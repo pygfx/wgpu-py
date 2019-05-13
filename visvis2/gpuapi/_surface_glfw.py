@@ -32,9 +32,11 @@ class GLFWSurfaceBackend(SurfaceBackend):
         ffi = vk.ffi
         surface = ctypes.c_void_p(0)
         # instance = ctypes.cast(int(ffi.cast('intptr_t', instance_handle)), ctypes.c_void_p)
-        instance = ctypes.cast(int(ffi.cast('uintptr_t', instance_handle)), ctypes.c_void_p)
+        instance = ctypes.cast(
+            int(ffi.cast("uintptr_t", instance_handle)), ctypes.c_void_p
+        )
         glfw.create_window_surface(instance, window, None, ctypes.byref(surface))
-        surface = ffi.cast('VkSurfaceKHR', surface.value)
+        surface = ffi.cast("VkSurfaceKHR", surface.value)
         if surface is None:
             raise Exception("failed to create window surface!")
         return surface

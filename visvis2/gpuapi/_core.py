@@ -1,4 +1,3 @@
-
 class GPUObject:
     """ The base class for all GPU objects.
     """

@@ -13,14 +13,14 @@ default_validation_layers = ["VK_LAYER_VALVE_steam_overlay"]
 
 
 class Instance(GPUObject):
-
     def __init__(self, *, surface=None, extensions=None, validation_layers=None):
 
         # Check validation layers
         available_validation_layers = self.get_available_validation_layers()
         if validation_layers is None:
-            validation_layers = [x for x in default_validation_layers
-                                 if x in available_validation_layers]
+            validation_layers = [
+                x for x in default_validation_layers if x in available_validation_layers
+            ]
         else:
             for layer in validation_layers:
                 if layer not in available_validation_layers:
@@ -50,7 +50,9 @@ class Instance(GPUObject):
 
     def _destroy(self):
         if self._dbcallback and self._handle:
-            func = vk.vkGetInstanceProcAddr(self._handle, 'vkDestroyDebugReportCallbackEXT')
+            func = vk.vkGetInstanceProcAddr(
+                self._handle, "vkDestroyDebugReportCallbackEXT"
+            )
             if func:
                 func(self._handle, self._dbcallback, None)
 
@@ -67,7 +69,7 @@ class Instance(GPUObject):
             sType=vk.VK_STRUCTURE_TYPE_APPLICATION_INFO,
             pApplicationName=default_app_name,
             applicationVersion=vk.VK_MAKE_VERSION(1, 0, 0),
-            pEngineName='visvis2',
+            pEngineName="visvis2",
             engineVersion=vk.VK_MAKE_VERSION(*version_info),  # visvis 2 version
             apiVersion=vk.VK_MAKE_VERSION(1, 0, 3),  # Vulkan API version
         )
@@ -79,27 +81,26 @@ class Instance(GPUObject):
             enabledExtensionCount=len(extensions),
             ppEnabledExtensionNames=extensions,
             enabledLayerCount=len(validation_layers),
-            ppEnabledLayerNames=validation_layers
+            ppEnabledLayerNames=validation_layers,
         )
 
         # Create the instance!
         return vk.vkCreateInstance(createInfo, None)
 
     def _create_debug_callback(self):
-
         def debugCallback(*args):
-            print('DEBUG: {} {}'.format(args[5], args[6]))
+            print("DEBUG: {} {}".format(args[5], args[6]))
             return 0
 
         # Create struct
         createInfo = vk.VkDebugReportCallbackCreateInfoEXT(
             sType=vk.VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
             flags=vk.VK_DEBUG_REPORT_ERROR_BIT_EXT | vk.VK_DEBUG_REPORT_WARNING_BIT_EXT,
-            pfnCallback=debugCallback
+            pfnCallback=debugCallback,
         )
 
         # Create the callback
-        func = vk.vkGetInstanceProcAddr(self._handle, 'vkCreateDebugReportCallbackEXT')
+        func = vk.vkGetInstanceProcAddr(self._handle, "vkCreateDebugReportCallbackEXT")
         if func:
             self._dbcallback = func(self._handle, createInfo, None)
         else:
@@ -117,4 +118,6 @@ class Instance(GPUObject):
     def get_available_extensions(self):
         """ Get the available Vulkan extensions for this system.
         """
-        return [x.extensionName for x in vk.vkEnumerateInstanceExtensionProperties(None)]
+        return [
+            x.extensionName for x in vk.vkEnumerateInstanceExtensionProperties(None)
+        ]

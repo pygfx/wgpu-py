@@ -13,16 +13,22 @@ class QueueFamilyIndices:
     def __init__(self):
         self.graphicsFamily = -1
         self.presentFamily = -1
+
     def isComplete(self):
         return self.graphicsFamily >= 0 and self.presentFamily >= 0
 
 
 def findQueueFamilies(instance, surface, device):
-    vkGetPhysicalDeviceSurfaceSupportKHR = vk.vkGetInstanceProcAddr(instance, 'vkGetPhysicalDeviceSurfaceSupportKHR')
+    vkGetPhysicalDeviceSurfaceSupportKHR = vk.vkGetInstanceProcAddr(
+        instance, "vkGetPhysicalDeviceSurfaceSupportKHR"
+    )
     indices = QueueFamilyIndices()
     queueFamilies = vk.vkGetPhysicalDeviceQueueFamilyProperties(device)
     for i, queueFamily in enumerate(queueFamilies):
-        if queueFamily.queueCount > 0 and queueFamily.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT:
+        if (
+            queueFamily.queueCount > 0
+            and queueFamily.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
+        ):
             indices.graphicsFamily = i
         presentSupport = vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface)
         if queueFamily.queueCount > 0 and presentSupport:
@@ -33,11 +39,17 @@ def findQueueFamilies(instance, surface, device):
 
 
 def chooseSwapSurfaceFormat(availableFormats):
-    if len(availableFormats) == 1 and availableFormats[0].format == vk.VK_FORMAT_UNDEFINED:
+    if (
+        len(availableFormats) == 1
+        and availableFormats[0].format == vk.VK_FORMAT_UNDEFINED
+    ):
         return VkSurfaceFormatKHR(vk.VK_FORMAT_B8G8R8A8_UNORM, 0)
 
     for availableFormat in availableFormats:
-        if availableFormat.format == vk.VK_FORMAT_B8G8R8A8_UNORM and availableFormat.colorSpace == 0:
+        if (
+            availableFormat.format == vk.VK_FORMAT_B8G8R8A8_UNORM
+            and availableFormat.colorSpace == 0
+        ):
             return availableFormat
 
     return availableFormats[0]
@@ -53,8 +65,13 @@ def chooseSwapPresentMode(availablePresentModes):
 
 def chooseSwapExtent(capabilities):
     WIDTH, HEIGHT = 640, 480  # todo: get from surface
-    width = max(capabilities.minImageExtent.width, min(capabilities.maxImageExtent.width, WIDTH))
-    height = max(capabilities.minImageExtent.height, min(capabilities.maxImageExtent.height, HEIGHT))
+    width = max(
+        capabilities.minImageExtent.width, min(capabilities.maxImageExtent.width, WIDTH)
+    )
+    height = max(
+        capabilities.minImageExtent.height,
+        min(capabilities.maxImageExtent.height, HEIGHT),
+    )
     return vk.VkExtent2D(width, height)
 
 
@@ -68,20 +85,25 @@ class SwapChainSupportDetails:
 def querySwapChainSupport(instance, surface, device):
     details = SwapChainSupportDetails()
 
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vk.vkGetInstanceProcAddr(instance, 'vkGetPhysicalDeviceSurfaceCapabilitiesKHR')
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vk.vkGetInstanceProcAddr(
+        instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"
+    )
     details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface)
 
-    vkGetPhysicalDeviceSurfaceFormatsKHR = vk.vkGetInstanceProcAddr(instance, 'vkGetPhysicalDeviceSurfaceFormatsKHR')
+    vkGetPhysicalDeviceSurfaceFormatsKHR = vk.vkGetInstanceProcAddr(
+        instance, "vkGetPhysicalDeviceSurfaceFormatsKHR"
+    )
     details.formats = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface)
 
-    vkGetPhysicalDeviceSurfacePresentModesKHR = vk.vkGetInstanceProcAddr(instance, 'vkGetPhysicalDeviceSurfacePresentModesKHR')
+    vkGetPhysicalDeviceSurfacePresentModesKHR = vk.vkGetInstanceProcAddr(
+        instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"
+    )
     details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface)
 
     return details
 
 
 class Figure:
-
     def __init__(self, instance, surface):
         self._actual_instance = instance
         self._instance = instance._handle
@@ -125,8 +147,12 @@ class Figure:
             )
             swapChainAdequate = False
             if extensionsSupported:
-                swapChainSupport = querySwapChainSupport(self._instance, self._surface, device)
-                swapChainAdequate = (not swapChainSupport.formats is None) and (not swapChainSupport.presentModes is None)
+                swapChainSupport = querySwapChainSupport(
+                    self._instance, self._surface, device
+                )
+                swapChainAdequate = (not swapChainSupport.formats is None) and (
+                    not swapChainSupport.presentModes is None
+                )
             if indices.isComplete() and extensionsSupported and swapChainAdequate:
                 selected = device
                 break
@@ -148,7 +174,9 @@ class Figure:
 
         # todo: can/should we cache the queue family info?
         indices = findQueueFamilies(self._instance, self._surface, self._physicalDevice)
-        uniqueQueueFamilies = {}.fromkeys((indices.graphicsFamily, indices.presentFamily))
+        uniqueQueueFamilies = {}.fromkeys(
+            (indices.graphicsFamily, indices.presentFamily)
+        )
 
         # Create queue info structs
         queueCreateInfos = []
@@ -157,7 +185,7 @@ class Figure:
                 sType=vk.VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
                 queueFamilyIndex=queueFamily,
                 queueCount=1,
-                pQueuePriorities=[1.0]
+                pQueuePriorities=[1.0],
             )
             queueCreateInfos.append(queueCreateInfo)
 
@@ -172,7 +200,7 @@ class Figure:
             enabledExtensionCount=len(deviceExtensions),
             ppEnabledExtensionNames=deviceExtensions,
             enabledLayerCount=len(self._actual_instance._validation_layers),
-            ppEnabledLayerNames=self._actual_instance._validation_layers
+            ppEnabledLayerNames=self._actual_instance._validation_layers,
         )
         device = vk.vkCreateDevice(self._physicalDevice, createInfo, None)
         if device is None:
@@ -185,14 +213,19 @@ class Figure:
         return device
 
     def _createSwapChain(self):
-        swapChainSupport = querySwapChainSupport(self._instance, self._surface, self._physicalDevice)
+        swapChainSupport = querySwapChainSupport(
+            self._instance, self._surface, self._physicalDevice
+        )
 
         surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats)
         presentMode = chooseSwapPresentMode(swapChainSupport.presentModes)
         extent = chooseSwapExtent(swapChainSupport.capabilities)
 
         imageCount = swapChainSupport.capabilities.minImageCount + 1
-        if swapChainSupport.capabilities.maxImageCount > 0 and imageCount > swapChainSupport.capabilities.maxImageCount:
+        if (
+            swapChainSupport.capabilities.maxImageCount > 0
+            and imageCount > swapChainSupport.capabilities.maxImageCount
+        ):
             imageCount = swapChainSupport.capabilities.maxImageCount
 
         createInfo = vk.VkSwapchainCreateInfoKHR(
@@ -204,14 +237,17 @@ class Figure:
             imageColorSpace=surfaceFormat.colorSpace,
             imageExtent=extent,
             imageArrayLayers=1,
-            imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+            imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         )
 
         indices = findQueueFamilies(self._instance, self._surface, self._physicalDevice)
         if indices.graphicsFamily != indices.presentFamily:
             createInfo.imageSharingMode = vk.VK_SHARING_MODE_CONCURRENT
             createInfo.queueFamilyIndexCount = 2
-            createInfo.pQueueFamilyIndices = [indices.graphicsFamily, indices.presentFamily]
+            createInfo.pQueueFamilyIndices = [
+                indices.graphicsFamily,
+                indices.presentFamily,
+            ]
         else:
             createInfo.imageSharingMode = vk.VK_SHARING_MODE_EXCLUSIVE
 
@@ -220,10 +256,14 @@ class Figure:
         createInfo.presentMode = presentMode
         createInfo.clipped = True
 
-        vkCreateSwapchainKHR = vk.vkGetDeviceProcAddr(self._device, 'vkCreateSwapchainKHR')
+        vkCreateSwapchainKHR = vk.vkGetDeviceProcAddr(
+            self._device, "vkCreateSwapchainKHR"
+        )
         self._swapChain = vkCreateSwapchainKHR(self._device, createInfo, None)
 
-        vkGetSwapchainImagesKHR = vk.vkGetDeviceProcAddr(self._device, 'vkGetSwapchainImagesKHR')
+        vkGetSwapchainImagesKHR = vk.vkGetDeviceProcAddr(
+            self._device, "vkGetSwapchainImagesKHR"
+        )
         self._swapChainImages = vkGetSwapchainImagesKHR(self._device, self._swapChain)
 
         self._swapChainImageFormat = surfaceFormat.format

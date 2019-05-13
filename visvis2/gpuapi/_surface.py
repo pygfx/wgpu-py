@@ -30,11 +30,15 @@ class Surface(GPUObject):
         if self._instance is not None:
             raise RuntimeError("Surface already created.")
         self._instance = instance
-        self._handle = self._backend.create_surface(instance._handle, 640, 480, "visvis2")
+        self._handle = self._backend.create_surface(
+            instance._handle, 640, 480, "visvis2"
+        )
 
     def _destroy(self):
         if self._handle and self._instance and self._instance._handle:
-            func = vk.vkGetInstanceProcAddr(self._instance._handle, 'vkDestroySurfaceKHR')
+            func = vk.vkGetInstanceProcAddr(
+                self._instance._handle, "vkDestroySurfaceKHR"
+            )
             if func:
                 func(self._instance._handle, self._handle, None)
         self._handle = None

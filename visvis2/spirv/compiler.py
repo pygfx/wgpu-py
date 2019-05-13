@@ -22,50 +22,51 @@ def vertex_shader():
 
     return 3 + 4
 
+
 vec3 = "vec3"
 vec4 = "vec4"
 
-STORAGE_CLASSES = dict(constant=StorageClass_UniformConstant,
-                       input=StorageClass_Input,
-                       uniform=StorageClass_Uniform,
-                       output=StorageClass_Output
-                       )
+STORAGE_CLASSES = dict(
+    constant=StorageClass_UniformConstant,
+    input=StorageClass_Input,
+    uniform=StorageClass_Uniform,
+    output=StorageClass_Output,
+)
 
 
 def fragment_shader():
-    #version 450
-    #extension GL_ARB_separate_shader_objects : enable
+    # version 450
+    # extension GL_ARB_separate_shader_objects : enable
 
     fragColor = input(vec3)
     outColor = output(vec4)
 
-    #layout(location = 0) in vec3 fragColor;
-    #layout(location = 0) out vec4 outColor;
+    # layout(location = 0) in vec3 fragColor;
+    # layout(location = 0) out vec4 outColor;
 
     def main():
         outColor = vec4(fragColor, 1.0)
-
 
 
 def get_shader_from_spirv(device, code):
     createInfo = vk.VkShaderModuleCreateInfo(
         sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
         codeSize=len(code),
-        pCode=code
+        pCode=code,
     )
     return vk.vkCreateShaderModule(device, createInfo, None)
 
 
 def get_vert_shader(device):
     nogit = os.path.abspath(os.path.join(__file__, "..", "..", "..", "nogit"))
-    with open(os.path.join(nogit, 'hello_triangle_vert.spv'), 'rb') as sf:
+    with open(os.path.join(nogit, "hello_triangle_vert.spv"), "rb") as sf:
         code = sf.read()
     return get_shader_from_spirv(device, code)
 
 
 def get_frag_shader(device):
     nogit = os.path.abspath(os.path.join(__file__, "..", "..", "..", "nogit"))
-    with open(os.path.join(nogit, 'hello_triangle_frag.spv'), 'rb') as sf:
+    with open(os.path.join(nogit, "hello_triangle_frag.spv"), "rb") as sf:
         code = sf.read()
 
     x = Python2SpirVCompiler(fragment_shader)
@@ -77,6 +78,7 @@ def get_frag_shader(device):
 
 ##
 
+
 def str_to_words(s):
     b = s.encode() + b"\x00"
     b += ((4 - (len(b) % 4)) % 4) * b"\x00"
@@ -84,12 +86,11 @@ def str_to_words(s):
     # todo: endianness?
     words = []
     for i in range(0, len(b), 4):
-        words.append(struct.unpack("<I", b[i:i+4])[0])
+        words.append(struct.unpack("<I", b[i : i + 4])[0])
     return words
 
 
 class Python2SpirVCompiler:
-
     def __init__(self, func):
         pycode = inspect.getsource(func)
         self.root = commonast.parse(pycode)
@@ -102,7 +103,9 @@ class Python2SpirVCompiler:
         self.instructions_pre = []
         self.instructions = []
 
-        assert len(self.root.body_nodes) == 1 and isinstance(self.root.body_nodes[0], commonast.FunctionDef)
+        assert len(self.root.body_nodes) == 1 and isinstance(
+            self.root.body_nodes[0], commonast.FunctionDef
+        )
 
     def create_id(self, type_id, xx=None):
         """ Get an id for a type, variable, function, etc.
@@ -162,7 +165,9 @@ class Python2SpirVCompiler:
         elif type_name.startswith("vec"):
             float_id = self.create_type_id("float")
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
-            self.gen_instruction_pre(OpTypeVector, type_id, float_id, int(type_name[3:]))
+            self.gen_instruction_pre(
+                OpTypeVector, type_id, float_id, int(type_name[3:])
+            )
             return type_id
         else:
             raise NotImplementedError()
@@ -219,10 +224,14 @@ class Python2SpirVCompiler:
 
         # Create entry point
         self._main_id = self.create_id("main")
-        self.gen_instruction_pre(OpEntryPoint, ExecutionModel_Fragment, self._main_id, "main")# todo: arg1, arg2, pointers, that, are, used)
+        self.gen_instruction_pre(
+            OpEntryPoint, ExecutionModel_Fragment, self._main_id, "main"
+        )  # todo: arg1, arg2, pointers, that, are, used)
 
-        if True: # fragment shader
-            self.gen_instruction_pre(OpExecutionMode, self._main_id, ExecutionMode_OriginLowerLeft)
+        if True:  # fragment shader
+            self.gen_instruction_pre(
+                OpExecutionMode, self._main_id, ExecutionMode_OriginLowerLeft
+            )
 
         self.scope_stack.append({})
         for node in self.root.body_nodes[0].body_nodes:
@@ -230,28 +239,31 @@ class Python2SpirVCompiler:
 
     def parse(self, node):
         nodeType = node.__class__.__name__
-        parse_func = getattr(self, 'parse_' + nodeType, None)
+        parse_func = getattr(self, "parse_" + nodeType, None)
         if parse_func:
             return parse_func(node)
         else:
-            raise Exception('Cannot parse %s-nodes yet' % nodeType)
+            raise Exception("Cannot parse %s-nodes yet" % nodeType)
 
     def parse_FunctionDef(self, node):
 
         assert node.name == "main"
 
-
         self.scope_stack.append({})
         result_type_id = self.create_type_id("void")
-        function_id = self._main_id# self.create_id(result_type_id)
+        function_id = self._main_id  # self.create_id(result_type_id)
 
         # Generate the function type -> specofy args and return value
         function_type_id = self.create_id(result_type_id)
-        self.gen_instruction_pre(OpTypeFunction, function_type_id, result_type_id, *[]) # can haz arg ids
+        self.gen_instruction_pre(
+            OpTypeFunction, function_type_id, result_type_id, *[]
+        )  # can haz arg ids
 
         # Generate function
         function_control = 0  # can specify whether it should inline, etc.
-        self.gen_instruction(OpFunction, result_type_id, function_id, function_control, function_type_id)
+        self.gen_instruction(
+            OpFunction, result_type_id, function_id, function_control, function_type_id
+        )
 
         # A function must begin with a label
         self.gen_instruction(OpLabel, self.create_id("label"))
@@ -304,15 +316,21 @@ class Python2SpirVCompiler:
                     for i in range(int(type_name[3:])):
                         type_id = self.create_type_id("float")
                         comp_id = self.create_id(type_id)
-                        self.gen_instruction(OpCompositeExtract, type_id, comp_id, id, i)
+                        self.gen_instruction(
+                            OpCompositeExtract, type_id, comp_id, id, i
+                        )
                         composite_ids.append(comp_id)
                 else:
                     raise TypeError(f"Cannot convert create vec4 from {type}")
             if len(composite_ids) != int(funcname[3:]):
-                raise TypeError(f"{funcname} did not expect {len(composite_ids)} elements")
+                raise TypeError(
+                    f"{funcname} did not expect {len(composite_ids)} elements"
+                )
             type_id = self.create_type_id(funcname)
             result_id = self.create_id(type_id)
-            self.gen_instruction(OpCompositeConstruct, type_id, result_id, *composite_ids)
+            self.gen_instruction(
+                OpCompositeConstruct, type_id, result_id, *composite_ids
+            )
             return result_id
         else:
             raise NotImplementedError()
@@ -330,13 +348,16 @@ class Python2SpirVCompiler:
         if isinstance(node.value, int):
             type_id = self.create_type_id("int")
             result_id = self.create_id(type_id)
-            self.gen_instruction_pre(OpConstant, type_id, result_id, struct.pack("<I", node.value))
+            self.gen_instruction_pre(
+                OpConstant, type_id, result_id, struct.pack("<I", node.value)
+            )
         elif isinstance(node.value, float):
             type_id = self.create_type_id("float")
             result_id = self.create_id(type_id)
-            self.gen_instruction_pre(OpConstant, type_id, result_id, struct.pack("<f", node.value))
+            self.gen_instruction_pre(
+                OpConstant, type_id, result_id, struct.pack("<f", node.value)
+            )
         return result_id
-
 
 
 if __name__ == "__main__":
@@ -344,4 +365,3 @@ if __name__ == "__main__":
     x.start_parsing()
     with open("b.spv", "wb") as f:
         f.write(x.dump())
-

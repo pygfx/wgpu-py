@@ -25,34 +25,37 @@ enableValidationLayers = False
 
 
 def debugCallback(*args):
-    print('DEBUG: {} {}'.format(args[5], args[6]))
+    print("DEBUG: {} {}".format(args[5], args[6]))
     return 0
 
+
 def createDebugReportCallbackEXT(instance, pCreateInfo, pAllocator):
-    func = vkGetInstanceProcAddr(instance, 'vkCreateDebugReportCallbackEXT')
+    func = vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT")
     if func:
         return func(instance, pCreateInfo, pAllocator)
     else:
         return VK_ERROR_EXTENSION_NOT_PRESENT
 
+
 def destroyDebugReportCallbackEXT(instance, callback, pAllocator):
-    func = vkGetInstanceProcAddr(instance, 'vkDestroyDebugReportCallbackEXT')
+    func = vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT")
     if func:
         func(instance, callback, pAllocator)
 
+
 def destroySurface(instance, surface, pAllocator=None):
-    func = vkGetInstanceProcAddr(instance, 'vkDestroySurfaceKHR')
+    func = vkGetInstanceProcAddr(instance, "vkDestroySurfaceKHR")
     if func:
         func(instance, surface, pAllocator)
 
+
 def destroySwapChain(device, swapChain, pAllocator=None):
-    func = vkGetDeviceProcAddr(device, 'vkDestroySwapchainKHR')
+    func = vkGetDeviceProcAddr(device, "vkDestroySwapchainKHR")
     if func:
         func(device, swapChain, pAllocator)
 
 
 class QueueFamilyIndices(object):
-
     def __init__(self):
         self.graphicsFamily = -1
         self.presentFamily = -1
@@ -67,8 +70,8 @@ class SwapChainSupportDetails(object):
         self.formats = None
         self.presentModes = None
 
-class HelloTriangleApplication(object):
 
+class HelloTriangleApplication(object):
     def __init__(self):
         self.__window = None
         self.__instance = None
@@ -179,11 +182,11 @@ class HelloTriangleApplication(object):
 
         appInfo = VkApplicationInfo(
             sType=VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            pApplicationName='Hello Triangle',
+            pApplicationName="Hello Triangle",
             applicationVersion=VK_MAKE_VERSION(1, 0, 0),
-            pEngineName='No Engine',
+            pEngineName="No Engine",
             engineVersion=VK_MAKE_VERSION(1, 0, 0),
-            apiVersion=VK_MAKE_VERSION(1, 0, 3)
+            apiVersion=VK_MAKE_VERSION(1, 0, 3),
         )
 
         createInfo = None
@@ -196,7 +199,7 @@ class HelloTriangleApplication(object):
                 enabledExtensionCount=len(extensions),
                 ppEnabledExtensionNames=extensions,
                 enabledLayerCount=len(validationLayers),
-                ppEnabledLayerNames=validationLayers
+                ppEnabledLayerNames=validationLayers,
             )
         else:
             createInfo = VkInstanceCreateInfo(
@@ -204,7 +207,7 @@ class HelloTriangleApplication(object):
                 pApplicationInfo=appInfo,
                 enabledExtensionCount=len(extensions),
                 ppEnabledExtensionNames=extensions,
-                enabledLayerCount=0
+                enabledLayerCount=0,
             )
 
         self.__instance = vkCreateInstance(createInfo, None)
@@ -216,18 +219,22 @@ class HelloTriangleApplication(object):
         createInfo = VkDebugReportCallbackCreateInfoEXT(
             sType=VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
             flags=VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT,
-            pfnCallback=debugCallback
+            pfnCallback=debugCallback,
         )
-        self.__callback = createDebugReportCallbackEXT(self.__instance, createInfo, None)
+        self.__callback = createDebugReportCallbackEXT(
+            self.__instance, createInfo, None
+        )
         if not self.__callback:
             raise Exception("failed to set up debug callback!")
 
     def __createSurface(self):
         surface = ctypes.c_void_p(0)
         # instance = ctypes.cast(int(ffi.cast('intptr_t', self.__instance)), ctypes.c_void_p)
-        instance = ctypes.cast(int(ffi.cast('uintptr_t', self.__instance)), ctypes.c_void_p)
+        instance = ctypes.cast(
+            int(ffi.cast("uintptr_t", self.__instance)), ctypes.c_void_p
+        )
         glfw.create_window_surface(instance, self.__window, None, ctypes.byref(surface))
-        self.__surface = ffi.cast('VkSurfaceKHR', surface.value)
+        self.__surface = ffi.cast("VkSurfaceKHR", surface.value)
         if self.__surface is None:
             raise Exception("failed to create window surface!")
 
@@ -244,14 +251,16 @@ class HelloTriangleApplication(object):
 
     def __createLogicalDevice(self):
         indices = self.__findQueueFamilies(self.__physicalDevice)
-        uniqueQueueFamilies = {}.fromkeys((indices.graphicsFamily, indices.presentFamily))
+        uniqueQueueFamilies = {}.fromkeys(
+            (indices.graphicsFamily, indices.presentFamily)
+        )
         queueCreateInfos = []
         for queueFamily in uniqueQueueFamilies:
             queueCreateInfo = VkDeviceQueueCreateInfo(
                 sType=VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
                 queueFamilyIndex=queueFamily,
                 queueCount=1,
-                pQueuePriorities=[1.0]
+                pQueuePriorities=[1.0],
             )
             queueCreateInfos.append(queueCreateInfo)
 
@@ -267,7 +276,7 @@ class HelloTriangleApplication(object):
                 enabledExtensionCount=len(deviceExtensions),
                 ppEnabledExtensionNames=deviceExtensions,
                 enabledLayerCount=len(validationLayers),
-                ppEnabledLayerNames=validationLayers
+                ppEnabledLayerNames=validationLayers,
             )
         else:
             createInfo = VkDeviceCreateInfo(
@@ -278,13 +287,15 @@ class HelloTriangleApplication(object):
                 pEnabledFeatures=[deviceFeatures],
                 enabledExtensionCount=len(deviceExtensions),
                 ppEnabledExtensionNames=deviceExtensions,
-                enabledLayerCount=0
+                enabledLayerCount=0,
             )
 
         self.__device = vkCreateDevice(self.__physicalDevice, createInfo, None)
         if self.__device is None:
             raise Exception("failed to create logical device!")
-        self.__graphicsQueue = vkGetDeviceQueue(self.__device, indices.graphicsFamily, 0)
+        self.__graphicsQueue = vkGetDeviceQueue(
+            self.__device, indices.graphicsFamily, 0
+        )
         self.__presentQueue = vkGetDeviceQueue(self.__device, indices.presentFamily, 0)
 
     def __createSwapChain(self):
@@ -295,7 +306,10 @@ class HelloTriangleApplication(object):
         extent = self.__chooseSwapExtent(swapChainSupport.capabilities)
 
         imageCount = swapChainSupport.capabilities.minImageCount + 1
-        if swapChainSupport.capabilities.maxImageCount > 0 and imageCount > swapChainSupport.capabilities.maxImageCount:
+        if (
+            swapChainSupport.capabilities.maxImageCount > 0
+            and imageCount > swapChainSupport.capabilities.maxImageCount
+        ):
             imageCount = swapChainSupport.capabilities.maxImageCount
 
         createInfo = VkSwapchainCreateInfoKHR(
@@ -307,14 +321,17 @@ class HelloTriangleApplication(object):
             imageColorSpace=surfaceFormat.colorSpace,
             imageExtent=extent,
             imageArrayLayers=1,
-            imageUsage=VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+            imageUsage=VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         )
 
         indices = self.__findQueueFamilies(self.__physicalDevice)
         if indices.graphicsFamily != indices.presentFamily:
             createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT
             createInfo.queueFamilyIndexCount = 2
-            createInfo.pQueueFamilyIndices = [indices.graphicsFamily, indices.presentFamily]
+            createInfo.pQueueFamilyIndices = [
+                indices.graphicsFamily,
+                indices.presentFamily,
+            ]
         else:
             createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE
 
@@ -323,21 +340,32 @@ class HelloTriangleApplication(object):
         createInfo.presentMode = presentMode
         createInfo.clipped = True
 
-        vkCreateSwapchainKHR = vkGetDeviceProcAddr(self.__device, 'vkCreateSwapchainKHR')
+        vkCreateSwapchainKHR = vkGetDeviceProcAddr(
+            self.__device, "vkCreateSwapchainKHR"
+        )
         self.__swapChain = vkCreateSwapchainKHR(self.__device, createInfo, None)
 
-        vkGetSwapchainImagesKHR = vkGetDeviceProcAddr(self.__device, 'vkGetSwapchainImagesKHR')
-        self.__swapChainImages = vkGetSwapchainImagesKHR(self.__device, self.__swapChain)
+        vkGetSwapchainImagesKHR = vkGetDeviceProcAddr(
+            self.__device, "vkGetSwapchainImagesKHR"
+        )
+        self.__swapChainImages = vkGetSwapchainImagesKHR(
+            self.__device, self.__swapChain
+        )
 
         self.__swapChainImageFormat = surfaceFormat.format
         self.__swapChainExtent = extent
 
     def __createImageViews(self):
         self.__swapChainImageViews = []
-        components = VkComponentMapping(VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-                                        VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY)
-        subresourceRange = VkImageSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT,
-                                                   0, 1, 0, 1)
+        components = VkComponentMapping(
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY,
+        )
+        subresourceRange = VkImageSubresourceRange(
+            VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1
+        )
         for i, image in enumerate(self.__swapChainImages):
             createInfo = VkImageViewCreateInfo(
                 sType=VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -346,9 +374,11 @@ class HelloTriangleApplication(object):
                 viewType=VK_IMAGE_VIEW_TYPE_2D,
                 format=self.__swapChainImageFormat,
                 components=components,
-                subresourceRange=subresourceRange
+                subresourceRange=subresourceRange,
             )
-            self.__swapChainImageViews.append(vkCreateImageView(self.__device, createInfo, None))
+            self.__swapChainImageViews.append(
+                vkCreateImageView(self.__device, createInfo, None)
+            )
 
     def __createRenderPass(self):
         colorAttachment = VkAttachmentDescription(
@@ -359,18 +389,17 @@ class HelloTriangleApplication(object):
             stencilLoadOp=VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             stencilStoreOp=VK_ATTACHMENT_STORE_OP_DONT_CARE,
             initialLayout=VK_IMAGE_LAYOUT_UNDEFINED,
-            finalLayout=VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+            finalLayout=VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         )
 
         colorAttachmentRef = VkAttachmentReference(
-            attachment=0,
-            layout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+            attachment=0, layout=VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
         )
 
         subPass = VkSubpassDescription(
             pipelineBindPoint=VK_PIPELINE_BIND_POINT_GRAPHICS,
             colorAttachmentCount=1,
-            pColorAttachments=colorAttachmentRef
+            pColorAttachments=colorAttachmentRef,
         )
 
         renderPassInfo = VkRenderPassCreateInfo(
@@ -378,7 +407,7 @@ class HelloTriangleApplication(object):
             attachmentCount=1,
             pAttachments=colorAttachment,
             subpassCount=1,
-            pSubpasses=subPass
+            pSubpasses=subPass,
         )
 
         self.__renderPass = vkCreateRenderPass(self.__device, renderPassInfo, None)
@@ -395,7 +424,7 @@ class HelloTriangleApplication(object):
             flags=0,
             stage=VK_SHADER_STAGE_VERTEX_BIT,
             module=vertShaderModule,
-            pName='main'
+            pName="main",
         )
 
         fragShaderStageInfo = VkPipelineShaderStageCreateInfo(
@@ -403,7 +432,7 @@ class HelloTriangleApplication(object):
             flags=0,
             stage=VK_SHADER_STAGE_FRAGMENT_BIT,
             module=fragShaderModule,
-            pName='main'
+            pName="main",
         )
 
         shaderStages = [vertShaderStageInfo, fragShaderStageInfo]
@@ -411,26 +440,30 @@ class HelloTriangleApplication(object):
         vertexInputInfo = VkPipelineVertexInputStateCreateInfo(
             sType=VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             vertexBindingDescriptionCount=0,
-            vertexAttributeDescriptionCount=0
+            vertexAttributeDescriptionCount=0,
         )
 
         inputAssembly = VkPipelineInputAssemblyStateCreateInfo(
             sType=VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             topology=VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-            primitiveRestartEnable=True
+            primitiveRestartEnable=True,
         )
 
-        viewport = VkViewport(0.0, 0.0,
-                              float(self.__swapChainExtent.width),
-                              float(self.__swapChainExtent.height),
-                              0.0, 1.0)
+        viewport = VkViewport(
+            0.0,
+            0.0,
+            float(self.__swapChainExtent.width),
+            float(self.__swapChainExtent.height),
+            0.0,
+            1.0,
+        )
         scissor = VkRect2D([0, 0], self.__swapChainExtent)
         viewportState = VkPipelineViewportStateCreateInfo(
             sType=VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
             viewportCount=1,
             pViewports=viewport,
             scissorCount=1,
-            pScissors=scissor
+            pScissors=scissor,
         )
 
         rasterizer = VkPipelineRasterizationStateCreateInfo(
@@ -441,18 +474,21 @@ class HelloTriangleApplication(object):
             lineWidth=1.0,
             cullMode=VK_CULL_MODE_BACK_BIT,
             frontFace=VK_FRONT_FACE_CLOCKWISE,
-            depthBiasEnable=False
+            depthBiasEnable=False,
         )
 
         multisampling = VkPipelineMultisampleStateCreateInfo(
             sType=VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
             sampleShadingEnable=False,
-            rasterizationSamples=VK_SAMPLE_COUNT_1_BIT
+            rasterizationSamples=VK_SAMPLE_COUNT_1_BIT,
         )
 
         colorBlendAttachment = VkPipelineColorBlendAttachmentState(
-            colorWriteMask=VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-            blendEnable=False
+            colorWriteMask=VK_COLOR_COMPONENT_R_BIT
+            | VK_COLOR_COMPONENT_G_BIT
+            | VK_COLOR_COMPONENT_B_BIT
+            | VK_COLOR_COMPONENT_A_BIT,
+            blendEnable=False,
         )
 
         colorBlending = VkPipelineColorBlendStateCreateInfo(
@@ -461,16 +497,18 @@ class HelloTriangleApplication(object):
             logicOp=VK_LOGIC_OP_COPY,
             attachmentCount=1,
             pAttachments=colorBlendAttachment,
-            blendConstants=[0.0, 0.0, 0.0, 0.0]
+            blendConstants=[0.0, 0.0, 0.0, 0.0],
         )
 
         pipelineLayoutInfo = VkPipelineLayoutCreateInfo(
             sType=VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             setLayoutCount=0,
-            pushConstantRangeCount=0
+            pushConstantRangeCount=0,
         )
 
-        self.__pipelineLayout = vkCreatePipelineLayout(self.__device, pipelineLayoutInfo, None)
+        self.__pipelineLayout = vkCreatePipelineLayout(
+            self.__device, pipelineLayoutInfo, None
+        )
 
         pipelineInfo = VkGraphicsPipelineCreateInfo(
             sType=VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -484,10 +522,12 @@ class HelloTriangleApplication(object):
             pColorBlendState=colorBlending,
             layout=self.__pipelineLayout,
             renderPass=self.__renderPass,
-            subpass=0
+            subpass=0,
         )
 
-        self.__graphicsPipeline = vkCreateGraphicsPipelines(self.__device, VK_NULL_HANDLE, 1, pipelineInfo, None)
+        self.__graphicsPipeline = vkCreateGraphicsPipelines(
+            self.__device, VK_NULL_HANDLE, 1, pipelineInfo, None
+        )
 
         vkDestroyShaderModule(self.__device, vertShaderModule, None)
         vkDestroyShaderModule(self.__device, fragShaderModule, None)
@@ -496,7 +536,7 @@ class HelloTriangleApplication(object):
         self.__swapChainFramebuffers = []
 
         for imageView in self.__swapChainImageViews:
-            attachments = [imageView,]
+            attachments = [imageView]
 
             framebufferInfo = VkFramebufferCreateInfo(
                 sType=VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -505,7 +545,7 @@ class HelloTriangleApplication(object):
                 pAttachments=attachments,
                 width=self.__swapChainExtent.width,
                 height=self.__swapChainExtent.height,
-                layers=1
+                layers=1,
             )
             framebuffer = vkCreateFramebuffer(self.__device, framebufferInfo, None)
             self.__swapChainFramebuffers.append(framebuffer)
@@ -515,7 +555,7 @@ class HelloTriangleApplication(object):
 
         poolInfo = VkCommandPoolCreateInfo(
             sType=VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            queueFamilyIndex=queueFamilyIndices.graphicsFamily
+            queueFamilyIndex=queueFamilyIndices.graphicsFamily,
         )
 
         self.__commandPool = vkCreateCommandPool(self.__device, poolInfo, None)
@@ -527,16 +567,19 @@ class HelloTriangleApplication(object):
             sType=VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
             commandPool=self.__commandPool,
             level=VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            commandBufferCount=len(self.__swapChainFramebuffers)
+            commandBufferCount=len(self.__swapChainFramebuffers),
         )
 
         commandBuffers = vkAllocateCommandBuffers(self.__device, allocInfo)
-        self.__commandBuffers = [ffi.addressof(commandBuffers, i)[0] for i in range(len(self.__swapChainFramebuffers))]
+        self.__commandBuffers = [
+            ffi.addressof(commandBuffers, i)[0]
+            for i in range(len(self.__swapChainFramebuffers))
+        ]
 
         for i, cmdBuffer in enumerate(self.__commandBuffers):
             beginInfo = VkCommandBufferBeginInfo(
                 sType=VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                flags=VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT
+                flags=VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
             )
 
             vkBeginCommandBuffer(cmdBuffer, beginInfo)
@@ -545,7 +588,7 @@ class HelloTriangleApplication(object):
                 sType=VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 renderPass=self.__renderPass,
                 framebuffer=self.__swapChainFramebuffers[i],
-                renderArea=[[0, 0], self.__swapChainExtent]
+                renderArea=[[0, 0], self.__swapChainExtent],
             )
 
             clearColor = VkClearValue([[0.0, 0.0, 0.0, 1.0]])
@@ -554,7 +597,9 @@ class HelloTriangleApplication(object):
 
             vkCmdBeginRenderPass(cmdBuffer, renderPassInfo, VK_SUBPASS_CONTENTS_INLINE)
 
-            vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, self.__graphicsPipeline)
+            vkCmdBindPipeline(
+                cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, self.__graphicsPipeline
+            )
             vkCmdDraw(cmdBuffer, 3, 1, 0, 0)
 
             vkCmdEndRenderPass(cmdBuffer)
@@ -562,31 +607,46 @@ class HelloTriangleApplication(object):
             vkEndCommandBuffer(cmdBuffer)
 
     def __createSemaphores(self):
-        semaphoreInfo = VkSemaphoreCreateInfo(sType=VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO)
+        semaphoreInfo = VkSemaphoreCreateInfo(
+            sType=VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
+        )
 
-        self.__imageAvailableSemaphore = vkCreateSemaphore(self.__device, semaphoreInfo, None)
-        self.__renderFinishedSemaphore = vkCreateSemaphore(self.__device, semaphoreInfo, None)
+        self.__imageAvailableSemaphore = vkCreateSemaphore(
+            self.__device, semaphoreInfo, None
+        )
+        self.__renderFinishedSemaphore = vkCreateSemaphore(
+            self.__device, semaphoreInfo, None
+        )
 
     def __drawFrame(self):
-        vkAcquireNextImageKHR = vkGetDeviceProcAddr(self.__device, 'vkAcquireNextImageKHR')
-        vkQueuePresentKHR = vkGetDeviceProcAddr(self.__device, 'vkQueuePresentKHR')
+        vkAcquireNextImageKHR = vkGetDeviceProcAddr(
+            self.__device, "vkAcquireNextImageKHR"
+        )
+        vkQueuePresentKHR = vkGetDeviceProcAddr(self.__device, "vkQueuePresentKHR")
 
-        imageIndex = vkAcquireNextImageKHR(self.__device, self.__swapChain, 18446744073709551615,
-                                           self.__imageAvailableSemaphore, VK_NULL_HANDLE)
+        imageIndex = vkAcquireNextImageKHR(
+            self.__device,
+            self.__swapChain,
+            18446744073709551615,
+            self.__imageAvailableSemaphore,
+            VK_NULL_HANDLE,
+        )
 
         submitInfo = VkSubmitInfo(sType=VK_STRUCTURE_TYPE_SUBMIT_INFO)
 
-        waitSemaphores = ffi.new('VkSemaphore[]', [self.__imageAvailableSemaphore])
-        waitStages = ffi.new('uint32_t[]', [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, ])
+        waitSemaphores = ffi.new("VkSemaphore[]", [self.__imageAvailableSemaphore])
+        waitStages = ffi.new(
+            "uint32_t[]", [VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT]
+        )
         submitInfo.waitSemaphoreCount = 1
         submitInfo.pWaitSemaphores = waitSemaphores
         submitInfo.pWaitDstStageMask = waitStages
 
-        cmdBuffers = ffi.new('VkCommandBuffer[]', [self.__commandBuffers[imageIndex], ])
+        cmdBuffers = ffi.new("VkCommandBuffer[]", [self.__commandBuffers[imageIndex]])
         submitInfo.commandBufferCount = 1
         submitInfo.pCommandBuffers = cmdBuffers
 
-        signalSemaphores = ffi.new('VkSemaphore[]', [self.__renderFinishedSemaphore])
+        signalSemaphores = ffi.new("VkSemaphore[]", [self.__renderFinishedSemaphore])
         submitInfo.signalSemaphoreCount = 1
         submitInfo.pSignalSemaphores = signalSemaphores
 
@@ -599,31 +659,36 @@ class HelloTriangleApplication(object):
             pWaitSemaphores=signalSemaphores,
             swapchainCount=1,
             pSwapchains=swapChains,
-            pImageIndices=[imageIndex]
+            pImageIndices=[imageIndex],
         )
 
         vkQueuePresentKHR(self.__presentQueue, presentInfo)
 
     def __createShaderModule(self, shaderFile):
-        with open(shaderFile, 'rb') as sf:
+        with open(shaderFile, "rb") as sf:
             code = sf.read()
             codeSize = len(code)
 
             createInfo = VkShaderModuleCreateInfo(
                 sType=VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
                 codeSize=codeSize,
-                pCode=code
+                pCode=code,
             )
 
             return vkCreateShaderModule(self.__device, createInfo, None)
 
-
     def __chooseSwapSurfaceFormat(self, availableFormats):
-        if len(availableFormats) == 1 and availableFormats[0].format == VK_FORMAT_UNDEFINED:
+        if (
+            len(availableFormats) == 1
+            and availableFormats[0].format == VK_FORMAT_UNDEFINED
+        ):
             return VkSurfaceFormatKHR(VK_FORMAT_B8G8R8A8_UNORM, 0)
 
         for availableFormat in availableFormats:
-            if availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM and availableFormat.colorSpace == 0:
+            if (
+                availableFormat.format == VK_FORMAT_B8G8R8A8_UNORM
+                and availableFormat.colorSpace == 0
+            ):
                 return availableFormat
 
         return availableFormats[0]
@@ -636,21 +701,37 @@ class HelloTriangleApplication(object):
         return VK_PRESENT_MODE_FIFO_KHR
 
     def __chooseSwapExtent(self, capabilities):
-        width = max(capabilities.minImageExtent.width, min(capabilities.maxImageExtent.width, WIDTH))
-        height = max(capabilities.minImageExtent.height, min(capabilities.maxImageExtent.height, HEIGHT))
+        width = max(
+            capabilities.minImageExtent.width,
+            min(capabilities.maxImageExtent.width, WIDTH),
+        )
+        height = max(
+            capabilities.minImageExtent.height,
+            min(capabilities.maxImageExtent.height, HEIGHT),
+        )
         return VkExtent2D(width, height)
 
     def __querySwapChainSupport(self, device):
         details = SwapChainSupportDetails()
 
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr(self.__instance, 'vkGetPhysicalDeviceSurfaceCapabilitiesKHR')
-        details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, self.__surface)
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vkGetInstanceProcAddr(
+            self.__instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"
+        )
+        details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+            device, self.__surface
+        )
 
-        vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetInstanceProcAddr(self.__instance, 'vkGetPhysicalDeviceSurfaceFormatsKHR')
+        vkGetPhysicalDeviceSurfaceFormatsKHR = vkGetInstanceProcAddr(
+            self.__instance, "vkGetPhysicalDeviceSurfaceFormatsKHR"
+        )
         details.formats = vkGetPhysicalDeviceSurfaceFormatsKHR(device, self.__surface)
 
-        vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetInstanceProcAddr(self.__instance, 'vkGetPhysicalDeviceSurfacePresentModesKHR')
-        details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(device, self.__surface)
+        vkGetPhysicalDeviceSurfacePresentModesKHR = vkGetInstanceProcAddr(
+            self.__instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"
+        )
+        details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(
+            device, self.__surface
+        )
 
         return details
 
@@ -660,7 +741,9 @@ class HelloTriangleApplication(object):
         swapChainAdequate = False
         if extensionsSupported:
             swapChainSupport = self.__querySwapChainSupport(device)
-            swapChainAdequate = (not swapChainSupport.formats is None) and (not swapChainSupport.presentModes is None)
+            swapChainAdequate = (not swapChainSupport.formats is None) and (
+                not swapChainSupport.presentModes is None
+            )
         return indices.isComplete() and extensionsSupported and swapChainAdequate
 
     def __checkDeviceExtensionSupport(self, device):
@@ -673,17 +756,23 @@ class HelloTriangleApplication(object):
         return False
 
     def __findQueueFamilies(self, device):
-        vkGetPhysicalDeviceSurfaceSupportKHR = vkGetInstanceProcAddr(self.__instance,
-                                                                   'vkGetPhysicalDeviceSurfaceSupportKHR')
+        vkGetPhysicalDeviceSurfaceSupportKHR = vkGetInstanceProcAddr(
+            self.__instance, "vkGetPhysicalDeviceSurfaceSupportKHR"
+        )
         indices = QueueFamilyIndices()
 
         queueFamilies = vkGetPhysicalDeviceQueueFamilyProperties(device)
 
         for i, queueFamily in enumerate(queueFamilies):
-            if queueFamily.queueCount > 0 and queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT:
+            if (
+                queueFamily.queueCount > 0
+                and queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT
+            ):
                 indices.graphicsFamily = i
 
-            presentSupport = vkGetPhysicalDeviceSurfaceSupportKHR(device, i, self.__surface)
+            presentSupport = vkGetPhysicalDeviceSurfaceSupportKHR(
+                device, i, self.__surface
+            )
 
             if queueFamily.queueCount > 0 and presentSupport:
                 indices.presentFamily = i
@@ -721,7 +810,7 @@ class HelloTriangleApplication(object):
         self.__mainLoop()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     app = HelloTriangleApplication()
 
