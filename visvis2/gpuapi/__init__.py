@@ -8,3 +8,4 @@ so that it can hopefully eventually hook into e.g. WebGPU.
 
 from ._instance import Instance
 from ._surface import Surface
+from ._device import PhysicalDevice

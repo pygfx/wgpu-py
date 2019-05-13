@@ -6,38 +6,6 @@ import vulkan as vk  # todo: should not need this in examples
 from visvis2 import gpuapi
 
 
-deviceExtensions = [vk.VK_KHR_SWAPCHAIN_EXTENSION_NAME]
-
-
-class QueueFamilyIndices:
-    def __init__(self):
-        self.graphicsFamily = -1
-        self.presentFamily = -1
-
-    def isComplete(self):
-        return self.graphicsFamily >= 0 and self.presentFamily >= 0
-
-
-def findQueueFamilies(instance, surface, device):
-    vkGetPhysicalDeviceSurfaceSupportKHR = vk.vkGetInstanceProcAddr(
-        instance, "vkGetPhysicalDeviceSurfaceSupportKHR"
-    )
-    indices = QueueFamilyIndices()
-    queueFamilies = vk.vkGetPhysicalDeviceQueueFamilyProperties(device)
-    for i, queueFamily in enumerate(queueFamilies):
-        if (
-            queueFamily.queueCount > 0
-            and queueFamily.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
-        ):
-            indices.graphicsFamily = i
-        presentSupport = vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface)
-        if queueFamily.queueCount > 0 and presentSupport:
-            indices.presentFamily = i
-        if indices.isComplete():
-            break
-    return indices
-
-
 def chooseSwapSurfaceFormat(availableFormats):
     if (
         len(availableFormats) == 1
@@ -75,39 +43,12 @@ def chooseSwapExtent(capabilities):
     return vk.VkExtent2D(width, height)
 
 
-class SwapChainSupportDetails:
-    def __init__(self):
-        self.capabilities = None
-        self.formats = None
-        self.presentModes = None
-
-
-def querySwapChainSupport(instance, surface, device):
-    details = SwapChainSupportDetails()
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vk.vkGetInstanceProcAddr(
-        instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"
-    )
-    details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface)
-
-    vkGetPhysicalDeviceSurfaceFormatsKHR = vk.vkGetInstanceProcAddr(
-        instance, "vkGetPhysicalDeviceSurfaceFormatsKHR"
-    )
-    details.formats = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface)
-
-    vkGetPhysicalDeviceSurfacePresentModesKHR = vk.vkGetInstanceProcAddr(
-        instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"
-    )
-    details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface)
-
-    return details
-
-
 class Figure:
-    def __init__(self, instance, surface):
+    def __init__(self, instance, surface, physicaldevice):
         self._actual_instance = instance
         self._instance = instance._handle
         self._surface = surface._handle
+        self._physicalDevice = physicaldevice._ref  # not handle
         self._init()
         self._initVulkan()
 
@@ -118,7 +59,6 @@ class Figure:
     def _init(self):
         self._swapchain = None
         self._device = None
-        self._physicalDevice = None  # todo: can I ditch this, its not an "object"
         self._dbcallback = None
 
     def _destroy(self):
@@ -126,7 +66,6 @@ class Figure:
             vk.vkDestroyDevice(self._device, None)
 
     def _initVulkan(self):
-        self._physicalDevice = self._selectPhysicalDevice()
         self._device = self._createLogicalDevice()
         self._swapchain = self._createSwapChain()
         # self.__createImageViews()
@@ -137,42 +76,12 @@ class Figure:
         # self.__createCommandBuffers()
         # self.__createSemaphores()
 
-    def _selectPhysicalDevice(self):
-        selected = None
-        for device in vk.vkEnumeratePhysicalDevices(self._instance):
-            indices = findQueueFamilies(self._instance, self._surface, device)
-            extensionsSupported = any(
-                extension.extensionName in deviceExtensions
-                for extension in vk.vkEnumerateDeviceExtensionProperties(device, None)
-            )
-            swapChainAdequate = False
-            if extensionsSupported:
-                swapChainSupport = querySwapChainSupport(
-                    self._instance, self._surface, device
-                )
-                swapChainAdequate = (not swapChainSupport.formats is None) and (
-                    not swapChainSupport.presentModes is None
-                )
-            if indices.isComplete() and extensionsSupported and swapChainAdequate:
-                selected = device
-                break
-        if selected is None:
-            raise Exception("failed to find a suitable GPU!")
-        device_props = vk.vkGetPhysicalDeviceProperties(selected)
-        print("selected", device_props.deviceName)
-        return selected
-
-    def get_available_devices(self):
-        devices = []
-        for device in vk.vkEnumeratePhysicalDevices(self._instance):
-            device_props = vk.vkGetPhysicalDeviceProperties(device)
-            devices.append(struct_to_dict(device_props))
-        return devices
-
     def _createLogicalDevice(self):
         # In principal, we can create multiple logical devices on the same physical device.
 
         # todo: can/should we cache the queue family info?
+        from visvis2.gpuapi._device import findQueueFamilies, deviceExtensions
+
         indices = findQueueFamilies(self._instance, self._surface, self._physicalDevice)
         uniqueQueueFamilies = {}.fromkeys(
             (indices.graphicsFamily, indices.presentFamily)
@@ -213,6 +122,8 @@ class Figure:
         return device
 
     def _createSwapChain(self):
+        from visvis2.gpuapi._device import querySwapChainSupport
+
         swapChainSupport = querySwapChainSupport(
             self._instance, self._surface, self._physicalDevice
         )
@@ -239,6 +150,8 @@ class Figure:
             imageArrayLayers=1,
             imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         )
+
+        from visvis2.gpuapi._device import findQueueFamilies
 
         indices = findQueueFamilies(self._instance, self._surface, self._physicalDevice)
         if indices.graphicsFamily != indices.presentFamily:
@@ -275,5 +188,9 @@ class Figure:
 surface = gpuapi.Surface()
 instance = gpuapi.Instance(surface=surface)
 surface.integrate_asyncio()
+for d in instance.get_available_devices():
+    if d.is_suitable(surface):
+        pdevice = d
 
-fig = Figure(instance, surface)
+
+fig = Figure(instance, surface, pdevice)

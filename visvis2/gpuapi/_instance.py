@@ -1,8 +1,8 @@
 import vulkan as vk
 from __main__ import __name__ as default_app_name
 
-from ._core import GPUObject
-
+from ._core import GPUObject, struct_to_dict
+from ._device import PhysicalDevice
 
 version_info = (0, 0, 1)  # of visvis2
 
@@ -115,12 +115,18 @@ class Instance(GPUObject):
         """
         # Aparently the VK_LAYER_LUNARG_standard_validation is a good default
         # https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Validation_layers
-        availableLayers = vk.vkEnumerateInstanceLayerProperties()
-        return [layerProperties.layerName for layerProperties in availableLayers]
+        layer_refs = vk.vkEnumerateInstanceLayerProperties()
+        return [layerProperties.layerName for layerProperties in layer_refs]
 
     def get_available_extensions(self):
-        """ Get the available Vulkan extensions for this system.
+        """ Get a list of the available Vulkan extensions for this system.
         """
-        return [
-            x.extensionName for x in vk.vkEnumerateInstanceExtensionProperties(None)
-        ]
+        extension_refs = vk.vkEnumerateInstanceExtensionProperties(None)
+        return [x.extensionName for x in extension_refs]
+
+    def get_available_devices(self):
+        """ Get a list of the available devices present on this system.
+        Each device is represented as a dict.
+        """
+        device_refs = vk.vkEnumeratePhysicalDevices(self._handle)
+        return [PhysicalDevice(self, d) for d in device_refs]

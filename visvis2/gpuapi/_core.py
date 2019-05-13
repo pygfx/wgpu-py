@@ -5,7 +5,8 @@ class GPUObject:
     _handle = None
 
     def __init__(self):
-        self._handle = self._create_handle()
+        self._handle = 0
+        raise NotImplementedError()
 
     def __del__(self):
         self._destroy()
