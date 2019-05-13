@@ -6,25 +6,28 @@ from ._core import GPUObject
 
 version_info = (0, 0, 1)  # of visvis2
 
-default_validation_layers = ["VK_LAYER_LUNARG_standard_validation"]
-default_validation_layers = ["VK_LAYER_VALVE_steam_overlay"]
-# VK_LAYER_LUNARG_standard_validation
-# VK_LAYER_VALVE_steam_overlay
-
 
 class Instance(GPUObject):
-    def __init__(self, *, surface=None, extensions=None, validation_layers=None):
+    def __init__(self, *, surface=None, extensions=None, validation_layers="default"):
 
-        # Check validation layers
+        # Check validation layers. The default is to use the first available.
+        # A good default is VK_LAYER_LUNARG_standard_validation, but it is not
+        # always available. E.g. my HP laptop has VK_LAYER_VALVE_steam_overlay
+        # instead.
         available_validation_layers = self.get_available_validation_layers()
         if validation_layers is None:
-            validation_layers = [
-                x for x in default_validation_layers if x in available_validation_layers
-            ]
+            validation_layers = []
+        elif validation_layers == "default":
+            if available_validation_layers:
+                validation_layers = [available_validation_layers[0]]
+            else:
+                validation_layers = []
+        elif validation_layers == "all":
+            validation_layers = list(available_validation_layers)
         else:
             for layer in validation_layers:
                 if layer not in available_validation_layers:
-                    raise ValueError(f"validation layers {layer} not available!")
+                    raise ValueError(f"validation layer {layer} not available!")
         self._validation_layers = validation_layers
 
         # Make sure that extensions are str
