@@ -11,6 +11,14 @@ glfw.init()
 
 
 class GLFWSurfaceBackend(SurfaceBackend):
+    """ Surface backend for GLFW.
+    """
+
+    def get_required_extensions(self):
+        """ Get the extensions that GLFW needs to run Vulkan. The Instance needs
+        to call this before it can create it's handle.
+        """
+        return [str(x) for x in glfw.get_required_instance_extensions()]
 
     def create_surface(self, instance_handle, width, height, name):
 

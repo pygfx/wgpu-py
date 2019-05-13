@@ -1,5 +1,7 @@
 
 class GPUObject:
+    """ The base class for all GPU objects.
+    """
 
     _handle = None
 
@@ -13,7 +15,7 @@ class GPUObject:
         pass
 
 
-
+# todo: perhaps the python vulkan lib has someting like this?
 def struct_to_dict(s):
     d = {}
     if repr(s).startswith("<vulkan") and hasattr(s, "obj"):
@@ -29,4 +31,3 @@ def struct_to_dict(s):
                 val = struct_to_dict(val)
             d[key] = val
     return d
-

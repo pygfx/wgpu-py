@@ -232,8 +232,8 @@ class Figure:
 
 ##
 
-instance = gpuapi.Instance()
-surface = gpuapi.Surface(instance)
+surface = gpuapi.Surface()
+instance = gpuapi.Instance(surface=surface)
 surface.integrate_asyncio()
 
 fig = Figure(instance, surface)
