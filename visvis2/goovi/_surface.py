@@ -5,6 +5,8 @@ import vulkan as vk
 from ._core import GPUObject
 
 
+# todo: what about offscreen rendering, and compute shaders?
+
 class Surface(GPUObject):
     """ Represents a screen surface to draw to.
     Needs a windowing toolkit (glfw only for now, but later also sdl2 and qt).

@@ -8,6 +8,11 @@ version_info = (0, 0, 1)  # of visvis2
 
 
 class Instance(GPUObject):
+    """ The root object for any Vulkan-based system. Most objects need a reference
+    to this. It is used for general configuration, and also for listing
+    validation layers, extensions, and available (physical) devices.
+    """
+
     def __init__(self, *, surface=None, extensions=None, validation_layers="default"):
 
         # Check validation layers. The default is to use the first available.
