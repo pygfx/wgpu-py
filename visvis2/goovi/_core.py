@@ -9,7 +9,10 @@ class GPUObject:
         raise NotImplementedError()
 
     def __del__(self):
-        self._destroy()
+        try:
+            self._destroy()
+        except Exception as err:
+            print(f"Error destroying {self.__class__.__name__} object: {str(err)}")
 
     def _destroy(self):
         pass

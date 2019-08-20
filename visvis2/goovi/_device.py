@@ -162,14 +162,26 @@ class LogicalDevice(GPUObject):
     def __init__(self, instance, surface, pdevice):
         self._handle = None
         self._swapchain = None
+        self._swapChainImageViews = None
 
         # self._instance = instance
         # self._surface = surface
-        # self._pdevice = pdevice
+        self._pdevice = pdevice
 
         self._handle = self._create_handle(instance, surface, pdevice)
+        self._createSwapChain(instance, surface, pdevice)
+        self._createSwapChainImageViews()
 
     def _destroy(self):
+        if self._swapChainImageViews:
+            for i in self._swapChainImageViews:
+                vk.vkDestroyImageView(self._handle, i, None)
+        self._swapChainImageViews = None
+        if self._swapchain:
+            func = vk.vkGetDeviceProcAddr(self._handle, "vkDestroySwapchainKHR")
+            if func:
+                func(self._handle, self._swapchain, None)
+        self._swapchain = None
         if self._handle:
             vk.vkDestroyDevice(self._handle, None)
         self._handle = None
@@ -218,7 +230,7 @@ class LogicalDevice(GPUObject):
     def _createSwapChain(self, instance, surface, pdevice):
         # todo: Not sure if all this swap chan KHR stuff should be here or in the Surface ...
 
-        instance_handle = instance._handler
+        instance_handle = instance._handle
         surface_handle = surface._handle
         pdevice_ref = pdevice._ref
 
@@ -266,14 +278,41 @@ class LogicalDevice(GPUObject):
         createInfo.clipped = True
 
         vkCreateSwapchainKHR = vk.vkGetDeviceProcAddr(
-            self._device, "vkCreateSwapchainKHR"
+            self._handle, "vkCreateSwapchainKHR"
         )
-        self._swapChain = vkCreateSwapchainKHR(self._device, createInfo, None)
-
-        vkGetSwapchainImagesKHR = vk.vkGetDeviceProcAddr(
-            self._device, "vkGetSwapchainImagesKHR"
-        )
-        self._swapChainImages = vkGetSwapchainImagesKHR(self._device, self._swapChain)
-
+        self._swapchain = vkCreateSwapchainKHR(self._handle, createInfo, None)
         self._swapChainImageFormat = surfaceFormat.format
         self._swapChainExtent = extent
+
+    def _createSwapChainImageViews(self):
+
+        # Create swap-chain images
+        vkGetSwapchainImagesKHR = vk.vkGetDeviceProcAddr(
+            self._handle, "vkGetSwapchainImagesKHR"
+        )
+        self._swapChainImages = vkGetSwapchainImagesKHR(self._handle, self._swapchain)
+
+        # Create swap-chain image views
+        self._swapChainImageViews = []
+        components = vk.VkComponentMapping(
+            vk.VK_COMPONENT_SWIZZLE_IDENTITY,
+            vk.VK_COMPONENT_SWIZZLE_IDENTITY,
+            vk.VK_COMPONENT_SWIZZLE_IDENTITY,
+            vk.VK_COMPONENT_SWIZZLE_IDENTITY,
+        )
+        subresourceRange = vk.VkImageSubresourceRange(
+            vk.VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1
+        )
+        for i, image in enumerate(self._swapChainImages):
+            createInfo = vk.VkImageViewCreateInfo(
+                sType=vk.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+                flags=0,
+                image=image,
+                viewType=vk.VK_IMAGE_VIEW_TYPE_2D,
+                format=self._swapChainImageFormat,
+                components=components,
+                subresourceRange=subresourceRange,
+            )
+            self._swapChainImageViews.append(
+                vk.vkCreateImageView(self._handle, createInfo, None)
+            )
