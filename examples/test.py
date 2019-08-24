@@ -12,10 +12,10 @@ class Figure:
     """ Wraps stuff ...
     """
 
-    def __init__(self, instance, surface, logicaldevice):
+    def __init__(self, instance, surface, device):
         self._instance = instance
         self._surface = surface
-        self._device = logicaldevice
+        self._device = device
 
         self._renderPass = None
         self._pipelineLayout = None
@@ -109,6 +109,23 @@ class Figure:
         return vk.vkCreateRenderPass(device_handle, renderPassInfo, None)
 
     def _createGraphicsPipeline(self):
+        # There are two types of Pipelines – ComputePipeline and GraphicsPipeline.
+        # ComputePipeline is the simpler one, because all it supports is compute-only programs.
+        # For each different set of parameters needed during rendering
+        # you must create a new Pipeline. You can then set it as the
+        # current active Pipeline in a CommandBuffer by calling the
+        # function vkCmdBindPipeline .
+        # There is also a helper object called PipelineCache, that can
+        # be used to speed up pipeline creation. It is a simple object
+        # that you can optionally pass in during Pipeline creation, but
+        # that really helps to improve performance via reduced memory
+        # usage, and the compilation time of your pipelines. The driver
+        # can use it internally to store some intermediate data, so
+        # that the creation of similar Pipelines could potentially be
+        # faster. You can also save and load the state of a
+        # PipelineCache object to a buffer of binary data, to save it
+        # on disk and use it the next time your application is executed.
+        # We recommend you use them!
 
         swapChainExtent = self._device._swapChainExtent
         device_handle = self._device._handle
@@ -261,14 +278,12 @@ class Figure:
         self._swapChainFramebuffers = swapChainFramebuffers
 
     def _createCommandPool(self):
-
+        # A CommandPool is a simple object that is used to allocate
+        # CommandBuffers. It’s connected to a specific Queue Family.
         device_handle = self._device._handle
         pdevice_ref = self._device._pdevice._ref
 
-        # todo: yuk
-        instance_handle = self._instance._handle
-        surface_handle = self._surface._handle
-        queueFamilyIndices = goovi._device.findQueueFamilies(instance_handle, surface_handle, pdevice_ref)
+        queueFamilyIndices = self._device._pdevice.findQueueFamilies(self._surface)
 
         poolInfo = vk.VkCommandPoolCreateInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -278,6 +293,13 @@ class Figure:
         self._commandPool = vk.vkCreateCommandPool(device_handle, poolInfo, None)
 
     def _createCommandBuffers(self):
+        # A CommandBuffer is allocated from a specific CommandPool. It
+        # represents a buffer of various commands to be executed by a
+        # logical Device. You can call various functions on a command
+        # buffer, all of them starting with vkCmd . They are used to
+        # specify the order, type and parameters of tasks that should be
+        # performed when the CommandBuffer is submitted to a Queue and
+        # is finally consumed by the Device.
 
         device_handle = self._device._handle
         commandPool = self._commandPool
@@ -314,7 +336,7 @@ class Figure:
                 renderArea=[[0, 0], swapChainExtent],
             )
 
-            clearColor = vk.VkClearValue([[0.0, 0.0, 0.0, 1.0]])
+            clearColor = vk.VkClearValue([[0.0, 0.0, 0.2, 1.0]])
             renderPassInfo.clearValueCount = 1
             renderPassInfo.pClearValues = vk.ffi.addressof(clearColor)
 
@@ -408,12 +430,13 @@ class Figure:
 
 ##
 
-surface = goovi.Surface()
-instance = goovi.Instance(surface=surface)
+instance = goovi.Instance()
+surface = goovi.Surface(instance)
 for d in instance.get_available_devices():
     if d.is_suitable(surface):
         pdevice = d
-device = goovi.LogicalDevice(instance, surface, pdevice)
+
+device = goovi.Device(instance, surface, pdevice)
 
 fig = Figure(instance, surface, device)
 fig.keep_drawing()

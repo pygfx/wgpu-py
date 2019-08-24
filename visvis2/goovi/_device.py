@@ -6,63 +6,6 @@ from ._core import GPUObject, struct_to_dict
 deviceExtensions = [vk.VK_KHR_SWAPCHAIN_EXTENSION_NAME]
 
 
-class QueueFamilyIndices:
-    def __init__(self):
-        self.graphicsFamily = -1
-        self.presentFamily = -1
-
-    def isComplete(self):
-        return self.graphicsFamily >= 0 and self.presentFamily >= 0
-
-
-def findQueueFamilies(instance, surface, device):
-    vkGetPhysicalDeviceSurfaceSupportKHR = vk.vkGetInstanceProcAddr(
-        instance, "vkGetPhysicalDeviceSurfaceSupportKHR"
-    )
-    indices = QueueFamilyIndices()
-    queueFamilies = vk.vkGetPhysicalDeviceQueueFamilyProperties(device)
-    for i, queueFamily in enumerate(queueFamilies):
-        if (
-            queueFamily.queueCount > 0
-            and queueFamily.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
-        ):
-            indices.graphicsFamily = i
-        presentSupport = vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface)
-        if queueFamily.queueCount > 0 and presentSupport:
-            indices.presentFamily = i
-        if indices.isComplete():
-            break
-    return indices
-
-
-class SwapChainSupportDetails:
-    def __init__(self):
-        self.capabilities = None
-        self.formats = None
-        self.presentModes = None
-
-
-def querySwapChainSupport(instance, surface, device):
-    details = SwapChainSupportDetails()
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vk.vkGetInstanceProcAddr(
-        instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"
-    )
-    details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface)
-
-    vkGetPhysicalDeviceSurfaceFormatsKHR = vk.vkGetInstanceProcAddr(
-        instance, "vkGetPhysicalDeviceSurfaceFormatsKHR"
-    )
-    details.formats = vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface)
-
-    vkGetPhysicalDeviceSurfacePresentModesKHR = vk.vkGetInstanceProcAddr(
-        instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"
-    )
-    details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface)
-
-    return details
-
-
 def chooseSwapSurfaceFormat(availableFormats):
     if (
         len(availableFormats) == 1
@@ -100,63 +43,14 @@ def chooseSwapExtent(capabilities):
     return vk.VkExtent2D(width, height)
 
 
-# Note that this object does NOT have a handle.
-class PhysicalDevice(GPUObject):
-    """ Representation of a physical device, e.g. your integrated
-    graphics or NVidia hardware. This object exposes the hardware's capabilities
-    and as such is used to select a device to render on.
+
+class Device(GPUObject):
     """
+    A Device can be thought of as a logical device, or opened device.
+    It is the main object that represents an initialized Vulkan device
+    that is ready to create all other objects.
 
-    def __init__(self, instance, ref):
-        self._instance = instance
-        self._handle = None
-        self._ref = ref
-        self._props = struct_to_dict(vk.vkGetPhysicalDeviceProperties(ref))
-        self._name = self._props["deviceName"]
-
-    def __repr__(self):
-        return f"<PhysicalDevice '{self._name}' {self._props['deviceID']}>"
-
-    @property
-    def props(self):
-        """ The properties of this device.
-        """
-        return self._props
-
-    @property
-    def limits(self):
-        """ The limits of this device (shorthand for ``d.props["limits"]``).
-        """
-        return self._props["limits"]
-
-    def is_suitable(self, surface):
-        """ Get whether this device is suitable for the given surface.
-        """
-        instance_handle = self._instance._handle
-        surface_handle = surface._handle
-        device_ref = self._ref
-
-        indices = findQueueFamilies(instance_handle, surface_handle, device_ref)
-        extensionsSupported = any(
-            extension.extensionName in deviceExtensions
-            for extension in vk.vkEnumerateDeviceExtensionProperties(device_ref, None)
-        )
-        swapChainAdequate = False
-        if extensionsSupported:
-            swapChainSupport = querySwapChainSupport(
-                instance_handle, surface_handle, device_ref
-            )
-            swapChainAdequate = (not swapChainSupport.formats is None) and (
-                not swapChainSupport.presentModes is None
-            )
-        if indices.isComplete() and extensionsSupported and swapChainAdequate:
-            return True
-
-
-class LogicalDevice(GPUObject):
-    """ ...
-
-    In principal, we can create multiple logical devices on the same physical device.
+    In principal you can create multiple logical devices in the same application.
     """
 
     def __init__(self, instance, surface, pdevice):
@@ -187,7 +81,7 @@ class LogicalDevice(GPUObject):
         self._handle = None
 
     def _create_handle(self, instance, surface, pdevice):
-        indices = findQueueFamilies(instance._handle, surface._handle, pdevice._ref)
+        indices = pdevice.findQueueFamilies(surface)
 
         uniqueQueueFamilies = {}.fromkeys(
             (indices.graphicsFamily, indices.presentFamily)
@@ -222,21 +116,26 @@ class LogicalDevice(GPUObject):
             raise Exception("failed to create logical device!")
 
         # todo: where to instantiate these?
+        # A Queue is an object representing a queue of commands to be
+        # executed on the device. All the actual work to be done by the
+        # GPU is requested by filling CommandBuffers and submitting them
+        # to Queues, using the function vkQueueSubmit . If you have
+        # multiple queues like the main graphics queue and a compute
+        # queue, you can submit different CommandBuffers to each of them.
+        # This way you can enable asynchronous compute, which can lead
+        # to a substantial speed up if done right.
         self._graphicsQueue = vk.vkGetDeviceQueue(device, indices.graphicsFamily, 0)
         self._presentQueue = vk.vkGetDeviceQueue(device, indices.presentFamily, 0)
+        self._computeQueue = None
 
         return device
 
     def _createSwapChain(self, instance, surface, pdevice):
         # todo: Not sure if all this swap chan KHR stuff should be here or in the Surface ...
 
-        instance_handle = instance._handle
         surface_handle = surface._handle
-        pdevice_ref = pdevice._ref
 
-        swapChainSupport = querySwapChainSupport(
-            instance_handle, surface_handle, pdevice_ref
-        )
+        swapChainSupport = pdevice.querySwapChainSupport(surface)
 
         surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats)
         presentMode = chooseSwapPresentMode(swapChainSupport.presentModes)
@@ -261,7 +160,7 @@ class LogicalDevice(GPUObject):
             imageUsage=vk.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         )
 
-        indices = findQueueFamilies(instance_handle, surface_handle, pdevice_ref)
+        indices = pdevice.findQueueFamilies(surface)
         if indices.graphicsFamily != indices.presentFamily:
             createInfo.imageSharingMode = vk.VK_SHARING_MODE_CONCURRENT
             createInfo.queueFamilyIndexCount = 2
@@ -281,6 +180,12 @@ class LogicalDevice(GPUObject):
             self._handle, "vkCreateSwapchainKHR"
         )
         self._swapchain = vkCreateSwapchainKHR(self._handle, createInfo, None)
+        # The swapchain represents a set of images that can be presented
+        # on the Surface, e.g. using double- or triple-buffering. From
+        # the swapchain you can query it for the Images it contains.
+        # These images already have their backing memory allocated by
+        # the system.
+
         self._swapChainImageFormat = surfaceFormat.format
         self._swapChainExtent = extent
 

@@ -5,20 +5,20 @@ import glfw
 import vulkan as vk
 
 from ._surface import SurfaceBackend
+from ._instance import register_standard_extension
 
 
 glfw.init()
 
 
+# Register the extensions that we need
+for x in glfw.get_required_instance_extensions():
+    register_standard_extension(str(x))
+
+
 class GLFWSurfaceBackend(SurfaceBackend):
     """ Surface backend for GLFW.
     """
-
-    def get_required_extensions(self):
-        """ Get the extensions that GLFW needs to run Vulkan. The Instance needs
-        to call this before it can create it's handle.
-        """
-        return [str(x) for x in glfw.get_required_instance_extensions()]
 
     def create_surface(self, instance_handle, width, height, name):
 
