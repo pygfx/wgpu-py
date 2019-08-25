@@ -45,7 +45,7 @@ def fragment_shader():
     # layout(location = 0) out vec4 outColor;
 
     def main():
-        outColor = vec4(fragColor, 1.0)
+        outColor = vec4(fragColor, 0.5)
 
 
 def get_shader_from_spirv(device, code):
@@ -65,9 +65,9 @@ def get_vert_shader(device):
 
 
 def get_frag_shader(device):
-    nogit = os.path.abspath(os.path.join(__file__, "..", "..", "..", "nogit"))
-    with open(os.path.join(nogit, "hello_triangle_frag.spv"), "rb") as sf:
-        code = sf.read()
+    # nogit = os.path.abspath(os.path.join(__file__, "..", "..", "..", "nogit"))
+    # with open(os.path.join(nogit, "hello_triangle_frag.spv"), "rb") as sf:
+        # code = sf.read()
 
     x = Python2SpirVCompiler(fragment_shader)
     x.start_parsing()

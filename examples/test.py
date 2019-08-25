@@ -7,6 +7,36 @@ import vulkan as vk  # todo: should not need this in examples
 from visvis2 import goovi, spirv
 
 
+class Wobject:
+    """
+    Attempt at making the abstraction of an object, like a mesh, or a Volume.
+    In this case its something that draws a triangle.
+
+    In most cases, all objects of the same type share the same shaders, and other
+    stuff, so they can also share the pipeline object.
+    """
+
+    _pipelinecache = {}
+
+    def __init__(self):
+        pass
+
+    def get_pipeline(self, device, renderpass):
+        key = device._handle, renderpass
+        if key not in Wobject._pipelinecache:
+            shader_modules = self.get_shaders(device)
+            pl = goovi.GraphicsPipeline(device, renderpass, shader_modules)
+            Wobject._pipelinecache[key] = pl
+        return Wobject._pipelinecache[key]
+
+
+    def get_shaders(self, device):
+
+        device_handle = device._handle
+        return {"vertex": spirv.get_vert_shader(device_handle),
+                "fragment": spirv.get_frag_shader(device_handle),
+                }
+
 
 class Figure:
     """ Wraps stuff ...
@@ -18,8 +48,6 @@ class Figure:
         self._device = device
 
         self._renderPass = None
-        self._pipelineLayout = None
-        self._graphicsPipeline = None
         self._swapChainFramebuffers = None
         self._commandPool = None
         self._commandBuffers = None
@@ -27,11 +55,17 @@ class Figure:
         self._renderFinishedSemaphore = None
 
         self._renderPass = self._createRenderPass()
-        self._createGraphicsPipeline()
+
+        self._scene = [Wobject(), Wobject()]
+        self._pipelines =[]
+        for wobject in self._scene:
+            self._pipelines.append(wobject.get_pipeline(self._device, self._renderPass))
+
         self._createFramebuffers()
         self._createCommandPool()
         self._createCommandBuffers()
         self._createSemaphores()
+
 
     def destroy(self):
         # todo: this does not get called
@@ -58,14 +92,6 @@ class Figure:
             for i in self._swapChainFramebuffers:
                 vk.vkDestroyFramebuffer(device_handle, i, None)
         self._swapChainFramebuffers = None
-
-        if self._graphicsPipeline:
-            vkDestroyPipeline(device_handle, self._graphicsPipeline, None)
-        self._graphicsPipeline = None
-
-        if self._pipelineLayout:
-            vk.vkDestroyPipelineLayout(device_handle, self._pipelineLayout, None)
-        self._pipelineLayout = None
 
         if self._renderPass:
             vk.vkDestroyRenderPass(device_handle, self._renderPass, None)
@@ -108,147 +134,7 @@ class Figure:
 
         return vk.vkCreateRenderPass(device_handle, renderPassInfo, None)
 
-    def _createGraphicsPipeline(self):
-        # There are two types of Pipelines – ComputePipeline and GraphicsPipeline.
-        # ComputePipeline is the simpler one, because all it supports is compute-only programs.
-        # For each different set of parameters needed during rendering
-        # you must create a new Pipeline. You can then set it as the
-        # current active Pipeline in a CommandBuffer by calling the
-        # function vkCmdBindPipeline .
-        # There is also a helper object called PipelineCache, that can
-        # be used to speed up pipeline creation. It is a simple object
-        # that you can optionally pass in during Pipeline creation, but
-        # that really helps to improve performance via reduced memory
-        # usage, and the compilation time of your pipelines. The driver
-        # can use it internally to store some intermediate data, so
-        # that the creation of similar Pipelines could potentially be
-        # faster. You can also save and load the state of a
-        # PipelineCache object to a buffer of binary data, to save it
-        # on disk and use it the next time your application is executed.
-        # We recommend you use them!
 
-        swapChainExtent = self._device._swapChainExtent
-        device_handle = self._device._handle
-        renderPass = self._renderPass
-
-        path = os.path.dirname(os.path.abspath(__file__))
-        vertShaderModule = spirv.get_vert_shader(device_handle)
-        fragShaderModule = spirv.get_frag_shader(device_handle)
-        # vertShaderModule = self.__createShaderModule(os.path.join(path, 'hello_triangle_vert.spv'))
-        # fragShaderModule = self.__createShaderModule(os.path.join(path, 'hello_triangle_frag.spv'))
-
-        vertShaderStageInfo = vk.VkPipelineShaderStageCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            flags=0,
-            stage=vk.VK_SHADER_STAGE_VERTEX_BIT,
-            module=vertShaderModule,
-            pName="main",
-        )
-
-        fragShaderStageInfo = vk.VkPipelineShaderStageCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            flags=0,
-            stage=vk.VK_SHADER_STAGE_FRAGMENT_BIT,
-            module=fragShaderModule,
-            pName="main",
-        )
-
-        shaderStages = [vertShaderStageInfo, fragShaderStageInfo]
-
-        vertexInputInfo = vk.VkPipelineVertexInputStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            vertexBindingDescriptionCount=0,
-            vertexAttributeDescriptionCount=0,
-        )
-
-        inputAssembly = vk.VkPipelineInputAssemblyStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-            topology=vk.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-            primitiveRestartEnable=True,
-        )
-
-        viewport = vk.VkViewport(
-            0.0,
-            0.0,
-            float(swapChainExtent.width),
-            float(swapChainExtent.height),
-            0.0,
-            1.0,
-        )
-        scissor = vk.VkRect2D([0, 0], swapChainExtent)
-        viewportState = vk.VkPipelineViewportStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-            viewportCount=1,
-            pViewports=viewport,
-            scissorCount=1,
-            pScissors=scissor,
-        )
-
-        rasterizer = vk.VkPipelineRasterizationStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-            depthClampEnable=False,
-            rasterizerDiscardEnable=False,
-            polygonMode=vk.VK_POLYGON_MODE_FILL,
-            lineWidth=1.0,
-            cullMode=vk.VK_CULL_MODE_BACK_BIT,
-            frontFace=vk.VK_FRONT_FACE_CLOCKWISE,
-            depthBiasEnable=False,
-        )
-
-        multisampling = vk.VkPipelineMultisampleStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-            sampleShadingEnable=False,
-            rasterizationSamples=vk.VK_SAMPLE_COUNT_1_BIT,
-        )
-
-        colorBlendAttachment = vk.VkPipelineColorBlendAttachmentState(
-            colorWriteMask=vk.VK_COLOR_COMPONENT_R_BIT
-            | vk.VK_COLOR_COMPONENT_G_BIT
-            | vk.VK_COLOR_COMPONENT_B_BIT
-            | vk.VK_COLOR_COMPONENT_A_BIT,
-            blendEnable=False,
-        )
-
-        colorBlending = vk.VkPipelineColorBlendStateCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-            logicOpEnable=False,
-            logicOp=vk.VK_LOGIC_OP_COPY,
-            attachmentCount=1,
-            pAttachments=colorBlendAttachment,
-            blendConstants=[0.0, 0.0, 0.0, 0.0],
-        )
-
-        pipelineLayoutInfo = vk.VkPipelineLayoutCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            setLayoutCount=0,
-            pushConstantRangeCount=0,
-        )
-
-        self._pipelineLayout = vk.vkCreatePipelineLayout(
-            device_handle, pipelineLayoutInfo, None
-        )
-
-        pipelineInfo = vk.VkGraphicsPipelineCreateInfo(
-            sType=vk.VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-            stageCount=2,
-            pStages=shaderStages,
-            pVertexInputState=vertexInputInfo,
-            pInputAssemblyState=inputAssembly,
-            pViewportState=viewportState,
-            pRasterizationState=rasterizer,
-            pMultisampleState=multisampling,
-            pColorBlendState=colorBlending,
-            layout=self._pipelineLayout,
-            renderPass=renderPass,
-            subpass=0,
-        )
-
-        self._graphicsPipeline = vk.vkCreateGraphicsPipelines(
-            device_handle, vk.VK_NULL_HANDLE, 1, pipelineInfo, None
-        )
-
-        vk.vkDestroyShaderModule(device_handle, vertShaderModule, None)
-        vk.vkDestroyShaderModule(device_handle, fragShaderModule, None)
 
     def _createFramebuffers(self):
 
@@ -306,7 +192,6 @@ class Figure:
         swapChainFramebuffers = self._swapChainFramebuffers
         renderPass = self._renderPass
         swapChainExtent = self._device._swapChainExtent
-        graphicsPipeline = self._graphicsPipeline
 
         allocInfo = vk.VkCommandBufferAllocateInfo(
             sType=vk.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -342,10 +227,11 @@ class Figure:
 
             vk.vkCmdBeginRenderPass(cmdBuffer, renderPassInfo, vk.VK_SUBPASS_CONTENTS_INLINE)
 
-            vk.vkCmdBindPipeline(
-                cmdBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline
-            )
-            vk.vkCmdDraw(cmdBuffer, 3, 1, 0, 0)
+            for pipeline in self._pipelines:
+                vk.vkCmdBindPipeline(
+                    cmdBuffer, vk.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline._handle
+                )
+                vk.vkCmdDraw(cmdBuffer, 3, 1, 0, 0)
 
             vk.vkCmdEndRenderPass(cmdBuffer)
 

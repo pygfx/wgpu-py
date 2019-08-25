@@ -9,4 +9,5 @@ so that it can hopefully eventually hook into e.g. WebGPU.
 from ._instance import get_available_validation_layers, get_available_extensions
 from ._instance import Instance, PhysicalDevice
 from ._surface import Surface
+from ._pipeline import GraphicsPipeline, ComputePipeline
 from ._device import Device
