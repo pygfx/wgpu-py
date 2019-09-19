@@ -13,9 +13,10 @@ import struct
 import inspect
 
 import vulkan as vk
-from . import commonast
 
-from ._spirv_constants import *
+from visvis2.spirv import commonast
+
+from visvis2.spirv._spirv_constants import *
 
 
 def vertex_shader():
@@ -32,6 +33,20 @@ STORAGE_CLASSES = dict(
     uniform=StorageClass_Uniform,
     output=StorageClass_Output,
 )
+
+
+def vertex_shader():
+
+    fragColor = output(vec3)
+    gl_Position = output(vec4)
+
+    # positions = constant(3, vec2)
+    positions = [vec2(0.0, -0.4), vec2(0.5, 0.4), vec2(-0.5, 0.5)]
+    colors = [vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)]
+
+    def main():
+        gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0)
+        fragColor = colors[gl_VertexIndex]
 
 
 def fragment_shader():
@@ -141,7 +156,10 @@ class Python2SpirVCompiler:
             if name_or_id in scope:
                 break
         else:
-            raise NameError(f"Variable {name_or_id} not found.")
+            if name_or_id == "gl_VertexIndex":
+                return name_or_id, name_or_id, "int", self.create_type_id("int")
+            else:
+                raise NameError(f"Variable {name_or_id} not found.")
         return scope[name_or_id]  # name, id, type, type_id
 
     def create_type_id(self, type_name):
@@ -154,9 +172,13 @@ class Python2SpirVCompiler:
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
             self.gen_instruction_pre(OpTypeVoid, type_id)
             return type_id
+        elif type_name == "uint":
+            self._type_info[type_name] = type_id = self.create_id(type_name, None)
+            self.gen_instruction_pre(OpTypeInt, type_id, 32, 0)  # unsigned
+            return type_id
         elif type_name == "int":
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
-            self.gen_instruction_pre(OpTypeInt, type_id, 32)
+            self.gen_instruction_pre(OpTypeInt, type_id, 32, 1)  # signed
             return type_id
         elif type_name == "float":
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
@@ -169,6 +191,18 @@ class Python2SpirVCompiler:
                 OpTypeVector, type_id, float_id, int(type_name[3:])
             )
             return type_id
+        elif type_name.startswith("array"):
+            _, n, sub_type_name = type_name.split("_", 2)
+            # Handle subtype
+            sub_type_id = self.create_type_id(sub_type_name)
+            # Handle count
+            # count_type_id = self.create_type_id("uint")
+            # self.gen_instruction_pre(OpConstant, count_type_id, 3)
+            # Handle toplevel array type
+            self._type_info[type_name] = type_id = self.create_id(type_name, None)
+            self.gen_instruction_pre(OpTypeArray, type_id, sub_type_id, n)
+            return type_id
+
         else:
             raise NotImplementedError()
 
@@ -284,7 +318,14 @@ class Python2SpirVCompiler:
 
             if isinstance(node.value_node, commonast.Call):
                 funcname = node.value_node.func_node.name
-                argnames = [arg.name for arg in node.value_node.arg_nodes]
+                argnames = []
+                for arg in node.value_node.arg_nodes:
+                    if isinstance(arg, commonast.Num):
+                        argnames.append(arg.value)
+                    elif isinstance(arg, commonast.Name):
+                        argnames.append(arg.name)
+                    else:
+                        raise NotImplementedError()
                 if funcname in ("input", "output"):
                     assert len(argnames) == 1
                     vartype = argnames[0]
@@ -292,6 +333,21 @@ class Python2SpirVCompiler:
                 else:
                     # scope[varname] = ??
                     raise NotImplementedError()
+
+            else:
+                # A constant, I guess
+                if isinstance(node.value_node, commonast.List):
+                    list_vartypes = []
+                    for subnode in node.value_node.element_nodes:
+                        assert isinstance(subnode, commonast.Call)
+                        list_vartypes.append(subnode.func_node.name)
+                    list_vartypes2 = set(list_vartypes)
+                    if len(list_vartypes2) != 1:
+                        raise TypeError("Lists must have uniform element types")
+                    vartype = f"array_{len(list_vartypes)}_{list_vartypes[0]}"
+                else:
+                    raise NotImplementedError()
+                self.create_variable(vartype, varname, STORAGE_CLASSES["constant"])
 
         else:
             root = self.scope_stack[0]
@@ -359,9 +415,34 @@ class Python2SpirVCompiler:
             )
         return result_id
 
+    def parse_Subscript(self, node):
+        if not isinstance(node.value_node, commonast.Name):
+            raise TypeError("Can only slice into direct variables.")
+        if not isinstance(node.slice_node, commonast.Index):
+            raise TypeError("Only singleton indices allowed.")
+
+        value_node = node.value_node
+        index_node = node.slice_node.value_node
+
+        self.parse(value_node)
+        self.parse(index_node)
+        # self.gen_instruction()
+
+        type_id = self.create_type_id("vec2")
+        result_id = self.create_id(type_id)
+
+        return result_id
+
+
+
 
 if __name__ == "__main__":
     x = Python2SpirVCompiler(fragment_shader)
     x.start_parsing()
     with open("b.spv", "wb") as f:
+        f.write(x.dump())
+
+    x = Python2SpirVCompiler(vertex_shader)
+    x.start_parsing()
+    with open("vertexx.spv", "wb") as f:
         f.write(x.dump())
