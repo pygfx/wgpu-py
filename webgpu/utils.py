@@ -2,6 +2,8 @@ from .wgpu import BaseWGPU
 
 
 def help(name_part, look_in_docs=False):
+    """ Print constants, enums, structs, and functions that contain the given name_part.
+    """
 
     name_part = name_part.lower()
 

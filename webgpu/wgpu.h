@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#define WGPUDESIRED_NUM_FRAMES 3
+
 #define WGPUMAX_BIND_GROUPS 4
 
 #define WGPUMAX_COLOR_TARGETS 4
@@ -898,6 +900,8 @@ void wgpu_render_pass_set_viewport(WGPURenderPassId pass_id,
 #if !defined(WGPU_REMOTE)
 WGPUAdapterId wgpu_request_adapter(const WGPURequestAdapterOptions *desc);
 #endif
+
+void wgpu_sampler_destroy(WGPUSamplerId sampler_id);
 
 #if !defined(WGPU_REMOTE)
 WGPUSwapChainOutput wgpu_swap_chain_get_next_texture(WGPUSwapChainId swap_chain_id);

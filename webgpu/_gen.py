@@ -1,5 +1,7 @@
 """
 Script to parse wgpu.h and generate wgpu.py
+
+Source: https://github.com/gfx-rs/wgpu/blob/master/ffi/wgpu.h
 """
 
 import os
@@ -178,7 +180,7 @@ pylines.append(f'"""\n{module_doc.strip()}\n"""\n')
 pylines.append("\nclass BaseWGPU:")
 pylines.append(f'    """ {class_doc.strip()}\n    """')
 
-pylines.append("\n    # %% Functions")
+pylines.append(f"\n    # %% Functions ({len(functions)})")
 for name, d in functions.items():
     assert name.startswith("wgpu_")
     name = name[5:]
@@ -190,24 +192,24 @@ for name, d in functions.items():
     pylines.append(f'        """')
     pylines.append("        raise NotImplementedError()")
 
-pylines.append("\n    # %% Structs\n")
+pylines.append(f"\n    # %% Structs ({len(structs)})\n")
 for name, vals in structs.items():
     assert name.startswith("WGPU")
     name = name[4:]
     c_args = [t + " " + key for key, t in vals.items()]
     py_args = [key + type_annotation(t) for key, t in vals.items()]
     dict_args = [f'"{key}": {key}' for key in vals.keys()]
-    pylines.append(f"\n    def create_{name}({', '.join(py_args)}):")
+    pylines.append(f"\n    def create_{name}(self, *, {', '.join(py_args)}):")
     pylines.append(f'        """ ' + ", ".join(c_args) + ' """')
     pylines.append("        return {"+ ", ".join(dict_args) + "}")
 
-pylines.append("\n    # %% Constants\n")
+pylines.append(f"\n    # %% Constants ({len(constants)})\n")
 for name, val in constants.items():
     assert name.startswith("WGPU")
     name = name[4:]
     pylines.append(f"    {name} = {val!r}")
 
-pylines.append("\n    # %% Enums\n")
+pylines.append(f"\n    # %% Enums ({len(enums)})\n")
 for name, subs in enums.items():
     assert name.startswith("WGPU")
     name = name[4:]
