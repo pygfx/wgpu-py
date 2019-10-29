@@ -10,154 +10,179 @@ https://github.com/realitix/vulkan/blob/master/example/contribs/example_glfw.py
 
 """
 
+import time
 import ctypes
 import asyncio
 
-import glfw
-
 import webgpu
 import webgpu.wgpu_gl
+import webgpu.wgpu_ctypes
+import webgpu.wgpu_ffi
+
+
+# Select backend. When using GL, I need to turn NVidia driver on, because of advanced shaders.
+BACKEND = "FFI"
+assert BACKEND in ("GL", "CTYPES", "FFI")
 
 
 ## Create window
 
 
-glfw.init()
+def create_window(*args):
+    if BACKEND == "GL":
+        return create_window_glfw(*args)
+    else:
+        return create_window_qt(*args)
 
 
-def create_window(width, height, name):
+def create_window_glfw(width, height, name, instance_handle):
+    import glfw
+    glfw.init()
 
-    # Create a window
-    # glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)  # this disabled opengl?
-    glfw.window_hint(glfw.RESIZABLE, False)
-    window = glfw.create_window(width, height, name, None, None)
-    return window
+    # todo: depends on what backend is used, I guess?
+    if BACKEND in ("CTYPES", "FFI"):
+        # Create Window
+        glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
+        glfw.window_hint(glfw.RESIZABLE, False)
+        window = glfw.create_window(width, height, name, None, None)
 
-    # # Create the Vulkan surface object
-    # ffi = vk.ffi
-    # surface = ctypes.c_void_p(0)
-    # # instance = ctypes.cast(int(ffi.cast('intptr_t', instance_handle)), ctypes.c_void_p)
-    # instance = ctypes.cast(
-    #     int(ffi.cast("uintptr_t", instance_handle)), ctypes.c_void_p
-    # )
-    # glfw.create_window_surface(instance, window, None, ctypes.byref(surface))
-    # surface = ffi.cast("VkSurfaceKHR", surface.value)
-    # if surface is None:
-    #     raise Exception("failed to create window surface!")
-    # return surface
+        # todo: how to get the window handle for glfw?
+        # This would have been nice ... but glfw.get_win32_window does not exist
+        # https://github.com/gfx-rs/wgpu/blob/master/examples/triangle/main.c#L167
+        # hwnd = glfw.glfwGetWin32Window(window)
+        # HINSTANCE hinstance = GetModuleHandle(NULL);
+        # surface = wgpu_create_surface_from_windows_hwnd(hinstance, hwnd);
+    else:
+        glfw.window_hint(glfw.RESIZABLE, False)
+        window = glfw.create_window(width, height, name, None, None)
+        glfw.make_context_current(window)
+        surface = window  # todo: surface_id
 
+    async def _keep_glfw_alive():
+        while True:
+            await asyncio.sleep(0.1)
+            if glfw.window_should_close(window):
+                glfw.terminate()
+                break
+            else:
+                glfw.poll_events()
 
-def integrate_asyncio(loop):
-    loop.create_task(_keep_glfw_alive())
-
-
-async def _keep_glfw_alive():
-    while True:
-        await asyncio.sleep(0.1)
-        if glfw.window_should_close(window):
-            glfw.terminate()
-            break
-        else:
-            glfw.poll_events()
+    asyncio.get_event_loop().create_task(_keep_glfw_alive())
+    return surface
 
 
-window = create_window(640, 480, "Triangle WGPU")
-integrate_asyncio(asyncio.get_event_loop())
+def create_window_qt(width, height, name, instance_handle):
+    from PyQt5 import QtCore, QtGui, QtWidgets
 
-glfw.make_context_current(window)
+    app = QtWidgets.QApplication([])
 
-# todo: surface_id
-surface_id = window
+    if BACKEND in ("CTYPES", "FFI"):
+        window = QtGui.QWindow(None)
+        # Use winId() or effectiveWinId() to get the Windows window handle
+        hwnd = webgpu.wgpu_ffi.ffi.cast("void *", int(window.winId()))
+        hinstance = webgpu.wgpu_ffi.ffi.NULL
+        surface = wgpu.create_surface_from_windows_hwnd(hinstance, hwnd)
+    else:
+        # class MyQt5OpenGLWidget(QtWidgets.QOpenGLWidget):
+        #     def paintEvent(self, event):
+        #         self.makeCurrent()
+        # todo: GL does currently not work on Qt - I'm fighting contexts / swap buffers
+        window = QtGui.QWindow(None)
+        window.setSurfaceType(QtGui.QWindow.OpenGLSurface)
+        window.ctx = QtGui.QOpenGLContext(window)
+        window.ctx.setFormat(window.requestedFormat())
+        window.ctx.create()
+        window.ctx.makeCurrent(window)
+        surface = window
+
+    window.resize(width, height)
+    window.setTitle(name + " | " + BACKEND)
+    window.show()
+
+    async def _keep_qt_alive():
+        while window.isVisible():
+            await asyncio.sleep(0.1)
+            app.flush()
+            app.processEvents()
+
+    asyncio.get_event_loop().create_task(_keep_qt_alive())
+    return surface
 
 ##
 
 # Instantiate gl-based wgpu context
-wgpu = webgpu.wgpu_gl.GlWGPU()
+if BACKEND == "GL":
+    wgpu = webgpu.wgpu_gl.GlWGPU()
+elif BACKEND == "CTYPES":
+    wgpu = webgpu.wgpu_ctypes.RsWGPU()
+elif BACKEND == "FFI":
+    wgpu = webgpu.wgpu_ffi.RsWGPU()
+else:
+    raise RuntimeError(f"Invalid backend {BACKEND}")
+
 
 adapter_id = wgpu.request_adapter(
     wgpu.create_RequestAdapterOptions(
         power_preference=wgpu.PowerPreference_Default,
-        backends=2 | 4 | 8  # backend bits - no idea what this means
+        backends=1 | 2 | 4 | 8  # backend bits - no idea what this means
         )
 )
 
 device_des = wgpu.create_DeviceDescriptor(
     extensions=wgpu.create_Extensions(anisotropic_filtering=False),
-    limits=wgpu.create_Limits(max_bind_groups=99)
+    limits=wgpu.create_Limits(max_bind_groups=8)
 )
 
 device_id = wgpu.adapter_request_device(adapter_id, device_des)
 
+surface_id = create_window(640, 480, "Triangle WGPU", device_id)
 
 # gl_VertexIndex vs gl_InstanceID
 
-vertex_code = """
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-//#extension GL_KHR_vulkan_glsl : enable
 
-out gl_PerVertex {
-    vec4 gl_Position;
-};
+def make_code(vert_or_frag):
+    # Get filename and load file
+    assert vert_or_frag in ("vert", "frag")
+    filename = "shaders/triangle." + vert_or_frag
+    if BACKEND != "GL":
+        filename += ".spv"
+    data = open(filename, 'rb').read()
+    # Process the data
+    if BACKEND == "GL":
+        return data.decode()
+    else:
+        # todo: if using the wgpu lib, need SpirV code as uint32 array
+        import cffi
+        ffi = cffi.FFI()
+        x = ffi.new("uint8_t[]", data)
+        y = ffi.cast("uint32_t *", x)
+        return dict(bytes=y, length=len(data)//4)
 
-layout(location = 0) out vec3 fragColor;
-
-vec2 positions[3] = vec2[](
-    vec2(0.0, -0.5),
-    vec2(0.5, 0.5),
-    vec2(-0.5, 0.5)
-);
-
-vec3 colors[3] = vec3[](
-    vec3(1.0, 0.0, 0.0),
-    vec3(0.0, 1.0, 0.0),
-    vec3(0.0, 0.0, 1.0)
-);
-
-void main() {
-    gl_Position = vec4(positions[gl_VertexID], 0.0, 1.0);
-    fragColor = colors[gl_VertexID];
-}
-"""
-
-fragment_code = """
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(location = 0) in vec3 fragColor;
-
-layout(location = 0) out vec4 outColor;
-
-void main() {
-    float x = 0.5;
-    outColor = vec4(fragColor, x + 0.5);
-}
-"""
 
 vs_module = wgpu.device_create_shader_module(
     device_id,
-    wgpu.create_ShaderModuleDescriptor(code=vertex_code)
+    wgpu.create_ShaderModuleDescriptor(code=make_code("vert"))
 )
 
 fs_module = wgpu.device_create_shader_module(
     device_id,
-    wgpu.create_ShaderModuleDescriptor(code=fragment_code)
+    wgpu.create_ShaderModuleDescriptor(code=make_code("frag"))
 )
 
 # todo: I think this is where uniforms go
 bind_group_layout = wgpu.device_create_bind_group_layout(
     device_id,
-    wgpu.create_BindGroupLayoutDescriptor(bindings=[], bindings_length=0)
+    wgpu.create_BindGroupLayoutDescriptor(bindings=(), bindings_length=0)
 )
 
 bind_group = wgpu.device_create_bind_group(
     device_id,
-    wgpu.create_BindGroupDescriptor(layout=bind_group_layout, bindings=[], bindings_length=0)
+    wgpu.create_BindGroupDescriptor(layout=bind_group_layout, bindings=(), bindings_length=0)
 )
 
 pipeline_layout = wgpu.device_create_pipeline_layout(
     device_id,
-    wgpu.create_PipelineLayoutDescriptor(bind_group_layouts=[bind_group], bind_group_layouts_length=1)
+    wgpu.create_PipelineLayoutDescriptor(bind_group_layouts=(bind_group, ), bind_group_layouts_length=1)
 )
 
 
@@ -203,7 +228,7 @@ render_pipeline = wgpu.device_create_render_pipeline(
         depth_stencil_state=None,
         vertex_input=wgpu.create_VertexInputDescriptor(
             index_format=wgpu.IndexFormat_Uint16,
-            vertex_buffers=[],
+            vertex_buffers=(),
             vertex_buffers_length=0,
         ),
         sample_count=1,
@@ -236,15 +261,17 @@ def drawFrame():
     rpass = wgpu.command_encoder_begin_render_pass(
         command_encoder,
         wgpu.create_RenderPassDescriptor(
-            color_attachments=[
+            color_attachments=(
                 wgpu.create_RenderPassColorAttachmentDescriptor(
-                    attachment=next_texture["view_id"],
+                    # attachment=next_texture["view_id"],
+                    # todo: arg! need struct2dict function in ffi implementation
+                    attachment=next_texture["view_id"] if isinstance(next_texture, dict) else next_texture.view_id,
                     resolve_target=None, # resolve_target: None,
                     load_op=wgpu.LoadOp_Clear,  # load_op: wgpu::LoadOp::Clear,
                     store_op=wgpu.StoreOp_Store,  # store_op: wgpu::StoreOp::Store,
-                    clear_color=(1, 1, 0, 1), # clear_color: wgpu::Color::GREEN,
+                    clear_color=dict(r=1, g=1, b=0, a=1), # clear_color: wgpu::Color::GREEN,
                 ),
-            ],
+            ),
             color_attachments_length=1,
             depth_stencil_attachment=None,  # depth_stencil_attachement
         )

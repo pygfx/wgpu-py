@@ -215,7 +215,7 @@ class GlWGPU(BaseWGPU):
     def device_create_swap_chain(self, device_id: int, surface_id: int, desc: 'SwapChainDescriptor'):
         assert device_id > 0
         # desc = {'usage': 16, 'format': 27, 'width': 640, 'height': 480, 'present_mode': 1}
-        self._devices[device_id].glfw_window = surface_id  # for now ...
+        self._devices[device_id].glfw_or_qt_window = surface_id  # for now ...
         self._devices[device_id].width = desc["width"]
         self._devices[device_id].height = desc["height"]
         return device_id  # swap_chain_id == device_id
@@ -274,5 +274,14 @@ class GlWGPU(BaseWGPU):
 
     def swap_chain_present(self, swap_chain_id: int):
         device_id = swap_chain_id  # swap_chain_id == device_id
-        import glfw
-        glfw.swap_buffers(self._devices[device_id].glfw_window)
+        glfw_or_qt_window = self._devices[device_id].glfw_or_qt_window
+        if "qt5" in str(glfw_or_qt_window).lower():
+            ctx = glfw_or_qt_window.context()
+            surface = ctx.surface()
+            glfw_or_qt_window.paintGL()
+            ctx.swapBuffers(glfw_or_qt_window)
+        elif "qt4" in str(glfw_or_qt_window).lower():
+            glfw_or_qt_window.swapBuffers()
+        else:
+            import glfw
+            glfw.swap_buffers(self._devices[device_id].glfw_or_qt_window)
