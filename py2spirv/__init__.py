@@ -1,6 +1,4 @@
 """
-visvis2.spirv
-
 A Python to SpirV compiler.
 """
 
