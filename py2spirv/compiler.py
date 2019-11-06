@@ -1,5 +1,9 @@
 """
-A compiler to translate Python code to SpirV.
+A compiler to translate Python code to SpirV. A compiler can be
+considered to exists of two parts: a parser to go from one code (Python)
+to an AST, and a generator to transform that AST into another code
+(SpirV). In this case the parsing is done using Python's builtin ast
+module, so the main part of this module comprises the SpirV generation.
 
 References:
 * https://www.khronos.org/registry/spir-v/
@@ -11,21 +15,25 @@ import io
 import ast
 import struct
 import inspect
-
-import vulkan as vk
-
-from visvis2.spirv import commonast
-
-from visvis2.spirv._spirv_constants import *
+import tempfile
+import subprocess
 
 
-def vertex_shader():
+from . import commonast
+from ._spirv_constants import *
 
-    return 3 + 4
+
+def parse_python(py_func):
+    py_code = inspect.getsource(py_func)
+    py_ast = commonast.parse(py_code)
+    return py_ast
 
 
-vec3 = "vec3"
-vec4 = "vec4"
+def generate_spirv(py_ast):
+    g = SpirVGenerator(py_ast)
+    g.generate()
+    return g
+
 
 STORAGE_CLASSES = dict(
     constant=StorageClass_UniformConstant,
@@ -35,92 +43,180 @@ STORAGE_CLASSES = dict(
 )
 
 
-def vertex_shader():
-
-    fragColor = output(vec3)
-    gl_Position = output(vec4)
-
-    # positions = constant(3, vec2)
-    positions = [vec2(0.0, -0.4), vec2(0.5, 0.4), vec2(-0.5, 0.5)]
-    colors = [vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)]
-
-    def main():
-        gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0)
-        fragColor = colors[gl_VertexIndex]
-
-
-def fragment_shader():
-    # version 450
-    # extension GL_ARB_separate_shader_objects : enable
-
-    fragColor = input(vec3)
-    outColor = output(vec4)
-
-    # layout(location = 0) in vec3 fragColor;
-    # layout(location = 0) out vec4 outColor;
-
-    def main():
-        outColor = vec4(fragColor, 0.5)
-
-
-def get_shader_from_spirv(device, code):
-    createInfo = vk.VkShaderModuleCreateInfo(
-        sType=vk.VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        codeSize=len(code),
-        pCode=code,
-    )
-    return vk.vkCreateShaderModule(device, createInfo, None)
-
-
-def get_vert_shader(device):
-    nogit = os.path.abspath(os.path.join(__file__, "..", "..", "..", "nogit"))
-    with open(os.path.join(nogit, "hello_triangle_vert.spv"), "rb") as sf:
-        code = sf.read()
-    return get_shader_from_spirv(device, code)
-
-
-def get_frag_shader(device):
-    # nogit = os.path.abspath(os.path.join(__file__, "..", "..", "..", "nogit"))
-    # with open(os.path.join(nogit, "hello_triangle_frag.spv"), "rb") as sf:
-        # code = sf.read()
-
-    x = Python2SpirVCompiler(fragment_shader)
-    x.start_parsing()
-    code = x.dump()
-
-    return get_shader_from_spirv(device, code)
-
-
-##
-
-
 def str_to_words(s):
-    b = s.encode() + b"\x00"
-    b += ((4 - (len(b) % 4)) % 4) * b"\x00"
-    assert len(b) % 4 == 0
+    b = s.encode()
+    padding = 4 - (len(b) % 4)  # 4, 3, 2 or 1 -> always at least 1 for 0-termination
+    b += padding * b"\x00"
+    assert len(b) % 4 == 0 and b[-1] == 0, b
     # todo: endianness?
     words = []
     for i in range(0, len(b), 4):
-        words.append(struct.unpack("<I", b[i : i + 4])[0])
+        words.append(b[i : i + 4])
+        #words.append(struct.unpack("<I", b[i : i + 4])[0])
     return words
 
 
-class Python2SpirVCompiler:
-    def __init__(self, func):
-        pycode = inspect.getsource(func)
-        self.root = commonast.parse(pycode)
+
+
+class SpirVGenerator:
+    """ Generate binary Spir-V code from a Python AST.
+    """
+
+    def __init__(self, py_ast):
+        self._root = py_ast
+
+        assert len(self._root.body_nodes) == 1 and isinstance(
+            self._root.body_nodes[0], commonast.FunctionDef
+        )
+
+    def _init(self):
+
+        # Section 2.4 of the Spir-V spec specifies the Logical Layout of a Module
+        self._sections = {
+            "capabilities": [],  # 1. All OpCapability instructions.
+            "extensions": [],  # 2. Optional OpExtension instructions.
+            "extension_imports": [],  # 3. Optional OpExtInstImport instructions.
+            "memory_model": [],  # 4. The single required OpMemoryModel instruction.
+            "entry_points": [],  # 5. All entry point declarations, using OpEntryPoint.
+            "execution_modes": [],  # 6. All execution-mode declarations, using OpExecutionMode or OpExecutionModeId.
+            "debug": [],  # 7. The debug instructions, which must be grouped in a specific following order.
+            "annotations": [],  # 8. All annotation instructions, e.g. OpDecorate.
+            "types": [],  # 9. All type declarations (OpTypeXXX instructions),
+                          # all constant instructions, and all global
+                          # variable declarations (all OpVariable instructions whose
+                          # Storage Class is notFunction). This is the preferred
+                          # location for OpUndef instructions, though they can also
+                          # appear in function bodies. All operands in all these
+                          # instructions must be declared before being used. Otherwise,
+                          # they can be in any order. This section is the ﬁrst section
+                          # to allow use of OpLine debug information.
+            "function_defs": [],  # 10. All function declarations. A function
+                                  # declaration is as follows.
+                                  # a. Function declaration, using OpFunction.
+                                  # b. Function parameter declarations, using OpFunctionParameter.
+                                  # c. Function end, using OpFunctionEnd.
+            "functions": [],  # 11. All function deﬁnitions (functions with a body).
+                              # A function deﬁnition is as follows:
+                              # a. Function deﬁnition, using OpFunction.
+                              # b. Function parameter declarations, using OpFunctionParameter.
+                              # c. Block, Block ...
+                              # d. Function end, using OpFunctionEnd.
+        }
 
         self._ids = {0: None}  # todo: I think this can simply be a counter ...
         self._type_info = {}  # type_name -> id
         self.scope_stack = []  # stack of dicts: name -> id, type, type_id
         # todo: can we do without a stack, pass everything into funcs?
 
-        self.instructions_pre = []
-        self.instructions = []
+    def generate(self):
+        """ Generate the Spir-V code. After this, to_binary() can be used to
+        produce the binary blob that represents the Spir-V module.
+        """
 
-        assert len(self.root.body_nodes) == 1 and isinstance(
-            self.root.body_nodes[0], commonast.FunctionDef
+        # Start clean
+        self._init()
+
+        # Define capabilities. Therea area lot more, and we probably should detect
+        # the cases when we need to define them, and/or let the user define them somehow.
+        self.gen_instruction("capabilities", OpCapability, Capability_Matrix)
+        self.gen_instruction("capabilities", OpCapability, Capability_Shader)
+        # self.gen_instruction("capabilities", OpCapability, Capability_Geometry)
+        # self.gen_instruction("capabilities", OpCapability, Capability_Float16)
+        # self.gen_instruction("capabilities", OpCapability, Capability_Float64)
+        self.gen_instruction("capabilities", OpCapability, Capability_ImageBasic)
+
+        # Define memory model (1 instruction)
+        self.gen_instruction("memory_model", OpMemoryModel, AddressingModel_Logical, MemoryModel_Simple)
+
+        # Define entry points
+        self._main_id = self.create_id("main")
+        self.gen_instruction(
+            "entry_points", OpEntryPoint, ExecutionModel_Fragment, self._main_id, "main"
+        )  # todo: arg1, arg2, pointers, that, are, used)
+
+        # Define execution modes for each entry point
+        self.gen_instruction(
+            "execution_modes", OpExecutionMode, self._main_id, ExecutionMode_OriginLowerLeft
         )
+
+        # Now walk the AST!
+        self.scope_stack.append({})
+        for node in self._root.body_nodes[0].body_nodes:
+            self.parse(node)
+
+    def to_text(self):
+        """ Generate a textual (dis-assembly-like) representation.
+        """
+        lines = []
+
+        def disp(pre, pro):
+            pre = pre or ""
+            line = str(pre.rjust(18)) + "  " + str(pro)
+            lines.append(line)
+
+        disp("header", "=" * 20)
+        disp("MagicNumber", hex(MagicNumber))
+        disp("Version", hex(Version))
+        disp("VendorId", hex(0))
+        disp("Bounds", len(self._ids))
+        disp("Reserved", hex(0))
+
+        for section_name, instructions in self._sections.items():
+            disp(section_name, "=" * 20)
+            for instruction in instructions:
+                disp(None, instruction)
+
+        return "\n".join(lines)
+
+    def to_binary(self):
+        """ Generated a bytes object representing the Spir-V module.
+        """
+        f = io.BytesIO()
+
+        def write_word(w):
+            if isinstance(w, bytes):
+                assert len(w) == 4
+                f.write(w)
+            else:
+                f.write(struct.pack("<I", w))
+
+        # Write header
+        write_word(MagicNumber)  # Magic number
+        write_word(Version)  # SpirV version
+        write_word(0)  # Vendor id - can be zero, let's use zero until we are registered
+        write_word(len(self._ids))  # Bound (of ids)
+        write_word(0)  # Reserved
+
+        # Write instructions
+        for instructions in self._sections.values():
+            for opcode, *instr_words in instructions:
+                words = []
+                for word in instr_words:
+                    if isinstance(word, str):
+                        words.extend(str_to_words(word))
+                    else:
+                        words.append(word)
+                write_word(((len(words) + 1) << 16) | opcode)
+                for word in words:
+                    write_word(word)
+
+        return f.getvalue()
+
+    def validate(self):
+        """ Validate the generated code by running spirv-val from the Vulkan SDK.
+        """
+        filename = os.path.join(tempfile.gettempdir(), "x.spv")
+        with open(filename, "wb") as f:
+            f.write(self.to_binary())
+        subprocess.check_call(["spirv-val", filename])
+
+    ## Utils
+
+    def gen_instruction(self, section_name, opcode, *words):
+        self._sections[section_name].append((opcode, *words))
+
+    def gen_func_instruction(self, opcode, *words):
+        self._sections["functions"].append((opcode, *words))
 
     def create_id(self, type_id, xx=None):
         """ Get an id for a type, variable, function, etc.
@@ -141,10 +237,10 @@ class Python2SpirVCompiler:
         type_id = self.create_type_id(type)
         # Create pointer type thingy
         pointer_id = self.create_id(None)
-        self.gen_instruction_pre(OpTypePointer, pointer_id, storage_class, type_id)
+        self.gen_instruction("types", OpTypePointer, pointer_id, storage_class, type_id)
         # Create the variable declaration
         id = self.create_id(type_id)
-        self.gen_instruction(OpVariable, pointer_id, id, storage_class)
+        self.gen_instruction("types", OpVariable, pointer_id, id, storage_class)
         scope[name] = name, id, type, type_id
         scope[id] = name, id, type, type_id
         return id
@@ -170,24 +266,24 @@ class Python2SpirVCompiler:
             return self._type_info[type_name]
         if type_name == "void":
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
-            self.gen_instruction_pre(OpTypeVoid, type_id)
+            self.gen_instruction("types", OpTypeVoid, type_id)
             return type_id
         elif type_name == "uint":
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
-            self.gen_instruction_pre(OpTypeInt, type_id, 32, 0)  # unsigned
+            self.gen_instruction("types", OpTypeInt, type_id, 32, 0)  # unsigned
             return type_id
         elif type_name == "int":
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
-            self.gen_instruction_pre(OpTypeInt, type_id, 32, 1)  # signed
+            self.gen_instruction("types", OpTypeInt, type_id, 32, 1)  # signed
             return type_id
         elif type_name == "float":
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
-            self.gen_instruction_pre(OpTypeFloat, type_id, 32)
+            self.gen_instruction("types", OpTypeFloat, type_id, 32)
             return type_id
         elif type_name.startswith("vec"):
             float_id = self.create_type_id("float")
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
-            self.gen_instruction_pre(
+            self.gen_instruction("types",
                 OpTypeVector, type_id, float_id, int(type_name[3:])
             )
             return type_id
@@ -197,10 +293,10 @@ class Python2SpirVCompiler:
             sub_type_id = self.create_type_id(sub_type_name)
             # Handle count
             # count_type_id = self.create_type_id("uint")
-            # self.gen_instruction_pre(OpConstant, count_type_id, 3)
+            # self.gen_instruction("types", OpConstant, count_type_id, 3)
             # Handle toplevel array type
             self._type_info[type_name] = type_id = self.create_id(type_name, None)
-            self.gen_instruction_pre(OpTypeArray, type_id, sub_type_id, n)
+            self.gen_instruction("types", OpTypeArray, type_id, sub_type_id, n)
             return type_id
 
         else:
@@ -212,64 +308,8 @@ class Python2SpirVCompiler:
         # int for values, str for types
         return res
 
-    def gen_instruction_pre(self, opcode, *words):
-        self.instructions_pre.append((opcode, *words))
 
-    def gen_instruction(self, opcode, *words):
-        self.instructions.append((opcode, *words))
-
-    def dump(self):
-        f = io.BytesIO()
-
-        def write_word(w):
-            if isinstance(w, bytes):
-                assert len(w) == 4
-                f.write(w)
-            else:
-                f.write(struct.pack("<I", w))
-
-        # Write header
-        write_word(0x07230203)  # Magic number
-        write_word(0x00010000)  # SpirV version
-        write_word(0x02820282)  # hex(sum([ord(x) for x in "Python"]))
-        write_word(len(self._ids))  # Bound (of ids)
-        write_word(0)  # Reserved
-
-        # Write instructions
-        instructions = self.instructions_pre + self.instructions
-        for opcode, *instr_words in instructions:
-            words = []
-            for word in instr_words:
-                if isinstance(word, str):
-                    words.extend(str_to_words(word))
-                else:
-                    words.append(word)
-            write_word(((len(words) + 1) << 16) | opcode)
-            for word in words:
-                write_word(word)
-
-        return f.getvalue()
-
-    def start_parsing(self):
-        self.gen_instruction_pre(OpCapability, 1)
-        # self.gen_instruction_pre(OpExtension
-        # self.gen_instruction_pre(OpExtInstImport
-        self.gen_instruction_pre(OpMemoryModel, 0, 0)  # todo: 0 or 1 for memory model?
-
-        # Create entry point
-        self._main_id = self.create_id("main")
-        self.gen_instruction_pre(
-            OpEntryPoint, ExecutionModel_Fragment, self._main_id, "main"
-        )  # todo: arg1, arg2, pointers, that, are, used)
-
-        if True:  # fragment shader
-            self.gen_instruction_pre(
-                OpExecutionMode, self._main_id, ExecutionMode_OriginLowerLeft
-            )
-
-        self.scope_stack.append({})
-        for node in self.root.body_nodes[0].body_nodes:
-            self.parse(node)
+    ## The parse functions
 
     def parse(self, node):
         nodeType = node.__class__.__name__
@@ -287,26 +327,28 @@ class Python2SpirVCompiler:
         result_type_id = self.create_type_id("void")
         function_id = self._main_id  # self.create_id(result_type_id)
 
-        # Generate the function type -> specofy args and return value
+        # Generate the function type -> specify args and return value
         function_type_id = self.create_id(result_type_id)
-        self.gen_instruction_pre(
+        self.gen_instruction("types",
             OpTypeFunction, function_type_id, result_type_id, *[]
         )  # can haz arg ids
+
+        # todo: also generate instructions in function_defs section
 
         # Generate function
         function_control = 0  # can specify whether it should inline, etc.
         self.gen_instruction(
-            OpFunction, result_type_id, function_id, function_control, function_type_id
+            "functions", OpFunction, result_type_id, function_id, function_control, function_type_id
         )
 
         # A function must begin with a label
-        self.gen_instruction(OpLabel, self.create_id("label"))
+        self.gen_instruction("functions", OpLabel, self.create_id("label"))
 
         for sub in node.body_nodes:
             self.parse(sub)
 
-        self.gen_instruction(OpReturn)
-        self.gen_instruction(OpFunctionEnd)
+        self.gen_instruction("functions", OpReturn)
+        self.gen_instruction("functions", OpFunctionEnd)
         self.scope_stack.pop(-1)
 
     def parse_Assign(self, node):
@@ -356,7 +398,7 @@ class Python2SpirVCompiler:
 
             result_id = self.parse(node.value_node)
             assert result_id
-            self.gen_instruction(OpStore, target_id, result_id, 0)
+            self.gen_func_instruction(OpStore, target_id, result_id, 0)
 
     def parse_Call(self, node):
         funcname = node.func_node.name
@@ -372,7 +414,7 @@ class Python2SpirVCompiler:
                     for i in range(int(type_name[3:])):
                         type_id = self.create_type_id("float")
                         comp_id = self.create_id(type_id)
-                        self.gen_instruction(
+                        self.gen_func_instruction(
                             OpCompositeExtract, type_id, comp_id, id, i
                         )
                         composite_ids.append(comp_id)
@@ -384,7 +426,7 @@ class Python2SpirVCompiler:
                 )
             type_id = self.create_type_id(funcname)
             result_id = self.create_id(type_id)
-            self.gen_instruction(
+            self.gen_func_instruction(
                 OpCompositeConstruct, type_id, result_id, *composite_ids
             )
             return result_id
@@ -396,7 +438,7 @@ class Python2SpirVCompiler:
 
         # todo: only load when the name is a pointer, and only once per func
         load_id = self.create_id(type_id)
-        self.gen_instruction(OpLoad, type_id, load_id, id)
+        self.gen_func_instruction(OpLoad, type_id, load_id, id)
         return load_id
 
     def parse_Num(self, node):
@@ -404,14 +446,14 @@ class Python2SpirVCompiler:
         if isinstance(node.value, int):
             type_id = self.create_type_id("int")
             result_id = self.create_id(type_id)
-            self.gen_instruction_pre(
-                OpConstant, type_id, result_id, struct.pack("<I", node.value)
+            self.gen_instruction(
+                "types", OpConstant, type_id, result_id, struct.pack("<I", node.value)
             )
         elif isinstance(node.value, float):
             type_id = self.create_type_id("float")
             result_id = self.create_id(type_id)
-            self.gen_instruction_pre(
-                OpConstant, type_id, result_id, struct.pack("<f", node.value)
+            self.gen_instruction(
+                "types", OpConstant, type_id, result_id, struct.pack("<f", node.value)
             )
         return result_id
 
@@ -426,23 +468,9 @@ class Python2SpirVCompiler:
 
         self.parse(value_node)
         self.parse(index_node)
-        # self.gen_instruction()
+        # self.gen_func_instruction()
 
         type_id = self.create_type_id("vec2")
         result_id = self.create_id(type_id)
 
         return result_id
-
-
-
-
-if __name__ == "__main__":
-    x = Python2SpirVCompiler(fragment_shader)
-    x.start_parsing()
-    with open("b.spv", "wb") as f:
-        f.write(x.dump())
-
-    x = Python2SpirVCompiler(vertex_shader)
-    x.start_parsing()
-    with open("vertexx.spv", "wb") as f:
-        f.write(x.dump())

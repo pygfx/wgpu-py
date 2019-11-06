@@ -13,7 +13,8 @@ if __name__ == "__main__" and "__file__" in globals():
                 fullkey = subkey if key.startswith("Op") else key + "_" + subkey
                 lines.append(f"{fullkey} = Enum({fullkey!r}, {val!r})")
         else:
-            lines.append(f"{key} = Enum({key!r}, {val!r})")
+            rval = hex(val) if key in ("MagicNumber", "Version", "OpCodeMask") else repr(val)
+            lines.append(f"{key} = Enum({key!r}, {rval})")
 
     with open(__file__, 'rb') as f:
         text = f.read().decode()
@@ -37,10 +38,10 @@ class Enum(int):
 
 ## BELOW IS AUTO-GENERATED
 
-MagicNumber = Enum('MagicNumber', 119734787)
-Version = Enum('Version', 66816)
+MagicNumber = Enum('MagicNumber', 0x7230203)
+Version = Enum('Version', 0x10500)
 Revision = Enum('Revision', 1)
-OpCodeMask = Enum('OpCodeMask', 65535)
+OpCodeMask = Enum('OpCodeMask', 0xffff)
 WordCountShift = Enum('WordCountShift', 16)
 
 SourceLanguage_Unknown = Enum('SourceLanguage_Unknown', 0)
