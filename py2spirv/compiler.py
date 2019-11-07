@@ -48,7 +48,6 @@ def str_to_words(s):
     padding = 4 - (len(b) % 4)  # 4, 3, 2 or 1 -> always at least 1 for 0-termination
     b += padding * b"\x00"
     assert len(b) % 4 == 0 and b[-1] == 0, b
-    # todo: endianness?
     words = []
     for i in range(0, len(b), 4):
         words.append(b[i : i + 4])
@@ -56,6 +55,10 @@ def str_to_words(s):
     return words
 
 
+class IdInt(int):
+
+    def __repr__(self):
+        return "%" + super().__repr__()
 
 
 class SpirVGenerator:
@@ -104,7 +107,8 @@ class SpirVGenerator:
         }
 
         self._ids = {0: None}  # todo: I think this can simply be a counter ...
-        self._type_info = {}  # type_name -> id
+        self._type_name_to_id = {}
+        self._type_id_to_name = {}
         self.scope_stack = []  # stack of dicts: name -> id, type, type_id
         # todo: can we do without a stack, pass everything into funcs?
 
@@ -148,23 +152,38 @@ class SpirVGenerator:
         """ Generate a textual (dis-assembly-like) representation.
         """
         lines = []
+        edge = 22
 
         def disp(pre, pro):
             pre = pre or ""
-            line = str(pre.rjust(18)) + "  " + str(pro)
+            line = str(pre.rjust(edge)) + str(pro)
             lines.append(line)
 
-        disp("header", "=" * 20)
-        disp("MagicNumber", hex(MagicNumber))
-        disp("Version", hex(Version))
-        disp("VendorId", hex(0))
-        disp("Bounds", len(self._ids))
-        disp("Reserved", hex(0))
+        disp("header ".ljust(edge, "-"), "")
+        disp("MagicNumber: ", hex(MagicNumber))
+        disp("Version: ", hex(Version))
+        disp("VendorId: ", hex(0))
+        disp("Bounds: ", len(self._ids))
+        disp("Reserved: ", hex(0))
 
+        types = set()
         for section_name, instructions in self._sections.items():
-            disp(section_name, "=" * 20)
+            #disp(section_name.upper(), "-" * 20)
+            disp((section_name + " ").ljust(edge, "-"), "")
             for instruction in instructions:
-                disp(None, instruction)
+                instruction_str = repr(instruction[0])
+                ret = None
+                for i in instruction[1:]:
+                    if isinstance(i, IdInt):
+                        i_str = "%" + self._type_id_to_name.get(i, str(i))
+                        if i_str not in types:
+                            types.add(i_str)
+                            ret = i_str + " = "
+                            i_str = "(" + repr(i) + ")"
+                        instruction_str += " " + i_str
+                    else:
+                        instruction_str += " " + repr(i)
+                disp(ret, instruction_str)
 
         return "\n".join(lines)
 
@@ -202,13 +221,39 @@ class SpirVGenerator:
 
         return f.getvalue()
 
-    def validate(self):
-        """ Validate the generated code by running spirv-val from the Vulkan SDK.
+    def disassble(self):
+        """ Disassemble the generated binary code using spirv-dis, and return as a string.
+        This produces a result similar to to_text(), but to_text() is probably more
+        informative.
+
+        Needs Spir-V tools, which can easily be obtained by installing the Vulkan SDK.
         """
         filename = os.path.join(tempfile.gettempdir(), "x.spv")
         with open(filename, "wb") as f:
             f.write(self.to_binary())
-        subprocess.check_call(["spirv-val", filename])
+        try:
+            stdout = subprocess.check_output(["spirv-dis", filename], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as err:
+            e = "Could not disassemle Spir-V:\n" + err.output.decode()
+            raise Exception(e)
+        else:
+            return stdout.decode()
+
+    def validate(self):
+        """ Validate the generated binary code by running spirv-val
+        .
+        Needs Spir-V tools, which can easily be obtained by installing the Vulkan SDK.
+        """
+        filename = os.path.join(tempfile.gettempdir(), "x.spv")
+        with open(filename, "wb") as f:
+            f.write(self.to_binary())
+        try:
+            stdout = subprocess.check_output(["spirv-val", filename], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as err:
+            e = "Spir-V invalid:\n" + err.output.decode()
+            raise Exception(e)
+        else:
+            print("Spir-V seems valid:\n" + stdout.decode())
 
     ## Utils
 
@@ -224,7 +269,7 @@ class SpirVGenerator:
         The "namespace" for id's is global to the whole shader/kernel.
         """
         # assert isinstance(type_id, int)
-        id = len(self._ids)
+        id = IdInt(len(self._ids))
         self._ids[id] = type_id
         return id
 
@@ -262,31 +307,28 @@ class SpirVGenerator:
         """ Get the id for the given type_name. Generates a type
         definition instruction as needed.
         """
-        if type_name in self._type_info:
-            return self._type_info[type_name]
+        # Already know this type?
+        if type_name in self._type_name_to_id:
+            return self._type_name_to_id[type_name]
+
         if type_name == "void":
-            self._type_info[type_name] = type_id = self.create_id(type_name, None)
+            type_id = self.create_id(type_name, None)
             self.gen_instruction("types", OpTypeVoid, type_id)
-            return type_id
         elif type_name == "uint":
-            self._type_info[type_name] = type_id = self.create_id(type_name, None)
+            type_id = self.create_id(type_name, None)
             self.gen_instruction("types", OpTypeInt, type_id, 32, 0)  # unsigned
-            return type_id
         elif type_name == "int":
-            self._type_info[type_name] = type_id = self.create_id(type_name, None)
+            type_id = self.create_id(type_name, None)
             self.gen_instruction("types", OpTypeInt, type_id, 32, 1)  # signed
-            return type_id
         elif type_name == "float":
-            self._type_info[type_name] = type_id = self.create_id(type_name, None)
+            type_id = self.create_id(type_name, None)
             self.gen_instruction("types", OpTypeFloat, type_id, 32)
-            return type_id
         elif type_name.startswith("vec"):
             float_id = self.create_type_id("float")
-            self._type_info[type_name] = type_id = self.create_id(type_name, None)
+            type_id = self.create_id(type_name, None)
             self.gen_instruction("types",
                 OpTypeVector, type_id, float_id, int(type_name[3:])
             )
-            return type_id
         elif type_name.startswith("array"):
             _, n, sub_type_name = type_name.split("_", 2)
             # Handle subtype
@@ -295,12 +337,14 @@ class SpirVGenerator:
             # count_type_id = self.create_type_id("uint")
             # self.gen_instruction("types", OpConstant, count_type_id, 3)
             # Handle toplevel array type
-            self._type_info[type_name] = type_id = self.create_id(type_name, None)
+            type_id = self.create_id(type_name, None)
             self.gen_instruction("types", OpTypeArray, type_id, sub_type_id, n)
-            return type_id
-
         else:
             raise NotImplementedError()
+
+        self._type_id_to_name[type_id] = type_name
+        self._type_name_to_id[type_name] = type_id
+        return type_id
 
     def get_type_id(self, id):
         res = self._ids[id]
