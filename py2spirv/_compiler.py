@@ -12,34 +12,19 @@ References:
 
 import os
 import io
-import ast
 import struct
 import inspect
 import tempfile
 import subprocess
 
-
-from . import commonast
-from ._spirv_constants import *
-
-
-def parse_python(py_func):
-    py_code = inspect.getsource(py_func)
-    py_ast = commonast.parse(py_code)
-    return py_ast
-
-
-def generate_spirv(py_ast):
-    g = SpirVGenerator(py_ast)
-    g.generate()
-    return g
+from . import _spirv_constants as cc
 
 
 STORAGE_CLASSES = dict(
-    constant=StorageClass_UniformConstant,
-    input=StorageClass_Input,
-    uniform=StorageClass_Uniform,
-    output=StorageClass_Output,
+    constant=cc.StorageClass_UniformConstant,
+    input=cc.StorageClass_Input,
+    uniform=cc.StorageClass_Uniform,
+    output=cc.StorageClass_Output,
 )
 
 
@@ -61,18 +46,31 @@ class IdInt(int):
         return "%" + super().__repr__()
 
 
-class SpirVGenerator:
+class BaseSpirVCompiler:
     """ Generate binary Spir-V code from a Python AST.
     """
 
-    def __init__(self, py_ast):
-        self._root = py_ast
+    def __init__(self, py_func):
+        if not inspect.isfunction(py_func):
+            raise TypeError("Python to SpirV Compiler needs a Python function.")
+        self._py_func = py_func
+        self._prepare()
 
-        assert len(self._root.body_nodes) == 1 and isinstance(
-            self._root.body_nodes[0], commonast.FunctionDef
-        )
+    def _prepare(self):
+        # Subclass should e.g. do some parsing here. Don't do too much work yet.
+        raise NotImplementedError()
+
+    def _generate(self):
+        # Subclasses should generate SpirV here
+        raise NotImplementedError()
 
     def _init(self):
+
+        self._ids = {0: None}  # todo: I think this can simply be a counter ...
+        self._type_name_to_id = {}
+        self._type_id_to_name = {}
+        self.scope_stack = []  # stack of dicts: name -> id, type, type_id
+        # todo: can we do without a stack, pass everything into funcs?
 
         # Section 2.4 of the Spir-V spec specifies the Logical Layout of a Module
         self._sections = {
@@ -106,12 +104,6 @@ class SpirVGenerator:
                               # d. Function end, using OpFunctionEnd.
         }
 
-        self._ids = {0: None}  # todo: I think this can simply be a counter ...
-        self._type_name_to_id = {}
-        self._type_id_to_name = {}
-        self.scope_stack = []  # stack of dicts: name -> id, type, type_id
-        # todo: can we do without a stack, pass everything into funcs?
-
     def generate(self):
         """ Generate the Spir-V code. After this, to_binary() can be used to
         produce the binary blob that represents the Spir-V module.
@@ -122,31 +114,28 @@ class SpirVGenerator:
 
         # Define capabilities. Therea area lot more, and we probably should detect
         # the cases when we need to define them, and/or let the user define them somehow.
-        self.gen_instruction("capabilities", OpCapability, Capability_Matrix)
-        self.gen_instruction("capabilities", OpCapability, Capability_Shader)
-        # self.gen_instruction("capabilities", OpCapability, Capability_Geometry)
-        # self.gen_instruction("capabilities", OpCapability, Capability_Float16)
-        # self.gen_instruction("capabilities", OpCapability, Capability_Float64)
-        self.gen_instruction("capabilities", OpCapability, Capability_ImageBasic)
+        self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Matrix)
+        self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Shader)
+        # self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Geometry)
+        # self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Float16)
+        # self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Float64)
+        self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_ImageBasic)
 
         # Define memory model (1 instruction)
-        self.gen_instruction("memory_model", OpMemoryModel, AddressingModel_Logical, MemoryModel_Simple)
+        self.gen_instruction("memory_model", cc.OpMemoryModel, cc.AddressingModel_Logical, cc.MemoryModel_Simple)
 
         # Define entry points
         self._main_id = self.create_id("main")
         self.gen_instruction(
-            "entry_points", OpEntryPoint, ExecutionModel_Fragment, self._main_id, "main"
+            "entry_points", cc.OpEntryPoint, cc.ExecutionModel_Fragment, self._main_id, "main"
         )  # todo: arg1, arg2, pointers, that, are, used)
 
         # Define execution modes for each entry point
         self.gen_instruction(
-            "execution_modes", OpExecutionMode, self._main_id, ExecutionMode_OriginLowerLeft
+            "execution_modes", cc.OpExecutionMode, self._main_id, cc.ExecutionMode_OriginLowerLeft
         )
 
-        # Now walk the AST!
-        self.scope_stack.append({})
-        for node in self._root.body_nodes[0].body_nodes:
-            self.parse(node)
+        self._generate()
 
     def to_text(self):
         """ Generate a textual (dis-assembly-like) representation.
@@ -160,8 +149,8 @@ class SpirVGenerator:
             lines.append(line)
 
         disp("header ".ljust(edge, "-"), "")
-        disp("MagicNumber: ", hex(MagicNumber))
-        disp("Version: ", hex(Version))
+        disp("MagicNumber: ", hex(cc.MagicNumber))
+        disp("Version: ", hex(cc.Version))
         disp("VendorId: ", hex(0))
         disp("Bounds: ", len(self._ids))
         disp("Reserved: ", hex(0))
@@ -200,8 +189,8 @@ class SpirVGenerator:
                 f.write(struct.pack("<I", w))
 
         # Write header
-        write_word(MagicNumber)  # Magic number
-        write_word(Version)  # SpirV version
+        write_word(cc.MagicNumber)  # Magic number
+        write_word(cc.Version)  # SpirV version
         write_word(0)  # Vendor id - can be zero, let's use zero until we are registered
         write_word(len(self._ids))  # Bound (of ids)
         write_word(0)  # Reserved
@@ -282,10 +271,10 @@ class SpirVGenerator:
         type_id = self.create_type_id(type)
         # Create pointer type thingy
         pointer_id = self.create_id(None)
-        self.gen_instruction("types", OpTypePointer, pointer_id, storage_class, type_id)
+        self.gen_instruction("types", cc.OpTypePointer, pointer_id, storage_class, type_id)
         # Create the variable declaration
         id = self.create_id(type_id)
-        self.gen_instruction("types", OpVariable, pointer_id, id, storage_class)
+        self.gen_instruction("types", cc.OpVariable, pointer_id, id, storage_class)
         scope[name] = name, id, type, type_id
         scope[id] = name, id, type, type_id
         return id
@@ -313,21 +302,21 @@ class SpirVGenerator:
 
         if type_name == "void":
             type_id = self.create_id(type_name, None)
-            self.gen_instruction("types", OpTypeVoid, type_id)
+            self.gen_instruction("types", cc.OpTypeVoid, type_id)
         elif type_name == "uint":
             type_id = self.create_id(type_name, None)
-            self.gen_instruction("types", OpTypeInt, type_id, 32, 0)  # unsigned
+            self.gen_instruction("types", cc.OpTypeInt, type_id, 32, 0)  # unsigned
         elif type_name == "int":
             type_id = self.create_id(type_name, None)
-            self.gen_instruction("types", OpTypeInt, type_id, 32, 1)  # signed
+            self.gen_instruction("types", cc.OpTypeInt, type_id, 32, 1)  # signed
         elif type_name == "float":
             type_id = self.create_id(type_name, None)
-            self.gen_instruction("types", OpTypeFloat, type_id, 32)
+            self.gen_instruction("types", cc.OpTypeFloat, type_id, 32)
         elif type_name.startswith("vec"):
             float_id = self.create_type_id("float")
             type_id = self.create_id(type_name, None)
             self.gen_instruction("types",
-                OpTypeVector, type_id, float_id, int(type_name[3:])
+                cc.OpTypeVector, type_id, float_id, int(type_name[3:])
             )
         elif type_name.startswith("array"):
             _, n, sub_type_name = type_name.split("_", 2)
@@ -338,7 +327,7 @@ class SpirVGenerator:
             # self.gen_instruction("types", OpConstant, count_type_id, 3)
             # Handle toplevel array type
             type_id = self.create_id(type_name, None)
-            self.gen_instruction("types", OpTypeArray, type_id, sub_type_id, n)
+            self.gen_instruction("types", cc.OpTypeArray, type_id, sub_type_id, n)
         else:
             raise NotImplementedError()
 
@@ -352,169 +341,3 @@ class SpirVGenerator:
         # int for values, str for types
         return res
 
-
-    ## The parse functions
-
-    def parse(self, node):
-        nodeType = node.__class__.__name__
-        parse_func = getattr(self, "parse_" + nodeType, None)
-        if parse_func:
-            return parse_func(node)
-        else:
-            raise Exception("Cannot parse %s-nodes yet" % nodeType)
-
-    def parse_FunctionDef(self, node):
-
-        assert node.name == "main"
-
-        self.scope_stack.append({})
-        result_type_id = self.create_type_id("void")
-        function_id = self._main_id  # self.create_id(result_type_id)
-
-        # Generate the function type -> specify args and return value
-        function_type_id = self.create_id(result_type_id)
-        self.gen_instruction("types",
-            OpTypeFunction, function_type_id, result_type_id, *[]
-        )  # can haz arg ids
-
-        # todo: also generate instructions in function_defs section
-
-        # Generate function
-        function_control = 0  # can specify whether it should inline, etc.
-        self.gen_instruction(
-            "functions", OpFunction, result_type_id, function_id, function_control, function_type_id
-        )
-
-        # A function must begin with a label
-        self.gen_instruction("functions", OpLabel, self.create_id("label"))
-
-        for sub in node.body_nodes:
-            self.parse(sub)
-
-        self.gen_instruction("functions", OpReturn)
-        self.gen_instruction("functions", OpFunctionEnd)
-        self.scope_stack.pop(-1)
-
-    def parse_Assign(self, node):
-        scope = self.scope_stack[-1]
-        assert len(node.target_nodes) == 1
-        varname = node.target_nodes[0].name
-
-        if len(self.scope_stack) == 1:
-
-            if isinstance(node.value_node, commonast.Call):
-                funcname = node.value_node.func_node.name
-                argnames = []
-                for arg in node.value_node.arg_nodes:
-                    if isinstance(arg, commonast.Num):
-                        argnames.append(arg.value)
-                    elif isinstance(arg, commonast.Name):
-                        argnames.append(arg.name)
-                    else:
-                        raise NotImplementedError()
-                if funcname in ("input", "output"):
-                    assert len(argnames) == 1
-                    vartype = argnames[0]
-                    self.create_variable(vartype, varname, STORAGE_CLASSES[funcname])
-                else:
-                    # scope[varname] = ??
-                    raise NotImplementedError()
-
-            else:
-                # A constant, I guess
-                if isinstance(node.value_node, commonast.List):
-                    list_vartypes = []
-                    for subnode in node.value_node.element_nodes:
-                        assert isinstance(subnode, commonast.Call)
-                        list_vartypes.append(subnode.func_node.name)
-                    list_vartypes2 = set(list_vartypes)
-                    if len(list_vartypes2) != 1:
-                        raise TypeError("Lists must have uniform element types")
-                    vartype = f"array_{len(list_vartypes)}_{list_vartypes[0]}"
-                else:
-                    raise NotImplementedError()
-                self.create_variable(vartype, varname, STORAGE_CLASSES["constant"])
-
-        else:
-            root = self.scope_stack[0]
-            assert varname in root, "can only use global vars yet"
-            _, target_id, _, _ = self.get_variable_info(varname)
-
-            result_id = self.parse(node.value_node)
-            assert result_id
-            self.gen_func_instruction(OpStore, target_id, result_id, 0)
-
-    def parse_Call(self, node):
-        funcname = node.func_node.name
-        arg_ids = [self.parse(arg) for arg in node.arg_nodes]
-        if funcname in ("vec2", "vec3", "vec4"):
-            composite_ids = []
-            for id in arg_ids:
-                type_id = self.get_type_id(id)
-                type_name = self.get_type_id(type_id)  # todo: this is weird
-                if type_name == "float":
-                    composite_ids.append(id)
-                elif type_name in ("vec2", "vec3", "vec4"):
-                    for i in range(int(type_name[3:])):
-                        type_id = self.create_type_id("float")
-                        comp_id = self.create_id(type_id)
-                        self.gen_func_instruction(
-                            OpCompositeExtract, type_id, comp_id, id, i
-                        )
-                        composite_ids.append(comp_id)
-                else:
-                    raise TypeError(f"Cannot convert create vec4 from {type}")
-            if len(composite_ids) != int(funcname[3:]):
-                raise TypeError(
-                    f"{funcname} did not expect {len(composite_ids)} elements"
-                )
-            type_id = self.create_type_id(funcname)
-            result_id = self.create_id(type_id)
-            self.gen_func_instruction(
-                OpCompositeConstruct, type_id, result_id, *composite_ids
-            )
-            return result_id
-        else:
-            raise NotImplementedError()
-
-    def parse_Name(self, node):
-        name, id, type, type_id = self.get_variable_info(node.name)
-
-        # todo: only load when the name is a pointer, and only once per func
-        load_id = self.create_id(type_id)
-        self.gen_func_instruction(OpLoad, type_id, load_id, id)
-        return load_id
-
-    def parse_Num(self, node):
-        # todo: re-use constants
-        if isinstance(node.value, int):
-            type_id = self.create_type_id("int")
-            result_id = self.create_id(type_id)
-            self.gen_instruction(
-                "types", OpConstant, type_id, result_id, struct.pack("<I", node.value)
-            )
-        elif isinstance(node.value, float):
-            type_id = self.create_type_id("float")
-            result_id = self.create_id(type_id)
-            self.gen_instruction(
-                "types", OpConstant, type_id, result_id, struct.pack("<f", node.value)
-            )
-        return result_id
-
-    def parse_Subscript(self, node):
-        if not isinstance(node.value_node, commonast.Name):
-            raise TypeError("Can only slice into direct variables.")
-        if not isinstance(node.slice_node, commonast.Index):
-            raise TypeError("Only singleton indices allowed.")
-
-        value_node = node.value_node
-        index_node = node.slice_node.value_node
-
-        self.parse(value_node)
-        self.parse(index_node)
-        # self.gen_func_instruction()
-
-        type_id = self.create_type_id("vec2")
-        result_id = self.create_id(type_id)
-
-        return result_id
