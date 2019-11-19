@@ -1,6 +1,7 @@
+import struct
 from dis import dis as pprint_bytecode
 
-from ._compiler import BaseSpirVCompiler, str_to_words, STORAGE_CLASSES
+from ._compiler import IdInt, BaseSpirVCompiler, str_to_words, STORAGE_CLASSES
 from . import _spirv_constants as cc
 from ._dis import dis
 from . import _types
@@ -47,6 +48,9 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
         self._output = {}
         self._uniforms = {}
         self._constants = {}  # ?
+
+        # Python variable names -> (SpirV object id, type_id)
+        self._aliases = {}
 
         # Declare funcion
         return_type_id = self.get_type_id(_types.void)
@@ -120,15 +124,32 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
             ob = "input"
         elif name == "output":
             ob = "output"
+        elif name in self._aliases:
+            ob = self._aliases[name]
         else:
-            raise NotImplementedError()
+            raise NameError(f"Using invalid variable: {name}")
         self._stack.append(ob)
 
     def _op_load_const(self):
         i = self._next()
         ob = self._co.co_consts[i]
-        self._stack.append(ob)
-        # todo: in some cases we need to generate OpConstant ...
+        if isinstance(ob, str):
+            # We use strings in e.g. input.define(), mmm
+            self._stack.append(ob)
+        elif isinstance(ob, (float, int, bool)):
+            id, type_id = self.create_object(type(ob))
+            if isinstance(ob, float):
+                bb = struct.pack("<f", ob)
+            elif isinstance(ob, int):
+                bb = struct.pack("<i", ob)
+            elif isinstance(ob, bool):
+                bb = struct.pack("<I", 0xffffffff if ob else 0)
+            self.gen_func_instruction(cc.OpConstant, type_id, id, bb)
+            self._stack.append(id)
+        elif ob is None:
+            self._stack.append(None)  # todo: for the final return ...
+        else:
+            raise NotImplementedError()
 
     def _op_load_global(self):
         i = self._next()
@@ -149,20 +170,39 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
         if ob == "input":
             if name not in self._input:
                 raise NameError(f"No input {name} defined.")
-            # todo: generate OpLoad
-            name, id, type, type_id = self.get_variable_info("input:" + name)
-            load_id = self.create_id("WUUUUUUT?")
-            self.gen_func_instruction(cc.OpLoad, type_id, load_id, id)
-            sub_ob = load_id
+            type, var_id = self._input[name]
+            id, type_id = self.create_object(type)
+            self.gen_func_instruction(cc.OpLoad, type_id, id, var_id)
+            sub_ob = id
         elif ob == "output":
-            if name not in self._output:
-                raise NameError(f"No output {name} defined.")
-            # todo: generate OpStore
-            1/0
+            raise AttributeError("Cannot read from output.")
         else:
             raise NotImplementedError()
 
         self._stack.append(sub_ob)
+
+    def _op_store_attr(self):
+        i = self._next()
+        name = self._co.co_names[i]
+        ob = self._stack.pop()
+        value = self._stack.pop()
+        assert isinstance(value, IdInt)
+
+        if ob == "input":
+            raise AttributeError("Cannot assign to input.")
+        elif ob == "output":
+            if name not in self._output:
+                raise NameError(f"No output {name} defined.")
+            type, var_id = self._output[name]
+            self.gen_func_instruction(cc.OpStore, var_id, value)
+        else:
+            raise NotImplementedError()
+
+    def _op_store_fast(self):
+        i = self._next()
+        name = self._co.co_varnames[i]
+        ob = self._stack.pop()
+        self._aliases[name] = ob
 
     def _op_load_method(self):  # new in Python 3.7
         i = self._next()
@@ -194,7 +234,47 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
         self._stack[-nargs:] = []
         func = self._stack.pop()
 
-        if func is vec4:
-            1/0
+        if issubclass(func, _types.BaseVector):
+            result = self._vector_packing(func, args)
+            self._stack.append(result)
 
-        raise NotImplementedError()
+        else:
+            raise NotImplementedError()
+
+    def _vector_packing(self, vector_type, args):
+
+        n, t = vector_type._n, vector_type._t  # noqa
+        type_id = self.get_type_id(t)
+        composite_ids = []
+
+        # Deconstruct
+        for arg in args:
+            if not isinstance(arg, IdInt):
+                raise RuntimeError("Expected a SpirV object")
+            element_type = self.get_type_from_id(arg)
+            if element_type in (float, int, bool):
+                assert element_type is t, "vector type mismatch"
+                composite_ids.append(arg)
+            elif issubclass(element_type, _types.BaseVector):
+                assert element_type._t is t, "vector type mismatch"
+                for i in range(element_type._n):
+                    comp_id = self.create_id("composite")
+                    self.gen_func_instruction(
+                        cc.OpCompositeExtract, type_id, comp_id, arg, i
+                    )
+                    composite_ids.append(comp_id)
+            else:
+                raise TypeError(f"Invalid type to compose vector: {element_type}")
+
+        # Check the length
+        if len(composite_ids) != n:
+            raise TypeError(
+                f"{vector_type} did not expect {len(composite_ids)} elements"
+            )
+
+        # Construct
+        result_id, vector_type_id = self.create_object(vector_type)
+        self.gen_func_instruction(
+            cc.OpCompositeConstruct, vector_type_id, result_id, *composite_ids
+        )
+        return result_id
