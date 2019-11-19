@@ -44,8 +44,8 @@ class Ast2SpirVCompiler(BaseSpirVCompiler):
         assert node.name == "main"
 
         self.scope_stack.append({})
-        result_type_id = self.create_type_id("void")
-        function_id = self._main_id  # self.create_id(result_type_id)
+        result_type_id = self.get_type_id("void")
+        function_id = self._entry_point_id  # self.create_id(result_type_id)
 
         # Generate the function type -> specify args and return value
         function_type_id = self.create_id(result_type_id)
@@ -126,13 +126,13 @@ class Ast2SpirVCompiler(BaseSpirVCompiler):
         if funcname in ("vec2", "vec3", "vec4"):
             composite_ids = []
             for id in arg_ids:
-                type_id = self.get_type_id(id)
-                type_name = self.get_type_id(type_id)  # todo: this is weird
+                the_type = self.get_type_from_id(id)
+                type_name = the_type.__name__#self.get_type_id(type_id)  # todo: this is weird
                 if type_name == "float":
                     composite_ids.append(id)
                 elif type_name in ("vec2", "vec3", "vec4"):
                     for i in range(int(type_name[3:])):
-                        type_id = self.create_type_id("float")
+                        type_id = self.get_type_id("float")
                         comp_id = self.create_id(type_id)
                         self.gen_func_instruction(
                             cc.OpCompositeExtract, type_id, comp_id, id, i
@@ -144,7 +144,7 @@ class Ast2SpirVCompiler(BaseSpirVCompiler):
                 raise TypeError(
                     f"{funcname} did not expect {len(composite_ids)} elements"
                 )
-            type_id = self.create_type_id(funcname)
+            type_id = self.get_type_id(funcname)
             result_id = self.create_id(type_id)
             self.gen_func_instruction(
                 cc.OpCompositeConstruct, type_id, result_id, *composite_ids
@@ -164,13 +164,13 @@ class Ast2SpirVCompiler(BaseSpirVCompiler):
     def parse_Num(self, node):
         # todo: re-use constants
         if isinstance(node.value, int):
-            type_id = self.create_type_id("int")
+            type_id = self.get_type_id("int")
             result_id = self.create_id(type_id)
             self.gen_instruction(
                 "types", cc.OpConstant, type_id, result_id, struct.pack("<I", node.value)
             )
         elif isinstance(node.value, float):
-            type_id = self.create_type_id("float")
+            type_id = self.get_type_id("float")
             result_id = self.create_id(type_id)
             self.gen_instruction(
                 "types", cc.OpConstant, type_id, result_id, struct.pack("<f", node.value)
@@ -190,7 +190,7 @@ class Ast2SpirVCompiler(BaseSpirVCompiler):
         self.parse(index_node)
         # self.gen_func_instruction()
 
-        type_id = self.create_type_id("vec2")
+        type_id = self.get_type_id("vec2")
         result_id = self.create_id(type_id)
 
         return result_id

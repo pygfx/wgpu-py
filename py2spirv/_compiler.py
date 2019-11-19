@@ -8,6 +8,15 @@ module, so the main part of this module comprises the SpirV generation.
 References:
 * https://www.khronos.org/registry/spir-v/
 
+
+Type info:
+* Basic types are bool, int, float. Latter two are numerics, all three are scalars.
+* Vector is two or more values of scalars (float, int, bool). For lengt > 4 need capabilities.
+* Matrix is 2, 3, or 4 float vectors (each vector is a column).
+* Array is homogeneous collection of non-void-type objects.
+* Structure is heterogeneous collection of non-void-type objects.
+* imagee, sampler, ...
+
 """
 
 import os
@@ -18,13 +27,23 @@ import tempfile
 import subprocess
 
 from . import _spirv_constants as cc
+from . import _types
+
+# todo: add debug info, most notably line numbers, but can also do source code and object names!
 
 
+
+
+# %%
+
+# Storage class members, used in OpTypePointer, OpTypeForwardPointer, Opvariable, OpGenericCastToPtrExplicit
 STORAGE_CLASSES = dict(
-    constant=cc.StorageClass_UniformConstant,
+    uniform_constant=cc.StorageClass_UniformConstant,
     input=cc.StorageClass_Input,
     uniform=cc.StorageClass_Uniform,
     output=cc.StorageClass_Output,
+    private=cc.StorageClass_Private,  # a constant within this module
+    function=cc.StorageClass_Function,  # scoped to the current function invokation
 )
 
 
@@ -66,7 +85,7 @@ class BaseSpirVCompiler:
 
     def _init(self):
 
-        self._ids = {0: None}  # todo: I think this can simply be a counter ...
+        self._ids = {0: None}  # maps id -> info. For objects, info is a type in _types
         self._type_name_to_id = {}
         self._type_id_to_name = {}
         self.scope_stack = []  # stack of dicts: name -> id, type, type_id
@@ -125,14 +144,14 @@ class BaseSpirVCompiler:
         self.gen_instruction("memory_model", cc.OpMemoryModel, cc.AddressingModel_Logical, cc.MemoryModel_Simple)
 
         # Define entry points
-        self._main_id = self.create_id("main")
+        self._entry_point_id = self.create_id("main")
         self.gen_instruction(
-            "entry_points", cc.OpEntryPoint, cc.ExecutionModel_Fragment, self._main_id, "main"
+            "entry_points", cc.OpEntryPoint, cc.ExecutionModel_Fragment, self._entry_point_id, "main"
         )  # todo: arg1, arg2, pointers, that, are, used)
 
         # Define execution modes for each entry point
         self.gen_instruction(
-            "execution_modes", cc.OpExecutionMode, self._main_id, cc.ExecutionMode_OriginLowerLeft
+            "execution_modes", cc.OpExecutionMode, self._entry_point_id, cc.ExecutionMode_OriginLowerLeft
         )
 
         self._generate()
@@ -252,15 +271,30 @@ class BaseSpirVCompiler:
     def gen_func_instruction(self, opcode, *words):
         self._sections["functions"].append((opcode, *words))
 
-    def create_id(self, type_id, xx=None):
-        """ Get an id for a type, variable, function, etc.
-        The name is optional, for debugging purposes.
+    def create_id(self, description):
+        """ Get a new id for a type, variable, object, pointer, function, etc.
         The "namespace" for id's is global to the whole shader/kernel.
         """
-        # assert isinstance(type_id, int)
+        # Also allow a name to generate OpName
         id = IdInt(len(self._ids))
-        self._ids[id] = type_id
+        self._ids[id] = description
         return id
+
+    def create_object(self, the_type):
+        """ Create id for a new object. Returns (id, type_id).
+        """
+        assert isinstance(the_type, type), f"create_id requires a type, not {the_type}"
+        assert issubclass(the_type, _types.spirv_types), f"not a spirv type: {the_type}"
+        type_id = self.get_type_id(the_type)
+        id = self.create_id(the_type)
+        return id, type_id
+
+    def get_type_from_id(self, id):
+        """ Get the type of a given object id.
+        """
+        t = self._ids[id]
+        assert isinstance(t, type)
+        return t
 
     def create_variable(self, type, name, storage_class):
         """ Create a variable in the current scope. Generates a variable
@@ -268,9 +302,9 @@ class BaseSpirVCompiler:
         """
         scope = self.scope_stack[-1]
         # Create type
-        type_id = self.create_type_id(type)
+        type_id = self.get_type_id(type)
         # Create pointer type thingy
-        pointer_id = self.create_id(None)
+        pointer_id = self.create_id("pointer")
         self.gen_instruction("types", cc.OpTypePointer, pointer_id, storage_class, type_id)
         # Create the variable declaration
         id = self.create_id(type_id)
@@ -287,57 +321,53 @@ class BaseSpirVCompiler:
                 break
         else:
             if name_or_id == "gl_VertexIndex":
-                return name_or_id, name_or_id, "int", self.create_type_id("int")
+                return name_or_id, name_or_id, "int", self.get_type_id("int")
             else:
                 raise NameError(f"Variable {name_or_id} not found.")
         return scope[name_or_id]  # name, id, type, type_id
 
-    def create_type_id(self, type_name):
+    def get_type_id(self, the_type):
         """ Get the id for the given type_name. Generates a type
         definition instruction as needed.
         """
+        assert isinstance(the_type, type), f"create_id requires a type, not {the_type}"
+        assert issubclass(the_type, _types.spirv_types), f"not a spirv type: {the_type}"
+
         # Already know this type?
-        if type_name in self._type_name_to_id:
-            return self._type_name_to_id[type_name]
+        if the_type.__name__ in self._type_name_to_id:
+            return self._type_name_to_id[the_type.__name__]
 
-        if type_name == "void":
-            type_id = self.create_id(type_name, None)
+        if the_type is _types.void:
+            type_id = self.create_id(the_type)
             self.gen_instruction("types", cc.OpTypeVoid, type_id)
-        elif type_name == "uint":
-            type_id = self.create_id(type_name, None)
-            self.gen_instruction("types", cc.OpTypeInt, type_id, 32, 0)  # unsigned
-        elif type_name == "int":
-            type_id = self.create_id(type_name, None)
+        elif the_type is _types.bool:
+            type_id = self.create_id(the_type)
+            self.gen_instruction("types", cc.OpTypeBool, type_id)
+        elif the_type is _types.int:
+            type_id = self.create_id(the_type)
             self.gen_instruction("types", cc.OpTypeInt, type_id, 32, 1)  # signed
-        elif type_name == "float":
-            type_id = self.create_id(type_name, None)
+        elif the_type is _types.float:
+            type_id = self.create_id(the_type)
             self.gen_instruction("types", cc.OpTypeFloat, type_id, 32)
-        elif type_name.startswith("vec"):
-            float_id = self.create_type_id("float")
-            type_id = self.create_id(type_name, None)
+        elif issubclass(the_type, _types.BaseVector):
+            sub_type_id = self.get_type_id(the_type._t)
+            type_id = self.create_id(the_type)
             self.gen_instruction("types",
-                cc.OpTypeVector, type_id, float_id, int(type_name[3:])
-            )
-        elif type_name.startswith("array"):
-            _, n, sub_type_name = type_name.split("_", 2)
-            # Handle subtype
-            sub_type_id = self.create_type_id(sub_type_name)
-            # Handle count
-            # count_type_id = self.create_type_id("uint")
-            # self.gen_instruction("types", OpConstant, count_type_id, 3)
-            # Handle toplevel array type
-            type_id = self.create_id(type_name, None)
-            self.gen_instruction("types", cc.OpTypeArray, type_id, sub_type_id, n)
+                cc.OpTypeVector, type_id, sub_type_id, the_type._n)
+
+        # elif type_name.startswith("array"):
+        #     _, n, sub_type_name = type_name.split("_", 2)
+        #     # Handle subtype
+        #     sub_type_id = self.get_type_id(sub_type_name)
+        #     # Handle count
+        #     # count_type_id = self.get_type_id("uint")
+        #     # self.gen_instruction("types", OpConstant, count_type_id, 3)
+        #     # Handle toplevel array type
+        #     type_id = self.create_id(type_name)
+        #     self.gen_instruction("types", cc.OpTypeArray, type_id, sub_type_id, n)
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(the_type)
 
-        self._type_id_to_name[type_id] = type_name
-        self._type_name_to_id[type_name] = type_id
+        self._type_id_to_name[type_id] = the_type.__name__
+        self._type_name_to_id[the_type.__name__] = type_id
         return type_id
-
-    def get_type_id(self, id):
-        res = self._ids[id]
-        # assert isinstance(res, int)
-        # int for values, str for types
-        return res
-
