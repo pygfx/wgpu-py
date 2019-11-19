@@ -14,10 +14,10 @@ import time
 import ctypes
 import asyncio
 
-import webgpu
-import webgpu.wgpu_gl
-import webgpu.wgpu_ctypes
-import webgpu.wgpu_ffi
+import wgpu
+import wgpu.wgpu_gl
+import wgpu.wgpu_ctypes
+import wgpu.wgpu_ffi
 
 
 # Select backend. When using GL, I need to turn NVidia driver on, because of advanced shaders.
@@ -79,9 +79,9 @@ def create_window_qt(width, height, name, instance_handle):
     if BACKEND in ("CTYPES", "FFI"):
         window = QtGui.QWindow(None)
         # Use winId() or effectiveWinId() to get the Windows window handle
-        hwnd = webgpu.wgpu_ffi.ffi.cast("void *", int(window.winId()))
-        hinstance = webgpu.wgpu_ffi.ffi.NULL
-        surface = wgpu.create_surface_from_windows_hwnd(hinstance, hwnd)
+        hwnd = wgpu.wgpu_ffi.ffi.cast("void *", int(window.winId()))
+        hinstance = wgpu.wgpu_ffi.ffi.NULL
+        surface = ctx.create_surface_from_windows_hwnd(hinstance, hwnd)
     else:
         # class MyQt5OpenGLWidget(QtWidgets.QOpenGLWidget):
         #     def paintEvent(self, event):
@@ -112,28 +112,28 @@ def create_window_qt(width, height, name, instance_handle):
 
 # Instantiate gl-based wgpu context
 if BACKEND == "GL":
-    wgpu = webgpu.wgpu_gl.GlWGPU()
+    ctx = wgpu.wgpu_gl.GlWGPU()
 elif BACKEND == "CTYPES":
-    wgpu = webgpu.wgpu_ctypes.RsWGPU()
+    ctx = wgpu.wgpu_ctypes.RsWGPU()
 elif BACKEND == "FFI":
-    wgpu = webgpu.wgpu_ffi.RsWGPU()
+    ctx = wgpu.wgpu_ffi.RsWGPU()
 else:
     raise RuntimeError(f"Invalid backend {BACKEND}")
 
 
-adapter_id = wgpu.request_adapter(
-    wgpu.create_RequestAdapterOptions(
-        power_preference=wgpu.PowerPreference_Default,
+adapter_id = ctx.request_adapter(
+    ctx.create_RequestAdapterOptions(
+        power_preference=ctx.PowerPreference_Default,
         backends=1 | 2 | 4 | 8  # backend bits - no idea what this means
         )
 )
 
-device_des = wgpu.create_DeviceDescriptor(
-    extensions=wgpu.create_Extensions(anisotropic_filtering=False),
-    limits=wgpu.create_Limits(max_bind_groups=8)
+device_des = ctx.create_DeviceDescriptor(
+    extensions=ctx.create_Extensions(anisotropic_filtering=False),
+    limits=ctx.create_Limits(max_bind_groups=8)
 )
 
-device_id = wgpu.adapter_request_device(adapter_id, device_des)
+device_id = ctx.adapter_request_device(adapter_id, device_des)
 
 surface_id = create_window(640, 480, "Triangle WGPU", device_id)
 
@@ -159,75 +159,75 @@ def make_code(vert_or_frag):
         return dict(bytes=y, length=len(data)//4)
 
 
-vs_module = wgpu.device_create_shader_module(
+vs_module = ctx.device_create_shader_module(
     device_id,
-    wgpu.create_ShaderModuleDescriptor(code=make_code("vert"))
+    ctx.create_ShaderModuleDescriptor(code=make_code("vert"))
 )
 
-fs_module = wgpu.device_create_shader_module(
+fs_module = ctx.device_create_shader_module(
     device_id,
-    wgpu.create_ShaderModuleDescriptor(code=make_code("frag"))
+    ctx.create_ShaderModuleDescriptor(code=make_code("frag"))
 )
 
 # todo: I think this is where uniforms go
-bind_group_layout = wgpu.device_create_bind_group_layout(
+bind_group_layout = ctx.device_create_bind_group_layout(
     device_id,
-    wgpu.create_BindGroupLayoutDescriptor(bindings=(), bindings_length=0)
+    ctx.create_BindGroupLayoutDescriptor(bindings=(), bindings_length=0)
 )
 
-bind_group = wgpu.device_create_bind_group(
+bind_group = ctx.device_create_bind_group(
     device_id,
-    wgpu.create_BindGroupDescriptor(layout=bind_group_layout, bindings=(), bindings_length=0)
+    ctx.create_BindGroupDescriptor(layout=bind_group_layout, bindings=(), bindings_length=0)
 )
 
-pipeline_layout = wgpu.device_create_pipeline_layout(
+pipeline_layout = ctx.device_create_pipeline_layout(
     device_id,
-    wgpu.create_PipelineLayoutDescriptor(bind_group_layouts=(bind_group, ), bind_group_layouts_length=1)
+    ctx.create_PipelineLayoutDescriptor(bind_group_layouts=(bind_group, ), bind_group_layouts_length=1)
 )
 
 
 # todo: a lot of these functions have device_id as first arg - this smells like a class, perhaps
 # todo: several descriptor args have a list, and another arg to provide the length of that list, because C
 
-render_pipeline = wgpu.device_create_render_pipeline(
+render_pipeline = ctx.device_create_render_pipeline(
     device_id,
-    wgpu.create_RenderPipelineDescriptor(
+    ctx.create_RenderPipelineDescriptor(
         layout=pipeline_layout,
-        vertex_stage=wgpu.create_ProgrammableStageDescriptor(
+        vertex_stage=ctx.create_ProgrammableStageDescriptor(
             module=vs_module,
             entry_point="main",
         ),
-        # fragment_stage: Some(wgpu::ProgrammableStageDescriptor {
-        fragment_stage=wgpu.create_ProgrammableStageDescriptor(
+        # fragment_stage: Some(ctx::ProgrammableStageDescriptor {
+        fragment_stage=ctx.create_ProgrammableStageDescriptor(
             module=fs_module,
             entry_point="main",
         ),
-        primitive_topology=wgpu.PrimitiveTopology_TriangleList,
-        # rasterization_state: Some(wgpu::RasterizationStateDescriptor {
-        rasterization_state=wgpu.create_RasterizationStateDescriptor(
-            front_face=wgpu.FrontFace_Ccw,
-            cull_mode=wgpu.CullMode_None,
+        primitive_topology=ctx.PrimitiveTopology_TriangleList,
+        # rasterization_state: Some(ctx::RasterizationStateDescriptor {
+        rasterization_state=ctx.create_RasterizationStateDescriptor(
+            front_face=ctx.FrontFace_Ccw,
+            cull_mode=ctx.CullMode_None,
             depth_bias=0,
             depth_bias_slope_scale=0.0,
             depth_bias_clamp=0.0,
         ),
-        # color_states: &[wgpu::ColorStateDescriptor {
-        color_states=wgpu.create_ColorStateDescriptor(
-            format=wgpu.TextureFormat_Bgra8UnormSrgb,
-            alpha_blend=wgpu.create_BlendDescriptor(
-                    src_factor=wgpu.BlendFactor_One,
-                    dst_factor=wgpu.BlendFactor_Zero,
-                    operation=wgpu.BlendOperation_Add),
-            color_blend=wgpu.create_BlendDescriptor(
-                    src_factor=wgpu.BlendFactor_One,
-                    dst_factor=wgpu.BlendFactor_Zero,
-                    operation=wgpu.BlendOperation_Add),
-            write_mask=wgpu.ColorWrite_ALL,  # write_mask: wgpu::ColorWrite::ALL,
+        # color_states: &[ctx::ColorStateDescriptor {
+        color_states=ctx.create_ColorStateDescriptor(
+            format=ctx.TextureFormat_Bgra8UnormSrgb,
+            alpha_blend=ctx.create_BlendDescriptor(
+                    src_factor=ctx.BlendFactor_One,
+                    dst_factor=ctx.BlendFactor_Zero,
+                    operation=ctx.BlendOperation_Add),
+            color_blend=ctx.create_BlendDescriptor(
+                    src_factor=ctx.BlendFactor_One,
+                    dst_factor=ctx.BlendFactor_Zero,
+                    operation=ctx.BlendOperation_Add),
+            write_mask=ctx.ColorWrite_ALL,  # write_mask: ctx::ColorWrite::ALL,
         ),
         color_states_length=1,
         depth_stencil_state=None,
-        vertex_input=wgpu.create_VertexInputDescriptor(
-            index_format=wgpu.IndexFormat_Uint16,
+        vertex_input=ctx.create_VertexInputDescriptor(
+            index_format=ctx.IndexFormat_Uint16,
             vertex_buffers=(),
             vertex_buffers_length=0,
         ),
@@ -238,38 +238,38 @@ render_pipeline = wgpu.device_create_render_pipeline(
 )
 
 
-swap_chain = wgpu.device_create_swap_chain(
+swap_chain = ctx.device_create_swap_chain(
     device_id=device_id,
     surface_id=surface_id,
-    desc=wgpu.create_SwapChainDescriptor(
-        usage=wgpu.TextureUsage_OUTPUT_ATTACHMENT,  # usage
-        format=wgpu.TextureFormat_Bgra8UnormSrgb, # format: wgpu::TextureFormat::Bgra8UnormSrgb,
+    desc=ctx.create_SwapChainDescriptor(
+        usage=ctx.TextureUsage_OUTPUT_ATTACHMENT,  # usage
+        format=ctx.TextureFormat_Bgra8UnormSrgb, # format: ctx::TextureFormat::Bgra8UnormSrgb,
         width=640, # width: size.width.round() as u32,
         height=480, # height: size.height.round() as u32,
-        present_mode=wgpu.PresentMode_Vsync,  # present_mode: wgpu::PresentMode::Vsync,
+        present_mode=ctx.PresentMode_Vsync,  # present_mode: ctx::PresentMode::Vsync,
     )
 )
 
 
 def drawFrame():
-    next_texture = wgpu.swap_chain_get_next_texture(swap_chain)
-    command_encoder = wgpu.device_create_command_encoder(
+    next_texture = ctx.swap_chain_get_next_texture(swap_chain)
+    command_encoder = ctx.device_create_command_encoder(
         device_id,
-        wgpu.create_CommandEncoderDescriptor(todo=0),
+        ctx.create_CommandEncoderDescriptor(todo=0),
     )
 
-    rpass = wgpu.command_encoder_begin_render_pass(
+    rpass = ctx.command_encoder_begin_render_pass(
         command_encoder,
-        wgpu.create_RenderPassDescriptor(
+        ctx.create_RenderPassDescriptor(
             color_attachments=(
-                wgpu.create_RenderPassColorAttachmentDescriptor(
+                ctx.create_RenderPassColorAttachmentDescriptor(
                     # attachment=next_texture["view_id"],
                     # todo: arg! need struct2dict function in ffi implementation
                     attachment=next_texture["view_id"] if isinstance(next_texture, dict) else next_texture.view_id,
                     resolve_target=None, # resolve_target: None,
-                    load_op=wgpu.LoadOp_Clear,  # load_op: wgpu::LoadOp::Clear,
-                    store_op=wgpu.StoreOp_Store,  # store_op: wgpu::StoreOp::Store,
-                    clear_color=dict(r=1, g=1, b=0, a=1), # clear_color: wgpu::Color::GREEN,
+                    load_op=ctx.LoadOp_Clear,  # load_op: ctx::LoadOp::Clear,
+                    store_op=ctx.StoreOp_Store,  # store_op: ctx::StoreOp::Store,
+                    clear_color=dict(r=1, g=1, b=0, a=1), # clear_color: ctx::Color::GREEN,
                 ),
             ),
             color_attachments_length=1,
@@ -277,15 +277,15 @@ def drawFrame():
         )
     )
 
-    wgpu.render_pass_set_pipeline(rpass, render_pipeline)
-    wgpu.render_pass_set_bind_group(rpass, 0, bind_group, [], 0)
-    wgpu.render_pass_draw(rpass, 3, 1, 0, 0)
+    ctx.render_pass_set_pipeline(rpass, render_pipeline)
+    ctx.render_pass_set_bind_group(rpass, 0, bind_group, [], 0)
+    ctx.render_pass_draw(rpass, 3, 1, 0, 0)
 
-    queue = wgpu.device_get_queue(device_id)
-    wgpu.render_pass_end_pass(rpass)
-    cmd_buf = wgpu.command_encoder_finish(command_encoder, None)
-    wgpu.queue_submit(queue, [cmd_buf], 1)
-    wgpu.swap_chain_present(swap_chain)
+    queue = ctx.device_get_queue(device_id)
+    ctx.render_pass_end_pass(rpass)
+    cmd_buf = ctx.command_encoder_finish(command_encoder, None)
+    ctx.queue_submit(queue, [cmd_buf], 1)
+    ctx.swap_chain_present(swap_chain)
 
 
 # todo: stop when window is closed ...
