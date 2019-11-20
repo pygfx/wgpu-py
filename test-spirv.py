@@ -32,6 +32,7 @@ def fragment_shader():
     # version 450
     # extension GL_ARB_separate_shader_objects : enable
     # layout(location = 0) in vec3 fragColor;
+    # layout(location = 1, subdinges=1) in vec2 fragColor2;
     # layout(location = 0) out vec4 outColor;
 
     # fragColor = input[0, vec3]
@@ -45,13 +46,28 @@ def fragment_shader():
     return outColor
 
 
+def phong_shading(bla:vec3, foo:float, var:int):
+    """
+    glsl-achtige code
+    """
+
+
 def fragment_shader(input, output):
 
     input.define("pos", vec3, 12)
     output.define("color", vec4, 0)
 
+    # x = phong_shading()
+
     x = vec4(input.pos, 0.5)
     output.color = x
+
+# + testable
+# + ziet eruit als Python
+# - ziet eruit als Python, maar is het niet echt
+# - nieuwe concepten moet je wel leren, is niet echt Python!
+# + ja, maar dan ken je de syntax iig al :P
+
 
 
 c = Bytecode2SpirVCompiler(fragment_shader)
