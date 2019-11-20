@@ -15,7 +15,7 @@ import ctypes
 import asyncio
 
 import wgpu
-import wgpu.wgpu_gl
+# import wgpu.wgpu_gl
 import wgpu.wgpu_ctypes
 import wgpu.wgpu_ffi
 
@@ -124,13 +124,15 @@ else:
 adapter_id = ctx.request_adapter(
     ctx.create_RequestAdapterOptions(
         power_preference=ctx.PowerPreference_Default,
-        backends=1 | 2 | 4 | 8  # backend bits - no idea what this means
+        # backends=1 | 2 | 4 | 8  # backend bits - no idea what this means
+        backends=8  # 2 and 8 are available, but 2 does not work on HP laptop
+        # oh, and although 8 works, it wants zero bind groups :/
         )
 )
 
 device_des = ctx.create_DeviceDescriptor(
     extensions=ctx.create_Extensions(anisotropic_filtering=False),
-    limits=ctx.create_Limits(max_bind_groups=8)
+    limits=ctx.create_Limits(max_bind_groups=0)
 )
 
 device_id = ctx.adapter_request_device(adapter_id, device_des)
@@ -182,7 +184,8 @@ bind_group = ctx.device_create_bind_group(
 
 pipeline_layout = ctx.device_create_pipeline_layout(
     device_id,
-    ctx.create_PipelineLayoutDescriptor(bind_group_layouts=(bind_group, ), bind_group_layouts_length=1)
+    # ctx.create_PipelineLayoutDescriptor(bind_group_layouts=(bind_group, ), bind_group_layouts_length=1)
+    ctx.create_PipelineLayoutDescriptor(bind_group_layouts=(), bind_group_layouts_length=0)
 )
 
 
@@ -269,7 +272,7 @@ def drawFrame():
                     resolve_target=None, # resolve_target: None,
                     load_op=ctx.LoadOp_Clear,  # load_op: ctx::LoadOp::Clear,
                     store_op=ctx.StoreOp_Store,  # store_op: ctx::StoreOp::Store,
-                    clear_color=dict(r=1, g=1, b=0, a=1), # clear_color: ctx::Color::GREEN,
+                    clear_color=dict(r=0.5, g=255, b=0, a=255), # clear_color: ctx::Color::GREEN,
                 ),
             ),
             color_attachments_length=1,
@@ -278,7 +281,7 @@ def drawFrame():
     )
 
     ctx.render_pass_set_pipeline(rpass, render_pipeline)
-    ctx.render_pass_set_bind_group(rpass, 0, bind_group, [], 0)
+    # ctx.render_pass_set_bind_group(rpass, 0, bind_group, [], 0)
     ctx.render_pass_draw(rpass, 3, 1, 0, 0)
 
     queue = ctx.device_get_queue(device_id)
@@ -292,6 +295,7 @@ def drawFrame():
 async def drawer():
     while True:
         await asyncio.sleep(0.1)
+        # print("draw")
         drawFrame()
 
 asyncio.get_event_loop().create_task(drawer())
