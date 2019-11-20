@@ -5,7 +5,7 @@ Small script to test spirv compiler.
 import os
 
 from py2spirv import _spirv_constants as cc
-from py2spirv import Ast2SpirVCompiler, Bytecode2SpirVCompiler
+from py2spirv import Ast2SpirVCompiler, Bytecode2SpirVCompiler, WASL2SpirVCompiler
 
 # todo: how to declare wether its a vertex or fragment shader
 # todo: std
@@ -46,21 +46,40 @@ def fragment_shader():
     return outColor
 
 
-def phong_shading(bla:vec3, foo:float, var:int):
-    """
-    glsl-achtige code
-    """
-
-
 def fragment_shader(input, output):
 
     input.define("pos", vec3, 12)
     output.define("color", vec4, 0)
 
-    # x = phong_shading()
-
     x = vec4(input.pos, 0.5)
     output.color = x
+
+
+fragment_shader = """
+fn main (pos: input vec3 12,
+         color: output vec4 13
+        ) {
+
+    # this is a comment
+    color = vec4(pos, 0.5)
+}
+"""
+
+vertex_shader = """
+fn main (
+    index: input int gl_VertexID,  # gl_VertexID or gl_VertexIndex
+    pos: output vec4 gl_Position,
+) {
+
+    positions = array(
+        vec2(+0.0, -0.5),
+        vec2(+0.5, +0.5),
+        vec2(-0.5, +0.5),
+    )
+    x = positions[index]
+    pos = vec4(x, 0.0, 1.0)
+}
+"""
 
 # + testable
 # + ziet eruit als Python
@@ -70,6 +89,7 @@ def fragment_shader(input, output):
 
 
 
-c = Bytecode2SpirVCompiler(fragment_shader)
+# c = Bytecode2SpirVCompiler(fragment_shader)
+c = WASL2SpirVCompiler(vertex_shader)
 c.generate()
 print(c.disassble())
