@@ -38,13 +38,14 @@ void main()
 print(glsl2spirv("""
 #version 450
 
-layout (location = 12) in vec3 aPos; // the position variable has attribute position 0
+//layout (location = 12) in vec3 aPos; // the position variable has attribute position 0
 
 layout(location = 13) out vec4 vertexColor; // specify a color output to the fragment shader
 
 void main()
 {
-    vertexColor = vec4(aPos, 1.0);
+    vertexColor = vec4(1.0, 1.0, 1.0, 1.0);
+    //vertexColor = vec4(aPos, 1.0);
 }
 """))
 
@@ -85,5 +86,19 @@ vec3 uColor = vec3(1.0, 0.0, 0.0);
 
 void main()
 {
+}
+"""))
+
+
+## Vector composite
+
+print(glsl2spirv("""
+#version 450
+
+void main()
+    {
+    int index = 0;
+    vec2 positions[3] = vec2[3]( vec2(0.0, -0.5), vec2(0.5, 0.5), vec2(-0.5, 0.5) );
+    vec2 x = positions[index];
 }
 """))

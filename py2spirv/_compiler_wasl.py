@@ -9,7 +9,7 @@ from . import _types
 grammar = """
 Program: Procedure;
 Comment: /#.*$/;
-Procedure: 'fn' name=ID '(' params+=IOParameter[',']  ','? ')' '{' body=Body '}';
+Procedure: 'fn' name=ID '(' params*=IOParameter[',']  ','? ')' '{' body=Body '}';
 IOParameter: name=ID ':' mode=ID type=ID location=Location;
 Location: INT | ID;
 Parameter: name=ID ':' type=ID;
@@ -128,7 +128,18 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
 
             self._input[name] = type, var_id  # the code only needs var_id
 
-            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
+            # Define location
+            assert isinstance(location, (int, str))
+            if isinstance(location, int):
+                self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
+            else:
+                try:
+                    location = cc.builtins[location]
+                except KeyError:
+                    raise NameError(f"Not a known builtin io variable: {location}")
+                self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location)
+
+            # Create a variable (via a pointer)
             self.gen_instruction("types", cc.OpTypePointer, pointer_id, cc.StorageClass_Input, type_id)
             self.gen_instruction("types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Input)
 
@@ -141,7 +152,18 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
 
             self._output[name] = type, var_id
 
-            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
+            # Define location
+            assert isinstance(location, (int, str))
+            if isinstance(location, int):
+                self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
+            else:
+                try:
+                    location = cc.builtins[location]
+                except KeyError:
+                    raise NameError(f"Not a known builtin io variable: {location}")
+                self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location)
+
+            # Create a variable (via a pointer)
             self.gen_instruction("types", cc.OpTypePointer, pointer_id, cc.StorageClass_Output, type_id)
             self.gen_instruction("types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Output)
 
@@ -152,6 +174,17 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
 
         self._generate_io()
 
+        # Declare funcion
+        return_type_id = self.get_type_id(_types.void)
+        func_type_id = self.create_id("func_declaration")
+        self.gen_instruction("types", cc.OpTypeFunction, func_type_id, return_type_id)  # 0 args
+
+        # Start function definition
+        func_id = self._entry_point_id
+        func_control = 0  # can specify whether it should inline, etc.
+        self.gen_func_instruction(cc.OpFunction, return_type_id, func_id, func_control, func_type_id)
+        self.gen_func_instruction(cc.OpLabel, self.create_id("label"))
+
         # Parse
         for opcode, arg in self._bytecode:
             method_name = "_op_" + opcode[3:].lower()
@@ -161,6 +194,10 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
                 raise RuntimeError(f"Cannot parse {opcode} yet (no {method_name}()).")
             else:
                 method(arg)
+
+        # End function definition
+        self.gen_func_instruction(cc.OpReturn)
+        self.gen_func_instruction(cc.OpFunctionEnd)
 
     def _op_load(self, name):
         # store a variable that is used in an inner scope.
@@ -180,14 +217,20 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
             id, type_id = self.create_object(type(ob))
             if isinstance(ob, float):
                 bb = struct.pack("<f", ob)
+                self.gen_instruction("types", cc.OpConstant, type_id, id, bb)
             elif isinstance(ob, int):
                 bb = struct.pack("<i", ob)
+                self.gen_instruction("types", cc.OpConstant, type_id, id, bb)
             elif isinstance(ob, bool):
-                bb = struct.pack("<I", 0xffffffff if ob else 0)
-            self.gen_func_instruction(cc.OpConstant, type_id, id, bb)
+                op = cc.OpConstantTrue if ob else cc.OpConstantFalse
+                self.gen_instruction("types", op, type_id, id)
+            else:
+                raise NotImplementedError()
             self._stack.append(id)
         else:
             raise NotImplementedError()
+
+        # Also see OpConstantNull OpConstantSampler OpConstantComposite
 
     def _op_load_global(self):
         raise NotImplementedError()
@@ -210,7 +253,7 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
             if issubclass(type, _types.BaseVector):
                 result = self._vector_packing(type, args)
             elif type is _types.array:
-                result = self._array_packing(type, args)
+                result = self._array_packing(args)
             else:
                 raise NotImplementedError()
             self._stack.append(result)
@@ -232,6 +275,8 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
                 assert element_type is t, "vector type mismatch"
                 composite_ids.append(arg)
             elif issubclass(element_type, _types.BaseVector):
+                # todo: a contiguous subset of the scalars consumed can be represented by a vector operand instead!
+                # -> I think this means we can simply do composite_ids.append(arg)
                 assert element_type._t is t, "vector type mismatch"
                 for i in range(element_type._n):
                     comp_id = self.create_id("composite")
@@ -248,15 +293,39 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
                 f"{vector_type} did not expect {len(composite_ids)} elements"
             )
 
+        assert len(composite_ids) >= 2, "When constructing a vector, there must be at least two Constituent operands."
+
         # Construct
         result_id, vector_type_id = self.create_object(vector_type)
         self.gen_func_instruction(
             cc.OpCompositeConstruct, vector_type_id, result_id, *composite_ids
         )
+        # todo: or OpConstantComposite
         return result_id
 
-    def _array_packing(self, array_type, args):
-        1/0
+    def _array_packing(self, args):
+        n = len(args)
+        if n == 0:
+            raise IndexError("No support for zero-sized arrays.")
+
+        # Check that all args have the same type
+        element_type = self.get_type_from_id(args[0])
+        composite_ids = args
+        for arg in args:
+            assert self.get_type_from_id(arg) is element_type, "array type mismatch"
+
+
+        # Create array class
+        array_type = type(f"array_{element_type.__name__}_{n}", (_types.array, ), {})
+        array_type._t = element_type
+        array_type._n = n
+
+        result_id, type_id = self.create_object(array_type)
+        self.gen_func_instruction(cc.OpCompositeConstruct, type_id, result_id, *composite_ids)
+        # todo: or OpConstantComposite
+
+        return result_id
+
 
     def _op_binary_op(self, op):
         right = self._stack.pop()
@@ -279,3 +348,57 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
         else:
             raise NotImplementedError(f"Wut is {op}??")
         self._stack.append(id)
+
+    def _op_index(self, name):
+
+        # Select object
+        if name in self._aliases:
+            container_id = self._aliases[name]
+        else:
+            raise NameError(f"Unknown variable {name}.")
+
+        # Get type of object and index
+        container_type = self.get_type_from_id(container_id)
+        element_type = container_type._t
+        container_type_id = self.get_type_id(container_type)
+        index = self._stack.pop()
+
+        # assert self.get_type_from_id(index) is int
+
+        if issubclass(container_type, _types.array):
+
+            # todo: maybe ... the variable for a constant should be created only once ... instead of every time it gets indexed
+            # Put the array into a variable
+            container_variable = self.create_id("variable")
+            container_variable_type = self.create_id("pointer_type")
+            self.gen_instruction("types", cc.OpTypePointer, container_variable_type, cc.StorageClass_Function, container_type_id)
+            self.gen_func_instruction(cc.OpVariable, container_variable_type, container_variable, cc.StorageClass_Function)
+            self.gen_func_instruction(cc.OpStore, container_variable, container_id)
+
+            # Prepare result id and type
+            result_id, result_type_id = self.create_object(element_type)
+
+            # Create pointer into the array
+            pointer1 = self.create_id("pointer")
+            pointer2 = self.create_id("pointer")
+            self.gen_instruction("types", cc.OpTypePointer, pointer1, cc.StorageClass_Function, result_type_id)
+            self.gen_func_instruction(cc.OpInBoundsAccessChain, pointer1, pointer2, container_variable, index)
+
+            # Load the element from the array
+            self.gen_func_instruction(cc.OpLoad, result_type_id, result_id, pointer2)
+        else:
+            raise NotImplementedError()
+
+        self._stack.append(result_id)
+
+        # OpAccessChain: Create a pointer into a composite object that can be used with OpLoad and OpStore.
+
+        # OpVectorExtractDynamic: Extract a single, dynamically selected, component of a vector.
+        # OpVectorInsertDynamic: Make a copy of a vector, with a single, variably selected, component modified.
+        # OpVectorShuffle: Select arbitrary components from two vectors to make a new vector.
+        # OpCompositeInsert: Make a copy of a composite object, while modifying one part of it. (updating an element)
+
+
+    def _op_if(self):
+        raise NotImplementedError()
+        # OpSelect

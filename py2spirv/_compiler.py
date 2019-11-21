@@ -146,15 +146,36 @@ class BaseSpirVCompiler:
         # Define entry points
         self._entry_point_id = self.create_id("main")
         self.gen_instruction(
-            "entry_points", cc.OpEntryPoint, cc.ExecutionModel_Fragment, self._entry_point_id, "main"
+            "entry_points", cc.OpEntryPoint, cc.ExecutionModel_Vertex, self._entry_point_id, "main"
         )  # todo: arg1, arg2, pointers, that, are, used)
 
         # Define execution modes for each entry point
-        self.gen_instruction(
-            "execution_modes", cc.OpExecutionMode, self._entry_point_id, cc.ExecutionMode_OriginLowerLeft
-        )
+        #self.gen_instruction(
+        #    "execution_modes", cc.OpExecutionMode, self._entry_point_id, cc.ExecutionMode_OriginLowerLeft
+        #)
 
         self._generate()
+
+        # Move OpVariable to the start of a function
+        func_instructions = self._sections["functions"]
+        insert_point = -1
+        for i in range(len(func_instructions)):
+            if func_instructions[i][0] == cc.OpFunction:
+                insert_point = -1
+            elif insert_point < 0:
+                if func_instructions[i][0] == cc.OpLabel:
+                    insert_point = i + 1
+            elif func_instructions[i][0] == cc.OpVariable:
+                func_instructions.insert(insert_point, func_instructions.pop(i))
+                insert_point += 1
+
+        # Get ids of global variables
+        global_OpVariable_s = []
+        for instr in self._sections["types"]:
+            if instr[0] == cc.OpVariable:
+                global_OpVariable_s.append(instr[2])
+        # We assume one function, so all are used in our single function
+        self._sections["entry_points"][0] = self._sections["entry_points"][0] + tuple(global_OpVariable_s)
 
     def to_text(self):
         """ Generate a textual (dis-assembly-like) representation.
@@ -184,7 +205,9 @@ class BaseSpirVCompiler:
                 for i in instruction[1:]:
                     if isinstance(i, IdInt):
                         i_str = "%" + self._type_id_to_name.get(i, str(i))
-                        if i_str not in types:
+                        if instruction[0] == cc.OpDecorate:
+                            pass
+                        elif i_str not in types:
                             types.add(i_str)
                             ret = i_str + " = "
                             i_str = "(" + repr(i) + ")"
@@ -242,7 +265,7 @@ class BaseSpirVCompiler:
         try:
             stdout = subprocess.check_output(["spirv-dis", filename], stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as err:
-            e = "Could not disassemle Spir-V:\n" + err.output.decode()
+            e = "Could not disassemble Spir-V:\n" + err.output.decode()
             raise Exception(e)
         else:
             return stdout.decode()
@@ -345,7 +368,7 @@ class BaseSpirVCompiler:
             self.gen_instruction("types", cc.OpTypeBool, type_id)
         elif the_type is _types.int:
             type_id = self.create_id(the_type)
-            self.gen_instruction("types", cc.OpTypeInt, type_id, 32, 1)  # signed
+            self.gen_instruction("types", cc.OpTypeInt, type_id, 32, 0)  # not signed? validate fails if I use 1
         elif the_type is _types.float:
             type_id = self.create_id(the_type)
             self.gen_instruction("types", cc.OpTypeFloat, type_id, 32)
@@ -354,20 +377,27 @@ class BaseSpirVCompiler:
             type_id = self.create_id(the_type)
             self.gen_instruction("types",
                 cc.OpTypeVector, type_id, sub_type_id, the_type._n)
-
-        # elif type_name.startswith("array"):
-        #     _, n, sub_type_name = type_name.split("_", 2)
-        #     # Handle subtype
-        #     sub_type_id = self.get_type_id(sub_type_name)
-        #     # Handle count
-        #     # count_type_id = self.get_type_id("uint")
-        #     # self.gen_instruction("types", OpConstant, count_type_id, 3)
-        #     # Handle toplevel array type
-        #     type_id = self.create_id(type_name)
-        #     self.gen_instruction("types", cc.OpTypeArray, type_id, sub_type_id, n)
+        elif issubclass(the_type, _types.BaseMatrix):
+            raise NotImplementedError()
+            # OpTypeMatrix
+        elif issubclass(the_type, _types.array):
+            count = the_type._n
+            sub_type_id = self.get_type_id(the_type._t)
+            # Handle count
+            count_type_id = self.get_type_id(int)
+            count_id = self.create_id("array_count")
+            self.gen_instruction("types", cc.OpConstant, count_type_id, count_id, count)
+            # Handle toplevel array type
+            type_id = self.create_id(the_type)
+            self.gen_instruction("types", cc.OpTypeArray, type_id, sub_type_id, count_id)
+            # Also see OpTypeRuntimeArray when length is not known at compile time (use OpArrayLength)
+        elif issubclass(the_type, _types.struct):
+            raise NotImplementedError()
+            # OpTypeStruct
         else:
             raise NotImplementedError(the_type)
 
+        # todo: also OpTypeImage and OpTypeSampledImage
         self._type_id_to_name[type_id] = the_type.__name__
         self._type_name_to_id[the_type.__name__] = type_id
         return type_id

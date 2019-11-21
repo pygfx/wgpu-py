@@ -113,8 +113,8 @@ def create_window_qt(width, height, name, instance_handle):
 # def vertex_shader(input, output):
 vertex_shader = """
 fn main (
-    index: input int gl_VertexID,  # gl_VertexID or gl_VertexIndex
-    pos: output vec4 gl_Position,
+    index: input int VertexId,  # VertexID or VertexIndex
+    pos: output vec4 Position,
 ) {
 
     positions = array(
@@ -123,7 +123,7 @@ fn main (
         vec2(-0.5, +0.5),
     )
 
-    pos = vec4(positions[index], 0.0, 1.0);
+    pos = vec4(positions[index], 0.0, 1.0)
 }
 """
 
@@ -143,9 +143,15 @@ else:
 adapter_id = ctx.request_adapter(
     ctx.create_RequestAdapterOptions(
         power_preference=ctx.PowerPreference_Default,
-        # backends=1 | 2 | 4 | 8  # backend bits - no idea what this means
-        backends=8  # 2 and 8 are available, but 2 does not work on HP laptop
-        # oh, and although 8 works, it wants zero bind groups :/
+        #backends = 1 | 2 | 4 | 8  # modern, but Dx12 is still buggy
+        backends = 2 | 4  # Vulkan or Metal
+        # on HP laptop: 2 and 8 are available, but 2 does not work. 8 works, but it wants zero bind groups :/
+        # 1 => Backend::Empty,
+        # 2 => Backend::Vulkan,
+        # 4 => Backend::Metal,
+        # 8 => Backend::Dx12,
+        # 16 => Backend::Dx11,
+        # 32 => Backend::Gl,
         )
 )
 
@@ -179,10 +185,25 @@ def make_code(vert_or_frag):
         y = ffi.cast("uint32_t *", x)
         return dict(bytes=y, length=len(data)//4)
 
+def make_code_wasl(vert_or_frag):
+    import cffi
+    ffi = cffi.FFI()
+    from py2spirv import WASL2SpirVCompiler
+    if vert_or_frag == "vert":
+        c = WASL2SpirVCompiler(vertex_shader)
+    else:
+        assert False
+
+    c.generate()
+    data = c.to_binary()
+    x = ffi.new("uint8_t[]", data)
+    y = ffi.cast("uint32_t *", x)
+    return dict(bytes=y, length=len(data)//4)
+
 
 vs_module = ctx.device_create_shader_module(
     device_id,
-    ctx.create_ShaderModuleDescriptor(code=make_code("vert"))
+    ctx.create_ShaderModuleDescriptor(code=make_code_wasl("vert"))
 )
 
 fs_module = ctx.device_create_shader_module(

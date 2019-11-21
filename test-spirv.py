@@ -55,7 +55,7 @@ def fragment_shader(input, output):
     output.color = x
 
 
-fragment_shader = """
+ffragment_shader = """
 fn main (pos: input vec3 12,
          color: output vec4 13
         ) {
@@ -67,8 +67,8 @@ fn main (pos: input vec3 12,
 
 vertex_shader = """
 fn main (
-    index: input int gl_VertexID,  # gl_VertexID or gl_VertexIndex
-    pos: output vec4 gl_Position,
+    index: input int VertexId,  # VertexID or VertexIndex
+    pos: output vec4 Position,
 ) {
 
     positions = array(
@@ -76,8 +76,8 @@ fn main (
         vec2(+0.5, +0.5),
         vec2(-0.5, +0.5),
     )
-    x = positions[index]
-    pos = vec4(x, 0.0, 1.0)
+
+    pos = vec4(positions[index], 0.0, 1.0)
 }
 """
 
@@ -88,8 +88,8 @@ fn main (
 # + ja, maar dan ken je de syntax iig al :P
 
 
-
-# c = Bytecode2SpirVCompiler(fragment_shader)
 c = WASL2SpirVCompiler(vertex_shader)
+# c = Bytecode2SpirVCompiler(fragment_shader)
 c.generate()
 print(c.disassble())
+c.validate()
