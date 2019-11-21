@@ -111,10 +111,11 @@ def create_window_qt(width, height, name, instance_handle):
 ##
 
 # def vertex_shader(input, output):
-vertex_shader = """
+vertex_shader_wasl = """
 fn main (
     index: input int VertexId,  # VertexID or VertexIndex
     pos: output vec4 Position,
+    color: output vec3 0,
 ) {
 
     positions = array(
@@ -123,8 +124,20 @@ fn main (
         vec2(-0.5, +0.5),
     )
 
-    pos = vec4(positions[index], 0.0, 1.0)
+    p = positions[index]
+    pos = vec4(p, 0.0, 1.0)
+    color = vec3(p, 0.5)
 }
+"""
+
+fragment_shader_wasl = """
+fn main (
+    inColor: input vec3 0,
+    outColor: output vec4 0,
+) {
+    outColor = vec4(inColor, 1.0)
+}
+
 """
 
 ##
@@ -167,7 +180,7 @@ surface_id = create_window(640, 480, "Triangle WGPU", device_id)
 # gl_VertexIndex vs gl_InstanceID
 
 
-def make_code(vert_or_frag):
+def make_code_file(vert_or_frag):
     # Get filename and load file
     assert vert_or_frag in ("vert", "frag")
     filename = "shaders/triangle." + vert_or_frag
@@ -190,11 +203,13 @@ def make_code_wasl(vert_or_frag):
     ffi = cffi.FFI()
     from py2spirv import WASL2SpirVCompiler
     if vert_or_frag == "vert":
-        c = WASL2SpirVCompiler(vertex_shader)
+        c = WASL2SpirVCompiler(vertex_shader_wasl)
+        c.generate("vertex")
     else:
-        assert False
+        fragment_shader_wasl
+        c = WASL2SpirVCompiler(fragment_shader_wasl)
+        c.generate("fragment")
 
-    c.generate()
     data = c.to_binary()
     x = ffi.new("uint8_t[]", data)
     y = ffi.cast("uint32_t *", x)
@@ -208,7 +223,7 @@ vs_module = ctx.device_create_shader_module(
 
 fs_module = ctx.device_create_shader_module(
     device_id,
-    ctx.create_ShaderModuleDescriptor(code=make_code("frag"))
+    ctx.create_ShaderModuleDescriptor(code=make_code_wasl("frag"))
 )
 
 # todo: I think this is where uniforms go

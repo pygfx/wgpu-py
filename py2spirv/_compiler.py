@@ -123,10 +123,18 @@ class BaseSpirVCompiler:
                               # d. Function end, using OpFunctionEnd.
         }
 
-    def generate(self):
+    def generate(self, execution_model="vertex"):
         """ Generate the Spir-V code. After this, to_binary() can be used to
         produce the binary blob that represents the Spir-V module.
         """
+
+        # todo: somehow derive execution_model from the function itself
+        if execution_model.lower() == "vertex":
+            execution_model = cc.ExecutionModel_Vertex
+        elif execution_model.lower() == "fragment":
+            execution_model = cc.ExecutionModel_Fragment
+        else:
+            raise ValueError(f"Unknown execution model: {execution_model}")
 
         # Start clean
         self._init()
@@ -144,10 +152,11 @@ class BaseSpirVCompiler:
         self.gen_instruction("memory_model", cc.OpMemoryModel, cc.AddressingModel_Logical, cc.MemoryModel_Simple)
 
         # Define entry points
+        # Note that we must add the ids of all used OpVariables that this entrypoint uses.
         self._entry_point_id = self.create_id("main")
         self.gen_instruction(
-            "entry_points", cc.OpEntryPoint, cc.ExecutionModel_Vertex, self._entry_point_id, "main"
-        )  # todo: arg1, arg2, pointers, that, are, used)
+            "entry_points", cc.OpEntryPoint, execution_model, self._entry_point_id, "main"
+        )
 
         # Define execution modes for each entry point
         #self.gen_instruction(
