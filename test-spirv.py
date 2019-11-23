@@ -5,7 +5,7 @@ Small script to test spirv compiler.
 import os
 
 from py2spirv import _spirv_constants as cc
-from py2spirv import Bytecode2SpirVCompiler, WASL2SpirVCompiler
+from py2spirv import Python2SpirVCompiler, WASL2SpirVCompiler
 from py2spirv import _types
 
 # todo: how to declare wether its a vertex or fragment shader
@@ -48,27 +48,29 @@ def fragment_shader():
 
 
 def fragment_shader(input, output):
+    input.define("index", "VertexId", i32)
+    output.define("pos", "Position", vec4)
+    output.define("color", 0, vec3)
 
-    input.define("pos", vec3, 12)
-    output.define("color", vec4, 0)
+    positions = Array(
+        vec2(+0.0, -0.5),
+        vec2(+0.5, +0.5),
+        vec2(-0.5, +0.5),
+    )
 
-    x = vec4(input.pos, 0.5)
-    output.color = x
+    p = positions[input.index]
+    output.pos = vec4(p, 0.0, 1.0)
+    output.color = vec3(p, 0.5)
 
 
 # from sprv import F32, I32, Bool
 
 ffragment_shader = """
-fn main (pos: input vec3_64 12,
-         color: output F32.mat(3, 4) 13
-         tex: image F16.vec(3).array(10) 14
-         someStruct: input {'foo': F32, 'bar': F32.vec(3)}
-        ) {
-
-
-    # this is a comment
-    color = vec4(pos, 0.5)
-    #color = f32.vec4(pos, 0.5)
+fn main (
+    inColor: input vec3 0,
+    outColor: output vec4 0,
+) {
+    outColor = vec4(inColor, 1.0)
 }
 """
 
@@ -95,8 +97,9 @@ fn main (
 # + ja, maar dan ken je de syntax iig al :P
 
 
-c = WASL2SpirVCompiler(vertex_shader)
-# c = Bytecode2SpirVCompiler(fragment_shader)
+# c = WASL2SpirVCompiler(vertex_shader)
+# c = Python2SpirVCompiler(fragment_shader)
+c = WASL2SpirVCompiler(ffragment_shader)
 c.generate()
 print(c.disassble())
 c.validate()

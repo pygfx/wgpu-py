@@ -15,12 +15,20 @@ CO_BINARY_OP = "CO_BINARY_OP"
 CO_STORE = "CO_STORE"
 CO_CALL = "CO_CALL"
 CO_INDEX = "CO_INDEX"
+CO_POP_TOP = "CO_POP_TOP"
 
 
-class BytecodeSpirVCompiler(BaseSpirVCompiler):
+class Bytecode2SpirVCompiler(BaseSpirVCompiler):
     """ A compiler that operates on our own well-defined bytecode.
     Use directly with bytecode input, or subclass to accept other kinds of
     input, convert that input to bytecode and then feed that into this base class.
+
+    Bytecode describing a stack machine is a pretty nice representation to generate
+    SpirV code, because the code gets visited in a flow, making it easier to
+    do type inference. By implementing our own bytecode, we can implement a single
+    generator based on that, and use the bytecode as a target for different source
+    languages. Also, we can target the bytecode a bit towards SpirV, making this
+    class relatively simple. In other words, it separates concerns very well.
     """
 
     def __init__(self, bytecode):
@@ -57,6 +65,9 @@ class BytecodeSpirVCompiler(BaseSpirVCompiler):
         # End function definition
         self.gen_func_instruction(cc.OpReturn)
         self.gen_func_instruction(cc.OpFunctionEnd)
+
+    def _op_pop_top(self, arg):
+        self._stack.pop()
 
     def _op_input(self, name_location_type):
         name, location, type_str = name_location_type
@@ -116,6 +127,8 @@ class BytecodeSpirVCompiler(BaseSpirVCompiler):
             id, type_id = self.create_object(type)
             self.gen_func_instruction(cc.OpLoad, type_id, id, var_id)
             ob = id
+        elif name in _types.spirv_types_map:
+            ob = _types.spirv_types_map[name]
         else:
             raise NameError(f"Using invalid variable: {name}")
         self._stack.append(ob)
@@ -154,17 +167,16 @@ class BytecodeSpirVCompiler(BaseSpirVCompiler):
             self.gen_func_instruction(cc.OpStore, var_id, ob)
         self._aliases[name] = ob
 
-    def _op_call(self, arg):
-        name, nargs = arg
+    def _op_call(self, nargs):
 
         args = self._stack[-nargs:]
         self._stack[-nargs:] = []
+        func = self._stack.pop()
 
-        if name in _types.spirv_types_map:
-            type = _types.spirv_types_map[name]
-            if issubclass(type, _types.Vector):
-                result = self._vector_packing(type, args)
-            elif issubclass(type, _types.Array):
+        if isinstance(func, type):
+            if issubclass(func, _types.Vector):
+                result = self._vector_packing(func, args)
+            elif issubclass(func, _types.Array):
                 result = self._array_packing(args)
             else:
                 raise NotImplementedError()
@@ -258,19 +270,15 @@ class BytecodeSpirVCompiler(BaseSpirVCompiler):
             raise NotImplementedError(f"Wut is {op}??")
         self._stack.append(id)
 
-    def _op_index(self, name):
+    def _op_index(self, arg):
 
-        # Select object
-        if name in self._aliases:
-            container_id = self._aliases[name]
-        else:
-            raise NameError(f"Unknown variable {name}.")
+        index = self._stack.pop()
+        container_id = self._stack.pop()
 
         # Get type of object and index
         container_type = self.get_type_from_id(container_id)
         element_type = container_type.subtype
         container_type_id = self.get_type_id(container_type)
-        index = self._stack.pop()
 
         # assert self.get_type_from_id(index) is int
 

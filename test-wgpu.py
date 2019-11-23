@@ -110,7 +110,30 @@ def create_window_qt(width, height, name, instance_handle):
 
 ##
 
-# def vertex_shader(input, output):
+
+def vertex_shader_py(input, output):
+    input.define("index", "VertexId", i32)
+    output.define("pos", "Position", vec4)
+    output.define("color", 0, vec3)
+
+    positions = Array(
+        vec2(+0.0, -0.5),
+        vec2(+0.5, +0.5),
+        vec2(-0.5, +0.7),
+    )
+
+    p = positions[input.index]
+    output.pos = vec4(p, 0.0, 1.0)
+    output.color = vec3(p, 0.5)
+
+
+def fragment_shader_py(input, output):
+    input.define("color", 0, vec3)
+    output.define("color", 0, vec4)
+
+    output.color = vec4(input.color, 1.0)
+
+
 vertex_shader_wasl = """
 fn main (
     index: input i32 VertexId,  # VertexID or VertexIndex
@@ -130,6 +153,7 @@ fn main (
 }
 """
 
+
 fragment_shader_wasl = """
 fn main (
     inColor: input vec3 0,
@@ -137,7 +161,6 @@ fn main (
 ) {
     outColor = vec4(inColor, 1.0)
 }
-
 """
 
 ##
@@ -215,15 +238,32 @@ def make_code_wasl(vert_or_frag):
     y = ffi.cast("uint32_t *", x)
     return dict(bytes=y, length=len(data)//4)
 
+def make_code_py(vert_or_frag):
+    import cffi
+    ffi = cffi.FFI()
+    from py2spirv import Python2SpirVCompiler
+    if vert_or_frag == "vert":
+        c = Python2SpirVCompiler(vertex_shader_py)
+        c.generate("vertex")
+    else:
+        fragment_shader_wasl
+        c = Python2SpirVCompiler(fragment_shader_py)
+        c.generate("fragment")
+
+    data = c.to_binary()
+    x = ffi.new("uint8_t[]", data)
+    y = ffi.cast("uint32_t *", x)
+    return dict(bytes=y, length=len(data)//4)
+
 
 vs_module = ctx.device_create_shader_module(
     device_id,
-    ctx.create_ShaderModuleDescriptor(code=make_code_wasl("vert"))
+    ctx.create_ShaderModuleDescriptor(code=make_code_py("vert"))
 )
 
 fs_module = ctx.device_create_shader_module(
     device_id,
-    ctx.create_ShaderModuleDescriptor(code=make_code_wasl("frag"))
+    ctx.create_ShaderModuleDescriptor(code=make_code_py("frag"))
 )
 
 # todo: I think this is where uniforms go

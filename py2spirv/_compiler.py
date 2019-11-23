@@ -69,16 +69,6 @@ class BaseSpirVCompiler:
     """ Generate binary Spir-V code from a Python AST.
     """
 
-    def __init__(self, py_func):
-        if not inspect.isfunction(py_func):
-            raise TypeError("Python to SpirV Compiler needs a Python function.")
-        self._py_func = py_func
-        self._prepare()
-
-    def _prepare(self):
-        # Subclass should e.g. do some parsing here. Don't do too much work yet.
-        raise NotImplementedError()
-
     def _generate(self):
         # Subclasses should generate SpirV here
         raise NotImplementedError()

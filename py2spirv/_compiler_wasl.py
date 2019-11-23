@@ -32,7 +32,7 @@ IdentifierIndexed: name=ID '[' index=Expression ']';
 meta_model = metamodel_from_str(grammar, classes=[])
 
 
-class WASL2SpirVCompiler(bc.BytecodeSpirVCompiler):
+class WASL2SpirVCompiler(bc.Bytecode2SpirVCompiler):
     """ Compiles a string with WASL shader code to SpirV.
     """
 
@@ -97,13 +97,15 @@ class Wasl2Bytecode:
         self.emit(bc.CO_LOAD, node.name)
 
     def visit_IdentifierIndexed(self, node):
+        self.emit(bc.CO_LOAD, node.name)
         self.visit(node.index)
-        self.emit(bc.CO_INDEX, node.name)
+        self.emit(bc.CO_INDEX, None)
 
     def visit_Number(self, node):
         self.emit(bc.CO_LOAD_CONSTANT, node.value)
 
     def visit_CallExpr(self, node):
+        self.emit(bc.CO_LOAD, node.name)
         for arg in node.args:
             self.visit(arg)
-        self.emit(bc.CO_CALL, (node.name, len(node.args)))
+        self.emit(bc.CO_CALL, len(node.args))
