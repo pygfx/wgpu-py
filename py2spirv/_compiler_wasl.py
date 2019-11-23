@@ -39,8 +39,7 @@ class WASL2SpirVCompiler(bc.BytecodeSpirVCompiler):
     def __init__(self, s):
         converter = Wasl2Bytecode()
         converter.convert(s)
-        bytecode, input, output = converter.dump()
-        super().__init__(bytecode, input, output)
+        super().__init__( converter.dump())
 
 
 class Wasl2Bytecode:
@@ -49,8 +48,6 @@ class Wasl2Bytecode:
 
     def convert(self, s):
         self._opcodes = []
-        self._input = {}
-        self._output = {}
         ast = meta_model.model_from_str(s)
         self.visit(ast)
 
@@ -58,7 +55,7 @@ class Wasl2Bytecode:
         self._opcodes.append((opcode, arg))
 
     def dump(self):
-        return self._opcodes, self._input, self._output
+        return self._opcodes
 
     def visit(self, node):
 
@@ -69,9 +66,9 @@ class Wasl2Bytecode:
         name = node.name
         for param in node.params:
             if param.mode == "input":
-                self._input[param.name] = param.type, param.location
+                self.emit(bc.CO_INPUT, (param.name, param.location, param.type))
             elif param.mode == "output":
-                self._output[param.name] = param.type, param.location
+                self.emit(bc.CO_OUTPUT, (param.name, param.location, param.type))
             elif param.mode == "uniform":
                 raise NotImplementedError()
             else:

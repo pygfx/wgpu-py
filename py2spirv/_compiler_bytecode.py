@@ -7,6 +7,7 @@ from . import _types
 
 
 CO_INPUT = "CO_INPUT"
+CO_OUTPUT = "CO_OUTPUT"
 CO_ASSIGN = "CO_ASSIGN"
 CO_LOAD_CONSTANT = "CO_LOAD_CONSTANT"
 CO_LOAD = "CO_LOAD"
@@ -22,66 +23,15 @@ class BytecodeSpirVCompiler(BaseSpirVCompiler):
     input, convert that input to bytecode and then feed that into this base class.
     """
 
-    def __init__(self, bytecode, input, output):
+    def __init__(self, bytecode):
         self._bytecode = bytecode
-        self._input = input
-        self._output = output
-
-    def _generate_io(self):
-        for name in list(self._input.keys()):
-            type_str, location = self._input[name]
-            type = _types.spirv_types_map[type_str]
-
-            var_id, type_id = self.create_object(type)  # todo: or "input." + name)
-            pointer_id = self.create_id("pointer")
-
-            self._input[name] = type, var_id  # the code only needs var_id
-
-            # Define location
-            assert isinstance(location, (int, str))
-            if isinstance(location, int):
-                self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
-            else:
-                try:
-                    location = cc.builtins[location]
-                except KeyError:
-                    raise NameError(f"Not a known builtin io variable: {location}")
-                self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location)
-
-            # Create a variable (via a pointer)
-            self.gen_instruction("types", cc.OpTypePointer, pointer_id, cc.StorageClass_Input, type_id)
-            self.gen_instruction("types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Input)
-
-        for name in list(self._output.keys()):
-            type_str, location = self._output[name]
-            type = _types.spirv_types_map[type_str]
-
-            var_id, type_id = self.create_object(type)  # todo: or "output." + name)
-            pointer_id = self.create_id("pointer")
-
-            self._output[name] = type, var_id
-
-            # Define location
-            assert isinstance(location, (int, str))
-            if isinstance(location, int):
-                self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
-            else:
-                try:
-                    location = cc.builtins[location]
-                except KeyError:
-                    raise NameError(f"Not a known builtin io variable: {location}")
-                self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location)
-
-            # Create a variable (via a pointer)
-            self.gen_instruction("types", cc.OpTypePointer, pointer_id, cc.StorageClass_Output, type_id)
-            self.gen_instruction("types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Output)
 
     def _generate(self):
 
         self._stack = []
+        self._input = {}
+        self._output = {}
         self._aliases = {}
-
-        self._generate_io()
 
         # Declare funcion
         return_type_id = self.get_type_id(_types.void)
@@ -107,6 +57,55 @@ class BytecodeSpirVCompiler(BaseSpirVCompiler):
         # End function definition
         self.gen_func_instruction(cc.OpReturn)
         self.gen_func_instruction(cc.OpFunctionEnd)
+
+    def _op_input(self, name_location_type):
+        name, location, type_str = name_location_type
+
+        type = _types.spirv_types_map[type_str]
+
+        var_id, type_id = self.create_object(type)  # todo: or "input." + name)
+        pointer_id = self.create_id("pointer")
+
+        self._input[name] = type, var_id  # the code only needs var_id
+
+        # Define location
+        assert isinstance(location, (int, str))
+        if isinstance(location, int):
+            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
+        else:
+            try:
+                location = cc.builtins[location]
+            except KeyError:
+                raise NameError(f"Not a known builtin io variable: {location}")
+            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location)
+
+        # Create a variable (via a pointer)
+        self.gen_instruction("types", cc.OpTypePointer, pointer_id, cc.StorageClass_Input, type_id)
+        self.gen_instruction("types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Input)
+
+    def _op_output(self, name_location_type):
+        name, location, type_str = name_location_type
+        type = _types.spirv_types_map[type_str]
+
+        var_id, type_id = self.create_object(type)  # todo: or "output." + name)
+        pointer_id = self.create_id("pointer")
+
+        self._output[name] = type, var_id
+
+        # Define location
+        assert isinstance(location, (int, str))
+        if isinstance(location, int):
+            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
+        else:
+            try:
+                location = cc.builtins[location]
+            except KeyError:
+                raise NameError(f"Not a known builtin io variable: {location}")
+            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location)
+
+        # Create a variable (via a pointer)
+        self.gen_instruction("types", cc.OpTypePointer, pointer_id, cc.StorageClass_Output, type_id)
+        self.gen_instruction("types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Output)
 
     def _op_load(self, name):
         # store a variable that is used in an inner scope.
