@@ -113,12 +113,12 @@ def create_window_qt(width, height, name, instance_handle):
 # def vertex_shader(input, output):
 vertex_shader_wasl = """
 fn main (
-    index: input int VertexId,  # VertexID or VertexIndex
+    index: input i32 VertexId,  # VertexID or VertexIndex
     pos: output vec4 Position,
     color: output vec3 0,
 ) {
 
-    positions = array(
+    positions = Array(
         vec2(+0.0, -0.5),
         vec2(+0.5, +0.5),
         vec2(-0.5, +0.5),

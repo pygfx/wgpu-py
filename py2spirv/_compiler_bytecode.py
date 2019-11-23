@@ -234,7 +234,7 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
         self._stack[-nargs:] = []
         func = self._stack.pop()
 
-        if issubclass(func, _types.BaseVector):
+        if issubclass(func, _types.Vector):
             result = self._vector_packing(func, args)
             self._stack.append(result)
 
@@ -243,7 +243,7 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
 
     def _vector_packing(self, vector_type, args):
 
-        n, t = vector_type._n, vector_type._t  # noqa
+        n, t = vector_type.length, vector_type.subtype  # noqa
         type_id = self.get_type_id(t)
         composite_ids = []
 
@@ -252,12 +252,12 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
             if not isinstance(arg, IdInt):
                 raise RuntimeError("Expected a SpirV object")
             element_type = self.get_type_from_id(arg)
-            if element_type in (float, int, bool):
+            if issubclass(element_type, _types.Scalar):
                 assert element_type is t, "vector type mismatch"
                 composite_ids.append(arg)
-            elif issubclass(element_type, _types.BaseVector):
-                assert element_type._t is t, "vector type mismatch"
-                for i in range(element_type._n):
+            elif issubclass(element_type, _types.Vector):
+                assert element_type.subtype is t, "vector type mismatch"
+                for i in range(element_type.length):
                     comp_id = self.create_id("composite")
                     self.gen_func_instruction(
                         cc.OpCompositeExtract, type_id, comp_id, arg, i

@@ -214,14 +214,18 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
 
     def _op_load_constant(self, ob):
         if isinstance(ob, (float, int, bool)):
-            id, type_id = self.create_object(type(ob))
             if isinstance(ob, float):
+                id, type_id = self.create_object(_types.f32)
                 bb = struct.pack("<f", ob)
                 self.gen_instruction("types", cc.OpConstant, type_id, id, bb)
+                # bb = struct.pack("<d", ob)
+                # self.gen_instruction("types", cc.OpConstant, type_id, id, bb[:4], bb[4:])
             elif isinstance(ob, int):
+                id, type_id = self.create_object(_types.i32)
                 bb = struct.pack("<i", ob)
                 self.gen_instruction("types", cc.OpConstant, type_id, id, bb)
             elif isinstance(ob, bool):
+                id, type_id = self.create_object(_types.boolean)
                 op = cc.OpConstantTrue if ob else cc.OpConstantFalse
                 self.gen_instruction("types", op, type_id, id)
             else:
@@ -250,9 +254,9 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
 
         if name in _types.spirv_types_map:
             type = _types.spirv_types_map[name]
-            if issubclass(type, _types.BaseVector):
+            if issubclass(type, _types.Vector):
                 result = self._vector_packing(type, args)
-            elif type is _types.array:
+            elif issubclass(type, _types.Array):
                 result = self._array_packing(args)
             else:
                 raise NotImplementedError()
@@ -262,7 +266,7 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
 
     def _vector_packing(self, vector_type, args):
 
-        n, t = vector_type._n, vector_type._t  # noqa
+        n, t = vector_type.length, vector_type.subtype  # noqa
         type_id = self.get_type_id(t)
         composite_ids = []
 
@@ -271,14 +275,14 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
             if not isinstance(arg, IdInt):
                 raise RuntimeError("Expected a SpirV object")
             element_type = self.get_type_from_id(arg)
-            if element_type in (float, int, bool):
+            if issubclass(element_type, _types.Scalar):
                 assert element_type is t, "vector type mismatch"
                 composite_ids.append(arg)
-            elif issubclass(element_type, _types.BaseVector):
+            elif issubclass(element_type, _types.Vector):
                 # todo: a contiguous subset of the scalars consumed can be represented by a vector operand instead!
                 # -> I think this means we can simply do composite_ids.append(arg)
-                assert element_type._t is t, "vector type mismatch"
-                for i in range(element_type._n):
+                assert element_type.subtype is t, "vector type mismatch"
+                for i in range(element_type.length):
                     comp_id = self.create_id("composite")
                     self.gen_func_instruction(
                         cc.OpCompositeExtract, type_id, comp_id, arg, i
@@ -314,11 +318,8 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
         for arg in args:
             assert self.get_type_from_id(arg) is element_type, "array type mismatch"
 
-
         # Create array class
-        array_type = type(f"array_{element_type.__name__}_{n}", (_types.array, ), {})
-        array_type._t = element_type
-        array_type._n = n
+        array_type = _types.Array(element_type, n)
 
         result_id, type_id = self.create_object(array_type)
         self.gen_func_instruction(cc.OpCompositeConstruct, type_id, result_id, *composite_ids)
@@ -334,7 +335,7 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
         left_type = self.get_type_from_id(left)
 
         assert left_type is _types.vec3
-        assert right_type is _types.float
+        assert issubclass(right_type, _types.Float)
 
         if op == "*":
             id, type_id = self.create_object(left_type)
@@ -359,13 +360,13 @@ class WASL2SpirVCompiler(BaseSpirVCompiler):
 
         # Get type of object and index
         container_type = self.get_type_from_id(container_id)
-        element_type = container_type._t
+        element_type = container_type.subtype
         container_type_id = self.get_type_id(container_type)
         index = self._stack.pop()
 
         # assert self.get_type_from_id(index) is int
 
-        if issubclass(container_type, _types.array):
+        if issubclass(container_type, _types.Array):
 
             # todo: maybe ... the variable for a constant should be created only once ... instead of every time it gets indexed
             # Put the array into a variable

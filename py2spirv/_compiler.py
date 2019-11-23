@@ -10,7 +10,7 @@ References:
 
 
 Type info:
-* Basic types are bool, int, float. Latter two are numerics, all three are scalars.
+* Basic types are boolean, int, float. Latter two are numerics, all three are scalars.
 * Vector is two or more values of scalars (float, int, bool). For lengt > 4 need capabilities.
 * Matrix is 2, 3, or 4 float vectors (each vector is a column).
 * Array is homogeneous collection of non-void-type objects.
@@ -145,7 +145,7 @@ class BaseSpirVCompiler:
         self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Shader)
         # self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Geometry)
         # self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Float16)
-        # self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Float64)
+        self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Float64)
         self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_ImageBasic)
 
         # Define memory model (1 instruction)
@@ -316,7 +316,7 @@ class BaseSpirVCompiler:
         """ Create id for a new object. Returns (id, type_id).
         """
         assert isinstance(the_type, type), f"create_id requires a type, not {the_type}"
-        assert issubclass(the_type, _types.spirv_types), f"not a spirv type: {the_type}"
+        assert issubclass(the_type, _types.SpirVType), f"not a spirv type: {the_type}"
         type_id = self.get_type_id(the_type)
         id = self.create_id(the_type)
         return id, type_id
@@ -363,44 +363,57 @@ class BaseSpirVCompiler:
         definition instruction as needed.
         """
         assert isinstance(the_type, type), f"create_id requires a type, not {the_type}"
-        assert issubclass(the_type, _types.spirv_types), f"not a spirv type: {the_type}"
+        assert issubclass(the_type, _types.SpirVType), f"not a spirv type: {the_type}"
+        # todo: check if is concrete type
 
         # Already know this type?
         if the_type.__name__ in self._type_name_to_id:
             return self._type_name_to_id[the_type.__name__]
 
-        if the_type is _types.void:
+        if issubclass(the_type, _types.void):
             type_id = self.create_id(the_type)
             self.gen_instruction("types", cc.OpTypeVoid, type_id)
-        elif the_type is _types.bool:
+        elif issubclass(the_type, _types.boolean):
             type_id = self.create_id(the_type)
             self.gen_instruction("types", cc.OpTypeBool, type_id)
-        elif the_type is _types.int:
+        elif issubclass(the_type, _types.Int):
             type_id = self.create_id(the_type)
-            self.gen_instruction("types", cc.OpTypeInt, type_id, 32, 0)  # not signed? validate fails if I use 1
-        elif the_type is _types.float:
+            bits = 32
+            if issubclass(the_type, _types.i16):
+                # todo: need OpCapability
+                bits = 16
+            elif issubclass(the_type, _types.i64):
+                bits = 64
+            self.gen_instruction("types", cc.OpTypeInt, type_id, bits, 0)  # no signedness semantics
+        elif issubclass(the_type, _types.Float):
             type_id = self.create_id(the_type)
-            self.gen_instruction("types", cc.OpTypeFloat, type_id, 32)
-        elif issubclass(the_type, _types.BaseVector):
-            sub_type_id = self.get_type_id(the_type._t)
+            bits = 32
+            if issubclass(the_type, _types.f16):
+                # todo: need OpCapability
+                bits = 16
+            elif issubclass(the_type, _types.f64):
+                bits = 64
+            self.gen_instruction("types", cc.OpTypeFloat, type_id, bits)
+        elif issubclass(the_type, _types.Vector):
+            sub_type_id = self.get_type_id(the_type.subtype)
             type_id = self.create_id(the_type)
             self.gen_instruction("types",
-                cc.OpTypeVector, type_id, sub_type_id, the_type._n)
-        elif issubclass(the_type, _types.BaseMatrix):
+                cc.OpTypeVector, type_id, sub_type_id, the_type.length)
+        elif issubclass(the_type, _types.Matrix):
             raise NotImplementedError()
             # OpTypeMatrix
-        elif issubclass(the_type, _types.array):
-            count = the_type._n
-            sub_type_id = self.get_type_id(the_type._t)
+        elif issubclass(the_type, _types.Array):
+            count = the_type.length
+            sub_type_id = self.get_type_id(the_type.subtype)
             # Handle count
-            count_type_id = self.get_type_id(int)
+            count_type_id = self.get_type_id(_types.i32)
             count_id = self.create_id("array_count")
             self.gen_instruction("types", cc.OpConstant, count_type_id, count_id, count)
             # Handle toplevel array type
             type_id = self.create_id(the_type)
             self.gen_instruction("types", cc.OpTypeArray, type_id, sub_type_id, count_id)
             # Also see OpTypeRuntimeArray when length is not known at compile time (use OpArrayLength)
-        elif issubclass(the_type, _types.struct):
+        elif issubclass(the_type, _types.Struct):
             raise NotImplementedError()
             # OpTypeStruct
         else:

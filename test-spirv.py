@@ -6,6 +6,7 @@ import os
 
 from py2spirv import _spirv_constants as cc
 from py2spirv import Ast2SpirVCompiler, Bytecode2SpirVCompiler, WASL2SpirVCompiler
+from py2spirv import _types
 
 # todo: how to declare wether its a vertex or fragment shader
 # todo: std
@@ -55,23 +56,29 @@ def fragment_shader(input, output):
     output.color = x
 
 
+# from sprv import F32, I32, Bool
+
 ffragment_shader = """
-fn main (pos: input vec3 12,
-         color: output vec4 13
+fn main (pos: input vec3_64 12,
+         color: output F32.mat(3, 4) 13
+         tex: image F16.vec(3).array(10) 14
+         someStruct: input {'foo': F32, 'bar': F32.vec(3)}
         ) {
+
 
     # this is a comment
     color = vec4(pos, 0.5)
+    #color = f32.vec4(pos, 0.5)
 }
 """
 
 vertex_shader = """
 fn main (
-    index: input int VertexId,  # VertexID or VertexIndex
+    index: input i32 VertexId,  # VertexID or VertexIndex
     pos: output vec4 Position,
 ) {
 
-    positions = array(
+    positions = Array(
         vec2(+0.0, -0.5),
         vec2(+0.5, +0.5),
         vec2(-0.5, +0.5),
