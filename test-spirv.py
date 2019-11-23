@@ -5,7 +5,7 @@ Small script to test spirv compiler.
 import os
 
 from py2spirv import _spirv_constants as cc
-from py2spirv import Ast2SpirVCompiler, Bytecode2SpirVCompiler, WASL2SpirVCompiler
+from py2spirv import Bytecode2SpirVCompiler, WASL2SpirVCompiler
 from py2spirv import _types
 
 # todo: how to declare wether its a vertex or fragment shader
