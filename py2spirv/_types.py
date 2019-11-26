@@ -84,8 +84,8 @@ class Vector(Composite):
     def __new__(cls, *args):
         if cls.is_abstract:
             if len(args) != 2:
-                raise TypeError("Vector specialization needs 2 args: Vector(subtype, n)")
-            subtype, n = args
+                raise TypeError("Vector specialization needs 2 args: Vector(n, subtype)")
+            n, subtype = args
             n = int(n)
             if not isinstance(subtype, type) and issubclass(subtype, Scalar):
                 raise TypeError("Vector subtype must be a Scalar type.")
@@ -114,8 +114,8 @@ class Matrix(Composite):
     def __new__(cls, *args):
         if cls.is_abstract:
             if len(args) != 3:
-                raise TypeError("Matrix specialization needs 3 args: Matrix(subtype, cols, rows)")
-            subtype, cols, rows = args
+                raise TypeError("Matrix specialization needs 3 args: Matrix(cols, rows, subtype)")
+            cols, rows, subtype = args
             cols, rows = int(cols), int(rows)
             if not isinstance(subtype, type) and issubclass(subtype, Float):
                 raise TypeError("Matrix subtype must be a Float type.")
@@ -145,8 +145,8 @@ class Array(Aggregate):
     def __new__(cls, *args):
         if cls.is_abstract:
             if len(args) != 2:
-                raise TypeError("Array specialization needs 2 args: Array(subtype, n)")
-            subtype, n = args
+                raise TypeError("Array specialization needs 2 args: Array(n, subtype)")
+            n, subtype = args
             n = int(n)
             if not isinstance(subtype, type) and issubclass(subtype, SpirVType):
                 raise TypeError("Array subtype must be a SpirV type.")
@@ -217,17 +217,17 @@ class i64(Int):
 
 # %% Convenient concrete types
 
-vec2 = Vector(f32, 2)
-vec3 = Vector(f32, 3)
-vec4 = Vector(f32, 4)
+vec2 = Vector(2, f32)
+vec3 = Vector(3, f32)
+vec4 = Vector(4, f32)
 
-ivec2 = Vector(i32, 2)
-ivec3 = Vector(i32, 3)
-ivec4 = Vector(i32, 4)
+ivec2 = Vector(2, i32)
+ivec3 = Vector(3, i32)
+ivec4 = Vector(4, i32)
 
-mat2 = Matrix(f32, 2, 2)
-mat3 = Matrix(f32, 3, 3)
-mat4 = Matrix(f32, 4, 4)
+mat2 = Matrix(2, 2, f32)
+mat3 = Matrix(3, 3, f32)
+mat4 = Matrix(4, 4, f32)
 
 
 # Types that can be referenced by name. From these types you can create any other type.

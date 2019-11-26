@@ -116,11 +116,11 @@ def vertex_shader_py(input, output):
     output.define("pos", "Position", vec4)
     output.define("color", 0, vec3)
 
-    positions = Array(
+    positions = [
         vec2(+0.0, -0.5),
         vec2(+0.5, +0.5),
         vec2(-0.5, +0.7),
-    )
+    ]
 
     p = positions[input.index]
     output.pos = vec4(p, 0.0, 1.0)

@@ -15,6 +15,7 @@ CO_STORE = "CO_STORE"
 CO_CALL = "CO_CALL"
 CO_INDEX = "CO_INDEX"
 CO_POP_TOP = "CO_POP_TOP"
+CO_BUILD_ARRAY = "CO_BUILD_ARRAY"
 
 
 class Bytecode2SpirVGenerator(BaseSpirVGenerator):
@@ -198,6 +199,13 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
         else:
             raise NotImplementedError()
 
+    def _op_build_array(self, nargs):
+        # Literal array
+        args = self._stack[-nargs:]
+        self._stack[-nargs:] = []
+        result = self._array_packing(args)
+        self._stack.append(result)
+
     def _vector_packing(self, vector_type, args):
 
         n, t = vector_type.length, vector_type.subtype  # noqa
@@ -255,7 +263,7 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
             assert self.get_type_from_id(arg) is element_type, "array type mismatch"
 
         # Create array class
-        array_type = _types.Array(element_type, n)
+        array_type = _types.Array(n, element_type)
 
         result_id, type_id = self.create_object(array_type)
         self.gen_func_instruction(

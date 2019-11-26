@@ -105,6 +105,9 @@ class PyBytecode2Bytecode:
         self._pointer += 1
         return res
 
+    def _peak_next(self):
+        return self._co.co_code[self._pointer]
+
     def _define(self, kind, name, location, type):
         if kind == "input":
             self.emit(bc.CO_INPUT, ("input." + name, location, type))
@@ -167,12 +170,11 @@ class PyBytecode2Bytecode:
             if name not in self._input:
                 raise NameError(f"No input {name} defined.")
             self.emit(bc.CO_LOAD, "input." + name)
+            self._stack.append("input." + name)
         elif ob == "output":
             raise AttributeError("Cannot read from output.")
         else:
             raise NotImplementedError()
-
-        self._stack.append(None)
 
     def _op_store_attr(self):
         i = self._next()
@@ -238,5 +240,28 @@ class PyBytecode2Bytecode:
         self._next()  # because always 1 arg even if dummy
         index = self._stack.pop()
         ob = self._stack.pop()
-        self.emit(bc.CO_INDEX, None)
+        if isinstance(index, tuple):
+            self.emit(bc.CO_INDEX, len(index))
+        else:
+            self.emit(bc.CO_INDEX, 1)
         self._stack.append(None)
+
+    def _op_build_tuple(self):
+        raise SyntaxError("No tuples in SpirV-ish Python")
+
+        n = self._next()
+        res = [self._stack.pop() for i in range(n)]
+        res = tuple(reversed(res))
+
+        if dis.opname[self._peak_next()] == "BINARY_SUBSCR":
+            self._stack.append(res)
+            # No emit, in the SpirV bytecode we pop the subscript indices off the stack.
+        else:
+            raise NotImplementedError("Tuples are not supported.")
+
+    def _op_build_list(self):
+        n = self._next()
+        res = [self._stack.pop() for i in range(n)]
+        res = list(reversed(res))
+        self._stack.append(res)
+        self.emit(bc.CO_BUILD_ARRAY, n)

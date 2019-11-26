@@ -29,7 +29,7 @@ def vertex_shader():
 # def fragment_shader(fragColor: spv.input(vec3, 0),
 #                     outColor: spv.output(vec4, 0),
 # ):
-def fragment_shader():
+def fragment_shader_xx():
     # version 450
     # extension GL_ARB_separate_shader_objects : enable
     # layout(location = 0) in vec3 fragColor;
@@ -46,7 +46,6 @@ def fragment_shader():
 
     return outColor
 
-
 def fragment_shader(input, output):
     input.define("index", "VertexId", i32)
     output.define("pos", "Position", vec4)
@@ -55,13 +54,12 @@ def fragment_shader(input, output):
     positions = Array(
         vec2(+0.0, -0.5),
         vec2(+0.5, +0.5),
-        vec2(-0.5, +0.5),
+        vec2(-0.5, +0.7),
     )
 
     p = positions[input.index]
     output.pos = vec4(p, 0.0, 1.0)
     output.color = vec3(p, 0.5)
-
 
 # from sprv import F32, I32, Bool
 
