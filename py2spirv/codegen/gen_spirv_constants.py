@@ -39,10 +39,12 @@ for key, val in spv.items():
             fullkey = subkey if key.startswith("Op") else key + "_" + subkey
             pylines.append(f"{fullkey} = Enum({fullkey!r}, {val!r})")
     else:
-        rval = hex(val) if key in ("MagicNumber", "Version", "OpCodeMask") else repr(val)
+        rval = (
+            hex(val) if key in ("MagicNumber", "Version", "OpCodeMask") else repr(val)
+        )
         pylines.append(f"{key} = Enum({key!r}, {rval})")
 
 text = preamble.strip() + "\n\n\n" + "\n".join(pylines) + "\n"
 
-with open("../_spirv_constants.py", 'wb') as f:
+with open("../_spirv_constants.py", "wb") as f:
     f.write(text.encode())

@@ -58,7 +58,6 @@ def wasl2spirv(code, shader_type=None):
     return m
 
 
-
 class Wasl2Bytecode:
     """ Compile WASL AST to bytecode.
     """
@@ -88,7 +87,9 @@ class Wasl2Bytecode:
             elif param.mode == "uniform":
                 raise NotImplementedError()
             else:
-                raise TypeError(f"Funcion argument {param.name} must be input, output or uniform, not {param.mode}.")
+                raise TypeError(
+                    f"Funcion argument {param.name} must be input, output or uniform, not {param.mode}."
+                )
 
         for node in node.body.expressions:
             self.visit(node)
@@ -101,7 +102,7 @@ class Wasl2Bytecode:
         self.visit(node.lhs)
         for term in node.rhs:
             self.visit(term)
-            1/0
+            1 / 0
 
     def visit_Term(self, node):
         self.visit(node.lhs)

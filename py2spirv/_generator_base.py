@@ -26,12 +26,11 @@ def str_to_words(s):
     words = []
     for i in range(0, len(b), 4):
         words.append(b[i : i + 4])
-        #words.append(struct.unpack("<I", b[i : i + 4])[0])
+        # words.append(struct.unpack("<I", b[i : i + 4])[0])
     return words
 
 
 class IdInt(int):
-
     def __repr__(self):
         return "%" + super().__repr__()
 
@@ -61,20 +60,28 @@ class BaseSpirVGenerator:
         self._init()
 
         # Define memory model (1 instruction)
-        self.gen_instruction("memory_model", cc.OpMemoryModel, cc.AddressingModel_Logical, cc.MemoryModel_Simple)
+        self.gen_instruction(
+            "memory_model",
+            cc.OpMemoryModel,
+            cc.AddressingModel_Logical,
+            cc.MemoryModel_Simple,
+        )
 
         # Define entry points
         # Note that we must add the ids of all used OpVariables that this entrypoint uses.
         self._entry_point_id = self.create_id("main")
         self.gen_instruction(
-            "entry_points", cc.OpEntryPoint, execution_model, self._entry_point_id, "main"
+            "entry_points",
+            cc.OpEntryPoint,
+            execution_model,
+            self._entry_point_id,
+            "main",
         )
 
         # Define execution modes for each entry point
-        #self.gen_instruction(
+        # self.gen_instruction(
         #    "execution_modes", cc.OpExecutionMode, self._entry_point_id, cc.ExecutionMode_OriginLowerLeft
-        #)
-
+        # )
 
         # Do the thing!
         self._generate(input)
@@ -106,25 +113,25 @@ class BaseSpirVGenerator:
             "debug": [],  # 7. The debug instructions, which must be grouped in a specific following order.
             "annotations": [],  # 8. All annotation instructions, e.g. OpDecorate.
             "types": [],  # 9. All type declarations (OpTypeXXX instructions),
-                          # all constant instructions, and all global
-                          # variable declarations (all OpVariable instructions whose
-                          # Storage Class is notFunction). This is the preferred
-                          # location for OpUndef instructions, though they can also
-                          # appear in function bodies. All operands in all these
-                          # instructions must be declared before being used. Otherwise,
-                          # they can be in any order. This section is the ﬁrst section
-                          # to allow use of OpLine debug information.
+            # all constant instructions, and all global
+            # variable declarations (all OpVariable instructions whose
+            # Storage Class is notFunction). This is the preferred
+            # location for OpUndef instructions, though they can also
+            # appear in function bodies. All operands in all these
+            # instructions must be declared before being used. Otherwise,
+            # they can be in any order. This section is the ﬁrst section
+            # to allow use of OpLine debug information.
             "function_defs": [],  # 10. All function declarations. A function
-                                  # declaration is as follows.
-                                  # a. Function declaration, using OpFunction.
-                                  # b. Function parameter declarations, using OpFunctionParameter.
-                                  # c. Function end, using OpFunctionEnd.
+            # declaration is as follows.
+            # a. Function declaration, using OpFunction.
+            # b. Function parameter declarations, using OpFunctionParameter.
+            # c. Function end, using OpFunctionEnd.
             "functions": [],  # 11. All function deﬁnitions (functions with a body).
-                              # A function deﬁnition is as follows:
-                              # a. Function deﬁnition, using OpFunction.
-                              # b. Function parameter declarations, using OpFunctionParameter.
-                              # c. Block, Block ...
-                              # d. Function end, using OpFunctionEnd.
+            # A function deﬁnition is as follows:
+            # a. Function deﬁnition, using OpFunction.
+            # b. Function parameter declarations, using OpFunctionParameter.
+            # c. Block, Block ...
+            # d. Function end, using OpFunctionEnd.
         }
 
     def _post_generate(self):
@@ -161,8 +168,9 @@ class BaseSpirVGenerator:
             if instr[0] == cc.OpVariable:
                 global_OpVariable_s.append(instr[2])
         # We assume one function, so all are used in our single function
-        self._sections["entry_points"][0] = self._sections["entry_points"][0] + tuple(global_OpVariable_s)
-
+        self._sections["entry_points"][0] = self._sections["entry_points"][0] + tuple(
+            global_OpVariable_s
+        )
 
     ## Utility for compiler
 
@@ -186,7 +194,7 @@ class BaseSpirVGenerator:
 
         types = set()
         for section_name, instructions in self._sections.items():
-            #disp(section_name.upper(), "-" * 20)
+            # disp(section_name.upper(), "-" * 20)
             disp((section_name + " ").ljust(edge, "-"), "")
             for instruction in instructions:
                 instruction_str = repr(instruction[0])
@@ -241,7 +249,6 @@ class BaseSpirVGenerator:
 
         return f.getvalue()
 
-
     ## Utils for subclasses
 
     def gen_instruction(self, section_name, opcode, *words):
@@ -284,7 +291,9 @@ class BaseSpirVGenerator:
         type_id = self.get_type_id(type)
         # Create pointer type thingy
         pointer_id = self.create_id("pointer")
-        self.gen_instruction("types", cc.OpTypePointer, pointer_id, storage_class, type_id)
+        self.gen_instruction(
+            "types", cc.OpTypePointer, pointer_id, storage_class, type_id
+        )
         # Create the variable declaration
         id = self.create_id(type_id)
         self.gen_instruction("types", cc.OpVariable, pointer_id, id, storage_class)
@@ -331,7 +340,9 @@ class BaseSpirVGenerator:
                 bits = 16
             elif issubclass(the_type, _types.i64):
                 bits = 64
-            self.gen_instruction("types", cc.OpTypeInt, type_id, bits, 0)  # no signedness semantics
+            self.gen_instruction(
+                "types", cc.OpTypeInt, type_id, bits, 0
+            )  # no signedness semantics
         elif issubclass(the_type, _types.Float):
             type_id = self.create_id(the_type)
             bits = 32
@@ -344,8 +355,9 @@ class BaseSpirVGenerator:
         elif issubclass(the_type, _types.Vector):
             sub_type_id = self.get_type_id(the_type.subtype)
             type_id = self.create_id(the_type)
-            self.gen_instruction("types",
-                cc.OpTypeVector, type_id, sub_type_id, the_type.length)
+            self.gen_instruction(
+                "types", cc.OpTypeVector, type_id, sub_type_id, the_type.length
+            )
         elif issubclass(the_type, _types.Matrix):
             raise NotImplementedError()
             # OpTypeMatrix
@@ -358,7 +370,9 @@ class BaseSpirVGenerator:
             self.gen_instruction("types", cc.OpConstant, count_type_id, count_id, count)
             # Handle toplevel array type
             type_id = self.create_id(the_type)
-            self.gen_instruction("types", cc.OpTypeArray, type_id, sub_type_id, count_id)
+            self.gen_instruction(
+                "types", cc.OpTypeArray, type_id, sub_type_id, count_id
+            )
             # Also see OpTypeRuntimeArray when length is not known at compile time (use OpArrayLength)
         elif issubclass(the_type, _types.Struct):
             raise NotImplementedError()

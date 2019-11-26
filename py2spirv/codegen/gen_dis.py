@@ -22,7 +22,7 @@ for line in js.splitlines():
     line = line.rstrip().replace("//", "#").replace(".push(", ".append(")
     line2 = line.lstrip()
     line3 = line2.split("#")[0]
-    indent = line[:len(line)-len(line2)]
+    indent = line[: len(line) - len(line2)]
     if line2.startswith(("/*", "*", "module.exports", "CO_GENERATOR:")):
         continue
     elif ": {" in line3 or ": [" in line3:

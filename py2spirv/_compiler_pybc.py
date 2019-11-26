@@ -110,8 +110,8 @@ class PyBytecode2Bytecode:
             self.emit(bc.CO_INPUT, ("input." + name, location, type))
             self._input[name] = type
         elif kind == "output":
-           self.emit(bc.CO_OUTPUT, ("output." + name, location, type))
-           self._output[name] = type
+            self.emit(bc.CO_OUTPUT, ("output." + name, location, type))
+            self._output[name] = type
 
     # %%
 
@@ -124,7 +124,7 @@ class PyBytecode2Bytecode:
         result = self._stack.pop()
         assert result is None
         # for now, there is no return in our-bytecode
-        self._next() # todo: why need pointer advance?
+        self._next()  # todo: why need pointer advance?
 
     def _op_load_fast(self):
         # store a variable that is used in an inner scope.
@@ -211,7 +211,7 @@ class PyBytecode2Bytecode:
         self._stack.append(func)
         self._stack.append(ob)
 
-    def _op_call_method(self): # new in Python 3.7
+    def _op_call_method(self):  # new in Python 3.7
         nargs = self._next()
         args = self._stack[-nargs:]
         self._stack[-nargs:] = []

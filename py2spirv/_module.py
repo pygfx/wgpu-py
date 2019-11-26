@@ -39,7 +39,9 @@ class SpirVModule:
         with open(filename, "wb") as f:
             f.write(self.to_bytes())
         try:
-            stdout = subprocess.check_output(["spirv-dis", filename], stderr=subprocess.STDOUT)
+            stdout = subprocess.check_output(
+                ["spirv-dis", filename], stderr=subprocess.STDOUT
+            )
         except subprocess.CalledProcessError as err:
             e = "Could not disassemble Spir-V:\n" + err.output.decode()
             raise Exception(e)
@@ -56,10 +58,11 @@ class SpirVModule:
         with open(filename, "wb") as f:
             f.write(self.to_bytes())
         try:
-            stdout = subprocess.check_output(["spirv-val", filename], stderr=subprocess.STDOUT)
+            stdout = subprocess.check_output(
+                ["spirv-val", filename], stderr=subprocess.STDOUT
+            )
         except subprocess.CalledProcessError as err:
             e = "Spir-V invalid:\n" + err.output.decode()
             raise Exception(e)
         else:
             print("Spir-V seems valid:\n" + stdout.decode())
-

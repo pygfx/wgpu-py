@@ -8,8 +8,8 @@ Type info:
 * imagee, sampler, ...
 """
 
-class ClassPropertyDescriptor(object):
 
+class ClassPropertyDescriptor(object):
     def __init__(self, fget):
         self.fget = fget
 
@@ -32,11 +32,12 @@ def classproperty(func):
 
 # todo: SpirV supports float and int of multiple different bits, must we expose that?
 
+
 def _create_type(name, base, **props):
     """ Create a new type, memoize on name.
     """
     if name not in SpirVType._subtypes:
-        SpirVType._subtypes[name] = type(name, (base, ), props)
+        SpirVType._subtypes[name] = type(name, (base,), props)
     return SpirVType._subtypes[name]
 
 
@@ -91,7 +92,7 @@ class Vector(Composite):
     @classproperty
     def f16(cls):
         n = cls.length
-        return  _create_type(f"vec{n}_f16", Vector, subtype=f16, length=n)
+        return _create_type(f"vec{n}_f16", Vector, subtype=f16, length=n)
 
     @classproperty
     def f32(cls):
@@ -106,22 +107,22 @@ class Vector(Composite):
     @classproperty
     def i16(cls):
         n = cls.length
-        return  _create_type(f"vec{n}_i16", Vector, subtype=i16, length=n)
+        return _create_type(f"vec{n}_i16", Vector, subtype=i16, length=n)
 
     @classproperty
     def i32(cls):
         n = cls.length
-        return  _create_type(f"vec{n}_i32", Vector, subtype=i32, length=n)
+        return _create_type(f"vec{n}_i32", Vector, subtype=i32, length=n)
 
     @classproperty
     def i64(cls):
         n = cls.length
-        return  _create_type(f"vec{n}_i64", Vector, subtype=i64, length=n)
+        return _create_type(f"vec{n}_i64", Vector, subtype=i64, length=n)
 
     @classproperty
     def boolean(cls):
         n = cls.length
-        return  _create_type(f"vec{n}_boolean", Vector, subtype=boolean, length=n)
+        return _create_type(f"vec{n}_boolean", Vector, subtype=boolean, length=n)
 
 
 class Matrix(Composite):
@@ -136,17 +137,23 @@ class Matrix(Composite):
     @classproperty
     def f16(cls):
         cols, rows = cls.cols, cls.rows
-        return  _create_type(f"mat{cols}x{rows}_f16", Matrix, subtype=f16, cols=cols, rows=rows)
+        return _create_type(
+            f"mat{cols}x{rows}_f16", Matrix, subtype=f16, cols=cols, rows=rows
+        )
 
     @classproperty
     def f32(cls):
         cols, rows = cls.cols, cls.rows
-        return _create_type(f"mat{cols}x{rows}_f32", Matrix, subtype=f32, cols=cols, rows=rows)
+        return _create_type(
+            f"mat{cols}x{rows}_f32", Matrix, subtype=f32, cols=cols, rows=rows
+        )
 
     @classproperty
     def f64(cls):
         cols, rows = cls.cols, cls.rows
-        return _create_type(f"mat{cols}x{rows}_f64", Matrix, subtype=f64, cols=cols, rows=rows)
+        return _create_type(
+            f"mat{cols}x{rows}_f64", Matrix, subtype=f64, cols=cols, rows=rows
+        )
 
 
 class Array(Aggregate):
@@ -167,7 +174,9 @@ class Array(Aggregate):
                 raise TypeError("Array subtype must be a SpirVType (but not void).")
             # todo: check that subtype is a concrete type
             # Create type
-            return _create_type(f"array{n}_{subtype.__name__}", Array, subtype=subtype, length=n)
+            return _create_type(
+                f"array{n}_{subtype.__name__}", Array, subtype=subtype, length=n
+            )
         else:
             instance = super(Array, cls).__new__(cls, *args)
             return instance
@@ -187,6 +196,7 @@ class Struct(Aggregate):
 
 
 # %% Concrete types
+
 
 class void(SpirVType):
     pass

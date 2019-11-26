@@ -9,6 +9,7 @@ from . import _spirv_constants as cc
 
 # DEPRECATED. WILL PROBABLY BE REMOVED SOON.
 
+
 def pythonast2spirv(func):
     raise NotImplementedError()
 
@@ -24,12 +25,10 @@ class Ast2SpirVGenerator(BaseSpirVGenerator):
         self._py_ast = commonast.parse(py_code)
 
         if not (
-            len(self._py_ast.body_nodes) == 1 and
-            isinstance(self._py_ast.body_nodes[0], commonast.FunctionDef)
-
+            len(self._py_ast.body_nodes) == 1
+            and isinstance(self._py_ast.body_nodes[0], commonast.FunctionDef)
         ):
             raise ValueError("AST does not resolve to a function node.")
-
 
     def _generate(self):
         # Now walk the AST!
@@ -56,8 +55,8 @@ class Ast2SpirVGenerator(BaseSpirVGenerator):
 
         # Generate the function type -> specify args and return value
         function_type_id = self.create_id(result_type_id)
-        self.gen_instruction("types",
-            cc.OpTypeFunction, function_type_id, result_type_id, *[]
+        self.gen_instruction(
+            "types", cc.OpTypeFunction, function_type_id, result_type_id, *[]
         )  # can haz arg ids
 
         # todo: also generate instructions in function_defs section
@@ -65,7 +64,12 @@ class Ast2SpirVGenerator(BaseSpirVGenerator):
         # Generate function
         function_control = 0  # can specify whether it should inline, etc.
         self.gen_instruction(
-            "functions", cc.OpFunction, result_type_id, function_id, function_control, function_type_id
+            "functions",
+            cc.OpFunction,
+            result_type_id,
+            function_id,
+            function_control,
+            function_type_id,
         )
 
         # A function must begin with a label
@@ -134,7 +138,9 @@ class Ast2SpirVGenerator(BaseSpirVGenerator):
             composite_ids = []
             for id in arg_ids:
                 the_type = self.get_type_from_id(id)
-                type_name = the_type.__name__#self.get_type_id(type_id)  # todo: this is weird
+                type_name = (
+                    the_type.__name__
+                )  # self.get_type_id(type_id)  # todo: this is weird
                 if type_name == "float":
                     composite_ids.append(id)
                 elif type_name in ("vec2", "vec3", "vec4"):
@@ -174,13 +180,21 @@ class Ast2SpirVGenerator(BaseSpirVGenerator):
             type_id = self.get_type_id("int")
             result_id = self.create_id(type_id)
             self.gen_instruction(
-                "types", cc.OpConstant, type_id, result_id, struct.pack("<I", node.value)
+                "types",
+                cc.OpConstant,
+                type_id,
+                result_id,
+                struct.pack("<I", node.value),
             )
         elif isinstance(node.value, float):
             type_id = self.get_type_id("float")
             result_id = self.create_id(type_id)
             self.gen_instruction(
-                "types", cc.OpConstant, type_id, result_id, struct.pack("<f", node.value)
+                "types",
+                cc.OpConstant,
+                type_id,
+                result_id,
+                struct.pack("<f", node.value),
             )
         return result_id
 

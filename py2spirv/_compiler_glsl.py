@@ -23,12 +23,15 @@ def glsl2spirv(glsl_code):
         f.write(glsl_code.encode())
 
     try:
-        stdout = subprocess.check_output(["glslangvalidator", "-V", filename1, "-o", filename2], stderr=subprocess.STDOUT)
+        stdout = subprocess.check_output(
+            ["glslangvalidator", "-V", filename1, "-o", filename2],
+            stderr=subprocess.STDOUT,
+        )
     except subprocess.CalledProcessError as err:
         e = "Could not compile glsl to Spir-V:\n" + err.output.decode()
         raise Exception(e)
 
     with open(filename2, "rb") as f:
-         binary = f.read()
+        binary = f.read()
 
     return SpirVModule(glsl_code, binary, "compiled from GLSL")

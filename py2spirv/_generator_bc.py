@@ -38,12 +38,16 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
         # Declare funcion
         return_type_id = self.get_type_id(_types.void)
         func_type_id = self.create_id("func_declaration")
-        self.gen_instruction("types", cc.OpTypeFunction, func_type_id, return_type_id)  # 0 args
+        self.gen_instruction(
+            "types", cc.OpTypeFunction, func_type_id, return_type_id
+        )  # 0 args
 
         # Start function definition
         func_id = self._entry_point_id
         func_control = 0  # can specify whether it should inline, etc.
-        self.gen_func_instruction(cc.OpFunction, return_type_id, func_id, func_control, func_type_id)
+        self.gen_func_instruction(
+            cc.OpFunction, return_type_id, func_id, func_control, func_type_id
+        )
         self.gen_func_instruction(cc.OpLabel, self.create_id("label"))
 
         # Parse
@@ -76,17 +80,25 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
         # Define location
         assert isinstance(location, (int, str))
         if isinstance(location, int):
-            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
+            self.gen_instruction(
+                "annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location
+            )
         else:
             try:
                 location = cc.builtins[location]
             except KeyError:
                 raise NameError(f"Not a known builtin io variable: {location}")
-            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location)
+            self.gen_instruction(
+                "annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location
+            )
 
         # Create a variable (via a pointer)
-        self.gen_instruction("types", cc.OpTypePointer, pointer_id, cc.StorageClass_Input, type_id)
-        self.gen_instruction("types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Input)
+        self.gen_instruction(
+            "types", cc.OpTypePointer, pointer_id, cc.StorageClass_Input, type_id
+        )
+        self.gen_instruction(
+            "types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Input
+        )
 
     def _op_output(self, name_location_type):
         name, location, type_str = name_location_type
@@ -100,17 +112,25 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
         # Define location
         assert isinstance(location, (int, str))
         if isinstance(location, int):
-            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location)
+            self.gen_instruction(
+                "annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location
+            )
         else:
             try:
                 location = cc.builtins[location]
             except KeyError:
                 raise NameError(f"Not a known builtin io variable: {location}")
-            self.gen_instruction("annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location)
+            self.gen_instruction(
+                "annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location
+            )
 
         # Create a variable (via a pointer)
-        self.gen_instruction("types", cc.OpTypePointer, pointer_id, cc.StorageClass_Output, type_id)
-        self.gen_instruction("types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Output)
+        self.gen_instruction(
+            "types", cc.OpTypePointer, pointer_id, cc.StorageClass_Output, type_id
+        )
+        self.gen_instruction(
+            "types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Output
+        )
 
     def _op_load(self, name):
         # store a variable that is used in an inner scope.
@@ -211,7 +231,9 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
                 f"{vector_type} did not expect {len(composite_ids)} elements"
             )
 
-        assert len(composite_ids) >= 2, "When constructing a vector, there must be at least two Constituent operands."
+        assert (
+            len(composite_ids) >= 2
+        ), "When constructing a vector, there must be at least two Constituent operands."
 
         # Construct
         result_id, vector_type_id = self.create_object(vector_type)
@@ -236,11 +258,12 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
         array_type = _types.Array(element_type, n)
 
         result_id, type_id = self.create_object(array_type)
-        self.gen_func_instruction(cc.OpCompositeConstruct, type_id, result_id, *composite_ids)
+        self.gen_func_instruction(
+            cc.OpCompositeConstruct, type_id, result_id, *composite_ids
+        )
         # todo: or OpConstantComposite
 
         return result_id
-
 
     def _op_binary_op(self, op):
         right = self._stack.pop()
@@ -255,11 +278,11 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
             id, type_id = self.create_object(left_type)
             self.gen_func_instruction(cc.OpVectorTimesScalar, type_id, id, left, right)
         elif op == "/":
-            1/0
+            1 / 0
         elif op == "+":
-            1/0
+            1 / 0
         elif op == "-":
-            1/0
+            1 / 0
         else:
             raise NotImplementedError(f"Wut is {op}??")
         self._stack.append(id)
@@ -282,8 +305,19 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
             # Put the array into a variable
             container_variable = self.create_id("variable")
             container_variable_type = self.create_id("pointer_type")
-            self.gen_instruction("types", cc.OpTypePointer, container_variable_type, cc.StorageClass_Function, container_type_id)
-            self.gen_func_instruction(cc.OpVariable, container_variable_type, container_variable, cc.StorageClass_Function)
+            self.gen_instruction(
+                "types",
+                cc.OpTypePointer,
+                container_variable_type,
+                cc.StorageClass_Function,
+                container_type_id,
+            )
+            self.gen_func_instruction(
+                cc.OpVariable,
+                container_variable_type,
+                container_variable,
+                cc.StorageClass_Function,
+            )
             self.gen_func_instruction(cc.OpStore, container_variable, container_id)
 
             # Prepare result id and type
@@ -292,8 +326,16 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
             # Create pointer into the array
             pointer1 = self.create_id("pointer")
             pointer2 = self.create_id("pointer")
-            self.gen_instruction("types", cc.OpTypePointer, pointer1, cc.StorageClass_Function, result_type_id)
-            self.gen_func_instruction(cc.OpInBoundsAccessChain, pointer1, pointer2, container_variable, index)
+            self.gen_instruction(
+                "types",
+                cc.OpTypePointer,
+                pointer1,
+                cc.StorageClass_Function,
+                result_type_id,
+            )
+            self.gen_func_instruction(
+                cc.OpInBoundsAccessChain, pointer1, pointer2, container_variable, index
+            )
 
             # Load the element from the array
             self.gen_func_instruction(cc.OpLoad, result_type_id, result_id, pointer2)
@@ -308,7 +350,6 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
         # OpVectorInsertDynamic: Make a copy of a vector, with a single, variably selected, component modified.
         # OpVectorShuffle: Select arbitrary components from two vectors to make a new vector.
         # OpCompositeInsert: Make a copy of a composite object, while modifying one part of it. (updating an element)
-
 
     def _op_if(self):
         raise NotImplementedError()
