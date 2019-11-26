@@ -5,7 +5,7 @@ Small script to test spirv compiler.
 import os
 
 from py2spirv import _spirv_constants as cc
-from py2spirv import Python2SpirVCompiler, WASL2SpirVCompiler
+from py2spirv import python2spirv, wasl2spirv
 from py2spirv import _types
 
 # todo: how to declare wether its a vertex or fragment shader
@@ -98,8 +98,8 @@ fn main (
 
 
 # c = WASL2SpirVCompiler(vertex_shader)
-# c = Python2SpirVCompiler(fragment_shader)
-c = WASL2SpirVCompiler(ffragment_shader)
-c.generate()
-print(c.disassble())
-c.validate()
+m = python2spirv(fragment_shader, "frag")
+# m = wasl2spirv(ffragment_shader, "frag")
+
+print(m.disassble())
+m.validate()

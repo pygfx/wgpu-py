@@ -1,12 +1,19 @@
 import struct
 import inspect
 
-from ._compiler import BaseSpirVCompiler, str_to_words, STORAGE_CLASSES
+from ._module import SpirVModule
+from ._generator_base import BaseSpirVGenerator, STORAGE_CLASSES
 from . import commonast
 from . import _spirv_constants as cc
 
 
-class Ast2SpirVCompiler(BaseSpirVCompiler):
+# DEPRECATED. WILL PROBABLY BE REMOVED SOON.
+
+def pythonast2spirv(func):
+    raise NotImplementedError()
+
+
+class Ast2SpirVGenerator(BaseSpirVGenerator):
     """ WIP Python 2 SpirV Compiler that parses Python AST to generate
     SpirV code. A downside of this approach is that to get the AST,
     the Python source must be available.

@@ -1,3 +1,13 @@
+"""
+Type info:
+* Basic types are boolean, int, float. Latter two are numerics, all three are scalars.
+* Vector is two or more values of scalars (float, int, bool). For lengt > 4 need capabilities.
+* Matrix is 2, 3, or 4 float vectors (each vector is a column).
+* Array is homogeneous collection of non-void-type objects.
+* Structure is heterogeneous collection of non-void-type objects.
+* imagee, sampler, ...
+"""
+
 class ClassPropertyDescriptor(object):
 
     def __init__(self, fget):
@@ -172,7 +182,7 @@ class Struct(Aggregate):
         if False:  # if all kwarg values are types, return a new type
             return _create_type(f"struct", Struct)
         else:
-            instance = super(Array, cls).__new__(cls, *args)
+            instance = super(Struct, cls).__new__(cls, **kwargs)
             return instance
 
 

@@ -202,6 +202,8 @@ surface_id = create_window(640, 480, "Triangle WGPU", device_id)
 
 # gl_VertexIndex vs gl_InstanceID
 
+from py2spirv import python2spirv, wasl2spirv
+
 
 def make_code_file(vert_or_frag):
     # Get filename and load file
@@ -224,16 +226,13 @@ def make_code_file(vert_or_frag):
 def make_code_wasl(vert_or_frag):
     import cffi
     ffi = cffi.FFI()
-    from py2spirv import WASL2SpirVCompiler
-    if vert_or_frag == "vert":
-        c = WASL2SpirVCompiler(vertex_shader_wasl)
-        c.generate("vertex")
-    else:
-        fragment_shader_wasl
-        c = WASL2SpirVCompiler(fragment_shader_wasl)
-        c.generate("fragment")
 
-    data = c.to_binary()
+    if vert_or_frag == "vert":
+        m = wasl2spirv(vertex_shader_wasl, vert_or_frag)
+    else:
+        m = wasl2spirv(fragment_shader_wasl, vert_or_frag)
+
+    data = m.to_bytes()
     x = ffi.new("uint8_t[]", data)
     y = ffi.cast("uint32_t *", x)
     return dict(bytes=y, length=len(data)//4)
@@ -241,16 +240,12 @@ def make_code_wasl(vert_or_frag):
 def make_code_py(vert_or_frag):
     import cffi
     ffi = cffi.FFI()
-    from py2spirv import Python2SpirVCompiler
     if vert_or_frag == "vert":
-        c = Python2SpirVCompiler(vertex_shader_py)
-        c.generate("vertex")
+        m = python2spirv(vertex_shader_py, vert_or_frag)
     else:
-        fragment_shader_wasl
-        c = Python2SpirVCompiler(fragment_shader_py)
-        c.generate("fragment")
+        m = python2spirv(fragment_shader_py, vert_or_frag)
 
-    data = c.to_binary()
+    data = m.to_bytes()
     x = ffi.new("uint8_t[]", data)
     y = ffi.cast("uint32_t *", x)
     return dict(bytes=y, length=len(data)//4)

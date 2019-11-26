@@ -1,7 +1,8 @@
-
 from textx import metamodel_from_str
 
-from . import _compiler_bytecode as bc
+from ._module import SpirVModule
+from ._generator_bc import Bytecode2SpirVGenerator
+from . import _generator_bc as bc
 
 
 grammar = """
@@ -32,30 +33,45 @@ IdentifierIndexed: name=ID '[' index=Expression ']';
 meta_model = metamodel_from_str(grammar, classes=[])
 
 
-class WASL2SpirVCompiler(bc.Bytecode2SpirVCompiler):
-    """ Compiles a string with WASL shader code to SpirV.
-    """
+def wasl2spirv(code, shader_type=None):
+    """ Compile WASL code to SpirV and return as a SpirVModule object.
 
-    def __init__(self, s):
-        converter = Wasl2Bytecode()
-        converter.convert(s)
-        super().__init__( converter.dump())
+    WASL is our own defined domain specific language (DSL) to write shaders.
+    It is highly experimental. The code is parsed using textx, the resulting
+    AST is converted to bytecode, from which the SpirV is generated.
+    """
+    if not isinstance(code, str):
+        raise TypeError("wasl2spirv expects a string.")
+
+    ast = meta_model.model_from_str(code)
+
+    converter = Wasl2Bytecode()
+    converter.convert(ast)
+    bytecode = converter.dump()
+
+    generator = Bytecode2SpirVGenerator()
+    generator.generate(bytecode, shader_type)
+    bb = generator.to_bytes()
+
+    m = SpirVModule(code, bb, "compiled from WASL")
+    m.gen = generator
+    return m
+
 
 
 class Wasl2Bytecode:
     """ Compile WASL AST to bytecode.
     """
 
-    def convert(self, s):
+    def convert(self, ast):
         self._opcodes = []
-        ast = meta_model.model_from_str(s)
         self.visit(ast)
-
-    def emit(self, opcode, arg):
-        self._opcodes.append((opcode, arg))
 
     def dump(self):
         return self._opcodes
+
+    def emit(self, opcode, arg):
+        self._opcodes.append((opcode, arg))
 
     def visit(self, node):
 

@@ -1,7 +1,6 @@
 import struct
 
-from ._compiler import BaseSpirVCompiler
-from ._compiler import IdInt, BaseSpirVCompiler, str_to_words
+from ._generator_base import IdInt, BaseSpirVGenerator
 from . import _spirv_constants as cc
 from . import _types
 
@@ -18,10 +17,8 @@ CO_INDEX = "CO_INDEX"
 CO_POP_TOP = "CO_POP_TOP"
 
 
-class Bytecode2SpirVCompiler(BaseSpirVCompiler):
-    """ A compiler that operates on our own well-defined bytecode.
-    Use directly with bytecode input, or subclass to accept other kinds of
-    input, convert that input to bytecode and then feed that into this base class.
+class Bytecode2SpirVGenerator(BaseSpirVGenerator):
+    """ A generator that operates on our own well-defined bytecode.
 
     Bytecode describing a stack machine is a pretty nice representation to generate
     SpirV code, because the code gets visited in a flow, making it easier to
@@ -31,10 +28,7 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
     class relatively simple. In other words, it separates concerns very well.
     """
 
-    def __init__(self, bytecode):
-        self._bytecode = bytecode
-
-    def _generate(self):
+    def _generate(self, bytecode):
 
         self._stack = []
         self._input = {}
@@ -53,7 +47,7 @@ class Bytecode2SpirVCompiler(BaseSpirVCompiler):
         self.gen_func_instruction(cc.OpLabel, self.create_id("label"))
 
         # Parse
-        for opcode, arg in self._bytecode:
+        for opcode, arg in bytecode:
             method_name = "_op_" + opcode[3:].lower()
             method = getattr(self, method_name, None)
             if method is None:

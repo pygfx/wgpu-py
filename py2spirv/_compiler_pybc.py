@@ -1,23 +1,34 @@
-import struct
 import inspect
 from dis import dis as pprint_bytecode
 
-from . import _compiler_bytecode as bc
+from ._module import SpirVModule
+from ._generator_bc import Bytecode2SpirVGenerator
+from . import _generator_bc as bc
 from ._dis import dis
 
 
-class Python2SpirVCompiler(bc.Bytecode2SpirVCompiler):
-    """ WIP Python to SpirV compiler that parses Python bytecode to generate
-    SpirV code. Takes a Python function.
+def python2spirv(func, shader_type=None):
+    """ Compile a Python function to SpirV and return as a SpirVModule object.
+
+    This function takes the bytecode of the given function, converts it to
+    a more standardized (and SpirV specific) bytecode, and then generates
+    the SpirV from that. All in dependency-free pure Python.
     """
 
-    def __init__(self, py_func):
-        if not inspect.isfunction(py_func):
-            raise TypeError("Python to SpirV Compiler needs a Python function.")
+    if not inspect.isfunction(func):
+        raise TypeError("python2spirv expects a Python function.")
 
-        converter = PyBytecode2Bytecode()
-        converter.convert(py_func)
-        super().__init__(converter.dump())
+    converter = PyBytecode2Bytecode()
+    converter.convert(func)
+    bytecode = converter.dump()
+
+    generator = Bytecode2SpirVGenerator()
+    generator.generate(bytecode, shader_type)
+    bb = generator.to_bytes()
+
+    m = SpirVModule(func, bb, "compiled from a Python function")
+    m.gen = generator
+    return m
 
 
 class PyBytecode2Bytecode:
@@ -39,7 +50,6 @@ class PyBytecode2Bytecode:
 
     def dump(self):
         return self._opcodes
-
 
     def _convert(self):
 

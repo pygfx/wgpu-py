@@ -1,40 +1,11 @@
-"""
-A compiler to translate Python code to SpirV. A compiler can be
-considered to exists of two parts: a parser to go from one code (Python)
-to an AST, and a generator to transform that AST into another code
-(SpirV). In this case the parsing is done using Python's builtin ast
-module, so the main part of this module comprises the SpirV generation.
-
-References:
-* https://www.khronos.org/registry/spir-v/
-
-
-Type info:
-* Basic types are boolean, int, float. Latter two are numerics, all three are scalars.
-* Vector is two or more values of scalars (float, int, bool). For lengt > 4 need capabilities.
-* Matrix is 2, 3, or 4 float vectors (each vector is a column).
-* Array is homogeneous collection of non-void-type objects.
-* Structure is heterogeneous collection of non-void-type objects.
-* imagee, sampler, ...
-
-"""
-
-import os
 import io
 import struct
-import inspect
-import tempfile
-import subprocess
 
 from . import _spirv_constants as cc
 from . import _types
 
 # todo: add debug info, most notably line numbers, but can also do source code and object names!
 
-
-
-
-# %%
 
 # Storage class members, used in OpTypePointer, OpTypeForwardPointer, Opvariable, OpGenericCastToPtrExplicit
 STORAGE_CLASSES = dict(
@@ -65,12 +36,55 @@ class IdInt(int):
         return "%" + super().__repr__()
 
 
-class BaseSpirVCompiler:
-    """ Generate binary Spir-V code from a Python AST.
+class BaseSpirVGenerator:
+    """ Base class that can be used by compiler implementations in the
+    last compile step to generate the SpirV code. It has an internal
+    representation of SpirV module and provides an API to generate
+    instructions.
     """
 
-    def _generate(self):
-        # Subclasses should generate SpirV here
+    def generate(self, input, execution_model):
+        """ Generate the Spir-V code. After this, to_bytes() can be used to
+        produce the binary blob that represents the Spir-V module.
+        """
+
+        # todo: somehow derive execution_model from the function itself
+        execution_model = execution_model or ""
+        if execution_model.lower() in ("vert", "vertex"):
+            execution_model = cc.ExecutionModel_Vertex
+        elif execution_model.lower() in ("frag", "fragment"):
+            execution_model = cc.ExecutionModel_Fragment
+        else:
+            raise ValueError(f"Unknown execution model: {execution_model}")
+
+        # Start clean
+        self._init()
+
+        # Define memory model (1 instruction)
+        self.gen_instruction("memory_model", cc.OpMemoryModel, cc.AddressingModel_Logical, cc.MemoryModel_Simple)
+
+        # Define entry points
+        # Note that we must add the ids of all used OpVariables that this entrypoint uses.
+        self._entry_point_id = self.create_id("main")
+        self.gen_instruction(
+            "entry_points", cc.OpEntryPoint, execution_model, self._entry_point_id, "main"
+        )
+
+        # Define execution modes for each entry point
+        #self.gen_instruction(
+        #    "execution_modes", cc.OpExecutionMode, self._entry_point_id, cc.ExecutionMode_OriginLowerLeft
+        #)
+
+
+        # Do the thing!
+        self._generate(input)
+
+        # Wrap up
+        self._post_generate()
+
+    def _generate(self, input):
+        """ Subclasses should implement this.
+        """
         raise NotImplementedError()
 
     def _init(self):
@@ -113,23 +127,13 @@ class BaseSpirVCompiler:
                               # d. Function end, using OpFunctionEnd.
         }
 
-    def generate(self, execution_model="vertex"):
-        """ Generate the Spir-V code. After this, to_binary() can be used to
-        produce the binary blob that represents the Spir-V module.
+    def _post_generate(self):
+        """ After most of the generation has been done, we set the required capabilities
+        and massage the order of instructions a bit.
         """
 
-        # todo: somehow derive execution_model from the function itself
-        if execution_model.lower() == "vertex":
-            execution_model = cc.ExecutionModel_Vertex
-        elif execution_model.lower() == "fragment":
-            execution_model = cc.ExecutionModel_Fragment
-        else:
-            raise ValueError(f"Unknown execution model: {execution_model}")
-
-        # Start clean
-        self._init()
-
         # Define capabilities. Therea area lot more, and we probably should detect
+        # todo: detect capabilities from SpirV stuff being used
         # the cases when we need to define them, and/or let the user define them somehow.
         self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Matrix)
         self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Shader)
@@ -137,23 +141,6 @@ class BaseSpirVCompiler:
         # self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Float16)
         self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_Float64)
         self.gen_instruction("capabilities", cc.OpCapability, cc.Capability_ImageBasic)
-
-        # Define memory model (1 instruction)
-        self.gen_instruction("memory_model", cc.OpMemoryModel, cc.AddressingModel_Logical, cc.MemoryModel_Simple)
-
-        # Define entry points
-        # Note that we must add the ids of all used OpVariables that this entrypoint uses.
-        self._entry_point_id = self.create_id("main")
-        self.gen_instruction(
-            "entry_points", cc.OpEntryPoint, execution_model, self._entry_point_id, "main"
-        )
-
-        # Define execution modes for each entry point
-        #self.gen_instruction(
-        #    "execution_modes", cc.OpExecutionMode, self._entry_point_id, cc.ExecutionMode_OriginLowerLeft
-        #)
-
-        self._generate()
 
         # Move OpVariable to the start of a function
         func_instructions = self._sections["functions"]
@@ -176,6 +163,9 @@ class BaseSpirVCompiler:
         # We assume one function, so all are used in our single function
         self._sections["entry_points"][0] = self._sections["entry_points"][0] + tuple(global_OpVariable_s)
 
+
+    ## Utility for compiler
+
     def to_text(self):
         """ Generate a textual (dis-assembly-like) representation.
         """
@@ -191,7 +181,7 @@ class BaseSpirVCompiler:
         disp("MagicNumber: ", hex(cc.MagicNumber))
         disp("Version: ", hex(cc.Version))
         disp("VendorId: ", hex(0))
-        disp("Bounds: ", len(self._ids))
+        disp("Bounds: ", len(self._id))
         disp("Reserved: ", hex(0))
 
         types = set()
@@ -217,7 +207,7 @@ class BaseSpirVCompiler:
 
         return "\n".join(lines)
 
-    def to_binary(self):
+    def to_bytes(self):
         """ Generated a bytes object representing the Spir-V module.
         """
         f = io.BytesIO()
@@ -251,41 +241,8 @@ class BaseSpirVCompiler:
 
         return f.getvalue()
 
-    def disassble(self):
-        """ Disassemble the generated binary code using spirv-dis, and return as a string.
-        This produces a result similar to to_text(), but to_text() is probably more
-        informative.
 
-        Needs Spir-V tools, which can easily be obtained by installing the Vulkan SDK.
-        """
-        filename = os.path.join(tempfile.gettempdir(), "x.spv")
-        with open(filename, "wb") as f:
-            f.write(self.to_binary())
-        try:
-            stdout = subprocess.check_output(["spirv-dis", filename], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as err:
-            e = "Could not disassemble Spir-V:\n" + err.output.decode()
-            raise Exception(e)
-        else:
-            return stdout.decode()
-
-    def validate(self):
-        """ Validate the generated binary code by running spirv-val
-        .
-        Needs Spir-V tools, which can easily be obtained by installing the Vulkan SDK.
-        """
-        filename = os.path.join(tempfile.gettempdir(), "x.spv")
-        with open(filename, "wb") as f:
-            f.write(self.to_binary())
-        try:
-            stdout = subprocess.check_output(["spirv-val", filename], stderr=subprocess.STDOUT)
-        except subprocess.CalledProcessError as err:
-            e = "Spir-V invalid:\n" + err.output.decode()
-            raise Exception(e)
-        else:
-            print("Spir-V seems valid:\n" + stdout.decode())
-
-    ## Utils
+    ## Utils for subclasses
 
     def gen_instruction(self, section_name, opcode, *words):
         self._sections[section_name].append((opcode, *words))
