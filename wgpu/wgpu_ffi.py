@@ -27,7 +27,7 @@ with open(path.join(HERE, 'wgpu.h')) as f:
 ffi.cdef("".join(lines))
 ffi.set_source("whatnameshouldiusehere", None)
 
-_lib = ffi.dlopen(path.join(HERE, "wgpu_native-release.dll"))
+_lib = ffi.dlopen(path.join(HERE, "wgpu_native-debug.dll"))
 
 def dict_to_struct(d, struct, refs):
     # return ffi.new(struct + " *", d)
@@ -110,7 +110,7 @@ _struct_info = dict(
     WGPUShaderModuleDescriptor = [('code', 'WGPUU32Array'),  ],
     WGPUSwapChainDescriptor = [('usage', 'uint32_t'), ('format', 'int64_t'), ('width', 'uint32_t'), ('height', 'uint32_t'), ('present_mode', 'int64_t'),  ],
     WGPUTextureDescriptor = [('size', 'WGPUExtent3d'), ('array_layer_count', 'uint32_t'), ('mip_level_count', 'uint32_t'), ('sample_count', 'uint32_t'), ('dimension', 'int64_t'), ('format', 'int64_t'), ('usage', 'uint32_t'),  ],
-    WGPURequestAdapterOptions = [('power_preference', 'int64_t'), ('backends', 'uint32_t'),  ],
+    WGPURequestAdapterOptions = [('power_preference', 'int64_t'),  ],
     WGPUSwapChainOutput = [('view_id', 'uint64_t'),  ],
     WGPUTextureViewDescriptor = [('format', 'int64_t'), ('dimension', 'int64_t'), ('aspect', 'int64_t'), ('base_mip_level', 'uint32_t'), ('level_count', 'uint32_t'), ('base_array_layer', 'uint32_t'), ('array_layer_count', 'uint32_t'),  ],
 )
@@ -633,13 +633,16 @@ class RsWGPU(BaseWGPU):
         xx = []
         return _lib.wgpu_render_pass_set_viewport(pass_id, x, y, w, h, min_depth, max_depth)
 
-    def request_adapter(self, desc: 'RequestAdapterOptions'):
+    def request_adapter_async(self, desc: 'RequestAdapterOptions', mask: int, callback: 'RequestAdapterCallback', userdata):
         """
-        WGPUAdapterId wgpu_request_adapter(const WGPURequestAdapterOptions *desc);
+        void wgpu_request_adapter_async(const WGPURequestAdapterOptions *desc,
+                                        WGPUBackendBit mask,
+                                        WGPURequestAdapterCallback callback,
+                                        void *userdata);
         """
         xx = []
         desc = dict_to_struct(desc, 'WGPURequestAdapterOptions', xx)
-        return _lib.wgpu_request_adapter(desc)
+        return _lib.wgpu_request_adapter_async(desc, mask, callback, userdata)
 
     def sampler_destroy(self, sampler_id: int):
         """

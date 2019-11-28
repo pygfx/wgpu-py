@@ -18,6 +18,13 @@ def python2spirv(func, shader_type=None):
     if not inspect.isfunction(func):
         raise TypeError("python2spirv expects a Python function.")
 
+    if not shader_type:
+        # Try to auto-detect
+        if "vert" in func.__name__ and not "frag" in func.__name__:
+            shader_type = "vertex"
+        elif "frag" in func.__name__ and not "vert" in func.__name__:
+            shader_type = "fragment"
+
     converter = PyBytecode2Bytecode()
     converter.convert(func)
     bytecode = converter.dump()

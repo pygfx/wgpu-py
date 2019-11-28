@@ -333,7 +333,6 @@ class WGPUTextureDescriptor(ctypes.Structure):
 class WGPURequestAdapterOptions(ctypes.Structure):
     _fields_ = [
         ("power_preference", ctypes.c_int64),
-        ("backends", ctypes.c_uint32),
     ]
 
 class WGPUSwapChainOutput(ctypes.Structure):
@@ -440,8 +439,7 @@ _lib.wgpu_render_pass_set_scissor_rect.argtypes = (ctypes.c_uint64, ctypes.c_uin
 _lib.wgpu_render_pass_set_stencil_reference.argtypes = (ctypes.c_uint64, ctypes.c_uint32, )
 _lib.wgpu_render_pass_set_vertex_buffers.argtypes = (ctypes.c_uint64, ctypes.c_uint32, ctypes.c_uint64, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint64), )
 _lib.wgpu_render_pass_set_viewport.argtypes = (ctypes.c_uint64, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, )
-_lib.wgpu_request_adapter.argtypes = (WGPURequestAdapterOptions, )
-_lib.wgpu_request_adapter.restype = ctypes.c_uint64
+_lib.wgpu_request_adapter_async.argtypes = (WGPURequestAdapterOptions, ctypes.c_uint32, ctypes.c_void_p, ctypes.c_void_p, )
 _lib.wgpu_sampler_destroy.argtypes = (ctypes.c_uint64, )
 _lib.wgpu_swap_chain_get_next_texture.argtypes = (ctypes.c_uint64, )
 _lib.wgpu_swap_chain_get_next_texture.restype = WGPUSwapChainOutput
@@ -884,11 +882,14 @@ class RsWGPU(BaseWGPU):
         """
         return _lib.wgpu_render_pass_set_viewport(pass_id, x, y, w, h, min_depth, max_depth)
 
-    def request_adapter(self, desc: 'RequestAdapterOptions'):
+    def request_adapter_async(self, desc: 'RequestAdapterOptions', mask: int, callback: 'RequestAdapterCallback', userdata):
         """
-        WGPUAdapterId wgpu_request_adapter(const WGPURequestAdapterOptions *desc);
+        void wgpu_request_adapter_async(const WGPURequestAdapterOptions *desc,
+                                        WGPUBackendBit mask,
+                                        WGPURequestAdapterCallback callback,
+                                        void *userdata);
         """
-        return _lib.wgpu_request_adapter(dict_to_struct(desc, WGPURequestAdapterOptions))
+        return _lib.wgpu_request_adapter_async(dict_to_struct(desc, WGPURequestAdapterOptions), mask, callback, userdata)
 
     def sampler_destroy(self, sampler_id: int):
         """

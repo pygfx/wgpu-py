@@ -164,7 +164,7 @@ def type_to_ctype(t):
         return "ctypes.POINTER(ctypes.c_uint64)"  # todo: probably
     elif t == "WGPURawString":
         return "ctypes.c_char_p"
-    elif t in ("WGPUBufferMapReadCallback", "WGPUBufferMapWriteCallback"):
+    elif t in ("WGPUBufferMapReadCallback", "WGPUBufferMapWriteCallback", "WGPURequestAdapterCallback"):
         return "ctypes.c_void_p"  # todo: function pointer
     elif t in structs:
         return t

@@ -437,9 +437,12 @@ class BaseWGPU:
         """
         raise NotImplementedError()
 
-    def request_adapter(self, desc: 'RequestAdapterOptions'):
+    def request_adapter_async(self, desc: 'RequestAdapterOptions', mask: int, callback: 'RequestAdapterCallback', userdata):
         """
-        WGPUAdapterId wgpu_request_adapter(const WGPURequestAdapterOptions *desc);
+        void wgpu_request_adapter_async(const WGPURequestAdapterOptions *desc,
+                                        WGPUBackendBit mask,
+                                        WGPURequestAdapterCallback callback,
+                                        void *userdata);
         """
         raise NotImplementedError()
 
@@ -643,9 +646,9 @@ class BaseWGPU:
         """ WGPUExtent3d size, uint32_t array_layer_count, uint32_t mip_level_count, uint32_t sample_count, WGPUTextureDimension dimension, WGPUTextureFormat format, WGPUTextureUsage usage """
         return {"size": size, "array_layer_count": array_layer_count, "mip_level_count": mip_level_count, "sample_count": sample_count, "dimension": dimension, "format": format, "usage": usage}
 
-    def create_RequestAdapterOptions(self, *, power_preference: 'PowerPreference', backends: int):
-        """ WGPUPowerPreference power_preference, WGPUBackendBit backends """
-        return {"power_preference": power_preference, "backends": backends}
+    def create_RequestAdapterOptions(self, *, power_preference: 'PowerPreference'):
+        """ WGPUPowerPreference power_preference """
+        return {"power_preference": power_preference}
 
     def create_SwapChainOutput(self, *, view_id: int):
         """ WGPUTextureViewId view_id """
@@ -655,14 +658,8 @@ class BaseWGPU:
         """ WGPUTextureFormat format, WGPUTextureViewDimension dimension, WGPUTextureAspect aspect, uint32_t base_mip_level, uint32_t level_count, uint32_t base_array_layer, uint32_t array_layer_count """
         return {"format": format, "dimension": dimension, "aspect": aspect, "base_mip_level": base_mip_level, "level_count": level_count, "base_array_layer": base_array_layer, "array_layer_count": array_layer_count}
 
-    # %% Constants (34)
+    # %% Constants (28)
 
-    DEFAULT_BIND_GROUPS = 4
-    DESIRED_NUM_FRAMES = 3
-    MAX_BIND_GROUPS = 4
-    MAX_COLOR_TARGETS = 4
-    MAX_MIP_LEVELS = 16
-    MAX_VERTEX_BUFFERS = 8
     ShaderStage_NONE = 0
     ShaderStage_VERTEX = 1
     ShaderStage_FRAGMENT = 2
