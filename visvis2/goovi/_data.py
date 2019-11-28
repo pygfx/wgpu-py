@@ -73,4 +73,3 @@ class DeviceMemory(GPUObject):
 # DescriptorSetLayout, which behaves like a template for a descriptor
 # set. Read on at:
 # https://gpuopen.com/understanding-vulkan-objects/
-

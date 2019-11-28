@@ -4,7 +4,6 @@ from ._core import GPUObject
 
 
 class BasePipeline(GPUObject):
-
     def __init__(self, device):
         self._device = device
 
@@ -15,7 +14,6 @@ class ComputePipeline(BasePipeline):
 
 
 class GraphicsPipeline(BasePipeline):
-
     def __init__(self, device, renderpass, shader_modules):
         self._device = device
         self._handle = None

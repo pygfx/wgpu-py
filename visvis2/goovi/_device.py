@@ -43,7 +43,6 @@ def chooseSwapExtent(capabilities):
     return vk.VkExtent2D(width, height)
 
 
-
 class Device(GPUObject):
     """
     A Device can be thought of as a logical device, or opened device.

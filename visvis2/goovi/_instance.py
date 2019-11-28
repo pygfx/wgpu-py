@@ -198,7 +198,9 @@ class PhysicalDevice(GPUObject):
                 and queueFamily.queueFlags & vk.VK_QUEUE_GRAPHICS_BIT
             ):
                 indices.graphicsFamily = i
-            presentSupport = vkGetPhysicalDeviceSurfaceSupportKHR(pdevice_ref, i, surface_handle)
+            presentSupport = vkGetPhysicalDeviceSurfaceSupportKHR(
+                pdevice_ref, i, surface_handle
+            )
             if queueFamily.queueCount > 0 and presentSupport:
                 indices.presentFamily = i
             if indices.isComplete():
@@ -214,17 +216,23 @@ class PhysicalDevice(GPUObject):
         vkGetPhysicalDeviceSurfaceCapabilitiesKHR = vk.vkGetInstanceProcAddr(
             instance_handle, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"
         )
-        details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(pdevice_ref, surface_handle)
+        details.capabilities = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+            pdevice_ref, surface_handle
+        )
 
         vkGetPhysicalDeviceSurfaceFormatsKHR = vk.vkGetInstanceProcAddr(
             instance_handle, "vkGetPhysicalDeviceSurfaceFormatsKHR"
         )
-        details.formats = vkGetPhysicalDeviceSurfaceFormatsKHR(pdevice_ref, surface_handle)
+        details.formats = vkGetPhysicalDeviceSurfaceFormatsKHR(
+            pdevice_ref, surface_handle
+        )
 
         vkGetPhysicalDeviceSurfacePresentModesKHR = vk.vkGetInstanceProcAddr(
             instance_handle, "vkGetPhysicalDeviceSurfacePresentModesKHR"
         )
-        details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(pdevice_ref, surface_handle)
+        details.presentModes = vkGetPhysicalDeviceSurfacePresentModesKHR(
+            pdevice_ref, surface_handle
+        )
 
         return details
 
@@ -269,6 +277,3 @@ class QueueFamilyIndices:
 
     def isComplete(self):
         return self.graphicsFamily >= 0 and self.presentFamily >= 0
-
-
-

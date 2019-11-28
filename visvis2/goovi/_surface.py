@@ -21,7 +21,9 @@ class Surface(GPUObject):
 
         # todo: Select backend
         self._backend = GLFWSurfaceBackend()
-        self._handle = self._backend.create_surface(instance._handle, 640, 480, "visvis2")
+        self._handle = self._backend.create_surface(
+            instance._handle, 640, 480, "visvis2"
+        )
 
     def _destroy(self):
         if self._handle and self._instance and self._instance._handle:
