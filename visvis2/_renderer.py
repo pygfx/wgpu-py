@@ -24,7 +24,43 @@ def ffi_code_from_spirv_module(m):
 # asyncio.get_event_loop().create_task(drawer())
 
 
-class Renderer:
+class BaseRenderer:
+    """ Base class for other renderers. A renderer takes a figure,
+    collect data that describe how it should be drawn, and then draws it.
+    """
+
+    pass
+
+
+class SvgRenderer(BaseRenderer):
+    """ Render to SVG. Because why not.
+    """
+
+    pass
+
+
+class GlRenderer(BaseRenderer):
+    """ Render with OpenGL. This is mostly there to illustrate that it *could* be done.
+    WGPU can (in time) also be used to render using OpenGL.
+    """
+
+    pass
+
+
+class BaseWgpuRenderer(BaseRenderer):
+    """ Render using WGPU.
+    """
+
+
+class OffscreenWgpuRenderer(BaseWgpuRenderer):
+    """ Render using WGPU, but offscreen, not using a surface.
+    """
+
+
+class SurfaceWgpuRenderer(BaseWgpuRenderer):
+    """ A renderer that renders to a surface.
+    """
+
     def __init__(self):
         ffi = wgpu.wgpu_ffi.ffi
 
@@ -193,10 +229,10 @@ class Renderer:
     def draw_frame(self, figure):
 
         # When resizing, re-create the swapchain
-        cur_size = figure.get_size()
+        cur_size = figure.size
         if cur_size != self._surface_size:
             self._surface_size = cur_size
-            self._create_swapchain(figure._get_surface_id(self._ctx), *cur_size)
+            self._create_swapchain(figure.get_surface_id(self._ctx), *cur_size)
 
         ctx = self._ctx
         device_id = self._device_id
