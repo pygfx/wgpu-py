@@ -62,6 +62,8 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
     """
 
     def __init__(self):
+        self._pipelines = []
+
         ffi = wgpu.wgpu_ffi.ffi
 
         # todo: this context is not really a context, its just an API, maybe keep it that way, or make it a context by including device_id
@@ -101,7 +103,8 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
 
         device_des = ctx.create_DeviceDescriptor(
             extensions=ctx.create_Extensions(anisotropic_filtering=False),
-            limits=ctx.create_Limits(max_bind_groups=0),
+            # extensions={"anisotropic_filtering": False},
+            limits=ctx.create_Limits(max_bind_groups=8),
         )
 
         self._device_id = ctx.adapter_request_device(adapter_id, device_des)
@@ -113,13 +116,10 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
             for ob in view.scene.children:  # todo: and their children, and ...
                 wobjects.append(ob)
 
-        assert (
-            len(wobjects) == 1
-        ), "haha, support only one object in total, no more, no less"
-
-        self.compose_pipeline(wobjects[0])
+        return wobjects
 
     def compose_pipeline(self, wobject):
+        ffi = wgpu.wgpu_ffi.ffi
         ctx = self._ctx
         device_id = self._device_id
 
@@ -138,31 +138,82 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
             ctx.create_ShaderModuleDescriptor(code=ffi_code_from_spirv_module(fshader)),
         )
 
-        # todo: I think this is where uniforms go
+        ##
+
+        if True:
+
+            # Create buffer objects (UBO), each mapped to a piece of memory.
+            # Create binding resources, mapping to these buffers.
+            # Create bindings layout
+
+            # Pointer that device_create_buffer_mapped sets, so that we can write stuff there
+            buffer_memory_pointer = ffi.new("uint8_t * *")
+
+            buffer = ctx.device_create_buffer_mapped(
+                device_id,
+                ctx.create_BufferDescriptor(
+                    size=8,
+                    usage=ctx.BufferUsage_UNIFORM,
+                ),
+                buffer_memory_pointer
+            )
+
+            resource = ctx.create_BindingResource(
+                tag = ctx.BindingResource_Buffer,  # Buffer / Sampler / TextureView
+                buffer = {"_0": ctx.create_BufferBinding(buffer=buffer, size=8, offset=0)},
+                # one of:
+                # buffer = create_BufferBinding
+                # sampler = WGPUSamplerId
+                # texture_view = WGPUTextureViewId
+            )
+
+            bindings_layout = [
+                ctx.create_BindGroupLayoutBinding(
+                    binding = 0,
+                    visibility = ctx.ShaderStage_FRAGMENT,
+                    ty = ctx.BindingType_UniformBuffer,
+                    texture_dimension = ctx.TextureDimension_D1,
+                    multisampled = False,
+                    dynamic = True,
+                )
+            ]
+
+            bindings = [
+                ctx.create_BindGroupBinding(binding=0, resource=resource)
+            ]
+
+        else:
+            bindings_layout = []
+            bindings = []
+
+
         bind_group_layout = ctx.device_create_bind_group_layout(
             device_id,
-            ctx.create_BindGroupLayoutDescriptor(bindings=(), bindings_length=0),
+            ctx.create_BindGroupLayoutDescriptor(bindings=bindings_layout, bindings_length=len(bindings_layout)),
         )
 
         bind_group = ctx.device_create_bind_group(
             device_id,
             ctx.create_BindGroupDescriptor(
-                layout=bind_group_layout, bindings=(), bindings_length=0
+                layout=bind_group_layout, bindings=bindings, bindings_length=len(bindings)
             ),
         )
+        print(bind_group_layout, bind_group)
+
+        ##
 
         pipeline_layout = ctx.device_create_pipeline_layout(
             device_id,
             # ctx.create_PipelineLayoutDescriptor(bind_group_layouts=(bind_group, ), bind_group_layouts_length=1)
             ctx.create_PipelineLayoutDescriptor(
-                bind_group_layouts=(), bind_group_layouts_length=0
+                bind_group_layouts=[bind_group_layout], bind_group_layouts_length=1
             ),
         )
 
         # todo: a lot of these functions have device_id as first arg - this smells like a class, perhaps
         # todo: several descriptor args have a list, and another arg to provide the length of that list, because C
 
-        self._render_pipeline = ctx.device_create_render_pipeline(
+        return ctx.device_create_render_pipeline(
             device_id,
             ctx.create_RenderPipelineDescriptor(
                 layout=pipeline_layout,
@@ -191,8 +242,8 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
                         operation=ctx.BlendOperation_Add,
                     ),
                     color_blend=ctx.create_BlendDescriptor(
-                        src_factor=ctx.BlendFactor_One,
-                        dst_factor=ctx.BlendFactor_Zero,
+                        src_factor=ctx.BlendFactor_SrcAlpha,
+                        dst_factor=ctx.BlendFactor_OneMinusSrcAlpha,
                         operation=ctx.BlendOperation_Add,
                     ),
                     write_mask=ctx.ColorWrite_ALL,  # write_mask: ctx::ColorWrite::ALL,
@@ -227,12 +278,15 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
         )
 
     def draw_frame(self, figure):
-
         # When resizing, re-create the swapchain
         cur_size = figure.size
         if cur_size != self._surface_size:
             self._surface_size = cur_size
             self._create_swapchain(figure.get_surface_id(self._ctx), *cur_size)
+
+        wobjects = self.collect_from_figure(figure)
+        if len(wobjects) != len(self._pipelines):
+            self._pipelines = [self.compose_pipeline(wo) for wo in wobjects]
 
         ctx = self._ctx
         device_id = self._device_id
@@ -246,7 +300,7 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
         rpass = ctx.command_encoder_begin_render_pass(
             command_encoder,
             ctx.create_RenderPassDescriptor(
-                color_attachments=(
+                color_attachments=[
                     ctx.create_RenderPassColorAttachmentDescriptor(
                         # attachment=next_texture["view_id"],
                         # todo: arg! need struct2dict function in ffi implementation
@@ -257,18 +311,19 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
                         load_op=ctx.LoadOp_Clear,  # load_op: ctx::LoadOp::Clear,
                         store_op=ctx.StoreOp_Store,  # store_op: ctx::StoreOp::Store,
                         clear_color=dict(
-                            r=0.5, g=255, b=0, a=255
+                            r=0.0, g=0.1, b=0.2, a=1.0
                         ),  # clear_color: ctx::Color::GREEN,
                     ),
-                ),
+                ],
                 color_attachments_length=1,
                 depth_stencil_attachment=None,  # depth_stencil_attachement
             ),
         )
 
-        ctx.render_pass_set_pipeline(rpass, self._render_pipeline)
-        # ctx.render_pass_set_bind_group(rpass, 0, bind_group, [], 0)
-        ctx.render_pass_draw(rpass, 3, 1, 0, 0)
+        for pipeline in self._pipelines:
+            ctx.render_pass_set_pipeline(rpass, pipeline)
+            # ctx.render_pass_set_bind_group(rpass, 0, bind_group, [], 0)
+            ctx.render_pass_draw(rpass, 3, 1, 0, 0)
 
         queue = ctx.device_get_queue(device_id)
         ctx.render_pass_end_pass(rpass)

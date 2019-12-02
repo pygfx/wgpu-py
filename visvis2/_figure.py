@@ -1,4 +1,5 @@
 import sys
+import traceback
 import asyncio
 
 import wgpu
@@ -12,28 +13,38 @@ class Figure:
     """ Represents the root rectangular region to draw to.
     """
 
-    def __init__(self, title="Figure", size=(640, 480), backend="qt", renderer=None):
+    def __init__(self, title="Figure", size=(640, 480), backend="qt", parent=None, renderer=None):
         self._views = []
         self._widget = None
+        self._err_hashes = {}
+
+        # Check renderer
+        if renderer is None:
+            self._renderer = _renderer.SurfaceWgpuRenderer()
+        else:
+            self._renderer = rendere
 
         # Select backend
         if backend.lower() == "qt":
-            self._widget = QtFigureWidget(None, self)
+            self._widget = QtFigureWidget(parent, self)
+            self._widget.paintEvent(None)  # trigger a paint, or there will be no painting at all, odd.
+            self._widget.update()
         else:
             raise ValueError(f"Invalid Figure backend {backend}")
 
         # Initialize widget, if we have one
         if self._widget is not None:
-            self._widget._visvis_set_size(*size)
-            self._widget._visvis_set_title(title)
-
-        # Check renderer
-        if renderer is None:
-            self._renderer = _renderer.SurfaceWgpuRenderer()
+            if parent is None:
+                self._widget._visvis_set_size(*size)
+                self._widget._visvis_set_title(title)
 
     @property
     def views(self):
         return self._views
+
+    @property
+    def renderer(self):
+        return self._renderer
 
     @property
     def widget(self):
@@ -47,11 +58,21 @@ class Figure:
         return self._widget._visvis_get_surface_id(ctx)
 
     def _on_paint(self):
-        if not hasattr(self, "_collected"):
-            self._collected = True
-            self._renderer.collect_from_figure(self)
-
-        self._renderer.draw_frame(self)
+        try:
+            self._renderer.draw_frame(self)
+        except Exception:
+            # Enable PM debuging
+            sys.last_type, sys.last_value, sys.last_traceback = sys.exc_info()
+            msg = str(sys.last_value)
+            msgh = hash(msg)
+            if msgh in self._err_hashes:
+                count = self._err_hashes[msgh] + 1
+                self._err_hashes[msgh] = count
+                sys.stderr.write(f"Error in draw again ({count}): " + msg.strip() + "\n")
+            else:
+                self._err_hashes[msgh] = 1
+                sys.stderr.write(f"Error in draw: " + msg.strip() + "\n")
+                traceback.print_last(6)
 
 
 # class QtFigureWidget(QtGui.QWindow):
@@ -73,7 +94,6 @@ class QtFigureWidget(QtWidgets.QWidget):
         self.setWindowTitle(title)
 
     def _visvis_get_surface_id(self, ctx):  # called by renderer
-
         # Memoize
         if self._surface_id is not None:
             return self._surface_id
@@ -110,8 +130,28 @@ class QtFigureWidget(QtWidgets.QWidget):
 
 
 app = QtWidgets.QApplication([])
-loop = qasync.QEventLoop(app)
-asyncio.set_event_loop(loop)
 
-if hasattr(asyncio, "integrate_with_ide"):
-    asyncio.integrate_with_ide(loop, run=False)
+
+# %% Integrate QT with asyncio
+
+
+if False:
+    # The qasync way, probably the best way, but needs a new event loop, so
+    # does not integrate so well (yet) with IDE's.
+    loop = qasync.QEventLoop(app)
+    asyncio.set_event_loop(loop)
+
+    # An experimental Pyzo thing I hacked together to switch loops
+    if hasattr(asyncio, "integrate_with_ide"):
+        asyncio.integrate_with_ide(loop, run=False)
+else:
+    # The quick-n-dirty way, simple and effective, but this limits the
+    # rate in which qt can process events. If we could get an event
+    # when qt has pending events, this might actually be effective.
+    async def _keep_qt_alive():
+        while True:
+            await asyncio.sleep(0.01)
+            app.flush()
+            app.processEvents()
+
+    asyncio.get_event_loop().create_task(_keep_qt_alive())
