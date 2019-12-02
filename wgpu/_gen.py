@@ -32,6 +32,82 @@ class TextOb:
         return self.read_until("\n")
 
 
+class StructField:
+    def __init__(self, name, typename, is_pointer, is_optional):
+        self.name = name
+        self.typename = typename
+        self.is_pointer = is_pointer
+        self.is_optional = is_optional  # union
+
+    def __repr__(self):
+        cname = ("*" if self.is_pointer else "") + self.name
+        ctype = ("optional " if self.is_optional else "") + self.typename
+        return f"<StructField '{ctype} {cname}'>"
+
+    def c_arg(self):
+        cname = ("*" if self.is_pointer else "") + self.name
+        ctype = ("optional " if self.is_optional else "") + self.typename
+        return ctype + " " + cname
+
+    def py_arg(self):
+        # todo: pythonize type?
+        annotation = self.typename + (" optional" if self.is_optional else "")
+        if self.is_optional:
+            return f"{self.name}: '{annotation}'=None"
+        else:
+            return f"{self.name}: '{annotation}'"
+
+
+def pythonise_type(t):
+    t = types.get(t, t)
+    t = types.get(t, t)  # because can be XX -> XXDummy -> uint32_t
+    if t in ("float", "double"):
+        return "float"
+    elif t in ("int32_t", "int64_t", "uint32_t", "uint64_t"):
+        return "int"
+    elif t.endswith("_t"):
+        return t[:-2]
+    elif t.startswith("WGPU"):
+        return t[4:]
+    else:
+        return t
+
+
+def type_annotation(t):
+    t = pythonise_type(t)
+    if t in ("int", "float"):
+        return f": {t}"
+    elif t == "void":
+        return ""
+    else:
+        return f": {t!r}"
+
+
+def type_to_ctype(t):
+    while types.get(t, t) is not t:
+        t = types.get(t, t)
+    if t == "void":
+        return "ctypes.c_void_p"
+    elif t in ("bool", "float", "double"):
+        return "ctypes.c_" + t
+    elif t in ("uint8_t", "int32_t", "int64_t", "uint32_t", "uint64_t"):
+        return "ctypes.c_" + t[:-2]
+    elif t in ("uintptr_t", ):
+        return "ctypes.POINTER(ctypes.c_uint64)"  # todo: probably
+    elif t == "WGPURawString":
+        return "ctypes.c_char_p"
+    elif t in ("WGPUBufferMapReadCallback", "WGPUBufferMapWriteCallback", "WGPURequestAdapterCallback"):
+        return "ctypes.c_void_p"  # todo: function pointer
+    elif t in structs:
+        return t
+    elif t in enums:
+        return "ctypes.c_int64"  # todo: --->>>> uint32 causes access violation, ??? but with cffi it seems enums are 4 bytes ...
+    # elif t == "WGPUBindingResource":
+        # return "dunno"
+    else:
+        raise NotImplementedError()
+
+
 # %% Parse
 
 hfile = TextOb(open("wgpu.h", "rb").read().decode())
@@ -41,6 +117,7 @@ enums = {}
 structs = {}
 functions = {}
 types = {}
+callbacks = {}
 
 unknown_lines = []
 
@@ -50,6 +127,8 @@ while not hfile.end_reached():
     line = hfile.readline()
 
     if not line.strip():
+        pass
+    elif line.startswith("//"):
         pass
     elif line.startswith("/*"):
         if "*/" in line:
@@ -83,21 +162,39 @@ while not hfile.end_reached():
             d[key.strip()] = int(val)
         enums[name] = d
     elif line.startswith("typedef struct"):
-        line += hfile.read_until("}") + hfile.readline()
+        assert line.count("{") == 1 and line.count("}") == 0
+        nesting_level = 1
+        while nesting_level > 0:
+            more_line = hfile.read_until("}") + hfile.readline()
+            line += more_line
+            nesting_level += more_line.count("{") - more_line.count("}")
         lines = line.strip().split("\n")
         name = lines[-1].split("}", 1)[1].strip("; ")
-        if not name:
-            line += hfile.read_until("}") + hfile.readline()
-            unknown_lines.append(line)
-            continue
+        assert name
         d = {}
+        union = False
         for line in lines[1:-1]:
+            if not union:
+                if line.strip().startswith("union {"):
+                    union = True
+                    continue
+            else:  # in a union
+                if line.strip() == "};":
+                    union = False
+                    continue
+            assert line.endswith(";")
             arg = line.strip().strip(",;")
             if arg.startswith("const "):
                 arg = arg[6:]
             arg_type, arg_name = arg.strip().split()
-            d[arg_name.strip(' *')] = arg_type
+            is_pointer = "*" in arg_name
+            is_optional = bool(union)
+            field_name = arg_name.strip(' *')
+            d[field_name] = StructField(field_name, arg_type, is_pointer, is_optional)
         structs[name] = d
+    elif line.startswith("typedef void (*") and "Callback" in line:
+        name = line.split("(*", 1)[1].split(")")[0].strip()
+        callbacks[name] = line.strip()
     elif line.startswith("typedef "):
         parts = line.strip().strip(";").split()
         if len(parts) == 3:
@@ -127,52 +224,6 @@ while not hfile.end_reached():
         unknown_lines.append(line)
 
 
-def pythonise_type(t):
-    t = types.get(t, t)
-    t = types.get(t, t)  # because can be XX -> XXDummy -> uint32_t
-    if t in ("float", "double"):
-        return "float"
-    elif t in ("int32_t", "int64_t", "uint32_t", "uint64_t"):
-        return "int"
-    elif t.endswith("_t"):
-        return t[:-2]
-    elif t.startswith("WGPU"):
-        return t[4:]
-    else:
-        return t
-
-def type_annotation(t):
-    t = pythonise_type(t)
-    if t in ("int", "float"):
-        return f": {t}"
-    elif t == "void":
-        return ""
-    else:
-        return f": {t!r}"
-
-def type_to_ctype(t):
-    t = types.get(t, t)
-    t = types.get(t, t)
-    t = types.get(t, t)  # because can be XX -> XXDummy -> uint32_t
-    if t == "void":
-        return "ctypes.c_void_p"
-    elif t in ("bool", "float", "double"):
-        return "ctypes.c_" + t
-    elif t in ("uint8_t", "int32_t", "int64_t", "uint32_t", "uint64_t"):
-        return "ctypes.c_" + t[:-2]
-    elif t in ("uintptr_t", ):
-        return "ctypes.POINTER(ctypes.c_uint64)"  # todo: probably
-    elif t == "WGPURawString":
-        return "ctypes.c_char_p"
-    elif t in ("WGPUBufferMapReadCallback", "WGPUBufferMapWriteCallback", "WGPURequestAdapterCallback"):
-        return "ctypes.c_void_p"  # todo: function pointer
-    elif t in structs:
-        return t
-    elif t in enums or (t + "_Tag") in enums:
-        return "ctypes.c_int64"  # todo: --->>>> uint32 causes access violation, ??? but with cffi it seems enums are 4 bytes ...
-    else:
-        raise NotImplementedError()
-
 # Summarize
 if unknown_lines:
     print(f"===== Could not parse {len(unknown_lines)} lines:")
@@ -185,6 +236,7 @@ print(f"Found {len(constants)} constants")
 print(f"Found {len(enums)} enums")
 print(f"Found {len(structs)} structs")
 print(f"Found {len(functions)} functions")
+print(f"Found {len(callbacks)} callbacks")
 
 
 # %% Generate abstract API
@@ -216,16 +268,24 @@ for name, d in functions.items():
     pylines.append(f'        """')
     pylines.append("        raise NotImplementedError()")
 
+pylines.append(f"\n    # %% Callbacks ({len(callbacks)})\n")
+for name, xx in callbacks.items():
+    assert name.startswith("WGPU")
+    name = name[4:]
+    pylines.append(f"\n    {name} = '{xx}'")
+
 pylines.append(f"\n    # %% Structs ({len(structs)})\n")
 for name, vals in structs.items():
     assert name.startswith("WGPU")
     name = name[4:]
-    c_args = [t + " " + key for key, t in vals.items()]
-    py_args = [key + type_annotation(t) for key, t in vals.items()]
+    c_args = [field.c_arg() for field in vals.values()]
+    # todo: also include is_pointer and is_optional
+    py_args = [field.py_arg() for field in vals.values()]
     dict_args = [f'"{key}": {key}' for key in vals.keys()]
     pylines.append(f"\n    def create_{name}(self, *, {', '.join(py_args)}):")
     pylines.append(f'        """ ' + ", ".join(c_args) + ' """')
-    pylines.append("        return {"+ ", ".join(dict_args) + "}")
+    the_dict = "{" + ", ".join(dict_args) + "}"
+    pylines.append(f"        return self._tostruct('{name}', {the_dict})")
 
 pylines.append(f"\n    # %% Constants ({len(constants)})\n")
 for name, val in constants.items():
@@ -308,8 +368,8 @@ for name, vals in structs.items():
     assert name.startswith("WGPU")
     pylines.append(f"class {name}(ctypes.Structure):")
     pylines.append("    _fields_ = [")
-    for key, t in vals.items():
-        pylines.append(f'        ("{key}", {type_to_ctype(t)}),')
+    for key, field in vals.items():
+        pylines.append(f'        ("{key}", {type_to_ctype(field.typename)}),')
     pylines.append("    ]\n")
 pylines.append("")
 
@@ -392,47 +452,52 @@ with open(path.join(HERE, 'wgpu.h')) as f:
 ffi.cdef("".join(lines))
 ffi.set_source("whatnameshouldiusehere", None)
 
-_lib = ffi.dlopen(path.join(HERE, "wgpu_native-release.dll"))
+_lib = ffi.dlopen(path.join(HERE, "wgpu_native-debug.dll"))
 
-def dict_to_struct(d, struct, refs):
-    # return ffi.new(struct + " *", d)
-    if d is None:
-        return ffi.NULL
-    is_flat = True
-    for val in d.values():
-        if isinstance(val, (tuple, list, dict, str)):
-            is_flat = False
-    if not is_flat:
-        s = ffi.new(struct + " *")
-        for key, sub_struct in _struct_info[struct]:
-            val = d[key]
-            if isinstance(val, (tuple, list)):
-                assert sub_struct
-                val2 = []
-                if val and isinstance(val[0], dict):
-                    for v in val:
-                        val2.append(dict_to_struct(v, sub_struct, refs))
-                    refs.extend(val2)
-                    val = [v[0] for v in val2]
-                    val = ffi.new(sub_struct + " []", val)
-                else:
-                    val = ffi.new(sub_struct + " []", val)
-                refs.append(val)
-            elif isinstance(val, dict):
-                val = dict_to_struct(val, sub_struct, refs)
-                refs.append(val)
-                if "*" not in str(getattr(s, key)):
-                    val = val[0]
-            elif isinstance(val, str):
-                val = ffi.new("char []", val.encode())
-                refs.append(val)
+
+# cffi will check the types of structs, and will also raise an error
+# when setting a non-existing struct attribute. It does not check whether
+# values are not set (it will simply use default values or null pointers).
+# Unions are also a bit of a hassle. Therefore we include struct_info
+# so we can handle "special fields" in some structs. The base API offers
+# a way to create structs using a function that ensures that all fields
+# are set (and making union fields optional).
+
+def dict_to_struct(d, structname, refs):
+    special_fields = _struct_info.get(structname, None)
+    if not special_fields:
+        return ffi.new(structname + " *", d)  # simple, flat
+    s = ffi.new(structname + " *")
+    for key, val in d.items():
+        info = special_fields.get(key, None)
+        if info:
+            subtypename, is_pointer, is_optional = info
+            if is_optional and val is None:
+                continue
             elif val is None:
-                val = ffi.NULL
-            setattr(s, key, val)
-        return s
-    else:
-        return ffi.new(struct + " *", d)
-
+                cval = ffi.NULL
+            elif isinstance(val, str):
+                cval = ffi.new("char []", val.encode())
+                refs.append(cval)
+            elif isinstance(val, dict):
+                cval = dict_to_struct(val, subtypename, refs)
+                refs.append(cval)
+                if not is_pointer:
+                    cval = cval[0]
+            elif isinstance(val, (tuple, list)):
+                cval = [dict_to_struct(v, subtypename, refs) for v in val]
+                refs.extend(cval)
+                cval = ffi.new(subtypename + " []", [v[0] for v in cval])
+                refs.append(cval)
+            else:
+                cval = val  # We trust the user
+                # raise TypeError(f"Expected dict or list for {subtypename}")
+        elif val is None:
+            cval = ffi.NULL
+        else:
+            cval = val
+        setattr(s, key, cval)
+    return s
 
 """
 
@@ -446,21 +511,25 @@ pylines = []
 pylines.append(f'"""\n{module_doc.strip()}\n"""\n')
 pylines.append(module_preamble.rstrip() + "\n\n")
 
-# Define structs
+# Write struct info
+pylines.append("# Define what struct fields are sub-structs")
 pylines.append("_struct_info = dict(")
 for name, vals in structs.items():
     assert name.startswith("WGPU")
-    line = f"    {name} = ["
-    for key, t in vals.items():
-        t = type_to_ctype(t)
-        if t.startswith("ctypes.c_"):
-            t = t[9:] + "_t"
-        line += f"('{key}', '{t}'), "
-    pylines.append(line + " ],")
+    field_lines = []
+    for field in vals.values():
+        t = type_to_ctype(field.typename)
+        if t in structs or field.is_pointer or field.is_optional or field.typename == "WGPURawString":
+            line = f"'{field.name}': ('{field.typename}', {field.is_pointer}, {field.is_optional}),"
+            field_lines.append(line)
+    if field_lines:
+        pylines.append(f"    {name} = " + "{\n        " + "\n        ".join(field_lines) + "\n    },")
 pylines.append(")\n")
 
 pylines.append("\nclass RsWGPU(BaseWGPU):")
 pylines.append(f'    """ {class_doc.strip()}\n    """')
+pylines.append("    def _tostruct(self, struct_name, d):")
+pylines.append("        return d#ffi.new('WGPU' + struct_name + ' *', d)[0]")
 for name, d in functions.items():
     assert name.startswith("wgpu_")
     pyname = name[5:]

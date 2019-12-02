@@ -147,10 +147,18 @@ class WGPUBindingResource_WGPUTextureView_Body(ctypes.Structure):
         ("_0", ctypes.c_uint64),
     ]
 
+class WGPUBindingResource(ctypes.Structure):
+    _fields_ = [
+        ("tag", ctypes.c_int64),
+        ("buffer", WGPUBindingResource_WGPUBuffer_Body),
+        ("sampler", WGPUBindingResource_WGPUSampler_Body),
+        ("texture_view", WGPUBindingResource_WGPUTextureView_Body),
+    ]
+
 class WGPUBindGroupBinding(ctypes.Structure):
     _fields_ = [
         ("binding", ctypes.c_uint32),
-        ("resource", ctypes.c_int64),
+        ("resource", WGPUBindingResource),
     ]
 
 class WGPUBindGroupDescriptor(ctypes.Structure):

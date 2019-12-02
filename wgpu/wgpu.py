@@ -483,180 +483,193 @@ class BaseWGPU:
         """
         raise NotImplementedError()
 
-    # %% Structs (43)
+    # %% Callbacks (3)
+
+
+    BufferMapReadCallback = 'typedef void (*WGPUBufferMapReadCallback)(WGPUBufferMapAsyncStatus status, const uint8_t *data, uint8_t *userdata);'
+
+    BufferMapWriteCallback = 'typedef void (*WGPUBufferMapWriteCallback)(WGPUBufferMapAsyncStatus status, uint8_t *data, uint8_t *userdata);'
+
+    RequestAdapterCallback = 'typedef void (*WGPURequestAdapterCallback)(WGPUAdapterId id, void *userdata);'
+
+    # %% Structs (44)
 
 
     def create_Extensions(self, *, anisotropic_filtering: 'bool'):
         """ bool anisotropic_filtering """
-        return {"anisotropic_filtering": anisotropic_filtering}
+        return self._tostruct('Extensions', {"anisotropic_filtering": anisotropic_filtering})
 
-    def create_Limits(self, *, max_bind_groups: int):
+    def create_Limits(self, *, max_bind_groups: 'uint32_t'):
         """ uint32_t max_bind_groups """
-        return {"max_bind_groups": max_bind_groups}
+        return self._tostruct('Limits', {"max_bind_groups": max_bind_groups})
 
-    def create_DeviceDescriptor(self, *, extensions: 'Extensions', limits: 'Limits'):
+    def create_DeviceDescriptor(self, *, extensions: 'WGPUExtensions', limits: 'WGPULimits'):
         """ WGPUExtensions extensions, WGPULimits limits """
-        return {"extensions": extensions, "limits": limits}
+        return self._tostruct('DeviceDescriptor', {"extensions": extensions, "limits": limits})
 
-    def create_ComputePassDescriptor(self, *, todo: int):
+    def create_ComputePassDescriptor(self, *, todo: 'uint32_t'):
         """ uint32_t todo """
-        return {"todo": todo}
+        return self._tostruct('ComputePassDescriptor', {"todo": todo})
 
-    def create_Color(self, *, r: float, g: float, b: float, a: float):
+    def create_Color(self, *, r: 'double', g: 'double', b: 'double', a: 'double'):
         """ double r, double g, double b, double a """
-        return {"r": r, "g": g, "b": b, "a": a}
+        return self._tostruct('Color', {"r": r, "g": g, "b": b, "a": a})
 
-    def create_RenderPassColorAttachmentDescriptor(self, *, attachment: int, resolve_target: int, load_op: 'LoadOp', store_op: 'StoreOp', clear_color: 'Color'):
-        """ WGPUTextureViewId attachment, WGPUTextureViewId resolve_target, WGPULoadOp load_op, WGPUStoreOp store_op, WGPUColor clear_color """
-        return {"attachment": attachment, "resolve_target": resolve_target, "load_op": load_op, "store_op": store_op, "clear_color": clear_color}
+    def create_RenderPassColorAttachmentDescriptor(self, *, attachment: 'WGPUTextureViewId', resolve_target: 'WGPUTextureViewId', load_op: 'WGPULoadOp', store_op: 'WGPUStoreOp', clear_color: 'WGPUColor'):
+        """ WGPUTextureViewId attachment, WGPUTextureViewId *resolve_target, WGPULoadOp load_op, WGPUStoreOp store_op, WGPUColor clear_color """
+        return self._tostruct('RenderPassColorAttachmentDescriptor', {"attachment": attachment, "resolve_target": resolve_target, "load_op": load_op, "store_op": store_op, "clear_color": clear_color})
 
-    def create_RenderPassDepthStencilAttachmentDescriptor_TextureViewId(self, *, attachment: int, depth_load_op: 'LoadOp', depth_store_op: 'StoreOp', clear_depth: float, stencil_load_op: 'LoadOp', stencil_store_op: 'StoreOp', clear_stencil: int):
+    def create_RenderPassDepthStencilAttachmentDescriptor_TextureViewId(self, *, attachment: 'WGPUTextureViewId', depth_load_op: 'WGPULoadOp', depth_store_op: 'WGPUStoreOp', clear_depth: 'float', stencil_load_op: 'WGPULoadOp', stencil_store_op: 'WGPUStoreOp', clear_stencil: 'uint32_t'):
         """ WGPUTextureViewId attachment, WGPULoadOp depth_load_op, WGPUStoreOp depth_store_op, float clear_depth, WGPULoadOp stencil_load_op, WGPUStoreOp stencil_store_op, uint32_t clear_stencil """
-        return {"attachment": attachment, "depth_load_op": depth_load_op, "depth_store_op": depth_store_op, "clear_depth": clear_depth, "stencil_load_op": stencil_load_op, "stencil_store_op": stencil_store_op, "clear_stencil": clear_stencil}
+        return self._tostruct('RenderPassDepthStencilAttachmentDescriptor_TextureViewId', {"attachment": attachment, "depth_load_op": depth_load_op, "depth_store_op": depth_store_op, "clear_depth": clear_depth, "stencil_load_op": stencil_load_op, "stencil_store_op": stencil_store_op, "clear_stencil": clear_stencil})
 
-    def create_RenderPassDescriptor(self, *, color_attachments: 'RenderPassColorAttachmentDescriptor', color_attachments_length: 'uintptr', depth_stencil_attachment: 'RenderPassDepthStencilAttachmentDescriptor_TextureViewId'):
-        """ WGPURenderPassColorAttachmentDescriptor color_attachments, uintptr_t color_attachments_length, WGPURenderPassDepthStencilAttachmentDescriptor_TextureViewId depth_stencil_attachment """
-        return {"color_attachments": color_attachments, "color_attachments_length": color_attachments_length, "depth_stencil_attachment": depth_stencil_attachment}
+    def create_RenderPassDescriptor(self, *, color_attachments: 'WGPURenderPassColorAttachmentDescriptor', color_attachments_length: 'uintptr_t', depth_stencil_attachment: 'WGPURenderPassDepthStencilAttachmentDescriptor_TextureViewId'):
+        """ WGPURenderPassColorAttachmentDescriptor *color_attachments, uintptr_t color_attachments_length, WGPURenderPassDepthStencilAttachmentDescriptor_TextureViewId *depth_stencil_attachment """
+        return self._tostruct('RenderPassDescriptor', {"color_attachments": color_attachments, "color_attachments_length": color_attachments_length, "depth_stencil_attachment": depth_stencil_attachment})
 
-    def create_BufferCopyView(self, *, buffer: int, offset: int, row_pitch: int, image_height: int):
+    def create_BufferCopyView(self, *, buffer: 'WGPUBufferId', offset: 'WGPUBufferAddress', row_pitch: 'uint32_t', image_height: 'uint32_t'):
         """ WGPUBufferId buffer, WGPUBufferAddress offset, uint32_t row_pitch, uint32_t image_height """
-        return {"buffer": buffer, "offset": offset, "row_pitch": row_pitch, "image_height": image_height}
+        return self._tostruct('BufferCopyView', {"buffer": buffer, "offset": offset, "row_pitch": row_pitch, "image_height": image_height})
 
-    def create_Origin3d(self, *, x: float, y: float, z: float):
+    def create_Origin3d(self, *, x: 'float', y: 'float', z: 'float'):
         """ float x, float y, float z """
-        return {"x": x, "y": y, "z": z}
+        return self._tostruct('Origin3d', {"x": x, "y": y, "z": z})
 
-    def create_TextureCopyView(self, *, texture: int, mip_level: int, array_layer: int, origin: 'Origin3d'):
+    def create_TextureCopyView(self, *, texture: 'WGPUTextureId', mip_level: 'uint32_t', array_layer: 'uint32_t', origin: 'WGPUOrigin3d'):
         """ WGPUTextureId texture, uint32_t mip_level, uint32_t array_layer, WGPUOrigin3d origin """
-        return {"texture": texture, "mip_level": mip_level, "array_layer": array_layer, "origin": origin}
+        return self._tostruct('TextureCopyView', {"texture": texture, "mip_level": mip_level, "array_layer": array_layer, "origin": origin})
 
-    def create_Extent3d(self, *, width: int, height: int, depth: int):
+    def create_Extent3d(self, *, width: 'uint32_t', height: 'uint32_t', depth: 'uint32_t'):
         """ uint32_t width, uint32_t height, uint32_t depth """
-        return {"width": width, "height": height, "depth": depth}
+        return self._tostruct('Extent3d', {"width": width, "height": height, "depth": depth})
 
-    def create_CommandBufferDescriptor(self, *, todo: int):
+    def create_CommandBufferDescriptor(self, *, todo: 'uint32_t'):
         """ uint32_t todo """
-        return {"todo": todo}
+        return self._tostruct('CommandBufferDescriptor', {"todo": todo})
 
-    def create_BufferBinding(self, *, buffer: int, offset: int, size: int):
+    def create_BufferBinding(self, *, buffer: 'WGPUBufferId', offset: 'WGPUBufferAddress', size: 'WGPUBufferAddress'):
         """ WGPUBufferId buffer, WGPUBufferAddress offset, WGPUBufferAddress size """
-        return {"buffer": buffer, "offset": offset, "size": size}
+        return self._tostruct('BufferBinding', {"buffer": buffer, "offset": offset, "size": size})
 
-    def create_BindingResource_WGPUBuffer_Body(self, *, _0: 'BufferBinding'):
+    def create_BindingResource_WGPUBuffer_Body(self, *, _0: 'WGPUBufferBinding'):
         """ WGPUBufferBinding _0 """
-        return {"_0": _0}
+        return self._tostruct('BindingResource_WGPUBuffer_Body', {"_0": _0})
 
-    def create_BindingResource_WGPUSampler_Body(self, *, _0: int):
+    def create_BindingResource_WGPUSampler_Body(self, *, _0: 'WGPUSamplerId'):
         """ WGPUSamplerId _0 """
-        return {"_0": _0}
+        return self._tostruct('BindingResource_WGPUSampler_Body', {"_0": _0})
 
-    def create_BindingResource_WGPUTextureView_Body(self, *, _0: int):
+    def create_BindingResource_WGPUTextureView_Body(self, *, _0: 'WGPUTextureViewId'):
         """ WGPUTextureViewId _0 """
-        return {"_0": _0}
+        return self._tostruct('BindingResource_WGPUTextureView_Body', {"_0": _0})
 
-    def create_BindGroupBinding(self, *, binding: int, resource: 'BindingResource'):
+    def create_BindingResource(self, *, tag: 'WGPUBindingResource_Tag', buffer: 'WGPUBindingResource_WGPUBuffer_Body optional'=None, sampler: 'WGPUBindingResource_WGPUSampler_Body optional'=None, texture_view: 'WGPUBindingResource_WGPUTextureView_Body optional'=None):
+        """ WGPUBindingResource_Tag tag, optional WGPUBindingResource_WGPUBuffer_Body buffer, optional WGPUBindingResource_WGPUSampler_Body sampler, optional WGPUBindingResource_WGPUTextureView_Body texture_view """
+        return self._tostruct('BindingResource', {"tag": tag, "buffer": buffer, "sampler": sampler, "texture_view": texture_view})
+
+    def create_BindGroupBinding(self, *, binding: 'uint32_t', resource: 'WGPUBindingResource'):
         """ uint32_t binding, WGPUBindingResource resource """
-        return {"binding": binding, "resource": resource}
+        return self._tostruct('BindGroupBinding', {"binding": binding, "resource": resource})
 
-    def create_BindGroupDescriptor(self, *, layout: int, bindings: 'BindGroupBinding', bindings_length: 'uintptr'):
-        """ WGPUBindGroupLayoutId layout, WGPUBindGroupBinding bindings, uintptr_t bindings_length """
-        return {"layout": layout, "bindings": bindings, "bindings_length": bindings_length}
+    def create_BindGroupDescriptor(self, *, layout: 'WGPUBindGroupLayoutId', bindings: 'WGPUBindGroupBinding', bindings_length: 'uintptr_t'):
+        """ WGPUBindGroupLayoutId layout, WGPUBindGroupBinding *bindings, uintptr_t bindings_length """
+        return self._tostruct('BindGroupDescriptor', {"layout": layout, "bindings": bindings, "bindings_length": bindings_length})
 
-    def create_BindGroupLayoutBinding(self, *, binding: int, visibility: int, ty: 'BindingType', texture_dimension: 'TextureViewDimension', multisampled: 'bool', dynamic: 'bool'):
+    def create_BindGroupLayoutBinding(self, *, binding: 'uint32_t', visibility: 'WGPUShaderStage', ty: 'WGPUBindingType', texture_dimension: 'WGPUTextureViewDimension', multisampled: 'bool', dynamic: 'bool'):
         """ uint32_t binding, WGPUShaderStage visibility, WGPUBindingType ty, WGPUTextureViewDimension texture_dimension, bool multisampled, bool dynamic """
-        return {"binding": binding, "visibility": visibility, "ty": ty, "texture_dimension": texture_dimension, "multisampled": multisampled, "dynamic": dynamic}
+        return self._tostruct('BindGroupLayoutBinding', {"binding": binding, "visibility": visibility, "ty": ty, "texture_dimension": texture_dimension, "multisampled": multisampled, "dynamic": dynamic})
 
-    def create_BindGroupLayoutDescriptor(self, *, bindings: 'BindGroupLayoutBinding', bindings_length: 'uintptr'):
-        """ WGPUBindGroupLayoutBinding bindings, uintptr_t bindings_length """
-        return {"bindings": bindings, "bindings_length": bindings_length}
+    def create_BindGroupLayoutDescriptor(self, *, bindings: 'WGPUBindGroupLayoutBinding', bindings_length: 'uintptr_t'):
+        """ WGPUBindGroupLayoutBinding *bindings, uintptr_t bindings_length """
+        return self._tostruct('BindGroupLayoutDescriptor', {"bindings": bindings, "bindings_length": bindings_length})
 
-    def create_BufferDescriptor(self, *, size: int, usage: int):
+    def create_BufferDescriptor(self, *, size: 'WGPUBufferAddress', usage: 'WGPUBufferUsage'):
         """ WGPUBufferAddress size, WGPUBufferUsage usage """
-        return {"size": size, "usage": usage}
+        return self._tostruct('BufferDescriptor', {"size": size, "usage": usage})
 
-    def create_CommandEncoderDescriptor(self, *, todo: int):
+    def create_CommandEncoderDescriptor(self, *, todo: 'uint32_t'):
         """ uint32_t todo """
-        return {"todo": todo}
+        return self._tostruct('CommandEncoderDescriptor', {"todo": todo})
 
-    def create_ProgrammableStageDescriptor(self, *, module: int, entry_point: 'RawString'):
+    def create_ProgrammableStageDescriptor(self, *, module: 'WGPUShaderModuleId', entry_point: 'WGPURawString'):
         """ WGPUShaderModuleId module, WGPURawString entry_point """
-        return {"module": module, "entry_point": entry_point}
+        return self._tostruct('ProgrammableStageDescriptor', {"module": module, "entry_point": entry_point})
 
-    def create_ComputePipelineDescriptor(self, *, layout: int, compute_stage: 'ProgrammableStageDescriptor'):
+    def create_ComputePipelineDescriptor(self, *, layout: 'WGPUPipelineLayoutId', compute_stage: 'WGPUProgrammableStageDescriptor'):
         """ WGPUPipelineLayoutId layout, WGPUProgrammableStageDescriptor compute_stage """
-        return {"layout": layout, "compute_stage": compute_stage}
+        return self._tostruct('ComputePipelineDescriptor', {"layout": layout, "compute_stage": compute_stage})
 
-    def create_PipelineLayoutDescriptor(self, *, bind_group_layouts: int, bind_group_layouts_length: 'uintptr'):
-        """ WGPUBindGroupLayoutId bind_group_layouts, uintptr_t bind_group_layouts_length """
-        return {"bind_group_layouts": bind_group_layouts, "bind_group_layouts_length": bind_group_layouts_length}
+    def create_PipelineLayoutDescriptor(self, *, bind_group_layouts: 'WGPUBindGroupLayoutId', bind_group_layouts_length: 'uintptr_t'):
+        """ WGPUBindGroupLayoutId *bind_group_layouts, uintptr_t bind_group_layouts_length """
+        return self._tostruct('PipelineLayoutDescriptor', {"bind_group_layouts": bind_group_layouts, "bind_group_layouts_length": bind_group_layouts_length})
 
-    def create_RasterizationStateDescriptor(self, *, front_face: 'FrontFace', cull_mode: 'CullMode', depth_bias: int, depth_bias_slope_scale: float, depth_bias_clamp: float):
+    def create_RasterizationStateDescriptor(self, *, front_face: 'WGPUFrontFace', cull_mode: 'WGPUCullMode', depth_bias: 'int32_t', depth_bias_slope_scale: 'float', depth_bias_clamp: 'float'):
         """ WGPUFrontFace front_face, WGPUCullMode cull_mode, int32_t depth_bias, float depth_bias_slope_scale, float depth_bias_clamp """
-        return {"front_face": front_face, "cull_mode": cull_mode, "depth_bias": depth_bias, "depth_bias_slope_scale": depth_bias_slope_scale, "depth_bias_clamp": depth_bias_clamp}
+        return self._tostruct('RasterizationStateDescriptor', {"front_face": front_face, "cull_mode": cull_mode, "depth_bias": depth_bias, "depth_bias_slope_scale": depth_bias_slope_scale, "depth_bias_clamp": depth_bias_clamp})
 
-    def create_BlendDescriptor(self, *, src_factor: 'BlendFactor', dst_factor: 'BlendFactor', operation: 'BlendOperation'):
+    def create_BlendDescriptor(self, *, src_factor: 'WGPUBlendFactor', dst_factor: 'WGPUBlendFactor', operation: 'WGPUBlendOperation'):
         """ WGPUBlendFactor src_factor, WGPUBlendFactor dst_factor, WGPUBlendOperation operation """
-        return {"src_factor": src_factor, "dst_factor": dst_factor, "operation": operation}
+        return self._tostruct('BlendDescriptor', {"src_factor": src_factor, "dst_factor": dst_factor, "operation": operation})
 
-    def create_ColorStateDescriptor(self, *, format: 'TextureFormat', alpha_blend: 'BlendDescriptor', color_blend: 'BlendDescriptor', write_mask: int):
+    def create_ColorStateDescriptor(self, *, format: 'WGPUTextureFormat', alpha_blend: 'WGPUBlendDescriptor', color_blend: 'WGPUBlendDescriptor', write_mask: 'WGPUColorWrite'):
         """ WGPUTextureFormat format, WGPUBlendDescriptor alpha_blend, WGPUBlendDescriptor color_blend, WGPUColorWrite write_mask """
-        return {"format": format, "alpha_blend": alpha_blend, "color_blend": color_blend, "write_mask": write_mask}
+        return self._tostruct('ColorStateDescriptor', {"format": format, "alpha_blend": alpha_blend, "color_blend": color_blend, "write_mask": write_mask})
 
-    def create_StencilStateFaceDescriptor(self, *, compare: 'CompareFunction', fail_op: 'StencilOperation', depth_fail_op: 'StencilOperation', pass_op: 'StencilOperation'):
+    def create_StencilStateFaceDescriptor(self, *, compare: 'WGPUCompareFunction', fail_op: 'WGPUStencilOperation', depth_fail_op: 'WGPUStencilOperation', pass_op: 'WGPUStencilOperation'):
         """ WGPUCompareFunction compare, WGPUStencilOperation fail_op, WGPUStencilOperation depth_fail_op, WGPUStencilOperation pass_op """
-        return {"compare": compare, "fail_op": fail_op, "depth_fail_op": depth_fail_op, "pass_op": pass_op}
+        return self._tostruct('StencilStateFaceDescriptor', {"compare": compare, "fail_op": fail_op, "depth_fail_op": depth_fail_op, "pass_op": pass_op})
 
-    def create_DepthStencilStateDescriptor(self, *, format: 'TextureFormat', depth_write_enabled: 'bool', depth_compare: 'CompareFunction', stencil_front: 'StencilStateFaceDescriptor', stencil_back: 'StencilStateFaceDescriptor', stencil_read_mask: int, stencil_write_mask: int):
+    def create_DepthStencilStateDescriptor(self, *, format: 'WGPUTextureFormat', depth_write_enabled: 'bool', depth_compare: 'WGPUCompareFunction', stencil_front: 'WGPUStencilStateFaceDescriptor', stencil_back: 'WGPUStencilStateFaceDescriptor', stencil_read_mask: 'uint32_t', stencil_write_mask: 'uint32_t'):
         """ WGPUTextureFormat format, bool depth_write_enabled, WGPUCompareFunction depth_compare, WGPUStencilStateFaceDescriptor stencil_front, WGPUStencilStateFaceDescriptor stencil_back, uint32_t stencil_read_mask, uint32_t stencil_write_mask """
-        return {"format": format, "depth_write_enabled": depth_write_enabled, "depth_compare": depth_compare, "stencil_front": stencil_front, "stencil_back": stencil_back, "stencil_read_mask": stencil_read_mask, "stencil_write_mask": stencil_write_mask}
+        return self._tostruct('DepthStencilStateDescriptor', {"format": format, "depth_write_enabled": depth_write_enabled, "depth_compare": depth_compare, "stencil_front": stencil_front, "stencil_back": stencil_back, "stencil_read_mask": stencil_read_mask, "stencil_write_mask": stencil_write_mask})
 
-    def create_VertexAttributeDescriptor(self, *, offset: int, format: 'VertexFormat', shader_location: int):
+    def create_VertexAttributeDescriptor(self, *, offset: 'WGPUBufferAddress', format: 'WGPUVertexFormat', shader_location: 'WGPUShaderLocation'):
         """ WGPUBufferAddress offset, WGPUVertexFormat format, WGPUShaderLocation shader_location """
-        return {"offset": offset, "format": format, "shader_location": shader_location}
+        return self._tostruct('VertexAttributeDescriptor', {"offset": offset, "format": format, "shader_location": shader_location})
 
-    def create_VertexBufferDescriptor(self, *, stride: int, step_mode: 'InputStepMode', attributes: 'VertexAttributeDescriptor', attributes_length: 'uintptr'):
-        """ WGPUBufferAddress stride, WGPUInputStepMode step_mode, WGPUVertexAttributeDescriptor attributes, uintptr_t attributes_length """
-        return {"stride": stride, "step_mode": step_mode, "attributes": attributes, "attributes_length": attributes_length}
+    def create_VertexBufferDescriptor(self, *, stride: 'WGPUBufferAddress', step_mode: 'WGPUInputStepMode', attributes: 'WGPUVertexAttributeDescriptor', attributes_length: 'uintptr_t'):
+        """ WGPUBufferAddress stride, WGPUInputStepMode step_mode, WGPUVertexAttributeDescriptor *attributes, uintptr_t attributes_length """
+        return self._tostruct('VertexBufferDescriptor', {"stride": stride, "step_mode": step_mode, "attributes": attributes, "attributes_length": attributes_length})
 
-    def create_VertexInputDescriptor(self, *, index_format: 'IndexFormat', vertex_buffers: 'VertexBufferDescriptor', vertex_buffers_length: 'uintptr'):
-        """ WGPUIndexFormat index_format, WGPUVertexBufferDescriptor vertex_buffers, uintptr_t vertex_buffers_length """
-        return {"index_format": index_format, "vertex_buffers": vertex_buffers, "vertex_buffers_length": vertex_buffers_length}
+    def create_VertexInputDescriptor(self, *, index_format: 'WGPUIndexFormat', vertex_buffers: 'WGPUVertexBufferDescriptor', vertex_buffers_length: 'uintptr_t'):
+        """ WGPUIndexFormat index_format, WGPUVertexBufferDescriptor *vertex_buffers, uintptr_t vertex_buffers_length """
+        return self._tostruct('VertexInputDescriptor', {"index_format": index_format, "vertex_buffers": vertex_buffers, "vertex_buffers_length": vertex_buffers_length})
 
-    def create_RenderPipelineDescriptor(self, *, layout: int, vertex_stage: 'ProgrammableStageDescriptor', fragment_stage: 'ProgrammableStageDescriptor', primitive_topology: 'PrimitiveTopology', rasterization_state: 'RasterizationStateDescriptor', color_states: 'ColorStateDescriptor', color_states_length: 'uintptr', depth_stencil_state: 'DepthStencilStateDescriptor', vertex_input: 'VertexInputDescriptor', sample_count: int, sample_mask: int, alpha_to_coverage_enabled: 'bool'):
-        """ WGPUPipelineLayoutId layout, WGPUProgrammableStageDescriptor vertex_stage, WGPUProgrammableStageDescriptor fragment_stage, WGPUPrimitiveTopology primitive_topology, WGPURasterizationStateDescriptor rasterization_state, WGPUColorStateDescriptor color_states, uintptr_t color_states_length, WGPUDepthStencilStateDescriptor depth_stencil_state, WGPUVertexInputDescriptor vertex_input, uint32_t sample_count, uint32_t sample_mask, bool alpha_to_coverage_enabled """
-        return {"layout": layout, "vertex_stage": vertex_stage, "fragment_stage": fragment_stage, "primitive_topology": primitive_topology, "rasterization_state": rasterization_state, "color_states": color_states, "color_states_length": color_states_length, "depth_stencil_state": depth_stencil_state, "vertex_input": vertex_input, "sample_count": sample_count, "sample_mask": sample_mask, "alpha_to_coverage_enabled": alpha_to_coverage_enabled}
+    def create_RenderPipelineDescriptor(self, *, layout: 'WGPUPipelineLayoutId', vertex_stage: 'WGPUProgrammableStageDescriptor', fragment_stage: 'WGPUProgrammableStageDescriptor', primitive_topology: 'WGPUPrimitiveTopology', rasterization_state: 'WGPURasterizationStateDescriptor', color_states: 'WGPUColorStateDescriptor', color_states_length: 'uintptr_t', depth_stencil_state: 'WGPUDepthStencilStateDescriptor', vertex_input: 'WGPUVertexInputDescriptor', sample_count: 'uint32_t', sample_mask: 'uint32_t', alpha_to_coverage_enabled: 'bool'):
+        """ WGPUPipelineLayoutId layout, WGPUProgrammableStageDescriptor vertex_stage, WGPUProgrammableStageDescriptor *fragment_stage, WGPUPrimitiveTopology primitive_topology, WGPURasterizationStateDescriptor *rasterization_state, WGPUColorStateDescriptor *color_states, uintptr_t color_states_length, WGPUDepthStencilStateDescriptor *depth_stencil_state, WGPUVertexInputDescriptor vertex_input, uint32_t sample_count, uint32_t sample_mask, bool alpha_to_coverage_enabled """
+        return self._tostruct('RenderPipelineDescriptor', {"layout": layout, "vertex_stage": vertex_stage, "fragment_stage": fragment_stage, "primitive_topology": primitive_topology, "rasterization_state": rasterization_state, "color_states": color_states, "color_states_length": color_states_length, "depth_stencil_state": depth_stencil_state, "vertex_input": vertex_input, "sample_count": sample_count, "sample_mask": sample_mask, "alpha_to_coverage_enabled": alpha_to_coverage_enabled})
 
-    def create_SamplerDescriptor(self, *, address_mode_u: 'AddressMode', address_mode_v: 'AddressMode', address_mode_w: 'AddressMode', mag_filter: 'FilterMode', min_filter: 'FilterMode', mipmap_filter: 'FilterMode', lod_min_clamp: float, lod_max_clamp: float, compare_function: 'CompareFunction'):
+    def create_SamplerDescriptor(self, *, address_mode_u: 'WGPUAddressMode', address_mode_v: 'WGPUAddressMode', address_mode_w: 'WGPUAddressMode', mag_filter: 'WGPUFilterMode', min_filter: 'WGPUFilterMode', mipmap_filter: 'WGPUFilterMode', lod_min_clamp: 'float', lod_max_clamp: 'float', compare_function: 'WGPUCompareFunction'):
         """ WGPUAddressMode address_mode_u, WGPUAddressMode address_mode_v, WGPUAddressMode address_mode_w, WGPUFilterMode mag_filter, WGPUFilterMode min_filter, WGPUFilterMode mipmap_filter, float lod_min_clamp, float lod_max_clamp, WGPUCompareFunction compare_function """
-        return {"address_mode_u": address_mode_u, "address_mode_v": address_mode_v, "address_mode_w": address_mode_w, "mag_filter": mag_filter, "min_filter": min_filter, "mipmap_filter": mipmap_filter, "lod_min_clamp": lod_min_clamp, "lod_max_clamp": lod_max_clamp, "compare_function": compare_function}
+        return self._tostruct('SamplerDescriptor', {"address_mode_u": address_mode_u, "address_mode_v": address_mode_v, "address_mode_w": address_mode_w, "mag_filter": mag_filter, "min_filter": min_filter, "mipmap_filter": mipmap_filter, "lod_min_clamp": lod_min_clamp, "lod_max_clamp": lod_max_clamp, "compare_function": compare_function})
 
-    def create_U32Array(self, *, bytes: int, length: 'uintptr'):
-        """ uint32_t bytes, uintptr_t length """
-        return {"bytes": bytes, "length": length}
+    def create_U32Array(self, *, bytes: 'uint32_t', length: 'uintptr_t'):
+        """ uint32_t *bytes, uintptr_t length """
+        return self._tostruct('U32Array', {"bytes": bytes, "length": length})
 
-    def create_ShaderModuleDescriptor(self, *, code: 'U32Array'):
+    def create_ShaderModuleDescriptor(self, *, code: 'WGPUU32Array'):
         """ WGPUU32Array code """
-        return {"code": code}
+        return self._tostruct('ShaderModuleDescriptor', {"code": code})
 
-    def create_SwapChainDescriptor(self, *, usage: int, format: 'TextureFormat', width: int, height: int, present_mode: 'PresentMode'):
+    def create_SwapChainDescriptor(self, *, usage: 'WGPUTextureUsage', format: 'WGPUTextureFormat', width: 'uint32_t', height: 'uint32_t', present_mode: 'WGPUPresentMode'):
         """ WGPUTextureUsage usage, WGPUTextureFormat format, uint32_t width, uint32_t height, WGPUPresentMode present_mode """
-        return {"usage": usage, "format": format, "width": width, "height": height, "present_mode": present_mode}
+        return self._tostruct('SwapChainDescriptor', {"usage": usage, "format": format, "width": width, "height": height, "present_mode": present_mode})
 
-    def create_TextureDescriptor(self, *, size: 'Extent3d', array_layer_count: int, mip_level_count: int, sample_count: int, dimension: 'TextureDimension', format: 'TextureFormat', usage: int):
+    def create_TextureDescriptor(self, *, size: 'WGPUExtent3d', array_layer_count: 'uint32_t', mip_level_count: 'uint32_t', sample_count: 'uint32_t', dimension: 'WGPUTextureDimension', format: 'WGPUTextureFormat', usage: 'WGPUTextureUsage'):
         """ WGPUExtent3d size, uint32_t array_layer_count, uint32_t mip_level_count, uint32_t sample_count, WGPUTextureDimension dimension, WGPUTextureFormat format, WGPUTextureUsage usage """
-        return {"size": size, "array_layer_count": array_layer_count, "mip_level_count": mip_level_count, "sample_count": sample_count, "dimension": dimension, "format": format, "usage": usage}
+        return self._tostruct('TextureDescriptor', {"size": size, "array_layer_count": array_layer_count, "mip_level_count": mip_level_count, "sample_count": sample_count, "dimension": dimension, "format": format, "usage": usage})
 
-    def create_RequestAdapterOptions(self, *, power_preference: 'PowerPreference'):
+    def create_RequestAdapterOptions(self, *, power_preference: 'WGPUPowerPreference'):
         """ WGPUPowerPreference power_preference """
-        return {"power_preference": power_preference}
+        return self._tostruct('RequestAdapterOptions', {"power_preference": power_preference})
 
-    def create_SwapChainOutput(self, *, view_id: int):
+    def create_SwapChainOutput(self, *, view_id: 'WGPUTextureViewId'):
         """ WGPUTextureViewId view_id """
-        return {"view_id": view_id}
+        return self._tostruct('SwapChainOutput', {"view_id": view_id})
 
-    def create_TextureViewDescriptor(self, *, format: 'TextureFormat', dimension: 'TextureViewDimension', aspect: 'TextureAspect', base_mip_level: int, level_count: int, base_array_layer: int, array_layer_count: int):
+    def create_TextureViewDescriptor(self, *, format: 'WGPUTextureFormat', dimension: 'WGPUTextureViewDimension', aspect: 'WGPUTextureAspect', base_mip_level: 'uint32_t', level_count: 'uint32_t', base_array_layer: 'uint32_t', array_layer_count: 'uint32_t'):
         """ WGPUTextureFormat format, WGPUTextureViewDimension dimension, WGPUTextureAspect aspect, uint32_t base_mip_level, uint32_t level_count, uint32_t base_array_layer, uint32_t array_layer_count """
-        return {"format": format, "dimension": dimension, "aspect": aspect, "base_mip_level": base_mip_level, "level_count": level_count, "base_array_layer": base_array_layer, "array_layer_count": array_layer_count}
+        return self._tostruct('TextureViewDescriptor', {"format": format, "dimension": dimension, "aspect": aspect, "base_mip_level": base_mip_level, "level_count": level_count, "base_array_layer": base_array_layer, "array_layer_count": array_layer_count})
 
     # %% Constants (28)
 

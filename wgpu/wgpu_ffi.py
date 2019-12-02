@@ -9,7 +9,7 @@ from cffi import FFI
 
 from .wgpu import BaseWGPU
 
-os.environ["RUST_BACKTRACE"] = "0"
+os.environ["RUST_BACKTRACE"] = "10"
 
 HERE = path.dirname(path.realpath(__file__))
 
@@ -29,96 +29,134 @@ ffi.set_source("whatnameshouldiusehere", None)
 
 _lib = ffi.dlopen(path.join(HERE, "wgpu_native-debug.dll"))
 
-def dict_to_struct(d, struct, refs):
-    # return ffi.new(struct + " *", d)
-    if d is None:
-        return ffi.NULL
-    is_flat = True
-    for val in d.values():
-        if isinstance(val, (tuple, list, dict, str)):
-            is_flat = False
-    if not is_flat:
-        s = ffi.new(struct + " *")
-        for key, sub_struct in _struct_info[struct]:
-            val = d[key]
-            if isinstance(val, (tuple, list)):
-                assert sub_struct
-                val2 = []
-                if val and isinstance(val[0], dict):
-                    for v in val:
-                        val2.append(dict_to_struct(v, sub_struct, refs))
-                    refs.extend(val2)
-                    val = [v[0] for v in val2]
-                    val = ffi.new(sub_struct + " []", val)
-                else:
-                    val = ffi.new(sub_struct + " []", val)
-                refs.append(val)
-            elif isinstance(val, dict):
-                val = dict_to_struct(val, sub_struct, refs)
-                refs.append(val)
-                if "*" not in str(getattr(s, key)):
-                    val = val[0]
-            elif isinstance(val, str):
-                val = ffi.new("char []", val.encode())
-                refs.append(val)
+
+# cffi will check the types of structs, and will also raise an error
+# when setting a non-existing struct attribute. It does not check whether
+# values are not set (it will simply use default values or null pointers).
+# Unions are also a bit of a hassle. Therefore we include struct_info
+# so we can handle "special fields" in some structs. The base API offers
+# a way to create structs using a function that ensures that all fields
+# are set (and making union fields optional).
+
+def dict_to_struct(d, structname, refs):
+    special_fields = _struct_info.get(structname, None)
+    if not special_fields:
+        return ffi.new(structname + " *", d)  # simple, flat
+    s = ffi.new(structname + " *")
+    for key, val in d.items():
+        info = special_fields.get(key, None)
+        if info:
+            subtypename, is_pointer, is_optional = info
+            if is_optional and val is None:
+                continue
             elif val is None:
-                val = ffi.NULL
-            setattr(s, key, val)
-        return s
-    else:
-        return ffi.new(struct + " *", d)
+                cval = ffi.NULL
+            elif isinstance(val, str):
+                cval = ffi.new("char []", val.encode())
+                refs.append(cval)
+            elif isinstance(val, dict):
+                cval = dict_to_struct(val, subtypename, refs)
+                refs.append(cval)
+                if not is_pointer:
+                    cval = cval[0]
+            elif isinstance(val, (tuple, list)):
+                cval = [dict_to_struct(v, subtypename, refs) for v in val]
+                refs.extend(cval)
+                cval = ffi.new(subtypename + " []", [v[0] for v in cval])
+                refs.append(cval)
+            else:
+                cval = val  # We trust the user
+                # raise TypeError(f"Expected dict or list for {subtypename}")
+        elif val is None:
+            cval = ffi.NULL
+        else:
+            cval = val
+        setattr(s, key, cval)
+    return s
 
 
+# Define what struct fields are sub-structs
 _struct_info = dict(
-    WGPUExtensions = [('anisotropic_filtering', 'bool_t'),  ],
-    WGPULimits = [('max_bind_groups', 'uint32_t'),  ],
-    WGPUDeviceDescriptor = [('extensions', 'WGPUExtensions'), ('limits', 'WGPULimits'),  ],
-    WGPUComputePassDescriptor = [('todo', 'uint32_t'),  ],
-    WGPUColor = [('r', 'double_t'), ('g', 'double_t'), ('b', 'double_t'), ('a', 'double_t'),  ],
-    WGPURenderPassColorAttachmentDescriptor = [('attachment', 'uint64_t'), ('resolve_target', 'uint64_t'), ('load_op', 'int64_t'), ('store_op', 'int64_t'), ('clear_color', 'WGPUColor'),  ],
-    WGPURenderPassDepthStencilAttachmentDescriptor_TextureViewId = [('attachment', 'uint64_t'), ('depth_load_op', 'int64_t'), ('depth_store_op', 'int64_t'), ('clear_depth', 'float_t'), ('stencil_load_op', 'int64_t'), ('stencil_store_op', 'int64_t'), ('clear_stencil', 'uint32_t'),  ],
-    WGPURenderPassDescriptor = [('color_attachments', 'WGPURenderPassColorAttachmentDescriptor'), ('color_attachments_length', 'ctypes.POINTER(ctypes.c_uint64)'), ('depth_stencil_attachment', 'WGPURenderPassDepthStencilAttachmentDescriptor_TextureViewId'),  ],
-    WGPUBufferCopyView = [('buffer', 'uint64_t'), ('offset', 'uint64_t'), ('row_pitch', 'uint32_t'), ('image_height', 'uint32_t'),  ],
-    WGPUOrigin3d = [('x', 'float_t'), ('y', 'float_t'), ('z', 'float_t'),  ],
-    WGPUTextureCopyView = [('texture', 'uint64_t'), ('mip_level', 'uint32_t'), ('array_layer', 'uint32_t'), ('origin', 'WGPUOrigin3d'),  ],
-    WGPUExtent3d = [('width', 'uint32_t'), ('height', 'uint32_t'), ('depth', 'uint32_t'),  ],
-    WGPUCommandBufferDescriptor = [('todo', 'uint32_t'),  ],
-    WGPUBufferBinding = [('buffer', 'uint64_t'), ('offset', 'uint64_t'), ('size', 'uint64_t'),  ],
-    WGPUBindingResource_WGPUBuffer_Body = [('_0', 'WGPUBufferBinding'),  ],
-    WGPUBindingResource_WGPUSampler_Body = [('_0', 'uint64_t'),  ],
-    WGPUBindingResource_WGPUTextureView_Body = [('_0', 'uint64_t'),  ],
-    WGPUBindGroupBinding = [('binding', 'uint32_t'), ('resource', 'int64_t'),  ],
-    WGPUBindGroupDescriptor = [('layout', 'uint64_t'), ('bindings', 'WGPUBindGroupBinding'), ('bindings_length', 'ctypes.POINTER(ctypes.c_uint64)'),  ],
-    WGPUBindGroupLayoutBinding = [('binding', 'uint32_t'), ('visibility', 'uint32_t'), ('ty', 'int64_t'), ('texture_dimension', 'int64_t'), ('multisampled', 'bool_t'), ('dynamic', 'bool_t'),  ],
-    WGPUBindGroupLayoutDescriptor = [('bindings', 'WGPUBindGroupLayoutBinding'), ('bindings_length', 'ctypes.POINTER(ctypes.c_uint64)'),  ],
-    WGPUBufferDescriptor = [('size', 'uint64_t'), ('usage', 'uint32_t'),  ],
-    WGPUCommandEncoderDescriptor = [('todo', 'uint32_t'),  ],
-    WGPUProgrammableStageDescriptor = [('module', 'uint64_t'), ('entry_point', 'char_p_t'),  ],
-    WGPUComputePipelineDescriptor = [('layout', 'uint64_t'), ('compute_stage', 'WGPUProgrammableStageDescriptor'),  ],
-    WGPUPipelineLayoutDescriptor = [('bind_group_layouts', 'uint64_t'), ('bind_group_layouts_length', 'ctypes.POINTER(ctypes.c_uint64)'),  ],
-    WGPURasterizationStateDescriptor = [('front_face', 'int64_t'), ('cull_mode', 'int64_t'), ('depth_bias', 'int32_t'), ('depth_bias_slope_scale', 'float_t'), ('depth_bias_clamp', 'float_t'),  ],
-    WGPUBlendDescriptor = [('src_factor', 'int64_t'), ('dst_factor', 'int64_t'), ('operation', 'int64_t'),  ],
-    WGPUColorStateDescriptor = [('format', 'int64_t'), ('alpha_blend', 'WGPUBlendDescriptor'), ('color_blend', 'WGPUBlendDescriptor'), ('write_mask', 'uint32_t'),  ],
-    WGPUStencilStateFaceDescriptor = [('compare', 'int64_t'), ('fail_op', 'int64_t'), ('depth_fail_op', 'int64_t'), ('pass_op', 'int64_t'),  ],
-    WGPUDepthStencilStateDescriptor = [('format', 'int64_t'), ('depth_write_enabled', 'bool_t'), ('depth_compare', 'int64_t'), ('stencil_front', 'WGPUStencilStateFaceDescriptor'), ('stencil_back', 'WGPUStencilStateFaceDescriptor'), ('stencil_read_mask', 'uint32_t'), ('stencil_write_mask', 'uint32_t'),  ],
-    WGPUVertexAttributeDescriptor = [('offset', 'uint64_t'), ('format', 'int64_t'), ('shader_location', 'uint32_t'),  ],
-    WGPUVertexBufferDescriptor = [('stride', 'uint64_t'), ('step_mode', 'int64_t'), ('attributes', 'WGPUVertexAttributeDescriptor'), ('attributes_length', 'ctypes.POINTER(ctypes.c_uint64)'),  ],
-    WGPUVertexInputDescriptor = [('index_format', 'int64_t'), ('vertex_buffers', 'WGPUVertexBufferDescriptor'), ('vertex_buffers_length', 'ctypes.POINTER(ctypes.c_uint64)'),  ],
-    WGPURenderPipelineDescriptor = [('layout', 'uint64_t'), ('vertex_stage', 'WGPUProgrammableStageDescriptor'), ('fragment_stage', 'WGPUProgrammableStageDescriptor'), ('primitive_topology', 'int64_t'), ('rasterization_state', 'WGPURasterizationStateDescriptor'), ('color_states', 'WGPUColorStateDescriptor'), ('color_states_length', 'ctypes.POINTER(ctypes.c_uint64)'), ('depth_stencil_state', 'WGPUDepthStencilStateDescriptor'), ('vertex_input', 'WGPUVertexInputDescriptor'), ('sample_count', 'uint32_t'), ('sample_mask', 'uint32_t'), ('alpha_to_coverage_enabled', 'bool_t'),  ],
-    WGPUSamplerDescriptor = [('address_mode_u', 'int64_t'), ('address_mode_v', 'int64_t'), ('address_mode_w', 'int64_t'), ('mag_filter', 'int64_t'), ('min_filter', 'int64_t'), ('mipmap_filter', 'int64_t'), ('lod_min_clamp', 'float_t'), ('lod_max_clamp', 'float_t'), ('compare_function', 'int64_t'),  ],
-    WGPUU32Array = [('bytes', 'uint32_t'), ('length', 'ctypes.POINTER(ctypes.c_uint64)'),  ],
-    WGPUShaderModuleDescriptor = [('code', 'WGPUU32Array'),  ],
-    WGPUSwapChainDescriptor = [('usage', 'uint32_t'), ('format', 'int64_t'), ('width', 'uint32_t'), ('height', 'uint32_t'), ('present_mode', 'int64_t'),  ],
-    WGPUTextureDescriptor = [('size', 'WGPUExtent3d'), ('array_layer_count', 'uint32_t'), ('mip_level_count', 'uint32_t'), ('sample_count', 'uint32_t'), ('dimension', 'int64_t'), ('format', 'int64_t'), ('usage', 'uint32_t'),  ],
-    WGPURequestAdapterOptions = [('power_preference', 'int64_t'),  ],
-    WGPUSwapChainOutput = [('view_id', 'uint64_t'),  ],
-    WGPUTextureViewDescriptor = [('format', 'int64_t'), ('dimension', 'int64_t'), ('aspect', 'int64_t'), ('base_mip_level', 'uint32_t'), ('level_count', 'uint32_t'), ('base_array_layer', 'uint32_t'), ('array_layer_count', 'uint32_t'),  ],
+    WGPUDeviceDescriptor = {
+        'extensions': ('WGPUExtensions', False, False),
+        'limits': ('WGPULimits', False, False),
+    },
+    WGPURenderPassColorAttachmentDescriptor = {
+        'resolve_target': ('WGPUTextureViewId', True, False),
+        'clear_color': ('WGPUColor', False, False),
+    },
+    WGPURenderPassDescriptor = {
+        'color_attachments': ('WGPURenderPassColorAttachmentDescriptor', True, False),
+        'depth_stencil_attachment': ('WGPURenderPassDepthStencilAttachmentDescriptor_TextureViewId', True, False),
+    },
+    WGPUTextureCopyView = {
+        'origin': ('WGPUOrigin3d', False, False),
+    },
+    WGPUBindingResource_WGPUBuffer_Body = {
+        '_0': ('WGPUBufferBinding', False, False),
+    },
+    WGPUBindingResource = {
+        'buffer': ('WGPUBindingResource_WGPUBuffer_Body', False, True),
+        'sampler': ('WGPUBindingResource_WGPUSampler_Body', False, True),
+        'texture_view': ('WGPUBindingResource_WGPUTextureView_Body', False, True),
+    },
+    WGPUBindGroupBinding = {
+        'resource': ('WGPUBindingResource', False, False),
+    },
+    WGPUBindGroupDescriptor = {
+        'bindings': ('WGPUBindGroupBinding', True, False),
+    },
+    WGPUBindGroupLayoutDescriptor = {
+        'bindings': ('WGPUBindGroupLayoutBinding', True, False),
+    },
+    WGPUProgrammableStageDescriptor = {
+        'entry_point': ('WGPURawString', False, False),
+    },
+    WGPUComputePipelineDescriptor = {
+        'compute_stage': ('WGPUProgrammableStageDescriptor', False, False),
+    },
+    WGPUPipelineLayoutDescriptor = {
+        'bind_group_layouts': ('WGPUBindGroupLayoutId', True, False),
+    },
+    WGPUColorStateDescriptor = {
+        'alpha_blend': ('WGPUBlendDescriptor', False, False),
+        'color_blend': ('WGPUBlendDescriptor', False, False),
+    },
+    WGPUDepthStencilStateDescriptor = {
+        'stencil_front': ('WGPUStencilStateFaceDescriptor', False, False),
+        'stencil_back': ('WGPUStencilStateFaceDescriptor', False, False),
+    },
+    WGPUVertexBufferDescriptor = {
+        'attributes': ('WGPUVertexAttributeDescriptor', True, False),
+    },
+    WGPUVertexInputDescriptor = {
+        'vertex_buffers': ('WGPUVertexBufferDescriptor', True, False),
+    },
+    WGPURenderPipelineDescriptor = {
+        'vertex_stage': ('WGPUProgrammableStageDescriptor', False, False),
+        'fragment_stage': ('WGPUProgrammableStageDescriptor', True, False),
+        'rasterization_state': ('WGPURasterizationStateDescriptor', True, False),
+        'color_states': ('WGPUColorStateDescriptor', True, False),
+        'depth_stencil_state': ('WGPUDepthStencilStateDescriptor', True, False),
+        'vertex_input': ('WGPUVertexInputDescriptor', False, False),
+    },
+    WGPUU32Array = {
+        'bytes': ('uint32_t', True, False),
+    },
+    WGPUShaderModuleDescriptor = {
+        'code': ('WGPUU32Array', False, False),
+    },
+    WGPUTextureDescriptor = {
+        'size': ('WGPUExtent3d', False, False),
+    },
 )
 
 
 class RsWGPU(BaseWGPU):
     """ WebGPU API implemented using the C-API dll of wgpu-rs, via cffi.
     """
+    def _tostruct(self, struct_name, d):
+        return d#ffi.new('WGPU' + struct_name + ' *', d)[0]
 
     def adapter_request_device(self, adapter_id: int, desc: 'DeviceDescriptor'):
         """
