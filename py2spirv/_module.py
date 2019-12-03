@@ -62,7 +62,10 @@ class SpirVModule:
                 ["spirv-val", filename], stderr=subprocess.STDOUT
             )
         except subprocess.CalledProcessError as err:
-            e = "Spir-V invalid:\n" + err.output.decode()
-            raise Exception(e)
+            out = err.output.decode()
         else:
-            print("Spir-V seems valid:\n" + stdout.decode())
+            out = stdout.decode().strip()
+        if out:
+            raise Exception(f"Spir-V {self._description} invalid:\n{out}")
+        else:
+            print(f"Spir-V {self._description} seems valid!")

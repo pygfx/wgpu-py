@@ -7,6 +7,7 @@ from . import _types
 
 CO_INPUT = "CO_INPUT"
 CO_OUTPUT = "CO_OUTPUT"
+CO_UNIFORM = "CO_UNIFORM"
 CO_ASSIGN = "CO_ASSIGN"
 CO_LOAD_CONSTANT = "CO_LOAD_CONSTANT"
 CO_LOAD = "CO_LOAD"
@@ -34,6 +35,7 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
         self._stack = []
         self._input = {}
         self._output = {}
+        self._uniform = {}
         self._aliases = {}
 
         # Declare funcion
@@ -68,23 +70,60 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
     def _op_pop_top(self, arg):
         self._stack.pop()
 
-    def _op_input(self, name_location_type):
-        name, location, type_str = name_location_type
+    def _op_input(self, args):
+        location, *name_type_pairs = args
+        self._setup_io_variable("input", location, name_type_pairs)
 
-        type = _types.spirv_types_map[type_str]
+    def _op_output(self, args):
+        location, *name_type_pairs = args
+        self._setup_io_variable("output", location, name_type_pairs)
 
-        var_id, type_id = self.create_object(type)  # todo: or "input." + name)
-        pointer_id = self.create_id("pointer")
+    def _op_uniform(self, args):
+        binding, *name_type_pairs = args
+        self._setup_io_variable("uniform", binding, name_type_pairs)
 
-        self._input[name] = type, var_id  # the code only needs var_id
+    def _setup_io_variable(self, kind, location, name_type_pairs):
 
-        # Define location
-        assert isinstance(location, (int, str))
+        n_names = len(name_type_pairs) / 2
+        singleton_mode = n_names ==1 and kind != "uniform"
+
+        # Triage over input kind
+        if kind == "input":
+            storage_class, iodict = cc.StorageClass_Input, self._input
+        elif kind == "output":
+            storage_class, iodict = cc.StorageClass_Output, self._output
+        elif kind == "uniform":  # location == binding
+            storage_class, iodict = cc.StorageClass_Uniform, self._uniform
+        else:
+            raise RuntimeError(f"Invalid IO kind {kind}")
+
+        # Get the root variable
+        if singleton_mode:
+            # Singleton (not allowed for Uniform)
+            name, type_str = name_type_pairs
+            var_type = _types.spirv_types_map[type_str]
+            var_id, var_type_id = self.create_object(var_type)  # todo: or f"{kind}.{name}"
+        else:
+            # todo: TBH I am not sure if this is allowed for non-uniforms :D
+            assert kind == "uniform", f"euhm, I dont know if you can use block {kind}s"
+            # Block - the variable is a struct
+            subtypes = {}
+            for i in range(0, len(name_type_pairs), 2):
+                key, subtype_str = name_type_pairs[i], name_type_pairs[i+1]
+                subtypes[key] = _types.spirv_types_map[subtype_str]
+            var_type = _types.Struct(**subtypes)
+            var_id, var_type_id = self.create_object(var_type)
+            # Define Variable as block
+            self.gen_instruction(
+                "annotations", cc.OpDecorate, var_id, cc.Decoration_Block
+            )
+
+        # Define location of variable
         if isinstance(location, int):
             self.gen_instruction(
                 "annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location
             )
-        else:
+        elif isinstance(location, str):
             try:
                 location = cc.builtins[location]
             except KeyError:
@@ -94,53 +133,58 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
             )
 
         # Create a variable (via a pointer)
+        var_pointer_id = self.create_id("pointer")
         self.gen_instruction(
-            "types", cc.OpTypePointer, pointer_id, cc.StorageClass_Input, type_id
+            "types", cc.OpTypePointer, var_pointer_id, storage_class, var_type_id
         )
         self.gen_instruction(
-            "types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Input
+            "types", cc.OpVariable, var_pointer_id, var_id, storage_class
         )
 
-    def _op_output(self, name_location_type):
-        name, location, type_str = name_location_type
-        type = _types.spirv_types_map[type_str]
-
-        var_id, type_id = self.create_object(type)  # todo: or "output." + name)
-        pointer_id = self.create_id("pointer")
-
-        self._output[name] = type, var_id
-
-        # Define location
-        assert isinstance(location, (int, str))
-        if isinstance(location, int):
-            self.gen_instruction(
-                "annotations", cc.OpDecorate, var_id, cc.Decoration_Location, location
-            )
+        # Store internal info to derefererence the variables
+        if singleton_mode:
+            if name in iodict:
+                raise NameError(f"{kind} {name} already exists")
+            iodict[name] = var_type, var_id  # the code only needs var_id
         else:
-            try:
-                location = cc.builtins[location]
-            except KeyError:
-                raise NameError(f"Not a known builtin io variable: {location}")
-            self.gen_instruction(
-                "annotations", cc.OpDecorate, var_id, cc.Decoration_BuiltIn, location
-            )
-
-        # Create a variable (via a pointer)
-        self.gen_instruction(
-            "types", cc.OpTypePointer, pointer_id, cc.StorageClass_Output, type_id
-        )
-        self.gen_instruction(
-            "types", cc.OpVariable, pointer_id, var_id, cc.StorageClass_Output
-        )
+            for i, subname in enumerate(subtypes):
+                subtype = subtypes[subname]
+                sub_pointer_id, subtype_id = self.create_object(subtype)
+                self.gen_instruction(
+                    "types", cc.OpTypePointer, sub_pointer_id, storage_class, subtype_id
+                )
+                index_id, index_type_id = self.create_object(_types.i32)
+                # todo: can re-use constants!
+                self.gen_instruction(
+                    "types", cc.OpConstant, index_type_id, index_id, struct.pack("<i", i)
+                )
+                if subname in iodict:
+                    raise NameError(f"{kind} {subname} already exists")
+                iodict[subname] = subtype, sub_pointer_id, var_id, index_id
 
     def _op_load(self, name):
         # store a variable that is used in an inner scope.
         if name in self._aliases:
             ob = self._aliases[name]
         elif name in self._input:
-            type, var_id = self._input[name]
+            io_args = self._input[name]
+            if len(io_args) == 4:
+                type, pointer_id, var_id, index_id = io_args
+                temp_id = self.create_id("struct-field")
+                self.gen_func_instruction(cc.OpAccessChain, pointer_id, temp_id, var_id, index_id)
+                id, type_id = self.create_object(type)
+                self.gen_func_instruction(cc.OpLoad, type_id, id, temp_id)
+            else:
+                type, pointer_id = io_args
+                id, type_id = self.create_object(type)
+                self.gen_func_instruction(cc.OpLoad, type_id, id, pointer_id)
+            ob = id
+        elif name in self._uniform:
+            type, pointer_id, var_id, index_id = self._uniform[name]
+            temp_id = self.create_id("struct-field")
+            self.gen_func_instruction(cc.OpAccessChain, pointer_id, temp_id, var_id, index_id)
             id, type_id = self.create_object(type)
-            self.gen_func_instruction(cc.OpLoad, type_id, id, var_id)
+            self.gen_func_instruction(cc.OpLoad, type_id, id, temp_id)
             ob = id
         elif name in _types.spirv_types_map:
             ob = _types.spirv_types_map[name]
@@ -178,8 +222,17 @@ class Bytecode2SpirVGenerator(BaseSpirVGenerator):
     def _op_store(self, name):
         ob = self._stack.pop()
         if name in self._output:
-            type, var_id = self._output[name]
-            self.gen_func_instruction(cc.OpStore, var_id, ob)
+            io_args = self._output[name]
+            if len(io_args) == 4:  # Struct
+                type, pointer_id, var_id, index_id = io_args
+                # type_id = self.get_type_id(type)
+                id = self.create_id("struct-field")
+                self.gen_func_instruction(cc.OpAccessChain, pointer_id, id, var_id, index_id)
+                self.gen_func_instruction(cc.OpStore, id, ob)
+            else:  # Simple
+                type, pointer_id = io_args  # pointer is a Variable
+                self.gen_func_instruction(cc.OpStore, pointer_id, ob)
+
         self._aliases[name] = ob
 
     def _op_call(self, nargs):

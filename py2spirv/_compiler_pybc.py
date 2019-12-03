@@ -33,7 +33,7 @@ def python2spirv(func, shader_type=None):
     generator.generate(bytecode, shader_type)
     bb = generator.to_bytes()
 
-    m = SpirVModule(func, bb, "compiled from a Python function")
+    m = SpirVModule(func, bb, f"compiled from Pyfunc {func.__name__}")
     m.gen = generator
     return m
 
@@ -89,7 +89,7 @@ class PyBytecode2Bytecode:
         # Keep track of shade io
         self._input = {}
         self._output = {}
-        self._uniforms = {}
+        self._uniform = {}
         self._constants = {}  # ?
 
         # Python variable names -> (SpirV object id, type_id)
@@ -115,13 +115,16 @@ class PyBytecode2Bytecode:
     def _peak_next(self):
         return self._co.co_code[self._pointer]
 
-    def _define(self, kind, name, location, type):
-        if kind == "input":
-            self.emit(bc.CO_INPUT, ("input." + name, location, type))
-            self._input[name] = type
-        elif kind == "output":
-            self.emit(bc.CO_OUTPUT, ("output." + name, location, type))
-            self._output[name] = type
+    def _define(self, kind, location, **variables):
+        COS = {"input": bc.CO_INPUT, "output": bc.CO_OUTPUT, "uniform": bc.CO_UNIFORM}
+        DICTS = {"input": self._input, "output": self._output, "uniform": self._uniform}
+        co = COS[kind]
+        d = DICTS[kind]
+        args = [location]
+        for name, type in variables.items():
+            args.extend([kind + "." + name, type])
+            d[name] = type
+        self.emit(co, tuple(args))
 
     # %%
 
@@ -140,10 +143,8 @@ class PyBytecode2Bytecode:
         # store a variable that is used in an inner scope.
         i = self._next()
         name = self._co.co_varnames[i]
-        if name == "input":
-            self._stack.append("input")
-        elif name == "output":
-            self._stack.append("output")
+        if name in ("input", "output", "uniform"):
+            self._stack.append(name)
         else:
             self.emit(bc.CO_LOAD, name)
             self._stack.append(name)  # todo: euhm, do we still need a stack?
@@ -159,6 +160,8 @@ class PyBytecode2Bytecode:
             self._stack.append(ob)
         elif ob is None:
             self._stack.append(None)  # todo: for the final return ...
+        elif isinstance(ob, tuple):
+            self._stack.append(ob)  # may be needed for kwargs in define()
         else:
             raise NotImplementedError()
 
@@ -173,11 +176,18 @@ class PyBytecode2Bytecode:
         name = self._co.co_names[i]
         ob = self._stack.pop()
 
-        if ob == "input":
+        if name == "define" and ob in ("input", "output", "uniform"):
+            self._stack.append((self._define, ob))
+        elif ob == "input":
             if name not in self._input:
                 raise NameError(f"No input {name} defined.")
             self.emit(bc.CO_LOAD, "input." + name)
             self._stack.append("input." + name)
+        elif ob == "uniform":
+            if name not in self._uniform:
+                raise NameError(f"No uniform {name} defined.")
+            self.emit(bc.CO_LOAD, "uniform." + name)
+            self._stack.append("uniform." + name)
         elif ob == "output":
             raise AttributeError("Cannot read from output.")
         else:
@@ -192,6 +202,8 @@ class PyBytecode2Bytecode:
 
         if ob == "input":
             raise AttributeError("Cannot assign to input.")
+        elif ob == "uniform":
+            raise AttributeError("Cannot assign to uniform.")
         elif ob == "output":
             if name not in self._output:
                 raise NameError(f"No output {name} defined.")
@@ -209,7 +221,7 @@ class PyBytecode2Bytecode:
         i = self._next()
         method_name = self._co.co_names[i]
         ob = self._stack.pop()
-        if ob == "input" or ob == "output":
+        if ob in ("input", "output", "uniform"):
             if method_name == "define":
                 func = self._define
             else:
@@ -225,13 +237,32 @@ class PyBytecode2Bytecode:
         args = self._stack[-nargs:]
         self._stack[-nargs:] = []
         ob = self._stack.pop()
-        if ob in ("input", "output"):
+        if ob in ("input", "output", "uniform"):
+            name, location, type = args
             func = self._stack.pop()
-            result = func(ob, *args)
+            result = func(ob, location, **{name: type})
             self._stack.append(result)
         else:
             self.emit(bc.CO_CALL, nargs)
             self._stack.append(None)
+
+    def _op_call_function_kw(self):
+        nargs = self._next()
+        kwarg_names = self._stack.pop()
+        n_kwargs = len(kwarg_names)
+        n_pargs = nargs - n_kwargs
+
+        args = self._stack[-nargs:]
+        self._stack[-nargs:] = []
+
+        func = self._stack.pop()
+        assert isinstance(func, tuple) and func[0].__func__.__name__ == "_define"
+        func_define, what = func
+
+        pargs = args[:n_pargs]
+        kwargs = {kwarg_names[i]: args[i+n_pargs] for i in range(n_kwargs)}
+        func_define(what, *pargs, **kwargs)
+        self._stack.append(None)
 
     def _op_call_function(self):
         nargs = self._next()

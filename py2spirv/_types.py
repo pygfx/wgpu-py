@@ -148,6 +148,7 @@ class Array(Aggregate):
                 raise TypeError("Array specialization needs 2 args: Array(n, subtype)")
             n, subtype = args
             n = int(n)
+            # Validate
             if not isinstance(subtype, type) and issubclass(subtype, SpirVType):
                 raise TypeError("Array subtype must be a SpirV type.")
             elif issubclass(subtype, void):
@@ -156,7 +157,7 @@ class Array(Aggregate):
                 raise TypeError("Array subtype cannot be an abstract SpirV type.")
             if n < 1:
                 raise TypeError("Array must have at least 1 element.")
-
+            # Return type
             props = dict(subtype=subtype, length=n, is_abstract=False)
             return _create_type(f"array{n}_{subtype.__name__}", Array, props)
         else:
@@ -172,7 +173,21 @@ class Struct(Aggregate):
 
     def __new__(cls, **kwargs):
         if cls.is_abstract:
-            raise NotImplementedError("Specialization")
+            n = len(kwargs)
+            # Validate
+            for key, subtype in kwargs.items():
+                if not isinstance(subtype, type) and issubclass(subtype, SpirVType):
+                    raise TypeError("Struct subtype must be a SpirV type.")
+                elif issubclass(subtype, void):
+                    raise TypeError("Struct subtype cannot be void.")
+                elif subtype.is_abstract:
+                    raise TypeError("Struct subtype cannot be an abstract SpirV type.")
+            # Return type
+            keys = tuple(kwargs.keys())
+            subtypes = tuple(kwargs.values())
+            type_names = "_".join(subtype.__name__ for subtype in subtypes)
+            props = dict(subtypes=subtypes, length=n, keys=keys, is_abstract=False)
+            return _create_type(f"struct{n}_{type_names}", Struct, props)
         else:
             return super().__new__(**kwargs)
 
@@ -245,7 +260,7 @@ spirv_types_map = dict(
     vec2=vec2,
     vec3=vec3,
     vec4=vec4,
-    # ivec2=ivec2,
+    ivec2=ivec2,
     # ivec3=ivec3,
     # ivec4=ivec4,
     # bvec2=bvec2,

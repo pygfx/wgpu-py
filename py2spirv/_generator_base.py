@@ -79,9 +79,10 @@ class BaseSpirVGenerator:
         )
 
         # Define execution modes for each entry point
-        # self.gen_instruction(
-        #    "execution_modes", cc.OpExecutionMode, self._entry_point_id, cc.ExecutionMode_OriginLowerLeft
-        # )
+        if execution_model == cc.ExecutionModel_Fragment:
+            self.gen_instruction(
+            "execution_modes", cc.OpExecutionMode, self._entry_point_id, cc.ExecutionMode_OriginLowerLeft
+            )
 
         # Do the thing!
         self._generate(input)
@@ -320,7 +321,7 @@ class BaseSpirVGenerator:
         """
         assert isinstance(the_type, type), f"create_id requires a type, not {the_type}"
         assert issubclass(the_type, _types.SpirVType), f"not a spirv type: {the_type}"
-        # todo: check if is concrete type
+        assert not the_type.is_abstract, f"not a concrete spirv type: {thetype}"
 
         # Already know this type?
         if the_type.__name__ in self._type_name_to_id:
@@ -375,8 +376,11 @@ class BaseSpirVGenerator:
             )
             # Also see OpTypeRuntimeArray when length is not known at compile time (use OpArrayLength)
         elif issubclass(the_type, _types.Struct):
-            raise NotImplementedError()
-            # OpTypeStruct
+            type_id = self.create_id(the_type)
+            subtype_ids = [self.get_type_id(subtype) for subtype in the_type.subtypes]
+            self.gen_instruction(
+                "types", cc.OpTypeStruct, type_id, *subtype_ids
+            )
         else:
             raise NotImplementedError(the_type)
 
