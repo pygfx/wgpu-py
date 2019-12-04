@@ -12,18 +12,18 @@ from py2spirv import _types
 # todo: std
 
 
-def vertex_shader():
+def vertex_shader(input, output, uniform):
+    input.define("index", "VertexId", i32)
+    # input.define("pos", 0, vec2)
+    output.define("pos", "Position", vec4)
+    output.define(0, color=vec3, foo=i32)
 
-    fragColor = output(vec3)
-    gl_Position = output(vec4)
+    positions = [vec2(+0.0, -0.5), vec2(+0.5, +0.5), vec2(-0.5, +0.7)]
 
-    # positions = constant(3, vec2)
-    positions = [vec2(0.0, -0.4), vec2(0.5, 0.4), vec2(-0.5, 0.5)]
-    colors = [vec3(1.0, 0.0, 0.0), vec3(0.0, 1.0, 0.0), vec3(0.0, 0.0, 1.0)]
-
-    def main():
-        gl_Position = vec4(positions[gl_VertexIndex], 0.0, 1.0)
-        fragColor = colors[gl_VertexIndex]
+    p = positions[input.index]
+    # p = input.pos
+    output.pos = vec4(p, 0.0, 1.0)
+    output.color = vec3(p, 0.5)
 
 
 # def fragment_shader(fragColor: spv.input(vec3, 0),
@@ -46,20 +46,13 @@ def fragment_shader_xx():
 
     return outColor
 
-def fragment_shader(input, output):
-    input.define("index", "VertexId", i32)
-    output.define("pos", "Position", vec4)
-    output.define("color", 0, vec3)
+def fragment_shader(input, output, uniform):
+    input.define(0, color=vec3, foo=i32)
+    output.define("color", 0, vec4)
+    # uniform.define("color", 0, vec3)
 
-    positions = Array(
-        vec2(+0.0, -0.5),
-        vec2(+0.5, +0.5),
-        vec2(-0.5, +0.7),
-    )
+    output.color = vec4(input.color, 0.1)
 
-    p = positions[input.index]
-    output.pos = vec4(p, 0.0, 1.0)
-    output.color = vec3(p, 0.5)
 
 # from sprv import F32, I32, Bool
 
@@ -72,7 +65,7 @@ fn main (
 }
 """
 
-vertex_shader = """
+vertex_shaderxx = """
 fn main (
     index: input i32 VertexId,  # VertexID or VertexIndex
     pos: output vec4 Position,
@@ -95,8 +88,8 @@ fn main (
 # + ja, maar dan ken je de syntax iig al :P
 
 
-# c = WASL2SpirVCompiler(vertex_shader)
-m = python2spirv(fragment_shader, "frag")
+# m = python2spirv(vertex_shader)
+m = python2spirv(fragment_shader)
 # m = wasl2spirv(ffragment_shader, "frag")
 
 print(m.disassble())

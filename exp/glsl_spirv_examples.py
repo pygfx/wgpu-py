@@ -67,12 +67,14 @@ void main()
 print(glsl2spirv("""
 #version 450
 
-layout(binding = 0) uniform meeeeh {
-    vec3 uColor;
-} uniform_object;
+//layout(location = 13) out vec4 fragColor; float foo = 3.0;
+layout(location = 13) out XX { vec4 fragColor; float foo; };
+
+//layout(binding = 0) uniform blabla { vec4 uColor; };
 
 void main()
 {
+   fragColor = vec4(1.0, 1.0, 1.0, foo);//uColor;
 }
 """))
 

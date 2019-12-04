@@ -68,7 +68,8 @@ class Figure:
             if msgh in self._err_hashes:
                 count = self._err_hashes[msgh] + 1
                 self._err_hashes[msgh] = count
-                sys.stderr.write(f"Error in draw again ({count}): " + msg.strip() + "\n")
+                shortmsg = msg.split("\n", 1)[0].strip()[:50]
+                sys.stderr.write(f"Error in draw again ({count}): {shortmsg}\n")
             else:
                 self._err_hashes[msgh] = 1
                 sys.stderr.write(f"Error in draw: " + msg.strip() + "\n")

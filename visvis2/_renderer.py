@@ -1,7 +1,9 @@
 import asyncio
+import ctypes
 
 import cffi
 import wgpu.wgpu_ffi
+import numpy as np
 
 
 ffi = cffi.FFI()
@@ -127,12 +129,14 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
         pipelinedescription = wobject.describe_pipeline()
 
         vshader = pipelinedescription["vertex_shader"]  # an SpirVModule
+        vshader.validate()
         vs_module = ctx.device_create_shader_module(
             device_id,
             ctx.create_ShaderModuleDescriptor(code=ffi_code_from_spirv_module(vshader)),
         )
 
         fshader = pipelinedescription["fragment_shader"]
+        fshader.validate()
         fs_module = ctx.device_create_shader_module(
             device_id,
             ctx.create_ShaderModuleDescriptor(code=ffi_code_from_spirv_module(fshader)),
@@ -141,26 +145,57 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
         ##
 
         if True:
+            # todo: wrap this up in buffer object
+            # todo: wondering if we must expose the C-API so directly, or use oo api instead, like wgpu-rs.
 
             # Create buffer objects (UBO), each mapped to a piece of memory.
             # Create binding resources, mapping to these buffers.
             # Create bindings layout
+            # Create bind group
+            # Wrap bindings layout in pipeline layout object
+            # Use the bind group during draw to specify UBOs
 
             # Pointer that device_create_buffer_mapped sets, so that we can write stuff there
             buffer_memory_pointer = ffi.new("uint8_t * *")
 
+            # Creates a new buffer, maps it into host-visible memory, copies data from the given slice,  and finally unmaps it.
+            # As in create_buffer_with_data in
+            # https://github.com/gfx-rs/wgpu-rs/blob/ab787e2b2c3ff1411ee505d40d449dd4e7949e52/src/lib.rs#L829
             buffer = ctx.device_create_buffer_mapped(
                 device_id,
                 ctx.create_BufferDescriptor(
-                    size=8,
+                    size=4*3,
                     usage=ctx.BufferUsage_UNIFORM,
                 ),
                 buffer_memory_pointer
             )
+            if True:
+                # Map a numpy array onto the data. We can now update the uniforms simply
+                # by editing the numpy array, how cool is that!
+                pointer_as_int = int(ffi.cast('intptr_t', buffer_memory_pointer[0]))
+                pointer_as_ctypes = ctypes.cast(pointer_as_int, ctypes.POINTER(ctypes.c_uint8))
+                uniforms = np.ctypeslib.as_array(pointer_as_ctypes, shape=(4*3,))
+                uniforms.dtype = np.float32
+                uniforms[:] = 1.0, 0.0, 0.0
+                self.dev_uniforms = uniforms
+            else:
+                # For reference, use ffi cdata object
+                import struct
+                nums = 1.0, 0.0, 0.0 #+0.0, -0.5, +0.5, +0.5, -0.9, +0.7
+                bb = b"".join(struct.pack("<f", i) for i in nums)
+                for i in range(len(bb)):
+                    buffer_memory_pointer[0][i] = bb[i]
+
+            # Unmap the buffer, not sure what the implications are if we do not do this.
+            # Seems kinda nice to map this onto a numpy array for instance ...
+            # ctx.buffer_unmap(buffer)
+
+            # ctx.buffer_map_read_async(buffer, 0, 6*4, map_read_callback, ffi.NULL)
+            # ctx.buffer_map_write_async(buffer, 0, 6*4, xxx, ffi.NULL)
 
             resource = ctx.create_BindingResource(
                 tag = ctx.BindingResource_Buffer,  # Buffer / Sampler / TextureView
-                buffer = {"_0": ctx.create_BufferBinding(buffer=buffer, size=8, offset=0)},
+                buffer = {"_0": ctx.create_BufferBinding(buffer=buffer, size=4*3, offset=0)},
                 # one of:
                 # buffer = create_BufferBinding
                 # sampler = WGPUSamplerId
@@ -192,28 +227,26 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
             ctx.create_BindGroupLayoutDescriptor(bindings=bindings_layout, bindings_length=len(bindings_layout)),
         )
 
+        # the bind group is used during draw
         bind_group = ctx.device_create_bind_group(
             device_id,
             ctx.create_BindGroupDescriptor(
                 layout=bind_group_layout, bindings=bindings, bindings_length=len(bindings)
             ),
         )
-        print(bind_group_layout, bind_group)
-
         ##
 
         pipeline_layout = ctx.device_create_pipeline_layout(
             device_id,
-            # ctx.create_PipelineLayoutDescriptor(bind_group_layouts=(bind_group, ), bind_group_layouts_length=1)
-            ctx.create_PipelineLayoutDescriptor(
-                bind_group_layouts=[bind_group_layout], bind_group_layouts_length=1
-            ),
+            ctx.create_PipelineLayoutDescriptor(bind_group_layouts=[bind_group_layout], bind_group_layouts_length=1),
         )
+
+        # print(bind_group_layout, bind_group, pipeline_layout)
 
         # todo: a lot of these functions have device_id as first arg - this smells like a class, perhaps
         # todo: several descriptor args have a list, and another arg to provide the length of that list, because C
 
-        return ctx.device_create_render_pipeline(
+        pipeline = ctx.device_create_render_pipeline(
             device_id,
             ctx.create_RenderPipelineDescriptor(
                 layout=pipeline_layout,
@@ -252,7 +285,7 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
                 depth_stencil_state=None,
                 vertex_input=ctx.create_VertexInputDescriptor(
                     index_format=ctx.IndexFormat_Uint16,
-                    vertex_buffers=(),
+                    vertex_buffers=(),  # todo: VBO's go here
                     vertex_buffers_length=0,
                 ),
                 sample_count=1,
@@ -260,6 +293,7 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
                 alpha_to_coverage_enabled=False,
             ),
         )
+        return pipeline, bind_group
 
     def _create_swapchain(self, surface_id, width, height):
         ctx = self._ctx
@@ -288,11 +322,20 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
         if len(wobjects) != len(self._pipelines):
             self._pipelines = [self.compose_pipeline(wo) for wo in wobjects]
 
+        if not self._pipelines:
+            return
+
         ctx = self._ctx
         device_id = self._device_id
         swap_chain = self._swap_chain
 
         next_texture = ctx.swap_chain_get_next_texture(swap_chain)
+        queue = ctx.device_get_queue(device_id)
+        # todo: what do I need to duplicate if I have two objects to draw???
+
+        command_buffers = []
+
+
         command_encoder = ctx.device_create_command_encoder(
             device_id, ctx.create_CommandEncoderDescriptor(todo=0)
         )
@@ -320,13 +363,21 @@ class SurfaceWgpuRenderer(BaseWgpuRenderer):
             ),
         )
 
-        for pipeline in self._pipelines:
+        for pipeline, bind_group in self._pipelines:
             ctx.render_pass_set_pipeline(rpass, pipeline)
-            # ctx.render_pass_set_bind_group(rpass, 0, bind_group, [], 0)
+
+            # Set uniforms, vertex buffers, index buffer
+            offsets = [0] # as long as the bindings in the group, I think
+            ctx.render_pass_set_bind_group(rpass, 0, bind_group, offsets, len(offsets))
+            # ctx.render_pass_set_index_buffer(&self.index_buf, 0);
+            # ctx.render_pass_set_vertex_buffers(0, &[(&self.vertex_buf, 0)]);
+
             ctx.render_pass_draw(rpass, 3, 1, 0, 0)
 
-        queue = ctx.device_get_queue(device_id)
         ctx.render_pass_end_pass(rpass)
+
         cmd_buf = ctx.command_encoder_finish(command_encoder, None)
-        ctx.queue_submit(queue, [cmd_buf], 1)
+        command_buffers.append(cmd_buf)
+
+        ctx.queue_submit(queue, command_buffers, len(command_buffers))
         ctx.swap_chain_present(swap_chain)

@@ -9,7 +9,7 @@ from cffi import FFI
 
 from .wgpu import BaseWGPU
 
-os.environ["RUST_BACKTRACE"] = "10"
+os.environ["RUST_BACKTRACE"] = "0"
 
 HERE = path.dirname(path.realpath(__file__))
 

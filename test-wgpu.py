@@ -16,7 +16,7 @@ import asyncio
 
 import wgpu
 # import wgpu.wgpu_gl
-import wgpu.wgpu_ctypes
+# import wgpu.wgpu_ctypes
 import wgpu.wgpu_ffi
 
 
