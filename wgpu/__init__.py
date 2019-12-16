@@ -4,6 +4,9 @@ from .utils import help
 from . import _api
 
 
+__version__ = "0.0.1"
+
+
 def _register_backend(func):
     if not (callable(func) and func.__name__ == "requestAdapter"):
         raise RuntimeError(
