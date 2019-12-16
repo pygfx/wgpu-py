@@ -65,7 +65,9 @@ def help(*searches, dev=False):
         for name_part in name_parts:
             for name, d in idl_parser.flags.items():
                 if name_part in name.lower():
-                    lines.append(name + ": " + ", ".join(f"{key}={d[key]}" for key in d.keys()))
+                    lines.append(
+                        name + ": " + ", ".join(f"{key}={d[key]}" for key in d.keys())
+                    )
                 else:
                     for key in d.keys():
                         if name_part in key.lower():
@@ -75,7 +77,9 @@ def help(*searches, dev=False):
         for name_part in name_parts:
             for name, d in h_parser.flags.items():
                 if name_part in name.lower():
-                    lines.append(name + ": " + ", ".join(f"{key}={d[key]}" for key in d.keys()))
+                    lines.append(
+                        name + ": " + ", ".join(f"{key}={d[key]}" for key in d.keys())
+                    )
                 else:
                     for key in d.keys():
                         if name_part in key.lower():
@@ -102,7 +106,9 @@ def help(*searches, dev=False):
         for name_part in name_parts:
             for name, d in idl_parser.enums.items():
                 if name_part in name.lower():
-                    lines.append(name + ": " + ", ".join(f"{key}='{d[key]}'" for key in d.keys()))
+                    lines.append(
+                        name + ": " + ", ".join(f"{key}='{d[key]}'" for key in d.keys())
+                    )
                 else:
                     for key, val in d.items():
                         if name_part in key.lower() or name_part in val.lower():
@@ -112,12 +118,13 @@ def help(*searches, dev=False):
         for name_part in name_parts:
             for name, d in h_parser.enums.items():
                 if name_part in name.lower():
-                    lines.append(name + ": " + ", ".join(f"{key}={d[key]}" for key in d.keys()))
+                    lines.append(
+                        name + ": " + ", ".join(f"{key}={d[key]}" for key in d.keys())
+                    )
                 else:
                     for key, val in d.items():
                         if name_part in key.lower():
                             lines.append(f"{name}.{key} = {val}")
-
 
     # Find structs
     lines = []
@@ -157,7 +164,6 @@ def help(*searches, dev=False):
             #     for field in d.values():
             #         if name_part in field.name.lower() or name_part in field.typename.lower():
             #             items["structs"].append(name + "." + field.py_arg())
-
 
     # Find functions
     lines = []

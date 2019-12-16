@@ -31,7 +31,7 @@ class BaseParser:
             c = self._text[self._pos]
             self._pos += 1
             if c == char:
-                return self._text[start:self._pos]
+                return self._text[start : self._pos]
         return ""
 
     def readline(self):
@@ -97,7 +97,7 @@ class StructField:
         if t not in ("bool", "int", "float", "str"):
             t = f"'{t}'"
         if d is not None:
-            d = {"false": "False", 'true': 'True'}.get(d, d)
+            d = {"false": "False", "true": "True"}.get(d, d)
             return f"{self.name}: {t}={d}"
         else:
             return f"{self.name}: {t}"
@@ -156,7 +156,7 @@ class IdlParser(BaseParser):
                 line_index = 0
                 while line_index < len(lines) - 1:
                     line_index += 1
-                    line = lines[line_index].strip();
+                    line = lines[line_index].strip()
                     if not line or line.startswith("//"):
                         continue
                     elif line.startswith("const ") and "Flags" in line:
@@ -179,7 +179,11 @@ class IdlParser(BaseParser):
                             line = line.replace(c, " ")
                         assert line.endswith(";")
                         funcname = line.split("(")[0].split()[-1]
-                        line = line.replace("\n", " ").replace("    ", " ").replace("  ", " ")
+                        line = (
+                            line.replace("\n", " ")
+                            .replace("    ", " ")
+                            .replace("  ", " ")
+                        )
                         self.functions[classname + "." + funcname] = line
             elif line.startswith("enum "):
                 line += self.read_until("}") + self.readline()
@@ -191,7 +195,12 @@ class IdlParser(BaseParser):
                     if not line or line.startswith("//"):
                         continue
                     key = val = line.strip('", \t')
-                    for i1, i2 in [("-", "_"), ("1d", "d1"), ("2d", "d2"), ("3d", "d3")]:
+                    for i1, i2 in [
+                        ("-", "_"),
+                        ("1d", "d1"),
+                        ("2d", "d2"),
+                        ("3d", "d3"),
+                    ]:
                         key = key.replace(i1, i2)
                     d[key] = val
                 self.enums[name] = d
@@ -244,10 +253,18 @@ class IdlParser(BaseParser):
                         t = arg_type[9:-1] + "-list"
                     elif arg_type == "ImageBitmap":
                         t = "array"
-                    elif arg_type in ["(GPULoadOp or GPUColor)", "(GPULoadOp or float)", "(GPULoadOp or unsigned long)"]:
+                    elif arg_type in [
+                        "(GPULoadOp or GPUColor)",
+                        "(GPULoadOp or float)",
+                        "(GPULoadOp or unsigned long)",
+                    ]:
                         # GPURenderPassColorAttachmentDescriptor
                         # GPURenderPassDepthStencilAttachmentDescriptor
-                        t = arg_type[1:-1].replace(" ", "-").replace("unsigned-long", "int")
+                        t = (
+                            arg_type[1:-1]
+                            .replace(" ", "-")
+                            .replace("unsigned-long", "int")
+                        )
                     else:
                         assert False
                     d[arg_name] = StructField(line, arg_name, t, default)
@@ -257,7 +274,6 @@ class IdlParser(BaseParser):
 
 
 # %% C-header
-
 
 
 class HParser(BaseParser):
@@ -343,7 +359,9 @@ class HParser(BaseParser):
                     raise RuntimeError("Cannot handle multiline comments yet.")
             elif line.startswith("#include "):
                 pass
-            elif line.startswith("#if !defined(WGPU_REMOTE)") or line.startswith("#if defined(WGPU_LOCAL)"):
+            elif line.startswith("#if !defined(WGPU_REMOTE)") or line.startswith(
+                "#if defined(WGPU_LOCAL)"
+            ):
                 pass
             elif line.startswith("#endif"):
                 pass
@@ -367,7 +385,7 @@ class HParser(BaseParser):
                     val = val.strip()
                     if not val:
                         val = i
-                    key = key[len(name)+1:]
+                    key = key[len(name) + 1 :]
                     d[key.strip()] = int(val)
                 self.enums[name] = d
             elif line.startswith("typedef struct"):
@@ -397,7 +415,7 @@ class HParser(BaseParser):
                     if arg.startswith("const "):
                         arg = arg[6:]
                     arg_type, arg_name = arg.strip().split()
-                    arg_name = arg_name.strip(' *')
+                    arg_name = arg_name.strip(" *")
                     if union:
                         line += " (in union)"
                     d[arg_name] = StructField(line, arg_name, arg_type)
@@ -411,7 +429,9 @@ class HParser(BaseParser):
                     self.types[parts[2]] = parts[1]
                 else:
                     self.unknown_lines.append(line)
-            elif (line.startswith("void ") or line.startswith("WGPU")) and "wgpu_" in line:
+            elif (
+                line.startswith("void ") or line.startswith("WGPU")
+            ) and "wgpu_" in line:
                 if ")" not in line:
                     line += self.read_until(")") + self.readline()
                 name = line.split("(")[0].strip().split()[-1].strip()

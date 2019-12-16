@@ -23,9 +23,18 @@ os.environ["RUST_BACKTRACE"] = "0"  # Set to 1 for more trace info
 
 # Read header file and strip some stuff that cffi would stumble on
 lines = []
-with open(os.path.join(get_resource_dir(), 'wgpu.h')) as f:
+with open(os.path.join(get_resource_dir(), "wgpu.h")) as f:
     for line in f.readlines():
-        if not line.startswith(("#include ", "#define WGPU_LOCAL", "#define WGPUColor", "#define WGPUOrigin3d_ZERO", "#if defined", "#endif")):
+        if not line.startswith(
+            (
+                "#include ",
+                "#define WGPU_LOCAL",
+                "#define WGPUColor",
+                "#define WGPUOrigin3d_ZERO",
+                "#if defined",
+                "#endif",
+            )
+        ):
             lines.append(line)
 
 
@@ -55,7 +64,7 @@ def new_struct(ctype, **kwargs):
 
 # wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-async def requestAdapter(options: dict=None):
+async def requestAdapter(options: dict = None):
     """ Request an GPUAdapter, the object that represents the implementation of WGPU.
     Use options (RequestAdapterOptions) to specify e.g. power preference.
 
@@ -66,8 +75,7 @@ async def requestAdapter(options: dict=None):
 
     # Convert the descriptor
     struct = new_struct(
-        "WGPURequestAdapterOptions *",
-        power_preference=options["powerPreference"],
+        "WGPURequestAdapterOptions *", power_preference=options["powerPreference"]
     )
 
     # Select possible backends. This is not exposed in the WebGPU API
@@ -89,10 +97,7 @@ async def requestAdapter(options: dict=None):
         adapter_id = received
 
     _lib.wgpu_request_adapter_async(
-        struct,
-        backend_mask,
-        _request_adapter_callback,
-        ffi.NULL,  # userdata, stub
+        struct, backend_mask, _request_adapter_callback, ffi.NULL  # userdata, stub
     )
 
     # For now, Rust will call the callback immediately
@@ -108,33 +113,26 @@ _register_backend(requestAdapter)
 
 
 class GPUAdapter(_api.GPUAdapter):
-
     def __init__(self, name, extensions, id):
         super().__init__(name, extensions)
         self._id = id
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def requestDevice(self, des: dict=None):
+    async def requestDevice(self, des: dict = None):
         return self.requestDeviceSync(des)
 
-    def requestDeviceSync(self, des: dict=None):
+    def requestDeviceSync(self, des: dict = None):
 
         extensions = des["extensions"]
         limits = des["limits"]
 
         c_extensions = new_struct(
-            "WGPUExtensions *",
-            anisotropic_filtering=extensions["anisotropicFiltering"],
+            "WGPUExtensions *", anisotropic_filtering=extensions["anisotropicFiltering"]
         )
-        c_limits = new_struct(
-            "WGPULimits *",
-            max_bind_groups=limits["maxBindGroups"],
-        )
+        c_limits = new_struct("WGPULimits *", max_bind_groups=limits["maxBindGroups"])
         struct = new_struct(
-            "WGPUDeviceDescriptor *",
-            extensions=c_extensions[0],
-            limits=c_limits[0],
+            "WGPUDeviceDescriptor *", extensions=c_extensions[0], limits=c_limits[0]
         )
 
         id = _lib.wgpu_adapter_request_device(self._id, struct)
@@ -149,9 +147,7 @@ class GPUDevice(_api.GPUDevice):
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def createBuffer(self, des: dict):
         struct = new_struct(
-            "WGPUBufferDescriptor *",
-            size=des["size"],
-            usage=des["usage"],
+            "WGPUBufferDescriptor *", size=des["size"], usage=des["usage"]
         )
 
         id = _lib.wgpu_device_create_buffer(self._internal, struct, mem)
@@ -164,19 +160,17 @@ class GPUDevice(_api.GPUDevice):
 
         size = int(des["size"])
 
-        struct = new_struct(
-            "WGPUBufferDescriptor *",
-            size=size,
-            usage=des["usage"],
-        )
+        struct = new_struct("WGPUBufferDescriptor *", size=size, usage=des["usage"])
 
         # Pointer that device_create_buffer_mapped sets, so that we can write stuff there
         buffer_memory_pointer = ffi.new("uint8_t * *")
 
-        id = _lib.wgpu_device_create_buffer_mapped(self._internal, struct, buffer_memory_pointer)
+        id = _lib.wgpu_device_create_buffer_mapped(
+            self._internal, struct, buffer_memory_pointer
+        )
 
         # Map a numpy array onto the data
-        pointer_as_int = int(ffi.cast('intptr_t', buffer_memory_pointer[0]))
+        pointer_as_int = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
         mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
         # mem_as_numpy = np.frombuffer(mem_as_ctypes, np.uint8)
 
@@ -191,12 +185,12 @@ class GPUDevice(_api.GPUDevice):
         for binding_des in des["bindings"]:
             c_binding = new_struct(
                 "WGPUBindGroupLayoutBinding *",
-                binding = int(binding_des["binding"]),
-                visibility = int(binding_des["visibility"]),  # WGPUShaderStage
-                ty = binding_des["BindingType"],
-                texture_dimension = binding_des["textureDimension"],
-                multisampled = bool(binding_des["multisampled"]),
-                dynamic = bool(binding_des["hasDynamicOffset"]),
+                binding=int(binding_des["binding"]),
+                visibility=int(binding_des["visibility"]),  # WGPUShaderStage
+                ty=binding_des["BindingType"],
+                texture_dimension=binding_des["textureDimension"],
+                multisampled=bool(binding_des["multisampled"]),
+                dynamic=bool(binding_des["hasDynamicOffset"]),
             )
             c_bindings_list.append(c_binding)
 
@@ -219,7 +213,6 @@ class GPUDevice(_api.GPUDevice):
 
 
 class GPUBuffer(_api.GPUBuffer):
-
 
     # wgpu.help('bufferunmap', dev=True)
     # IDL: void unmap();
@@ -247,7 +240,7 @@ def _copy_docstrings():
         elif ob.__module__ != __name__:
             continue
         base = ob.mro()[1]
-        ob.__doc__  = base.__doc__
+        ob.__doc__ = base.__doc__
         for name, attr in ob.__dict__.items():
             if name.startswith("_") or not hasattr(attr, "__doc__"):
                 continue

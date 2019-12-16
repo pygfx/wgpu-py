@@ -1,13 +1,15 @@
 # wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-async def requestAdapter(options: dict=None):
+async def requestAdapter(options: dict = None):
     """ Request an Adapter, the object that represents the implementation of WGPU.
     Use options (RequestAdapterOptions) to specify e.g. power preference.
 
     Before requesting an adapter, a wgpu backend should be selected. At the moment
     there is only one backend. Use ``import wgpu.rs`` to select it.
     """
-    raise RuntimeError("Select a backend (by importing wgpu.rs) before requesting an adapter!")
+    raise RuntimeError(
+        "Select a backend (by importing wgpu.rs) before requesting an adapter!"
+    )
 
 
 class GPUObject:
@@ -60,7 +62,7 @@ class GPUAdapter:  # Not a GPUObject
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def requestDevice(self, des: dict=None):
+    async def requestDevice(self, des: dict = None):
         """ Request a Device object. Use des (DeviceDescriptor) to specify
         a device label.
         """
@@ -68,7 +70,6 @@ class GPUAdapter:  # Not a GPUObject
 
     def foobar(self):
         pass
-
 
 
 class GPUDevice(GPUObject):
@@ -202,7 +203,6 @@ class GPUDevice(GPUObject):
         raise NotImplementedError()
 
 
-
 class GPUBuffer(GPUObject):
     """
     A GPUBuffer represents a block of memory that can be used in GPU
@@ -299,9 +299,11 @@ class GPUTextureView(GPUObject):
     """
     """
 
+
 class GPUSampler(GPUObject):
     """
     """
+
 
 class GPUBindGroupLayout(GPUObject):
     """
@@ -318,6 +320,7 @@ class GPUBindGroupLayout(GPUObject):
 class GPUBindGroup(GPUObject):
     """
     """
+
 
 class GPUPipelineLayout(GPUObject):
     """
@@ -341,9 +344,11 @@ class GPUShaderModule(GPUObject):
     """ A GPUShaderModule represents a programmable shader.
     """
 
+
 class GPUComputePipleline(GPUObject):
     """
     """
+
 
 class GPURenderPipleline(GPUObject):
     """
@@ -351,9 +356,11 @@ class GPURenderPipleline(GPUObject):
     to a surface. This is where everything comes together.
     """
 
+
 class GPUCommandBuffer(GPUObject):
     """
     """
+
 
 class GPUCommandEncoder(GPUObject):
     """
@@ -431,7 +438,6 @@ class GPUProgrammablePassEncoder(GPUObject):
     # IDL: void insertDebugMarker(DOMString markerLabel);
     def insertDebugMarker(self):
         raise NotImplementedError()
-
 
 
 class GPUComputePassEncoder(GPUProgrammablePassEncoder):

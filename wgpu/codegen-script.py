@@ -190,7 +190,9 @@ for fname in ("_api.py", "rs.py"):
     starts = "# IDL: ", "# wgpu.help("
     with open(filename, "rb") as f:
         api_lines = f.read().decode().strip().splitlines()
-    api_lines = [line.rstrip() for line in api_lines if not line.lstrip().startswith(starts)]
+    api_lines = [
+        line.rstrip() for line in api_lines if not line.lstrip().startswith(starts)
+    ]
     api_lines.append("")
 
     # Detect api functions
@@ -203,7 +205,7 @@ for fname in ("_api.py", "rs.py"):
             indent = len(line) - len(line.lstrip())
             funcname = line.split("(")[0].split()[-1]
             if not funcname.startswith("_"):
-                if not api_lines[i-1].lstrip().startswith("@property"):
+                if not api_lines[i - 1].lstrip().startswith("@property"):
                     if indent:
                         funcname = current_class + "." + funcname
                     func_id = funcname.replace(".", "").lower()
@@ -224,7 +226,9 @@ for fname in ("_api.py", "rs.py"):
             searches.extend([arg[3:] for arg in argtypes if arg.startswith("GPU")])
             searches = [f"'{x}'" for x in searches]
             api_lines.insert(i, " " * indent + "# IDL: " + line)
-            api_lines.insert(i, " " * indent + f"# wgpu.help({', '.join(searches)}, dev=True)")
+            api_lines.insert(
+                i, " " * indent + f"# wgpu.help({', '.join(searches)}, dev=True)"
+            )
 
     # Report missing
     print(f"Found {count} functions already implemented")
