@@ -1,5 +1,7 @@
 # Special for this repo
 nogit/
+wgpu/resources/*.dll
+wgpu/resources/*.so
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
