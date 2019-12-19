@@ -58,7 +58,7 @@ interface GPU {
 
 interface GPUAdapter {
     readonly attribute DOMString name;
-    readonly attribute object extensions;
+    readonly attribute sequence<GPUExtensionName> extensions;
     //readonly attribute GPULimits limits; Don’t expose higher limits for now.
 
     // May reject with DOMException  // TODO: DOMException("OperationError")?
@@ -77,14 +77,13 @@ enum GPUPowerPreference {
 [Exposed=(Window, Worker), Serializable]
 interface GPUDevice : EventTarget {
     [SameObject] readonly attribute GPUAdapter adapter;
-    readonly attribute object extensions;
+    readonly attribute sequence<GPUExtensionName> extensions;
     readonly attribute object limits;
 
     [SameObject] readonly attribute GPUQueue defaultQueue;
 
     GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    Promise<GPUMappedBuffer> createBufferMappedAsync(GPUBufferDescriptor descriptor);
     GPUTexture createTexture(GPUTextureDescriptor descriptor);
     GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
 
@@ -102,14 +101,14 @@ interface GPUDevice : EventTarget {
 GPUDevice includes GPUObjectBase;
 
 dictionary GPUDeviceDescriptor : GPUObjectDescriptorBase {
-    GPUExtensions extensions = {};
+    sequence<GPUExtensionName> extensions = [];
     GPULimits limits = {};
 
     // TODO: are other things configurable like queues?
 };
 
-dictionary GPUExtensions {
-    boolean anisotropicFiltering = false;
+enum GPUExtensionName {
+    "anisotropic-filtering"
 };
 
 dictionary GPULimits {
