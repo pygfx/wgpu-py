@@ -121,10 +121,10 @@ class GPUAdapter(classes.GPUAdapter):
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def requestDevice(self, *, label: str, extensions: 'GPUExtensionName-list'=[], limits: 'GPULimits'={}):
+    async def requestDevice(self, *, label="", extensions: 'GPUExtensionName-list'=[], limits: 'GPULimits'={}):
         return self.requestDeviceSync(label=label, extensions=extensions, limits=limits)
 
-    def requestDeviceSync(self, *, label: str, extensions: 'GPUExtensionName-list'=[], limits: 'GPULimits'={}):
+    def requestDeviceSync(self, *, label="", extensions: 'GPUExtensionName-list'=[], limits: 'GPULimits'={}):
 
         extensions = tuple(extensions)
 
@@ -145,7 +145,7 @@ class GPUDevice(classes.GPUDevice):
 
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
-    def createBuffer(self, *, label: str, size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
+    def createBuffer(self, *, label="", size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
         size = int(size)
 
         struct = new_struct(
@@ -157,7 +157,7 @@ class GPUDevice(classes.GPUDevice):
 
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    def createBufferMapped(self, *, label: str, size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
+    def createBufferMapped(self, *, label="", size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
 
         size = int(size)
 
@@ -179,7 +179,7 @@ class GPUDevice(classes.GPUDevice):
 
     # wgpu.help('devicecreatebindgrouplayout', 'BindGroupLayoutDescriptor', dev=True)
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
-    def createBindGroupLayout(self, *, label: str, bindings: 'GPUBindGroupLayoutBinding-list'):
+    def createBindGroupLayout(self, *, label="", bindings: 'GPUBindGroupLayoutBinding-list'):
 
         c_bindings_list = []
         for binding in bindings:
@@ -207,7 +207,7 @@ class GPUDevice(classes.GPUDevice):
 
     # wgpu.help('devicecreatebindgroup', 'BindGroupDescriptor', dev=True)
     # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor);
-    def createBindGroup(self, *, label: str, layout: 'GPUBindGroupLayout', bindings: 'GPUBindGroupBinding-list'):
+    def createBindGroup(self, *, label="", layout: 'GPUBindGroupLayout', bindings: 'GPUBindGroupBinding-list'):
         pass
 
 

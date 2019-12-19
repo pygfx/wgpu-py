@@ -272,6 +272,8 @@ for fname in ("classes.py", "rs.py"):
                 assert argtypes[0].startswith("GPU")
                 arg_struct = ip.structs[argtypes[0][3:]]
                 py_args = [field.py_arg() for field in arg_struct.values()]
+                if py_args[0] == "label: str":
+                    py_args[0] = 'label=""'
                 py_args.insert(0, "self")
                 py_args.insert(1, "*")
                 api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
