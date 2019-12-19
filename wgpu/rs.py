@@ -13,10 +13,10 @@ import ctypes
 
 from cffi import FFI
 
-from . import _api
+from . import classes
 from . import _register_backend
 from .utils import get_resource_dir
-from ._constants import cstructfield2enum, enummap
+from ._mappings import cstructfield2enum, enummap
 
 
 os.environ["RUST_BACKTRACE"] = "0"  # Set to 1 for more trace info
@@ -62,20 +62,22 @@ def new_struct(ctype, **kwargs):
     return struct
 
 
+# %% The API
+
+
 # wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-async def requestAdapter(options: dict = None):
+async def requestAdapter(powerPreference: "enum PowerPreference"):
     """ Request an GPUAdapter, the object that represents the implementation of WGPU.
-    Use options (RequestAdapterOptions) to specify e.g. power preference.
-
     This function uses the Rust WGPU library.
+
+    Params:
+        powerPreference(enum): "high-performance" or "low-power"
     """
-    if options is None:
-        options = {"powerPreference": "high-performance"}
 
     # Convert the descriptor
     struct = new_struct(
-        "WGPURequestAdapterOptions *", power_preference=options["powerPreference"]
+        "WGPURequestAdapterOptions *", power_preference=powerPreference
     )
 
     # Select possible backends. This is not exposed in the WebGPU API
@@ -104,7 +106,7 @@ async def requestAdapter(options: dict = None):
     # todo: when wgpu gets an event loop -> while run wgpu event loop or something
 
     assert adapter_id is not None
-    extensions = {}
+    extensions = []
     return GPUAdapter("WGPU", extensions, adapter_id)
 
 
@@ -112,23 +114,22 @@ async def requestAdapter(options: dict = None):
 _register_backend(requestAdapter)
 
 
-class GPUAdapter(_api.GPUAdapter):
+class GPUAdapter(classes.GPUAdapter):
     def __init__(self, name, extensions, id):
         super().__init__(name, extensions)
         self._id = id
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def requestDevice(self, des: dict = None):
-        return self.requestDeviceSync(des)
+    async def requestDevice(self, *, label: str, extensions: 'GPUExtensionName-list'=[], limits: 'GPULimits'={}):
+        return self.requestDeviceSync(label=label, extensions=extensions, limits=limits)
 
-    def requestDeviceSync(self, des: dict = None):
+    def requestDeviceSync(self, *, label: str, extensions: 'GPUExtensionName-list'=[], limits: 'GPULimits'={}):
 
-        extensions = des["extensions"]
-        limits = des["limits"]
+        extensions = tuple(extensions)
 
         c_extensions = new_struct(
-            "WGPUExtensions *", anisotropic_filtering=extensions["anisotropicFiltering"]
+            "WGPUExtensions *", anisotropic_filtering="anisotropicFiltering" in extensions,
         )
         c_limits = new_struct("WGPULimits *", max_bind_groups=limits["maxBindGroups"])
         struct = new_struct(
@@ -136,31 +137,31 @@ class GPUAdapter(_api.GPUAdapter):
         )
 
         id = _lib.wgpu_adapter_request_device(self._id, struct)
-        label = des.get("label", "")
         queue = None
         return GPUDevice(label, id, self, extensions, limits, queue)
 
 
-class GPUDevice(_api.GPUDevice):
+class GPUDevice(classes.GPUDevice):
 
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
-    def createBuffer(self, des: dict):
+    def createBuffer(self, *, label: str, size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
+        size = int(size)
+
         struct = new_struct(
-            "WGPUBufferDescriptor *", size=des["size"], usage=des["usage"]
+            "WGPUBufferDescriptor *", size=size, usage=usage
         )
 
         id = _lib.wgpu_device_create_buffer(self._internal, struct, mem)
-        label = des.get("label", "")
-        return GPUBuffer(label, id, self, des["size"], des["usage"], "unmapped", None)
+        return GPUBuffer(label, id, self, size, usage, "unmapped", None)
 
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    def createBufferMapped(self, des: dict):
+    def createBufferMapped(self, *, label: str, size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
 
-        size = int(des["size"])
+        size = int(size)
 
-        struct = new_struct("WGPUBufferDescriptor *", size=size, usage=des["usage"])
+        struct = new_struct("WGPUBufferDescriptor *", size=size, usage=usage)
 
         # Pointer that device_create_buffer_mapped sets, so that we can write stuff there
         buffer_memory_pointer = ffi.new("uint8_t * *")
@@ -174,23 +175,22 @@ class GPUDevice(_api.GPUDevice):
         mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
         # mem_as_numpy = np.frombuffer(mem_as_ctypes, np.uint8)
 
-        label = des.get("label", "")
-        return GPUBuffer(label, id, self, size, des["usage"], "mapped", mem_as_ctypes)
+        return GPUBuffer(label, id, self, size, usage, "mapped", mem_as_ctypes)
 
     # wgpu.help('devicecreatebindgrouplayout', 'BindGroupLayoutDescriptor', dev=True)
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
-    def createBindGroupLayout(self, des: dict):
+    def createBindGroupLayout(self, *, label: str, bindings: 'GPUBindGroupLayoutBinding-list'):
 
         c_bindings_list = []
-        for binding_des in des["bindings"]:
+        for binding in bindings:
             c_binding = new_struct(
                 "WGPUBindGroupLayoutBinding *",
-                binding=int(binding_des["binding"]),
-                visibility=int(binding_des["visibility"]),  # WGPUShaderStage
-                ty=binding_des["BindingType"],
-                texture_dimension=binding_des["textureDimension"],
-                multisampled=bool(binding_des["multisampled"]),
-                dynamic=bool(binding_des["hasDynamicOffset"]),
+                binding=int(binding["binding"]),
+                visibility=int(binding["visibility"]),  # WGPUShaderStage
+                ty=binding["BindingType"],
+                texture_dimension=binding["textureDimension"],
+                multisampled=bool(binding["multisampled"]),
+                dynamic=bool(binding["hasDynamicOffset"]),
             )
             c_bindings_list.append(c_binding)
 
@@ -202,17 +202,16 @@ class GPUDevice(_api.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_bind_group_layout(self._internal, struct)
-        label = des.get("label", "")
 
-        return GPUBindGroupLayout(label, id, self, des["bindings"])
+        return GPUBindGroupLayout(label, id, self, bindings)
 
     # wgpu.help('devicecreatebindgroup', 'BindGroupDescriptor', dev=True)
     # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor);
-    def createBindGroup(self, des: dict):
+    def createBindGroup(self, *, label: str, layout: 'GPUBindGroupLayout', bindings: 'GPUBindGroupBinding-list'):
         pass
 
 
-class GPUBuffer(_api.GPUBuffer):
+class GPUBuffer(classes.GPUBuffer):
 
     # wgpu.help('bufferunmap', dev=True)
     # IDL: void unmap();
@@ -229,13 +228,15 @@ class GPUBuffer(_api.GPUBuffer):
             _lib.wgpu_buffer_destroy(self._internal)
 
 
-class GPUBindGroupLayout(_api.GPUBindGroupLayout):
+class GPUBindGroupLayout(classes.GPUBindGroupLayout):
     pass
 
 
+# %%
+
 def _copy_docstrings():
     for ob in globals().values():
-        if not (isinstance(ob, type) and issubclass(ob, _api.GPUObject)):
+        if not (isinstance(ob, type) and issubclass(ob, classes.GPUObject)):
             continue
         elif ob.__module__ != __name__:
             continue

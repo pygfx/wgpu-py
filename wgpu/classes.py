@@ -1,11 +1,18 @@
+"""
+The classes representing the wgpu API. This module defines the classes,
+properties, methods and documentation. The actual methods are implemented
+in backend modules.
+"""
+
 # wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-async def requestAdapter(options: dict = None):
+async def requestAdapter(powerPreference: "enum PowerPreference"):
     """ Request an Adapter, the object that represents the implementation of WGPU.
-    Use options (RequestAdapterOptions) to specify e.g. power preference.
-
     Before requesting an adapter, a wgpu backend should be selected. At the moment
     there is only one backend. Use ``import wgpu.rs`` to select it.
+
+    Params:
+        powerPreference(enum): "high-performance" or "low-power"
     """
     raise RuntimeError(
         "Select a backend (by importing wgpu.rs) before requesting an adapter!"
@@ -31,6 +38,12 @@ class GPUObject:
         return self._label
 
 
+class DictLike:
+
+    def __getitem__(self, name):
+        return self.__dict__[name]
+
+
 class GPUAdapter:  # Not a GPUObject
     """
     An adapter represents an implementation of WGPU on the system.
@@ -44,7 +57,7 @@ class GPUAdapter:  # Not a GPUObject
 
     def __init__(self, name, extensions):
         self._name = name
-        self._extensions = extensions
+        self._extensions = tuple(extensions)
 
     @property
     def name(self):
@@ -54,22 +67,48 @@ class GPUAdapter:  # Not a GPUObject
 
     @property
     def extensions(self):
-        """ A GPUExtensions object which enumerates the extensions
-        supported by the system, and whether each extension is supported
-        by the underlying implementation.
+        """ A tuple that enumerates the extensions supported by the adapter.
         """
         return self._extensions
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def requestDevice(self, des: dict = None):
-        """ Request a Device object. Use des (DeviceDescriptor) to specify
-        a device label.
+    async def requestDevice(self, *, label: str, extensions: 'GPUExtensionName-list'=[], limits: 'GPULimits'={}):
+        """ Request a Device object.
+
+        Params:
+            extensions (list): the extensions that you need.
+            limits (dict): the various limits that you need.
         """
         raise NotImplementedError()
 
     def foobar(self):
         pass
+
+
+class WGPULimits(DictLike):
+    """ A dict-like object representing the device limits.
+    """
+
+    def __init__(self,
+        *,
+        maxBindGroups = 4,
+        maxDynamicUniformBuffersPerPipelineLayout = 8,
+        maxDynamicStorageBuffersPerPipelineLayout = 4,
+        maxSampledTexturesPerShaderStage = 16,
+        maxSamplersPerShaderStage = 16,
+        maxStorageBuffersPerShaderStage = 4,
+        maxStorageTexturesPerShaderStage = 4,
+        maxUniformBuffersPerShaderStage = 12,
+    ):
+        self.maxBindGroups = maxBindGroups
+        self.maxDynamicUniformBuffersPerPipelineLayout = maxDynamicUniformBuffersPerPipelineLayout
+        self.maxDynamicStorageBuffersPerPipelineLayout = maxDynamicStorageBuffersPerPipelineLayout
+        self.maxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage
+        self.maxSamplersPerShaderStage = maxSamplersPerShaderStage
+        self.maxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage
+        self.maxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage
+        self.maxUniformBuffersPerShaderStage = maxUniformBuffersPerShaderStage,
 
 
 class GPUDevice(GPUObject):
@@ -110,7 +149,7 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
-    def createBuffer(self, des: dict):
+    def createBuffer(self, *, label: str, size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
         """ Create a Buffer object. Use des (BufferDescriptor) to specify
         buffer size and usage.
         """
@@ -118,14 +157,12 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    def createBufferMapped(self, des: dict):
+    def createBufferMapped(self, *, label: str, size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
         """ Create a mapped buffer object.  Use des (BufferDescriptor) to specify
         buffer size and usage.
         """
         raise NotImplementedError()
 
-    # wgpu.help('devicecreatebuffermappedasync', 'BufferDescriptor', dev=True)
-    # IDL: Promise<GPUMappedBuffer> createBufferMappedAsync(GPUBufferDescriptor descriptor);
     async def createBufferMappedAsync(self, des: dict):
         """ Asynchronously create a mapped buffer object. Use des (BufferDescriptor) to specify
         buffer size and usage.
@@ -134,7 +171,7 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatetexture', 'TextureDescriptor', dev=True)
     # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor);
-    def createTexture(self, des: dict):
+    def createTexture(self, *, label: str, size: 'GPUExtent3D', arrayLayerCount: int=1, mipLevelCount: int=1, sampleCount: int=1, dimension: 'GPUTextureDimension'="2d", format: 'GPUTextureFormat', usage: 'GPUTextureUsageFlags'):
         """ Create a Texture object. Use des (TextureDescriptor) to specify size,
         dimensions and more.
         """
@@ -142,14 +179,14 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatesampler', 'SamplerDescriptor', dev=True)
     # IDL: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
-    def createSampler(self, des: dict):
+    def createSampler(self, *, label: str, addressModeU: 'GPUAddressMode'="clamp-to-edge", addressModeV: 'GPUAddressMode'="clamp-to-edge", addressModeW: 'GPUAddressMode'="clamp-to-edge", magFilter: 'GPUFilterMode'="nearest", minFilter: 'GPUFilterMode'="nearest", mipmapFilter: 'GPUFilterMode'="nearest", lodMinClamp: float=0, lodMaxClamp: float=0xffffffff, compare: 'GPUCompareFunction'="never"):
         """ Create a Sampler object. Use des (SamplerDescriptor) to specify its modes.
         """
         raise NotImplementedError()
 
     # wgpu.help('devicecreatebindgrouplayout', 'BindGroupLayoutDescriptor', dev=True)
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
-    def createBindGroupLayout(self, des: dict):
+    def createBindGroupLayout(self, *, label: str, bindings: 'GPUBindGroupLayoutBinding-list'):
         """ Create a GPUBindGroupLayout. Use makeBindGroupLayoutDescriptor() to define a list
         of bindings. Each binding (makeBindGroupLayoutBinding()) has:
 
@@ -167,39 +204,39 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatepipelinelayout', 'PipelineLayoutDescriptor', dev=True)
     # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
-    def createPipelineLayout(self, des: dict):
+    def createPipelineLayout(self, *, label: str, bindGroupLayouts: 'GPUBindGroupLayout-list'):
         raise NotImplementedError()
 
     # wgpu.help('devicecreatebindgroup', 'BindGroupDescriptor', dev=True)
     # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor);
-    def createBindGroup(self, des: dict):
+    def createBindGroup(self, *, label: str, layout: 'GPUBindGroupLayout', bindings: 'GPUBindGroupBinding-list'):
         """ Create a GPUBindGroup. Use makeBindGroupDescriptor() to define it.
         """
         raise NotImplementedError()
 
     # wgpu.help('devicecreateshadermodule', 'ShaderModuleDescriptor', dev=True)
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
-    def createShaderModule(self, des: dict):
+    def createShaderModule(self, *, label: str, code: 'GPUShaderCode'):
         raise NotImplementedError()
 
     # wgpu.help('devicecreatecomputepipeline', 'ComputePipelineDescriptor', dev=True)
     # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor);
-    def createComputePipeline(self, des: dict):
+    def createComputePipeline(self, *, label: str, layout: 'GPUPipelineLayout', computeStage: 'GPUProgrammableStageDescriptor'):
         raise NotImplementedError()
 
     # wgpu.help('devicecreaterenderpipeline', 'RenderPipelineDescriptor', dev=True)
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
-    def createRenderPipeline(self, des: dict):
+    def createRenderPipeline(self, *, label: str, layout: 'GPUPipelineLayout', vertexStage: 'GPUProgrammableStageDescriptor', fragmentStage: 'GPUProgrammableStageDescriptor', primitiveTopology: 'GPUPrimitiveTopology', rasterizationState: 'GPURasterizationStateDescriptor'={}, colorStates: 'GPUColorStateDescriptor-list', depthStencilState: 'GPUDepthStencilStateDescriptor', vertexState: 'GPUVertexStateDescriptor'={}, sampleCount: int=1, sampleMask: int=0xFFFFFFFF, alphaToCoverageEnabled: bool=False):
         raise NotImplementedError()
 
     # wgpu.help('devicecreatecommandencoder', 'CommandEncoderDescriptor', dev=True)
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
-    def createCommandEncoder(self, des: dict):
+    def createCommandEncoder(self, *, label: str):
         raise NotImplementedError()
 
     # wgpu.help('devicecreaterenderbundleencoder', 'RenderBundleEncoderDescriptor', dev=True)
     # IDL: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
-    def createRenderBundleEncoder(self, des: dict):
+    def createRenderBundleEncoder(self, *, label: str, colorFormats: 'GPUTextureFormat-list', depthStencilFormat: 'GPUTextureFormat', sampleCount: int=1):
         raise NotImplementedError()
 
 
@@ -211,6 +248,9 @@ class GPUBuffer(GPUObject):
     the buffer, subject to alignment restrictions depending on the
     operation. Some GPUBuffers can be mapped which makes the block of
     memory accessible via a numpy array called its mapping.
+
+    Create a buffer using GPUDevice.createBuffer(), GPUDevice.createBufferMapped()
+    or GPUDevice.createBufferAsync().
     """
 
     def __init__(self, label, internal, device, size, usage, state, mapping):
@@ -286,7 +326,7 @@ class GPUTexture(GPUObject):
 
     # wgpu.help('texturecreateview', 'TextureViewDescriptor', dev=True)
     # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {});
-    def createView(self):
+    def createView(self, *, label: str, format: 'GPUTextureFormat', dimension: 'GPUTextureViewDimension', aspect: 'GPUTextureAspect'="all", baseMipLevel: int=0, mipLevelCount: int=0, baseArrayLayer: int=0, arrayLayerCount: int=0):
         raise NotImplementedError()
 
     # wgpu.help('texturedestroy', dev=True)
@@ -368,12 +408,12 @@ class GPUCommandEncoder(GPUObject):
 
     # wgpu.help('commandencoderbeginrenderpass', 'RenderPassDescriptor', dev=True)
     # IDL: GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor);
-    def beginRenderPass(self):
+    def beginRenderPass(self, *, label: str, colorAttachments: 'GPURenderPassColorAttachmentDescriptor-list', depthStencilAttachment: 'GPURenderPassDepthStencilAttachmentDescriptor'):
         raise NotImplementedError()
 
     # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
     # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
-    def beginComputePass(self):
+    def beginComputePass(self, *, label: str):
         raise NotImplementedError()
 
     # wgpu.help('commandencodercopybuffertobuffer', 'Buffer', 'BufferSize', 'Buffer', 'BufferSize', 'BufferSize', dev=True)
@@ -413,7 +453,7 @@ class GPUCommandEncoder(GPUObject):
 
     # wgpu.help('commandencoderfinish', 'CommandBufferDescriptor', dev=True)
     # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {});
-    def finish(self):
+    def finish(self, *, label: str):
         raise NotImplementedError()
 
 
@@ -551,7 +591,7 @@ class GPURenderBundleEncoder(GPURenderEncoderBase):
 
     # wgpu.help('renderbundleencoderfinish', 'RenderBundleDescriptor', dev=True)
     # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
-    def finish(self):
+    def finish(self, *, label: str):
         raise NotImplementedError()
 
 

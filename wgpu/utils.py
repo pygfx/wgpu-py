@@ -5,7 +5,7 @@ Utility functions.
 import os
 import inspect
 
-from . import _api, _constants
+from . import classes as m_classes, flags as m_flags, enums as m_enums
 
 
 def get_resource_dir():
@@ -48,10 +48,10 @@ def help(*searches, dev=False):
     lines = []
     all_lines.append(("flags", lines))
     for name_part in name_parts:
-        for name, val in _constants.__dict__.items():
+        for name, val in m_flags.__dict__.items():
             if name.startswith("_"):
                 continue
-            if isinstance(val, _constants.Flags):
+            if isinstance(val, m_flags.Flags):
                 if name_part in name.lower():
                     lines.append(name + ": " + ", ".join(val))
                 else:
@@ -89,10 +89,10 @@ def help(*searches, dev=False):
     lines = []
     all_lines.append(("enums", lines))
     for name_part in name_parts:
-        for name, val in _constants.__dict__.items():
+        for name, val in m_enums.__dict__.items():
             if name.startswith("_"):
                 continue
-            elif isinstance(val, _constants.Enum):
+            elif isinstance(val, m_enums.Enum):
                 if name_part in name.lower():
                     lines.append(name + ": " + ", ".join(f"'{x}'" for x in val))
                 else:
@@ -126,18 +126,52 @@ def help(*searches, dev=False):
                         if name_part in key.lower():
                             lines.append(f"{name}.{key} = {val}")
 
-    # Find structs
+    # Find functions
     lines = []
-    all_lines.append(("structs", lines))
+    all_lines.append(("functions", lines))
     for name_part in name_parts:
-        for name, val in _constants.__dict__.items():
-            if name.startswith("_"):
-                continue
-            elif name.startswith("make"):  # struct
-                # todo: also check fields
-                name = name[4:]
-                if name_part in name.lower():
-                    lines.append(name)
+        name_part_f = name_part.replace("_", "").replace(".", "")
+        for cls in m_classes.__dict__.values():
+            if isinstance(cls, type):
+                for attr_name, attr in cls.__dict__.items():
+                    if attr_name.startswith("_") or not callable(attr):
+                        continue
+                    funcname = cls.__name__ + "." + attr_name
+                    sig = str(inspect.signature(attr)).replace("self, ", "").replace("(self)", "()")
+                    func_id = funcname.replace(".", "").lower()
+                    if name_part_f in func_id or name_part_f in sig.lower():
+                        lines.append(funcname + sig)
+
+    if dev:
+        lines = []
+        all_lines.append(("functions in .idl", lines))
+        for name_part in name_parts:
+            name_part_f = name_part.replace("_", "").replace(".", "")
+            for func_id, line in idl_parser.functions.items():
+                if name_part_f in func_id:
+                    lines.append(line.strip())
+        lines = []
+        all_lines.append(("functions in .h", lines))
+        for name_part in name_parts:
+            name_part_f = name_part.replace("_", "").replace(".", "")
+            for func_id, line in h_parser.functions.items():
+                if name_part_f in func_id:
+                    lines.append(line.strip())
+
+    # Find structs
+
+    # In our API, there are no structs, only function kwargs.
+    # lines = []
+    # all_lines.append(("structs", lines))
+    # for name_part in name_parts:
+    #     for name, val in _constants.__dict__.items():
+    #         if name.startswith("_"):
+    #             continue
+    #         elif name.startswith("make"):  # struct
+    #             # todo: also check fields
+    #             name = name[4:]
+    #             if name_part in name.lower():
+    #                 lines.append(name)
 
     if dev:
         lines = []
@@ -165,43 +199,18 @@ def help(*searches, dev=False):
             #         if name_part in field.name.lower() or name_part in field.typename.lower():
             #             items["structs"].append(name + "." + field.py_arg())
 
-    # Find functions
-    lines = []
-    all_lines.append(("functions", lines))
-    for name_part in name_parts:
-        name_part_f = name_part.replace("_", "").replace(".", "")
-        for cls in _api.__dict__.values():
-            if isinstance(cls, type):
-                for attr_name, attr in cls.__dict__.items():
-                    if attr_name.startswith("_") or not callable(attr):
-                        continue
-                    funcname = cls.__name__ + "." + attr_name
-                    func_id = funcname.replace(".", "").lower()
-                    if name_part_f in func_id:
-                        sig = str(inspect.signature(attr)).replace("self, ", "")
-                        lines.append(funcname + sig)
-
-    if dev:
-        lines = []
-        all_lines.append(("functions in .idl", lines))
-        for name_part in name_parts:
-            name_part_f = name_part.replace("_", "").replace(".", "")
-            for func_id, line in idl_parser.functions.items():
-                if name_part_f in func_id:
-                    lines.append(line.strip())
-        lines = []
-        all_lines.append(("functions in .h", lines))
-        for name_part in name_parts:
-            name_part_f = name_part.replace("_", "").replace(".", "")
-            for func_id, line in h_parser.functions.items():
-                if name_part_f in func_id:
-                    lines.append(line.strip())
 
     # Display
     for title, lines in all_lines:
+        # Remove duplicates
+        for i in reversed(range(len(lines))):
+            if lines[i] in lines[:i]:
+                lines.pop(i)
+        # Print header
         if " in " not in title:
             print(f"\n--- {len(lines)} {title} ".ljust(80, "-"))
         elif lines:
             print(f"--- {len(lines)} {title} ---")
+        # Print lines
         if lines:
             print("\n".join("    " + line for line in lines))
