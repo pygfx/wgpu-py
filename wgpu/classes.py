@@ -86,7 +86,7 @@ class GPUAdapter:  # Not a GPUObject
         pass
 
 
-class WGPULimits(DictLike):
+class GPULimits(DictLike):
     """ A dict-like object representing the device limits.
     """
 
@@ -150,30 +150,26 @@ class GPUDevice(GPUObject):
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def createBuffer(self, *, label="", size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
-        """ Create a Buffer object. Use des (BufferDescriptor) to specify
-        buffer size and usage.
+        """ Create a Buffer object.
         """
         raise NotImplementedError()
 
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
     def createBufferMapped(self, *, label="", size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
-        """ Create a mapped buffer object.  Use des (BufferDescriptor) to specify
-        buffer size and usage.
+        """ Create a mapped buffer object (its memory is accesable to the CPU).
         """
         raise NotImplementedError()
 
     async def createBufferMappedAsync(self, des: dict):
-        """ Asynchronously create a mapped buffer object. Use des (BufferDescriptor) to specify
-        buffer size and usage.
+        """ Asynchronously create a mapped buffer object.
         """
         raise NotImplementedError()
 
     # wgpu.help('devicecreatetexture', 'TextureDescriptor', dev=True)
     # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor);
     def createTexture(self, *, label="", size: 'GPUExtent3D', arrayLayerCount: int=1, mipLevelCount: int=1, sampleCount: int=1, dimension: 'GPUTextureDimension'="2d", format: 'GPUTextureFormat', usage: 'GPUTextureUsageFlags'):
-        """ Create a Texture object. Use des (TextureDescriptor) to specify size,
-        dimensions and more.
+        """ Create a Texture object.
         """
         raise NotImplementedError()
 
@@ -187,8 +183,15 @@ class GPUDevice(GPUObject):
     # wgpu.help('devicecreatebindgrouplayout', 'BindGroupLayoutDescriptor', dev=True)
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
     def createBindGroupLayout(self, *, label="", bindings: 'GPUBindGroupLayoutBinding-list'):
-        """ Create a GPUBindGroupLayout. Use makeBindGroupLayoutDescriptor() to define a list
-        of bindings. Each binding (makeBindGroupLayoutBinding()) has:
+        """ Create a GPUBindGroupLayout.
+
+        * A Binding maps a buffer/texture/sampler/uniform to an integer slot.
+        * A BindGroup represents a group of such bindings.
+        * A BindGroupLayoutBinding is an abstract definition of a binding.
+          It describes a single shader resource binding to be included in a GPUBindGroupLayout.
+        * A BindGroupLayout represents a list of such abstract bindings.
+
+        Each binding has:
 
         * binding: interger to tie things together
         * visibility: bitset to show in what shader stages the resource will be accessinble in.
@@ -202,15 +205,18 @@ class GPUDevice(GPUObject):
         """
         raise NotImplementedError()
 
-    # wgpu.help('devicecreatepipelinelayout', 'PipelineLayoutDescriptor', dev=True)
-    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
-    def createPipelineLayout(self, *, label="", bindGroupLayouts: 'GPUBindGroupLayout-list'):
-        raise NotImplementedError()
-
     # wgpu.help('devicecreatebindgroup', 'BindGroupDescriptor', dev=True)
     # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor);
     def createBindGroup(self, *, label="", layout: 'GPUBindGroupLayout', bindings: 'GPUBindGroupBinding-list'):
-        """ Create a GPUBindGroup. Use makeBindGroupDescriptor() to define it.
+        """ Create a GPUBindGroup. The list of bindings are GPUBindGroupBinding objects,
+        representing a concrete binding.
+        """
+        raise NotImplementedError()
+
+    # wgpu.help('devicecreatepipelinelayout', 'PipelineLayoutDescriptor', dev=True)
+    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
+    def createPipelineLayout(self, *, label="", bindGroupLayouts: 'GPUBindGroupLayout-list'):
+        """ Create a GPUPipelineLayout, consisting of a list of GPUBindGroupLayout objects.
         """
         raise NotImplementedError()
 
@@ -227,6 +233,42 @@ class GPUDevice(GPUObject):
     # wgpu.help('devicecreaterenderpipeline', 'RenderPipelineDescriptor', dev=True)
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
     def createRenderPipeline(self, *, label="", layout: 'GPUPipelineLayout', vertexStage: 'GPUProgrammableStageDescriptor', fragmentStage: 'GPUProgrammableStageDescriptor', primitiveTopology: 'GPUPrimitiveTopology', rasterizationState: 'GPURasterizationStateDescriptor'={}, colorStates: 'GPUColorStateDescriptor-list', depthStencilState: 'GPUDepthStencilStateDescriptor', vertexState: 'GPUVertexStateDescriptor'={}, sampleCount: int=1, sampleMask: int=0xFFFFFFFF, alphaToCoverageEnabled: bool=False):
+        """ Create a GPURenderPipeline object describing a render pipeline.
+
+        Params:
+            layout (GPUPipelineLayout): The layout (list of binding groups).
+            vertexStage: ``{"module": vertex_shader, entry_point="main"}``
+            fragmentStage: ``{"module": fragment_shader, entry_point="main"}``
+            primitiveTopology (enum): wgpu.PrimitiveTopology
+            rasterizationState (dict): see below.
+            colorStates (list of dicts): see below.
+            depthStencilState: TODO
+            vertexState: ``{"indexFormat": wgpu.IndexFormat.uint32, "vertexBuffers": []}``
+            sampleCount (int): set higher than one for subsampling.
+            sampleMask (int): sample bitmask.
+            alphaToCoverageEnabled (bool): wheher to anable alpha coverage.
+
+        RasterizationState example dict:
+        ```
+        {
+            "front_face": wgpu.FrontFace.ccw,
+            "cull_mode": wgpu.CullMode.none,
+            "depth_bias": 0,
+            "depth_bias_slope_scale": 0.0,
+            "depth_bias_clamp": 0.0
+        }
+        ```
+
+        ColorState example dict:
+        ```
+        {
+            "format":,
+            "alpha_blend": (wgpu.BlendFactor.One, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
+            "colorBlend":(wgpu.BlendFactor.One, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
+            "writeMask": wgpu.ColorWrite.ALL
+        }
+        ```
+        """
         raise NotImplementedError()
 
     # wgpu.help('devicecreatecommandencoder', 'CommandEncoderDescriptor', dev=True)
@@ -237,6 +279,15 @@ class GPUDevice(GPUObject):
     # wgpu.help('devicecreaterenderbundleencoder', 'RenderBundleEncoderDescriptor', dev=True)
     # IDL: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
     def createRenderBundleEncoder(self, *, label="", colorFormats: 'GPUTextureFormat-list', depthStencilFormat: 'GPUTextureFormat', sampleCount: int=1):
+        raise NotImplementedError()
+
+    # todo: or should we create a Qt widget wrapper thingy?
+    def configureSwapChainQt(self, *, surface, format, usage):
+        """ Configure the swap chain for the given Qt widget, and returns a
+        new GPUSwapChain object representing it. Destroys any swapchain
+        previously returned by configureSwapChain, including all of the
+        textures it has produced.
+        """
         raise NotImplementedError()
 
 
@@ -354,12 +405,18 @@ class GPUBindGroupLayout(GPUObject):
 
     def __init__(self, label, internal, device, bindings):
         super().__init__(label, internal, device)
-        self._bindings = bindings
+        self._bindings = tuple(bindings)
 
 
 class GPUBindGroup(GPUObject):
     """
+    A GPUBindGroup represents a group of bindings, a link between a shader slot
+    and a resource (sampler, texture-view, buffer).
     """
+
+    def __init__(self, label, internal, device, bindings):
+        super().__init__(label, internal, device)
+        self._bindings = bindings
 
 
 class GPUPipelineLayout(GPUObject):
@@ -367,17 +424,9 @@ class GPUPipelineLayout(GPUObject):
     A GPUPipelineLayout describes the layout of a pipeline.
     """
 
-    @property
-    def layout(self):
-        """ The GPUBindGroupLayout for this pipeline.
-        """
-        return self._layout
-
-    @property
-    def bindings(self):
-        """
-        """
-        return self._bindings
+    def __init__(self, label, internal, device, layouts):
+        super().__init__(label, internal, device)
+        self._layouts = tuple(layouts)  # GPUBindGroupLayout objects
 
 
 class GPUShaderModule(GPUObject):
@@ -385,14 +434,14 @@ class GPUShaderModule(GPUObject):
     """
 
 
-class GPUComputePipleline(GPUObject):
+class GPUComputePipeline(GPUObject):
     """
     """
 
 
-class GPURenderPipleline(GPUObject):
+class GPURenderPipeline(GPUObject):
     """
-    A GPURenderPipleline represents a single pipeline to draw something
+    A GPURenderPipeline represents a single pipeline to draw something
     to a surface. This is where everything comes together.
     """
 
@@ -461,7 +510,7 @@ class GPUProgrammablePassEncoder(GPUObject):
 
     # wgpu.help('programmablepassencodersetbindgroup', 'BindGroup', dev=True)
     # IDL: void setBindGroup(unsigned long index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  unsigned long long dynamicOffsetsDataStart,  unsigned long long dynamicOffsetsDataLength);
-    def setBindGroup(self):
+    def setBindGroup(self, index, bindGroup, dynamicOffsetsData, dynamicOffsetsDataStart, dynamicOffsetsDataLength):
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
@@ -615,4 +664,13 @@ class GPUSwapChain(GPUObject):
     # wgpu.help('swapchaingetcurrenttexture', dev=True)
     # IDL: GPUTexture getCurrentTexture();
     def getCurrentTexture(self):
+        """ For now, use getCurrentTextureView.
+        """
+        raise NotImplementedError("Use getCurrentTextureView() instead for now")
+
+    def getCurrentTextureView(self):
+        """ NOTICE: this function is likely to change or be replaced by getCurrentTexture()
+        at some point. An incompatibility between wgpu-native and WebGPU requires
+        us to implement this workaround.
+        """
         raise NotImplementedError()
