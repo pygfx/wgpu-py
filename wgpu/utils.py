@@ -4,13 +4,13 @@ Utility functions.
 
 import os
 import inspect
+from pkg_resources import resource_filename
 
 from . import classes as m_classes, flags as m_flags, enums as m_enums
 
 
-def get_resource_dir():
-    # todo: use setuptools package data thingy
-    return os.path.join(os.path.dirname(os.path.realpath(__file__)), "resources")
+def get_resource_filename(name):
+    return resource_filename("wgpu.resources", name)
 
 
 def help(*searches, dev=False):
@@ -37,10 +37,10 @@ def help(*searches, dev=False):
     if dev:
         from ._parsers import IdlParser, HParser
 
-        filename = os.path.join(get_resource_dir(), "webgpu.idl")
+        filename = os.path.join(get_resource_filename("webgpu.idl"))
         idl_parser = IdlParser(open(filename, "rb").read().decode())
         idl_parser.parse()
-        filename = os.path.join(get_resource_dir(), "wgpu.h")
+        filename = os.path.join(get_resource_filename("wgpu.h"))
         h_parser = HParser(open(filename, "rb").read().decode())
         h_parser.parse()
 
