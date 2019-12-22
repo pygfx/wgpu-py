@@ -39,7 +39,6 @@ class GPUObject:
 
 
 class DictLike:
-
     def __getitem__(self, name):
         return self.__dict__[name]
 
@@ -73,7 +72,13 @@ class GPUAdapter:  # Not a GPUObject
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def requestDevice(self, *, label="", extensions: 'GPUExtensionName-list'=[], limits: 'GPULimits'={}):
+    async def requestDevice(
+        self,
+        *,
+        label="",
+        extensions: "GPUExtensionName-list" = [],
+        limits: "GPULimits" = {},
+    ):
         """ Request a Device object.
 
         Params:
@@ -90,25 +95,30 @@ class GPULimits(DictLike):
     """ A dict-like object representing the device limits.
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         *,
-        maxBindGroups = 4,
-        maxDynamicUniformBuffersPerPipelineLayout = 8,
-        maxDynamicStorageBuffersPerPipelineLayout = 4,
-        maxSampledTexturesPerShaderStage = 16,
-        maxSamplersPerShaderStage = 16,
-        maxStorageBuffersPerShaderStage = 4,
-        maxStorageTexturesPerShaderStage = 4,
-        maxUniformBuffersPerShaderStage = 12,
+        maxBindGroups=4,
+        maxDynamicUniformBuffersPerPipelineLayout=8,
+        maxDynamicStorageBuffersPerPipelineLayout=4,
+        maxSampledTexturesPerShaderStage=16,
+        maxSamplersPerShaderStage=16,
+        maxStorageBuffersPerShaderStage=4,
+        maxStorageTexturesPerShaderStage=4,
+        maxUniformBuffersPerShaderStage=12,
     ):
         self.maxBindGroups = maxBindGroups
-        self.maxDynamicUniformBuffersPerPipelineLayout = maxDynamicUniformBuffersPerPipelineLayout
-        self.maxDynamicStorageBuffersPerPipelineLayout = maxDynamicStorageBuffersPerPipelineLayout
+        self.maxDynamicUniformBuffersPerPipelineLayout = (
+            maxDynamicUniformBuffersPerPipelineLayout
+        )
+        self.maxDynamicStorageBuffersPerPipelineLayout = (
+            maxDynamicStorageBuffersPerPipelineLayout
+        )
         self.maxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage
         self.maxSamplersPerShaderStage = maxSamplersPerShaderStage
         self.maxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage
         self.maxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage
-        self.maxUniformBuffersPerShaderStage = maxUniformBuffersPerShaderStage,
+        self.maxUniformBuffersPerShaderStage = (maxUniformBuffersPerShaderStage,)
 
 
 class GPUDevice(GPUObject):
@@ -149,14 +159,18 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
-    def createBuffer(self, *, label="", size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
+    def createBuffer(
+        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"
+    ):
         """ Create a Buffer object.
         """
         raise NotImplementedError()
 
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    def createBufferMapped(self, *, label="", size: 'GPUBufferSize', usage: 'GPUBufferUsageFlags'):
+    def createBufferMapped(
+        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"
+    ):
         """ Create a mapped buffer object (its memory is accesable to the CPU).
         """
         raise NotImplementedError()
@@ -168,21 +182,47 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatetexture', 'TextureDescriptor', dev=True)
     # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor);
-    def createTexture(self, *, label="", size: 'GPUExtent3D', arrayLayerCount: int=1, mipLevelCount: int=1, sampleCount: int=1, dimension: 'GPUTextureDimension'="2d", format: 'GPUTextureFormat', usage: 'GPUTextureUsageFlags'):
+    def createTexture(
+        self,
+        *,
+        label="",
+        size: "GPUExtent3D",
+        arrayLayerCount: int = 1,
+        mipLevelCount: int = 1,
+        sampleCount: int = 1,
+        dimension: "GPUTextureDimension" = "2d",
+        format: "GPUTextureFormat",
+        usage: "GPUTextureUsageFlags",
+    ):
         """ Create a Texture object.
         """
         raise NotImplementedError()
 
     # wgpu.help('devicecreatesampler', 'SamplerDescriptor', dev=True)
     # IDL: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
-    def createSampler(self, *, label="", addressModeU: 'GPUAddressMode'="clamp-to-edge", addressModeV: 'GPUAddressMode'="clamp-to-edge", addressModeW: 'GPUAddressMode'="clamp-to-edge", magFilter: 'GPUFilterMode'="nearest", minFilter: 'GPUFilterMode'="nearest", mipmapFilter: 'GPUFilterMode'="nearest", lodMinClamp: float=0, lodMaxClamp: float=0xffffffff, compare: 'GPUCompareFunction'="never"):
+    def createSampler(
+        self,
+        *,
+        label="",
+        addressModeU: "GPUAddressMode" = "clamp-to-edge",
+        addressModeV: "GPUAddressMode" = "clamp-to-edge",
+        addressModeW: "GPUAddressMode" = "clamp-to-edge",
+        magFilter: "GPUFilterMode" = "nearest",
+        minFilter: "GPUFilterMode" = "nearest",
+        mipmapFilter: "GPUFilterMode" = "nearest",
+        lodMinClamp: float = 0,
+        lodMaxClamp: float = 0xFFFFFFFF,
+        compare: "GPUCompareFunction" = "never",
+    ):
         """ Create a Sampler object. Use des (SamplerDescriptor) to specify its modes.
         """
         raise NotImplementedError()
 
     # wgpu.help('devicecreatebindgrouplayout', 'BindGroupLayoutDescriptor', dev=True)
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
-    def createBindGroupLayout(self, *, label="", bindings: 'GPUBindGroupLayoutBinding-list'):
+    def createBindGroupLayout(
+        self, *, label="", bindings: "GPUBindGroupLayoutBinding-list"
+    ):
         """ Create a GPUBindGroupLayout.
 
         * A Binding maps a buffer/texture/sampler/uniform to an integer slot.
@@ -207,7 +247,13 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatebindgroup', 'BindGroupDescriptor', dev=True)
     # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor);
-    def createBindGroup(self, *, label="", layout: 'GPUBindGroupLayout', bindings: 'GPUBindGroupBinding-list'):
+    def createBindGroup(
+        self,
+        *,
+        label="",
+        layout: "GPUBindGroupLayout",
+        bindings: "GPUBindGroupBinding-list",
+    ):
         """ Create a GPUBindGroup. The list of bindings are GPUBindGroupBinding objects,
         representing a concrete binding.
         """
@@ -215,24 +261,47 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreatepipelinelayout', 'PipelineLayoutDescriptor', dev=True)
     # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
-    def createPipelineLayout(self, *, label="", bindGroupLayouts: 'GPUBindGroupLayout-list'):
+    def createPipelineLayout(
+        self, *, label="", bindGroupLayouts: "GPUBindGroupLayout-list"
+    ):
         """ Create a GPUPipelineLayout, consisting of a list of GPUBindGroupLayout objects.
         """
         raise NotImplementedError()
 
     # wgpu.help('devicecreateshadermodule', 'ShaderModuleDescriptor', dev=True)
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
-    def createShaderModule(self, *, label="", code: 'GPUShaderCode'):
+    def createShaderModule(self, *, label="", code: "GPUShaderCode"):
         raise NotImplementedError()
 
     # wgpu.help('devicecreatecomputepipeline', 'ComputePipelineDescriptor', dev=True)
     # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor);
-    def createComputePipeline(self, *, label="", layout: 'GPUPipelineLayout', computeStage: 'GPUProgrammableStageDescriptor'):
+    def createComputePipeline(
+        self,
+        *,
+        label="",
+        layout: "GPUPipelineLayout",
+        computeStage: "GPUProgrammableStageDescriptor",
+    ):
         raise NotImplementedError()
 
     # wgpu.help('devicecreaterenderpipeline', 'RenderPipelineDescriptor', dev=True)
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
-    def createRenderPipeline(self, *, label="", layout: 'GPUPipelineLayout', vertexStage: 'GPUProgrammableStageDescriptor', fragmentStage: 'GPUProgrammableStageDescriptor', primitiveTopology: 'GPUPrimitiveTopology', rasterizationState: 'GPURasterizationStateDescriptor'={}, colorStates: 'GPUColorStateDescriptor-list', depthStencilState: 'GPUDepthStencilStateDescriptor', vertexState: 'GPUVertexStateDescriptor'={}, sampleCount: int=1, sampleMask: int=0xFFFFFFFF, alphaToCoverageEnabled: bool=False):
+    def createRenderPipeline(
+        self,
+        *,
+        label="",
+        layout: "GPUPipelineLayout",
+        vertexStage: "GPUProgrammableStageDescriptor",
+        fragmentStage: "GPUProgrammableStageDescriptor",
+        primitiveTopology: "GPUPrimitiveTopology",
+        rasterizationState: "GPURasterizationStateDescriptor" = {},
+        colorStates: "GPUColorStateDescriptor-list",
+        depthStencilState: "GPUDepthStencilStateDescriptor",
+        vertexState: "GPUVertexStateDescriptor" = {},
+        sampleCount: int = 1,
+        sampleMask: int = 0xFFFFFFFF,
+        alphaToCoverageEnabled: bool = False,
+    ):
         """ Create a GPURenderPipeline object describing a render pipeline.
 
         Params:
@@ -278,7 +347,14 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('devicecreaterenderbundleencoder', 'RenderBundleEncoderDescriptor', dev=True)
     # IDL: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
-    def createRenderBundleEncoder(self, *, label="", colorFormats: 'GPUTextureFormat-list', depthStencilFormat: 'GPUTextureFormat', sampleCount: int=1):
+    def createRenderBundleEncoder(
+        self,
+        *,
+        label="",
+        colorFormats: "GPUTextureFormat-list",
+        depthStencilFormat: "GPUTextureFormat",
+        sampleCount: int = 1,
+    ):
         raise NotImplementedError()
 
     # todo: or should we create a Qt widget wrapper thingy?
@@ -377,7 +453,18 @@ class GPUTexture(GPUObject):
 
     # wgpu.help('texturecreateview', 'TextureViewDescriptor', dev=True)
     # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {});
-    def createView(self, *, label="", format: 'GPUTextureFormat', dimension: 'GPUTextureViewDimension', aspect: 'GPUTextureAspect'="all", baseMipLevel: int=0, mipLevelCount: int=0, baseArrayLayer: int=0, arrayLayerCount: int=0):
+    def createView(
+        self,
+        *,
+        label="",
+        format: "GPUTextureFormat",
+        dimension: "GPUTextureViewDimension",
+        aspect: "GPUTextureAspect" = "all",
+        baseMipLevel: int = 0,
+        mipLevelCount: int = 0,
+        baseArrayLayer: int = 0,
+        arrayLayerCount: int = 0,
+    ):
         raise NotImplementedError()
 
     # wgpu.help('texturedestroy', dev=True)
@@ -457,7 +544,13 @@ class GPUCommandEncoder(GPUObject):
 
     # wgpu.help('commandencoderbeginrenderpass', 'RenderPassDescriptor', dev=True)
     # IDL: GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor);
-    def beginRenderPass(self, *, label="", colorAttachments: 'GPURenderPassColorAttachmentDescriptor-list', depthStencilAttachment: 'GPURenderPassDepthStencilAttachmentDescriptor'):
+    def beginRenderPass(
+        self,
+        *,
+        label="",
+        colorAttachments: "GPURenderPassColorAttachmentDescriptor-list",
+        depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor",
+    ):
         raise NotImplementedError()
 
     # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
@@ -510,7 +603,14 @@ class GPUProgrammablePassEncoder(GPUObject):
 
     # wgpu.help('programmablepassencodersetbindgroup', 'BindGroup', dev=True)
     # IDL: void setBindGroup(unsigned long index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  unsigned long long dynamicOffsetsDataStart,  unsigned long long dynamicOffsetsDataLength);
-    def setBindGroup(self, index, bindGroup, dynamicOffsetsData, dynamicOffsetsDataStart, dynamicOffsetsDataLength):
+    def setBindGroup(
+        self,
+        index,
+        bindGroup,
+        dynamicOffsetsData,
+        dynamicOffsetsDataStart,
+        dynamicOffsetsDataLength,
+    ):
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
