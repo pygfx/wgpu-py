@@ -18,6 +18,7 @@ from py2spirv import python2spirv  # This is not yet a public library
 
 # Pick either PyQt5 or Pyside2
 from PyQt5 import QtWidgets
+
 # from PySide2 import QtWidgets
 
 app = QtWidgets.QApplication([])
@@ -37,11 +38,7 @@ def vertex_shader(input, output):
     output.define("pos", "Position", vec4)
     output.define("color", 0, vec3)
 
-    positions = [
-        vec2(+0.0, -0.5),
-        vec2(+0.5, +0.5),
-        vec2(-0.5, +0.7),
-    ]
+    positions = [vec2(+0.0, -0.5), vec2(+0.5, +0.5), vec2(-0.5, +0.7)]
 
     p = positions[input.index]
     output.pos = vec4(p, 0.0, 1.0)
@@ -75,17 +72,27 @@ render_pipeline = device.createRenderPipeline(
     vertexStage={"module": vshader, "entryPoint": "main"},
     fragmentStage={"module": fshader, "entryPoint": "main"},
     primitiveTopology=wgpu.PrimitiveTopology.triangle_list,
-    rasterizationState={"frontFace": wgpu.FrontFace.ccw,
-                        "cullMode": wgpu.CullMode.none,
-                        "depthBias": 0,
-                        "depthBiasSlopeScale": 0.0,
-                        "depthBiasClamp": 0.0,
+    rasterizationState={
+        "frontFace": wgpu.FrontFace.ccw,
+        "cullMode": wgpu.CullMode.none,
+        "depthBias": 0,
+        "depthBiasSlopeScale": 0.0,
+        "depthBiasClamp": 0.0,
     },
     colorStates=[
-        {"format": wgpu.TextureFormat.bgra8unorm_srgb,
-         "alphaBlend": (wgpu.BlendFactor.one, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
-         "colorBlend":(wgpu.BlendFactor.one, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
-         "writeMask": wgpu.ColorWrite.ALL
+        {
+            "format": wgpu.TextureFormat.bgra8unorm_srgb,
+            "alphaBlend": (
+                wgpu.BlendFactor.one,
+                wgpu.BlendFactor.zero,
+                wgpu.BlendOperation.add,
+            ),
+            "colorBlend": (
+                wgpu.BlendFactor.one,
+                wgpu.BlendFactor.zero,
+                wgpu.BlendOperation.add,
+            ),
+            "writeMask": wgpu.ColorWrite.ALL,
         }
     ],
     depthStencilState=None,
@@ -113,13 +120,14 @@ def drawFrame():
 
     render_pass = command_encoder.beginRenderPass(
         colorAttachments=[
-            {"attachment": current_texture_view,
-             "resolveTarget": None,
-             "loadValue": (0, 0, 0, 1), # LoadOp.load or color
-             "storeOp": wgpu.StoreOp.store,
-            },
+            {
+                "attachment": current_texture_view,
+                "resolveTarget": None,
+                "loadValue": (0, 0, 0, 1),  # LoadOp.load or color
+                "storeOp": wgpu.StoreOp.store,
+            }
         ],
-        depthStencilAttachment=None
+        depthStencilAttachment=None,
     )
 
     render_pass.setPipeline(render_pipeline)
@@ -135,10 +143,12 @@ def drawFrame():
 
 # wgpu.requestAnimationFrame(drawFrame)
 
+
 async def drawer():
     while True:
         await asyncio.sleep(0.1)
         # print("draw")
         drawFrame()
+
 
 asyncio.get_event_loop().create_task(drawer())

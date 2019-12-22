@@ -137,7 +137,11 @@ def help(*searches, dev=False):
                     if attr_name.startswith("_") or not callable(attr):
                         continue
                     funcname = cls.__name__ + "." + attr_name
-                    sig = str(inspect.signature(attr)).replace("self, ", "").replace("(self)", "()")
+                    sig = (
+                        str(inspect.signature(attr))
+                        .replace("self, ", "")
+                        .replace("(self)", "()")
+                    )
                     func_id = funcname.replace(".", "").lower()
                     if name_part_f in func_id or name_part_f in sig.lower():
                         lines.append(funcname + sig)
@@ -198,7 +202,6 @@ def help(*searches, dev=False):
             #     for field in d.values():
             #         if name_part in field.name.lower() or name_part in field.typename.lower():
             #             items["structs"].append(name + "." + field.py_arg())
-
 
     # Display
     for title, lines in all_lines:

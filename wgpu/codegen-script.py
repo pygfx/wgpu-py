@@ -20,7 +20,12 @@ from _parsers import IdlParser, HParser
 
 
 def blacken(src, ll=88):
-    p = subprocess.Popen(["black", "-l", str(ll), "-"], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(
+        ["black", "-l", str(ll), "-"],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
     p.stdin.write(src.encode())
     p.stdin.close()
     result = p.stdout.read().decode()
