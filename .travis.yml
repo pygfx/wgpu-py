@@ -5,7 +5,6 @@ matrix:
       compiler: gcc
       dist: xenial
       language: rust
-      sudo: false
     - os: windows
       rust: nightly
       language: rust
@@ -33,7 +32,6 @@ script:
   - git clone https://github.com/gfx-rs/wgpu.git wgpu-native
   - cd wgpu-native
   - git checkout v0.4
-  - cargo test
   # TODO: enable GL backend
   - (cd wgpu-core && cargo check --all-features)
   - if [[ $TRAVIS_OS_NAME == "osx" ]]; then (cd wgpu-native && cargo check --features vulkan-portability); fi
@@ -51,4 +49,4 @@ script:
       export CMAKE_PREFIX_PATH=$GLFW3_INSTALL_DIR &&
       make example-compute example-triangle VERBOSE=1;
     fi
-  - if [[ $TRAVIS_RUST_VERSION == "nightly" ]] && [[ $TRAVIS_OS_NAME != "windows" ]]; then make VERBOSE=1; fi
+  - make lib-native ffi/wgpu.h VERBOSE=1;
