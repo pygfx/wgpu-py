@@ -1,8 +1,6 @@
 language: python
 python:
     - "3.6"
-    - "3.7"
-    - "3.8"
 
 deploy:
     provider: releases
@@ -25,7 +23,13 @@ matrix:
       compiler: clang
 
 install:
+  # ensure recent versions of setuptools
   - python -m pip install -U setuptools wheel pip
 
 script:
+  # test if we can still build
   - python setup.py bdist_wheel
+  # install in development-mode
+  - python setup.py develop
+  # tests
+  - python -c 'import wgpu'  # stub
