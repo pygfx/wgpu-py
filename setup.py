@@ -5,7 +5,7 @@ from setuptools import find_packages, setup
 
 NAME = "wgpu"
 
-with open(f"{NAME}/__version__.py") as fh:
+with open(f"{NAME}/__init__.py") as fh:
     VERSION = re.search(r"__version__ = \"(.*?)\"", fh.read()).group(1)
 
 
