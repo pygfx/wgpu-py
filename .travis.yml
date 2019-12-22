@@ -4,6 +4,16 @@ python:
     - "3.7"
     - "3.8"
 
+deploy:
+    provider: releases
+    api_key: "GITHUB OAUTH TOKEN"
+    file_glob: true
+    file: dist/*.whl
+    skip_cleanup: true
+    draft: true
+    on:
+        tags: true
+
 matrix:
   include:
     - os: linux
