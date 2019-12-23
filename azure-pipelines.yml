@@ -60,7 +60,7 @@ jobs:
       testResultsFiles: results.xml
       mergeTestResults: true
       failTaskOnFailedTests: true
-      testRunTitle: Test
+      testRunTitle: Test $(vmImage)
   - task: Bash@3
     displayName: Packaged test
     inputs:
