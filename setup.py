@@ -4,6 +4,7 @@ from setuptools import find_packages, setup
 
 
 NAME = "wgpu"
+SUMMARY_LINE = 4  # summary line nr in README.md to use as short description
 
 with open(f"{NAME}/__init__.py") as fh:
     VERSION = re.search(r"__version__ = \"(.*?)\"", fh.read()).group(1)
@@ -28,7 +29,7 @@ setup(
     },
     python_requires=">=3.6.0",
     license=open("LICENSE").read(),
-    description=open("README.md").readlines()[2],
+    description=open("README.md").readlines()[SUMMARY_LINE],
     long_description=open("README.md").read(),
     long_description_content_type='text/markdown',
     author="Almar Klein",

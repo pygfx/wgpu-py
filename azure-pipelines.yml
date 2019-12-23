@@ -1,6 +1,9 @@
 trigger:
 - master
 
+variables:
+  NAME: wgpu
+
 jobs:
 - job: Build
   strategy:
@@ -31,13 +34,14 @@ jobs:
     inputs:
       targetType: inline
       script: |
-        black --check
+        black --check $NAME
   - task: Bash@3
     displayName: Build wheel and install in development mode
     inputs:
       targetType: inline
       script: |
-        python setup.py bdist_wheel develop
+        python setup.py develop
+        python setup.py bdist_wheel
   - task: Bash@3
     displayName: Test
     inputs:
@@ -67,7 +71,7 @@ jobs:
         cp dist/*.whl ../pkgtest/.
         cd ../pkgtest
         pip install *.whl
-        python -c "import wgpu"
+        python -c "import $NAME"
   - task: PublishBuildArtifacts@1
     displayName: Publish package artifact
     inputs:
