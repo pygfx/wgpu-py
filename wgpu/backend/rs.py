@@ -14,10 +14,10 @@ import ctypes
 
 from cffi import FFI
 
-from . import classes
-from . import _register_backend
-from .utils import get_resource_filename
-from ._mappings import cstructfield2enum, enummap
+from .. import classes
+from .. import _register_backend
+from ..utils import get_resource_filename
+from .._mappings import cstructfield2enum, enummap
 
 
 os.environ["RUST_BACKTRACE"] = "0"  # Set to 1 for more trace info

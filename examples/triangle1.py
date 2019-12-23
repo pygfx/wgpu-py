@@ -123,8 +123,8 @@ async def main(canvas):
 import asyncio
 
 from PyQt5 import QtWidgets  # Use either PyQt5 or Pyside2
-import wgpu.gui.qt
-import wgpu.rs  # Select Rust backend
+import wgpu.gui.qt  # Use Qt as a GUI
+import wgpu.backend.rs  # Select Rust backend
 
 
 app = QtWidgets.QApplication([])

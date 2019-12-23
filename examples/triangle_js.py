@@ -124,8 +124,8 @@ async def main(canvas):
 # %% Create the canvas and run - JS backend
 
 from flexx import flx
-import wgpu.gui.flexx
-import wgpu.js  # Select JS backend
+import wgpu.gui.flexx  # Use Flexx as a GUI
+import wgpu.backend.js  # Select JS backend
 
 
 class Example(flx.Widget):

@@ -6,7 +6,7 @@ descriptors are arguments, this API can probably be fully automatically
 generated.
 """
 
-from . import _register_backend
+from .. import _register_backend
 
 global window
 
