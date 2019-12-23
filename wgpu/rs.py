@@ -15,7 +15,7 @@ from cffi import FFI
 
 from . import classes
 from . import _register_backend
-from .utils import get_resource_dir
+from .utils import get_resource_filename
 from ._mappings import cstructfield2enum, enummap
 
 
@@ -23,7 +23,7 @@ os.environ["RUST_BACKTRACE"] = "0"  # Set to 1 for more trace info
 
 # Read header file and strip some stuff that cffi would stumble on
 lines = []
-with open(os.path.join(get_resource_dir(), "wgpu.h")) as f:
+with open(get_resource_filename("wgpu.h")) as f:
     for line in f.readlines():
         if not line.startswith(
             (
@@ -44,7 +44,7 @@ ffi.cdef("".join(lines))
 ffi.set_source("wgpu.h", None)
 
 # Load the dynamic library
-_lib = ffi.dlopen(os.path.join(get_resource_dir(), "wgpu_native-debug.dll"))
+_lib = ffi.dlopen(get_resource_filename("wgpu_native-debug.dll"))
 
 
 def new_struct(ctype, **kwargs):
