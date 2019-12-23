@@ -110,7 +110,7 @@ jobs:
   - task: GithubRelease@0
     displayName: GitHub Release
     inputs:
-      gitHubConnection: korijn-github-release
+      gitHubConnection: github.com_Korijn
       repositoryName: 'Korijn/wgpu-py'
       tagSource: 'Git tag'
       assets: '*.whl'
