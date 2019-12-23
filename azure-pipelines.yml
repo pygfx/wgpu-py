@@ -91,7 +91,7 @@ jobs:
       artifactName: wheels
 - job: Release
   dependsOn: Build
-  condition: succeeded()
+  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
   pool:
     vmImage: ubuntu-16.04
   steps:
