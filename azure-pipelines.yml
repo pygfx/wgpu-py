@@ -85,10 +85,10 @@ jobs:
       failTaskOnFailedTests: true
       testRunTitle: Test $(vmImage) (packaged)
   - task: PublishBuildArtifacts@1
-    displayName: Publish package artifact
+    displayName: Publish wheels
     inputs:
       pathtoPublish: dist
-      artifactName: $(vmImage)-wheel
+      artifactName: wheels
 - job: Release
   dependsOn: Build
   condition: succeeded()
@@ -99,10 +99,19 @@ jobs:
   - task: DownloadBuildArtifacts@0
     displayName: Download wheels
     inputs:
-      downloadPath: .
+      artifactName: wheels
+      downloadPath: dist
   - task: Bash@3
     displayName: Test (packaged)
     inputs:
       targetType: inline
       script: |
         ls -la
+  - task: GithubRelease@0
+    displayName: GitHub Release
+    inputs:
+      gitHubConnection: almarklein
+      repositoryName: almarklein/wgpu-py
+      assets: *.whl
+      isDraft: true
+      assetUploadMode: replace
