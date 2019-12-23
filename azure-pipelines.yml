@@ -47,7 +47,7 @@ jobs:
     inputs:
       targetType: inline
       script: |
-        pipenv run pytest --disable-warnings --junit-xml=results.xml || true
+        pytest --disable-warnings --junit-xml=results.xml || true
 
         # Fail the task if results.xml was not created
         if [[ ! -f results.xml ]]
