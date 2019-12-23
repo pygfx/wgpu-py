@@ -111,7 +111,8 @@ jobs:
     displayName: GitHub Release
     inputs:
       gitHubConnection: korijn-github-release
-      repositoryName: Korijn/wgpu-py
+      repositoryName: 'Korijn/wgpu-py'
+      tagSource: 'Git tag'
       assets: '*.whl'
       isDraft: true
       assetUploadMode: replace
