@@ -10,6 +10,8 @@ from . import classes as m_classes, flags as m_flags, enums as m_enums
 
 
 def get_resource_filename(name):
+    """ Get the filename to a wgpu resource.
+    """
     return resource_filename("wgpu.resources", name)
 
 
