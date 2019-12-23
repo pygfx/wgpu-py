@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 
 
 NAME = "wgpu"
-SUMMARY_LINE = 4  # summary line nr in README.md to use as short description
+SUMMARY = "Next generation GPU API for Python"
 
 with open(f"{NAME}/__init__.py") as fh:
     VERSION = re.search(r"__version__ = \"(.*?)\"", fh.read()).group(1)
@@ -29,11 +29,11 @@ setup(
     package_data={f"{NAME}.resources": ["*.dll", "*.so", "*.dylib", "*.h", "*.idl"]},
     python_requires=">=3.6.0",
     license=open("LICENSE").read(),
-    description=open("README.md").readlines()[SUMMARY_LINE],
+    description=SUMMARY,
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="Almar Klein",
-    author_email="almarklein@gmail.com",
+    author_email="almar.klein@gmail.com",
     url="https://github.com/almarklein/wgpu-py",
     cmdclass={"bdist_wheel": bdist_wheel},
 )
