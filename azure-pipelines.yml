@@ -95,14 +95,22 @@ jobs:
   pool:
     vmImage: ubuntu-16.04
   steps:
-  - checkout: none
+  - task: Bash@3
+    displayName: Check git tag
+    inputs:
+      targetType: inline
+      script: |
+        TAGS=$(git describe --tags)
+        echo "##vso[task.setvariable variable=TAGS]$TAGS"
   - task: DownloadBuildArtifacts@0
     displayName: Download wheels
+    condition: and(succeeded(), neq(variables['TAGS'], ''))
     inputs:
       artifactName: wheels
       downloadPath: .
   - task: GithubRelease@1
     displayName: GitHub Release
+    condition: and(succeeded(), neq(variables['TAGS'], ''))
     inputs:
       gitHubConnection: github.com_Korijn
       repositoryName: 'Korijn/wgpu-py'
@@ -112,16 +120,19 @@ jobs:
       assetUploadMode: replace
   - task: Bash@3
     displayName: Install twine
+    condition: and(succeeded(), neq(variables['TAGS'], ''))
     inputs:
       targetType: inline
       script: |
         python -m pip install -U pip setuptools wheel twine
-  - task: TwineAuthenticate@0
+  - task: TwineAuthenticate@1
     displayName: Authenticate with PyPI
+    condition: and(succeeded(), neq(variables['TAGS'], ''))
     inputs:
       pythonUploadServiceConnection: pypi
   - task: Bash@3
     displayName: Upload wheels to PyPI
+    condition: and(succeeded(), neq(variables['TAGS'], ''))
     inputs:
       targetType: inline
       script: |
