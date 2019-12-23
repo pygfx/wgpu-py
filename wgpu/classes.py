@@ -357,12 +357,8 @@ class GPUDevice(GPUObject):
     ):
         raise NotImplementedError()
 
-    # todo: or should we create a Qt widget wrapper thingy?
-    def configureSwapChainQt(self, *, surface, format, usage):
-        """ Configure the swap chain for the given Qt widget, and returns a
-        new GPUSwapChain object representing it. Destroys any swapchain
-        previously returned by configureSwapChain, including all of the
-        textures it has produced.
+    def _gui_configureSwapChain(self, canvas, format, usage):
+        """ Get a swapchain object from a canvas object. Called by BaseCanvas.
         """
         raise NotImplementedError()
 

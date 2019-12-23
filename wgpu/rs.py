@@ -9,6 +9,7 @@ header file to do most type conversions for us.
 """
 
 import os
+import sys
 import ctypes
 
 from cffi import FFI
@@ -60,6 +61,21 @@ def new_struct(ctype, **kwargs):
         else:
             setattr(struct, key, val)
     return struct
+
+
+def get_surface_id_from_win_id(win_id):
+    if sys.platform.startswith("win"):
+        # Use create_surface_from_windows_hwnd
+        hwnd = ffi.cast("void *", int(win_id))
+        hinstance = ffi.NULL
+        return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
+    elif sys.platform.startswith("linux"):
+        # Use create_surface_from_xlib
+        raise NotImplementedError("Linux")
+    elif sys.platform.startswith("darwin"):
+        # Use create_surface_from_metal_layer
+        raise NotImplementedError("OS-X")
+    raise RuntimeError("Cannot get surface id: unsupported platform")
 
 
 # %% The API
@@ -447,44 +463,11 @@ class GPUDevice(classes.GPUDevice):
         id = _lib.wgpu_device_create_command_encoder(self._internal, struct)
         return GPUCommandEncoder(label, id, self)
 
-    def configureSwapChainQt(self, *, label="", surface, format, usage):
-        """ Get a swapchain object from a Qt widget.
+    def _gui_configureSwapChain(self, canvas, format, usage):
+        """ Get a swapchain object from a canvas object. Called by BaseCanvas.
         """
-        # Note: surface is a Qt Widget object
-
-        import sys
-
-        if sys.platform.startswith("win"):
-            # Use create_surface_from_windows_hwnd
-            # todo: factor this line out into a gui.py or something
-            hwnd = ffi.cast("void *", int(surface.winId()))
-            hinstance = ffi.NULL
-            surface_id = _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
-
-        elif sys.platform.startswith("linux"):
-            # Use create_surface_from_xlib
-            raise NotImplementedError("Linux")
-
-        elif sys.platform.startswith("darwin"):
-            # Use create_surface_from_metal_layer
-            raise NotImplementedError("OS-X")
-
-        else:
-            raise RuntimeError("Unsupported platform")
-
-        struct = new_struct(
-            "WGPUSwapChainDescriptor *",
-            usage=usage,
-            format=format,
-            width=surface.width(),
-            height=surface.height(),
-            present_mode=1,
-        )  # vsync or not vsync
-
-        # todo: safe surface id somewhere
-        # todo: maybe move this stuff into the swap chain class, so we can ce-create on resize and all that
-        id = _lib.wgpu_device_create_swap_chain(self._internal, surface_id, struct)
-        return GPUSwapChain(label, id, self)
+        # Note: canvas should implement the BaseCanvas interface.
+        return GPUSwapChain(self, canvas, format, usage)
 
 
 class GPUBuffer(classes.GPUBuffer):
@@ -770,9 +753,43 @@ class GPUQueue(classes.GPUQueue):
 
 
 class GPUSwapChain(classes.GPUSwapChain):
+    def __init__(self, device, canvas, format, usage):
+        super().__init__("", None, device)
+        self._canvas = canvas
+        self._format = format
+        self._usage = usage
+        self._surface_size = (-1, -1)
+        self._surface_id = None
+        self._create_native_swapchain_if_needed()
+
+    def _create_native_swapchain_if_needed(self):
+        cur_size = self._canvas.getSizeAndPixelRatio()  # width, height, ratio
+        if cur_size == self._surface_size:
+            return
+
+        self._surface_size = cur_size
+
+        struct = new_struct(
+            "WGPUSwapChainDescriptor *",
+            usage=self._usage,
+            format=self._format,
+            width=cur_size[0],
+            height=cur_size[1],
+            present_mode=1,  # vsync or not vsync
+        )
+
+        if self._surface_id is None:
+            win_id = self._canvas.getWindowId()
+            self._surface_id = get_surface_id_from_win_id(win_id)
+
+        self._internal = _lib.wgpu_device_create_swap_chain(
+            self._device._internal, self._surface_id, struct  # noqa - device-id
+        )
+
     def getCurrentTextureView(self):
         # todo: should we cache instances (on their id)?
         # otherwise we have multiple instances mapping to same internal texture
+        self._create_native_swapchain_if_needed()
         swapChainOutput = _lib.wgpu_swap_chain_get_next_texture(self._internal)
         return classes.GPUTextureView("swapchain", swapChainOutput.view_id, self)
 

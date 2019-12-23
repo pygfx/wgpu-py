@@ -1,12 +1,10 @@
 """
-Example use of webgpu API to draw a triangle.
+Hypothetical example for a visualization to be converted to JS.
 
-Similar example in other languages / API's:
+DOES NOT WORK YET. THIS IS MOSTLY TO GET AN IMPRESSION OF HOW IT COULD WORK.
 
-* Rust wgpu: https://github.com/gfx-rs/wgpu-rs/blob/master/examples/hello-triangle/main.rs
-* C wgpu: https://github.com/gfx-rs/wgpu/blob/master/examples/triangle/main.c
-* Python Vulkan: https://github.com/realitix/vulkan/blob/master/example/contribs/example_glfw.py
-
+This example uses Flexx to collect and compile the Python code to JS modules,
+and provide a HTML5 canvas without having to write HTML.
 """
 
 
@@ -36,7 +34,12 @@ def fragment_shader(input, output):
     output.color = vec4(input.color, 1.0)
 
 
-# %% The wgpu calls
+# todo: how to serialize the shaders? base64 or via a custom hook?
+vertex_shader = "something that flexx can serialize"
+fragment_shader = "something that flexx can serialize"
+
+
+# %% The wgpu calls - exact same code as in triangle1.py
 
 
 async def main(canvas):
@@ -118,33 +121,22 @@ async def main(canvas):
     canvas.setDrawFunction(drawFrame)
 
 
-# %% Create the canvas and run - Rust backend + Qt
+# %% Create the canvas and run - JS backend
 
-import asyncio
-
-from PyQt5 import QtWidgets  # Use either PyQt5 or Pyside2
-import wgpu.gui.qt
-import wgpu.rs  # Select Rust backend
+from flexx import flx
+import wgpu.gui.flexx
+import wgpu.js  # Select JS backend
 
 
-app = QtWidgets.QApplication([])
-canvas = wgpu.gui.qt.QGpuWidget(None)  # a QWidget
-canvas.resize(640, 480)
-canvas.setWindowTitle("Python wgpu triangle")
-canvas.show()
-
-# This is a simple way to integrate Qt's event loop with asyncio, but for real
-# apps you probably want to use something like the qasync library.
-async def mainLoop():
-    while canvas.isVisible():
-        await asyncio.sleep(0.01)
-        app.flush()
-        app.processEvents()
-    asyncio.get_event_loop().stop()
+class Example(flx.Widget):
+    def init(self):
+        # All of this gets executed in JS
+        super().init()
+        with flx.HBox():
+            self.canvas = wgpu.gui.flexx.GpuWidget()
+        main(self.canvas)
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(main(canvas))
-    loop.create_task(mainLoop())
-    loop.run_forever()
+    m = flx.launch(Example, "chrome-browser")
+    flx.run()

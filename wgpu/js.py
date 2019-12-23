@@ -1,16 +1,12 @@
 """
 Stub WGPU backend implementation based on JS WebGPU API.
 
-If we manage to make our API (the method and attributes of the classes,
-and enum and flag values) the same as WebGPU, then this should be all
-we need to make vizualizations PScript-able.
-
-If our API does deviate (for some reason), we need to write a thin
-wrapper here. Also ok, but more work to write / maintain.
+Since the exposed Python API is the same as the JS API, except that
+descriptors are arguments, this API can probably be fully automatically
+generated.
 """
 
 from . import _register_backend
-
 
 global window
 
