@@ -110,3 +110,19 @@ jobs:
       isDraft: true
       addChangeLog: false
       assetUploadMode: replace
+  - task: Bash@3
+    displayName: Install twine
+    inputs:
+      targetType: inline
+      script: |
+        python -m pip install -U pip setuptools wheel twine
+  - task: TwineAuthenticate@0
+    displayName: Authenticate with PyPI
+    inputs:
+      pythonUploadServiceConnection: pypi
+  - task: Bash@3
+    displayName: Upload wheels to PyPI
+    inputs:
+      targetType: inline
+      script: |
+        twine upload -r "pypi" --config-file $(PYPIRC_PATH) wheels/*.whl
