@@ -112,6 +112,6 @@ jobs:
     inputs:
       gitHubConnection: almarklein
       repositoryName: almarklein/wgpu-py
-      assets: *.whl
+      assets: '*.whl'
       isDraft: true
       assetUploadMode: replace
