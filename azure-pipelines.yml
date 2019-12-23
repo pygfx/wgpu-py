@@ -100,19 +100,12 @@ jobs:
     displayName: Download wheels
     inputs:
       artifactName: wheels
-      downloadPath: dist
-  - task: Bash@3
-    displayName: Test (packaged)
-    inputs:
-      targetType: inline
-      script: |
-        ls -la
-  - task: GithubRelease@0
+      downloadPath: .
+  - task: GithubRelease@1
     displayName: GitHub Release
     inputs:
       gitHubConnection: github.com_Korijn
       repositoryName: 'Korijn/wgpu-py'
-      tagSource: 'Git tag'
-      assets: '*.whl'
+      assets: 'wheels/*.whl'
       isDraft: true
       assetUploadMode: replace
