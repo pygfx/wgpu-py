@@ -75,5 +75,5 @@ jobs:
   - task: PublishBuildArtifacts@1
     displayName: Publish package artifact
     inputs:
-      pathtoPublish: dist/*
+      pathtoPublish: dist
       artifactName: $(vmImage)-wheel
