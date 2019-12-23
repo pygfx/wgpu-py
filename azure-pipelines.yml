@@ -108,4 +108,5 @@ jobs:
       repositoryName: 'Korijn/wgpu-py'
       assets: 'wheels/*.whl'
       isDraft: true
+      addChangeLog: false
       assetUploadMode: replace
