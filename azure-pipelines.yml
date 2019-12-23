@@ -68,7 +68,6 @@ jobs:
       script: |
         python setup.py develop --uninstall
         rm -rf ./wgpu ./build ./egg-info
-        cd ../pkgtest
         pip install dist/*.whl
         pytest --disable-warnings --junit-xml=results-packaged.xml || true
 
