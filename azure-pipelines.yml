@@ -112,8 +112,8 @@ jobs:
     displayName: GitHub Release
     condition: and(succeeded(), neq(variables['TAGS'], ''))
     inputs:
-      gitHubConnection: github.com_Korijn
-      repositoryName: 'Korijn/wgpu-py'
+      gitHubConnection: github.com_almarklein
+      repositoryName: 'almarklein/wgpu-py'
       assets: 'wheels/*.whl'
       isDraft: true
       addChangeLog: false
