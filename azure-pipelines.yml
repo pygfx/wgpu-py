@@ -89,3 +89,20 @@ jobs:
     inputs:
       pathtoPublish: dist
       artifactName: $(vmImage)-wheel
+- job: Release
+  dependsOn: Build
+  condition: succeeded()
+  pool:
+    vmImage: ubuntu-16.04
+  steps:
+  - checkout: none
+  - task: DownloadBuildArtifacts@0
+    displayName: Download wheels
+    inputs:
+      downloadPath: .
+  - task: Bash@3
+    displayName: Test (packaged)
+    inputs:
+      targetType: inline
+      script: |
+        ls -la

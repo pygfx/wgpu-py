@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/korijn/wgpu-py/_apis/build/status/Korijn.wgpu-py?branchName=master)](https://dev.azure.com/korijn/wgpu-py/_build/latest?definitionId=1&branchName=master)
+[![Build Status](https://dev.azure.com/almarklein/wgpu-py/_apis/build/status/almarklein.wgpu-py?branchName=master)](https://dev.azure.com/almarklein/wgpu-py/_build/latest?definitionId=1&branchName=master)
 
 # wgpu-py
 
