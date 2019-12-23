@@ -98,7 +98,7 @@ def get_surface_id_from_win_id(win_id):
 
 # wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-async def requestAdapter(powerPreference: "enum PowerPreference"):
+async def requestAdapter(*, powerPreference: "GPUPowerPreference"):
     """ Request an GPUAdapter, the object that represents the implementation of WGPU.
     This function uses the Rust WGPU library.
 
@@ -635,7 +635,7 @@ class GPUProgrammablePassEncoder(classes.GPUProgrammablePassEncoder):
 
     # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
     # IDL: void pushDebugGroup(DOMString groupLabel);
-    def pushDebugGroup(self):
+    def pushDebugGroup(self, groupLabel):
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
@@ -645,7 +645,7 @@ class GPUProgrammablePassEncoder(classes.GPUProgrammablePassEncoder):
 
     # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
     # IDL: void insertDebugMarker(DOMString markerLabel);
-    def insertDebugMarker(self):
+    def insertDebugMarker(self, markerLabel):
         raise NotImplementedError()
 
 
@@ -655,17 +655,17 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
 
     # wgpu.help('computepassencodersetpipeline', 'ComputePipeline', dev=True)
     # IDL: void setPipeline(GPUComputePipeline pipeline);
-    def setPipeline(self):
+    def setPipeline(self, pipeline):
         raise NotImplementedError()
 
     # wgpu.help('computepassencoderdispatch', dev=True)
     # IDL: void dispatch(unsigned long x, optional unsigned long y = 1, optional unsigned long z = 1);
-    def dispatch(self):
+    def dispatch(self, x, y, z):
         raise NotImplementedError()
 
     # wgpu.help('computepassencoderdispatchindirect', 'Buffer', 'BufferSize', dev=True)
     # IDL: void dispatchIndirect(GPUBuffer indirectBuffer, GPUBufferSize indirectOffset);
-    def dispatchIndirect(self):
+    def dispatchIndirect(self, indirectBuffer, indirectOffset):
         raise NotImplementedError()
 
     # wgpu.help('computepassencoderendpass', dev=True)
@@ -686,12 +686,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('renderencoderbasesetindexbuffer', 'Buffer', 'BufferSize', dev=True)
     # IDL: void setIndexBuffer(GPUBuffer buffer, optional GPUBufferSize offset = 0);
-    def setIndexBuffer(self):
+    def setIndexBuffer(self, buffer, offset):
         raise NotImplementedError()
 
     # wgpu.help('renderencoderbasesetvertexbuffer', 'Buffer', 'BufferSize', dev=True)
     # IDL: void setVertexBuffer(unsigned long slot, GPUBuffer buffer, optional GPUBufferSize offset = 0);
-    def setVertexBuffer(self):
+    def setVertexBuffer(self, slot, buffer, offset):
         raise NotImplementedError()
 
     # wgpu.help('renderencoderbasedraw', dev=True)
@@ -703,17 +703,19 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('renderencoderbasedrawindirect', 'Buffer', 'BufferSize', dev=True)
     # IDL: void drawIndirect(GPUBuffer indirectBuffer, GPUBufferSize indirectOffset);
-    def drawIndirect(self):
+    def drawIndirect(self, indirectBuffer, indirectOffset):
         raise NotImplementedError()
 
     # wgpu.help('renderencoderbasedrawindexed', dev=True)
     # IDL: void drawIndexed(unsigned long indexCount, unsigned long instanceCount,  unsigned long firstIndex, long baseVertex, unsigned long firstInstance);
-    def drawIndexed(self):
+    def drawIndexed(
+        self, indexCount, instanceCount, firstIndex, baseVertex, firstInstance
+    ):
         raise NotImplementedError()
 
     # wgpu.help('renderencoderbasedrawindexedindirect', 'Buffer', 'BufferSize', dev=True)
     # IDL: void drawIndexedIndirect(GPUBuffer indirectBuffer, GPUBufferSize indirectOffset);
-    def drawIndexedIndirect(self):
+    def drawIndexedIndirect(self, indirectBuffer, indirectOffset):
         raise NotImplementedError()
 
 
@@ -726,27 +728,27 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
 
     # wgpu.help('renderpassencodersetviewport', dev=True)
     # IDL: void setViewport(float x, float y,  float width, float height,  float minDepth, float maxDepth);
-    def setViewport(self):
+    def setViewport(self, x, y, width, height, minDepth, maxDepth):
         raise NotImplementedError()
 
     # wgpu.help('renderpassencodersetscissorrect', dev=True)
     # IDL: void setScissorRect(unsigned long x, unsigned long y, unsigned long width, unsigned long height);
-    def setScissorRect(self):
+    def setScissorRect(self, x, y, width, height):
         raise NotImplementedError()
 
     # wgpu.help('renderpassencodersetblendcolor', 'Color', dev=True)
     # IDL: void setBlendColor(GPUColor color);
-    def setBlendColor(self):
+    def setBlendColor(self, color):
         raise NotImplementedError()
 
     # wgpu.help('renderpassencodersetstencilreference', dev=True)
     # IDL: void setStencilReference(unsigned long reference);
-    def setStencilReference(self):
+    def setStencilReference(self, reference):
         raise NotImplementedError()
 
     # wgpu.help('renderpassencoderexecutebundles', dev=True)
     # IDL: void executeBundles(sequence<GPURenderBundle> bundles);
-    def executeBundles(self):
+    def executeBundles(self, bundles):
         raise NotImplementedError()
 
     # wgpu.help('renderpassencoderendpass', dev=True)
@@ -790,16 +792,16 @@ class GPUSwapChain(classes.GPUSwapChain):
             format=self._format,
             width=cur_size[0],
             height=cur_size[1],
-            present_mode=1,  # vsync or not vsync
-        )
+            present_mode=1,
+        )  # vsync or not vsync
 
         if self._surface_id is None:
             win_id = self._canvas.getWindowId()
             self._surface_id = get_surface_id_from_win_id(win_id)
 
         self._internal = _lib.wgpu_device_create_swap_chain(
-            self._device._internal, self._surface_id, struct  # noqa - device-id
-        )
+            self._device._internal, self._surface_id, struct
+        )  # noqa - device-id
 
     def getCurrentTextureView(self):
         # todo: should we cache instances (on their id)?

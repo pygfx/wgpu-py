@@ -16,7 +16,7 @@ Links:
 import os
 import subprocess
 
-from _parsers import IdlParser, HParser
+from wgpu._parsers import IdlParser, HParser
 
 
 def blacken(src, ll=88):
@@ -36,8 +36,8 @@ def blacken(src, ll=88):
 
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
-resource_dir = os.path.join(this_dir, "resources")
-lib_dir = this_dir
+lib_dir = os.path.join(this_dir, "wgpu")
+resource_dir = os.path.join(lib_dir, "resources")
 
 
 ip = IdlParser(open(os.path.join(resource_dir, "webgpu.idl"), "rb").read().decode())
@@ -243,12 +243,16 @@ with open(os.path.join(lib_dir, "_mappings.py"), "wb") as f:
     f.write(code.encode())
 print("Written to _mappings.py")
 
+# todo: compare backend implementation with classes.py
+# todo: some of these checks we may want to run in the tests
+# todo: some other stuff we may want to export as a report somewhere
+
 
 # %% Inject IDL into our hand-written source
 
 # ip.functions["requestAdapter"] = ip.functions.pop("requestadapter")
 
-for fname in ("classes.py", "rs.py"):
+for fname in ("classes.py", "backend/rs.py"):
     filename = os.path.join(lib_dir, fname)
     print(f"\n##### Check functions in {fname}")
 
@@ -289,18 +293,24 @@ for fname in ("classes.py", "rs.py"):
             pyline = api_lines[i]
             searches = [func_id]
             args = line.split("(", 1)[1].split(")", 1)[0].split(",")
+            argnames = [arg.split("=")[0].split()[-1] for arg in args if arg.strip()]
             argtypes = [arg.split("=")[0].split()[-2] for arg in args if arg.strip()]
             searches.extend([arg[3:] for arg in argtypes if arg.startswith("GPU")])
             searches = [f"'{x}'" for x in searches]
 
-            if len(argtypes) == 1 and argtypes[0].endswith("Descriptor"):
+            if len(argtypes) == 1 and argtypes[0].endswith(("Options", "Descriptor")):
                 assert argtypes[0].startswith("GPU")
                 arg_struct = ip.structs[argtypes[0][3:]]
                 py_args = [field.py_arg() for field in arg_struct.values()]
                 if py_args[0] == "label: str":
                     py_args[0] = 'label=""'
-                py_args.insert(0, "self")
-                py_args.insert(1, "*")
+                if "requestadapter" in func_id:  # todo:  if "." in func_id?
+                    py_args = ["*"] + py_args
+                else:
+                    py_args = ["self", "*"] + py_args
+                api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
+            else:
+                py_args = ["self"] + argnames
                 api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
 
             api_lines.insert(i, " " * indent + "# IDL: " + line)
