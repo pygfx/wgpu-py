@@ -22,30 +22,45 @@ from .._mappings import cstructfield2enum, enummap
 
 os.environ["RUST_BACKTRACE"] = "0"  # Set to 1 for more trace info
 
-# Read header file and strip some stuff that cffi would stumble on
-lines = []
-with open(get_resource_filename("wgpu.h")) as f:
-    for line in f.readlines():
-        if not line.startswith(
-            (
-                "#include ",
-                "#define WGPU_LOCAL",
-                "#define WGPUColor",
-                "#define WGPUOrigin3d_ZERO",
-                "#if defined",
-                "#endif",
-            )
-        ):
-            lines.append(line)
+
+def _get_wgpu_h():
+    # Read header file and strip some stuff that cffi would stumble on
+    lines = []
+    with open(get_resource_filename("wgpu.h")) as f:
+        for line in f.readlines():
+            if not line.startswith(
+                (
+                    "#include ",
+                    "#define WGPU_LOCAL",
+                    "#define WGPUColor",
+                    "#define WGPUOrigin3d_ZERO",
+                    "#if defined",
+                    "#endif",
+                )
+            ):
+                lines.append(line)
+    return "".join(lines)
 
 
-# Configure cffi
+def _get_wgpu_lib_path():
+    override_path = os.getenv("WGPU_LIB_PATH", "").strip()
+    embedded_path = get_resource_filename("wgpu_native.dll")
+
+    paths = []
+    for path in [override_path, embedded_path]:
+        if path:
+            paths.append(path)
+            if os.path.isfile(path):
+                return path
+    else:
+        raise RuntimeError(f"Could not find WGPU library, checked: {paths}")
+
+
+# Configure cffi and load the dynamic library
 ffi = FFI()
-ffi.cdef("".join(lines))
+ffi.cdef(_get_wgpu_h())
 ffi.set_source("wgpu.h", None)
-
-# Load the dynamic library
-_lib = ffi.dlopen(get_resource_filename("wgpu_native-debug.dll"))
+_lib = ffi.dlopen(_get_wgpu_lib_path())
 
 
 def new_struct(ctype, **kwargs):
@@ -140,7 +155,7 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label="",
         extensions: "GPUExtensionName-list" = [],
-        limits: "GPULimits" = {}
+        limits: "GPULimits" = {},
     ):
         return self.requestDeviceSync(label=label, extensions=extensions, limits=limits)
 
@@ -149,7 +164,7 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label="",
         extensions: "GPUExtensionName-list" = [],
-        limits: "GPULimits" = {}
+        limits: "GPULimits" = {},
     ):
 
         extensions = tuple(extensions)
@@ -246,7 +261,7 @@ class GPUDevice(classes.GPUDevice):
         *,
         label="",
         layout: "GPUBindGroupLayout",
-        bindings: "GPUBindGroupBinding-list"
+        bindings: "GPUBindGroupBinding-list",
     ):
 
         c_bindings_list = []
@@ -326,7 +341,7 @@ class GPUDevice(classes.GPUDevice):
         vertexState: "GPUVertexStateDescriptor" = {},
         sampleCount: int = 1,
         sampleMask: int = 0xFFFFFFFF,
-        alphaToCoverageEnabled: bool = False
+        alphaToCoverageEnabled: bool = False,
     ):
 
         refs = []  # to avoid premature gc collection
@@ -501,7 +516,7 @@ class GPUTexture(classes.GPUTexture):
         baseMipLevel: int = 0,
         mipLevelCount: int = 0,
         baseArrayLayer: int = 0,
-        arrayLayerCount: int = 0
+        arrayLayerCount: int = 0,
     ):
 
         struct = new_struct(
@@ -532,7 +547,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder):
         *,
         label="",
         colorAttachments: "GPURenderPassColorAttachmentDescriptor-list",
-        depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor"
+        depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor",
     ):
 
         refs = []
