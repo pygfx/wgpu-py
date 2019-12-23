@@ -62,16 +62,28 @@ jobs:
       failTaskOnFailedTests: true
       testRunTitle: Test $(vmImage)
   - task: Bash@3
-    displayName: Packaged test
+    displayName: Test (packaged)
     inputs:
       targetType: inline
       script: |
         python setup.py develop --uninstall
-        mkdir ../pkgtest
-        cp dist/*.whl ../pkgtest/.
+        rm -rf ./wgpu ./build ./egg-info
         cd ../pkgtest
-        pip install *.whl
-        python -c "import $NAME"
+        pip install dist/*.whl
+        pytest --disable-warnings --junit-xml=results-packaged.xml || true
+
+        # Fail the task if results-packaged.xml was not created
+        if [[ ! -f results-packaged.xml ]]
+        then
+          echo "##vso[task.logissue type=error]No test results were found"
+          exit 1
+        fi
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: results-packaged.xml
+      mergeTestResults: true
+      failTaskOnFailedTests: true
+      testRunTitle: Test $(vmImage) (packaged)
   - task: PublishBuildArtifacts@1
     displayName: Publish package artifact
     inputs:
