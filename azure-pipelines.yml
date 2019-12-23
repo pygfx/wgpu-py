@@ -34,7 +34,7 @@ jobs:
     inputs:
       targetType: inline
       script: |
-        black --check $NAME tests
+        black --check $NAME tests examples
   - task: Bash@3
     displayName: Build wheel and install in development mode
     inputs:
