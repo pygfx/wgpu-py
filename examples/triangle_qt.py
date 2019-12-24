@@ -124,7 +124,8 @@ import asyncio
 
 from PyQt5 import QtWidgets  # Use either PyQt5 or Pyside2
 from wgpu.gui.qt import WgpuCanvas  # GPUCanvas is a QWidget subclass
-import wgpu.backend.rs  # Select Rust backend
+import wgpu
+wgpu.init('rs')
 
 
 app = QtWidgets.QApplication([])

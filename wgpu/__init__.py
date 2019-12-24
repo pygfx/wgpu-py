@@ -26,3 +26,11 @@ def requestAdapterSync(powerPreference: "enum PowerPreference"):
 
     loop = asyncio.get_event_loop()
     return loop.run_until_complete(requestAdapter(powerPreference))
+
+
+def init(backend="rs"):
+    """ Initialize wgpu by loading a backend
+    """
+    import importlib
+
+    return importlib.import_module(".".join(__name__, "backend", backend))

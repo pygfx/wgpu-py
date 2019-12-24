@@ -125,7 +125,8 @@ async def main(canvas):
 
 from flexx import flx
 from wgpu.gui.flexx import WgpuCanvas  # WgpuCanvas is a flx.Canvas subclass
-import wgpu.backend.js  # Select JS backend
+import wgpu
+wgpu.init('js')
 
 
 class Example(flx.Widget):

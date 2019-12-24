@@ -7,7 +7,7 @@ from .base import BaseCanvas
 
 
 class WgpuCanvas(flx.CanvasWidget):
-    """ Flexx widget to be used with the wgpu.backed.js backend. Provides a
+    """ Flexx widget to be used with the wgpu.backend.js backend. Provides a
     canvas to render to.
     """
 

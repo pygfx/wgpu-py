@@ -56,10 +56,12 @@ The full API is accessable via the main namespace:
 import wgpu
 ```
 
-But to use it, you need to select a backend first. You do this by importing it.
-There is currently only one backend:
+But to use it, you need to initialize the library first. You can provide
+configuration overloads here, such as the choice of backend (default backend is
+Rust, ie: `backend='rs'`):
+
 ```py
-import wgpu.backend.rs
+wgpu.init()
 ```
 
 To give an idea of what this API looks like, here's the API code from the triangle example:
@@ -67,6 +69,7 @@ To give an idea of what this API looks like, here's the API code from the triang
 # ... code to create shaders and GUI are omitted for brevity
 
 import wgpu
+wgpu.init()
 
 async def main(canvas):
 

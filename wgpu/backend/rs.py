@@ -20,9 +20,6 @@ from ..utils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
 
 
-os.environ["RUST_BACKTRACE"] = "0"  # Set to 1 for more trace info
-
-
 def _get_wgpu_h():
     # Read header file and strip some stuff that cffi would stumble on
     lines = []
