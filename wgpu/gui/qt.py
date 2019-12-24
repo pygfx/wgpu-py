@@ -3,6 +3,7 @@ Support for rendering in a Qt widget. Provides a widget subclass that
 can be used as a standalone window or in a larger GUI.
 """
 
+import importlib
 import sys
 
 from .base import BaseCanvas
@@ -10,11 +11,14 @@ from .base import BaseCanvas
 
 # Select GUI toolkit
 for libname in ("PySide2", "PyQt5"):
-    if libname in sys.modules:
-        QWidget = sys.modules[libname].QtWidgets.QWidget
+    try:
+        QtWidgets = importlib.import_module(libname + ".QtWidgets")
+        QWidget = QtWidgets.QWidget
         break
+    except ImportError:
+        pass
 else:
-    raise ImportError("Need to import PySide2.QtWidgets or PyQt5.QtWidgets first.")
+    raise ImportError("Could not import PySide2.QtWidgets or PyQt5.QtWidgets.")
 
 
 class WgpuCanvas(BaseCanvas, QWidget):
