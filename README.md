@@ -4,8 +4,6 @@
 
 Next generation GPU API for Python
 
-This is experimental, work in progress, you probably don't want to use this just yet!
-
 
 ## Introduction
 
@@ -19,6 +17,23 @@ a simpler (higher level) spelling. The Python `wgpu` library brings the
 WebGPU API to Python. Based on [wgpu-native](https://github.com/gfx-rs/wgpu).
 
 
+## Status
+
+*This is experimental, work in progress, you probably don't want to use this just yet!*
+
+* We have a few working examples!
+* This currently only works on Windows.
+* We don't yet package the wgpu lib; you have to bring it along yourself for now.
+* We have not fully implemented the API yet.
+* The API may change. We're still figuring out what works best.
+* The API may change more. Until WebGPU settles as a standard, its specification
+  may change, and with that our API will probably too.
+
+Web support: we are considering future support for compiling (Python)
+visualizations to the web via PScript and Flexx. We try to keep that
+option open as long as it does not get in the way too much. No promises.
+
+
 ## Installation
 
 ```
@@ -27,10 +42,7 @@ pip install wgpu
 
 This library does not have any dependencies on other Python libraries.
 Though if you want to render to the screen you need a GUI toolkit.
-Currently supported are:
-
-* PySide2
-* PyQt5
+Currently supported are `PySide2`, `PyQt5`, `wgpu`.
 
 This library will eventually include the required Rust library, but for
 now, you have to bring it yourself. Tell where it is by setting the
