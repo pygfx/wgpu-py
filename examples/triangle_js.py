@@ -118,13 +118,13 @@ async def main(canvas):
         render_pass.endPass()
         device.defaultQueue.submit([command_encoder.finish()])
 
-    canvas.setDrawFunction(drawFrame)
+    canvas.drawFrame = drawFrame
 
 
 # %% Create the canvas and run - JS backend
 
 from flexx import flx
-import wgpu.gui.flexx  # Use Flexx as a GUI
+from wgpu.gui.flexx import WgpuCanvas  # WgpuCanvas is a flx.Canvas subclass
 import wgpu.backend.js  # Select JS backend
 
 
@@ -133,7 +133,7 @@ class Example(flx.Widget):
         # All of this gets executed in JS
         super().init()
         with flx.HBox():
-            self.canvas = wgpu.gui.flexx.GpuWidget()
+            self.canvas = WgpuCanvas()
         main(self.canvas)
 
 
