@@ -21,8 +21,7 @@ else:
     # otherwise, if none have been imported yet, try to do it ourselves
     for libname in qt_libs:
         try:
-            QtWidgets = importlib.import_module(libname + ".QtWidgets")
-            QWidget = QtWidgets.QWidget
+            QWidget = importlib.import_module(libname + ".QtWidgets").QWidget
             break
         except ImportError:
             pass
