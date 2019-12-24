@@ -9,13 +9,13 @@ in backend modules.
 async def requestAdapter(*, powerPreference: "GPUPowerPreference"):
     """ Request an Adapter, the object that represents the implementation of WGPU.
     Before requesting an adapter, a wgpu backend should be selected. At the moment
-    there is only one backend. Use ``import wgpu.rs`` to select it.
+    there is only one backend. Use ``wgpu.init()`` to select it.
 
     Params:
         powerPreference(enum): "high-performance" or "low-power"
     """
     raise RuntimeError(
-        "Select a backend (by importing wgpu.rs) before requesting an adapter!"
+        "Select a WGPU backend by calling wgpu.init() before requesting an adapter!"
     )
 
 
