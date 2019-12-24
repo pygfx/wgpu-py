@@ -1,5 +1,5 @@
 """
-Example use of webgpu API to draw a triangle.
+Example use of webgpu API to draw a triangle, with Qt.
 
 Similar example in other languages / API's:
 
@@ -115,7 +115,7 @@ async def main(canvas):
         render_pass.endPass()
         device.defaultQueue.submit([command_encoder.finish()])
 
-    canvas.setDrawFunction(drawFrame)
+    canvas.drawFrame = drawFrame
 
 
 # %% Create the canvas and run - Rust backend + Qt
@@ -123,28 +123,22 @@ async def main(canvas):
 import asyncio
 
 from PyQt5 import QtWidgets  # Use either PyQt5 or Pyside2
-import wgpu.gui.qt  # Use Qt as a GUI
+from wgpu.gui.qt import WgpuCanvas  # GPUCanvas is a QWidget subclass
 import wgpu.backend.rs  # Select Rust backend
 
 
 app = QtWidgets.QApplication([])
-canvas = wgpu.gui.qt.QGpuWidget(None)  # a QWidget
-canvas.resize(640, 480)
-canvas.setWindowTitle("Python wgpu triangle")
-canvas.show()
+canvas = WgpuCanvas(None, size=(640, 480), title="wgpu triangle with Qt")
 
 # This is a simple way to integrate Qt's event loop with asyncio, but for real
 # apps you probably want to use something like the qasync library.
 async def mainLoop():
-    while canvas.isVisible():
-        await asyncio.sleep(0.01)
+    await main(canvas)
+    while not canvas.isClosed():
+        await asyncio.sleep(0.001)
         app.flush()
         app.processEvents()
-    asyncio.get_event_loop().stop()
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.create_task(main(canvas))
-    loop.create_task(mainLoop())
-    loop.run_forever()
+    asyncio.get_event_loop().run_until_complete(mainLoop())
