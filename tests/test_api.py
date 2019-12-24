@@ -1,2 +1,2 @@
 def test_stub():
-    import wgpu
+    import wgpu  # noqa: F401

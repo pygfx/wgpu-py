@@ -8,7 +8,7 @@ generated.
 
 from .. import _register_backend
 
-global window
+from pscript.stubs import window
 
 
 async def requestAdapter(options):
