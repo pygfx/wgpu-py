@@ -99,6 +99,9 @@ venv.bak/
 .spyderproject
 .spyproject
 
+# VSCode project settings
+.vscode
+
 # Rope project settings
 .ropeproject
 
@@ -107,3 +110,7 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# Pipenv (for now, dev-requirements.txt is sufficient)
+Pipfile
+Pipfile.lock
