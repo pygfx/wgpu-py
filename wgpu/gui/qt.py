@@ -9,8 +9,9 @@ import sys
 from .base import BaseCanvas
 
 
-# Select GUI toolkit
-for libname in ("PySide2", "PyQt5"):
+# Select Qt toolkit
+qt_libs = ("PySide2", "PyQt5")
+for libname in qt_libs:
     # if both are installed, and the user has imported the one that
     # they want to use already, stick with that
     if libname in sys.modules:
@@ -18,7 +19,7 @@ for libname in ("PySide2", "PyQt5"):
         break
 else:
     # otherwise, if none have been imported yet, try to do it ourselves
-    for libname in ("PySide2", "PyQt5"):
+    for libname in qt_libs:
         try:
             QtWidgets = importlib.import_module(libname + ".QtWidgets")
             QWidget = QtWidgets.QWidget
@@ -26,7 +27,7 @@ else:
         except ImportError:
             pass
     else:
-        raise ImportError("Could not import PySide2.QtWidgets nor PyQt5.QtWidgets.")
+        raise ImportError("Could not import " + ", ".join(qt_libs))
 
 
 class WgpuCanvas(BaseCanvas, QWidget):
