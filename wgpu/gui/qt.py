@@ -31,7 +31,7 @@ else:
     else:
         # otherwise error out and force the user to make a choice
         raise ImportError(
-            "Import one of " + ", ".join(available) + " before "
+            "Import one of " + ", ".join(available.keys()) + " before "
             "the WgpuCanvas to select a Qt toolkit"
         )
 if QWidget is None:
