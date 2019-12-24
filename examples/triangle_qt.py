@@ -7,12 +7,13 @@ Similar example in other languages / API's:
 * C wgpu: https://github.com/gfx-rs/wgpu/blob/master/examples/triangle/main.c
 * Python Vulkan: https://github.com/realitix/vulkan/blob/master/example/contribs/example_glfw.py
 
-"""
+"""  # noqa: E501
 
 
 # %% Shaders
 
-from py2spirv import python2spirv  # This is not yet a public library
+# This is not yet a public library
+from py2spirv import python2spirv, i32, vec2, vec3, vec4
 
 
 @python2spirv
@@ -120,15 +121,16 @@ async def main(canvas):
 
 # %% Create the canvas and run - Rust backend + Qt
 
-import asyncio
+import asyncio  # noqa: E402
 
-from PyQt5 import QtWidgets  # Use either PyQt5 or Pyside2
-from wgpu.gui.qt import WgpuCanvas  # GPUCanvas is a QWidget subclass
-import wgpu.backend.rs  # Select Rust backend
+from PyQt5 import QtWidgets  # noqa: E402, Use either PyQt5 or Pyside2
+from wgpu.gui.qt import WgpuCanvas  # noqa: E402, WgpuCanvas is a QWidget subclass
+import wgpu.backend.rs  # noqa: E402, select Rust backend
 
 
 app = QtWidgets.QApplication([])
 canvas = WgpuCanvas(None, size=(640, 480), title="wgpu triangle with Qt")
+
 
 # This is a simple way to integrate Qt's event loop with asyncio, but for real
 # apps you probably want to use something like the qasync library.
