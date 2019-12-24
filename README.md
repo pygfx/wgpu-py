@@ -12,7 +12,7 @@ it with a Pythonic API similar to WebGPU.
 
 The OpenGL API is old and showing it's cracks. New API's like Vulkan,
 Metal and DX12 provide a modern way to control the GPU, but these API's
-are too low-level. The WebGPU API follows the same concepts, but with
+are too low-level for general use. The WebGPU API follows the same concepts, but with
 a simpler (higher level) spelling. The Python `wgpu` library brings the
 WebGPU API to Python. Based on [wgpu-native](https://github.com/gfx-rs/wgpu).
 
