@@ -3,30 +3,37 @@ Support for rendering in a Qt widget. Provides a widget subclass that
 can be used as a standalone window or in a larger GUI.
 """
 
-import importlib
+from importlib import import_module
 import sys
 
 from .base import BaseCanvas
 
 
 # Select Qt toolkit
-qt_libs = ("PySide2", "PyQt5")
-for libname in qt_libs:
-    # if both are installed, and the user has imported the one that
-    # they want to use already, stick with that
+libs = ("PySide2", "PyQt5")
+QWidget = None
+for libname in libs:
+    # if one of the libs is already imported, use that
     if libname in sys.modules:
         QWidget = sys.modules[libname].QtWidgets.QWidget
         break
 else:
-    # otherwise, if none have been imported yet, try to do it ourselves
-    for libname in qt_libs:
+    # otherwise, see which libs are available
+    available = {}
+    for libname in libs:
         try:
-            QWidget = importlib.import_module(libname + ".QtWidgets").QWidget
-            break
+            available[libname] = import_module(libname + ".QtWidgets").QWidget
         except ImportError:
             pass
+    if len(available) == 1:
+        # if only one is available, use that
+        QWidget = list(available.values())[0]
     else:
-        raise ImportError("Could not import " + ", ".join(qt_libs))
+        # otherwise error out and force the user to make a choice
+        raise ImportError("Import one of " + ", ".join(available) + " before "
+                          "the WgpuCanvas to select a Qt toolkit")
+if QWidget is None:
+    raise ImportError("Could not import " + " or ".join(libs))
 
 
 class WgpuCanvas(BaseCanvas, QWidget):
