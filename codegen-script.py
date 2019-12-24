@@ -313,11 +313,14 @@ for fname in ("classes.py", "backend/rs.py"):
             else:
                 py_args = ["self"] + argnames
                 api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
+            api_lines[i] += "  # noqa: F821"  # undefined name
 
             api_lines.insert(i, " " * indent + "# IDL: " + line)
             api_lines.insert(
                 i, " " * indent + f"# wgpu.help({', '.join(searches)}, dev=True)"
             )
+            if len(api_lines[i]) > 88:
+                api_lines[i] += "  # noqa: E501"  # line too long
 
     # Report missing
     print(f"Found {count} functions already implemented")
