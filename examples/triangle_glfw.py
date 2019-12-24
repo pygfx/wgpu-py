@@ -126,7 +126,7 @@ import glfw
 from wgpu.gui.glfw import WgpuCanvas  # WgpuCanvas wraps a glfw window
 import wgpu
 
-wgpu.init("rs")
+wgpu.init()
 
 
 glfw.init()
