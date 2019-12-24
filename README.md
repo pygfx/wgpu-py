@@ -41,8 +41,6 @@ pip install wgpu
 ```
 
 This library does not have any dependencies on other Python libraries.
-Though if you want to render to the screen you need a GUI toolkit.
-Currently supported are `PySide2`, `PyQt5`, `glfw`.
 
 This library will eventually include the required Rust library, but for
 now, you have to bring it yourself. Tell where it is by setting the
@@ -146,6 +144,10 @@ async def main(canvas):
 
     canvas.setDrawFunction(drawFrame)
 ```
+
+## GUI integration
+
+To render to the screen you can use one of: `Tk` (from the Python stdlib), `glfw`, `PySide2`, `PyQt5`. Visializations can also be embedded in Qt applications.
 
 
 ## License
