@@ -162,7 +162,11 @@ class GPUDevice(GPUObject):
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def createBuffer(
-        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"  # noqa: F821, E501
+        self,
+        *,
+        label="",
+        size: "GPUBufferSize",  # noqa: F821
+        usage: "GPUBufferUsageFlags",  # noqa: F821
     ):
         """ Create a Buffer object.
         """
@@ -171,7 +175,11 @@ class GPUDevice(GPUObject):
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
     def createBufferMapped(
-        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"  # noqa: F821, E501
+        self,
+        *,
+        label="",
+        size: "GPUBufferSize",  # noqa: F821
+        usage: "GPUBufferUsageFlags",  # noqa: F821
     ):
         """ Create a mapped buffer object (its memory is accesable to the CPU).
         """

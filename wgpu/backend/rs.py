@@ -191,19 +191,29 @@ class GPUDevice(classes.GPUDevice):
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def createBuffer(
-        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"  # noqa: F821, E501
+        self,
+        *,
+        label="",
+        size: "GPUBufferSize",  # noqa: F821
+        usage: "GPUBufferUsageFlags",  # noqa: F821
     ):
         size = int(size)
 
         struct = new_struct("WGPUBufferDescriptor *", size=size, usage=usage)
 
-        id = _lib.wgpu_device_create_buffer(self._internal, struct, mem)  # TODO: mem is undefined  # noqa: F821, E501
+        id = _lib.wgpu_device_create_buffer(
+            self._internal, struct, mem  # TODO: mem is undefined  # noqa: F821
+        )
         return GPUBuffer(label, id, self, size, usage, "unmapped", None)
 
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
     def createBufferMapped(
-        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"  # noqa: F821, E501
+        self,
+        *,
+        label="",
+        size: "GPUBufferSize",  # noqa: F821
+        usage: "GPUBufferUsageFlags",  # noqa: F821
     ):
 
         size = int(size)
