@@ -280,7 +280,7 @@ class GPUDevice(classes.GPUDevice):
             layout=layout._internal,
             bindings=c_bindings_array,
             bindings_length=len(c_bindings_list),
-        )  # noqa
+        )
 
         id = _lib.wgpu_device_create_bind_group(self._internal, struct)
         return classes.GPUBindGroup(label, id, self, bindings)
@@ -291,7 +291,7 @@ class GPUDevice(classes.GPUDevice):
         self, *, label="", bindGroupLayouts: "GPUBindGroupLayout-list"  # noqa: F821
     ):
 
-        bindGroupLayouts_ids = [x._internal for x in bindGroupLayouts]  # noqa
+        bindGroupLayouts_ids = [x._internal for x in bindGroupLayouts]
 
         c_layout_array = ffi.new("WGPUBindGroupLayoutId []", bindGroupLayouts_ids)
         struct = new_struct(
@@ -465,7 +465,7 @@ class GPUDevice(classes.GPUDevice):
             sample_count=sampleCount,
             sample_mask=sampleMask,
             alpha_to_coverage_enabled=alphaToCoverageEnabled,
-        )  # noqa  # c-pointer  # enum
+        )  # c-pointer  # enum
 
         id = _lib.wgpu_device_create_render_pipeline(self._internal, struct)
         return classes.GPURenderPipeline(label, id, self)
@@ -682,7 +682,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
     # wgpu.help('renderencoderbasesetpipeline', 'RenderPipeline', dev=True)
     # IDL: void setPipeline(GPURenderPipeline pipeline);
     def setPipeline(self, pipeline):
-        pipeline_id = pipeline._internal  # noqa
+        pipeline_id = pipeline._internal
         _lib.wgpu_render_pass_set_pipeline(self._internal, pipeline_id)
 
     # wgpu.help('renderencoderbasesetindexbuffer', 'Buffer', 'BufferSize', dev=True)
@@ -803,7 +803,7 @@ class GPUSwapChain(classes.GPUSwapChain):
 
         self._internal = _lib.wgpu_device_create_swap_chain(
             self._device._internal, self._surface_id, struct
-        )  # noqa - device-id
+        )  # device-id
 
     def getCurrentTextureView(self):
         # todo: should we cache instances (on their id)?
