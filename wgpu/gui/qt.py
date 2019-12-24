@@ -30,8 +30,10 @@ else:
         QWidget = list(available.values())[0]
     else:
         # otherwise error out and force the user to make a choice
-        raise ImportError("Import one of " + ", ".join(available) + " before "
-                          "the WgpuCanvas to select a Qt toolkit")
+        raise ImportError(
+            "Import one of " + ", ".join(available) + " before "
+            "the WgpuCanvas to select a Qt toolkit"
+        )
 if QWidget is None:
     raise ImportError("Could not import " + " or ".join(libs))
 
