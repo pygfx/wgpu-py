@@ -21,14 +21,15 @@ class WgpuCanvas(BaseCanvas, QWidget):
     """ A QWidget subclass that can be used as a canvas to render to.
     """
 
-    def __init__(self, *args, size=(640, 480), title="", **kwargs):
+    def __init__(self, *args, size=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
         WA_PaintOnScreen = 8  # QtCore.Qt.WA_PaintOnScreen
         self.setAttribute(WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
 
-        width, height = size
-        self.resize(width, height)
+        if size:
+            width, height = size
+            self.resize(width, height)
         if title:
             self.setWindowTitle(title)
         self.show()

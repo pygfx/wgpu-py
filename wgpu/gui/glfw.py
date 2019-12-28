@@ -22,8 +22,13 @@ class WgpuCanvas(BaseCanvas):
     """ A canvas object wrapping a glfw window.
     """
 
-    def __init__(self, *, size=(640, 480), title=""):
-        width, height = size
+    def __init__(self, *, size=None, title=None):
+        if size:
+            width, height = size
+        else:
+            width, height = 256, 256
+        title = title or ""
+
         glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
         glfw.window_hint(glfw.RESIZABLE, True)
         self._window = glfw.create_window(width, height, title, None, None)
