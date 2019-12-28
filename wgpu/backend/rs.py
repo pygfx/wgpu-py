@@ -322,7 +322,7 @@ class GPUDevice(classes.GPUDevice):
         elif hasattr(code, "to_bytes"):
             data = code.to_bytes()
 
-        magic_nr = b'\x03\x02#\x07'  # 0x7230203
+        magic_nr = b"\x03\x02#\x07"  # 0x7230203
         if data[:4] != magic_nr:
             raise ValueError("Given shader data does not look like a SpirV module")
 
