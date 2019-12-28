@@ -16,6 +16,8 @@ are too low-level for general use. The WebGPU API follows the same concepts, but
 a simpler (higher level) spelling. The Python `wgpu` library brings the
 WebGPU API to Python. Based on [wgpu-native](https://github.com/gfx-rs/wgpu).
 
+To get an idea of what this API looks like have a look at [triangle.py](https://github.com/almarklein/wgpu-py/blob/master/examples/triangle.py) and the other [examples](https://github.com/almarklein/wgpu-py/blob/master/examples/).
+
 
 ## Status
 
@@ -23,15 +25,12 @@ WebGPU API to Python. Based on [wgpu-native](https://github.com/gfx-rs/wgpu).
 
 * We have a few working examples!
 * This currently only works on Windows.
+* The examples rely on a lib that's not yet on pypi.
 * We don't yet package the wgpu lib; you have to bring it along yourself for now.
 * We have not fully implemented the API yet.
 * The API may change. We're still figuring out what works best.
 * The API may change more. Until WebGPU settles as a standard, its specification
   may change, and with that our API will probably too.
-
-Web support: we are considering future support for compiling (Python)
-visualizations to the web via PScript and Flexx. We try to keep that
-option open as long as it does not get in the way too much. No promises.
 
 
 ## Installation
@@ -39,8 +38,6 @@ option open as long as it does not get in the way too much. No promises.
 ```
 pip install wgpu
 ```
-
-This library does not have any dependencies on other Python libraries.
 
 This library will eventually include the required Rust library, but for
 now, you have to bring it yourself. Tell where it is by setting the
@@ -60,94 +57,18 @@ There is currently only one backend:
 import wgpu.backend.rs
 ```
 
-To give an idea of what this API looks like, here's the API code from the triangle example:
-```py
-# ... code to create shaders and GUI are omitted for brevity
-
-import wgpu
-
-async def main(canvas):
-
-    adapter = await wgpu.requestAdapter(powerPreference="high-performance")
-    device = await adapter.requestDevice(extensions=[], limits=wgpu.GPULimits())
-
-    vshader = device.createShaderModule(code=vertex_shader.to_bytes())
-    fshader = device.createShaderModule(code=fragment_shader.to_bytes())
-
-    bind_group_layout = device.createBindGroupLayout(bindings=[])  # zero bindings
-    bind_group = device.createBindGroup(layout=bind_group_layout, bindings=[])
-
-    pipeline_layout = device.createPipelineLayout(bindGroupLayouts=[bind_group_layout])
-
-    render_pipeline = device.createRenderPipeline(
-        layout=pipeline_layout,
-        vertexStage={"module": vshader, "entryPoint": "main"},
-        fragmentStage={"module": fshader, "entryPoint": "main"},
-        primitiveTopology=wgpu.PrimitiveTopology.triangle_list,
-        rasterizationState={
-            "frontFace": wgpu.FrontFace.ccw,
-            "cullMode": wgpu.CullMode.none,
-            "depthBias": 0,
-            "depthBiasSlopeScale": 0.0,
-            "depthBiasClamp": 0.0,
-        },
-        colorStates=[
-            {
-                "format": wgpu.TextureFormat.bgra8unorm_srgb,
-                "alphaBlend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "colorBlend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "writeMask": wgpu.ColorWrite.ALL,
-            }
-        ],
-        depthStencilState=None,
-        vertexState={"indexFormat": wgpu.IndexFormat.uint32, "vertexBuffers": []},
-        sampleCount=1,
-        sampleMask=0xFFFFFFFF,
-        alphaToCoverageEnabled=False,
-    )
-
-    swap_chain = canvas.configureSwapChain(
-        device, wgpu.TextureFormat.bgra8unorm_srgb, wgpu.TextureUsage.OUTPUT_ATTACHMENT
-    )
-
-    def drawFrame():
-        current_texture_view = swap_chain.getCurrentTextureView()
-        command_encoder = device.createCommandEncoder()
-
-        render_pass = command_encoder.beginRenderPass(
-            colorAttachments=[
-                {
-                    "attachment": current_texture_view,
-                    "resolveTarget": None,
-                    "loadValue": (0, 0, 0, 1),  # LoadOp.load or color
-                    "storeOp": wgpu.StoreOp.store,
-                }
-            ],
-            depthStencilAttachment=None,
-        )
-
-        render_pass.setPipeline(render_pipeline)
-        render_pass.setBindGroup(
-            0, bind_group, [], 0, 999999
-        )  # last 2 elements not used
-        render_pass.draw(3, 1, 0, 0)
-        render_pass.endPass()
-        device.defaultQueue.submit([command_encoder.finish()])
-
-    canvas.setDrawFunction(drawFrame)
-```
 
 ## GUI integration
 
-To render to the screen you can use one of: `Tk` (from the Python stdlib), `glfw`, `PySide2`, `PyQt5`. Visializations can also be embedded in Qt applications.
+To render to the screen you can use any of the following GUI toolkits:
+`Tk` (included with Python), `glfw`, `PySide2`, `PyQt5`.
+
+
+## Web support
+
+We are considering future support for compiling (Python)
+visualizations to the web via PScript and Flexx. We try to keep that
+option open as long as it does not get in the way too much. No promises.
 
 
 ## License
@@ -160,4 +81,5 @@ This code is distributed under the 2-clause BSD license.
 * Clone the repo and run `python setup.py develop`, or simply add the root dir to your `PYTHONPATH`.
 * Point the `WGPU_LIB_PATH` environment variable to the dynamic library created by `wgpu-native`.
 * Use `black .` to apply autoformatting.
+* Use `flake8 .` to check for flake errors.
 * Use `pytest .` to run the tests.
