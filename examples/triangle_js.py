@@ -10,7 +10,8 @@ and provide a HTML5 canvas without having to write HTML.
 
 # %% Shaders
 
-from py2spirv import python2spirv  # This is not yet a public library
+# This is not yet a public library
+from py2spirv import python2spirv, i32, vec2, vec3, vec4
 
 
 @python2spirv
@@ -35,8 +36,8 @@ def fragment_shader(input, output):
 
 
 # todo: how to serialize the shaders? base64 or via a custom hook?
-vertex_shader = "something that flexx can serialize"
-fragment_shader = "something that flexx can serialize"
+vertex_shader = "something that flexx can serialize"  # noqa: F811
+fragment_shader = "something that flexx can serialize"  # noqa: F811
 
 
 # %% The wgpu calls - exact same code as in triangle1.py
@@ -123,9 +124,9 @@ async def main(canvas):
 
 # %% Create the canvas and run - JS backend
 
-from flexx import flx
-from wgpu.gui.flexx import WgpuCanvas  # WgpuCanvas is a flx.Canvas subclass
-import wgpu.backend.js  # Select JS backend
+from flexx import flx  # noqa: E402
+from wgpu.gui.flexx import WgpuCanvas  # noqa: E402, WgpuCanvas is a flx.Canvas subclass
+import wgpu.backend.js  # noqa: E402, select JS backend
 
 
 class Example(flx.Widget):

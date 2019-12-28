@@ -7,12 +7,13 @@ Similar example in other languages / API's:
 * C wgpu: https://github.com/gfx-rs/wgpu/blob/master/examples/triangle/main.c
 * Python Vulkan: https://github.com/realitix/vulkan/blob/master/example/contribs/example_glfw.py
 
-"""
+"""  # noqa: E501
 
 
 # %% Shaders
 
-from py2spirv import python2spirv  # This is not yet a public library
+# This is not yet a public library
+from py2spirv import python2spirv, i32, vec2, vec3, vec4
 
 
 @python2spirv
@@ -120,11 +121,11 @@ async def main(canvas):
 
 # %% Create the canvas and run - Rust backend + GLFW
 
-import asyncio
+import asyncio  # noqa: E402
 
-import glfw
-from wgpu.gui.glfw import WgpuCanvas  # WgpuCanvas wraps a glfw window
-import wgpu.backend.rs  # Select Rust backend
+import glfw  # noqa: E402
+from wgpu.gui.glfw import WgpuCanvas  # noqa: E402, WgpuCanvas wraps a glfw window
+import wgpu.backend.rs  # noqa: E402, select Rust backend
 
 
 glfw.init()

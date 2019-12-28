@@ -30,11 +30,17 @@ jobs:
         python -m pip install -U pip setuptools wheel
         pip install -r dev-requirements.txt
   - task: Bash@3
-    displayName: Lint
+    displayName: Lint (black)
     inputs:
       targetType: inline
       script: |
-        black --check $NAME tests examples
+        black --check .
+  - task: Bash@3
+    displayName: Lint (flake8)
+    inputs:
+      targetType: inline
+      script: |
+        flake8
   - task: Bash@3
     displayName: Build wheel and install in development mode
     inputs:

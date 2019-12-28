@@ -1,7 +1,7 @@
-from .flags import *
-from .enums import *
-from .classes import *
-from .utils import help
+from .flags import *  # noqa: F403
+from .enums import *  # noqa: F403
+from .classes import *  # noqa: F403
+from .utils import help  # noqa: F401
 from . import classes
 
 
@@ -19,10 +19,10 @@ def _register_backend(func):
     # todo: auto-select upon using requestAdapter?
 
 
-def requestAdapterSync(powerPreference: "enum PowerPreference"):
+def requestAdapterSync(powerPreference: "enum PowerPreference"):  # noqa: F722
     """ A convenience function.
     """
     import asyncio
 
     loop = asyncio.get_event_loop()
-    return loop.run_until_complete(requestAdapter(powerPreference))
+    return loop.run_until_complete(requestAdapter(powerPreference))  # noqa: F405

@@ -18,7 +18,7 @@ class BaseCanvas:
         previously returned by configureSwapChain, including all of the
         textures it has produced.
         """
-        self._swapchain = device._gui_configureSwapChain(self, format, usage)  # noqa
+        self._swapchain = device._gui_configureSwapChain(self, format, usage)
         return self._swapchain
 
     def drawFrame(self):
@@ -34,7 +34,7 @@ class BaseCanvas:
         try:
             self.drawFrame()
             if self._swapchain is not None:
-                self._swapchain._gui_present()  # noqa - a.k.a swap buffers
+                self._swapchain._gui_present()  # a.k.a swap buffers
         except Exception:
             # Enable PM debuging
             sys.last_type, sys.last_value, sys.last_traceback = sys.exc_info()
