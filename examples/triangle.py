@@ -14,7 +14,7 @@ Similar example in other languages / API's:
 """
 
 import wgpu
-from py2spirv import python2spirv, vec2, vec3, vec4, i32  # Not yet a public library
+from spirv import python2spirv, vec2, vec3, vec4, i32
 
 
 # %% Shaders

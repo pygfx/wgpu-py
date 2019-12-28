@@ -25,7 +25,6 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 * We have a few working examples!
 * This currently only works on Windows.
-* The examples rely on a lib that's not yet on pypi.
 * We don't yet package the wgpu lib; you have to bring it along yourself for now.
 * We have not fully implemented the API yet.
 * The API may change. We're still figuring out what works best.
@@ -37,6 +36,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 ```
 pip install wgpu
+pip install spirv  # optional - our examples use this to define shaders
 ```
 
 This library will eventually include the required Rust library, but for
@@ -50,6 +50,7 @@ The full API is accessable via the main namespace:
 ```py
 import wgpu
 ```
+
 
 But to use it, you need to select a backend first. You do this by importing it.
 There is currently only one backend:
