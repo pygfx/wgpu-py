@@ -14,7 +14,7 @@ Similar example in other languages / API's:
 """
 
 import wgpu
-from py2spirv import python2spirv, vec2, vec3, vec4, i32  # Not yet a public library
+from spirv import python2spirv, vec2, vec3, vec4, i32
 
 
 # %% Shaders
@@ -49,8 +49,8 @@ async def main(canvas):
     adapter = await wgpu.requestAdapter(powerPreference="high-performance")
     device = await adapter.requestDevice(extensions=[], limits=wgpu.GPULimits())
 
-    vshader = device.createShaderModule(code=vertex_shader.to_bytes())
-    fshader = device.createShaderModule(code=fragment_shader.to_bytes())
+    vshader = device.createShaderModule(code=vertex_shader)
+    fshader = device.createShaderModule(code=fragment_shader)
 
     bind_group_layout = device.createBindGroupLayout(bindings=[])  # zero bindings
     bind_group = device.createBindGroup(layout=bind_group_layout, bindings=[])

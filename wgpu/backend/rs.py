@@ -319,10 +319,12 @@ class GPUDevice(classes.GPUDevice):
 
         if isinstance(code, bytes):
             data = code  # Assume it's Spirv
-        elif hasattr(code, "to_spirv_bytes"):
-            data = code.to_spirv_bytes()
+        elif hasattr(code, "to_bytes"):
+            data = code.to_bytes()
 
-        assert True  # todo: check on SpirV magic number
+        magic_nr = b"\x03\x02#\x07"  # 0x7230203
+        if data[:4] != magic_nr:
+            raise ValueError("Given shader data does not look like a SpirV module")
 
         # From bytes to WGPUU32Array
         data_u8 = ffi.new("uint8_t[]", data)
