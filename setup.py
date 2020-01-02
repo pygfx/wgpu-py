@@ -22,7 +22,7 @@ setup(
     name=NAME,
     version=VERSION,
     packages=find_packages(exclude=["tests", "tests.*", "examples", "examples.*"]),
-    package_data={f"{NAME}.resources": ["*.dll", "*.so", "*.dylib", "*.h", "*.idl"]},
+    package_data={f"{NAME}.resources": ["*.dll", "*.so", "*.dylib", "*.h", "*.idl", "commit-sha"]},
     python_requires=">=3.6.0",
     license=open("LICENSE").read(),
     description=SUMMARY,

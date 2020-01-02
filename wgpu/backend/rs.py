@@ -44,7 +44,17 @@ def _get_wgpu_h():
 
 def _get_wgpu_lib_path():
     override_path = os.getenv("WGPU_LIB_PATH", "").strip()
-    embedded_path = get_resource_filename("wgpu_native.dll")
+
+    if sys.platform.startswith("win"):
+        lib_filename = "wgpu_native.dll"
+    elif sys.platform.startswith("darwin"):
+        lib_filename = "libwgpu_native.dylib"
+    elif sys.platform.startswith("linux"):
+        lib_filename = "libwgpu_native.so"
+    else:
+        raise RuntimeError(f"Platform {sys.platform} not supported")
+
+    embedded_path = get_resource_filename(lib_filename)
 
     paths = []
     for path in [override_path, embedded_path]:

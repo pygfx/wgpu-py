@@ -1,3 +1,4 @@
 black
 pytest
 flake8
+requests

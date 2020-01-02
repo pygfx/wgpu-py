@@ -1,6 +1,15 @@
-// This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Generated with cbindgen:0.11.1 */
+
+/* DO NOT MODIFY THIS MANUALLY! This file was generated using cbindgen.
+ * To generate this file:
+ *   1. Get the latest cbindgen using `cargo install --force cbindgen`
+ *      a. Alternatively, you can clone `https://github.com/eqrion/cbindgen` and use a tagged release
+ *   2. Run `rustup run nightly cbindgen toolkit/library/rust/ --lockfile Cargo.lock --crate wgpu-remote -o dom/webgpu/ffi/wgpu_ffi_generated.h`
+ */
 
 #define WGPU_LOCAL
 
@@ -340,11 +349,11 @@ typedef uint64_t WGPUId_Texture_Dummy;
 typedef WGPUId_Texture_Dummy WGPUTextureId;
 
 typedef struct {
-  float x;
-  float y;
-  float z;
+  uint32_t x;
+  uint32_t y;
+  uint32_t z;
 } WGPUOrigin3d;
-#define WGPUOrigin3d_ZERO (WGPUOrigin3d){ .x = 0.0, .y = 0.0, .z = 0.0 }
+#define WGPUOrigin3d_ZERO (WGPUOrigin3d){ .x = 0, .y = 0, .z = 0 }
 
 typedef struct {
   WGPUTextureId texture;
