@@ -6,6 +6,20 @@ import tempfile
 from zipfile import ZipFile
 
 
+RESOURCE_DIR = "wgpu/resources/"
+VERSION_FILE = os.path.join(RESOURCE_DIR, "wgpu_native-version")
+
+
+def get_current_version():
+    with open(VERSION_FILE, mode="r") as fh:
+        return fh.read()
+
+
+def write_current_version(version):
+    with open(VERSION_FILE, mode="w") as fh:
+        return fh.write(version)
+
+
 def download_file(url, filename):
     CHUNK_SIZE = 1024 * 128
     resp = requests.get(url, stream=True)
@@ -41,7 +55,6 @@ def main(version, debug, os_string, upstream):
     zip_filename = os.path.join(tmp, filename)
     print(f"Downloading {url} to {zip_filename}")
     download_file(url, zip_filename)
-    resource_dir = "wgpu/resources/"
     members = [
         "wgpu.h",
         "libwgpu_native.so",
@@ -49,15 +62,22 @@ def main(version, debug, os_string, upstream):
         "wgpu_native.dll",
         "commit-sha",
     ]
-    print(f"Extracting {members} to {resource_dir}")
-    extract_files(zip_filename, members, resource_dir)
+    print(f"Extracting {members} to {RESOURCE_DIR}")
+    extract_files(zip_filename, members, RESOURCE_DIR)
+    current_version = get_current_version()
+    if version != current_version:
+        print(f"Version changed, updating {VERSION_FILE}")
+        write_current_version(version)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Download wgpu-native binaries and " "headers from github releases"
     )
-    parser.add_argument("version", help="Version to download")
+    version = get_current_version()
+    parser.add_argument(
+        "--version", help=f"Version to download (default: {version})", default=version,
+    )
     parser.add_argument(
         "--debug",
         action="store_true",

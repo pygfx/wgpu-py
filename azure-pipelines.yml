@@ -3,7 +3,6 @@ trigger:
 
 variables:
   NAME: wgpu
-  WGPU_NATIVE_VERSION: v0.5dev
 
 jobs:
 - job: Build
@@ -32,12 +31,12 @@ jobs:
         python -m pip install -U pip setuptools wheel
         pip install -r dev-requirements.txt
   - task: Bash@3
-    displayName: Download WGPU native binaries
+    displayName: Restore WGPU native binary
     inputs:
       targetType: inline
       script: |
         set -ex
-        python download-wgpu-native.py $(WGPU_NATIVE_VERSION)
+        python download-wgpu-native.py
   - task: Bash@3
     displayName: Lint (black)
     inputs:

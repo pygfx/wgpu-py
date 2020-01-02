@@ -23,7 +23,15 @@ setup(
     version=VERSION,
     packages=find_packages(exclude=["tests", "tests.*", "examples", "examples.*"]),
     package_data={
-        f"{NAME}.resources": ["*.dll", "*.so", "*.dylib", "*.h", "*.idl", "commit-sha"]
+        f"{NAME}.resources": [
+            "*.dll",
+            "*.so",
+            "*.dylib",
+            "*.h",
+            "*.idl",
+            "commit-sha",
+            "wgpu_native-version",
+        ]
     },
     python_requires=">=3.6.0",
     license=open("LICENSE").read(),
