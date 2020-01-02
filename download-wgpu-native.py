@@ -6,9 +6,6 @@ import tempfile
 from zipfile import ZipFile
 
 
-UPSTREAM = "Korijn/wgpu"
-
-
 def download_file(url, filename):
     CHUNK_SIZE = 1024 * 128
     resp = requests.get(url, stream=True)
@@ -36,10 +33,10 @@ def get_os_string():
         return "linux"
 
 
-def main(version, debug, os_string):
+def main(version, debug, os_string, upstream):
     debug = "debug" if debug else "release"
     filename = f"wgpu-{debug}-{os_string}-{version}.zip"
-    url = f"https://github.com/{UPSTREAM}/releases/download/{version}/{filename}"
+    url = f"https://github.com/{upstream}/releases/download/{version}/{filename}"
     tmp = tempfile.gettempdir()
     zip_filename = os.path.join(tmp, filename)
     print(f"Downloading {url} to {zip_filename}")
@@ -73,6 +70,12 @@ if __name__ == "__main__":
         help=f"Platform to download for (default: {os_string})",
         default=os_string,
     )
+    upstream = "Korijn/wgpu"
+    parser.add_argument(
+        "--upstream",
+        help=f"Upstream repository to download release from (default: {upstream})",
+        default=upstream,
+    )
     args = parser.parse_args()
 
-    main(args.version, args.debug, args.os)
+    main(args.version, args.debug, args.os, args.upstream)
