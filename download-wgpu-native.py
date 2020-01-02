@@ -6,7 +6,7 @@ import tempfile
 from zipfile import ZipFile
 
 
-RESOURCE_DIR = "wgpu/resources/"
+RESOURCE_DIR = os.path.join("wgpu", "resources")
 VERSION_FILE = os.path.join(RESOURCE_DIR, "wgpu_native-version")
 
 
