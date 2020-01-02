@@ -3,6 +3,7 @@ trigger:
 
 variables:
   NAME: wgpu
+  WGPU_NATIVE_VERSION: v0.5dev
 
 jobs:
 - job: Build
@@ -36,7 +37,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        python download-wgpu-native.py
+        python download-wgpu-native.py $(WGPU_NATIVE_VERSION)
   - task: Bash@3
     displayName: Lint (black)
     inputs:
