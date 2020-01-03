@@ -79,8 +79,17 @@ This code is distributed under the 2-clause BSD license.
 
 ## Developers
 
-* Clone the repo and run `python setup.py develop`, or simply add the root dir to your `PYTHONPATH`.
-* Point the `WGPU_LIB_PATH` environment variable to the dynamic library created by `wgpu-native`.
+* Clone the repo.
+* Install devtools using `pip install -r dev-requirements.txt` (you can replace `pip` with `pipenv` to install to a virtualenv).
+* Install wgpu-py in editable mode by running `python setup.py develop`, or simply add the root dir to your `PYTHONPATH`.
+* Run `python download-wgpu-native.py` to download the upstream wgpu-native binaries.
+  * Or alternatively point the `WGPU_LIB_PATH` environment variable to the dynamic library created by `wgpu-native`.
 * Use `black .` to apply autoformatting.
 * Use `flake8 .` to check for flake errors.
 * Use `pytest .` to run the tests.
+
+
+### Changing the upstream wgpu-native version
+
+* Use the optional arguments to `python download-wgpu-native.py --help` to download a different version of the upstream wgpu-native binaries.
+* The file `wgpu/resources/wgpu_native-version` will be updated by the script to track which version we depend upon.
