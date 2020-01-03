@@ -51,8 +51,6 @@ def _get_wgpu_lib_path():
         lib_filename = "libwgpu_native.dylib"
     elif sys.platform.startswith("linux"):
         lib_filename = "libwgpu_native.so"
-    else:
-        raise RuntimeError(f"Platform {sys.platform} not supported")
 
     embedded_path = get_resource_filename(lib_filename)
 
