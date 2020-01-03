@@ -30,8 +30,6 @@ elif sys.platform.startswith("linux"):
     resources_globs.append("*.so")
 elif sys.platform.startswith("darwin"):
     resources_globs.append("*.dylib")
-else:
-    raise RuntimeError(f"Platform '{sys.platform}' not supported")
 
 
 setup(
