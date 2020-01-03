@@ -47,7 +47,7 @@ def get_os_string():
         return "macos"
     elif sys.platform.startswith("linux"):
         return "linux"
-    else
+    else:
         raise RuntimeError(f"Platform '{sys.platform}' not supported")
 
 
