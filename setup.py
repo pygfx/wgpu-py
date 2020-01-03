@@ -25,11 +25,11 @@ resources_globs = [
     "commit-sha",
 ]
 if sys.platform.startswith("win"):
-    resources_globs.append("*.dll",)
+    resources_globs.append("*.dll")
 elif sys.platform.startswith("linux"):
-    resources_globs.append("*.so",)
+    resources_globs.append("*.so")
 elif sys.platform.startswith("darwin"):
-    resources_globs.append("*.dylib",)
+    resources_globs.append("*.dylib")
 else:
     raise RuntimeError(f"Platform '{sys.platform}' not supported")
 
