@@ -30,14 +30,10 @@ def download_file(url, filename):
             fh.write(chunk)
 
 
-def extract_files(zip_filename, members, path, missing_ok=True):
+def extract_files(zip_filename, members, path):
     z = ZipFile(zip_filename)
     for member in members:
-        try:
-            z.extract(member, path=path)
-        except KeyError:
-            if not missing_ok:
-                raise
+        z.extract(member, path=path)
 
 
 def get_os_string():
