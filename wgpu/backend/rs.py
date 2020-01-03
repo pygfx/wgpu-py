@@ -45,6 +45,7 @@ def _get_wgpu_h():
 def _get_wgpu_lib_path():
     override_path = os.getenv("WGPU_LIB_PATH", "").strip()
 
+    lib_filename = ""
     if sys.platform.startswith("win"):
         lib_filename = "wgpu_native.dll"
     elif sys.platform.startswith("darwin"):
