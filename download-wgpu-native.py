@@ -6,18 +6,20 @@ import tempfile
 from zipfile import ZipFile
 
 
+# The directory containing non-python resources that are included in packaging
 RESOURCE_DIR = os.path.join("wgpu", "resources")
+# A text file used to track the version installed through this script
 VERSION_FILE = os.path.join(RESOURCE_DIR, "wgpu_native-version")
 
 
 def get_current_version():
     with open(VERSION_FILE, mode="r") as fh:
-        return fh.read()
+        return fh.read().strip()
 
 
 def write_current_version(version):
     with open(VERSION_FILE, mode="w") as fh:
-        return fh.write(version)
+        return fh.write(version.strip())
 
 
 def download_file(url, filename):
@@ -45,6 +47,8 @@ def get_os_string():
         return "macos"
     elif sys.platform.startswith("linux"):
         return "linux"
+    else
+        raise RuntimeError(f"Platform '{sys.platform}' not supported")
 
 
 def main(version, debug, os_string, upstream):
@@ -89,6 +93,7 @@ if __name__ == "__main__":
         "--os",
         help=f"Platform to download for (default: {os_string})",
         default=os_string,
+        choices=("linux", "macos", "windows"),
     )
     upstream = "Korijn/wgpu"
     parser.add_argument(
