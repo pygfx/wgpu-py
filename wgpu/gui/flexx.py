@@ -1,6 +1,5 @@
 from flexx import flx
-
-from .base import BaseCanvas
+from pscript.stubs import window
 
 
 # Flexx cannot do multiple inheritance, so we consider BaseCanvas an interface :)

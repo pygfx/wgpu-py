@@ -202,7 +202,10 @@ def help(*searches, dev=False):
                     lines.append(x)
             # else:
             #     for field in d.values():
-            #         if name_part in field.name.lower() or name_part in field.typename.lower():
+            #         if (
+            #             name_part in field.name.lower()
+            #             or name_part in field.typename.lower()
+            #         ):
             #             items["structs"].append(name + "." + field.py_arg())
 
     # Display

@@ -12,8 +12,10 @@ class BaseParser:
 
     * flags: a dict mapping the (Pythonic) flag name to a dict of field-value pairs.
     * enums: a dict mapping the (Pythonic) enum name to a dict of field-value pairs.
-    * structs: a dict mapping the (Pythonic) struct name to a dict of StructField objects.
-    * functions: a dict mapping the (normalized) func name to the line defining the function.
+    * structs: a dict mapping the (Pythonic) struct name to a dict of StructField
+      objects.
+    * functions: a dict mapping the (normalized) func name to the line defining the
+      function.
 
     """
 
@@ -47,7 +49,7 @@ class BaseParser:
         self.callbacks = {}
         self.types = {}
 
-        self.unknown_lines = unknown_lines = []
+        self.unknown_lines = []
 
         if verbose:
             print(f"##### Parsing with {self.__class__.__name__} ...")
@@ -211,8 +213,9 @@ class IdlParser(BaseParser):
                     line = self.readline()
                     lines.append(line)
                 name = lines[0].split(" ", 1)[1].strip("{ \t\r\n")
-                if "GPUDeviceDescriptor" in name:
-                    a = 323
+                # TODO: unused
+                # if "GPUDeviceDescriptor" in name:
+                #     a = 323
                 if ":" in name:
                     name, _, base = name.partition(":")
                     name, base = name.strip(), base.strip()
@@ -229,14 +232,16 @@ class IdlParser(BaseParser):
                         continue
                     assert line.endswith(";")
                     arg = line.strip().strip(",;").strip()
-                    is_required = False
+                    # TODO: unused
+                    # is_required = False
                     default = None
                     if "=" in arg:
                         arg, default = arg.rsplit("=", 1)
                         arg, default = arg.strip(), default.strip()
                     arg_type, arg_name = arg.strip().rsplit(" ", 1)
                     if arg_type.startswith("required "):
-                        is_required = True
+                        # TODO: unused
+                        # is_required = True
                         arg_type = arg_type[9:]
                     if arg_type in ["double", "float"]:
                         t = "float"
@@ -293,7 +298,7 @@ class HParser(BaseParser):
     #         return t[4:]
     #     else:
     #         return t
-    #
+
     # def type_annotation(self, t):
     #     t = self.pythonise_type(t)
     #     if t in ("int", "float"):
@@ -302,7 +307,7 @@ class HParser(BaseParser):
     #         return ""
     #     else:
     #         return f": {t!r}"
-    #
+
     # def type_to_ctype(self, t):
     #     while self.types.get(t, t) is not t:
     #         t = self.types.get(t, t)
@@ -316,12 +321,15 @@ class HParser(BaseParser):
     #         return "ctypes.POINTER(ctypes.c_uint64)"  # todo: probably
     #     elif t == "WGPURawString":
     #         return "ctypes.c_char_p"
-    #     elif t in ("WGPUBufferMapReadCallback", "WGPUBufferMapWriteCallback", "WGPURequestAdapterCallback"):
+    #     elif t in ("WGPUBufferMapReadCallback", "WGPUBufferMapWriteCallback",
+    #                "WGPURequestAdapterCallback"):
     #         return "ctypes.c_void_p"  # todo: function pointer
     #     elif t in self.structs:
     #         return t
     #     elif t in self.enums:
-    #         return "ctypes.c_int64"  # todo: --->>>> uint32 causes access violation, ??? but with cffi it seems enums are 4 bytes ...
+    #         # todo: --->>>> uint32 causes access violation, ??? but with cffi it seems
+    #         #               enums are 4 bytes ...
+    #         return "ctypes.c_int64"
     #     # elif t == "WGPUBindingResource":
     #         # return "dunno"
     #     else:

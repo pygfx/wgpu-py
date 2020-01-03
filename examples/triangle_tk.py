@@ -1,29 +1,30 @@
 """
-Import the viz from triangle.py and run it in a glfw window.
-The glfw library can be installed using ``pip install glfw``.
+Import the viz from triangle.py and run it in a Tk window.
+Tkinter comes with Python by default.
 """
 
-import asyncio  # noqa: E402
+import asyncio
 
-import glfw
-from wgpu.gui.glfw import WgpuCanvas  # WgpuCanvas wraps a glfw window
+import tkinter
+from wgpu.gui.tk import WgpuCanvas  # WgpuCanvas wraps a glfw window
 import wgpu.backend.rs  # noqa: F401, Select Rust backend
 
 # Import the (async) function that we must call to run the visualization
 from triangle import main
 
 
-glfw.init()
-canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle with GLFW")
+root = tkinter.Tk()
+root.withdraw()
+canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle with Tkinter")
 
 
 async def mainLoop():
     await main(canvas)
     while not canvas.isClosed():
         await asyncio.sleep(0.001)
-        glfw.poll_events()
+        root.update_idletasks()
+        root.update()
     loop.stop()
-    glfw.terminate()
 
 
 if __name__ == "__main__":

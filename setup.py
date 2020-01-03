@@ -1,6 +1,8 @@
 import re
 
 from setuptools import find_packages, setup
+from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+from wheel.pep425tags import get_platform
 
 
 NAME = "wgpu"
@@ -10,16 +12,10 @@ with open(f"{NAME}/__init__.py") as fh:
     VERSION = re.search(r"__version__ = \"(.*?)\"", fh.read()).group(1)
 
 
-# the binary components of this library are pre-built
-# so setuptools can't tell our wheel should have a platform tag
-# therefore we use a custom bdist_wheel command to force it
-from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
-
-
 class bdist_wheel(_bdist_wheel):
     def finalize_options(self):
+        self.plat_name = get_platform()  # force a platform tag
         _bdist_wheel.finalize_options(self)
-        self.root_is_pure = False
 
 
 setup(
