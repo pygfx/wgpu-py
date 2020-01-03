@@ -14,7 +14,9 @@ for libname in ("PySide2", "PyQt5"):
         QWidget = sys.modules[libname].QtWidgets.QWidget
         break
 else:
-    raise ImportError("Need to import PySide2.QtWidgets or PyQt5.QtWidgets first.")
+    raise ImportError(
+        "Import one of PySide2, PyQt5 before the WgpuCanvas to select a Qt toolkit"
+    )
 
 
 class WgpuCanvas(BaseCanvas, QWidget):
