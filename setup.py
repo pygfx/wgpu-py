@@ -1,4 +1,5 @@
 import re
+import sys
 
 from setuptools import find_packages, setup
 from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
@@ -18,21 +19,26 @@ class bdist_wheel(_bdist_wheel):
         _bdist_wheel.finalize_options(self)
 
 
+resources_globs = [
+    "*.h",
+    "*.idl",
+    "commit-sha",
+]
+if sys.platform.startswith("win"):
+    resources_globs.append("*.dll",)
+elif sys.platform.startswith("linux"):
+    resources_globs.append("*.so",)
+elif sys.platform.startswith("darwin"):
+    resources_globs.append("*.dylib",)
+else:
+    raise RuntimeError(f"Platform '{sys.platform}' not supported")
+
+
 setup(
     name=NAME,
     version=VERSION,
     packages=find_packages(exclude=["tests", "tests.*", "examples", "examples.*"]),
-    package_data={
-        f"{NAME}.resources": [
-            "*.dll",
-            "*.so",
-            "*.dylib",
-            "*.h",
-            "*.idl",
-            "commit-sha",
-            "wgpu_native-version",
-        ]
-    },
+    package_data={f"{NAME}.resources": resources_globs},
     python_requires=">=3.6.0",
     license=open("LICENSE").read(),
     description=SUMMARY,

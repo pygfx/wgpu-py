@@ -61,11 +61,16 @@ def main(version, debug, os_string, upstream):
     download_file(url, zip_filename)
     members = [
         "wgpu.h",
-        "libwgpu_native.so",
-        "libwgpu_native.dylib",
-        "wgpu_native.dll",
         "commit-sha",
     ]
+    if os_string == "linux":
+        members.append("libwgpu_native.so")
+    elif os_string == "macos":
+        members.append("libwgpu_native.dylib")
+    elif os_string == "windows":
+        members.append("wgpu_native.dll")
+    else:
+        raise RuntimeError(f"Platform '{os_string}' not supported")
     print(f"Extracting {members} to {RESOURCE_DIR}")
     extract_files(zip_filename, members, RESOURCE_DIR)
     current_version = get_current_version()
