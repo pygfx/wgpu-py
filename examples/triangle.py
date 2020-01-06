@@ -14,13 +14,13 @@ Similar example in other languages / API's:
 """
 
 import wgpu
-from spirv import python2spirv, vec2, vec3, vec4, i32
+from python_shader import python2shader , vec2, vec3, vec4, i32
 
 
 # %% Shaders
 
 
-@python2spirv
+@python2shader
 def vertex_shader(input, output):
     input.define("index", "VertexId", i32)
     output.define("pos", "Position", vec4)
@@ -33,7 +33,7 @@ def vertex_shader(input, output):
     output.color = vec3(p, 0.5)
 
 
-@python2spirv
+@python2shader
 def fragment_shader(input, output):
     input.define("color", 0, vec3)
     output.define("color", 0, vec4)
