@@ -14,7 +14,7 @@ Similar example in other languages / API's:
 """
 
 import wgpu
-from python_shader import python2shader , vec2, vec3, vec4, i32
+from python_shader import python2shader, vec2, vec3, vec4, i32
 
 
 # %% Shaders
