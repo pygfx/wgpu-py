@@ -25,7 +25,6 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 * We have a few working examples!
 * This currently only works on Windows.
-* We don't yet package the wgpu lib; you have to bring it along yourself for now.
 * We have not fully implemented the API yet.
 * The API may change. We're still figuring out what works best.
 * The API may change more. Until WebGPU settles as a standard, its specification
@@ -39,9 +38,8 @@ pip install wgpu
 pip install spirv  # optional - our examples use this to define shaders
 ```
 
-This library will eventually include the required Rust library, but for
-now, you have to bring it yourself. Tell where it is by setting the
-environment variable `WGPU_LIB_PATH`.
+The library ships with Rust binaries for Windows, MacOS and Linux. If you want to use
+a custom build instead, you can set the environment variable `WGPU_LIB_PATH`.
 
 
 ## Usage
@@ -81,9 +79,9 @@ This code is distributed under the 2-clause BSD license.
 
 * Clone the repo.
 * Install devtools using `pip install -r dev-requirements.txt` (you can replace `pip` with `pipenv` to install to a virtualenv).
-* Install wgpu-py in editable mode by running `python setup.py develop`, or simply add the root dir to your `PYTHONPATH`.
+* Install wgpu-py in editable mode by running `python setup.py develop`, this will also install our only runtime dependency `cffi`
 * Run `python download-wgpu-native.py` to download the upstream wgpu-native binaries.
-  * Or alternatively point the `WGPU_LIB_PATH` environment variable to the dynamic library created by `wgpu-native`.
+  * Or alternatively point the `WGPU_LIB_PATH` environment variable to a custom build.
 * Use `black .` to apply autoformatting.
 * Use `flake8 .` to check for flake errors.
 * Use `pytest .` to run the tests.

@@ -43,24 +43,26 @@ def _get_wgpu_h():
 
 
 def _get_wgpu_lib_path():
-    override_path = os.getenv("WGPU_LIB_PATH", "").strip()
+    paths = []
 
-    lib_filename = ""
+    override_path = os.getenv("WGPU_LIB_PATH", "").strip()
+    if override_path:
+        paths.append(override_path)
+
+    lib_filename = None
     if sys.platform.startswith("win"):
         lib_filename = "wgpu_native.dll"
     elif sys.platform.startswith("darwin"):
         lib_filename = "libwgpu_native.dylib"
     elif sys.platform.startswith("linux"):
         lib_filename = "libwgpu_native.so"
+    if lib_filename:
+        embedded_path = get_resource_filename(lib_filename)
+        paths.append(embedded_path)
 
-    embedded_path = get_resource_filename(lib_filename)
-
-    paths = []
-    for path in [override_path, embedded_path]:
-        if path:
-            paths.append(path)
-            if os.path.isfile(path):
-                return path
+    for path in paths:
+        if os.path.isfile(path):
+            return path
     else:
         raise RuntimeError(f"Could not find WGPU library, checked: {paths}")
 
@@ -330,6 +332,8 @@ class GPUDevice(classes.GPUDevice):
             data = code  # Assume it's Spirv
         elif hasattr(code, "to_bytes"):
             data = code.to_bytes()
+        elif hasattr(code, "to_spirv"):
+            data = code.to_spirv()
 
         magic_nr = b"\x03\x02#\x07"  # 0x7230203
         if data[:4] != magic_nr:

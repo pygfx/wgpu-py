@@ -32,12 +32,18 @@ elif sys.platform.startswith("darwin"):
     resources_globs.append("*.dylib")
 
 
+runtime_deps = [
+    "cffi",
+]
+
+
 setup(
     name=NAME,
     version=VERSION,
     packages=find_packages(exclude=["tests", "tests.*", "examples", "examples.*"]),
     package_data={f"{NAME}.resources": resources_globs},
     python_requires=">=3.6.0",
+    install_requires=runtime_deps,
     license=open("LICENSE").read(),
     description=SUMMARY,
     long_description=open("README.md").read(),
