@@ -334,6 +334,8 @@ class GPUDevice(classes.GPUDevice):
             data = code.to_bytes()
         elif hasattr(code, "to_spirv"):
             data = code.to_spirv()
+        else:
+            raise TypeError("Need bytes or ob with ob.to_spirv() for shader.")
 
         magic_nr = b"\x03\x02#\x07"  # 0x7230203
         if data[:4] != magic_nr:

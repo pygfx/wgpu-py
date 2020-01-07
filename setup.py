@@ -33,7 +33,7 @@ elif sys.platform.startswith("darwin"):
 
 
 runtime_deps = [
-    "cffi",
+    "cffi>=1.10",
 ]
 
 
