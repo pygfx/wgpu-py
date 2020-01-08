@@ -19,7 +19,7 @@ if glfw_version_info < (1, 9):
     if sys.platform.startswith("win"):
         glfw._glfw.glfwGetWin32Window.restype = ctypes.c_void_p
         glfw._glfw.glfwGetWin32Window.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
-        glfw.get_win32_window = glfw._glfw.glfwGetWin32Window  # todo: name ok?
+        glfw.get_win32_window = glfw._glfw.glfwGetWin32Window
     elif sys.platform.startswith("darwin"):
         glfw._glfw.glfwGetCocoaWindow.restype = ctypes.c_void_p
         glfw._glfw.glfwGetCocoaWindow.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
