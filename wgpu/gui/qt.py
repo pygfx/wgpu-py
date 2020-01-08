@@ -51,4 +51,4 @@ class WgpuCanvas(BaseCanvas, QWidget):
         return not self.isVisible()
 
     def getWindowId(self):
-        return self.winId()
+        return int(self.winId())
