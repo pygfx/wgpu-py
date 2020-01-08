@@ -95,12 +95,12 @@ def get_surface_id_from_win_id(win_id):
         hwnd = ffi.cast("void *", int(win_id))
         hinstance = ffi.NULL
         return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
-    elif sys.platform.startswith("linux"):
-        # Use create_surface_from_xlib
-        raise NotImplementedError("Linux")
     elif sys.platform.startswith("darwin"):
         # Use create_surface_from_metal_layer
         raise NotImplementedError("OS-X")
+    elif sys.platform.startswith("linux"):
+        # Use create_surface_from_xlib
+        raise NotImplementedError("Linux")
     raise RuntimeError("Cannot get surface id: unsupported platform")
 
 

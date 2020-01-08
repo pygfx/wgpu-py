@@ -3,6 +3,7 @@ Support to render in a glfw window. The advantage of glfw is that it's
 very lightweight.
 """
 
+import sys
 import ctypes
 
 import glfw
@@ -10,12 +11,20 @@ import glfw
 from .base import BaseCanvas
 
 
-# Expose GetWin32Window
-# see https://github.com/FlorianRhiem/pyGLFW/issues/39
-# see https://www.glfw.org/docs/latest/group__native.html
-glfw._glfw.glfwGetWin32Window.restype = ctypes.c_void_p
-glfw._glfw.glfwGetWin32Window.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
-# todo: also for Linux and OS X
+glfw_version_info = tuple(int(i) for i in glfw.__version__.split(".")[:2])
+
+if glfw_version_info < (1, 9):
+    # see https://github.com/FlorianRhiem/pyGLFW/issues/39
+    # see https://www.glfw.org/docs/latest/group__native.html
+    if sys.platform.startswith("win"):
+        glfw._glfw.glfwGetWin32Window.restype = ctypes.c_void_p
+        glfw._glfw.glfwGetWin32Window.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
+        glfw.get_win32_window = glfw._glfw.glfwGetWin32Window  # todo: name ok?
+    elif sys.platform.startswith("darwin"):
+        glfw._glfw.glfwGetCocoaWindow.restype = ctypes.c_void_p
+        glfw._glfw.glfwGetCocoaWindow.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
+        glfw.get_cocoa_window = glfw._glfw.glfwGetCocoaWindow
+    # todo: also for Linux
 
 
 class WgpuCanvas(BaseCanvas):
@@ -41,7 +50,12 @@ class WgpuCanvas(BaseCanvas):
         return width, height, pixelratio
 
     def getWindowId(self):
-        return int(glfw._glfw.glfwGetWin32Window(self._window))
+        if sys.platform.startswith("win"):
+            return int(glfw.get_win32_window(self._window))
+        elif sys.platform.startswith("darwin"):
+            return int(glfw.get_cocoa_window(self._window))
+        else:
+            raise NotImplementedError()
 
     def _paint(self, *args):
         self._drawFrameAndPresent()
