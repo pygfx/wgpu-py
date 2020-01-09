@@ -99,7 +99,7 @@ def get_surface_id_from_win_id(win_id):
         # wgpu_create_surface_from_metal_layer(void *layer)
         # todo: untested; might well be wrong
         layer = ctypes.c_void_p(win_id)
-        return _lib.wgpu_create_surface_from_metal_layer(void *layer)
+        return _lib.wgpu_create_surface_from_metal_layer(layer)
     elif sys.platform.startswith("linux"):
         # wgpu_create_surface_from_wayland(void *surface, void *display)
         # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
@@ -108,7 +108,7 @@ def get_surface_id_from_win_id(win_id):
             # todo: untested; surface ok? probably need that display param?
             surface = ctypes.c_void_p(win_id)
             display = ffi.NULL
-            return wgpu_create_surface_from_wayland(surface, void *display)
+            return wgpu_create_surface_from_wayland(surface, display)
         else:
             # todo: untested; probably need that display param?
             display = ffi.NULL

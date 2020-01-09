@@ -19,11 +19,7 @@ class bdist_wheel(_bdist_wheel):
         _bdist_wheel.finalize_options(self)
 
 
-resources_globs = [
-    "*.h",
-    "*.idl",
-    "commit-sha",
-]
+resources_globs = ["*.h", "*.idl", "commit-sha"]
 if sys.platform.startswith("win"):
     resources_globs.append("*.dll")
 elif sys.platform.startswith("linux"):
@@ -32,9 +28,7 @@ elif sys.platform.startswith("darwin"):
     resources_globs.append("*.dylib")
 
 
-runtime_deps = [
-    "cffi>=1.10",
-]
+runtime_deps = ["cffi>=1.10"]
 
 
 setup(
