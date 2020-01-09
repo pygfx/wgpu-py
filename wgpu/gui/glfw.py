@@ -73,9 +73,9 @@ class WgpuCanvas(BaseCanvas):
         elif sys.platform.startswith("linux"):
             is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
             if is_wayland:
-                return glfw.get_wayland_window(self._window)
+                return int(glfw.get_wayland_window(self._window))
             else:
-                return glfw.get_x11_window(self._window)
+                return int(glfw.get_x11_window(self._window))
         else:
             raise RuntimeError("Unsupported platform.")
 
