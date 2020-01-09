@@ -103,14 +103,13 @@ def get_surface_id_from_win_id(win_id):
     elif sys.platform.startswith("linux"):
         # wgpu_create_surface_from_wayland(void *surface, void *display)
         # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
-        wayland = False  # todo: how to detect Wayland cs Xorg?
-        if wayland:
-            # todo: untested; surface ok? probably need that display param?
+        is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+        if is_wayland:
+            # todo: untested; surface ok?
             surface = ctypes.c_void_p(win_id)
             display = ffi.NULL
-            return wgpu_create_surface_from_wayland(surface, display)
+            return _lib.wgpu_create_surface_from_wayland(surface, display)
         else:
-            # todo: untested; probably need that display param?
             display = ffi.NULL
             return _lib.wgpu_create_surface_from_xlib(display, win_id)
     # Else ...
