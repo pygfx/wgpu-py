@@ -98,7 +98,7 @@ def get_surface_id_from_win_id(win_id):
     elif sys.platform.startswith("darwin"):
         # wgpu_create_surface_from_metal_layer(void *layer)
         # todo: untested; might well be wrong
-        layer = ctypes.c_void_p(win_id)
+        layer = ffi.cast("void *", win_id)
         return _lib.wgpu_create_surface_from_metal_layer(layer)
     elif sys.platform.startswith("linux"):
         # wgpu_create_surface_from_wayland(void *surface, void *display)
