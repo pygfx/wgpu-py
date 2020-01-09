@@ -1,8 +1,13 @@
 """
 Support to render in a glfw window. The advantage of glfw is that it's
 very lightweight.
+
+Install pyglfw using ``pip install glfw``. On Windows this is enough.
+On Linux, install the glfw lib using ``sudo apt install libglfw3``,
+or ``sudo apt install libglfw3-wayland`` when using Wayland.
 """
 
+import os
 import sys
 import ctypes
 
@@ -24,7 +29,17 @@ if glfw_version_info < (1, 9):
         glfw._glfw.glfwGetCocoaWindow.restype = ctypes.c_void_p
         glfw._glfw.glfwGetCocoaWindow.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
         glfw.get_cocoa_window = glfw._glfw.glfwGetCocoaWindow
-    # todo: also for Linux
+    elif sys.platform.startswith("linux"):
+        if hasattr(glfw._glfw, "glfwGetWaylandWindow"):
+            glfw._glfw.glfwGetWaylandWindow.restype = ctypes.c_void_p
+            glfw._glfw.glfwGetWaylandWindow.argtypes = [
+                ctypes.POINTER(glfw._GLFWwindow)
+            ]
+            glfw.get_wayland_window = glfw._glfw.glfwGetWaylandWindow
+        if hasattr(glfw._glfw, "glfwGetX11Window"):
+            glfw._glfw.glfwGetX11Window.restype = ctypes.c_uint32
+            glfw._glfw.glfwGetX11Window.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
+            glfw.get_x11_window = glfw._glfw.glfwGetX11Window
 
 
 class WgpuCanvas(BaseCanvas):
@@ -32,6 +47,7 @@ class WgpuCanvas(BaseCanvas):
     """
 
     def __init__(self, *, size=None, title=None):
+        super().__init__()
         if size:
             width, height = size
         else:
@@ -54,8 +70,14 @@ class WgpuCanvas(BaseCanvas):
             return int(glfw.get_win32_window(self._window))
         elif sys.platform.startswith("darwin"):
             return int(glfw.get_cocoa_window(self._window))
+        elif sys.platform.startswith("linux"):
+            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+            if is_wayland:
+                return glfw.get_wayland_window(self._window)
+            else:
+                return glfw.get_x11_window(self._window)
         else:
-            raise NotImplementedError()
+            raise RuntimeError("Unsupported platform.")
 
     def _paint(self, *args):
         self._drawFrameAndPresent()
