@@ -91,17 +91,30 @@ def new_struct(ctype, **kwargs):
 
 def get_surface_id_from_win_id(win_id):
     if sys.platform.startswith("win"):
-        # Use create_surface_from_windows_hwnd
+        # wgpu_create_surface_from_windows_hwnd(void *_hinstance, void *hwnd)
         hwnd = ffi.cast("void *", int(win_id))
         hinstance = ffi.NULL
         return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
     elif sys.platform.startswith("darwin"):
-        # Use create_surface_from_metal_layer
-        raise NotImplementedError("OS-X")
+        # wgpu_create_surface_from_metal_layer(void *layer)
+        # todo: untested; might well be wrong
+        layer = ctypes.c_void_p(win_id)
+        return _lib.wgpu_create_surface_from_metal_layer(void *layer)
     elif sys.platform.startswith("linux"):
-        # Use create_surface_from_xlib
-        raise NotImplementedError("Linux")
-    raise RuntimeError("Cannot get surface id: unsupported platform")
+        # wgpu_create_surface_from_wayland(void *surface, void *display)
+        # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
+        wayland = False  # todo: how to detect Wayland cs Xorg?
+        if wayland:
+            # todo: untested; surface ok? probably need that display param?
+            surface = ctypes.c_void_p(win_id)
+            display = ffi.NULL
+            return wgpu_create_surface_from_wayland(surface, void *display)
+        else:
+            # todo: untested; probably need that display param?
+            display = ffi.NULL
+            return _lib.wgpu_create_surface_from_xlib(display, win_id)
+    # Else ...
+    raise RuntimeError("Cannot get surface id: unsupported platform.")
 
 
 # %% The API
