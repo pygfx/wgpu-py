@@ -105,11 +105,12 @@ def get_surface_id_from_win_id(win_id):
         # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
         is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
         if is_wayland:
-            # todo: untested; surface ok?
-            surface = ctypes.c_void_p(win_id)
+            # todo: works, but have not yet been able to test drawing to the window
+            surface = ffi.cast("void *", win_id)
             display = ffi.NULL
             return _lib.wgpu_create_surface_from_wayland(surface, display)
         else:
+            # todo: works, but have not yet been able to test drawing to the window
             display = ffi.NULL
             return _lib.wgpu_create_surface_from_xlib(display, win_id)
     # Else ...
