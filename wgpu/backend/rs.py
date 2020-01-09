@@ -57,6 +57,7 @@ def _get_wgpu_lib_path():
     elif sys.platform.startswith("linux"):
         lib_filename = "libwgpu_native.so"
     if lib_filename:
+        # Note that this can be a false positive, e.g. ARM linux.
         embedded_path = get_resource_filename(lib_filename)
         paths.append(embedded_path)
 

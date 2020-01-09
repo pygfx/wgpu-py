@@ -26,7 +26,8 @@ elif sys.platform.startswith("linux"):
     resources_globs.append("*.so")
 elif sys.platform.startswith("darwin"):
     resources_globs.append("*.dylib")
-
+else:
+    pass  # don't include binaries; user will have to arrange for the lib
 
 runtime_deps = ["cffi>=1.10"]
 
