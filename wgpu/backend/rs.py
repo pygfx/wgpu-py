@@ -12,7 +12,7 @@ import os
 import sys
 import ctypes
 
-from cffi import FFI
+from cffi import FFI, __version_info__ as cffi_version_info
 
 from .. import classes
 from .. import _register_backend
@@ -20,7 +20,8 @@ from ..utils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
 
 
-os.environ["RUST_BACKTRACE"] = "0"  # Set to 1 for more trace info
+if cffi_version_info < (1, 10):
+    raise ImportError(f"{__name__} needs cffi 1.10 or later.")
 
 
 def _get_wgpu_h():

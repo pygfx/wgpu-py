@@ -24,7 +24,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 *This is experimental, work in progress, you probably don't want to use this just yet!*
 
 * We have a few working examples!
-* This currently only works on Windows.
+* These *should* work on all platforms but this is currently only tested on Windows (see #28 and #29), so they probably don't :)
 * We have not fully implemented the API yet.
 * The API may change. We're still figuring out what works best.
 * The API may change more. Until WebGPU settles as a standard, its specification
@@ -35,7 +35,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 ```
 pip install wgpu
-pip install spirv  # optional - our examples use this to define shaders
+pip install python-shader  # optional - our examples use this to define shaders
 ```
 
 The library ships with Rust binaries for Windows, MacOS and Linux. If you want to use
@@ -49,7 +49,6 @@ The full API is accessable via the main namespace:
 import wgpu
 ```
 
-
 But to use it, you need to select a backend first. You do this by importing it.
 There is currently only one backend:
 ```py
@@ -60,7 +59,7 @@ import wgpu.backend.rs
 ## GUI integration
 
 To render to the screen you can use any of the following GUI toolkits:
-`Tk` (included with Python), `glfw`, `PySide2`, `PyQt5`.
+`Tk` (included with Python), `glfw`, `PySide2`, `PyQt5`, `PySide`, `PyQt4`.
 
 
 ## Web support
