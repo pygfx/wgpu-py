@@ -1,11 +1,14 @@
 """
-Script to generate parts of the API.
+Script to auto-generate parts of the API.
 
-* The IDL is used to generate structs, enums and flags.
+* The IDL is used to generate enums and flags, and signatures from JS dicts.
 * The wgpu.h is used to check missing fields, and to  automate enum conversion
   for the rs backend.
-* The API classes are written by hand, following the spec. We inject
-  some comment lines into the hand-written code to help during dev.
+* The API classes are written by hand, following the IDL spec. We inject
+  comment lines and signatures into the hand-written code. This makes it easy
+  to track where updates are needed as the IDL or header file changes.
+* A report is written to codegen_report.md, which is under version control,
+  so we can easily see the status.
 
 Links:
 - Spec and IDL: https://gpuweb.github.io/gpuweb/
@@ -19,7 +22,15 @@ import subprocess
 from wgpu._parsers import IdlParser, HParser
 
 
-def blacken(src, ll=88):
+def blacken(src, singleline=False):
+    """ Format the given src string by calling black in a subprocess.
+    If singleline is True, all signatures become single-line, so they can
+    be parsed and updated.
+    """
+    if singleline:  # remove noqas
+        src = "\n".join(line.split("# noqa:")[0] for line in src.splitlines())
+    ll = 9999999 if singleline else 88
+    # Call black
     p = subprocess.Popen(
         ["black", "-l", str(ll), "-"],
         stdin=subprocess.PIPE,
@@ -30,15 +41,31 @@ def blacken(src, ll=88):
     p.stdin.close()
     result = p.stdout.read().decode()
     log = p.stderr.read().decode()
+    # Post process and return (or error)
     if "error" in log.lower():
         raise RuntimeError(log)
+    if singleline:  # Black still puts long signatures on 3 lines :/
+        result = result.replace("(\n        self", "(self")
+        result = result.replace(",\n    ):\n", "):\n")
     return result
+
+
+def print(*args, **kwargs):
+    """ Report something (will be printed and added to a file.
+    """
+    __builtins__.print(*args, **kwargs)
+    if args and not args[0].lstrip().startswith("#"):
+        args = ("* ",) + args
+    __builtins__.print(*args, file=report_file, flush=True, **kwargs)
 
 
 this_dir = os.path.dirname(os.path.abspath(__file__))
 lib_dir = os.path.join(this_dir, "wgpu")
 resource_dir = os.path.join(lib_dir, "resources")
 
+report_file = open(
+    os.path.join(resource_dir, "codegen_report.md"), "wt", encoding="utf-8"
+)
 
 ip = IdlParser(open(os.path.join(resource_dir, "webgpu.idl"), "rb").read().decode())
 ip.parse(verbose=True)
@@ -46,35 +73,45 @@ ip.parse(verbose=True)
 hp = HParser(open(os.path.join(resource_dir, "wgpu.h"), "rb").read().decode())
 hp.parse(verbose=True)
 
+print("# wgpu-py codegen report")
+print("Running", os.path.basename(__file__))
 
-# %% Compare
+
+# %% Compare webgpu.idl and wgpu.h
+
+# Check consistency between IDL and .h
+# get a mapping from string enums (IDL) to int enums (Rust)
 
 enummap = {}  # name -> int
 
-print("\n##### Comparing flags")
+print("\n## Comparing webgpu.idl with wgpu.h")
+
+print("\n### Comparing flags")
 for name in hp.flags:
     if name not in ip.flags:
-        print(name, "flag missing in .idl")
+        print(f" {name} flag missing in .idl")
 for name in ip.flags:
     if name not in hp.flags:
-        print(name, "flag missing in .h")
+        print(f"{name} flag missing in .h")
 for name in hp.flags:
     if name not in ip.flags:
         continue
     if hp.flags[name] != ip.flags[name]:
-        print(" ", name)
-        print("c:", ", ".join((f"{key}:{val}" for key, val in hp.flags[name].items())))
-        print("i:", ", ".join((f"{key}:{val}" for key, val in ip.flags[name].items())))
+        print(f" {name}")
+        print(
+            "c: " + ", ".join((f"{key}:{val}" for key, val in hp.flags[name].items()))
+        )
+        print(
+            "i: " + ", ".join((f"{key}:{val}" for key, val in ip.flags[name].items()))
+        )
 
-# todo: C -> STORAGE_READ:256, INDIRECT:512   IDL -> INDIRECT:256
-
-print("\n##### Comparing enums")
+print("\n### Comparing enums")
 for name in hp.enums:
     if name not in ip.enums:
-        print(name, "enum missing in .idl")
+        print(f"{name} enum missing in .idl")
 for name in ip.enums:
     if name not in hp.enums:
-        print(name, "enum missing in .h")
+        print(f"{name}enum missing in .h")
 for name in hp.enums:
     if name not in ip.enums:
         continue
@@ -85,15 +122,15 @@ for name in hp.enums:
         if hkey in hp.enums[name]:
             enummap[name + "." + ikey] = hp.enums[name][hkey]
         else:
-            print(name + "." + ikey, "is missing")
+            print(f"{name}.{ikey} is missing")
 
-print("\n##### Comparing structs")
+print("\n### Comparing structs")
 for name in hp.structs:
     if name not in ip.structs:
-        print(name, "structs missing in .idl")
+        print(f"{name} struct missing in .idl")
 for name in ip.structs:
     if name not in hp.structs:
-        print(name, "structs missing in .h")
+        print(f"{name} struct missing in .h")
 for name in hp.structs:
     if name not in ip.structs:
         continue
@@ -104,14 +141,14 @@ for name in hp.structs:
     keys3.discard("todo")
     keys4.discard("label")
     if keys3 != keys4:
-        print("  ", name)
-        print("c:", keys1)
-        print("i:", keys2)
+        print(f" {name}")
+        print("c: " + str(keys1))
+        print("i: " + str(keys2))
 
 
 # %% Generate code for flags
 
-print("\n##### Generate API for flags")
+print("\n## Generate API code")
 
 preamble = '''
 """
@@ -147,15 +184,14 @@ for name, d in ip.flags.items():
     pylines.append(")\n")
 
 # Write
+code = blacken("\n".join(pylines))
 with open(os.path.join(lib_dir, "flags.py"), "wb") as f:
-    code = blacken("\n".join(pylines))
     f.write(code.encode())
 print("Written to flags.py")
 
 
 # %% Generate code for enums
 
-print("\n##### Generate API for enums")
 
 preamble = '''
 """
@@ -193,15 +229,14 @@ for name, d in ip.enums.items():
     pylines.append(")\n")
 
 # Write
+code = blacken("\n".join(pylines))
 with open(os.path.join(lib_dir, "enums.py"), "wb") as f:
-    code = blacken("\n".join(pylines))
     f.write(code.encode())
 print("Written to enums.py")
 
 
-# %% Generate code for e.g. mapping enums
+# %% Generate helper code for mapping enums
 
-print("\n##### Generate helper code (e.g. mappings)")
 
 preamble = '''
 """
@@ -214,14 +249,6 @@ Mappings that help automate some things in the implementations.
 
 # Generate code
 pylines = [preamble]
-
-# pylines.append(f"\n# %% Structs ({len(ip.structs)})\n")
-# for name, vals in ip.structs.items():
-#     py_args = [field.py_arg() for field in vals.values()]
-#     dict_args = [f'"{key}": {key}' for key in vals.keys()]
-#     pylines.append(f"def make{name}(*, {', '.join(py_args)}):")
-#     the_dict = "{" + ", ".join(dict_args) + "}"
-#     pylines.append(f"    return {the_dict}\n")
 
 # pylines.append(f"\n# %% Enum map ({len(enummap)})\n")
 pylines.append("enummap = {")
@@ -239,28 +266,26 @@ for structname, struct in hp.structs.items():
 pylines.append("}\n")
 
 # Write
+code = blacken("\n".join(pylines))  # just in case; code is already black
 with open(os.path.join(lib_dir, "_mappings.py"), "wb") as f:
-    code = blacken("\n".join(pylines))  # just in case; code is already black
     f.write(code.encode())
 print("Written to _mappings.py")
-
-# todo: compare backend implementation with classes.py
-# todo: some of these checks we may want to run in the tests
-# todo: some other stuff we may want to export as a report somewhere
 
 
 # %% Inject IDL into our hand-written source
 
 # ip.functions["requestAdapter"] = ip.functions.pop("requestadapter")
 
+print(f"\n## Checking and patching hand-written API code")
+
 for fname in ("classes.py", "backend/rs.py"):
     filename = os.path.join(lib_dir, fname)
-    print(f"\n##### Check functions in {fname}")
+    print(f"\n### Check functions in {fname}")
 
     starts = "# IDL: ", "# wgpu.help("
     with open(filename, "rb") as f:
         code = f.read().decode()
-        api_lines = blacken(code, ll=99999999).splitlines()  # inf line lenght
+        api_lines = blacken(code, True).splitlines()  # inf line lenght
     api_lines = [
         line.rstrip() for line in api_lines if not line.lstrip().startswith(starts)
     ]
@@ -313,14 +338,11 @@ for fname in ("classes.py", "backend/rs.py"):
             else:
                 py_args = ["self"] + argnames
                 api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
-            api_lines[i] += "  # noqa: F821"  # undefined name
 
             api_lines.insert(i, " " * indent + "# IDL: " + line)
             api_lines.insert(
                 i, " " * indent + f"# wgpu.help({', '.join(searches)}, dev=True)"
             )
-            if len(api_lines[i]) > 88:
-                api_lines[i] += "  # noqa: E501"  # line too long
 
     # Report missing
     print(f"Found {count} functions already implemented")
@@ -333,8 +355,8 @@ for fname in ("classes.py", "backend/rs.py"):
             print(f"Found unknown function {funcname}")
 
     # Write back
+    code = blacken("\n".join(api_lines))
     with open(filename, "wb") as f:
-        code = blacken("\n".join(api_lines))
         f.write(code.encode())
     print(f"Injected IDL lines into {fname}")
 
