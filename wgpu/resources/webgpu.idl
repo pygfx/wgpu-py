@@ -1,43 +1,9 @@
-// from https://gpuweb.github.io/gpuweb/#idl-index
-
-typedef unsigned long long GPUBufferSize;
-
-dictionary GPUColorDict {
-    required double r;
-    required double g;
-    required double b;
-    required double a;
-};
-typedef (sequence<double> or GPUColorDict) GPUColor;
-
-dictionary GPUOrigin2DDict {
-    unsigned long x = 0;
-    unsigned long y = 0;
-};
-typedef (sequence<unsigned long> or GPUOrigin2DDict) GPUOrigin2D;
-
-dictionary GPUOrigin3DDict {
-    unsigned long x = 0;
-    unsigned long y = 0;
-    unsigned long z = 0;
-};
-typedef (sequence<unsigned long> or GPUOrigin3DDict) GPUOrigin3D;
-
-dictionary GPUExtent3DDict {
-    required unsigned long width;
-    required unsigned long height;
-    required unsigned long depth;
-};
-typedef (sequence<unsigned long> or GPUExtent3DDict) GPUExtent3D;
-
-typedef sequence<any> GPUMappedBuffer;
-
 interface mixin GPUObjectBase {
     attribute DOMString? label;
 };
 
 dictionary GPUObjectDescriptorBase {
-    DOMString? label;
+    DOMString label;
 };
 
 [Exposed=Window]
@@ -50,19 +16,9 @@ partial interface WorkerNavigator {
     [SameObject] readonly attribute GPU gpu;
 };
 
-[Exposed=Window]
+[Exposed=(Window, DedicatedWorker)]
 interface GPU {
-    // May reject with DOMException  // TODO: DOMException("OperationError")?
     Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-};
-
-interface GPUAdapter {
-    readonly attribute DOMString name;
-    readonly attribute sequence<GPUExtensionName> extensions;
-    //readonly attribute GPULimits limits; Don’t expose higher limits for now.
-
-    // May reject with DOMException  // TODO: DOMException("OperationError")?
-    Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
 };
 
 dictionary GPURequestAdapterOptions {
@@ -74,7 +30,37 @@ enum GPUPowerPreference {
     "high-performance"
 };
 
-[Exposed=(Window, Worker), Serializable]
+interface GPUAdapter {
+    readonly attribute DOMString name;
+    readonly attribute sequence<GPUExtensionName> extensions;
+    //readonly attribute GPULimits limits; Don’t expose higher limits for now.
+
+    Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+};
+
+dictionary GPUDeviceDescriptor : GPUObjectDescriptorBase {
+    sequence<GPUExtensionName> extensions = [];
+    GPULimits limits = {};
+
+    // TODO: are other things configurable like queues?
+};
+
+enum GPUExtensionName {
+    "anisotropic-filtering"
+};
+
+dictionary GPULimits {
+    unsigned long maxBindGroups = 4;
+    unsigned long maxDynamicUniformBuffersPerPipelineLayout = 8;
+    unsigned long maxDynamicStorageBuffersPerPipelineLayout = 4;
+    unsigned long maxSampledTexturesPerShaderStage = 16;
+    unsigned long maxSamplersPerShaderStage = 16;
+    unsigned long maxStorageBuffersPerShaderStage = 4;
+    unsigned long maxStorageTexturesPerShaderStage = 4;
+    unsigned long maxUniformBuffersPerShaderStage = 12;
+};
+
+[Exposed=(Window, DedicatedWorker), Serializable]
 interface GPUDevice : EventTarget {
     [SameObject] readonly attribute GPUAdapter adapter;
     readonly attribute sequence<GPUExtensionName> extensions;
@@ -99,28 +85,6 @@ interface GPUDevice : EventTarget {
     GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
 };
 GPUDevice includes GPUObjectBase;
-
-dictionary GPUDeviceDescriptor : GPUObjectDescriptorBase {
-    sequence<GPUExtensionName> extensions = [];
-    GPULimits limits = {};
-
-    // TODO: are other things configurable like queues?
-};
-
-enum GPUExtensionName {
-    "anisotropic-filtering"
-};
-
-dictionary GPULimits {
-    unsigned long maxBindGroups = 4;
-    unsigned long maxDynamicUniformBuffersPerPipelineLayout = 8;
-    unsigned long maxDynamicStorageBuffersPerPipelineLayout = 4;
-    unsigned long maxSampledTexturesPerShaderStage = 16;
-    unsigned long maxSamplersPerShaderStage = 16;
-    unsigned long maxStorageBuffersPerShaderStage = 4;
-    unsigned long maxStorageTexturesPerShaderStage = 4;
-    unsigned long maxUniformBuffersPerShaderStage = 12;
-};
 
 [Serializable]
 interface GPUBuffer {
@@ -839,7 +803,7 @@ partial interface GPUDevice {
 };
 
 [
-    Exposed=Window
+    Exposed=(Window, DedicatedWorker)
 ]
 interface GPUUncapturedErrorEvent : Event {
     constructor(
@@ -854,6 +818,38 @@ dictionary GPUUncapturedErrorEventInit : EventInit {
 };
 
 partial interface GPUDevice {
-    [Exposed=Window]
+    [Exposed=(Window, DedicatedWorker)]
     attribute EventHandler onuncapturederror;
 };
+
+typedef unsigned long long GPUBufferSize;
+
+dictionary GPUColorDict {
+    required double r;
+    required double g;
+    required double b;
+    required double a;
+};
+typedef (sequence<double> or GPUColorDict) GPUColor;
+
+dictionary GPUOrigin2DDict {
+    unsigned long x = 0;
+    unsigned long y = 0;
+};
+typedef (sequence<unsigned long> or GPUOrigin2DDict) GPUOrigin2D;
+
+dictionary GPUOrigin3DDict {
+    unsigned long x = 0;
+    unsigned long y = 0;
+    unsigned long z = 0;
+};
+typedef (sequence<unsigned long> or GPUOrigin3DDict) GPUOrigin3D;
+
+dictionary GPUExtent3DDict {
+    required unsigned long width;
+    required unsigned long height;
+    required unsigned long depth;
+};
+typedef (sequence<unsigned long> or GPUExtent3DDict) GPUExtent3D;
+
+typedef sequence<(GPUBuffer or ArrayBuffer)> GPUMappedBuffer;

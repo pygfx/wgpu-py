@@ -40,9 +40,6 @@
 *  VertexInputDescriptor struct missing in .idl
 *  U32Array struct missing in .idl
 *  SwapChainOutput struct missing in .idl
-*  Origin2D struct missing in .h
-*  Origin3D struct missing in .h
-*  Extent3D struct missing in .h
 *  VertexStateDescriptor struct missing in .h
 *  VertexBufferLayoutDescriptor struct missing in .h
 *  ImageBitmapCopyView struct missing in .h
@@ -51,6 +48,9 @@
 *  RenderBundleEncoderDescriptor struct missing in .h
 *  FenceDescriptor struct missing in .h
 *  UncapturedErrorEventInit struct missing in .h
+*  Origin2D struct missing in .h
+*  Origin3D struct missing in .h
+*  Extent3D struct missing in .h
 *   Limits
 *  c: ['max_bind_groups']
 *  i: ['maxBindGroups', 'maxDynamicUniformBuffersPerPipelineLayout', 'maxDynamicStorageBuffersPerPipelineLayout', 'maxSampledTexturesPerShaderStage', 'maxSamplersPerShaderStage', 'maxStorageBuffersPerShaderStage', 'maxStorageTexturesPerShaderStage', 'maxUniformBuffersPerShaderStage']
