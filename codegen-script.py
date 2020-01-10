@@ -7,7 +7,7 @@ Script to auto-generate parts of the API.
 * The API classes are written by hand, following the IDL spec. We inject
   comment lines and signatures into the hand-written code. This makes it easy
   to track where updates are needed as the IDL or header file changes.
-* A report is written to codegen_report.txt, which is under version control,
+* A report is written to codegen_report.md, which is under version control,
   so we can easily see the status.
 
 Links:
@@ -54,6 +54,8 @@ def print(*args, **kwargs):
     """ Report something (will be printed and added to a file.
     """
     __builtins__.print(*args, **kwargs)
+    if args and not args[0].lstrip().startswith("#"):
+        args = ("* ",) + args
     __builtins__.print(*args, file=report_file, flush=True, **kwargs)
 
 
@@ -62,7 +64,7 @@ lib_dir = os.path.join(this_dir, "wgpu")
 resource_dir = os.path.join(lib_dir, "resources")
 
 report_file = open(
-    os.path.join(resource_dir, "codegen_report.txt"), "wt", encoding="utf-8"
+    os.path.join(resource_dir, "codegen_report.md"), "wt", encoding="utf-8"
 )
 
 ip = IdlParser(open(os.path.join(resource_dir, "webgpu.idl"), "rb").read().decode())
@@ -71,17 +73,20 @@ ip.parse(verbose=True)
 hp = HParser(open(os.path.join(resource_dir, "wgpu.h"), "rb").read().decode())
 hp.parse(verbose=True)
 
+print("# wgpu-py codegen report")
 print("Running", os.path.basename(__file__))
 
 
-# %% Compare IDL and .h
+# %% Compare webgpu.idl and wgpu.h
 
 # Check consistency between IDL and .h
 # get a mapping from string enums (IDL) to int enums (Rust)
 
 enummap = {}  # name -> int
 
-print("\n##### Comparing flags")
+print("\n## Comparing webgpu.idl with wgpu.h")
+
+print("\n### Comparing flags")
 for name in hp.flags:
     if name not in ip.flags:
         print(f" {name} flag missing in .idl")
@@ -100,7 +105,7 @@ for name in hp.flags:
             "i: " + ", ".join((f"{key}:{val}" for key, val in ip.flags[name].items()))
         )
 
-print("\n##### Comparing enums")
+print("\n### Comparing enums")
 for name in hp.enums:
     if name not in ip.enums:
         print(f"{name} enum missing in .idl")
@@ -119,7 +124,7 @@ for name in hp.enums:
         else:
             print(f"{name}.{ikey} is missing")
 
-print("\n##### Comparing structs")
+print("\n### Comparing structs")
 for name in hp.structs:
     if name not in ip.structs:
         print(f"{name} struct missing in .idl")
@@ -143,7 +148,7 @@ for name in hp.structs:
 
 # %% Generate code for flags
 
-print("\n##### Generate API for flags")
+print("\n## Generate API code")
 
 preamble = '''
 """
@@ -187,7 +192,6 @@ print("Written to flags.py")
 
 # %% Generate code for enums
 
-print("\n##### Generate API for enums")
 
 preamble = '''
 """
@@ -233,7 +237,6 @@ print("Written to enums.py")
 
 # %% Generate helper code for mapping enums
 
-print("\n##### Generate helper code")
 
 preamble = '''
 """
@@ -246,14 +249,6 @@ Mappings that help automate some things in the implementations.
 
 # Generate code
 pylines = [preamble]
-
-# pylines.append(f"\n# %% Structs ({len(ip.structs)})\n")
-# for name, vals in ip.structs.items():
-#     py_args = [field.py_arg() for field in vals.values()]
-#     dict_args = [f'"{key}": {key}' for key in vals.keys()]
-#     pylines.append(f"def make{name}(*, {', '.join(py_args)}):")
-#     the_dict = "{" + ", ".join(dict_args) + "}"
-#     pylines.append(f"    return {the_dict}\n")
 
 # pylines.append(f"\n# %% Enum map ({len(enummap)})\n")
 pylines.append("enummap = {")
@@ -276,18 +271,16 @@ with open(os.path.join(lib_dir, "_mappings.py"), "wb") as f:
     f.write(code.encode())
 print("Written to _mappings.py")
 
-# todo: compare backend implementation with classes.py
-# todo: some of these checks we may want to run in the tests
-# todo: some other stuff we may want to export as a report somewhere
-
 
 # %% Inject IDL into our hand-written source
 
 # ip.functions["requestAdapter"] = ip.functions.pop("requestadapter")
 
+print(f"\n## Checking and patching hand-written API code")
+
 for fname in ("classes.py", "backend/rs.py"):
     filename = os.path.join(lib_dir, fname)
-    print(f"\n##### Check functions in {fname}")
+    print(f"\n### Check functions in {fname}")
 
     starts = "# IDL: ", "# wgpu.help("
     with open(filename, "rb") as f:
