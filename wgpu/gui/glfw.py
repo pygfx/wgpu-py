@@ -51,8 +51,14 @@ class WgpuCanvas(BaseCanvas):
             width, height = 256, 256
         title = title or ""
 
+        # Set window hints
         glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
         glfw.window_hint(glfw.RESIZABLE, True)
+        # see https://github.com/FlorianRhiem/pyGLFW/issues/42
+        if sys.platform.startswith("linux"):
+            if "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower():
+                glfw.window_hint(glfw.FOCUSED, False)  # prevent Wayland focus error
+
         self._window = glfw.create_window(width, height, title, None, None)
         glfw.set_window_refresh_callback(self._window, self._paint)
 
