@@ -19,22 +19,17 @@ class bdist_wheel(_bdist_wheel):
         _bdist_wheel.finalize_options(self)
 
 
-resources_globs = [
-    "*.h",
-    "*.idl",
-    "commit-sha",
-]
+resources_globs = ["*.h", "*.idl", "commit-sha"]
 if sys.platform.startswith("win"):
     resources_globs.append("*.dll")
 elif sys.platform.startswith("linux"):
     resources_globs.append("*.so")
 elif sys.platform.startswith("darwin"):
     resources_globs.append("*.dylib")
+else:
+    pass  # don't include binaries; user will have to arrange for the lib
 
-
-runtime_deps = [
-    "cffi",
-]
+runtime_deps = ["cffi>=1.10"]
 
 
 setup(

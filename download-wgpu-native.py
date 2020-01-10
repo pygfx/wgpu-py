@@ -44,6 +44,9 @@ def get_os_string():
     elif sys.platform.startswith("linux"):
         return "linux"
     else:
+        # We do not provide binaries for this platform. Note that we can
+        # have false positives, e.g. on ARM Linux. We assume that users on
+        # such platforms are aware and arrange for the wgpu lib themselves.
         raise RuntimeError(f"Platform '{sys.platform}' not supported")
 
 
@@ -55,10 +58,7 @@ def main(version, debug, os_string, upstream):
     zip_filename = os.path.join(tmp, filename)
     print(f"Downloading {url} to {zip_filename}")
     download_file(url, zip_filename)
-    members = [
-        "wgpu.h",
-        "commit-sha",
-    ]
+    members = ["wgpu.h", "commit-sha"]
     if os_string == "linux":
         members.append("libwgpu_native.so")
     elif os_string == "macos":
@@ -81,7 +81,7 @@ if __name__ == "__main__":
     )
     version = get_current_version()
     parser.add_argument(
-        "--version", help=f"Version to download (default: {version})", default=version,
+        "--version", help=f"Version to download (default: {version})", default=version
     )
     parser.add_argument(
         "--debug",

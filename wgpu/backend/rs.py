@@ -57,6 +57,7 @@ def _get_wgpu_lib_path():
     elif sys.platform.startswith("linux"):
         lib_filename = "libwgpu_native.so"
     if lib_filename:
+        # Note that this can be a false positive, e.g. ARM linux.
         embedded_path = get_resource_filename(lib_filename)
         paths.append(embedded_path)
 
@@ -91,17 +92,30 @@ def new_struct(ctype, **kwargs):
 
 def get_surface_id_from_win_id(win_id):
     if sys.platform.startswith("win"):
-        # Use create_surface_from_windows_hwnd
+        # wgpu_create_surface_from_windows_hwnd(void *_hinstance, void *hwnd)
         hwnd = ffi.cast("void *", int(win_id))
         hinstance = ffi.NULL
         return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
-    elif sys.platform.startswith("linux"):
-        # Use create_surface_from_xlib
-        raise NotImplementedError("Linux")
     elif sys.platform.startswith("darwin"):
-        # Use create_surface_from_metal_layer
-        raise NotImplementedError("OS-X")
-    raise RuntimeError("Cannot get surface id: unsupported platform")
+        # wgpu_create_surface_from_metal_layer(void *layer)
+        # todo: untested; might well be wrong
+        layer = ffi.cast("void *", win_id)
+        return _lib.wgpu_create_surface_from_metal_layer(layer)
+    elif sys.platform.startswith("linux"):
+        # wgpu_create_surface_from_wayland(void *surface, void *display)
+        # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
+        is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+        if is_wayland:
+            # todo: works, but have not yet been able to test drawing to the window
+            surface = ffi.cast("void *", win_id)
+            display = ffi.NULL
+            return _lib.wgpu_create_surface_from_wayland(surface, display)
+        else:
+            # todo: works, but have not yet been able to test drawing to the window
+            display = ffi.NULL
+            return _lib.wgpu_create_surface_from_xlib(display, win_id)
+    # Else ...
+    raise RuntimeError("Cannot get surface id: unsupported platform.")
 
 
 # %% The API
@@ -334,6 +348,8 @@ class GPUDevice(classes.GPUDevice):
             data = code.to_bytes()
         elif hasattr(code, "to_spirv"):
             data = code.to_spirv()
+        else:
+            raise TypeError("Need bytes or ob with ob.to_spirv() for shader.")
 
         magic_nr = b"\x03\x02#\x07"  # 0x7230203
         if data[:4] != magic_nr:

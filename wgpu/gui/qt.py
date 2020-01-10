@@ -4,14 +4,16 @@ can be used as a standalone window or in a larger GUI.
 """
 
 import sys
+import importlib
 
 from .base import BaseCanvas
 
-
 # Select GUI toolkit
-for libname in ("PySide2", "PyQt5"):
+for libname in ("PySide2", "PyQt5", "PySide", "PyQt4"):
     if libname in sys.modules:
-        QWidget = sys.modules[libname].QtWidgets.QWidget
+        QtCore = importlib.import_module(libname + ".QtCore")
+        widgets_modname = "QtGui" if QtCore.qVersion()[0] == "4" else "QtWidgets"
+        QWidget = importlib.import_module(libname + "." + widgets_modname).QWidget
         break
 else:
     raise ImportError(
@@ -25,8 +27,7 @@ class WgpuCanvas(BaseCanvas, QWidget):
 
     def __init__(self, *args, size=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
-        WA_PaintOnScreen = 8  # QtCore.Qt.WA_PaintOnScreen
-        self.setAttribute(WA_PaintOnScreen, True)
+        self.setAttribute(QtCore.Qt.WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
 
         if size:
@@ -51,4 +52,4 @@ class WgpuCanvas(BaseCanvas, QWidget):
         return not self.isVisible()
 
     def getWindowId(self):
-        return self.winId()
+        return int(self.winId())

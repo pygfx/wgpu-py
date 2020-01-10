@@ -1,15 +1,15 @@
-// /* This Source Code Form is subject to the terms of the Mozilla Public
-//  * License, v. 2.0. If a copy of the MPL was not distributed with this
-//  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// /* Generated with cbindgen:0.11.1 */
+/* Generated with cbindgen:0.12.1 */
 
-// /* DO NOT MODIFY THIS MANUALLY! This file was generated using cbindgen.
-//  * To generate this file:
-//  *   1. Get the latest cbindgen using `cargo install --force cbindgen`
-//  *      a. Alternatively, you can clone `https://github.com/eqrion/cbindgen` and use a tagged release
-//  *   2. Run `rustup run nightly cbindgen toolkit/library/rust/ --lockfile Cargo.lock --crate wgpu-remote -o dom/webgpu/ffi/wgpu_ffi_generated.h`
-//  */
+/* DO NOT MODIFY THIS MANUALLY! This file was generated using cbindgen.
+ * To generate this file:
+ *   1. Get the latest cbindgen using `cargo install --force cbindgen`
+ *      a. Alternatively, you can clone `https://github.com/eqrion/cbindgen` and use a tagged release
+ *   2. Run `rustup run nightly cbindgen toolkit/library/rust/ --lockfile Cargo.lock --crate wgpu-remote -o dom/webgpu/ffi/wgpu_ffi_generated.h`
+ */
 
 #define WGPU_LOCAL
 
@@ -278,13 +278,13 @@ typedef void (*WGPUBufferMapReadCallback)(WGPUBufferMapAsyncStatus status, const
 
 typedef void (*WGPUBufferMapWriteCallback)(WGPUBufferMapAsyncStatus status, uint8_t *data, uint8_t *userdata);
 
-typedef uint64_t WGPUId_ComputePass_Dummy;
-
-typedef WGPUId_ComputePass_Dummy WGPUComputePassId;
-
 typedef uint64_t WGPUId_CommandBuffer_Dummy;
 
 typedef WGPUId_CommandBuffer_Dummy WGPUCommandBufferId;
+
+typedef uint64_t WGPUId_ComputePass_Dummy;
+
+typedef WGPUId_ComputePass_Dummy WGPUComputePassId;
 
 typedef WGPUCommandBufferId WGPUCommandEncoderId;
 
@@ -686,6 +686,8 @@ void wgpu_buffer_map_write_async(WGPUBufferId buffer_id,
 
 void wgpu_buffer_unmap(WGPUBufferId buffer_id);
 
+void wgpu_command_buffer_destroy(WGPUCommandBufferId command_buffer_id);
+
 WGPUComputePassId wgpu_command_encoder_begin_compute_pass(WGPUCommandEncoderId encoder_id,
                                                           const WGPUComputePassDescriptor *desc);
 
@@ -714,6 +716,8 @@ void wgpu_command_encoder_copy_texture_to_texture(WGPUCommandEncoderId command_e
                                                   const WGPUTextureCopyView *destination,
                                                   WGPUExtent3d copy_size);
 
+void wgpu_command_encoder_destroy(WGPUCommandEncoderId command_encoder_id);
+
 WGPUCommandBufferId wgpu_command_encoder_finish(WGPUCommandEncoderId encoder_id,
                                                 const WGPUCommandBufferDescriptor *desc);
 
@@ -741,9 +745,11 @@ void wgpu_compute_pass_set_pipeline(WGPUComputePassId pass_id, WGPUComputePipeli
 
 WGPUSurfaceId wgpu_create_surface_from_metal_layer(void *layer);
 
+WGPUSurfaceId wgpu_create_surface_from_wayland(void *surface, void *display);
+
 WGPUSurfaceId wgpu_create_surface_from_windows_hwnd(void *_hinstance, void *hwnd);
 
-WGPUSurfaceId wgpu_create_surface_from_xlib(const void **display, uint64_t window);
+WGPUSurfaceId wgpu_create_surface_from_xlib(const void **display, unsigned long window);
 
 WGPUBindGroupId wgpu_device_create_bind_group(WGPUDeviceId device_id,
                                               const WGPUBindGroupDescriptor *desc);
