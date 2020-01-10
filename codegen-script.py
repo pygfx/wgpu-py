@@ -361,5 +361,9 @@ for fname in ("classes.py", "backend/rs.py"):
     print(f"Injected IDL lines into {fname}")
 
 
+# Close the file in case we're in an interactive session
+report_file.close()
+
+
 # >>> [i for i in x if not i.endswith("Descriptor")]
 # ['Color', 'Origin2D', 'Origin3D', 'Extent3D', 'RequestAdapterOptions', 'Extensions', 'Limits', 'BindGroupLayoutBinding', 'BindGroupBinding', 'BufferBinding', 'BufferCopyView', 'TextureCopyView', 'ImageBitmapCopyView', 'UncapturedErrorEventInit']
