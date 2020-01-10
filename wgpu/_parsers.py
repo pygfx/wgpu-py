@@ -361,10 +361,8 @@ class HParser(BaseParser):
             elif line.startswith("//"):
                 pass
             elif line.startswith("/*"):
-                if "*/" in line:
-                    pass
-                else:
-                    raise RuntimeError("Cannot handle multiline comments yet.")
+                while "*/" not in line:
+                    line += self.readline()
             elif line.startswith("#include "):
                 pass
             elif line.startswith("#if !defined(WGPU_REMOTE)") or line.startswith(

@@ -24,12 +24,12 @@ class Enum:
 # %% Enums (23)
 
 PowerPreference = Enum(
-    "PowerPreference", low_power="low-power", high_performance="high-performance"
+    "PowerPreference", low_power="low-power", high_performance="high-performance",
 )
 
-ExtensionName = Enum("ExtensionName", anisotropic_filtering="anisotropic-filtering")
+ExtensionName = Enum("ExtensionName", anisotropic_filtering="anisotropic-filtering",)
 
-TextureDimension = Enum("TextureDimension", d1="1d", d2="2d", d3="3d")
+TextureDimension = Enum("TextureDimension", d1="1d", d2="2d", d3="3d",)
 
 TextureViewDimension = Enum(
     "TextureViewDimension",
@@ -42,7 +42,7 @@ TextureViewDimension = Enum(
 )
 
 TextureAspect = Enum(
-    "TextureAspect", all="all", stencil_only="stencil-only", depth_only="depth-only"
+    "TextureAspect", all="all", stencil_only="stencil-only", depth_only="depth-only",
 )
 
 TextureFormat = Enum(
@@ -88,7 +88,7 @@ TextureFormat = Enum(
 )
 
 TextureComponentType = Enum(
-    "TextureComponentType", float="float", sint="sint", uint="uint"
+    "TextureComponentType", float="float", sint="sint", uint="uint",
 )
 
 AddressMode = Enum(
@@ -98,7 +98,7 @@ AddressMode = Enum(
     mirror_repeat="mirror-repeat",
 )
 
-FilterMode = Enum("FilterMode", nearest="nearest", linear="linear")
+FilterMode = Enum("FilterMode", nearest="nearest", linear="linear",)
 
 CompareFunction = Enum(
     "CompareFunction",
@@ -131,9 +131,9 @@ PrimitiveTopology = Enum(
     triangle_strip="triangle-strip",
 )
 
-FrontFace = Enum("FrontFace", ccw="ccw", cw="cw")
+FrontFace = Enum("FrontFace", ccw="ccw", cw="cw",)
 
-CullMode = Enum("CullMode", none="none", front="front", back="back")
+CullMode = Enum("CullMode", none="none", front="front", back="back",)
 
 BlendFactor = Enum(
     "BlendFactor",
@@ -173,7 +173,7 @@ StencilOperation = Enum(
     decrement_wrap="decrement-wrap",
 )
 
-IndexFormat = Enum("IndexFormat", uint16="uint16", uint32="uint32")
+IndexFormat = Enum("IndexFormat", uint16="uint16", uint32="uint32",)
 
 VertexFormat = Enum(
     "VertexFormat",
@@ -209,12 +209,12 @@ VertexFormat = Enum(
     int4="int4",
 )
 
-InputStepMode = Enum("InputStepMode", vertex="vertex", instance="instance")
+InputStepMode = Enum("InputStepMode", vertex="vertex", instance="instance",)
 
-LoadOp = Enum("LoadOp", load="load")
+LoadOp = Enum("LoadOp", load="load",)
 
-StoreOp = Enum("StoreOp", store="store", clear="clear")
+StoreOp = Enum("StoreOp", store="store", clear="clear",)
 
 ErrorFilter = Enum(
-    "ErrorFilter", none="none", out_of_memory="out-of-memory", validation="validation"
+    "ErrorFilter", none="none", out_of_memory="out-of-memory", validation="validation",
 )

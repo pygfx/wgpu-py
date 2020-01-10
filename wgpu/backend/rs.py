@@ -122,8 +122,8 @@ def get_surface_id_from_win_id(win_id):
 
 
 # wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
-# IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});  # noqa: E501
-async def requestAdapter(*, powerPreference: "GPUPowerPreference"):  # noqa: F821
+# IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
+async def requestAdapter(*, powerPreference: "GPUPowerPreference"):
     """ Request an GPUAdapter, the object that represents the implementation of WGPU.
     This function uses the Rust WGPU library.
 
@@ -174,13 +174,13 @@ class GPUAdapter(classes.GPUAdapter):
         self._id = id
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});  # noqa: E501
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     async def requestDevice(
         self,
         *,
         label="",
-        extensions: "GPUExtensionName-list" = [],  # noqa: F821
-        limits: "GPULimits" = {},  # noqa: F821
+        extensions: "GPUExtensionName-list" = [],
+        limits: "GPULimits" = {},
     ):
         return self.requestDeviceSync(label=label, extensions=extensions, limits=limits)
 
@@ -188,8 +188,8 @@ class GPUAdapter(classes.GPUAdapter):
         self,
         *,
         label="",
-        extensions: "GPUExtensionName-list" = [],  # noqa: F821
-        limits: "GPULimits" = {},  # noqa: F821
+        extensions: "GPUExtensionName-list" = [],
+        limits: "GPULimits" = {},
     ):
 
         extensions = tuple(extensions)
@@ -216,29 +216,21 @@ class GPUDevice(classes.GPUDevice):
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def createBuffer(
-        self,
-        *,
-        label="",
-        size: "GPUBufferSize",  # noqa: F821
-        usage: "GPUBufferUsageFlags",  # noqa: F821
+        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"
     ):
         size = int(size)
 
         struct = new_struct("WGPUBufferDescriptor *", size=size, usage=usage)
 
         id = _lib.wgpu_device_create_buffer(
-            self._internal, struct, mem  # TODO: mem is undefined  # noqa: F821
-        )
+            self._internal, struct, mem
+        )  # TODO: mem is undefined
         return GPUBuffer(label, id, self, size, usage, "unmapped", None)
 
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
     def createBufferMapped(
-        self,
-        *,
-        label="",
-        size: "GPUBufferSize",  # noqa: F821
-        usage: "GPUBufferUsageFlags",  # noqa: F821
+        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"
     ):
 
         size = int(size)
@@ -261,9 +253,9 @@ class GPUDevice(classes.GPUDevice):
         return GPUBuffer(label, id, self, size, usage, "mapped", mem_as_ctypes)
 
     # wgpu.help('devicecreatebindgrouplayout', 'BindGroupLayoutDescriptor', dev=True)
-    # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);  # noqa: E501
+    # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
     def createBindGroupLayout(
-        self, *, label="", bindings: "GPUBindGroupLayoutBinding-list"  # noqa: F821
+        self, *, label="", bindings: "GPUBindGroupLayoutBinding-list"
     ):
 
         c_bindings_list = []
@@ -296,8 +288,8 @@ class GPUDevice(classes.GPUDevice):
         self,
         *,
         label="",
-        layout: "GPUBindGroupLayout",  # noqa: F821
-        bindings: "GPUBindGroupBinding-list",  # noqa: F821
+        layout: "GPUBindGroupLayout",
+        bindings: "GPUBindGroupBinding-list",
     ):
 
         c_bindings_list = []
@@ -321,9 +313,9 @@ class GPUDevice(classes.GPUDevice):
         return classes.GPUBindGroup(label, id, self, bindings)
 
     # wgpu.help('devicecreatepipelinelayout', 'PipelineLayoutDescriptor', dev=True)
-    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);  # noqa: E501
+    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
     def createPipelineLayout(
-        self, *, label="", bindGroupLayouts: "GPUBindGroupLayout-list"  # noqa: F821
+        self, *, label="", bindGroupLayouts: "GPUBindGroupLayout-list"
     ):
 
         bindGroupLayouts_ids = [x._internal for x in bindGroupLayouts]
@@ -340,7 +332,7 @@ class GPUDevice(classes.GPUDevice):
 
     # wgpu.help('devicecreateshadermodule', 'ShaderModuleDescriptor', dev=True)
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
-    def createShaderModule(self, *, label="", code: "GPUShaderCode"):  # noqa: F821
+    def createShaderModule(self, *, label="", code: "GPUShaderCode"):
 
         if isinstance(code, bytes):
             data = code  # Assume it's Spirv
@@ -368,19 +360,19 @@ class GPUDevice(classes.GPUDevice):
         return classes.GPUShaderModule(label, id, self)
 
     # wgpu.help('devicecreaterenderpipeline', 'RenderPipelineDescriptor', dev=True)
-    # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);  # noqa: E501
+    # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
     def createRenderPipeline(
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout",  # noqa: F821
-        vertexStage: "GPUProgrammableStageDescriptor",  # noqa: F821
-        fragmentStage: "GPUProgrammableStageDescriptor",  # noqa: F821
-        primitiveTopology: "GPUPrimitiveTopology",  # noqa: F821
-        rasterizationState: "GPURasterizationStateDescriptor" = {},  # noqa: F821
-        colorStates: "GPUColorStateDescriptor-list",  # noqa: F821
-        depthStencilState: "GPUDepthStencilStateDescriptor",  # noqa: F821
-        vertexState: "GPUVertexStateDescriptor" = {},  # noqa: F821
+        layout: "GPUPipelineLayout",
+        vertexStage: "GPUProgrammableStageDescriptor",
+        fragmentStage: "GPUProgrammableStageDescriptor",
+        primitiveTopology: "GPUPrimitiveTopology",
+        rasterizationState: "GPURasterizationStateDescriptor" = {},
+        colorStates: "GPUColorStateDescriptor-list",
+        depthStencilState: "GPUDepthStencilStateDescriptor",
+        vertexState: "GPUVertexStateDescriptor" = {},
         sampleCount: int = 1,
         sampleMask: int = 0xFFFFFFFF,
         alphaToCoverageEnabled: bool = False,
@@ -512,7 +504,7 @@ class GPUDevice(classes.GPUDevice):
         return classes.GPURenderPipeline(label, id, self)
 
     # wgpu.help('devicecreatecommandencoder', 'CommandEncoderDescriptor', dev=True)
-    # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});  # noqa: E501
+    # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
     def createCommandEncoder(self, *, label=""):
 
         struct = new_struct("WGPUCommandEncoderDescriptor *", todo=0)
@@ -552,9 +544,9 @@ class GPUTexture(classes.GPUTexture):
         self,
         *,
         label="",
-        format: "GPUTextureFormat",  # noqa: F821
-        dimension: "GPUTextureViewDimension",  # noqa: F821
-        aspect: "GPUTextureAspect" = "all",  # noqa: F821
+        format: "GPUTextureFormat",
+        dimension: "GPUTextureViewDimension",
+        aspect: "GPUTextureAspect" = "all",
         baseMipLevel: int = 0,
         mipLevelCount: int = 0,
         baseArrayLayer: int = 0,
@@ -588,8 +580,8 @@ class GPUCommandEncoder(classes.GPUCommandEncoder):
         self,
         *,
         label="",
-        colorAttachments: "GPURenderPassColorAttachmentDescriptor-list",  # noqa: F821
-        depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor",  # noqa: F821, E501
+        colorAttachments: "GPURenderPassColorAttachmentDescriptor-list",
+        depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor",
     ):
 
         refs = []
@@ -654,7 +646,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder):
 class GPUProgrammablePassEncoder(classes.GPUProgrammablePassEncoder):
 
     # wgpu.help('programmablepassencodersetbindgroup', 'BindGroup', dev=True)
-    # IDL: void setBindGroup(unsigned long index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  unsigned long long dynamicOffsetsDataStart,  unsigned long long dynamicOffsetsDataLength);  # noqa: E501
+    # IDL: void setBindGroup(unsigned long index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  unsigned long long dynamicOffsetsDataStart,  unsigned long long dynamicOffsetsDataLength);
     def setBindGroup(
         self,
         index,
@@ -701,12 +693,12 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
         raise NotImplementedError()
 
     # wgpu.help('computepassencoderdispatch', dev=True)
-    # IDL: void dispatch(unsigned long x, optional unsigned long y = 1, optional unsigned long z = 1);  # noqa: E501
+    # IDL: void dispatch(unsigned long x, optional unsigned long y = 1, optional unsigned long z = 1);
     def dispatch(self, x, y, z):
         raise NotImplementedError()
 
     # wgpu.help('computepassencoderdispatchindirect', 'Buffer', 'BufferSize', dev=True)
-    # IDL: void dispatchIndirect(GPUBuffer indirectBuffer, GPUBufferSize indirectOffset);  # noqa: E501
+    # IDL: void dispatchIndirect(GPUBuffer indirectBuffer, GPUBufferSize indirectOffset);
     def dispatchIndirect(self, indirectBuffer, indirectOffset):
         raise NotImplementedError()
 
@@ -732,12 +724,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         raise NotImplementedError()
 
     # wgpu.help('renderencoderbasesetvertexbuffer', 'Buffer', 'BufferSize', dev=True)
-    # IDL: void setVertexBuffer(unsigned long slot, GPUBuffer buffer, optional GPUBufferSize offset = 0);  # noqa: E501
+    # IDL: void setVertexBuffer(unsigned long slot, GPUBuffer buffer, optional GPUBufferSize offset = 0);
     def setVertexBuffer(self, slot, buffer, offset):
         raise NotImplementedError()
 
     # wgpu.help('renderencoderbasedraw', dev=True)
-    # IDL: void draw(unsigned long vertexCount, unsigned long instanceCount,  unsigned long firstVertex, unsigned long firstInstance);  # noqa: E501
+    # IDL: void draw(unsigned long vertexCount, unsigned long instanceCount,  unsigned long firstVertex, unsigned long firstInstance);
     def draw(self, vertexCount, instanceCount, firstVertex, firstInstance):
         _lib.wgpu_render_pass_draw(
             self._internal, vertexCount, instanceCount, firstVertex, firstInstance
@@ -749,14 +741,14 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         raise NotImplementedError()
 
     # wgpu.help('renderencoderbasedrawindexed', dev=True)
-    # IDL: void drawIndexed(unsigned long indexCount, unsigned long instanceCount,  unsigned long firstIndex, long baseVertex, unsigned long firstInstance);  # noqa: E501
+    # IDL: void drawIndexed(unsigned long indexCount, unsigned long instanceCount,  unsigned long firstIndex, long baseVertex, unsigned long firstInstance);
     def drawIndexed(
         self, indexCount, instanceCount, firstIndex, baseVertex, firstInstance
     ):
         raise NotImplementedError()
 
-    # wgpu.help('renderencoderbasedrawindexedindirect', 'Buffer', 'BufferSize', dev=True)  # noqa: E501
-    # IDL: void drawIndexedIndirect(GPUBuffer indirectBuffer, GPUBufferSize indirectOffset);  # noqa: E501
+    # wgpu.help('renderencoderbasedrawindexedindirect', 'Buffer', 'BufferSize', dev=True)
+    # IDL: void drawIndexedIndirect(GPUBuffer indirectBuffer, GPUBufferSize indirectOffset);
     def drawIndexedIndirect(self, indirectBuffer, indirectOffset):
         raise NotImplementedError()
 
@@ -770,12 +762,12 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     """
 
     # wgpu.help('renderpassencodersetviewport', dev=True)
-    # IDL: void setViewport(float x, float y,  float width, float height,  float minDepth, float maxDepth);  # noqa: E501
+    # IDL: void setViewport(float x, float y,  float width, float height,  float minDepth, float maxDepth);
     def setViewport(self, x, y, width, height, minDepth, maxDepth):
         raise NotImplementedError()
 
     # wgpu.help('renderpassencodersetscissorrect', dev=True)
-    # IDL: void setScissorRect(unsigned long x, unsigned long y, unsigned long width, unsigned long height);  # noqa: E501
+    # IDL: void setScissorRect(unsigned long x, unsigned long y, unsigned long width, unsigned long height);
     def setScissorRect(self, x, y, width, height):
         raise NotImplementedError()
 

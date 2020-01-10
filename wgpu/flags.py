@@ -35,9 +35,9 @@ BufferUsage = Flags(
 )
 
 TextureUsage = Flags(
-    "TextureUsage", COPY_SRC=1, COPY_DST=2, SAMPLED=4, STORAGE=8, OUTPUT_ATTACHMENT=16
+    "TextureUsage", COPY_SRC=1, COPY_DST=2, SAMPLED=4, STORAGE=8, OUTPUT_ATTACHMENT=16,
 )
 
-ShaderStage = Flags("ShaderStage", VERTEX=1, FRAGMENT=2, COMPUTE=4)
+ShaderStage = Flags("ShaderStage", VERTEX=1, FRAGMENT=2, COMPUTE=4,)
 
-ColorWrite = Flags("ColorWrite", RED=1, GREEN=2, BLUE=4, ALPHA=8, ALL=15)
+ColorWrite = Flags("ColorWrite", RED=1, GREEN=2, BLUE=4, ALPHA=8, ALL=15,)
