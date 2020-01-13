@@ -47,7 +47,17 @@ if glfw_version_info < (1, 9):
         glfw.get_x11_display = glfw._glfw.glfwGetX11Display
 
 
-class WgpuCanvas(BaseCanvas):
+# Do checks to prevent pitfalls on hybrid Xorg/Wayland systems
+if sys.platform.startswith("linux"):
+    is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+    if is_wayland and not hasattr(glfw, "get_wayland_window"):
+        raise RuntimeError(
+            "We're on Wayland but Wayland functions not available. "
+            + "Did you apt install libglfw3-wayland?"
+        )
+
+
+class GlfwWgpuCanvas(BaseCanvas):
     """ A canvas object wrapping a glfw window.
     """
 
@@ -105,3 +115,6 @@ class WgpuCanvas(BaseCanvas):
 
     def isClosed(self):
         return glfw.window_should_close(self._window)
+
+
+WgpuCanvas = GlfwWgpuCanvas

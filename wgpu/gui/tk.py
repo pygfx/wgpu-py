@@ -8,7 +8,7 @@ import tkinter
 from wgpu.gui.base import BaseCanvas
 
 
-class WgpuCanvas(BaseCanvas, tkinter.Toplevel):
+class TkWgpuCanvas(BaseCanvas, tkinter.Toplevel):
     """ A canvas object base on a Tkinter TopLevel window.
     """
 
@@ -57,3 +57,6 @@ class WgpuCanvas(BaseCanvas, tkinter.Toplevel):
     def _paint(self, *args):
         # Actual drawing needs to happen *after* Tcl draws bg
         self.after(1, self._drawFrameAndPresent)
+
+
+WgpuCanvas = TkWgpuCanvas

@@ -21,7 +21,7 @@ else:
     )
 
 
-class WgpuCanvas(BaseCanvas, QWidget):
+class QtWgpuCanvas(BaseCanvas, QWidget):
     """ A QWidget subclass that can be used as a canvas to render to.
     """
 
@@ -58,3 +58,6 @@ class WgpuCanvas(BaseCanvas, QWidget):
 
     def getWindowId(self):
         return int(self.winId())
+
+
+WgpuCanvas = QtWgpuCanvas

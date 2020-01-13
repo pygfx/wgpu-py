@@ -84,7 +84,9 @@ class BaseCanvas:
         if sys.platform.startswith("linux"):
             is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
             if is_wayland:
-                raise NotImplementedError()
+                raise NotImplementedError(
+                    f"Cannot (yet) get display id on {self.__class__.__name__}."
+                )
             else:
                 x11 = ctypes.CDLL(ctypes.util.find_library("X11"))
                 x11.XOpenDisplay.restype = ctypes.c_void_p
