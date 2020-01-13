@@ -33,10 +33,18 @@ if glfw_version_info < (1, 9):
         glfw._glfw.glfwGetWaylandWindow.restype = ctypes.c_void_p
         glfw._glfw.glfwGetWaylandWindow.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
         glfw.get_wayland_window = glfw._glfw.glfwGetWaylandWindow
+    if hasattr(glfw._glfw, "glfwGetWaylandDisplay"):
+        glfw._glfw.glfwGetWaylandDisplay.restype = ctypes.c_void_p
+        glfw._glfw.glfwGetWaylandDisplay.argtypes = []
+        glfw.get_wayland_display = glfw._glfw.glfwGetWaylandDisplay
     if hasattr(glfw._glfw, "glfwGetX11Window"):
         glfw._glfw.glfwGetX11Window.restype = ctypes.c_uint32
         glfw._glfw.glfwGetX11Window.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
         glfw.get_x11_window = glfw._glfw.glfwGetX11Window
+    if hasattr(glfw._glfw, "glfwGetX11Display"):
+        glfw._glfw.glfwGetX11Display.restype = ctypes.c_void_p
+        glfw._glfw.glfwGetX11Display.argtypes = []
+        glfw.get_x11_display = glfw._glfw.glfwGetX11Display
 
 
 class WgpuCanvas(BaseCanvas):
@@ -67,6 +75,16 @@ class WgpuCanvas(BaseCanvas):
         width, height = glfw.get_window_size(self._window)
         pixelratio = glfw.get_window_content_scale(self._window)[0]
         return width, height, pixelratio
+
+    def getDisplayId(self):
+        if sys.platform.startswith("linux"):
+            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+            if is_wayland:
+                return glfw.get_wayland_display()
+            else:
+                return glfw.get_x11_display()
+        else:
+            raise RuntimeError(f"Cannot get GLFW display id on {sys.platform}.")
 
     def getWindowId(self):
         if sys.platform.startswith("win"):

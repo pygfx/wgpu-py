@@ -91,7 +91,8 @@ def new_struct(ctype, **kwargs):
     return struct
 
 
-def get_surface_id_from_win_id(win_id):
+def get_surface_id_from_canvas(canvas):
+    win_id = canvas.getWindowId()
     if sys.platform.startswith("win"):
         # wgpu_create_surface_from_windows_hwnd(void *_hinstance, void *hwnd)
         hwnd = ffi.cast("void *", int(win_id))
@@ -105,15 +106,15 @@ def get_surface_id_from_win_id(win_id):
     elif sys.platform.startswith("linux"):
         # wgpu_create_surface_from_wayland(void *surface, void *display)
         # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
+        display_id = canvas.getDisplayId()
         is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
         if is_wayland:
             # todo: works, but have not yet been able to test drawing to the window
             surface = ffi.cast("void *", win_id)
-            display = ffi.NULL
+            display = ffi.cast("void *", display_id)
             return _lib.wgpu_create_surface_from_wayland(surface, display)
         else:
-            # todo: works, but have not yet been able to test drawing to the window
-            display = ffi.NULL
+            display = ffi.cast("void **", display_id)
             return _lib.wgpu_create_surface_from_xlib(display, win_id)
     # Else ...
     raise RuntimeError("Cannot get surface id: unsupported platform.")
@@ -832,8 +833,7 @@ class GPUSwapChain(classes.GPUSwapChain):
         )  # vsync or not vsync
 
         if self._surface_id is None:
-            win_id = self._canvas.getWindowId()
-            self._surface_id = get_surface_id_from_win_id(win_id)
+            self._surface_id = get_surface_id_from_canvas(self._canvas)
 
         self._internal = _lib.wgpu_device_create_swap_chain(
             self._device._internal, self._surface_id, struct

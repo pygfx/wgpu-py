@@ -51,5 +51,10 @@ class WgpuCanvas(BaseCanvas, QWidget):
     def isClosed(self):
         return not self.isVisible()
 
+    def getDisplayId(self):
+        # There is qx11info, but it is rarely available.
+        # https://doc.qt.io/qt-5/qx11info.html#display
+        return super().getDisplayId()  # use X11 lib
+
     def getWindowId(self):
         return int(self.winId())
