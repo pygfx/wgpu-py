@@ -100,7 +100,17 @@ def get_surface_id_from_canvas(canvas):
         return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
     elif sys.platform.startswith("darwin"):
         # wgpu_create_surface_from_metal_layer(void *layer)
-        # todo: untested; might well be wrong
+        # todo: OSX support
+        # This is what the triangle example from wgpu-native does:
+        # #if WGPU_TARGET == WGPU_TARGET_MACOS
+        #     {
+        #         id metal_layer = NULL;
+        #         NSWindow *ns_window = glfwGetCocoaWindow(window);
+        #         [ns_window.contentView setWantsLayer:YES];
+        #         metal_layer = [CAMetalLayer layer];
+        #         [ns_window.contentView setLayer:metal_layer];
+        #         surface = wgpu_create_surface_from_metal_layer(metal_layer);
+        #     }
         layer = ffi.cast("void *", win_id)
         return _lib.wgpu_create_surface_from_metal_layer(layer)
     elif sys.platform.startswith("linux"):
