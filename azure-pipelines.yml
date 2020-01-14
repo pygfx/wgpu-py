@@ -5,6 +5,7 @@ variables:
   NAME: wgpu
 
 jobs:
+
 - job: Build
   strategy:
     matrix:
@@ -58,7 +59,7 @@ jobs:
       script: |
         set -ex
         python setup.py develop
-        python setup.py bdist_wheel
+        python setup.py sdist bdist_wheel
   - task: Bash@3
     displayName: Test
     inputs:
@@ -107,12 +108,17 @@ jobs:
     inputs:
       pathtoPublish: dist
       artifactName: wheels
+
 - job: Release
   dependsOn: Build
   condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
   pool:
     vmImage: ubuntu-16.04
   steps:
+  - task: UsePythonVersion@0
+    displayName: Select Python 3.6
+    inputs:
+      versionSpec: '3.6'
   - task: Bash@3
     displayName: Check git tag
     inputs:
@@ -158,4 +164,5 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        twine upload -r "pypi" --config-file $(PYPIRC_PATH) wheels/*.whl
+        rm wheels/*linux*.whl
+        twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive wheels/*
