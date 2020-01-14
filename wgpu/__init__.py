@@ -5,7 +5,7 @@ from .utils import help  # noqa: F401
 from . import classes
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 def _register_backend(func):
