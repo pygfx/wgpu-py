@@ -100,7 +100,7 @@ def get_surface_id_from_canvas(canvas):
         return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
     elif sys.platform.startswith("darwin"):
         # wgpu_create_surface_from_metal_layer(void *layer)
-        # todo: OSX support
+        # todo: MacOS support
         # This is what the triangle example from wgpu-native does:
         # #if WGPU_TARGET == WGPU_TARGET_MACOS
         #     {

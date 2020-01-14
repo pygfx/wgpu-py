@@ -24,7 +24,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 *This is experimental, work in progress, you probably don't want to use this just yet!*
 
 * We have a few working examples!
-* Support for Windows and Linux. Support for OSX is underway.
+* Support for Windows and Linux. Support for MacOS is underway.
 * We have not fully implemented the API yet.
 * The API may change. We're still figuring out what works best.
 * The API may change more. Until WebGPU settles as a standard, its specification
@@ -54,7 +54,7 @@ On Linux, it's advisable to install the proprietary drivers of your GPU
 Note that on Linux, the `tk` canvas does not work. Wayland currently only
 works with the GLFW canvas (and is unstable).
 
-On OS X you need at least OSX 10.13 (High Sierra) to have Vulkan support.
+On MacOS you need at least 10.13 (High Sierra) to have Vulkan support.
 At the moment, we've not implemented drawing to a window yet (see #29).
 
 
