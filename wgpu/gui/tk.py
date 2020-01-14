@@ -8,7 +8,7 @@ import tkinter
 from wgpu.gui.base import BaseCanvas
 
 
-class WgpuCanvas(BaseCanvas, tkinter.Toplevel):
+class TkWgpuCanvas(BaseCanvas, tkinter.Toplevel):
     """ A canvas object base on a Tkinter TopLevel window.
     """
 
@@ -41,12 +41,22 @@ class WgpuCanvas(BaseCanvas, tkinter.Toplevel):
         except Exception:
             return True
 
+    def getDisplayId(self):
+        return super().getDisplayId()
+
     def getWindowId(self):
+        # There's two functions of interest here. On Linux they return the same
+        # value (for a toplevel widget), but on Windows not, and frame() does
+        # not work.
+        # * self.winfo_id(): platform-specific identifier for window
+        # * self.frame(): platform specific window identifier for the
+        #   outermost frame that contains window
         return int(self.winfo_id())
-        # The docs seem to say that the below also produces the native window id,
-        # but the resulting int is different, and with it things don't work:
         # return int(self.frame(), 16)
 
     def _paint(self, *args):
         # Actual drawing needs to happen *after* Tcl draws bg
         self.after(1, self._drawFrameAndPresent)
+
+
+WgpuCanvas = TkWgpuCanvas

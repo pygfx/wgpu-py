@@ -24,7 +24,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 *This is experimental, work in progress, you probably don't want to use this just yet!*
 
 * We have a few working examples!
-* These *should* work on all platforms but this is currently only tested on Windows (see #28 and #29), so they probably don't :)
+* Support for Windows and Linux. Support for OSX is underway.
 * We have not fully implemented the API yet.
 * The API may change. We're still figuring out what works best.
 * The API may change more. Until WebGPU settles as a standard, its specification
@@ -40,6 +40,22 @@ pip install python-shader  # optional - our examples use this to define shaders
 
 The library ships with Rust binaries for Windows, MacOS and Linux. If you want to use
 a custom build instead, you can set the environment variable `WGPU_LIB_PATH`.
+
+
+## Platform requirements
+
+Under the hood, `wgpu` runs on Vulkan or Metal, and eventually also DX12 or OpenGL.
+
+On Windows 10, things should just work. On older Windows versions you may need
+to install the Vulkan drivers (or wait for the DX12 backend to become more mature).
+
+On Linux, it's advisable to install the proprietary drivers of your GPU
+(if you have a dedicated GPU). You may need to `apt install mesa-vulkan-drivers`.
+Note that on Linux, the `tk` canvas does not work. Wayland currently only
+works with the GLFW canvas (and is unstable).
+
+On OS X you need at least OSX 10.13 (High Sierra) to have Vulkan support.
+At the moment, we've not implemented drawing to a window yet (see #29).
 
 
 ## Usage

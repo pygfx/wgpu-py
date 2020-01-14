@@ -1,5 +1,7 @@
+import os
 import sys
 import traceback
+import ctypes.util
 
 
 class BaseCanvas:
@@ -11,6 +13,7 @@ class BaseCanvas:
         super().__init__(*args, **kwargs)
         self._swapchain = None
         self._err_hashes = {}
+        self._display_id = None
 
     def configureSwapChain(self, device, format, usage):
         """ Configures the swap chain for this canvas, and returns a
@@ -69,3 +72,26 @@ class BaseCanvas:
         to obtain a surface id.
         """
         raise NotImplementedError()
+
+    def getDisplayId(self):
+        """ Get the native display id on Linux. This is needed by the backends
+        to obtain a surface id on Linux.
+        """
+        # Re-use to avoid creating loads of id's
+        if self._display_id is not None:
+            return self._display_id
+
+        if sys.platform.startswith("linux"):
+            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+            if is_wayland:
+                raise NotImplementedError(
+                    f"Cannot (yet) get display id on {self.__class__.__name__}."
+                )
+            else:
+                x11 = ctypes.CDLL(ctypes.util.find_library("X11"))
+                x11.XOpenDisplay.restype = ctypes.c_void_p
+                self._display_id = x11.XOpenDisplay(None)
+        else:
+            raise RuntimeError(f"Cannot get display id on {sys.platform}.")
+
+        return self._display_id
