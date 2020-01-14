@@ -5,6 +5,7 @@ variables:
   NAME: wgpu
 
 jobs:
+
 - job: Build
   strategy:
     matrix:
@@ -107,19 +108,25 @@ jobs:
     inputs:
       pathtoPublish: dist
       artifactName: wheels
+
 - job: Release
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
+  #condition: and(succeeded(), eq(variables['Build.SourceBranchName'], 'master'))
   pool:
     vmImage: ubuntu-16.04
   steps:
+  - task: UsePythonVersion@0
+    displayName: Select Python 3.6
+    inputs:
+      versionSpec: '3.6'
   - task: Bash@3
     displayName: Check git tag
     inputs:
       targetType: inline
       script: |
         set -x
-        TAGS=$(git describe --tags)
+        #TAGS=$(git describe --tags)
+        TAGS=testtest
         echo "##vso[task.setvariable variable=TAGS]$TAGS"
   - task: DownloadBuildArtifacts@0
     displayName: Download wheels
