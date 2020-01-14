@@ -59,7 +59,7 @@ jobs:
       script: |
         set -ex
         python setup.py develop
-        python setup.py bdist_wheel
+        python setup.py sdist bdist_wheel
   - task: Bash@3
     displayName: Test
     inputs:
@@ -166,4 +166,5 @@ jobs:
       script: |
         set -ex
         rm wheels/*linux*.whl
-        twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive wheels/*.whl
+        ls wheels
+        #twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive wheels/*
