@@ -165,4 +165,4 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        twine upload -r "pypi" --config-file $(PYPIRC_PATH) wheels/*.whl
+        twine upload -r "pypi" --config-file $(PYPIRC_PATH) --non-interactive wheels/*.whl
