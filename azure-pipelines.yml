@@ -13,11 +13,14 @@ jobs:
         vmImage: ubuntu-16.04
         SDIST: 1
         LINT: 1
+        SEP: /
       MacOS:
         vmImage: macOS-10.14
         MACOSX_DEPLOYMENT_TARGET: '10.13'
+        SEP: /
       Windows:
         vmImage: vs2017-win2016
+        SEP: \
   pool:
     vmImage: $(vmImage)
   steps:
@@ -32,6 +35,7 @@ jobs:
       script: |
         set -ex
         python -m pip install -U pip
+        pip install -U setuptools wheel
         pip install -U -r dev-requirements.txt
   - task: Bash@3
     displayName: Create source distribution
@@ -100,11 +104,13 @@ jobs:
         set -ex
         python setup.py develop --uninstall
         python setup.py clean --all
+        rm -rf ./wgpu
         pushd $AGENT_TEMPDIRECTORY
-        pip install $BUILD_SOURCESDIRECTORY/dist/*.whl
+        pip install $BUILD_SOURCESDIRECTORY$SEPdist$SEP*.whl
         popd
         pytest --junit-xml=results-wheel.xml || true
         pip uninstall -y wgpu
+        git restore ./wgpu
 
         # Fail the task if results-wheel.xml was not created
         if [[ ! -f results-wheel.xml ]]
@@ -125,11 +131,13 @@ jobs:
       targetType: inline
       script: |
         set -ex
+        rm -rf ./wgpu
         pushd $AGENT_TEMPDIRECTORY
-        pip install $BUILD_SOURCESDIRECTORY/dist/*.tar.gz
+        pip install $BUILD_SOURCESDIRECTORY$SEPdist$SEP*.tar.gz
         popd
         # don't run tests, we just want to know if the sdist can be installed
         pip uninstall -y wgpu
+        git restore ./wgpu
   - task: Bash@3
     displayName: Manylinux1 tag
     condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
