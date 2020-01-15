@@ -100,7 +100,7 @@ jobs:
         set -ex
         python setup.py develop --uninstall
         python setup.py clean --all
-        pushd $TMP
+        pushd $AGENT_TEMPDIRECTORY
         pip install $BUILD_SOURCESDIRECTORY)/dist/*.whl
         popd
         pytest --junit-xml=results-wheel.xml || true
@@ -125,7 +125,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        pushd $TMP
+        pushd $AGENT_TEMPDIRECTORY
         pip install dist/*.tar.gz
         popd
         # don't run tests, we just want to know if the sdist can be installed
