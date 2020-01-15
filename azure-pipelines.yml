@@ -101,7 +101,7 @@ jobs:
         python setup.py develop --uninstall
         python setup.py clean --all
         pushd $AGENT_TEMPDIRECTORY
-        pip install $BUILD_SOURCESDIRECTORY)/dist/*.whl
+        pip install $BUILD_SOURCESDIRECTORY/dist/*.whl
         popd
         pytest --junit-xml=results-wheel.xml || true
         pip uninstall -y wgpu
