@@ -140,8 +140,11 @@ jobs:
     inputs:
       targetType: inline
       script: |
-        set -ex
-        auditwheel addtag dist/*.whl
+        set -x
+        mkdir wheelhouse
+        auditwheel repair dist/*.whl || true
+        rm dist/*.whl
+        cp wheelhouse/*.whl dist/.
   - task: PublishBuildArtifacts@1
     displayName: Publish distributions
     inputs:
@@ -205,5 +208,4 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        rm dist/*linux*.whl  # TODO: ensure manylinux1 platform tag
         twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive dist/*
