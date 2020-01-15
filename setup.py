@@ -47,4 +47,5 @@ setup(
     author_email="almar.klein@gmail.com",
     url="https://github.com/almarklein/wgpu-py",
     cmdclass={"bdist_wheel": bdist_wheel},
+    data_files=[("", ["LICENSE"])],
 )

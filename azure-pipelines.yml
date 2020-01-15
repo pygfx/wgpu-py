@@ -11,6 +11,7 @@ jobs:
     matrix:
       Linux:
         vmImage: ubuntu-16.04
+        FULL_BUILD: 1
       MacOS:
         vmImage: macOS-10.14
         MACOSX_DEPLOYMENT_TARGET: '10.13'
@@ -32,14 +33,16 @@ jobs:
         python -m pip install -U pip
         pip install -U -r dev-requirements.txt
   - task: Bash@3
-    displayName: Restore WGPU native binary
+    displayName: Create source distribution
+    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
     inputs:
       targetType: inline
       script: |
         set -ex
-        python download-wgpu-native.py
+        python setup.py sdist
   - task: Bash@3
     displayName: Lint (black)
+    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
     inputs:
       targetType: inline
       script: |
@@ -47,11 +50,19 @@ jobs:
         black --check .
   - task: Bash@3
     displayName: Lint (flake8)
+    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
     inputs:
       targetType: inline
       script: |
         set -ex
         flake8
+  - task: Bash@3
+    displayName: Restore WGPU native binary
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        python download-wgpu-native.py
   - task: Bash@3
     displayName: Build wheel and install in development mode
     inputs:
@@ -59,14 +70,14 @@ jobs:
       script: |
         set -ex
         python setup.py develop
-        python setup.py sdist bdist_wheel
+        python setup.py bdist_wheel
   - task: Bash@3
     displayName: Test
     inputs:
       targetType: inline
       script: |
         set -ex
-        pytest --disable-warnings --junit-xml=results.xml || true
+        pytest --junit-xml=results.xml || true
 
         # Fail the task if results.xml was not created
         if [[ ! -f results.xml ]]
@@ -76,38 +87,65 @@ jobs:
         fi
   - task: PublishTestResults@2
     inputs:
-      testResultsFiles: results.xml
+      testResultsFiles: results*.xml
       mergeTestResults: true
       failTaskOnFailedTests: true
       testRunTitle: Test $(vmImage)
   - task: Bash@3
-    displayName: Test (packaged)
+    displayName: Test wheel
     inputs:
       targetType: inline
       script: |
         set -ex
         python setup.py develop --uninstall
-        rm -rf ./wgpu ./build ./egg-info
+        python setup.py clean --all
+        rm -rf ./wgpu
         pip install dist/*.whl
-        pytest --disable-warnings --junit-xml=results-packaged.xml || true
+        pytest --junit-xml=results-wheel.xml || true
 
-        # Fail the task if results-packaged.xml was not created
-        if [[ ! -f results-packaged.xml ]]
+        # Fail the task if results-wheel.xml was not created
+        if [[ ! -f results-wheel.xml ]]
         then
           echo "##vso[task.logissue type=error]No test results were found"
           exit 1
         fi
   - task: PublishTestResults@2
     inputs:
-      testResultsFiles: results-packaged.xml
+      testResultsFiles: results-wheel.xml
       mergeTestResults: true
       failTaskOnFailedTests: true
-      testRunTitle: Test $(vmImage) (packaged)
+      testRunTitle: Test $(vmImage) (wheel)
+  - task: Bash@3
+    displayName: Test sdist
+    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        python setup.py develop --uninstall
+        python setup.py clean --all
+        rm -rf ./wgpu
+        pip install dist/*.tar.gz
+        pytest --junit-xml=results-sdist.xml || true
+
+        # Fail the task if results-sdist.xml was not created
+        if [[ ! -f results-sdist.xml ]]
+        then
+          echo "##vso[task.logissue type=error]No test results were found"
+          exit 1
+        fi
+  - task: PublishTestResults@2
+    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
+    inputs:
+      testResultsFiles: results-sdist.xml
+      mergeTestResults: true
+      failTaskOnFailedTests: true
+      testRunTitle: Test $(vmImage) (sdist)
   - task: PublishBuildArtifacts@1
-    displayName: Publish wheels
+    displayName: Publish distributions
     inputs:
       pathtoPublish: dist
-      artifactName: wheels
+      artifactName: dist
 
 - job: Release
   dependsOn: Build
@@ -128,10 +166,10 @@ jobs:
         TAGS=$(git describe --tags)
         echo "##vso[task.setvariable variable=TAGS]$TAGS"
   - task: DownloadBuildArtifacts@0
-    displayName: Download wheels
+    displayName: Download dist
     condition: and(succeeded(), ne(variables['TAGS'], ''))
     inputs:
-      artifactName: wheels
+      artifactName: dist
       downloadPath: .
   - task: GithubRelease@1
     displayName: GitHub Release
@@ -139,7 +177,7 @@ jobs:
     inputs:
       gitHubConnection: github.com_almarklein
       repositoryName: 'almarklein/wgpu-py'
-      assets: 'wheels/*.whl'
+      assets: 'dist/*.whl'  # TODO: include sdist
       isDraft: true
       addChangeLog: false
       assetUploadMode: replace
@@ -158,11 +196,11 @@ jobs:
     inputs:
       pythonUploadServiceConnection: pypi
   - task: Bash@3
-    displayName: Upload wheels to PyPI
+    displayName: Upload dist to PyPI
     condition: and(succeeded(), ne(variables['TAGS'], ''))
     inputs:
       targetType: inline
       script: |
         set -ex
-        rm wheels/*linux*.whl
-        twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive wheels/*
+        rm dist/*linux*.whl
+        twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive dist/*
