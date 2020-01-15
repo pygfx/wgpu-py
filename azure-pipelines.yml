@@ -137,14 +137,14 @@ jobs:
   - task: Bash@3
     displayName: Manylinux1 tag
     condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
+    continueOnError: true
     inputs:
       targetType: inline
       script: |
-        set -x
-        mkdir wheelhouse
-        auditwheel repair dist/*.whl || true
+        set -ex
+        auditwheel repair dist/*.whl
         rm dist/*.whl
-        cp wheelhouse/*.whl dist/. || true
+        cp wheelhouse/*.whl dist/.
   - task: PublishBuildArtifacts@1
     displayName: Publish distributions
     inputs:
