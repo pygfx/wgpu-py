@@ -106,7 +106,7 @@ jobs:
         python setup.py clean --all
         rm -rf ./wgpu
         pushd $AGENT_TEMPDIRECTORY
-        pip install $BUILD_SOURCESDIRECTORY$SEPdist$SEP*.whl
+        pip install ${BUILD_SOURCESDIRECTORY}${SEP}dist${SEP}*.whl
         popd
         pytest --junit-xml=results-wheel.xml || true
         pip uninstall -y wgpu
@@ -133,7 +133,7 @@ jobs:
         set -ex
         rm -rf ./wgpu
         pushd $AGENT_TEMPDIRECTORY
-        pip install $BUILD_SOURCESDIRECTORY$SEPdist$SEP*.tar.gz
+        pip install ${BUILD_SOURCESDIRECTORY}${SEP}dist${SEP}*.tar.gz
         popd
         # don't run tests, we just want to know if the sdist can be installed
         pip uninstall -y wgpu
