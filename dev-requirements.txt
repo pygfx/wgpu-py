@@ -3,6 +3,6 @@ pytest
 flake8
 requests
 setuptools
-wheel
+wheel==0.31.1
 twine
 auditwheel; sys_platform == 'linux'
