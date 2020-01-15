@@ -208,4 +208,5 @@ jobs:
       targetType: inline
       script: |
         set -ex
+        rm dist/*linux*.whl  # TODO: ensure manylinux1 platform tag
         twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive dist/*
