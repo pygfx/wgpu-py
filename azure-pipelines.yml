@@ -144,7 +144,7 @@ jobs:
         mkdir wheelhouse
         auditwheel repair dist/*.whl || true
         rm dist/*.whl
-        cp wheelhouse/*.whl dist/.
+        cp wheelhouse/*.whl dist/. || true
   - task: PublishBuildArtifacts@1
     displayName: Publish distributions
     inputs:
