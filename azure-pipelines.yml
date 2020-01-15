@@ -13,14 +13,11 @@ jobs:
         vmImage: ubuntu-16.04
         SDIST: 1
         LINT: 1
-        SEP: /
       MacOS:
         vmImage: macOS-10.14
         MACOSX_DEPLOYMENT_TARGET: '10.13'
-        SEP: /
       Windows:
         vmImage: vs2017-win2016
-        SEP: \
   pool:
     vmImage: $(vmImage)
   steps:
@@ -105,7 +102,7 @@ jobs:
         python setup.py clean --all
         rm -rf ./wgpu
         pushd $AGENT_TEMPDIRECTORY
-        pip install ${BUILD_SOURCESDIRECTORY}${SEP}dist${SEP}*.whl
+        pip install $(echo "$(Build.SourcesDirectory)" | sed -e 's/\\/\//g')/dist/*.whl
         popd
         pytest --junit-xml=results-wheel.xml || true
         pip uninstall -y wgpu
@@ -132,7 +129,7 @@ jobs:
         set -ex
         rm -rf ./wgpu
         pushd $AGENT_TEMPDIRECTORY
-        pip install ${BUILD_SOURCESDIRECTORY}${SEP}dist${SEP}*.tar.gz
+        pip install $(echo "$(Build.SourcesDirectory)" | sed -e 's/\\/\//g')/dist/*.tar.gz
         popd
         # don't run tests, we just want to know if the sdist can be installed
         pip uninstall -y wgpu
