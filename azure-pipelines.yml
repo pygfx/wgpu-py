@@ -11,7 +11,8 @@ jobs:
     matrix:
       Linux:
         vmImage: ubuntu-16.04
-        FULL_BUILD: 1
+        SDIST: 1
+        LINT: 1
       MacOS:
         vmImage: macOS-10.14
         MACOSX_DEPLOYMENT_TARGET: '10.13'
@@ -34,7 +35,7 @@ jobs:
         pip install -U -r dev-requirements.txt
   - task: Bash@3
     displayName: Create source distribution
-    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
+    condition: and(succeeded(), eq(variables['SDIST'], '1'))
     inputs:
       targetType: inline
       script: |
@@ -42,7 +43,7 @@ jobs:
         python setup.py sdist
   - task: Bash@3
     displayName: Lint (black)
-    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
+    condition: and(succeeded(), eq(variables['LINT'], '1'))
     inputs:
       targetType: inline
       script: |
@@ -50,7 +51,7 @@ jobs:
         black --check .
   - task: Bash@3
     displayName: Lint (flake8)
-    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
+    condition: and(succeeded(), eq(variables['LINT'], '1'))
     inputs:
       targetType: inline
       script: |
@@ -99,9 +100,11 @@ jobs:
         set -ex
         python setup.py develop --uninstall
         python setup.py clean --all
-        rm -rf ./wgpu
-        pip install dist/*.whl
+        pushd $TMP
+        pip install $BUILD_SOURCESDIRECTORY)/dist/*.whl
+        popd
         pytest --junit-xml=results-wheel.xml || true
+        pip uninstall -y wgpu
 
         # Fail the task if results-wheel.xml was not created
         if [[ ! -f results-wheel.xml ]]
@@ -117,30 +120,22 @@ jobs:
       testRunTitle: Test $(vmImage) (wheel)
   - task: Bash@3
     displayName: Test sdist
-    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
+    condition: and(succeeded(), eq(variables['SDIST'], '1'))
     inputs:
       targetType: inline
       script: |
         set -ex
-        python setup.py develop --uninstall
-        python setup.py clean --all
-        rm -rf ./wgpu
         pip install dist/*.tar.gz
-        pytest --junit-xml=results-sdist.xml || true
-
-        # Fail the task if results-sdist.xml was not created
-        if [[ ! -f results-sdist.xml ]]
-        then
-          echo "##vso[task.logissue type=error]No test results were found"
-          exit 1
-        fi
-  - task: PublishTestResults@2
-    condition: and(succeeded(), eq(variables['FULL_BUILD'], '1'))
+        # don't run tests, we just want to know if the sdist can be installed
+        pip uninstall -y wgpu
+  - task: Bash@3
+    displayName: Manylinux1 tag
+    condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
     inputs:
-      testResultsFiles: results-sdist.xml
-      mergeTestResults: true
-      failTaskOnFailedTests: true
-      testRunTitle: Test $(vmImage) (sdist)
+      targetType: inline
+      script: |
+        set -ex
+        auditwheel addtag dist/*.whl
   - task: PublishBuildArtifacts@1
     displayName: Publish distributions
     inputs:
@@ -177,7 +172,9 @@ jobs:
     inputs:
       gitHubConnection: github.com_almarklein
       repositoryName: 'almarklein/wgpu-py'
-      assets: 'dist/*.whl'  # TODO: include sdist
+      assets: |
+        dist/*.whl
+        dist/*.tar.gz
       isDraft: true
       addChangeLog: false
       assetUploadMode: replace

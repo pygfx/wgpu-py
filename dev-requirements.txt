@@ -5,3 +5,4 @@ requests
 setuptools
 wheel
 twine
+auditwheel; sys_platform == 'linux'
