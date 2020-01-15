@@ -126,7 +126,7 @@ jobs:
       script: |
         set -ex
         pushd $AGENT_TEMPDIRECTORY
-        pip install dist/*.tar.gz
+        pip install $BUILD_SOURCESDIRECTORY/dist/*.tar.gz
         popd
         # don't run tests, we just want to know if the sdist can be installed
         pip uninstall -y wgpu
