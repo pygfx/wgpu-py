@@ -1,8 +1,8 @@
 from .flags import *  # noqa: F403
 from .enums import *  # noqa: F403
-from .classes import *  # noqa: F403
+from .base import *  # noqa: F403
 from .utils import help  # noqa: F401
-from . import classes
+from . import base
 
 
 __version__ = "0.1.2"
@@ -13,7 +13,7 @@ def _register_backend(func):
         raise RuntimeError(
             "WGPU backend must be registered as function called requestAdapter."
         )
-    if globals()["requestAdapter"] is not classes.requestAdapter:
+    if globals()["requestAdapter"] is not base.requestAdapter:
         raise RuntimeError("WGPU backend can only be set once.")
     globals()["requestAdapter"] = func
     # todo: auto-select upon using requestAdapter?

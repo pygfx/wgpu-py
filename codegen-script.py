@@ -278,7 +278,7 @@ print("Written to _mappings.py")
 
 print(f"\n## Checking and patching hand-written API code")
 
-for fname in ("classes.py", "backend/rs.py"):
+for fname in ("base.py", "backend/rs.py"):
     filename = os.path.join(lib_dir, fname)
     print(f"\n### Check functions in {fname}")
 

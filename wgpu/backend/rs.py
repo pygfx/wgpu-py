@@ -14,7 +14,7 @@ import ctypes
 
 from cffi import FFI, __version_info__ as cffi_version_info
 
-from .. import classes
+from .. import base
 from .. import _register_backend
 from ..utils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
@@ -180,7 +180,7 @@ async def requestAdapter(*, powerPreference: "GPUPowerPreference"):
 _register_backend(requestAdapter)
 
 
-class GPUAdapter(classes.GPUAdapter):
+class GPUAdapter(base.GPUAdapter):
     def __init__(self, name, extensions, id):
         super().__init__(name, extensions)
         self._id = id
@@ -223,7 +223,7 @@ class GPUAdapter(classes.GPUAdapter):
         return GPUDevice(label, id, self, extensions, limits, queue)
 
 
-class GPUDevice(classes.GPUDevice):
+class GPUDevice(base.GPUDevice):
 
     # wgpu.help('devicecreatebuffer', 'BufferDescriptor', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
@@ -291,7 +291,7 @@ class GPUDevice(classes.GPUDevice):
 
         id = _lib.wgpu_device_create_bind_group_layout(self._internal, struct)
 
-        return classes.GPUBindGroupLayout(label, id, self, bindings)
+        return base.GPUBindGroupLayout(label, id, self, bindings)
 
     # wgpu.help('devicecreatebindgroup', 'BindGroupDescriptor', dev=True)
     # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor);
@@ -307,14 +307,14 @@ class GPUDevice(classes.GPUDevice):
         for binding in bindings:
             # The resource can be a sampler, texture view, or buffer descriptor
             resource = binding["resource"]
-            if isinstance(resource, classes.GPUSampler):
+            if isinstance(resource, base.GPUSampler):
                 c_resource_kwargs = {
                     "tag": 1,  # WGPUBindingResource_Tag.WGPUBindingResource_Sampler
                     "sampler": new_struct(
                         "WGPUBindingResource_WGPUSampler_Body *", _0=resource._internal
                     )[0],
                 }
-            elif isinstance(resource, classes.GPUTextureView):
+            elif isinstance(resource, base.GPUTextureView):
                 c_resource_kwargs = {
                     "tag": 2,  # WGPUBindingResource_Tag.WGPUBindingResource_TextureView
                     "texture_view": new_struct(
@@ -352,7 +352,7 @@ class GPUDevice(classes.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_bind_group(self._internal, struct)
-        return classes.GPUBindGroup(label, id, self, bindings)
+        return base.GPUBindGroup(label, id, self, bindings)
 
     # wgpu.help('devicecreatepipelinelayout', 'PipelineLayoutDescriptor', dev=True)
     # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
@@ -370,7 +370,7 @@ class GPUDevice(classes.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_pipeline_layout(self._internal, struct)
-        return classes.GPUPipelineLayout(label, id, self, bindGroupLayouts)
+        return base.GPUPipelineLayout(label, id, self, bindGroupLayouts)
 
     # wgpu.help('devicecreateshadermodule', 'ShaderModuleDescriptor', dev=True)
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
@@ -399,7 +399,7 @@ class GPUDevice(classes.GPUDevice):
         struct = new_struct("WGPUShaderModuleDescriptor *", code=c_code[0])
 
         id = _lib.wgpu_device_create_shader_module(self._internal, struct)
-        return classes.GPUShaderModule(label, id, self)
+        return base.GPUShaderModule(label, id, self)
 
     # wgpu.help('devicecreatecomputepipeline', 'ComputePipelineDescriptor', dev=True)
     # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor);
@@ -424,7 +424,7 @@ class GPUDevice(classes.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_compute_pipeline(self._internal, struct)
-        return classes.GPUComputePipeline(label, id, self)
+        return base.GPUComputePipeline(label, id, self)
 
     # wgpu.help('devicecreaterenderpipeline', 'RenderPipelineDescriptor', dev=True)
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
@@ -568,7 +568,7 @@ class GPUDevice(classes.GPUDevice):
         )  # c-pointer  # enum
 
         id = _lib.wgpu_device_create_render_pipeline(self._internal, struct)
-        return classes.GPURenderPipeline(label, id, self)
+        return base.GPURenderPipeline(label, id, self)
 
     # wgpu.help('devicecreatecommandencoder', 'CommandEncoderDescriptor', dev=True)
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
@@ -586,7 +586,7 @@ class GPUDevice(classes.GPUDevice):
         return GPUSwapChain(self, canvas, format, usage)
 
 
-class GPUBuffer(classes.GPUBuffer):
+class GPUBuffer(base.GPUBuffer):
 
     # wgpu.help('buffermapreadasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapReadAsync();
@@ -633,7 +633,7 @@ class GPUBuffer(classes.GPUBuffer):
             _lib.wgpu_buffer_destroy(self._internal)
 
 
-class GPUTexture(classes.GPUTexture):
+class GPUTexture(base.GPUTexture):
 
     # wgpu.help('texturecreateview', 'TextureViewDescriptor', dev=True)
     # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {});
@@ -661,7 +661,7 @@ class GPUTexture(classes.GPUTexture):
         )
 
         id = _lib.wgpu_texture_create_view(self._internal, struct)
-        return classes.GPUTextureView(label, id, self)
+        return base.GPUTextureView(label, id, self)
 
     # wgpu.help('texturedestroy', dev=True)
     # IDL: void destroy();
@@ -669,7 +669,7 @@ class GPUTexture(classes.GPUTexture):
         _lib.wgpu_texture_destroy(self._internal)
 
 
-class GPUCommandEncoder(classes.GPUCommandEncoder):
+class GPUCommandEncoder(base.GPUCommandEncoder):
 
     # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
     # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
@@ -692,7 +692,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder):
 
         c_color_attachments_list = []
         for colorAttachment in colorAttachments:
-            assert isinstance(colorAttachment["attachment"], classes.GPUTextureView)
+            assert isinstance(colorAttachment["attachment"], base.GPUTextureView)
             texture_view_id = colorAttachment["attachment"]._internal
             if colorAttachment["resolveTarget"] is None:
                 c_resolve_target = ffi.NULL
@@ -744,10 +744,10 @@ class GPUCommandEncoder(classes.GPUCommandEncoder):
     def finish(self, *, label=""):
         struct = new_struct("WGPUCommandBufferDescriptor *", todo=0)
         id = _lib.wgpu_command_encoder_finish(self._internal, struct)
-        return classes.GPUCommandBuffer(label, id, self)
+        return base.GPUCommandBuffer(label, id, self)
 
 
-class GPUProgrammablePassEncoder(classes.GPUProgrammablePassEncoder):
+class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
 
     # wgpu.help('programmablepassencodersetbindgroup', 'BindGroup', dev=True)
     # IDL: void setBindGroup(unsigned long index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  unsigned long long dynamicOffsetsDataStart,  unsigned long long dynamicOffsetsDataLength);
@@ -861,7 +861,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         raise NotImplementedError()
 
 
-# todo: this does not inherit from classes.GPURenderPassEncoder. Use multiple
+# todo: this does not inherit from base.GPURenderPassEncoder. Use multiple
 # inheritance or leave it?
 
 
@@ -900,7 +900,7 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
         _lib.wgpu_render_pass_end_pass(self._internal)
 
 
-class GPUQueue(classes.GPUQueue):
+class GPUQueue(base.GPUQueue):
 
     # wgpu.help('queuesubmit', dev=True)
     # IDL: void submit(sequence<GPUCommandBuffer> commandBuffers);
@@ -912,7 +912,7 @@ class GPUQueue(classes.GPUQueue):
         )
 
 
-class GPUSwapChain(classes.GPUSwapChain):
+class GPUSwapChain(base.GPUSwapChain):
     def __init__(self, device, canvas, format, usage):
         super().__init__("", None, device)
         self._canvas = canvas
@@ -950,7 +950,7 @@ class GPUSwapChain(classes.GPUSwapChain):
         # otherwise we have multiple instances mapping to same internal texture
         self._create_native_swapchain_if_needed()
         swapChainOutput = _lib.wgpu_swap_chain_get_next_texture(self._internal)
-        return classes.GPUTextureView("swapchain", swapChainOutput.view_id, self)
+        return base.GPUTextureView("swapchain", swapChainOutput.view_id, self)
 
     def _gui_present(self):
         """ Present the current texture. This is not part of the public API,
@@ -964,16 +964,16 @@ class GPUSwapChain(classes.GPUSwapChain):
 
 def _copy_docstrings():
     for ob in globals().values():
-        if not (isinstance(ob, type) and issubclass(ob, classes.GPUObject)):
+        if not (isinstance(ob, type) and issubclass(ob, base.GPUObject)):
             continue
         elif ob.__module__ != __name__:
             continue
-        base = ob.mro()[1]
-        ob.__doc__ = base.__doc__
+        BaseCls = ob.mro()[1]
+        ob.__doc__ = BaseCls.__doc__
         for name, attr in ob.__dict__.items():
             if name.startswith("_") or not hasattr(attr, "__doc__"):
                 continue
-            base_attr = getattr(base, name, None)
+            base_attr = getattr(BaseCls, name, None)
             if base_attr is not None:
                 attr.__doc__ = base_attr.__doc__
 
