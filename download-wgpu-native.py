@@ -50,9 +50,12 @@ def get_os_string():
         raise RuntimeError(f"Platform '{sys.platform}' not supported")
 
 
-def main(version, debug, os_string, upstream):
-    debug = "debug" if debug else "release"
-    filename = f"wgpu-{debug}-{os_string}-{version}.zip"
+def get_arch():
+    return "64" if sys.maxsize > 2 ** 32 else "32"  # True on 64-bit Python interpreters
+
+
+def main(version, os_string, arch, upstream):
+    filename = f"wgpu-{os_string}-{arch}-release.zip"
     url = f"https://github.com/{upstream}/releases/download/{version}/{filename}"
     tmp = tempfile.gettempdir()
     zip_filename = os.path.join(tmp, filename)
@@ -77,17 +80,11 @@ def main(version, debug, os_string, upstream):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Download wgpu-native binaries and " "headers from github releases"
+        description="Download wgpu-native binaries and headers from github releases"
     )
     version = get_current_version()
     parser.add_argument(
         "--version", help=f"Version to download (default: {version})", default=version
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Download debug build " "instead of release build",
-        default=False,
     )
     os_string = get_os_string()
     parser.add_argument(
@@ -96,7 +93,14 @@ if __name__ == "__main__":
         default=os_string,
         choices=("linux", "macos", "windows"),
     )
-    upstream = "Korijn/wgpu"
+    arch_string = get_arch()
+    parser.add_argument(
+        "--arch",
+        help=f"Architecture to download for (default: {arch_string})",
+        default=arch_string,
+        choices=("32", "64"),
+    )
+    upstream = "Korijn/wgpu-bin"
     parser.add_argument(
         "--upstream",
         help=f"Upstream repository to download release from (default: {upstream})",
@@ -104,4 +108,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(args.version, args.debug, args.os, args.upstream)
+    main(args.version, args.os, args.arch, args.upstream)

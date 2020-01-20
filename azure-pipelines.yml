@@ -139,16 +139,15 @@ jobs:
         pip uninstall -y wgpu
         git restore ./wgpu
   - task: Bash@3
-    displayName: Manylinux1 tag
+    displayName: Manylinux2010 tag
     condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
-    continueOnError: true
     inputs:
       targetType: inline
       script: |
         set -ex
         sudo apt-get update
         sudo apt-get install -y patchelf
-        auditwheel repair dist/*.whl
+        auditwheel repair --plat manylinux2010_x86_64 dist/*.whl
         rm dist/*.whl
         cp wheelhouse/*.whl dist/.
   - task: Bash@3
@@ -220,5 +219,4 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        rm dist/*linux*.whl  # TODO: ensure manylinux1 platform tag
         twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive dist/*
