@@ -24,6 +24,9 @@ if cffi_version_info < (1, 10):
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
 
 
+cstructfield2enum_alt = {"store_op": "StoreOp", "load_op": "LoadOp"}
+
+
 def _get_wgpu_h():
     # Read header file and strip some stuff that cffi would stumble on
     lines = []
@@ -83,7 +86,10 @@ def new_struct(ctype, **kwargs):
     struct = ffi.new(ctype)
     for key, val in kwargs.items():
         if isinstance(val, str) and isinstance(getattr(struct, key), int):
-            structname = cstructfield2enum[ctype.strip(" *")[4:] + "." + key]
+            if key in cstructfield2enum_alt:
+                structname = cstructfield2enum_alt[key]
+            else:
+                structname = cstructfield2enum[ctype.strip(" *")[4:] + "." + key]
             ival = enummap[structname + "." + val]
             setattr(struct, key, ival)
         else:
@@ -658,8 +664,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
     # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
     def beginComputePass(self, *, label=""):
         struct = new_struct("WGPUComputePassDescriptor *", todo=0)
-        id = _lib.wgpu_command_encoder_begin_compute_pass(self._internal, struct)
-        return GPUComputePassEncoder(label, id, self)
+        raw_pass = _lib.wgpu_command_encoder_begin_compute_pass(self._internal, struct)
+        return GPUComputePassEncoder(label, raw_pass, self)
 
     # wgpu.help('commandencoderbeginrenderpass', 'RenderPassDescriptor', dev=True)
     def beginRenderPass(
@@ -718,8 +724,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             depth_stencil_attachment=c_depth_stencil_attachment,
         )
 
-        id = _lib.wgpu_command_encoder_begin_render_pass(self._internal, struct)
-        return GPURenderPassEncoder(label, id, self)
+        raw_pass = _lib.wgpu_command_encoder_begin_render_pass(self._internal, struct)
+        return GPURenderPassEncoder(label, raw_pass, self)
 
     # wgpu.help('commandencoderfinish', 'CommandBufferDescriptor', dev=True)
     def finish(self, *, label=""):

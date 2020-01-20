@@ -64,7 +64,10 @@ lib_dir = os.path.join(this_dir, "wgpu")
 resource_dir = os.path.join(lib_dir, "resources")
 
 report_file = open(
-    os.path.join(resource_dir, "codegen_report.md"), "wt", encoding="utf-8", newline="\n"
+    os.path.join(resource_dir, "codegen_report.md"),
+    "wt",
+    encoding="utf-8",
+    newline="\n",
 )
 
 ip = IdlParser(open(os.path.join(resource_dir, "webgpu.idl"), "rb").read().decode())
