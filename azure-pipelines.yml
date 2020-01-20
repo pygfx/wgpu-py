@@ -141,7 +141,6 @@ jobs:
   - task: Bash@3
     displayName: Manylinux1 tag
     condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
-    continueOnError: true
     inputs:
       targetType: inline
       script: |
@@ -220,5 +219,4 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        rm dist/*linux*.whl  # TODO: ensure manylinux1 platform tag
         twine upload -r "wgpu" --config-file $(PYPIRC_PATH) --non-interactive dist/*
