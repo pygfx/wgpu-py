@@ -1,12 +1,31 @@
 """
-WGPU backend implementation based on the wgpu library.
+WGPU backend implementation based on wgpu-native
 
 The Rust wgpu project (https://github.com/gfx-rs/wgpu) is a Rust library
 based on gfx-hal, which wraps Metal, Vulkan, DX12 and more in the
 future. It can compile into a dynamic library exposing a C-API,
-accomanied by a C header file. We wrap this using cffi, which uses the
+accompanied by a C header file. We wrap this using cffi, which uses the
 header file to do most type conversions for us.
+
+Developer notes and tips:
+
+* The purpose of this module is to tie our Pythonic API, which closely
+  resembles the WebGPU spec, to the C API of wgpu-native.
+* Most of it is converting dicts to ffi structs. You may think that this
+  can be automated, and this would indeed be possible for 80-90% of the
+  methods. However, the API's do not always line up, and there's async stuff
+  to take into account too. Therefore we do it manually. In the end, I think
+  that this will make the code easier to maintain.
+* Run the wgpu.help() thing that is listed above each API method. This will
+  usually give you all info that you need from webgpu.idl and wgpu.h.
+* You may need webgpu.idl and wgpu.h from the resource dir as a reference.
+* Use new_struct() to create a C structure with minimal boilerplate.
+* When we update the upstream webgpu.idl or wgpu.h, the codegen-script.py
+  should be run. This may update base.py and this module. Then run git diff
+  to see what changed in webgpu.idl, wgpu.h and in this file, and make
+  adjustments as needed.
 """
+
 
 import os
 import sys
