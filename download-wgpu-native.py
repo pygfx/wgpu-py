@@ -11,6 +11,13 @@ RESOURCE_DIR = os.path.join("wgpu", "resources")
 # A text file used to track the version installed through this script
 VERSION_FILE = os.path.join(RESOURCE_DIR, "wgpu_native-version")
 
+# Whether to ensure we export \n instead of \r\n
+FORCE_SIMPLE_NEWLINES = False
+if sys.platform.startswith("win"):
+    sample = open(os.path.join(RESOURCE_DIR, "codegen_report.md"), "rb").read()
+    if sample.count(b"\r\n") == 0:
+        FORCE_SIMPLE_NEWLINES = True
+
 
 def get_current_version():
     with open(VERSION_FILE, mode="r") as fh:
@@ -34,6 +41,11 @@ def extract_files(zip_filename, members, path):
     z = ZipFile(zip_filename)
     for member in members:
         z.extract(member, path=path)
+        if member.endswith(".h") and FORCE_SIMPLE_NEWLINES:
+            filename = os.path.join(path, member)
+            bb = open(filename, "rb").read()
+            with open(filename, "wb") as f:
+                f.write(bb.replace(b"\r\n", b"\n"))
 
 
 def get_os_string():
