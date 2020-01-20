@@ -272,7 +272,7 @@ with open(os.path.join(lib_dir, "_mappings.py"), "wb") as f:
 print("Written to _mappings.py")
 
 
-# %% Inject IDL into our hand-written source
+# %% Patching our hand-written source
 
 # ip.functions["requestAdapter"] = ip.functions.pop("requestadapter")
 
@@ -339,7 +339,8 @@ for fname in ("base.py", "backend/rs.py"):
                 py_args = ["self"] + argnames
                 api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
 
-            api_lines.insert(i, " " * indent + "# IDL: " + line)
+            if fname == "base.py":
+                api_lines.insert(i, " " * indent + "# IDL: " + line)
             api_lines.insert(
                 i, " " * indent + f"# wgpu.help({', '.join(searches)}, dev=True)"
             )
