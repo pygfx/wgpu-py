@@ -139,7 +139,7 @@ jobs:
         pip uninstall -y wgpu
         git restore ./wgpu
   - task: Bash@3
-    displayName: Manylinux2010 tag
+    displayName: Manylinux1 tag
     condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
     inputs:
       targetType: inline
@@ -147,7 +147,7 @@ jobs:
         set -ex
         sudo apt-get update
         sudo apt-get install -y patchelf
-        auditwheel repair --plat manylinux2010_x86_64 dist/*.whl
+        auditwheel repair dist/*.whl
         rm dist/*.whl
         cp wheelhouse/*.whl dist/.
   - task: Bash@3
