@@ -234,9 +234,7 @@ class GPUDevice(classes.GPUDevice):
 
         struct = new_struct("WGPUBufferDescriptor *", size=size, usage=usage)
 
-        id = _lib.wgpu_device_create_buffer(
-            self._internal, struct, mem
-        )  # TODO: mem is undefined
+        id = _lib.wgpu_device_create_buffer(self._internal, struct)
         return GPUBuffer(label, id, self, size, usage, "unmapped", None)
 
     # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
@@ -274,14 +272,15 @@ class GPUDevice(classes.GPUDevice):
         for binding in bindings:
             c_binding = new_struct(
                 "WGPUBindGroupLayoutBinding *",
-                binding=int(binding.binding),
-                visibility=int(binding.visibility),
-                ty=binding.BindingType,
-                texture_dimension=binding.textureDimension,
-                multisampled=bool(binding.multisampled),
-                dynamic=bool(binding.hasDynamicOffset),
+                binding=int(binding["binding"]),
+                visibility=int(binding["visibility"]),
+                ty=binding["type"],
+                texture_dimension=binding.get("textureDimension", "2d"),
+                # ???=binding.get("textureComponentType", "float"),
+                multisampled=bool(binding.get("multisampled", False)),
+                dynamic=bool(binding.get("hasDynamicOffset", False)),
             )  # WGPUShaderStage
-            c_bindings_list.append(c_binding)
+            c_bindings_list.append(c_binding[0])
 
         c_bindings_array = ffi.new("WGPUBindGroupLayoutBinding []", c_bindings_list)
         struct = new_struct(
@@ -306,12 +305,43 @@ class GPUDevice(classes.GPUDevice):
 
         c_bindings_list = []
         for binding in bindings:
+            # The resource can be a sampler, texture view, or buffer descriptor
+            resource = binding["resource"]
+            if isinstance(resource, classes.GPUSampler):
+                c_resource_kwargs = {
+                    "tag": 1,  # WGPUBindingResource_Tag.WGPUBindingResource_Sampler
+                    "sampler": new_struct(
+                        "WGPUBindingResource_WGPUSampler_Body *", _0=resource._internal
+                    )[0],
+                }
+            elif isinstance(resource, classes.GPUTextureView):
+                c_resource_kwargs = {
+                    "tag": 2,  # WGPUBindingResource_Tag.WGPUBindingResource_TextureView
+                    "texture_view": new_struct(
+                        "WGPUBindingResource_WGPUTextureView_Body *",
+                        _0=resource._internal,
+                    )[0],
+                }
+            elif isinstance(resource, dict):  # Buffer binding
+                c_buffer_binding = new_struct(
+                    "WGPUBufferBinding *",
+                    buffer=resource["buffer"]._internal,
+                    offset=resource["offset"],
+                    size=resource["size"],
+                )
+                c_resource_kwargs = {
+                    "tag": 0,  # WGPUBindingResource_Tag.WGPUBindingResource_Buffer
+                    "buffer": new_struct(
+                        "WGPUBindingResource_WGPUBuffer_Body *", _0=c_buffer_binding[0]
+                    )[0],
+                }
+            c_resource = new_struct("WGPUBindingResource *", **c_resource_kwargs)
             c_binding = new_struct(
                 "WGPUBindGroupBinding *",
-                binding=int(binding.binding),
-                resource=binding.resource,
-            )  # todo: xxxx WGPUBindingResource
-            c_bindings_list.append(c_binding)
+                binding=int(binding["binding"]),
+                resource=c_resource[0],
+            )
+            c_bindings_list.append(c_binding[0])
 
         c_bindings_array = ffi.new("WGPUBindGroupBinding []", c_bindings_list)
         struct = new_struct(
@@ -370,6 +400,31 @@ class GPUDevice(classes.GPUDevice):
 
         id = _lib.wgpu_device_create_shader_module(self._internal, struct)
         return classes.GPUShaderModule(label, id, self)
+
+    # wgpu.help('devicecreatecomputepipeline', 'ComputePipelineDescriptor', dev=True)
+    # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor);
+    def createComputePipeline(
+        self,
+        *,
+        label="",
+        layout: "GPUPipelineLayout",
+        computeStage: "GPUProgrammableStageDescriptor",
+    ):
+
+        c_compute_stage = new_struct(
+            "WGPUProgrammableStageDescriptor *",
+            module=computeStage["module"]._internal,
+            entry_point=ffi.new("char []", computeStage["entryPoint"].encode()),
+        )
+
+        struct = new_struct(
+            "WGPUComputePipelineDescriptor *",
+            layout=layout._internal,
+            compute_stage=c_compute_stage[0],
+        )
+
+        id = _lib.wgpu_device_create_compute_pipeline(self._internal, struct)
+        return classes.GPUComputePipeline(label, id, self)
 
     # wgpu.help('devicecreaterenderpipeline', 'RenderPipelineDescriptor', dev=True)
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
@@ -533,6 +588,36 @@ class GPUDevice(classes.GPUDevice):
 
 class GPUBuffer(classes.GPUBuffer):
 
+    # wgpu.help('buffermapreadasync', dev=True)
+    # IDL: Promise<ArrayBuffer> mapReadAsync();
+    async def mapReadAsync(self):
+
+        data = None
+
+        @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
+        def _map_read_callback(status, buffer_data_p, user_data_p):
+            # print("_map_read_callback called", status)
+            nonlocal data
+            if status == 0:
+                pointer_as_int = int(ffi.cast("intptr_t", buffer_data_p))
+                mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
+                data = mem_as_ctypes
+
+        start, size = 0, self.size
+        _lib.wgpu_buffer_map_read_async(
+            self._internal, start, size, _map_read_callback, ffi.NULL
+        )  # userdata, stub
+
+        # Let it do some cycles
+        _lib.wgpu_device_poll(self._device._internal, True)
+
+        if data is None:
+            raise RuntimeError("Could not read buffer data.")
+        return data
+
+    def mapReadSync(self):
+        raise NotImplementedError()
+
     # wgpu.help('bufferunmap', dev=True)
     # IDL: void unmap();
     def unmap(self):
@@ -585,6 +670,13 @@ class GPUTexture(classes.GPUTexture):
 
 
 class GPUCommandEncoder(classes.GPUCommandEncoder):
+
+    # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
+    # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
+    def beginComputePass(self, *, label=""):
+        struct = new_struct("WGPUComputePassDescriptor *", todo=0)
+        id = _lib.wgpu_command_encoder_begin_compute_pass(self._internal, struct)
+        return GPUComputePassEncoder(label, id, self)
 
     # wgpu.help('commandencoderbeginrenderpass', 'RenderPassDescriptor', dev=True)
     # IDL: GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor);
@@ -702,22 +794,26 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     # wgpu.help('computepassencodersetpipeline', 'ComputePipeline', dev=True)
     # IDL: void setPipeline(GPUComputePipeline pipeline);
     def setPipeline(self, pipeline):
-        raise NotImplementedError()
+        pipeline_id = pipeline._internal
+        _lib.wgpu_compute_pass_set_pipeline(self._internal, pipeline_id)
 
     # wgpu.help('computepassencoderdispatch', dev=True)
     # IDL: void dispatch(unsigned long x, optional unsigned long y = 1, optional unsigned long z = 1);
     def dispatch(self, x, y, z):
-        raise NotImplementedError()
+        _lib.wgpu_compute_pass_dispatch(self._internal, x, y, z)
 
     # wgpu.help('computepassencoderdispatchindirect', 'Buffer', 'BufferSize', dev=True)
     # IDL: void dispatchIndirect(GPUBuffer indirectBuffer, GPUBufferSize indirectOffset);
     def dispatchIndirect(self, indirectBuffer, indirectOffset):
-        raise NotImplementedError()
+        buffer_id = indirectBuffer._internal
+        _lib.wgpu_compute_pass_dispatch_indirect(
+            self._internal, buffer_id, indirectOffset
+        )
 
     # wgpu.help('computepassencoderendpass', dev=True)
     # IDL: void endPass();
     def endPass(self):
-        raise NotImplementedError()
+        _lib.wgpu_compute_pass_end_pass(self._internal)
 
 
 class GPURenderEncoderBase(GPUProgrammablePassEncoder):

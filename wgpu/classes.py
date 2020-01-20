@@ -545,6 +545,11 @@ class GPUCommandEncoder(GPUObject):
     """
     """
 
+    # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
+    # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
+    def beginComputePass(self, *, label=""):
+        raise NotImplementedError()
+
     # wgpu.help('commandencoderbeginrenderpass', 'RenderPassDescriptor', dev=True)
     # IDL: GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor);
     def beginRenderPass(
@@ -554,11 +559,6 @@ class GPUCommandEncoder(GPUObject):
         colorAttachments: "GPURenderPassColorAttachmentDescriptor-list",
         depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor",
     ):
-        raise NotImplementedError()
-
-    # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
-    # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
-    def beginComputePass(self, *, label=""):
         raise NotImplementedError()
 
     # wgpu.help('commandencodercopybuffertobuffer', 'Buffer', 'BufferSize', 'Buffer', 'BufferSize', 'BufferSize', dev=True)

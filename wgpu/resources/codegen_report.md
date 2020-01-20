@@ -97,14 +97,12 @@
 *  Injected IDL lines into classes.py
 
 ### Check functions in backend/rs.py
-*  Found 38 functions already implemented
+*  Found 40 functions already implemented
 *  Not implemented: GPUTexture createTexture(GPUTextureDescriptor descriptor);
 *  Not implemented: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
-*  Not implemented: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor);
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
 *  Not implemented: Promise<ArrayBuffer> mapReadAsync();
 *  Not implemented: Promise<ArrayBuffer> mapWriteAsync();
-*  Not implemented: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
 *  Not implemented: void copyBufferToBuffer( GPUBuffer source, GPUBufferSize sourceOffset, GPUBuffer destination, GPUBufferSize destinationOffset, GPUBufferSize size);
 *  Not implemented: void copyBufferToTexture( GPUBufferCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
 *  Not implemented: void copyTextureToBuffer( GPUTextureCopyView source, GPUBufferCopyView destination, GPUExtent3D copySize);
@@ -125,7 +123,7 @@
 *  Not implemented: constructor(DOMString message);
 *  Not implemented: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
 *  Found unknown function new_struct
-*  Found unknown function get_surface_id_from_win_id
+*  Found unknown function get_surface_id_from_canvas
 *  Found unknown function GPUAdapter.requestDeviceSync
 *  Found unknown function GPUSwapChain.getCurrentTextureView
 *  Injected IDL lines into backend/rs.py
