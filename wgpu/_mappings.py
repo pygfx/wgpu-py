@@ -151,12 +151,14 @@ enummap = {
 }
 
 cstructfield2enum = {
-    "RenderPassColorAttachmentDescriptor.load_op": "LoadOp",
-    "RenderPassColorAttachmentDescriptor.store_op": "StoreOp",
-    "RenderPassDepthStencilAttachmentDescriptor_TextureViewId.depth_load_op": "LoadOp",
-    "RenderPassDepthStencilAttachmentDescriptor_TextureViewId.depth_store_op": "StoreOp",
-    "RenderPassDepthStencilAttachmentDescriptor_TextureViewId.stencil_load_op": "LoadOp",
-    "RenderPassDepthStencilAttachmentDescriptor_TextureViewId.stencil_store_op": "StoreOp",
+    "RenderPassColorAttachmentDescriptorBase_TextureViewId__TextureViewId.load_op": "LoadOp",
+    "RenderPassColorAttachmentDescriptorBase_TextureViewId__TextureViewId.store_op": "StoreOp",
+    "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.depth_load_op": "LoadOp",
+    "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.depth_store_op": "StoreOp",
+    "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.stencil_load_op": "LoadOp",
+    "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.stencil_store_op": "StoreOp",
+    "RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId.load_op": "LoadOp",
+    "RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId.store_op": "StoreOp",
     "BindGroupLayoutBinding.ty": "BindingType",
     "BindGroupLayoutBinding.texture_dimension": "TextureViewDimension",
     "RasterizationStateDescriptor.front_face": "FrontFace",

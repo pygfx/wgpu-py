@@ -440,7 +440,7 @@ class HParser(BaseParser):
             ) and "wgpu_" in line:
                 if ")" not in line:
                     line += self.read_until(")") + self.readline()
-                name = line.split("(")[0].strip().split()[-1].strip()
+                name = line.split("(")[0].strip().split()[-1].strip().strip("*")
                 self.functions[name] = line
             else:
                 self.unknown_lines.append(line)

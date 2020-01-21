@@ -64,7 +64,10 @@ lib_dir = os.path.join(this_dir, "wgpu")
 resource_dir = os.path.join(lib_dir, "resources")
 
 report_file = open(
-    os.path.join(resource_dir, "codegen_report.md"), "wt", encoding="utf-8"
+    os.path.join(resource_dir, "codegen_report.md"),
+    "wt",
+    encoding="utf-8",
+    newline="\n",
 )
 
 ip = IdlParser(open(os.path.join(resource_dir, "webgpu.idl"), "rb").read().decode())
@@ -272,13 +275,22 @@ with open(os.path.join(lib_dir, "_mappings.py"), "wb") as f:
 print("Written to _mappings.py")
 
 
-# %% Inject IDL into our hand-written source
+# %% Patching our hand-written source
 
 # ip.functions["requestAdapter"] = ip.functions.pop("requestadapter")
 
 print(f"\n## Checking and patching hand-written API code")
 
-for fname in ("classes.py", "backend/rs.py"):
+
+def get_func_id_match(func_id, d):
+    """ Find matching func_id, taking into account sync/async method pairs.
+    """
+    for func_id_try in [func_id, func_id.replace("async", ""), func_id + "async"]:
+        if func_id_try in d:
+            return func_id_try
+
+
+for fname in ("base.py", "backend/rs.py"):
     filename = os.path.join(lib_dir, fname)
     print(f"\n### Check functions in {fname}")
 
@@ -312,12 +324,13 @@ for fname in ("classes.py", "backend/rs.py"):
     # Inject IDL definitions
     count = 0
     for func_id in reversed(list(api_functions.keys())):
-        if func_id in ip.functions:
+        func_id_match = get_func_id_match(func_id, ip.functions)
+        if func_id_match:
             funcname, i, indent = api_functions[func_id]
             count += 1
-            line = ip.functions[func_id]
+            line = ip.functions[func_id_match]
             pyline = api_lines[i]
-            searches = [func_id]
+            searches = [func_id_match]
             args = line.split("(", 1)[1].split(")", 1)[0].split(",")
             argnames = [arg.split("=")[0].split()[-1] for arg in args if arg.strip()]
             argtypes = [arg.split("=")[0].split()[-2] for arg in args if arg.strip()]
@@ -330,7 +343,7 @@ for fname in ("classes.py", "backend/rs.py"):
                 py_args = [field.py_arg() for field in arg_struct.values()]
                 if py_args[0] == "label: str":
                     py_args[0] = 'label=""'
-                if "requestadapter" in func_id:  # todo:  if "." in func_id?
+                if "requestadapter" in func_id:
                     py_args = ["*"] + py_args
                 else:
                     py_args = ["self", "*"] + py_args
@@ -339,7 +352,8 @@ for fname in ("classes.py", "backend/rs.py"):
                 py_args = ["self"] + argnames
                 api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
 
-            api_lines.insert(i, " " * indent + "# IDL: " + line)
+            if fname == "base.py":
+                api_lines.insert(i, " " * indent + "# IDL: " + line)
             api_lines.insert(
                 i, " " * indent + f"# wgpu.help({', '.join(searches)}, dev=True)"
             )
@@ -347,10 +361,10 @@ for fname in ("classes.py", "backend/rs.py"):
     # Report missing
     print(f"Found {count} functions already implemented")
     for func_id in ip.functions:
-        if func_id not in api_functions:
+        if not get_func_id_match(func_id, api_functions):
             print(f"Not implemented: {ip.functions[func_id]}")
     for func_id in api_functions:
-        if func_id not in ip.functions:
+        if not get_func_id_match(func_id, ip.functions):
             funcname = api_functions[func_id][0]
             print(f"Found unknown function {funcname}")
 

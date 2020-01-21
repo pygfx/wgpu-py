@@ -11,9 +11,13 @@ from .. import _register_backend
 from pscript.stubs import window
 
 
-async def requestAdapter(options):
+def requestAdapter(options):
+    raise NotImplementedError("Cannot use sync API functions in JS.")
+
+
+async def requestAdapterASync(options):
     return await window.navigator.gpu.requestAdapter(options)
 
 
 # Mark as the backend on import time
-_register_backend(requestAdapter)
+_register_backend(requestAdapter, requestAdapterASync)

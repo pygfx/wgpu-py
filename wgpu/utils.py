@@ -6,7 +6,7 @@ import os
 import inspect
 from pkg_resources import resource_filename
 
-from . import classes as m_classes, flags as m_flags, enums as m_enums
+from . import base as m_classes, flags as m_flags, enums as m_enums
 
 
 def get_resource_filename(name):

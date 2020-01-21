@@ -46,8 +46,8 @@ def fragment_shader(input, output):
 
 async def main(canvas):
 
-    adapter = await wgpu.requestAdapter(powerPreference="high-performance")
-    device = await adapter.requestDevice(extensions=[], limits=wgpu.GPULimits())
+    adapter = await wgpu.requestAdapterAsync(powerPreference="high-performance")
+    device = await adapter.requestDeviceAsync(extensions=[], limits=wgpu.GPULimits())
 
     vshader = device.createShaderModule(code=vertex_shader)
     fshader = device.createShaderModule(code=fragment_shader)

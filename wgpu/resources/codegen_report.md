@@ -4,6 +4,9 @@
 ## Comparing webgpu.idl with wgpu.h
 
 ### Comparing flags
+*   DEFAULT flag missing in .idl
+*   DESIRED flag missing in .idl
+*   MAX flag missing in .idl
 *   ShaderStage
 *  c: NONE:0, VERTEX:1, FRAGMENT:2, COMPUTE:4
 *  i: VERTEX:1, FRAGMENT:2, COMPUTE:4
@@ -29,7 +32,12 @@
 
 ### Comparing structs
 *  Extensions struct missing in .idl
-*  RenderPassDepthStencilAttachmentDescriptor_TextureViewId struct missing in .idl
+*  RawPass struct missing in .idl
+*  RenderPassColorAttachmentDescriptorBase_TextureViewId__TextureViewId struct missing in .idl
+*  RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId struct missing in .idl
+*  RawRenderTargets struct missing in .idl
+*  RawRenderPass struct missing in .idl
+*  RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId struct missing in .idl
 *  Origin3d struct missing in .idl
 *  Extent3d struct missing in .idl
 *  BindingResource_WGPUBuffer_Body struct missing in .idl
@@ -43,6 +51,7 @@
 *  VertexStateDescriptor struct missing in .h
 *  VertexBufferLayoutDescriptor struct missing in .h
 *  ImageBitmapCopyView struct missing in .h
+*  RenderPassColorAttachmentDescriptor struct missing in .h
 *  RenderPassDepthStencilAttachmentDescriptor struct missing in .h
 *  RenderBundleDescriptor struct missing in .h
 *  RenderBundleEncoderDescriptor struct missing in .h
@@ -54,9 +63,6 @@
 *   Limits
 *  c: ['max_bind_groups']
 *  i: ['maxBindGroups', 'maxDynamicUniformBuffersPerPipelineLayout', 'maxDynamicStorageBuffersPerPipelineLayout', 'maxSampledTexturesPerShaderStage', 'maxSamplersPerShaderStage', 'maxStorageBuffersPerShaderStage', 'maxStorageTexturesPerShaderStage', 'maxUniformBuffersPerShaderStage']
-*   RenderPassColorAttachmentDescriptor
-*  c: ['attachment', 'resolve_target', 'load_op', 'store_op', 'clear_color']
-*  i: ['attachment', 'resolveTarget', 'loadValue', 'storeOp']
 *   BindGroupLayoutBinding
 *  c: ['binding', 'visibility', 'ty', 'texture_dimension', 'multisampled', 'dynamic']
 *  i: ['binding', 'visibility', 'type', 'textureDimension', 'textureComponentType', 'multisampled', 'hasDynamicOffset']
@@ -80,8 +86,8 @@
 
 ## Checking and patching hand-written API code
 
-### Check functions in classes.py
-*  Found 55 functions already implemented
+### Check functions in base.py
+*  Found 60 functions already implemented
 *  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
 *  Not implemented: void signal(GPUFence fence, unsigned long long signalValue);
 *  Not implemented: unsigned long long getCompletedValue();
@@ -91,20 +97,15 @@
 *  Not implemented: constructor();
 *  Not implemented: constructor(DOMString message);
 *  Not implemented: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
-*  Found unknown function GPUAdapter.foobar
-*  Found unknown function GPUDevice.createBufferMappedAsync
 *  Found unknown function GPUSwapChain.getCurrentTextureView
-*  Injected IDL lines into classes.py
+*  Injected IDL lines into base.py
 
 ### Check functions in backend/rs.py
-*  Found 38 functions already implemented
+*  Found 44 functions already implemented
 *  Not implemented: GPUTexture createTexture(GPUTextureDescriptor descriptor);
 *  Not implemented: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
-*  Not implemented: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor);
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
-*  Not implemented: Promise<ArrayBuffer> mapReadAsync();
 *  Not implemented: Promise<ArrayBuffer> mapWriteAsync();
-*  Not implemented: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
 *  Not implemented: void copyBufferToBuffer( GPUBuffer source, GPUBufferSize sourceOffset, GPUBuffer destination, GPUBufferSize destinationOffset, GPUBufferSize size);
 *  Not implemented: void copyBufferToTexture( GPUBufferCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
 *  Not implemented: void copyTextureToBuffer( GPUTextureCopyView source, GPUBufferCopyView destination, GPUExtent3D copySize);
@@ -125,7 +126,6 @@
 *  Not implemented: constructor(DOMString message);
 *  Not implemented: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
 *  Found unknown function new_struct
-*  Found unknown function get_surface_id_from_win_id
-*  Found unknown function GPUAdapter.requestDeviceSync
+*  Found unknown function get_surface_id_from_canvas
 *  Found unknown function GPUSwapChain.getCurrentTextureView
 *  Injected IDL lines into backend/rs.py

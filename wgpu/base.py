@@ -2,18 +2,38 @@
 The classes representing the wgpu API. This module defines the classes,
 properties, methods and documentation. The actual methods are implemented
 in backend modules.
+
+Developer notes and tips:
+
+* We follow the IDL spec, with the exception that where in JS the input args
+  are provided via a dict, we use kwargs directly.
+* However, some input args have subdicts (and sub-sub-dicts).
+* For methods that are async in IDL, we also provide sync methods.
+* The Async method names have an "Async" suffix.
+* We will try hard not to rely on asyncio.
+
 """
 
 
 # wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-async def requestAdapter(*, powerPreference: "GPUPowerPreference"):
+def requestAdapter(*, powerPreference: "GPUPowerPreference"):
     """ Request an Adapter, the object that represents the implementation of WGPU.
     Before requesting an adapter, a wgpu backend should be selected. At the moment
     there is only one backend. Use ``import wgpu.rs`` to select it.
 
     Params:
         powerPreference(enum): "high-performance" or "low-power"
+    """
+    raise RuntimeError(
+        "Select a backend (by importing wgpu.rs) before requesting an adapter!"
+    )
+
+
+# wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
+# IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
+async def requestAdapterAsync(*, powerPreference: "GPUPowerPreference"):
+    """ Async version of ``requestAdapter()``.
     """
     raise RuntimeError(
         "Select a backend (by importing wgpu.rs) before requesting an adapter!"
@@ -73,7 +93,7 @@ class GPUAdapter:  # Not a GPUObject
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def requestDevice(
+    def requestDevice(
         self,
         *,
         label="",
@@ -88,8 +108,18 @@ class GPUAdapter:  # Not a GPUObject
         """
         raise NotImplementedError()
 
-    def foobar(self):
-        pass
+    # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    async def requestDeviceAsync(
+        self,
+        *,
+        label="",
+        extensions: "GPUExtensionName-list" = [],
+        limits: "GPULimits" = {},
+    ):
+        """ Async version of requestDevice().
+        """
+        raise NotImplementedError()
 
 
 class GPULimits(DictLike):
@@ -177,7 +207,11 @@ class GPUDevice(GPUObject):
         """
         raise NotImplementedError()
 
-    async def createBufferMappedAsync(self, des: dict):
+    # wgpu.help('devicecreatebuffermapped', 'BufferDescriptor', dev=True)
+    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
+    async def createBufferMappedAsync(
+        self, *, label="", size: "GPUBufferSize", usage: "GPUBufferUsageFlags"
+    ):
         """ Asynchronously create a mapped buffer object.
         """
         raise NotImplementedError()
@@ -427,7 +461,17 @@ class GPUBuffer(GPUObject):
 
     # wgpu.help('buffermapreadasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapReadAsync();
+    def mapRead(self):
+        raise NotImplementedError()
+
+    # wgpu.help('buffermapreadasync', dev=True)
+    # IDL: Promise<ArrayBuffer> mapReadAsync();
     async def mapReadAsync(self):
+        raise NotImplementedError()
+
+    # wgpu.help('buffermapwriteasync', dev=True)
+    # IDL: Promise<ArrayBuffer> mapWriteAsync();
+    def mapWrite(self):
         raise NotImplementedError()
 
     # wgpu.help('buffermapwriteasync', dev=True)
@@ -545,6 +589,11 @@ class GPUCommandEncoder(GPUObject):
     """
     """
 
+    # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
+    # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
+    def beginComputePass(self, *, label=""):
+        raise NotImplementedError()
+
     # wgpu.help('commandencoderbeginrenderpass', 'RenderPassDescriptor', dev=True)
     # IDL: GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor);
     def beginRenderPass(
@@ -554,11 +603,6 @@ class GPUCommandEncoder(GPUObject):
         colorAttachments: "GPURenderPassColorAttachmentDescriptor-list",
         depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor",
     ):
-        raise NotImplementedError()
-
-    # wgpu.help('commandencoderbegincomputepass', 'ComputePassDescriptor', dev=True)
-    # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
-    def beginComputePass(self, *, label=""):
         raise NotImplementedError()
 
     # wgpu.help('commandencodercopybuffertobuffer', 'Buffer', 'BufferSize', 'Buffer', 'BufferSize', 'BufferSize', dev=True)
