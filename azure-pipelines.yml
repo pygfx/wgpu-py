@@ -8,7 +8,6 @@ trigger:
 
 variables:
   NAME: wgpu
-  PYTHON_ARCHITECTURE: x64
 
 jobs:
 - job: Build
@@ -23,9 +22,6 @@ jobs:
         MACOSX_DEPLOYMENT_TARGET: '10.13'
       Windows:
         vmImage: vs2017-win2016
-      Windows-32:
-        vmImage: vs2017-win2016
-        PYTHON_ARCHITECTURE: x86
   pool:
     vmImage: $(vmImage)
   steps:
@@ -33,7 +29,6 @@ jobs:
     displayName: Select Python 3.6
     inputs:
       versionSpec: '3.6'
-      architecture: $(PYTHON_ARCHITECTURE)
   - task: Bash@3
     displayName: Install development requirements
     inputs:
@@ -115,7 +110,7 @@ jobs:
         popd
         pytest --junit-xml=results-wheel.xml || true
         pip uninstall -y wgpu
-        git reset --hard HEAD
+        git restore ./wgpu
 
         # Fail the task if results-wheel.xml was not created
         if [[ ! -f results-wheel.xml ]]
@@ -142,7 +137,7 @@ jobs:
         popd
         # don't run tests, we just want to know if the sdist can be installed
         pip uninstall -y wgpu
-        git reset --hard HEAD
+        git restore ./wgpu
   - task: Bash@3
     displayName: Manylinux1 tag
     condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
