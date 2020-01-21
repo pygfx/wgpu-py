@@ -23,7 +23,6 @@ jobs:
         MACOSX_DEPLOYMENT_TARGET: '10.13'
       Windows:
         vmImage: vs2017-win2016
-        PY_ARCH: x86
       Windows-32:
         vmImage: vs2017-win2016
         PY_ARCH: x86
