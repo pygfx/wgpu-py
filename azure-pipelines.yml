@@ -8,6 +8,7 @@ trigger:
 
 variables:
   NAME: wgpu
+  PY_ARCH: x64
 
 jobs:
 - job: Build
@@ -32,7 +33,7 @@ jobs:
     displayName: Select Python 3.6
     inputs:
       versionSpec: '3.6'
-      architecture: $[coalesce(variables['PY_ARCH'], 'x64')]
+      architecture: $(PY_ARCH)
   - task: Bash@3
     displayName: Install development requirements
     inputs:
