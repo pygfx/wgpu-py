@@ -2,7 +2,7 @@ black
 pytest
 flake8
 requests
-setuptools
+setuptools<45.0.0
 wheel==0.31.1
 twine
 auditwheel; sys_platform == 'linux'
