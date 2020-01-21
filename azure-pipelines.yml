@@ -35,7 +35,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        python -m pip install -U pip
+        python -m pip install -U pip<20.0.0
         pip install -U -r dev-requirements.txt
   - task: Bash@3
     displayName: Create source distribution
@@ -205,7 +205,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        python -m pip install -U pip setuptools
+        python -m pip install -U pip<20.0.0 setuptools
         python -m pip install -U wheel twine
   - task: TwineAuthenticate@1
     displayName: Authenticate with PyPI
