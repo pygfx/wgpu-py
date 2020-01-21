@@ -2,7 +2,7 @@
 Support to render in a glfw window. The advantage of glfw is that it's
 very lightweight.
 
-Install pyglfw using ``pip install glfw``. On Windows this is enough.
+Install pyGLFW using ``pip install glfw``. On Windows this is enough.
 On Linux, install the glfw lib using ``sudo apt install libglfw3``,
 or ``sudo apt install libglfw3-wayland`` when using Wayland.
 """
@@ -19,6 +19,7 @@ from .base import BaseCanvas
 glfw_version_info = tuple(int(i) for i in glfw.__version__.split(".")[:2])
 
 if glfw_version_info < (1, 9):
+    # todo: in half a year or so, remove this and force glfw >= 1.9
     # see https://github.com/FlorianRhiem/pyGLFW/issues/39
     # see https://www.glfw.org/docs/latest/group__native.html
     if hasattr(glfw._glfw, "glfwGetWin32Window"):
@@ -73,6 +74,7 @@ class GlfwWgpuCanvas(BaseCanvas):
         glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
         glfw.window_hint(glfw.RESIZABLE, True)
         # see https://github.com/FlorianRhiem/pyGLFW/issues/42
+        # Alternatively, from pyGLFW 1.10 one can set glfw.ERROR_REPORTING='warn'
         if sys.platform.startswith("linux"):
             if "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower():
                 glfw.window_hint(glfw.FOCUSED, False)  # prevent Wayland focus error
