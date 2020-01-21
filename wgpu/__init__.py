@@ -1,6 +1,6 @@
-from .flags import *  # noqa: F403
-from .enums import *  # noqa: F403
-from .base import *  # noqa: F403
+from .flags import *  # noqa: F401,F403
+from .enums import *  # noqa: F401,F403
+from .base import *  # noqa: F401,F403
 from .utils import help  # noqa: F401
 from . import base
 
@@ -8,21 +8,18 @@ from . import base
 __version__ = "0.1.2"
 
 
-def _register_backend(func):
+def _register_backend(func, func_async):
     if not (callable(func) and func.__name__ == "requestAdapter"):
         raise RuntimeError(
-            "WGPU backend must be registered as function called requestAdapter."
+            "WGPU backend must be registered with function called requestAdapterSync."
+        )
+    if not (callable(func_async) and func_async.__name__ == "requestAdapterAsync"):
+        raise RuntimeError(
+            "WGPU backend must be registered with function called requestAdapterAsync."
         )
     if globals()["requestAdapter"] is not base.requestAdapter:
         raise RuntimeError("WGPU backend can only be set once.")
     globals()["requestAdapter"] = func
+    globals()["requestAdapterAsync"] = func_async
+
     # todo: auto-select upon using requestAdapter?
-
-
-def requestAdapterSync(powerPreference: "enum PowerPreference"):  # noqa: F722
-    """ A convenience function.
-    """
-    import asyncio
-
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(requestAdapter(powerPreference))  # noqa: F405

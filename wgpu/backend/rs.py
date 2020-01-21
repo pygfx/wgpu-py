@@ -159,7 +159,7 @@ def get_surface_id_from_canvas(canvas):
 
 
 # wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
-async def requestAdapter(*, powerPreference: "GPUPowerPreference"):
+def requestAdapter(*, powerPreference: "GPUPowerPreference"):
     """ Request an GPUAdapter, the object that represents the implementation of WGPU.
     This function uses the Rust WGPU library.
 
@@ -200,8 +200,16 @@ async def requestAdapter(*, powerPreference: "GPUPowerPreference"):
     return GPUAdapter("WGPU", extensions, adapter_id)
 
 
+# wgpu.help('requestadapter', 'RequestAdapterOptions', dev=True)
+async def requestAdapterAsync(*, powerPreference: "GPUPowerPreference"):
+    """ Async version of ``requestAdapter()``.
+    This function uses the Rust WGPU library.
+    """
+    return requestAdapter(powerPreference=powerPreference)
+
+
 # Mark as the backend on import time
-_register_backend(requestAdapter)
+_register_backend(requestAdapter, requestAdapterAsync)
 
 
 class GPUAdapter(base.GPUAdapter):
@@ -210,16 +218,7 @@ class GPUAdapter(base.GPUAdapter):
         self._id = id
 
     # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
-    async def requestDevice(
-        self,
-        *,
-        label="",
-        extensions: "GPUExtensionName-list" = [],
-        limits: "GPULimits" = {},
-    ):
-        return self.requestDeviceSync(label=label, extensions=extensions, limits=limits)
-
-    def requestDeviceSync(
+    def requestDevice(
         self,
         *,
         label="",
@@ -244,6 +243,16 @@ class GPUAdapter(base.GPUAdapter):
         queue = GPUQueue("", queue_id, self)
 
         return GPUDevice(label, id, self, extensions, limits, queue)
+
+    # wgpu.help('adapterrequestdevice', 'DeviceDescriptor', dev=True)
+    async def requestDeviceAsync(
+        self,
+        *,
+        label="",
+        extensions: "GPUExtensionName-list" = [],
+        limits: "GPULimits" = {},
+    ):
+        return self.requestDevice(label=label, extensions=extensions, limits=limits)
 
 
 class GPUDevice(base.GPUDevice):
@@ -601,10 +610,8 @@ class GPUDevice(base.GPUDevice):
 
 
 class GPUBuffer(base.GPUBuffer):
-
     # wgpu.help('buffermapreadasync', dev=True)
-    async def mapReadAsync(self):
-
+    def mapRead(self):
         data = None
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
@@ -628,8 +635,10 @@ class GPUBuffer(base.GPUBuffer):
             raise RuntimeError("Could not read buffer data.")
         return data
 
-    def mapReadSync(self):
-        raise NotImplementedError()
+    # wgpu.help('buffermapreadasync', dev=True)
+    async def mapReadAsync(self):
+        # todo: actually make this async
+        return self.mapRead()
 
     # wgpu.help('bufferunmap', dev=True)
     def unmap(self):

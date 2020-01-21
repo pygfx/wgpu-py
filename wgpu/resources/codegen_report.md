@@ -87,7 +87,7 @@
 ## Checking and patching hand-written API code
 
 ### Check functions in base.py
-*  Found 55 functions already implemented
+*  Found 60 functions already implemented
 *  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
 *  Not implemented: void signal(GPUFence fence, unsigned long long signalValue);
 *  Not implemented: unsigned long long getCompletedValue();
@@ -97,13 +97,11 @@
 *  Not implemented: constructor();
 *  Not implemented: constructor(DOMString message);
 *  Not implemented: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
-*  Found unknown function GPUAdapter.foobar
-*  Found unknown function GPUDevice.createBufferMappedAsync
 *  Found unknown function GPUSwapChain.getCurrentTextureView
 *  Injected IDL lines into base.py
 
 ### Check functions in backend/rs.py
-*  Found 41 functions already implemented
+*  Found 44 functions already implemented
 *  Not implemented: GPUTexture createTexture(GPUTextureDescriptor descriptor);
 *  Not implemented: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
@@ -129,7 +127,5 @@
 *  Not implemented: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
 *  Found unknown function new_struct
 *  Found unknown function get_surface_id_from_canvas
-*  Found unknown function GPUAdapter.requestDeviceSync
-*  Found unknown function GPUBuffer.mapReadSync
 *  Found unknown function GPUSwapChain.getCurrentTextureView
 *  Injected IDL lines into backend/rs.py
