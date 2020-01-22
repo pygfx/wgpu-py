@@ -3,6 +3,7 @@ nogit/
 wgpu/resources/*.dll
 wgpu/resources/*.so
 wgpu/resources/*.dylib
+wgpu/resources/commit-sha
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
