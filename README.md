@@ -74,8 +74,25 @@ import wgpu.backend.rs
 
 ## GUI integration
 
-To render to the screen you can use any of the following GUI toolkits:
-`Tk` (included with Python), `glfw`, `PySide2`, `PyQt5`, `PySide`, `PyQt4`.
+To render to the screen you can use a variety of GUI toolkits:
+
+```py
+# Tk is included with Python (though this canvas only seems to work on Windows)
+from wgpu.gui.tk import WgpuCanvas
+
+# GLFW is a great lightweight windowing toolkit. Install with `pip install glfw`
+from wgpu.gui.glfw import WgpuCanvas
+
+# Visualizations can be embedded as a widget in a Qt application.
+# Import PySide2, PyQt5, PySide or PyQt4 before running the line below.
+# The code will detect and use the library that is imported.
+from wgpu.gui.qt import WgpuCanvas
+```
+
+Some functions in the original `wgpu-native` API are async. In the Python API,
+the default functions are all sync (blocking), making things easy for general use.
+Async versions of these functions are available, so wgpu can also work
+well with Asyncio or Trio.
 
 
 ## Web support
