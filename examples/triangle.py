@@ -1,5 +1,5 @@
 """
-Example use of webgpu API to draw a triangle. See the triangle_tk.py
+Example use of webgpu API to draw a triangle. See the triangle_glfw.py
 script (and related scripts) for actually running this.
 
 Similar example in other languages / API's:
@@ -44,10 +44,23 @@ def fragment_shader(input, output):
 # %% The wgpu calls
 
 
-async def main(canvas):
+def main(canvas):
+    """ Regular function to setup a viz on the given canvas.
+    """
+    adapter = wgpu.requestAdapter(powerPreference="high-performance")
+    device = adapter.requestDevice(extensions=[], limits=wgpu.GPULimits())
+    return _main(canvas, device)
 
+
+async def mainAsync(canvas):
+    """ Async function to setup a viz on the given canvas.
+    """
     adapter = await wgpu.requestAdapterAsync(powerPreference="high-performance")
     device = await adapter.requestDeviceAsync(extensions=[], limits=wgpu.GPULimits())
+    return _main(canvas, device)
+
+
+def _main(canvas, device):
 
     vshader = device.createShaderModule(code=vertex_shader)
     fshader = device.createShaderModule(code=fragment_shader)
