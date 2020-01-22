@@ -170,7 +170,7 @@ jobs:
 
 - job: Release
   dependsOn: Build
-  # condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   pool:
     vmImage: ubuntu-16.04
   steps:
