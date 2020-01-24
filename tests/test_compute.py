@@ -3,7 +3,11 @@ from python_shader import python2shader
 import wgpu.backend.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
+from pytest import mark
+from testutils import can_use_wgpu_lib
 
+
+@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_0_1():
     @python2shader
     def compute_shader(input, buffer):
@@ -17,6 +21,7 @@ def test_compute_0_1():
     assert np.all(out[0] == np.arange(100))
 
 
+@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_1_3():
     @python2shader
     def compute_shader(input, buffer):

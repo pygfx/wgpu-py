@@ -232,7 +232,9 @@ class GPUAdapter(base.GPUAdapter):
             "WGPUExtensions *",
             anisotropic_filtering="anisotropicFiltering" in extensions,
         )
-        c_limits = new_struct("WGPULimits *", max_bind_groups=limits["maxBindGroups"])
+        c_limits = new_struct(
+            "WGPULimits *", max_bind_groups=limits.get("maxBindGroups", 4)
+        )
         struct = new_struct(
             "WGPUDeviceDescriptor *", extensions=c_extensions[0], limits=c_limits[0]
         )

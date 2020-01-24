@@ -63,6 +63,9 @@ class DictLike:
     def __getitem__(self, name):
         return self.__dict__[name]
 
+    def get(self, key, default=None):
+        return self.__dict__.get(key, default)
+
 
 class GPUAdapter:  # Not a GPUObject
     """
