@@ -102,6 +102,18 @@ jobs:
       failTaskOnFailedTests: true
       testRunTitle: Test $(vmImage)
   - task: Bash@3
+    displayName: Manylinux1 tag
+    condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        sudo apt-get update
+        sudo apt-get install -y patchelf
+        auditwheel repair dist/*.whl
+        rm dist/*.whl
+        cp wheelhouse/*.whl dist/.
+  - task: Bash@3
     displayName: Test wheel
     inputs:
       targetType: inline
@@ -143,18 +155,6 @@ jobs:
         # don't run tests, we just want to know if the sdist can be installed
         pip uninstall -y wgpu
         git reset --hard HEAD
-  - task: Bash@3
-    displayName: Manylinux1 tag
-    condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
-    inputs:
-      targetType: inline
-      script: |
-        set -ex
-        sudo apt-get update
-        sudo apt-get install -y patchelf
-        auditwheel repair dist/*.whl
-        rm dist/*.whl
-        cp wheelhouse/*.whl dist/.
   - task: Bash@3
     displayName: Twine check
     inputs:
