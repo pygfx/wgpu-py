@@ -1,5 +1,5 @@
 """
-Utility functions.
+Core utilities that are loaded into the root namespace or used internally.
 """
 
 import os

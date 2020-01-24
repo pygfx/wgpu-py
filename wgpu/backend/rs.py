@@ -35,7 +35,7 @@ from cffi import FFI, __version_info__ as cffi_version_info
 
 from .. import base
 from .. import _register_backend
-from ..utils import get_resource_filename
+from .._coreutils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
 
 

@@ -1,8 +1,7 @@
 from .flags import *  # noqa: F401,F403
 from .enums import *  # noqa: F401,F403
 from .base import *  # noqa: F401,F403
-from .utils import help  # noqa: F401
-from ._compute import compute_with_buffers  # noqa: F401
+from ._coreutils import help  # noqa: F401
 from . import base
 
 

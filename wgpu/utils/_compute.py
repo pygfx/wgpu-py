@@ -1,11 +1,5 @@
 """
 Simple high-level utilities for doing compute on the GPU.
-
-The purpose of wgpu-py is to provide a Pythonic wrapper around wgpu-native.
-In principal, a higher-level API is not within the scope of the project.
-However, by providing a few un-opinionated utility functions, other projects
-(like python-shader) can use wgpu (e.g. in their tests) without having
-to keep track of changes in wgpu itself.
 """
 
 import sys

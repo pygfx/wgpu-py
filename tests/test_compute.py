@@ -1,7 +1,7 @@
 import numpy as np
 from python_shader import python2shader
 import wgpu.backend.rs  # noqa
-from wgpu import compute_with_buffers
+from wgpu.utils import compute_with_buffers
 
 
 def test_compute_0_1():
