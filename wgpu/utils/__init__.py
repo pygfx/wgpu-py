@@ -8,7 +8,7 @@ Higher level utility functions. This module is not imported by default.
 # projects (like python-shader) can use wgpu (e.g. in their tests)
 # without having to keep track of changes in wgpu itself.
 #
-# We should limit our scope: functionality added here should have an
+# We should be conservative here: functionality added here should have an
 # unopinionated API, providing tools that are still low-level (follow
 # GPU/wgpu semantics), but without using low level details of the wgpu
 # API itself.

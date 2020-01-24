@@ -43,19 +43,6 @@ jobs:
         python -m pip install -U pip
         pip install -U -r dev-requirements.txt
   - task: Bash@3
-    displayName: Install Vulkan on Linux
-    condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
-    inputs:
-      targetType: inline
-      script: |
-        # Vulkan drivers
-        sudo apt install libvulkan1 mesa-vulkan-drivers vulkan-utils
-        # Vulkan SDK
-        # wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-        # sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.1.130-xenial.list http://packages.lunarg.com/vulkan/1.1.130/lunarg-vulkan-1.1.130-xenial.list
-        # sudo apt update
-        # sudo apt install vulkan-sdk
-  - task: Bash@3
     displayName: Create source distribution
     condition: and(succeeded(), eq(variables['SDIST'], '1'))
     inputs:
