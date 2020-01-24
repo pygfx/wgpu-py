@@ -287,10 +287,9 @@ class GPUDevice(base.GPUDevice):
             self._internal, struct, buffer_memory_pointer
         )
 
-        # Map a numpy array onto the data
+        # Map a ctypes array onto the data
         pointer_as_int = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
         mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
-        # mem_as_numpy = np.frombuffer(mem_as_ctypes, np.uint8)
 
         return GPUBuffer(label, id, self, size, usage, "mapped", mem_as_ctypes)
 

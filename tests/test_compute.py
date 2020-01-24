@@ -1,10 +1,13 @@
-import numpy as np
+import random
+import ctypes
+from ctypes import c_int32, c_ubyte
+
 from python_shader import python2shader
 import wgpu.backend.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
 from pytest import mark
-from testutils import can_use_wgpu_lib
+from testutils import can_use_wgpu_lib, iters_equal
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -15,10 +18,18 @@ def test_compute_0_1():
         buffer.define("out", 0, Array(i32))
         buffer.out[input.index] = input.index
 
-    out = compute_with_buffers({}, {0: (100, np.int32)}, compute_shader)
+    # Create some ints!
+    out = compute_with_buffers({}, {0: c_int32 * 100}, compute_shader)
     assert isinstance(out, dict) and len(out) == 1
-    assert isinstance(out[0], np.ndarray)
-    assert np.all(out[0] == np.arange(100))
+    assert isinstance(out[0], ctypes.Array)
+    assert iters_equal(out[0], range(100))
+
+    # Same, but specify in bytes
+    out = compute_with_buffers({}, {0: c_ubyte * 80}, compute_shader, n=20)
+    assert isinstance(out, dict) and len(out) == 1
+    assert isinstance(out[0], ctypes.Array)
+    out0 = (c_int32 * 20).from_buffer(out[0])  # cast (a view in np)
+    assert iters_equal(out0, range(20))
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -33,17 +44,19 @@ def test_compute_1_3():
         buffer.out1[input.index] = buffer.in1[input.index]
         buffer.out2[input.index] = input.index
 
-    in1 = np.random.uniform(0, 100, (100,)).astype(np.int32)
+    # Create an array of 100 random int32
+    in1 = [int(random.uniform(0, 100)) for i in range(100)]
+    in1 = (c_int32 * 100)(*in1)
 
-    outspecs = {0: (100, np.int32), 1: (100, np.int32), 2: (100, np.int32)}
+    outspecs = {0: 100 * c_int32, 1: 100 * c_int32, 2: 100 * c_int32}
     out = compute_with_buffers({0: in1}, outspecs, compute_shader)
     assert isinstance(out, dict) and len(out) == 3
-    assert isinstance(out[0], np.ndarray)
-    assert isinstance(out[1], np.ndarray)
-    assert isinstance(out[2], np.ndarray)
-    assert np.all(out[0] == in1)  # because it's the same buffer
-    assert np.all(out[1] == in1)  # because the shader copied the data
-    assert np.all(out[2] == np.arange(100))  # because this is the index
+    assert isinstance(out[0], ctypes.Array)
+    assert isinstance(out[1], ctypes.Array)
+    assert isinstance(out[2], ctypes.Array)
+    assert iters_equal(out[0], in1)  # because it's the same buffer
+    assert iters_equal(out[1], in1)  # because the shader copied the data
+    assert iters_equal(out[2], range(100))  # because this is the index
 
 
 if __name__ == "__main__":

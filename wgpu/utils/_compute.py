@@ -2,11 +2,9 @@
 Simple high-level utilities for doing compute on the GPU.
 """
 
-import sys
+import ctypes
 
 import wgpu
-
-# Note: these funcs need numpy, but we don't import it because its not a strict dep of wgpu-py
 
 
 def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
@@ -15,52 +13,51 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     using storage buffer objects.
 
     Params:
-        input_arrays (dict): A dict mapping an integer binding to a numpy array.
-        output_arrays (dict): A dict mapping an integer binding to an outputs spec.
-            The spec must be a tuple ``(*shape, dtype)``. A buffer is created
-            for each binding and its data is read and returned. The binding can be
-            one that is also used as an input array (in which case the GPU buffer
-            is the same).
-        shader (bytes, shader-object): Any compatible shader object representing
-            a SpirV compute shader.
-        n (int, tuple, optional): The number provided to dispatch. Can be an int
+        input_arrays (dict): A dict mapping int bindings to ctypes arrays.
+            The type of the array does not need to match the type with which
+            the shader will interpret the buffer data (though it probably
+            makes the code easier to follow).
+        output_arrays (dict): A dict mapping int bindings to ctypes
+            array types. This function uses the given type to determine
+            the buffer size (in bytes), and returns arrays of matching
+            type. Example: ``ctypes.c_float * 20``. If you don't care
+            about the type (e.g. because you re-cast it later), you can
+            just specify the buffer size using ``ctypes.c_ubyte * nbytes``.
+        shader (bytes, shader-object): The SpirV representing the shader,
+            as raw bytes or an object implementing ``to_spirv()``
+            (e.g. a python_shader SpirV module).
+        n (int, tuple, optional): The dispatch counts. Can be an int
             or a 3-tuple of ints to specify (x, y, z). If not given or None,
-            the first value of the first spec in output_arrays is used.
-    """
+            the length of the first output array type is used.
 
-    # How can we get numpy arrays if numpy is not imported?
-    if "numpy" not in sys.modules:
-        raise RuntimeError("need numpy arrays.")
-    np = sys.modules["numpy"]
+    Returns:
+        output (dict): A dict mapping int bindings to ctypes arrays. The
+            keys match those of ``output_arrays``, and the arrays are instances
+            of the corresponding array types.
+    """
 
     # Check input arrays
     if not isinstance(input_arrays, dict):  # empty is ok
         raise ValueError("input_arrays must be a dict.")
     for key, array in input_arrays.items():
         if not isinstance(key, int):
-            raise TypeError("keys of dict input_arrays must be int.")
-        if not isinstance(array, np.ndarray):
-            raise TypeError("input arrays must be numpy arrays.")
+            raise TypeError("keys of input_arrays must be int.")
+        if not isinstance(array, ctypes.Array):
+            raise TypeError("values of input_arrays must be ctypes arrays.")
 
     # Check output arrays
-    output_arrays2 = {}
     if not isinstance(output_arrays, dict) or not output_arrays:
         raise ValueError("output_arrays must be a nonempty dict.")
-    for key, spec in output_arrays.items():
+    for key, array_type in output_arrays.items():
         if not isinstance(key, int):
-            raise TypeError("keys of dict output_arrays must be int.")
-        if not (isinstance(spec, tuple) and len(spec) >= 2):
-            raise TypeError("output arrays must be (*shape, dtype) tuples.")
-        try:
-            shape = tuple(int(i) for i in spec[:-1])
-            output_arrays2[key] = shape + (np.dtype(spec[-1]),)
-        except Exception as err:
-            raise TypeError(f"output arrays must be (*shape, dtype) tuples: {str(err)}")
+            raise TypeError("keys of output_arrays must be int.")
+        if not (isinstance(array_type, type) and issubclass(array_type, ctypes.Array)):
+            raise TypeError("values of output_arrays must be ctypes array subclasses.")
 
     # Get x, y, z from n
     if n is None:
-        spec = list(output_arrays2.values())[0]
-        x, y, z = spec[0], 1, 1
+        array_type = list(output_arrays.values())[0]
+        x, y, z = array_type._length_, 1, 1
     elif isinstance(n, int):
         x, y, z = int(n), 1, 1
     elif isinstance(n, tuple) and len(n) == 3:
@@ -79,23 +76,21 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     buffers = {}
     for binding_index, array in input_arrays.items():
         # Create the buffer object
-        usage = usage = wgpu.BufferUsage.STORAGE
-        if binding_index in output_arrays2:
+        nbytes = ctypes.sizeof(array)
+        usage = wgpu.BufferUsage.STORAGE
+        if binding_index in output_arrays:
             usage |= wgpu.BufferUsage.MAP_READ
-        buffer = device.createBufferMapped(size=array.nbytes, usage=usage)
+        buffer = device.createBufferMapped(size=nbytes, usage=usage)
         # Copy data from array to buffer
-        mapped_array = np.frombuffer(buffer.mapping, array.dtype)
-        mapped_array.shape = array.shape
-        mapped_array[:] = array
+        ctypes.memmove(buffer.mapping, array, nbytes)
         buffer.unmap()
-        del mapped_array
         # Store
         buffers[binding_index] = buffer
-    for binding_index, spec in output_arrays2.items():
+    for binding_index, array_type in output_arrays.items():
         if binding_index in input_arrays:
             continue  # We already have this buffer
-        usage = usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
-        nbytes = np.prod(spec[:-1]) * spec[-1].itemsize
+        nbytes = ctypes.sizeof(array_type)
+        usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
         buffers[binding_index] = device.createBuffer(size=nbytes, usage=usage)
 
     # Create bindings and binding layouts
@@ -134,13 +129,10 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     device.defaultQueue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffers
-    output_arrays = {}
-    for binding_index, spec in output_arrays2.items():
-        shape, dtype = spec[:-1], spec[-1]
+    output = {}
+    for binding_index, array_type in output_arrays.items():
         buffer = buffers[binding_index]
-        data = buffer.mapRead()  # slow, can also be done async
-        output_array = np.frombuffer(data, dtype)
-        output_array.shape = shape
-        output_arrays[binding_index] = output_array
+        array_uint8 = buffer.mapRead()  # slow, can also be done async
+        output[binding_index] = array_type.from_buffer(array_uint8)
 
-    return output_arrays
+    return output
