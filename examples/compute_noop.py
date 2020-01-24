@@ -1,17 +1,17 @@
 """
 Example compute shader that does ... nothing but copy a value from one
-buffer into another
+buffer into another.
 """
 
-import numpy as np
+import ctypes
+
 import wgpu
+import wgpu.backend.rs  # Select backend
+from wgpu.utils import compute_with_buffers  # Convenience function
 from python_shader import python2shader, i32, Array
 
-# Select backend
-import wgpu.backend.rs
 
-
-# %% Shader
+# %% Shader and data
 
 
 @python2shader
@@ -23,28 +23,49 @@ def compute_shader(input, buffer):
     buffer.data2[input.index] = buffer.data1[input.index]
 
 
-# %% The wgpu calls
+# Create input data as a ctypes array
+n = 20
+IntArrayType = ctypes.c_int32 * n
+data = IntArrayType(*range(n))
 
 
+# %% The short version using a convenience function
+
+# The first arg is the input data, per binding
+# The second arg are the ouput types, per binding
+out = compute_with_buffers({0: data}, {1: IntArrayType}, compute_shader, n=n)
+
+# The result is a dict matching the output types
+# Select data from buffer at binding 1
+result = out[1]
+print(result[:])
+
+
+# %% The long version using the wgpu API
+
+# Create device and shader object
 adapter = wgpu.requestAdapter(powerPreference="high-performance")
 device = adapter.requestDevice(extensions=[], limits=wgpu.GPULimits())
-
 cshader = device.createShaderModule(code=compute_shader)
 
-n = 10
+# Create buffer objects, input buffer is mapped.
 buffer1 = device.createBufferMapped(
-    size=n * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
+    size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
 )
-# buffer2 = device.createBufferMapped(size=n * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ)
 buffer2 = device.createBuffer(
-    size=n * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
+    size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
 )
-array1 = np.frombuffer(buffer1.mapping, np.int32)
-array1[:] = np.arange(0, n)
 
+# Cast buffer array
+array1 = IntArrayType.from_buffer(buffer1.mapping)
+# With Numpy this would be:
+# array1 = np.frombuffer(buffer1.mapping, np.int32)
+
+# Copy data and then unmap
+array1[:] = data
 buffer1.unmap()
-buffer2.unmap()
 
+# Setup layout and bindings
 binding_layouts = [
     {
         "binding": 0,
@@ -62,14 +83,15 @@ bindings = [
     {"binding": 1, "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},},
 ]
 
+# Put everything together
 bind_group_layout = device.createBindGroupLayout(bindings=binding_layouts)
 pipeline_layout = device.createPipelineLayout(bindGroupLayouts=[bind_group_layout])
 bind_group = device.createBindGroup(layout=bind_group_layout, bindings=bindings)
 
+# Create and run the pipeline
 compute_pipeline = device.createComputePipeline(
     layout=pipeline_layout, computeStage={"module": cshader, "entryPoint": "main"},
 )
-
 command_encoder = device.createCommandEncoder()
 compute_pass = command_encoder.beginComputePass()
 compute_pass.setPipeline(compute_pipeline)
@@ -78,6 +100,10 @@ compute_pass.dispatch(n, 1, 1)  # x y z
 compute_pass.endPass()
 device.defaultQueue.submit([command_encoder.finish()])
 
-data = buffer2.mapRead()
-# data = await buffer2.mapReadAsync()
-print(np.frombuffer(data, np.int32))
+# Read result
+result = buffer2.mapRead()
+result = IntArrayType.from_buffer(result)  # cast
+print(result[:])
+
+# With Numpy this would be:
+# print(np.frombuffer(buffer2.mapRead(), np.int32))
