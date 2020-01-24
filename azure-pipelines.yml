@@ -40,7 +40,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        python -m pip install -U "pip<20.0.0"
+        python -m pip install -U https://github.com/pypa/pip/archive/1cf779c1ea88053c690686571d67826f11463232.zip
         pip install -U -r dev-requirements.txt
   - task: Bash@3
     displayName: Create source distribution
@@ -215,7 +215,8 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        python -m pip install -U "pip<20.0.0" setuptools
+        python -m pip install -U https://github.com/pypa/pip/archive/1cf779c1ea88053c690686571d67826f11463232.zip
+        python -m pip install -U setuptools
         python -m pip install -U wheel twine
   - task: TwineAuthenticate@1
     displayName: Authenticate with PyPI
