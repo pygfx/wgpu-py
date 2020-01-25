@@ -29,7 +29,7 @@ IntArrayType = ctypes.c_int32 * n
 data = IntArrayType(*range(n))
 
 
-# %% The short version using a convenience function
+# %% The short version, using ctypes arrays
 
 # The first arg is the input data, per binding
 # The second arg are the ouput types, per binding
@@ -39,6 +39,17 @@ out = compute_with_buffers({0: data}, {1: IntArrayType}, compute_shader, n=n)
 # Select data from buffer at binding 1
 result = out[1]
 print(result[:])
+
+
+# %% The short version, using numpy
+
+# import numpy as np
+#
+# numpy_data = np.arange(n, dtype=np.int32)
+#
+# data = IntArrayType.from_address(numpy_data.ctypes.data)
+# out = compute_with_buffers({0: data}, {1: IntArrayType}, compute_shader, n=n)
+# print(np.frombuffer(out[1], dtype=np.int32))
 
 
 # %% The long version using the wgpu API
