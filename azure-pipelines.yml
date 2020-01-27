@@ -178,7 +178,7 @@ jobs:
     vmImage: $(vmImage)
   steps:
   - task: Bash@3
-    displayName: Create and start container
+    displayName: Create and start & prepare container
     inputs:
       targetType: inline
       script: |
