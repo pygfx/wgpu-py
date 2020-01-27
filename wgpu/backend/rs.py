@@ -35,7 +35,7 @@ from cffi import FFI, __version_info__ as cffi_version_info
 
 from .. import base
 from .. import _register_backend
-from ..utils import get_resource_filename
+from .._coreutils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
 
 
@@ -232,7 +232,9 @@ class GPUAdapter(base.GPUAdapter):
             "WGPUExtensions *",
             anisotropic_filtering="anisotropicFiltering" in extensions,
         )
-        c_limits = new_struct("WGPULimits *", max_bind_groups=limits["maxBindGroups"])
+        c_limits = new_struct(
+            "WGPULimits *", max_bind_groups=limits.get("maxBindGroups", 4)
+        )
         struct = new_struct(
             "WGPUDeviceDescriptor *", extensions=c_extensions[0], limits=c_limits[0]
         )
@@ -285,10 +287,9 @@ class GPUDevice(base.GPUDevice):
             self._internal, struct, buffer_memory_pointer
         )
 
-        # Map a numpy array onto the data
+        # Map a ctypes array onto the data
         pointer_as_int = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
         mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
-        # mem_as_numpy = np.frombuffer(mem_as_ctypes, np.uint8)
 
         return GPUBuffer(label, id, self, size, usage, "mapped", mem_as_ctypes)
 

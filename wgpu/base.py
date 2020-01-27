@@ -63,6 +63,9 @@ class DictLike:
     def __getitem__(self, name):
         return self.__dict__[name]
 
+    def get(self, key, default=None):
+        return self.__dict__.get(key, default)
+
 
 class GPUAdapter:  # Not a GPUObject
     """
@@ -410,7 +413,7 @@ class GPUBuffer(GPUObject):
     of the allocation can be addressed by its offset from the start of
     the buffer, subject to alignment restrictions depending on the
     operation. Some GPUBuffers can be mapped which makes the block of
-    memory accessible via a numpy array called its mapping.
+    memory accessible via a ctypes array called its mapping.
 
     Create a buffer using GPUDevice.createBuffer(), GPUDevice.createBufferMapped()
     or GPUDevice.createBufferAsync().
@@ -449,13 +452,13 @@ class GPUBuffer(GPUObject):
 
     # NOTE: this attribute is not specified by IDL, I think its still undecided how to
     #       expose the memory
-    # NOTE: could expose this as a numpy array, but I may like the idea to make
-    #       wgpu independent of numpy, and you need to cast dtype and shape anyway ...
     @property
     def mapping(self):
         """ The mapped memory of the buffer, exposed as a ctypes array.
-        Use something like ``np.frombuffer(b.mapping, np.float32)`` to map
-        it to a numpy array of appropriate dtype and shape.
+        Can be cast to a ctypes array of appropriate type using
+        ``your_array_type.from_buffer(b.mapping)``. Or use something like
+        ``np.frombuffer(b.mapping, np.float32)`` to map it to a numpy array
+        of appropriate dtype and shape.
         """
         return self._mapping
 
