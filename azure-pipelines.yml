@@ -11,7 +11,7 @@ variables:
   PY_ARCH: x64
 
 jobs:
-- job: Host build
+- job: host_build
   strategy:
     matrix:
       Linux:
@@ -168,7 +168,7 @@ jobs:
       pathtoPublish: dist
       artifactName: dist
 
-- job: Docker build
+- job: docker_build
   pool:
     vmImage: ubuntu-16.04
   steps:
@@ -290,10 +290,10 @@ jobs:
         docker stop $CID
         docker rm $CID
 
-- job: Release
+- job: release
   dependsOn:
-  - Host build
-  - Docker build
+  - host_build
+  - docker_build
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   pool:
     vmImage: ubuntu-16.04
