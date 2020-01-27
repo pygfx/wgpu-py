@@ -188,8 +188,8 @@ jobs:
         docker start $CID
         docker exec -i $CID bash -c "\
           cp -r /tmp/src/. . && \
-          sudo apt-get update && \
-          sudo apt-get install -y build-essential git"
+          apt-get update && \
+          apt-get install -y build-essential git"
   - task: Bash@3
     displayName: Install development requirements and restore WGPU native binary
     inputs:
@@ -238,8 +238,7 @@ jobs:
       script: |
         set -ex
         docker exec -i $CID bash -c "\
-          sudo apt-get update && \
-          sudo apt-get install -y patchelf && \
+          apt-get install -y patchelf && \
           auditwheel repair dist/*.whl && \
           rm dist/*.whl && \
           cp wheelhouse/*.whl dist/."
@@ -289,7 +288,7 @@ jobs:
       pathtoPublish: dist
       artifactName: dist        
   - task: Bash@3
-    displayName: 'Post-job: stop and remove container'
+    displayName: 'Post-job: Stop and remove container'
     condition: and(always(), ne(variables['CID'], ''))
     inputs:
       targetType: inline
