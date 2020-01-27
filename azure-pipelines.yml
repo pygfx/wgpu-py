@@ -11,7 +11,7 @@ variables:
   PY_ARCH: x64
 
 jobs:
-- job: Build
+- job: Host build
   strategy:
     matrix:
       Linux:
@@ -168,8 +168,132 @@ jobs:
       pathtoPublish: dist
       artifactName: dist
 
+- job: Docker build
+  pool:
+    vmImage: ubuntu-16.04
+  steps:
+  - task: Bash@3
+    displayName: Create and start container
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro i386/python:3.6-slim-stretch sleep infinity)
+        echo "##vso[task.setvariable variable=CID]$CID"
+        docker start $CID
+        docker exec -ti $CID cp -r /tmp/src/. .
+  - task: Bash@3
+    displayName: Install development requirements and restore WGPU native binary
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        docker exec -ti $CID bash -c "\
+          python -m pip install -U pip && \
+          pip install -U -r dev-requirements.txt && \
+          python download-wgpu-native.py"
+  - task: Bash@3
+    displayName: Build wheel and install in development mode
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        docker exec -ti $CID bash -c "\
+          python setup.py develop && \
+          python setup.py bdist_wheel"
+  - task: Bash@3
+    displayName: Test
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        docker exec -ti $CID bash -c "\
+          pytest --junit-xml=results.xml || true"
+        docker cp $CID:/tmp/wrk/results.xml .
+
+        # Fail the task if results.xml was not created
+        if [[ ! -f results.xml ]]
+        then
+          echo "##vso[task.logissue type=error]No test results were found"
+          exit 1
+        fi
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: results.xml
+      mergeTestResults: true
+      failTaskOnFailedTests: true
+      testRunTitle: Test $(vmImage) (docker)
+  - task: Bash@3
+    displayName: Manylinux1 tag
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        docker exec -ti $CID bash -c "\
+          sudo apt-get update && \
+          sudo apt-get install -y patchelf && \
+          auditwheel repair dist/*.whl && \
+          rm dist/*.whl && \
+          cp wheelhouse/*.whl dist/."
+        docker cp $CID:/tmp/wrk/dist/. dist/.
+  - task: Bash@3
+    displayName: Test wheel
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        docker exec -ti $CID bash -c "\
+          python setup.py develop --uninstall && \
+          python setup.py clean --all && \
+          rm -rf ./wgpu && \
+          mkdir -p /tmp/test && \
+          pushd /tmp/test && \
+          pip install /tmp/wrk/dist/*.whl && \
+          popd && \
+          pytest --junit-xml=results-wheel.xml || true && \
+          pip uninstall -y wgpu && \
+          git reset --hard HEAD"
+        docker cp $CID:/tmp/wrk/results-wheel.xml .
+
+        # Fail the task if results-wheel.xml was not created
+        if [[ ! -f results-wheel.xml ]]
+        then
+          echo "##vso[task.logissue type=error]No test results were found"
+          exit 1
+        fi
+  - task: PublishTestResults@2
+    inputs:
+      testResultsFiles: results-wheel.xml
+      mergeTestResults: true
+      failTaskOnFailedTests: true
+      testRunTitle: Test $(vmImage) (wheel, docker)
+  - task: Bash@3
+    displayName: Twine check
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        docker exec -ti $CID bash -c "\
+          twine check dist/*"
+  - task: PublishBuildArtifacts@1
+    displayName: Publish distributions
+    inputs:
+      pathtoPublish: dist
+      artifactName: dist        
+  - task: Bash@3
+    displayName: 'Post-job: stop and remove container'
+    condition: and(always(), ne(variables['CID'], ''))
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        docker stop $CID
+        docker rm $CID
+
 - job: Release
-  dependsOn: Build
+  dependsOn:
+  - Host build
+  - Docker build
   condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
   pool:
     vmImage: ubuntu-16.04
