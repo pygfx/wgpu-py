@@ -186,7 +186,10 @@ jobs:
         CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $(dockerImage) sleep infinity)
         echo "##vso[task.setvariable variable=CID]$CID"
         docker start $CID
-        docker exec -i $CID cp -r /tmp/src/. .
+        docker exec -i $CID bash -c "\
+          cp -r /tmp/src/. . && \
+          sudo apt-get update && \
+          sudo apt-get install -y build-essential && \
   - task: Bash@3
     displayName: Install development requirements and restore WGPU native binary
     inputs:
