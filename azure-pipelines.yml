@@ -169,8 +169,13 @@ jobs:
       artifactName: dist
 
 - job: docker_build
+  strategy:
+    matrix:
+      Linux-32:
+        vmImage: ubuntu-16.04
+        dockerImage: i386/python:3.6-slim-stretch
   pool:
-    vmImage: ubuntu-16.04
+    vmImage: $(vmImage)
   steps:
   - task: Bash@3
     displayName: Create and start container
@@ -178,17 +183,17 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro i386/python:3.6-slim-stretch sleep infinity)
+        CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $(dockerImage) sleep infinity)
         echo "##vso[task.setvariable variable=CID]$CID"
         docker start $CID
-        docker exec -ti $CID cp -r /tmp/src/. .
+        docker exec -i $CID cp -r /tmp/src/. .
   - task: Bash@3
     displayName: Install development requirements and restore WGPU native binary
     inputs:
       targetType: inline
       script: |
         set -ex
-        docker exec -ti $CID bash -c "\
+        docker exec -i $CID bash -c "\
           python -m pip install -U pip && \
           pip install -U -r dev-requirements.txt && \
           python download-wgpu-native.py"
@@ -198,7 +203,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        docker exec -ti $CID bash -c "\
+        docker exec -i $CID bash -c "\
           python setup.py develop && \
           python setup.py bdist_wheel"
   - task: Bash@3
@@ -207,7 +212,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        docker exec -ti $CID bash -c "\
+        docker exec -i $CID bash -c "\
           pytest --junit-xml=results.xml || true"
         docker cp $CID:/tmp/wrk/results.xml .
 
@@ -229,7 +234,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        docker exec -ti $CID bash -c "\
+        docker exec -i $CID bash -c "\
           sudo apt-get update && \
           sudo apt-get install -y patchelf && \
           auditwheel repair dist/*.whl && \
@@ -242,7 +247,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        docker exec -ti $CID bash -c "\
+        docker exec -i $CID bash -c "\
           python setup.py develop --uninstall && \
           python setup.py clean --all && \
           rm -rf ./wgpu && \
@@ -273,7 +278,7 @@ jobs:
       targetType: inline
       script: |
         set -ex
-        docker exec -ti $CID bash -c "\
+        docker exec -i $CID bash -c "\
           twine check dist/*"
   - task: PublishBuildArtifacts@1
     displayName: Publish distributions
