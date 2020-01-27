@@ -189,7 +189,7 @@ jobs:
         docker exec -i $CID bash -c "\
           cp -r /tmp/src/. . && \
           apt-get update && \
-          apt-get install -y build-essential git libssl-dev"
+          apt-get install -y build-essential git libssl-dev zip"
   - task: Bash@3
     displayName: Install development requirements and restore WGPU native binary
     inputs:
@@ -242,6 +242,7 @@ jobs:
           auditwheel repair dist/*.whl && \
           rm dist/*.whl && \
           cp wheelhouse/*.whl dist/."
+        mkdir -p dist
         docker cp $CID:/tmp/wrk/dist/. dist/.
   - task: Bash@3
     displayName: Test wheel
