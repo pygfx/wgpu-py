@@ -5,5 +5,5 @@ requests
 setuptools
 wheel==0.31.1
 twine
-python-shader>=0.3.3
+python-shader>=0.3.4
 auditwheel; sys_platform == 'linux'
