@@ -15,12 +15,12 @@ from python_shader import python2shader, i32, Array
 
 
 @python2shader
-def compute_shader(input, buffer):
-    input.define("index", "GlobalInvocationId", i32)
-    buffer.define("data1", 0, Array(i32))
-    buffer.define("data2", 1, Array(i32))
-
-    buffer.data2[input.index] = buffer.data1[input.index]
+def compute_shader(
+    index: ("input", "GlobalInvocationId", i32),
+    data1: ("buffer", 0, Array(i32)),
+    data2: ("buffer", 1, Array(i32)),
+):
+    data2[index] = data1[index]
 
 
 # Create input data as a ctypes array

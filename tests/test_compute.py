@@ -2,7 +2,7 @@ import random
 import ctypes
 from ctypes import c_int32, c_ubyte
 
-from python_shader import python2shader
+from python_shader import python2shader, Array, i32
 import wgpu.backend.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
@@ -13,10 +13,10 @@ from testutils import can_use_wgpu_lib, iters_equal
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_0_1():
     @python2shader
-    def compute_shader(input, buffer):
-        input.define("index", "GlobalInvocationId", i32)
-        buffer.define("out", 0, Array(i32))
-        buffer.out[input.index] = input.index
+    def compute_shader(
+        index: ("input", "GlobalInvocationId", i32), out: ("output", 0, Array(i32)),
+    ):
+        out[index] = index
 
     # Create some ints!
     out = compute_with_buffers({}, {0: c_int32 * 100}, compute_shader)
@@ -35,14 +35,14 @@ def test_compute_0_1():
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_1_3():
     @python2shader
-    def compute_shader(input, buffer):
-        input.define("index", "GlobalInvocationId", i32)
-        buffer.define("in1", 0, Array(i32))
-        buffer.define("out1", 1, Array(i32))
-        buffer.define("out2", 2, Array(i32))
-
-        buffer.out1[input.index] = buffer.in1[input.index]
-        buffer.out2[input.index] = input.index
+    def compute_shader(
+        index: ("input", "GlobalInvocationId", i32),
+        in1: ("input", 0, Array(i32)),
+        out1: ("output", 1, Array(i32)),
+        out2: ("output", 2, Array(i32)),
+    ):
+        out1[index] = in1[index]
+        out2[index] = index
 
     # Create an array of 100 random int32
     in1 = [int(random.uniform(0, 100)) for i in range(100)]
