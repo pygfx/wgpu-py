@@ -3,7 +3,7 @@ pytest
 flake8
 requests
 setuptools
-wheel==0.31.1
+wheel
 twine
-python-shader>=0.3.3
+python-shader>=0.3.4
 auditwheel; sys_platform == 'linux'
