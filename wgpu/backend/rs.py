@@ -562,7 +562,7 @@ class GPUDevice(base.GPUDevice):
                     offset=attribute["offset"],
                     shader_location=attribute["shaderLocation"],
                 )
-                c_attributes_list.append(c_attribute)
+                c_attributes_list.append(c_attribute[0])
             c_attributes_array = ffi.new(
                 "WGPUVertexAttributeDescriptor []", c_attributes_list
             )
@@ -573,7 +573,7 @@ class GPUDevice(base.GPUDevice):
                 attributes=c_attributes_array,
                 attributes_length=len(c_attributes_list),
             )
-            c_vertex_buffer_descriptors_list.append(c_vertex_buffer_descriptor)
+            c_vertex_buffer_descriptors_list.append(c_vertex_buffer_descriptor[0])
         c_vertex_buffer_descriptors_array = ffi.new(
             "WGPUVertexBufferDescriptor []", c_vertex_buffer_descriptors_list
         )
@@ -844,7 +844,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('renderencoderbasesetvertexbuffer', 'Buffer', 'BufferSize', dev=True)
     def setVertexBuffer(self, slot, buffer, offset):
-        raise NotImplementedError()
+        buffers, offsets = [buffer], [offset]
+        c_buffer_ids = ffi.new("WGPUBufferId []", [b._internal for b in buffers])
+        c_offsets = ffi.new("WGPUBufferAddress []", [int(i) for i in offsets])
+        _lib.wgpu_render_pass_set_vertex_buffers(
+            self._internal, slot, c_buffer_ids, c_offsets, len(buffers)
+        )
 
     # wgpu.help('renderencoderbasedraw', dev=True)
     def draw(self, vertexCount, instanceCount, firstVertex, firstInstance):
