@@ -30,6 +30,7 @@ Developer notes and tips:
 import os
 import sys
 import ctypes
+from weakref import WeakKeyDictionary
 
 from cffi import FFI, __version_info__ as cffi_version_info
 
@@ -97,6 +98,9 @@ ffi.cdef(_get_wgpu_h())
 ffi.set_source("wgpu.h", None)
 _lib = ffi.dlopen(_get_wgpu_lib_path())
 
+# Object to be able to bind the lifetime of objects to other objects
+_refs_per_struct = WeakKeyDictionary()
+
 
 def new_struct(ctype, **kwargs):
     """ Create an ffi struct. Provides a flatter syntax and converts our
@@ -113,6 +117,14 @@ def new_struct(ctype, **kwargs):
             setattr(struct, key, ival)
         else:
             setattr(struct, key, val)
+    # Some kwargs may be other ffi objects, and some may represent
+    # pointers. These need special care because them "being in" the
+    # current struct does not prevent them from being cleaned up by
+    # Python's garbage collector. Keeping hold of these objects in the
+    # calling code is painful and prone to missing cases, so we solve
+    # the issue here. We cannot attach an attribute to the struct directly,
+    # so we use a global WeakKeyDictionary. Also see issue #52.
+    _refs_per_struct[struct] = kwargs
     return struct
 
 
@@ -469,8 +481,6 @@ class GPUDevice(base.GPUDevice):
         sampleMask: int = 0xFFFFFFFF,
         alphaToCoverageEnabled: bool = False,
     ):
-
-        refs = []  # to avoid premature gc collection
         c_vertex_stage = new_struct(
             "WGPUProgrammableStageDescriptor *",
             module=vertexStage["module"]._internal,
@@ -524,7 +534,6 @@ class GPUDevice(base.GPUDevice):
                 color_blend=c_color_blend[0],
                 write_mask=colorState["writeMask"],
             )  # enum
-            refs.extend([c_alpha_blend, c_color_blend])
             c_color_states_list.append(c_color_state[0])
         c_color_states_array = ffi.new(
             "WGPUColorStateDescriptor []", c_color_states_list
@@ -564,7 +573,6 @@ class GPUDevice(base.GPUDevice):
                 attributes=c_attributes_array,
                 attributes_length=len(c_attributes_list),
             )
-            refs.append(c_attributes_list)
             c_vertex_buffer_descriptors_list.append(c_vertex_buffer_descriptor)
         c_vertex_buffer_descriptors_array = ffi.new(
             "WGPUVertexBufferDescriptor []", c_vertex_buffer_descriptors_list
@@ -705,8 +713,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor",
     ):
 
-        refs = []
-
         c_color_attachments_list = []
         for colorAttachment in colorAttachments:
             assert isinstance(colorAttachment["attachment"], base.GPUTextureView)
@@ -736,7 +742,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
                 store_op=colorAttachment["storeOp"],
                 clear_color=c_clear_color[0],
             )
-            refs.append(c_clear_color)
             c_color_attachments_list.append(c_attachment[0])
         c_color_attachments_array = ffi.new(
             "WGPURenderPassColorAttachmentDescriptor []", c_color_attachments_list
