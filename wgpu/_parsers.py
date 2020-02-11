@@ -24,6 +24,9 @@ class BaseParser:
         self._length = len(text)
         self._pos = 0
 
+    def reset(self):
+        self._pos = 0
+
     def end_reached(self):
         return self._pos >= self._length
 
@@ -136,6 +139,22 @@ class IdlParser(BaseParser):
 
     def _parse(self):
 
+        # First resolve typedefs
+        # mmm, actually, these GPU types also work as docs ...
+        typedefs = {}
+        # while not self.end_reached():
+        #     line = self.readline()
+        #     if line.startswith("typedef "):
+        #         # Track typedefs to resolve types. Skip union types (with "or")
+        #         line2 = line.split("]")[-1]
+        #         if " or " in line:
+        #             pass
+        #         else:
+        #             parts = line2.strip().strip(";").split()
+        #             if len(parts) >= 2:
+        #                 typedefs[parts[-1]] = " ".join(parts[:-1])
+        # self.reset()
+
         while not self.end_reached():
 
             line = self.readline()
@@ -243,6 +262,7 @@ class IdlParser(BaseParser):
                         # TODO: unused
                         # is_required = True
                         arg_type = arg_type[9:]
+                    arg_type = typedefs.get(arg_type, arg_type)
                     if arg_type in ["double", "float"]:
                         t = "float"
                     elif arg_type in ["long", "unsigned long", "unsigned long long"]:
@@ -260,6 +280,7 @@ class IdlParser(BaseParser):
                         t = "array"
                     elif arg_type in [
                         "(GPULoadOp or GPUColor)",
+                        "(GPULoadOp or GPUStencilValue)",
                         "(GPULoadOp or float)",
                         "(GPULoadOp or unsigned long)",
                     ]:

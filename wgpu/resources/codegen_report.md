@@ -89,14 +89,15 @@
 ### Check functions in base.py
 *  Found 60 functions already implemented
 *  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
-*  Not implemented: void signal(GPUFence fence, unsigned long long signalValue);
-*  Not implemented: unsigned long long getCompletedValue();
-*  Not implemented: Promise<void> onCompletion(unsigned long long completionValue);
+*  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue);
+*  Not implemented: GPUFenceValue getCompletedValue();
+*  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue);
 *  Not implemented: GPUSwapChain configureSwapChain(GPUSwapChainDescriptor descriptor);
 *  Not implemented: Promise<GPUTextureFormat> getSwapChainPreferredFormat(GPUDevice device);
 *  Not implemented: constructor();
 *  Not implemented: constructor(DOMString message);
 *  Not implemented: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
+*  Found unknown function DictLike.get
 *  Found unknown function GPUSwapChain.getCurrentTextureView
 *  Injected IDL lines into base.py
 
@@ -106,7 +107,7 @@
 *  Not implemented: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
 *  Not implemented: Promise<ArrayBuffer> mapWriteAsync();
-*  Not implemented: void copyBufferToBuffer( GPUBuffer source, GPUBufferSize sourceOffset, GPUBuffer destination, GPUBufferSize destinationOffset, GPUBufferSize size);
+*  Not implemented: void copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, GPUSize64 size);
 *  Not implemented: void copyBufferToTexture( GPUBufferCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
 *  Not implemented: void copyTextureToBuffer( GPUTextureCopyView source, GPUBufferCopyView destination, GPUExtent3D copySize);
 *  Not implemented: void copyTextureToTexture( GPUTextureCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
@@ -115,10 +116,10 @@
 *  Not implemented: void insertDebugMarker(DOMString markerLabel);
 *  Not implemented: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
 *  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
-*  Not implemented: void signal(GPUFence fence, unsigned long long signalValue);
+*  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue);
 *  Not implemented: void copyImageBitmapToTexture( GPUImageBitmapCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
-*  Not implemented: unsigned long long getCompletedValue();
-*  Not implemented: Promise<void> onCompletion(unsigned long long completionValue);
+*  Not implemented: GPUFenceValue getCompletedValue();
+*  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue);
 *  Not implemented: GPUSwapChain configureSwapChain(GPUSwapChainDescriptor descriptor);
 *  Not implemented: Promise<GPUTextureFormat> getSwapChainPreferredFormat(GPUDevice device);
 *  Not implemented: GPUTexture getCurrentTexture();

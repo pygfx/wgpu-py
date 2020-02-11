@@ -27,7 +27,7 @@ PowerPreference = Enum(
     "PowerPreference", low_power="low-power", high_performance="high-performance",
 )
 
-ExtensionName = Enum("ExtensionName", anisotropic_filtering="anisotropic-filtering",)
+ExtensionName = Enum("ExtensionName", texture_compression_bc="texture-compression-bc",)
 
 TextureDimension = Enum("TextureDimension", d1="1d", d2="2d", d3="3d",)
 
