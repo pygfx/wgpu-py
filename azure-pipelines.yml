@@ -337,7 +337,7 @@ jobs:
       assets: |
         dist/*.whl
         dist/*.tar.gz
-      isDraft: true
+      isDraft: false
       addChangeLog: false
       assetUploadMode: replace
   - task: Bash@3

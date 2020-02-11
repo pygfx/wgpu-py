@@ -45,8 +45,7 @@ class QtWgpuCanvas(BaseCanvas, QWidget):
         self._drawFrameAndPresent()
 
     def getSizeAndPixelRatio(self):
-        pixelratio = 1  # todo: pixelratio
-        return self.width(), self.height(), pixelratio
+        return self.width(), self.height(), self.window().devicePixelRatio()
 
     def isClosed(self):
         return not self.isVisible()
