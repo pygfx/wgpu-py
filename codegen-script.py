@@ -335,7 +335,7 @@ for fname in ("base.py", "backend/rs.py"):
             argnames = [arg.split("=")[0].split()[-1] for arg in args if arg.strip()]
             argtypes = [arg.split("=")[0].split()[-2] for arg in args if arg.strip()]
             searches.extend([arg[3:] for arg in argtypes if arg.startswith("GPU")])
-            searches = [f"'{x}'" for x in searches]
+            searches = [f"'{x}'" for x in sorted(set(searches))]
 
             if len(argtypes) == 1 and argtypes[0].endswith(("Options", "Descriptor")):
                 assert argtypes[0].startswith("GPU")
