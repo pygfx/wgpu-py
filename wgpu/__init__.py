@@ -5,7 +5,7 @@ from ._coreutils import help  # noqa: F401
 from . import base
 
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 
 def _register_backend(func, func_async):
