@@ -37,7 +37,7 @@ def help(*searches, dev=False):
     all_lines = []  # list of (title, lines_list)
 
     if dev:
-        from ._parsers import IdlParser, HParser
+        from ._parsers import IdlParser, HParser, to_neutral_name
 
         filename = os.path.join(get_resource_filename("webgpu.idl"))
         idl_parser = IdlParser(open(filename, "rb").read().decode())
@@ -132,7 +132,7 @@ def help(*searches, dev=False):
     lines = []
     all_lines.append(("functions", lines))
     for name_part in name_parts:
-        name_part_f = name_part.replace("_", "").replace(".", "")
+        name_part_f = to_neutral_name(name_part)
         for cls in m_classes.__dict__.values():
             if isinstance(cls, type):
                 for attr_name, attr in cls.__dict__.items():

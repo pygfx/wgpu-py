@@ -171,7 +171,7 @@ def get_surface_id_from_canvas(canvas):
 
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
-def requestAdapter(*, powerPreference: "GPUPowerPreference"):
+def request_adapter(*, power_preference: "GPUPowerPreference"):
     """ Request an GPUAdapter, the object that represents the implementation of WGPU.
     This function uses the Rust WGPU library.
 
@@ -213,7 +213,7 @@ def requestAdapter(*, powerPreference: "GPUPowerPreference"):
 
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
-async def requestAdapterAsync(*, powerPreference: "GPUPowerPreference"):
+async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
     """ Async version of ``requestAdapter()``.
     This function uses the Rust WGPU library.
     """
@@ -230,7 +230,7 @@ class GPUAdapter(base.GPUAdapter):
         self._id = id
 
     # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
-    def requestDevice(
+    def request_device(
         self,
         *,
         label="",
@@ -259,7 +259,7 @@ class GPUAdapter(base.GPUAdapter):
         return GPUDevice(label, id, self, extensions, limits, queue)
 
     # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
-    async def requestDeviceAsync(
+    async def request_device_async(
         self,
         *,
         label="",
@@ -270,9 +270,8 @@ class GPUAdapter(base.GPUAdapter):
 
 
 class GPUDevice(base.GPUDevice):
-
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
-    def createBuffer(
+    def create_buffer(
         self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
     ):
         size = int(size)
@@ -283,7 +282,7 @@ class GPUDevice(base.GPUDevice):
         return GPUBuffer(label, id, self, size, usage, "unmapped", None)
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    def createBufferMapped(
+    def create_buffer_mapped(
         self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
     ):
 
@@ -306,7 +305,7 @@ class GPUDevice(base.GPUDevice):
         return GPUBuffer(label, id, self, size, usage, "mapped", mem_as_ctypes)
 
     # wgpu.help('BindGroupLayoutDescriptor', 'devicecreatebindgrouplayout', dev=True)
-    def createBindGroupLayout(
+    def create_bind_group_layout(
         self, *, label="", bindings: "GPUBindGroupLayoutBinding-list"
     ):
 
@@ -336,7 +335,7 @@ class GPUDevice(base.GPUDevice):
         return base.GPUBindGroupLayout(label, id, self, bindings)
 
     # wgpu.help('BindGroupDescriptor', 'devicecreatebindgroup', dev=True)
-    def createBindGroup(
+    def create_bind_group(
         self,
         *,
         label="",
@@ -396,8 +395,8 @@ class GPUDevice(base.GPUDevice):
         return base.GPUBindGroup(label, id, self, bindings)
 
     # wgpu.help('PipelineLayoutDescriptor', 'devicecreatepipelinelayout', dev=True)
-    def createPipelineLayout(
-        self, *, label="", bindGroupLayouts: "GPUBindGroupLayout-list"
+    def create_pipeline_layout(
+        self, *, label="", bind_group_layouts: "GPUBindGroupLayout-list"
     ):
 
         bindGroupLayouts_ids = [x._internal for x in bindGroupLayouts]
@@ -413,7 +412,7 @@ class GPUDevice(base.GPUDevice):
         return base.GPUPipelineLayout(label, id, self, bindGroupLayouts)
 
     # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
-    def createShaderModule(self, *, label="", code: "GPUShaderCode"):
+    def create_shader_module(self, *, label="", code: "GPUShaderCode"):
 
         if isinstance(code, bytes):
             data = code  # Assume it's Spirv
@@ -441,12 +440,12 @@ class GPUDevice(base.GPUDevice):
         return base.GPUShaderModule(label, id, self)
 
     # wgpu.help('ComputePipelineDescriptor', 'devicecreatecomputepipeline', dev=True)
-    def createComputePipeline(
+    def create_compute_pipeline(
         self,
         *,
         label="",
         layout: "GPUPipelineLayout",
-        computeStage: "GPUProgrammableStageDescriptor",
+        compute_stage: "GPUProgrammableStageDescriptor",
     ):
 
         c_compute_stage = new_struct(
@@ -465,21 +464,21 @@ class GPUDevice(base.GPUDevice):
         return base.GPUComputePipeline(label, id, self)
 
     # wgpu.help('RenderPipelineDescriptor', 'devicecreaterenderpipeline', dev=True)
-    def createRenderPipeline(
+    def create_render_pipeline(
         self,
         *,
         label="",
         layout: "GPUPipelineLayout",
-        vertexStage: "GPUProgrammableStageDescriptor",
-        fragmentStage: "GPUProgrammableStageDescriptor",
-        primitiveTopology: "GPUPrimitiveTopology",
-        rasterizationState: "GPURasterizationStateDescriptor" = {},
-        colorStates: "GPUColorStateDescriptor-list",
-        depthStencilState: "GPUDepthStencilStateDescriptor",
-        vertexState: "GPUVertexStateDescriptor" = {},
-        sampleCount: "GPUSize32" = 1,
-        sampleMask: "GPUSampleMask" = 0xFFFFFFFF,
-        alphaToCoverageEnabled: bool = False,
+        vertex_stage: "GPUProgrammableStageDescriptor",
+        fragment_stage: "GPUProgrammableStageDescriptor",
+        primitive_topology: "GPUPrimitiveTopology",
+        rasterization_state: "GPURasterizationStateDescriptor" = {},
+        color_states: "GPUColorStateDescriptor-list",
+        depth_stencil_state: "GPUDepthStencilStateDescriptor",
+        vertex_state: "GPUVertexStateDescriptor" = {},
+        sample_count: "GPUSize32" = 1,
+        sample_mask: "GPUSampleMask" = 0xFFFFFFFF,
+        alpha_to_coverage_enabled: bool = False,
     ):
         c_vertex_stage = new_struct(
             "WGPUProgrammableStageDescriptor *",
@@ -604,7 +603,7 @@ class GPUDevice(base.GPUDevice):
         return base.GPURenderPipeline(label, id, self)
 
     # wgpu.help('CommandEncoderDescriptor', 'devicecreatecommandencoder', dev=True)
-    def createCommandEncoder(self, *, label=""):
+    def create_command_encoder(self, *, label=""):
 
         struct = new_struct("WGPUCommandEncoderDescriptor *", todo=0)
 
@@ -620,7 +619,7 @@ class GPUDevice(base.GPUDevice):
 
 class GPUBuffer(base.GPUBuffer):
     # wgpu.help('buffermapreadasync', dev=True)
-    def mapRead(self):
+    def map_read(self):
         data = None
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
@@ -645,7 +644,7 @@ class GPUBuffer(base.GPUBuffer):
         return data
 
     # wgpu.help('buffermapreadasync', dev=True)
-    async def mapReadAsync(self):
+    async def map_read_async(self):
         # todo: actually make this async
         return self.mapRead()
 
@@ -663,19 +662,18 @@ class GPUBuffer(base.GPUBuffer):
 
 
 class GPUTexture(base.GPUTexture):
-
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
-    def createView(
+    def create_view(
         self,
         *,
         label="",
         format: "GPUTextureFormat",
         dimension: "GPUTextureViewDimension",
         aspect: "GPUTextureAspect" = "all",
-        baseMipLevel: "GPUIntegerCoordinate" = 0,
-        mipLevelCount: "GPUIntegerCoordinate" = 0,
-        baseArrayLayer: "GPUIntegerCoordinate" = 0,
-        arrayLayerCount: "GPUIntegerCoordinate" = 0,
+        base_mip_level: "GPUIntegerCoordinate" = 0,
+        mip_level_count: "GPUIntegerCoordinate" = 0,
+        base_array_layer: "GPUIntegerCoordinate" = 0,
+        array_layer_count: "GPUIntegerCoordinate" = 0,
     ):
 
         struct = new_struct(
@@ -697,20 +695,19 @@ class GPUTexture(base.GPUTexture):
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder):
-
     # wgpu.help('ComputePassDescriptor', 'commandencoderbegincomputepass', dev=True)
-    def beginComputePass(self, *, label=""):
+    def begin_compute_pass(self, *, label=""):
         struct = new_struct("WGPUComputePassDescriptor *", todo=0)
         raw_pass = _lib.wgpu_command_encoder_begin_compute_pass(self._internal, struct)
         return GPUComputePassEncoder(label, raw_pass, self)
 
     # wgpu.help('RenderPassDescriptor', 'commandencoderbeginrenderpass', dev=True)
-    def beginRenderPass(
+    def begin_render_pass(
         self,
         *,
         label="",
-        colorAttachments: "GPURenderPassColorAttachmentDescriptor-list",
-        depthStencilAttachment: "GPURenderPassDepthStencilAttachmentDescriptor",
+        color_attachments: "GPURenderPassColorAttachmentDescriptor-list",
+        depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
     ):
 
         c_color_attachments_list = []
@@ -769,15 +766,14 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
-
     # wgpu.help('BindGroup', 'Index32', 'Size64', 'programmablepassencodersetbindgroup', dev=True)
-    def setBindGroup(
+    def set_bind_group(
         self,
         index,
-        bindGroup,
-        dynamicOffsetsData,
-        dynamicOffsetsDataStart,
-        dynamicOffsetsDataLength,
+        bind_group,
+        dynamic_offsets_data,
+        dynamic_offsets_data_start,
+        dynamic_offsets_data_length,
     ):
         offsets = list(dynamicOffsetsData)
         c_offsets = ffi.new("WGPUBufferAddress []", offsets)
@@ -792,15 +788,15 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
             )
 
     # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
-    def pushDebugGroup(self, groupLabel):
+    def push_debug_group(self, group_label):
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
-    def popDebugGroup(self):
+    def pop_debug_group(self):
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
-    def insertDebugMarker(self, markerLabel):
+    def insert_debug_marker(self, marker_label):
         raise NotImplementedError()
 
 
@@ -809,7 +805,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     """
 
     # wgpu.help('ComputePipeline', 'computepassencodersetpipeline', dev=True)
-    def setPipeline(self, pipeline):
+    def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
         _lib.wgpu_compute_pass_set_pipeline(self._internal, pipeline_id)
 
@@ -818,14 +814,14 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
         _lib.wgpu_compute_pass_dispatch(self._internal, x, y, z)
 
     # wgpu.help('Buffer', 'Size64', 'computepassencoderdispatchindirect', dev=True)
-    def dispatchIndirect(self, indirectBuffer, indirectOffset):
+    def dispatch_indirect(self, indirect_buffer, indirect_offset):
         buffer_id = indirectBuffer._internal
         _lib.wgpu_compute_pass_dispatch_indirect(
             self._internal, buffer_id, indirectOffset
         )
 
     # wgpu.help('computepassencoderendpass', dev=True)
-    def endPass(self):
+    def end_pass(self):
         _lib.wgpu_compute_pass_end_pass(self._internal)
 
 
@@ -834,16 +830,16 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
     """
 
     # wgpu.help('RenderPipeline', 'renderencoderbasesetpipeline', dev=True)
-    def setPipeline(self, pipeline):
+    def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
         _lib.wgpu_render_pass_set_pipeline(self._internal, pipeline_id)
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
-    def setIndexBuffer(self, buffer, offset):
+    def set_index_buffer(self, buffer, offset):
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
-    def setVertexBuffer(self, slot, buffer, offset):
+    def set_vertex_buffer(self, slot, buffer, offset):
         buffers, offsets = [buffer], [offset]
         c_buffer_ids = ffi.new("WGPUBufferId []", [b._internal for b in buffers])
         c_offsets = ffi.new("WGPUBufferAddress []", [int(i) for i in offsets])
@@ -852,23 +848,23 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         )
 
     # wgpu.help('Size32', 'renderencoderbasedraw', dev=True)
-    def draw(self, vertexCount, instanceCount, firstVertex, firstInstance):
+    def draw(self, vertex_count, instance_count, first_vertex, first_instance):
         _lib.wgpu_render_pass_draw(
             self._internal, vertexCount, instanceCount, firstVertex, firstInstance
         )
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindirect', dev=True)
-    def drawIndirect(self, indirectBuffer, indirectOffset):
+    def draw_indirect(self, indirect_buffer, indirect_offset):
         raise NotImplementedError()
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
-    def drawIndexed(
-        self, indexCount, instanceCount, firstIndex, baseVertex, firstInstance
+    def draw_indexed(
+        self, index_count, instance_count, first_index, base_vertex, first_instance
     ):
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindexedindirect', dev=True)
-    def drawIndexedIndirect(self, indirectBuffer, indirectOffset):
+    def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
         raise NotImplementedError()
 
 
@@ -881,34 +877,33 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     """
 
     # wgpu.help('renderpassencodersetviewport', dev=True)
-    def setViewport(self, x, y, width, height, minDepth, maxDepth):
+    def set_viewport(self, x, y, width, height, min_depth, max_depth):
         raise NotImplementedError()
 
     # wgpu.help('IntegerCoordinate', 'renderpassencodersetscissorrect', dev=True)
-    def setScissorRect(self, x, y, width, height):
+    def set_scissor_rect(self, x, y, width, height):
         raise NotImplementedError()
 
     # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
-    def setBlendColor(self, color):
+    def set_blend_color(self, color):
         raise NotImplementedError()
 
     # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
-    def setStencilReference(self, reference):
+    def set_stencil_reference(self, reference):
         raise NotImplementedError()
 
     # wgpu.help('renderpassencoderexecutebundles', dev=True)
-    def executeBundles(self, bundles):
+    def execute_bundles(self, bundles):
         raise NotImplementedError()
 
     # wgpu.help('renderpassencoderendpass', dev=True)
-    def endPass(self):
+    def end_pass(self):
         _lib.wgpu_render_pass_end_pass(self._internal)
 
 
 class GPUQueue(base.GPUQueue):
-
     # wgpu.help('queuesubmit', dev=True)
-    def submit(self, commandBuffers):
+    def submit(self, command_buffers):
         command_buffer_ids = [cb._internal for cb in commandBuffers]
         c_command_buffers = ffi.new("WGPUCommandBufferId []", command_buffer_ids)
         _lib.wgpu_queue_submit(

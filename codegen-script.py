@@ -19,7 +19,7 @@ Links:
 import os
 import subprocess
 
-from wgpu._parsers import IdlParser, HParser
+from wgpu._parsers import IdlParser, HParser, to_neutral_name, to_python_name
 
 
 def blacken(src, singleline=False):
@@ -139,8 +139,8 @@ for name in hp.structs:
         continue
     keys1 = list(hp.structs[name].keys())
     keys2 = list(ip.structs[name].keys())
-    keys3 = {key.lower().replace("_length", "").replace("_", "") for key in keys1}
-    keys4 = {key.lower() for key in keys2}
+    keys3 = {to_neutral_name(key.replace("_length", "")) for key in keys1}
+    keys4 = {to_neutral_name(key) for key in keys2}
     keys3.discard("todo")
     keys4.discard("label")
     if keys3 != keys4:
@@ -314,11 +314,11 @@ for fname in ("base.py", "backend/rs.py"):
             funcname = line.split("(")[0].split()[-1]
             if not funcname.startswith("_"):
                 if not api_lines[i - 1].lstrip().startswith("@property"):
+                    func_id = funcname
+                    funcname = to_python_name(funcname)
                     if indent:
-                        funcname = current_class + "." + funcname
-                    func_id = funcname.replace(".", "").lower()
-                    if funcname.startswith("GPU"):
-                        func_id = func_id[3:]
+                        func_id = current_class + "." + func_id
+                    func_id = to_neutral_name(func_id)
                     api_functions[func_id] = funcname, i, indent
 
     # Inject IDL definitions
@@ -326,17 +326,26 @@ for fname in ("base.py", "backend/rs.py"):
     for func_id in reversed(list(api_functions.keys())):
         func_id_match = get_func_id_match(func_id, ip.functions)
         if func_id_match:
-            funcname, i, indent = api_functions[func_id]
             count += 1
-            line = ip.functions[func_id_match]
-            pyline = api_lines[i]
-            searches = [func_id_match]
-            args = line.split("(", 1)[1].split(")", 1)[0].split(",")
+
+            # Get info
+            funcname, i, indent = api_functions[func_id]
+            py_line = api_lines[i]
+            idl_line = ip.functions[func_id_match]
+            preamble = py_line.split("def ")[0] + "def " + funcname + "("
+
+            # Get arg names and types
+            args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
             argnames = [arg.split("=")[0].split()[-1] for arg in args if arg.strip()]
+            argnames = [to_python_name(argname) for argname in argnames]
             argtypes = [arg.split("=")[0].split()[-2] for arg in args if arg.strip()]
+
+            # Compose searches for help() call
+            searches = [func_id_match]
             searches.extend([arg[3:] for arg in argtypes if arg.startswith("GPU")])
             searches = [f"'{x}'" for x in sorted(set(searches))]
 
+            # Get Python args, if one arg that is a dict, flatten dict to kwargs
             if len(argtypes) == 1 and argtypes[0].endswith(("Options", "Descriptor")):
                 assert argtypes[0].startswith("GPU")
                 arg_struct = ip.structs[argtypes[0][3:]]
@@ -347,13 +356,15 @@ for fname in ("base.py", "backend/rs.py"):
                     py_args = ["*"] + py_args
                 else:
                     py_args = ["self", "*"] + py_args
-                api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
             else:
                 py_args = ["self"] + argnames
-                api_lines[i] = pyline.split("(")[0] + "(" + ", ".join(py_args) + "):"
 
+            # Replace function signature
+            api_lines[i] = preamble + ", ".join(py_args) + "):"
+
+            # Insert comments
             if fname == "base.py":
-                api_lines.insert(i, " " * indent + "# IDL: " + line)
+                api_lines.insert(i, " " * indent + "# IDL: " + idl_line)
             api_lines.insert(
                 i, " " * indent + f"# wgpu.help({', '.join(searches)}, dev=True)"
             )
@@ -366,7 +377,7 @@ for fname in ("base.py", "backend/rs.py"):
     for func_id in api_functions:
         if not get_func_id_match(func_id, ip.functions):
             funcname = api_functions[func_id][0]
-            print(f"Found unknown function {funcname}")
+            print(f"Found unknown function {funcname} ({func_id})")
 
     # Write back
     code = blacken("\n".join(api_lines))
