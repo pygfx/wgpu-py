@@ -129,7 +129,7 @@ def new_struct(ctype, **kwargs):
 
 
 def get_surface_id_from_canvas(canvas):
-    win_id = canvas.getWindowId()
+    win_id = canvas.get_window_id()
     if sys.platform.startswith("win"):
         # wgpu_create_surface_from_windows_hwnd(void *_hinstance, void *hwnd)
         hwnd = ffi.cast("void *", int(win_id))
@@ -153,7 +153,7 @@ def get_surface_id_from_canvas(canvas):
     elif sys.platform.startswith("linux"):
         # wgpu_create_surface_from_wayland(void *surface, void *display)
         # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
-        display_id = canvas.getDisplayId()
+        display_id = canvas.get_display_id()
         is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
         if is_wayland:
             # todo: works, but have not yet been able to test drawing to the window
@@ -180,7 +180,9 @@ def request_adapter(*, power_preference: "GPUPowerPreference"):
     """
 
     # Convert the descriptor
-    struct = new_struct("WGPURequestAdapterOptions *", power_preference=power_preference)
+    struct = new_struct(
+        "WGPURequestAdapterOptions *", power_preference=power_preference
+    )
 
     # Select possible backends. This is not exposed in the WebGPU API
     # 1 => Backend::Empty,
@@ -922,7 +924,7 @@ class GPUSwapChain(base.GPUSwapChain):
         self._create_native_swap_chain_if_needed()
 
     def _create_native_swap_chain_if_needed(self):
-        cur_size = self._canvas.getSizeAndPixelRatio()  # width, height, ratio
+        cur_size = self._canvas.get_size_and_pixel_ratio()  # width, height, ratio
         if cur_size == self._surface_size:
             return
 

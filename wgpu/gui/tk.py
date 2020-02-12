@@ -29,22 +29,22 @@ class TkWgpuCanvas(BaseCanvas, tkinter.Toplevel):
         for ev_name in ["<Expose>", "<Configure>", "<Enter>"]:
             self.bind(ev_name, self._paint)
 
-    def getSizeAndPixelRatio(self):
+    def get_size_and_pixel_ratio(self):
         width = self.winfo_width()
         height = self.winfo_height()
         pixelratio = 1  # todo: pixelratio? Ask for it via win32 api?
         return width, height, pixelratio
 
-    def isClosed(self):
+    def is_closed(self):
         try:
             return self.wm_state() != "normal"
         except Exception:
             return True
 
-    def getDisplayId(self):
-        return super().getDisplayId()
+    def get_display_id(self):
+        return super().get_display_id()  # uses X11 lib
 
-    def getWindowId(self):
+    def get_window_id(self):
         # There's two functions of interest here. On Linux they return the same
         # value (for a toplevel widget), but on Windows not, and frame() does
         # not work.
@@ -56,7 +56,7 @@ class TkWgpuCanvas(BaseCanvas, tkinter.Toplevel):
 
     def _paint(self, *args):
         # Actual drawing needs to happen *after* Tcl draws bg
-        self.after(1, self._drawFrameAndPresent)
+        self.after(1, self._draw_frame_and_present)
 
 
 WgpuCanvas = TkWgpuCanvas

@@ -82,13 +82,13 @@ class GlfwWgpuCanvas(BaseCanvas):
         self._window = glfw.create_window(width, height, title, None, None)
         glfw.set_window_refresh_callback(self._window, self._paint)
 
-    def getSizeAndPixelRatio(self):
+    def get_size_and_pixel_ratio(self):
         # todo: maybe expose both logical size and physical size instead?
         width, height = glfw.get_window_size(self._window)
         pixelratio = glfw.get_window_content_scale(self._window)[0]
         return width, height, pixelratio
 
-    def getDisplayId(self):
+    def get_display_id(self):
         if sys.platform.startswith("linux"):
             is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
             if is_wayland:
@@ -98,7 +98,7 @@ class GlfwWgpuCanvas(BaseCanvas):
         else:
             raise RuntimeError(f"Cannot get GLFW display id on {sys.platform}.")
 
-    def getWindowId(self):
+    def get_window_id(self):
         if sys.platform.startswith("win"):
             return int(glfw.get_win32_window(self._window))
         elif sys.platform.startswith("darwin"):
@@ -113,9 +113,9 @@ class GlfwWgpuCanvas(BaseCanvas):
             raise RuntimeError(f"Cannot get GLFW window id on {sys.platform}.")
 
     def _paint(self, *args):
-        self._drawFrameAndPresent()
+        self._draw_frame_and_present()
 
-    def isClosed(self):
+    def is_closed(self):
         return glfw.window_should_close(self._window)
 
 

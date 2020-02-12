@@ -37,25 +37,25 @@ class QtWgpuCanvas(BaseCanvas, QWidget):
             self.setWindowTitle(title)
         self.show()
 
-    def paintEngine(self):
+    def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
         return None
 
-    def paintEvent(self, event):
-        self._drawFrameAndPresent()
+    def paintEvent(self, event):  # noqa: N802 - this is a Qt method
+        self._draw_frame_and_present()
 
-    def getSizeAndPixelRatio(self):
+    def get_size_and_pixel_ratio(self):
         return self.width(), self.height(), self.window().devicePixelRatio()
 
-    def isClosed(self):
+    def is_closed(self):
         return not self.isVisible()
 
-    def getDisplayId(self):
+    def get_display_id(self):
         # There is qx11info, but it is rarely available.
         # https://doc.qt.io/qt-5/qx11info.html#display
-        return super().getDisplayId()  # use X11 lib
+        return super().get_display_id()  # uses X11 lib
 
-    def getWindowId(self):
+    def get_window_id(self):
         return int(self.winId())
 
 
