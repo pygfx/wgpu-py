@@ -975,12 +975,12 @@ def _copy_docstrings():
             continue
         elif ob.__module__ != __name__:
             continue
-        BaseCls = ob.mro()[1]  # noqa: N806
-        ob.__doc__ = BaseCls.__doc__
+        base_cls = ob.mro()[1]
+        ob.__doc__ = base_cls.__doc__
         for name, attr in ob.__dict__.items():
             if name.startswith("_") or not hasattr(attr, "__doc__"):
                 continue
-            base_attr = getattr(BaseCls, name, None)
+            base_attr = getattr(base_cls, name, None)
             if base_attr is not None:
                 attr.__doc__ = base_attr.__doc__
 
