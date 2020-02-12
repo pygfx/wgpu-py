@@ -105,12 +105,12 @@ def _main(canvas, device):
         alphaToCoverageEnabled=False,
     )
 
-    swap_chain = canvas.configureSwapChain(
+    swap_chain = canvas.configure_swap_chain(
         device, wgpu.TextureFormat.bgra8unorm_srgb, wgpu.TextureUsage.OUTPUT_ATTACHMENT
     )
 
     def drawFrame():
-        current_texture_view = swap_chain.getCurrentTextureView()
+        current_texture_view = swap_chain.get_current_texture_view()
         command_encoder = device.createCommandEncoder()
 
         render_pass = command_encoder.beginRenderPass(

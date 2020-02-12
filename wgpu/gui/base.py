@@ -11,7 +11,7 @@ class BaseCanvas:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._swapchain = None
+        self._swap_chain = None
         self._err_hashes = {}
         self._display_id = None
 
@@ -21,8 +21,8 @@ class BaseCanvas:
         previously returned by configureSwapChain, including all of the
         textures it has produced.
         """
-        self._swapchain = device._gui_configureSwapChain(self, format, usage)
-        return self._swapchain
+        self._swap_chain = device._gui_configure_swap_chain(self, format, usage)
+        return self._swap_chain
 
     def drawFrame(self):
         """ The function that gets called at each draw. You can implement
@@ -36,8 +36,8 @@ class BaseCanvas:
         """
         try:
             self.drawFrame()
-            if self._swapchain is not None:
-                self._swapchain._gui_present()  # a.k.a swap buffers
+            if self._swap_chain is not None:
+                self._swap_chain._gui_present()  # a.k.a swap buffers
         except Exception:
             # Enable PM debuging
             sys.last_type, sys.last_value, sys.last_traceback = sys.exc_info()

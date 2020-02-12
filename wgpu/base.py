@@ -18,7 +18,7 @@ Developer notes and tips:
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
 def request_adapter(*, power_preference: "GPUPowerPreference"):
-    """ Request an Adapter, the object that represents the implementation of WGPU.
+    """ Request a GPUAdapter, the object that represents the implementation of WGPU.
     Before requesting an adapter, a wgpu backend should be selected. At the moment
     there is only one backend. Use ``import wgpu.rs`` to select it.
 
@@ -400,8 +400,8 @@ class GPUDevice(GPUObject):
     ):
         raise NotImplementedError()
 
-    def _gui_configureSwapChain(self, canvas, format, usage):
-        """ Get a swapchain object from a canvas object. Called by BaseCanvas.
+    def _gui_configure_swap_chain(self, canvas, format, usage):
+        """ Get a SwapChain object from a canvas object. Called by BaseCanvas.
         """
         raise NotImplementedError()
 
@@ -816,11 +816,11 @@ class GPUSwapChain(GPUObject):
     # wgpu.help('swapchaingetcurrenttexture', dev=True)
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
-        """ For now, use getCurrentTextureView.
+        """ For now, use get_current_texture_view.
         """
-        raise NotImplementedError("Use getCurrentTextureView() instead for now")
+        raise NotImplementedError("Use get_current_texture_view() instead for now")
 
-    def getCurrentTextureView(self):
+    def get_current_texture_view(self):
         """ NOTICE: this function is likely to change or be replaced by
         getCurrentTexture() at some point. An incompatibility between wgpu-native and
         WebGPU requires us to implement this workaround.
