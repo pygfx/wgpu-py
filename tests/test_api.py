@@ -9,8 +9,8 @@ def test_stub():
 
     assert wgpu.__version__
     assert wgpu.help
-    assert wgpu.requestAdapter
-    assert wgpu.requestAdapterAsync
+    assert wgpu.request_adapter
+    assert wgpu.request_adapter_async
 
 
 def get_output_from_subprocess(code):
