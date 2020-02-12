@@ -19,8 +19,7 @@ def _determine_can_use_vulkan_sdk():
 
 
 def _determine_can_use_wgpu_lib():
-    code = "import wgpu.backend.rs;"
-    code += "wgpu.request_adapter(power_preference='high-performance').request_device()"
+    code = "import wgpu.utils; wgpu.utils.create_device()"
     try:
         subprocess.check_output(
             [sys.executable, "-c", code,]
