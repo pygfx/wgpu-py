@@ -240,6 +240,12 @@ class GPUAdapter(base.GPUAdapter):
         limits: "GPULimits" = {},
     ):
 
+        # Fill in defaults of limits
+        limits = limits or {}
+        limits2 = {}
+        for key in "max_bind_groups":
+            limits2[key] = limits.get(key, base.default_limits[key])
+
         extensions = tuple(extensions)
 
         c_extensions = new_struct(
@@ -247,7 +253,7 @@ class GPUAdapter(base.GPUAdapter):
             anisotropic_filtering="anisotropic_filtering" in extensions,
         )
         c_limits = new_struct(
-            "WGPULimits *", max_bind_groups=limits.get("max_bind_groups", 4)
+            "WGPULimits *", max_bind_groups=limits2["max_bind_groups"]
         )
         struct = new_struct(
             "WGPUDeviceDescriptor *", extensions=c_extensions[0], limits=c_limits[0]
@@ -258,7 +264,7 @@ class GPUAdapter(base.GPUAdapter):
         queue_id = _lib.wgpu_device_get_queue(id)
         queue = GPUQueue("", queue_id, self)
 
-        return GPUDevice(label, id, self, extensions, limits, queue)
+        return GPUDevice(label, id, self, extensions, limits2, queue)
 
     # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
     async def request_device_async(

@@ -125,34 +125,16 @@ class GPUAdapter:  # Not a GPUObject
         raise NotImplementedError()
 
 
-class GPULimits(DictLike):
-    """ A dict-like object representing the device limits.
-    """
-
-    def __init__(
-        self,
-        *,
-        maxBindGroups=4,
-        maxDynamicUniformBuffersPerPipelineLayout=8,
-        maxDynamicStorageBuffersPerPipelineLayout=4,
-        maxSampledTexturesPerShaderStage=16,
-        maxSamplersPerShaderStage=16,
-        maxStorageBuffersPerShaderStage=4,
-        maxStorageTexturesPerShaderStage=4,
-        maxUniformBuffersPerShaderStage=12,
-    ):
-        self.maxBindGroups = maxBindGroups
-        self.maxDynamicUniformBuffersPerPipelineLayout = (
-            maxDynamicUniformBuffersPerPipelineLayout
-        )
-        self.maxDynamicStorageBuffersPerPipelineLayout = (
-            maxDynamicStorageBuffersPerPipelineLayout
-        )
-        self.maxSampledTexturesPerShaderStage = maxSampledTexturesPerShaderStage
-        self.maxSamplersPerShaderStage = maxSamplersPerShaderStage
-        self.maxStorageBuffersPerShaderStage = maxStorageBuffersPerShaderStage
-        self.maxStorageTexturesPerShaderStage = maxStorageTexturesPerShaderStage
-        self.maxUniformBuffersPerShaderStage = (maxUniformBuffersPerShaderStage,)
+default_limits = dict(
+    max_bind_groups=4,
+    max_dynamic_uniform_buffers_per_pipeline_layout=8,
+    max_dynamic_storage_buffers_per_pipeline_layout=4,
+    max_sampled_textures_per_shader_stage=16,
+    max_samplers_per_shader_stage=16,
+    max_storage_buffers_per_shader_stage=4,
+    max_storage_textures_per_shader_stage=4,
+    max_uniform_buffers_per_shader_stage=12,
+)
 
 
 class GPUDevice(GPUObject):
