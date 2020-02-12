@@ -216,7 +216,7 @@ def request_adapter(*, power_preference: "GPUPowerPreference"):
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
-    """ Async version of ``requestAdapter()``.
+    """ Async version of ``request_adapter()``.
     This function uses the Rust WGPU library.
     """
     return request_adapter(power_preference=power_preference)
@@ -243,7 +243,7 @@ class GPUAdapter(base.GPUAdapter):
         # Fill in defaults of limits
         limits = limits or {}
         limits2 = {}
-        for key in "max_bind_groups":
+        for key in ["max_bind_groups"]:
             limits2[key] = limits.get(key, base.default_limits[key])
 
         extensions = tuple(extensions)
@@ -274,7 +274,7 @@ class GPUAdapter(base.GPUAdapter):
         extensions: "GPUExtensionName-list" = [],
         limits: "GPULimits" = {},
     ):
-        return self.requestDevice(label=label, extensions=extensions, limits=limits)
+        return self.request_device(label=label, extensions=extensions, limits=limits)
 
 
 class GPUDevice(base.GPUDevice):

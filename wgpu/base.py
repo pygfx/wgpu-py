@@ -147,13 +147,13 @@ class GPUDevice(GPUObject):
     invalid.
     """
 
-    def __init__(self, label, internal, adapter, extensions, limits, defaul_queue):
+    def __init__(self, label, internal, adapter, extensions, limits, default_queue):
         super().__init__(label, internal, None)
         assert isinstance(adapter, GPUAdapter)
         self._adapter = adapter
         self._extensions = extensions
         self._limits = limits
-        self._defaul_queue = defaul_queue
+        self._default_queue = default_queue
 
     @property
     def extensions(self):
@@ -164,15 +164,15 @@ class GPUDevice(GPUObject):
 
     @property
     def limits(self):
-        """ A GPULimits object exposing the limits with which this device was created.
+        """ A dict exposing the limits with which this device was created.
         """
         return self._limits
 
     @property
-    def defaul_queue(self):
+    def default_queue(self):
         """ The default queue for this device.
         """
-        return self._defaul_queue
+        return self._default_queue
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);

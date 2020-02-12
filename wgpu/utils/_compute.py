@@ -68,9 +68,9 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
         raise ValueError("compute_with_buffers: n value(s) must be >= 1.")
 
     # Create a device and compile the shader
-    adapter = wgpu.requestAdapter(powerPreference="high-performance")
-    device = adapter.requestDevice(extensions=[], limits=wgpu.GPULimits())
-    cshader = device.createShaderModule(code=shader)
+    adapter = wgpu.request_adapter(power_preference="high-performance")
+    device = adapter.request_device(extensions=[], limits={})
+    cshader = device.create_shader_module(code=shader)
 
     # Create buffers for input and output arrays
     buffers = {}
@@ -80,7 +80,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
         usage = wgpu.BufferUsage.STORAGE
         if binding_index in output_arrays:
             usage |= wgpu.BufferUsage.MAP_READ
-        buffer = device.createBufferMapped(size=nbytes, usage=usage)
+        buffer = device.create_buffer_mapped(size=nbytes, usage=usage)
         # Copy data from array to buffer
         ctypes.memmove(buffer.mapping, array, nbytes)
         buffer.unmap()
@@ -91,7 +91,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
             continue  # We already have this buffer
         nbytes = ctypes.sizeof(array_type)
         usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
-        buffers[binding_index] = device.createBuffer(size=nbytes, usage=usage)
+        buffers[binding_index] = device.create_buffer(size=nbytes, usage=usage)
 
     # Create bindings and binding layouts
     bindings = []
@@ -112,27 +112,32 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
         )
 
     # Put buffers together
-    bind_group_layout = device.createBindGroupLayout(bindings=binding_layouts)
-    pipeline_layout = device.createPipelineLayout(bindGroupLayouts=[bind_group_layout])
-    bind_group = device.createBindGroup(layout=bind_group_layout, bindings=bindings)
+    bind_group_layout = device.create_bind_group_layout(bindings=binding_layouts)
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=bindings)
 
     # Create a pipeline and "run it"
-    compute_pipeline = device.createComputePipeline(
-        layout=pipeline_layout, computeStage={"module": cshader, "entryPoint": "main"},
+    compute_pipeline = device.create_compute_pipeline(
+        layout=pipeline_layout,
+        compute_stage={"module": cshader, "entry_point": "main"},
     )
-    command_encoder = device.createCommandEncoder()
-    compute_pass = command_encoder.beginComputePass()
-    compute_pass.setPipeline(compute_pipeline)
-    compute_pass.setBindGroup(0, bind_group, [], 0, 999999)  # last 2 elements not used
+    command_encoder = device.create_command_encoder()
+    compute_pass = command_encoder.begin_compute_pass()
+    compute_pass.set_pipeline(compute_pipeline)
+    compute_pass.set_bind_group(
+        0, bind_group, [], 0, 999999
+    )  # last 2 elements not used
     compute_pass.dispatch(x, y, z)
-    compute_pass.endPass()
-    device.defaultQueue.submit([command_encoder.finish()])
+    compute_pass.end_pass()
+    device.default_queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffers
     output = {}
     for binding_index, array_type in output_arrays.items():
         buffer = buffers[binding_index]
-        array_uint8 = buffer.mapRead()  # slow, can also be done async
+        array_uint8 = buffer.map_read()  # slow, can also be done async
         output[binding_index] = array_type.from_buffer(array_uint8)
 
     return output

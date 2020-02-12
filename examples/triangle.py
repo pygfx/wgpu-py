@@ -47,90 +47,92 @@ def fragment_shader(
 def main(canvas):
     """ Regular function to setup a viz on the given canvas.
     """
-    adapter = wgpu.requestAdapter(powerPreference="high-performance")
-    device = adapter.requestDevice(extensions=[], limits=wgpu.GPULimits())
+    adapter = wgpu.request_adapter(power_preference="high-performance")
+    device = adapter.request_device(extensions=[], limits={})
     return _main(canvas, device)
 
 
-async def mainAsync(canvas):
+async def main_async(canvas):
     """ Async function to setup a viz on the given canvas.
     """
-    adapter = await wgpu.requestAdapterAsync(powerPreference="high-performance")
-    device = await adapter.requestDeviceAsync(extensions=[], limits=wgpu.GPULimits())
+    adapter = await wgpu.request_adapter_async(power_preference="high-performance")
+    device = await adapter.request_device_async(extensions=[], limits={})
     return _main(canvas, device)
 
 
 def _main(canvas, device):
 
-    vshader = device.createShaderModule(code=vertex_shader)
-    fshader = device.createShaderModule(code=fragment_shader)
+    vshader = device.create_shader_module(code=vertex_shader)
+    fshader = device.create_shader_module(code=fragment_shader)
 
-    bind_group_layout = device.createBindGroupLayout(bindings=[])  # zero bindings
-    bind_group = device.createBindGroup(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
 
-    pipeline_layout = device.createPipelineLayout(bindGroupLayouts=[bind_group_layout])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
 
-    render_pipeline = device.createRenderPipeline(
+    render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
-        vertexStage={"module": vshader, "entryPoint": "main"},
-        fragmentStage={"module": fshader, "entryPoint": "main"},
-        primitiveTopology=wgpu.PrimitiveTopology.triangle_list,
-        rasterizationState={
-            "frontFace": wgpu.FrontFace.ccw,
-            "cullMode": wgpu.CullMode.none,
-            "depthBias": 0,
-            "depthBiasSlopeScale": 0.0,
-            "depthBiasClamp": 0.0,
+        vertex_stage={"module": vshader, "entry_point": "main"},
+        fragment_stage={"module": fshader, "entry_point": "main"},
+        primitive_topology=wgpu.PrimitiveTopology.triangle_list,
+        rasterization_state={
+            "front_face": wgpu.FrontFace.ccw,
+            "cull_mode": wgpu.CullMode.none,
+            "depth_bias": 0,
+            "depth_bias_slope_scale": 0.0,
+            "depth_bias_clamp": 0.0,
         },
-        colorStates=[
+        color_states=[
             {
                 "format": wgpu.TextureFormat.bgra8unorm_srgb,
-                "alphaBlend": (
+                "alpha_blend": (
                     wgpu.BlendFactor.one,
                     wgpu.BlendFactor.zero,
                     wgpu.BlendOperation.add,
                 ),
-                "colorBlend": (
+                "color_blend": (
                     wgpu.BlendFactor.one,
                     wgpu.BlendFactor.zero,
                     wgpu.BlendOperation.add,
                 ),
-                "writeMask": wgpu.ColorWrite.ALL,
+                "write_mask": wgpu.ColorWrite.ALL,
             }
         ],
-        depthStencilState=None,
-        vertexState={"indexFormat": wgpu.IndexFormat.uint32, "vertexBuffers": []},
-        sampleCount=1,
-        sampleMask=0xFFFFFFFF,
-        alphaToCoverageEnabled=False,
+        depth_stencil_state=None,
+        vertex_state={"index_format": wgpu.IndexFormat.uint32, "vertex_buffers": []},
+        sample_count=1,
+        sample_mask=0xFFFFFFFF,
+        alpha_to_coverage_enabled=False,
     )
 
     swap_chain = canvas.configure_swap_chain(
         device, wgpu.TextureFormat.bgra8unorm_srgb, wgpu.TextureUsage.OUTPUT_ATTACHMENT
     )
 
-    def drawFrame():
+    def draw_frame():
         current_texture_view = swap_chain.get_current_texture_view()
-        command_encoder = device.createCommandEncoder()
+        command_encoder = device.create_command_encoder()
 
-        render_pass = command_encoder.beginRenderPass(
-            colorAttachments=[
+        render_pass = command_encoder.begin_render_pass(
+            color_attachments=[
                 {
                     "attachment": current_texture_view,
-                    "resolveTarget": None,
-                    "loadValue": (0, 0, 0, 1),  # LoadOp.load or color
-                    "storeOp": wgpu.StoreOp.store,
+                    "resolve_target": None,
+                    "load_value": (0, 0, 0, 1),  # LoadOp.load or color
+                    "store_op": wgpu.StoreOp.store,
                 }
             ],
-            depthStencilAttachment=None,
+            depth_stencil_attachment=None,
         )
 
-        render_pass.setPipeline(render_pipeline)
-        render_pass.setBindGroup(
+        render_pass.set_pipeline(render_pipeline)
+        render_pass.set_bind_group(
             0, bind_group, [], 0, 999999
         )  # last 2 elements not used
         render_pass.draw(3, 1, 0, 0)
-        render_pass.endPass()
-        device.defaultQueue.submit([command_encoder.finish()])
+        render_pass.end_pass()
+        device.default_queue.submit([command_encoder.finish()])
 
-    canvas.drawFrame = drawFrame
+    canvas.draw_frame = draw_frame

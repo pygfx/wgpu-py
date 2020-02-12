@@ -55,15 +55,15 @@ print(result[:])
 # %% The long version using the wgpu API
 
 # Create device and shader object
-adapter = wgpu.requestAdapter(powerPreference="high-performance")
-device = adapter.requestDevice(extensions=[], limits=wgpu.GPULimits())
-cshader = device.createShaderModule(code=compute_shader)
+adapter = wgpu.request_adapter(power_preference="high-performance")
+device = adapter.request_device(extensions=[], limits={})
+cshader = device.create_shader_module(code=compute_shader)
 
 # Create buffer objects, input buffer is mapped.
-buffer1 = device.createBufferMapped(
+buffer1 = device.create_buffer_mapped(
     size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
 )
-buffer2 = device.createBuffer(
+buffer2 = device.create_buffer(
     size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
 )
 
@@ -95,24 +95,24 @@ bindings = [
 ]
 
 # Put everything together
-bind_group_layout = device.createBindGroupLayout(bindings=binding_layouts)
-pipeline_layout = device.createPipelineLayout(bindGroupLayouts=[bind_group_layout])
-bind_group = device.createBindGroup(layout=bind_group_layout, bindings=bindings)
+bind_group_layout = device.create_bind_group_layout(bindings=binding_layouts)
+pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[bind_group_layout])
+bind_group = device.create_bind_group(layout=bind_group_layout, bindings=bindings)
 
 # Create and run the pipeline
-compute_pipeline = device.createComputePipeline(
-    layout=pipeline_layout, computeStage={"module": cshader, "entryPoint": "main"},
+compute_pipeline = device.create_compute_pipeline(
+    layout=pipeline_layout, compute_stage={"module": cshader, "entry_point": "main"},
 )
-command_encoder = device.createCommandEncoder()
-compute_pass = command_encoder.beginComputePass()
-compute_pass.setPipeline(compute_pipeline)
-compute_pass.setBindGroup(0, bind_group, [], 0, 999999)  # last 2 elements not used
+command_encoder = device.create_command_encoder()
+compute_pass = command_encoder.begin_compute_pass()
+compute_pass.set_pipeline(compute_pipeline)
+compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
 compute_pass.dispatch(n, 1, 1)  # x y z
-compute_pass.endPass()
-device.defaultQueue.submit([command_encoder.finish()])
+compute_pass.end_pass()
+device.default_queue.submit([command_encoder.finish()])
 
 # Read result
-result = buffer2.mapRead()
+result = buffer2.map_read()
 result = IntArrayType.from_buffer(result)  # cast
 print(result[:])
 
