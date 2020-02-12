@@ -9,17 +9,17 @@ __version__ = "0.1.4"
 
 
 def _register_backend(func, func_async):
-    if not (callable(func) and func.__name__ == "requestAdapter"):
+    if not (callable(func) and func.__name__ == "request_adapter"):
         raise RuntimeError(
-            "WGPU backend must be registered with function called requestAdapterSync."
+            "WGPU backend must be registered with function called request_adapter."
         )
-    if not (callable(func_async) and func_async.__name__ == "requestAdapterAsync"):
+    if not (callable(func_async) and func_async.__name__ == "request_adapter_async"):
         raise RuntimeError(
-            "WGPU backend must be registered with function called requestAdapterAsync."
+            "WGPU backend must be registered with function called request_adapter_async."
         )
-    if globals()["requestAdapter"] is not base.requestAdapter:
+    if globals()["request_adapter"] is not base.request_adapter:
         raise RuntimeError("WGPU backend can only be set once.")
-    globals()["requestAdapter"] = func
-    globals()["requestAdapterAsync"] = func_async
+    globals()["request_adapter"] = func
+    globals()["request_adapter_async"] = func_async
 
-    # todo: auto-select upon using requestAdapter?
+    # todo: auto-select upon using request_adapter?

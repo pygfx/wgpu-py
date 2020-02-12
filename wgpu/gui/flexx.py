@@ -12,17 +12,17 @@ class WgpuCanvas(flx.CanvasWidget):
 
     def init(self):
         self._draw_func = None
-        window.requestAnimationFrame(self._drawFrameAndPresent)
+        window.requestAnimationFrame(self._draw_frame_and_present)
 
-    def configureSwapChain(self, *args):
+    def configure_swap_chain(self, *args):
         return self.node.configureSwapChain(*args)
 
-    def drawFrame(self):
+    def draw_frame(self):
         pass
 
-    def _drawFrameAndPresent(self):
-        window.requestAnimationFrame(self._drawFrameAndPresent)
-        self.drawFrame()
+    def _draw_frame_and_present(self):
+        window.requestAnimationFrame(self._draw_frame_and_present)
+        self.draw_frame()
 
-    def isClosed(self):
+    def is_closed(self):
         return False

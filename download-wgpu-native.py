@@ -30,10 +30,9 @@ def write_current_version(version):
 
 
 def download_file(url, filename):
-    CHUNK_SIZE = 1024 * 128
     resp = requests.get(url, stream=True)
     with open(filename, mode="wb") as fh:
-        for chunk in resp.iter_content(chunk_size=CHUNK_SIZE):
+        for chunk in resp.iter_content(chunk_size=1024 * 128):
             fh.write(chunk)
 
 

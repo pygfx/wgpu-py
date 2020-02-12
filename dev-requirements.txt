@@ -1,6 +1,7 @@
 black
 pytest
 flake8
+pep8-naming
 requests
 setuptools
 wheel

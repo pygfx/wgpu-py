@@ -97,8 +97,8 @@
 *  Not implemented: constructor();
 *  Not implemented: constructor(DOMString message);
 *  Not implemented: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
-*  Found unknown function DictLike.get
-*  Found unknown function GPUSwapChain.getCurrentTextureView
+*  Found unknown function get (dictlikeget)
+*  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into base.py
 
 ### Check functions in backend/rs.py
@@ -126,7 +126,7 @@
 *  Not implemented: constructor();
 *  Not implemented: constructor(DOMString message);
 *  Not implemented: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
-*  Found unknown function new_struct
-*  Found unknown function get_surface_id_from_canvas
-*  Found unknown function GPUSwapChain.getCurrentTextureView
+*  Found unknown function new_struct (newstruct)
+*  Found unknown function get_surface_id_from_canvas (getsurfaceidfromcanvas)
+*  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into backend/rs.py

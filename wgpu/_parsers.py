@@ -2,7 +2,48 @@
 This module provides classes to parse the .idl and .h files defining
 the WebGPU and wgpu API. These help us to generate code (definitions
 of flags, enums and stucts) and to provide help for developers.
+
+Naming conventions differ between IDL and header files. To deal with that, we
+use a neutral name as key in some places, and convert to Python name in others:
+
+* flags: name is CamelCase, field names are UPPERCASE, values are int.
+  No changes required.
+* enums: name is CamelCase, field names are snake_case, values are 'like-this'.
+  We need to convert the field names of IDL (these are the same as the values).
+* structs: their fields are the function arguments, so we never refer them by name.
+* function args: name is snake_case. Needs conversion.
+* function names: name is snake_case. Needs conversion. To uniquely identify
+  functions (in .h the classname is part of the function name) the keys in the
+  functions dict are neutral names.
+
 """
+
+
+def to_neutral_name(name):
+    """ Convert a name to the neutral name with no capitals, underscores or dots.
+    Used primarily to match function names of IDL and .h specs.
+    """
+    name = name.lower()
+    if name.startswith("gpu"):
+        name = name[3:]
+    if name.startswith("wgpu"):
+        name = name[4:]
+    for c in " -_.":
+        name = name.replace(c, "")
+    return name
+
+
+def to_python_name(name):
+    """ Convert someName and some_name to the Python flavor.
+    To convert function names and function argument names.
+    """
+    name2 = ""
+    for c in name:
+        c2 = c.lower()
+        if c2 != c and len(name2) > 0 and name2[-1] != "_":
+            name2 += "_"
+        name2 += c2
+    return name2
 
 
 class BaseParser:
@@ -10,7 +51,7 @@ class BaseParser:
 
     Our parsers have the following attributes:
 
-    * flags: a dict mapping the (Pythonic) flag name to a dict of field-value pairs.
+    * flags: a dict mapping the (neutral) flag name to a dict of field-value pairs.
     * enums: a dict mapping the (Pythonic) enum name to a dict of field-value pairs.
     * structs: a dict mapping the (Pythonic) struct name to a dict of StructField
       objects.
@@ -97,15 +138,16 @@ class StructField:
         return self.line
 
     def py_arg(self):
+        name = to_python_name(self.name)
         t = self.typename
         d = self.default
         if t not in ("bool", "int", "float", "str"):
             t = f"'{t}'"
         if d is not None:
             d = {"false": "False", "true": "True"}.get(d, d)
-            return f"{self.name}: {t}={d}"
+            return f"{name}: {t}={d}"
         else:
-            return f"{self.name}: {t}"
+            return f"{name}: {t}"
 
 
 # %% IDL
@@ -116,6 +158,9 @@ class IdlParser(BaseParser):
     """
 
     def _normalize(self):
+        """ We don't do any name format normalization in the parser code itself;
+        we do that here.
+        """
 
         # Remove GPU prefix for flags, enums and structs
         for d in (self.flags, self.enums, self.structs):
@@ -131,11 +176,10 @@ class IdlParser(BaseParser):
             if name.endswith("Base"):
                 self.structs.pop(name)
 
-        # Normalize function name to be a flat lowercase name withour underscores
+        # Normalize function name to be a flat lowercase name without underscores
         for name in list(self.functions.keys()):
-            assert name.startswith("GPU") and "." in name
-            new_name = name[3:].replace(".", "").lower()
-            self.functions[new_name] = self.functions.pop(name)
+            assert name.startswith("GPU") and name.count(".") == 1
+            self.functions[to_neutral_name(name)] = self.functions.pop(name)
 
     def _parse(self):
 
@@ -357,6 +401,9 @@ class HParser(BaseParser):
     #         raise NotImplementedError()
 
     def _normalize(self):
+        """ We don't do any name format normalization in the parser code itself;
+        we do that here.
+        """
 
         # Remove WGPU prefix for flags, enums and structs
         for d in (self.flags, self.enums, self.structs):
@@ -365,11 +412,10 @@ class HParser(BaseParser):
                 new_name = name[4:]
                 d[new_name] = d.pop(name)
 
-        # Normalize function name to be a flat lowercase name withour underscores
+        # Normalize function name to be a flat lowercase name without underscores
         for name in list(self.functions.keys()):
             assert name.startswith("wgpu") and "." not in name
-            new_name = name[4:].replace("_", "").lower()
-            self.functions[new_name] = self.functions.pop(name)
+            self.functions[to_neutral_name(name)] = self.functions.pop(name)
 
     def _parse(self):
 

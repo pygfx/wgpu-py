@@ -15,6 +15,6 @@ glfw.init()
 canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle with GLFW")
 
 main(canvas)
-while not canvas.isClosed():
+while not canvas.is_closed():
     glfw.poll_events()
 glfw.terminate()
