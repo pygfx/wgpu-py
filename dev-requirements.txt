@@ -1,4 +1,4 @@
-black
+black==19.10b0
 pytest
 flake8
 pep8-naming
@@ -8,3 +8,4 @@ wheel
 twine
 python-shader>=0.3.4
 auditwheel; sys_platform == 'linux'
+pyinstaller[hook_testing] @ https://github.com/bjones1/pyinstaller/archive/4232a.zip
