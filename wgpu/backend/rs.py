@@ -844,9 +844,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
     def set_index_buffer(self, buffer, offset):
-        _lib.wgpu_render_pass_set_index_buffer(
-            self._internal, buffer._internal, offset
-        )
+        _lib.wgpu_render_pass_set_index_buffer(self._internal, buffer._internal, offset)
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
     def set_vertex_buffer(self, slot, buffer, offset):
@@ -872,7 +870,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         self, index_count, instance_count, first_index, base_vertex, first_instance
     ):
         _lib.wgpu_render_pass_draw_indexed(
-            self._internal, index_count, instance_count, first_index, base_vertex, first_instance
+            self._internal,
+            index_count,
+            instance_count,
+            first_index,
+            base_vertex,
+            first_instance,
         )
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindexedindirect', dev=True)
