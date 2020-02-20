@@ -48,4 +48,10 @@ setup(
     url="https://github.com/almarklein/wgpu-py",
     cmdclass={"bdist_wheel": bdist_wheel},
     data_files=[("", ["LICENSE"])],
+    entry_points={
+        "pyinstaller40": [
+            "hook-dirs = wgpu.__pyinstaller:get_hook_dirs",
+            "tests = wgpu.__pyinstaller:get_test_dirs",
+        ],
+    },
 )
