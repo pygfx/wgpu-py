@@ -93,6 +93,7 @@ def _get_wgpu_lib_path():
 
 
 # Configure cffi and load the dynamic library
+# NOTE: `import wgpu.backend.rs` is used in pyinstaller tests to verify that we can load the DLL after freezing
 ffi = FFI()
 ffi.cdef(_get_wgpu_h())
 ffi.set_source("wgpu.h", None)
