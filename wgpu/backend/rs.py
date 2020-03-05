@@ -845,7 +845,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
     def set_index_buffer(self, buffer, offset):
-        raise NotImplementedError()
+        _lib.wgpu_render_pass_set_index_buffer(self._internal, buffer._internal, offset)
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
     def set_vertex_buffer(self, slot, buffer, offset):
@@ -863,18 +863,25 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         )
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindirect', dev=True)
-    def draw_indirect(self, indirect_buffer, indirect_offset):
-        raise NotImplementedError()
+    # def draw_indirect(self, indirect_buffer, indirect_offset):
+    #     raise NotImplementedError()
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     def draw_indexed(
         self, index_count, instance_count, first_index, base_vertex, first_instance
     ):
-        raise NotImplementedError()
+        _lib.wgpu_render_pass_draw_indexed(
+            self._internal,
+            index_count,
+            instance_count,
+            first_index,
+            base_vertex,
+            first_instance,
+        )
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindexedindirect', dev=True)
-    def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
-        raise NotImplementedError()
+    # def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
+    #     raise NotImplementedError()
 
 
 # todo: this does not inherit from base.GPURenderPassEncoder. Use multiple
