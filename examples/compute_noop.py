@@ -6,7 +6,7 @@ buffer into another.
 import ctypes
 
 import wgpu
-import wgpu.backend.rs  # Select backend
+import wgpu.backends.rs  # Select backend
 from wgpu.utils import compute_with_buffers  # Convenience function
 from python_shader import python2shader, i32, Array
 

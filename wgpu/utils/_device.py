@@ -3,6 +3,6 @@ def create_device():
     the WGPU lib is usable on this system. If not, this call will
     probably exit (Rust panic). returns None.
     """
-    import wgpu.backend.rs
+    import wgpu.backends.rs
 
     wgpu.request_adapter(power_preference="high-performance").request_device()

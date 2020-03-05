@@ -6,7 +6,7 @@ from pscript.stubs import window
 
 
 class WgpuCanvas(flx.CanvasWidget):
-    """ Flexx widget to be used with the wgpu.backed.js backend. Provides a
+    """ Flexx widget to be used with the wgpu.backeds.js backend. Provides a
     canvas to render to.
     """
 

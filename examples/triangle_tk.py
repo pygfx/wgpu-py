@@ -5,7 +5,7 @@ Tkinter comes with Python by default.
 
 import tkinter
 from wgpu.gui.tk import WgpuCanvas  # WgpuCanvas wraps a glfw window
-import wgpu.backend.rs  # noqa: F401, Select Rust backend
+import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 # Import the (async) function that we must call to run the visualization
 from triangle import main

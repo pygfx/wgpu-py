@@ -20,7 +20,7 @@ Developer notes and tips:
 def request_adapter(*, power_preference: "GPUPowerPreference"):
     """ Request a GPUAdapter, the object that represents the implementation of WGPU.
     Before requesting an adapter, a wgpu backend should be selected. At the moment
-    there is only one backend. Use ``import wgpu.rs`` to select it.
+    there is only one backend. Use ``import wgpu.backends.rs`` to select it.
 
     Params:
         powerPreference(enum): "high-performance" or "low-power"

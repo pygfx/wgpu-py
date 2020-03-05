@@ -3,7 +3,7 @@ import ctypes
 from ctypes import c_int32, c_ubyte
 
 from python_shader import python2shader, Array, i32
-import wgpu.backend.rs  # noqa
+import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
 from pytest import mark
