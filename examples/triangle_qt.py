@@ -5,7 +5,7 @@ Works with either PyQt5 or PySide2.
 
 from PyQt5 import QtWidgets  # Use either PyQt5 or Pyside2
 from wgpu.gui.qt import WgpuCanvas  # WgpuCanvas is a QWidget subclass
-import wgpu.backend.rs  # noqa: F401, Select Rust backend
+import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 # Import the (async) function that we must call to run the visualization
 from triangle import main

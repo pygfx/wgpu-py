@@ -9,7 +9,7 @@ and provide a HTML5 canvas without having to write HTML.
 
 from flexx import flx
 from wgpu.gui.flexx import WgpuCanvas  # WgpuCanvas is a flx.Canvas subclass
-import wgpu.backend.js  # noqa: F401, Select JS backend
+import wgpu.backends.js  # noqa: F401, Select JS backend
 
 # Import the (async) function that we must call to run the visualization
 import triangle
