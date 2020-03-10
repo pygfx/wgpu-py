@@ -182,8 +182,8 @@ def get_surface_id_from_canvas(canvas):
         objc.objc_msgSend(content_view, set_wants_layer_sel, True)
 
         # metal_layer = [CAMetalLayer layer];
-        CAMetalLayer = objc.objc_getClass(b"CAMetalLayer")
-        metal_layer = objc.objc_msgSend(CAMetalLayer, layer_sel)
+        ca_metal_layer_class = objc.objc_getClass(b"CAMetalLayer")
+        metal_layer = objc.objc_msgSend(ca_metal_layer_class, layer_sel)
 
         # [ns_window.content_view setLayer:metal_layer];
         objc.objc_msgSend(content_view, set_layer_sel, ctypes.c_void_p(metal_layer))
