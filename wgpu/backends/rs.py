@@ -151,24 +151,26 @@ def get_surface_id_from_canvas(canvas):
         #     }
         window = ctypes.c_void_p(win_id)
 
-        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library('objc'))
+        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
         objc.objc_getClass.restype = ctypes.c_void_p
         objc.sel_registerName.restype = ctypes.c_void_p
         objc.objc_msgSend.restype = ctypes.c_void_p
         objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
 
-        content_view_sel = objc.sel_registerName(b'contentView')
-        set_wants_layer_sel = objc.sel_registerName(b'setWantsLayer:')
-        responds_to_sel_sel = objc.sel_registerName(b'respondsToSelector:')
-        layer_sel = objc.sel_registerName(b'layer')
-        set_layer_sel = objc.sel_registerName(b'setLayer:')
+        content_view_sel = objc.sel_registerName(b"contentView")
+        set_wants_layer_sel = objc.sel_registerName(b"setWantsLayer:")
+        responds_to_sel_sel = objc.sel_registerName(b"respondsToSelector:")
+        layer_sel = objc.sel_registerName(b"layer")
+        set_layer_sel = objc.sel_registerName(b"setLayer:")
 
         # Try some duck typing to see what kind of object the window pointer points to
         # Qt doesn't return a NSWindow, but a QNSView instead, which is subclass of NSView.
-        if (objc.objc_msgSend(window, responds_to_sel_sel, ctypes.c_void_p(content_view_sel))):
+        if objc.objc_msgSend(
+            window, responds_to_sel_sel, ctypes.c_void_p(content_view_sel)
+        ):
             # NSWindow instances respond to contentView selector
             content_view = objc.objc_msgSend(window, content_view_sel)
-        elif (objc.objc_msgSend(window, responds_to_sel_sel, ctypes.c_void_p(layer_sel))):
+        elif objc.objc_msgSend(window, responds_to_sel_sel, ctypes.c_void_p(layer_sel)):
             # NSView instances respond to layer selector
             # Let's assume that the given window pointer is actually the content view
             content_view = window
@@ -180,7 +182,7 @@ def get_surface_id_from_canvas(canvas):
         objc.objc_msgSend(content_view, set_wants_layer_sel, True)
 
         # metal_layer = [CAMetalLayer layer];
-        CAMetalLayer = objc.objc_getClass(b'CAMetalLayer')
+        CAMetalLayer = objc.objc_getClass(b"CAMetalLayer")
         metal_layer = objc.objc_msgSend(CAMetalLayer, layer_sel)
 
         # [ns_window.content_view setLayer:metal_layer];
