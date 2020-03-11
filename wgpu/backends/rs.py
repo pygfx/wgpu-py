@@ -175,8 +175,9 @@ def get_surface_id_from_canvas(canvas):
             # Let's assume that the given window pointer is actually the content view
             content_view = window
         else:
-            # Can't tell what kind of object window is
-            raise TypeError()
+            # If the code reaches this part, we know that `window` is an
+            # objective-c object but the type is neither NSView or NSWindow.
+            raise RuntimeError("Received unidentified objective-c object.")
 
         # [ns_window.contentView setWantsLayer:YES]
         objc.objc_msgSend(content_view, set_wants_layer_sel, True)
