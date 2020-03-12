@@ -30,6 +30,7 @@ Developer notes and tips:
 import os
 import sys
 import ctypes
+import ctypes.util
 from weakref import WeakKeyDictionary
 
 from cffi import FFI, __version_info__ as cffi_version_info
@@ -138,7 +139,6 @@ def get_surface_id_from_canvas(canvas):
         return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
     elif sys.platform.startswith("darwin"):
         # wgpu_create_surface_from_metal_layer(void *layer)
-        # todo: MacOS support
         # This is what the triangle example from wgpu-native does:
         # #if WGPU_TARGET == WGPU_TARGET_MACOS
         #     {
@@ -149,8 +149,48 @@ def get_surface_id_from_canvas(canvas):
         #         [ns_window.contentView setLayer:metal_layer];
         #         surface = wgpu_create_surface_from_metal_layer(metal_layer);
         #     }
-        layer = ffi.cast("void *", win_id)
-        return _lib.wgpu_create_surface_from_metal_layer(layer)
+        window = ctypes.c_void_p(win_id)
+
+        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
+        objc.objc_getClass.restype = ctypes.c_void_p
+        objc.sel_registerName.restype = ctypes.c_void_p
+        objc.objc_msgSend.restype = ctypes.c_void_p
+        objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+
+        content_view_sel = objc.sel_registerName(b"contentView")
+        set_wants_layer_sel = objc.sel_registerName(b"setWantsLayer:")
+        responds_to_sel_sel = objc.sel_registerName(b"respondsToSelector:")
+        layer_sel = objc.sel_registerName(b"layer")
+        set_layer_sel = objc.sel_registerName(b"setLayer:")
+
+        # Try some duck typing to see what kind of object the window pointer points to
+        # Qt doesn't return a NSWindow, but a QNSView instead, which is subclass of NSView.
+        if objc.objc_msgSend(
+            window, responds_to_sel_sel, ctypes.c_void_p(content_view_sel)
+        ):
+            # NSWindow instances respond to contentView selector
+            content_view = objc.objc_msgSend(window, content_view_sel)
+        elif objc.objc_msgSend(window, responds_to_sel_sel, ctypes.c_void_p(layer_sel)):
+            # NSView instances respond to layer selector
+            # Let's assume that the given window pointer is actually the content view
+            content_view = window
+        else:
+            # If the code reaches this part, we know that `window` is an
+            # objective-c object but the type is neither NSView or NSWindow.
+            raise RuntimeError("Received unidentified objective-c object.")
+
+        # [ns_window.contentView setWantsLayer:YES]
+        objc.objc_msgSend(content_view, set_wants_layer_sel, True)
+
+        # metal_layer = [CAMetalLayer layer];
+        ca_metal_layer_class = objc.objc_getClass(b"CAMetalLayer")
+        metal_layer = objc.objc_msgSend(ca_metal_layer_class, layer_sel)
+
+        # [ns_window.content_view setLayer:metal_layer];
+        objc.objc_msgSend(content_view, set_layer_sel, ctypes.c_void_p(metal_layer))
+
+        metal_layer_ffi_pointer = ffi.cast("void *", metal_layer)
+        return _lib.wgpu_create_surface_from_metal_layer(metal_layer_ffi_pointer)
     elif sys.platform.startswith("linux"):
         # wgpu_create_surface_from_wayland(void *surface, void *display)
         # wgpu_create_surface_from_xlib(const void **display, uint64_t window)

@@ -51,6 +51,10 @@ class TkWgpuCanvas(BaseCanvas, tkinter.Toplevel):
         # * self.winfo_id(): platform-specific identifier for window
         # * self.frame(): platform specific window identifier for the
         #   outermost frame that contains window
+        # On macOS, the object from winfo_id doesn't seem to be an obj-c object
+        # and there is no clear way of getting a hold of the top-level NSView
+        # object. Needs further investigation. The `wm_frame` and `frame` methods
+        # both return the same id as `winfo_id`.
         return int(self.winfo_id())
         # return int(self.frame(), 16)
 
