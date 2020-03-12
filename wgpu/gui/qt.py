@@ -37,6 +37,8 @@ class QtWgpuCanvas(BaseCanvas, QWidget):
             self.setWindowTitle(title)
         self.show()
 
+        # self.window().windowHandle().screenChanged.connect(self._update_size)
+
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
         return None
@@ -44,8 +46,23 @@ class QtWgpuCanvas(BaseCanvas, QWidget):
     def paintEvent(self, event):  # noqa: N802 - this is a Qt method
         self._draw_frame_and_present()
 
+    # def resizeEvent(self, event):
+    #     w, h = event.size().width(), event.size().height()
+    #     self._whr = self.width(), self.height(), self.window().devicePixelRatio()
+    #
+    # def _update_size(self, *args):
+    #     self._whr = self.width(), self.height(), self.window().devicePixelRatio()
+
     def get_size_and_pixel_ratio(self):
-        return self.width(), self.height(), self.window().devicePixelRatio()
+        # https://doc.qt.io/qt-5/qpaintdevice.html
+        logical_size = self.width(), self.height()
+        # todo: maybe self.metric(self.PdmWidth)
+        logical_size = float(logical_size[0]), float(logical_size[1])
+        pixelratio = self.window().devicePixelRatioF()  # mind the F!
+        physical_size = (
+            int(logical_size[0] * pixelratio), int(logical_size[1] * pixelratio)
+        )
+        return physical_size, logical_size
 
     def is_closed(self):
         return not self.isVisible()

@@ -81,7 +81,7 @@ class GlfwWgpuCanvas(BaseCanvas):
 
         self._window = glfw.create_window(width, height, title, None, None)
         glfw.set_window_refresh_callback(self._window, self._paint)
-        if sys.platform.startswith("darwin"):
+        if True:#sys.platform.startswith("darwin"):
             # Apparently, the refresh_callback is not called when the window
             # is created, gets focus, or is resized on macOS. So this is a
             # workaround to explicitely make sure that the paint callback
@@ -91,9 +91,11 @@ class GlfwWgpuCanvas(BaseCanvas):
 
     def get_size_and_pixel_ratio(self):
         # todo: maybe expose both logical size and physical size instead?
-        width, height = glfw.get_window_size(self._window)
+        physical_size = glfw.get_window_size(self._window)
+        physical_size = int(physical_size[0]), int(physical_size[1])
         pixelratio = glfw.get_window_content_scale(self._window)[0]
-        return width, height, pixelratio
+        logical_size = physical_size[0] / pixelratio, physical_size[1] / pixelratio
+        return physical_size, logical_size
 
     def get_display_id(self):
         if sys.platform.startswith("linux"):

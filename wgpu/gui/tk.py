@@ -32,7 +32,10 @@ class TkWgpuCanvas(BaseCanvas, tkinter.Toplevel):
     def get_size_and_pixel_ratio(self):
         width = self.winfo_width()
         height = self.winfo_height()
-        pixelratio = 1  # todo: pixelratio? Ask for it via win32 api?
+        # Tk is not HDPI aware; the width and height are in physical
+        # pixels. There is no notion about logical pixels. Therefore,
+        # things work fine, but are simply tiny on highres displays.
+        pixelratio = 1
         return width, height, pixelratio
 
     def is_closed(self):

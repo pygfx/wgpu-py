@@ -978,27 +978,31 @@ class GPUSwapChain(base.GPUSwapChain):
         self._create_native_swap_chain_if_needed()
 
     def _create_native_swap_chain_if_needed(self):
-        cur_size = self._canvas.get_size_and_pixel_ratio()  # width, height, ratio
-        if cur_size == self._surface_size:
+        physical_size, logical_size = self._canvas.get_size_and_pixel_ratio()
+        if physical_size == self._surface_size:
             return
+        self._surface_size = physical_size
 
-        self._surface_size = cur_size
+        physical_width = physical_size[0]#int(cur_size[0] * cur_size[2] + 0.999)
+        physical_height = physical_size[1]#int(cur_size[1] * cur_size[2] + 0.999)
+
+        print(physical_size, logical_size)
 
         struct = new_struct(
             "WGPUSwapChainDescriptor *",
             usage=self._usage,
             format=self._format,
-            width=cur_size[0],
-            height=cur_size[1],
+            width=max(1, physical_width),
+            height=max(1, physical_height),
             present_mode=1,
-        )  # vsync or not vsync
+        )
 
         if self._surface_id is None:
             self._surface_id = get_surface_id_from_canvas(self._canvas)
 
         self._internal = _lib.wgpu_device_create_swap_chain(
             self._device._internal, self._surface_id, struct
-        )  # device-id
+        )
 
     def get_current_texture_view(self):
         # todo: should we cache instances (on their id)?
