@@ -12,7 +12,7 @@ from triangle import main
 
 
 glfw.init()
-canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle with GLFW")
+canvas = WgpuCanvas(title="wgpu triangle with GLFW")
 
 main(canvas)
 while not canvas.is_closed():

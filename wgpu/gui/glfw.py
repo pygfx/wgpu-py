@@ -58,6 +58,15 @@ if sys.platform.startswith("linux"):
         )
 
 
+# Enable high-res displays
+# (otherwise glfw does not pick up being moved from one monitor to another)
+# todo: see if we can get this added to glfw
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+except Exception:
+    pass  # fail on non-windows
+
+
 class GlfwWgpuCanvas(BaseCanvas):
     """ A canvas object wrapping a glfw window.
     """
@@ -67,7 +76,7 @@ class GlfwWgpuCanvas(BaseCanvas):
         if size:
             width, height = size
         else:
-            width, height = 256, 256
+            width, height = 640, 480
         title = title or ""
 
         # Set window hints
@@ -80,8 +89,10 @@ class GlfwWgpuCanvas(BaseCanvas):
                 glfw.window_hint(glfw.FOCUSED, False)  # prevent Wayland focus error
 
         self._window = glfw.create_window(width, height, title, None, None)
+        self._visible = True
+        self.set_logical_size(width, height)
         glfw.set_window_refresh_callback(self._window, self._paint)
-        if True:#sys.platform.startswith("darwin"):
+        if sys.platform.startswith("darwin"):
             # Apparently, the refresh_callback is not called when the window
             # is created, gets focus, or is resized on macOS. So this is a
             # workaround to explicitely make sure that the paint callback
@@ -89,23 +100,8 @@ class GlfwWgpuCanvas(BaseCanvas):
             glfw.set_window_focus_callback(self._window, self._paint)
             glfw.set_window_size_callback(self._window, self._paint)
 
-    def get_size_and_pixel_ratio(self):
-        # todo: maybe expose both logical size and physical size instead?
-        physical_size = glfw.get_window_size(self._window)
-        physical_size = int(physical_size[0]), int(physical_size[1])
-        pixelratio = glfw.get_window_content_scale(self._window)[0]
-        logical_size = physical_size[0] / pixelratio, physical_size[1] / pixelratio
-        return physical_size, logical_size
-
-    def get_display_id(self):
-        if sys.platform.startswith("linux"):
-            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-            if is_wayland:
-                return glfw.get_wayland_display()
-            else:
-                return glfw.get_x11_display()
-        else:
-            raise RuntimeError(f"Cannot get GLFW display id on {sys.platform}.")
+    def _paint(self, *args):
+        self._draw_frame_and_present()
 
     def get_window_id(self):
         if sys.platform.startswith("win"):
@@ -121,11 +117,41 @@ class GlfwWgpuCanvas(BaseCanvas):
         else:
             raise RuntimeError(f"Cannot get GLFW window id on {sys.platform}.")
 
-    def _paint(self, *args):
-        self._draw_frame_and_present()
+    def get_display_id(self):
+        if sys.platform.startswith("linux"):
+            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+            if is_wayland:
+                return glfw.get_wayland_display()
+            else:
+                return glfw.get_x11_display()
+        else:
+            raise RuntimeError(f"Cannot get GLFW display id on {sys.platform}.")
+
+    def get_pixel_ratio(self):
+        return glfw.get_window_content_scale(self._window)[0]
+
+    def get_logical_size(self):
+        # There is get_window_size, which is supposed to return screen coordinates,
+        # but on my 4K screen it returns the same values as get_framebuffer_size.
+        psize = glfw.get_framebuffer_size(self._window)
+        psize = int(psize[0]), int(psize[1])
+        ratio = glfw.get_window_content_scale(self._window)[0]
+        return psize[0] / ratio, psize[1] / ratio
+
+    def get_physical_size(self):
+        psize = glfw.get_framebuffer_size(self._window)
+        return int(psize[0]), int(psize[1])
+
+    def set_logical_size(self, width, height):
+        ratio = glfw.get_window_content_scale(self._window)[0]
+        glfw.set_window_size(self._window, int(ratio * width), int(ratio * height))
+
+    def close(self):
+        glfw.hide_window(self._window)
+        self._visible = False
 
     def is_closed(self):
-        return glfw.window_should_close(self._window)
+        return glfw.window_should_close(self._window) or not self._visible
 
 
 WgpuCanvas = GlfwWgpuCanvas

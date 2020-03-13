@@ -4,6 +4,7 @@ can be used as a standalone window or in a larger GUI.
 """
 
 import sys
+import ctypes
 import importlib
 
 from .base import BaseCanvas
@@ -13,59 +14,57 @@ for libname in ("PySide2", "PyQt5", "PySide", "PyQt4"):
     if libname in sys.modules:
         QtCore = importlib.import_module(libname + ".QtCore")
         widgets_modname = "QtGui" if QtCore.qVersion()[0] == "4" else "QtWidgets"
-        QWidget = importlib.import_module(libname + "." + widgets_modname).QWidget
+        QtWidgets = importlib.import_module(libname + "." + widgets_modname)
         break
 else:
     raise ImportError(
         "Import one of PySide2, PyQt5 before the WgpuCanvas to select a Qt toolkit"
     )
 
+# Enable high-res displays
+try:
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)
+except Exception:
+    pass  # fail on non-windows
+try:
+    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+    QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
+except Exception:
+    pass  # fail on older Qt's
 
-class QtWgpuCanvas(BaseCanvas, QWidget):
-    """ A QWidget subclass that can be used as a canvas to render to.
-    """
 
+class QtWgpuCanvas(BaseCanvas, QtWidgets.QWidget):
     def __init__(self, *args, size=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setAttribute(QtCore.Qt.WA_PaintOnScreen, True)
-        self.setAutoFillBackground(False)
 
         if size:
             width, height = size
             self.resize(width, height)
+        elif "parent" not in kwargs:
+            self.resize(640, 480)
         if title:
             self.setWindowTitle(title)
+
+        # The actual surface is held by a subwidget. This is to make sure that
+        # the logical surface size is actually integer. Otherwise the window
+        # size can be set to subpixel (logical) values, without being able to
+        # detect this. See https://github.com/almarklein/wgpu-py/pull/68
+        self._subwidget = WgpuSubWidget(self)
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+        layout.addWidget(self._subwidget)
+
         self.show()
 
-        # self.window().windowHandle().screenChanged.connect(self._update_size)
+    # Qt methods
 
-    def paintEngine(self):  # noqa: N802 - this is a Qt method
-        # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
-        return None
+    def update(self):
+        super().update()
+        self._subwidget.update()
 
-    def paintEvent(self, event):  # noqa: N802 - this is a Qt method
-        self._draw_frame_and_present()
-
-    # def resizeEvent(self, event):
-    #     w, h = event.size().width(), event.size().height()
-    #     self._whr = self.width(), self.height(), self.window().devicePixelRatio()
-    #
-    # def _update_size(self, *args):
-    #     self._whr = self.width(), self.height(), self.window().devicePixelRatio()
-
-    def get_size_and_pixel_ratio(self):
-        # https://doc.qt.io/qt-5/qpaintdevice.html
-        logical_size = self.width(), self.height()
-        # todo: maybe self.metric(self.PdmWidth)
-        logical_size = float(logical_size[0]), float(logical_size[1])
-        pixelratio = self.window().devicePixelRatioF()  # mind the F!
-        physical_size = (
-            int(logical_size[0] * pixelratio), int(logical_size[1] * pixelratio)
-        )
-        return physical_size, logical_size
-
-    def is_closed(self):
-        return not self.isVisible()
+    # Methods that we add from wgpu (snake_case)
 
     def get_display_id(self):
         # There is qx11info, but it is rarely available.
@@ -73,7 +72,51 @@ class QtWgpuCanvas(BaseCanvas, QWidget):
         return super().get_display_id()  # uses X11 lib
 
     def get_window_id(self):
-        return int(self.winId())
+        return int(self._subwidget.winId())
+
+    def get_pixel_ratio(self):
+        # The pixel ratio always seems to be a whole number. When setting
+        # the scale in Windows 10 to 175%, Qt pretends its 2.0.
+        return self._subwidget.devicePixelRatioF()
+
+    def get_logical_size(self):
+        # Sizes in Qt are logical
+        lsize = self._subwidget.width(), self._subwidget.height()
+        return float(lsize[0]), float(lsize[1])
+
+    def get_physical_size(self):
+        # https://doc.qt.io/qt-5/qpaintdevice.html
+        # https://doc.qt.io/qt-5/highdpi.html
+        lsize = self._subwidget.width(), self._subwidget.height()
+        lsize = float(lsize[0]), float(lsize[1])
+        ratio = self._subwidget.devicePixelRatioF()
+        return int(lsize[0] * ratio + 0.4999), int(lsize[1] * ratio + 0.4999)
+
+    def set_logical_size(self, width, height):
+        self.resize(width, height)  # See note on pixel ratio below
+
+    def close(self):
+        super().close()
+
+    def is_closed(self):
+        return not self.isVisible()
+
+
+class WgpuSubWidget(QtWidgets.QWidget):
+    """ The widget that actually prevents the surface to render to.
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_PaintOnScreen, True)
+        self.setAutoFillBackground(False)
+
+    def paintEngine(self):  # noqa: N802 - this is a Qt method
+        # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
+        return None
+
+    def paintEvent(self, event):  # noqa: N802 - this is a Qt method
+        self.parent()._draw_frame_and_present()
 
 
 WgpuCanvas = QtWgpuCanvas

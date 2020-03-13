@@ -55,24 +55,6 @@ class BaseCanvas:
 
     # Methods that must be overloaded
 
-    def get_size_and_pixel_ratio(self):
-        """ Get a three-element tuple (width, height, pixelratio). This
-        can be used internally (by the backends) to create the
-        swapchain, and by users to determine the canvas size.
-        """
-        raise NotImplementedError()
-
-    def is_closed(self):
-        """ Whether the window is closed.
-        """
-        raise NotImplementedError()
-
-    def get_window_id(self):
-        """ Get the native window id. This can be used by the backends
-        to obtain a surface id.
-        """
-        raise NotImplementedError()
-
     def get_display_id(self):
         """ Get the native display id on Linux. This is needed by the backends
         to obtain a surface id on Linux.
@@ -95,3 +77,39 @@ class BaseCanvas:
             raise RuntimeError(f"Cannot get display id on {sys.platform}.")
 
         return self._display_id
+
+    def get_window_id(self):
+        """ Get the native window id. This can be used by the backends
+        to obtain a surface id.
+        """
+        raise NotImplementedError()
+
+    def get_pixel_ratio(self):
+        """ Get the float ratio between logical and physical pixels.
+        """
+        raise NotImplementedError()
+
+    def get_logical_size(self):
+        """ Get the logical size in float pixels.
+        """
+        raise NotImplementedError()
+
+    def get_physical_size(self):
+        """ Get the physical size in integer pixels.
+        """
+        raise NotImplementedError()
+
+    def set_logical_size(self, width, height):
+        """ Set the window size (in logical pixels).
+        """
+        raise NotImplementedError()
+
+    def close(self):
+        """ Close the window.
+        """
+        raise NotImplementedError()
+
+    def is_closed(self):
+        """ Whether the window is closed.
+        """
+        raise NotImplementedError()

@@ -12,7 +12,7 @@ from triangle import main
 
 
 app = QtWidgets.QApplication([])
-canvas = WgpuCanvas(None, size=(640, 480), title="wgpu triangle with Qt")
+canvas = WgpuCanvas(title="wgpu triangle with Qt")
 
 main(canvas)
 app.exec_()

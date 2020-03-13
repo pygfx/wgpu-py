@@ -978,22 +978,18 @@ class GPUSwapChain(base.GPUSwapChain):
         self._create_native_swap_chain_if_needed()
 
     def _create_native_swap_chain_if_needed(self):
-        physical_size, logical_size = self._canvas.get_size_and_pixel_ratio()
-        if physical_size == self._surface_size:
+        psize = self._canvas.get_physical_size()
+        if psize == self._surface_size:
             return
-        self._surface_size = physical_size
-
-        physical_width = physical_size[0]#int(cur_size[0] * cur_size[2] + 0.999)
-        physical_height = physical_size[1]#int(cur_size[1] * cur_size[2] + 0.999)
-
-        print(physical_size, logical_size)
+        self._surface_size = psize
+        # print(psize, self._canvas.get_logical_size(), self._canvas.get_pixel_ratio())
 
         struct = new_struct(
             "WGPUSwapChainDescriptor *",
             usage=self._usage,
             format=self._format,
-            width=max(1, physical_width),
-            height=max(1, physical_height),
+            width=max(1, psize[0]),
+            height=max(1, psize[1]),
             present_mode=1,
         )
 
