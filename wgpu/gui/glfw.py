@@ -60,7 +60,7 @@ if sys.platform.startswith("linux"):
 
 # Enable high-res displays
 # (otherwise glfw does not pick up being moved from one monitor to another)
-# todo: see if we can get this added to glfw
+# todo: see if we can get this added to glfw, then remove this somewhat later.
 try:
     ctypes.windll.shcore.SetProcessDpiAwareness(2)
 except Exception:
