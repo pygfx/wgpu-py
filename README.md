@@ -51,8 +51,7 @@ to install the Vulkan drivers (or wait for the DX12 backend to become more matur
 
 On Linux, it's advisable to install the proprietary drivers of your GPU
 (if you have a dedicated GPU). You may need to `apt install mesa-vulkan-drivers`.
-Note that on Linux, the `tk` canvas does not work. Wayland currently only
-works with the GLFW canvas (and is unstable).
+Wayland currently only works with the GLFW canvas (and is unstable).
 
 On MacOS you need at least 10.13 (High Sierra) to have Vulkan support.
 At the moment, we've not implemented drawing to a window yet (see #29).
@@ -77,9 +76,6 @@ import wgpu.backend.rs
 To render to the screen you can use a variety of GUI toolkits:
 
 ```py
-# Tk is included with Python (though this canvas only seems to work on Windows)
-from wgpu.gui.tk import WgpuCanvas
-
 # GLFW is a great lightweight windowing toolkit. Install with `pip install glfw`
 from wgpu.gui.glfw import WgpuCanvas
 
