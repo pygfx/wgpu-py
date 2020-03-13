@@ -132,7 +132,7 @@ class GlfwWgpuCanvas(BaseCanvas):
 
     def get_logical_size(self):
         # There is get_window_size, which is supposed to return screen coordinates,
-        # but on my 4K screen it returns the same values as get_framebuffer_size.
+        # but it returns the same values as get_framebuffer_size on Windows 10.
         psize = glfw.get_framebuffer_size(self._window)
         psize = int(psize[0]), int(psize[1])
         ratio = glfw.get_window_content_scale(self._window)[0]
@@ -143,8 +143,12 @@ class GlfwWgpuCanvas(BaseCanvas):
         return int(psize[0]), int(psize[1])
 
     def set_logical_size(self, width, height):
-        ratio = glfw.get_window_content_scale(self._window)[0]
-        glfw.set_window_size(self._window, int(ratio * width), int(ratio * height))
+        # todo: double check this for Linux and macOS
+        if sys.platform.startswith("darwin"):
+            glfw.set_window_size(self._window, int(width), int(height))
+        else:
+            ratio = glfw.get_window_content_scale(self._window)[0]
+            glfw.set_window_size(self._window, int(ratio * width), int(ratio * height))
 
     def close(self):
         glfw.hide_window(self._window)
