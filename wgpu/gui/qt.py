@@ -99,7 +99,7 @@ class QtWgpuCanvas(BaseCanvas, QtWidgets.QWidget):
         lsize = self._subwidget.width(), self._subwidget.height()
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self._subwidget.devicePixelRatioF()
-        return int(lsize[0] * ratio + 0.4999), int(lsize[1] * ratio + 0.4999)
+        return round(lsize[0] * ratio), round(lsize[1] * ratio)
 
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
