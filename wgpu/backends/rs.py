@@ -30,6 +30,7 @@ Developer notes and tips:
 import os
 import sys
 import ctypes
+import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
 
@@ -39,6 +40,9 @@ from .. import base
 from .. import _register_backend
 from .._coreutils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
+
+
+logger = logging.getLogger("wgpu")  # noqa
 
 
 if cffi_version_info < (1, 10):
@@ -673,7 +677,6 @@ class GPUBuffer(base.GPUBuffer):
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
         def _map_read_callback(status, buffer_data_p, user_data_p):
-            # print("_map_read_callback called", status)
             nonlocal data
             if status == 0:
                 pointer_as_int = int(ffi.cast("intptr_t", buffer_data_p))
@@ -978,11 +981,13 @@ class GPUSwapChain(base.GPUSwapChain):
         self._create_native_swap_chain_if_needed()
 
     def _create_native_swap_chain_if_needed(self):
-        psize = self._canvas.get_physical_size()
+        canvas = self._canvas
+        psize = canvas.get_physical_size()
         if psize == self._surface_size:
             return
         self._surface_size = psize
-        # print(psize, self._canvas.get_logical_size(), self._canvas.get_pixel_ratio())
+
+        # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
 
         struct = new_struct(
             "WGPUSwapChainDescriptor *",
@@ -994,7 +999,7 @@ class GPUSwapChain(base.GPUSwapChain):
         )
 
         if self._surface_id is None:
-            self._surface_id = get_surface_id_from_canvas(self._canvas)
+            self._surface_id = get_surface_id_from_canvas(canvas)
 
         self._internal = _lib.wgpu_device_create_swap_chain(
             self._device._internal, self._surface_id, struct
