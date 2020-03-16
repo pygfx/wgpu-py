@@ -8,6 +8,7 @@ from wgpu.gui.glfw import WgpuCanvas  # WgpuCanvas wraps a glfw window
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 # Import the (async) function that we must call to run the visualization
+
 from triangle import main
 
 

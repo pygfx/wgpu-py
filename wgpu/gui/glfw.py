@@ -89,7 +89,6 @@ class GlfwWgpuCanvas(BaseCanvas):
                 glfw.window_hint(glfw.FOCUSED, False)  # prevent Wayland focus error
 
         self._window = glfw.create_window(width, height, title, None, None)
-        self._visible = True
         self.set_logical_size(width, height)
         glfw.set_window_refresh_callback(self._window, self._paint)
         if sys.platform.startswith("darwin"):
@@ -151,11 +150,11 @@ class GlfwWgpuCanvas(BaseCanvas):
             glfw.set_window_size(self._window, int(ratio * width), int(ratio * height))
 
     def close(self):
-        glfw.hide_window(self._window)
-        self._visible = False
+        # glfw.hide_window(self._window) - no: clicking the cross also does not hide it
+        glfw.set_window_should_close(self._window, True)
 
     def is_closed(self):
-        return glfw.window_should_close(self._window) or not self._visible
+        return glfw.window_should_close(self._window)
 
 
 WgpuCanvas = GlfwWgpuCanvas
