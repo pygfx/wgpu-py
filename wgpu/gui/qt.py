@@ -114,7 +114,7 @@ class QtWgpuCanvas(BaseCanvas, QtWidgets.QWidget):
 
 
 class WgpuSubWidget(QtWidgets.QWidget):
-    """ The widget that actually prevents the surface to render to.
+    """ The widget that actually provides the surface to render to.
     """
 
     def __init__(self, parent):
