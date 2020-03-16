@@ -58,26 +58,21 @@ if sys.platform.startswith("linux"):
         )
 
 
-# Enable high-res displays
-# (otherwise glfw does not pick up being moved from one monitor to another)
-# todo: see if we can get this added to glfw, then remove this somewhat later.
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except Exception:
-    pass  # fail on non-windows
-
-
 class GlfwWgpuCanvas(BaseCanvas):
     """ A canvas object wrapping a glfw window.
     """
 
+    # See https://www.glfw.org/docs/latest/group__window.html
+
     def __init__(self, *, size=None, title=None):
         super().__init__()
+
+        # Handle inputs
         if size:
-            width, height = size
+            size = float(size[0]), float(size[1])
         else:
-            width, height = 640, 480
-        title = title or ""
+            size = 640, 480
+        title = str(title or "")
 
         # Set window hints
         glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
@@ -88,19 +83,71 @@ class GlfwWgpuCanvas(BaseCanvas):
             if "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower():
                 glfw.window_hint(glfw.FOCUSED, False)  # prevent Wayland focus error
 
-        self._window = glfw.create_window(width, height, title, None, None)
-        self.set_logical_size(width, height)
-        glfw.set_window_refresh_callback(self._window, self._paint)
+        # Create the window (the initial size may not be in logical pixels)
+        self._window = glfw.create_window(int(size[0]), int(size[1]), title, None, None)
+
+        # Register callbacks
+        glfw.set_window_content_scale_callback(self._window, self._on_pixelratio_change)
+        glfw.set_framebuffer_size_callback(self._window, self._on_size_change)
+        glfw.set_window_refresh_callback(self._window, self._on_paint)
         if sys.platform.startswith("darwin"):
             # Apparently, the refresh_callback is not called when the window
             # is created, gets focus, or is resized on macOS. So this is a
             # workaround to explicitely make sure that the paint callback
             # is called so that the contents are drawn.
             glfw.set_window_focus_callback(self._window, self._paint)
-            glfw.set_window_size_callback(self._window, self._paint)
+        # glfw.set_window_iconify_callback
+        # glfw.set_window_maximize_callback
+        # glfw.set_framebuffer_size_callback
 
-    def _paint(self, *args):
+        # Initialize the size
+        self.set_logical_size(*size)
+
+    # Callbacks
+
+    def _on_pixelratio_change(self, *args):
+        self._set_logical_size()
+        self._on_paint()
+
+    def _on_size_change(self, *args):
+        self._logical_size = self._get_logical_size()
+        self._on_paint()
+
+    def _on_paint(self, *args):
         self._draw_frame_and_present()
+
+    # Helpers
+
+    def _get_logical_size(self):
+        # Because the value of get_window_size is ambiguous, we use the
+        # framebuffer size and pixel ratio to derive the logical size.
+        psize = glfw.get_framebuffer_size(self._window)
+        psize = int(psize[0]), int(psize[1])
+        ratio = glfw.get_window_content_scale(self._window)[0]
+        return psize[0] / ratio, psize[1] / ratio
+
+    def _set_logical_size(self):
+        # There is unclarity about the window size in "screen pixels".
+        # It appears that on Windows and X11 its the same as the
+        # framebuffer size, and on macOS it's logical pixels.
+        # See https://github.com/glfw/glfw/issues/845
+        # Here, we simply do a quick test so we can compensate.
+
+        # The target logical size
+        lsize = self._logical_size
+        pixel_ratio = glfw.get_window_content_scale(self._window)[0]
+        # The current screen size and physical size, and its ratio
+        ssize = glfw.get_window_size(self._window)
+        psize = glfw.get_framebuffer_size(self._window)
+        screen_ratio = ssize[0] / psize[0]
+        # Apply
+        glfw.set_window_size(
+            self._window,
+            int(lsize[0] * pixel_ratio / screen_ratio),
+            int(lsize[1] * pixel_ratio / screen_ratio),
+        )
+
+    # API
 
     def get_window_id(self):
         if sys.platform.startswith("win"):
@@ -130,24 +177,15 @@ class GlfwWgpuCanvas(BaseCanvas):
         return glfw.get_window_content_scale(self._window)[0]
 
     def get_logical_size(self):
-        # There is get_window_size, which is supposed to return screen coordinates,
-        # but it returns the same values as get_framebuffer_size on Windows 10.
-        psize = glfw.get_framebuffer_size(self._window)
-        psize = int(psize[0]), int(psize[1])
-        ratio = glfw.get_window_content_scale(self._window)[0]
-        return psize[0] / ratio, psize[1] / ratio
+        return self._logical_size
 
     def get_physical_size(self):
         psize = glfw.get_framebuffer_size(self._window)
         return int(psize[0]), int(psize[1])
 
     def set_logical_size(self, width, height):
-        # todo: double check this for Linux and macOS
-        if sys.platform.startswith("darwin"):
-            glfw.set_window_size(self._window, int(width), int(height))
-        else:
-            ratio = glfw.get_window_content_scale(self._window)[0]
-            glfw.set_window_size(self._window, int(ratio * width), int(ratio * height))
+        self._logical_size = float(width), float(height)
+        self._set_logical_size()
 
     def close(self):
         # glfw.hide_window(self._window) - no: clicking the cross also does not hide it
