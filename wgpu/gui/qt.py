@@ -21,16 +21,25 @@ else:
         "Import one of PySide2, PyQt5 before the WgpuCanvas to select a Qt toolkit"
     )
 
-# Enable high-res displays
-try:
-    ctypes.windll.shcore.SetProcessDpiAwareness(2)
-except Exception:
-    pass  # fail on non-windows
-try:
-    QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
-    QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps, True)
-except Exception:
-    pass  # fail on older Qt's
+
+def enable_hidpi():
+    """ Enable high-res displays.
+    """
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        pass  # fail on non-windows
+    try:
+        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+    except Exception:
+        pass  # fail on older Qt's
+
+
+# If you import this module, you want to use wgpu in a way that does not suck
+# on high-res monitors. So we apply the minimal configuration to make this so.
+# Most apps probably should also set AA_UseHighDpiPixmaps, but it's not
+# needed for wgpu, so not our responsibility (some users may NOT want it set).
+enable_hidpi()
 
 
 class QtWgpuCanvas(BaseCanvas, QtWidgets.QWidget):
@@ -93,6 +102,8 @@ class QtWgpuCanvas(BaseCanvas, QtWidgets.QWidget):
         return int(lsize[0] * ratio + 0.4999), int(lsize[1] * ratio + 0.4999)
 
     def set_logical_size(self, width, height):
+        if width < 0 or height < 0:
+            raise ValueError("Window width and height must not be negative")
         self.resize(width, height)  # See note on pixel ratio below
 
     def close(self):

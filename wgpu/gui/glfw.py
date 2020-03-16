@@ -40,9 +40,7 @@ class GlfwWgpuCanvas(BaseCanvas):
         super().__init__()
 
         # Handle inputs
-        if size:
-            size = float(size[0]), float(size[1])
-        else:
+        if not size:
             size = 640, 480
         title = str(title or "")
 
@@ -91,7 +89,8 @@ class GlfwWgpuCanvas(BaseCanvas):
     # Helpers
 
     def _get_logical_size(self):
-        # Because the value of get_window_size is ambiguous, we use the
+        # Because the value of get_window_size is in physical pixels
+        # on some systems and logical pixels on other, we use the
         # framebuffer size and pixel ratio to derive the logical size.
         psize = glfw.get_framebuffer_size(self._window)
         psize = int(psize[0]), int(psize[1])
@@ -156,6 +155,8 @@ class GlfwWgpuCanvas(BaseCanvas):
         return int(psize[0]), int(psize[1])
 
     def set_logical_size(self, width, height):
+        if width < 0 or height < 0:
+            raise ValueError("Window width and height must not be negative")
         self._logical_size = float(width), float(height)
         self._set_logical_size()
 
