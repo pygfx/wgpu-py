@@ -9,44 +9,16 @@ or ``sudo apt install libglfw3-wayland`` when using Wayland.
 
 import os
 import sys
-import ctypes
 
 import glfw
 
 from .base import BaseCanvas
 
 
+# Make sure that glfw is new enough
 glfw_version_info = tuple(int(i) for i in glfw.__version__.split(".")[:2])
-
 if glfw_version_info < (1, 9):
-    # todo: in half a year or so, remove this and force glfw >= 1.9
-    # see https://github.com/FlorianRhiem/pyGLFW/issues/39
-    # see https://www.glfw.org/docs/latest/group__native.html
-    if hasattr(glfw._glfw, "glfwGetWin32Window"):
-        glfw._glfw.glfwGetWin32Window.restype = ctypes.c_void_p
-        glfw._glfw.glfwGetWin32Window.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
-        glfw.get_win32_window = glfw._glfw.glfwGetWin32Window
-    if hasattr(glfw._glfw, "glfwGetCocoaWindow"):
-        glfw._glfw.glfwGetCocoaWindow.restype = ctypes.c_void_p
-        glfw._glfw.glfwGetCocoaWindow.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
-        glfw.get_cocoa_window = glfw._glfw.glfwGetCocoaWindow
-    if hasattr(glfw._glfw, "glfwGetWaylandWindow"):
-        glfw._glfw.glfwGetWaylandWindow.restype = ctypes.c_void_p
-        glfw._glfw.glfwGetWaylandWindow.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
-        glfw.get_wayland_window = glfw._glfw.glfwGetWaylandWindow
-    if hasattr(glfw._glfw, "glfwGetWaylandDisplay"):
-        glfw._glfw.glfwGetWaylandDisplay.restype = ctypes.c_void_p
-        glfw._glfw.glfwGetWaylandDisplay.argtypes = []
-        glfw.get_wayland_display = glfw._glfw.glfwGetWaylandDisplay
-    if hasattr(glfw._glfw, "glfwGetX11Window"):
-        glfw._glfw.glfwGetX11Window.restype = ctypes.c_uint32
-        glfw._glfw.glfwGetX11Window.argtypes = [ctypes.POINTER(glfw._GLFWwindow)]
-        glfw.get_x11_window = glfw._glfw.glfwGetX11Window
-    if hasattr(glfw._glfw, "glfwGetX11Display"):
-        glfw._glfw.glfwGetX11Display.restype = ctypes.c_void_p
-        glfw._glfw.glfwGetX11Display.argtypes = []
-        glfw.get_x11_display = glfw._glfw.glfwGetX11Display
-
+    raise ImportError("wgpu-py requires glfw 1.9 or higher.")
 
 # Do checks to prevent pitfalls on hybrid Xorg/Wayland systems
 if sys.platform.startswith("linux"):
