@@ -1,7 +1,9 @@
 import os
 import sys
-import traceback
+import logging
 import ctypes.util
+
+logger = logging.getLogger("wgpu")
 
 
 class BaseCanvas:
@@ -34,24 +36,38 @@ class BaseCanvas:
         """ Draw the frame and present the swapchain. Errors are printed to stderr.
         Should be called by the subclass at an appropriate time.
         """
+        # Perform the user-defined drawing code. When this errors,
+        # we should report the error and then continue, otherwise we crash.
         try:
             self.draw_frame()
+        except Exception as err:
+            self._log_exception("Draw error", err)
+
+        # Always present the swapchain, or wgpu gets into an error state.
+        try:
             if self._swap_chain is not None:
                 self._swap_chain._gui_present()  # a.k.a swap buffers
-        except Exception:
-            # Enable PM debuging
-            sys.last_type, sys.last_value, sys.last_traceback = sys.exc_info()
-            msg = str(sys.last_value)
-            msgh = hash(msg)
-            if msgh in self._err_hashes:
-                count = self._err_hashes[msgh] + 1
-                self._err_hashes[msgh] = count
-                shortmsg = msg.split("\n", 1)[0].strip()[:50]
-                sys.stderr.write(f"Error in draw again ({count}): {shortmsg}\n")
-            else:
-                self._err_hashes[msgh] = 1
-                sys.stderr.write(f"Error in draw: " + msg.strip() + "\n")
-                traceback.print_last(6)
+        except Exception as err:
+            self._log_exception("Swapchain present error", err)
+
+    def _log_exception(self, kind, err):
+        """ Log the given exception instance, but only log a one-liner for
+        subsequent occurances of the same error to avoid spamming (which
+        can happen easily with errors in the drawing code).
+        """
+        msg = str(err)
+        msgh = hash(msg)
+        if msgh not in self._err_hashes:
+            # Provide the exception, so the default logger prints a stacktrace.
+            # IDE's can get the exception from the root logger for PM debugging.
+            self._err_hashes[msgh] = 1
+            logger.error(kind, exc_info=err)
+        else:
+            # We've seen this message before, return a one-liner instead.
+            self._err_hashes[msgh] = count = self._err_hashes[msgh] + 1
+            msg = kind + ": " + msg.split("\n")[0].strip()
+            msg = msg if len(msg) <= 70 else msg[:69] + "…"
+            logger.error(msg + f" ({count})")
 
     # Methods that must be overloaded
 

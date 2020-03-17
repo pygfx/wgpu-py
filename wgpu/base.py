@@ -14,6 +14,10 @@ Developer notes and tips:
 
 """
 
+import logging
+
+logger = logging.getLogger("wgpu")
+
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
@@ -48,6 +52,7 @@ class GPUObject:
         self._label = label
         self._internal = internal  # The native/raw/real GPU object
         self._device = device
+        logger.info(f"Creating {self.__class__.__name__} {label}")
 
     def __repr__(self):
         return f"<{self.__class__.__name__} '{self.label}' at 0x{hex(id(self))}>"

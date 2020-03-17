@@ -42,4 +42,4 @@ def test_do_not_import_utils_subpackage():
     # Also, no numpy
     code = "import sys, wgpu.utils; print('numpy' in sys.modules)"
     out = get_output_from_subprocess(code)
-    assert out.startswith("False"), out
+    assert out.strip().endswith("False"), out
