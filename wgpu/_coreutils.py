@@ -3,8 +3,6 @@ Core utilities that are loaded into the root namespace or used internally.
 """
 
 import os
-import sys
-import logging
 import inspect
 from pkg_resources import resource_filename
 
@@ -224,47 +222,3 @@ def help(*searches, dev=False):
         # Print lines
         if lines:
             print("\n".join("    " + line for line in lines))
-
-
-class _Formatter(logging.Formatter):
-    """Formatter that enabled PM debugging and shortens recurring error messages."""
-
-    def __init__(self):
-        super().__init__()
-        self._err_hashes = {}
-
-    def format(self, record):
-        if record.exc_info:
-            # Enable post mortem debugging
-            sys.last_type, sys.last_value, sys.last_traceback = record.exc_info
-            # Get default message, and its hash
-            msg = super().format(record)
-            msgh = hash(msg)
-            # If we've seen this message before, return a one-liner instead
-            if msgh in self._err_hashes:
-                count = self._err_hashes[msgh] + 1
-                self._err_hashes[msgh] = count
-                msg = record.funcName + "(): "
-                msg += str(sys.last_value).split("\n")[0].strip()
-                msg = msg if len(msg) <= 70 else msg[:69] + "…"
-                msg += f" ({count})"
-                return msg
-            else:
-                self._err_hashes[msgh] = 1
-                return msg
-        else:
-            return super().format(record)
-
-
-def create_logger():
-    logger = logging.getLogger("wgpu")
-    logger.propagate = False
-    logger.setLevel(logging.WARNING)
-
-    handler = logging.StreamHandler()
-    logger.addHandler(handler)
-    handler.setFormatter(_Formatter())
-    return logger
-
-
-logger = create_logger()

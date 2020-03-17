@@ -41,14 +41,33 @@ class BaseCanvas:
         try:
             self.draw_frame()
         except Exception as err:
-            logger.error("Error during draw", exc_info=err)
+            self._log_exception("Draw error", err)
 
         # Always present the swapchain, or wgpu gets into an error state.
         try:
             if self._swap_chain is not None:
                 self._swap_chain._gui_present()  # a.k.a swap buffers
         except Exception as err:
-            logger.error("Could not present the swapchain", exc_info=err)
+            self._log_exception("Swapchain present error", err)
+
+    def _log_exception(self, kind, err):
+        """ Log the given exception instance, but only log a one-liner for
+        subsequent occurances of the same error to avoid spamming (which
+        can happen easily with errors in the drawing code).
+        """
+        msg = str(err)
+        msgh = hash(msg)
+        if msgh not in self._err_hashes:
+            # Provide the exception, so the default logger prints a stacktrace.
+            # IDE's can get the exception from the root logger for PM debugging.
+            self._err_hashes[msgh] = 1
+            logger.error(kind, exc_info=err)
+        else:
+            # We've seen this message before, return a one-liner instead.
+            self._err_hashes[msgh] = count = self._err_hashes[msgh] + 1
+            msg = kind + ": " + msg.split("\n")[0].strip()
+            msg = msg if len(msg) <= 70 else msg[:69] + "…"
+            logger.error(msg + f" ({count})")
 
     # Methods that must be overloaded
 
