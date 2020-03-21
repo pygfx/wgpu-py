@@ -64,14 +64,6 @@ class GPUObject:
         return self._label
 
 
-class DictLike:
-    def __getitem__(self, name):
-        return self.__dict__[name]
-
-    def get(self, key, default=None):
-        return self.__dict__.get(key, default)
-
-
 class GPUAdapter:  # Not a GPUObject
     """
     An adapter represents an implementation of WGPU on the system.
@@ -605,6 +597,10 @@ class GPUCommandEncoder(GPUObject):
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopybuffertotexture', dev=True)
     # IDL: void copyBufferToTexture( GPUBufferCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
     def copy_buffer_to_texture(self, source, destination, copy_size):
+        """
+        # todo: docstrings in wgpu-rs say that BufferCopyView.row_pitch must be multiple of 256
+        # todo: docstrings in wgpu-rs say that BufferCopyView.offset must be multiple of 512
+        """
         raise NotImplementedError()
 
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopytexturetobuffer', dev=True)

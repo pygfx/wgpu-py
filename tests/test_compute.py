@@ -14,7 +14,7 @@ from testutils import can_use_wgpu_lib, iters_equal
 def test_compute_0_1():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", i32), out: ("output", 0, Array(i32)),
+        index: ("input", "GlobalInvocationId", i32), out: ("buffer", 0, Array(i32)),
     ):
         out[index] = index
 
@@ -37,9 +37,9 @@ def test_compute_1_3():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", i32),
-        in1: ("input", 0, Array(i32)),
-        out1: ("output", 1, Array(i32)),
-        out2: ("output", 2, Array(i32)),
+        in1: ("buffer", 0, Array(i32)),
+        out1: ("buffer", 1, Array(i32)),
+        out2: ("buffer", 2, Array(i32)),
     ):
         out1[index] = in1[index]
         out2[index] = index
