@@ -1,6 +1,8 @@
 import sys
 import subprocess
 
+import wgpu.backends.rs  # noqa
+
 
 def iters_equal(iter1, iter2):
     iter1, iter2 = list(iter1), list(iter2)
@@ -28,6 +30,19 @@ def _determine_can_use_wgpu_lib():
         return False
     else:
         return True
+
+
+_apapter_and_device = []
+
+
+def get_device():
+    """ Get a device object. Stores a single global device object for all tests.
+    """
+    if not _apapter_and_device:
+        adapter = wgpu.request_adapter(power_preference="high-performance")
+        device = adapter.request_device(extensions=[], limits={})
+        _apapter_and_device.extend([adapter, device])
+    return _apapter_and_device[1]
 
 
 can_use_vulkan_sdk = _determine_can_use_vulkan_sdk()

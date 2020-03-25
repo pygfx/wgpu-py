@@ -63,6 +63,10 @@ class GPUObject:
         """
         return self._label
 
+    def __del__(self):
+        if hasattr(self, "destroy"):
+            self.destroy()
+
 
 class GPUAdapter:  # Not a GPUObject
     """
@@ -101,6 +105,9 @@ class GPUAdapter:  # Not a GPUObject
         limits: "GPULimits" = {},
     ):
         """ Request a Device object.
+
+        It is recommended to request a device object once, or perhaps twice.
+        But not for every operation (e.g. in unit tests).
 
         Params:
             extensions (list): the extensions that you need.
@@ -405,9 +412,6 @@ class GPUBuffer(GPUObject):
         self._state = state
         self._mapping = mapping
 
-    def __del__(self):
-        self.destroy()
-
     @property
     def size(self):
         """ The length of the GPUBuffer allocation in bytes.
@@ -470,8 +474,8 @@ class GPUBuffer(GPUObject):
     # IDL: void destroy();
     def destroy(self):
         """ An application that no longer requires a GPUBuffer can choose
-        to lose access to it before garbage collection by calling
-        destroy().
+        to destroy it. Note tat this is automatically called when the
+        Python object is cleaned up by the garbadge collector.
         """
         raise NotImplementedError()
 

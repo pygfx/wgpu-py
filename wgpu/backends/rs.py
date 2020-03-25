@@ -783,6 +783,9 @@ class GPUBuffer(base.GPUBuffer):
 
 class GPUTexture(base.GPUTexture):
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
+
+    _destroyed = False
+
     def create_view(
         self,
         *,
@@ -817,7 +820,9 @@ class GPUTexture(base.GPUTexture):
 
     # wgpu.help('texturedestroy', dev=True)
     def destroy(self):
-        _lib.wgpu_texture_destroy(self._internal)
+        if not self._destroyed:
+            self._destroyed = True
+            _lib.wgpu_texture_destroy(self._internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder):

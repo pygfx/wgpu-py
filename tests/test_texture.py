@@ -8,7 +8,7 @@ import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
 from pytest import mark
-from testutils import can_use_wgpu_lib, iters_equal
+from testutils import can_use_wgpu_lib, iters_equal, get_device
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -39,9 +39,7 @@ def test_compute_tex2():
     bpp = nbytes // (nx * ny)  # bytes per pixel
     # todo: docstrings in wgpu-rs say that BufferCopyView.row_pitch must be multiple of 256
 
-    # Create a device and compile the shader
-    adapter = wgpu.request_adapter(power_preference="high-performance")
-    device = adapter.request_device(extensions=[], limits={})
+    device = get_device()
     cshader = device.create_shader_module(code=compute_shader)
 
     # Create texture and view
