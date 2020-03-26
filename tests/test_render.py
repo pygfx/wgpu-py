@@ -137,8 +137,6 @@ def test_render_textured_square_rgba8unorm():
     """ Test a texture with format rgba8unorm.
     """
 
-    device = get_device()
-
     @python2shader
     def fragment_shader(
         tex: ("texture", 0, "2d f32"),
@@ -150,28 +148,20 @@ def test_render_textured_square_rgba8unorm():
         out_color = stdlib.texture(samtex, tcoord)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 50, 0, 255, 100, 100, 0, 255, 150, 150, 0, 255, 200, 200, 0, 255]
     texture_data = (ctypes.c_uint8 * (4 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.rgba8unorm,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.rgba8unorm, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 def test_render_textured_square_rgba8uint():
     """ Test a texture with format rgba8uint.
     """
 
-    device = get_device()
-
     @python2shader
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
@@ -183,28 +173,20 @@ def test_render_textured_square_rgba8uint():
         out_color = vec4(stdlib.texture(samtex, tcoord)) / 255.0  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 50, 0, 255, 100, 100, 0, 255, 150, 150, 0, 255, 200, 200, 0, 255]
     texture_data = (ctypes.c_uint8 * (4 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.rgba8uint,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.rgba8uint, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 def test_render_textured_square_rgba16sint():
     """ Test a texture with format rgba16sint.
     """
 
-    device = get_device()
-
     @python2shader
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
@@ -216,28 +198,20 @@ def test_render_textured_square_rgba16sint():
         out_color = vec4(stdlib.texture(samtex, tcoord)) / 255.0  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 50, 0, 255, 100, 100, 0, 255, 150, 150, 0, 255, 200, 200, 0, 255]
     texture_data = (ctypes.c_int16 * (4 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.rgba16sint,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.rgba16sint, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rgba32float():
     """ Test a texture with format rgba32float.
     """
-
-    device = get_device()
 
     @python2shader
     def fragment_shader(
@@ -250,20 +224,14 @@ def test_render_textured_square_rgba32float():
         out_color = stdlib.texture(samtex, tcoord) / 255.0  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 50, 0, 255, 100, 100, 0, 255, 150, 150, 0, 255, 200, 200, 0, 255]
     texture_data = (ctypes.c_float * (4 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.rgba32float,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.rgba32float, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 # %% rg textures
@@ -274,8 +242,6 @@ def test_render_textured_square_rg8unorm():
     """ Test a texture with format rg8unorm.
     The GPU considers blue to be 0 and alpha to be 1.
     """
-
-    device = get_device()
 
     @python2shader
     def fragment_shader(
@@ -288,20 +254,14 @@ def test_render_textured_square_rg8unorm():
         out_color = stdlib.texture(samtex, tcoord)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 50, 100, 100, 150, 150, 200, 200]
     texture_data = (ctypes.c_ubyte * (2 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.rg8unorm,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.rg8unorm, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -309,8 +269,6 @@ def test_render_textured_square_rg8uint():
     """ Test a texture with format rg8uint.
     The GPU considers blue to be 0 and alpha to be 1.
     """
-
-    device = get_device()
 
     @python2shader
     def fragment_shader(
@@ -324,20 +282,14 @@ def test_render_textured_square_rg8uint():
         out_color = vec4(val.r / 255.0, val.g / 255.0, 0, 1.0)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 50, 100, 100, 150, 150, 200, 200]
     texture_data = (ctypes.c_ubyte * (2 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.rg8uint,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.rg8uint, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -345,8 +297,6 @@ def test_render_textured_square_rg16sint():
     """ Test a texture with format rg16sint.
     The GPU considers blue to be 0 and alpha to be 1.
     """
-
-    device = get_device()
 
     @python2shader
     def fragment_shader(
@@ -360,20 +310,14 @@ def test_render_textured_square_rg16sint():
         out_color = vec4(val.r / 255.0, val.g / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 50, 100, 100, 150, 150, 200, 200]
     texture_data = (ctypes.c_int16 * (2 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.rg16sint,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.rg16sint, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -381,8 +325,6 @@ def test_render_textured_square_rg32float():
     """ Test a texture with format rg32float.
     The GPU considers blue to be 0 and alpha to be 1.
     """
-
-    device = get_device()
 
     @python2shader
     def fragment_shader(
@@ -396,20 +338,14 @@ def test_render_textured_square_rg32float():
         out_color = vec4(val.r / 255.0, val.g / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 50, 100, 100, 150, 150, 200, 200]
     texture_data = (ctypes.c_float * (2 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.rg32float,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.rg32float, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 # %% r textures
@@ -419,8 +355,6 @@ def test_render_textured_square_rg32float():
 def test_render_textured_square_r8unorm():
     """ Test a texture with format r8unorm.
     """
-
-    device = get_device()
 
     @python2shader
     def fragment_shader(
@@ -434,28 +368,20 @@ def test_render_textured_square_r8unorm():
         out_color = vec4(val, val, 0.0, 1.0)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 100, 150, 200]
     texture_data = (ctypes.c_uint8 * (1 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.r8unorm,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.r8unorm, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_r8uint():
     """ Test a texture with format r8uint.
     """
-
-    device = get_device()
 
     @python2shader
     def fragment_shader(
@@ -469,20 +395,14 @@ def test_render_textured_square_r8uint():
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 100, 150, 200]
     texture_data = (ctypes.c_uint8 * (1 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.r8uint,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.r8uint, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -492,8 +412,6 @@ def test_render_textured_square_r16sint():
 
     # todo: WHY does this not work???
 
-    device = get_device()
-
     @python2shader
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
@@ -506,20 +424,14 @@ def test_render_textured_square_r16sint():
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 100, 150, 200]
     texture_data = (ctypes.c_int16 * (1 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.r16sint,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.r16sint, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -529,8 +441,6 @@ def test_render_textured_square_r32sint():
 
     # todo: WHY does this not work???
 
-    device = get_device()
-
     @python2shader
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
@@ -543,20 +453,14 @@ def test_render_textured_square_r32sint():
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 100, 150, 200]
     texture_data = (ctypes.c_int32 * (1 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.r32sint,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.r32sint, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
@@ -564,8 +468,6 @@ def test_render_textured_square_r32float():
     """ Test a texture with format r32float.
     """
     # todo: WHY does this not work???
-
-    device = get_device()
 
     @python2shader
     def fragment_shader(
@@ -579,29 +481,37 @@ def test_render_textured_square_r32float():
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    ny, nx, nz = 2, 2, 1
+    nx, ny, nz = 2, 2, 1
     x = [50, 100, 150, 200]
     texture_data = (ctypes.c_float * (1 * nx * ny))(*x)
 
-    # Create a texture
-    texture = device.create_texture(
-        size=(nx, ny, nz),
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.r32float,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    # Render and validate
+    _render_textured_square(
+        fragment_shader, wgpu.TextureFormat.r32float, (nx, ny, nz), texture_data
     )
-    upload_to_texture(device, texture, texture_data, nx, ny, nz)
-
-    _render_textured_square(device, texture, vertex_shader, fragment_shader)
 
 
-def _render_textured_square(device, texture, vertex_shader, fragment_shader):
+def _render_textured_square(
+    fragment_shader, texture_format, texture_size, texture_data
+):
     """ Render, and test the result. The resulting image must be a
     gradient on R and B, zeros on G and ones on A.
     """
+    nx, ny, nz = texture_size
+
+    device = get_device()
 
     python_shader.dev.validate(vertex_shader)
     python_shader.dev.validate(fragment_shader)
+
+    # Create texture
+    texture = device.create_texture(
+        size=(nx, ny, nz),
+        dimension=wgpu.TextureDimension.d2,
+        format=texture_format,
+        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+    )
+    upload_to_texture(device, texture, texture_data, nx, ny, nz)
 
     sampler = device.create_sampler(mag_filter="linear", min_filter="linear")
     texture_view = texture.create_default_view()
