@@ -2,6 +2,7 @@ import sys
 import subprocess
 
 import wgpu.backends.rs  # noqa
+from wgpu.utils import get_default_device  # noqa
 
 
 def iters_equal(iter1, iter2):
@@ -21,7 +22,7 @@ def _determine_can_use_vulkan_sdk():
 
 
 def _determine_can_use_wgpu_lib():
-    code = "import wgpu.utils; wgpu.utils.create_device()"
+    code = "import wgpu.utils; wgpu.utils.get_default_device()"
     try:
         subprocess.check_output(
             [sys.executable, "-c", code,]
@@ -30,19 +31,6 @@ def _determine_can_use_wgpu_lib():
         return False
     else:
         return True
-
-
-_apapter_and_device = []
-
-
-def get_device():
-    """ Get a device object. Stores a single global device object for all tests.
-    """
-    if not _apapter_and_device:
-        adapter = wgpu.request_adapter(power_preference="high-performance")
-        device = adapter.request_device(extensions=[], limits={})
-        _apapter_and_device.extend([adapter, device])
-    return _apapter_and_device[1]
 
 
 can_use_vulkan_sdk = _determine_can_use_vulkan_sdk()

@@ -10,7 +10,7 @@ from python_shader import python2shader, f32, vec2, vec4, i32
 from python_shader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import mark
-from testutils import can_use_wgpu_lib, get_device
+from testutils import can_use_wgpu_lib, get_default_device
 
 
 @python2shader
@@ -35,7 +35,7 @@ def test_render_orange_square():
     """ Render an orange square and check that there is an orange square.
     """
 
-    device = get_device()
+    device = get_default_device()
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
@@ -89,7 +89,7 @@ def test_render_orange_dots():
         tcoord = vec2(p + 0.5)  # noqa - map to 0..1
         pointsize = 16.0  # noqa
 
-    device = get_device()
+    device = get_default_device()
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
@@ -486,7 +486,7 @@ def _render_textured_square(
     """
     nx, ny, nz = texture_size
 
-    device = get_device()
+    device = get_default_device()
 
     python_shader.dev.validate(vertex_shader)
     python_shader.dev.validate(fragment_shader)

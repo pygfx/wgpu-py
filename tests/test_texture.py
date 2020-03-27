@@ -6,7 +6,7 @@ from python_shader import python2shader, ivec3
 import wgpu.backends.rs  # noqa
 
 from pytest import mark
-from testutils import can_use_wgpu_lib, get_device
+from testutils import can_use_wgpu_lib, get_default_device
 import numpy as np
 
 # todo: use "image" instead of ""texture" to communicate usage as storage?
@@ -379,7 +379,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
 
     python_shader.dev.validate(compute_shader)
 
-    device = get_device()
+    device = get_default_device()
     cshader = device.create_shader_module(code=compute_shader)
 
     # Create texture and view

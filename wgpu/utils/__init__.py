@@ -14,4 +14,4 @@ Higher level utility functions. This module is not imported by default.
 # API itself.
 
 from ._compute import compute_with_buffers  # noqa: F401
-from ._device import create_device  # noqa: F401
+from ._device import get_default_device  # noqa: F401
