@@ -21,11 +21,11 @@ def test_compute_tex_1d_rgba8uint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "1d rgba8ui storage"),
+        tex: ("texture", 0, "1d rgba8ui"),
     ):
-        color = imageLoad(tex, index.x)
+        color = tex.read(index.x)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.x, color)
+        tex.write(index.x, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 1, 1, 4
@@ -48,12 +48,11 @@ def test_compute_tex_1d_rgba8uint():
 def test_compute_tex_1d_rg16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "1d rg16i storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "1d rg16i"),
     ):
-        color = imageLoad(tex, index.x)
+        color = tex.read(index.x)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.x, color)
+        tex.write(index.x, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 1, 1, 2
@@ -76,12 +75,11 @@ def test_compute_tex_1d_rg16sint():
 def test_compute_tex_1d_r16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "1d r16i storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "1d r16i"),
     ):
-        color = imageLoad(tex, index.x)
+        color = tex.read(index.x)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.x, color)
+        tex.write(index.x, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 1, 1, 1
@@ -104,12 +102,11 @@ def test_compute_tex_1d_r16sint():
 def test_compute_tex_1d_r32float():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "1d r32f storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "1d r32f"),
     ):
-        color = imageLoad(tex, index.x)
+        color = tex.read(index.x)
         color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        imageStore(tex, index.x, color)
+        tex.write(index.x, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 1, 1, 1
@@ -136,11 +133,12 @@ def test_compute_tex_2d_rgba8uint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "2d rgba8ui storage"),
+        tex: ("texture", 0, "2d rgba8ui"),
     ):
-        color = imageLoad(tex, index.xy)
+        color = tex.read(index.xy)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.xy, color)
+        # tex.write(index.xy, color)  # is syntactic sugar for:
+        stdlib.write(tex, index.xy, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 1, 4
@@ -164,12 +162,11 @@ def test_compute_tex_2d_rgba8uint():
 def test_compute_tex_2d_rg16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "2d rg16i storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "2d rg16i"),
     ):
-        color = imageLoad(tex, index.xy)
+        color = tex.read(index.xy)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.xy, color)
+        tex.write(index.xy, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 1, 2
@@ -193,12 +190,11 @@ def test_compute_tex_2d_rg16sint():
 def test_compute_tex_2d_r16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "2d r16i storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "2d r16i"),
     ):
-        color = imageLoad(tex, index.xy)
+        color = tex.read(index.xy)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.xy, color)
+        tex.write(index.xy, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 1, 1
@@ -222,12 +218,11 @@ def test_compute_tex_2d_r16sint():
 def test_compute_tex_2d_r32float():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "2d r32f storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "2d r32f"),
     ):
-        color = imageLoad(tex, index.xy)
+        color = tex.read(index.xy)
         color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        imageStore(tex, index.xy, color)
+        tex.write(index.xy, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 1, 1
@@ -255,11 +250,11 @@ def test_compute_tex_3d_rgba8uint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "3d rgba8ui storage"),
+        tex: ("texture", 0, "3d rgba8ui"),
     ):
-        color = imageLoad(tex, index.xyz)
+        color = tex.read(index.xyz)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.xyz, color)
+        tex.write(index.xyz, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 6, 4
@@ -284,12 +279,11 @@ def test_compute_tex_3d_rgba8uint():
 def test_compute_tex_3d_rg16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "3d rg16i storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "3d rg16i"),
     ):
-        color = imageLoad(tex, index.xyz)
+        color = tex.read(index.xyz)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.xyz, color)
+        tex.write(index.xyz, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 6, 2
@@ -314,12 +308,11 @@ def test_compute_tex_3d_rg16sint():
 def test_compute_tex_3d_r16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "3d r16i storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "3d r16i"),
     ):
-        color = imageLoad(tex, index.xyz)
+        color = tex.read(index.xyz)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        imageStore(tex, index.xyz, color)
+        tex.write(index.xyz, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 6, 1
@@ -343,12 +336,11 @@ def test_compute_tex_3d_r16sint():
 def test_compute_tex_3d_r32float():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "3d r32f storage"),
+        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "3d r32f"),
     ):
-        color = imageLoad(tex, index.xyz)
+        color = tex.read(index.xyz)
         color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        imageStore(tex, index.xyz, color)
+        tex.write(index.xyz, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 6, 1
