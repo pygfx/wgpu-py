@@ -279,7 +279,7 @@ def test_render_textured_square_rg8uint():
     ):
         samtex = stdlib.sampler2D(tex, sampler)
         val = vec2(stdlib.texture(samtex, tcoord).rg)
-        out_color = vec4(val.r / 255.0, val.g / 255.0, 0, 1.0)  # noqa
+        out_color = vec4(val.rg / 255.0, 0, 1.0)  # noqa
 
     # Create texture data
     nx, ny, nz = 2, 2, 1
@@ -307,7 +307,7 @@ def test_render_textured_square_rg16sint():
     ):
         samtex = stdlib.sampler2D(tex, sampler)
         val = vec2(stdlib.texture(samtex, tcoord).rg)
-        out_color = vec4(val.r / 255.0, val.g / 255.0, 0.0, 1.0)  # noqa
+        out_color = vec4(val.rg / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
     nx, ny, nz = 2, 2, 1
@@ -334,8 +334,8 @@ def test_render_textured_square_rg32float():
         out_color: (RES_OUTPUT, 0, vec4),
     ):
         samtex = stdlib.sampler2D(tex, sampler)
-        val = stdlib.texture(samtex, tcoord)
-        out_color = vec4(val.r / 255.0, val.g / 255.0, 0.0, 1.0)  # noqa
+        val = stdlib.texture(samtex, tcoord).rg
+        out_color = vec4(val.rg / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
     nx, ny, nz = 2, 2, 1
@@ -414,13 +414,13 @@ def test_render_textured_square_r16sint():
 
     @python2shader
     def fragment_shader(
-        tex: ("texture", 0, "2d i32"),
+        tex: ("texture", 0, "2d r16i"),
         sampler: ("sampler", 1, ""),
         tcoord: (RES_INPUT, 0, vec2),
         out_color: (RES_OUTPUT, 0, vec4),
     ):
         samtex = stdlib.sampler2D(tex, sampler)
-        val = f32(stdlib.texture(samtex, tcoord).g)
+        val = f32(stdlib.texture(samtex, tcoord).r)
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
@@ -443,13 +443,13 @@ def test_render_textured_square_r32sint():
 
     @python2shader
     def fragment_shader(
-        tex: ("texture", 0, "2d i32"),
+        tex: ("texture", 0, "2d r32i"),
         sampler: ("sampler", 1, ""),
         tcoord: (RES_INPUT, 0, vec2),
         out_color: (RES_OUTPUT, 0, vec4),
     ):
         samtex = stdlib.sampler2D(tex, sampler)
-        val = f32(stdlib.texture(samtex, tcoord).g)
+        val = f32(stdlib.texture(samtex, tcoord).r)
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
@@ -471,13 +471,13 @@ def test_render_textured_square_r32float():
 
     @python2shader
     def fragment_shader(
-        tex: ("texture", 0, "2d f32"),
+        tex: ("texture", 0, "2d r32f"),
         sampler: ("sampler", 1, ""),
         tcoord: (RES_INPUT, 0, vec2),
         out_color: (RES_OUTPUT, 0, vec4),
     ):
         samtex = stdlib.sampler2D(tex, sampler)
-        val = stdlib.texture(samtex, tcoord).r
+        val = f32(stdlib.texture(samtex, tcoord).r)
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
