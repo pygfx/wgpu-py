@@ -6,6 +6,7 @@ requests
 setuptools
 wheel
 twine
+numpy
 python-shader>=0.3.4
 auditwheel; sys_platform == 'linux'
 pyinstaller[hook_testing] @ https://github.com/bjones1/pyinstaller/archive/4232a.zip
