@@ -9,7 +9,7 @@ Developer notes and tips:
   are provided via a dict, we use kwargs directly.
 * However, some input args have subdicts (and sub-sub-dicts).
 * For methods that are async in IDL, we also provide sync methods.
-* The Async method names have an "Async" suffix.
+* The Async method names have an "_async" suffix.
 * We will try hard not to rely on asyncio.
 
 """
@@ -387,9 +387,19 @@ class GPUDevice(GPUObject):
         raise NotImplementedError()
 
     def _gui_configure_swap_chain(self, canvas, format, usage):
-        """ Get a SwapChain object from a canvas object. Called by BaseCanvas.
+        """ Private method for the canvas to get a SwapChain object.
+        The canvas class implements configure_swap_chain(), as specified
+        by the WebGPU spec. The canvas, in turn, calls *this* method.
         """
         raise NotImplementedError()
+
+    def _gui_get_swap_chain_preferred_format(self, canvas):
+        """ Private method for the canvas to get the preferred swap
+        chain format. The canvas class implements
+        get_swap_chain_preferred_format(), as specified by the WebGPU
+        spec. The canvas, in turn, calls *this* method.
+        """
+        return "bgra8unorm-srgb"  # seems to be a good default
 
 
 class GPUBuffer(GPUObject):
@@ -794,6 +804,12 @@ class GPUQueue(GPUObject):
     # IDL: void copyImageBitmapToTexture( GPUImageBitmapCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
     def copy_image_bitmap_to_texture(self, source, destination, copy_size):
         raise NotImplementedError()
+
+    # Not implemented, because fences do not yet have a use
+    # def createFence(self):
+    # def signal(self):
+    # Fence.getCompletedValue
+    # Fence.onCompletion
 
 
 class GPUSwapChain(GPUObject):

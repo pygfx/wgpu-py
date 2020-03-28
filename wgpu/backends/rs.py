@@ -782,10 +782,10 @@ class GPUBuffer(base.GPUBuffer):
 
 
 class GPUTexture(base.GPUTexture):
-    # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
 
     _destroyed = False
 
+    # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
     def create_view(
         self,
         *,
