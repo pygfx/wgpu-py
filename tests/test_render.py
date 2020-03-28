@@ -152,7 +152,7 @@ def test_render_textured_square_rgba8unorm():
     texture_data = (ctypes.c_uint8 * (4 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.rgba8unorm, (nx, ny, nz), texture_data
     )
 
@@ -177,7 +177,7 @@ def test_render_textured_square_rgba8uint():
     texture_data = (ctypes.c_uint8 * (4 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.rgba8uint, (nx, ny, nz), texture_data
     )
 
@@ -202,7 +202,7 @@ def test_render_textured_square_rgba16sint():
     texture_data = (ctypes.c_int16 * (4 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.rgba16sint, (nx, ny, nz), texture_data
     )
 
@@ -227,7 +227,7 @@ def test_render_textured_square_rgba32float():
     texture_data = (ctypes.c_float * (4 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.rgba32float, (nx, ny, nz), texture_data
     )
 
@@ -256,7 +256,7 @@ def test_render_textured_square_rg8unorm():
     texture_data = (ctypes.c_ubyte * (2 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.rg8unorm, (nx, ny, nz), texture_data
     )
 
@@ -283,7 +283,7 @@ def test_render_textured_square_rg8uint():
     texture_data = (ctypes.c_ubyte * (2 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.rg8uint, (nx, ny, nz), texture_data
     )
 
@@ -310,7 +310,7 @@ def test_render_textured_square_rg16sint():
     texture_data = (ctypes.c_int16 * (2 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.rg16sint, (nx, ny, nz), texture_data
     )
 
@@ -337,7 +337,7 @@ def test_render_textured_square_rg32float():
     texture_data = (ctypes.c_float * (2 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.rg32float, (nx, ny, nz), texture_data
     )
 
@@ -366,7 +366,7 @@ def test_render_textured_square_r8unorm():
     texture_data = (ctypes.c_uint8 * (1 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.r8unorm, (nx, ny, nz), texture_data
     )
 
@@ -392,7 +392,7 @@ def test_render_textured_square_r8uint():
     texture_data = (ctypes.c_uint8 * (1 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.r8uint, (nx, ny, nz), texture_data
     )
 
@@ -421,7 +421,7 @@ def test_render_textured_square_r16sint():
     texture_data = (ctypes.c_int16 * (1 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.r16sint, (nx, ny, nz), texture_data
     )
 
@@ -450,7 +450,7 @@ def test_render_textured_square_r32sint():
     texture_data = (ctypes.c_int32 * (1 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.r32sint, (nx, ny, nz), texture_data
     )
 
@@ -478,12 +478,14 @@ def test_render_textured_square_r32float():
     texture_data = (ctypes.c_float * (1 * nx * ny))(*x)
 
     # Render and validate
-    _render_textured_square(
+    render_textured_square(
         fragment_shader, wgpu.TextureFormat.r32float, (nx, ny, nz), texture_data
     )
 
 
-def _render_textured_square(
+# %% utils
+
+def render_textured_square(
     fragment_shader, texture_format, texture_size, texture_data
 ):
     """ Render, and test the result. The resulting image must be a
@@ -562,9 +564,6 @@ def _render_textured_square(
     assert np.equal(sq[:, 0, 1], ref2).all()
     assert np.all(sq[:, :, 2] == 0)  # blue
     assert np.all(sq[:, :, 3] == 255)  # alpha
-
-
-# %% utils
 
 
 def upload_to_texture(device, texture, data, nx, ny, nz):
