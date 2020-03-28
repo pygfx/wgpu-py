@@ -485,9 +485,8 @@ def test_render_textured_square_r32float():
 
 # %% utils
 
-def render_textured_square(
-    fragment_shader, texture_format, texture_size, texture_data
-):
+
+def render_textured_square(fragment_shader, texture_format, texture_size, texture_data):
     """ Render, and test the result. The resulting image must be a
     gradient on R and B, zeros on G and ones on A.
     """
@@ -576,10 +575,10 @@ def upload_to_texture(device, texture, data, nx, ny, nz):
     ctypes.memmove(buffer.mapping, data, nbytes)
     buffer.unmap()
 
-    # Upload
+    # Upload (image_height must only be nonzero for 3D textures)
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": 0},
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
@@ -677,7 +676,7 @@ def render_to_texture(
     render_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": 0},
         (nx, ny, 1),
     )
     device.default_queue.submit([command_encoder.finish()])
