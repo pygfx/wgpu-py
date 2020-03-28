@@ -157,6 +157,7 @@ def test_render_textured_square_rgba8unorm():
     )
 
 
+@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rgba8uint():
     """ Test a texture with format rgba8uint.
     """
@@ -181,6 +182,7 @@ def test_render_textured_square_rgba8uint():
     )
 
 
+@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rgba16sint():
     """ Test a texture with format rgba16sint.
     """

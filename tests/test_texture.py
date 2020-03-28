@@ -333,6 +333,7 @@ def test_compute_tex_3d_r16sint():
     )
 
 
+@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_r32float():
     @python2shader
     def compute_shader(
