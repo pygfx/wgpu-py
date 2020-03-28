@@ -36,6 +36,7 @@ def help(*searches, dev=False):
     name_parts = [name_part.lower() for name_part in name_parts]
     all_lines = []  # list of (title, lines_list)
 
+    # todo: to_neutral_name also used in non-dev mode!
     if dev:
         from ._parsers import IdlParser, HParser, to_neutral_name
 

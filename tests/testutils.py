@@ -1,6 +1,9 @@
 import sys
 import subprocess
 
+import wgpu.backends.rs  # noqa
+from wgpu.utils import get_default_device  # noqa
+
 
 def iters_equal(iter1, iter2):
     iter1, iter2 = list(iter1), list(iter2)
@@ -19,7 +22,7 @@ def _determine_can_use_vulkan_sdk():
 
 
 def _determine_can_use_wgpu_lib():
-    code = "import wgpu.utils; wgpu.utils.create_device()"
+    code = "import wgpu.utils; wgpu.utils.get_default_device()"
     try:
         subprocess.check_output(
             [sys.executable, "-c", code,]

@@ -357,6 +357,72 @@ class GPUDevice(base.GPUDevice):
 
         return GPUBuffer(label, id, self, size, usage, "mapped", mem_as_ctypes)
 
+    # wgpu.help('TextureDescriptor', 'devicecreatetexture', dev=True)
+    def create_texture(
+        self,
+        *,
+        label="",
+        size: "GPUExtent3D",
+        array_layer_count: "GPUIntegerCoordinate" = 1,
+        mip_level_count: "GPUIntegerCoordinate" = 1,
+        sample_count: "GPUSize32" = 1,
+        dimension: "GPUTextureDimension" = "2d",
+        format: "GPUTextureFormat",
+        usage: "GPUTextureUsageFlags",
+    ):
+        if isinstance(size, (list, tuple)):
+            assert len(size) == 3
+            size = {"width": size[0], "height": size[1], "depth": size[2]}
+        c_size = new_struct(
+            "WGPUExtent3d *",
+            width=size["width"],
+            height=size["height"],
+            depth=size["depth"],
+        )
+        struct = new_struct(
+            "WGPUTextureDescriptor *",
+            size=c_size[0],
+            array_layer_count=array_layer_count,
+            mip_level_count=mip_level_count,
+            sample_count=sample_count,
+            dimension=dimension,
+            format=format,
+            usage=usage,
+        )
+        id = _lib.wgpu_device_create_texture(self._internal, struct)
+
+        return GPUTexture(label, id, self)
+
+    # wgpu.help('SamplerDescriptor', 'devicecreatesampler', dev=True)
+    def create_sampler(
+        self,
+        *,
+        label="",
+        address_mode_u: "GPUAddressMode" = "clamp-to-edge",
+        address_mode_v: "GPUAddressMode" = "clamp-to-edge",
+        address_mode_w: "GPUAddressMode" = "clamp-to-edge",
+        mag_filter: "GPUFilterMode" = "nearest",
+        min_filter: "GPUFilterMode" = "nearest",
+        mipmap_filter: "GPUFilterMode" = "nearest",
+        lod_min_clamp: float = 0,
+        lod_max_clamp: float = 0xFFFFFFFF,
+        compare: "GPUCompareFunction" = "never",
+    ):
+        struct = new_struct(
+            "WGPUSamplerDescriptor *",
+            address_mode_u=address_mode_u,
+            address_mode_v=address_mode_v,
+            mag_filter=mag_filter,
+            min_filter=min_filter,
+            mipmap_filter=mipmap_filter,
+            lod_min_clamp=lod_min_clamp,
+            lod_max_clamp=lod_max_clamp,
+            compare_function=compare,
+        )
+
+        id = _lib.wgpu_device_create_sampler(self._internal, struct)
+        return base.GPUSampler(label, id, self)
+
     # wgpu.help('BindGroupLayoutDescriptor', 'devicecreatebindgrouplayout', dev=True)
     def create_bind_group_layout(
         self, *, label="", bindings: "GPUBindGroupLayoutBinding-list"
@@ -593,7 +659,9 @@ class GPUDevice(base.GPUDevice):
         if depth_stencil_state is None:
             c_depth_stencil_state = ffi.NULL
         else:
-            raise NotImplementedError()
+            raise NotImplementedError(
+                "GPUDevice.create_render_pipeline depth_stencil_state"
+            )
             # c_depth_stencil_state = new_struct(
             #     "WGPUDepthStencilStateDescriptor *",
             #     format=
@@ -715,6 +783,9 @@ class GPUBuffer(base.GPUBuffer):
 
 class GPUTexture(base.GPUTexture):
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
+
+    _destroyed = False
+
     def create_view(
         self,
         *,
@@ -741,9 +812,17 @@ class GPUTexture(base.GPUTexture):
         id = _lib.wgpu_texture_create_view(self._internal, struct)
         return base.GPUTextureView(label, id, self)
 
+    def create_default_view(self, *, label=""):
+        # This method is available in wgpu-rs, and it's kinda nice :)
+        # I'm not sure what the equivalent create_view() call should be (I tried and failed)
+        id = _lib.wgpu_texture_create_view(self._internal, ffi.NULL)
+        return base.GPUTextureView(label, id, self)
+
     # wgpu.help('texturedestroy', dev=True)
     def destroy(self):
-        _lib.wgpu_texture_destroy(self._internal)
+        if not self._destroyed:
+            self._destroyed = True
+            _lib.wgpu_texture_destroy(self._internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder):
@@ -769,7 +848,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             if color_attachment["resolve_target"] is None:
                 c_resolve_target = ffi.NULL
             else:
-                raise NotImplementedError()
+                raise NotImplementedError(
+                    "GPUCommandEncoder.begin_render_pass resolve_target"
+                )
             if isinstance(color_attachment["load_value"], str):
                 assert color_attachment["load_value"] == "load"
                 c_load_op = 1  # WGPULoadOp_Load
@@ -798,7 +879,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
-            raise NotImplementedError()
+            raise NotImplementedError(
+                "GPUCommandEncoder.begin_render_pass depth_stencil_attachment"
+            )
 
         struct = new_struct(
             "WGPURenderPassDescriptor *",
@@ -809,6 +892,147 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         raw_pass = _lib.wgpu_command_encoder_begin_render_pass(self._internal, struct)
         return GPURenderPassEncoder(label, raw_pass, self)
+
+    # wgpu.help('Buffer', 'Size64', 'commandencodercopybuffertobuffer', dev=True)
+    def copy_buffer_to_buffer(
+        self, source, source_offset, destination, destination_offset, size
+    ):
+        assert isinstance(source, GPUBuffer)
+        assert isinstance(destination, GPUBuffer)
+        _lib.wgpu_command_encoder_copy_buffer_to_buffer(
+            self._internal,
+            source._internal,
+            int(source_offset),
+            destination._internal,
+            int(destination_offset),
+            int(size),
+        )
+
+    # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopybuffertotexture', dev=True)
+    def copy_buffer_to_texture(self, source, destination, copy_size):
+
+        c_source = new_struct(
+            "WGPUBufferCopyView *",
+            buffer=source["buffer"]._internal,
+            offset=int(source.get("offset", 0)),
+            row_pitch=int(source["row_pitch"]),
+            image_height=int(source["image_height"]),
+        )
+
+        ori = destination["origin"]
+        if isinstance(ori, (list, tuple)):
+            assert len(ori) == 3
+            c_origin = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
+        else:
+            c_origin = new_struct("WGPUOrigin3d *", x=ori["x"], y=ori["y"], z=ori["z"])
+        c_destination = new_struct(
+            "WGPUTextureCopyView *",
+            texture=destination["texture"]._internal,
+            mip_level=int(destination.get("mip_level", 0)),
+            array_layer=int(destination.get("array_layer", 0)),
+            origin=c_origin[0],
+        )
+
+        size = copy_size
+        if isinstance(size, (list, tuple)):
+            assert len(size) == 3
+            size = {"width": size[0], "height": size[1], "depth": size[2]}
+        c_copy_size = new_struct(
+            "WGPUExtent3d *",
+            width=size["width"],
+            height=size["height"],
+            depth=size["depth"],
+        )
+
+        _lib.wgpu_command_encoder_copy_buffer_to_texture(
+            self._internal, c_source, c_destination, c_copy_size[0],
+        )
+
+    # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopytexturetobuffer', dev=True)
+    def copy_texture_to_buffer(self, source, destination, copy_size):
+
+        ori = source["origin"]
+        if isinstance(ori, (list, tuple)):
+            assert len(ori) == 3
+            c_origin = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
+        else:
+            c_origin = new_struct("WGPUOrigin3d *", x=ori["x"], y=ori["y"], z=ori["z"])
+        c_source = new_struct(
+            "WGPUTextureCopyView *",
+            texture=source["texture"]._internal,
+            mip_level=int(source.get("mip_level", 0)),
+            array_layer=int(source.get("array_layer", 0)),
+            origin=c_origin[0],
+        )
+
+        c_destination = new_struct(
+            "WGPUBufferCopyView *",
+            buffer=destination["buffer"]._internal,
+            offset=int(destination.get("offset", 0)),
+            row_pitch=int(destination["row_pitch"]),
+            image_height=int(destination["image_height"]),
+        )
+
+        size = copy_size
+        if isinstance(size, (list, tuple)):
+            assert len(size) == 3
+            size = {"width": size[0], "height": size[1], "depth": size[2]}
+        c_copy_size = new_struct(
+            "WGPUExtent3d *",
+            width=size["width"],
+            height=size["height"],
+            depth=size["depth"],
+        )
+
+        _lib.wgpu_command_encoder_copy_texture_to_buffer(
+            self._internal, c_source, c_destination, c_copy_size[0],
+        )
+
+    # wgpu.help('Extent3D', 'TextureCopyView', 'commandencodercopytexturetotexture', dev=True)
+    def copy_texture_to_texture(self, source, destination, copy_size):
+
+        ori = source["origin"]
+        if isinstance(ori, (list, tuple)):
+            assert len(ori) == 3
+            c_origin1 = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
+        else:
+            c_origin1 = new_struct("WGPUOrigin3d *", x=ori["x"], y=ori["y"], z=ori["z"])
+        c_source = new_struct(
+            "WGPUTextureCopyView *",
+            texture=source["texture"]._internal,
+            mip_level=int(source.get("mip_level", 0)),
+            array_layer=int(source.get("array_layer", 0)),
+            origin=c_origin1[0],
+        )
+
+        ori = destination["origin"]
+        if isinstance(ori, (list, tuple)):
+            assert len(ori) == 3
+            c_origin2 = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
+        else:
+            c_origin2 = new_struct("WGPUOrigin3d *", x=ori["x"], y=ori["y"], z=ori["z"])
+        c_destination = new_struct(
+            "WGPUTextureCopyView *",
+            texture=destination["texture"]._internal,
+            mip_level=int(destination.get("mip_level", 0)),
+            array_layer=int(destination.get("array_layer", 0)),
+            origin=c_origin2[0],
+        )
+
+        size = copy_size
+        if isinstance(size, (list, tuple)):
+            assert len(size) == 3
+            size = {"width": size[0], "height": size[1], "depth": size[2]}
+        c_copy_size = new_struct(
+            "WGPUExtent3d *",
+            width=size["width"],
+            height=size["height"],
+            depth=size["depth"],
+        )
+
+        _lib.wgpu_command_encoder_copy_texture_to_texture(
+            self._internal, c_source, c_destination, c_copy_size[0],
+        )
 
     # wgpu.help('CommandBufferDescriptor', 'commandencoderfinish', dev=True)
     def finish(self, *, label=""):
@@ -839,17 +1063,17 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
                 self._internal, index, bind_group_id, c_offsets, len(offsets)
             )
 
-    # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
-    def push_debug_group(self, group_label):
-        raise NotImplementedError()
-
-    # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
-    def pop_debug_group(self):
-        raise NotImplementedError()
-
-    # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
-    def insert_debug_marker(self, marker_label):
-        raise NotImplementedError()
+    # # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
+    # def push_debug_group(self, group_label):
+    #     raise NotImplementedError()
+    #
+    # # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
+    # def pop_debug_group(self):
+    #     raise NotImplementedError()
+    #
+    # # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
+    # def insert_debug_marker(self, marker_label):
+    #     raise NotImplementedError()
 
 
 class GPUComputePassEncoder(GPUProgrammablePassEncoder):
@@ -905,7 +1129,6 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
 
-    # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindirect', dev=True)
     # def draw_indirect(self, indirect_buffer, indirect_offset):
     #     raise NotImplementedError()
 
@@ -922,7 +1145,6 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             first_instance,
         )
 
-    # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindexedindirect', dev=True)
     # def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
     #     raise NotImplementedError()
 
@@ -935,25 +1157,25 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     """
     """
 
-    # wgpu.help('renderpassencodersetviewport', dev=True)
-    def set_viewport(self, x, y, width, height, min_depth, max_depth):
-        raise NotImplementedError()
-
-    # wgpu.help('IntegerCoordinate', 'renderpassencodersetscissorrect', dev=True)
-    def set_scissor_rect(self, x, y, width, height):
-        raise NotImplementedError()
-
-    # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
-    def set_blend_color(self, color):
-        raise NotImplementedError()
-
-    # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
-    def set_stencil_reference(self, reference):
-        raise NotImplementedError()
-
-    # wgpu.help('renderpassencoderexecutebundles', dev=True)
-    def execute_bundles(self, bundles):
-        raise NotImplementedError()
+    # # wgpu.help('renderpassencodersetviewport', dev=True)
+    # def set_viewport(self, x, y, width, height, min_depth, max_depth):
+    #     raise NotImplementedError()
+    #
+    # # wgpu.help('IntegerCoordinate', 'renderpassencodersetscissorrect', dev=True)
+    # def set_scissor_rect(self, x, y, width, height):
+    #     raise NotImplementedError()
+    #
+    # # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
+    # def set_blend_color(self, color):
+    #     raise NotImplementedError()
+    #
+    # # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
+    # def set_stencil_reference(self, reference):
+    #     raise NotImplementedError()
+    #
+    # # wgpu.help('renderpassencoderexecutebundles', dev=True)
+    # def execute_bundles(self, bundles):
+    #     raise NotImplementedError()
 
     # wgpu.help('renderpassencoderendpass', dev=True)
     def end_pass(self):

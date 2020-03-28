@@ -290,7 +290,7 @@ def get_func_id_match(func_id, d):
             return func_id_try
 
 
-for fname in ("base.py", "backend/rs.py"):
+for fname in ("base.py", "backends/rs.py"):
     filename = os.path.join(lib_dir, fname)
     print(f"\n### Check functions in {fname}")
 

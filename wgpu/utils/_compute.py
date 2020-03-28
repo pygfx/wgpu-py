@@ -4,7 +4,7 @@ Simple high-level utilities for doing compute on the GPU.
 
 import ctypes
 
-import wgpu
+import wgpu.utils
 
 
 def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
@@ -68,8 +68,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
         raise ValueError("compute_with_buffers: n value(s) must be >= 1.")
 
     # Create a device and compile the shader
-    adapter = wgpu.request_adapter(power_preference="high-performance")
-    device = adapter.request_device(extensions=[], limits={})
+    device = wgpu.utils.get_default_device()
     cshader = device.create_shader_module(code=shader)
 
     # Create buffers for input and output arrays
