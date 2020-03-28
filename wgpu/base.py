@@ -510,6 +510,12 @@ class GPUTexture(GPUObject):
     ):
         raise NotImplementedError()
 
+    def create_default_view(self, *, label=""):
+        """ Get the default view on this texture. This method is not
+        part of the WebGPU API, but we provide it because it's useful.
+        """
+        raise NotImplementedError()
+
     # wgpu.help('texturedestroy', dev=True)
     # IDL: void destroy();
     def destroy(self):

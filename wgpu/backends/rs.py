@@ -659,6 +659,7 @@ class GPUDevice(base.GPUDevice):
         if depth_stencil_state is None:
             c_depth_stencil_state = ffi.NULL
         else:
+            # todo: missing API
             raise NotImplementedError(
                 "GPUDevice.create_render_pipeline depth_stencil_state"
             )
@@ -731,6 +732,17 @@ class GPUDevice(base.GPUDevice):
         id = _lib.wgpu_device_create_command_encoder(self._internal, struct)
         return GPUCommandEncoder(label, id, self)
 
+    # Not yet implemented in wgpu-native
+    # def create_render_bundle_encoder(
+    #     self,
+    #     *,
+    #     label="",
+    #     color_formats: "GPUTextureFormat-list",
+    #     depth_stencil_format: "GPUTextureFormat",
+    #     sample_count: "GPUSize32" = 1,
+    # ):
+    #     pass
+
     def _gui_configure_swap_chain(self, canvas, format, usage):
         """ Get a swapchain object from a canvas object. Called by BaseCanvas.
         """
@@ -761,12 +773,45 @@ class GPUBuffer(base.GPUBuffer):
 
         if data is None:
             raise RuntimeError("Could not read buffer data.")
+
+        self._state = "mapped"
+        return data
+
+    # wgpu.help('buffermapwriteasync', dev=True)
+    def map_write(self):
+        data = None
+
+        @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
+        def _map_write_callback(status, buffer_data_p, user_data_p):
+            nonlocal data
+            if status == 0:
+                pointer_as_int = int(ffi.cast("intptr_t", buffer_data_p))
+                mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
+                data = mem_as_ctypes
+
+        start, size = 0, self.size
+        _lib.wgpu_buffer_map_write_async(
+            self._internal, start, size, _map_write_callback, ffi.NULL
+        )
+
+        # Let it do some cycles
+        _lib.wgpu_device_poll(self._device._internal, True)
+
+        if data is None:
+            raise RuntimeError("Could not read buffer data.")
+
+        self._state = "mapped"
         return data
 
     # wgpu.help('buffermapreadasync', dev=True)
     async def map_read_async(self):
         # todo: actually make this async
-        return self.mapRead()
+        return self.map_read()
+
+    # wgpu.help('buffermapwriteasync', dev=True)
+    async def map_write_async(self):
+        # todo: actually make this async
+        return self.map_write()
 
     # wgpu.help('bufferunmap', dev=True)
     def unmap(self):
@@ -848,6 +893,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             if color_attachment["resolve_target"] is None:
                 c_resolve_target = ffi.NULL
             else:
+                # todo: missing API
                 raise NotImplementedError(
                     "GPUCommandEncoder.begin_render_pass resolve_target"
                 )
@@ -879,6 +925,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
+            # todo: missing API
             raise NotImplementedError(
                 "GPUCommandEncoder.begin_render_pass depth_stencil_attachment"
             )
@@ -1129,6 +1176,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
 
+    # todo: missing API
     # def draw_indirect(self, indirect_buffer, indirect_offset):
     #     raise NotImplementedError()
 
@@ -1145,41 +1193,69 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             first_instance,
         )
 
+    # todo: missing API
     # def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
     #     raise NotImplementedError()
 
 
-# todo: this does not inherit from base.GPURenderPassEncoder. Use multiple
-# inheritance or leave it?
-
-
 class GPURenderPassEncoder(GPURenderEncoderBase):
-    """
-    """
 
-    # # wgpu.help('renderpassencodersetviewport', dev=True)
-    # def set_viewport(self, x, y, width, height, min_depth, max_depth):
-    #     raise NotImplementedError()
-    #
-    # # wgpu.help('IntegerCoordinate', 'renderpassencodersetscissorrect', dev=True)
-    # def set_scissor_rect(self, x, y, width, height):
-    #     raise NotImplementedError()
-    #
-    # # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
-    # def set_blend_color(self, color):
-    #     raise NotImplementedError()
-    #
-    # # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
-    # def set_stencil_reference(self, reference):
-    #     raise NotImplementedError()
-    #
-    # # wgpu.help('renderpassencoderexecutebundles', dev=True)
-    # def execute_bundles(self, bundles):
-    #     raise NotImplementedError()
+    # Note: this does not inherit from base.GPURenderPassEncoder!
+
+    # wgpu.help('renderpassencodersetviewport', dev=True)
+    def set_viewport(self, x, y, width, height, min_depth, max_depth):
+        _lib.wgpu_render_pass_set_viewport(
+            self._internal,
+            float(x),
+            float(y),
+            float(width),
+            float(height),
+            float(min_depth),
+            float(max_depth),
+        )
+
+    # wgpu.help('IntegerCoordinate', 'renderpassencodersetscissorrect', dev=True)
+    def set_scissor_rect(self, x, y, width, height):
+        _lib.wgpu_render_pass_set_scissor_rect(
+            self._internal, int(x), int(y), int(width), int(height)
+        )
+
+    # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
+    def set_blend_color(self, color):
+        if isinstance(color, (tuple, list)):
+            color = dict(r=0, g=0, b=0, a=0)
+        c_color = ffi.new("WGPUColor *", color)
+        _lib.wgpu_render_pass_set_blend_color(self._internal, c_color)
+
+    # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
+    def set_stencil_reference(self, reference):
+        _lib.wgpu_render_pass_set_stencil_reference(self._internal, int(reference))
+
+    # wgpu.help('renderpassencoderexecutebundles', dev=True)
+    def execute_bundles(self, bundles):
+        bundles2 = []
+        for bundle in bundles:
+            if isinstance(bundle, base.GPURenderBundle):
+                bundles2.append(bundle._internal)
+            else:
+                bundles2.append(int(bundle))
+
+        c_bundles_array = ffi.new("WGPURenderBundleId []", bundles2)
+        _lib.wgpu_render_pass_execute_bundles(
+            self._internal, c_bundles_array, len(bundles2),
+        )
 
     # wgpu.help('renderpassencoderendpass', dev=True)
     def end_pass(self):
         _lib.wgpu_render_pass_end_pass(self._internal)
+
+
+class GPURenderBundleEncoder(base.GPURenderBundleEncoder):
+    pass
+
+    # Not yet implemented in wgpu-native
+    # def finish(self, *, label=""):
+    #     raise NotImplementedError()
 
 
 class GPUQueue(base.GPUQueue):
@@ -1190,6 +1266,10 @@ class GPUQueue(base.GPUQueue):
         _lib.wgpu_queue_submit(
             self._internal, c_command_buffers, len(command_buffer_ids)
         )
+
+    # Seems not yet implemented in wgpu-native
+    # def copy_image_bitmap_to_texture(self, source, destination, copy_size):
+    #     raise NotImplementedError()
 
 
 class GPUSwapChain(base.GPUSwapChain):

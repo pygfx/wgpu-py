@@ -108,7 +108,9 @@ def _main(canvas, device):
     )
 
     swap_chain = canvas.configure_swap_chain(
-        device, canvas.get_swap_chain_preferred_format(device), wgpu.TextureUsage.OUTPUT_ATTACHMENT
+        device,
+        canvas.get_swap_chain_preferred_format(device),
+        wgpu.TextureUsage.OUTPUT_ATTACHMENT,
     )
 
     def draw_frame():

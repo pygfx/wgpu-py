@@ -92,13 +92,13 @@
 *  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue);
 *  Not implemented: GPUFenceValue getCompletedValue();
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue);
+*  Found unknown function create_default_view (texturecreatedefaultview)
 *  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into base.py
 
 ### Check functions in backends/rs.py
-*  Found 40 functions already implemented
+*  Found 47 functions already implemented
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
-*  Not implemented: Promise<ArrayBuffer> mapWriteAsync();
 *  Not implemented: void pushDebugGroup(DOMString groupLabel);
 *  Not implemented: void popDebugGroup();
 *  Not implemented: void insertDebugMarker(DOMString markerLabel);
@@ -107,11 +107,6 @@
 *  Not implemented: void insertDebugMarker(DOMString markerLabel);
 *  Not implemented: void drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
 *  Not implemented: void drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
-*  Not implemented: void setViewport(float x, float y,  float width, float height,  float minDepth, float maxDepth);
-*  Not implemented: void setScissorRect(GPUIntegerCoordinate x, GPUIntegerCoordinate y,  GPUIntegerCoordinate width, GPUIntegerCoordinate height);
-*  Not implemented: void setBlendColor(GPUColor color);
-*  Not implemented: void setStencilReference(GPUStencilValue reference);
-*  Not implemented: void executeBundles(sequence<GPURenderBundle> bundles);
 *  Not implemented: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
 *  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
 *  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue);
@@ -119,8 +114,6 @@
 *  Not implemented: GPUFenceValue getCompletedValue();
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue);
 *  Not implemented: GPUTexture getCurrentTexture();
-*  Found unknown function new_struct (newstruct)
-*  Found unknown function get_surface_id_from_canvas (getsurfaceidfromcanvas)
 *  Found unknown function create_default_view (texturecreatedefaultview)
 *  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into backends/rs.py
