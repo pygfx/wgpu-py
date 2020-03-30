@@ -39,6 +39,25 @@ def test_override_wgpu_lib_path():
     assert path == old_path
 
 
+def test_tuple_from_tuple_or_dict():
+
+    func = wgpu.backends.rs._tuple_from_tuple_or_dict
+
+    assert func([1, 2, 3], ("x", "y", "z")) == (1, 2, 3)
+    assert func({"y": 2, "z": 3, "x": 1}, ("x", "y", "z")) == (1, 2, 3)
+    assert func((10, 20), ("width", "height")) == (10, 20)
+    assert func({"width": 10, "height": 20}, ("width", "height")) == (10, 20)
+
+    with raises(TypeError):
+        func("not tuple/dict", ("x", "y")) == (1, 2)
+    with raises(ValueError):
+        func([1], ("x", "y")) == (1, 2)
+    with raises(ValueError):
+        func([1, 2, 3], ("x", "y")) == (1, 2)
+    with raises(ValueError):
+        assert func({"x": 1}, ("x", "y"))
+
+
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_shader_module_creation():
     @python_shader.python2shader
@@ -200,5 +219,6 @@ def test_do_a_copy_roundtrip():
 
 if __name__ == "__main__":
     test_override_wgpu_lib_path()
+    test_tuple_from_tuple_or_dict()
     test_shader_module_creation()
     test_do_a_copy_roundtrip()

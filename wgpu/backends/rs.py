@@ -212,6 +212,29 @@ def get_surface_id_from_canvas(canvas):
     raise RuntimeError("Cannot get surface id: unsupported platform.")
 
 
+def _tuple_from_tuple_or_dict(ob, fields):
+    """ Given a tuple/list/dict, return a tuple. Also checks tuple size.
+
+    >> # E.g.
+    >> _tuple_from_tuple_or_dict({"x": 1, "y": 2}, ("x", "y"))
+    (1, 2)
+    >> _tuple_from_tuple_or_dict([1, 2], ("x", "y"))
+    (1, 2)
+    """
+    error_msg = "Expected tuple/key/dict with fields: {}"
+    if isinstance(ob, (list, tuple)):
+        if len(ob) != len(fields):
+            raise ValueError(error_msg.format(", ".join(fields)))
+        return tuple(ob)
+    elif isinstance(ob, dict):
+        try:
+            return tuple(ob[key] for key in fields)
+        except KeyError:
+            raise ValueError(error_msg.format(", ".join(fields)))
+    else:
+        raise TypeError(error_msg.format(", ".join(fields)))
+
+
 # %% The API
 
 
@@ -370,14 +393,9 @@ class GPUDevice(base.GPUDevice):
         format: "GPUTextureFormat",
         usage: "GPUTextureUsageFlags",
     ):
-        if isinstance(size, (list, tuple)):
-            assert len(size) == 3
-            size = {"width": size[0], "height": size[1], "depth": size[2]}
+        size = _tuple_from_tuple_or_dict(size, ("width", "height", "depth"))
         c_size = new_struct(
-            "WGPUExtent3d *",
-            width=size["width"],
-            height=size["height"],
-            depth=size["depth"],
+            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
         )
         struct = new_struct(
             "WGPUTextureDescriptor *",
@@ -494,6 +512,8 @@ class GPUDevice(base.GPUDevice):
                         "WGPUBindingResource_WGPUBuffer_Body *", _0=c_buffer_binding[0]
                     )[0],
                 }
+            else:
+                raise TypeError("Unexpected resource type {type(resource)}")  # no-cover
             c_resource = new_struct("WGPUBindingResource *", **c_resource_kwargs)
             c_binding = new_struct(
                 "WGPUBindGroupBinding *",
@@ -619,26 +639,18 @@ class GPUDevice(base.GPUDevice):
         )
         c_color_states_list = []
         for color_state in color_states:
-            alpha_blend = color_state["alpha_blend"]
-            if not isinstance(alpha_blend, (list, tuple)):  # support dict and tuple
-                alpha_blend = (
-                    alpha_blend["src_factor"],
-                    alpha_blend["dst_factor"],
-                    alpha_blend["operation"],
-                )
+            alpha_blend = _tuple_from_tuple_or_dict(
+                color_state["alpha_blend"], ("src_factor", "dst_factor", "operation"),
+            )
             c_alpha_blend = new_struct(
                 "WGPUBlendDescriptor *",
                 src_factor=alpha_blend[0],
                 dst_factor=alpha_blend[1],
                 operation=alpha_blend[2],
             )
-            color_blend = color_state["color_blend"]
-            if not isinstance(color_blend, (list, tuple)):  # support dict and tuple
-                color_blend = (
-                    color_blend["src_factor"],
-                    color_blend["dst_factor"],
-                    color_blend["operation"],
-                )
+            color_blend = _tuple_from_tuple_or_dict(
+                color_state["color_blend"], ("src_factor", "dst_factor", "operation"),
+            )
             c_color_blend = new_struct(
                 "WGPUBlendDescriptor *",
                 src_factor=color_blend[0],
@@ -903,13 +915,10 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
                 c_clear_color = ffi.new("WGPUColor *", dict(r=0, g=0, b=0, a=0))
             else:
                 c_load_op = 0  # WGPULoadOp_Clear
-                clr = color_attachment["load_value"]
-                if isinstance(clr, dict):
-                    c_clear_color = ffi.new("WGPUColor *", *clr)
-                else:
-                    c_clear_color = ffi.new(
-                        "WGPUColor *", dict(r=clr[0], g=clr[1], b=clr[2], a=clr[3])
-                    )
+                clr = _tuple_from_tuple_or_dict(color_attachment["load_value"], "rgba")
+                c_clear_color = new_struct(
+                    "WGPUColor *", r=clr[0], g=clr[1], b=clr[2], a=clr[3]
+                )
             c_attachment = new_struct(
                 "WGPURenderPassColorAttachmentDescriptor *",
                 attachment=texture_view_id,
@@ -966,12 +975,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             image_height=int(source["image_height"]),
         )
 
-        ori = destination["origin"]
-        if isinstance(ori, (list, tuple)):
-            assert len(ori) == 3
-            c_origin = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
-        else:
-            c_origin = new_struct("WGPUOrigin3d *", x=ori["x"], y=ori["y"], z=ori["z"])
+        ori = _tuple_from_tuple_or_dict(destination["origin"], "xyz")
+        c_origin = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
         c_destination = new_struct(
             "WGPUTextureCopyView *",
             texture=destination["texture"]._internal,
@@ -980,15 +985,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             origin=c_origin[0],
         )
 
-        size = copy_size
-        if isinstance(size, (list, tuple)):
-            assert len(size) == 3
-            size = {"width": size[0], "height": size[1], "depth": size[2]}
+        size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct(
-            "WGPUExtent3d *",
-            width=size["width"],
-            height=size["height"],
-            depth=size["depth"],
+            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_buffer_to_texture(
@@ -998,12 +997,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopytexturetobuffer', dev=True)
     def copy_texture_to_buffer(self, source, destination, copy_size):
 
-        ori = source["origin"]
-        if isinstance(ori, (list, tuple)):
-            assert len(ori) == 3
-            c_origin = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
-        else:
-            c_origin = new_struct("WGPUOrigin3d *", x=ori["x"], y=ori["y"], z=ori["z"])
+        ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
+        c_origin = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
         c_source = new_struct(
             "WGPUTextureCopyView *",
             texture=source["texture"]._internal,
@@ -1020,15 +1015,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             image_height=int(destination["image_height"]),
         )
 
-        size = copy_size
-        if isinstance(size, (list, tuple)):
-            assert len(size) == 3
-            size = {"width": size[0], "height": size[1], "depth": size[2]}
+        size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct(
-            "WGPUExtent3d *",
-            width=size["width"],
-            height=size["height"],
-            depth=size["depth"],
+            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_texture_to_buffer(
@@ -1038,12 +1027,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
     # wgpu.help('Extent3D', 'TextureCopyView', 'commandencodercopytexturetotexture', dev=True)
     def copy_texture_to_texture(self, source, destination, copy_size):
 
-        ori = source["origin"]
-        if isinstance(ori, (list, tuple)):
-            assert len(ori) == 3
-            c_origin1 = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
-        else:
-            c_origin1 = new_struct("WGPUOrigin3d *", x=ori["x"], y=ori["y"], z=ori["z"])
+        ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
+        c_origin1 = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
         c_source = new_struct(
             "WGPUTextureCopyView *",
             texture=source["texture"]._internal,
@@ -1052,12 +1037,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             origin=c_origin1[0],
         )
 
-        ori = destination["origin"]
-        if isinstance(ori, (list, tuple)):
-            assert len(ori) == 3
-            c_origin2 = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
-        else:
-            c_origin2 = new_struct("WGPUOrigin3d *", x=ori["x"], y=ori["y"], z=ori["z"])
+        ori = _tuple_from_tuple_or_dict(destination["origin"], "xyz")
+        c_origin2 = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
         c_destination = new_struct(
             "WGPUTextureCopyView *",
             texture=destination["texture"]._internal,
@@ -1066,15 +1047,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             origin=c_origin2[0],
         )
 
-        size = copy_size
-        if isinstance(size, (list, tuple)):
-            assert len(size) == 3
-            size = {"width": size[0], "height": size[1], "depth": size[2]}
+        size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct(
-            "WGPUExtent3d *",
-            width=size["width"],
-            height=size["height"],
-            depth=size["depth"],
+            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_texture_to_texture(
@@ -1222,9 +1197,8 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
 
     # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
     def set_blend_color(self, color):
-        if isinstance(color, (tuple, list)):
-            color = dict(r=0, g=0, b=0, a=0)
-        c_color = ffi.new("WGPUColor *", color)
+        color = _tuple_from_tuple_or_dict(color, "rgba")
+        c_color = ffi.new("WGPUColor *", r=color[0], g=color[1], b=color[2], a=color[3])
         _lib.wgpu_render_pass_set_blend_color(self._internal, c_color)
 
     # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
