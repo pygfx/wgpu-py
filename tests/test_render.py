@@ -9,8 +9,12 @@ import python_shader
 from python_shader import python2shader, f32, vec2, vec4, i32
 from python_shader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
-from pytest import mark
+from pytest import skip, mark
 from testutils import can_use_wgpu_lib, get_default_device
+
+
+if not can_use_wgpu_lib:
+    skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
 @python2shader
@@ -30,7 +34,6 @@ def vertex_shader(
     tcoord = vec2(p + 0.5)  # noqa - map to 0..1
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_orange_square():
     """ Render an orange square and check that there is an orange square.
     """
@@ -66,7 +69,6 @@ def test_render_orange_square():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_orange_dots():
     """ Render four orange dots and check that there are four orange square dots.
     """
@@ -132,7 +134,6 @@ def test_render_orange_dots():
 # %% rgba textures
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rgba8unorm():
     """ Test a texture with format rgba8unorm.
     """
@@ -157,7 +158,6 @@ def test_render_textured_square_rgba8unorm():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rgba8uint():
     """ Test a texture with format rgba8uint.
     """
@@ -182,7 +182,6 @@ def test_render_textured_square_rgba8uint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rgba16sint():
     """ Test a texture with format rgba16sint.
     """
@@ -207,7 +206,6 @@ def test_render_textured_square_rgba16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rgba32float():
     """ Test a texture with format rgba32float.
     """
@@ -235,7 +233,6 @@ def test_render_textured_square_rgba32float():
 # %% rg textures
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rg8unorm():
     """ Test a texture with format rg8unorm.
     The GPU considers blue to be 0 and alpha to be 1.
@@ -261,7 +258,6 @@ def test_render_textured_square_rg8unorm():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rg8uint():
     """ Test a texture with format rg8uint.
     The GPU considers blue to be 0 and alpha to be 1.
@@ -288,7 +284,6 @@ def test_render_textured_square_rg8uint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rg16sint():
     """ Test a texture with format rg16sint.
     The GPU considers blue to be 0 and alpha to be 1.
@@ -315,7 +310,6 @@ def test_render_textured_square_rg16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_rg32float():
     """ Test a texture with format rg32float.
     The GPU considers blue to be 0 and alpha to be 1.
@@ -345,7 +339,6 @@ def test_render_textured_square_rg32float():
 # %% r textures
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_r8unorm():
     """ Test a texture with format r8unorm.
     """
@@ -371,7 +364,6 @@ def test_render_textured_square_r8unorm():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_render_textured_square_r8uint():
     """ Test a texture with format r8uint.
     """
@@ -397,8 +389,7 @@ def test_render_textured_square_r8uint():
     )
 
 
-# @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
-@mark.skipif(True, reason="This test does not pass yet!")
+@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r16sint():
     """ Test a texture with format r16sint. Because e.g. CT data.
     """
@@ -426,8 +417,7 @@ def test_render_textured_square_r16sint():
     )
 
 
-# @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
-@mark.skipif(True, reason="This test does not pass yet!")
+@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r32sint():
     """ Test a texture with format r32sint. Because e.g. CT data.
     """
@@ -455,8 +445,7 @@ def test_render_textured_square_r32sint():
     )
 
 
-# @mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
-@mark.skipif(True, reason="This test does not pass yet!")
+@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r32float():
     """ Test a texture with format r32float.
     """

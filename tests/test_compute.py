@@ -6,11 +6,14 @@ from python_shader import python2shader, Array, i32
 import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
-from pytest import mark
+from pytest import skip
 from testutils import can_use_wgpu_lib, iters_equal
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
+if not can_use_wgpu_lib:
+    skip("Skipping tests that need the wgpu lib", allow_module_level=True)
+
+
 def test_compute_0_1():
     @python2shader
     def compute_shader(
@@ -32,7 +35,6 @@ def test_compute_0_1():
     assert iters_equal(out0, range(20))
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_1_3():
     @python2shader
     def compute_shader(

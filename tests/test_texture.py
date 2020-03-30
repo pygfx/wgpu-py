@@ -5,7 +5,7 @@ import python_shader
 from python_shader import python2shader, ivec3
 import wgpu.backends.rs  # noqa
 
-from pytest import mark
+from pytest import skip
 from testutils import can_use_wgpu_lib, get_default_device
 import numpy as np
 
@@ -13,10 +13,12 @@ import numpy as np
 # todo: maybe specify sampling in type description??
 
 
+if not can_use_wgpu_lib:
+    skip("Skipping tests that need the wgpu lib", allow_module_level=True)
+
 # %% 1D
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_1d_rgba8uint():
     @python2shader
     def compute_shader(
@@ -44,7 +46,6 @@ def test_compute_tex_1d_rgba8uint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_1d_rg16sint():
     @python2shader
     def compute_shader(
@@ -71,7 +72,6 @@ def test_compute_tex_1d_rg16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_1d_r16sint():
     @python2shader
     def compute_shader(
@@ -98,7 +98,6 @@ def test_compute_tex_1d_r16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_1d_r32float():
     @python2shader
     def compute_shader(
@@ -128,7 +127,6 @@ def test_compute_tex_1d_r32float():
 # %% 2D
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_2d_rgba8uint():
     @python2shader
     def compute_shader(
@@ -158,7 +156,6 @@ def test_compute_tex_2d_rgba8uint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_2d_rg16sint():
     @python2shader
     def compute_shader(
@@ -186,7 +183,6 @@ def test_compute_tex_2d_rg16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_2d_r16sint():
     @python2shader
     def compute_shader(
@@ -214,7 +210,6 @@ def test_compute_tex_2d_r16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_2d_r32float():
     @python2shader
     def compute_shader(
@@ -245,7 +240,6 @@ def test_compute_tex_2d_r32float():
 # %% 3D
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_rgba8uint():
     @python2shader
     def compute_shader(
@@ -275,7 +269,6 @@ def test_compute_tex_3d_rgba8uint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_rg16sint():
     @python2shader
     def compute_shader(
@@ -304,7 +297,6 @@ def test_compute_tex_3d_rg16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_r16sint():
     @python2shader
     def compute_shader(
@@ -333,7 +325,6 @@ def test_compute_tex_3d_r16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_r32float():
     @python2shader
     def compute_shader(
