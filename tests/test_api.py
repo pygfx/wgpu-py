@@ -43,3 +43,48 @@ def test_do_not_import_utils_subpackage():
     code = "import sys, wgpu.utils; print('numpy' in sys.modules)"
     out = get_output_from_subprocess(code)
     assert out.strip().endswith("False"), out
+
+
+def test_help1(capsys):
+    x = wgpu.help("foobar")
+    captured = capsys.readouterr()
+
+    assert x is None
+    assert captured.err == ""
+    assert "0 flags" in captured.out
+    assert "0 enums" in captured.out
+    assert "0 functions" in captured.out
+
+
+def test_help2(capsys):
+    x = wgpu.help("request device")
+    captured = capsys.readouterr()
+
+    assert x is None
+    assert captured.err == ""
+    assert "0 flags" in captured.out
+    assert "0 enums" in captured.out
+    assert "2 functions" in captured.out
+    assert "request_device(" in captured.out
+    assert "request_device_async(" in captured.out
+
+
+def test_help3(capsys):
+    x = wgpu.help("buffer")
+    captured = capsys.readouterr()
+
+    assert x is None
+    assert captured.err == ""
+    assert "1 flags" in captured.out
+    assert "3 enums" in captured.out
+    assert "18 functions" in captured.out
+
+
+def test_help4(capsys):
+    x = wgpu.help("WGPUBufferDescriptor", dev=True)
+    captured = capsys.readouterr()
+
+    assert x is None
+    assert captured.err == ""
+    assert "2 structs in .idl" in captured.out
+    assert "3 structs in .h" in captured.out

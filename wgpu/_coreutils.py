@@ -21,6 +21,8 @@ def help(*searches, dev=False):
     can be useful during debugging and dev.
     """
 
+    from ._parsers import IdlParser, HParser, to_neutral_name
+
     # Strip prefixes used in .idl and .h
     name_parts = []
     for name_part in searches:
@@ -36,10 +38,7 @@ def help(*searches, dev=False):
     name_parts = [name_part.lower() for name_part in name_parts]
     all_lines = []  # list of (title, lines_list)
 
-    # todo: to_neutral_name also used in non-dev mode!
     if dev:
-        from ._parsers import IdlParser, HParser, to_neutral_name
-
         filename = os.path.join(get_resource_filename("webgpu.idl"))
         idl_parser = IdlParser(open(filename, "rb").read().decode())
         idl_parser.parse()
@@ -145,7 +144,7 @@ def help(*searches, dev=False):
                         .replace("self, ", "")
                         .replace("(self)", "()")
                     )
-                    func_id = funcname.replace(".", "").lower()
+                    func_id = to_neutral_name(funcname)
                     if name_part_f in func_id or name_part_f in sig.lower():
                         lines.append(funcname + sig)
 
