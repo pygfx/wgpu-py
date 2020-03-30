@@ -3,6 +3,8 @@ import subprocess
 
 import wgpu
 
+from pytest import raises
+
 
 def test_basic_api():
     import wgpu  # noqa: F401
@@ -27,6 +29,27 @@ def test_enums_and_flags():
 
     # Flag groups show their field names (in uppercase)
     assert "STORAGE" in repr(wgpu.BufferUsage)
+
+
+def test_base_wgpu_api():
+
+    with raises(RuntimeError) as error:
+        wgpu.base.request_adapter(power_preference="high-performance")
+    assert "select a backend" in str(error.value).lower()
+
+    # Fake a device and an adapter
+    adapter = wgpu.base.GPUAdapter("adapter07", [])
+    device = wgpu.base.GPUDevice("device08", -1, adapter, [42, 43], {}, None)
+
+    assert adapter.name == "adapter07"
+    assert adapter.extensions == ()
+
+    assert isinstance(device, wgpu.base.GPUObject)
+    assert device.label == "device08"
+    assert device.extensions == [42, 43]
+    assert device.limits == {}
+    assert hex(id(device)) in repr(device)
+    assert device.label in repr(device)
 
 
 def get_output_from_subprocess(code):

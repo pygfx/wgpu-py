@@ -386,14 +386,15 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     texture_view = texture.create_default_view()
 
     # Create buffer that we need to upload the data
-    buffer = device.create_buffer_mapped(
-        size=nbytes,
-        usage=wgpu.BufferUsage.MAP_READ
+    buffer_usage = (
+        wgpu.BufferUsage.MAP_READ
         | wgpu.BufferUsage.COPY_SRC
-        | wgpu.BufferUsage.COPY_DST,
+        | wgpu.BufferUsage.COPY_DST
     )
+    buffer = device.create_buffer_mapped(size=nbytes, usage=buffer_usage)
     ctypes.memmove(buffer.mapping, data1, nbytes)
     buffer.unmap()
+    assert buffer.usage == buffer_usage
 
     # Define bindings
     bindings = [{"binding": 0, "resource": texture_view}]

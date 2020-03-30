@@ -7,9 +7,10 @@ from wgpu.utils import get_default_device  # noqa
 
 def iters_equal(iter1, iter2):
     iter1, iter2 = list(iter1), list(iter2)
-    assert len(iter1) == len(iter2)
-    assert all(iter1[i] == iter2[i] for i in range(len(iter1)))
-    return True
+    if len(iter1) == len(iter2):
+        if all(iter1[i] == iter2[i] for i in range(len(iter1))):
+            return True
+    return False
 
 
 def _determine_can_use_vulkan_sdk():

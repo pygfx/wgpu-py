@@ -45,7 +45,7 @@ from .._mappings import cstructfield2enum, enummap
 logger = logging.getLogger("wgpu")  # noqa
 
 
-if cffi_version_info < (1, 10):
+if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
 
 
@@ -79,11 +79,11 @@ def _get_wgpu_lib_path():
         paths.append(override_path)
 
     lib_filename = None
-    if sys.platform.startswith("win"):
+    if sys.platform.startswith("win"):  # no-cover
         lib_filename = "wgpu_native.dll"
-    elif sys.platform.startswith("darwin"):
+    elif sys.platform.startswith("darwin"):  # no-cover
         lib_filename = "libwgpu_native.dylib"
-    elif sys.platform.startswith("linux"):
+    elif sys.platform.startswith("linux"):  # no-cover
         lib_filename = "libwgpu_native.so"
     if lib_filename:
         # Note that this can be a false positive, e.g. ARM linux.
@@ -93,7 +93,7 @@ def _get_wgpu_lib_path():
     for path in paths:
         if os.path.isfile(path):
             return path
-    else:
+    else:  # no-cover
         raise RuntimeError(f"Could not find WGPU library, checked: {paths}")
 
 
@@ -264,7 +264,7 @@ async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
     """ Async version of ``request_adapter()``.
     This function uses the Rust WGPU library.
     """
-    return request_adapter(power_preference=power_preference)
+    return request_adapter(power_preference=power_preference)  # no-cover
 
 
 # Mark as the backend on import time
@@ -771,7 +771,7 @@ class GPUBuffer(base.GPUBuffer):
         # Let it do some cycles
         _lib.wgpu_device_poll(self._device._internal, True)
 
-        if data is None:
+        if data is None:  # no-cover
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
@@ -797,7 +797,7 @@ class GPUBuffer(base.GPUBuffer):
         # Let it do some cycles
         _lib.wgpu_device_poll(self._device._internal, True)
 
-        if data is None:
+        if data is None:  # no-cover
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
@@ -1324,7 +1324,7 @@ class GPUSwapChain(base.GPUSwapChain):
 # %%
 
 
-def _copy_docstrings():
+def _copy_docstrings():  # co-cover
     for ob in globals().values():
         if not (isinstance(ob, type) and issubclass(ob, base.GPUObject)):
             continue

@@ -41,7 +41,7 @@ async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
     """
     raise RuntimeError(
         "Select a backend (by importing wgpu.rs) before requesting an adapter!"
-    )
+    )  # no-cover
 
 
 class GPUObject:
