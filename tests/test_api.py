@@ -4,13 +4,29 @@ import subprocess
 import wgpu
 
 
-def test_stub():
+def test_basic_api():
     import wgpu  # noqa: F401
 
-    assert wgpu.__version__
+    assert isinstance(wgpu.__version__, str)
+    assert isinstance(wgpu.version_info, tuple)
     assert wgpu.help
     assert wgpu.request_adapter
     assert wgpu.request_adapter_async
+
+
+def test_enums_and_flags():
+
+    # Enums are str
+    assert isinstance(wgpu.BindingType.storage_buffer, str)
+
+    # Enum groups show their values
+    assert "storage-buffer" in repr(wgpu.BindingType)
+
+    # Flags are ints
+    assert isinstance(wgpu.BufferUsage.STORAGE, int)
+
+    # Flag groups show their field names (in uppercase)
+    assert "STORAGE" in repr(wgpu.BufferUsage)
 
 
 def get_output_from_subprocess(code):

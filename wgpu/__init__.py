@@ -6,6 +6,7 @@ from . import base
 
 
 __version__ = "0.1.5"
+version_info = tuple(map(int, __version__.split(".")))
 
 
 def _register_backend(func, func_async):
