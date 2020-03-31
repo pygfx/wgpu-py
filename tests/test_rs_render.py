@@ -118,6 +118,90 @@ def test_render_orange_square_indexed():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
+def test_render_orange_square_color_attachement1():
+    """ Render an orange square on a blue background, testing the load_value.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    ca = {
+        "resolve_target": None,
+        "load_value": (0, 0, 0.8, 1),  # LoadOp.load or color
+        "store_op": wgpu.StoreOp.store,
+    }
+
+    # Render
+    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_to_screen(*render_args, color_attachement=ca)
+    a = render_to_texture(*render_args, size=(64, 64), color_attachement=ca)
+
+    # Check the blue background
+    assert np.all(a[:16, :16, 2] == 204)
+    assert np.all(a[:16, -16:, 2] == 204)
+    assert np.all(a[-16:, :16, 2] == 204)
+    assert np.all(a[-16:, -16:, 2] == 204)
+
+    # Check the square
+    sq = a[16:-16, 16:-16, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
+def test_render_orange_square_color_attachement2():
+    """ Render an orange square on a blue background, testing the LoadOp.load,
+    though in this case the result is the same as the normal square test.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    ca = {
+        "resolve_target": None,
+        "load_value": wgpu.LoadOp.load,  # LoadOp.load or color
+        "store_op": wgpu.StoreOp.store,
+    }
+
+    # Render
+    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_to_screen(*render_args, color_attachement=ca)
+    a = render_to_texture(*render_args, size=(64, 64), color_attachement=ca)
+
+    # Check the background
+    bg = a.copy()
+    bg[16:-16, 16:-16, :] = 0
+    assert np.all(bg == 0)
+
+    # Check the square
+    sq = a[16:-16, 16:-16, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
 def test_render_orange_square_vbo():
     """ Render an orange square, using a VBO.
     """
@@ -606,7 +690,14 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     upload_to_texture(device, texture, texture_data, nx, ny, nz)
 
     sampler = device.create_sampler(mag_filter="linear", min_filter="linear")
-    texture_view = texture.create_default_view()
+
+    # texture_view = texture.create_default_view()
+    # or:
+    texture_view = texture.create_view(
+        format=texture_format,
+        dimension=wgpu.TextureDimension.d2,
+        aspect=wgpu.TextureAspect.all,
+    )
 
     # Bindings and layout
     bindings = [
@@ -696,6 +787,7 @@ def render_to_texture(
     ibo=None,
     vbos=None,
     vbo_views=None,
+    color_attachement=None,
 ):
 
     # https://github.com/gfx-rs/wgpu-rs/blob/master/examples/capture/main.rs
@@ -766,16 +858,14 @@ def render_to_texture(
 
     command_encoder = device.create_command_encoder()
 
+    color_attachement = color_attachement or {
+        "resolve_target": None,
+        "load_value": (0, 0, 0, 0),  # LoadOp.load or color
+        "store_op": wgpu.StoreOp.store,
+    }
+    color_attachement["attachment"] = current_texture_view
     render_pass = command_encoder.begin_render_pass(
-        color_attachments=[
-            {
-                "attachment": current_texture_view,
-                "resolve_target": None,
-                "load_value": (0, 0, 0, 0),  # LoadOp.load or color
-                "store_op": wgpu.StoreOp.store,
-            }
-        ],
-        depth_stencil_attachment=None,
+        color_attachments=[color_attachement], depth_stencil_attachment=None,
     )
 
     render_pass.set_pipeline(render_pipeline)
@@ -812,6 +902,7 @@ def render_to_screen(
     ibo=None,
     vbos=None,
     vbo_views=None,
+    color_attachement=None,
 ):
     """ Render to a window on screen, for debugging purposes.
     """
@@ -874,16 +965,14 @@ def render_to_screen(
         current_texture_view = swap_chain.get_current_texture_view()
         command_encoder = device.create_command_encoder()
 
+        ca = color_attachement or {
+            "resolve_target": None,
+            "load_value": (0, 0, 0, 0),  # LoadOp.load or color
+            "store_op": wgpu.StoreOp.store,
+        }
+        ca["attachment"] = current_texture_view
         render_pass = command_encoder.begin_render_pass(
-            color_attachments=[
-                {
-                    "attachment": current_texture_view,
-                    "resolve_target": None,
-                    "load_value": (0, 0, 0, 1),  # LoadOp.load or color
-                    "store_op": wgpu.StoreOp.store,
-                }
-            ],
-            depth_stencil_attachment=None,
+            color_attachments=[ca], depth_stencil_attachment=None,
         )
 
         render_pass.set_pipeline(render_pipeline)
@@ -913,6 +1002,8 @@ if __name__ == "__main__":
     test_render_orange_square_vbo()
     test_render_orange_square_indexed()
     test_render_orange_dots()
+    test_render_orange_square_color_attachement1()
+    test_render_orange_square_color_attachement2()
 
     test_render_textured_square_rgba8unorm()
     test_render_textured_square_rgba8uint()

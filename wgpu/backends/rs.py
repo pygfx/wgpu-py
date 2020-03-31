@@ -52,6 +52,10 @@ if cffi_version_info < (1, 10):  # no-cover
 cstructfield2enum_alt = {"store_op": "StoreOp", "load_op": "LoadOp"}
 
 
+class NotYetImplementedError(NotImplementedError):
+    pass  # NotImplementedError does not count in coverage, this one does
+
+
 def _get_wgpu_h():
     # Read header file and strip some stuff that cffi would stumble on
     lines = []
@@ -672,7 +676,7 @@ class GPUDevice(base.GPUDevice):
             c_depth_stencil_state = ffi.NULL
         else:
             # todo: missing API
-            raise NotImplementedError(
+            raise NotYetImplementedError(
                 "GPUDevice.create_render_pipeline depth_stencil_state"
             )
             # c_depth_stencil_state = new_struct(
@@ -858,6 +862,7 @@ class GPUTexture(base.GPUTexture):
 
         struct = new_struct(
             "WGPUTextureViewDescriptor *",
+            format=format,
             dimension=dimension,
             aspect=aspect,
             base_mip_level=base_mip_level,
@@ -906,7 +911,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
                 c_resolve_target = ffi.NULL
             else:
                 # todo: missing API
-                raise NotImplementedError(
+                raise NotYetImplementedError(
                     "GPUCommandEncoder.begin_render_pass resolve_target"
                 )
             if isinstance(color_attachment["load_value"], str):
@@ -935,7 +940,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
             # todo: missing API
-            raise NotImplementedError(
+            raise NotYetImplementedError(
                 "GPUCommandEncoder.begin_render_pass depth_stencil_attachment"
             )
 
@@ -1087,15 +1092,15 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
 
     # # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
     # def push_debug_group(self, group_label):
-    #     raise NotImplementedError()
+    #     raise NotYetImplementedError()
     #
     # # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
     # def pop_debug_group(self):
-    #     raise NotImplementedError()
+    #     raise NotYetImplementedError()
     #
     # # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
     # def insert_debug_marker(self, marker_label):
-    #     raise NotImplementedError()
+    #     raise NotYetImplementedError()
 
 
 class GPUComputePassEncoder(GPUProgrammablePassEncoder):
@@ -1153,7 +1158,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # todo: missing API
     # def draw_indirect(self, indirect_buffer, indirect_offset):
-    #     raise NotImplementedError()
+    #     raise NotYetImplementedError()
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     def draw_indexed(
@@ -1170,7 +1175,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # todo: missing API
     # def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
-    #     raise NotImplementedError()
+    #     raise NotYetImplementedError()
 
 
 class GPURenderPassEncoder(GPURenderEncoderBase):
@@ -1229,7 +1234,7 @@ class GPURenderBundleEncoder(base.GPURenderBundleEncoder):
 
     # Not yet implemented in wgpu-native
     # def finish(self, *, label=""):
-    #     raise NotImplementedError()
+    #     raise NotYetImplementedError()
 
 
 class GPUQueue(base.GPUQueue):
@@ -1243,7 +1248,7 @@ class GPUQueue(base.GPUQueue):
 
     # Seems not yet implemented in wgpu-native
     # def copy_image_bitmap_to_texture(self, source, destination, copy_size):
-    #     raise NotImplementedError()
+    #     raise NotYetImplementedError()
 
 
 class GPUSwapChain(base.GPUSwapChain):
