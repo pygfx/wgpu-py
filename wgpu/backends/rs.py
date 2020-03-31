@@ -141,12 +141,14 @@ def new_struct(ctype, **kwargs):
 
 def get_surface_id_from_canvas(canvas):
     win_id = canvas.get_window_id()
-    if sys.platform.startswith("win"):
+
+    if sys.platform.startswith("win"):  # no-cover
         # wgpu_create_surface_from_windows_hwnd(void *_hinstance, void *hwnd)
         hwnd = ffi.cast("void *", int(win_id))
         hinstance = ffi.NULL
         return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
-    elif sys.platform.startswith("darwin"):
+
+    elif sys.platform.startswith("darwin"):  # no-cover
         # wgpu_create_surface_from_metal_layer(void *layer)
         # This is what the triangle example from wgpu-native does:
         # #if WGPU_TARGET == WGPU_TARGET_MACOS
@@ -200,7 +202,8 @@ def get_surface_id_from_canvas(canvas):
 
         metal_layer_ffi_pointer = ffi.cast("void *", metal_layer)
         return _lib.wgpu_create_surface_from_metal_layer(metal_layer_ffi_pointer)
-    elif sys.platform.startswith("linux"):
+
+    elif sys.platform.startswith("linux"):  # no-cover
         # wgpu_create_surface_from_wayland(void *surface, void *display)
         # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
         display_id = canvas.get_display_id()
@@ -213,8 +216,9 @@ def get_surface_id_from_canvas(canvas):
         else:
             display = ffi.cast("void **", display_id)
             return _lib.wgpu_create_surface_from_xlib(display, win_id)
-    # Else ...
-    raise RuntimeError("Cannot get surface id: unsupported platform.")
+
+    else:  # no-cover
+        raise RuntimeError("Cannot get surface id: unsupported platform.")
 
 
 def _tuple_from_tuple_or_dict(ob, fields):
@@ -355,7 +359,9 @@ class GPUAdapter(base.GPUAdapter):
         extensions: "GPUExtensionName-list" = [],
         limits: "GPULimits" = {},
     ):
-        return self.request_device(label=label, extensions=extensions, limits=limits)
+        return self.request_device(
+            label=label, extensions=extensions, limits=limits
+        )  # no-cover
 
 
 class GPUDevice(base.GPUDevice):
@@ -843,12 +849,12 @@ class GPUBuffer(base.GPUBuffer):
     # wgpu.help('buffermapreadasync', dev=True)
     async def map_read_async(self):
         # todo: actually make this async
-        return self.map_read()
+        return self.map_read()  # no-cover
 
     # wgpu.help('buffermapwriteasync', dev=True)
     async def map_write_async(self):
         # todo: actually make this async
-        return self.map_write()
+        return self.map_write()  # no-cover
 
     # wgpu.help('bufferunmap', dev=True)
     def unmap(self):
@@ -1149,11 +1155,11 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
         _lib.wgpu_compute_pass_dispatch(self._internal, x, y, z)
 
     # wgpu.help('Buffer', 'Size64', 'computepassencoderdispatchindirect', dev=True)
-    def dispatch_indirect(self, indirect_buffer, indirect_offset):
-        buffer_id = indirect_buffer._internal
-        _lib.wgpu_compute_pass_dispatch_indirect(
-            self._internal, buffer_id, indirect_offset
-        )
+    # def dispatch_indirect(self, indirect_buffer, indirect_offset):
+    #     buffer_id = indirect_buffer._internal
+    #     _lib.wgpu_compute_pass_dispatch_indirect(
+    #         self._internal, buffer_id, indirect_offset
+    #     )
 
     # wgpu.help('computepassencoderendpass', dev=True)
     def end_pass(self):
@@ -1244,21 +1250,21 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     def set_stencil_reference(self, reference):
         _lib.wgpu_render_pass_set_stencil_reference(self._internal, int(reference))
 
-    # wgpu.help('renderpassencoderexecutebundles', dev=True)
-    def execute_bundles(self, bundles):
-        # Not sure what this function exists in the Rust API, because there is no
-        # way to create bundles yet?
-        bundles2 = []
-        for bundle in bundles:
-            if isinstance(bundle, base.GPURenderBundle):
-                bundles2.append(bundle._internal)
-            else:
-                bundles2.append(int(bundle))
-
-        c_bundles_array = ffi.new("WGPURenderBundleId []", bundles2)
-        _lib.wgpu_render_pass_execute_bundles(
-            self._internal, c_bundles_array, len(bundles2),
-        )
+    # todo: missing api
+    # def execute_bundles(self, bundles):
+    #     # Not sure what this function exists in the Rust API, because there is no
+    #     # way to create bundles yet?
+    #     bundles2 = []
+    #     for bundle in bundles:
+    #         if isinstance(bundle, base.GPURenderBundle):
+    #             bundles2.append(bundle._internal)
+    #         else:
+    #             bundles2.append(int(bundle))
+    #
+    #     c_bundles_array = ffi.new("WGPURenderBundleId []", bundles2)
+    #     _lib.wgpu_render_pass_execute_bundles(
+    #         self._internal, c_bundles_array, len(bundles2),
+    #     )
 
     # wgpu.help('renderpassencoderendpass', dev=True)
     def end_pass(self):

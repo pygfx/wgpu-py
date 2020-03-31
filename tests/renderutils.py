@@ -66,7 +66,7 @@ def render_to_texture(
     ibo=None,
     vbos=None,
     vbo_views=None,
-    color_attachement=None,
+    color_attachment=None,
     depth_stencil_state=None,
     depth_stencil_attachment=None,
     renderpass_callback=lambda *args: None
@@ -140,14 +140,14 @@ def render_to_texture(
 
     command_encoder = device.create_command_encoder()
 
-    color_attachement = color_attachement or {
+    color_attachment = color_attachment or {
         "resolve_target": None,
         "load_value": (0, 0, 0, 0),  # LoadOp.load or color
         "store_op": wgpu.StoreOp.store,
     }
-    color_attachement["attachment"] = current_texture_view
+    color_attachment["attachment"] = current_texture_view
     render_pass = command_encoder.begin_render_pass(
-        color_attachments=[color_attachement],
+        color_attachments=[color_attachment],
         depth_stencil_attachment=depth_stencil_attachment,
     )
 
@@ -186,7 +186,7 @@ def render_to_screen(
     ibo=None,
     vbos=None,
     vbo_views=None,
-    color_attachement=None,
+    color_attachment=None,
     depth_stencil_state=None,
     depth_stencil_attachment=None,
     renderpass_callback=lambda *args: None
@@ -252,7 +252,7 @@ def render_to_screen(
         current_texture_view = swap_chain.get_current_texture_view()
         command_encoder = device.create_command_encoder()
 
-        ca = color_attachement or {
+        ca = color_attachment or {
             "resolve_target": None,
             "load_value": (0, 0, 0, 0),  # LoadOp.load or color
             "store_op": wgpu.StoreOp.store,

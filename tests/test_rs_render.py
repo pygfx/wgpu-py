@@ -180,7 +180,7 @@ def test_render_orange_square_vbo():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_color_attachement1():
+def test_render_orange_square_color_attachment1():
     """ Render an orange square on a blue background, testing the load_value.
     """
 
@@ -205,8 +205,8 @@ def test_render_orange_square_color_attachement1():
 
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
-    # render_to_screen(*render_args, color_attachement=ca)
-    a = render_to_texture(*render_args, size=(64, 64), color_attachement=ca)
+    # render_to_screen(*render_args, color_attachment=ca)
+    a = render_to_texture(*render_args, size=(64, 64), color_attachment=ca)
 
     # Check the blue background
     assert np.all(a[:16, :16, 2] == 204)
@@ -222,7 +222,7 @@ def test_render_orange_square_color_attachement1():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_color_attachement2():
+def test_render_orange_square_color_attachment2():
     """ Render an orange square on a blue background, testing the LoadOp.load,
     though in this case the result is the same as the normal square test.
     """
@@ -248,8 +248,8 @@ def test_render_orange_square_color_attachement2():
 
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
-    # render_to_screen(*render_args, color_attachement=ca)
-    a = render_to_texture(*render_args, size=(64, 64), color_attachement=ca)
+    # render_to_screen(*render_args, color_attachment=ca)
+    a = render_to_texture(*render_args, size=(64, 64), color_attachment=ca)
 
     # Check the background
     bg = a.copy()
@@ -507,8 +507,8 @@ if __name__ == "__main__":
 
     test_render_orange_square_vbo()
     test_render_orange_square_indexed()
-    test_render_orange_square_color_attachement1()
-    test_render_orange_square_color_attachement2()
+    test_render_orange_square_color_attachment1()
+    test_render_orange_square_color_attachment2()
 
     test_render_orange_square_viewport()
     test_render_orange_square_scissor()
