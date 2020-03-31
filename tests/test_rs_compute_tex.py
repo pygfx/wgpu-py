@@ -4,10 +4,11 @@ import ctypes
 import python_shader
 from python_shader import python2shader, ivec3
 import wgpu.backends.rs  # noqa
+import numpy as np
 
 from pytest import skip
 from testutils import can_use_wgpu_lib, get_default_device
-import numpy as np
+from renderutils import render_to_texture, render_to_screen  # noqa
 
 # todo: use "image" instead of ""texture" to communicate usage as storage?
 # todo: maybe specify sampling in type description??
