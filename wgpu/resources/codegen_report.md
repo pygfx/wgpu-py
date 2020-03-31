@@ -97,7 +97,7 @@
 *  Injected IDL lines into base.py
 
 ### Check functions in backends/rs.py
-*  Found 47 functions already implemented
+*  Found 45 functions already implemented
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
 *  Not implemented: void pushDebugGroup(DOMString groupLabel);
 *  Not implemented: void popDebugGroup();
@@ -105,8 +105,10 @@
 *  Not implemented: void pushDebugGroup(DOMString groupLabel);
 *  Not implemented: void popDebugGroup();
 *  Not implemented: void insertDebugMarker(DOMString markerLabel);
+*  Not implemented: void dispatchIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
 *  Not implemented: void drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
 *  Not implemented: void drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+*  Not implemented: void executeBundles(sequence<GPURenderBundle> bundles);
 *  Not implemented: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
 *  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
 *  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue);

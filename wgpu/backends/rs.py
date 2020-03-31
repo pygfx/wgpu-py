@@ -937,8 +937,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             c_resolve_target = (
                 ffi.NULL
                 if color_attachment["resolve_target"] is None
-                else color_attachment["resolve_target"]._internal  # TextureViewId
-            )
+                else color_attachment["resolve_target"]._internal
+            )  # TextureViewId
             c_load_op, clear_color = _loadop_and_clear_from_value(
                 color_attachment["load_value"]
             )
@@ -1154,7 +1154,6 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     def dispatch(self, x, y, z):
         _lib.wgpu_compute_pass_dispatch(self._internal, x, y, z)
 
-    # wgpu.help('Buffer', 'Size64', 'computepassencoderdispatchindirect', dev=True)
     # def dispatch_indirect(self, indirect_buffer, indirect_offset):
     #     buffer_id = indirect_buffer._internal
     #     _lib.wgpu_compute_pass_dispatch_indirect(
