@@ -127,3 +127,30 @@ def test_help4(capsys):
     assert captured.err == ""
     assert "2 structs in .idl" in captured.out
     assert "3 structs in .h" in captured.out
+
+
+def test_register_backend_fails():
+    def request_adapter():
+        pass
+
+    async def request_adapter_async():
+        pass
+
+    old_request_adapter = wgpu.request_adapter
+    try:
+        wgpu.request_adapter = wgpu.base.request_adapter
+
+        with raises(RuntimeError):
+            wgpu._register_backend("foo", "foo")
+        with raises(RuntimeError):
+            wgpu._register_backend(request_adapter, "foo")
+        wgpu._register_backend(request_adapter, request_adapter_async)
+        assert wgpu.request_adapter is request_adapter
+        assert wgpu.request_adapter_async is request_adapter_async
+
+        wgpu.request_adapter = "anything not base.request_adapter"
+        with raises(RuntimeError):
+            wgpu._register_backend(request_adapter, request_adapter_async)
+
+    finally:
+        wgpu.request_adapter = old_request_adapter
