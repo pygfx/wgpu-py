@@ -69,6 +69,116 @@ def test_render_orange_square():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
+def test_render_orange_square_indexed():
+    """ Render an orange square, using an index buffer.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    # Index buffer
+    indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
+    ibo = device.create_buffer_mapped(
+        size=ctypes.sizeof(indices),
+        usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
+    )
+    ctypes.memmove(ibo.mapping, indices, ctypes.sizeof(indices))
+    ibo.unmap()
+
+    # Render
+    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    # render_to_screen(*render_args, topology=wgpu.PrimitiveTopology.triangle_list, ibo=ibo)
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        topology=wgpu.PrimitiveTopology.triangle_list,
+        ibo=ibo,
+    )
+
+    # Check that the background is all zero
+    bg = a.copy()
+    bg[16:-16, 16:-16, :] = 0
+    assert np.all(bg == 0)
+
+    # Check the square
+    sq = a[16:-16, 16:-16, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
+def test_render_orange_square_vbo():
+    """ Render an orange square, using a VBO.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def vertex_shader(
+        pos_in: (RES_INPUT, 0, vec2),
+        pos: (RES_OUTPUT, "Position", vec4),
+        tcoord: (RES_OUTPUT, 0, vec2),
+    ):
+        pos = vec4(pos_in, 0.0, 1.0)  # noqa
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    # Vertex buffer
+    pos_data = (ctypes.c_float * 8)(-0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5)
+    vbo = device.create_buffer_mapped(
+        size=ctypes.sizeof(pos_data),
+        usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.MAP_WRITE,
+    )
+    ctypes.memmove(vbo.mapping, pos_data, ctypes.sizeof(pos_data))
+    vbo.unmap()
+
+    # Vertex buffer views
+    vbo_view = {
+        "array_stride": 4 * 2,
+        "stepmode": "vertex",
+        "attributes": [
+            {"format": wgpu.VertexFormat.float2, "offset": 0, "shader_location": 0,},
+        ],
+    }
+
+    # Render
+    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    # render_to_screen(*render_args, vbos=[vbo], vbo_views=[vbo_view])
+    a = render_to_texture(*render_args, size=(64, 64), vbos=[vbo], vbo_views=[vbo_view])
+
+    # Check that the background is all zero
+    bg = a.copy()
+    bg[16:-16, 16:-16, :] = 0
+    assert np.all(bg == 0)
+
+    # Check the square
+    sq = a[16:-16, 16:-16, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
 def test_render_orange_dots():
     """ Render four orange dots and check that there are four orange square dots.
     """
@@ -583,9 +693,15 @@ def render_to_texture(
     *,
     size,
     topology=wgpu.PrimitiveTopology.triangle_strip,
+    ibo=None,
+    vbos=None,
+    vbo_views=None,
 ):
 
     # https://github.com/gfx-rs/wgpu-rs/blob/master/examples/capture/main.rs
+
+    vbos = vbos or []
+    vbo_views = vbo_views or []
 
     # Select texture format. The srgb norm maps to the srgb colorspace which
     # appears to be the default for render pipelines https://en.wikipedia.org/wiki/SRGB
@@ -639,7 +755,10 @@ def render_to_texture(
             }
         ],
         depth_stencil_state=None,
-        vertex_state={"index_format": wgpu.IndexFormat.uint32, "vertex_buffers": []},
+        vertex_state={
+            "index_format": wgpu.IndexFormat.uint32,
+            "vertex_buffers": vbo_views,
+        },
         sample_count=1,
         sample_mask=0xFFFFFFFF,
         alpha_to_coverage_enabled=False,
@@ -661,7 +780,13 @@ def render_to_texture(
 
     render_pass.set_pipeline(render_pipeline)
     render_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
-    render_pass.draw(4, 1, 0, 0)
+    for slot, vbo in enumerate(vbos):
+        render_pass.set_vertex_buffer(slot, vbo, 0)
+    if ibo is None:
+        render_pass.draw(4, 1, 0, 0)
+    else:
+        render_pass.set_index_buffer(ibo, 0)
+        render_pass.draw_indexed(6, 1, 0, 0, 0)
     render_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
@@ -684,11 +809,17 @@ def render_to_screen(
     bind_group,
     *,
     topology=wgpu.PrimitiveTopology.triangle_strip,
+    ibo=None,
+    vbos=None,
+    vbo_views=None,
 ):
     """ Render to a window on screen, for debugging purposes.
     """
     import glfw
     from wgpu.gui.glfw import WgpuCanvas
+
+    vbos = vbos or []
+    vbo_views = vbo_views or []
 
     # Setup canvas
     glfw.init()
@@ -726,7 +857,10 @@ def render_to_screen(
             }
         ],
         depth_stencil_state=None,
-        vertex_state={"index_format": wgpu.IndexFormat.uint32, "vertex_buffers": []},
+        vertex_state={
+            "index_format": wgpu.IndexFormat.uint32,
+            "vertex_buffers": vbo_views,
+        },
         sample_count=1,
         sample_mask=0xFFFFFFFF,
         alpha_to_coverage_enabled=False,
@@ -756,7 +890,13 @@ def render_to_screen(
         render_pass.set_bind_group(
             0, bind_group, [], 0, 999999
         )  # last 2 elements not used
-        render_pass.draw(4, 1, 0, 0)
+        for slot, vbo in enumerate(vbos):
+            render_pass.set_vertex_buffer(slot, vbo, 0)
+        if ibo is None:
+            render_pass.draw(4, 1, 0, 0)
+        else:
+            render_pass.set_index_buffer(ibo, 0)
+            render_pass.draw_indexed(6, 1, 0, 0, 0)
         render_pass.end_pass()
         device.default_queue.submit([command_encoder.finish()])
 
@@ -770,6 +910,8 @@ def render_to_screen(
 
 if __name__ == "__main__":
     test_render_orange_square()
+    test_render_orange_square_vbo()
+    test_render_orange_square_indexed()
     test_render_orange_dots()
 
     test_render_textured_square_rgba8unorm()
