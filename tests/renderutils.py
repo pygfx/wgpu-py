@@ -9,6 +9,51 @@ import numpy as np
 import wgpu.backends.rs  # noqa
 
 
+def upload_to_texture(device, texture, data, nx, ny, nz):
+
+    nbytes = ctypes.sizeof(data)
+    bpp = nbytes // (nx * ny * nz)
+
+    # Create a buffer to get the data into the GPU
+    buffer = device.create_buffer_mapped(size=nbytes, usage=wgpu.BufferUsage.COPY_SRC)
+
+    # Upload to buffer
+    ctypes.memmove(buffer.mapping, data, nbytes)
+    buffer.unmap()
+
+    # Copy to texture (image_height must only be nonzero for 3D textures)
+    command_encoder = device.create_command_encoder()
+    command_encoder.copy_buffer_to_texture(
+        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": 0},
+        {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        (nx, ny, nz),
+    )
+    device.default_queue.submit([command_encoder.finish()])
+
+
+def download_from_texture(device, texture, data_type, nx, ny, nz):
+    nbytes = ctypes.sizeof(data_type)
+    bpp = nbytes // (nx * ny * nz)
+
+    # Create a buffer to get the data into the GPU
+    buffer = device.create_buffer(size=nbytes, usage=wgpu.BufferUsage.COPY_DST)
+
+    # Copy to buffer
+    command_encoder = device.create_command_encoder()
+    command_encoder.copy_texture_to_buffer(
+        {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": 0},
+        (nx, ny, nz),
+    )
+    device.default_queue.submit([command_encoder.finish()])
+
+    # Download
+    mapped_array = buffer.map_read()
+    data = data_type.from_buffer(mapped_array)
+    buffer.unmap()
+    return data
+
+
 def render_to_texture(
     device,
     vertex_shader,
@@ -22,6 +67,9 @@ def render_to_texture(
     vbos=None,
     vbo_views=None,
     color_attachement=None,
+    depth_stencil_state=None,
+    depth_stencil_attachment=None,
+    renderpass_callback=lambda *args: None
 ):
 
     # https://github.com/gfx-rs/wgpu-rs/blob/master/examples/capture/main.rs
@@ -80,7 +128,7 @@ def render_to_texture(
                 "write_mask": wgpu.ColorWrite.ALL,
             }
         ],
-        depth_stencil_state=None,
+        depth_stencil_state=depth_stencil_state,
         vertex_state={
             "index_format": wgpu.IndexFormat.uint32,
             "vertex_buffers": vbo_views,
@@ -99,13 +147,15 @@ def render_to_texture(
     }
     color_attachement["attachment"] = current_texture_view
     render_pass = command_encoder.begin_render_pass(
-        color_attachments=[color_attachement], depth_stencil_attachment=None,
+        color_attachments=[color_attachement],
+        depth_stencil_attachment=depth_stencil_attachment,
     )
 
     render_pass.set_pipeline(render_pipeline)
     render_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
     for slot, vbo in enumerate(vbos):
         render_pass.set_vertex_buffer(slot, vbo, 0)
+    renderpass_callback(render_pass)
     if ibo is None:
         render_pass.draw(4, 1, 0, 0)
     else:
@@ -137,6 +187,9 @@ def render_to_screen(
     vbos=None,
     vbo_views=None,
     color_attachement=None,
+    depth_stencil_state=None,
+    depth_stencil_attachment=None,
+    renderpass_callback=lambda *args: None
 ):
     """ Render to a window on screen, for debugging purposes.
     """
@@ -181,7 +234,7 @@ def render_to_screen(
                 "write_mask": wgpu.ColorWrite.ALL,
             }
         ],
-        depth_stencil_state=None,
+        depth_stencil_state=depth_stencil_state,
         vertex_state={
             "index_format": wgpu.IndexFormat.uint32,
             "vertex_buffers": vbo_views,
@@ -206,7 +259,7 @@ def render_to_screen(
         }
         ca["attachment"] = current_texture_view
         render_pass = command_encoder.begin_render_pass(
-            color_attachments=[ca], depth_stencil_attachment=None,
+            color_attachments=[ca], depth_stencil_attachment=depth_stencil_attachment,
         )
 
         render_pass.set_pipeline(render_pipeline)
@@ -215,6 +268,7 @@ def render_to_screen(
         )  # last 2 elements not used
         for slot, vbo in enumerate(vbos):
             render_pass.set_vertex_buffer(slot, vbo, 0)
+        renderpass_callback(render_pass)
         if ibo is None:
             render_pass.draw(4, 1, 0, 0)
         else:

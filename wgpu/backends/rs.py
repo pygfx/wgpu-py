@@ -49,11 +49,12 @@ if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
 
 
-cstructfield2enum_alt = {"store_op": "StoreOp", "load_op": "LoadOp"}
-
-
-class NotYetImplementedError(NotImplementedError):
-    pass  # NotImplementedError does not count in coverage, this one does
+cstructfield2enum_alt = {
+    "load_op": "LoadOp",
+    "store_op": "StoreOp",
+    "depth_store_op": "StoreOp",
+    "stencil_store_op": "StoreOp",
+}
 
 
 def _get_wgpu_h():
@@ -237,6 +238,14 @@ def _tuple_from_tuple_or_dict(ob, fields):
             raise ValueError(error_msg.format(", ".join(fields)))
     else:
         raise TypeError(error_msg.format(", ".join(fields)))
+
+
+def _loadop_and_clear_from_value(value):
+    if isinstance(value, str):
+        assert value == "load"
+        return 1, 0  # WGPULoadOp_Load and a stub value
+    else:
+        return 0, value  # WGPULoadOp_Clear and the value
 
 
 # %% The API
@@ -675,20 +684,32 @@ class GPUDevice(base.GPUDevice):
         if depth_stencil_state is None:
             c_depth_stencil_state = ffi.NULL
         else:
-            # todo: missing API
-            raise NotYetImplementedError(
-                "GPUDevice.create_render_pipeline depth_stencil_state"
+            stencil_front = depth_stencil_state["stencil_front"]
+            c_stencil_front = new_struct(
+                "WGPUStencilStateFaceDescriptor *",
+                compare=stencil_front["compare"],
+                fail_op=stencil_front["fail_op"],
+                depth_fail_op=stencil_front["depth_fail_op"],
+                pass_op=stencil_front["pass_op"],
             )
-            # c_depth_stencil_state = new_struct(
-            #     "WGPUDepthStencilStateDescriptor *",
-            #     format=
-            #     depth_write_enabled=
-            #     depth_compare
-            #     stencil_front
-            #     stencil_back
-            #     stencil_read_mask
-            #     stencil_write_mask
-            # )
+            stencil_back = depth_stencil_state["stencil_back"]
+            c_stencil_back = new_struct(
+                "WGPUStencilStateFaceDescriptor *",
+                compare=stencil_back["compare"],
+                fail_op=stencil_back["fail_op"],
+                depth_fail_op=stencil_back["depth_fail_op"],
+                pass_op=stencil_back["pass_op"],
+            )
+            c_depth_stencil_state = new_struct(
+                "WGPUDepthStencilStateDescriptor *",
+                format=depth_stencil_state["format"],
+                depth_write_enabled=bool(depth_stencil_state["depth_write_enabled"]),
+                depth_compare=depth_stencil_state["depth_compare"],
+                stencil_front=c_stencil_front[0],
+                stencil_back=c_stencil_back[0],
+                stencil_read_mask=depth_stencil_state["stencil_read_mask"],
+                stencil_write_mask=depth_stencil_state["stencil_write_mask"],
+            )
         c_vertex_buffer_descriptors_list = []
         for buffer_des in vertex_state["vertex_buffers"]:
             c_attributes_list = []
@@ -907,23 +928,22 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         for color_attachment in color_attachments:
             assert isinstance(color_attachment["attachment"], base.GPUTextureView)
             texture_view_id = color_attachment["attachment"]._internal
-            if color_attachment["resolve_target"] is None:
-                c_resolve_target = ffi.NULL
-            else:
-                # todo: missing API
-                raise NotYetImplementedError(
-                    "GPUCommandEncoder.begin_render_pass resolve_target"
-                )
-            if isinstance(color_attachment["load_value"], str):
-                assert color_attachment["load_value"] == "load"
-                c_load_op = 1  # WGPULoadOp_Load
-                c_clear_color = ffi.new("WGPUColor *", dict(r=0, g=0, b=0, a=0))
-            else:
-                c_load_op = 0  # WGPULoadOp_Clear
-                clr = _tuple_from_tuple_or_dict(color_attachment["load_value"], "rgba")
-                c_clear_color = new_struct(
-                    "WGPUColor *", r=clr[0], g=clr[1], b=clr[2], a=clr[3]
-                )
+            c_resolve_target = (
+                ffi.NULL
+                if color_attachment["resolve_target"] is None
+                else color_attachment["resolve_target"]._internal  # TextureViewId
+            )
+            c_load_op, clear_color = _loadop_and_clear_from_value(
+                color_attachment["load_value"]
+            )
+            clr = (
+                (0.0, 0.0, 0.0, 0.0)
+                if clear_color == 0
+                else _tuple_from_tuple_or_dict(clear_color, "rgba")
+            )
+            c_clear_color = new_struct(
+                "WGPUColor *", r=clr[0], g=clr[1], b=clr[2], a=clr[3]
+            )
             c_attachment = new_struct(
                 "WGPURenderPassColorAttachmentDescriptor *",
                 attachment=texture_view_id,
@@ -939,9 +959,21 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
-            # todo: missing API
-            raise NotYetImplementedError(
-                "GPUCommandEncoder.begin_render_pass depth_stencil_attachment"
+            c_depth_load_op, c_depth_clear = _loadop_and_clear_from_value(
+                depth_stencil_attachment["depth_load_value"]
+            )
+            c_stencil_load_op, c_stencil_clear = _loadop_and_clear_from_value(
+                depth_stencil_attachment["stencil_load_value"]
+            )
+            c_depth_stencil_attachment = new_struct(
+                "WGPURenderPassDepthStencilAttachmentDescriptor *",
+                attachment=depth_stencil_attachment["attachment"]._internal,
+                depth_load_op=c_depth_load_op,
+                depth_store_op=depth_stencil_attachment["depth_store_op"],
+                clear_depth=float(c_depth_clear),
+                stencil_load_op=c_stencil_load_op,
+                stencil_store_op=depth_stencil_attachment["stencil_store_op"],
+                clear_stencil=int(c_stencil_clear),
             )
 
         struct = new_struct(
@@ -1092,15 +1124,15 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
 
     # # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
     # def push_debug_group(self, group_label):
-    #     raise NotYetImplementedError()
+    #     ...
     #
     # # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
     # def pop_debug_group(self):
-    #     raise NotYetImplementedError()
+    #     ...
     #
     # # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
     # def insert_debug_marker(self, marker_label):
-    #     raise NotYetImplementedError()
+    #     ...
 
 
 class GPUComputePassEncoder(GPUProgrammablePassEncoder):
@@ -1158,7 +1190,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # todo: missing API
     # def draw_indirect(self, indirect_buffer, indirect_offset):
-    #     raise NotYetImplementedError()
+    #     ...
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     def draw_indexed(
@@ -1175,7 +1207,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # todo: missing API
     # def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
-    #     raise NotYetImplementedError()
+    #     ...
 
 
 class GPURenderPassEncoder(GPURenderEncoderBase):
@@ -1203,7 +1235,9 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
     def set_blend_color(self, color):
         color = _tuple_from_tuple_or_dict(color, "rgba")
-        c_color = ffi.new("WGPUColor *", r=color[0], g=color[1], b=color[2], a=color[3])
+        c_color = new_struct(
+            "WGPUColor *", r=color[0], g=color[1], b=color[2], a=color[3]
+        )
         _lib.wgpu_render_pass_set_blend_color(self._internal, c_color)
 
     # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
@@ -1212,6 +1246,8 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
 
     # wgpu.help('renderpassencoderexecutebundles', dev=True)
     def execute_bundles(self, bundles):
+        # Not sure what this function exists in the Rust API, because there is no
+        # way to create bundles yet?
         bundles2 = []
         for bundle in bundles:
             if isinstance(bundle, base.GPURenderBundle):
@@ -1234,7 +1270,7 @@ class GPURenderBundleEncoder(base.GPURenderBundleEncoder):
 
     # Not yet implemented in wgpu-native
     # def finish(self, *, label=""):
-    #     raise NotYetImplementedError()
+    #     ...
 
 
 class GPUQueue(base.GPUQueue):
@@ -1248,7 +1284,7 @@ class GPUQueue(base.GPUQueue):
 
     # Seems not yet implemented in wgpu-native
     # def copy_image_bitmap_to_texture(self, source, destination, copy_size):
-    #     raise NotYetImplementedError()
+    #     ...
 
 
 class GPUSwapChain(base.GPUSwapChain):
@@ -1303,17 +1339,17 @@ class GPUSwapChain(base.GPUSwapChain):
 # %%
 
 
-def _copy_docstrings():  # co-cover
+def _copy_docstrings():
     for ob in globals().values():
         if not (isinstance(ob, type) and issubclass(ob, base.GPUObject)):
             continue
         elif ob.__module__ != __name__:
-            continue
+            continue  # no-cover
         base_cls = ob.mro()[1]
         ob.__doc__ = base_cls.__doc__
         for name, attr in ob.__dict__.items():
             if name.startswith("_") or not hasattr(attr, "__doc__"):
-                continue
+                continue  # no-cover
             base_attr = getattr(base_cls, name, None)
             if base_attr is not None:
                 attr.__doc__ = base_attr.__doc__

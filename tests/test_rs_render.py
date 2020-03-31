@@ -19,18 +19,19 @@ if not can_use_wgpu_lib:
 
 @python2shader
 def vertex_shader(
-    index: (RES_INPUT, "VertexId", i32),
-    pos: (RES_OUTPUT, "Position", vec4),
-    tcoord: (RES_OUTPUT, 0, vec2),
+    index: (RES_INPUT, "VertexId", i32), pos: (RES_OUTPUT, "Position", vec4),
 ):
     positions = [
-        vec2(-0.5, -0.5),
-        vec2(-0.5, +0.5),
-        vec2(+0.5, -0.5),
-        vec2(+0.5, +0.5),
+        vec3(-0.5, -0.5, 0.1),
+        vec3(-0.5, +0.5, 0.1),
+        vec3(+0.5, -0.5, 0.1),
+        vec3(+0.5, +0.5, 0.1),
     ]
     p = positions[index]
-    pos = vec4(p, 0.0, 1.0)  # noqa
+    pos = vec4(p, 1.0)  # noqa
+
+
+# %% Simple square
 
 
 def test_render_orange_square():
@@ -66,6 +67,9 @@ def test_render_orange_square():
     assert np.all(sq[:, :, 1] == 127)  # green
     assert np.all(sq[:, :, 2] == 0)  # blue
     assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
+# %% Variations
 
 
 def test_render_orange_square_indexed():
@@ -125,9 +129,7 @@ def test_render_orange_square_vbo():
 
     @python2shader
     def vertex_shader(
-        pos_in: (RES_INPUT, 0, vec2),
-        pos: (RES_OUTPUT, "Position", vec4),
-        tcoord: (RES_OUTPUT, 0, vec2),
+        pos_in: (RES_INPUT, 0, vec2), pos: (RES_OUTPUT, "Position", vec4),
     ):
         pos = vec4(pos_in, 0.0, 1.0)  # noqa
 
@@ -262,6 +264,183 @@ def test_render_orange_square_color_attachement2():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
+# %% Viewport and stencil
+
+
+def test_render_orange_square_viewport():
+    """ Render an orange square, in a sub-viewport of the rendered area.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    def cb(renderpass):
+        renderpass.set_viewport(10, 20, 32, 32, 0, 100)
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    # Render
+    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    # render_to_screen(*render_args, renderpass_callback=cb)
+    a = render_to_texture(*render_args, size=(64, 64), renderpass_callback=cb)
+
+    # Check that the background is all zero
+    bg = a.copy()
+    bg[20 + 8 : 52 - 8, 10 + 8 : 42 - 8, :] = 0
+    assert np.all(bg == 0)
+
+    # Check the square
+    sq = a[20 + 8 : 52 - 8, 10 + 8 : 42 - 8, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
+def test_render_orange_square_scissor():
+    """ Render an orange square, but scissor half the screen away.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    def cb(renderpass):
+        renderpass.set_scissor_rect(0, 0, 32, 32)
+        # Alse set blend color. Does not change outout, but covers the call.
+        renderpass.set_blend_color((0, 0, 0, 1))
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    # Render
+    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    # render_to_screen(*render_args, renderpass_callback=cb)
+    a = render_to_texture(*render_args, size=(64, 64), renderpass_callback=cb)
+
+    # Check that the background is all zero
+    bg = a.copy()
+    bg[16:32, 16:32, :] = 0
+    assert np.all(bg == 0)
+
+    # Check the square
+    sq = a[16:32, 16:32, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
+def test_render_orange_square_depth():
+    """ Render an orange square, but disable half of it using a depth test.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def vertex_shader2(
+        index: (RES_INPUT, "VertexId", i32), pos: (RES_OUTPUT, "Position", vec4),
+    ):
+        positions = [
+            vec3(-0.5, -0.5, 0.0),
+            vec3(-0.5, +0.5, 0.0),
+            vec3(+0.5, -0.5, 0.2),
+            vec3(+0.5, +0.5, 0.2),
+        ]
+        pos = vec4(positions[index], 1.0)  # noqa
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    def cb(renderpass):
+        renderpass.set_stencil_reference(42)
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    # Create dept-stencil texture
+    depth_stencil_texture = device.create_texture(
+        size=(64, 64, 1),  # when rendering to texture
+        # size=(640, 480, 1),  # when rendering to screen
+        dimension=wgpu.TextureDimension.d2,
+        format=wgpu.TextureFormat.depth24plus_stencil8,
+        usage=wgpu.TextureUsage.OUTPUT_ATTACHMENT,
+    )
+
+    depth_stencil_state = dict(
+        format=wgpu.TextureFormat.depth24plus_stencil8,
+        depth_write_enabled=True,
+        depth_compare=wgpu.CompareFunction.less_equal,
+        stencil_front={
+            "compare": wgpu.CompareFunction.equal,
+            "fail_op": wgpu.StencilOperation.keep,
+            "depth_fail_op": wgpu.StencilOperation.keep,
+            "pass_op": wgpu.StencilOperation.keep,
+        },
+        stencil_back={
+            "compare": wgpu.CompareFunction.equal,
+            "fail_op": wgpu.StencilOperation.keep,
+            "depth_fail_op": wgpu.StencilOperation.keep,
+            "pass_op": wgpu.StencilOperation.keep,
+        },
+        stencil_read_mask=0,
+        stencil_write_mask=0,
+    )
+
+    depth_stencil_attachment = dict(
+        attachment=depth_stencil_texture.create_default_view(),
+        depth_load_value=0.1,
+        depth_store_op=wgpu.StoreOp.store,
+        stencil_load_value=wgpu.LoadOp.load,
+        stencil_store_op=wgpu.StoreOp.store,
+    )
+
+    # Render
+    render_args = device, vertex_shader2, fragment_shader, pipeline_layout, bind_group
+    # render_to_screen(*render_args, renderpass_callback=cb, depth_stencil_state=depth_stencil_state, depth_stencil_attachment=depth_stencil_attachment)
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        renderpass_callback=cb,
+        depth_stencil_state=depth_stencil_state,
+        depth_stencil_attachment=depth_stencil_attachment,
+    )
+
+    # Check that the background is all zero
+    bg = a.copy()
+    bg[16:-16, 16:32, :] = 0
+    assert np.all(bg == 0)
+
+    # Check the square
+    sq = a[16:-16, 16:32, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
+# %% Not squares
+
+
 def test_render_orange_dots():
     """ Render four orange dots and check that there are four orange square dots.
     """
@@ -271,7 +450,6 @@ def test_render_orange_dots():
         index: (RES_INPUT, "VertexId", i32),
         pos: (RES_OUTPUT, "Position", vec4),
         pointsize: (RES_OUTPUT, "PointSize", f32),
-        tcoord: (RES_OUTPUT, 0, vec2),
     ):
         positions = [
             vec2(-0.5, -0.5),
@@ -281,7 +459,6 @@ def test_render_orange_dots():
         ]
         p = positions[index]
         pos = vec4(p, 0.0, 1.0)  # noqa
-        tcoord = vec2(p + 0.5)  # noqa - map to 0..1
         pointsize = 16.0  # noqa
 
     device = get_default_device()
@@ -325,9 +502,16 @@ def test_render_orange_dots():
 
 
 if __name__ == "__main__":
+
     test_render_orange_square()
+
     test_render_orange_square_vbo()
     test_render_orange_square_indexed()
-    test_render_orange_dots()
     test_render_orange_square_color_attachement1()
     test_render_orange_square_color_attachement2()
+
+    test_render_orange_square_viewport()
+    test_render_orange_square_scissor()
+    test_render_orange_square_depth()
+
+    test_render_orange_dots()

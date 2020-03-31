@@ -11,6 +11,7 @@ from python_shader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip, mark
 from testutils import can_use_wgpu_lib, get_default_device
+from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
 
 
 if not can_use_wgpu_lib:
@@ -462,26 +463,6 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     assert np.equal(sq[:, 0, 1], ref2).all()
     assert np.all(sq[:, :, 2] == 0)  # blue
     assert np.all(sq[:, :, 3] == 255)  # alpha
-
-
-def upload_to_texture(device, texture, data, nx, ny, nz):
-
-    nbytes = ctypes.sizeof(data)
-    bpp = nbytes // (nx * ny * nz)
-
-    # Create a buffer to get the data into the GPU
-    buffer = device.create_buffer_mapped(size=nbytes, usage=wgpu.BufferUsage.COPY_SRC)
-    ctypes.memmove(buffer.mapping, data, nbytes)
-    buffer.unmap()
-
-    # Upload (image_height must only be nonzero for 3D textures)
-    command_encoder = device.create_command_encoder()
-    command_encoder.copy_buffer_to_texture(
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": 0},
-        {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        (nx, ny, nz),
-    )
-    device.default_queue.submit([command_encoder.finish()])
 
 
 if __name__ == "__main__":
