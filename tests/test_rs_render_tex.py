@@ -7,7 +7,6 @@ import numpy as np
 
 import python_shader
 from python_shader import python2shader, f32, vec2, vec4, i32
-from python_shader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip, mark
 from testutils import can_use_wgpu_lib, get_default_device
@@ -20,9 +19,9 @@ if not can_use_wgpu_lib:
 
 @python2shader
 def vertex_shader(
-    index: (RES_INPUT, "VertexId", i32),
-    pos: (RES_OUTPUT, "Position", vec4),
-    tcoord: (RES_OUTPUT, 0, vec2),
+    index: ("input", "VertexId", i32),
+    pos: ("output", "Position", vec4),
+    tcoord: ("output", 0, vec2),
 ):
     positions = [
         vec2(-0.5, -0.5),
@@ -46,8 +45,8 @@ def test_render_textured_square_rgba8unorm():
     def fragment_shader(
         tex: ("texture", 0, "2d f32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         out_color = tex.sample(sampler, tcoord)  # noqa
 
@@ -70,8 +69,8 @@ def test_render_textured_square_rgba8uint():
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         out_color = vec4(tex.sample(sampler, tcoord)) / 255.0  # noqa
 
@@ -94,8 +93,8 @@ def test_render_textured_square_rgba16sint():
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         out_color = vec4(tex.sample(sampler, tcoord)) / 255.0  # noqa
 
@@ -118,8 +117,8 @@ def test_render_textured_square_rgba32float():
     def fragment_shader(
         tex: ("texture", 0, "2d f32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         out_color = tex.sample(sampler, tcoord) / 255.0  # noqa
 
@@ -146,8 +145,8 @@ def test_render_textured_square_rg8unorm():
     def fragment_shader(
         tex: ("texture", 0, "2d f32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         out_color = tex.sample(sampler, tcoord)  # noqa
 
@@ -171,8 +170,8 @@ def test_render_textured_square_rg8uint():
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         val = vec2(tex.sample(sampler, tcoord).rg)
         out_color = vec4(val.rg / 255.0, 0, 1.0)  # noqa
@@ -197,8 +196,8 @@ def test_render_textured_square_rg16sint():
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         val = vec2(tex.sample(sampler, tcoord).rg)
         out_color = vec4(val.rg / 255.0, 0.0, 1.0)  # noqa
@@ -223,8 +222,8 @@ def test_render_textured_square_rg32float():
     def fragment_shader(
         tex: ("texture", 0, "2d f32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         val = tex.sample(sampler, tcoord).rg
         out_color = vec4(val.rg / 255.0, 0.0, 1.0)  # noqa
@@ -251,8 +250,8 @@ def test_render_textured_square_r8unorm():
     def fragment_shader(
         tex: ("texture", 0, "2d f32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         val = tex.sample(sampler, tcoord).r
         out_color = vec4(val, val, 0.0, 1.0)  # noqa
@@ -276,8 +275,8 @@ def test_render_textured_square_r8uint():
     def fragment_shader(
         tex: ("texture", 0, "2d i32"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         val = f32(tex.sample(sampler, tcoord).r)
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
@@ -304,8 +303,8 @@ def test_render_textured_square_r16sint():
     def fragment_shader(
         tex: ("texture", 0, "2d r16i"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         val = f32(tex.sample(sampler, tcoord).r)
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
@@ -332,8 +331,8 @@ def test_render_textured_square_r32sint():
     def fragment_shader(
         tex: ("texture", 0, "2d r32i"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         val = f32(tex.sample(sampler, tcoord).r)
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
@@ -359,8 +358,8 @@ def test_render_textured_square_r32float():
     def fragment_shader(
         tex: ("texture", 0, "2d r32f"),
         sampler: ("sampler", 1, ""),
-        tcoord: (RES_INPUT, 0, vec2),
-        out_color: (RES_OUTPUT, 0, vec4),
+        tcoord: ("input", 0, vec2),
+        out_color: ("output", 0, vec4),
     ):
         val = f32(tex.sample(sampler, tcoord).r)
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
