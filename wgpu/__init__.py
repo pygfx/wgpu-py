@@ -5,7 +5,7 @@ from .base import *  # noqa: F401,F403
 from . import base
 
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 version_info = tuple(map(int, __version__.split(".")))
 
 
