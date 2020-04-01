@@ -1170,11 +1170,12 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     def dispatch(self, x, y, z):
         _lib.wgpu_compute_pass_dispatch(self._internal, x, y, z)
 
-    # def dispatch_indirect(self, indirect_buffer, indirect_offset):
-    #     buffer_id = indirect_buffer._internal
-    #     _lib.wgpu_compute_pass_dispatch_indirect(
-    #         self._internal, buffer_id, indirect_offset
-    #     )
+    # wgpu.help('Buffer', 'Size64', 'computepassencoderdispatchindirect', dev=True)
+    def dispatch_indirect(self, indirect_buffer, indirect_offset):
+        buffer_id = indirect_buffer._internal
+        _lib.wgpu_compute_pass_dispatch_indirect(
+            self._internal, buffer_id, int(indirect_offset)
+        )
 
     # wgpu.help('computepassencoderendpass', dev=True)
     def end_pass(self):
@@ -1209,9 +1210,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
 
-    # todo: missing API
-    # def draw_indirect(self, indirect_buffer, indirect_offset):
-    #     ...
+    # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindirect', dev=True)
+    def draw_indirect(self, indirect_buffer, indirect_offset):
+        buffer_id = indirect_buffer._internal
+        _lib.wgpu_render_pass_draw_indirect(
+            self._internal, buffer_id, int(indirect_offset)
+        )
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     def draw_indexed(
@@ -1226,9 +1230,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             first_instance,
         )
 
-    # todo: missing API
-    # def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
-    #     ...
+    # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindexedindirect', dev=True)
+    def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
+        buffer_id = indirect_buffer._internal
+        _lib.wgpu_render_pass_draw_indexed_indirect(
+            self._internal, buffer_id, int(indirect_offset)
+        )
 
 
 class GPURenderPassEncoder(GPURenderEncoderBase):
@@ -1265,7 +1272,6 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     def set_stencil_reference(self, reference):
         _lib.wgpu_render_pass_set_stencil_reference(self._internal, int(reference))
 
-    # todo: missing api
     # Not sure what this function exists in the Rust API, because there is no
     # way to create bundles yet?
     # def execute_bundles(self, bundles):

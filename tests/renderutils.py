@@ -66,6 +66,7 @@ def render_to_texture(
     ibo=None,
     vbos=None,
     vbo_views=None,
+    indirect_buffer=None,
     color_attachment=None,
     depth_stencil_state=None,
     depth_stencil_attachment=None,
@@ -157,10 +158,16 @@ def render_to_texture(
         render_pass.set_vertex_buffer(slot, vbo, 0)
     renderpass_callback(render_pass)
     if ibo is None:
-        render_pass.draw(4, 1, 0, 0)
+        if indirect_buffer is None:
+            render_pass.draw(4, 1, 0, 0)
+        else:
+            render_pass.draw_indirect(indirect_buffer, 0)
     else:
         render_pass.set_index_buffer(ibo, 0)
-        render_pass.draw_indexed(6, 1, 0, 0, 0)
+        if indirect_buffer is None:
+            render_pass.draw_indexed(6, 1, 0, 0, 0)
+        else:
+            render_pass.draw_indexed_indirect(indirect_buffer, 0)
     render_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
@@ -186,6 +193,7 @@ def render_to_screen(
     ibo=None,
     vbos=None,
     vbo_views=None,
+    indirect_buffer=None,
     color_attachment=None,
     depth_stencil_state=None,
     depth_stencil_attachment=None,
@@ -270,10 +278,16 @@ def render_to_screen(
             render_pass.set_vertex_buffer(slot, vbo, 0)
         renderpass_callback(render_pass)
         if ibo is None:
-            render_pass.draw(4, 1, 0, 0)
+            if indirect_buffer is None:
+                render_pass.draw(4, 1, 0, 0)
+            else:
+                render_pass.draw_indirect(indirect_buffer, 0)
         else:
             render_pass.set_index_buffer(ibo, 0)
-            render_pass.draw_indexed(6, 1, 0, 0, 0)
+            if indirect_buffer is None:
+                render_pass.draw_indexed(6, 1, 0, 0, 0)
+            else:
+                render_pass.draw_indexed_indirect(indirect_buffer, 0)
         render_pass.end_pass()
         device.default_queue.submit([command_encoder.finish()])
 

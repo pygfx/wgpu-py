@@ -61,6 +61,100 @@ def test_compute_1_3():
     assert iters_equal(out[2], range(100))  # because this is the index
 
 
+def test_compute_indirect():
+    @python2shader
+    def compute_shader(
+        index: ("input", "GlobalInvocationId", i32),
+        data1: ("buffer", 0, Array(i32)),
+        data2: ("buffer", 1, Array(i32)),
+    ):
+        data2[index] = data1[index] + 1
+
+    # Create an array of 100 random int32
+    n = 100
+    in1 = [int(random.uniform(0, 100)) for i in range(n)]
+    in1 = (c_int32 * n)(*in1)
+
+    # Create device and shader object
+    device = wgpu.utils.get_default_device()
+    cshader = device.create_shader_module(code=compute_shader)
+
+    # Create input buffer and upload data to in
+    buffer1 = device.create_buffer_mapped(
+        size=ctypes.sizeof(in1), usage=wgpu.BufferUsage.STORAGE
+    )
+    ctypes.memmove(buffer1.mapping, in1, ctypes.sizeof(in1))
+    buffer1.unmap()
+
+    # Create output buffer
+    buffer2 = device.create_buffer(
+        size=ctypes.sizeof(in1),
+        usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ,
+    )
+
+    # Create buffer to hold the dispatch parameters for the indirect call
+    params = (ctypes.c_int32 * 3)(n - 2, 1, 1)  # note the minus 2!
+    buffer3 = device.create_buffer_mapped(
+        size=ctypes.sizeof(params), usage=wgpu.BufferUsage.INDIRECT
+    )
+    ctypes.memmove(buffer3.mapping, params, ctypes.sizeof(params))
+    buffer3.unmap()
+
+    # Setup layout and bindings
+    binding_layouts = [
+        {
+            "binding": 0,
+            "visibility": wgpu.ShaderStage.COMPUTE,
+            "type": wgpu.BindingType.storage_buffer,
+        },
+        {
+            "binding": 1,
+            "visibility": wgpu.ShaderStage.COMPUTE,
+            "type": wgpu.BindingType.storage_buffer,
+        },
+    ]
+    bindings = [
+        {
+            "binding": 0,
+            "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},
+        },
+        {
+            "binding": 1,
+            "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},
+        },
+    ]
+
+    # Put everything together
+    bind_group_layout = device.create_bind_group_layout(bindings=binding_layouts)
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=bindings)
+
+    # Create and run the pipeline
+    compute_pipeline = device.create_compute_pipeline(
+        layout=pipeline_layout,
+        compute_stage={"module": cshader, "entry_point": "main"},
+    )
+    command_encoder = device.create_command_encoder()
+    compute_pass = command_encoder.begin_compute_pass()
+    compute_pass.set_pipeline(compute_pipeline)
+    compute_pass.set_bind_group(
+        0, bind_group, [], 0, 999999
+    )  # last 2 elements not used
+    compute_pass.dispatch_indirect(buffer3, 0)
+    compute_pass.end_pass()
+    device.default_queue.submit([command_encoder.finish()])
+
+    # Read result
+    out1 = in1.__class__.from_buffer(buffer2.map_read())
+    in2 = list(in1)[:]
+    out2 = [i - 1 for i in out1]
+    # The shader was applied to all but the last two elements
+    assert in2[:-2] == out2[:-2]
+    assert out2[-2:] == [-1, -1]
+
+
 def test_compute_fails():
     @python2shader
     def compute_shader(
@@ -105,4 +199,5 @@ def test_compute_fails():
 if __name__ == "__main__":
     test_compute_0_1()
     test_compute_1_3()
+    test_compute_indirect()
     test_compute_fails()
