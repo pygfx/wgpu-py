@@ -121,6 +121,107 @@ def test_render_orange_square_indexed():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
+def test_render_orange_square_indirect():
+    """ Render an orange square and check that there is an orange square.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    # Buffer with draw parameters for indirect draw call
+    params = (ctypes.c_int32 * 4)(4, 1, 0, 0)
+    indirect_buffer = device.create_buffer_mapped(
+        size=ctypes.sizeof(params), usage=wgpu.BufferUsage.INDIRECT
+    )
+    ctypes.memmove(indirect_buffer.mapping, params, ctypes.sizeof(params))
+    indirect_buffer.unmap()
+
+    # Render
+    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    # render_to_screen(*render_args, indirect_buffer=indirect_buffer)
+    a = render_to_texture(*render_args, size=(64, 64), indirect_buffer=indirect_buffer)
+
+    # Check that the background is all zero
+    bg = a.copy()
+    bg[16:-16, 16:-16, :] = 0
+    assert np.all(bg == 0)
+
+    # Check the square
+    sq = a[16:-16, 16:-16, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
+def test_render_orange_square_indexed_indirect():
+    """ Render an orange square, using an index buffer.
+    """
+
+    device = get_default_device()
+
+    @python2shader
+    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+
+    # Bindings and layout
+    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+
+    # Index buffer
+    indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
+    ibo = device.create_buffer_mapped(
+        size=ctypes.sizeof(indices),
+        usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
+    )
+    ctypes.memmove(ibo.mapping, indices, ctypes.sizeof(indices))
+    ibo.unmap()
+
+    # Buffer with draw parameters for indirect draw call
+    params = (ctypes.c_int32 * 5)(6, 1, 0, 0, 0)
+    indirect_buffer = device.create_buffer_mapped(
+        size=ctypes.sizeof(params), usage=wgpu.BufferUsage.INDIRECT
+    )
+    ctypes.memmove(indirect_buffer.mapping, params, ctypes.sizeof(params))
+    indirect_buffer.unmap()
+
+    # Render
+    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    # render_to_screen(*render_args, topology=wgpu.PrimitiveTopology.triangle_list, ibo=ibo, indirect_buffer=indirect_buffer)
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        topology=wgpu.PrimitiveTopology.triangle_list,
+        ibo=ibo,
+        indirect_buffer=indirect_buffer,
+    )
+
+    # Check that the background is all zero
+    bg = a.copy()
+    bg[16:-16, 16:-16, :] = 0
+    assert np.all(bg == 0)
+
+    # Check the square
+    sq = a[16:-16, 16:-16, :]
+    assert np.all(sq[:, :, 0] == 255)  # red
+    assert np.all(sq[:, :, 1] == 127)  # green
+    assert np.all(sq[:, :, 2] == 0)  # blue
+    assert np.all(sq[:, :, 3] == 255)  # alpha
+
+
 def test_render_orange_square_vbo():
     """ Render an orange square, using a VBO.
     """
@@ -505,10 +606,12 @@ if __name__ == "__main__":
 
     test_render_orange_square()
 
-    test_render_orange_square_vbo()
     test_render_orange_square_indexed()
+    test_render_orange_square_indirect()
+    test_render_orange_square_indexed_indirect()
     test_render_orange_square_color_attachment1()
     test_render_orange_square_color_attachment2()
+    test_render_orange_square_vbo()
 
     test_render_orange_square_viewport()
     test_render_orange_square_scissor()
