@@ -38,7 +38,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
     # Check input arrays
     if not isinstance(input_arrays, dict):  # empty is ok
-        raise ValueError("input_arrays must be a dict.")
+        raise TypeError("input_arrays must be a dict.")
     for key, array in input_arrays.items():
         if not isinstance(key, int):
             raise TypeError("keys of input_arrays must be int.")
@@ -47,7 +47,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
     # Check output arrays
     if not isinstance(output_arrays, dict) or not output_arrays:
-        raise ValueError("output_arrays must be a nonempty dict.")
+        raise TypeError("output_arrays must be a nonempty dict.")
     for key, array_type in output_arrays.items():
         if not isinstance(key, int):
             raise TypeError("keys of output_arrays must be int.")

@@ -4,19 +4,22 @@ import ctypes
 import python_shader
 from python_shader import python2shader, ivec3
 import wgpu.backends.rs  # noqa
-
-from pytest import mark
-from testutils import can_use_wgpu_lib, get_default_device
 import numpy as np
+
+from pytest import skip
+from testutils import can_use_wgpu_lib, get_default_device
+from renderutils import render_to_texture, render_to_screen  # noqa
 
 # todo: use "image" instead of ""texture" to communicate usage as storage?
 # todo: maybe specify sampling in type description??
 
 
+if not can_use_wgpu_lib:
+    skip("Skipping tests that need the wgpu lib", allow_module_level=True)
+
 # %% 1D
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_1d_rgba8uint():
     @python2shader
     def compute_shader(
@@ -44,7 +47,6 @@ def test_compute_tex_1d_rgba8uint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_1d_rg16sint():
     @python2shader
     def compute_shader(
@@ -71,7 +73,6 @@ def test_compute_tex_1d_rg16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_1d_r16sint():
     @python2shader
     def compute_shader(
@@ -98,7 +99,6 @@ def test_compute_tex_1d_r16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_1d_r32float():
     @python2shader
     def compute_shader(
@@ -128,7 +128,6 @@ def test_compute_tex_1d_r32float():
 # %% 2D
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_2d_rgba8uint():
     @python2shader
     def compute_shader(
@@ -158,7 +157,6 @@ def test_compute_tex_2d_rgba8uint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_2d_rg16sint():
     @python2shader
     def compute_shader(
@@ -186,7 +184,6 @@ def test_compute_tex_2d_rg16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_2d_r16sint():
     @python2shader
     def compute_shader(
@@ -214,7 +211,6 @@ def test_compute_tex_2d_r16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_2d_r32float():
     @python2shader
     def compute_shader(
@@ -245,7 +241,6 @@ def test_compute_tex_2d_r32float():
 # %% 3D
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_rgba8uint():
     @python2shader
     def compute_shader(
@@ -275,7 +270,6 @@ def test_compute_tex_3d_rgba8uint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_rg16sint():
     @python2shader
     def compute_shader(
@@ -304,7 +298,6 @@ def test_compute_tex_3d_rg16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_r16sint():
     @python2shader
     def compute_shader(
@@ -333,7 +326,6 @@ def test_compute_tex_3d_r16sint():
     )
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_tex_3d_r32float():
     @python2shader
     def compute_shader(
@@ -395,14 +387,15 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     texture_view = texture.create_default_view()
 
     # Create buffer that we need to upload the data
-    buffer = device.create_buffer_mapped(
-        size=nbytes,
-        usage=wgpu.BufferUsage.MAP_READ
+    buffer_usage = (
+        wgpu.BufferUsage.MAP_READ
         | wgpu.BufferUsage.COPY_SRC
-        | wgpu.BufferUsage.COPY_DST,
+        | wgpu.BufferUsage.COPY_DST
     )
+    buffer = device.create_buffer_mapped(size=nbytes, usage=buffer_usage)
     ctypes.memmove(buffer.mapping, data1, nbytes)
     buffer.unmap()
+    assert buffer.usage == buffer_usage
 
     # Define bindings
     bindings = [{"binding": 0, "resource": texture_view}]

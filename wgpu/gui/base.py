@@ -26,6 +26,11 @@ class BaseCanvas:
         self._swap_chain = device._gui_configure_swap_chain(self, format, usage)
         return self._swap_chain
 
+    def get_swap_chain_preferred_format(self, device):
+        """ Get the preferred format of the swap chain for this canvas.
+        """
+        return device._gui_get_swap_chain_preferred_format(self)
+
     def draw_frame(self):
         """ The function that gets called at each draw. You can implement
         this method in a subclass, or assign the attribute directly.

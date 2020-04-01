@@ -373,11 +373,13 @@ for fname in ("base.py", "backends/rs.py"):
     print(f"Found {count} functions already implemented")
     for func_id in ip.functions:
         if not get_func_id_match(func_id, api_functions):
-            print(f"Not implemented: {ip.functions[func_id]}")
+            if not (func_id.endswith("constructor") or func_id.startswith("canvas")):
+                print(f"Not implemented: {ip.functions[func_id]}")
     for func_id in api_functions:
         if not get_func_id_match(func_id, ip.functions):
-            funcname = api_functions[func_id][0]
-            print(f"Found unknown function {funcname} ({func_id})")
+            if func_id not in ("newstruct", "getsurfaceidfromcanvas"):
+                funcname = api_functions[func_id][0]
+                print(f"Found unknown function {funcname} ({func_id})")
 
     # Write back
     code = blacken("\n".join(api_lines))

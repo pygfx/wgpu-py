@@ -6,11 +6,14 @@ from python_shader import python2shader, Array, i32
 import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
-from pytest import mark
+from pytest import skip, raises
 from testutils import can_use_wgpu_lib, iters_equal
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
+if not can_use_wgpu_lib:
+    skip("Skipping tests that need the wgpu lib", allow_module_level=True)
+
+
 def test_compute_0_1():
     @python2shader
     def compute_shader(
@@ -32,7 +35,6 @@ def test_compute_0_1():
     assert iters_equal(out0, range(20))
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Cannot use wgpu lib")
 def test_compute_1_3():
     @python2shader
     def compute_shader(
@@ -59,6 +61,48 @@ def test_compute_1_3():
     assert iters_equal(out[2], range(100))  # because this is the index
 
 
+def test_compute_fails():
+    @python2shader
+    def compute_shader(
+        index: ("input", "GlobalInvocationId", i32),
+        in1: ("buffer", 0, Array(i32)),
+        out1: ("buffer", 1, Array(i32)),
+    ):
+        out1[index] = in1[index]
+
+    in1 = [int(random.uniform(0, 100)) for i in range(100)]
+    in1 = (c_int32 * 100)(*in1)
+
+    # Baseline; this works
+    out = compute_with_buffers(
+        {0: in1}, {0: c_int32 * 100}, compute_shader, n=(100, 1, 1)
+    )
+    assert iters_equal(out[0], in1)
+
+    with raises(TypeError):  # input_arrays is not a dict
+        compute_with_buffers([in1], {0: c_int32 * 100}, compute_shader)
+    with raises(TypeError):  # input_arrays key not int
+        compute_with_buffers({"0": in1}, {0: c_int32 * 100}, compute_shader)
+    with raises(TypeError):  # input_arrays value not ctypes array
+        compute_with_buffers({0: list(in1)}, {0: c_int32 * 100}, compute_shader)
+
+    with raises(TypeError):  # output_arrays is not a dict
+        compute_with_buffers({0: in1}, [c_int32 * 100], compute_shader)
+    with raises(TypeError):  # output_arrays key not int
+        compute_with_buffers({0: in1}, {"0": c_int32 * 100}, compute_shader)
+    with raises(TypeError):  # output_arrays value not a ctypes Array type
+        compute_with_buffers({0: in1}, {0: "foobar"}, compute_shader)
+
+    with raises(TypeError):  # invalid n
+        compute_with_buffers({0: in1}, {0: c_int32 * 100}, compute_shader, n="100")
+    with raises(ValueError):  # invalid n
+        compute_with_buffers({0: in1}, {0: c_int32 * 100}, compute_shader, n=-1)
+
+    with raises(TypeError):  # invalid shader
+        compute_with_buffers({0: in1}, {0: c_int32 * 100}, "not a shader")
+
+
 if __name__ == "__main__":
     test_compute_0_1()
     test_compute_1_3()
+    test_compute_fails()
