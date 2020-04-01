@@ -19,5 +19,5 @@ async def request_adapter_async(options):
     return await window.navigator.gpu.request_adapter(options)
 
 
-# Mark as the backend on import time
+# Mark as the backend at import time
 _register_backend(request_adapter, request_adapter_async)

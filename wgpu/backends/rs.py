@@ -1,7 +1,7 @@
 """
 WGPU backend implementation based on wgpu-native
 
-The Rust wgpu project (https://github.com/gfx-rs/wgpu) is a Rust library
+The wgpu-native project (https://github.com/gfx-rs/wgpu) is a Rust library
 based on gfx-hal, which wraps Metal, Vulkan, DX12 and more in the
 future. It can compile into a dynamic library exposing a C-API,
 accompanied by a C header file. We wrap this using cffi, which uses the
@@ -11,19 +11,22 @@ Developer notes and tips:
 
 * The purpose of this module is to tie our Pythonic API, which closely
   resembles the WebGPU spec, to the C API of wgpu-native.
-* Most of it is converting dicts to ffi structs. You may think that this
-  can be automated, and this would indeed be possible for 80-90% of the
-  methods. However, the API's do not always line up, and there's async stuff
-  to take into account too. Therefore we do it manually. In the end, I think
-  that this will make the code easier to maintain.
-* Run the wgpu.help() thing that is listed above each API method. This will
-  usually give you all info that you need from webgpu.idl and wgpu.h.
-* You may need webgpu.idl and wgpu.h from the resource dir as a reference.
+* Most of it is converting dicts to ffi structs. You may think that
+  this can be automated, and this would indeed be possible for 80-90%
+  of the methods. However, the API's do not always line up, and there's
+  async stuff to take into account too. Therefore we do it manually.
+  In the end, I think that this will make the code easier to maintain.
+* Run the wgpu.help() call that is listed above each API method. This
+  will usually give you all info that you need from webgpu.idl and
+  wgpu.h.
+* Though sometimes you may also need webgpu.idl and wgpu.h from the
+  resource dir as a reference.
 * Use new_struct() to create a C structure with minimal boilerplate.
-* When we update the upstream webgpu.idl or wgpu.h, the codegen-script.py
-  should be run. This may update base.py and this module. Then run git diff
-  to see what changed in webgpu.idl, wgpu.h and in this file, and make
-  adjustments as needed.
+  It also converts string enum values to their corresponding integers.
+* When we update the upstream webgpu.idl or wgpu.h, the
+  codegen-script.py should be run. This will update base.py and this
+  module. Then run git diff to see what changed in webgpu.idl, wgpu.h
+  and in this file, and make adjustments as needed.
 """
 
 
@@ -49,16 +52,9 @@ if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
 
 
-cstructfield2enum_alt = {
-    "load_op": "LoadOp",
-    "store_op": "StoreOp",
-    "depth_store_op": "StoreOp",
-    "stencil_store_op": "StoreOp",
-}
-
-
 def _get_wgpu_h():
-    # Read header file and strip some stuff that cffi would stumble on
+    """ Read header file and strip some stuff that cffi would stumble on.
+    """
     lines = []
     with open(get_resource_filename("wgpu.h")) as f:
         for line in f.readlines():
@@ -77,6 +73,9 @@ def _get_wgpu_h():
 
 
 def _get_wgpu_lib_path():
+    """ Get the path to the wgpu library, taking into account the
+    WGPU_LIB_PATH environment variable.
+    """
     paths = []
 
     override_path = os.getenv("WGPU_LIB_PATH", "").strip()
@@ -103,14 +102,25 @@ def _get_wgpu_lib_path():
 
 
 # Configure cffi and load the dynamic library
-# NOTE: `import wgpu.backends.rs` is used in pyinstaller tests to verify that we can load the DLL after freezing
+# NOTE: `import wgpu.backends.rs` is used in pyinstaller tests to verify
+# that we can load the DLL after freezing
 ffi = FFI()
 ffi.cdef(_get_wgpu_h())
 ffi.set_source("wgpu.h", None)
 _lib = ffi.dlopen(_get_wgpu_lib_path())
 
+
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
+
+
+# Some enum keys need a shortcut
+_cstructfield2enum_alt = {
+    "load_op": "LoadOp",
+    "store_op": "StoreOp",
+    "depth_store_op": "StoreOp",
+    "stencil_store_op": "StoreOp",
+}
 
 
 def new_struct(ctype, **kwargs):
@@ -120,8 +130,8 @@ def new_struct(ctype, **kwargs):
     struct = ffi.new(ctype)
     for key, val in kwargs.items():
         if isinstance(val, str) and isinstance(getattr(struct, key), int):
-            if key in cstructfield2enum_alt:
-                structname = cstructfield2enum_alt[key]
+            if key in _cstructfield2enum_alt:
+                structname = _cstructfield2enum_alt[key]
             else:
                 structname = cstructfield2enum[ctype.strip(" *")[4:] + "." + key]
             ival = enummap[structname + "." + val]
@@ -140,6 +150,9 @@ def new_struct(ctype, **kwargs):
 
 
 def get_surface_id_from_canvas(canvas):
+    """ Get an id representing the surface to render to. The way to
+    obtain this id differs per platform and GUI toolkit.
+    """
     win_id = canvas.get_window_id()
 
     if sys.platform.startswith("win"):  # no-cover
@@ -245,6 +258,10 @@ def _tuple_from_tuple_or_dict(ob, fields):
 
 
 def _loadop_and_clear_from_value(value):
+    """ In WebGPU, the load op, can be given either as "load" or a value.
+    The latter translates to "clear" plus that value in wgpu-native.
+    The value can be float/int/color, but we don't deal with that here.
+    """
     if isinstance(value, str):
         assert value == "load"
         return 1, 0  # WGPULoadOp_Load and a stub value
@@ -307,7 +324,7 @@ async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
     return request_adapter(power_preference=power_preference)  # no-cover
 
 
-# Mark as the backend on import time
+# Mark as the backend at import time
 _register_backend(request_adapter, request_adapter_async)
 
 
@@ -476,7 +493,7 @@ class GPUDevice(base.GPUDevice):
                 # ???=binding.get("textureComponentType", "float"),
                 multisampled=bool(binding.get("multisampled", False)),
                 dynamic=bool(binding.get("has_dynamic_offset", False)),
-            )  # WGPUShaderStage
+            )
             c_bindings_list.append(c_binding[0])
 
         c_bindings_array = ffi.new("WGPUBindGroupLayoutBinding []", c_bindings_list)
@@ -762,7 +779,7 @@ class GPUDevice(base.GPUDevice):
             sample_count=sample_count,
             sample_mask=sample_mask,
             alpha_to_coverage_enabled=alpha_to_coverage_enabled,
-        )  # c-pointer  # enum
+        )
 
         id = _lib.wgpu_device_create_render_pipeline(self._internal, struct)
         return base.GPURenderPipeline(label, id, self)
@@ -809,7 +826,7 @@ class GPUBuffer(base.GPUBuffer):
         start, size = 0, self.size
         _lib.wgpu_buffer_map_read_async(
             self._internal, start, size, _map_read_callback, ffi.NULL
-        )  # userdata, stub
+        )
 
         # Let it do some cycles
         _lib.wgpu_device_poll(self._device._internal, True)
@@ -903,7 +920,6 @@ class GPUTexture(base.GPUTexture):
 
     def create_default_view(self, *, label=""):
         # This method is available in wgpu-rs, and it's kinda nice :)
-        # I'm not sure what the equivalent create_view() call should be (I tried and failed)
         id = _lib.wgpu_texture_create_view(self._internal, ffi.NULL)
         return base.GPUTextureView(label, id, self)
 
@@ -938,7 +954,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
                 ffi.NULL
                 if color_attachment["resolve_target"] is None
                 else color_attachment["resolve_target"]._internal
-            )  # TextureViewId
+            )  # this is a TextureViewId or null
             c_load_op, clear_color = _loadop_and_clear_from_value(
                 color_attachment["load_value"]
             )
@@ -1250,9 +1266,9 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
         _lib.wgpu_render_pass_set_stencil_reference(self._internal, int(reference))
 
     # todo: missing api
+    # Not sure what this function exists in the Rust API, because there is no
+    # way to create bundles yet?
     # def execute_bundles(self, bundles):
-    #     # Not sure what this function exists in the Rust API, because there is no
-    #     # way to create bundles yet?
     #     bundles2 = []
     #     for bundle in bundles:
     #         if isinstance(bundle, base.GPURenderBundle):
