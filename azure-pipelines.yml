@@ -42,7 +42,6 @@ jobs:
         set -ex
         python -m pip install -U pip
         pip install -U -r dev-requirements.txt
-        pip install -U git+https://github.com/almarklein/python-shader.git@progress
   - task: Bash@3
     displayName: Create source distribution
     condition: and(succeeded(), eq(variables['SDIST'], '1'))
