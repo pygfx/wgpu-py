@@ -64,9 +64,13 @@ class GPUObject:
         """
         return self._label
 
+    def _destroy(self):
+        """ Subclasses can implement this to clean up.
+        """
+        pass
+
     def __del__(self):
-        if hasattr(self, "destroy"):
-            self.destroy()
+        self._destroy()
 
 
 class GPUAdapter:  # Not a GPUObject
@@ -128,6 +132,12 @@ class GPUAdapter:  # Not a GPUObject
         """ Async version of request_device().
         """
         raise NotImplementedError()
+
+    def _destroy(self):
+        pass
+
+    def __del__(self):
+        self._destroy()
 
 
 default_limits = dict(

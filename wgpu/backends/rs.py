@@ -382,12 +382,9 @@ class GPUAdapter(base.GPUAdapter):
 
     def _destroy(self):
         if self._id is not None:
-            # todo: _lib.wgpu_adapter_destroy(self._id)  # function/symbol not found
-            # also so other destroy methods
-            self._id = None
-
-    def __del__(self):
-        self._destroy()
+            self._id, id = None, self._id
+            id  # todo: _lib.wgpu_adapter_destroy(id)  # function/symbol not found
+            # also so other _destroy() methods
 
 
 class GPUDevice(base.GPUDevice):
@@ -890,14 +887,16 @@ class GPUBuffer(base.GPUBuffer):
 
     # wgpu.help('bufferdestroy', dev=True)
     def destroy(self):
-        if self._state != "destroyed":
+        self._destroy()  # no-cover
+
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
             self._state = "destroyed"
-            _lib.wgpu_buffer_destroy(self._internal)
+            _lib.wgpu_buffer_destroy(internal)
 
 
 class GPUTexture(base.GPUTexture):
-
-    _destroyed = False
 
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
     def create_view(
@@ -934,9 +933,12 @@ class GPUTexture(base.GPUTexture):
 
     # wgpu.help('texturedestroy', dev=True)
     def destroy(self):
-        if not self._destroyed:
-            self._destroyed = True
-            _lib.wgpu_texture_destroy(self._internal)
+        self._destroy()  # no-cover
+
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            _lib.wgpu_texture_destroy(internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder):
@@ -1192,10 +1194,10 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
 
     # todo: const uint8_t *wgpu_compute_pass_finish(WGPURawPass *pass, uintptr_t *length);
 
-    def destroy(self):
+    def _destroy(self):
         if self._internal is not None:
-            # _lib.wgpu_compute_pass_destroy(self._internal)  # function/symbol not found
-            self._internal = None
+            self._internal, internal = None, self._internal
+            internal  # _lib.wgpu_compute_pass_destroy(internal)  # function/symbol not found
 
 
 class GPURenderEncoderBase(GPUProgrammablePassEncoder):
@@ -1255,10 +1257,10 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # todo: uint8_t *wgpu_render_pass_finish(WGPURawPass *pass, uintptr_t *length);
 
-    def destroy(self):
+    def _destroy(self):
         if self._internal is not None:
-            # _lib.wgpu_render_pass_destroy(self._internal)  # function/symbol not found
-            self._internal = None
+            self._internal, internal = None, self._internal
+            internal  # _lib.wgpu_render_pass_destroy(self._internal)  # function/symbol not found
 
 
 class GPURenderPassEncoder(GPURenderEncoderBase):
