@@ -14,7 +14,6 @@ enummap = {
     "BindingType.readonly-storage-buffer": 2,
     "BindingType.sampler": 3,
     "BindingType.sampled-texture": 4,
-    "BindingType.storage-texture": 5,
     "BlendFactor.zero": 0,
     "BlendFactor.one": 1,
     "BlendFactor.src-color": 2,

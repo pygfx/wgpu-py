@@ -398,7 +398,9 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     )
     upload_to_texture(device, texture, texture_data, nx, ny, nz)
 
-    sampler = device.create_sampler(mag_filter="linear", min_filter="linear")
+    sampler = device.create_sampler(
+        mag_filter="linear", min_filter="linear", compare="never"
+    )
 
     # texture_view = texture.create_default_view()
     # or:
@@ -425,11 +427,11 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
             "type": wgpu.BindingType.sampler,
         },
     ]
-    bind_group_layout = device.create_bind_group_layout(bindings=binding_layouts)
+    bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=bindings)
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
 
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group

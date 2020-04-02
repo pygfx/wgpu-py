@@ -111,11 +111,11 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
         )
 
     # Put buffers together
-    bind_group_layout = device.create_bind_group_layout(bindings=binding_layouts)
+    bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=bindings)
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
 
     # Create a pipeline and "run it"
     compute_pipeline = device.create_compute_pipeline(
