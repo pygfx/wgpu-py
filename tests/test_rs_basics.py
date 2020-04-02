@@ -87,6 +87,12 @@ def test_shader_module_creation():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_adapter_destroy():
+    adapter = wgpu.request_adapter(power_preference="high-performance")
+    adapter.__del__()
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_do_a_copy_roundtrip():
     # Let's take some data, and copy it to buffer to texture to
     # texture to buffer to buffer and back to CPU.

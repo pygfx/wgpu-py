@@ -45,7 +45,8 @@ async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
 
 
 class GPUObject:
-    """ The root class for all GPU classes.
+    """ The root class for all GPU objects (the device and all objects
+    belonging to a device).
     """
 
     def __init__(self, label, internal, device):

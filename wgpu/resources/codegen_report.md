@@ -11,7 +11,7 @@
 *  c: NONE:0, VERTEX:1, FRAGMENT:2, COMPUTE:4
 *  i: VERTEX:1, FRAGMENT:2, COMPUTE:4
 *   BufferUsage
-*  c: MAP_READ:1, MAP_WRITE:2, COPY_SRC:4, COPY_DST:8, INDEX:16, VERTEX:32, UNIFORM:64, STORAGE:128, STORAGE_READ:256, INDIRECT:512, NONE:0
+*  c: MAP_READ:1, MAP_WRITE:2, COPY_SRC:4, COPY_DST:8, INDEX:16, VERTEX:32, UNIFORM:64, STORAGE:128, INDIRECT:256, STORAGE_READ:512, NONE:0
 *  i: MAP_READ:1, MAP_WRITE:2, COPY_SRC:4, COPY_DST:8, INDEX:16, VERTEX:32, UNIFORM:64, STORAGE:128, INDIRECT:256
 *   ColorWrite
 *  c: RED:1, GREEN:2, BLUE:4, ALPHA:8, COLOR:7, ALL:15
@@ -33,11 +33,8 @@
 ### Comparing structs
 *  Extensions struct missing in .idl
 *  RawPass struct missing in .idl
-*  RenderPassColorAttachmentDescriptorBase_TextureViewId__TextureViewId struct missing in .idl
-*  RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId struct missing in .idl
-*  RawRenderTargets struct missing in .idl
-*  RawRenderPass struct missing in .idl
 *  RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId struct missing in .idl
+*  RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId struct missing in .idl
 *  Origin3d struct missing in .idl
 *  Extent3d struct missing in .idl
 *  BindingResource_WGPUBuffer_Body struct missing in .idl
@@ -114,5 +111,7 @@
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue);
 *  Not implemented: GPUTexture getCurrentTexture();
 *  Found unknown function create_default_view (texturecreatedefaultview)
+*  Found unknown function destroy (computepassencoderdestroy)
+*  Found unknown function destroy (renderencoderbasedestroy)
 *  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into backends/rs.py

@@ -380,6 +380,15 @@ class GPUAdapter(base.GPUAdapter):
             label=label, extensions=extensions, limits=limits
         )  # no-cover
 
+    def _destroy(self):
+        if self._id is not None:
+            # todo: _lib.wgpu_adapter_destroy(self._id)  # function/symbol not found
+            # also so other destroy methods
+            self._id = None
+
+    def __del__(self):
+        self._destroy()
+
 
 class GPUDevice(base.GPUDevice):
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
@@ -1133,7 +1142,7 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
         dynamic_offsets_data_length,
     ):
         offsets = list(dynamic_offsets_data)
-        c_offsets = ffi.new("WGPUBufferAddress []", offsets)
+        c_offsets = ffi.new("WGPUDynamicOffset []", offsets)
         bind_group_id = bind_group._internal
         if isinstance(self, GPUComputePassEncoder):
             _lib.wgpu_compute_pass_set_bind_group(
@@ -1180,6 +1189,13 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     # wgpu.help('computepassencoderendpass', dev=True)
     def end_pass(self):
         _lib.wgpu_compute_pass_end_pass(self._internal)
+
+    # todo: const uint8_t *wgpu_compute_pass_finish(WGPURawPass *pass, uintptr_t *length);
+
+    def destroy(self):
+        if self._internal is not None:
+            # _lib.wgpu_compute_pass_destroy(self._internal)  # function/symbol not found
+            self._internal = None
 
 
 class GPURenderEncoderBase(GPUProgrammablePassEncoder):
@@ -1236,6 +1252,13 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         _lib.wgpu_render_pass_draw_indexed_indirect(
             self._internal, buffer_id, int(indirect_offset)
         )
+
+    # todo: uint8_t *wgpu_render_pass_finish(WGPURawPass *pass, uintptr_t *length);
+
+    def destroy(self):
+        if self._internal is not None:
+            # _lib.wgpu_render_pass_destroy(self._internal)  # function/symbol not found
+            self._internal = None
 
 
 class GPURenderPassEncoder(GPURenderEncoderBase):
