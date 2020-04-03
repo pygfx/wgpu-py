@@ -14,7 +14,6 @@ enummap = {
     "BindingType.readonly-storage-buffer": 2,
     "BindingType.sampler": 3,
     "BindingType.sampled-texture": 4,
-    "BindingType.storage-texture": 5,
     "BlendFactor.zero": 0,
     "BlendFactor.one": 1,
     "BlendFactor.src-color": 2,
@@ -151,14 +150,12 @@ enummap = {
 }
 
 cstructfield2enum = {
-    "RenderPassColorAttachmentDescriptorBase_TextureViewId__TextureViewId.load_op": "LoadOp",
-    "RenderPassColorAttachmentDescriptorBase_TextureViewId__TextureViewId.store_op": "StoreOp",
+    "RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId.load_op": "LoadOp",
+    "RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId.store_op": "StoreOp",
     "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.depth_load_op": "LoadOp",
     "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.depth_store_op": "StoreOp",
     "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.stencil_load_op": "LoadOp",
     "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.stencil_store_op": "StoreOp",
-    "RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId.load_op": "LoadOp",
-    "RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId.store_op": "StoreOp",
     "BindGroupLayoutBinding.ty": "BindingType",
     "BindGroupLayoutBinding.texture_dimension": "TextureViewDimension",
     "RasterizationStateDescriptor.front_face": "FrontFace",

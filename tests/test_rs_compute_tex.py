@@ -398,19 +398,22 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     assert buffer.usage == buffer_usage
 
     # Define bindings
+    # todo: we're cheating here. wgpu-native has storage_texture, but WebGPU
+    # only has readonly-storage-texture or writeonly-storage-texture. We will
+    # probably at some point be forced to use two textures in these tests :)
     bindings = [{"binding": 0, "resource": texture_view}]
     binding_layouts = [
         {
             "binding": 0,
             "visibility": wgpu.ShaderStage.COMPUTE,
-            "type": wgpu.BindingType.storage_texture,
+            "type": wgpu.BindingType.readonly_storage_texture,  # == storage-texture
         }
     ]
-    bind_group_layout = device.create_bind_group_layout(bindings=binding_layouts)
+    bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=bindings)
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
 
     # Create a pipeline and run it
     compute_pipeline = device.create_compute_pipeline(

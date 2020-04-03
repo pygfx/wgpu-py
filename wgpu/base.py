@@ -45,7 +45,8 @@ async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
 
 
 class GPUObject:
-    """ The root class for all GPU classes.
+    """ The root class for all GPU objects (the device and all objects
+    belonging to a device).
     """
 
     def __init__(self, label, internal, device):
@@ -63,9 +64,13 @@ class GPUObject:
         """
         return self._label
 
+    def _destroy(self):
+        """ Subclasses can implement this to clean up.
+        """
+        pass
+
     def __del__(self):
-        if hasattr(self, "destroy"):
-            self.destroy()
+        self._destroy()
 
 
 class GPUAdapter:  # Not a GPUObject
@@ -127,6 +132,12 @@ class GPUAdapter:  # Not a GPUObject
         """ Async version of request_device().
         """
         raise NotImplementedError()
+
+    def _destroy(self):
+        pass
+
+    def __del__(self):
+        self._destroy()
 
 
 default_limits = dict(
@@ -212,7 +223,6 @@ class GPUDevice(GPUObject):
         *,
         label="",
         size: "GPUExtent3D",
-        array_layer_count: "GPUIntegerCoordinate" = 1,
         mip_level_count: "GPUIntegerCoordinate" = 1,
         sample_count: "GPUSize32" = 1,
         dimension: "GPUTextureDimension" = "2d",
@@ -237,7 +247,7 @@ class GPUDevice(GPUObject):
         mipmap_filter: "GPUFilterMode" = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 0xFFFFFFFF,
-        compare: "GPUCompareFunction" = "never",
+        compare: "GPUCompareFunction",
     ):
         """ Create a Sampler object. Use des (SamplerDescriptor) to specify its modes.
         """
@@ -246,7 +256,7 @@ class GPUDevice(GPUObject):
     # wgpu.help('BindGroupLayoutDescriptor', 'devicecreatebindgrouplayout', dev=True)
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
     def create_bind_group_layout(
-        self, *, label="", bindings: "GPUBindGroupLayoutBinding-list"
+        self, *, label="", entries: "GPUBindGroupLayoutEntry-list"
     ):
         """ Create a GPUBindGroupLayout.
 
@@ -280,7 +290,7 @@ class GPUDevice(GPUObject):
         *,
         label="",
         layout: "GPUBindGroupLayout",
-        bindings: "GPUBindGroupBinding-list",
+        entries: "GPUBindGroupEntry-list",
     ):
         """ Create a GPUBindGroup. The list of bindings are GPUBindGroupBinding objects,
         representing a concrete binding.
@@ -299,7 +309,7 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
-    def create_shader_module(self, *, label="", code: "GPUShaderCode"):
+    def create_shader_module(self, *, label="", code: str):
         raise NotImplementedError()
 
     # wgpu.help('ComputePipelineDescriptor', 'devicecreatecomputepipeline', dev=True)
@@ -604,6 +614,7 @@ class GPUCommandEncoder(GPUObject):
         label="",
         color_attachments: "GPURenderPassColorAttachmentDescriptor-list",
         depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
+        occlusion_query_set: "GPUQuerySet",
     ):
         raise NotImplementedError()
 
@@ -655,8 +666,8 @@ class GPUCommandEncoder(GPUObject):
 
 
 class GPUProgrammablePassEncoder(GPUObject):
-    # wgpu.help('BindGroup', 'Index32', 'Size64', 'programmablepassencodersetbindgroup', dev=True)
-    # IDL: void setBindGroup(GPUIndex32 index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  GPUSize64 dynamicOffsetsDataStart,  GPUSize64 dynamicOffsetsDataLength);
+    # wgpu.help('BindGroup', 'Index32', 'Size32', 'Size64', 'programmablepassencodersetbindgroup', dev=True)
+    # IDL: void setBindGroup(GPUIndex32 index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  GPUSize64 dynamicOffsetsDataStart,  GPUSize32 dynamicOffsetsDataLength);
     def set_bind_group(
         self,
         index,
@@ -718,17 +729,17 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
-    # IDL: void setIndexBuffer(GPUBuffer buffer, optional GPUSize64 offset = 0);
-    def set_index_buffer(self, buffer, offset):
+    # IDL: void setIndexBuffer(GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    def set_index_buffer(self, buffer, offset, size):
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
-    # IDL: void setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0);
-    def set_vertex_buffer(self, slot, buffer, offset):
+    # IDL: void setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    def set_vertex_buffer(self, slot, buffer, offset, size):
         raise NotImplementedError()
 
     # wgpu.help('Size32', 'renderencoderbasedraw', dev=True)
-    # IDL: void draw(GPUSize32 vertexCount, GPUSize32 instanceCount,  GPUSize32 firstVertex, GPUSize32 firstInstance);
+    # IDL: void draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
     def draw(self, vertex_count, instance_count, first_vertex, first_instance):
         raise NotImplementedError()
 
@@ -738,7 +749,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         raise NotImplementedError()
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
-    # IDL: void drawIndexed(GPUSize32 indexCount, GPUSize32 instanceCount,  GPUSize32 firstIndex, GPUSignedOffset32 baseVertex, GPUSize32 firstInstance);
+    # IDL: void drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstIndex = 0,  optional GPUSignedOffset32 baseVertex = 0,  optional GPUSize32 firstInstance = 0);
     def draw_indexed(
         self, index_count, instance_count, first_index, base_vertex, first_instance
     ):

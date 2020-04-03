@@ -21,7 +21,7 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# %% Enums (23)
+# %% Enums (24)
 
 PowerPreference = Enum(
     "PowerPreference", low_power="low-power", high_performance="high-performance",
@@ -118,8 +118,10 @@ BindingType = Enum(
     storage_buffer="storage-buffer",
     readonly_storage_buffer="readonly-storage-buffer",
     sampler="sampler",
+    comparison_sampler="comparison-sampler",
     sampled_texture="sampled-texture",
-    storage_texture="storage-texture",
+    readonly_storage_texture="readonly-storage-texture",
+    writeonly_storage_texture="writeonly-storage-texture",
 )
 
 PrimitiveTopology = Enum(
@@ -214,6 +216,8 @@ InputStepMode = Enum("InputStepMode", vertex="vertex", instance="instance",)
 LoadOp = Enum("LoadOp", load="load",)
 
 StoreOp = Enum("StoreOp", store="store", clear="clear",)
+
+QueryType = Enum("QueryType", occlusion="occlusion",)
 
 ErrorFilter = Enum(
     "ErrorFilter", none="none", out_of_memory="out-of-memory", validation="validation",

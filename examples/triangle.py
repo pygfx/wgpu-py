@@ -65,8 +65,8 @@ def _main(canvas, device):
     vshader = device.create_shader_module(code=vertex_shader)
     fshader = device.create_shader_module(code=fragment_shader)
 
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
 
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]

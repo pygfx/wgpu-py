@@ -86,8 +86,8 @@ def test_glfw_canvas_render():
     device = get_default_device()
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )

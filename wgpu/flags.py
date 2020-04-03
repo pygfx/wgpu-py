@@ -32,6 +32,7 @@ BufferUsage = Flags(
     UNIFORM=64,
     STORAGE=128,
     INDIRECT=256,
+    QUERY_RESOLVE=512,
 )
 
 TextureUsage = Flags(

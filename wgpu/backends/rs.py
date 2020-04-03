@@ -380,6 +380,12 @@ class GPUAdapter(base.GPUAdapter):
             label=label, extensions=extensions, limits=limits
         )  # no-cover
 
+    def _destroy(self):
+        if self._id is not None:
+            self._id, id = None, self._id
+            id  # todo: _lib.wgpu_adapter_destroy(id)  # function/symbol not found
+            # also so other _destroy() methods
+
 
 class GPUDevice(base.GPUDevice):
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
@@ -422,7 +428,6 @@ class GPUDevice(base.GPUDevice):
         *,
         label="",
         size: "GPUExtent3D",
-        array_layer_count: "GPUIntegerCoordinate" = 1,
         mip_level_count: "GPUIntegerCoordinate" = 1,
         sample_count: "GPUSize32" = 1,
         dimension: "GPUTextureDimension" = "2d",
@@ -436,7 +441,7 @@ class GPUDevice(base.GPUDevice):
         struct = new_struct(
             "WGPUTextureDescriptor *",
             size=c_size[0],
-            array_layer_count=array_layer_count,
+            array_layer_count=1,
             mip_level_count=mip_level_count,
             sample_count=sample_count,
             dimension=dimension,
@@ -460,7 +465,7 @@ class GPUDevice(base.GPUDevice):
         mipmap_filter: "GPUFilterMode" = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 0xFFFFFFFF,
-        compare: "GPUCompareFunction" = "never",
+        compare: "GPUCompareFunction",
     ):
         struct = new_struct(
             "WGPUSamplerDescriptor *",
@@ -479,33 +484,36 @@ class GPUDevice(base.GPUDevice):
 
     # wgpu.help('BindGroupLayoutDescriptor', 'devicecreatebindgrouplayout', dev=True)
     def create_bind_group_layout(
-        self, *, label="", bindings: "GPUBindGroupLayoutBinding-list"
+        self, *, label="", entries: "GPUBindGroupLayoutEntry-list"
     ):
 
-        c_bindings_list = []
-        for binding in bindings:
-            c_binding = new_struct(
+        c_entries_list = []
+        for entry in entries:
+            type = entry["type"]
+            if type in ("readonly-storage-texture" or "writeonly-storage-texture"):
+                type = 5  # StorageTexture
+            c_entry = new_struct(
                 "WGPUBindGroupLayoutBinding *",
-                binding=int(binding["binding"]),
-                visibility=int(binding["visibility"]),
-                ty=binding["type"],
-                texture_dimension=binding.get("texture_dimension", "2d"),
-                # ???=binding.get("textureComponentType", "float"),
-                multisampled=bool(binding.get("multisampled", False)),
-                dynamic=bool(binding.get("has_dynamic_offset", False)),
+                binding=int(entry["binding"]),
+                visibility=int(entry["visibility"]),
+                ty=type,
+                texture_dimension=entry.get("texture_dimension", "2d"),
+                # ???=entry.get("textureComponentType", "float"),
+                multisampled=bool(entry.get("multisampled", False)),
+                dynamic=bool(entry.get("has_dynamic_offset", False)),
             )
-            c_bindings_list.append(c_binding[0])
+            c_entries_list.append(c_entry[0])
 
-        c_bindings_array = ffi.new("WGPUBindGroupLayoutBinding []", c_bindings_list)
+        c_entries_array = ffi.new("WGPUBindGroupLayoutBinding []", c_entries_list)
         struct = new_struct(
             "WGPUBindGroupLayoutDescriptor *",
-            bindings=c_bindings_array,
-            bindings_length=len(c_bindings_list),
+            bindings=c_entries_array,
+            bindings_length=len(c_entries_list),
         )
 
         id = _lib.wgpu_device_create_bind_group_layout(self._internal, struct)
 
-        return base.GPUBindGroupLayout(label, id, self, bindings)
+        return base.GPUBindGroupLayout(label, id, self, entries)
 
     # wgpu.help('BindGroupDescriptor', 'devicecreatebindgroup', dev=True)
     def create_bind_group(
@@ -513,13 +521,13 @@ class GPUDevice(base.GPUDevice):
         *,
         label="",
         layout: "GPUBindGroupLayout",
-        bindings: "GPUBindGroupBinding-list",
+        entries: "GPUBindGroupEntry-list",
     ):
 
-        c_bindings_list = []
-        for binding in bindings:
+        c_entries_list = []
+        for entry in entries:
             # The resource can be a sampler, texture view, or buffer descriptor
-            resource = binding["resource"]
+            resource = entry["resource"]
             if isinstance(resource, base.GPUSampler):
                 c_resource_kwargs = {
                     "tag": 1,  # WGPUBindingResource_Tag.WGPUBindingResource_Sampler
@@ -536,7 +544,7 @@ class GPUDevice(base.GPUDevice):
                     )[0],
                 }
             elif isinstance(resource, dict):  # Buffer binding
-                c_buffer_binding = new_struct(
+                c_buffer_entry = new_struct(
                     "WGPUBufferBinding *",
                     buffer=resource["buffer"]._internal,
                     offset=resource["offset"],
@@ -545,29 +553,29 @@ class GPUDevice(base.GPUDevice):
                 c_resource_kwargs = {
                     "tag": 0,  # WGPUBindingResource_Tag.WGPUBindingResource_Buffer
                     "buffer": new_struct(
-                        "WGPUBindingResource_WGPUBuffer_Body *", _0=c_buffer_binding[0]
+                        "WGPUBindingResource_WGPUBuffer_Body *", _0=c_buffer_entry[0]
                     )[0],
                 }
             else:
                 raise TypeError("Unexpected resource type {type(resource)}")  # no-cover
             c_resource = new_struct("WGPUBindingResource *", **c_resource_kwargs)
-            c_binding = new_struct(
+            c_entry = new_struct(
                 "WGPUBindGroupBinding *",
-                binding=int(binding["binding"]),
+                binding=int(entry["binding"]),
                 resource=c_resource[0],
             )
-            c_bindings_list.append(c_binding[0])
+            c_entries_list.append(c_entry[0])
 
-        c_bindings_array = ffi.new("WGPUBindGroupBinding []", c_bindings_list)
+        c_entries_array = ffi.new("WGPUBindGroupBinding []", c_entries_list)
         struct = new_struct(
             "WGPUBindGroupDescriptor *",
             layout=layout._internal,
-            bindings=c_bindings_array,
-            bindings_length=len(c_bindings_list),
+            bindings=c_entries_array,
+            bindings_length=len(c_entries_list),
         )
 
         id = _lib.wgpu_device_create_bind_group(self._internal, struct)
-        return base.GPUBindGroup(label, id, self, bindings)
+        return base.GPUBindGroup(label, id, self, entries)
 
     # wgpu.help('PipelineLayoutDescriptor', 'devicecreatepipelinelayout', dev=True)
     def create_pipeline_layout(
@@ -587,7 +595,7 @@ class GPUDevice(base.GPUDevice):
         return base.GPUPipelineLayout(label, id, self, bind_group_layouts)
 
     # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
-    def create_shader_module(self, *, label="", code: "GPUShaderCode"):
+    def create_shader_module(self, *, label="", code: str):
 
         if isinstance(code, bytes):
             data = code  # Assume it's Spirv
@@ -881,14 +889,16 @@ class GPUBuffer(base.GPUBuffer):
 
     # wgpu.help('bufferdestroy', dev=True)
     def destroy(self):
-        if self._state != "destroyed":
+        self._destroy()  # no-cover
+
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
             self._state = "destroyed"
-            _lib.wgpu_buffer_destroy(self._internal)
+            _lib.wgpu_buffer_destroy(internal)
 
 
 class GPUTexture(base.GPUTexture):
-
-    _destroyed = False
 
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
     def create_view(
@@ -925,9 +935,12 @@ class GPUTexture(base.GPUTexture):
 
     # wgpu.help('texturedestroy', dev=True)
     def destroy(self):
-        if not self._destroyed:
-            self._destroyed = True
-            _lib.wgpu_texture_destroy(self._internal)
+        self._destroy()  # no-cover
+
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            _lib.wgpu_texture_destroy(internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder):
@@ -945,6 +958,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         color_attachments: "GPURenderPassColorAttachmentDescriptor-list",
         depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
     ):
+        # todo: we remove the occlusion_query_set param, because its not implemented in wgpu
+        # and its unclear how to create it.
 
         c_color_attachments_list = []
         for color_attachment in color_attachments:
@@ -1123,7 +1138,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
-    # wgpu.help('BindGroup', 'Index32', 'Size64', 'programmablepassencodersetbindgroup', dev=True)
+    # wgpu.help('BindGroup', 'Index32', 'Size32', 'Size64', 'programmablepassencodersetbindgroup', dev=True)
     def set_bind_group(
         self,
         index,
@@ -1133,7 +1148,7 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
         dynamic_offsets_data_length,
     ):
         offsets = list(dynamic_offsets_data)
-        c_offsets = ffi.new("WGPUBufferAddress []", offsets)
+        c_offsets = ffi.new("WGPUDynamicOffset []", offsets)
         bind_group_id = bind_group._internal
         if isinstance(self, GPUComputePassEncoder):
             _lib.wgpu_compute_pass_set_bind_group(
@@ -1181,6 +1196,13 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     def end_pass(self):
         _lib.wgpu_compute_pass_end_pass(self._internal)
 
+    # todo: const uint8_t *wgpu_compute_pass_finish(WGPURawPass *pass, uintptr_t *length);
+
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            internal  # _lib.wgpu_compute_pass_destroy(internal)  # function/symbol not found
+
 
 class GPURenderEncoderBase(GPUProgrammablePassEncoder):
     """
@@ -1192,11 +1214,11 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         _lib.wgpu_render_pass_set_pipeline(self._internal, pipeline_id)
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
-    def set_index_buffer(self, buffer, offset):
+    def set_index_buffer(self, buffer, offset, size):
         _lib.wgpu_render_pass_set_index_buffer(self._internal, buffer._internal, offset)
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
-    def set_vertex_buffer(self, slot, buffer, offset):
+    def set_vertex_buffer(self, slot, buffer, offset, size):
         buffers, offsets = [buffer], [offset]
         c_buffer_ids = ffi.new("WGPUBufferId []", [b._internal for b in buffers])
         c_offsets = ffi.new("WGPUBufferAddress []", [int(i) for i in offsets])
@@ -1236,6 +1258,13 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         _lib.wgpu_render_pass_draw_indexed_indirect(
             self._internal, buffer_id, int(indirect_offset)
         )
+
+    # todo: uint8_t *wgpu_render_pass_finish(WGPURawPass *pass, uintptr_t *length);
+
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            internal  # _lib.wgpu_render_pass_destroy(self._internal)  # function/symbol not found
 
 
 class GPURenderPassEncoder(GPURenderEncoderBase):

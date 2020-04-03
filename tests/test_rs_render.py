@@ -45,8 +45,8 @@ def test_render_orange_square():
         out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -83,8 +83,8 @@ def test_render_orange_square_indexed():
         out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -132,8 +132,8 @@ def test_render_orange_square_indirect():
         out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -175,8 +175,8 @@ def test_render_orange_square_indexed_indirect():
         out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -239,8 +239,8 @@ def test_render_orange_square_vbo():
         out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -292,8 +292,8 @@ def test_render_orange_square_color_attachment1():
         out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -335,8 +335,8 @@ def test_render_orange_square_color_attachment2():
         out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -382,8 +382,8 @@ def test_render_orange_square_viewport():
         renderpass.set_viewport(10, 20, 32, 32, 0, 100)
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -422,8 +422,8 @@ def test_render_orange_square_scissor():
         renderpass.set_blend_color((0, 0, 0, 1))
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -472,8 +472,8 @@ def test_render_orange_square_depth():
         renderpass.set_stencil_reference(42)
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
@@ -569,8 +569,8 @@ def test_render_orange_dots():
         out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(bindings=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, bindings=[])
+    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )

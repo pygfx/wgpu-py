@@ -155,7 +155,7 @@ def render_to_texture(
     render_pass.set_pipeline(render_pipeline)
     render_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
     for slot, vbo in enumerate(vbos):
-        render_pass.set_vertex_buffer(slot, vbo, 0)
+        render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)
     renderpass_callback(render_pass)
     if ibo is None:
         if indirect_buffer is None:
@@ -163,7 +163,7 @@ def render_to_texture(
         else:
             render_pass.draw_indirect(indirect_buffer, 0)
     else:
-        render_pass.set_index_buffer(ibo, 0)
+        render_pass.set_index_buffer(ibo, 0, ibo.size)
         if indirect_buffer is None:
             render_pass.draw_indexed(6, 1, 0, 0, 0)
         else:
@@ -275,7 +275,7 @@ def render_to_screen(
             0, bind_group, [], 0, 999999
         )  # last 2 elements not used
         for slot, vbo in enumerate(vbos):
-            render_pass.set_vertex_buffer(slot, vbo, 0)
+            render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)
         renderpass_callback(render_pass)
         if ibo is None:
             if indirect_buffer is None:
@@ -283,7 +283,7 @@ def render_to_screen(
             else:
                 render_pass.draw_indirect(indirect_buffer, 0)
         else:
-            render_pass.set_index_buffer(ibo, 0)
+            render_pass.set_index_buffer(ibo, 0, ibo.size)
             if indirect_buffer is None:
                 render_pass.draw_indexed(6, 1, 0, 0, 0)
             else:
