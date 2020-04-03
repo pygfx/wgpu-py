@@ -6,7 +6,7 @@ import ctypes.util
 logger = logging.getLogger("wgpu")
 
 
-class BaseCanvas:
+class WgpuCanvasBase:
     """ An abstract base canvas. Can be implementd to provide a canvas for
     various GUI toolkits.
     """

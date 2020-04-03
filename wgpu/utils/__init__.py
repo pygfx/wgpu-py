@@ -13,5 +13,5 @@ Higher level utility functions. This module is not imported by default.
 # GPU/wgpu semantics), but without using low level details of the wgpu
 # API itself.
 
-from ._compute import compute_with_buffers  # noqa: F401
 from ._device import get_default_device  # noqa: F401
+from ._compute import compute_with_buffers  # noqa: F401

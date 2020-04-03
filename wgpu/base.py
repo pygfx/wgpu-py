@@ -44,35 +44,6 @@ async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
     )  # no-cover
 
 
-class GPUObject:
-    """ The root class for all GPU objects (the device and all objects
-    belonging to a device).
-    """
-
-    def __init__(self, label, internal, device):
-        self._label = label
-        self._internal = internal  # The native/raw/real GPU object
-        self._device = device
-        logger.info(f"Creating {self.__class__.__name__} {label}")
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} '{self.label}' at 0x{hex(id(self))}>"
-
-    @property
-    def label(self):
-        """ A human-readable name identifying the GPU object.
-        """
-        return self._label
-
-    def _destroy(self):
-        """ Subclasses can implement this to clean up.
-        """
-        pass
-
-    def __del__(self):
-        self._destroy()
-
-
 class GPUAdapter:  # Not a GPUObject
     """
     An adapter represents an implementation of WGPU on the system.
@@ -150,6 +121,35 @@ default_limits = dict(
     max_storage_textures_per_shader_stage=4,
     max_uniform_buffers_per_shader_stage=12,
 )
+
+
+class GPUObject:
+    """ The root class for all GPU objects (the device and all objects
+    belonging to a device).
+    """
+
+    def __init__(self, label, internal, device):
+        self._label = label
+        self._internal = internal  # The native/raw/real GPU object
+        self._device = device
+        logger.info(f"Creating {self.__class__.__name__} {label}")
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} '{self.label}' at 0x{hex(id(self))}>"
+
+    @property
+    def label(self):
+        """ A human-readable name identifying the GPU object.
+        """
+        return self._label
+
+    def _destroy(self):
+        """ Subclasses can implement this to clean up.
+        """
+        pass
+
+    def __del__(self):
+        self._destroy()
 
 
 class GPUDevice(GPUObject):

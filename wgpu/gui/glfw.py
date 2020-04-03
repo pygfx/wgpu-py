@@ -13,7 +13,7 @@ import weakref
 
 import glfw
 
-from .base import BaseCanvas
+from .base import WgpuCanvasBase
 
 
 # Make sure that glfw is new enough
@@ -48,7 +48,7 @@ def update_glfw_canvasses():
     return len(canvases)
 
 
-class GlfwWgpuCanvas(BaseCanvas):
+class GlfwWgpuCanvas(WgpuCanvasBase):
     """ A canvas object wrapping a glfw window.
     """
 

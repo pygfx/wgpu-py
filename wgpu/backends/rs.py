@@ -812,9 +812,9 @@ class GPUDevice(base.GPUDevice):
     #     pass
 
     def _gui_configure_swap_chain(self, canvas, format, usage):
-        """ Get a swapchain object from a canvas object. Called by BaseCanvas.
+        """ Get a swapchain object from a canvas object. Called by WgpuCanvasBase.
         """
-        # Note: canvas should implement the BaseCanvas interface.
+        # Note: canvas should implement the WgpuCanvasBase interface.
         return GPUSwapChain(self, canvas, format, usage)
 
 

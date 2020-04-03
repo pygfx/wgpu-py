@@ -7,7 +7,7 @@ import sys
 import ctypes
 import importlib
 
-from .base import BaseCanvas
+from .base import WgpuCanvasBase
 
 # Select GUI toolkit
 for libname in ("PySide2", "PyQt5", "PySide", "PyQt4"):
@@ -44,7 +44,7 @@ def enable_hidpi():
 enable_hidpi()
 
 
-class QtWgpuCanvas(BaseCanvas, QtWidgets.QWidget):
+class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
     def __init__(self, *args, size=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
 

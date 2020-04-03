@@ -5,7 +5,7 @@ from pscript.stubs import window
 raise NotImplementedError()
 
 
-# Flexx cannot do multiple inheritance, so we consider BaseCanvas an interface :)
+# Flexx cannot do multiple inheritance, so we consider WgpuCanvasBase an interface :)
 
 
 class WgpuCanvas(flx.CanvasWidget):
