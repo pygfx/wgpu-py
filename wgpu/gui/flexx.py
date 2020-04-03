@@ -2,6 +2,9 @@ from flexx import flx
 from pscript.stubs import window
 
 
+raise NotImplementedError()
+
+
 # Flexx cannot do multiple inheritance, so we consider BaseCanvas an interface :)
 
 
@@ -12,7 +15,10 @@ class WgpuCanvas(flx.CanvasWidget):
 
     def init(self):
         self._draw_func = None
-        window.requestAnimationFrame(self._draw_frame_and_present)
+        self._draw_pending = False
+
+        self.node.addEventListener("size", self.request_draw)
+        self.request_draw()
 
     def configure_swap_chain(self, *args):
         return self.node.configureSwapChain(*args)
@@ -21,8 +27,13 @@ class WgpuCanvas(flx.CanvasWidget):
         pass
 
     def _draw_frame_and_present(self):
-        window.requestAnimationFrame(self._draw_frame_and_present)
+        self._draw_pending = False
         self.draw_frame()
+
+    def request_draw(self):
+        if not self._draw_pending:
+            self._draw_pending = True
+            window.requestAnimationFrame(self._draw_frame_and_present)
 
     def is_closed(self):
         return False

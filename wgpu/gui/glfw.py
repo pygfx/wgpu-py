@@ -9,6 +9,7 @@ or ``sudo apt install libglfw3-wayland`` when using Wayland.
 
 import os
 import sys
+import weakref
 
 import glfw
 
@@ -28,6 +29,23 @@ if sys.platform.startswith("linux"):
             "We're on Wayland but Wayland functions not available. "
             + "Did you apt install libglfw3-wayland?"
         )
+
+
+all_glfw_canvases = weakref.WeakSet()
+
+
+def update_glfw_canvasses():
+    """ Call this in your glfw event loop to draw each canvas that needs
+    an update. Returns the number of visible canvases.
+    """
+    # Note that _draw_frame_and_present already catches errors, it can
+    # only raise errors if the logging system fails.
+    canvases = tuple(all_glfw_canvases)
+    for canvas in canvases:
+        if canvas._need_draw:
+            canvas._need_draw = False
+            canvas._draw_frame_and_present()
+    return len(canvases)
 
 
 class GlfwWgpuCanvas(BaseCanvas):
@@ -56,20 +74,18 @@ class GlfwWgpuCanvas(BaseCanvas):
         # Create the window (the initial size may not be in logical pixels)
         self._window = glfw.create_window(int(size[0]), int(size[1]), title, None, None)
 
-        # Register callbacks
+        # Register ourselves
+        self._need_draw = True
+        all_glfw_canvases.add(self)
+
+        # Register callbacks. We may get notified too often, but that's
+        # ok, they'll result in a single draw.
         glfw.set_window_content_scale_callback(self._window, self._on_pixelratio_change)
         glfw.set_framebuffer_size_callback(self._window, self._on_size_change)
-        glfw.set_window_refresh_callback(self._window, self._on_paint)
-        if sys.platform.startswith("darwin"):
-            # Apparently, the refresh_callback is not called when the window
-            # is created, gets focus, or is resized on macOS. So this is a
-            # workaround to explicitely make sure that the paint callback
-            # is called so that the contents are drawn.
-            glfw.set_window_focus_callback(self._window, self._paint)
-        # glfw.set_window_iconify_callback
-        # glfw.set_window_maximize_callback
-        # glfw.set_framebuffer_size_callback
-
+        glfw.set_window_close_callback(self._window, self._on_close)
+        glfw.set_window_refresh_callback(self._window, self._on_window_dirty)
+        glfw.set_window_focus_callback(self._window, self._on_window_dirty)
+        glfw.set_window_maximize_callback(self._window, self._on_window_dirty)
         # Initialize the size
         self.set_logical_size(*size)
 
@@ -77,14 +93,19 @@ class GlfwWgpuCanvas(BaseCanvas):
 
     def _on_pixelratio_change(self, *args):
         self._set_logical_size()
-        self._on_paint()
+        self._need_draw = True
 
     def _on_size_change(self, *args):
         self._logical_size = self._get_logical_size()
-        self._on_paint()
+        self._need_draw = True
 
-    def _on_paint(self, *args):
-        self._draw_frame_and_present()
+    def _on_close(self, *args):
+        print("closing")
+        all_glfw_canvases.discard(self)
+        glfw.hide_window(self._window)
+
+    def _on_window_dirty(self, *args):
+        self._need_draw = True
 
     # Helpers
 
@@ -160,9 +181,13 @@ class GlfwWgpuCanvas(BaseCanvas):
         self._logical_size = float(width), float(height)
         self._set_logical_size()
 
+    def request_draw(self):
+        self._need_draw = True
+        glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
+
     def close(self):
-        # glfw.hide_window(self._window) - no: clicking the cross also does not hide it
         glfw.set_window_should_close(self._window, True)
+        self._on_close()
 
     def is_closed(self):
         return glfw.window_should_close(self._window)

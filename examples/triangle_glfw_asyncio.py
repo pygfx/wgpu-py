@@ -7,7 +7,7 @@ The glfw library can be installed using ``pip install glfw``.
 import asyncio  # noqa: E402
 
 import glfw
-from wgpu.gui.glfw import WgpuCanvas  # WgpuCanvas wraps a glfw window
+from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 # Import the (async) function that we must call to run the visualization
@@ -20,7 +20,7 @@ canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle with GLFW")
 
 async def mainloop():
     await main_async(canvas)
-    while not canvas.is_closed():
+    while update_glfw_canvasses():
         await asyncio.sleep(0.001)
         glfw.poll_events()
     loop.stop()

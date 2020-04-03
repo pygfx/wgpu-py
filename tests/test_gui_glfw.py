@@ -4,7 +4,6 @@ like the swap chain.
 """
 
 import os
-import time
 
 from python_shader import python2shader, vec4, i32
 from python_shader import RES_INPUT, RES_OUTPUT
@@ -80,7 +79,7 @@ def test_glfw_canvas_render():
     """
 
     import glfw
-    from wgpu.gui.glfw import WgpuCanvas
+    from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
 
     canvas = WgpuCanvas()
     device = get_default_device()
@@ -136,7 +135,12 @@ def test_glfw_canvas_render():
         wgpu.TextureUsage.OUTPUT_ATTACHMENT,
     )
 
+    frame_counter = 0
+
     def draw_frame():
+        nonlocal frame_counter
+        frame_counter += 1
+
         current_texture_view = swap_chain.get_current_texture_view()
         command_encoder = device.create_command_encoder()
 
@@ -158,11 +162,31 @@ def test_glfw_canvas_render():
 
     canvas.draw_frame = draw_frame
 
-    etime = time.time() + 0.1
+    # Give it a few rounds to start up
     for i in range(5):
         glfw.poll_events()
-    while time.time() < etime:
+        update_glfw_canvasses()
+    # There should have been exactly one draw now
+    assert frame_counter == 1
+
+    # Ask for a lot of draws
+    for i in range(5):
+        canvas.request_draw()
+    # Process evens for a while
+    for i in range(5):
         glfw.poll_events()
+        update_glfw_canvasses()
+    # We should have had just one draw
+    assert frame_counter == 2
+
+    # Change the canvase size
+    canvas.set_logical_size(300, 200)
+    canvas.set_logical_size(400, 300)
+    for i in range(5):
+        glfw.poll_events()
+        update_glfw_canvasses()
+    # We should have had just one draw
+    assert frame_counter == 3
 
     canvas.close()
     glfw.poll_events()

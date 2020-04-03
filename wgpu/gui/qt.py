@@ -26,7 +26,9 @@ def enable_hidpi():
     """ Enable high-res displays.
     """
     try:
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        # See https://github.com/pyzo/pyzo/pull/700 why we seem to need both
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor dpi aware
     except Exception:
         pass  # fail on non-windows
     try:
@@ -105,6 +107,9 @@ class QtWgpuCanvas(BaseCanvas, QtWidgets.QWidget):
         if width < 0 or height < 0:
             raise ValueError("Window width and height must not be negative")
         self.resize(width, height)  # See note on pixel ratio below
+
+    def request_draw(self):
+        self.update()
 
     def close(self):
         super().close()
