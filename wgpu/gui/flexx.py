@@ -24,5 +24,8 @@ class WgpuCanvas(flx.CanvasWidget):
         window.requestAnimationFrame(self._draw_frame_and_present)
         self.draw_frame()
 
+    def request_draw(self):
+        pass  # already drawing continuously
+
     def is_closed(self):
         return False

@@ -38,8 +38,8 @@ class BaseCanvas:
         pass
 
     def _draw_frame_and_present(self):
-        """ Draw the frame and present the swapchain. Errors are printed to stderr.
-        Should be called by the subclass at an appropriate time.
+        """ Draw the frame and present the swapchain. Errors are logged to the
+        "wgpu" logger. Should be called by the subclass at an appropriate time.
         """
         # Perform the user-defined drawing code. When this errors,
         # we should report the error and then continue, otherwise we crash.
@@ -51,7 +51,7 @@ class BaseCanvas:
         # Always present the swapchain, or wgpu gets into an error state.
         try:
             if self._swap_chain is not None:
-                self._swap_chain._gui_present()  # a.k.a swap buffers
+                self._swap_chain._gui_present()  # a.k.a. swap buffers
         except Exception as err:
             self._log_exception("Swapchain present error", err)
 
@@ -78,7 +78,8 @@ class BaseCanvas:
 
     def get_display_id(self):
         """ Get the native display id on Linux. This is needed by the backends
-        to obtain a surface id on Linux.
+        to obtain a surface id on Linux. The default implementation calls into
+        the X11 lib to get the display id.
         """
         # Re-use to avoid creating loads of id's
         if self._display_id is not None:
@@ -125,12 +126,18 @@ class BaseCanvas:
         """
         raise NotImplementedError()
 
+    def request_draw(self):
+        """ Request from the main loop to schedule a new draw event,
+        so that the canvas will be updated.
+        """
+        raise NotImplementedError()
+
     def close(self):
         """ Close the window.
         """
         raise NotImplementedError()
 
     def is_closed(self):
-        """ Whether the window is closed.
+        """ Get whether the window is closed.
         """
         raise NotImplementedError()
