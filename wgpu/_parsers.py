@@ -309,7 +309,12 @@ class IdlParser(BaseParser):
                     arg_type = typedefs.get(arg_type, arg_type)
                     if arg_type in ["double", "float"]:
                         t = "float"
-                    elif arg_type in ["long", "unsigned long", "unsigned long long", "GPUSize64"]:
+                    elif arg_type in [
+                        "long",
+                        "unsigned long",
+                        "unsigned long long",
+                        "GPUSize64",
+                    ]:
                         t = "int"
                     elif arg_type in ["boolean"]:
                         t = "bool"

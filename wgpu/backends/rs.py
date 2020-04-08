@@ -387,9 +387,7 @@ class GPUAdapter(base.GPUAdapter):
 
 class GPUDevice(base.GPUDevice):
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
-    def create_buffer(
-        self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
-    ):
+    def create_buffer(self, *, label="", size: int, usage: "GPUBufferUsageFlags"):
         size = int(size)
 
         struct = new_struct("WGPUBufferDescriptor *", size=size, usage=usage)
@@ -399,7 +397,7 @@ class GPUDevice(base.GPUDevice):
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
     def create_buffer_mapped(
-        self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
+        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
     ):
 
         size = int(size)
@@ -961,6 +959,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         label="",
         color_attachments: "GPURenderPassColorAttachmentDescriptor-list",
         depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
+        # occlusion_query_set: "GPUQuerySet",
     ):
         # todo: we remove the occlusion_query_set param, because its not implemented in wgpu
         # and its unclear how to create it.

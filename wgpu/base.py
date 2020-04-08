@@ -190,9 +190,7 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
-    def create_buffer(
-        self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
-    ):
+    def create_buffer(self, *, label="", size: int, usage: "GPUBufferUsageFlags"):
         """ Create a Buffer object.
 
         Arguments:
@@ -204,7 +202,7 @@ class GPUDevice(GPUObject):
     # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
     def create_buffer_mapped(
-        self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
+        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
     ):
         """ Create a buffer object that is mapped from the start. It must
         be unmapped before using it in a pipeline.
@@ -218,7 +216,7 @@ class GPUDevice(GPUObject):
     # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
     async def create_buffer_mapped_async(
-        self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
+        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
     ):
         """ Asynchronous version of create_buffer_mapped()
         """
@@ -1222,6 +1220,7 @@ class GPUQueue(GPUObject):
 
     You can obtain a queue object via the ``devicer.default_queue`` property.
     """
+
     # wgpu.help('queuesubmit', dev=True)
     # IDL: void submit(sequence<GPUCommandBuffer> commandBuffers);
     def submit(self, command_buffers):

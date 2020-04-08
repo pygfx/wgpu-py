@@ -19,6 +19,10 @@ sys.path.insert(0, ROOT_DIR)
 import wgpu  # noqa: E402
 import wgpu.gui  # noqa: E402
 
+# Make flags and enum appear better in docs
+wgpu.enums._use_sphinx_repr = True
+wgpu.flags._use_sphinx_repr = True
+
 
 # -- Project information -----------------------------------------------------
 
