@@ -420,11 +420,13 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
             "binding": 0,
             "visibility": wgpu.ShaderStage.FRAGMENT,
             "type": wgpu.BindingType.sampled_texture,
+            "view_dimension": wgpu.TextureViewDimension.d2,
         },
         {
             "binding": 1,
             "visibility": wgpu.ShaderStage.FRAGMENT,
             "type": wgpu.BindingType.sampler,
+            "view_dimension": wgpu.TextureViewDimension.d2,
         },
     ]
     bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)

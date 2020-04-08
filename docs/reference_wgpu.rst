@@ -1,12 +1,39 @@
 WGPU API
 ========
 
+This document describes the wgpu API. It is basically a Pythonic version of the
+`WebGPU API <https://gpuweb.github.io/gpuweb/>`_. It exposes an API
+for performing operations, such as rendering and computation, on a
+Graphics Processing Unit.
+
+.. note::
+    The WebGPU API is still being developed and occasionally there are backwards
+    incompatible changes. Since we mostly follow the WebGPU API, there may be
+    backwards incompatible changes to wgpu-py too. This will be so until
+    the WebGPU settles as a standard.
+
+
+Selecting the backend
+---------------------
+
+Before you can use this API, you have to select a backend. Eventually
+there may be multiple backends, but at the moment
+there is only one backend, which is based on the Rust libary
+`wgpu-native <https://github.com/gfx-rs/wgpu>`_. You select
+the backend by importing it:
+
+
+.. code-block:: py
+
+    import wgpu.backends.rs
+
 
 Adapter
 -------
 
-To start using the GPU, we must obtain a device object. But first, we request
-an adapter, which represens a GPU implementation on the current system.
+To start using the GPU for computations or rendering, we must obtain a
+device object. But first, we request an adapter, which represens a GPU
+implementation on the current system.
 
 .. autofunction:: wgpu.request_adapter
 
@@ -19,7 +46,8 @@ an adapter, which represens a GPU implementation on the current system.
 Device
 ------
 
-The device is the root object for all other GPU objects.
+The device is the central object; most other GPU objects are created
+from it.
 
 .. autoclass:: wgpu.base.GPUObject
     :members:
@@ -50,7 +78,27 @@ Buffers and textures are used to provide your shaders with data.
 Bind groups
 -----------
 
-Bind groups are used to tell the GPU what the data looks like.
+Shaders need access to resources like buffers, texture views, and samplers.
+The access to these resources occurs via so called bindings. There are
+integer slots, which you specify both via the API and in the shader, to
+bind the resources to the shader.
+
+Bindings are organized into bind groups, which essentially form a list
+of bindings. E.g. in Python shaders the slot of each resource is specified
+as a two-tuple (e.g. ``(1, 3)``) specifying the bind group and binding
+slot respectively.
+
+Further, in wgpu you need to specify a binding *layout*, providing
+meta-information about the binding (type, texture dimension etc.).
+
+One uses ``device.create_bind_group()`` to create a group of bindings
+using the actual buffers/textures/samplers.
+
+One uses ``device.create_bind_group_layout()`` to specify more information
+about these bindings, and ``device.create_pipeline_layout()`` to pack
+one or more bind group layouts together, into a complete layout description
+for a pipeline.
+
 
 .. autoclass:: wgpu.base.GPUBindGroupLayout
     :members:

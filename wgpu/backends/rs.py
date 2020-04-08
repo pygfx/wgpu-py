@@ -348,8 +348,6 @@ class GPUAdapter(base.GPUAdapter):
         for key in ["max_bind_groups"]:
             limits2[key] = limits.get(key, base.default_limits[key])
 
-        extensions = tuple(extensions)
-
         c_extensions = new_struct(
             "WGPUExtensions *",
             anisotropic_filtering="anisotropic_filtering" in extensions,
@@ -486,19 +484,21 @@ class GPUDevice(base.GPUDevice):
     def create_bind_group_layout(
         self, *, label="", entries: "GPUBindGroupLayoutEntry-list"
     ):
-
         c_entries_list = []
         for entry in entries:
             type = entry["type"]
-            if type in ("readonly-storage-texture" or "writeonly-storage-texture"):
-                type = 5  # StorageTexture
+            if "texture" in type and "view_dimension" not in entry:
+                raise ValueError("Texture bindings should specify 'view_dimension'")
+            if type in ("readonly-storage-texture", "writeonly-storage-texture"):
+                type = 5  # StorageTexture, workaround while wgpu-native is behind
             c_entry = new_struct(
                 "WGPUBindGroupLayoutBinding *",
                 binding=int(entry["binding"]),
                 visibility=int(entry["visibility"]),
                 ty=type,
-                texture_dimension=entry.get("texture_dimension", "2d"),
+                texture_dimension=entry.get("view_dimension", "2d"),
                 # ???=entry.get("textureComponentType", "float"),
+                # ???=entry.get("storageTextureFormat", "float"),
                 multisampled=bool(entry.get("multisampled", False)),
                 dynamic=bool(entry.get("has_dynamic_offset", False)),
             )
@@ -843,6 +843,7 @@ class GPUBuffer(base.GPUBuffer):
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
+        self._mapping = data
         return data
 
     # wgpu.help('buffermapwriteasync', dev=True)
@@ -869,6 +870,7 @@ class GPUBuffer(base.GPUBuffer):
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
+        self._mapping = data
         return data
 
     # wgpu.help('buffermapreadasync', dev=True)
@@ -886,6 +888,7 @@ class GPUBuffer(base.GPUBuffer):
         if self._state == "mapped":
             _lib.wgpu_buffer_unmap(self._internal)
             self._state = "unmapped"
+            self._mapping = None
 
     # wgpu.help('bufferdestroy', dev=True)
     def destroy(self):
@@ -895,6 +898,7 @@ class GPUBuffer(base.GPUBuffer):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             self._state = "destroyed"
+            self._mapping = None
             _lib.wgpu_buffer_destroy(internal)
 
 
