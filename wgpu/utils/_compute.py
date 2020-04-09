@@ -12,7 +12,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     output arrays. Both input and output arrays are represented on the GPU
     using storage buffer objects.
 
-    Params:
+    Parameters:
         input_arrays (dict): A dict mapping int bindings to ctypes arrays.
             The type of the array does not need to match the type with which
             the shader will interpret the buffer data (though it probably
@@ -32,8 +32,8 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
     Returns:
         output (dict): A dict mapping int bindings to ctypes arrays. The
-            keys match those of ``output_arrays``, and the arrays are instances
-            of the corresponding array types.
+        keys match those of ``output_arrays``, and the arrays are instances
+        of the corresponding array types.
     """
 
     # Check input arrays

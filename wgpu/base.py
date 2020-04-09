@@ -22,9 +22,8 @@ logger = logging.getLogger("wgpu")
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
 def request_adapter(*, power_preference: "GPUPowerPreference"):
-    """ Request a GPUAdapter, the object that represents a wgpu implementation.
-    Before requesting an adapter, a wgpu backend should be selected. At the moment
-    there is only one backend. Use ``import wgpu.backends.rs`` to select it.
+    """ Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
+    implementation, from which one can request a :class:`GPUDevice`.
 
     Arguments:
         powerPreference(PowerPreference): "high-performance" or "low-power"
@@ -77,7 +76,7 @@ class GPUAdapter:  # Not a GPUObject
         extensions: "GPUExtensionName-list" = [],
         limits: "GPULimits" = {},
     ):
-        """ Request a GPUDevice from the adapter.
+        """ Request a :class:`GPUDevice` from the adapter.
 
         Arguments:
             label (str): A human readable label. Optional.
