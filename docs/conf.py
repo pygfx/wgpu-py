@@ -22,6 +22,15 @@ import wgpu.gui  # noqa: E402
 
 # -- Tweak wgpu's docs -------------------------------------------------------
 
+# Ensure that our API docs are complete
+with open(os.path.join(ROOT_DIR, "docs", "reference_wgpu.rst"), "rb") as f:
+    wgpu_api_docs_text = f.read().decode()
+for cls in wgpu.base.__dict__.values():
+    if not isinstance(cls, type):
+        continue
+    expected_line = f".. autoclass:: wgpu.{cls.__name__}\n"
+    assert expected_line in wgpu_api_docs_text, f"Missing docs for {cls.__name__}"
+
 # Make flags and enum appear better in docs
 wgpu.enums._use_sphinx_repr = True
 wgpu.flags._use_sphinx_repr = True
@@ -35,6 +44,7 @@ wgpu.request_adapter_async.__doc__ = (
     + wgpu.request_adapter_async.__doc__.lstrip()
 )
 
+# Also tweak docstrings of classes and their methods
 for cls in wgpu.base.__dict__.values():
     if not isinstance(cls, type):
         continue

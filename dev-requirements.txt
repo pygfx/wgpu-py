@@ -4,6 +4,7 @@ flake8
 pep8-naming
 requests
 setuptools
+sphinx
 wheel
 twine
 numpy
