@@ -27,7 +27,7 @@ def request_adapter(*, power_preference: "GPUPowerPreference"):
     there is only one backend. Use ``import wgpu.backends.rs`` to select it.
 
     Arguments:
-        powerPreference(enum): "high-performance" or "low-power"
+        powerPreference(PowerPreference): "high-performance" or "low-power"
     """
     raise RuntimeError(
         "Select a backend (by importing wgpu.rs) before requesting an adapter!"
@@ -81,7 +81,7 @@ class GPUAdapter:  # Not a GPUObject
 
         Arguments:
             label (str): A human readable label. Optional.
-            extensions (list): the extensions that you need.
+            extensions (list of str): the extensions that you need.
             limits (dict): the various limits that you need.
         """
         raise NotImplementedError()
@@ -239,7 +239,7 @@ class GPUDevice(GPUObject):
 
         Arguments:
             label (str): A human readable label. Optional.
-            size (tuple, dict): The size (x, y, z) of the texture.
+            size (tuple or dict): The texture size with fields (x, y, z).
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
             dimension (TextureDimension): The dimensionality of the texture.
@@ -271,9 +271,9 @@ class GPUDevice(GPUObject):
             address_mode_u (AddressMode): What happens when sampling beyond the x edge.
             address_mode_v (AddressMode): What happens when sampling beyond the y edge.
             address_mode_w (AddressMode): What happens when sampling beyond the z edge.
-            mag_filter (FilterMode): Interpolation when zoomed in. Default nearest.
-            min_filter (FilterMode): Interpolation when zoomed out. Default nearest.
-            mipmap_filter: (FilterMode): Interpolation between mip levels. Default nearest.
+            mag_filter (FilterMode): Interpolation when zoomed in. Default 'nearest'.
+            min_filter (FilterMode): Interpolation when zoomed out. Default 'nearest'.
+            mipmap_filter: (FilterMode): Interpolation between mip levels. Default 'nearest'.
             lod_min_clamp (float): The minimum level of detail. Default 0.
             lod_max_clamp (float): The maxium level of detail. Default inf.
             compare (CompareFunction): todo
@@ -292,7 +292,7 @@ class GPUDevice(GPUObject):
 
         Arguments:
             label (str): A human readable label. Optional.
-            entries (list): A list of layout entry dicts.
+            entries (list of dict): A list of layout entry dicts.
 
         Example entry dict:
 
@@ -305,7 +305,6 @@ class GPUDevice(GPUObject):
                 "view_dimension": wgpu.TextureViewDimension.d2,
                 # "texture_component_type" -> todo not supported yet
                 # "storage_texture_format" -> todo not supported yet
-                "multisampled": False,  # optional
                 "multisampled": False,  # optional
                 "has_dynamic_offset": False,  # optional
             },
@@ -334,7 +333,7 @@ class GPUDevice(GPUObject):
             label (str): A human readable label. Optional.
             layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
-            entries (list): A list of dicts, see below.
+            entries (list of dict): A list of dicts, see below.
 
         Example entry dicts:
 
@@ -345,13 +344,11 @@ class GPUDevice(GPUObject):
                 "binding" : 0,  # slot
                 "resource": a_sampler,
             }
-
             # For a texture view
             {
                 "binding" : 0,  # slot
                 "resource": a_texture_view,
             }
-
             # For a texture
             {
                 "binding" : 0,  # slot
@@ -374,7 +371,7 @@ class GPUDevice(GPUObject):
 
         Arguments:
             label (str): A human readable label. Optional.
-            bind_group_layouts (list): A list of GPUBindGroupLayout objects.
+            bind_group_layouts (list): A list of :class:`GPUBindGroupLayout` objects.
         """
         raise NotImplementedError()
 
@@ -389,8 +386,8 @@ class GPUDevice(GPUObject):
 
         Arguments:
             label (str): A human readable label. Optional.
-            code: The shadercode, as SpirV bytes, or an object implementing
-                ``to_spirv()`` or ``to_bytes()``.
+            code (bytes): The shadercode, as binary SpirV, or an object
+                implementing ``to_spirv()`` or ``to_bytes()``.
         """
         raise NotImplementedError()
 
@@ -434,14 +431,14 @@ class GPUDevice(GPUObject):
 
         Arguments:
             label (str): A human readable label. Optional.
-            layout: A GPUPipelineLayout created with ``create_pipeline_layout()``.
-            vertex_stage: E.g. ``{"module": shader_module, entry_point="main"}``
-            fragment_stage: E.g. ``{"module": shader_module, entry_point="main"}``
+            layout (GPUPipelineLayout): A layout created with ``create_pipeline_layout()``.
+            vertex_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``
+            fragment_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``
             primitive_topology (PrimitiveTopology): The topology, e.g. triangles or lines.
             rasterization_state (dict): Specify rasterization rules. See below.
-            color_states (list of dicts): Specify color blending rules. See below.
-            depth_stencil_state: Specify texture for depth and stencil. See below.
-            vertex_state: Specify index and vertex buffer info. See below.
+            color_states (list of dict): Specify color blending rules. See below.
+            depth_stencil_state (dict): Specify texture for depth and stencil. Can be None. See below.
+            vertex_state (dict): Specify index and vertex buffer info. See below.
             sample_count (int): Set higher than one for subsampling.
             sample_mask (int): Sample bitmask.
             alpha_to_coverage_enabled (bool): Wheher to anable alpha coverage.
@@ -859,8 +856,8 @@ class GPUCommandEncoder(GPUObject):
 
         Arguments:
             label (str): A human readable label. Optional.
-            color_attachements (list): List of color attachement dicts. See below.
-            depth_stencil_attachment: A depth stencil attachement dict. See below.
+            color_attachements (list of dict): List of color attachement dicts. See below.
+            depth_stencil_attachment (dict): A depth stencil attachement dict. See below.
             occlusion_query_set: TODO NOT IMPLEMENTED
 
         Example color attachement:
@@ -895,9 +892,9 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a buffer to another buffer.
 
         Arguments:
-            source: The source buffer.
+            source (GPUBuffer): The source buffer.
             source_offset (int): The byte offset.
-            destination: The target buffer.
+            destination (GPUBuffer): The target buffer.
             destination_offset (int): The byte offset in the destination buffer.
             size (int): The number of bytes to copy.
         """
@@ -909,8 +906,8 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a buffer to a texture (view).
 
         Arguments:
-            source: A dict with fields: buffer, offset, row_pitch, image_height.
-            destination: A dict with fields: texture, mip_level, array_layer, origin.
+            source (GPUBuffer): A dict with fields: buffer, offset, row_pitch, image_height.
+            destination (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
             copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()
@@ -921,8 +918,8 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a texture (view) to a buffer.
 
         Arguments:
-            source: A dict with fields: texture, mip_level, array_layer, origin.
-            destination:  A dict with fields: buffer, offset, row_pitch, image_height.
+            source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            destination (GPUBuffer):  A dict with fields: buffer, offset, row_pitch, image_height.
             copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()
@@ -933,8 +930,8 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a texture (view) to another texture (view).
 
         Arguments:
-            source: A dict with fields: texture, mip_level, array_layer, origin.
-            destination:  A dict with fields: texture, mip_level, array_layer, origin.
+            source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            destination (GPUTexture):  A dict with fields: texture, mip_level, array_layer, origin.
             copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()
@@ -992,8 +989,8 @@ class GPUProgrammablePassEncoder(GPUObject):
 
         Arguments:
             index (int): The slot to bind at.
-            bind_group: A GPUBindGroup object.
-            dynamic_offsets_data: A list of offsets (one for each bind group).
+            bind_group (GPUBindGroup): The bind group to bind.
+            dynamic_offsets_data (list of int): A list of offsets (one for each bind group).
             dynamic_offsets_data_start (int): Not used.
             dynamic_offsets_data_length (int): Not used.
         """
@@ -1034,7 +1031,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
         """ Set the pipeline for this compute pass.
 
         Arguments:
-            pipeline: A GPUComputePipeline object.
+            pipeline (GPUComputePipeline): The pipeline to use.
         """
         raise NotImplementedError()
 
@@ -1056,7 +1053,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
         """ Like ``dispatch()``, but the function arguments are in a buffer.
 
         Arguments:
-            indirect_buffer: The GPUBuffer object that contains the arguments.
+            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
             indirect_offset (int): The byte offset at which the arguments are.
         """
         raise NotImplementedError()
@@ -1080,7 +1077,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         """ Set the pipeline for this render pass.
 
         Arguments:
-            pipeline: A GPURenderPipeline object.
+            pipeline (GPURenderPipeline): The pipeline to use.
         """
         raise NotImplementedError()
 
@@ -1090,7 +1087,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         """ Set the index buffer for this render pass.
 
         Arguments:
-            buffer: A GPUBuffer object.
+            buffer (GPUBuffer): The buffer that contains the indices.
             offset (int): The byte offset in the buffer..
             size (int): The number of bytes to use.
         """
@@ -1103,7 +1100,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
         Arguments:
             slot (int): The binding slot for the vertex buffer.
-            buffer: A GPUBuffer object
+            buffer (GPUBuffer): The buffer that contains the vertex data.
             offset (int): The byte offset in the buffer.
             size (int): The number of bytes to use.
         """
@@ -1128,7 +1125,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         """ Like ``draw()``, but the function arguments are in a buffer.
 
         Arguments:
-            indirect_buffer: The GPUBuffer object that contains the arguments.
+            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
             indirect_offset (int): The byte offset at which the arguments are.
         """
         raise NotImplementedError()
@@ -1156,7 +1153,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         Like ``draw_indexed()``, but the function arguments are in a buffer.
 
         Arguments:
-            indirect_buffer: The GPUBuffer object that contains the arguments.
+            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
             indirect_offset (int): The byte offset at which the arguments are.
         """
         raise NotImplementedError()
@@ -1206,7 +1203,7 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
         """ Set the blend color for the render pass.
 
         Arguments:
-            color: A 4-tuple, or a dict with fields: r, g, b, a.
+            color (tuple or dict): A color with fields (r, g, b, a).
         """
         raise NotImplementedError()
 
@@ -1271,7 +1268,7 @@ class GPUQueue(GPUObject):
         """ Submit a :class:`GPUCommandBuffer` to the queue.
 
         Arguments:
-            command_buffers: The GPUCommandBuffer to add.
+            command_buffers (list): The :class:`GPUCommandBuffer` objects to add.
         """
         raise NotImplementedError()
 
