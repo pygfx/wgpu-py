@@ -22,12 +22,12 @@ logger = logging.getLogger("wgpu")
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
 def request_adapter(*, power_preference: "GPUPowerPreference"):
-    """ Request a GPUAdapter, the object that represents the implementation of WGPU.
+    """ Request a GPUAdapter, the object that represents a wgpu implementation.
     Before requesting an adapter, a wgpu backend should be selected. At the moment
     there is only one backend. Use ``import wgpu.backends.rs`` to select it.
 
-    Params:
-        powerPreference(enum): "high-performance" or "low-power"
+    Arguments:
+        powerPreference(PowerPreference): "high-performance" or "low-power"
     """
     raise RuntimeError(
         "Select a backend (by importing wgpu.rs) before requesting an adapter!"
@@ -44,8 +44,82 @@ async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
     )  # no-cover
 
 
+class GPUAdapter:  # Not a GPUObject
+    """
+    An adapter represents both an instance of a hardware accelerator
+    (e.g. GPU or CPU) and an implementation of WGPU on top of that
+    accelerator. If an adapter becomes unavailable, it becomes invalid.
+    Once invalid, it never becomes valid again.
+    """
+
+    def __init__(self, name, extensions):
+        self._name = name
+        self._extensions = tuple(extensions)
+
+    @property
+    def name(self):
+        """ A human-readable name identifying the adapter.
+        """
+        return self._name
+
+    @property
+    def extensions(self):
+        """ A tuple that represents the extensions supported by the adapter.
+        """
+        return self._extensions
+
+    # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    def request_device(
+        self,
+        *,
+        label="",
+        extensions: "GPUExtensionName-list" = [],
+        limits: "GPULimits" = {},
+    ):
+        """ Request a GPUDevice from the adapter.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            extensions (list of str): the extensions that you need.
+            limits (dict): the various limits that you need.
+        """
+        raise NotImplementedError()
+
+    # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    async def request_device_async(
+        self,
+        *,
+        label="",
+        extensions: "GPUExtensionName-list" = [],
+        limits: "GPULimits" = {},
+    ):
+        """ Async version of ``request_device()``.
+        """
+        raise NotImplementedError()
+
+    def _destroy(self):
+        pass
+
+    def __del__(self):
+        self._destroy()
+
+
+default_limits = dict(
+    max_bind_groups=4,
+    max_dynamic_uniform_buffers_per_pipeline_layout=8,
+    max_dynamic_storage_buffers_per_pipeline_layout=4,
+    max_sampled_textures_per_shader_stage=16,
+    max_samplers_per_shader_stage=16,
+    max_storage_buffers_per_shader_stage=4,
+    max_storage_textures_per_shader_stage=4,
+    max_uniform_buffers_per_shader_stage=12,
+)
+
+
 class GPUObject:
-    """ The root class for all GPU objects (the device and all objects
+    """ The base class for all GPU objects (the device and all objects
     belonging to a device).
     """
 
@@ -73,107 +147,30 @@ class GPUObject:
         self._destroy()
 
 
-class GPUAdapter:  # Not a GPUObject
-    """
-    An adapter represents an implementation of WGPU on the system.
-    Each adapter identifies both an instance of a hardware accelerator
-    (e.g. GPU or CPU) and an instance of a implementation of WGPU on
-    top of that accelerator.
-
-    If an adapter becomes unavailable, it becomes invalid. Once invalid,
-    it never becomes valid again.
-    """
-
-    def __init__(self, name, extensions):
-        self._name = name
-        self._extensions = tuple(extensions)
-
-    @property
-    def name(self):
-        """ A human-readable name identifying the adapter.
-        """
-        return self._name
-
-    @property
-    def extensions(self):
-        """ A tuple that enumerates the extensions supported by the adapter.
-        """
-        return self._extensions
-
-    # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    def request_device(
-        self,
-        *,
-        label="",
-        extensions: "GPUExtensionName-list" = [],
-        limits: "GPULimits" = {},
-    ):
-        """ Request a Device object.
-
-        It is recommended to request a device object once, or perhaps twice.
-        But not for every operation (e.g. in unit tests).
-
-        Params:
-            extensions (list): the extensions that you need.
-            limits (dict): the various limits that you need.
-        """
-        raise NotImplementedError()
-
-    # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def request_device_async(
-        self,
-        *,
-        label="",
-        extensions: "GPUExtensionName-list" = [],
-        limits: "GPULimits" = {},
-    ):
-        """ Async version of request_device().
-        """
-        raise NotImplementedError()
-
-    def _destroy(self):
-        pass
-
-    def __del__(self):
-        self._destroy()
-
-
-default_limits = dict(
-    max_bind_groups=4,
-    max_dynamic_uniform_buffers_per_pipeline_layout=8,
-    max_dynamic_storage_buffers_per_pipeline_layout=4,
-    max_sampled_textures_per_shader_stage=16,
-    max_samplers_per_shader_stage=16,
-    max_storage_buffers_per_shader_stage=4,
-    max_storage_textures_per_shader_stage=4,
-    max_uniform_buffers_per_shader_stage=12,
-)
-
-
 class GPUDevice(GPUObject):
     """
-    A GPUDevice is the logical instantiation of an adapter, through which
+    A device is the logical instantiation of an adapter, through which
     internal objects are created. It can be shared across threads.
-
     A device is the exclusive owner of all internal objects created
     from it: when the device is lost, all objects created from it become
     invalid.
+
+    Create a device using :func:`GPUAdapter.request_device` or
+    :func:`GPUAdapter.request_device_async`.
     """
 
     def __init__(self, label, internal, adapter, extensions, limits, default_queue):
         super().__init__(label, internal, None)
         assert isinstance(adapter, GPUAdapter)
         self._adapter = adapter
-        self._extensions = extensions
-        self._limits = limits
+        self._extensions = tuple(sorted([str(x) for x in extensions]))
+        self._limits = limits.copy()
         self._default_queue = default_queue
 
     @property
     def extensions(self):
-        """ A GPUExtensions object exposing the extensions with which this device was
-        created.
+        """ A tuple of strings representing the extensions with which this
+        device was created.
         """
         return self._extensions
 
@@ -185,34 +182,43 @@ class GPUDevice(GPUObject):
 
     @property
     def default_queue(self):
-        """ The default queue for this device.
+        """ The default :class:`GPUQueue` for this device.
         """
         return self._default_queue
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
-    def create_buffer(
-        self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
-    ):
-        """ Create a Buffer object.
+    def create_buffer(self, *, label="", size: int, usage: "GPUBufferUsageFlags"):
+        """ Create a :class:`GPUBuffer` object.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            size (int): The size of the buffer in bytes.
+            usage (BufferUsageFlags): The ways in which this buffer will be used.
         """
         raise NotImplementedError()
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
     def create_buffer_mapped(
-        self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
+        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
     ):
-        """ Create a mapped buffer object (its memory is accesable to the CPU).
+        """ Create a :class:`GPUBuffer` object that is mapped from the start. It must
+        be unmapped before using it in a pipeline.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            size (int): The size of the buffer in bytes.
+            usage (BufferUsageFlags): The ways in which this buffer will be used.
         """
         raise NotImplementedError()
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
     async def create_buffer_mapped_async(
-        self, *, label="", size: "GPUSize64", usage: "GPUBufferUsageFlags"
+        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
     ):
-        """ Asynchronously create a mapped buffer object.
+        """ Async version of ``create_buffer_mapped()``.
         """
         raise NotImplementedError()
 
@@ -229,7 +235,16 @@ class GPUDevice(GPUObject):
         format: "GPUTextureFormat",
         usage: "GPUTextureUsageFlags",
     ):
-        """ Create a Texture object.
+        """ Create a :class:`GPUTexture` object.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            size (tuple or dict): The texture size with fields (x, y, z).
+            mip_level_count (int): The number of mip leveles. Default 1.
+            sample_count (int): The number of samples. Default 1.
+            dimension (TextureDimension): The dimensionality of the texture.
+            format (TextureFormat): What channels it stores and how.
+            usage (TextureUsageFlags): The ways in which the texture will be used.
         """
         raise NotImplementedError()
 
@@ -249,7 +264,19 @@ class GPUDevice(GPUObject):
         lod_max_clamp: float = 0xFFFFFFFF,
         compare: "GPUCompareFunction",
     ):
-        """ Create a Sampler object. Use des (SamplerDescriptor) to specify its modes.
+        """ Create a :class:`GPUSampler` object. Samplers specify how a texture is sampled.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            address_mode_u (AddressMode): What happens when sampling beyond the x edge.
+            address_mode_v (AddressMode): What happens when sampling beyond the y edge.
+            address_mode_w (AddressMode): What happens when sampling beyond the z edge.
+            mag_filter (FilterMode): Interpolation when zoomed in. Default 'nearest'.
+            min_filter (FilterMode): Interpolation when zoomed out. Default 'nearest'.
+            mipmap_filter: (FilterMode): Interpolation between mip levels. Default 'nearest'.
+            lod_min_clamp (float): The minimum level of detail. Default 0.
+            lod_max_clamp (float): The maxium level of detail. Default inf.
+            compare (CompareFunction): todo
         """
         raise NotImplementedError()
 
@@ -258,28 +285,34 @@ class GPUDevice(GPUObject):
     def create_bind_group_layout(
         self, *, label="", entries: "GPUBindGroupLayoutEntry-list"
     ):
-        """ Create a GPUBindGroupLayout.
+        """ Create a :class:`GPUBindGroupLayout` object. One or more
+        such objects are passed to :func:`create_pipeline_layout` to
+        specify the (abstract) pipeline layout for resources. See the
+        docs on bind groups for details.
 
-        * A Binding maps a buffer/texture/sampler/uniform to an integer slot.
-        * A BindGroup represents a group of such bindings.
-        * A BindGroupLayoutBinding is an abstract definition of a binding.
-          It describes a single shader resource binding to be included in a
-          GPUBindGroupLayout.
-        * A BindGroupLayout represents a list of such abstract bindings.
+        Arguments:
+            label (str): A human readable label. Optional.
+            entries (list of dict): A list of layout entry dicts.
 
-        Each binding has:
+        Example entry dict:
 
-        * binding: interger to tie things together
-        * visibility: bitset to show in what shader stages the resource will be
-          accessible in.
-        * type: A member of BindingType that indicates the intended usage of a resource
-          binding.
-        * textureDimension: Describes the dimensionality of texture view bindings.
-        * multisampled: Indicates whether texture view bindings are multisampled.
-        * hasDynamicOffset: For uniform-buffer, storage-buffer, and
-          readonly-storage-buffer bindings, indicates that the binding has a
-          dynamic offset. One offset must be passed to setBindGroup for each
-          dynamic binding in increasing order of binding number.
+        .. code-block:: py
+
+            {
+                "binding": 0,
+                "visibility": wgpu.ShaderStage.FRAGMENT,
+                "type": wgpu.BindingType.sampled_texture,
+                "view_dimension": wgpu.TextureViewDimension.d2,
+                # "texture_component_type" -> todo not supported yet
+                # "storage_texture_format" -> todo not supported yet
+                "multisampled": False,  # optional
+                "has_dynamic_offset": False,  # optional
+            },
+
+        About ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
+        readonly-storage-buffer bindings, it indicates whether the binding has a
+        dynamic offset. One offset must be passed to ``set_bind_group`` for each
+        dynamic binding in increasing order of binding number.
         """
         raise NotImplementedError()
 
@@ -292,8 +325,39 @@ class GPUDevice(GPUObject):
         layout: "GPUBindGroupLayout",
         entries: "GPUBindGroupEntry-list",
     ):
-        """ Create a GPUBindGroup. The list of bindings are GPUBindGroupBinding objects,
-        representing a concrete binding.
+        """ Create a :class:`GPUBindGroup` object, which can be used in
+        :func:`pass.set_bind_group() <GPUProgrammablePassEncoder.set_bind_group>`
+        to attach a group of resources.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            layout (GPUBindGroupLayout): The layout (abstract representation)
+                for this bind group.
+            entries (list of dict): A list of dicts, see below.
+
+        Example entry dicts:
+
+        .. code-block:: py
+
+            # For a sampler
+            {
+                "binding" : 0,  # slot
+                "resource": a_sampler,
+            }
+            # For a texture view
+            {
+                "binding" : 0,  # slot
+                "resource": a_texture_view,
+            }
+            # For a texture
+            {
+                "binding" : 0,  # slot
+                "resource": {
+                    "buffer": a_buffer,
+                    "offset": 0,
+                    "size": 812,
+                }
+            }
         """
         raise NotImplementedError()
 
@@ -302,14 +366,29 @@ class GPUDevice(GPUObject):
     def create_pipeline_layout(
         self, *, label="", bind_group_layouts: "GPUBindGroupLayout-list"
     ):
-        """ Create a GPUPipelineLayout, consisting of a list of GPUBindGroupLayout
-        objects.
+        """ Create a :class:`GPUPipelineLayout` object, which can be
+        used in :func:`create_render_pipeline` or :func:`create_compute_pipeline`.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            bind_group_layouts (list): A list of :class:`GPUBindGroupLayout` objects.
         """
         raise NotImplementedError()
 
     # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
     def create_shader_module(self, *, label="", code: str):
+        """ Create a :class:`GPUShaderModule` object from shader source.
+
+        Currently, only SpirV is supported. One can compile glsl shaders to
+        SpirV ahead of time, or use the python-shader package to write shaders
+        in Python.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            code (bytes): The shadercode, as binary SpirV, or an object
+                implementing ``to_spirv()`` or ``to_bytes()``.
+        """
         raise NotImplementedError()
 
     # wgpu.help('ComputePipelineDescriptor', 'devicecreatecomputepipeline', dev=True)
@@ -321,6 +400,13 @@ class GPUDevice(GPUObject):
         layout: "GPUPipelineLayout",
         compute_stage: "GPUProgrammableStageDescriptor",
     ):
+        """ Create a :class:`GPUComputePipeline` object.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            layout (GPUPipelineLayout): object created with ``create_pipeline_layout()``.
+            compute_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``.
+        """
         raise NotImplementedError()
 
     # wgpu.help('RenderPipelineDescriptor', 'devicecreaterenderpipeline', dev=True)
@@ -341,47 +427,104 @@ class GPUDevice(GPUObject):
         sample_mask: "GPUSampleMask" = 0xFFFFFFFF,
         alpha_to_coverage_enabled: bool = False,
     ):
-        """ Create a GPURenderPipeline object describing a render pipeline.
+        """ Create a :class:`GPURenderPipeline` object.
 
-        Params:
-            layout (GPUPipelineLayout): The layout (list of binding groups).
-            vertexStage: ``{"module": vertex_shader, entry_point="main"}``
-            fragmentStage: ``{"module": fragment_shader, entry_point="main"}``
-            primitiveTopology (enum): wgpu.PrimitiveTopology
-            rasterizationState (dict): see below.
-            colorStates (list of dicts): see below.
-            depthStencilState: TODO
-            vertexState: ``{"indexFormat": wgpu.IndexFormat.uint32, "vertexBuffers": []}``
-            sampleCount (int): set higher than one for subsampling.
-            sampleMask (int): sample bitmask.
-            alphaToCoverageEnabled (bool): wheher to anable alpha coverage.
+        Arguments:
+            label (str): A human readable label. Optional.
+            layout (GPUPipelineLayout): A layout created with ``create_pipeline_layout()``.
+            vertex_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``
+            fragment_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``
+            primitive_topology (PrimitiveTopology): The topology, e.g. triangles or lines.
+            rasterization_state (dict): Specify rasterization rules. See below.
+            color_states (list of dict): Specify color blending rules. See below.
+            depth_stencil_state (dict): Specify texture for depth and stencil. Can be None. See below.
+            vertex_state (dict): Specify index and vertex buffer info. See below.
+            sample_count (int): Set higher than one for subsampling.
+            sample_mask (int): Sample bitmask.
+            alpha_to_coverage_enabled (bool): Wheher to anable alpha coverage.
 
-        RasterizationState example dict:
-        ```
-        {
-            "front_face": wgpu.FrontFace.ccw,
-            "cull_mode": wgpu.CullMode.none,
-            "depth_bias": 0,
-            "depth_bias_slope_scale": 0.0,
-            "depth_bias_clamp": 0.0
-        }
-        ```
+        Example rasterization state dict:
 
-        ColorState example dict:
-        ```
-        {
-            "format":,
-            "alpha_blend": (wgpu.BlendFactor.One, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
-            "colorBlend":(wgpu.BlendFactor.One, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
-            "writeMask": wgpu.ColorWrite.ALL
-        }
-        ```
+        .. code-block:: py
+
+            {
+                "front_face": wgpu.FrontFace.ccw,
+                "cull_mode": wgpu.CullMode.none,
+                "depth_bias": 0,
+                "depth_bias_slope_scale": 0.0,
+                "depth_bias_clamp": 0.0
+            }
+
+        Example color state dict:
+
+        .. code-block:: py
+
+            {
+                "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                "alpha_blend": (wgpu.BlendFactor.One, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
+                "colorBlend": (wgpu.BlendFactor.One, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
+                "writeMask": wgpu.ColorWrite.ALL
+            }
+
+        Example depth-stencil state dict:
+
+        .. code-block:: py
+
+            {
+                "format": wgpu.TextureFormat.depth24plus_stencil8,
+                "depth_write_enabled": True,
+                "depth_compare": wgpu.CompareFunction.less_equal,
+                "stencil_front": {
+                    "compare": wgpu.CompareFunction.equal,
+                    "fail_op": wgpu.StencilOperation.keep,
+                    "depth_fail_op": wgpu.StencilOperation.keep,
+                    "pass_op": wgpu.StencilOperation.keep,
+                },
+                "stencil_back": {
+                    "compare": wgpu.CompareFunction.equal,
+                    "fail_op": wgpu.StencilOperation.keep,
+                    "depth_fail_op": wgpu.StencilOperation.keep,
+                    "pass_op": wgpu.StencilOperation.keep,
+                },
+                "stencil_read_mask": 0,
+                "stencil_write_mask": 0,
+            }
+
+        Example vertex state dict:
+
+        .. code-block:: py
+
+            {
+                "indexFormat": wgpu.IndexFormat.uint32,
+                "vertexBuffers": [
+                    {
+                        "array_stride": 8,
+                        "stepmode": "vertex",
+                        "attributes": [
+                            {
+                                "format": wgpu.VertexFormat.float2,
+                                "offset": 0,
+                                "shader_location": 0,
+                            },
+                            ...
+                        ],
+                    },
+                    ...
+                ]
+            }
         """
         raise NotImplementedError()
 
     # wgpu.help('CommandEncoderDescriptor', 'devicecreatecommandencoder', dev=True)
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
     def create_command_encoder(self, *, label=""):
+        """ Create a :class:`GPUCommandEncoder` object. A command
+        encoder is used to record commands, which can then be submitted
+        at once to the GPU.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+        """
         raise NotImplementedError()
 
     # wgpu.help('RenderBundleEncoderDescriptor', 'devicecreaterenderbundleencoder', dev=True)
@@ -394,6 +537,10 @@ class GPUDevice(GPUObject):
         depth_stencil_format: "GPUTextureFormat",
         sample_count: "GPUSize32" = 1,
     ):
+        """ Create a :class:`GPURenderBundle` object.
+
+        TODO
+        """
         raise NotImplementedError()
 
     def _gui_configure_swap_chain(self, canvas, format, usage):
@@ -418,11 +565,15 @@ class GPUBuffer(GPUObject):
     operations. Data is stored in linear layout, meaning that each byte
     of the allocation can be addressed by its offset from the start of
     the buffer, subject to alignment restrictions depending on the
-    operation. Some GPUBuffers can be mapped which makes the block of
-    memory accessible via a ctypes array called its mapping.
+    operation.
 
-    Create a buffer using GPUDevice.createBuffer(), GPUDevice.createBufferMapped()
-    or GPUDevice.createBufferAsync().
+    Create a buffer using :func:`GPUDevice.create_buffer`,
+    :func:`GPUDevice.create_buffer_mapped` or :func:`GPUDevice.create_buffer_mapped_async`.
+
+    One can sync data in a buffer by mapping it (or by creating a mapped
+    buffer) and then setting/getting the values in the mapped array.
+    Alternatively, one can tell the GPU (via the command encoder) to
+    copy data between buffers and textures.
     """
 
     def __init__(self, label, internal, device, size, usage, state, mapping):
@@ -440,16 +591,20 @@ class GPUBuffer(GPUObject):
 
     @property
     def usage(self):
-        """ The allowed usages (int bitmap) for this GPUBuffer.
+        """ The allowed usages (int bitmap) for this GPUBuffer, specifying
+        e.g. whether the buffer may be used as a vertex buffer, uniform buffer,
+        target or source for copying data, etc.
         """
         return self._usage
 
     @property
     def state(self):
-        """ The current state of the GPUBuffer: "mapped" where the
-        buffer is available for CPU operations, "unmapped" where the
-        buffer is available for GPU operations, "destroyed", where the
-        buffer is no longer available for any operations except destroy.
+        """ The current state of the GPUBuffer:
+
+        * "mapped" when the buffer is available for CPU operations.
+        * "unmapped" when the buffer is available for GPU operations.
+        * "destroyed", when the buffer is no longer available for any
+          operations except destroy.
         """
         return self._state
 
@@ -458,43 +613,58 @@ class GPUBuffer(GPUObject):
     @property
     def mapping(self):
         """ The mapped memory of the buffer, exposed as a ctypes array.
-        Can be cast to a ctypes array of appropriate type using
-        ``your_array_type.from_buffer(b.mapping)``. Or use something like
-        ``np.frombuffer(b.mapping, np.float32)`` to map it to a numpy array
-        of appropriate dtype and shape.
+        Is only not ``None`` when the buffer is mapped. Can be cast to a
+        ctypes array of appropriate type using
+        ``your_array_type.from_buffer(b.mapping)``. Or use something
+        like ``np.frombuffer(b.mapping, np.float32)`` to map it to a
+        numpy array of appropriate dtype and shape.
         """
         return self._mapping
 
     # wgpu.help('buffermapreadasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapReadAsync();
     def map_read(self):
+        """ Make the buffer memory accessable to the CPU for reading.
+        Sets the ``mapping`` property and returns the mapped memory as
+        a ctypes array.
+        """
         raise NotImplementedError()
 
     # wgpu.help('buffermapreadasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapReadAsync();
     async def map_read_async(self):
+        """ Async version of ``map_read()``.
+        """
         raise NotImplementedError()
 
     # wgpu.help('buffermapwriteasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapWriteAsync();
     def map_write(self):
+        """ Make the buffer memory accessable to the CPU for writing.
+        Sets the ``mapping`` property and returns the mapped memory as
+        a ctypes array.
+        """
         raise NotImplementedError()
 
     # wgpu.help('buffermapwriteasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapWriteAsync();
     async def map_write_async(self):
+        """ Async version of ``map_write()``.
+        """
         raise NotImplementedError()
 
     # wgpu.help('bufferunmap', dev=True)
     # IDL: void unmap();
     def unmap(self):
+        """ Unmap the buffer so that it can be used in a GPU pipeline.
+        """
         raise NotImplementedError()
 
     # wgpu.help('bufferdestroy', dev=True)
     # IDL: void destroy();
     def destroy(self):
-        """ An application that no longer requires a GPUBuffer can choose
-        to destroy it. Note tat this is automatically called when the
+        """ An application that no longer requires a buffer can choose
+        to destroy it. Note that this is automatically called when the
         Python object is cleaned up by the garbadge collector.
         """
         raise NotImplementedError()
@@ -502,6 +672,12 @@ class GPUBuffer(GPUObject):
 
 class GPUTexture(GPUObject):
     """
+    A texture represents a 1D, 2D or 3D color image object. It also can have mipmaps
+    (different levels of varying detail), and arrays. The texture represents
+    the "raw" data. A :class:`GPUTextureView` is used to define how the texture data
+    should be interpreted.
+
+    Create a texture using :func:`GPUDevice.create_texture`.
     """
 
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
@@ -518,35 +694,65 @@ class GPUTexture(GPUObject):
         base_array_layer: "GPUIntegerCoordinate" = 0,
         array_layer_count: "GPUIntegerCoordinate" = 0,
     ):
+        """ Create a :class:`GPUTextureView` object.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            format (TextureFormat): What channels it stores and how.
+            dimension (TextureViewDimension): The dimensionality of the texture view.
+            aspect (TextureAspect): Whether this view is used for depth, stencil, or all.
+            base_mip_level (int): The starting mip level.
+            mip_level_count (int): The number of mip levels.
+            base_array_layer (int): The starting array layer.
+            array_layer_count (int): The number of array layers.
+        """
         raise NotImplementedError()
 
     def create_default_view(self, *, label=""):
-        """ Get the default view on this texture. This method is not
-        part of the WebGPU API, but we provide it because it's useful.
+        """ Get the default view on this texture. This method is not part of
+        the WebGPU API, but we (currently) provide it because it's so useful.
+
+        Parameters:
+            label (str): A human readable label. Optional.
         """
         raise NotImplementedError()
 
     # wgpu.help('texturedestroy', dev=True)
     # IDL: void destroy();
     def destroy(self):
+        """ An application that no longer requires a texture can choose
+        to destroy it. Note that this is automatically called when the
+        Python object is cleaned up by the garbadge collector.
+        """
         raise NotImplementedError()
 
 
 class GPUTextureView(GPUObject):
     """
+    A texture view represents a way to represent a :class:`GPUTexture`.
+
+    Create a texture view using :func:`GPUTexture.create_view` or
+    :func:`GPUTexture.create_default_view`.
     """
 
 
 class GPUSampler(GPUObject):
     """
+    A sampler specifies how a texture (view) must be sampled by the shader,
+    in terms of subsampling, sampling between mip levels, and sampling out
+    of the image boundaries.
+
+    Create a sampler using :func:`GPUDevice.create_sampler`.
     """
 
 
 class GPUBindGroupLayout(GPUObject):
     """
-    A GPUBindGroupLayout defines the interface between a set of
-    resources bound in a GPUBindGroup and their accessibility in shader
+    A bind group layout defines the interface between a set of
+    resources bound in a :class:`GPUBindGroup` and their accessibility in shader
     stages.
+
+    Create a bind group layout using :func:`GPUDevice.create_bind_group_layout`.
     """
 
     def __init__(self, label, internal, device, bindings):
@@ -556,8 +762,10 @@ class GPUBindGroupLayout(GPUObject):
 
 class GPUBindGroup(GPUObject):
     """
-    A GPUBindGroup represents a group of bindings, a link between a shader slot
+    A bind group represents a group of bindings, the shader slot,
     and a resource (sampler, texture-view, buffer).
+
+    Create a bind group using :func:`GPUDevice.create_bind_group`.
     """
 
     def __init__(self, label, internal, device, bindings):
@@ -567,7 +775,10 @@ class GPUBindGroup(GPUObject):
 
 class GPUPipelineLayout(GPUObject):
     """
-    A GPUPipelineLayout describes the layout of a pipeline.
+    A pipeline layout describes the layout of a pipeline, as a list
+    of :class:`GPUBindGroupLayout` objects.
+
+    Create a pipeline layout using :func:`GPUDevice.create_pipeline_layout`.
     """
 
     def __init__(self, label, internal, device, layouts):
@@ -576,34 +787,58 @@ class GPUPipelineLayout(GPUObject):
 
 
 class GPUShaderModule(GPUObject):
-    """ A GPUShaderModule represents a programmable shader.
+    """
+    A shader module represents a programmable shader.
+
+    Create a shader module using :func:`GPUDevice.create_shader_module`.
     """
 
 
 class GPUComputePipeline(GPUObject):
     """
+    A compute pipeline represents a single pipeline for computations (no rendering).
+
+    Create a compute pipeline using :func:`GPUDevice.create_compute_pipeline`.
     """
 
 
 class GPURenderPipeline(GPUObject):
     """
-    A GPURenderPipeline represents a single pipeline to draw something
-    to a surface. This is where everything comes together.
+    A render pipeline represents a single pipeline to draw something
+    using a vertex and a fragment shader. The render target can come
+    from a window on the screen or from an in-memory texture (off-screen
+    rendering).
+
+    Create a render pipeline using :func:`GPUDevice.create_render_pipeline`.
     """
 
 
 class GPUCommandBuffer(GPUObject):
     """
+    A command buffer stores a series of commands, generated by a
+    :class:`GPUCommandEncoder`, to be submitted to a :class:`GPUQueue`.
+
+    Create a command buffer using :func:`GPUCommandEncoder.finish`.
     """
 
 
 class GPUCommandEncoder(GPUObject):
     """
+    A command encoder is used to record a series of commands. When done,
+    call :func:`finish` to obtain a GPUCommandBuffer object.
+
+    Create a command encoder using :func:`GPUDevice.create_command_encoder`.
     """
 
     # wgpu.help('ComputePassDescriptor', 'commandencoderbegincomputepass', dev=True)
     # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
     def begin_compute_pass(self, *, label=""):
+        """ Record the beginning of a compute pass. Returns a
+        :class:`GPUComputePassEncoder` object.
+
+        Parameters:
+            label (str): A human readable label. Optional.
+        """
         raise NotImplementedError()
 
     # wgpu.help('RenderPassDescriptor', 'commandencoderbeginrenderpass', dev=True)
@@ -616,6 +851,37 @@ class GPUCommandEncoder(GPUObject):
         depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
         occlusion_query_set: "GPUQuerySet",
     ):
+        """ Record the beginning of a render pass. Returns a
+        :class:`GPURenderPassEncoder` object.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            color_attachements (list of dict): List of color attachement dicts. See below.
+            depth_stencil_attachment (dict): A depth stencil attachement dict. See below.
+            occlusion_query_set: TODO NOT IMPLEMENTED
+
+        Example color attachement:
+
+        .. code-block:: py
+
+            {
+                "resolve_target": None,
+                "load_value": (0, 0, 0, 0),  # LoadOp.load or a color
+                "store_op": wgpu.StoreOp.store,
+            }
+
+        Example depth stencil attachement:
+
+        .. code-block:: py
+
+            {
+                "attachment": texture_view,
+                "depth_load_value": 0.0,
+                "depth_store_op": wgpu.StoreOp.store,
+                "stencil_load_value": wgpu.LoadOp.load,
+                "stencil_store_op": wgpu.StoreOp.store,
+            }
+        """
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Size64', 'commandencodercopybuffertobuffer', dev=True)
@@ -623,49 +889,91 @@ class GPUCommandEncoder(GPUObject):
     def copy_buffer_to_buffer(
         self, source, source_offset, destination, destination_offset, size
     ):
+        """ Copy the contents of a buffer to another buffer.
+
+        Arguments:
+            source (GPUBuffer): The source buffer.
+            source_offset (int): The byte offset.
+            destination (GPUBuffer): The target buffer.
+            destination_offset (int): The byte offset in the destination buffer.
+            size (int): The number of bytes to copy.
+        """
         raise NotImplementedError()
 
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopybuffertotexture', dev=True)
     # IDL: void copyBufferToTexture( GPUBufferCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
     def copy_buffer_to_texture(self, source, destination, copy_size):
-        """
-        # todo: docstrings in wgpu-rs say that BufferCopyView.row_pitch must be multiple of 256
-        # todo: docstrings in wgpu-rs say that BufferCopyView.offset must be multiple of 512
+        """ Copy the contents of a buffer to a texture (view).
+
+        Arguments:
+            source (GPUBuffer): A dict with fields: buffer, offset, row_pitch, image_height.
+            destination (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()
 
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopytexturetobuffer', dev=True)
     # IDL: void copyTextureToBuffer( GPUTextureCopyView source, GPUBufferCopyView destination, GPUExtent3D copySize);
     def copy_texture_to_buffer(self, source, destination, copy_size):
+        """ Copy the contents of a texture (view) to a buffer.
+
+        Arguments:
+            source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            destination (GPUBuffer):  A dict with fields: buffer, offset, row_pitch, image_height.
+            copy_size (int): The number of bytes to copy.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Extent3D', 'TextureCopyView', 'commandencodercopytexturetotexture', dev=True)
     # IDL: void copyTextureToTexture( GPUTextureCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
     def copy_texture_to_texture(self, source, destination, copy_size):
+        """ Copy the contents of a texture (view) to another texture (view).
+
+        Arguments:
+            source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            destination (GPUTexture):  A dict with fields: texture, mip_level, array_layer, origin.
+            copy_size (int): The number of bytes to copy.
+        """
         raise NotImplementedError()
 
     # wgpu.help('commandencoderpushdebuggroup', dev=True)
     # IDL: void pushDebugGroup(DOMString groupLabel);
     def push_debug_group(self, group_label):
+        """ TODO
+        """
         raise NotImplementedError()
 
     # wgpu.help('commandencoderpopdebuggroup', dev=True)
     # IDL: void popDebugGroup();
     def pop_debug_group(self):
+        """ TODO
+        """
         raise NotImplementedError()
 
     # wgpu.help('commandencoderinsertdebugmarker', dev=True)
     # IDL: void insertDebugMarker(DOMString markerLabel);
     def insert_debug_marker(self, marker_label):
+        """ TODO
+        """
         raise NotImplementedError()
 
     # wgpu.help('CommandBufferDescriptor', 'commandencoderfinish', dev=True)
     # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {});
     def finish(self, *, label=""):
+        """ Finish recording. Returns a :class:`GPUCommandBuffer` to
+        submit to a :class:`GPUQueue`.
+
+        Parameters:
+            label (str): A human readable label. Optional.
+        """
         raise NotImplementedError()
 
 
 class GPUProgrammablePassEncoder(GPUObject):
+    """
+    Base class for the different pass encoder classes.
+    """
+
     # wgpu.help('BindGroup', 'Index32', 'Size32', 'Size64', 'programmablepassencodersetbindgroup', dev=True)
     # IDL: void setBindGroup(GPUIndex32 index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  GPUSize64 dynamicOffsetsDataStart,  GPUSize32 dynamicOffsetsDataLength);
     def set_bind_group(
@@ -676,76 +984,150 @@ class GPUProgrammablePassEncoder(GPUObject):
         dynamic_offsets_data_start,
         dynamic_offsets_data_length,
     ):
+        """ Associate the given bind group (i.e. group or resources) with the
+        given slot/index.
+
+        Arguments:
+            index (int): The slot to bind at.
+            bind_group (GPUBindGroup): The bind group to bind.
+            dynamic_offsets_data (list of int): A list of offsets (one for each bind group).
+            dynamic_offsets_data_start (int): Not used.
+            dynamic_offsets_data_length (int): Not used.
+        """
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
     # IDL: void pushDebugGroup(DOMString groupLabel);
     def push_debug_group(self, group_label):
+        """ TODO
+        """
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
     # IDL: void popDebugGroup();
     def pop_debug_group(self):
+        """ TODO
+        """
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
     # IDL: void insertDebugMarker(DOMString markerLabel);
     def insert_debug_marker(self, marker_label):
+        """ TODO
+        """
         raise NotImplementedError()
 
 
 class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     """
+    A compute-pass encoder records commands related to a compute pass.
+
+    Create a compute pass encoder using :func:`GPUCommandEncoder.begin_compute_pass`.
     """
 
     # wgpu.help('ComputePipeline', 'computepassencodersetpipeline', dev=True)
     # IDL: void setPipeline(GPUComputePipeline pipeline);
     def set_pipeline(self, pipeline):
+        """ Set the pipeline for this compute pass.
+
+        Arguments:
+            pipeline (GPUComputePipeline): The pipeline to use.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Size32', 'computepassencoderdispatch', dev=True)
     # IDL: void dispatch(GPUSize32 x, optional GPUSize32 y = 1, optional GPUSize32 z = 1);
     def dispatch(self, x, y, z):
+        """ Run the compute shader.
+
+        Arguments:
+            x (int): The number of cycles in index x.
+            y (int): The number of cycles in index y.
+            z (int): The number of cycles in index z.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Size64', 'computepassencoderdispatchindirect', dev=True)
     # IDL: void dispatchIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def dispatch_indirect(self, indirect_buffer, indirect_offset):
+        """ Like ``dispatch()``, but the function arguments are in a buffer.
+
+        Arguments:
+            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
+            indirect_offset (int): The byte offset at which the arguments are.
+        """
         raise NotImplementedError()
 
     # wgpu.help('computepassencoderendpass', dev=True)
     # IDL: void endPass();
     def end_pass(self):
+        """ Record the end of the compute pass.
+        """
         raise NotImplementedError()
 
 
 class GPURenderEncoderBase(GPUProgrammablePassEncoder):
     """
+    Base class for different render-pass encoder classes.
     """
 
     # wgpu.help('RenderPipeline', 'renderencoderbasesetpipeline', dev=True)
     # IDL: void setPipeline(GPURenderPipeline pipeline);
     def set_pipeline(self, pipeline):
+        """ Set the pipeline for this render pass.
+
+        Arguments:
+            pipeline (GPURenderPipeline): The pipeline to use.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
     # IDL: void setIndexBuffer(GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
     def set_index_buffer(self, buffer, offset, size):
+        """ Set the index buffer for this render pass.
+
+        Arguments:
+            buffer (GPUBuffer): The buffer that contains the indices.
+            offset (int): The byte offset in the buffer..
+            size (int): The number of bytes to use.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
     # IDL: void setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
     def set_vertex_buffer(self, slot, buffer, offset, size):
+        """ Associate a vertex buffer with a bind slot.
+
+        Arguments:
+            slot (int): The binding slot for the vertex buffer.
+            buffer (GPUBuffer): The buffer that contains the vertex data.
+            offset (int): The byte offset in the buffer.
+            size (int): The number of bytes to use.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Size32', 'renderencoderbasedraw', dev=True)
     # IDL: void draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
     def draw(self, vertex_count, instance_count, first_vertex, first_instance):
+        """ Run the render pipeline without an index buffer.
+
+        Arguments:
+            vertex_count (int): The number of vertices to draw.
+            instance_count (int):  The number of instances to draw.
+            first_vertex (int): The vertex offset.
+            first_instance (int):  The instance offset.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindirect', dev=True)
     # IDL: void drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indirect(self, indirect_buffer, indirect_offset):
+        """ Like ``draw()``, but the function arguments are in a buffer.
+
+        Arguments:
+            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
+            indirect_offset (int): The byte offset at which the arguments are.
+        """
         raise NotImplementedError()
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
@@ -753,73 +1135,149 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
     def draw_indexed(
         self, index_count, instance_count, first_index, base_vertex, first_instance
     ):
+        """ Run the render pipeline using an index buffer.
+
+        Arguments:
+            index_count (int): The number of indices to draw.
+            instance_count (int): The number of instances to draw.
+            first_index (int):  The index offset.
+            base_vertex (int):  A number added to each index in the index buffer.
+            first_instance (int): The instance offset.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindexedindirect', dev=True)
     # IDL: void drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
+        """
+        Like ``draw_indexed()``, but the function arguments are in a buffer.
+
+        Arguments:
+            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
+            indirect_offset (int): The byte offset at which the arguments are.
+        """
         raise NotImplementedError()
 
 
 class GPURenderPassEncoder(GPURenderEncoderBase):
     """
+    A render-pass encoder records commands related to a render pass.
+
+    Create a render pass encoder using :func:`GPUCommandEncoder.begin_render_pass`.
     """
 
     # wgpu.help('renderpassencodersetviewport', dev=True)
     # IDL: void setViewport(float x, float y,  float width, float height,  float minDepth, float maxDepth);
     def set_viewport(self, x, y, width, height, min_depth, max_depth):
+        """ Set the viewport for this render pass. The whole scene is rendered
+        to this sub-rectangle.
+
+        Arguments:
+            x (int): Horizontal coordinate.
+            y (int): Vertical coordinate.
+            width (int): Horizontal size.
+            height (int): Vertical size.
+            min_depth (int): Clipping in depth.
+            max_depth (int): Clipping in depth.
+
+        """
         raise NotImplementedError()
 
     # wgpu.help('IntegerCoordinate', 'renderpassencodersetscissorrect', dev=True)
     # IDL: void setScissorRect(GPUIntegerCoordinate x, GPUIntegerCoordinate y,  GPUIntegerCoordinate width, GPUIntegerCoordinate height);
     def set_scissor_rect(self, x, y, width, height):
+        """ Set the scissor rectangle for this render pass. The scene
+        is rendered as usual, but is only applied to this sub-rectangle.
+
+        Arguments:
+            x (int): Horizontal coordinate.
+            y (int): Vertical coordinate.
+            width (int): Horizontal size.
+            height (int): Vertical size.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
     # IDL: void setBlendColor(GPUColor color);
     def set_blend_color(self, color):
+        """ Set the blend color for the render pass.
+
+        Arguments:
+            color (tuple or dict): A color with fields (r, g, b, a).
+        """
         raise NotImplementedError()
 
     # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
     # IDL: void setStencilReference(GPUStencilValue reference);
     def set_stencil_reference(self, reference):
+        """ Set the reference stencil value for this render pass.
+
+        Arguments:
+            reference (int): The reference value.
+        """
         raise NotImplementedError()
 
     # wgpu.help('renderpassencoderexecutebundles', dev=True)
     # IDL: void executeBundles(sequence<GPURenderBundle> bundles);
     def execute_bundles(self, bundles):
+        """
+        TODO
+        """
         raise NotImplementedError()
 
     # wgpu.help('renderpassencoderendpass', dev=True)
     # IDL: void endPass();
     def end_pass(self):
+        """ Record the end of the render pass.
+        """
         raise NotImplementedError()
 
 
 class GPURenderBundle(GPUObject):
     """
+    TODO
     """
 
 
 class GPURenderBundleEncoder(GPURenderEncoderBase):
     """
+    TODO
     """
 
     # wgpu.help('RenderBundleDescriptor', 'renderbundleencoderfinish', dev=True)
     # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
     def finish(self, *, label=""):
+        """ Finish recording and return a :class:`GPURenderBundle`.
+
+        Parameters:
+            label (str): A human readable label. Optional.
+        """
         raise NotImplementedError()
 
 
 class GPUQueue(GPUObject):
+    """
+    A queue can be used to submit command buffers to.
+
+    You can obtain a queue object via the :attr:`GPUDevice.default_queue` property.
+    """
+
     # wgpu.help('queuesubmit', dev=True)
     # IDL: void submit(sequence<GPUCommandBuffer> commandBuffers);
     def submit(self, command_buffers):
+        """ Submit a :class:`GPUCommandBuffer` to the queue.
+
+        Arguments:
+            command_buffers (list): The :class:`GPUCommandBuffer` objects to add.
+        """
         raise NotImplementedError()
 
     # wgpu.help('Extent3D', 'ImageBitmapCopyView', 'TextureCopyView', 'queuecopyimagebitmaptotexture', dev=True)
     # IDL: void copyImageBitmapToTexture( GPUImageBitmapCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
     def copy_image_bitmap_to_texture(self, source, destination, copy_size):
+        """
+        TODO
+        """
         raise NotImplementedError()
 
     # Not implemented, because fences do not yet have a use
@@ -831,18 +1289,24 @@ class GPUQueue(GPUObject):
 
 class GPUSwapChain(GPUObject):
     """
+    A swap chain is a placeholder for a texture to be presented to the screen,
+    so that you can provide the corresponding texture view as a color attachement
+    to ``command_encoder.begin_render_pass()``.
+
+    You can obtain a swap chain using :func:`canvas.configure_swap_chain() <wgpu.gui.WgpuCanvasBase.configure_swap_chain>`.
     """
 
     # wgpu.help('swapchaingetcurrenttexture', dev=True)
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
-        """ For now, use get_current_texture_view.
+        """ For now, use ``get_current_texture_view()``.
         """
         raise NotImplementedError("Use get_current_texture_view() instead for now")
 
     def get_current_texture_view(self):
         """ NOTICE: this function is likely to change or be replaced by
-        getCurrentTexture() at some point. An incompatibility between wgpu-native and
-        WebGPU requires us to implement this workaround.
+        ``get_current_texture()`` at some point. An incompatibility
+        between wgpu-native and WebGPU requires us to implement this
+        workaround.
         """
         raise NotImplementedError()

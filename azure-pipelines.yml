@@ -18,6 +18,7 @@ jobs:
         vmImage: ubuntu-16.04
         SDIST: 1
         LINT: 1
+        DOCS: 1
       MacOS:
         vmImage: macOS-10.14
         MACOSX_DEPLOYMENT_TARGET: '10.13'
@@ -66,6 +67,16 @@ jobs:
       script: |
         set -ex
         flake8
+  - task: Bash@3
+    displayName: Generate docs with Sphynx
+    condition: and(succeeded(), eq(variables['DOCS'], '1'))
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        pushd docs
+        make html
+        popd
   - task: Bash@3
     displayName: Restore WGPU native binary
     inputs:

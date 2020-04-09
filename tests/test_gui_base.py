@@ -2,10 +2,10 @@
 Test the canvas basics.
 """
 
-import wgpu.gui.base  # noqa
+import wgpu.gui  # noqa
 
 
-class TheTestCanvas(wgpu.gui.base.BaseCanvas):
+class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
     def __init__(self):
         super().__init__()
         self._count = 0
