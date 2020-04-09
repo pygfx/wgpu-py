@@ -5,7 +5,7 @@ Getting started
 Installation
 ------------
 
-.. code-block::
+.. code-block:: bash
 
     pip install wgpu
 
