@@ -959,7 +959,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         label="",
         color_attachments: "GPURenderPassColorAttachmentDescriptor-list",
         depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
-        # occlusion_query_set: "GPUQuerySet",
     ):
         # todo: we remove the occlusion_query_set param, because its not implemented in wgpu
         # and its unclear how to create it.
