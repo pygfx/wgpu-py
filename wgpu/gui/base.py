@@ -19,9 +19,9 @@ class WgpuCanvasBase:
 
     def configure_swap_chain(self, device, format, usage):
         """ Configures the swap chain for this canvas, and returns a
-        new :class:`GPUSwapChain <wgpu.base.GPUSwapChain>` object representing it. Destroys any swapchain
-        previously returned by ``configure_swap_chain()``, including
-        all of the textures it has produced.
+        new :class:`GPUSwapChain <wgpu.GPUSwapChain>` object representing
+        it. Destroys any swapchain previously returned by this function,
+        including all of the textures it has produced.
 
         Also see :func:`get_swap_chain_preferred_format`.
         """
