@@ -83,6 +83,7 @@ class GPUAdapter:  # Not a GPUObject
         But not for every operation (e.g. in unit tests).
 
         Arguments:
+            label (str): a human readable label. Optional.
             extensions (list): the extensions that you need.
             limits (dict): the various limits that you need.
         """
@@ -194,6 +195,7 @@ class GPUDevice(GPUObject):
         """ Create a :class:`GPUBuffer` object.
 
         Arguments:
+            label (str): a human readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (BufferUsageFlags): The ways in which this buffer will be used.
         """
@@ -208,6 +210,7 @@ class GPUDevice(GPUObject):
         be unmapped before using it in a pipeline.
 
         Arguments:
+            label (str): a human readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (BufferUsageFlags): The ways in which this buffer will be used.
         """
@@ -238,6 +241,7 @@ class GPUDevice(GPUObject):
         """ Create a :class:`GPUTexture` object.
 
         Arguments:
+            label (str): a human readable label. Optional.
             size (tuple, dict): The size (x, y, z) of the texture.
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
@@ -266,6 +270,7 @@ class GPUDevice(GPUObject):
         """ Create a :class:`GPUSampler` object. Samplers specify how a texture is sampled.
 
         Arguments:
+            label (str): a human readable label. Optional.
             address_mode_u (AddressMode): what happend when sampling beyond the x edge.
             address_mode_v (AddressMode): what happend when sampling beyond the y edge.
             address_mode_w (AddressMode): what happend when sampling beyond the z edge.
@@ -289,6 +294,7 @@ class GPUDevice(GPUObject):
         docs on bind groups for details.
 
         Arguments:
+            label (str): a human readable label. Optional.
             entries (list): a list of BindGroupLayoutEntry dicts.
 
         Example entry dict:
@@ -327,6 +333,7 @@ class GPUDevice(GPUObject):
         :func:`GPUCommandEncoder.set_bind_group` to attach a group of resources.
 
         Arguments:
+            label (str): a human readable label. Optional.
             layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
             entries (list): A list of dicts, see below.
@@ -368,6 +375,7 @@ class GPUDevice(GPUObject):
         used in :func:`create_render_pipeline` or :func:`create_compute_pipeline`.
 
         Arguments:
+            label (str): a human readable label. Optional.
             bind_group_layouts (list): A list of GPUBindGroupLayout objects.
         """
         raise NotImplementedError()
@@ -382,6 +390,7 @@ class GPUDevice(GPUObject):
         in Python.
 
         Arguments:
+            label (str): a human readable label. Optional.
             code: The shadercode, as SpirV bytes, or an object implementing
                 ``to_spirv()`` or ``to_bytes()``.
         """
@@ -399,6 +408,7 @@ class GPUDevice(GPUObject):
         """ Create a :class:`GPUComputePipeline` object.
 
         Arguments:
+            label (str): a human readable label. Optional.
             layout (GPUPipelineLayout): object created with ``create_pipeline_layout()``.
             compute_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``.
         """
@@ -425,6 +435,7 @@ class GPUDevice(GPUObject):
         """ Create a :class:`GPURenderPipeline` object.
 
         Arguments:
+            label (str): a human readable label. Optional.
             layout: a GPUPipelineLayout created with ``create_pipeline_layout()``.
             vertex_stage: E.g. ``{"module": shader_module, entry_point="main"}``
             fragment_stage: E.g. ``{"module": shader_module, entry_point="main"}``
@@ -689,6 +700,7 @@ class GPUTexture(GPUObject):
         """ Create a :class:`GPUTextureView` object.
 
         Arguments:
+            label (str): a human readable label. Optional.
             format (TextureFormat): What channels it stores and how.
             dimension (TextureViewDimension): The dimensionality of the texture view.
             aspect (TextureAspect): Whether this view is used for depth, stencil, or all.
@@ -702,6 +714,9 @@ class GPUTexture(GPUObject):
     def create_default_view(self, *, label=""):
         """ Get the default view on this texture. This method is not part of
         the WebGPU API, but we (currently) provide it because it's so useful.
+
+        Parameters:
+            label (str): a human readable label. Optional.
         """
         raise NotImplementedError()
 
@@ -823,6 +838,9 @@ class GPUCommandEncoder(GPUObject):
     def begin_compute_pass(self, *, label=""):
         """ Record the beginning of a compute pass. Returns a
         GPUComputePassEncoder object.
+
+        Parameters:
+            label (str): a human readable label. Optional.
         """
         raise NotImplementedError()
 
@@ -840,6 +858,7 @@ class GPUCommandEncoder(GPUObject):
         GPURenderPassEncoder object.
 
         Arguments:
+            label (str): a human readable label. Optional.
             color_attachements (list): List of color attachement dicts. See below.
             depth_stencil_attachment: A depth stencil attachement dict. See below.
             occlusion_query_set: TODO NOT IMPLEMENTED
@@ -945,6 +964,9 @@ class GPUCommandEncoder(GPUObject):
     # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {});
     def finish(self, *, label=""):
         """ Finish recording. Returns a GPUCommandBuffer to submit to a GPUQueue.
+
+        Parameters:
+            label (str): a human readable label. Optional.
         """
         raise NotImplementedError()
 
@@ -1228,6 +1250,9 @@ class GPURenderBundleEncoder(GPURenderEncoderBase):
     # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
     def finish(self, *, label=""):
         """ Finish recording and return a GPURenderBundle.
+
+        Parameters:
+            label (str): a human readable label. Optional.
         """
         raise NotImplementedError()
 
