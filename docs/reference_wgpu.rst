@@ -47,6 +47,11 @@ the backend by importing it:
     import wgpu.backends.rs
 
 
+The ``wgpu-py`` package comes with the ``wgpu-native`` library. If you want
+to use your own version of that library instead, set the ``WGPU_LIB_PATH``
+environment variable.
+
+
 Adapter
 -------
 

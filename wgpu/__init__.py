@@ -1,5 +1,5 @@
 """
-This a Python implementation of the next generation GPU API: WebGPU.
+This a Python implementation of the next generation GPU API.
 """
 
 from ._coreutils import help  # noqa: F401
