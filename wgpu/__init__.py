@@ -1,3 +1,7 @@
+"""
+This a Python implementation of the next generation GPU API.
+"""
+
 from ._coreutils import help  # noqa: F401
 from .flags import *  # noqa: F401,F403
 from .enums import *  # noqa: F401,F403

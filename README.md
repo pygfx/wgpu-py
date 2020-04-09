@@ -1,4 +1,5 @@
 [![Build Status](https://dev.azure.com/almarklein/wgpu-py/_apis/build/status/almarklein.wgpu-py?branchName=master)](https://dev.azure.com/almarklein/wgpu-py/_build/latest?definitionId=1&branchName=master)
+[![Documentation Status](https://readthedocs.org/projects/wgpu-py/badge/?version=latest)](https://wgpu-py.readthedocs.io)
 
 # wgpu-py
 
@@ -7,27 +8,26 @@ Next generation GPU API for Python
 
 ## Introduction
 
-In short, this is a Python lib wrapping the Rust wgpu lib and exposing
-it with a Pythonic API similar to WebGPU.
+In short, this is a Python lib wrapping [wgpu-native](https://github.com/gfx-rs/wgpu)
+and exposing it with a Pythonic API similar to the [WebGPU spec](https://gpuweb.github.io/gpuweb/).
 
 The OpenGL API is old and showing it's cracks. New API's like Vulkan,
 Metal and DX12 provide a modern way to control the GPU, but these API's
 are too low-level for general use. The WebGPU API follows the same concepts, but with
 a simpler (higher level) spelling. The Python `wgpu` library brings the
-WebGPU API to Python. Based on [wgpu-native](https://github.com/gfx-rs/wgpu).
+WebGPU API to Python.
 
 To get an idea of what this API looks like have a look at [triangle.py](https://github.com/almarklein/wgpu-py/blob/master/examples/triangle.py) and the other [examples](https://github.com/almarklein/wgpu-py/blob/master/examples/).
 
 
 ## Status
 
-*This is experimental, work in progress, you probably don't want to use this just yet!*
+*The wgpu-API has not settled yet, use with care!*
 
-* We have a few working examples!
+* Coverage of the WebGPU spec is about 95%.
+* Test coverage of the API is 100%.
 * Support for Windows and Linux. Support for MacOS is underway.
-* We have not fully implemented the API yet.
-* The API may change. We're still figuring out what works best.
-* The API may change more. Until WebGPU settles as a standard, its specification
+* The API may change. Until WebGPU settles as a standard, its specification
   may change, and with that our API will probably too.
 
 
@@ -35,7 +35,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 ```
 pip install wgpu
-pip install python-shader  # optional - our examples use this to define shaders
+pip install python-shader  # optional - our examples use this
 ```
 
 The library ships with Rust binaries for Windows, MacOS and Linux. If you want to use

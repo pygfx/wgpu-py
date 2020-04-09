@@ -47,12 +47,18 @@ the backend by importing it:
     import wgpu.backends.rs
 
 
+The ``wgpu-py`` package comes with the ``wgpu-native`` library. If you want
+to use your own version of that library instead, set the ``WGPU_LIB_PATH``
+environment variable.
+
+
 Adapter
 -------
 
-To start using the GPU for computations or rendering, we must obtain a
-device object. But first, we request an adapter, which represens a GPU
-implementation on the current system.
+To start using the GPU for computations or rendering, a device object
+is required. One first requests an adapter, which represens a GPU
+implementation on the current system. The device can then be requested
+from the adapter.
 
 .. autofunction:: wgpu.request_adapter
 
