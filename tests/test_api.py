@@ -46,10 +46,26 @@ def test_base_wgpu_api():
 
     assert isinstance(device, wgpu.base.GPUObject)
     assert device.label == "device08"
-    assert device.extensions == [42, 43]
+    assert device.extensions == ("42", "43")
     assert device.limits == {}
     assert hex(id(device)) in repr(device)
     assert device.label in repr(device)
+
+
+def test_that_all_docstrings_are_there():
+
+    for cls in wgpu.base.__dict__.values():
+        if not isinstance(cls, type):
+            continue
+        if cls.__name__.startswith("_"):
+            continue
+        assert cls.__doc__
+        for name, attr in cls.__dict__.items():
+            if not (callable(attr) or isinstance(attr, property)):
+                continue
+            if name.startswith("_"):
+                continue
+            assert attr.__doc__
 
 
 def get_output_from_subprocess(code):

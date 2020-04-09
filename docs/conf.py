@@ -19,9 +19,39 @@ sys.path.insert(0, ROOT_DIR)
 import wgpu  # noqa: E402
 import wgpu.gui  # noqa: E402
 
+
+# -- Tweak wgpu's docs -------------------------------------------------------
+
 # Make flags and enum appear better in docs
 wgpu.enums._use_sphinx_repr = True
 wgpu.flags._use_sphinx_repr = True
+
+# Simplify the signature of the two root functions
+wgpu.request_adapter.__doc__ = (
+    "request_adapter(**parameters)\n\n    " + wgpu.request_adapter.__doc__.lstrip()
+)
+wgpu.request_adapter_async.__doc__ = (
+    "request_adapter_async(**parameters)\n\n    "
+    + wgpu.request_adapter_async.__doc__.lstrip()
+)
+
+for cls in wgpu.base.__dict__.values():
+    if not isinstance(cls, type):
+        continue
+    # Change class docstring to include a link to the base class,
+    # and the class' signature is not shown
+    base_info = ""
+    base_cls = cls.mro()[1]
+    if base_cls is not object:
+        base_info = f"    *Subclass of* :class:`.{base_cls.__name__}`\n\n"
+    cls.__doc__ = cls.__name__ + "()\n\n" + base_info + "    " + cls.__doc__.lstrip()
+    # Change docstring of methods that dont have positional arguments
+    for method in cls.__dict__.values():
+        if not (callable(method) and hasattr(method, "__code__")):
+            continue
+        if method.__code__.co_argcount == 1 and method.__code__.co_kwonlyargcount > 0:
+            sig = method.__name__ + "(**parameters)"
+            method.__doc__ = sig + "\n\n        " + method.__doc__.lstrip()
 
 
 # -- Project information -----------------------------------------------------

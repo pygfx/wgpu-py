@@ -64,7 +64,7 @@ class GPUAdapter:  # Not a GPUObject
 
     @property
     def extensions(self):
-        """ A tuple that enumerates the extensions supported by the adapter.
+        """ A tuple that represents the extensions supported by the adapter.
         """
         return self._extensions
 
@@ -157,8 +157,8 @@ class GPUDevice(GPUObject):
     from it: when the device is lost, all objects created from it become
     invalid.
 
-    Create a device using ``adapter.request_device()`` or
-    ``adapter.request_device_async()``.
+    Create a device using :func:`GPUAdapter.request_device` or
+    :func:`GPUAdapter.request_device_async`.
     """
 
     def __init__(self, label, internal, adapter, extensions, limits, default_queue):
@@ -171,7 +171,7 @@ class GPUDevice(GPUObject):
 
     @property
     def extensions(self):
-        """ A list of strings representing the extensions with which this
+        """ A tuple of strings representing the extensions with which this
         device was created.
         """
         return self._extensions
@@ -191,7 +191,7 @@ class GPUDevice(GPUObject):
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def create_buffer(self, *, label="", size: int, usage: "GPUBufferUsageFlags"):
-        """ Create a Buffer object.
+        """ Create a :class:`GPUBuffer` object.
 
         Arguments:
             size (int): The size of the buffer in bytes.
@@ -204,7 +204,7 @@ class GPUDevice(GPUObject):
     def create_buffer_mapped(
         self, *, label="", size: int, usage: "GPUBufferUsageFlags"
     ):
-        """ Create a buffer object that is mapped from the start. It must
+        """ Create a :class:`GPUBuffer` object that is mapped from the start. It must
         be unmapped before using it in a pipeline.
 
         Arguments:
@@ -235,7 +235,7 @@ class GPUDevice(GPUObject):
         format: "GPUTextureFormat",
         usage: "GPUTextureUsageFlags",
     ):
-        """ Create a Texture object.
+        """ Create a :class:`GPUTexture` object.
 
         Arguments:
             size (tuple, dict): The size (x, y, z) of the texture.
@@ -243,7 +243,7 @@ class GPUDevice(GPUObject):
             sample_count (int): The number of samples. Default 1.
             dimension (TextureDimension): The dimensionality of the texture.
             format (TextureFormat): What channels it stores and how.
-            usage (TextureUsageFlags): The ways in wich the texture will be used.
+            usage (TextureUsageFlags): The ways in which the texture will be used.
         """
         raise NotImplementedError()
 
@@ -263,7 +263,7 @@ class GPUDevice(GPUObject):
         lod_max_clamp: float = 0xFFFFFFFF,
         compare: "GPUCompareFunction",
     ):
-        """ Create a Sampler object. Samplers specify how a texture is sampled.
+        """ Create a :class:`GPUSampler` object. Samplers specify how a texture is sampled.
 
         Arguments:
             address_mode_u (AddressMode): what happend when sampling beyond the x edge.
@@ -283,10 +283,10 @@ class GPUDevice(GPUObject):
     def create_bind_group_layout(
         self, *, label="", entries: "GPUBindGroupLayoutEntry-list"
     ):
-        """ Create a GPUBindGroupLayout. One or more such objects are
-        passed to ``create_pipeline_layout()`` to specify the (abstract)
-        pipeline layout for resources. See the docs on bind groups for
-        details.
+        """ Create a :class:`GPUBindGroupLayout` object. One or more
+        such objects are passed to ``create_pipeline_layout()`` to
+        specify the (abstract) pipeline layout for resources. See the
+        docs on bind groups for details.
 
         Arguments:
             entries (list): a list of BindGroupLayoutEntry dicts.
@@ -307,7 +307,7 @@ class GPUDevice(GPUObject):
                 "has_dynamic_offset": False,  # optional
             },
 
-        About has_dynamic_offset: For uniform-buffer, storage-buffer, and
+        About ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
         readonly-storage-buffer bindings, indicates whether the binding has a
         dynamic offset. One offset must be passed to set_bind_group for each
         dynamic binding in increasing order of binding number.
@@ -323,11 +323,11 @@ class GPUDevice(GPUObject):
         layout: "GPUBindGroupLayout",
         entries: "GPUBindGroupEntry-list",
     ):
-        """ Create a GPUBindGroup, which can be used in ``pass.set_bind_group()``
-        to attach a group of resources.
+        """ Create a :class:`GPUBindGroup` object, which can be used in
+        :func:`GPUCommandEncoder.set_bind_group` to attach a group of resources.
 
         Arguments:
-            layout (BindGroupLayout): The layout (abstract representation)
+            layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
             entries (list): A list of dicts, see below.
 
@@ -364,8 +364,8 @@ class GPUDevice(GPUObject):
     def create_pipeline_layout(
         self, *, label="", bind_group_layouts: "GPUBindGroupLayout-list"
     ):
-        """ Create a GPUPipelineLayout, which can be used in
-        ``create_render_pipeline()`` or ``create_compute_pipeline()``.
+        """ Create a :class:`GPUPipelineLayout` object, which can be
+        used in :func:`create_render_pipeline` or :func:`create_compute_pipeline`.
 
         Arguments:
             bind_group_layouts (list): A list of GPUBindGroupLayout objects.
@@ -375,7 +375,7 @@ class GPUDevice(GPUObject):
     # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
     def create_shader_module(self, *, label="", code: str):
-        """ Create a GPUShaderModule object from shader source.
+        """ Create a :class:`GPUShaderModule` object from shader source.
 
         Currently, only SpirV is supported. One can compile glsl shaders to
         SpirV ahead of time, or use the python-shader package to write shaders
@@ -396,10 +396,10 @@ class GPUDevice(GPUObject):
         layout: "GPUPipelineLayout",
         compute_stage: "GPUProgrammableStageDescriptor",
     ):
-        """ Create a GPUComputePipeline object.
+        """ Create a :class:`GPUComputePipeline` object.
 
         Arguments:
-            layout: a GPUPipelineLayout created with ``create_pipeline_layout()``.
+            layout (GPUPipelineLayout): object created with ``create_pipeline_layout()``.
             compute_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``.
         """
         raise NotImplementedError()
@@ -422,7 +422,7 @@ class GPUDevice(GPUObject):
         sample_mask: "GPUSampleMask" = 0xFFFFFFFF,
         alpha_to_coverage_enabled: bool = False,
     ):
-        """ Create a GPURenderPipeline object.
+        """ Create a :class:`GPURenderPipeline` object.
 
         Arguments:
             layout: a GPUPipelineLayout created with ``create_pipeline_layout()``.
@@ -512,8 +512,9 @@ class GPUDevice(GPUObject):
     # wgpu.help('CommandEncoderDescriptor', 'devicecreatecommandencoder', dev=True)
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
     def create_command_encoder(self, *, label=""):
-        """ Create a GPUCommandEncoder object. A command encoder is used to
-        record commands, which can then be submitted at once to the GPU.
+        """ Create a :class:`GPUCommandEncoder` object. A command
+        encoder is used to record commands, which can then be submitted
+        at once to the GPU.
         """
         raise NotImplementedError()
 
@@ -527,7 +528,7 @@ class GPUDevice(GPUObject):
         depth_stencil_format: "GPUTextureFormat",
         sample_count: "GPUSize32" = 1,
     ):
-        """ Create a GPURenderBundle object.
+        """ Create a :class:`GPURenderBundle` object.
 
         TODO
         """
@@ -557,8 +558,8 @@ class GPUBuffer(GPUObject):
     the buffer, subject to alignment restrictions depending on the
     operation.
 
-    Create a buffer using GPUDevice.createBuffer(), GPUDevice.createBufferMapped()
-    or GPUDevice.createBufferAsync().
+    Create a buffer using :func:`GPUDevice.createBuffer`,
+    :func`GPUDevice.createBufferMapped` or :func:`GPUDevice.createBufferAsync`.
 
     One can sync data in a buffer by mapping it (or by creating a mapped
     buffer) and then setting/getting the values in the mapped array.
@@ -614,26 +615,41 @@ class GPUBuffer(GPUObject):
     # wgpu.help('buffermapreadasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapReadAsync();
     def map_read(self):
+        """ Make the buffer memory accessable to the CPU for reading.
+        Sets the ``mapping`` property and returns the mapped memory as
+        a ctypes array.
+        """
         raise NotImplementedError()
 
     # wgpu.help('buffermapreadasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapReadAsync();
     async def map_read_async(self):
+        """ Async version of ``map_read()``.
+        """
         raise NotImplementedError()
 
     # wgpu.help('buffermapwriteasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapWriteAsync();
     def map_write(self):
+        """ Make the buffer memory accessable to the CPU for writing.
+        Sets the ``mapping`` property and returns the mapped memory as
+        a ctypes array.
+        """
         raise NotImplementedError()
 
     # wgpu.help('buffermapwriteasync', dev=True)
     # IDL: Promise<ArrayBuffer> mapWriteAsync();
     async def map_write_async(self):
+        """ Async version of ``map_write()``.
+        """
         raise NotImplementedError()
 
     # wgpu.help('bufferunmap', dev=True)
     # IDL: void unmap();
     def unmap(self):
+        """ Unmap the buffer. Buffers cannot be mapped when they are
+        used in a pipeline.
+        """
         raise NotImplementedError()
 
     # wgpu.help('bufferdestroy', dev=True)
@@ -653,7 +669,7 @@ class GPUTexture(GPUObject):
     the "raw" data. A texture view is always used to define how the texture data
     should be interpreted.
 
-    Create a texture using ``device.create_texture()``.
+    Create a texture using :func:GPUDevice.create_texture`.
     """
 
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
@@ -670,7 +686,7 @@ class GPUTexture(GPUObject):
         base_array_layer: "GPUIntegerCoordinate" = 0,
         array_layer_count: "GPUIntegerCoordinate" = 0,
     ):
-        """ Create a GPUTextureView object.
+        """ Create a :class:`GPUTextureView` object.
 
         Arguments:
             format (TextureFormat): What channels it stores and how.
@@ -703,8 +719,8 @@ class GPUTextureView(GPUObject):
     """
     A GPUTextureView represents a way to represent a GPUTexture.
 
-    Create a texture view using ``texture.create_view()`` or
-    ``texture.create_default_view()``.
+    Create a texture view using :func:GPUTexture.create_view` or
+    :func:`GPUTexture.create_default_view`.
     """
 
 
@@ -714,7 +730,7 @@ class GPUSampler(GPUObject):
     in terms of subsampling, sampling between mip levels, and sampling out
     of the image boundaries.
 
-    Create a sampler using ``device.create_sampler()``.
+    Create a sampler using :func:`GPUDevice.create_sampler`.
     """
 
 
@@ -724,7 +740,7 @@ class GPUBindGroupLayout(GPUObject):
     resources bound in a GPUBindGroup and their accessibility in shader
     stages.
 
-    Create a bind group layout using ``device.create_bind_group_layout()``.
+    Create a bind group layout using :func:`GPUDevice.create_bind_group_layout`.
     """
 
     def __init__(self, label, internal, device, bindings):
@@ -737,7 +753,7 @@ class GPUBindGroup(GPUObject):
     A GPUBindGroup represents a group of bindings, the shader slot,
     and a resource (sampler, texture-view, buffer).
 
-    Create a bind group using ``device.create_bind_group()``.
+    Create a bind group using :func:`GPUDevice.create_bind_group`.
     """
 
     def __init__(self, label, internal, device, bindings):
@@ -750,7 +766,7 @@ class GPUPipelineLayout(GPUObject):
     A GPUPipelineLayout describes the layout of a pipeline, as a list
     of GPUBindGroupLayout objects.
 
-    Create a pipeline layout using ``device.create_pipeline_layout()``.
+    Create a pipeline layout using :func:`GPUDevice.create_pipeline_layout`.
     """
 
     def __init__(self, label, internal, device, layouts):
@@ -762,7 +778,7 @@ class GPUShaderModule(GPUObject):
     """
     A GPUShaderModule represents a programmable shader.
 
-    Create a shader module using ``device.create_shader_module()``.
+    Create a shader module using :func:`GPUDevice.create_shader_module`.
     """
 
 
@@ -770,7 +786,7 @@ class GPUComputePipeline(GPUObject):
     """
     A GPUComputePipeline represents a single pipeline for computations (no rendering).
 
-    Create a compute pipeline using ``device.create_compute_pipeline()``.
+    Create a compute pipeline using :func:`GPUDevice.create_compute_pipeline`.
     """
 
 
@@ -781,7 +797,7 @@ class GPURenderPipeline(GPUObject):
     from a window on the screen or be an in-memory texture (off-screen
     rendering).
 
-    Create a render pipeline using ``device.create_render_pipeline()``.
+    Create a render pipeline using :func:`GPUDevice.create_render_pipeline`.
     """
 
 
@@ -790,7 +806,7 @@ class GPUCommandBuffer(GPUObject):
     A GPUCommandBuffer stores a series of commands, generated by GPUCommandEncoder,
     to be submitted to a GPUQueue.
 
-    Create a command buffer using ``command_encoder.finish()``.
+    Create a command buffer using :func:`GPUCommand_encoder.finish`.
     """
 
 
@@ -799,7 +815,7 @@ class GPUCommandEncoder(GPUObject):
     A GPUCommandEncoder is used to record a series of commands. When done,
     call ``finish()`` to obtain a GPUCommandBuffer object.
 
-    Create a command encoder using ``device.create_command_encoder()``.
+    Create a command encoder using :func:`GPUDevice.create_command_encoder`.
     """
 
     # wgpu.help('ComputePassDescriptor', 'commandencoderbegincomputepass', dev=True)
@@ -986,7 +1002,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     """
     A GPUComputePassEncoder records commands related to a compute pass.
 
-    Create a compute pass encoder using ``command_encoder.begin_compute_pass()``.
+    Create a compute pass encoder using :func:`GPUCommandEncoder.begin_compute_pass`.
     """
 
     # wgpu.help('ComputePipeline', 'computepassencodersetpipeline', dev=True)
@@ -1127,7 +1143,7 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     """
     A GPURenderPassEncoder records commands related to a render pass.
 
-    Create a render pass encoder using ``command_encoder.begin_render_pass()``.
+    Create a render pass encoder using :func:`GPUCommandEncoder.begin_render_pass`.
     """
 
     # wgpu.help('renderpassencodersetviewport', dev=True)
@@ -1211,6 +1227,8 @@ class GPURenderBundleEncoder(GPURenderEncoderBase):
     # wgpu.help('RenderBundleDescriptor', 'renderbundleencoderfinish', dev=True)
     # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
     def finish(self, *, label=""):
+        """ Finish recording and return a GPURenderBundle.
+        """
         raise NotImplementedError()
 
 
@@ -1218,7 +1236,7 @@ class GPUQueue(GPUObject):
     """
     A GPUQueue can be used to submit command buffers to.
 
-    You can obtain a queue object via the ``devicer.default_queue`` property.
+    You can obtain a queue object via the :prop:`GPUDevice.default_queue` property.
     """
 
     # wgpu.help('queuesubmit', dev=True)
@@ -1252,7 +1270,7 @@ class GPUSwapChain(GPUObject):
     so that you can provide the corresponding texture view as a color attachement
     to ``command_encoder.begin_render_pass()``.
 
-    You can obtain a swap chain using ``canvas.configure_swap_chain()``.
+    You can obtain a swap chain using :func:`canvas.configure_swap_chain() <wgpu.gui.WgpuCanvasBase.configure_swap_chain>`.
     """
 
     # wgpu.help('swapchaingetcurrenttexture', dev=True)

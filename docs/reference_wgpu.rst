@@ -13,6 +13,23 @@ Graphics Processing Unit.
     the WebGPU settles as a standard.
 
 
+How to read this API
+--------------------
+
+The classes in this API all start with "GPU", this helps discern them
+from flags and enums. These classes are never instantiated directly;
+new objects are returned by certain methods.
+
+Most methods in this API have no positional arguments; each argument
+must be referenced by name. Some argument values must be a dict, these
+can be thought of as "nested" arguments.
+
+Many arguments (and dict fields) must be a
+:doc:`flags <reference_flags>` (integer bitmasks that can be *orred* together)
+or an :doc:`enums <reference_enums>` (strings). Some arguments have a
+default value. Most do not.
+
+
 Selecting the backend
 ---------------------
 
