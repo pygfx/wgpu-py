@@ -8,7 +8,7 @@ these include GLFW and Qt .
 The WgpuCanvas class
 ------------------------
 
-For each supported toolkit, we implement a ``WgpuCanvas`` class, which all
+For each supported toolkit, there is a ``WgpuCanvas`` class, which all
 derive from the following class.
 
 .. autoclass:: wgpu.gui.WgpuCanvasBase
@@ -18,7 +18,7 @@ derive from the following class.
 Support for Qt
 --------------
 
-We support PyQt4, PyQt5, PySide and PySide2. The wgpu library detects what
+There is support fo PyQt4, PyQt5, PySide and PySide2. The wgpu library detects what
 library you are using by looking what module has been imported.
 
 .. code-block:: py

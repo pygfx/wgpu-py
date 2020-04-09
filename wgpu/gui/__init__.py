@@ -1,6 +1,5 @@
 """
-Code to help provide a canvas to render to.
-You don't need this per see, but it makes things a bit easier.
+Code to provide a canvas to render to.
 """
 
 from .base import WgpuCanvasBase  # noqa: F401
