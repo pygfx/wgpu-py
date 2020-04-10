@@ -151,7 +151,9 @@ def test_glfw_canvas_render():
             "store_op": wgpu.StoreOp.store,
         }
         render_pass = command_encoder.begin_render_pass(
-            color_attachments=[ca], depth_stencil_attachment=None,
+            color_attachments=[ca],
+            depth_stencil_attachment=None,
+            occlusion_query_set=None,
         )
 
         render_pass.set_pipeline(render_pipeline)

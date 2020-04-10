@@ -114,7 +114,7 @@ for name in hp.enums:
         print(f"{name} enum missing in .idl")
 for name in ip.enums:
     if name not in hp.enums:
-        print(f"{name}enum missing in .h")
+        print(f"{name} enum missing in .h")
 for name in hp.enums:
     if name not in ip.enums:
         continue

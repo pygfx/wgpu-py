@@ -398,10 +398,6 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     )
     upload_to_texture(device, texture, texture_data, nx, ny, nz)
 
-    sampler = device.create_sampler(
-        mag_filter="linear", min_filter="linear", compare="never"
-    )
-
     # texture_view = texture.create_default_view()
     # or:
     texture_view = texture.create_view(
@@ -409,6 +405,18 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
         dimension=wgpu.TextureDimension.d2,
         aspect=wgpu.TextureAspect.all,
     )
+
+    sampler = device.create_sampler(
+        mag_filter="linear", min_filter="linear", compare="never"
+    )
+
+    # Determine texture component type from the format
+    if texture_format.endswith(("norm", "float")):
+        texture_component_type = wgpu.TextureComponentType.float
+    elif "uint" in texture_format:
+        texture_component_type = wgpu.TextureComponentType.uint
+    else:
+        texture_component_type = wgpu.TextureComponentType.sint
 
     # Bindings and layout
     bindings = [
@@ -421,12 +429,12 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
             "visibility": wgpu.ShaderStage.FRAGMENT,
             "type": wgpu.BindingType.sampled_texture,
             "view_dimension": wgpu.TextureViewDimension.d2,
+            "texture_component_type": texture_component_type,
         },
         {
             "binding": 1,
             "visibility": wgpu.ShaderStage.FRAGMENT,
             "type": wgpu.BindingType.sampler,
-            "view_dimension": wgpu.TextureViewDimension.d2,
         },
     ]
     bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
@@ -450,13 +458,14 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     # Check the square
     sq = a[16:-16, 16:-16, :]
     ref1 = [
-        [50, 50, 50, 50, 50, 50, 50, 50, 52, 55, 58, 61, 64, 67, 70, 73],
-        [77, 80, 83, 86, 89, 92, 95, 98, 100, 100, 100, 100, 100, 100, 100, 100],
+        [150, 150, 150, 150, 150, 150, 150, 150, 152, 155, 158, 161],
+        [164, 167, 170, 173, 177, 180, 183, 186, 189, 192],
+        [195, 198, 200, 200, 200, 200, 200, 200, 200, 200],
     ]
     ref2 = [
-        [50, 50, 50, 50, 50, 50, 50, 50, 53, 59, 66, 72, 78, 84, 91, 97],
-        [103, 109, 116, 122, 128, 134, 141, 147],
-        [150, 150, 150, 150, 150, 150, 150, 150],
+        [150, 150, 150, 150, 150, 150, 150, 150, 147, 141, 134, 128],
+        [122, 116, 109, 103, 97, 91, 84, 78, 72, 66],
+        [59, 53, 50, 50, 50, 50, 50, 50, 50, 50],
     ]
     ref1, ref2 = sum(ref1, []), sum(ref2, [])
 

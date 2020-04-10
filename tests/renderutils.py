@@ -21,10 +21,10 @@ def upload_to_texture(device, texture, data, nx, ny, nz):
     ctypes.memmove(buffer.mapping, data, nbytes)
     buffer.unmap()
 
-    # Copy to texture (image_height must only be nonzero for 3D textures)
+    # Copy to texture (rows_per_image must only be nonzero for 3D textures)
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": 0},
+        {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
@@ -42,7 +42,7 @@ def download_from_texture(device, texture, data_type, nx, ny, nz):
     command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": 0},
+        {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
         (nx, ny, nz),
     )
     device.default_queue.submit([command_encoder.finish()])
@@ -94,7 +94,7 @@ def render_to_texture(
     current_texture_view = texture.create_default_view()
 
     # Also a buffer to read the data to CPU
-    buffer = device.create_buffer_mapped(
+    buffer = device.create_buffer(
         size=nbytes, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST
     )
 
@@ -150,6 +150,7 @@ def render_to_texture(
     render_pass = command_encoder.begin_render_pass(
         color_attachments=[color_attachment],
         depth_stencil_attachment=depth_stencil_attachment,
+        occlusion_query_set=None,
     )
 
     render_pass.set_pipeline(render_pipeline)
@@ -171,7 +172,7 @@ def render_to_texture(
     render_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": 0},
+        {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
         (nx, ny, 1),
     )
     device.default_queue.submit([command_encoder.finish()])
@@ -202,7 +203,7 @@ def render_to_screen(
     """ Render to a window on screen, for debugging purposes.
     """
     import glfw
-    from wgpu.gui.glfw import WgpuCanvas
+    from wgpu.gui.glfw import WgpuCanvas, update_glfw_canvasses
 
     vbos = vbos or []
     vbo_views = vbo_views or []
@@ -267,7 +268,9 @@ def render_to_screen(
         }
         ca["attachment"] = current_texture_view
         render_pass = command_encoder.begin_render_pass(
-            color_attachments=[ca], depth_stencil_attachment=depth_stencil_attachment,
+            color_attachments=[ca],
+            depth_stencil_attachment=depth_stencil_attachment,
+            occlusion_query_set=None,
         )
 
         render_pass.set_pipeline(render_pipeline)
@@ -294,6 +297,6 @@ def render_to_screen(
     canvas.draw_frame = draw_frame
 
     # Enter main loop
-    while not canvas.is_closed():
+    while update_glfw_canvasses():
         glfw.poll_events()
     glfw.terminate()

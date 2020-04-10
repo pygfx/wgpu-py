@@ -296,16 +296,22 @@ class GPUDevice(GPUObject):
         Example entry dict:
 
         .. code-block:: py
-
+            # Buffer
             {
                 "binding": 0,
+                "visibility": wgpu.ShaderStage.COMPUTE,
+                "type": wgpu.BindingType.storage_buffer,
+                "has_dynamic_offset": False,  # optional
+            },
+            # Texture
+            {
+                "binding": 1,
                 "visibility": wgpu.ShaderStage.FRAGMENT,
                 "type": wgpu.BindingType.sampled_texture,
                 "view_dimension": wgpu.TextureViewDimension.d2,
-                # "texture_component_type" -> todo not supported yet
-                # "storage_texture_format" -> todo not supported yet
+                "texture_component_type": wgpu.TextureComponentType.float,
+                "storage_texture_format": wgpu.TextureFormat.rgba8unorm,
                 "multisampled": False,  # optional
-                "has_dynamic_offset": False,  # optional
             },
 
         About ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
@@ -857,7 +863,7 @@ class GPUCommandEncoder(GPUObject):
             label (str): A human readable label. Optional.
             color_attachements (list of dict): List of color attachement dicts. See below.
             depth_stencil_attachment (dict): A depth stencil attachement dict. See below.
-            occlusion_query_set: TODO NOT IMPLEMENTED
+            occlusion_query_set: IGNORED, NOT IMPLEMENTED in wgpu-native
 
         Example color attachement:
 
@@ -905,7 +911,7 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a buffer to a texture (view).
 
         Arguments:
-            source (GPUBuffer): A dict with fields: buffer, offset, row_pitch, image_height.
+            source (GPUBuffer): A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
             destination (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
             copy_size (int): The number of bytes to copy.
         """
@@ -918,7 +924,7 @@ class GPUCommandEncoder(GPUObject):
 
         Arguments:
             source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
-            destination (GPUBuffer):  A dict with fields: buffer, offset, row_pitch, image_height.
+            destination (GPUBuffer):  A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
             copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()

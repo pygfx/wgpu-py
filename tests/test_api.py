@@ -142,7 +142,7 @@ def test_help4(capsys):
     assert x is None
     assert captured.err == ""
     assert "2 structs in .idl" in captured.out
-    assert "3 structs in .h" in captured.out
+    assert "2 structs in .h" in captured.out
 
 
 def test_register_backend_fails():

@@ -386,6 +386,14 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     )
     texture_view = texture.create_default_view()
 
+    # Determine texture component type from the format
+    if texture_format.endswith(("norm", "float")):
+        texture_component_type = wgpu.TextureComponentType.float
+    elif "uint" in texture_format:
+        texture_component_type = wgpu.TextureComponentType.uint
+    else:
+        texture_component_type = wgpu.TextureComponentType.sint
+
     # Create buffer that we need to upload the data
     buffer_usage = (
         wgpu.BufferUsage.MAP_READ
@@ -406,7 +414,10 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         {
             "binding": 0,
             "visibility": wgpu.ShaderStage.COMPUTE,
-            "type": wgpu.BindingType.readonly_storage_texture,  # == storage-texture
+            "type": wgpu.BindingType.readonly_storage_texture,
+            "view_dimension": wgpu.TextureViewDimension.d2,
+            "storage_texture_format": texture_format,
+            "texture_component_type": texture_component_type,
         }
     ]
     bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
@@ -422,7 +433,12 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     )
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {
+            "buffer": buffer,
+            "offset": 0,
+            "bytes_per_row": bpp * nx,
+            "rows_per_image": ny,
+        },
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
@@ -435,7 +451,12 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     compute_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {
+            "buffer": buffer,
+            "offset": 0,
+            "bytes_per_row": bpp * nx,
+            "rows_per_image": ny,
+        },
         (nx, ny, nz),
     )
     device.default_queue.submit([command_encoder.finish()])

@@ -447,6 +447,8 @@ class HParser(BaseParser):
                 parts = line.split()
                 if len(parts) == 3:
                     basename, _, name = parts[1].partition("_")
+                    if basename.upper() == basename:
+                        continue  # Maxima and other constants, not flags
                     val = int(parts[2].strip())
                     self.flags.setdefault(basename, {})[name] = val
                 elif "WGPU_LOCAL" in line:
