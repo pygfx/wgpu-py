@@ -21,9 +21,9 @@
 *  BufferMapAsyncStatus enum missing in .idl
 *  PresentMode enum missing in .idl
 *  BindingResource_Tag enum missing in .idl
-*  ExtensionNameenum missing in .h
-*  QueryTypeenum missing in .h
-*  ErrorFilterenum missing in .h
+*  ExtensionName enum missing in .h
+*  QueryType enum missing in .h
+*  ErrorFilter enum missing in .h
 *  TextureFormat.rgb10a2unorm is missing
 *  TextureFormat.rg11b10float is missing
 

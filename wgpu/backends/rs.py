@@ -1391,8 +1391,9 @@ class GPUSwapChain(base.GPUSwapChain):
             format=self._format,
             width=max(1, psize[0]),
             height=max(1, psize[1]),
-            present_mode=1,  # 0: Immediate, 1: Mailbox, 2: Fifo
+            present_mode=1,
         )
+        # present_mode -> 0: Immediate, 1: Mailbox, 2: Fifo
 
         if self._surface_id is None:
             self._surface_id = get_surface_id_from_canvas(canvas)
