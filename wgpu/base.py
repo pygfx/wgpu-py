@@ -275,7 +275,7 @@ class GPUDevice(GPUObject):
             mipmap_filter: (FilterMode): Interpolation between mip levels. Default 'nearest'.
             lod_min_clamp (float): The minimum level of detail. Default 0.
             lod_max_clamp (float): The maxium level of detail. Default inf.
-            compare (CompareFunction): todo
+            compare (CompareFunction): The sample compare operation for depth textures.
         """
         raise NotImplementedError()
 

@@ -166,19 +166,6 @@ def help(*searches, dev=False):
 
     # Find structs
 
-    # In our API, there are no structs, only function kwargs.
-    # lines = []
-    # all_lines.append(("structs", lines))
-    # for name_part in name_parts:
-    #     for name, val in _constants.__dict__.items():
-    #         if name.startswith("_"):
-    #             continue
-    #         elif name.startswith("make"):  # struct
-    #             # todo: also check fields
-    #             name = name[4:]
-    #             if name_part in name.lower():
-    #                 lines.append(name)
-
     if dev:
         lines = []
         all_lines.append(("structs in .idl", lines))
@@ -200,13 +187,6 @@ def help(*searches, dev=False):
                         x += "\n        " + field.line
                     x += "\n    }"
                     lines.append(x)
-            # else:
-            #     for field in d.values():
-            #         if (
-            #             name_part in field.name.lower()
-            #             or name_part in field.typename.lower()
-            #         ):
-            #             items["structs"].append(name + "." + field.py_arg())
 
     # Display
     for title, lines in all_lines:

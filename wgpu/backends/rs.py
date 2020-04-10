@@ -390,8 +390,7 @@ class GPUAdapter(base.GPUAdapter):
     def _destroy(self):
         if self._id is not None:
             self._id, id = None, self._id
-            id  # todo: _lib.wgpu_adapter_destroy(id)  # function/symbol not found
-            # also so other _destroy() methods
+            _lib.wgpu_adapter_destroy(id)
 
 
 class GPUDevice(base.GPUDevice):
@@ -982,8 +981,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
         occlusion_query_set: "GPUQuerySet",
     ):
-        # todo: we remove the occlusion_query_set param, because its not implemented in wgpu
-        # and its unclear how to create it.
+        # Note that occlusion_query_set is ignored because wgpu-native does not have it.
 
         c_color_attachments_list = []
         for color_attachment in color_attachments:
@@ -1225,7 +1223,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
-            internal  # _lib.wgpu_compute_pass_destroy(internal)  # function/symbol not found
+            internal  # todo: crashes _lib.wgpu_compute_pass_destroy(internal)
 
 
 class GPURenderEncoderBase(GPUProgrammablePassEncoder):
@@ -1287,7 +1285,7 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
-            internal  # _lib.wgpu_render_pass_destroy(self._internal)  # function/symbol not found
+            internal  # todo: crashes _lib.wgpu_render_pass_destroy(internal)
 
 
 class GPURenderPassEncoder(GPURenderEncoderBase):
