@@ -2,7 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* Generated with cbindgen:0.13.1 */
+/* Generated with cbindgen:0.14.0 */
 
 /* DO NOT MODIFY THIS MANUALLY! This file was generated using cbindgen.
  * To generate this file:
@@ -11,13 +11,21 @@
  *   2. Run `rustup run nightly cbindgen toolkit/library/rust/ --lockfile Cargo.lock --crate wgpu-remote -o dom/webgpu/ffi/wgpu_ffi_generated.h`
  */
 
-#define WGPU_LOCAL
+typedef unsigned long long WGPUNonZeroU64;
+typedef unsigned long long WGPUOption_AdapterId;
+typedef unsigned long long WGPUOption_SurfaceId;
+typedef unsigned long long WGPUOption_TextureViewId;
 
 
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+
+/**
+ * Bound uniform/storage buffer offsets must be aligned to this number.
+ */
+#define WGPUBIND_BUFFER_ALIGNMENT 256
 
 #define WGPUDEFAULT_BIND_GROUPS 4
 
@@ -42,8 +50,10 @@ typedef enum {
   WGPUBindingType_StorageBuffer = 1,
   WGPUBindingType_ReadonlyStorageBuffer = 2,
   WGPUBindingType_Sampler = 3,
-  WGPUBindingType_SampledTexture = 4,
-  WGPUBindingType_StorageTexture = 5,
+  WGPUBindingType_ComparisonSampler = 4,
+  WGPUBindingType_SampledTexture = 5,
+  WGPUBindingType_ReadonlyStorageTexture = 6,
+  WGPUBindingType_WriteonlyStorageTexture = 7,
 } WGPUBindingType;
 
 typedef enum {
@@ -78,14 +88,15 @@ typedef enum {
 } WGPUBufferMapAsyncStatus;
 
 typedef enum {
-  WGPUCompareFunction_Never = 0,
-  WGPUCompareFunction_Less = 1,
-  WGPUCompareFunction_Equal = 2,
-  WGPUCompareFunction_LessEqual = 3,
-  WGPUCompareFunction_Greater = 4,
-  WGPUCompareFunction_NotEqual = 5,
-  WGPUCompareFunction_GreaterEqual = 6,
-  WGPUCompareFunction_Always = 7,
+  WGPUCompareFunction_Undefined = 0,
+  WGPUCompareFunction_Never = 1,
+  WGPUCompareFunction_Less = 2,
+  WGPUCompareFunction_Equal = 3,
+  WGPUCompareFunction_LessEqual = 4,
+  WGPUCompareFunction_Greater = 5,
+  WGPUCompareFunction_NotEqual = 6,
+  WGPUCompareFunction_GreaterEqual = 7,
+  WGPUCompareFunction_Always = 8,
 } WGPUCompareFunction;
 
 typedef enum {
@@ -126,8 +137,26 @@ typedef enum {
 } WGPUPowerPreference;
 
 typedef enum {
-  WGPUPresentMode_NoVsync = 0,
-  WGPUPresentMode_Vsync = 1,
+  /**
+   * The presentation engine does **not** wait for a vertical blanking period and
+   * the request is presented immediately. This is a low-latency presentation mode,
+   * but visible tearing may be observed. Will fallback to `Fifo` if unavailable on the
+   * selected  platform and backend. Not optimal for mobile.
+   */
+  WGPUPresentMode_Immediate = 0,
+  /**
+   * The presentation engine waits for the next vertical blanking period to update
+   * the current image, but frames may be submitted without delay. This is a low-latency
+   * presentation mode and visible tearing will **not** be observed. Will fallback to `Fifo`
+   * if unavailable on the selected platform and backend. Not optimal for mobile.
+   */
+  WGPUPresentMode_Mailbox = 1,
+  /**
+   * The presentation engine waits for the next vertical blanking period to update
+   * the current image. The framerate will be capped at the display refresh rate,
+   * corresponding to the `VSync`. Tearing cannot be observed. Optimal for mobile.
+   */
+  WGPUPresentMode_Fifo = 2,
 } WGPUPresentMode;
 
 typedef enum {
@@ -161,6 +190,12 @@ typedef enum {
 } WGPUTextureAspect;
 
 typedef enum {
+  WGPUTextureComponentType_Float,
+  WGPUTextureComponentType_Sint,
+  WGPUTextureComponentType_Uint,
+} WGPUTextureComponentType;
+
+typedef enum {
   WGPUTextureDimension_D1,
   WGPUTextureDimension_D2,
   WGPUTextureDimension_D3,
@@ -171,46 +206,40 @@ typedef enum {
   WGPUTextureFormat_R8Snorm = 1,
   WGPUTextureFormat_R8Uint = 2,
   WGPUTextureFormat_R8Sint = 3,
-  WGPUTextureFormat_R16Unorm = 4,
-  WGPUTextureFormat_R16Snorm = 5,
-  WGPUTextureFormat_R16Uint = 6,
-  WGPUTextureFormat_R16Sint = 7,
-  WGPUTextureFormat_R16Float = 8,
-  WGPUTextureFormat_Rg8Unorm = 9,
-  WGPUTextureFormat_Rg8Snorm = 10,
-  WGPUTextureFormat_Rg8Uint = 11,
-  WGPUTextureFormat_Rg8Sint = 12,
-  WGPUTextureFormat_R32Uint = 13,
-  WGPUTextureFormat_R32Sint = 14,
-  WGPUTextureFormat_R32Float = 15,
-  WGPUTextureFormat_Rg16Unorm = 16,
-  WGPUTextureFormat_Rg16Snorm = 17,
-  WGPUTextureFormat_Rg16Uint = 18,
-  WGPUTextureFormat_Rg16Sint = 19,
-  WGPUTextureFormat_Rg16Float = 20,
-  WGPUTextureFormat_Rgba8Unorm = 21,
-  WGPUTextureFormat_Rgba8UnormSrgb = 22,
-  WGPUTextureFormat_Rgba8Snorm = 23,
-  WGPUTextureFormat_Rgba8Uint = 24,
-  WGPUTextureFormat_Rgba8Sint = 25,
-  WGPUTextureFormat_Bgra8Unorm = 26,
-  WGPUTextureFormat_Bgra8UnormSrgb = 27,
-  WGPUTextureFormat_Rgb10a2Unorm = 28,
-  WGPUTextureFormat_Rg11b10Float = 29,
-  WGPUTextureFormat_Rg32Uint = 30,
-  WGPUTextureFormat_Rg32Sint = 31,
-  WGPUTextureFormat_Rg32Float = 32,
-  WGPUTextureFormat_Rgba16Unorm = 33,
-  WGPUTextureFormat_Rgba16Snorm = 34,
-  WGPUTextureFormat_Rgba16Uint = 35,
-  WGPUTextureFormat_Rgba16Sint = 36,
-  WGPUTextureFormat_Rgba16Float = 37,
-  WGPUTextureFormat_Rgba32Uint = 38,
-  WGPUTextureFormat_Rgba32Sint = 39,
-  WGPUTextureFormat_Rgba32Float = 40,
-  WGPUTextureFormat_Depth32Float = 41,
-  WGPUTextureFormat_Depth24Plus = 42,
-  WGPUTextureFormat_Depth24PlusStencil8 = 43,
+  WGPUTextureFormat_R16Uint = 4,
+  WGPUTextureFormat_R16Sint = 5,
+  WGPUTextureFormat_R16Float = 6,
+  WGPUTextureFormat_Rg8Unorm = 7,
+  WGPUTextureFormat_Rg8Snorm = 8,
+  WGPUTextureFormat_Rg8Uint = 9,
+  WGPUTextureFormat_Rg8Sint = 10,
+  WGPUTextureFormat_R32Uint = 11,
+  WGPUTextureFormat_R32Sint = 12,
+  WGPUTextureFormat_R32Float = 13,
+  WGPUTextureFormat_Rg16Uint = 14,
+  WGPUTextureFormat_Rg16Sint = 15,
+  WGPUTextureFormat_Rg16Float = 16,
+  WGPUTextureFormat_Rgba8Unorm = 17,
+  WGPUTextureFormat_Rgba8UnormSrgb = 18,
+  WGPUTextureFormat_Rgba8Snorm = 19,
+  WGPUTextureFormat_Rgba8Uint = 20,
+  WGPUTextureFormat_Rgba8Sint = 21,
+  WGPUTextureFormat_Bgra8Unorm = 22,
+  WGPUTextureFormat_Bgra8UnormSrgb = 23,
+  WGPUTextureFormat_Rgb10a2Unorm = 24,
+  WGPUTextureFormat_Rg11b10Float = 25,
+  WGPUTextureFormat_Rg32Uint = 26,
+  WGPUTextureFormat_Rg32Sint = 27,
+  WGPUTextureFormat_Rg32Float = 28,
+  WGPUTextureFormat_Rgba16Uint = 29,
+  WGPUTextureFormat_Rgba16Sint = 30,
+  WGPUTextureFormat_Rgba16Float = 31,
+  WGPUTextureFormat_Rgba32Uint = 32,
+  WGPUTextureFormat_Rgba32Sint = 33,
+  WGPUTextureFormat_Rgba32Float = 34,
+  WGPUTextureFormat_Depth32Float = 35,
+  WGPUTextureFormat_Depth24Plus = 36,
+  WGPUTextureFormat_Depth24PlusStencil8 = 37,
 } WGPUTextureFormat;
 
 typedef enum {
@@ -255,11 +284,11 @@ typedef enum {
   WGPUVertexFormat_Int4 = 48,
 } WGPUVertexFormat;
 
-typedef uint64_t WGPUId_Adapter_Dummy;
+typedef WGPUNonZeroU64 WGPUId_Adapter_Dummy;
 
 typedef WGPUId_Adapter_Dummy WGPUAdapterId;
 
-typedef uint64_t WGPUId_Device_Dummy;
+typedef WGPUNonZeroU64 WGPUId_Device_Dummy;
 
 typedef WGPUId_Device_Dummy WGPUDeviceId;
 
@@ -276,11 +305,11 @@ typedef struct {
   WGPULimits limits;
 } WGPUDeviceDescriptor;
 
-typedef uint64_t WGPUId_BindGroup_Dummy;
+typedef WGPUNonZeroU64 WGPUId_BindGroup_Dummy;
 
 typedef WGPUId_BindGroup_Dummy WGPUBindGroupId;
 
-typedef uint64_t WGPUId_Buffer_Dummy;
+typedef WGPUNonZeroU64 WGPUId_Buffer_Dummy;
 
 typedef WGPUId_Buffer_Dummy WGPUBufferId;
 
@@ -290,7 +319,7 @@ typedef void (*WGPUBufferMapReadCallback)(WGPUBufferMapAsyncStatus status, const
 
 typedef void (*WGPUBufferMapWriteCallback)(WGPUBufferMapAsyncStatus status, uint8_t *data, uint8_t *userdata);
 
-typedef uint64_t WGPUId_CommandBuffer_Dummy;
+typedef WGPUNonZeroU64 WGPUId_CommandBuffer_Dummy;
 
 typedef WGPUId_CommandBuffer_Dummy WGPUCommandBufferId;
 
@@ -307,11 +336,9 @@ typedef struct {
   uint32_t todo;
 } WGPUComputePassDescriptor;
 
-typedef uint64_t WGPUId_TextureView_Dummy;
+typedef WGPUNonZeroU64 WGPUId_TextureView_Dummy;
 
 typedef WGPUId_TextureView_Dummy WGPUTextureViewId;
-
-typedef const WGPUTextureViewId *WGPUOptionRef_TextureViewId;
 
 typedef struct {
   double r;
@@ -328,13 +355,13 @@ typedef struct {
 
 typedef struct {
   WGPUTextureViewId attachment;
-  WGPUOptionRef_TextureViewId resolve_target;
+  WGPUOption_TextureViewId resolve_target;
   WGPULoadOp load_op;
   WGPUStoreOp store_op;
   WGPUColor clear_color;
-} WGPURenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId;
+} WGPURenderPassColorAttachmentDescriptorBase_TextureViewId;
 
-typedef WGPURenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId WGPURenderPassColorAttachmentDescriptor;
+typedef WGPURenderPassColorAttachmentDescriptorBase_TextureViewId WGPURenderPassColorAttachmentDescriptor;
 
 typedef struct {
   WGPUTextureViewId attachment;
@@ -357,11 +384,11 @@ typedef struct {
 typedef struct {
   WGPUBufferId buffer;
   WGPUBufferAddress offset;
-  uint32_t row_pitch;
-  uint32_t image_height;
+  uint32_t bytes_per_row;
+  uint32_t rows_per_image;
 } WGPUBufferCopyView;
 
-typedef uint64_t WGPUId_Texture_Dummy;
+typedef WGPUNonZeroU64 WGPUId_Texture_Dummy;
 
 typedef WGPUId_Texture_Dummy WGPUTextureId;
 
@@ -395,15 +422,15 @@ typedef const char *WGPURawString;
 
 typedef uint32_t WGPUDynamicOffset;
 
-typedef uint64_t WGPUId_ComputePipeline_Dummy;
+typedef WGPUNonZeroU64 WGPUId_ComputePipeline_Dummy;
 
 typedef WGPUId_ComputePipeline_Dummy WGPUComputePipelineId;
 
-typedef uint64_t WGPUId_Surface;
+typedef WGPUNonZeroU64 WGPUId_Surface;
 
 typedef WGPUId_Surface WGPUSurfaceId;
 
-typedef uint64_t WGPUId_BindGroupLayout_Dummy;
+typedef WGPUNonZeroU64 WGPUId_BindGroupLayout_Dummy;
 
 typedef WGPUId_BindGroupLayout_Dummy WGPUBindGroupLayoutId;
 
@@ -413,7 +440,7 @@ typedef struct {
   WGPUBufferAddress size;
 } WGPUBufferBinding;
 
-typedef uint64_t WGPUId_Sampler_Dummy;
+typedef WGPUNonZeroU64 WGPUId_Sampler_Dummy;
 
 typedef WGPUId_Sampler_Dummy WGPUSamplerId;
 
@@ -447,12 +474,13 @@ typedef struct {
 typedef struct {
   uint32_t binding;
   WGPUBindingResource resource;
-} WGPUBindGroupBinding;
+} WGPUBindGroupEntry;
 
 typedef struct {
+  const char *label;
   WGPUBindGroupLayoutId layout;
-  const WGPUBindGroupBinding *bindings;
-  uintptr_t bindings_length;
+  const WGPUBindGroupEntry *entries;
+  uintptr_t entries_length;
 } WGPUBindGroupDescriptor;
 
 typedef uint32_t WGPUShaderStage;
@@ -465,14 +493,17 @@ typedef struct {
   uint32_t binding;
   WGPUShaderStage visibility;
   WGPUBindingType ty;
-  WGPUTextureViewDimension texture_dimension;
   bool multisampled;
-  bool dynamic;
-} WGPUBindGroupLayoutBinding;
+  bool has_dynamic_offset;
+  WGPUTextureViewDimension view_dimension;
+  WGPUTextureComponentType texture_component_type;
+  WGPUTextureFormat storage_texture_format;
+} WGPUBindGroupLayoutEntry;
 
 typedef struct {
-  const WGPUBindGroupLayoutBinding *bindings;
-  uintptr_t bindings_length;
+  const char *label;
+  const WGPUBindGroupLayoutEntry *entries;
+  uintptr_t entries_length;
 } WGPUBindGroupLayoutDescriptor;
 
 typedef uint32_t WGPUBufferUsage;
@@ -489,19 +520,20 @@ typedef uint32_t WGPUBufferUsage;
 #define WGPUBufferUsage_NONE 0
 
 typedef struct {
+  const char *label;
   WGPUBufferAddress size;
   WGPUBufferUsage usage;
 } WGPUBufferDescriptor;
 
 typedef struct {
-  uint32_t todo;
+  const char *label;
 } WGPUCommandEncoderDescriptor;
 
-typedef uint64_t WGPUId_PipelineLayout_Dummy;
+typedef WGPUNonZeroU64 WGPUId_PipelineLayout_Dummy;
 
 typedef WGPUId_PipelineLayout_Dummy WGPUPipelineLayoutId;
 
-typedef uint64_t WGPUId_ShaderModule_Dummy;
+typedef WGPUNonZeroU64 WGPUId_ShaderModule_Dummy;
 
 typedef WGPUId_ShaderModule_Dummy WGPUShaderModuleId;
 
@@ -520,7 +552,7 @@ typedef struct {
   uintptr_t bind_group_layouts_length;
 } WGPUPipelineLayoutDescriptor;
 
-typedef uint64_t WGPUId_RenderPipeline_Dummy;
+typedef WGPUNonZeroU64 WGPUId_RenderPipeline_Dummy;
 
 typedef WGPUId_RenderPipeline_Dummy WGPURenderPipelineId;
 
@@ -579,17 +611,17 @@ typedef struct {
 } WGPUVertexAttributeDescriptor;
 
 typedef struct {
-  WGPUBufferAddress stride;
+  WGPUBufferAddress array_stride;
   WGPUInputStepMode step_mode;
   const WGPUVertexAttributeDescriptor *attributes;
   uintptr_t attributes_length;
-} WGPUVertexBufferDescriptor;
+} WGPUVertexBufferLayoutDescriptor;
 
 typedef struct {
   WGPUIndexFormat index_format;
-  const WGPUVertexBufferDescriptor *vertex_buffers;
+  const WGPUVertexBufferLayoutDescriptor *vertex_buffers;
   uintptr_t vertex_buffers_length;
-} WGPUVertexInputDescriptor;
+} WGPUVertexStateDescriptor;
 
 typedef struct {
   WGPUPipelineLayoutId layout;
@@ -600,7 +632,7 @@ typedef struct {
   const WGPUColorStateDescriptor *color_states;
   uintptr_t color_states_length;
   const WGPUDepthStencilStateDescriptor *depth_stencil_state;
-  WGPUVertexInputDescriptor vertex_input;
+  WGPUVertexStateDescriptor vertex_state;
   uint32_t sample_count;
   uint32_t sample_mask;
   bool alpha_to_coverage_enabled;
@@ -615,7 +647,7 @@ typedef struct {
   WGPUFilterMode mipmap_filter;
   float lod_min_clamp;
   float lod_max_clamp;
-  WGPUCompareFunction compare_function;
+  WGPUCompareFunction compare;
 } WGPUSamplerDescriptor;
 
 typedef struct {
@@ -627,7 +659,7 @@ typedef struct {
   WGPUU32Array code;
 } WGPUShaderModuleDescriptor;
 
-typedef uint64_t WGPUId_SwapChain_Dummy;
+typedef WGPUNonZeroU64 WGPUId_SwapChain_Dummy;
 
 typedef WGPUId_SwapChain_Dummy WGPUSwapChainId;
 
@@ -649,6 +681,7 @@ typedef struct {
 } WGPUSwapChainDescriptor;
 
 typedef struct {
+  const char *label;
   WGPUExtent3d size;
   uint32_t array_layer_count;
   uint32_t mip_level_count;
@@ -662,20 +695,21 @@ typedef WGPUDeviceId WGPUQueueId;
 
 typedef WGPURawPass *WGPURenderPassId;
 
-typedef uint64_t WGPUId_RenderBundle_Dummy;
+typedef WGPUNonZeroU64 WGPUId_RenderBundle_Dummy;
 
 typedef WGPUId_RenderBundle_Dummy WGPURenderBundleId;
 
 typedef struct {
   WGPUPowerPreference power_preference;
+  WGPUOption_SurfaceId compatible_surface;
 } WGPURequestAdapterOptions;
 
 typedef uint32_t WGPUBackendBit;
 
-typedef void (*WGPURequestAdapterCallback)(WGPUAdapterId id, void *userdata);
+typedef void (*WGPURequestAdapterCallback)(WGPUOption_AdapterId id, void *userdata);
 
 typedef struct {
-  WGPUTextureViewId view_id;
+  WGPUOption_TextureViewId view_id;
 } WGPUSwapChainOutput;
 
 typedef struct {
@@ -846,9 +880,9 @@ WGPUTextureId wgpu_device_create_texture(WGPUDeviceId device_id, const WGPUTextu
 
 void wgpu_device_destroy(WGPUDeviceId device_id);
 
-void wgpu_device_get_limits(WGPUDeviceId _device_id, WGPULimits *limits);
+WGPUQueueId wgpu_device_get_default_queue(WGPUDeviceId device_id);
 
-WGPUQueueId wgpu_device_get_queue(WGPUDeviceId device_id);
+void wgpu_device_get_limits(WGPUDeviceId _device_id, WGPULimits *limits);
 
 void wgpu_device_poll(WGPUDeviceId device_id, bool force_wait);
 
@@ -922,7 +956,8 @@ void wgpu_render_pass_set_blend_color(WGPURawPass *pass, const WGPUColor *color)
 
 void wgpu_render_pass_set_index_buffer(WGPURawPass *pass,
                                        WGPUBufferId buffer_id,
-                                       WGPUBufferAddress offset);
+                                       WGPUBufferAddress offset,
+                                       WGPUBufferAddress size);
 
 void wgpu_render_pass_set_pipeline(WGPURawPass *pass, WGPURenderPipelineId pipeline_id);
 
@@ -934,17 +969,11 @@ void wgpu_render_pass_set_scissor_rect(WGPURawPass *pass,
 
 void wgpu_render_pass_set_stencil_reference(WGPURawPass *pass, uint32_t value);
 
-/**
- * # Safety
- *
- * This function is unsafe as there is no guarantee that the given pointers
- * (`buffer_ids` and `offsets`) are valid for `length` elements.
- */
-void wgpu_render_pass_set_vertex_buffers(WGPURawPass *pass,
-                                         uint32_t start_slot,
-                                         const WGPUBufferId *buffer_ids,
-                                         const WGPUBufferAddress *offsets,
-                                         uintptr_t length);
+void wgpu_render_pass_set_vertex_buffer(WGPURawPass *pass,
+                                        uint32_t slot,
+                                        WGPUBufferId buffer_id,
+                                        WGPUBufferAddress offset,
+                                        WGPUBufferAddress size);
 
 void wgpu_render_pass_set_viewport(WGPURawPass *pass,
                                    float x,

@@ -4,9 +4,6 @@
 ## Comparing webgpu.idl with wgpu.h
 
 ### Comparing flags
-*   DEFAULT flag missing in .idl
-*   DESIRED flag missing in .idl
-*   MAX flag missing in .idl
 *   ShaderStage
 *  c: NONE:0, VERTEX:1, FRAGMENT:2, COMPUTE:4
 *  i: VERTEX:1, FRAGMENT:2, COMPUTE:4
@@ -24,20 +21,16 @@
 *  BufferMapAsyncStatus enum missing in .idl
 *  PresentMode enum missing in .idl
 *  BindingResource_Tag enum missing in .idl
-*  ExtensionNameenum missing in .h
-*  TextureComponentTypeenum missing in .h
-*  QueryTypeenum missing in .h
-*  ErrorFilterenum missing in .h
-*  BindingType.comparison-sampler is missing
-*  BindingType.readonly-storage-texture is missing
-*  BindingType.writeonly-storage-texture is missing
-*  TextureFormat.rgb10a2unorm is missing
-*  TextureFormat.rg11b10float is missing
+*  ExtensionName enum missing in .h
+*  QueryType enum missing in .h
+*  ErrorFilter enum missing in .h
+*  TextureFormat.rgb10a2unorm missing in .h
+*  TextureFormat.rg11b10float missing in .h
 
 ### Comparing structs
 *  Extensions struct missing in .idl
 *  RawPass struct missing in .idl
-*  RenderPassColorAttachmentDescriptorBase_TextureViewId__OptionRef_TextureViewId struct missing in .idl
+*  RenderPassColorAttachmentDescriptorBase_TextureViewId struct missing in .idl
 *  RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId struct missing in .idl
 *  Origin3d struct missing in .idl
 *  Extent3d struct missing in .idl
@@ -45,16 +38,8 @@
 *  BindingResource_WGPUSampler_Body struct missing in .idl
 *  BindingResource_WGPUTextureView_Body struct missing in .idl
 *  BindingResource struct missing in .idl
-*  BindGroupBinding struct missing in .idl
-*  BindGroupLayoutBinding struct missing in .idl
-*  VertexBufferDescriptor struct missing in .idl
-*  VertexInputDescriptor struct missing in .idl
 *  U32Array struct missing in .idl
 *  SwapChainOutput struct missing in .idl
-*  BindGroupLayoutEntry struct missing in .h
-*  BindGroupEntry struct missing in .h
-*  VertexStateDescriptor struct missing in .h
-*  VertexBufferLayoutDescriptor struct missing in .h
 *  ImageBitmapCopyView struct missing in .h
 *  RenderPassColorAttachmentDescriptor struct missing in .h
 *  RenderPassDepthStencilAttachmentDescriptor struct missing in .h
@@ -72,27 +57,18 @@
 *   RenderPassDescriptor
 *  c: ['color_attachments', 'color_attachments_length', 'depth_stencil_attachment']
 *  i: ['label', 'colorAttachments', 'depthStencilAttachment', 'occlusionQuerySet']
-*   BufferCopyView
-*  c: ['buffer', 'offset', 'row_pitch', 'image_height']
-*  i: ['buffer', 'offset', 'bytesPerRow', 'rowsPerImage']
-*   BindGroupDescriptor
-*  c: ['layout', 'bindings', 'bindings_length']
-*  i: ['label', 'layout', 'entries']
-*   BindGroupLayoutDescriptor
-*  c: ['bindings', 'bindings_length']
-*  i: ['label', 'entries']
-*   RenderPipelineDescriptor
-*  c: ['layout', 'vertex_stage', 'fragment_stage', 'primitive_topology', 'rasterization_state', 'color_states', 'color_states_length', 'depth_stencil_state', 'vertex_input', 'sample_count', 'sample_mask', 'alpha_to_coverage_enabled']
-*  i: ['label', 'layout', 'vertexStage', 'fragmentStage', 'primitiveTopology', 'rasterizationState', 'colorStates', 'depthStencilState', 'vertexState', 'sampleCount', 'sampleMask', 'alphaToCoverageEnabled']
-*   SamplerDescriptor
-*  c: ['address_mode_u', 'address_mode_v', 'address_mode_w', 'mag_filter', 'min_filter', 'mipmap_filter', 'lod_min_clamp', 'lod_max_clamp', 'compare_function']
-*  i: ['label', 'addressModeU', 'addressModeV', 'addressModeW', 'magFilter', 'minFilter', 'mipmapFilter', 'lodMinClamp', 'lodMaxClamp', 'compare']
+*   BindGroupLayoutEntry
+*  c: ['binding', 'visibility', 'ty', 'multisampled', 'has_dynamic_offset', 'view_dimension', 'texture_component_type', 'storage_texture_format']
+*  i: ['binding', 'visibility', 'type', 'viewDimension', 'textureComponentType', 'storageTextureFormat', 'multisampled', 'hasDynamicOffset']
 *   SwapChainDescriptor
 *  c: ['usage', 'format', 'width', 'height', 'present_mode']
 *  i: ['label', 'device', 'format', 'usage']
 *   TextureDescriptor
-*  c: ['size', 'array_layer_count', 'mip_level_count', 'sample_count', 'dimension', 'format', 'usage']
+*  c: ['label', 'size', 'array_layer_count', 'mip_level_count', 'sample_count', 'dimension', 'format', 'usage']
 *  i: ['label', 'size', 'mipLevelCount', 'sampleCount', 'dimension', 'format', 'usage']
+*   RequestAdapterOptions
+*  c: ['power_preference', 'compatible_surface']
+*  i: ['powerPreference']
 *   TextureViewDescriptor
 *  c: ['format', 'dimension', 'aspect', 'base_mip_level', 'level_count', 'base_array_layer', 'array_layer_count']
 *  i: ['label', 'format', 'dimension', 'aspect', 'baseMipLevel', 'mipLevelCount', 'baseArrayLayer', 'arrayLayerCount']
@@ -106,41 +82,41 @@
 
 ### Check functions in base.py
 *  Found 60 functions already implemented
-*  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
-*  Not implemented: void resolveQuerySet( GPUQuerySet querySet, GPUSize32 queryFirstIndex, GPUSize32 queryCount, GPUBuffer dstBuffer, GPUSize64 dstOffset);
-*  Not implemented: void beginOcclusionQuery(GPUSize32 queryIndex);
-*  Not implemented: void endOcclusionQuery(GPUSize32 queryIndex);
-*  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
-*  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue);
-*  Not implemented: GPUFenceValue getCompletedValue();
-*  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue);
-*  Not implemented: void destroy();
+*  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
+*  Not implemented: void resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset); (commandencoderresolvequeryset)
+*  Not implemented: void beginOcclusionQuery(GPUSize32 queryIndex); (renderpassencoderbeginocclusionquery)
+*  Not implemented: void endOcclusionQuery(GPUSize32 queryIndex); (renderpassencoderendocclusionquery)
+*  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {}); (queuecreatefence)
+*  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue); (queuesignal)
+*  Not implemented: GPUFenceValue getCompletedValue(); (fencegetcompletedvalue)
+*  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue); (fenceoncompletion)
+*  Not implemented: void destroy(); (querysetdestroy)
 *  Found unknown function create_default_view (texturecreatedefaultview)
 *  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into base.py
 
 ### Check functions in backends/rs.py
 *  Found 48 functions already implemented
-*  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
-*  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
-*  Not implemented: void pushDebugGroup(DOMString groupLabel);
-*  Not implemented: void popDebugGroup();
-*  Not implemented: void insertDebugMarker(DOMString markerLabel);
-*  Not implemented: void resolveQuerySet( GPUQuerySet querySet, GPUSize32 queryFirstIndex, GPUSize32 queryCount, GPUBuffer dstBuffer, GPUSize64 dstOffset);
-*  Not implemented: void pushDebugGroup(DOMString groupLabel);
-*  Not implemented: void popDebugGroup();
-*  Not implemented: void insertDebugMarker(DOMString markerLabel);
-*  Not implemented: void beginOcclusionQuery(GPUSize32 queryIndex);
-*  Not implemented: void endOcclusionQuery(GPUSize32 queryIndex);
-*  Not implemented: void executeBundles(sequence<GPURenderBundle> bundles);
-*  Not implemented: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
-*  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
-*  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue);
-*  Not implemented: void copyImageBitmapToTexture( GPUImageBitmapCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
-*  Not implemented: GPUFenceValue getCompletedValue();
-*  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue);
-*  Not implemented: void destroy();
-*  Not implemented: GPUTexture getCurrentTexture();
+*  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor); (devicecreaterenderbundleencoder)
+*  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
+*  Not implemented: void pushDebugGroup(DOMString groupLabel); (commandencoderpushdebuggroup)
+*  Not implemented: void popDebugGroup(); (commandencoderpopdebuggroup)
+*  Not implemented: void insertDebugMarker(DOMString markerLabel); (commandencoderinsertdebugmarker)
+*  Not implemented: void resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset); (commandencoderresolvequeryset)
+*  Not implemented: void pushDebugGroup(DOMString groupLabel); (programmablepassencoderpushdebuggroup)
+*  Not implemented: void popDebugGroup(); (programmablepassencoderpopdebuggroup)
+*  Not implemented: void insertDebugMarker(DOMString markerLabel); (programmablepassencoderinsertdebugmarker)
+*  Not implemented: void beginOcclusionQuery(GPUSize32 queryIndex); (renderpassencoderbeginocclusionquery)
+*  Not implemented: void endOcclusionQuery(GPUSize32 queryIndex); (renderpassencoderendocclusionquery)
+*  Not implemented: void executeBundles(sequence<GPURenderBundle> bundles); (renderpassencoderexecutebundles)
+*  Not implemented: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {}); (renderbundleencoderfinish)
+*  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {}); (queuecreatefence)
+*  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue); (queuesignal)
+*  Not implemented: void copyImageBitmapToTexture( GPUImageBitmapCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize); (queuecopyimagebitmaptotexture)
+*  Not implemented: GPUFenceValue getCompletedValue(); (fencegetcompletedvalue)
+*  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue); (fenceoncompletion)
+*  Not implemented: void destroy(); (querysetdestroy)
+*  Not implemented: GPUTexture getCurrentTexture(); (swapchaingetcurrenttexture)
 *  Found unknown function create_default_view (texturecreatedefaultview)
 *  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into backends/rs.py

@@ -10,9 +10,6 @@ from pytest import skip
 from testutils import can_use_wgpu_lib, get_default_device
 from renderutils import render_to_texture, render_to_screen  # noqa
 
-# todo: use "image" instead of ""texture" to communicate usage as storage?
-# todo: maybe specify sampling in type description??
-
 
 if not can_use_wgpu_lib:
     skip("Skipping tests that need the wgpu lib", allow_module_level=True)
@@ -24,11 +21,12 @@ def test_compute_tex_1d_rgba8uint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "1d rgba8ui"),
+        tex1: ("texture", 0, "1d rgba8ui"),
+        tex2: ("texture", 1, "1d rgba8ui"),
     ):
-        color = tex.read(index.x)
+        color = tex1.read(index.x)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex.write(index.x, color)
+        tex2.write(index.x, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 1, 1, 4
@@ -50,11 +48,13 @@ def test_compute_tex_1d_rgba8uint():
 def test_compute_tex_1d_rg16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "1d rg16i"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "1d rg16i"),
+        tex2: ("texture", 1, "1d rg16i"),
     ):
-        color = tex.read(index.x)
+        color = tex1.read(index.x)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex.write(index.x, color)
+        tex2.write(index.x, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 1, 1, 2
@@ -76,11 +76,13 @@ def test_compute_tex_1d_rg16sint():
 def test_compute_tex_1d_r16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "1d r16i"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "1d r16i"),
+        tex2: ("texture", 1, "1d r16i"),
     ):
-        color = tex.read(index.x)
+        color = tex1.read(index.x)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex.write(index.x, color)
+        tex2.write(index.x, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 1, 1, 1
@@ -102,11 +104,13 @@ def test_compute_tex_1d_r16sint():
 def test_compute_tex_1d_r32float():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "1d r32f"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "1d r32f"),
+        tex2: ("texture", 1, "1d r32f"),
     ):
-        color = tex.read(index.x)
+        color = tex1.read(index.x)
         color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        tex.write(index.x, color)
+        tex2.write(index.x, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 1, 1, 1
@@ -132,12 +136,13 @@ def test_compute_tex_2d_rgba8uint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "2d rgba8ui"),
+        tex1: ("texture", 0, "2d rgba8ui"),
+        tex2: ("texture", 1, "2d rgba8ui"),
     ):
-        color = tex.read(index.xy)
+        color = tex1.read(index.xy)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        # tex.write(index.xy, color)  # is syntactic sugar for:
-        stdlib.write(tex, index.xy, color)
+        # tex2.write(index.xy, color)  # is syntactic sugar for:
+        stdlib.write(tex2, index.xy, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 1, 4
@@ -160,11 +165,13 @@ def test_compute_tex_2d_rgba8uint():
 def test_compute_tex_2d_rg16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "2d rg16i"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "2d rg16i"),
+        tex2: ("texture", 1, "2d rg16i"),
     ):
-        color = tex.read(index.xy)
+        color = tex1.read(index.xy)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex.write(index.xy, color)
+        tex2.write(index.xy, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 1, 2
@@ -187,11 +194,13 @@ def test_compute_tex_2d_rg16sint():
 def test_compute_tex_2d_r16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "2d r16i"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "2d r16i"),
+        tex2: ("texture", 1, "2d r16i"),
     ):
-        color = tex.read(index.xy)
+        color = tex1.read(index.xy)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex.write(index.xy, color)
+        tex2.write(index.xy, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 1, 1
@@ -214,11 +223,13 @@ def test_compute_tex_2d_r16sint():
 def test_compute_tex_2d_r32float():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "2d r32f"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "2d r32f"),
+        tex2: ("texture", 1, "2d r32f"),
     ):
-        color = tex.read(index.xy)
+        color = tex1.read(index.xy)
         color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        tex.write(index.xy, color)
+        tex2.write(index.xy, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 1, 1
@@ -245,11 +256,12 @@ def test_compute_tex_3d_rgba8uint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex: ("texture", 0, "3d rgba8ui"),
+        tex1: ("texture", 0, "3d rgba8ui"),
+        tex2: ("texture", 1, "3d rgba8ui"),
     ):
-        color = tex.read(index.xyz)
+        color = tex1.read(index.xyz)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex.write(index.xyz, color)
+        tex2.write(index.xyz, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 6, 4
@@ -273,11 +285,13 @@ def test_compute_tex_3d_rgba8uint():
 def test_compute_tex_3d_rg16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "3d rg16i"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "3d rg16i"),
+        tex2: ("texture", 1, "3d rg16i"),
     ):
-        color = tex.read(index.xyz)
+        color = tex1.read(index.xyz)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex.write(index.xyz, color)
+        tex2.write(index.xyz, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 6, 2
@@ -301,11 +315,13 @@ def test_compute_tex_3d_rg16sint():
 def test_compute_tex_3d_r16sint():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "3d r16i"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "3d r16i"),
+        tex2: ("texture", 1, "3d r16i"),
     ):
-        color = tex.read(index.xyz)
+        color = tex1.read(index.xyz)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex.write(index.xyz, color)
+        tex2.write(index.xyz, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 6, 1
@@ -329,11 +345,13 @@ def test_compute_tex_3d_r16sint():
 def test_compute_tex_3d_r32float():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), tex: ("texture", 0, "3d r32f"),
+        index: ("input", "GlobalInvocationId", ivec3),
+        tex1: ("texture", 0, "3d r32f"),
+        tex2: ("texture", 1, "3d r32f"),
     ):
-        color = tex.read(index.xyz)
+        color = tex1.read(index.xyz)
         color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        tex.write(index.xyz, color)
+        tex2.write(index.xyz, color)
 
     # Generate data
     nx, ny, nz, nc = 7, 8, 6, 1
@@ -375,16 +393,29 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     device = get_default_device()
     cshader = device.create_shader_module(code=compute_shader)
 
-    # Create texture and view
-    texture = device.create_texture(
+    # Create textures and views
+    texture1 = device.create_texture(
         size=(nx, ny, nz),
         dimension=texture_dim,
         format=texture_format,
-        usage=wgpu.TextureUsage.STORAGE
-        | wgpu.TextureUsage.COPY_DST
-        | wgpu.TextureUsage.COPY_SRC,
+        usage=wgpu.TextureUsage.STORAGE | wgpu.TextureUsage.COPY_DST,
     )
-    texture_view = texture.create_default_view()
+    texture2 = device.create_texture(
+        size=(nx, ny, nz),
+        dimension=texture_dim,
+        format=texture_format,
+        usage=wgpu.TextureUsage.STORAGE | wgpu.TextureUsage.COPY_SRC,
+    )
+    texture_view1 = texture1.create_default_view()
+    texture_view2 = texture2.create_default_view()
+
+    # Determine texture component type from the format
+    if texture_format.endswith(("norm", "float")):
+        texture_component_type = wgpu.TextureComponentType.float
+    elif "uint" in texture_format:
+        texture_component_type = wgpu.TextureComponentType.uint
+    else:
+        texture_component_type = wgpu.TextureComponentType.sint
 
     # Create buffer that we need to upload the data
     buffer_usage = (
@@ -398,16 +429,28 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     assert buffer.usage == buffer_usage
 
     # Define bindings
-    # todo: we're cheating here. wgpu-native has storage_texture, but WebGPU
-    # only has readonly-storage-texture or writeonly-storage-texture. We will
-    # probably at some point be forced to use two textures in these tests :)
-    bindings = [{"binding": 0, "resource": texture_view}]
+    # One can see here why we need 2 textures: one is readonly, one writeonly
+    bindings = [
+        {"binding": 0, "resource": texture_view1},
+        {"binding": 1, "resource": texture_view2},
+    ]
     binding_layouts = [
         {
             "binding": 0,
             "visibility": wgpu.ShaderStage.COMPUTE,
-            "type": wgpu.BindingType.readonly_storage_texture,  # == storage-texture
-        }
+            "type": wgpu.BindingType.readonly_storage_texture,  # <-
+            "view_dimension": wgpu.TextureViewDimension.d2,
+            "storage_texture_format": texture_format,
+            "texture_component_type": texture_component_type,
+        },
+        {
+            "binding": 1,
+            "visibility": wgpu.ShaderStage.COMPUTE,
+            "type": wgpu.BindingType.writeonly_storage_texture,  # <-
+            "view_dimension": wgpu.TextureViewDimension.d2,
+            "storage_texture_format": texture_format,
+            "texture_component_type": texture_component_type,
+        },
     ]
     bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
     pipeline_layout = device.create_pipeline_layout(
@@ -422,8 +465,13 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     )
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
-        {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {
+            "buffer": buffer,
+            "offset": 0,
+            "bytes_per_row": bpp * nx,
+            "rows_per_image": ny,
+        },
+        {"texture": texture1, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
     compute_pass = command_encoder.begin_compute_pass()
@@ -434,8 +482,13 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     compute_pass.dispatch(nx, ny, nz)
     compute_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
-        {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"buffer": buffer, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {"texture": texture2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {
+            "buffer": buffer,
+            "offset": 0,
+            "bytes_per_row": bpp * nx,
+            "rows_per_image": ny,
+        },
         (nx, ny, nz),
     )
     device.default_queue.submit([command_encoder.finish()])

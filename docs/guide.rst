@@ -44,6 +44,16 @@ For now, we'll direct you to some related tutorials:
 * https://rust-tutorials.github.io/learn-wgpu/
 
 
+Coordinate system
+-----------------
+
+The Y-axis is up in normalized device coordinate (NDC): point(-1.0, -1.0)
+in NDC is located at the bottom-left corner of NDC. In addition, x and
+y in NDC should be between -1.0 and 1.0 inclusive, while z in NDC should
+be between 0.0 and 1.0 inclusive. Vertices out of this range in NDC
+will not introduce any errors, but they will be clipped.
+
+
 Examples
 --------
 

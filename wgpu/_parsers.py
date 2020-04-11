@@ -276,9 +276,6 @@ class IdlParser(BaseParser):
                     line = self.readline()
                     lines.append(line)
                 name = lines[0].split(" ", 1)[1].strip("{ \t\r\n")
-                # TODO: unused
-                # if "GPUDeviceDescriptor" in name:
-                #     a = 323
                 if ":" in name:
                     name, _, base = name.partition(":")
                     name, base = name.strip(), base.strip()
@@ -295,16 +292,12 @@ class IdlParser(BaseParser):
                         continue
                     assert line.endswith(";")
                     arg = line.strip().strip(",;").strip()
-                    # TODO: unused
-                    # is_required = False
                     default = None
                     if "=" in arg:
                         arg, default = arg.rsplit("=", 1)
                         arg, default = arg.strip(), default.strip()
                     arg_type, arg_name = arg.strip().rsplit(" ", 1)
                     if arg_type.startswith("required "):
-                        # TODO: unused
-                        # is_required = True
                         arg_type = arg_type[9:]
                     arg_type = typedefs.get(arg_type, arg_type)
                     if arg_type in ["double", "float"]:
@@ -322,7 +315,6 @@ class IdlParser(BaseParser):
                         t = "str"
                     elif arg_type.startswith("GPU"):
                         t = arg_type
-                        # todo: can in some cases resolve this to int/float via typedefs
                     elif arg_type.startswith("sequence<GPU"):
                         t = arg_type[9:-1] + "-list"
                     elif arg_type == "ImageBitmap":
@@ -354,56 +346,6 @@ class IdlParser(BaseParser):
 class HParser(BaseParser):
     """ Parse (part of) .h files to obtain info about flags, enums and structs.
     """
-
-    # def pythonise_type(self, t):
-    #     t = self.types.get(t, t)
-    #     t = self.types.get(t, t)  # because can be XX -> XXDummy -> uint32_t
-    #     if t in ("float", "double"):
-    #         return "float"
-    #     elif t in ("int32_t", "int64_t", "uint32_t", "uint64_t"):
-    #         return "int"
-    #     elif t.endswith("_t"):
-    #         return t[:-2]
-    #     elif t.startswith("WGPU"):
-    #         return t[4:]
-    #     else:
-    #         return t
-
-    # def type_annotation(self, t):
-    #     t = self.pythonise_type(t)
-    #     if t in ("int", "float"):
-    #         return f": {t}"
-    #     elif t == "void":
-    #         return ""
-    #     else:
-    #         return f": {t!r}"
-
-    # def type_to_ctype(self, t):
-    #     while self.types.get(t, t) is not t:
-    #         t = self.types.get(t, t)
-    #     if t == "void":
-    #         return "ctypes.c_void_p"
-    #     elif t in ("bool", "float", "double"):
-    #         return "ctypes.c_" + t
-    #     elif t in ("uint8_t", "int32_t", "int64_t", "uint32_t", "uint64_t"):
-    #         return "ctypes.c_" + t[:-2]
-    #     elif t in ("uintptr_t", ):
-    #         return "ctypes.POINTER(ctypes.c_uint64)"  # todo: probably
-    #     elif t == "WGPURawString":
-    #         return "ctypes.c_char_p"
-    #     elif t in ("WGPUBufferMapReadCallback", "WGPUBufferMapWriteCallback",
-    #                "WGPURequestAdapterCallback"):
-    #         return "ctypes.c_void_p"  # todo: function pointer
-    #     elif t in self.structs:
-    #         return t
-    #     elif t in self.enums:
-    #         # todo: --->>>> uint32 causes access violation, ??? but with cffi it seems
-    #         #               enums are 4 bytes ...
-    #         return "ctypes.c_int64"
-    #     # elif t == "WGPUBindingResource":
-    #         # return "dunno"
-    #     else:
-    #         raise NotImplementedError()
 
     def _normalize(self):
         """ We don't do any name format normalization in the parser code itself;
@@ -447,6 +389,8 @@ class HParser(BaseParser):
                 parts = line.split()
                 if len(parts) == 3:
                     basename, _, name = parts[1].partition("_")
+                    if basename.upper() == basename:
+                        continue  # Maxima and other constants, not flags
                     val = int(parts[2].strip())
                     self.flags.setdefault(basename, {})[name] = val
                 elif "WGPU_LOCAL" in line:

@@ -127,6 +127,7 @@ def _main(canvas, device):
                 }
             ],
             depth_stencil_attachment=None,
+            occlusion_query_set=None,
         )
 
         render_pass.set_pipeline(render_pipeline)

@@ -26,5 +26,3 @@ def _register_backend(func, func_async):
         raise RuntimeError("WGPU backend can only be set once.")
     globals()["request_adapter"] = func
     globals()["request_adapter_async"] = func_async
-
-    # todo: auto-select upon using request_adapter?

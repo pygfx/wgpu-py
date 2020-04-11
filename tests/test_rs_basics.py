@@ -140,7 +140,7 @@ def test_do_a_copy_roundtrip():
     # Copy from buffer to texture
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
-        {"buffer": buf1, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {"buffer": buf1, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         {"texture": tex2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
@@ -157,7 +157,7 @@ def test_do_a_copy_roundtrip():
     command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_buffer(
         {"texture": tex3, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"buffer": buf4, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
     device.default_queue.submit([command_encoder.finish()])
@@ -191,7 +191,7 @@ def test_do_a_copy_roundtrip():
     # Copy from buffer to texture
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
-        {"buffer": buf1, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {"buffer": buf1, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         {"texture": tex2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
@@ -204,7 +204,7 @@ def test_do_a_copy_roundtrip():
     # Copy from texture to buffer
     command_encoder.copy_texture_to_buffer(
         {"texture": tex3, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"buffer": buf4, "offset": 0, "row_pitch": bpp * nx, "image_height": ny},
+        {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
 

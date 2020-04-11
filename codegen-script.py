@@ -114,7 +114,7 @@ for name in hp.enums:
         print(f"{name} enum missing in .idl")
 for name in ip.enums:
     if name not in hp.enums:
-        print(f"{name}enum missing in .h")
+        print(f"{name} enum missing in .h")
 for name in hp.enums:
     if name not in ip.enums:
         continue
@@ -125,7 +125,7 @@ for name in hp.enums:
         if hkey in hp.enums[name]:
             enummap[name + "." + ikey] = hp.enums[name][hkey]
         else:
-            print(f"{name}.{ikey} is missing")
+            print(f"{name}.{ikey} missing in .h")
 
 print("\n### Comparing structs")
 for name in hp.structs:
@@ -142,6 +142,7 @@ for name in hp.structs:
     keys3 = {to_neutral_name(key.replace("_length", "")) for key in keys1}
     keys4 = {to_neutral_name(key) for key in keys2}
     keys3.discard("todo")
+    keys3.discard("label")
     keys4.discard("label")
     if keys3 != keys4:
         print(f" {name}")
@@ -380,7 +381,7 @@ for fname in ("base.py", "backends/rs.py"):
     for func_id in ip.functions:
         if not get_func_id_match(func_id, api_functions):
             if not (func_id.endswith("constructor") or func_id.startswith("canvas")):
-                print(f"Not implemented: {ip.functions[func_id]}")
+                print(f"Not implemented: {ip.functions[func_id]} ({func_id})")
     for func_id in api_functions:
         if not get_func_id_match(func_id, ip.functions):
             if func_id not in ("newstruct", "getsurfaceidfromcanvas"):
