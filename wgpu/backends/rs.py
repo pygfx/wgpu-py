@@ -574,7 +574,9 @@ class GPUDevice(base.GPUDevice):
                     )[0],
                 }
             else:
-                raise TypeError(f"Unexpected resource type {type(resource)}")  # no-cover
+                raise TypeError(
+                    f"Unexpected resource type {type(resource)}"
+                )  # no-cover
             c_resource = new_struct("WGPUBindingResource *", **c_resource_kwargs)
             c_entry = new_struct(
                 "WGPUBindGroupEntry *",
