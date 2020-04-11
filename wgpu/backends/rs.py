@@ -503,8 +503,9 @@ class GPUDevice(base.GPUDevice):
                 need = {"view_dimension", "texture_component_type"}
                 if "storage" in type:
                     need.add("storage_texture_format")
-                if not all(x in entry for x in need):
-                    raise ValueError(f"{type} bindings should specify {need}")
+                assert all(
+                    x in entry for x in need
+                ), f"{type} binding should specify {need}"
             c_entry = new_struct(
                 "WGPUBindGroupLayoutEntry *",
                 binding=int(entry["binding"]),
