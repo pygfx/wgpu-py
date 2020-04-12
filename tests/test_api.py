@@ -14,6 +14,10 @@ def test_basic_api():
     assert wgpu.help
     assert wgpu.request_adapter
     assert wgpu.request_adapter_async
+    assert (
+        wgpu.base.request_adapter.__code__.co_varnames
+        == wgpu.base.request_adapter_async.__code__.co_varnames
+    )
 
 
 def test_enums_and_flags():
@@ -34,7 +38,7 @@ def test_enums_and_flags():
 def test_base_wgpu_api():
 
     with raises(RuntimeError) as error:
-        wgpu.base.request_adapter(power_preference="high-performance")
+        wgpu.base.request_adapter(canvas=None, power_preference="high-performance")
     assert "select a backend" in str(error.value).lower()
 
     # Fake a device and an adapter

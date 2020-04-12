@@ -359,15 +359,13 @@ for fname in ("base.py", "backends/rs.py"):
                 py_args = [field.py_arg() for field in arg_struct.values()]
                 if py_args[0] == "label: str":
                     py_args[0] = 'label=""'
-                if "requestadapter" in func_id:
-                    py_args = ["*"] + py_args
-                else:
                     py_args = ["self", "*"] + py_args
             else:
                 py_args = ["self"] + argnames
 
             # Replace function signature
-            api_lines[i] = preamble + ", ".join(py_args) + "):"
+            if "requestadapter" not in func_id:
+                api_lines[i] = preamble + ", ".join(py_args) + "):"
 
             # Insert comments
             if fname == "base.py":
