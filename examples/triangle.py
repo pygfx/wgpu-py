@@ -47,7 +47,7 @@ def fragment_shader(
 def main(canvas):
     """ Regular function to setup a viz on the given canvas.
     """
-    adapter = wgpu.request_adapter(power_preference="high-performance")
+    adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
     device = adapter.request_device(extensions=[], limits={})
     return _main(canvas, device)
 
@@ -55,7 +55,9 @@ def main(canvas):
 async def main_async(canvas):
     """ Async function to setup a viz on the given canvas.
     """
-    adapter = await wgpu.request_adapter_async(power_preference="high-performance")
+    adapter = await wgpu.request_adapter_async(
+        canvas=canvas, power_preference="high-performance"
+    )
     device = await adapter.request_device_async(extensions=[], limits={})
     return _main(canvas, device)
 

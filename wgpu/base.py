@@ -21,11 +21,15 @@ logger = logging.getLogger("wgpu")
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-def request_adapter(*, power_preference: "GPUPowerPreference"):
+def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
     """ Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
     implementation, from which one can request a :class:`GPUDevice`.
 
     Arguments:
+        canvas (WgpuCanvas): The canvas that the adapter should be able to
+            render to (to create a swap chain for, to be precise). Can be None
+            if you're not rendering to screen (or if you're confident that the
+            returned adapter will work just fine).
         powerPreference(PowerPreference): "high-performance" or "low-power"
     """
     raise RuntimeError(
@@ -35,7 +39,7 @@ def request_adapter(*, power_preference: "GPUPowerPreference"):
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 # IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
-async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
+async def request_adapter_async(*, canvas, power_preference: "GPUPowerPreference"):
     """ Async version of ``request_adapter()``.
     """
     raise RuntimeError(

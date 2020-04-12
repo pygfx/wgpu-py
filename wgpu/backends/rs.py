@@ -273,18 +273,27 @@ def _loadop_and_clear_from_value(value):
 
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
-def request_adapter(*, power_preference: "GPUPowerPreference"):
-    """ Request an GPUAdapter, the object that represents the implementation of WGPU.
-    This function uses the Rust WGPU library.
+def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
+    """ Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
+    implementation, from which one can request a :class:`GPUDevice`.
 
-    Params:
-        power_preference(enum): "high-performance" or "low-power"
+    This is the implementation based on the Rust wgpu-native library.
+
+    Arguments:
+        canvas (WgpuCanvas): The canvas that the adapter should be able to
+            render to (to create a swap chain for, to be precise). Can be None
+            if you're not rendering to screen (or if you're confident that the
+            returned adapter will work just fine).
+        powerPreference(PowerPreference): "high-performance" or "low-power"
     """
 
-    # todo: if we don't pass a valid surface id, there is no guarantee we'll
-    # be able to create a swapchain for it (from this adapter)
-    # Also, in visvis2 we had to memoize the surface id, must we do it too?
-    surface_id = 0  # get_surface_id_from_canvas(canvas)
+    # Get surface id that the adapter must be compatible with. If we
+    # don't pass a valid surface id, there is no guarantee we'll be
+    # able to create a swapchain for it (from this adapter).
+    if canvas is None:
+        surface_id = 0
+    else:
+        surface_id = get_surface_id_from_canvas(canvas)
 
     # Convert the descriptor
     struct = new_struct(
@@ -324,11 +333,11 @@ def request_adapter(*, power_preference: "GPUPowerPreference"):
 
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
-async def request_adapter_async(*, power_preference: "GPUPowerPreference"):
+async def request_adapter_async(*, canvas, power_preference: "GPUPowerPreference"):
     """ Async version of ``request_adapter()``.
     This function uses the Rust WGPU library.
     """
-    return request_adapter(power_preference=power_preference)  # no-cover
+    return request_adapter(canvas=canvas, power_preference=power_preference)  # no-cover
 
 
 # Mark as the backend at import time
