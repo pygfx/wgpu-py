@@ -82,7 +82,10 @@ def test_glfw_canvas_render():
     from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
 
     canvas = WgpuCanvas()
-    device = get_default_device()
+
+    # wgpu.utils.get_default_device()
+    adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
+    device = adapter.request_device()
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
