@@ -9,7 +9,7 @@ from python_shader import python2shader, vec4, i32
 from python_shader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip
-from testutils import can_use_wgpu_lib, get_default_device
+from testutils import can_use_wgpu_lib
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
