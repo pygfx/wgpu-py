@@ -548,7 +548,7 @@ class GPUDevice(GPUObject):
     ):
         """ Create a :class:`GPURenderBundle` object.
 
-        TODO
+        TODO: not yet available in wgpu-native
         """
         raise NotImplementedError()
 
@@ -948,21 +948,21 @@ class GPUCommandEncoder(GPUObject):
     # wgpu.help('commandencoderpushdebuggroup', dev=True)
     # IDL: void pushDebugGroup(DOMString groupLabel);
     def push_debug_group(self, group_label):
-        """ TODO
+        """ TODO: not yet available in wgpu-native
         """
         raise NotImplementedError()
 
     # wgpu.help('commandencoderpopdebuggroup', dev=True)
     # IDL: void popDebugGroup();
     def pop_debug_group(self):
-        """ TODO
+        """ TODO: not yet available in wgpu-native
         """
         raise NotImplementedError()
 
     # wgpu.help('commandencoderinsertdebugmarker', dev=True)
     # IDL: void insertDebugMarker(DOMString markerLabel);
     def insert_debug_marker(self, marker_label):
-        """ TODO
+        """ TODO: not yet available in wgpu-native
         """
         raise NotImplementedError()
 
@@ -1008,21 +1008,21 @@ class GPUProgrammablePassEncoder(GPUObject):
     # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
     # IDL: void pushDebugGroup(DOMString groupLabel);
     def push_debug_group(self, group_label):
-        """ TODO
+        """ Push a named debug group into the command stream.
         """
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
     # IDL: void popDebugGroup();
     def pop_debug_group(self):
-        """ TODO
+        """ Pop the active debug group.
         """
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
     # IDL: void insertDebugMarker(DOMString markerLabel);
     def insert_debug_marker(self, marker_label):
-        """ TODO
+        """ Insert the given message into the debug message queue.
         """
         raise NotImplementedError()
 
@@ -1230,7 +1230,7 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     # IDL: void executeBundles(sequence<GPURenderBundle> bundles);
     def execute_bundles(self, bundles):
         """
-        TODO
+        TODO: not yet available in wgpu-native
         """
         raise NotImplementedError()
 
@@ -1244,13 +1244,13 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
 
 class GPURenderBundle(GPUObject):
     """
-    TODO
+    TODO: not yet available in wgpu-native
     """
 
 
 class GPURenderBundleEncoder(GPURenderEncoderBase):
     """
-    TODO
+    TODO: not yet available in wgpu-native
     """
 
     # wgpu.help('RenderBundleDescriptor', 'renderbundleencoderfinish', dev=True)
@@ -1285,7 +1285,7 @@ class GPUQueue(GPUObject):
     # IDL: void copyImageBitmapToTexture( GPUImageBitmapCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
     def copy_image_bitmap_to_texture(self, source, destination, copy_size):
         """
-        TODO
+        TODO: not yet available in wgpu-native
         """
         raise NotImplementedError()
 
