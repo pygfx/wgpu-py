@@ -109,35 +109,35 @@ def _main(canvas, device):
         alpha_to_coverage_enabled=False,
     )
 
-    swap_chain = canvas.configure_swap_chain(
-        device,
-        canvas.get_swap_chain_preferred_format(device),
+    swap_chain = device.configure_swap_chain(
+        canvas,
+        device.get_swap_chain_preferred_format(canvas),
         wgpu.TextureUsage.OUTPUT_ATTACHMENT,
     )
 
     def draw_frame():
-        current_texture_view = swap_chain.get_current_texture_view()
-        command_encoder = device.create_command_encoder()
+        with swap_chain as current_texture_view:
+            command_encoder = device.create_command_encoder()
 
-        render_pass = command_encoder.begin_render_pass(
-            color_attachments=[
-                {
-                    "attachment": current_texture_view,
-                    "resolve_target": None,
-                    "load_value": (0, 0, 0, 1),  # LoadOp.load or color
-                    "store_op": wgpu.StoreOp.store,
-                }
-            ],
-            depth_stencil_attachment=None,
-            occlusion_query_set=None,
-        )
+            render_pass = command_encoder.begin_render_pass(
+                color_attachments=[
+                    {
+                        "attachment": current_texture_view,
+                        "resolve_target": None,
+                        "load_value": (0, 0, 0, 1),  # LoadOp.load or color
+                        "store_op": wgpu.StoreOp.store,
+                    }
+                ],
+                depth_stencil_attachment=None,
+                occlusion_query_set=None,
+            )
 
-        render_pass.set_pipeline(render_pipeline)
-        render_pass.set_bind_group(
-            0, bind_group, [], 0, 999999
-        )  # last 2 elements not used
-        render_pass.draw(3, 1, 0, 0)
-        render_pass.end_pass()
-        device.default_queue.submit([command_encoder.finish()])
+            render_pass.set_pipeline(render_pipeline)
+            render_pass.set_bind_group(
+                0, bind_group, [], 0, 999999
+            )  # last 2 elements not used
+            render_pass.draw(3, 1, 0, 0)
+            render_pass.end_pass()
+            device.default_queue.submit([command_encoder.finish()])
 
     canvas.draw_frame = draw_frame

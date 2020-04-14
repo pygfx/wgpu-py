@@ -26,10 +26,10 @@ def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
     implementation, from which one can request a :class:`GPUDevice`.
 
     Arguments:
-        canvas (WgpuCanvas): The canvas that the adapter should be able to
-            render to (to create a swap chain for, to be precise). Can be None
-            if you're not rendering to screen (or if you're confident that the
-            returned adapter will work just fine).
+        canvas (WgpuCanvasInterface): The canvas that the adapter should
+            be able to render to (to create a swap chain for, to be precise).
+            Can be None if you're not rendering to screen (or if you're
+            confident that the returned adapter will work just fine).
         powerPreference(PowerPreference): "high-performance" or "low-power"
     """
     raise RuntimeError(
@@ -553,18 +553,24 @@ class GPUDevice(GPUObject):
         """
         raise NotImplementedError()
 
-    def _gui_configure_swap_chain(self, canvas, format, usage):
-        """ Private method for the canvas to get a SwapChain object.
-        The canvas class implements configure_swap_chain(), as specified
-        by the WebGPU spec. The canvas, in turn, calls *this* method.
+    def configure_swap_chain(self, canvas, format, usage):
+        """ Get a :class:`GPUSwapChain` object for the given canvas.
+        In the WebGPU spec this is a method of the canvas. In wgpu-py
+        it's a method of the device.
+
+        Parameters:
+            canvas (WgpuCanvasInterface): An object implementing the canvas interface.
+            format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
+            usage (TextureUsage): Probably ``wgpu.TextureUsage.OUTPUT_ATTACHMENT``.
         """
+        # This was made a method of device to help decouple the canvas
+        # implementation from the wgpu API.
         raise NotImplementedError()
 
-    def _gui_get_swap_chain_preferred_format(self, canvas):
-        """ Private method for the canvas to get the preferred swap
-        chain format. The canvas class implements
-        get_swap_chain_preferred_format(), as specified by the WebGPU
-        spec. The canvas, in turn, calls *this* method.
+    def get_swap_chain_preferred_format(self, canvas):
+        """ Get the preferred swap chain format. In the WebGPU spec
+        this is a method of the canvas. In wgpu-py it's a method of the
+        device.
         """
         return "bgra8unorm-srgb"  # seems to be a good default
 
@@ -1301,22 +1307,42 @@ class GPUSwapChain(GPUObject):
     """
     A swap chain is a placeholder for a texture to be presented to the screen,
     so that you can provide the corresponding texture view as a color attachement
-    to ``command_encoder.begin_render_pass()``.
+    to :func:`GPUCommandEncoder.begin_render_pass`. The texture view can be
+    obtained by using the swap-chain in a with-statement. The swap-chain is
+    presented to the screen when the context exits.
 
-    You can obtain a swap chain using :func:`canvas.configure_swap_chain() <wgpu.gui.WgpuCanvasBase.configure_swap_chain>`.
+    Example:
+
+    .. code-block:: py
+
+        with swap_chain as texture_view:
+            ...
+            command_encoder.begin_render_pass(
+                color_attachments=[
+                    {
+                        "attachment": texture_view,
+                        ...
+                    }
+                ],
+                ...
+            )
+
+    You can obtain a swap chain using :func:`device.configure_swap_chain() <GPUDevice.configure_swap_chain>`.
     """
 
     # wgpu.help('swapchaingetcurrenttexture', dev=True)
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
-        """ For now, use ``get_current_texture_view()``.
+        """ WebGPU defines this method, but we deviate from the spec here:
+        you should use the swap-chain object as a context manager to obtain
+        a texture view to render to.
         """
-        raise NotImplementedError("Use get_current_texture_view() instead for now")
+        raise NotImplementedError(
+            "Use the swap-chain as a context manager to get a texture view."
+        )
 
-    def get_current_texture_view(self):
-        """ NOTICE: this function is likely to change or be replaced by
-        ``get_current_texture()`` at some point. An incompatibility
-        between wgpu-native and WebGPU requires us to implement this
-        workaround.
-        """
-        raise NotImplementedError()
+    def __enter__(self):
+        raise NotImplementedError()  # Get the current texture view
+
+    def __exit__(self, type, value, tb):
+        raise NotImplementedError()  # Present the current texture

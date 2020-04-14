@@ -2,4 +2,4 @@
 Code to provide a canvas to render to.
 """
 
-from .base import WGPUCanvasInterface, WgpuCanvasBase  # noqa: F401
+from .base import WgpuCanvasInterface, WgpuCanvasBase  # noqa: F401

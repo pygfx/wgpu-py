@@ -132,13 +132,13 @@ def test_glfw_canvas_render():
 
 def test_glfw_canvas_render_custom_canvas():
     """ Render an orange square ... in a glfw window. But not using WgpuCanvas.
-    This helps make sure that WGPUCanvasInterface is indeed the minimal
+    This helps make sure that WgpuCanvasInterface is indeed the minimal
     required canvas API.
     """
 
     import glfw
 
-    class CustomCanvas(wgpu.WGPUCanvasInterface):
+    class CustomCanvas:  # implements wgpu.WgpuCanvasInterface
         def __init__(self):
             glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
             glfw.window_hint(glfw.RESIZABLE, True)
@@ -158,6 +158,9 @@ def test_glfw_canvas_render_custom_canvas():
             else:
                 raise RuntimeError(f"Cannot get GLFW window id on {sys.platform}.")
 
+        def get_display_id(self):
+            return wgpu.WgpuCanvasInterface.get_display_id(self)
+
         def get_physical_size(self):
             psize = glfw.get_framebuffer_size(self.__window)
             return int(psize[0]), int(psize[1])
@@ -172,9 +175,6 @@ def test_glfw_canvas_render_custom_canvas():
         time.sleep(0.01)
         glfw.poll_events()
         draw_frame()
-        # Somehow we must present the swap chain. Since we subclassed
-        # WGPUCanvasInterface we can do it like this.
-        canvas._swap_chain._gui_present()
 
 
 def _get_draw_function(device, canvas):
@@ -223,33 +223,33 @@ def _get_draw_function(device, canvas):
         alpha_to_coverage_enabled=False,
     )
 
-    swap_chain = canvas.configure_swap_chain(
-        device,
-        canvas.get_swap_chain_preferred_format(device),
+    swap_chain = device.configure_swap_chain(
+        canvas,
+        device.get_swap_chain_preferred_format(canvas),
         wgpu.TextureUsage.OUTPUT_ATTACHMENT,
     )
 
     def draw_frame():
-        current_texture_view = swap_chain.get_current_texture_view()
-        command_encoder = device.create_command_encoder()
+        with swap_chain as current_texture_view:
+            command_encoder = device.create_command_encoder()
 
-        ca = {
-            "attachment": current_texture_view,
-            "resolve_target": None,
-            "load_value": (0, 0, 0, 0),
-            "store_op": wgpu.StoreOp.store,
-        }
-        render_pass = command_encoder.begin_render_pass(
-            color_attachments=[ca],
-            depth_stencil_attachment=None,
-            occlusion_query_set=None,
-        )
+            ca = {
+                "attachment": current_texture_view,
+                "resolve_target": None,
+                "load_value": (0, 0, 0, 0),
+                "store_op": wgpu.StoreOp.store,
+            }
+            render_pass = command_encoder.begin_render_pass(
+                color_attachments=[ca],
+                depth_stencil_attachment=None,
+                occlusion_query_set=None,
+            )
 
-        render_pass.set_pipeline(render_pipeline)
-        render_pass.set_bind_group(0, bind_group, [], 0, 999999)
-        render_pass.draw(4, 1, 0, 0)
-        render_pass.end_pass()
-        device.default_queue.submit([command_encoder.finish()])
+            render_pass.set_pipeline(render_pipeline)
+            render_pass.set_bind_group(0, bind_group, [], 0, 999999)
+            render_pass.draw(4, 1, 0, 0)
+            render_pass.end_pass()
+            device.default_queue.submit([command_encoder.finish()])
 
     return draw_frame
 

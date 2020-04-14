@@ -6,35 +6,17 @@ import ctypes.util
 logger = logging.getLogger("wgpu")
 
 
-class WGPUCanvasInterface:
+class WgpuCanvasInterface:
     """ This is the interface that a canvas object must implement in order
     to be a valid canvas that wgpu can work with.
     """
 
-    # NOTE: It is not necessary to subclass this class, though it's probably easier.
+    # NOTE: It is not necessary to actually subclass this class.
 
     def __init__(self, *args, **kwargs):
+        # The args/kwargs are there because we may be mixed with e.g. a Qt widget
         super().__init__(*args, **kwargs)
-        self._swap_chain = None
         self._display_id = None
-
-    def configure_swap_chain(self, device, format, usage):
-        """ Configures the swap chain for this canvas, and returns a
-        new :class:`GPUSwapChain <wgpu.GPUSwapChain>` object representing
-        it. Destroys any swapchain previously returned by this function,
-        including all of the textures it has produced.
-        This function is part of the WebGPU spec.
-
-        Also see :func:`get_swap_chain_preferred_format`.
-        """
-        self._swap_chain = device._gui_configure_swap_chain(self, format, usage)
-        return self._swap_chain
-
-    def get_swap_chain_preferred_format(self, device):
-        """ Get the preferred format of the swap chain for this canvas.
-        This function is part of the WebGPU spec.
-        """
-        return device._gui_get_swap_chain_preferred_format(self)
 
     def get_window_id(self):
         """ Get the native window id. This is used by the backends
@@ -72,8 +54,8 @@ class WGPUCanvasInterface:
         raise NotImplementedError()
 
 
-class WgpuCanvasBase(WGPUCanvasInterface):
-    """ An abstract class, extending :class:`WGPUCanvasInterface`,
+class WgpuCanvasBase(WgpuCanvasInterface):
+    """ An abstract class, extending :class:`WgpuCanvasInterface`,
     that provides a base canvas for various GUI toolkits, so
     that basic canvas functionality is available via a common API.
 
@@ -101,13 +83,6 @@ class WgpuCanvasBase(WGPUCanvasInterface):
             self.draw_frame()
         except Exception as err:
             self._log_exception("Draw error", err)
-
-        # Always present the swapchain, or wgpu gets into an error state.
-        try:
-            if self._swap_chain is not None:
-                self._swap_chain._gui_present()  # a.k.a. swap buffers
-        except Exception as err:
-            self._log_exception("Swapchain present error", err)
 
     def _log_exception(self, kind, err):
         """ Log the given exception instance, but only log a one-liner for
