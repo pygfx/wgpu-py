@@ -91,21 +91,19 @@
 *  Not implemented: GPUFenceValue getCompletedValue(); (fencegetcompletedvalue)
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue); (fenceoncompletion)
 *  Not implemented: void destroy(); (querysetdestroy)
+*  Found unknown function configure_swap_chain (deviceconfigureswapchain)
+*  Found unknown function get_swap_chain_preferred_format (devicegetswapchainpreferredformat)
 *  Found unknown function create_default_view (texturecreatedefaultview)
-*  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into base.py
 
 ### Check functions in backends/rs.py
-*  Found 48 functions already implemented
+*  Found 51 functions already implemented
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor); (devicecreaterenderbundleencoder)
 *  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
 *  Not implemented: void pushDebugGroup(DOMString groupLabel); (commandencoderpushdebuggroup)
 *  Not implemented: void popDebugGroup(); (commandencoderpopdebuggroup)
 *  Not implemented: void insertDebugMarker(DOMString markerLabel); (commandencoderinsertdebugmarker)
 *  Not implemented: void resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset); (commandencoderresolvequeryset)
-*  Not implemented: void pushDebugGroup(DOMString groupLabel); (programmablepassencoderpushdebuggroup)
-*  Not implemented: void popDebugGroup(); (programmablepassencoderpopdebuggroup)
-*  Not implemented: void insertDebugMarker(DOMString markerLabel); (programmablepassencoderinsertdebugmarker)
 *  Not implemented: void beginOcclusionQuery(GPUSize32 queryIndex); (renderpassencoderbeginocclusionquery)
 *  Not implemented: void endOcclusionQuery(GPUSize32 queryIndex); (renderpassencoderendocclusionquery)
 *  Not implemented: void executeBundles(sequence<GPURenderBundle> bundles); (renderpassencoderexecutebundles)
@@ -117,6 +115,6 @@
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue); (fenceoncompletion)
 *  Not implemented: void destroy(); (querysetdestroy)
 *  Not implemented: GPUTexture getCurrentTexture(); (swapchaingetcurrenttexture)
+*  Found unknown function configure_swap_chain (deviceconfigureswapchain)
 *  Found unknown function create_default_view (texturecreatedefaultview)
-*  Found unknown function get_current_texture_view (swapchaingetcurrenttextureview)
 *  Injected IDL lines into backends/rs.py
