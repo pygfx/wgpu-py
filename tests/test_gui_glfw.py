@@ -4,6 +4,7 @@ like the swap chain.
 """
 
 import os
+import sys
 import time
 
 from python_shader import python2shader, vec4, i32
@@ -87,7 +88,96 @@ def test_glfw_canvas_render():
     # wgpu.utils.get_default_device()
     adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
     device = adapter.request_device()
+    draw_frame1 = _get_draw_function(device, canvas)
 
+    frame_counter = 0
+
+    def draw_frame2():
+        nonlocal frame_counter
+        frame_counter += 1
+        draw_frame1()
+
+    canvas.draw_frame = draw_frame2
+
+    # Give it a few rounds to start up
+    for i in range(5):
+        glfw.poll_events()
+        update_glfw_canvasses()
+    # There should have been exactly one draw now
+    assert frame_counter == 1
+
+    # Ask for a lot of draws
+    for i in range(5):
+        canvas.request_draw()
+    # Process evens for a while
+    for i in range(5):
+        glfw.poll_events()
+        update_glfw_canvasses()
+    # We should have had just one draw
+    assert frame_counter == 2
+
+    # Change the canvase size
+    canvas.set_logical_size(300, 200)
+    canvas.set_logical_size(400, 300)
+    for i in range(5):
+        time.sleep(0.01)
+        glfw.poll_events()
+        update_glfw_canvasses()
+    # We should have had just one draw
+    assert frame_counter == 3
+
+    canvas.close()
+    glfw.poll_events()
+
+
+def test_glfw_canvas_render_custom_canvas():
+    """ Render an orange square ... in a glfw window. But not using WgpuCanvas.
+    This helps make sure that WgpuCanvasInterface is indeed the minimal
+    required canvas API.
+    """
+
+    import glfw
+
+    class CustomCanvas:  # implements wgpu.WgpuCanvasInterface
+        def __init__(self):
+            glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
+            glfw.window_hint(glfw.RESIZABLE, True)
+            self.__window = glfw.create_window(300, 200, "canvas", None, None)
+
+        def get_window_id(self):
+            if sys.platform.startswith("win"):
+                return int(glfw.get_win32_window(self.__window))
+            elif sys.platform.startswith("darwin"):
+                return int(glfw.get_cocoa_window(self.__window))
+            elif sys.platform.startswith("linux"):
+                is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+                if is_wayland:
+                    return int(glfw.get_wayland_window(self.__window))
+                else:
+                    return int(glfw.get_x11_window(self.__window))
+            else:
+                raise RuntimeError(f"Cannot get GLFW window id on {sys.platform}.")
+
+        def get_display_id(self):
+            return wgpu.WgpuCanvasInterface.get_display_id(self)
+
+        def get_physical_size(self):
+            psize = glfw.get_framebuffer_size(self.__window)
+            return int(psize[0]), int(psize[1])
+
+    canvas = CustomCanvas()
+
+    adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
+    device = adapter.request_device()
+    draw_frame = _get_draw_function(device, canvas)
+
+    for i in range(5):
+        time.sleep(0.01)
+        glfw.poll_events()
+        draw_frame()
+
+
+def _get_draw_function(device, canvas):
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
     bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
@@ -133,70 +223,35 @@ def test_glfw_canvas_render():
         alpha_to_coverage_enabled=False,
     )
 
-    swap_chain = canvas.configure_swap_chain(
-        device,
-        canvas.get_swap_chain_preferred_format(device),
+    swap_chain = device.configure_swap_chain(
+        canvas,
+        device.get_swap_chain_preferred_format(canvas),
         wgpu.TextureUsage.OUTPUT_ATTACHMENT,
     )
 
-    frame_counter = 0
-
     def draw_frame():
-        nonlocal frame_counter
-        frame_counter += 1
+        with swap_chain as current_texture_view:
+            command_encoder = device.create_command_encoder()
 
-        current_texture_view = swap_chain.get_current_texture_view()
-        command_encoder = device.create_command_encoder()
+            ca = {
+                "attachment": current_texture_view,
+                "resolve_target": None,
+                "load_value": (0, 0, 0, 0),
+                "store_op": wgpu.StoreOp.store,
+            }
+            render_pass = command_encoder.begin_render_pass(
+                color_attachments=[ca],
+                depth_stencil_attachment=None,
+                occlusion_query_set=None,
+            )
 
-        ca = {
-            "attachment": current_texture_view,
-            "resolve_target": None,
-            "load_value": (0, 0, 0, 0),
-            "store_op": wgpu.StoreOp.store,
-        }
-        render_pass = command_encoder.begin_render_pass(
-            color_attachments=[ca],
-            depth_stencil_attachment=None,
-            occlusion_query_set=None,
-        )
+            render_pass.set_pipeline(render_pipeline)
+            render_pass.set_bind_group(0, bind_group, [], 0, 999999)
+            render_pass.draw(4, 1, 0, 0)
+            render_pass.end_pass()
+            device.default_queue.submit([command_encoder.finish()])
 
-        render_pass.set_pipeline(render_pipeline)
-        render_pass.set_bind_group(0, bind_group, [], 0, 999999)
-        render_pass.draw(4, 1, 0, 0)
-        render_pass.end_pass()
-        device.default_queue.submit([command_encoder.finish()])
-
-    canvas.draw_frame = draw_frame
-
-    # Give it a few rounds to start up
-    for i in range(5):
-        glfw.poll_events()
-        update_glfw_canvasses()
-    # There should have been exactly one draw now
-    assert frame_counter == 1
-
-    # Ask for a lot of draws
-    for i in range(5):
-        canvas.request_draw()
-    # Process evens for a while
-    for i in range(5):
-        glfw.poll_events()
-        update_glfw_canvasses()
-    # We should have had just one draw
-    assert frame_counter == 2
-
-    # Change the canvase size
-    canvas.set_logical_size(300, 200)
-    canvas.set_logical_size(400, 300)
-    for i in range(5):
-        time.sleep(0.01)
-        glfw.poll_events()
-        update_glfw_canvasses()
-    # We should have had just one draw
-    assert frame_counter == 3
-
-    canvas.close()
-    glfw.poll_events()
+    return draw_frame
 
 
 if __name__ == "__main__":
@@ -204,5 +259,6 @@ if __name__ == "__main__":
 
     test_glfw_canvas_basics()
     test_glfw_canvas_render()
+    test_glfw_canvas_render_custom_canvas()
 
     teardown_module()

@@ -20,9 +20,6 @@ class WgpuCanvas(flx.CanvasWidget):
         self.node.addEventListener("size", self.request_draw)
         self.request_draw()
 
-    def configure_swap_chain(self, *args):
-        return self.node.configureSwapChain(*args)
-
     def draw_frame(self):
         pass
 

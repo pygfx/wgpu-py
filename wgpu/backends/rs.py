@@ -842,10 +842,7 @@ class GPUDevice(base.GPUDevice):
     # ):
     #     pass
 
-    def _gui_configure_swap_chain(self, canvas, format, usage):
-        """ Get a swapchain object from a canvas object. Called by WgpuCanvasBase.
-        """
-        # Note: canvas should implement the WgpuCanvasBase interface.
+    def configure_swap_chain(self, canvas, format, usage):
         return GPUSwapChain(self, canvas, format, usage)
 
 
@@ -1429,17 +1426,14 @@ class GPUSwapChain(base.GPUSwapChain):
             self._device._internal, self._surface_id, struct
         )
 
-    def get_current_texture_view(self):
-        # todo: should we cache instances (on their id)?
-        # otherwise we have multiple instances mapping to same internal texture
+    def __enter__(self):
+        # Get the current texture view, and make sure it is presented when done
         self._create_native_swap_chain_if_needed()
         swap_chain_output = _lib.wgpu_swap_chain_get_next_texture(self._internal)
         return base.GPUTextureView("swap_chain", swap_chain_output.view_id, self)
 
-    def _gui_present(self):
-        """ Present the current texture. This is not part of the public API,
-        instead, GUI backends should call this at the right moment.
-        """
+    def __exit__(self, type, value, tb):
+        # Present the current texture
         _lib.wgpu_swap_chain_present(self._internal)
 
 

@@ -1,15 +1,33 @@
 GUI API
 =======
 
-The wgpu library provides GUI integration for a few GUI toolkits. At the moment
-these include GLFW and Qt .
+You can use wgpu for compute tasks and to render offscreen. Rendering to
+screen is also possible, but we need a *canvas* for that. Since the Python
+ecosystem provides many different GUI toolkits, we need an interface.
+
+For convenience, the wgpu library has builtin support for a few GUI
+toolkits. At the moment these include GLFW and Qt.
 
 
-The WgpuCanvas class
-------------------------
+The canvas interface
+--------------------
 
-For each supported toolkit, there is a ``WgpuCanvas`` class, which all
-derive from the following class.
+To render to a window, an object is needed that implements the few
+functions on the canvas interface, and provide that object to
+:func:`request_adapter() <wgpu.request_adapter>` and
+:func:`device.configure_swap_chain() <wgpu.GPUDevice.configure_swap_chain>`.
+This interface makes it possible to hook wgpu-py to any GUI that supports GPU rendering.
+
+.. autoclass:: wgpu.gui.WgpuCanvasInterface
+    :members:
+
+
+The WgpuCanvas classes
+----------------------
+
+For each GUI toolkit that wgpu-py has builtin support, there is a
+``WgpuCanvas`` class, which all derive from the following class. This thus
+provides a single (simple) API to work with windows.
 
 .. autoclass:: wgpu.gui.WgpuCanvasBase
     :members:
