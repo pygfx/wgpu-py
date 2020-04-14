@@ -446,7 +446,7 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
 
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
-    render_to_screen(*render_args)
+    # render_to_screen(*render_args)
     a = render_to_texture(*render_args, size=(64, 64))
 
     # print(a.max(), a[:,:,0].max())
