@@ -6,15 +6,16 @@ import ctypes.util
 logger = logging.getLogger("wgpu")
 
 
-class WgpuCanvasBase:
-    """ An abstract base canvas. Can be implementd to provide a canvas for
-    various GUI toolkits.
+class WGPUCanvasInterface:
+    """ This is the interface that a canvas object must implement in order
+    to be a valid canvas that wgpu can work with.
     """
+
+    # NOTE: It is not necessary to subclass this class, though it's probably easier.
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._swap_chain = None
-        self._err_hashes = {}
         self._display_id = None
 
     def configure_swap_chain(self, device, format, usage):
@@ -22,6 +23,7 @@ class WgpuCanvasBase:
         new :class:`GPUSwapChain <wgpu.GPUSwapChain>` object representing
         it. Destroys any swapchain previously returned by this function,
         including all of the textures it has produced.
+        This function is part of the WebGPU spec.
 
         Also see :func:`get_swap_chain_preferred_format`.
         """
@@ -30,8 +32,58 @@ class WgpuCanvasBase:
 
     def get_swap_chain_preferred_format(self, device):
         """ Get the preferred format of the swap chain for this canvas.
+        This function is part of the WebGPU spec.
         """
         return device._gui_get_swap_chain_preferred_format(self)
+
+    def get_window_id(self):
+        """ Get the native window id. This is used by the backends
+        to obtain a surface id.
+        """
+        raise NotImplementedError()
+
+    def get_display_id(self):
+        """ Get the native display id on Linux. This is used by the backends
+        to obtain a surface id on Linux. The default implementation calls into
+        the X11 lib to get the display id.
+        """
+        # Re-use to avoid creating loads of id's
+        if self._display_id is not None:
+            return self._display_id
+
+        if sys.platform.startswith("linux"):
+            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+            if is_wayland:
+                raise NotImplementedError(
+                    f"Cannot (yet) get display id on {self.__class__.__name__}."
+                )
+            else:
+                x11 = ctypes.CDLL(ctypes.util.find_library("X11"))
+                x11.XOpenDisplay.restype = ctypes.c_void_p
+                self._display_id = x11.XOpenDisplay(None)
+        else:
+            raise RuntimeError(f"Cannot get display id on {sys.platform}.")
+
+        return self._display_id
+
+    def get_physical_size(self):
+        """ Get the physical size in integer pixels.
+        """
+        raise NotImplementedError()
+
+
+class WgpuCanvasBase(WGPUCanvasInterface):
+    """ An abstract class, extending :class:`WGPUCanvasInterface`,
+    that provides a base canvas for various GUI toolkits, so
+    that basic canvas functionality is available via a common API.
+
+    It convenient, but not required to use this class (or any of its
+    subclasses) to use wgpu-py.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._err_hashes = {}
 
     def draw_frame(self):
         """ The function that gets called at each draw. You can implement
@@ -77,36 +129,6 @@ class WgpuCanvasBase:
             logger.error(msg + f" ({count})")
 
     # Methods that must be overloaded
-
-    def get_display_id(self):
-        """ Get the native display id on Linux. This is needed by the backends
-        to obtain a surface id on Linux. The default implementation calls into
-        the X11 lib to get the display id.
-        """
-        # Re-use to avoid creating loads of id's
-        if self._display_id is not None:
-            return self._display_id
-
-        if sys.platform.startswith("linux"):
-            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-            if is_wayland:
-                raise NotImplementedError(
-                    f"Cannot (yet) get display id on {self.__class__.__name__}."
-                )
-            else:
-                x11 = ctypes.CDLL(ctypes.util.find_library("X11"))
-                x11.XOpenDisplay.restype = ctypes.c_void_p
-                self._display_id = x11.XOpenDisplay(None)
-        else:
-            raise RuntimeError(f"Cannot get display id on {sys.platform}.")
-
-        return self._display_id
-
-    def get_window_id(self):
-        """ Get the native window id. This can be used by the backends
-        to obtain a surface id.
-        """
-        raise NotImplementedError()
 
     def get_pixel_ratio(self):
         """ Get the float ratio between logical and physical pixels.
