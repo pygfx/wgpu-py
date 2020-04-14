@@ -300,6 +300,7 @@ class GPUDevice(GPUObject):
         Example entry dict:
 
         .. code-block:: py
+
             # Buffer
             {
                 "binding": 0,
@@ -358,7 +359,7 @@ class GPUDevice(GPUObject):
                 "binding" : 0,  # slot
                 "resource": a_texture_view,
             }
-            # For a texture
+            # For a buffer
             {
                 "binding" : 0,  # slot
                 "resource": {

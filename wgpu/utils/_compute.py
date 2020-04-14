@@ -107,6 +107,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
                 "binding": binding_index,
                 "visibility": wgpu.ShaderStage.COMPUTE,
                 "type": wgpu.BindingType.storage_buffer,
+                "has_dynamic_offset": False,
             }
         )
 

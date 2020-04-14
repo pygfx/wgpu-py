@@ -4,6 +4,7 @@ like the swap chain.
 """
 
 import os
+import time
 
 from python_shader import python2shader, vec4, i32
 from python_shader import RES_INPUT, RES_OUTPUT
@@ -185,6 +186,7 @@ def test_glfw_canvas_render():
     canvas.set_logical_size(300, 200)
     canvas.set_logical_size(400, 300)
     for i in range(5):
+        time.sleep(0.01)
         glfw.poll_events()
         update_glfw_canvasses()
     # We should have had just one draw

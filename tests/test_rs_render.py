@@ -40,9 +40,12 @@ def test_render_orange_square():
 
     device = get_default_device()
 
+    # NOTE: the 0.499 instead of 0.5 is to make sure the resulting value is 127.
+    # With 0.5 some drivers would produce 127 and others 128.
+
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
@@ -80,7 +83,7 @@ def test_render_orange_square_indexed():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
@@ -129,7 +132,7 @@ def test_render_orange_square_indirect():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
@@ -172,7 +175,7 @@ def test_render_orange_square_indexed_indirect():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
@@ -236,7 +239,7 @@ def test_render_orange_square_vbo():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
@@ -289,7 +292,7 @@ def test_render_orange_square_color_attachment1():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
@@ -332,7 +335,7 @@ def test_render_orange_square_color_attachment2():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
@@ -376,7 +379,7 @@ def test_render_orange_square_viewport():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     def cb(renderpass):
         renderpass.set_viewport(10, 20, 32, 32, 0, 100)
@@ -414,7 +417,7 @@ def test_render_orange_square_scissor():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     def cb(renderpass):
         renderpass.set_scissor_rect(0, 0, 32, 32)
@@ -466,7 +469,7 @@ def test_render_orange_square_depth():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     def cb(renderpass):
         renderpass.set_stencil_reference(42)
@@ -566,7 +569,7 @@ def test_render_orange_dots():
 
     @python2shader
     def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
-        out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
     bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings

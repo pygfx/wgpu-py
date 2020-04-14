@@ -9,7 +9,7 @@ import python_shader
 from python_shader import python2shader, f32, vec2, vec4, i32
 import wgpu.backends.rs  # noqa
 from pytest import skip, mark
-from testutils import can_use_wgpu_lib, get_default_device
+from testutils import can_use_wgpu_lib, get_default_device, can_use_vulkan_sdk
 from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
 
 
@@ -386,8 +386,9 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
 
     device = get_default_device()
 
-    python_shader.dev.validate(vertex_shader)
-    python_shader.dev.validate(fragment_shader)
+    if can_use_vulkan_sdk:
+        python_shader.dev.validate(vertex_shader)
+        python_shader.dev.validate(fragment_shader)
 
     # Create texture
     texture = device.create_texture(
@@ -445,7 +446,7 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
 
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
-    # render_to_screen(*render_args)
+    render_to_screen(*render_args)
     a = render_to_texture(*render_args, size=(64, 64))
 
     # print(a.max(), a[:,:,0].max())
@@ -469,10 +470,10 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     ]
     ref1, ref2 = sum(ref1, []), sum(ref2, [])
 
-    assert np.equal(sq[0, :, 0], ref1).all()
-    assert np.equal(sq[:, 0, 0], ref2).all()
-    assert np.equal(sq[0, :, 1], ref1).all()
-    assert np.equal(sq[:, 0, 1], ref2).all()
+    assert np.allclose(sq[0, :, 0], ref1, atol=1)
+    assert np.allclose(sq[:, 0, 0], ref2, atol=1)
+    assert np.allclose(sq[0, :, 1], ref1, atol=1)
+    assert np.allclose(sq[:, 0, 1], ref2, atol=1)
     assert np.all(sq[:, :, 2] == 0)  # blue
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
