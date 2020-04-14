@@ -20,10 +20,10 @@ def test_override_wgpu_lib_path():
 
     # Change it
     old_env_var = os.environ.get("WGPU_LIB_PATH", None)
-    os.environ["WGPU_LIB_PATH"] = __file__  # because it must be a valid path
+    os.environ["WGPU_LIB_PATH"] = "foo/bar"
 
     # Check
-    assert wgpu.backends.rs._get_wgpu_lib_path() == __file__
+    assert wgpu.backends.rs._get_wgpu_lib_path() == "foo/bar"
 
     # Change it back
     if old_env_var is None:

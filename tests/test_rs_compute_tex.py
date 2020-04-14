@@ -476,11 +476,16 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         (nx, ny, nz),
     )
     compute_pass = command_encoder.begin_compute_pass()
+    compute_pass.push_debug_group("foo")
+    compute_pass.insert_debug_marker("setting pipeline")
     compute_pass.set_pipeline(compute_pipeline)
+    compute_pass.insert_debug_marker("setting bind group")
     compute_pass.set_bind_group(
         0, bind_group, [], 0, 999999
     )  # last 2 elements not used
+    compute_pass.insert_debug_marker("dispatch!")
     compute_pass.dispatch(nx, ny, nz)
+    compute_pass.pop_debug_group()
     compute_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},

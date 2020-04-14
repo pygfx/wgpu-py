@@ -70,7 +70,7 @@ def render_to_texture(
     color_attachment=None,
     depth_stencil_state=None,
     depth_stencil_attachment=None,
-    renderpass_callback=lambda *args: None
+    renderpass_callback=lambda *args: None,
 ):
 
     # https://github.com/gfx-rs/wgpu-rs/blob/master/examples/capture/main.rs
@@ -152,12 +152,18 @@ def render_to_texture(
         depth_stencil_attachment=depth_stencil_attachment,
         occlusion_query_set=None,
     )
+    render_pass.push_debug_group("foo")
 
+    render_pass.insert_debug_marker("setting pipeline")
     render_pass.set_pipeline(render_pipeline)
+    render_pass.insert_debug_marker("setting bind group")
     render_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
     for slot, vbo in enumerate(vbos):
+        render_pass.insert_debug_marker(f"setting vbo {slot}")
         render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)
+    render_pass.insert_debug_marker(f"invoking callback")
     renderpass_callback(render_pass)
+    render_pass.insert_debug_marker(f"draw!")
     if ibo is None:
         if indirect_buffer is None:
             render_pass.draw(4, 1, 0, 0)
@@ -169,6 +175,7 @@ def render_to_texture(
             render_pass.draw_indexed(6, 1, 0, 0, 0)
         else:
             render_pass.draw_indexed_indirect(indirect_buffer, 0)
+    render_pass.pop_debug_group()
     render_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
@@ -198,7 +205,7 @@ def render_to_screen(
     color_attachment=None,
     depth_stencil_state=None,
     depth_stencil_attachment=None,
-    renderpass_callback=lambda *args: None
+    renderpass_callback=lambda *args: None,
 ):
     """ Render to a window on screen, for debugging purposes.
     """
@@ -272,14 +279,20 @@ def render_to_screen(
             depth_stencil_attachment=depth_stencil_attachment,
             occlusion_query_set=None,
         )
+        render_pass.push_debug_group("foo")
 
+        render_pass.insert_debug_marker("setting pipeline")
         render_pass.set_pipeline(render_pipeline)
+        render_pass.insert_debug_marker("setting bind group")
         render_pass.set_bind_group(
             0, bind_group, [], 0, 999999
         )  # last 2 elements not used
         for slot, vbo in enumerate(vbos):
+            render_pass.insert_debug_marker(f"setting vbo {slot}")
             render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)
+        render_pass.insert_debug_marker("invoking callback")
         renderpass_callback(render_pass)
+        render_pass.insert_debug_marker("draw!")
         if ibo is None:
             if indirect_buffer is None:
                 render_pass.draw(4, 1, 0, 0)
@@ -291,6 +304,7 @@ def render_to_screen(
                 render_pass.draw_indexed(6, 1, 0, 0, 0)
             else:
                 render_pass.draw_indexed_indirect(indirect_buffer, 0)
+        render_pass.pop_debug_group()
         render_pass.end_pass()
         device.default_queue.submit([command_encoder.finish()])
 

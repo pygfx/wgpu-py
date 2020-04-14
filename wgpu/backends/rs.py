@@ -76,29 +76,30 @@ def _get_wgpu_lib_path():
     """ Get the path to the wgpu library, taking into account the
     WGPU_LIB_PATH environment variable.
     """
-    paths = []
 
+    # If path is given, use that or fail trying
     override_path = os.getenv("WGPU_LIB_PATH", "").strip()
     if override_path:
-        paths.append(override_path)
+        return override_path
 
-    lib_filename = None
+    # Get lib filename for supported platforms
     if sys.platform.startswith("win"):  # no-cover
         lib_filename = "wgpu_native.dll"
     elif sys.platform.startswith("darwin"):  # no-cover
         lib_filename = "libwgpu_native.dylib"
     elif sys.platform.startswith("linux"):  # no-cover
         lib_filename = "libwgpu_native.so"
-    if lib_filename:
-        # Note that this can be a false positive, e.g. ARM linux.
-        embedded_path = get_resource_filename(lib_filename)
-        paths.append(embedded_path)
-
-    for path in paths:
-        if os.path.isfile(path):
-            return path
     else:  # no-cover
-        raise RuntimeError(f"Could not find WGPU library, checked: {paths}")
+        raise RuntimeError(
+            f"No WGPU library shipped for platform {sys.platform}. Set WGPU_LIB_PATH instead."
+        )
+
+    # Note that this can be a false positive, e.g. ARM linux.
+    embedded_path = get_resource_filename(lib_filename)
+    if not os.path.isfile(embedded_path):  # no-cover
+        raise RuntimeError(f"Could not find WGPU library in {embedded_path}")
+    else:
+        return embedded_path
 
 
 # Configure cffi and load the dynamic library
@@ -1170,6 +1171,11 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         id = _lib.wgpu_command_encoder_finish(self._internal, struct)
         return base.GPUCommandBuffer(label, id, self)
 
+    # todo: these do not exist yet for command_encoder in wgpu-native
+    # def push_debug_group(self, group_label):
+    # def pop_debug_group(self):
+    # def insert_debug_marker(self, marker_label):
+
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
     # wgpu.help('BindGroup', 'Index32', 'Size32', 'Size64', 'programmablepassencodersetbindgroup', dev=True)
@@ -1193,17 +1199,28 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
                 self._internal, index, bind_group_id, c_offsets, len(offsets)
             )
 
-    # # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
-    # def push_debug_group(self, group_label):
-    #     ...
-    #
-    # # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
-    # def pop_debug_group(self):
-    #     ...
-    #
-    # # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
-    # def insert_debug_marker(self, marker_label):
-    #     ...
+    # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
+    def push_debug_group(self, group_label):
+        c_group_label = ffi.new("char []", group_label.encode())
+        if isinstance(self, GPUComputePassEncoder):
+            _lib.wgpu_compute_pass_push_debug_group(self._internal, c_group_label)
+        else:
+            _lib.wgpu_render_pass_push_debug_group(self._internal, c_group_label)
+
+    # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
+    def pop_debug_group(self):
+        if isinstance(self, GPUComputePassEncoder):
+            _lib.wgpu_compute_pass_pop_debug_group(self._internal)
+        else:
+            _lib.wgpu_render_pass_pop_debug_group(self._internal)
+
+    # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
+    def insert_debug_marker(self, marker_label):
+        c_marker_label = ffi.new("char []", marker_label.encode())
+        if isinstance(self, GPUComputePassEncoder):
+            _lib.wgpu_compute_pass_insert_debug_marker(self._internal, c_marker_label)
+        else:
+            _lib.wgpu_render_pass_insert_debug_marker(self._internal, c_marker_label)
 
 
 class GPUComputePassEncoder(GPUProgrammablePassEncoder):

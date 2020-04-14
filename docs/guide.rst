@@ -54,6 +54,24 @@ be between 0.0 and 1.0 inclusive. Vertices out of this range in NDC
 will not introduce any errors, but they will be clipped.
 
 
+Debugging
+---------
+
+If you want to debug your application, it's adviced to use a debug build
+of wgpu-native, because this will enable the validation layers.
+
+You can run your application via RenderDoc, which is able to capture a
+frame, including all API calls, objects and the complete pipeline state
+and displays all of that information within a nice UI.
+
+Many GPU objects can be given a string label. This label will be used
+in Rust validation errors, and are also used in e.g. RenderDoc to
+identify objects.
+
+Additionally, you can insert debug markers at the render/compute pass
+object, which will then show up in RenderDoc.
+
+
 Examples
 --------
 
