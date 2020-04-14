@@ -54,17 +54,17 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
         if not (isinstance(array_type, type) and issubclass(array_type, ctypes.Array)):
             raise TypeError("values of output_arrays must be ctypes array subclasses.")
 
-    # Get x, y, z from n
+    # Get nx, ny, nz from n
     if n is None:
         array_type = list(output_arrays.values())[0]
-        x, y, z = array_type._length_, 1, 1
+        nx, ny, nz = array_type._length_, 1, 1
     elif isinstance(n, int):
-        x, y, z = int(n), 1, 1
+        nx, ny, nz = int(n), 1, 1
     elif isinstance(n, tuple) and len(n) == 3:
-        x, y, z = int(n[0]), int(n[1]), int(n[2])
+        nx, ny, nz = int(n[0]), int(n[1]), int(n[2])
     else:
         raise TypeError("compute_with_buffers: n must be None, an int, or 3-int tuple.")
-    if not (x >= 1 and y >= 1 and z >= 1):
+    if not (nx >= 1 and ny >= 1 and nz >= 1):
         raise ValueError("compute_with_buffers: n value(s) must be >= 1.")
 
     # Create a device and compile the shader
@@ -76,7 +76,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     for binding_index, array in input_arrays.items():
         # Create the buffer object
         nbytes = ctypes.sizeof(array)
-        usage = wgpu.BufferUsage.STORAGE
+        usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_WRITE
         if binding_index in output_arrays:
             usage |= wgpu.BufferUsage.MAP_READ
         buffer = device.create_buffer_mapped(size=nbytes, usage=usage)
@@ -107,6 +107,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
                 "binding": binding_index,
                 "visibility": wgpu.ShaderStage.COMPUTE,
                 "type": wgpu.BindingType.storage_buffer,
+                "has_dynamic_offset": False,
             }
         )
 
@@ -125,10 +126,8 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
     compute_pass.set_pipeline(compute_pipeline)
-    compute_pass.set_bind_group(
-        0, bind_group, [], 0, 999999
-    )  # last 2 elements not used
-    compute_pass.dispatch(x, y, z)
+    compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 args not used
+    compute_pass.dispatch(nx, ny, nz)
     compute_pass.end_pass()
     device.default_queue.submit([command_encoder.finish()])
 

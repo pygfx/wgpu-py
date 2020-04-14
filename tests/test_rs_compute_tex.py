@@ -7,7 +7,7 @@ import wgpu.backends.rs  # noqa
 import numpy as np
 
 from pytest import skip
-from testutils import can_use_wgpu_lib, get_default_device
+from testutils import can_use_wgpu_lib, get_default_device, can_use_vulkan_sdk
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
@@ -388,7 +388,8 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     nbytes = ctypes.sizeof(data1)
     bpp = nbytes // (nx * ny * nz)  # bytes per pixel
 
-    python_shader.dev.validate(compute_shader)
+    if can_use_vulkan_sdk:
+        python_shader.dev.validate(compute_shader)
 
     device = get_default_device()
     cshader = device.create_shader_module(code=compute_shader)
