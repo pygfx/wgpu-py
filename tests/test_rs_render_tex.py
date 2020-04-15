@@ -8,7 +8,7 @@ import numpy as np
 import python_shader
 from python_shader import python2shader, f32, vec2, vec4, i32
 import wgpu.backends.rs  # noqa
-from pytest import skip, mark
+from pytest import skip
 from testutils import can_use_wgpu_lib, get_default_device, can_use_vulkan_sdk
 from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
 
