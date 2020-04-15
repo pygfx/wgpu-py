@@ -242,7 +242,7 @@ class GPUDevice(GPUObject):
 
         Arguments:
             label (str): A human readable label. Optional.
-            size (tuple or dict): The texture size with fields (x, y, z).
+            size (tuple or dict): The texture size with fields (width, height, depth).
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
             dimension (TextureDimension): The dimensionality of the texture.
@@ -280,6 +280,7 @@ class GPUDevice(GPUObject):
             lod_min_clamp (float): The minimum level of detail. Default 0.
             lod_max_clamp (float): The maxium level of detail. Default inf.
             compare (CompareFunction): The sample compare operation for depth textures.
+                For non-depth textures you probably want to set this to zero.
         """
         raise NotImplementedError()
 

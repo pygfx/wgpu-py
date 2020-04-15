@@ -8,7 +8,7 @@ import numpy as np
 import python_shader
 from python_shader import python2shader, f32, vec2, vec4, i32
 import wgpu.backends.rs  # noqa
-from pytest import skip, mark
+from pytest import skip
 from testutils import can_use_wgpu_lib, get_default_device, can_use_vulkan_sdk
 from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
 
@@ -292,12 +292,9 @@ def test_render_textured_square_r8uint():
     )
 
 
-@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r16sint():
     """ Test a texture with format r16sint. Because e.g. CT data.
     """
-
-    # todo: WHY does this not work???
 
     @python2shader
     def fragment_shader(
@@ -320,12 +317,9 @@ def test_render_textured_square_r16sint():
     )
 
 
-@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r32sint():
     """ Test a texture with format r32sint. Because e.g. CT data.
     """
-
-    # todo: WHY does this not work???
 
     @python2shader
     def fragment_shader(
@@ -348,11 +342,9 @@ def test_render_textured_square_r32sint():
     )
 
 
-@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r32float():
     """ Test a texture with format r32float.
     """
-    # todo: WHY does this not work???
 
     @python2shader
     def fragment_shader(
@@ -408,8 +400,9 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     )
 
     sampler = device.create_sampler(
-        mag_filter="linear", min_filter="linear", compare="never"
+        mag_filter="linear", min_filter="linear", compare=0,
     )
+    # compare 0 means undefined, but there is no wgpu.CompareFunction.undefined !
 
     # Determine texture component type from the format
     if texture_format.endswith(("norm", "float")):
@@ -491,6 +484,6 @@ if __name__ == "__main__":
 
     test_render_textured_square_r8unorm()
     test_render_textured_square_r8uint()
-    # test_render_textured_square_r16sint()  # fails, why?
-    # test_render_textured_square_r32sint()  # fails, why?
-    # test_render_textured_square_r32float()  # fails, why?
+    test_render_textured_square_r16sint()
+    test_render_textured_square_r32sint()
+    test_render_textured_square_r32float()
