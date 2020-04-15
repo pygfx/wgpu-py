@@ -357,7 +357,7 @@ for fname in ("base.py", "backends/rs.py"):
                 assert argtypes[0].startswith("GPU")
                 arg_struct = ip.structs[argtypes[0][3:]]
                 py_args = [field.py_arg() for field in arg_struct.values()]
-                if py_args[0] == "label: str":
+                if py_args[0].startswith("label: str"):
                     py_args[0] = 'label=""'
                     py_args = ["self", "*"] + py_args
             else:
