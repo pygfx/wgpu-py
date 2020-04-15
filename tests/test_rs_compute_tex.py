@@ -407,8 +407,8 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         format=texture_format,
         usage=wgpu.TextureUsage.STORAGE | wgpu.TextureUsage.COPY_SRC,
     )
-    texture_view1 = texture1.create_default_view()
-    texture_view2 = texture2.create_default_view()
+    texture_view1 = texture1.create_view()
+    texture_view2 = texture2.create_view()
 
     # Determine texture component type from the format
     if texture_format.endswith(("norm", "float")):

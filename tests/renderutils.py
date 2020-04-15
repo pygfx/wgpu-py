@@ -91,7 +91,7 @@ def render_to_texture(
         format=texture_format,
         usage=wgpu.TextureUsage.OUTPUT_ATTACHMENT | wgpu.TextureUsage.COPY_SRC,
     )
-    current_texture_view = texture.create_default_view()
+    current_texture_view = texture.create_view()
 
     # Also a buffer to read the data to CPU
     buffer = device.create_buffer(

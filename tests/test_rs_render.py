@@ -8,7 +8,7 @@ import numpy as np
 from python_shader import python2shader, f32, vec2, vec4, i32
 from python_shader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
-from pytest import skip
+from pytest import skip, raises
 from testutils import can_use_wgpu_lib, get_default_device
 from renderutils import render_to_texture, render_to_screen  # noqa
 
@@ -260,7 +260,7 @@ def test_render_orange_square_vbo():
     # Vertex buffer views
     vbo_view = {
         "array_stride": 4 * 2,
-        "stepmode": "vertex",
+        "step_mode": "vertex",
         "attributes": [
             {"format": wgpu.VertexFormat.float2, "offset": 0, "shader_location": 0,},
         ],
@@ -391,6 +391,12 @@ def test_render_orange_square_viewport():
         bind_group_layouts=[bind_group_layout]
     )
 
+    # Fiddled in a small test to covers the raising of an exception
+    with raises(TypeError):
+        device.create_bind_group(
+            layout=bind_group_layout, entries=[{"resource": device}]
+        )
+
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
     # render_to_screen(*render_args, renderpass_callback=cb)
@@ -511,7 +517,7 @@ def test_render_orange_square_depth():
     )
 
     depth_stencil_attachment = dict(
-        attachment=depth_stencil_texture.create_default_view(),
+        attachment=depth_stencil_texture.create_view(),
         depth_load_value=0.1,
         depth_store_op=wgpu.StoreOp.store,
         stencil_load_value=wgpu.LoadOp.load,
