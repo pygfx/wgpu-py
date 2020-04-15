@@ -65,8 +65,8 @@ def get_arch():
     return "64" if sys.maxsize > 2 ** 32 else "32"  # True on 64-bit Python interpreters
 
 
-def main(version, os_string, arch, upstream):
-    filename = f"wgpu-{os_string}-{arch}-release.zip"
+def main(version, os_string, arch, upstream, build):
+    filename = f"wgpu-{os_string}-{arch}-{build}.zip"
     url = f"https://github.com/{upstream}/releases/download/{version}/{filename}"
     tmp = tempfile.gettempdir()
     zip_filename = os.path.join(tmp, filename)
@@ -117,6 +117,13 @@ if __name__ == "__main__":
         help=f"Upstream repository to download release from (default: {upstream})",
         default=upstream,
     )
+    build = "release"
+    parser.add_argument(
+        "--build",
+        help=f"Type of build to download for (default: {build})",
+        default=build,
+        choices=("debug", "release"),
+    )
     args = parser.parse_args()
 
-    main(args.version, args.os, args.arch, args.upstream)
+    main(args.version, args.os, args.arch, args.upstream, args.build)
