@@ -120,7 +120,7 @@ if __name__ == "__main__":
     build = "release"
     parser.add_argument(
         "--build",
-        help=f"Type of build to download for (default: {build})",
+        help=f"Type of build to download (default: {build})",
         default=build,
         choices=("debug", "release"),
     )
