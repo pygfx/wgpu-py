@@ -1248,7 +1248,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
         _lib.wgpu_compute_pass_set_pipeline(self._internal, pipeline_id)
 
     # wgpu.help('Size32', 'computepassencoderdispatch', dev=True)
-    def dispatch(self, x, y, z):
+    def dispatch(self, x, y=1, z=1):
         _lib.wgpu_compute_pass_dispatch(self._internal, x, y, z)
 
     # wgpu.help('Buffer', 'Size64', 'computepassencoderdispatchindirect', dev=True)
@@ -1280,19 +1280,19 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         _lib.wgpu_render_pass_set_pipeline(self._internal, pipeline_id)
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
-    def set_index_buffer(self, buffer, offset, size):
+    def set_index_buffer(self, buffer, offset=0, size=0):
         _lib.wgpu_render_pass_set_index_buffer(
             self._internal, buffer._internal, int(offset), int(size)
         )
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
-    def set_vertex_buffer(self, slot, buffer, offset, size):
+    def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
         _lib.wgpu_render_pass_set_vertex_buffer(
             self._internal, int(slot), buffer._internal, int(offset), int(size)
         )
 
     # wgpu.help('Size32', 'renderencoderbasedraw', dev=True)
-    def draw(self, vertex_count, instance_count, first_vertex, first_instance):
+    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
         _lib.wgpu_render_pass_draw(
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
@@ -1306,7 +1306,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     def draw_indexed(
-        self, index_count, instance_count, first_index, base_vertex, first_instance
+        self,
+        index_count,
+        instance_count=1,
+        first_index=0,
+        base_vertex=0,
+        first_instance=0,
     ):
         _lib.wgpu_render_pass_draw_indexed(
             self._internal,

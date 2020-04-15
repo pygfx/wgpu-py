@@ -1078,13 +1078,13 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
 
     # wgpu.help('Size32', 'computepassencoderdispatch', dev=True)
     # IDL: void dispatch(GPUSize32 x, optional GPUSize32 y = 1, optional GPUSize32 z = 1);
-    def dispatch(self, x, y, z):
+    def dispatch(self, x, y=1, z=1):
         """ Run the compute shader.
 
         Arguments:
             x (int): The number of cycles in index x.
-            y (int): The number of cycles in index y.
-            z (int): The number of cycles in index z.
+            y (int): The number of cycles in index y. Default 1.
+            z (int): The number of cycles in index z. Default 1.
         """
         raise NotImplementedError()
 
@@ -1124,39 +1124,39 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
     # IDL: void setIndexBuffer(GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def set_index_buffer(self, buffer, offset, size):
+    def set_index_buffer(self, buffer, offset=0, size=0):
         """ Set the index buffer for this render pass.
 
         Arguments:
             buffer (GPUBuffer): The buffer that contains the indices.
-            offset (int): The byte offset in the buffer..
-            size (int): The number of bytes to use.
+            offset (int): The byte offset in the buffer. Default 0.
+            size (int): The number of bytes to use. Default 0.
         """
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
     # IDL: void setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def set_vertex_buffer(self, slot, buffer, offset, size):
+    def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
         """ Associate a vertex buffer with a bind slot.
 
         Arguments:
             slot (int): The binding slot for the vertex buffer.
             buffer (GPUBuffer): The buffer that contains the vertex data.
-            offset (int): The byte offset in the buffer.
-            size (int): The number of bytes to use.
+            offset (int): The byte offset in the buffer. Default 0.
+            size (int): The number of bytes to use. Default 0.
         """
         raise NotImplementedError()
 
     # wgpu.help('Size32', 'renderencoderbasedraw', dev=True)
     # IDL: void draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
-    def draw(self, vertex_count, instance_count, first_vertex, first_instance):
+    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
         """ Run the render pipeline without an index buffer.
 
         Arguments:
             vertex_count (int): The number of vertices to draw.
-            instance_count (int):  The number of instances to draw.
-            first_vertex (int): The vertex offset.
-            first_instance (int):  The instance offset.
+            instance_count (int):  The number of instances to draw. Default 1.
+            first_vertex (int): The vertex offset. Default 0.
+            first_instance (int):  The instance offset. Default 0.
         """
         raise NotImplementedError()
 
@@ -1174,16 +1174,21 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     # IDL: void drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstIndex = 0,  optional GPUSignedOffset32 baseVertex = 0,  optional GPUSize32 firstInstance = 0);
     def draw_indexed(
-        self, index_count, instance_count, first_index, base_vertex, first_instance
+        self,
+        index_count,
+        instance_count=1,
+        first_index=0,
+        base_vertex=0,
+        first_instance=0,
     ):
         """ Run the render pipeline using an index buffer.
 
         Arguments:
             index_count (int): The number of indices to draw.
-            instance_count (int): The number of instances to draw.
-            first_index (int):  The index offset.
-            base_vertex (int):  A number added to each index in the index buffer.
-            first_instance (int): The instance offset.
+            instance_count (int): The number of instances to draw. Default 1.
+            first_index (int):  The index offset. Default 0.
+            base_vertex (int):  A number added to each index in the index buffer. Default 0.
+            first_instance (int): The instance offset. Default 0.
         """
         raise NotImplementedError()
 
