@@ -292,7 +292,6 @@ def test_render_textured_square_r8uint():
     )
 
 
-@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r16sint():
     """ Test a texture with format r16sint. Because e.g. CT data.
     """
@@ -318,7 +317,6 @@ def test_render_textured_square_r16sint():
     )
 
 
-@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r32sint():
     """ Test a texture with format r32sint. Because e.g. CT data.
     """
@@ -344,7 +342,6 @@ def test_render_textured_square_r32sint():
     )
 
 
-@mark.skip(reason="This test does not pass yet!")
 def test_render_textured_square_r32float():
     """ Test a texture with format r32float.
     """
