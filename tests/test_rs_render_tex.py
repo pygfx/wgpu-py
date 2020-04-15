@@ -297,8 +297,6 @@ def test_render_textured_square_r16sint():
     """ Test a texture with format r16sint. Because e.g. CT data.
     """
 
-    # todo: WHY does this not work???
-
     @python2shader
     def fragment_shader(
         tex: ("texture", 0, "2d r16i"),
@@ -325,8 +323,6 @@ def test_render_textured_square_r32sint():
     """ Test a texture with format r32sint. Because e.g. CT data.
     """
 
-    # todo: WHY does this not work???
-
     @python2shader
     def fragment_shader(
         tex: ("texture", 0, "2d r32i"),
@@ -352,7 +348,6 @@ def test_render_textured_square_r32sint():
 def test_render_textured_square_r32float():
     """ Test a texture with format r32float.
     """
-    # todo: WHY does this not work???
 
     @python2shader
     def fragment_shader(
@@ -408,8 +403,9 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     )
 
     sampler = device.create_sampler(
-        mag_filter="linear", min_filter="linear", compare="never"
+        mag_filter="linear", min_filter="linear", compare=0,
     )
+    # compare 0 means undefined, but there is no wgpu.CompareFunction.undefined !
 
     # Determine texture component type from the format
     if texture_format.endswith(("norm", "float")):
@@ -491,6 +487,6 @@ if __name__ == "__main__":
 
     test_render_textured_square_r8unorm()
     test_render_textured_square_r8uint()
-    # test_render_textured_square_r16sint()  # fails, why?
-    # test_render_textured_square_r32sint()  # fails, why?
-    # test_render_textured_square_r32float()  # fails, why?
+    test_render_textured_square_r16sint()
+    test_render_textured_square_r32sint()
+    test_render_textured_square_r32float()
