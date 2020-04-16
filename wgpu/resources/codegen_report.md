@@ -93,7 +93,6 @@
 *  Not implemented: void destroy(); (querysetdestroy)
 *  Found unknown function configure_swap_chain (deviceconfigureswapchain)
 *  Found unknown function get_swap_chain_preferred_format (devicegetswapchainpreferredformat)
-*  Found unknown function create_default_view (texturecreatedefaultview)
 *  Injected IDL lines into base.py
 
 ### Check functions in backends/rs.py
@@ -116,5 +115,4 @@
 *  Not implemented: void destroy(); (querysetdestroy)
 *  Not implemented: GPUTexture getCurrentTexture(); (swapchaingetcurrenttexture)
 *  Found unknown function configure_swap_chain (deviceconfigureswapchain)
-*  Found unknown function create_default_view (texturecreatedefaultview)
 *  Injected IDL lines into backends/rs.py

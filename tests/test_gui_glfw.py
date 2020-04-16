@@ -216,7 +216,6 @@ def _get_draw_function(device, canvas):
                 "write_mask": wgpu.ColorWrite.ALL,
             }
         ],
-        depth_stencil_state=None,
         vertex_state={"index_format": wgpu.IndexFormat.uint32, "vertex_buffers": [],},
         sample_count=1,
         sample_mask=0xFFFFFFFF,
@@ -239,11 +238,7 @@ def _get_draw_function(device, canvas):
                 "load_value": (0, 0, 0, 0),
                 "store_op": wgpu.StoreOp.store,
             }
-            render_pass = command_encoder.begin_render_pass(
-                color_attachments=[ca],
-                depth_stencil_attachment=None,
-                occlusion_query_set=None,
-            )
+            render_pass = command_encoder.begin_render_pass(color_attachments=[ca],)
 
             render_pass.set_pipeline(render_pipeline)
             render_pass.set_bind_group(0, bind_group, [], 0, 999999)

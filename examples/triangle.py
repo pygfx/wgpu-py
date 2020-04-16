@@ -99,10 +99,8 @@ def _main(canvas, device):
                     wgpu.BlendFactor.zero,
                     wgpu.BlendOperation.add,
                 ),
-                "write_mask": wgpu.ColorWrite.ALL,
             }
         ],
-        depth_stencil_state=None,
         vertex_state={"index_format": wgpu.IndexFormat.uint32, "vertex_buffers": []},
         sample_count=1,
         sample_mask=0xFFFFFFFF,
@@ -128,8 +126,6 @@ def _main(canvas, device):
                         "store_op": wgpu.StoreOp.store,
                     }
                 ],
-                depth_stencil_attachment=None,
-                occlusion_query_set=None,
             )
 
             render_pass.set_pipeline(render_pipeline)

@@ -84,8 +84,8 @@ class GPUAdapter:  # Not a GPUObject
 
         Arguments:
             label (str): A human readable label. Optional.
-            extensions (list of str): the extensions that you need.
-            limits (dict): the various limits that you need.
+            extensions (list of str): the extensions that you need. Default [].
+            limits (dict): the various limits that you need. Default {}.
         """
         raise NotImplementedError()
 
@@ -245,7 +245,7 @@ class GPUDevice(GPUObject):
             size (tuple or dict): The texture size with fields (width, height, depth).
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
-            dimension (TextureDimension): The dimensionality of the texture.
+            dimension (TextureDimension): The dimensionality of the texture. Default 2d.
             format (TextureFormat): What channels it stores and how.
             usage (TextureUsageFlags): The ways in which the texture will be used.
         """
@@ -265,22 +265,25 @@ class GPUDevice(GPUObject):
         mipmap_filter: "GPUFilterMode" = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 0xFFFFFFFF,
-        compare: "GPUCompareFunction",
+        compare: "GPUCompareFunction" = None,
     ):
         """ Create a :class:`GPUSampler` object. Samplers specify how a texture is sampled.
 
         Arguments:
             label (str): A human readable label. Optional.
             address_mode_u (AddressMode): What happens when sampling beyond the x edge.
+                Default "clamp-to-edge".
             address_mode_v (AddressMode): What happens when sampling beyond the y edge.
+                Default "clamp-to-edge".
             address_mode_w (AddressMode): What happens when sampling beyond the z edge.
+                Default "clamp-to-edge".
             mag_filter (FilterMode): Interpolation when zoomed in. Default 'nearest'.
             min_filter (FilterMode): Interpolation when zoomed out. Default 'nearest'.
             mipmap_filter: (FilterMode): Interpolation between mip levels. Default 'nearest'.
             lod_min_clamp (float): The minimum level of detail. Default 0.
             lod_max_clamp (float): The maxium level of detail. Default inf.
             compare (CompareFunction): The sample compare operation for depth textures.
-                For non-depth textures you probably want to set this to zero.
+                Only specify this for depth textures. Default None.
         """
         raise NotImplementedError()
 
@@ -309,14 +312,29 @@ class GPUDevice(GPUObject):
                 "type": wgpu.BindingType.storage_buffer,
                 "has_dynamic_offset": False,  # optional
             },
-            # Texture
+            # Sampler
             {
                 "binding": 1,
+                "visibility": wgpu.ShaderStage.COMPUTE,
+                "type": wgpu.BindingType.sampler,
+            },
+            # Sampled texture
+            {
+                "binding": 2,
                 "visibility": wgpu.ShaderStage.FRAGMENT,
                 "type": wgpu.BindingType.sampled_texture,
                 "view_dimension": wgpu.TextureViewDimension.d2,
                 "texture_component_type": wgpu.TextureComponentType.float,
-                "storage_texture_format": wgpu.TextureFormat.rgba8unorm,
+                "multisampled": False,  # optional
+            },
+            # Storage texture
+            {
+                "binding": 2,
+                "visibility": wgpu.ShaderStage.FRAGMENT,
+                "type": wgpu.BindingType.readonly_storage_texture,
+                "view_dimension": wgpu.TextureViewDimension.d2,
+                "texture_component_type": wgpu.TextureComponentType.float,
+                "storage_texture_format": wgpu.TextureFormat.r32float,
                 "multisampled": False,  # optional
             },
 
@@ -428,11 +446,11 @@ class GPUDevice(GPUObject):
         label="",
         layout: "GPUPipelineLayout",
         vertex_stage: "GPUProgrammableStageDescriptor",
-        fragment_stage: "GPUProgrammableStageDescriptor",
+        fragment_stage: "GPUProgrammableStageDescriptor" = None,
         primitive_topology: "GPUPrimitiveTopology",
         rasterization_state: "GPURasterizationStateDescriptor" = {},
         color_states: "GPUColorStateDescriptor-list",
-        depth_stencil_state: "GPUDepthStencilStateDescriptor",
+        depth_stencil_state: "GPUDepthStencilStateDescriptor" = None,
         vertex_state: "GPUVertexStateDescriptor" = {},
         sample_count: "GPUSize32" = 1,
         sample_mask: "GPUSampleMask" = 0xFFFFFFFF,
@@ -444,26 +462,29 @@ class GPUDevice(GPUObject):
             label (str): A human readable label. Optional.
             layout (GPUPipelineLayout): A layout created with ``create_pipeline_layout()``.
             vertex_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``
-            fragment_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``
+            fragment_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``. Default None.
             primitive_topology (PrimitiveTopology): The topology, e.g. triangles or lines.
-            rasterization_state (dict): Specify rasterization rules. See below.
+            rasterization_state (dict): Specify rasterization rules. See below. Default None.
             color_states (list of dict): Specify color blending rules. See below.
-            depth_stencil_state (dict): Specify texture for depth and stencil. Can be None. See below.
+            depth_stencil_state (dict): Specify texture for depth and stencil. See below. Default None.
             vertex_state (dict): Specify index and vertex buffer info. See below.
-            sample_count (int): Set higher than one for subsampling.
-            sample_mask (int): Sample bitmask.
-            alpha_to_coverage_enabled (bool): Wheher to anable alpha coverage.
+            sample_count (int): Set higher than one for subsampling. Default 1.
+            sample_mask (int): Sample bitmask. Default all ones.
+            alpha_to_coverage_enabled (bool): Wheher to anable alpha coverage. Default False.
+
+        In the example dicts below, the values that are marked as optional,
+        the shown value is the default.
 
         Example rasterization state dict:
 
         .. code-block:: py
 
             {
-                "front_face": wgpu.FrontFace.ccw,
-                "cull_mode": wgpu.CullMode.none,
-                "depth_bias": 0,
-                "depth_bias_slope_scale": 0.0,
-                "depth_bias_clamp": 0.0
+                "front_face": wgpu.FrontFace.ccw,  # optional
+                "cull_mode": wgpu.CullMode.none,  # optional
+                "depth_bias": 0,  # optional
+                "depth_bias_slope_scale": 0.0,  # optional
+                "depth_bias_clamp": 0.0  # optional
             }
 
         Example color state dict:
@@ -472,9 +493,17 @@ class GPUDevice(GPUObject):
 
             {
                 "format": wgpu.TextureFormat.bgra8unorm_srgb,
-                "alpha_blend": (wgpu.BlendFactor.One, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
-                "colorBlend": (wgpu.BlendFactor.One, wgpu.BlendFactor.zero, wgpu.BlendOperation.add),
-                "writeMask": wgpu.ColorWrite.ALL
+                "alpha_blend": (
+                    wgpu.BlendFactor.One,
+                    wgpu.BlendFactor.zero,
+                    wgpu.BlendOperation.add,
+                ),
+                "color_blend": (
+                    wgpu.BlendFactor.One,
+                    wgpu.BlendFactor.zero,
+                    gpu.BlendOperation.add,
+                ),
+                "write_mask": wgpu.ColorWrite.ALL  # optional
             }
 
         Example depth-stencil state dict:
@@ -483,22 +512,22 @@ class GPUDevice(GPUObject):
 
             {
                 "format": wgpu.TextureFormat.depth24plus_stencil8,
-                "depth_write_enabled": True,
-                "depth_compare": wgpu.CompareFunction.less_equal,
-                "stencil_front": {
+                "depth_write_enabled": False,  # optional
+                "depth_compare": wgpu.CompareFunction.always,  # optional
+                "stencil_front": {  # optional
                     "compare": wgpu.CompareFunction.equal,
                     "fail_op": wgpu.StencilOperation.keep,
                     "depth_fail_op": wgpu.StencilOperation.keep,
                     "pass_op": wgpu.StencilOperation.keep,
                 },
-                "stencil_back": {
+                "stencil_back": {  # optional
                     "compare": wgpu.CompareFunction.equal,
                     "fail_op": wgpu.StencilOperation.keep,
                     "depth_fail_op": wgpu.StencilOperation.keep,
                     "pass_op": wgpu.StencilOperation.keep,
                 },
-                "stencil_read_mask": 0,
-                "stencil_write_mask": 0,
+                "stencil_read_mask": 0xFFFFFFFF,  # optional
+                "stencil_write_mask": 0xFFFFFFFF,  # optional
             }
 
         Example vertex state dict:
@@ -510,7 +539,7 @@ class GPUDevice(GPUObject):
                 "vertexBuffers": [
                     {
                         "array_stride": 8,
-                        "stepmode": "vertex",
+                        "step_mode": wgpu.InputStepMode.vertex,  # optional
                         "attributes": [
                             {
                                 "format": wgpu.VertexFormat.float2,
@@ -545,7 +574,7 @@ class GPUDevice(GPUObject):
         *,
         label="",
         color_formats: "GPUTextureFormat-list",
-        depth_stencil_format: "GPUTextureFormat",
+        depth_stencil_format: "GPUTextureFormat" = None,
         sample_count: "GPUSize32" = 1,
     ):
         """ Create a :class:`GPURenderBundle` object.
@@ -554,7 +583,7 @@ class GPUDevice(GPUObject):
         """
         raise NotImplementedError()
 
-    def configure_swap_chain(self, canvas, format, usage):
+    def configure_swap_chain(self, canvas, format, usage=None):
         """ Get a :class:`GPUSwapChain` object for the given canvas.
         In the WebGPU spec this is a method of the canvas. In wgpu-py
         it's a method of the device.
@@ -562,7 +591,7 @@ class GPUDevice(GPUObject):
         Parameters:
             canvas (WgpuCanvasInterface): An object implementing the canvas interface.
             format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
-            usage (TextureUsage): Probably ``wgpu.TextureUsage.OUTPUT_ATTACHMENT``.
+            usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
         """
         # This was made a method of device to help decouple the canvas
         # implementation from the wgpu API.
@@ -703,8 +732,8 @@ class GPUTexture(GPUObject):
         self,
         *,
         label="",
-        format: "GPUTextureFormat",
-        dimension: "GPUTextureViewDimension",
+        format: "GPUTextureFormat" = None,
+        dimension: "GPUTextureViewDimension" = None,
         aspect: "GPUTextureAspect" = "all",
         base_mip_level: "GPUIntegerCoordinate" = 0,
         mip_level_count: "GPUIntegerCoordinate" = 0,
@@ -713,24 +742,19 @@ class GPUTexture(GPUObject):
     ):
         """ Create a :class:`GPUTextureView` object.
 
+        If no aguments are given, a default view is given, with the
+        same format and dimension as the texture.
+
         Arguments:
             label (str): A human readable label. Optional.
             format (TextureFormat): What channels it stores and how.
             dimension (TextureViewDimension): The dimensionality of the texture view.
             aspect (TextureAspect): Whether this view is used for depth, stencil, or all.
-            base_mip_level (int): The starting mip level.
-            mip_level_count (int): The number of mip levels.
-            base_array_layer (int): The starting array layer.
-            array_layer_count (int): The number of array layers.
-        """
-        raise NotImplementedError()
-
-    def create_default_view(self, *, label=""):
-        """ Get the default view on this texture. This method is not part of
-        the WebGPU API, but we (currently) provide it because it's so useful.
-
-        Parameters:
-            label (str): A human readable label. Optional.
+                Default all.
+            base_mip_level (int): The starting mip level. Default 0.
+            mip_level_count (int): The number of mip levels. Default 0.
+            base_array_layer (int): The starting array layer. Default 0.
+            array_layer_count (int): The number of array layers. Default 0.
         """
         raise NotImplementedError()
 
@@ -748,8 +772,7 @@ class GPUTextureView(GPUObject):
     """
     A texture view represents a way to represent a :class:`GPUTexture`.
 
-    Create a texture view using :func:`GPUTexture.create_view` or
-    :func:`GPUTexture.create_default_view`.
+    Create a texture view using :func:`GPUTexture.create_view`.
     """
 
 
@@ -865,8 +888,8 @@ class GPUCommandEncoder(GPUObject):
         *,
         label="",
         color_attachments: "GPURenderPassColorAttachmentDescriptor-list",
-        depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
-        occlusion_query_set: "GPUQuerySet",
+        depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor" = None,
+        occlusion_query_set: "GPUQuerySet" = None,
     ):
         """ Record the beginning of a render pass. Returns a
         :class:`GPURenderPassEncoder` object.
@@ -874,17 +897,18 @@ class GPUCommandEncoder(GPUObject):
         Arguments:
             label (str): A human readable label. Optional.
             color_attachements (list of dict): List of color attachement dicts. See below.
-            depth_stencil_attachment (dict): A depth stencil attachement dict. See below.
-            occlusion_query_set: IGNORED, NOT IMPLEMENTED in wgpu-native
+            depth_stencil_attachment (dict): A depth stencil attachement dict. See below. Default None.
+            occlusion_query_set: Default None. TODO NOT IMPLEMENTED in wgpu-native.
 
         Example color attachement:
 
         .. code-block:: py
 
             {
-                "resolve_target": None,
+                "attachement": texture_view,
+                "resolve_target": None,  # optional
                 "load_value": (0, 0, 0, 0),  # LoadOp.load or a color
-                "store_op": wgpu.StoreOp.store,
+                "store_op": wgpu.StoreOp.store,  # optional
             }
 
         Example depth stencil attachement:
@@ -1054,13 +1078,13 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
 
     # wgpu.help('Size32', 'computepassencoderdispatch', dev=True)
     # IDL: void dispatch(GPUSize32 x, optional GPUSize32 y = 1, optional GPUSize32 z = 1);
-    def dispatch(self, x, y, z):
+    def dispatch(self, x, y=1, z=1):
         """ Run the compute shader.
 
         Arguments:
             x (int): The number of cycles in index x.
-            y (int): The number of cycles in index y.
-            z (int): The number of cycles in index z.
+            y (int): The number of cycles in index y. Default 1.
+            z (int): The number of cycles in index z. Default 1.
         """
         raise NotImplementedError()
 
@@ -1100,39 +1124,39 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
     # IDL: void setIndexBuffer(GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def set_index_buffer(self, buffer, offset, size):
+    def set_index_buffer(self, buffer, offset=0, size=0):
         """ Set the index buffer for this render pass.
 
         Arguments:
             buffer (GPUBuffer): The buffer that contains the indices.
-            offset (int): The byte offset in the buffer..
-            size (int): The number of bytes to use.
+            offset (int): The byte offset in the buffer. Default 0.
+            size (int): The number of bytes to use. Default 0.
         """
         raise NotImplementedError()
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
     # IDL: void setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def set_vertex_buffer(self, slot, buffer, offset, size):
+    def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
         """ Associate a vertex buffer with a bind slot.
 
         Arguments:
             slot (int): The binding slot for the vertex buffer.
             buffer (GPUBuffer): The buffer that contains the vertex data.
-            offset (int): The byte offset in the buffer.
-            size (int): The number of bytes to use.
+            offset (int): The byte offset in the buffer. Default 0.
+            size (int): The number of bytes to use. Default 0.
         """
         raise NotImplementedError()
 
     # wgpu.help('Size32', 'renderencoderbasedraw', dev=True)
     # IDL: void draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
-    def draw(self, vertex_count, instance_count, first_vertex, first_instance):
+    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
         """ Run the render pipeline without an index buffer.
 
         Arguments:
             vertex_count (int): The number of vertices to draw.
-            instance_count (int):  The number of instances to draw.
-            first_vertex (int): The vertex offset.
-            first_instance (int):  The instance offset.
+            instance_count (int):  The number of instances to draw. Default 1.
+            first_vertex (int): The vertex offset. Default 0.
+            first_instance (int):  The instance offset. Default 0.
         """
         raise NotImplementedError()
 
@@ -1150,16 +1174,21 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     # IDL: void drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstIndex = 0,  optional GPUSignedOffset32 baseVertex = 0,  optional GPUSize32 firstInstance = 0);
     def draw_indexed(
-        self, index_count, instance_count, first_index, base_vertex, first_instance
+        self,
+        index_count,
+        instance_count=1,
+        first_index=0,
+        base_vertex=0,
+        first_instance=0,
     ):
         """ Run the render pipeline using an index buffer.
 
         Arguments:
             index_count (int): The number of indices to draw.
-            instance_count (int): The number of instances to draw.
-            first_index (int):  The index offset.
-            base_vertex (int):  A number added to each index in the index buffer.
-            first_instance (int): The instance offset.
+            instance_count (int): The number of instances to draw. Default 1.
+            first_index (int):  The index offset. Default 0.
+            base_vertex (int):  A number added to each index in the index buffer. Default 0.
+            first_instance (int): The instance offset. Default 0.
         """
         raise NotImplementedError()
 

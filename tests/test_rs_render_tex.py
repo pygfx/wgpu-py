@@ -8,7 +8,7 @@ import numpy as np
 import python_shader
 from python_shader import python2shader, f32, vec2, vec4, i32
 import wgpu.backends.rs  # noqa
-from pytest import skip
+from pytest import skip, raises
 from testutils import can_use_wgpu_lib, get_default_device, can_use_vulkan_sdk
 from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
 
@@ -391,18 +391,18 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     )
     upload_to_texture(device, texture, texture_data, nx, ny, nz)
 
-    # texture_view = texture.create_default_view()
+    # texture_view = texture.create_view()
     # or:
     texture_view = texture.create_view(
-        format=texture_format,
-        dimension=wgpu.TextureDimension.d2,
-        aspect=wgpu.TextureAspect.all,
+        format=texture_format, dimension=wgpu.TextureDimension.d2,
     )
+    # But not like these ...
+    with raises(ValueError):
+        texture_view = texture.create_view(dimension=wgpu.TextureDimension.d2,)
+    with raises(ValueError):
+        texture_view = texture.create_view(mip_level_count=1,)
 
-    sampler = device.create_sampler(
-        mag_filter="linear", min_filter="linear", compare=0,
-    )
-    # compare 0 means undefined, but there is no wgpu.CompareFunction.undefined !
+    sampler = device.create_sampler(mag_filter="linear", min_filter="linear")
 
     # Determine texture component type from the format
     if texture_format.endswith(("norm", "float")):

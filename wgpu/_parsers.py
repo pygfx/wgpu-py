@@ -299,6 +299,10 @@ class IdlParser(BaseParser):
                     arg_type, arg_name = arg.strip().rsplit(" ", 1)
                     if arg_type.startswith("required "):
                         arg_type = arg_type[9:]
+                        # required args should not have a default
+                        assert default is None
+                    else:
+                        default = default or "None"
                     arg_type = typedefs.get(arg_type, arg_type)
                     if arg_type in ["double", "float"]:
                         t = "float"

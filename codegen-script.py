@@ -343,9 +343,12 @@ for fname in ("base.py", "backends/rs.py"):
 
             # Get arg names and types
             args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-            argnames = [arg.split("=")[0].split()[-1] for arg in args if arg.strip()]
+            args = [arg.strip() for arg in args if arg.strip()]
+            defaults = [arg.partition("=")[2].strip() for arg in args]
+            argnames = [arg.split("=")[0].split()[-1] for arg in args]
             argnames = [to_python_name(argname) for argname in argnames]
-            argtypes = [arg.split("=")[0].split()[-2] for arg in args if arg.strip()]
+            argnames = [(f"{n}={v}" if v else n) for n, v in zip(argnames, defaults)]
+            argtypes = [arg.split("=")[0].split()[-2] for arg in args]
 
             # Compose searches for help() call
             searches = [func_id_match]
@@ -357,7 +360,7 @@ for fname in ("base.py", "backends/rs.py"):
                 assert argtypes[0].startswith("GPU")
                 arg_struct = ip.structs[argtypes[0][3:]]
                 py_args = [field.py_arg() for field in arg_struct.values()]
-                if py_args[0] == "label: str":
+                if py_args[0].startswith("label: str"):
                     py_args[0] = 'label=""'
                     py_args = ["self", "*"] + py_args
             else:

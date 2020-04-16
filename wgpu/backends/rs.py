@@ -39,7 +39,7 @@ from weakref import WeakKeyDictionary
 
 from cffi import FFI, __version_info__ as cffi_version_info
 
-from .. import base
+from .. import base, flags
 from .. import _register_backend
 from .._coreutils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
@@ -485,7 +485,7 @@ class GPUDevice(base.GPUDevice):
         mipmap_filter: "GPUFilterMode" = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 0xFFFFFFFF,
-        compare: "GPUCompareFunction",
+        compare: "GPUCompareFunction" = None,
     ):
         struct = new_struct(
             "WGPUSamplerDescriptor *",
@@ -496,7 +496,7 @@ class GPUDevice(base.GPUDevice):
             mipmap_filter=mipmap_filter,
             lod_min_clamp=lod_min_clamp,
             lod_max_clamp=lod_max_clamp,
-            compare=compare,
+            compare=0 if compare is None else compare,
         )
 
         id = _lib.wgpu_device_create_sampler(self._internal, struct)
@@ -584,9 +584,7 @@ class GPUDevice(base.GPUDevice):
                     )[0],
                 }
             else:
-                raise TypeError(
-                    f"Unexpected resource type {type(resource)}"
-                )  # no-cover
+                raise TypeError(f"Unexpected resource type {type(resource)}")
             c_resource = new_struct("WGPUBindingResource *", **c_resource_kwargs)
             c_entry = new_struct(
                 "WGPUBindGroupEntry *",
@@ -684,11 +682,11 @@ class GPUDevice(base.GPUDevice):
         label="",
         layout: "GPUPipelineLayout",
         vertex_stage: "GPUProgrammableStageDescriptor",
-        fragment_stage: "GPUProgrammableStageDescriptor",
+        fragment_stage: "GPUProgrammableStageDescriptor" = None,
         primitive_topology: "GPUPrimitiveTopology",
         rasterization_state: "GPURasterizationStateDescriptor" = {},
         color_states: "GPUColorStateDescriptor-list",
-        depth_stencil_state: "GPUDepthStencilStateDescriptor",
+        depth_stencil_state: "GPUDepthStencilStateDescriptor" = None,
         vertex_state: "GPUVertexStateDescriptor" = {},
         sample_count: "GPUSize32" = 1,
         sample_mask: "GPUSampleMask" = 0xFFFFFFFF,
@@ -699,18 +697,20 @@ class GPUDevice(base.GPUDevice):
             module=vertex_stage["module"]._internal,
             entry_point=ffi.new("char []", vertex_stage["entry_point"].encode()),
         )
-        c_fragment_stage = new_struct(
-            "WGPUProgrammableStageDescriptor *",
-            module=fragment_stage["module"]._internal,
-            entry_point=ffi.new("char []", fragment_stage["entry_point"].encode()),
-        )
+        c_fragment_stage = ffi.NULL
+        if fragment_stage is not None:
+            c_fragment_stage = new_struct(
+                "WGPUProgrammableStageDescriptor *",
+                module=fragment_stage["module"]._internal,
+                entry_point=ffi.new("char []", fragment_stage["entry_point"].encode()),
+            )
         c_rasterization_state = new_struct(
             "WGPURasterizationStateDescriptor *",
-            front_face=rasterization_state["front_face"],
-            cull_mode=rasterization_state["cull_mode"],
-            depth_bias=rasterization_state["depth_bias"],
-            depth_bias_slope_scale=rasterization_state["depth_bias_slope_scale"],
-            depth_bias_clamp=rasterization_state["depth_bias_clamp"],
+            front_face=rasterization_state.get("front_face", "ccw"),
+            cull_mode=rasterization_state.get("cull_mode", "none"),
+            depth_bias=rasterization_state.get("depth_bias", 0),
+            depth_bias_slope_scale=rasterization_state.get("depth_bias_slope_scale", 0),
+            depth_bias_clamp=rasterization_state.get("depth_bias_clamp", 0),
         )
         c_color_states_list = []
         for color_state in color_states:
@@ -737,8 +737,8 @@ class GPUDevice(base.GPUDevice):
                 format=color_state["format"],
                 alpha_blend=c_alpha_blend[0],
                 color_blend=c_color_blend[0],
-                write_mask=color_state["write_mask"],
-            )  # enum
+                write_mask=color_state.get("write_mask", 0xF),
+            )
             c_color_states_list.append(c_color_state[0])
         c_color_states_array = ffi.new(
             "WGPUColorStateDescriptor []", c_color_states_list
@@ -746,31 +746,37 @@ class GPUDevice(base.GPUDevice):
         if depth_stencil_state is None:
             c_depth_stencil_state = ffi.NULL
         else:
-            stencil_front = depth_stencil_state["stencil_front"]
+            stencil_front = depth_stencil_state.get("stencil_front", {})
             c_stencil_front = new_struct(
                 "WGPUStencilStateFaceDescriptor *",
-                compare=stencil_front["compare"],
-                fail_op=stencil_front["fail_op"],
-                depth_fail_op=stencil_front["depth_fail_op"],
-                pass_op=stencil_front["pass_op"],
+                compare=stencil_front.get("compare", "always"),
+                fail_op=stencil_front.get("fail_op", "keep"),
+                depth_fail_op=stencil_front.get("depth_fail_op", "keep"),
+                pass_op=stencil_front.get("pass_op", "keep"),
             )
-            stencil_back = depth_stencil_state["stencil_back"]
+            stencil_back = depth_stencil_state.get("stencil_back", {})
             c_stencil_back = new_struct(
                 "WGPUStencilStateFaceDescriptor *",
-                compare=stencil_back["compare"],
-                fail_op=stencil_back["fail_op"],
-                depth_fail_op=stencil_back["depth_fail_op"],
-                pass_op=stencil_back["pass_op"],
+                compare=stencil_back.get("compare", "always"),
+                fail_op=stencil_back.get("fail_op", "keep"),
+                depth_fail_op=stencil_back.get("depth_fail_op", "keep"),
+                pass_op=stencil_back.get("pass_op", "keep"),
             )
             c_depth_stencil_state = new_struct(
                 "WGPUDepthStencilStateDescriptor *",
                 format=depth_stencil_state["format"],
-                depth_write_enabled=bool(depth_stencil_state["depth_write_enabled"]),
-                depth_compare=depth_stencil_state["depth_compare"],
+                depth_write_enabled=bool(
+                    depth_stencil_state.get("depth_write_enabled", False)
+                ),
+                depth_compare=depth_stencil_state.get("depth_compare", "always"),
                 stencil_front=c_stencil_front[0],
                 stencil_back=c_stencil_back[0],
-                stencil_read_mask=depth_stencil_state["stencil_read_mask"],
-                stencil_write_mask=depth_stencil_state["stencil_write_mask"],
+                stencil_read_mask=depth_stencil_state.get(
+                    "stencil_read_mask", 0xFFFFFFFF
+                ),
+                stencil_write_mask=depth_stencil_state.get(
+                    "stencil_write_mask", 0xFFFFFFFF
+                ),
             )
         c_vertex_buffer_descriptors_list = []
         for buffer_des in vertex_state["vertex_buffers"]:
@@ -789,7 +795,7 @@ class GPUDevice(base.GPUDevice):
             c_vertex_buffer_descriptor = new_struct(
                 "WGPUVertexBufferLayoutDescriptor *",
                 array_stride=buffer_des["array_stride"],
-                step_mode=buffer_des["stepmode"],
+                step_mode=buffer_des.get("step_mode", "vertex"),
                 attributes=c_attributes_array,
                 attributes_length=len(c_attributes_list),
             )
@@ -799,7 +805,7 @@ class GPUDevice(base.GPUDevice):
         )
         c_vertex_state = new_struct(
             "WGPUVertexStateDescriptor *",
-            index_format=vertex_state["index_format"],
+            index_format=vertex_state.get("index_format", "uint32"),
             vertex_buffers=c_vertex_buffer_descriptors_array,
             vertex_buffers_length=len(c_vertex_buffer_descriptors_list),
         )
@@ -837,12 +843,13 @@ class GPUDevice(base.GPUDevice):
     #     *,
     #     label="",
     #     color_formats: "GPUTextureFormat-list",
-    #     depth_stencil_format: "GPUTextureFormat",
+    #     depth_stencil_format: "GPUTextureFormat" = None,
     #     sample_count: "GPUSize32" = 1,
     # ):
     #     pass
 
-    def configure_swap_chain(self, canvas, format, usage):
+    def configure_swap_chain(self, canvas, format, usage=None):
+        usage = flags.TextureUsage.OUTPUT_ATTACHMENT if usage is None else usage
         return GPUSwapChain(self, canvas, format, usage)
 
 
@@ -937,32 +944,43 @@ class GPUTexture(base.GPUTexture):
         self,
         *,
         label="",
-        format: "GPUTextureFormat",
-        dimension: "GPUTextureViewDimension",
+        format: "GPUTextureFormat" = None,
+        dimension: "GPUTextureViewDimension" = None,
         aspect: "GPUTextureAspect" = "all",
         base_mip_level: "GPUIntegerCoordinate" = 0,
         mip_level_count: "GPUIntegerCoordinate" = 0,
         base_array_layer: "GPUIntegerCoordinate" = 0,
         array_layer_count: "GPUIntegerCoordinate" = 0,
     ):
+        if format is None or dimension is None:
+            if not (
+                format is None
+                and dimension is None
+                and aspect == "all"
+                and base_mip_level == 0
+                and mip_level_count == 0
+                and base_array_layer == 0
+                and array_layer_count == 0
+            ):
+                raise ValueError(
+                    "In create_view() if any paramter is given, "
+                    + "both format and dimension must be specified."
+                )
+            id = _lib.wgpu_texture_create_view(self._internal, ffi.NULL)
 
-        struct = new_struct(
-            "WGPUTextureViewDescriptor *",
-            format=format,
-            dimension=dimension,
-            aspect=aspect,
-            base_mip_level=base_mip_level,
-            level_count=mip_level_count,
-            base_array_layer=base_array_layer,
-            array_layer_count=array_layer_count,
-        )
+        else:
+            struct = new_struct(
+                "WGPUTextureViewDescriptor *",
+                format=format,
+                dimension=dimension,
+                aspect=aspect,
+                base_mip_level=base_mip_level,
+                level_count=mip_level_count,
+                base_array_layer=base_array_layer,
+                array_layer_count=array_layer_count,
+            )
+            id = _lib.wgpu_texture_create_view(self._internal, struct)
 
-        id = _lib.wgpu_texture_create_view(self._internal, struct)
-        return base.GPUTextureView(label, id, self)
-
-    def create_default_view(self, *, label=""):
-        # This method is available in wgpu-rs, and it's kinda nice :)
-        id = _lib.wgpu_texture_create_view(self._internal, ffi.NULL)
         return base.GPUTextureView(label, id, self)
 
     # wgpu.help('texturedestroy', dev=True)
@@ -988,8 +1006,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         *,
         label="",
         color_attachments: "GPURenderPassColorAttachmentDescriptor-list",
-        depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor",
-        occlusion_query_set: "GPUQuerySet",
+        depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor" = None,
+        occlusion_query_set: "GPUQuerySet" = None,
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.
 
@@ -999,7 +1017,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             texture_view_id = color_attachment["attachment"]._internal
             c_resolve_target = (
                 0
-                if color_attachment["resolve_target"] is None
+                if color_attachment.get("resolve_target", None) is None
                 else color_attachment["resolve_target"]._internal
             )  # this is a TextureViewId or null
             c_load_op, clear_color = _loadop_and_clear_from_value(
@@ -1018,7 +1036,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
                 attachment=texture_view_id,
                 resolve_target=c_resolve_target,
                 load_op=c_load_op,
-                store_op=color_attachment["store_op"],
+                store_op=color_attachment.get("store_op", "store"),
                 clear_color=c_clear_color[0],
             )
             c_color_attachments_list.append(c_attachment[0])
@@ -1078,7 +1096,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             buffer=source["buffer"]._internal,
             offset=int(source.get("offset", 0)),
             bytes_per_row=int(source["bytes_per_row"]),
-            rows_per_image=int(source["rows_per_image"]),
+            rows_per_image=int(source.get("rows_per_image", 0)),
         )
 
         ori = _tuple_from_tuple_or_dict(destination["origin"], "xyz")
@@ -1118,7 +1136,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             buffer=destination["buffer"]._internal,
             offset=int(destination.get("offset", 0)),
             bytes_per_row=int(destination["bytes_per_row"]),
-            rows_per_image=int(destination["rows_per_image"]),
+            rows_per_image=int(destination.get("rows_per_image", 0)),
         )
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
@@ -1230,7 +1248,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
         _lib.wgpu_compute_pass_set_pipeline(self._internal, pipeline_id)
 
     # wgpu.help('Size32', 'computepassencoderdispatch', dev=True)
-    def dispatch(self, x, y, z):
+    def dispatch(self, x, y=1, z=1):
         _lib.wgpu_compute_pass_dispatch(self._internal, x, y, z)
 
     # wgpu.help('Buffer', 'Size64', 'computepassencoderdispatchindirect', dev=True)
@@ -1262,19 +1280,19 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         _lib.wgpu_render_pass_set_pipeline(self._internal, pipeline_id)
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
-    def set_index_buffer(self, buffer, offset, size):
+    def set_index_buffer(self, buffer, offset=0, size=0):
         _lib.wgpu_render_pass_set_index_buffer(
             self._internal, buffer._internal, int(offset), int(size)
         )
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
-    def set_vertex_buffer(self, slot, buffer, offset, size):
+    def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
         _lib.wgpu_render_pass_set_vertex_buffer(
             self._internal, int(slot), buffer._internal, int(offset), int(size)
         )
 
     # wgpu.help('Size32', 'renderencoderbasedraw', dev=True)
-    def draw(self, vertex_count, instance_count, first_vertex, first_instance):
+    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
         _lib.wgpu_render_pass_draw(
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
@@ -1288,7 +1306,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     def draw_indexed(
-        self, index_count, instance_count, first_index, base_vertex, first_instance
+        self,
+        index_count,
+        instance_count=1,
+        first_index=0,
+        base_vertex=0,
+        first_instance=0,
     ):
         _lib.wgpu_render_pass_draw_indexed(
             self._internal,
