@@ -72,6 +72,15 @@ def _get_wgpu_h():
     return "".join(lines)
 
 
+def get_wgpu_version():
+    """ Read wgpu version tracking text file.
+    """
+    with open(get_resource_filename("wgpu_native-version")) as f:
+        ver_str = f.readline().strip()
+    ver_info = tuple(map(int, ver_str[1:].split('.')))
+    return ver_str, ver_info
+
+
 def _get_wgpu_lib_path():
     """ Get the path to the wgpu library, taking into account the
     WGPU_LIB_PATH environment variable.

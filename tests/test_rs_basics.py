@@ -10,6 +10,17 @@ from testutils import can_use_wgpu_lib, iters_equal
 from pytest import mark, raises
 
 
+def test_get_wgpu_version():
+    version, version_info = wgpu.backends.rs.get_wgpu_version()
+
+    assert isinstance(version, str)
+    assert version.startswith("v")
+
+    assert isinstance(version_info, tuple)
+    assert all(isinstance(i, int) for i in version_info)
+    assert len(version_info) == 3
+
+
 def test_override_wgpu_lib_path():
 
     # Current version
