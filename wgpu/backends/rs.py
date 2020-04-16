@@ -73,12 +73,14 @@ def _get_wgpu_h():
 
 
 def get_wgpu_version():
-    """ Read wgpu version tracking text file.
+    """ Read wgpu version tracking text files.
     """
     with open(get_resource_filename("wgpu_native-version")) as f:
         ver_str = f.readline().strip()
+    with open(get_resource_filename("commit-sha")) as f:
+        commit_sha = f.readline().strip()
     ver_info = tuple(map(int, ver_str[1:].split('.')))
-    return ver_str, ver_info
+    return ver_str, ver_info, commit_sha
 
 
 def _get_wgpu_lib_path():
