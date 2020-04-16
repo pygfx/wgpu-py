@@ -24,10 +24,10 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 *The wgpu-API has not settled yet, use with care!*
 
-* Coverage of the WebGPU spec is about 95%.
+* Coverage of the WebGPU spec is nearly complete.
 * Test coverage of the API is 100%.
-* Support for Windows and Linux. Support for MacOS is underway.
-* The API may change. Until WebGPU settles as a standard, its specification
+* Support for Windows, Linux and MacOS.
+* Until WebGPU settles as a standard, its specification
   may change, and with that our API will probably too.
 
 
@@ -54,10 +54,11 @@ On Linux, it's advisable to install the proprietary drivers of your GPU
 Wayland currently only works with the GLFW canvas (and is unstable).
 
 On MacOS you need at least 10.13 (High Sierra) to have Vulkan support.
-At the moment, we've not implemented drawing to a window yet (see #29).
 
 
 ## Usage
+
+Also see the [online documentation](https://wgpu-py.readthedocs.io).
 
 The full API is accessable via the main namespace:
 ```py
@@ -69,9 +70,6 @@ There is currently only one backend:
 ```py
 import wgpu.backend.rs
 ```
-
-
-## GUI integration
 
 To render to the screen you can use a variety of GUI toolkits:
 
