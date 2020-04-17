@@ -896,22 +896,22 @@ class GPUCommandEncoder(GPUObject):
 
         Arguments:
             label (str): A human readable label. Optional.
-            color_attachements (list of dict): List of color attachement dicts. See below.
-            depth_stencil_attachment (dict): A depth stencil attachement dict. See below. Default None.
+            color_attachments (list of dict): List of color attachment dicts. See below.
+            depth_stencil_attachment (dict): A depth stencil attachment dict. See below. Default None.
             occlusion_query_set: Default None. TODO NOT IMPLEMENTED in wgpu-native.
 
-        Example color attachement:
+        Example color attachment:
 
         .. code-block:: py
 
             {
-                "attachement": texture_view,
+                "attachment": texture_view,
                 "resolve_target": None,  # optional
                 "load_value": (0, 0, 0, 0),  # LoadOp.load or a color
                 "store_op": wgpu.StoreOp.store,  # optional
             }
 
-        Example depth stencil attachement:
+        Example depth stencil attachment:
 
         .. code-block:: py
 
@@ -1336,7 +1336,7 @@ class GPUQueue(GPUObject):
 class GPUSwapChain(GPUObject):
     """
     A swap chain is a placeholder for a texture to be presented to the screen,
-    so that you can provide the corresponding texture view as a color attachement
+    so that you can provide the corresponding texture view as a color attachment
     to :func:`GPUCommandEncoder.begin_render_pass`. The texture view can be
     obtained by using the swap-chain in a with-statement. The swap-chain is
     presented to the screen when the context exits.
