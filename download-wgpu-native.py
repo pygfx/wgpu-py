@@ -93,10 +93,10 @@ def main(version, os_string, arch, upstream, build):
     print(f"Extracting {members} to {RESOURCE_DIR}")
     extract_files(zip_filename, members, RESOURCE_DIR)
     current_version = get_current_version()
-    if version != current_version or True:
+    if version != current_version:
         print(f"Version changed, updating {VERSION_FILE}")
         filename = "commit-sha"
-        url = f"https://github.com/{upstream}/releases/download/{version}/{filename}"
+        url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
         commit_sha_filename = os.path.join(tmp, filename)
         print(f"Downloading {url} to {commit_sha_filename}")
         download_file(url, commit_sha_filename)
