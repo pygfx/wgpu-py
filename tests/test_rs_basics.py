@@ -11,10 +11,11 @@ from pytest import mark, raises
 
 
 def test_get_wgpu_version():
-    version, version_info, commit_sha = wgpu.backends.rs.get_wgpu_version()
+    version = wgpu.backends.rs.__version__
+    commit_sha = wgpu.backends.rs.__commit_sha__
+    version_info = wgpu.backends.rs.version_info
 
     assert isinstance(version, str)
-    assert version.startswith("v")
     assert len(version) > 1
 
     assert isinstance(version_info, tuple)
