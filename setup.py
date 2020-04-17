@@ -19,7 +19,7 @@ class bdist_wheel(_bdist_wheel):  # noqa: N801
         _bdist_wheel.finalize_options(self)
 
 
-resources_globs = ["*.h", "*.idl", "commit-sha", "wgpu_native-version"]
+resources_globs = ["*.h", "*.idl"]
 if sys.platform.startswith("win"):
     resources_globs.append("*.dll")
 elif sys.platform.startswith("linux"):

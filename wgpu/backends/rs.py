@@ -47,6 +47,11 @@ from .._mappings import cstructfield2enum, enummap
 
 logger = logging.getLogger("wgpu")  # noqa
 
+# wgpu-native version
+__version__ = "0.5.1"
+__commit_sha__ = "83d4981"
+version_info = tuple(map(int, __version__.split(".")))
+
 
 if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
@@ -70,17 +75,6 @@ def _get_wgpu_h():
             ):
                 lines.append(line)
     return "".join(lines)
-
-
-def get_wgpu_version():
-    """ Read wgpu version tracking text files.
-    """
-    with open(get_resource_filename("wgpu_native-version")) as f:
-        ver_str = f.readline().strip()
-    with open(get_resource_filename("commit-sha")) as f:
-        commit_sha = f.readline().strip()
-    ver_info = tuple(map(int, ver_str[1:].split('.')))
-    return ver_str, ver_info, commit_sha
 
 
 def _get_wgpu_lib_path():
