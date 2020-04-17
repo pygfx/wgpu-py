@@ -28,14 +28,10 @@ def write_current_version(version, commit_sha):
     with open(VERSION_FILE) as fh:
         file_content = fh.read()
     file_content = re.sub(
-        r"__version__ = \".*?\"",
-        f"__version__ = \"{version}\"",
-        file_content,
+        r"__version__ = \".*?\"", f'__version__ = "{version}"', file_content,
     )
     file_content = re.sub(
-        r"__commit_sha__ = \".*?\"",
-        f"__commit_sha__ = \"{commit_sha}\"",
-        file_content,
+        r"__commit_sha__ = \".*?\"", f'__commit_sha__ = "{commit_sha}"', file_content,
     )
     with open(VERSION_FILE, mode="w") as fh:
         fh.write(file_content)
