@@ -121,3 +121,6 @@ venv.bak/
 # Pipenv (for now, dev-requirements.txt is sufficient)
 Pipfile
 Pipfile.lock
+# Poetry
+poetry.lock
+pyproject.toml

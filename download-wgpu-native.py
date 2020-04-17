@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import requests
 import sys
 import tempfile
@@ -8,8 +9,8 @@ from zipfile import ZipFile
 
 # The directory containing non-python resources that are included in packaging
 RESOURCE_DIR = os.path.join("wgpu", "resources")
-# A text file used to track the version installed through this script
-VERSION_FILE = os.path.join(RESOURCE_DIR, "wgpu_native-version")
+# The version installed through this script is tracked in the backend module
+VERSION_FILE = os.path.join("wgpu", "backends", "rs.py")
 
 # Whether to ensure we export \n instead of \r\n
 FORCE_SIMPLE_NEWLINES = False
@@ -20,13 +21,21 @@ if sys.platform.startswith("win"):
 
 
 def get_current_version():
-    with open(VERSION_FILE, mode="r") as fh:
-        return fh.read().strip()
+    with open(VERSION_FILE) as fh:
+        return re.search(r"__version__ = \"(.*?)\"", fh.read()).group(1)
 
 
-def write_current_version(version):
+def write_current_version(version, commit_sha):
+    with open(VERSION_FILE) as fh:
+        file_content = fh.read()
+    file_content = re.sub(
+        r"__version__ = \".*?\"", f'__version__ = "{version}"', file_content,
+    )
+    file_content = re.sub(
+        r"__commit_sha__ = \".*?\"", f'__commit_sha__ = "{commit_sha}"', file_content,
+    )
     with open(VERSION_FILE, mode="w") as fh:
-        return fh.write(version.strip())
+        fh.write(file_content)
 
 
 def download_file(url, filename):
@@ -67,12 +76,12 @@ def get_arch():
 
 def main(version, os_string, arch, upstream, build):
     filename = f"wgpu-{os_string}-{arch}-{build}.zip"
-    url = f"https://github.com/{upstream}/releases/download/{version}/{filename}"
+    url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
     tmp = tempfile.gettempdir()
     zip_filename = os.path.join(tmp, filename)
     print(f"Downloading {url} to {zip_filename}")
     download_file(url, zip_filename)
-    members = ["wgpu.h", "commit-sha"]
+    members = ["wgpu.h"]
     if os_string == "linux":
         members.append("libwgpu_native.so")
     elif os_string == "macos":
@@ -86,7 +95,14 @@ def main(version, os_string, arch, upstream, build):
     current_version = get_current_version()
     if version != current_version:
         print(f"Version changed, updating {VERSION_FILE}")
-        write_current_version(version)
+        filename = "commit-sha"
+        url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
+        commit_sha_filename = os.path.join(tmp, filename)
+        print(f"Downloading {url} to {commit_sha_filename}")
+        download_file(url, commit_sha_filename)
+        with open(commit_sha_filename) as fh:
+            commit_sha = fh.read().strip()
+        write_current_version(version, commit_sha)
 
 
 if __name__ == "__main__":

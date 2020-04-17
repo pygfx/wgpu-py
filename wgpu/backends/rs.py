@@ -47,6 +47,11 @@ from .._mappings import cstructfield2enum, enummap
 
 logger = logging.getLogger("wgpu")  # noqa
 
+# wgpu-native version
+__version__ = "0.5.1"
+__commit_sha__ = "83d4981"
+version_info = tuple(map(int, __version__.split(".")))
+
 
 if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
