@@ -47,7 +47,7 @@ from .._mappings import cstructfield2enum, enummap
 
 logger = logging.getLogger("wgpu")  # noqa
 
-# wgpu-native version
+# wgpu-native version that we target/expect
 __version__ = "0.5.2"
 __commit_sha__ = "160be433dbec0fc7a27d25f2aba3423666ccfa10"
 version_info = tuple(map(int, __version__.split(".")))
@@ -115,6 +115,34 @@ ffi.cdef(_get_wgpu_h())
 ffi.set_source("wgpu.h", None)
 _lib = ffi.dlopen(_get_wgpu_lib_path())
 
+
+# Get the actual wgpu-native version
+_version_int = _lib.wgpu_get_version()
+version_info_lib = tuple((_version_int >> bits) & 0xff for bits in (16, 8, 0))
+if version_info_lib != version_info:
+    logger.warning(f"Expected wgpu-native version {version_info} but got {version_info_lib}")
+
+
+@ffi.callback("void(int level, const char *)")
+def _logger_callback(level, c_msg):
+    msg = ffi.string(c_msg).decode(errors="ignore")  # makes a copy
+    m = {
+        1: logger.error,
+        2: logger.warning,
+        3: logger.info,
+        4: logger.debug,
+        5: logger.debug,  # trace
+    }
+
+    func = m.get(level, logger.warn)
+    func(msg)
+
+
+# Set log callback. Levels -> 1: error, 2: warn, 3: info, 4: debug
+_lib.wgpu_set_log_callback(_logger_callback)
+_lib.wgpu_set_log_level(2)
+logger.setLevel(logging.WARN)
+# todo: somehow keep log levels in sync. At least automate log-level mapping
 
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
