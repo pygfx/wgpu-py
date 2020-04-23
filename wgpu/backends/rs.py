@@ -355,6 +355,37 @@ def _loadop_and_clear_from_value(value):
         return 0, value  # WGPULoadOp_Clear and the value
 
 
+def _get_memoryview_and_address(data):
+    """ Get a memoryview for the given data and its memory address.
+    The data object must support the buffer protocol.
+    """
+
+    m = memoryview(data)
+
+    if True:
+        # Get the address via ffi. In contrast to ctypes, this also
+        # works for readonly data (e.g. bytes)
+        c_data = ffi.from_buffer("uint8_t []", m)
+        address = int(ffi.cast("uintptr_t", c_data))
+    elif hasattr(data, "__array_interface__"):
+        # e.g. a Numpy array - we can get the address easily
+        address = data.__array_interface__["data"][0]
+    elif not m.readonly:
+        # e.g. a bytearray - get the address via ctypes
+        c_array = (ctypes.c_uint8 * m.nbytes).from_buffer(m)
+        address = ctypes.addressof(c_array)
+    else:
+        # e.g. bytes - make a copy or error
+        raise ValueError(
+            "Cannot get address of readonly buffer (unless it supports the __array_interface__)"
+        )
+        # c_array = (ctypes.c_uint8 * m.nbytes).from_buffer_copy(m)
+        # m = memoryview(c_array)
+        # address = ctypes.addressof(c_array)
+
+    return m, address
+
+
 def _check_struct(what, d):
     """ Check that the given dict does not have any unexpected keys
     (which may be there because of typos or api changes).
@@ -1626,8 +1657,73 @@ class GPUQueue(base.GPUQueue):
     # def copy_image_bitmap_to_texture(self, source, destination, copy_size):
     #     ...
 
-    # todo: def wgpu_queue_write_buffer
-    # todo: def wgpu_queue_write_texture
+    # wgpu.help('Buffer', 'Size64', 'queuewritebuffer', dev=True)
+    def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
+
+        # We support anything that memoryview supports, i.e. anything
+        # that implements the buffer protocol, including, bytes,
+        # bytearray, ctypes arrays, numpy arrays, etc.
+        m, address = _get_memoryview_and_address(data)
+        nbytes = m.nbytes
+
+        # Checks
+        if not m.contiguous:
+            raise ValueError("The given buffer data is not continuous")
+
+        # Deal with offset and size
+        buffer_offset = int(buffer_offset)
+        data_offset = int(data_offset)
+        if not size:
+            data_length = nbytes - data_offset
+        else:
+            data_length = int(size)
+
+        assert 0 <= buffer_offset < buffer.size
+        assert 0 <= data_offset < nbytes
+        assert 0 <= data_length <= (nbytes - data_offset)
+        assert data_length <= buffer.size - buffer_offset
+
+        c_data = ffi.cast("uint8_t *", address + data_offset)
+        _lib.wgpu_queue_write_buffer(
+            self._internal, buffer._internal, buffer_offset, c_data, data_length
+        )
+
+    # wgpu.help('Extent3D', 'TextureCopyView', 'TextureDataLayout', 'queuewritetexture', dev=True)
+    def write_texture(self, destination, data, data_layout, size):
+
+        m, address = _get_memoryview_and_address(data)
+
+        # Checks
+        if not m.contiguous:
+            raise ValueError("The given texture data is not continuous")
+
+        c_data = ffi.cast("uint8_t *", address)
+        data_length = m.nbytes
+
+        ori = _tuple_from_tuple_or_dict(destination.get("origin", (0, 0, 0)), "xyz")
+        c_origin = new_struct("WGPUOrigin3d", x=ori[0], y=ori[1], z=ori[2])
+        c_destination = new_struct_p(
+            "WGPUTextureCopyView *",
+            texture=destination["texture"]._internal,
+            mip_level=destination.get("mip_level", 0),
+            origin=c_origin,
+        )
+
+        c_data_layout = new_struct_p(
+            "WGPUTextureDataLayout *",
+            offset=data_layout.get("offset", 0),
+            bytes_per_row=data_layout["bytes_per_row"],
+            rows_per_image=data_layout.get("rows_per_image", 0),
+        )
+
+        size = _tuple_from_tuple_or_dict(size, ("width", "height", "depth"))
+        c_size = new_struct_p(
+            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+        )
+
+        _lib.wgpu_queue_write_texture(
+            self._internal, c_destination, c_data, data_length, c_data_layout, c_size
+        )
 
 
 class GPUSwapChain(base.GPUSwapChain):

@@ -104,7 +104,7 @@
 ## Checking and patching hand-written API code
 
 ### Check functions in base.py
-*  Found 60 functions already implemented
+*  Found 62 functions already implemented
 *  Not implemented: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor); (devicecreatebuffermapped)
 *  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
 *  Not implemented: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0); (buffergetmappedrange)
@@ -120,8 +120,6 @@
 *  Not implemented: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex); (renderpassencoderwritetimestamp)
 *  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {}); (queuecreatefence)
 *  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue); (queuesignal)
-*  Not implemented: void writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, [AllowShared] ArrayBuffer data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size); (queuewritebuffer)
-*  Not implemented: void writeTexture( GPUTextureCopyView destination, [AllowShared] ArrayBuffer data, GPUTextureDataLayout dataLayout, GPUExtent3D size); (queuewritetexture)
 *  Not implemented: GPUFenceValue getCompletedValue(); (fencegetcompletedvalue)
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue); (fenceoncompletion)
 *  Not implemented: void destroy(); (querysetdestroy)
@@ -130,7 +128,7 @@
 *  Injected IDL lines into base.py
 
 ### Check functions in backends/rs.py
-*  Found 50 functions already implemented
+*  Found 52 functions already implemented
 *  Not implemented: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor); (devicecreatebuffermapped)
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor); (devicecreaterenderbundleencoder)
 *  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
@@ -153,8 +151,6 @@
 *  Not implemented: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {}); (renderbundleencoderfinish)
 *  Not implemented: GPUFence createFence(optional GPUFenceDescriptor descriptor = {}); (queuecreatefence)
 *  Not implemented: void signal(GPUFence fence, GPUFenceValue signalValue); (queuesignal)
-*  Not implemented: void writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, [AllowShared] ArrayBuffer data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size); (queuewritebuffer)
-*  Not implemented: void writeTexture( GPUTextureCopyView destination, [AllowShared] ArrayBuffer data, GPUTextureDataLayout dataLayout, GPUExtent3D size); (queuewritetexture)
 *  Not implemented: void copyImageBitmapToTexture( GPUImageBitmapCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize); (queuecopyimagebitmaptotexture)
 *  Not implemented: GPUFenceValue getCompletedValue(); (fencegetcompletedvalue)
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue); (fenceoncompletion)

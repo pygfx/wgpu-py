@@ -5,6 +5,7 @@ import ctypes
 import wgpu.utils
 import wgpu.backends.rs
 import pyshader
+import numpy as np
 
 from testutils import run_tests, can_use_wgpu_lib, iters_equal
 from pytest import mark, raises
@@ -281,6 +282,108 @@ def test_do_a_copy_roundtrip():
     data4 = data3.__class__.from_buffer(mapped_data)
     buf5.unmap()
     assert iters_equal(data3, data4)
+
+
+def test_get_memoryview_and_address():
+
+    get_memoryview_and_address = wgpu.backends.rs._get_memoryview_and_address
+
+    data = b"bytes are readonly, so this does not work"
+    m, address = get_memoryview_and_address(data)
+    assert m.nbytes > 0
+    assert address > 0
+
+    data = bytearray(b"but a bytearray works")
+    m, address = get_memoryview_and_address(data)
+    assert m.nbytes > 0
+    assert address > 0
+
+    data = (ctypes.c_float * 100)()
+    m, address = get_memoryview_and_address(data)
+    assert m.nbytes > 0
+    assert address > 0
+
+    data = np.array([1, 2, 3, 4])
+    m, address = get_memoryview_and_address(data)
+    assert m.nbytes > 0
+    assert address > 0
+
+    data = np.array([1, 2, 3, 4])
+    data.flags.writeable = False
+    m, address = get_memoryview_and_address(data)
+    assert m.nbytes > 0
+    assert address > 0
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_write_buffer():
+    device = wgpu.utils.get_default_device()
+
+    nx, ny, nz = 100, 1, 1
+    data1 = (ctypes.c_float * 100)(*[random.random() for i in range(nx * ny * nz)])
+    nbytes = ctypes.sizeof(data1)
+
+    # Create buffer
+    buf4 = device.create_buffer(
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+    )
+
+    # Upload from CPU to buffer
+    device.default_queue.write_buffer(buf4, 0, data1)
+    device.default_queue.submit([])
+
+    # Download from buffer to CPU
+    mapped_data = buf4.map(wgpu.MapMode.READ)
+    data2 = data1.__class__.from_buffer(mapped_data)
+    buf4.unmap()
+    assert iters_equal(data1, data2)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_write_texture():
+    device = wgpu.utils.get_default_device()
+
+    nx, ny, nz = 100, 1, 1
+    data1 = (ctypes.c_float * 100)(*[random.random() for i in range(nx * ny * nz)])
+    nbytes = ctypes.sizeof(data1)
+    bpp = nbytes // (nx * ny * nz)
+    texture_format = wgpu.TextureFormat.r32float
+    texture_dim = wgpu.TextureDimension.d1
+
+    # Create buffers and textures
+    tex3 = device.create_texture(
+        size=(nx, ny, nz),
+        dimension=texture_dim,
+        format=texture_format,
+        usage=wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST,
+    )
+    buf4 = device.create_buffer(
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+    )
+
+    # Upload from CPU to texture
+    device.default_queue.write_texture(
+        {"texture": tex3},
+        data1,
+        {"bytes_per_row": bpp * nx, "rows_per_image": ny},
+        (nx, ny, nz),
+    )
+    # device.default_queue.submit([])  -> call further down
+
+    # Copy from texture to buffer
+    command_encoder = device.create_command_encoder()
+    command_encoder.copy_texture_to_buffer(
+        {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
+        {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
+        (nx, ny, nz),
+    )
+    device.default_queue.submit([command_encoder.finish()])
+
+    # Download from buffer to CPU
+    mapped_data = buf4.map(wgpu.MapMode.READ)
+    data2 = data1.__class__.from_buffer(mapped_data)
+    buf4.unmap()
+    assert iters_equal(data1, data2)
 
 
 if __name__ == "__main__":

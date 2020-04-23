@@ -592,7 +592,7 @@ class GPUDevice(GPUObject):
         In the WebGPU spec this is a method of the canvas. In wgpu-py
         it's a method of the device.
 
-        Parameters:
+        Arguments:
             canvas (WgpuCanvasInterface): An object implementing the canvas interface.
             format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
             usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
@@ -964,7 +964,7 @@ class GPUCommandEncoder(GPUObject):
         """ Record the beginning of a compute pass. Returns a
         :class:`GPUComputePassEncoder` object.
 
-        Parameters:
+        Arguments:
             label (str): A human readable label. Optional.
         """
         raise NotImplementedError()
@@ -1092,7 +1092,7 @@ class GPUCommandEncoder(GPUObject):
         """ Finish recording. Returns a :class:`GPUCommandBuffer` to
         submit to a :class:`GPUQueue`.
 
-        Parameters:
+        Arguments:
             label (str): A human readable label. Optional.
         """
         raise NotImplementedError()
@@ -1385,7 +1385,7 @@ class GPURenderBundleEncoder(GPURenderEncoderBase):
     def finish(self, *, label=""):
         """ Finish recording and return a :class:`GPURenderBundle`.
 
-        Parameters:
+        Arguments:
             label (str): A human readable label. Optional.
         """
         raise NotImplementedError()
@@ -1413,6 +1413,41 @@ class GPUQueue(GPUObject):
     def copy_image_bitmap_to_texture(self, source, destination, copy_size):
         """
         TODO: not yet available in wgpu-native
+        """
+        raise NotImplementedError()
+
+    # wgpu.help('Buffer', 'Size64', 'queuewritebuffer', dev=True)
+    # IDL: void writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, [AllowShared] ArrayBuffer data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
+    def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
+        """ Takes the data contents and schedules a write operation of
+        these contents to the buffer. Any subsequent modifications to
+        data do not affect what is written at the time that the
+        scheduled operation runs.
+
+        Arguments:
+            buffer: The :class:`GPUBuffer` object to write to.
+            buffer_offset (int): The offset in the buffer to start writing at.
+            data: The data to write.
+            data_offset: The byte offset in the data. Default 0.
+            size: The number of bytes to write. Default all minus offset.
+        """
+        raise NotImplementedError()
+
+    # wgpu.help('Extent3D', 'TextureCopyView', 'TextureDataLayout', 'queuewritetexture', dev=True)
+    # IDL: void writeTexture( GPUTextureCopyView destination, [AllowShared] ArrayBuffer data, GPUTextureDataLayout dataLayout, GPUExtent3D size);
+    def write_texture(self, destination, data, data_layout, size):
+        """ Takes the data contents and schedules a write operation of
+        these contents to the destination texture in the queue. Any
+        subsequent modifications to data do not affect what is written
+        at the time that the scheduled operation runs.
+
+        Arguments:
+            destination: A dict with fields: "texture" (a texture object),
+                "origin" (a 3-tuple), "mip_level" (an int, default 0).
+            data: The data to write.
+            data_layout: A dict with fields: "offset" (an int, default 0),
+                "bytes_per_row" (an int), "rows_per_image" (an int, default 0).
+            size: A 3-tuple of ints specifying the size to write.
         """
         raise NotImplementedError()
 
