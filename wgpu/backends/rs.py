@@ -129,21 +129,15 @@ _cstructfield2enum_alt = {
 }
 
 
-def new_struct(ctype, **kwargs):
-    """ Create an ffi struct. Provides a flatter syntax and converts our
-    string enums to int enums needed in C.
+def new_struct_p(ctype, **kwargs):
+    """ Create a (pointer to a) ffi struct. Provides a flatter syntax
+    and converts our string enums to int enums needed in C. The passed
+    kwargs are also bound to the lifetime of the new struct.
     """
-    struct = ffi.new(ctype)
-    for key, val in kwargs.items():
-        if isinstance(val, str) and isinstance(getattr(struct, key), int):
-            if key in _cstructfield2enum_alt:
-                structname = _cstructfield2enum_alt[key]
-            else:
-                structname = cstructfield2enum[ctype.strip(" *")[4:] + "." + key]
-            ival = enummap[structname + "." + val]
-            setattr(struct, key, ival)
-        else:
-            setattr(struct, key, val)
+    # assert ctype.endswith(" *")
+    struct_p = _new_struct_p(ctype, **kwargs)
+    _refs_per_struct[struct_p] = kwargs
+    return struct_p
     # Some kwargs may be other ffi objects, and some may represent
     # pointers. These need special care because them "being in" the
     # current struct does not prevent them from being cleaned up by
@@ -151,8 +145,32 @@ def new_struct(ctype, **kwargs):
     # calling code is painful and prone to missing cases, so we solve
     # the issue here. We cannot attach an attribute to the struct directly,
     # so we use a global WeakKeyDictionary. Also see issue #52.
-    _refs_per_struct[struct] = kwargs
+
+
+def new_struct(ctype, **kwargs):
+    """ Create a direct ffi struct. The passed kwargs are also bound
+    to the lifetime of the new struct.
+    """
+    # assert not ctype.endswith("*")
+    struct_p = _new_struct_p(ctype + " *", **kwargs)
+    struct = struct_p[0]
+    _refs_per_struct[struct] = kwargs, struct_p  # todo: I think only kwargs are needed
     return struct
+
+
+def _new_struct_p(ctype, **kwargs):
+    struct_p = ffi.new(ctype)
+    for key, val in kwargs.items():
+        if isinstance(val, str) and isinstance(getattr(struct_p, key), int):
+            if key in _cstructfield2enum_alt:
+                structname = _cstructfield2enum_alt[key]
+            else:
+                structname = cstructfield2enum[ctype.strip(" *")[4:] + "." + key]
+            ival = enummap[structname + "." + val]
+            setattr(struct_p, key, ival)
+        else:
+            setattr(struct_p, key, val)
+    return struct_p
 
 
 def get_surface_id_from_canvas(canvas):
@@ -302,7 +320,7 @@ def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
         surface_id = get_surface_id_from_canvas(canvas)
 
     # Convert the descriptor
-    struct = new_struct(
+    struct = new_struct_p(
         "WGPURequestAdapterOptions *",
         power_preference=power_preference,
         compatible_surface=surface_id,
@@ -369,20 +387,18 @@ class GPUAdapter(base.GPUAdapter):
         limits2.update(limits or {})
 
         c_extensions = new_struct(
-            "WGPUExtensions *",
+            "WGPUExtensions",
             anisotropic_filtering="anisotropic_filtering" in extensions,
         )
-        c_limits = new_struct(
-            "WGPULimits *", max_bind_groups=limits2["max_bind_groups"]
-        )
-        struct = new_struct(
-            "WGPUDeviceDescriptor *", extensions=c_extensions[0], limits=c_limits[0]
+        c_limits = new_struct("WGPULimits", max_bind_groups=limits2["max_bind_groups"])
+        struct = new_struct_p(
+            "WGPUDeviceDescriptor *", extensions=c_extensions, limits=c_limits
         )
 
         device_id = _lib.wgpu_adapter_request_device(self._id, struct)
 
         # Get the actual limits reported by the device
-        c_limits = new_struct("WGPULimits *")
+        c_limits = new_struct_p("WGPULimits *")
         _lib.wgpu_device_get_limits(device_id, c_limits)
         limits3 = {key: getattr(c_limits, key) for key in dir(c_limits)}
 
@@ -413,7 +429,7 @@ class GPUDevice(base.GPUDevice):
     def create_buffer(self, *, label="", size: int, usage: "GPUBufferUsageFlags"):
         c_label = ffi.new("char []", label.encode())
         size = int(size)
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
         )
 
@@ -427,7 +443,7 @@ class GPUDevice(base.GPUDevice):
 
         c_label = ffi.new("char []", label.encode())
         size = int(size)
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
         )
 
@@ -460,12 +476,12 @@ class GPUDevice(base.GPUDevice):
         c_label = ffi.new("char []", label.encode())
         size = _tuple_from_tuple_or_dict(size, ("width", "height", "depth"))
         c_size = new_struct(
-            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d", width=size[0], height=size[1], depth=size[2],
         )
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUTextureDescriptor *",
             label=c_label,
-            size=c_size[0],
+            size=c_size,
             array_layer_count=1,
             mip_level_count=mip_level_count,
             sample_count=sample_count,
@@ -492,7 +508,7 @@ class GPUDevice(base.GPUDevice):
         lod_max_clamp: float = 0xFFFFFFFF,
         compare: "GPUCompareFunction" = None,
     ):
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUSamplerDescriptor *",
             address_mode_u=address_mode_u,
             address_mode_v=address_mode_v,
@@ -522,7 +538,7 @@ class GPUDevice(base.GPUDevice):
                     x in entry for x in need
                 ), f"{type} binding should specify {need}"
             c_entry = new_struct(
-                "WGPUBindGroupLayoutEntry *",
+                "WGPUBindGroupLayoutEntry",
                 binding=int(entry["binding"]),
                 visibility=int(entry["visibility"]),
                 ty=type,
@@ -532,14 +548,13 @@ class GPUDevice(base.GPUDevice):
                 texture_component_type=entry.get("texture_component_type", "float"),
                 storage_texture_format=entry.get("storage_texture_format", 0),
             )
-            c_entries_list.append(c_entry[0])
+            c_entries_list.append(c_entry)
 
         c_label = ffi.new("char []", label.encode())
-        c_entries_array = ffi.new("WGPUBindGroupLayoutEntry []", c_entries_list)
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUBindGroupLayoutDescriptor *",
             label=c_label,
-            entries=c_entries_array,
+            entries=ffi.new("WGPUBindGroupLayoutEntry []", c_entries_list),
             entries_length=len(c_entries_list),
         )
 
@@ -564,20 +579,20 @@ class GPUDevice(base.GPUDevice):
                 c_resource_kwargs = {
                     "tag": 1,  # WGPUBindingResource_Tag.WGPUBindingResource_Sampler
                     "sampler": new_struct(
-                        "WGPUBindingResource_WGPUSampler_Body *", _0=resource._internal
-                    )[0],
+                        "WGPUBindingResource_WGPUSampler_Body", _0=resource._internal
+                    ),
                 }
             elif isinstance(resource, base.GPUTextureView):
                 c_resource_kwargs = {
                     "tag": 2,  # WGPUBindingResource_Tag.WGPUBindingResource_TextureView
                     "texture_view": new_struct(
-                        "WGPUBindingResource_WGPUTextureView_Body *",
+                        "WGPUBindingResource_WGPUTextureView_Body",
                         _0=resource._internal,
-                    )[0],
+                    ),
                 }
             elif isinstance(resource, dict):  # Buffer binding
                 c_buffer_entry = new_struct(
-                    "WGPUBufferBinding *",
+                    "WGPUBufferBinding",
                     buffer=resource["buffer"]._internal,
                     offset=resource["offset"],
                     size=resource["size"],
@@ -585,22 +600,22 @@ class GPUDevice(base.GPUDevice):
                 c_resource_kwargs = {
                     "tag": 0,  # WGPUBindingResource_Tag.WGPUBindingResource_Buffer
                     "buffer": new_struct(
-                        "WGPUBindingResource_WGPUBuffer_Body *", _0=c_buffer_entry[0]
-                    )[0],
+                        "WGPUBindingResource_WGPUBuffer_Body", _0=c_buffer_entry
+                    ),
                 }
             else:
                 raise TypeError(f"Unexpected resource type {type(resource)}")
-            c_resource = new_struct("WGPUBindingResource *", **c_resource_kwargs)
+            c_resource = new_struct("WGPUBindingResource", **c_resource_kwargs)
             c_entry = new_struct(
-                "WGPUBindGroupEntry *",
+                "WGPUBindGroupEntry",
                 binding=int(entry["binding"]),
-                resource=c_resource[0],
+                resource=c_resource,
             )
-            c_entries_list.append(c_entry[0])
+            c_entries_list.append(c_entry)
 
         c_label = ffi.new("char []", label.encode())
         c_entries_array = ffi.new("WGPUBindGroupEntry []", c_entries_list)
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUBindGroupDescriptor *",
             label=c_label,
             layout=layout._internal,
@@ -619,7 +634,7 @@ class GPUDevice(base.GPUDevice):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
 
         c_layout_array = ffi.new("WGPUBindGroupLayoutId []", bind_group_layouts_ids)
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUPipelineLayoutDescriptor *",
             bind_group_layouts=c_layout_array,
             bind_group_layouts_length=len(bind_group_layouts),
@@ -649,9 +664,9 @@ class GPUDevice(base.GPUDevice):
         data_u32 = ffi.cast("uint32_t *", data_u8)
         c_code = ffi.new(
             "WGPUU32Array *", {"bytes": data_u32, "length": len(data) // 4}
-        )
+        )[0]
 
-        struct = new_struct("WGPUShaderModuleDescriptor *", code=c_code[0])
+        struct = new_struct_p("WGPUShaderModuleDescriptor *", code=c_code)
 
         id = _lib.wgpu_device_create_shader_module(self._internal, struct)
         return base.GPUShaderModule(label, id, self)
@@ -666,15 +681,15 @@ class GPUDevice(base.GPUDevice):
     ):
 
         c_compute_stage = new_struct(
-            "WGPUProgrammableStageDescriptor *",
+            "WGPUProgrammableStageDescriptor",
             module=compute_stage["module"]._internal,
             entry_point=ffi.new("char []", compute_stage["entry_point"].encode()),
         )
 
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUComputePipelineDescriptor *",
             layout=layout._internal,
-            compute_stage=c_compute_stage[0],
+            compute_stage=c_compute_stage,
         )
 
         id = _lib.wgpu_device_create_compute_pipeline(self._internal, struct)
@@ -698,18 +713,18 @@ class GPUDevice(base.GPUDevice):
         alpha_to_coverage_enabled: bool = False,
     ):
         c_vertex_stage = new_struct(
-            "WGPUProgrammableStageDescriptor *",
+            "WGPUProgrammableStageDescriptor",
             module=vertex_stage["module"]._internal,
             entry_point=ffi.new("char []", vertex_stage["entry_point"].encode()),
         )
         c_fragment_stage = ffi.NULL
         if fragment_stage is not None:
-            c_fragment_stage = new_struct(
+            c_fragment_stage = new_struct_p(
                 "WGPUProgrammableStageDescriptor *",
                 module=fragment_stage["module"]._internal,
                 entry_point=ffi.new("char []", fragment_stage["entry_point"].encode()),
             )
-        c_rasterization_state = new_struct(
+        c_rasterization_state = new_struct_p(
             "WGPURasterizationStateDescriptor *",
             front_face=rasterization_state.get("front_face", "ccw"),
             cull_mode=rasterization_state.get("cull_mode", "none"),
@@ -723,7 +738,7 @@ class GPUDevice(base.GPUDevice):
                 color_state["alpha_blend"], ("src_factor", "dst_factor", "operation"),
             )
             c_alpha_blend = new_struct(
-                "WGPUBlendDescriptor *",
+                "WGPUBlendDescriptor",
                 src_factor=alpha_blend[0],
                 dst_factor=alpha_blend[1],
                 operation=alpha_blend[2],
@@ -732,19 +747,19 @@ class GPUDevice(base.GPUDevice):
                 color_state["color_blend"], ("src_factor", "dst_factor", "operation"),
             )
             c_color_blend = new_struct(
-                "WGPUBlendDescriptor *",
+                "WGPUBlendDescriptor",
                 src_factor=color_blend[0],
                 dst_factor=color_blend[1],
                 operation=color_blend[2],
             )
             c_color_state = new_struct(
-                "WGPUColorStateDescriptor *",
+                "WGPUColorStateDescriptor",
                 format=color_state["format"],
-                alpha_blend=c_alpha_blend[0],
-                color_blend=c_color_blend[0],
+                alpha_blend=c_alpha_blend,
+                color_blend=c_color_blend,
                 write_mask=color_state.get("write_mask", 0xF),
             )
-            c_color_states_list.append(c_color_state[0])
+            c_color_states_list.append(c_color_state)
         c_color_states_array = ffi.new(
             "WGPUColorStateDescriptor []", c_color_states_list
         )
@@ -753,7 +768,7 @@ class GPUDevice(base.GPUDevice):
         else:
             stencil_front = depth_stencil_state.get("stencil_front", {})
             c_stencil_front = new_struct(
-                "WGPUStencilStateFaceDescriptor *",
+                "WGPUStencilStateFaceDescriptor",
                 compare=stencil_front.get("compare", "always"),
                 fail_op=stencil_front.get("fail_op", "keep"),
                 depth_fail_op=stencil_front.get("depth_fail_op", "keep"),
@@ -761,21 +776,21 @@ class GPUDevice(base.GPUDevice):
             )
             stencil_back = depth_stencil_state.get("stencil_back", {})
             c_stencil_back = new_struct(
-                "WGPUStencilStateFaceDescriptor *",
+                "WGPUStencilStateFaceDescriptor",
                 compare=stencil_back.get("compare", "always"),
                 fail_op=stencil_back.get("fail_op", "keep"),
                 depth_fail_op=stencil_back.get("depth_fail_op", "keep"),
                 pass_op=stencil_back.get("pass_op", "keep"),
             )
-            c_depth_stencil_state = new_struct(
+            c_depth_stencil_state = new_struct_p(
                 "WGPUDepthStencilStateDescriptor *",
                 format=depth_stencil_state["format"],
                 depth_write_enabled=bool(
                     depth_stencil_state.get("depth_write_enabled", False)
                 ),
                 depth_compare=depth_stencil_state.get("depth_compare", "always"),
-                stencil_front=c_stencil_front[0],
-                stencil_back=c_stencil_back[0],
+                stencil_front=c_stencil_front,
+                stencil_back=c_stencil_back,
                 stencil_read_mask=depth_stencil_state.get(
                     "stencil_read_mask", 0xFFFFFFFF
                 ),
@@ -788,44 +803,44 @@ class GPUDevice(base.GPUDevice):
             c_attributes_list = []
             for attribute in buffer_des["attributes"]:
                 c_attribute = new_struct(
-                    "WGPUVertexAttributeDescriptor *",
+                    "WGPUVertexAttributeDescriptor",
                     format=attribute["format"],
                     offset=attribute["offset"],
                     shader_location=attribute["shader_location"],
                 )
-                c_attributes_list.append(c_attribute[0])
+                c_attributes_list.append(c_attribute)
             c_attributes_array = ffi.new(
                 "WGPUVertexAttributeDescriptor []", c_attributes_list
             )
             c_vertex_buffer_descriptor = new_struct(
-                "WGPUVertexBufferLayoutDescriptor *",
+                "WGPUVertexBufferLayoutDescriptor",
                 array_stride=buffer_des["array_stride"],
                 step_mode=buffer_des.get("step_mode", "vertex"),
                 attributes=c_attributes_array,
                 attributes_length=len(c_attributes_list),
             )
-            c_vertex_buffer_descriptors_list.append(c_vertex_buffer_descriptor[0])
+            c_vertex_buffer_descriptors_list.append(c_vertex_buffer_descriptor)
         c_vertex_buffer_descriptors_array = ffi.new(
             "WGPUVertexBufferLayoutDescriptor []", c_vertex_buffer_descriptors_list
         )
         c_vertex_state = new_struct(
-            "WGPUVertexStateDescriptor *",
+            "WGPUVertexStateDescriptor",
             index_format=vertex_state.get("index_format", "uint32"),
             vertex_buffers=c_vertex_buffer_descriptors_array,
             vertex_buffers_length=len(c_vertex_buffer_descriptors_list),
         )
 
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPURenderPipelineDescriptor *",
             layout=layout._internal,
-            vertex_stage=c_vertex_stage[0],
+            vertex_stage=c_vertex_stage,
             fragment_stage=c_fragment_stage,
             primitive_topology=primitive_topology,
             rasterization_state=c_rasterization_state,
             color_states=c_color_states_array,
             color_states_length=len(c_color_states_list),
             depth_stencil_state=c_depth_stencil_state,
-            vertex_state=c_vertex_state[0],
+            vertex_state=c_vertex_state,
             sample_count=sample_count,
             sample_mask=sample_mask,
             alpha_to_coverage_enabled=alpha_to_coverage_enabled,
@@ -837,7 +852,7 @@ class GPUDevice(base.GPUDevice):
     # wgpu.help('CommandEncoderDescriptor', 'devicecreatecommandencoder', dev=True)
     def create_command_encoder(self, *, label=""):
         c_label = ffi.new("char []", label.encode())
-        struct = new_struct("WGPUCommandEncoderDescriptor *", label=c_label)
+        struct = new_struct_p("WGPUCommandEncoderDescriptor *", label=c_label)
 
         id = _lib.wgpu_device_create_command_encoder(self._internal, struct)
         return GPUCommandEncoder(label, id, self)
@@ -974,7 +989,7 @@ class GPUTexture(base.GPUTexture):
             id = _lib.wgpu_texture_create_view(self._internal, ffi.NULL)
 
         else:
-            struct = new_struct(
+            struct = new_struct_p(
                 "WGPUTextureViewDescriptor *",
                 format=format,
                 dimension=dimension,
@@ -1001,7 +1016,7 @@ class GPUTexture(base.GPUTexture):
 class GPUCommandEncoder(base.GPUCommandEncoder):
     # wgpu.help('ComputePassDescriptor', 'commandencoderbegincomputepass', dev=True)
     def begin_compute_pass(self, *, label=""):
-        struct = new_struct("WGPUComputePassDescriptor *", todo=0)
+        struct = new_struct_p("WGPUComputePassDescriptor *", todo=0)
         raw_pass = _lib.wgpu_command_encoder_begin_compute_pass(self._internal, struct)
         return GPUComputePassEncoder(label, raw_pass, self)
 
@@ -1034,17 +1049,17 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
                 else _tuple_from_tuple_or_dict(clear_color, "rgba")
             )
             c_clear_color = new_struct(
-                "WGPUColor *", r=clr[0], g=clr[1], b=clr[2], a=clr[3]
+                "WGPUColor", r=clr[0], g=clr[1], b=clr[2], a=clr[3]
             )
             c_attachment = new_struct(
-                "WGPURenderPassColorAttachmentDescriptor *",
+                "WGPURenderPassColorAttachmentDescriptor",
                 attachment=texture_view_id,
                 resolve_target=c_resolve_target,
                 load_op=c_load_op,
                 store_op=color_attachment.get("store_op", "store"),
-                clear_color=c_clear_color[0],
+                clear_color=c_clear_color,
             )
-            c_color_attachments_list.append(c_attachment[0])
+            c_color_attachments_list.append(c_attachment)
         c_color_attachments_array = ffi.new(
             "WGPURenderPassColorAttachmentDescriptor []", c_color_attachments_list
         )
@@ -1057,7 +1072,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             c_stencil_load_op, c_stencil_clear = _loadop_and_clear_from_value(
                 depth_stencil_attachment["stencil_load_value"]
             )
-            c_depth_stencil_attachment = new_struct(
+            c_depth_stencil_attachment = new_struct_p(
                 "WGPURenderPassDepthStencilAttachmentDescriptor *",
                 attachment=depth_stencil_attachment["attachment"]._internal,
                 depth_load_op=c_depth_load_op,
@@ -1068,7 +1083,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
                 clear_stencil=int(c_stencil_clear),
             )
 
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPURenderPassDescriptor *",
             color_attachments=c_color_attachments_array,
             color_attachments_length=len(c_color_attachments_list),
@@ -1096,7 +1111,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopybuffertotexture', dev=True)
     def copy_buffer_to_texture(self, source, destination, copy_size):
 
-        c_source = new_struct(
+        c_source = new_struct_p(
             "WGPUBufferCopyView *",
             buffer=source["buffer"]._internal,
             offset=int(source.get("offset", 0)),
@@ -1105,38 +1120,38 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         )
 
         ori = _tuple_from_tuple_or_dict(destination["origin"], "xyz")
-        c_origin = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
-        c_destination = new_struct(
+        c_origin = new_struct("WGPUOrigin3d", x=ori[0], y=ori[1], z=ori[2])
+        c_destination = new_struct_p(
             "WGPUTextureCopyView *",
             texture=destination["texture"]._internal,
             mip_level=int(destination.get("mip_level", 0)),
             array_layer=int(destination.get("array_layer", 0)),
-            origin=c_origin[0],
+            origin=c_origin,
         )
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct(
-            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_buffer_to_texture(
-            self._internal, c_source, c_destination, c_copy_size[0],
+            self._internal, c_source, c_destination, c_copy_size,
         )
 
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopytexturetobuffer', dev=True)
     def copy_texture_to_buffer(self, source, destination, copy_size):
 
         ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
-        c_origin = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
-        c_source = new_struct(
+        c_origin = new_struct("WGPUOrigin3d", x=ori[0], y=ori[1], z=ori[2])
+        c_source = new_struct_p(
             "WGPUTextureCopyView *",
             texture=source["texture"]._internal,
             mip_level=int(source.get("mip_level", 0)),
             array_layer=int(source.get("array_layer", 0)),
-            origin=c_origin[0],
+            origin=c_origin,
         )
 
-        c_destination = new_struct(
+        c_destination = new_struct_p(
             "WGPUBufferCopyView *",
             buffer=destination["buffer"]._internal,
             offset=int(destination.get("offset", 0)),
@@ -1146,48 +1161,48 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct(
-            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_texture_to_buffer(
-            self._internal, c_source, c_destination, c_copy_size[0],
+            self._internal, c_source, c_destination, c_copy_size,
         )
 
     # wgpu.help('Extent3D', 'TextureCopyView', 'commandencodercopytexturetotexture', dev=True)
     def copy_texture_to_texture(self, source, destination, copy_size):
 
         ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
-        c_origin1 = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
-        c_source = new_struct(
+        c_origin1 = new_struct("WGPUOrigin3d", x=ori[0], y=ori[1], z=ori[2])
+        c_source = new_struct_p(
             "WGPUTextureCopyView *",
             texture=source["texture"]._internal,
             mip_level=int(source.get("mip_level", 0)),
             array_layer=int(source.get("array_layer", 0)),
-            origin=c_origin1[0],
+            origin=c_origin1,
         )
 
         ori = _tuple_from_tuple_or_dict(destination["origin"], "xyz")
-        c_origin2 = new_struct("WGPUOrigin3d *", x=ori[0], y=ori[1], z=ori[2])
-        c_destination = new_struct(
+        c_origin2 = new_struct("WGPUOrigin3d", x=ori[0], y=ori[1], z=ori[2])
+        c_destination = new_struct_p(
             "WGPUTextureCopyView *",
             texture=destination["texture"]._internal,
             mip_level=int(destination.get("mip_level", 0)),
             array_layer=int(destination.get("array_layer", 0)),
-            origin=c_origin2[0],
+            origin=c_origin2,
         )
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct(
-            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_texture_to_texture(
-            self._internal, c_source, c_destination, c_copy_size[0],
+            self._internal, c_source, c_destination, c_copy_size,
         )
 
     # wgpu.help('CommandBufferDescriptor', 'commandencoderfinish', dev=True)
     def finish(self, *, label=""):
-        struct = new_struct("WGPUCommandBufferDescriptor *", todo=0)
+        struct = new_struct_p("WGPUCommandBufferDescriptor *", todo=0)
         id = _lib.wgpu_command_encoder_finish(self._internal, struct)
         return base.GPUCommandBuffer(label, id, self)
 
@@ -1367,7 +1382,7 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
     def set_blend_color(self, color):
         color = _tuple_from_tuple_or_dict(color, "rgba")
-        c_color = new_struct(
+        c_color = new_struct_p(
             "WGPUColor *", r=color[0], g=color[1], b=color[2], a=color[3]
         )
         _lib.wgpu_render_pass_set_blend_color(self._internal, c_color)
@@ -1437,7 +1452,7 @@ class GPUSwapChain(base.GPUSwapChain):
 
         # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
 
-        struct = new_struct(
+        struct = new_struct_p(
             "WGPUSwapChainDescriptor *",
             usage=self._usage,
             format=self._format,
