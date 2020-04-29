@@ -130,11 +130,11 @@ _cstructfield2enum_alt = {
 
 
 def new_struct_p(ctype, **kwargs):
-    """ Create a (pointer to a) ffi struct. Provides a flatter syntax
+    """ Create a pointer to an ffi struct. Provides a flatter syntax
     and converts our string enums to int enums needed in C. The passed
     kwargs are also bound to the lifetime of the new struct.
     """
-    # assert ctype.endswith(" *")
+    assert ctype.endswith(" *")
     struct_p = _new_struct_p(ctype, **kwargs)
     _refs_per_struct[struct_p] = kwargs
     return struct_p
@@ -148,13 +148,13 @@ def new_struct_p(ctype, **kwargs):
 
 
 def new_struct(ctype, **kwargs):
-    """ Create a direct ffi struct. The passed kwargs are also bound
+    """ Create an ffi value struct. The passed kwargs are also bound
     to the lifetime of the new struct.
     """
-    # assert not ctype.endswith("*")
+    assert not ctype.endswith("*")
     struct_p = _new_struct_p(ctype + " *", **kwargs)
     struct = struct_p[0]
-    _refs_per_struct[struct] = kwargs, struct_p  # todo: I think only kwargs are needed
+    _refs_per_struct[struct] = kwargs
     return struct
 
 
