@@ -101,7 +101,10 @@ jobs:
         set -ex
         git clone https://github.com/google/swiftshader.git
         sudo apt-get install -y cmake
-        cd swiftshader/build
+        cd swiftshader
+        # from https://chromium.googlesource.com/chromium/src/+/master/DEPS#197
+        git checkout baa10d7b1deef695c165f185be80fdb351a6d9a7
+        cd build
         cmake ..
         make --jobs=8
         ./vk-unittests
