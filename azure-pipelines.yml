@@ -93,6 +93,19 @@ jobs:
         python setup.py develop
         python setup.py bdist_wheel
   - task: Bash@3
+    displayName: Install SwiftShader
+    condition: and(succeeded(), eq(variables['Agent.OS'], 'Linux'))
+    inputs:
+      targetType: inline
+      script: |
+        set -ex
+        git clone https://github.com/google/swiftshader.git
+        sudo apt-get install -y cmake
+        cd swiftshader/build
+        cmake ..
+        make --jobs=8
+        ./vk-unittests
+  - task: Bash@3
     displayName: Test
     inputs:
       targetType: inline
