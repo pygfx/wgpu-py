@@ -161,9 +161,9 @@ def render_to_texture(
     for slot, vbo in enumerate(vbos):
         render_pass.insert_debug_marker(f"setting vbo {slot}")
         render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)
-    render_pass.insert_debug_marker(f"invoking callback")
+    render_pass.insert_debug_marker("invoking callback")
     renderpass_callback(render_pass)
-    render_pass.insert_debug_marker(f"draw!")
+    render_pass.insert_debug_marker("draw!")
     if ibo is None:
         if indirect_buffer is None:
             render_pass.draw(4, 1, 0, 0)
