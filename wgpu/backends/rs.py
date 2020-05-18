@@ -39,7 +39,7 @@ from weakref import WeakKeyDictionary
 
 from cffi import FFI, __version_info__ as cffi_version_info
 
-from .. import base, flags
+from .. import base, flags, _structs
 from .. import _register_backend
 from .._coreutils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
@@ -293,6 +293,19 @@ def _loadop_and_clear_from_value(value):
         return 0, value  # WGPULoadOp_Clear and the value
 
 
+def _check_struct(what, d):
+    """ Check that the given dict does not have any unexpected keys
+    (which may be there because of typos or api changes).
+    """
+    fields = set(d.keys())
+    ref_fields = getattr(_structs, what).keys()
+    unexpected = fields.difference(ref_fields)
+    if unexpected:
+        s1 = ", ".join(unexpected)
+        s2 = ", ".join(ref_fields)
+        raise ValueError(f"Unexpected keys: {s1}.\n  -> for {what}: {s2}.")
+
+
 # %% The API
 
 
@@ -383,6 +396,7 @@ class GPUAdapter(base.GPUAdapter):
     ):
 
         # Handle default limits
+        _check_struct("Limits", limits)
         limits2 = base.default_limits.copy()
         limits2.update(limits or {})
 
@@ -529,6 +543,7 @@ class GPUDevice(base.GPUDevice):
     ):
         c_entries_list = []
         for entry in entries:
+            _check_struct("BindGroupLayoutEntry", entry)
             type = entry["type"]
             if "texture" in type:
                 need = {"view_dimension", "texture_component_type"}
@@ -573,6 +588,7 @@ class GPUDevice(base.GPUDevice):
 
         c_entries_list = []
         for entry in entries:
+            _check_struct("BindGroupEntry", entry)
             # The resource can be a sampler, texture view, or buffer descriptor
             resource = entry["resource"]
             if isinstance(resource, base.GPUSampler):
@@ -591,6 +607,7 @@ class GPUDevice(base.GPUDevice):
                     ),
                 }
             elif isinstance(resource, dict):  # Buffer binding
+                _check_struct("BufferBinding", resource)
                 c_buffer_entry = new_struct(
                     "WGPUBufferBinding",
                     buffer=resource["buffer"]._internal,
@@ -679,6 +696,7 @@ class GPUDevice(base.GPUDevice):
         layout: "GPUPipelineLayout",
         compute_stage: "GPUProgrammableStageDescriptor",
     ):
+        _check_struct("ProgrammableStageDescriptor", compute_stage)
 
         c_compute_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
@@ -712,6 +730,10 @@ class GPUDevice(base.GPUDevice):
         sample_mask: "GPUSampleMask" = 0xFFFFFFFF,
         alpha_to_coverage_enabled: bool = False,
     ):
+        _check_struct("ProgrammableStageDescriptor", vertex_stage)
+        _check_struct("RasterizationStateDescriptor", rasterization_state)
+        _check_struct("VertexStateDescriptor", vertex_state)
+
         c_vertex_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
             module=vertex_stage["module"]._internal,
@@ -719,6 +741,7 @@ class GPUDevice(base.GPUDevice):
         )
         c_fragment_stage = ffi.NULL
         if fragment_stage is not None:
+            _check_struct("ProgrammableStageDescriptor", fragment_stage)
             c_fragment_stage = new_struct_p(
                 "WGPUProgrammableStageDescriptor *",
                 module=fragment_stage["module"]._internal,
@@ -734,6 +757,7 @@ class GPUDevice(base.GPUDevice):
         )
         c_color_states_list = []
         for color_state in color_states:
+            _check_struct("ColorStateDescriptor", color_state)
             alpha_blend = _tuple_from_tuple_or_dict(
                 color_state["alpha_blend"], ("src_factor", "dst_factor", "operation"),
             )
@@ -766,7 +790,9 @@ class GPUDevice(base.GPUDevice):
         if depth_stencil_state is None:
             c_depth_stencil_state = ffi.NULL
         else:
+            _check_struct("DepthStencilStateDescriptor", depth_stencil_state)
             stencil_front = depth_stencil_state.get("stencil_front", {})
+            _check_struct("StencilStateFaceDescriptor", stencil_front)
             c_stencil_front = new_struct(
                 "WGPUStencilStateFaceDescriptor",
                 compare=stencil_front.get("compare", "always"),
@@ -800,8 +826,10 @@ class GPUDevice(base.GPUDevice):
             )
         c_vertex_buffer_descriptors_list = []
         for buffer_des in vertex_state["vertex_buffers"]:
+            _check_struct("VertexBufferLayoutDescriptor", buffer_des)
             c_attributes_list = []
             for attribute in buffer_des["attributes"]:
+                _check_struct("VertexAttributeDescriptor", attribute)
                 c_attribute = new_struct(
                     "WGPUVertexAttributeDescriptor",
                     format=attribute["format"],
@@ -1033,6 +1061,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         c_color_attachments_list = []
         for color_attachment in color_attachments:
+            _check_struct("RenderPassColorAttachmentDescriptor", color_attachment)
             assert isinstance(color_attachment["attachment"], base.GPUTextureView)
             texture_view_id = color_attachment["attachment"]._internal
             c_resolve_target = (
@@ -1066,6 +1095,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
+            _check_struct(
+                "RenderPassDepthStencilAttachmentDescriptor", depth_stencil_attachment
+            )
             c_depth_load_op, c_depth_clear = _loadop_and_clear_from_value(
                 depth_stencil_attachment["depth_load_value"]
             )
@@ -1111,6 +1143,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopybuffertotexture', dev=True)
     def copy_buffer_to_texture(self, source, destination, copy_size):
 
+        _check_struct("BufferCopyView", source)
+        _check_struct("TextureCopyView", destination)
+
         c_source = new_struct_p(
             "WGPUBufferCopyView *",
             buffer=source["buffer"]._internal,
@@ -1141,6 +1176,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopytexturetobuffer', dev=True)
     def copy_texture_to_buffer(self, source, destination, copy_size):
 
+        _check_struct("TextureCopyView", source)
+        _check_struct("BufferCopyView", destination)
+
         ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
         c_origin = new_struct("WGPUOrigin3d", x=ori[0], y=ori[1], z=ori[2])
         c_source = new_struct_p(
@@ -1170,6 +1208,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
     # wgpu.help('Extent3D', 'TextureCopyView', 'commandencodercopytexturetotexture', dev=True)
     def copy_texture_to_texture(self, source, destination, copy_size):
+
+        _check_struct("TextureCopyView", source)
+        _check_struct("TextureCopyView", destination)
 
         ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
         c_origin1 = new_struct("WGPUOrigin3d", x=ori[0], y=ori[1], z=ori[2])
