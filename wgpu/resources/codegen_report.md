@@ -77,6 +77,7 @@
 *  Written to flags.py
 *  Written to enums.py
 *  Written to _mappings.py
+*  Written to _structs.py
 
 ## Checking and patching hand-written API code
 
@@ -114,5 +115,6 @@
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue); (fenceoncompletion)
 *  Not implemented: void destroy(); (querysetdestroy)
 *  Not implemented: GPUTexture getCurrentTexture(); (swapchaingetcurrenttexture)
+*  Found unknown function new_struct_p (newstructp)
 *  Found unknown function configure_swap_chain (deviceconfigureswapchain)
 *  Injected IDL lines into backends/rs.py

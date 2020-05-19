@@ -107,7 +107,7 @@ class BaseParser:
             if self.unknown_lines:
                 print(f"Could not parse {len(self.unknown_lines)} lines")
             else:
-                print(f"All lines where parsed")
+                print("All lines where parsed")
             print(f"Found {len(self.flags)} flags")
             print(f"Found {len(self.enums)} enums")
             print(f"Found {len(self.structs)} structs")

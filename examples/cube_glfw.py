@@ -295,7 +295,7 @@ render_pipeline = device.create_render_pipeline(
         "vertex_buffers": [
             {
                 "array_stride": 4 * 6,
-                "stepmode": wgpu.InputStepMode.vertex,
+                "step_mode": wgpu.InputStepMode.vertex,
                 "attributes": [
                     {
                         "format": wgpu.VertexFormat.float4,

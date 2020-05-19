@@ -1,13 +1,13 @@
-black==19.10b0
+wheel
+black
 pytest
 flake8
 pep8-naming
 requests
 setuptools
 sphinx
-wheel
 twine
 numpy
 python-shader>=0.4.0
 auditwheel; sys_platform == 'linux'
-pyinstaller[hook_testing] @ https://github.com/bjones1/pyinstaller/archive/4232a.zip
+pyinstaller[develop] @ https://github.com/pyinstaller/pyinstaller/archive/develop.zip

@@ -21,7 +21,7 @@ jobs:
         DOCS: 1
       MacOS:
         vmImage: macOS-10.14
-        MACOSX_DEPLOYMENT_TARGET: '10.13'
+        MACOSX_DEPLOYMENT_TARGET: '10.14'
       Windows:
         vmImage: vs2017-win2016
       Windows-32:
