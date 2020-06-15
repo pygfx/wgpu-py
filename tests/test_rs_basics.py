@@ -4,7 +4,7 @@ import ctypes
 
 import wgpu.utils
 import wgpu.backends.rs
-import python_shader
+import pyshader
 
 from testutils import can_use_wgpu_lib, iters_equal
 from pytest import mark, raises
@@ -76,7 +76,7 @@ def test_tuple_from_tuple_or_dict():
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_shader_module_creation():
-    @python_shader.python2shader
+    @pyshader.python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", "i32"), out: ("buffer", 0, "Array(i32)"),
     ):

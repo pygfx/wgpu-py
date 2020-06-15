@@ -1,8 +1,8 @@
 import random
 import ctypes
 
-import python_shader
-from python_shader import python2shader, ivec3
+import pyshader
+from pyshader import python2shader, ivec3
 import wgpu.backends.rs  # noqa
 import numpy as np
 
@@ -389,7 +389,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     bpp = nbytes // (nx * ny * nz)  # bytes per pixel
 
     if can_use_vulkan_sdk:
-        python_shader.dev.validate(compute_shader)
+        pyshader.dev.validate(compute_shader)
 
     device = get_default_device()
     cshader = device.create_shader_module(code=compute_shader)
