@@ -410,7 +410,7 @@ class GPUDevice(GPUObject):
         """ Create a :class:`GPUShaderModule` object from shader source.
 
         Currently, only SpirV is supported. One can compile glsl shaders to
-        SpirV ahead of time, or use the python-shader package to write shaders
+        SpirV ahead of time, or use the pyshader package to write shaders
         in Python.
 
         Arguments:

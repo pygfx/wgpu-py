@@ -59,7 +59,7 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         # The actual surface is held by a subwidget. This is to make sure that
         # the logical surface size is actually integer. Otherwise the window
         # size can be set to subpixel (logical) values, without being able to
-        # detect this. See https://github.com/almarklein/wgpu-py/pull/68
+        # detect this. See https://github.com/pygfx/wgpu-py/pull/68
         self._subwidget = WgpuSubWidget(self)
 
         layout = QtWidgets.QHBoxLayout(self)
