@@ -33,147 +33,147 @@ jobs:
             os: windows-latest
             PY_ARCH: x86
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.6
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.6'
-          architecture: matrix.PY_ARCH
-      - name: Install dev dependencies
-        run: |
-            python -m pip install --upgrade pip
-            pip install -U -r dev-requirements.txt
-      - name: Create source distribution
-        if: matrix.SDIST == 1
-        run: |
-            python setup.py sdist
-      - name: Lint
-        if: matrix.LINT == 1
-        run: |
-            black --check .
-            flake8 .
-      - name: Build docs
-        if: matrix.DOCS == 1
-        run: |
-            pushd docs
-            make html
-            popd
-      - name: Restore WGPU native binary
-        run: |
-            python download-wgpu-native.py
-      - name: Build wheel and install in development mode
-        run: |
-            python setup.py develop
-            python setup.py bdist_wheel
-      - name: Test from repo
-        run: |
-           pytest -v .
-      - name: Manylinux1 tag
-        if: startsWith(matrix.os, 'ubuntu')
-        run: |
-            sudo apt-get update
-            sudo apt-get install -y patchelf
-            auditwheel repair dist/*.whl
-            rm dist/*.whl
-            cp wheelhouse/*.whl dist/.
-      - name: Test wheel
-        shell: bash
-        run: |
-            python setup.py develop --uninstall
-            python setup.py clean --all
-            rm -rf ./wgpu
-            pushd $HOME
-            pip install $GITHUB_WORKSPACE/wgpu-py/dist/*.whl
-            popd
-            pytest -v .
-            pip uninstall -y wgpu
-            git reset --hard HEAD
-      - name: Test sdist
-        if: matrix.SDIST == 1
-        shell: bash
-        run: |
-            rm -rf ./wgpu
-            pushd $HOME
-            pip install $GITHUB_WORKSPACE/wgpu-py/dist/*.tar.gz
-            popd
-            # don't run tests, we just want to know if the sdist can be installed
-            pip uninstall -y wgpu
-            git reset --hard HEAD
-      - name: Twine check
-        run: |
-           twine check dist/*
-      - name: Publish distributions
-        uses: actions/upload-artifact@v2
-        with:
-          path: dist
-          name: dist
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.6
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.6'
+        architecture: matrix.PY_ARCH
+    - name: Install dev dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install -U -r dev-requirements.txt
+    - name: Create source distribution
+      if: matrix.SDIST == 1
+      run: |
+          python setup.py sdist
+    - name: Lint
+      if: matrix.LINT == 1
+      run: |
+          black --check .
+          flake8 .
+    - name: Build docs
+      if: matrix.DOCS == 1
+      run: |
+          pushd docs
+          make html
+          popd
+    - name: Restore WGPU native binary
+      run: |
+          python download-wgpu-native.py
+    - name: Build wheel and install in development mode
+      run: |
+          python setup.py develop
+          python setup.py bdist_wheel
+    - name: Test from repo
+      run: |
+          pytest -v .
+    - name: Manylinux1 tag
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf
+          auditwheel repair dist/*.whl
+          rm dist/*.whl
+          cp wheelhouse/*.whl dist/.
+    - name: Test wheel
+      shell: bash
+      run: |
+          python setup.py develop --uninstall
+          python setup.py clean --all
+          rm -rf ./wgpu
+          pushd $HOME
+          pip install $GITHUB_WORKSPACE/wgpu-py/dist/*.whl
+          popd
+          pytest -v .
+          pip uninstall -y wgpu
+          git reset --hard HEAD
+    - name: Test sdist
+      if: matrix.SDIST == 1
+      shell: bash
+      run: |
+          rm -rf ./wgpu
+          pushd $HOME
+          pip install $GITHUB_WORKSPACE/wgpu-py/dist/*.tar.gz
+          popd
+          # don't run tests, we just want to know if the sdist can be installed
+          pip uninstall -y wgpu
+          git reset --hard HEAD
+    - name: Twine check
+      run: |
+          twine check dist/*
+    - name: Publish distributions
+      uses: actions/upload-artifact@v2
+      with:
+        path: dist
+        name: dist
 
   docker-build:
     name: Linux-32
     runs-on: ubuntu-16.04
     steps:
-     - name: Create and start & prepare container
-       env:
-          dockerImage: 'i386/python:3.6-slim-buster'
-        run: |
-          CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $(dockerImage) sleep infinity)
-          docker start $CID
-          docker exec -i $CID bash -c "\
-            cp -r /tmp/src/. . && \
-            apt-get update && \
-            apt-get install -y build-essential git libssl-dev zip"
-      - name: Install development requirements and restore WGPU native binary
-        run: |
-          docker exec -i $CID bash -c "\
-            python -m pip install -U pip && \
-            pip install -U -r dev-requirements.txt && \
-            python download-wgpu-native.py"
-      - name: Build wheel and install in development mode
-        run: |
-          docker exec -i $CID bash -c "\
-            python setup.py develop && \
-            python setup.py bdist_wheel"
-      - name: Test repo
-        run: |
-          docker exec -i $CID bash -c "\
-            pytest -v tests"
-          docker cp $CID:/tmp/wrk/results.xml .
-      - name: Manylinux1 tag
-        run: |
-          docker exec -i $CID bash -c "\
-            apt-get install -y patchelf && \
-            auditwheel repair dist/*.whl && \
-            rm dist/*.whl && \
-            cp wheelhouse/*.whl dist/."
-          mkdir -p dist
-          docker cp $CID:/tmp/wrk/dist/. dist/.
-      - name: Test wheel
-        run: |
-          docker exec -i $CID bash -c "\
-            python setup.py develop --uninstall && \
-            python setup.py clean --all && \
-            rm -rf ./wgpu && \
-            mkdir -p /tmp/test && \
-            pushd /tmp/test && \
-            pip install /tmp/wrk/dist/*.whl && \
-            popd && \
-            pytest -v tests\
-            pip uninstall -y wgpu && \
-            git reset --hard HEAD"
-          docker cp $CID:/tmp/wrk/results-wheel.xml .
-      - name: Twine check
-        run: |
-          docker exec -i $CID bash -c "\
-            twine check dist/*"
-      - name: Publish distributions
-        uses: actions/upload-artifact@v2
-        with:
-          path: dist
-          name: dist
-      - name: Post-job - stop and remove container
-        run: |
-          docker stop $CID
-          docker rm $CID
+    - name: Create and start & prepare container
+      env:
+        dockerImage: 'i386/python:3.6-slim-buster'
+      run: |
+        CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $(dockerImage) sleep infinity)
+        docker start $CID
+        docker exec -i $CID bash -c "\
+          cp -r /tmp/src/. . && \
+          apt-get update && \
+          apt-get install -y build-essential git libssl-dev zip"
+    - name: Install development requirements and restore WGPU native binary
+      run: |
+        docker exec -i $CID bash -c "\
+          python -m pip install -U pip && \
+          pip install -U -r dev-requirements.txt && \
+          python download-wgpu-native.py"
+    - name: Build wheel and install in development mode
+      run: |
+        docker exec -i $CID bash -c "\
+          python setup.py develop && \
+          python setup.py bdist_wheel"
+    - name: Test repo
+      run: |
+        docker exec -i $CID bash -c "\
+          pytest -v tests"
+        docker cp $CID:/tmp/wrk/results.xml .
+    - name: Manylinux1 tag
+      run: |
+        docker exec -i $CID bash -c "\
+          apt-get install -y patchelf && \
+          auditwheel repair dist/*.whl && \
+          rm dist/*.whl && \
+          cp wheelhouse/*.whl dist/."
+        mkdir -p dist
+        docker cp $CID:/tmp/wrk/dist/. dist/.
+    - name: Test wheel
+      run: |
+        docker exec -i $CID bash -c "\
+          python setup.py develop --uninstall && \
+          python setup.py clean --all && \
+          rm -rf ./wgpu && \
+          mkdir -p /tmp/test && \
+          pushd /tmp/test && \
+          pip install /tmp/wrk/dist/*.whl && \
+          popd && \
+          pytest -v tests\
+          pip uninstall -y wgpu && \
+          git reset --hard HEAD"
+        docker cp $CID:/tmp/wrk/results-wheel.xml .
+    - name: Twine check
+      run: |
+        docker exec -i $CID bash -c "\
+          twine check dist/*"
+    - name: Publish distributions
+      uses: actions/upload-artifact@v2
+      with:
+        path: dist
+        name: dist
+    - name: Post-job - stop and remove container
+      run: |
+        docker stop $CID
+        docker rm $CID
 
   publish:
     name: Publish Github release
