@@ -69,7 +69,7 @@ jobs:
     - name: Test PyInstaller
       if: matrix.SKIPTEST != 1 && (matrix.pyversion == '3.6' || matrix.pyversion == '3.7')
       run: |
-          pip instal -y psutil
+          pip install -y psutil
           pip install -y pyinstaller[develop] @ https://github.com/pyinstaller/pyinstaller/archive/develop.zip
           pytest -v wgpu/__pyinstaller
 
