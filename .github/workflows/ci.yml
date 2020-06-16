@@ -38,7 +38,7 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '3.6'
-        architecture: matrix.PY_ARCH
+        architecture: ${{ matrix.PY_ARCH }}
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
@@ -114,9 +114,9 @@ jobs:
     steps:
     - name: Create and start & prepare container
       env:
-        dockerImage: 'i386/python:3.6-slim-buster'
+        dockerImage: i386/python:3.6-slim-buster
       run: |
-        CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $(dockerImage) sleep infinity)
+        CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $dockerImage sleep infinity)
         docker start $CID
         docker exec -i $CID bash -c "\
           cp -r /tmp/src/. . && \
