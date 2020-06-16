@@ -12,6 +12,7 @@ on:
 
 jobs:
 
+  # Test builds test different Python versions. Also linting/docs/pyinstaller etc.
   test-build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -33,9 +34,10 @@ jobs:
           - name: Test Linux py38
             os: ubuntu-latest
             pyversion: '3.8'
-          - name: Test Linux pypy3
-            os: ubuntu-latest
-            pyversion: 'pypy3'
+          # Pypy3 fails on installing a 3d party dependency
+          #- name: Test Linux pypy3
+          #  os: ubuntu-latest
+          #  pyversion: 'pypy3'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.pyversion }}
@@ -73,19 +75,21 @@ jobs:
           pip install https://github.com/pyinstaller/pyinstaller/archive/develop.zip
           pytest -v wgpu/__pyinstaller
 
+  # The release builds are done for the platforms that we want to build wheels for.
+  # We build wheels, test them, and then upload the wheel as an artifact.
   release-build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - name: Linux
+          - name: Linux-64
             os: ubuntu-latest
             SDIST: 1
-          - name: MacOS
+          - name: MacOS-64
             os: macos-latest
             pyversion: '3.8'
-          - name: Windows
+          - name: Windows-64
             os: windows-latest
             pyversion: '3.6'
           - name: Windows-32
