@@ -13,7 +13,3 @@ wheel
 setuptools
 twine
 auditwheel; sys_platform == 'linux'
-
-# For pyinstaller tests
-psutil
-pyinstaller[develop] @ https://github.com/pyinstaller/pyinstaller/archive/develop.zip

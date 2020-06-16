@@ -61,10 +61,16 @@ jobs:
       if: matrix.SKIPTEST != 1
       run: |
           python download-wgpu-native.py
-    - name: Test from repo
+    - name: Test on repo
       if: matrix.SKIPTEST != 1
       run: |
-          pytest -v .
+          pytest -v tests
+    - name: Test PyInstaller
+      if: matrix.SKIPTEST != 1 && (matrix.pyversion == '3.6' || matrix.pyversion == '3.7')
+      run: |
+          pip instal -y psutil
+          pip install -y pyinstaller[develop] @ https://github.com/pyinstaller/pyinstaller/archive/develop.zip
+          pytest -v wgpu/__pyinstaller
 
   release-build:
     name: ${{ matrix.name }}
@@ -122,7 +128,7 @@ jobs:
           pushd $HOME
           pip install $(echo "$GITHUB_WORKSPACE" | sed -e 's/\\/\//g')/dist/*.whl
           popd
-          pytest -v .
+          pytest -v tests
           pip uninstall -y wgpu
           git reset --hard HEAD
     - name: Test sdist
@@ -172,10 +178,6 @@ jobs:
         docker exec -i $CID bash -c "\
           python setup.py develop && \
           python setup.py bdist_wheel"
-    - name: Test repo
-      run: |
-        docker exec -i $CID bash -c "\
-          pytest -v tests"
     - name: Manylinux1 tag
       run: |
         docker exec -i $CID bash -c "\
