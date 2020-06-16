@@ -70,7 +70,7 @@ jobs:
       if: matrix.SKIPTEST != 1 && (matrix.pyversion == '3.6' || matrix.pyversion == '3.7')
       run: |
           pip install psutil
-          pip install pyinstaller[develop] @ https://github.com/pyinstaller/pyinstaller/archive/develop.zip
+          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.zip
           pytest -v wgpu/__pyinstaller
 
   release-build:
