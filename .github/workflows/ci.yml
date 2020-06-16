@@ -57,10 +57,11 @@ jobs:
           pushd docs
           make html
           popd
-    - name: Restore WGPU native binary
+    - name: Install in development mode
       if: matrix.SKIPTEST != 1
       run: |
           python download-wgpu-native.py
+          python setup.py develop
     - name: Test on repo
       if: matrix.SKIPTEST != 1
       run: |
@@ -105,11 +106,9 @@ jobs:
       if: matrix.SDIST == 1
       run: |
           python setup.py sdist
-    - name: Restore WGPU native binary
-      run: |
-          python download-wgpu-native.py
     - name: Build wheel
       run: |
+          python download-wgpu-native.py
           python setup.py bdist_wheel
     - name: Manylinux1 tag
       if: startsWith(matrix.os, 'ubuntu')
@@ -167,16 +166,15 @@ jobs:
           cp -r /tmp/src/. . && \
           apt-get update && \
           apt-get install -y build-essential git libssl-dev zip"
-    - name: Install development requirements and restore WGPU native binary
+    - name: Install development requirements
       run: |
         docker exec -i $CID bash -c "\
           python -m pip install -U pip && \
-          pip install -U -r dev-requirements.txt && \
-          python download-wgpu-native.py"
-    - name: Build wheel and install in development mode
+          pip install -U -r dev-requirements.txt"
+    - name: Build wheel
       run: |
         docker exec -i $CID bash -c "\
-          python setup.py develop && \
+          python download-wgpu-native.py && \
           python setup.py bdist_wheel"
     - name: Manylinux1 tag
       run: |
