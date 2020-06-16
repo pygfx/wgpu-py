@@ -1,13 +1,19 @@
-wheel
-black
+# For unit tests, linting, etc.
+pyshader>=0.5.0
+requests
+numpy
 pytest
+black
 flake8
 pep8-naming
-requests
-setuptools
 sphinx
+
+# Building wheels
+wheel
+setuptools
 twine
-numpy
-pyshader>=0.5.0
 auditwheel; sys_platform == 'linux'
+
+# For pyinstaller tests
+psutil
 pyinstaller[develop] @ https://github.com/pyinstaller/pyinstaller/archive/develop.zip
