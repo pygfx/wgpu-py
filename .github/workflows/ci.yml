@@ -1,0 +1,218 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - master
+
+jobs:
+
+  release-build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+            SDIST: 1
+            LINT: 1
+            DOCS: 1
+          - name: MacOS
+            os: macos-latest
+            pyversion: '3.8'
+          - name: Windows
+            os: windows-latest
+            pyversion: '3.6'
+          - name: Windows-32
+            os: windows-latest
+            PY_ARCH: x86
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python 3.6
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.6'
+          architecture: matrix.PY_ARCH
+      - name: Install dev dependencies
+        run: |
+            python -m pip install --upgrade pip
+            pip install -U -r dev-requirements.txt
+      - name: Create source distribution
+        if: matrix.SDIST == 1
+        run: |
+            python setup.py sdist
+      - name: Lint
+        if: matrix.LINT == 1
+        run: |
+            black --check .
+            flake8 .
+      - name: Build docs
+        if: matrix.DOCS == 1
+        run: |
+            pushd docs
+            make html
+            popd
+      - name: Restore WGPU native binary
+        run: |
+            python download-wgpu-native.py
+      - name: Build wheel and install in development mode
+        run: |
+            python setup.py develop
+            python setup.py bdist_wheel
+      - name: Test from repo
+        run: |
+           pytest -v .
+      - name: Manylinux1 tag
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y patchelf
+            auditwheel repair dist/*.whl
+            rm dist/*.whl
+            cp wheelhouse/*.whl dist/.
+      - name: Test wheel
+        shell: bash
+        run: |
+            python setup.py develop --uninstall
+            python setup.py clean --all
+            rm -rf ./wgpu
+            pushd $HOME
+            pip install $GITHUB_WORKSPACE/wgpu-py/dist/*.whl
+            popd
+            pytest -v .
+            pip uninstall -y wgpu
+            git reset --hard HEAD
+      - name: Test sdist
+        if: matrix.SDIST == 1
+        shell: bash
+        run: |
+            rm -rf ./wgpu
+            pushd $HOME
+            pip install $GITHUB_WORKSPACE/wgpu-py/dist/*.tar.gz
+            popd
+            # don't run tests, we just want to know if the sdist can be installed
+            pip uninstall -y wgpu
+            git reset --hard HEAD
+      - name: Twine check
+        run: |
+           twine check dist/*
+      - name: Publish distributions
+        uses: actions/upload-artifact@v2
+        with:
+          path: dist
+          name: dist
+
+  docker-build:
+    name: Linux-32
+    runs-on: ubuntu-16.04
+    steps:
+     - name: Create and start & prepare container
+        env:
+          dockerImage: 'i386/python:3.6-slim-buster'
+        run: |
+          CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $(dockerImage) sleep infinity)
+          docker start $CID
+          docker exec -i $CID bash -c "\
+            cp -r /tmp/src/. . && \
+            apt-get update && \
+            apt-get install -y build-essential git libssl-dev zip"
+      - name: Install development requirements and restore WGPU native binary
+        run: |
+          docker exec -i $CID bash -c "\
+            python -m pip install -U pip && \
+            pip install -U -r dev-requirements.txt && \
+            python download-wgpu-native.py"
+      - name: Build wheel and install in development mode
+        run: |
+          docker exec -i $CID bash -c "\
+            python setup.py develop && \
+            python setup.py bdist_wheel"
+      - name: Test repo
+        run: |
+          docker exec -i $CID bash -c "\
+            pytest -v tests"
+          docker cp $CID:/tmp/wrk/results.xml .
+      - name: Manylinux1 tag
+        run: |
+          docker exec -i $CID bash -c "\
+            apt-get install -y patchelf && \
+            auditwheel repair dist/*.whl && \
+            rm dist/*.whl && \
+            cp wheelhouse/*.whl dist/."
+          mkdir -p dist
+          docker cp $CID:/tmp/wrk/dist/. dist/.
+      - name: Test wheel
+        run: |
+          docker exec -i $CID bash -c "\
+            python setup.py develop --uninstall && \
+            python setup.py clean --all && \
+            rm -rf ./wgpu && \
+            mkdir -p /tmp/test && \
+            pushd /tmp/test && \
+            pip install /tmp/wrk/dist/*.whl && \
+            popd && \
+            pytest -v tests\
+            pip uninstall -y wgpu && \
+            git reset --hard HEAD"
+          docker cp $CID:/tmp/wrk/results-wheel.xml .
+      - name: Twine check
+        run: |
+          docker exec -i $CID bash -c "\
+            twine check dist/*"
+      - name: Publish distributions
+        uses: actions/upload-artifact@v2
+        with:
+          path: dist
+          name: dist
+      - name: Post-job - stop and remove container
+        run: |
+          docker stop $CID
+          docker rm $CID
+
+  publish:
+    name: Publish Github release
+    runs-on: ubuntu-latest
+    needs: [release-build, docker-build]
+    if: success() && startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.6
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.6'
+    - name: Download assets
+      uses: actions/download-artifact@v1.0.0
+      with:
+        name: dist
+    - name: Get version from git ref
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+    - name: Create release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
+        release_name: Release ${{ steps.get_version.outputs.VERSION }}
+        body: |
+            Autogenerated binary wheels that include wgpu-native.
+        draft: false
+        prerelease: false
+    - name: Upload Release Assets
+      # Move back to official action after fix https://github.com/actions/upload-release-asset/issues/4
+      uses: AButler/upload-release-assets@v2.0
+      with:
+        release-tag: ${{ steps.get_version.outputs.VERSION }}
+        files: 'dist/*.tar.gz;dist/*.whl'
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.pypi_password }}
