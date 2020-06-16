@@ -158,7 +158,7 @@ jobs:
           pushd /tmp/test && \
           pip install /tmp/wrk/dist/*.whl && \
           popd && \
-          pytest -v tests\
+          pytest -v tests && \
           pip uninstall -y wgpu && \
           git reset --hard HEAD"
     - name: Twine check
