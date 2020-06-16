@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/almarklein/wgpu-py/_apis/build/status/almarklein.wgpu-py?branchName=master)](https://dev.azure.com/almarklein/wgpu-py/_build/latest?definitionId=1&branchName=master)
+![CI](https://github.com/pygfx/wgpu-py/workflows/CI/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/wgpu-py/badge/?version=latest)](https://wgpu-py.readthedocs.io)
 
 # wgpu-py

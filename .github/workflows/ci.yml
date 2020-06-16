@@ -20,6 +20,7 @@ jobs:
         include:
           - name: Test lint & docs
             os: ubuntu-latest
+            pyversion: '3.8'
             LINT: 1
             DOCS: 1
             SKIPTEST: 1
