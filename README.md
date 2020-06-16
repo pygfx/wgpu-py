@@ -1,4 +1,4 @@
-[![Build Status](https://dev.azure.com/almarklein/wgpu-py/_apis/build/status/almarklein.wgpu-py?branchName=master)](https://dev.azure.com/almarklein/wgpu-py/_build/latest?definitionId=1&branchName=master)
+![CI](https://github.com/pygfx/wgpu-py/workflows/CI/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/wgpu-py/badge/?version=latest)](https://wgpu-py.readthedocs.io)
 
 # wgpu-py
@@ -17,7 +17,7 @@ are too low-level for general use. The WebGPU API follows the same concepts, but
 a simpler (higher level) spelling. The Python `wgpu` library brings the
 WebGPU API to Python.
 
-To get an idea of what this API looks like have a look at [triangle.py](https://github.com/almarklein/wgpu-py/blob/master/examples/triangle.py) and the other [examples](https://github.com/almarklein/wgpu-py/blob/master/examples/).
+To get an idea of what this API looks like have a look at [triangle.py](https://github.com/pygfx/wgpu-py/blob/master/examples/triangle.py) and the other [examples](https://github.com/pygfx/wgpu-py/blob/master/examples/).
 
 
 ## Status
@@ -35,7 +35,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 ```
 pip install wgpu
-pip install python-shader  # optional - our examples use this
+pip install pyshader  # optional - our examples use this
 ```
 
 The library ships with Rust binaries for Windows, MacOS and Linux. If you want to use

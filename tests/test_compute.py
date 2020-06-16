@@ -2,7 +2,7 @@ import random
 import ctypes
 from ctypes import c_int32, c_ubyte
 
-from python_shader import python2shader, Array, i32
+from pyshader import python2shader, Array, i32
 import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 

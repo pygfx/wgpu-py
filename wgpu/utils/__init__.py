@@ -5,7 +5,7 @@ Higher level utility functions. This module is not imported by default.
 # The purpose of wgpu-py is to provide a Pythonic wrapper around
 # wgpu-native. In principal, a higher-level API is not within the scope
 # of the project. However, by providing a few utility functions, other
-# projects (like python-shader) can use wgpu (e.g. in their tests)
+# projects (like pyshader) can use wgpu (e.g. in their tests)
 # without having to keep track of changes in wgpu itself.
 #
 # We should be conservative here: functionality added here should have an

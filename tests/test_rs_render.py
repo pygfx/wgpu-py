@@ -5,8 +5,8 @@ Test render pipeline, by drawing a whole lot of orange squares ...
 import ctypes
 import numpy as np
 
-from python_shader import python2shader, f32, vec2, vec4, i32
-from python_shader import RES_INPUT, RES_OUTPUT
+from pyshader import python2shader, f32, vec2, vec4, i32
+from pyshader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip, raises
 from testutils import can_use_wgpu_lib, get_default_device

@@ -7,8 +7,8 @@ import os
 import sys
 import time
 
-from python_shader import python2shader, vec4, i32
-from python_shader import RES_INPUT, RES_OUTPUT
+from pyshader import python2shader, vec4, i32
+from pyshader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip
 from testutils import can_use_wgpu_lib

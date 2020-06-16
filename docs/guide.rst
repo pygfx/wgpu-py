@@ -77,4 +77,4 @@ Examples
 
 Some examples with wgpu-py can be found here:
 
-* https://github.com/almarklein/wgpu-py/tree/master/examples
+* https://github.com/pygfx/wgpu-py/tree/master/examples

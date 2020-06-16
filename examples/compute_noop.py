@@ -8,7 +8,7 @@ import ctypes
 import wgpu
 import wgpu.backends.rs  # Select backend
 from wgpu.utils import compute_with_buffers  # Convenience function
-from python_shader import python2shader, i32, Array
+from pyshader import python2shader, i32, Array
 
 
 # %% Shader and data

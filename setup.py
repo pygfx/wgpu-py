@@ -45,7 +45,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Almar Klein",
     author_email="almar.klein@gmail.com",
-    url="https://github.com/almarklein/wgpu-py",
+    url="https://github.com/pygfx/wgpu-py",
     cmdclass={"bdist_wheel": bdist_wheel},
     data_files=[("", ["LICENSE"])],
     entry_points={

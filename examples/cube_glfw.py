@@ -10,8 +10,8 @@ import wgpu
 from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 import numpy as np
-from python_shader import python2shader, shadertype_as_ctype
-from python_shader import Struct, mat4, vec4, vec2
+from pyshader import python2shader, shadertype_as_ctype
+from pyshader import Struct, mat4, vec4, vec2
 
 
 # %% Create canvas and device

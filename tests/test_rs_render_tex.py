@@ -5,8 +5,8 @@ Test render pipeline by rendering to a texture.
 import ctypes
 import numpy as np
 
-import python_shader
-from python_shader import python2shader, f32, vec2, vec4, i32
+import pyshader
+from pyshader import python2shader, f32, vec2, vec4, i32
 import wgpu.backends.rs  # noqa
 from pytest import skip, raises
 from testutils import can_use_wgpu_lib, get_default_device, can_use_vulkan_sdk
@@ -379,8 +379,8 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     device = get_default_device()
 
     if can_use_vulkan_sdk:
-        python_shader.dev.validate(vertex_shader)
-        python_shader.dev.validate(fragment_shader)
+        pyshader.dev.validate(vertex_shader)
+        pyshader.dev.validate(fragment_shader)
 
     # Create texture
     texture = device.create_texture(
