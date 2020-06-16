@@ -83,7 +83,7 @@ jobs:
           python setup.py clean --all
           rm -rf ./wgpu
           pushd $HOME
-          pip install $GITHUB_WORKSPACE/wgpu-py/dist/*.whl
+          pip install $GITHUB_WORKSPACE/dist/*.whl
           popd
           pytest -v .
           pip uninstall -y wgpu
@@ -94,7 +94,7 @@ jobs:
       run: |
           rm -rf ./wgpu
           pushd $HOME
-          pip install $GITHUB_WORKSPACE/wgpu-py/dist/*.tar.gz
+          pip install $GITHUB_WORKSPACE/dist/*.tar.gz
           popd
           # don't run tests, we just want to know if the sdist can be installed
           pip uninstall -y wgpu
@@ -117,6 +117,7 @@ jobs:
         dockerImage: i386/python:3.6-slim-buster
       run: |
         CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $dockerImage sleep infinity)
+        echo "::set-env name=CID::$CID"
         docker start $CID
         docker exec -i $CID bash -c "\
           cp -r /tmp/src/. . && \
