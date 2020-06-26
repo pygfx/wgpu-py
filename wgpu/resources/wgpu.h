@@ -1,8 +1,4 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/* Generated with cbindgen:0.14.0 */
+/* Generated with cbindgen:0.14.2 */
 
 /* DO NOT MODIFY THIS MANUALLY! This file was generated using cbindgen.
  * To generate this file:
@@ -37,7 +33,7 @@ typedef unsigned long long WGPUOption_TextureViewId;
 
 #define WGPUMAX_MIP_LEVELS 16
 
-#define WGPUMAX_VERTEX_BUFFERS 8
+#define WGPUMAX_VERTEX_BUFFERS 16
 
 typedef enum {
   WGPUAddressMode_ClampToEdge = 0,
@@ -131,6 +127,15 @@ typedef enum {
 } WGPULoadOp;
 
 typedef enum {
+  WGPULogLevel_Off = 0,
+  WGPULogLevel_Error = 1,
+  WGPULogLevel_Warn = 2,
+  WGPULogLevel_Info = 3,
+  WGPULogLevel_Debug = 4,
+  WGPULogLevel_Trace = 5,
+} WGPULogLevel;
+
+typedef enum {
   WGPUPowerPreference_Default = 0,
   WGPUPowerPreference_LowPower = 1,
   WGPUPowerPreference_HighPerformance = 2,
@@ -182,6 +187,15 @@ typedef enum {
   WGPUStoreOp_Clear = 0,
   WGPUStoreOp_Store = 1,
 } WGPUStoreOp;
+
+typedef enum {
+  WGPUSwapChainStatus_Good,
+  WGPUSwapChainStatus_Suboptimal,
+  WGPUSwapChainStatus_Timeout,
+  WGPUSwapChainStatus_Outdated,
+  WGPUSwapChainStatus_Lost,
+  WGPUSwapChainStatus_OutOfMemory,
+} WGPUSwapChainStatus;
 
 typedef enum {
   WGPUTextureAspect_All,
@@ -252,36 +266,36 @@ typedef enum {
 } WGPUTextureViewDimension;
 
 typedef enum {
-  WGPUVertexFormat_Uchar2 = 1,
-  WGPUVertexFormat_Uchar4 = 3,
-  WGPUVertexFormat_Char2 = 5,
-  WGPUVertexFormat_Char4 = 7,
-  WGPUVertexFormat_Uchar2Norm = 9,
-  WGPUVertexFormat_Uchar4Norm = 11,
-  WGPUVertexFormat_Char2Norm = 14,
-  WGPUVertexFormat_Char4Norm = 16,
-  WGPUVertexFormat_Ushort2 = 18,
-  WGPUVertexFormat_Ushort4 = 20,
-  WGPUVertexFormat_Short2 = 22,
-  WGPUVertexFormat_Short4 = 24,
-  WGPUVertexFormat_Ushort2Norm = 26,
-  WGPUVertexFormat_Ushort4Norm = 28,
-  WGPUVertexFormat_Short2Norm = 30,
-  WGPUVertexFormat_Short4Norm = 32,
-  WGPUVertexFormat_Half2 = 34,
-  WGPUVertexFormat_Half4 = 36,
-  WGPUVertexFormat_Float = 37,
-  WGPUVertexFormat_Float2 = 38,
-  WGPUVertexFormat_Float3 = 39,
-  WGPUVertexFormat_Float4 = 40,
-  WGPUVertexFormat_Uint = 41,
-  WGPUVertexFormat_Uint2 = 42,
-  WGPUVertexFormat_Uint3 = 43,
-  WGPUVertexFormat_Uint4 = 44,
-  WGPUVertexFormat_Int = 45,
-  WGPUVertexFormat_Int2 = 46,
-  WGPUVertexFormat_Int3 = 47,
-  WGPUVertexFormat_Int4 = 48,
+  WGPUVertexFormat_Uchar2 = 0,
+  WGPUVertexFormat_Uchar4 = 1,
+  WGPUVertexFormat_Char2 = 2,
+  WGPUVertexFormat_Char4 = 3,
+  WGPUVertexFormat_Uchar2Norm = 4,
+  WGPUVertexFormat_Uchar4Norm = 5,
+  WGPUVertexFormat_Char2Norm = 6,
+  WGPUVertexFormat_Char4Norm = 7,
+  WGPUVertexFormat_Ushort2 = 8,
+  WGPUVertexFormat_Ushort4 = 9,
+  WGPUVertexFormat_Short2 = 10,
+  WGPUVertexFormat_Short4 = 11,
+  WGPUVertexFormat_Ushort2Norm = 12,
+  WGPUVertexFormat_Ushort4Norm = 13,
+  WGPUVertexFormat_Short2Norm = 14,
+  WGPUVertexFormat_Short4Norm = 15,
+  WGPUVertexFormat_Half2 = 16,
+  WGPUVertexFormat_Half4 = 17,
+  WGPUVertexFormat_Float = 18,
+  WGPUVertexFormat_Float2 = 19,
+  WGPUVertexFormat_Float3 = 20,
+  WGPUVertexFormat_Float4 = 21,
+  WGPUVertexFormat_Uint = 22,
+  WGPUVertexFormat_Uint2 = 23,
+  WGPUVertexFormat_Uint3 = 24,
+  WGPUVertexFormat_Uint4 = 25,
+  WGPUVertexFormat_Int = 26,
+  WGPUVertexFormat_Int2 = 27,
+  WGPUVertexFormat_Int3 = 28,
+  WGPUVertexFormat_Int4 = 29,
 } WGPUVertexFormat;
 
 typedef WGPUNonZeroU64 WGPUId_Adapter_Dummy;
@@ -308,6 +322,10 @@ typedef struct {
 typedef WGPUNonZeroU64 WGPUId_BindGroup_Dummy;
 
 typedef WGPUId_BindGroup_Dummy WGPUBindGroupId;
+
+typedef WGPUNonZeroU64 WGPUId_BindGroupLayout_Dummy;
+
+typedef WGPUId_BindGroupLayout_Dummy WGPUBindGroupLayoutId;
 
 typedef WGPUNonZeroU64 WGPUId_Buffer_Dummy;
 
@@ -382,10 +400,14 @@ typedef struct {
 } WGPURenderPassDescriptor;
 
 typedef struct {
-  WGPUBufferId buffer;
   WGPUBufferAddress offset;
   uint32_t bytes_per_row;
   uint32_t rows_per_image;
+} WGPUTextureDataLayout;
+
+typedef struct {
+  WGPUBufferId buffer;
+  WGPUTextureDataLayout layout;
 } WGPUBufferCopyView;
 
 typedef WGPUNonZeroU64 WGPUId_Texture_Dummy;
@@ -402,7 +424,6 @@ typedef struct {
 typedef struct {
   WGPUTextureId texture;
   uint32_t mip_level;
-  uint32_t array_layer;
   WGPUOrigin3d origin;
 } WGPUTextureCopyView;
 
@@ -429,10 +450,6 @@ typedef WGPUId_ComputePipeline_Dummy WGPUComputePipelineId;
 typedef WGPUNonZeroU64 WGPUId_Surface;
 
 typedef WGPUId_Surface WGPUSurfaceId;
-
-typedef WGPUNonZeroU64 WGPUId_BindGroupLayout_Dummy;
-
-typedef WGPUId_BindGroupLayout_Dummy WGPUBindGroupLayoutId;
 
 typedef struct {
   WGPUBufferId buffer;
@@ -506,6 +523,8 @@ typedef struct {
   uintptr_t entries_length;
 } WGPUBindGroupLayoutDescriptor;
 
+typedef const char *WGPULabel;
+
 typedef uint32_t WGPUBufferUsage;
 #define WGPUBufferUsage_MAP_READ 1
 #define WGPUBufferUsage_MAP_WRITE 2
@@ -516,11 +535,9 @@ typedef uint32_t WGPUBufferUsage;
 #define WGPUBufferUsage_UNIFORM 64
 #define WGPUBufferUsage_STORAGE 128
 #define WGPUBufferUsage_INDIRECT 256
-#define WGPUBufferUsage_STORAGE_READ 512
-#define WGPUBufferUsage_NONE 0
 
 typedef struct {
-  const char *label;
+  WGPULabel label;
   WGPUBufferAddress size;
   WGPUBufferUsage usage;
 } WGPUBufferDescriptor;
@@ -639,6 +656,7 @@ typedef struct {
 } WGPURenderPipelineDescriptor;
 
 typedef struct {
+  WGPULabel label;
   WGPUAddressMode address_mode_u;
   WGPUAddressMode address_mode_v;
   WGPUAddressMode address_mode_w;
@@ -669,8 +687,6 @@ typedef uint32_t WGPUTextureUsage;
 #define WGPUTextureUsage_SAMPLED 4
 #define WGPUTextureUsage_STORAGE 8
 #define WGPUTextureUsage_OUTPUT_ATTACHMENT 16
-#define WGPUTextureUsage_NONE 0
-#define WGPUTextureUsage_UNINITIALIZED 65535
 
 typedef struct {
   WGPUTextureUsage usage;
@@ -681,9 +697,8 @@ typedef struct {
 } WGPUSwapChainDescriptor;
 
 typedef struct {
-  const char *label;
+  WGPULabel label;
   WGPUExtent3d size;
-  uint32_t array_layer_count;
   uint32_t mip_level_count;
   uint32_t sample_count;
   WGPUTextureDimension dimension;
@@ -708,11 +723,15 @@ typedef uint32_t WGPUBackendBit;
 
 typedef void (*WGPURequestAdapterCallback)(WGPUOption_AdapterId id, void *userdata);
 
+typedef void (*WGPULogCallback)(int level, const char *msg);
+
 typedef struct {
+  WGPUSwapChainStatus status;
   WGPUOption_TextureViewId view_id;
 } WGPUSwapChainOutput;
 
 typedef struct {
+  WGPULabel label;
   WGPUTextureFormat format;
   WGPUTextureViewDimension dimension;
   WGPUTextureAspect aspect;
@@ -722,12 +741,43 @@ typedef struct {
   uint32_t array_layer_count;
 } WGPUTextureViewDescriptor;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void wgpu_adapter_destroy(WGPUAdapterId adapter_id);
 
 WGPUDeviceId wgpu_adapter_request_device(WGPUAdapterId adapter_id,
-                                         const WGPUDeviceDescriptor *desc);
+                                         const WGPUDeviceDescriptor *desc,
+                                         const char *trace_path);
 
 void wgpu_bind_group_destroy(WGPUBindGroupId bind_group_id);
+
+void wgpu_bind_group_layout_destroy(WGPUBindGroupLayoutId bind_group_layout_id);
 
 void wgpu_buffer_destroy(WGPUBufferId buffer_id);
 
@@ -777,17 +827,17 @@ void wgpu_command_encoder_copy_buffer_to_buffer(WGPUCommandEncoderId command_enc
 void wgpu_command_encoder_copy_buffer_to_texture(WGPUCommandEncoderId command_encoder_id,
                                                  const WGPUBufferCopyView *source,
                                                  const WGPUTextureCopyView *destination,
-                                                 WGPUExtent3d copy_size);
+                                                 const WGPUExtent3d *copy_size);
 
 void wgpu_command_encoder_copy_texture_to_buffer(WGPUCommandEncoderId command_encoder_id,
                                                  const WGPUTextureCopyView *source,
                                                  const WGPUBufferCopyView *destination,
-                                                 WGPUExtent3d copy_size);
+                                                 const WGPUExtent3d *copy_size);
 
 void wgpu_command_encoder_copy_texture_to_texture(WGPUCommandEncoderId command_encoder_id,
                                                   const WGPUTextureCopyView *source,
                                                   const WGPUTextureCopyView *destination,
-                                                  WGPUExtent3d copy_size);
+                                                  const WGPUExtent3d *copy_size);
 
 void wgpu_command_encoder_destroy(WGPUCommandEncoderId command_encoder_id);
 
@@ -806,8 +856,6 @@ void wgpu_compute_pass_dispatch_indirect(WGPURawPass *pass,
                                          WGPUBufferAddress offset);
 
 void wgpu_compute_pass_end_pass(WGPUComputePassId pass_id);
-
-const uint8_t *wgpu_compute_pass_finish(WGPURawPass *pass, uintptr_t *length);
 
 void wgpu_compute_pass_insert_debug_marker(WGPURawPass *_pass, WGPURawString _label);
 
@@ -828,6 +876,10 @@ void wgpu_compute_pass_set_bind_group(WGPURawPass *pass,
                                       uintptr_t offset_length);
 
 void wgpu_compute_pass_set_pipeline(WGPURawPass *pass, WGPUComputePipelineId pipeline_id);
+
+void wgpu_compute_pipeline_destroy(WGPUComputePipelineId compute_pipeline_id);
+
+WGPUSurfaceId wgpu_create_surface_from_android(void *a_native_window);
 
 WGPUSurfaceId wgpu_create_surface_from_metal_layer(void *layer);
 
@@ -886,15 +938,44 @@ void wgpu_device_get_limits(WGPUDeviceId _device_id, WGPULimits *limits);
 
 void wgpu_device_poll(WGPUDeviceId device_id, bool force_wait);
 
+unsigned int wgpu_get_version(void);
+
+void wgpu_pipeline_layout_destroy(WGPUPipelineLayoutId pipeline_layout_id);
+
 /**
  * # Safety
  *
- * This function is unsafe as there is no guarantee that the given pointer is
- * valid for `command_buffers_length` elements.
+ * This function is unsafe as there is no guarantee that the given `command_buffers`
+ * pointer is valid for `command_buffers_length` elements.
  */
 void wgpu_queue_submit(WGPUQueueId queue_id,
                        const WGPUCommandBufferId *command_buffers,
                        uintptr_t command_buffers_length);
+
+/**
+ * # Safety
+ *
+ * This function is unsafe as there is no guarantee that the given `data`
+ * pointer is valid for `data_length` elements.
+ */
+void wgpu_queue_write_buffer(WGPUQueueId queue_id,
+                             WGPUBufferId buffer_id,
+                             WGPUBufferAddress buffer_offset,
+                             const uint8_t *data,
+                             uintptr_t data_length);
+
+/**
+ * # Safety
+ *
+ * This function is unsafe as there is no guarantee that the given `data`
+ * pointer is valid for `data_length` elements.
+ */
+void wgpu_queue_write_texture(WGPUQueueId queue_id,
+                              const WGPUTextureCopyView *texture,
+                              const uint8_t *data,
+                              uintptr_t data_length,
+                              const WGPUTextureDataLayout *data_layout,
+                              const WGPUExtent3d *size);
 
 void wgpu_render_pass_destroy(WGPURawPass *pass);
 
@@ -931,8 +1012,6 @@ void wgpu_render_pass_end_pass(WGPURenderPassId pass_id);
 void wgpu_render_pass_execute_bundles(WGPURawPass *_pass,
                                       const WGPURenderBundleId *_bundles,
                                       uintptr_t _bundles_length);
-
-const uint8_t *wgpu_render_pass_finish(WGPURawPass *pass, uintptr_t *length);
 
 void wgpu_render_pass_insert_debug_marker(WGPURawPass *_pass, WGPURawString _label);
 
@@ -983,6 +1062,8 @@ void wgpu_render_pass_set_viewport(WGPURawPass *pass,
                                    float depth_min,
                                    float depth_max);
 
+void wgpu_render_pipeline_destroy(WGPURenderPipelineId render_pipeline_id);
+
 /**
  * # Safety
  *
@@ -994,6 +1075,12 @@ void wgpu_request_adapter_async(const WGPURequestAdapterOptions *desc,
                                 void *userdata);
 
 void wgpu_sampler_destroy(WGPUSamplerId sampler_id);
+
+void wgpu_set_log_callback(WGPULogCallback callback);
+
+int wgpu_set_log_level(WGPULogLevel level);
+
+void wgpu_shader_module_destroy(WGPUShaderModuleId shader_module_id);
 
 WGPUSwapChainOutput wgpu_swap_chain_get_next_texture(WGPUSwapChainId swap_chain_id);
 
