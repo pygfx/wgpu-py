@@ -315,8 +315,10 @@ class IdlParser(BaseParser):
                         t = "int"
                     elif arg_type in ["boolean"]:
                         t = "bool"
-                    elif arg_type in ["DOMString", "DOMString?"]:
+                    elif arg_type in ["DOMString", "DOMString?", "USVString"]:
                         t = "str"
+                    elif arg_type in ["object"]:
+                        t = "dict"
                     elif arg_type.startswith("GPU"):
                         t = arg_type
                     elif arg_type.startswith("sequence<GPU"):

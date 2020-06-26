@@ -25,14 +25,17 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# %% Enums (24)
+# %% Enums (26)
 
 PowerPreference = Enum(
     "PowerPreference", low_power="low-power", high_performance="high-performance",
 )  #:
 
 ExtensionName = Enum(
-    "ExtensionName", texture_compression_bc="texture-compression-bc",
+    "ExtensionName",
+    texture_compression_bc="texture-compression-bc",
+    pipeline_statistics_query="pipeline-statistics-query",
+    timestamp_query="timestamp-query",
 )  #:
 
 TextureDimension = Enum("TextureDimension", d1="1d", d2="2d", d3="3d",)  #:
@@ -91,6 +94,20 @@ TextureFormat = Enum(
     depth32float="depth32float",
     depth24plus="depth24plus",
     depth24plus_stencil8="depth24plus-stencil8",
+    bc1_rgba_unorm="bc1-rgba-unorm",
+    bc1_rgba_unorm_srgb="bc1-rgba-unorm-srgb",
+    bc2_rgba_unorm="bc2-rgba-unorm",
+    bc2_rgba_unorm_srgb="bc2-rgba-unorm-srgb",
+    bc3_rgba_unorm="bc3-rgba-unorm",
+    bc3_rgba_unorm_srgb="bc3-rgba-unorm-srgb",
+    bc4_r_unorm="bc4-r-unorm",
+    bc4_r_snorm="bc4-r-snorm",
+    bc5_rg_unorm="bc5-rg-unorm",
+    bc5_rg_snorm="bc5-rg-snorm",
+    bc6h_rgb_ufloat="bc6h-rgb-ufloat",
+    bc6h_rgb_sfloat="bc6h-rgb-sfloat",
+    bc7_rgba_unorm="bc7-rgba-unorm",
+    bc7_rgba_unorm_srgb="bc7-rgba-unorm-srgb",
 )  #:
 
 TextureComponentType = Enum(
@@ -128,6 +145,10 @@ BindingType = Enum(
     sampled_texture="sampled-texture",
     readonly_storage_texture="readonly-storage-texture",
     writeonly_storage_texture="writeonly-storage-texture",
+)  #:
+
+CompilationMessageType = Enum(
+    "CompilationMessageType", error="error", warning="warning", info="info",
 )  #:
 
 PrimitiveTopology = Enum(
@@ -223,7 +244,21 @@ LoadOp = Enum("LoadOp", load="load",)  #:
 
 StoreOp = Enum("StoreOp", store="store", clear="clear",)  #:
 
-QueryType = Enum("QueryType", occlusion="occlusion",)  #:
+QueryType = Enum(
+    "QueryType",
+    occlusion="occlusion",
+    pipeline_statistics="pipeline-statistics",
+    timestamp="timestamp",
+)  #:
+
+PipelineStatisticName = Enum(
+    "PipelineStatisticName",
+    vertex_shader_invocations="vertex-shader-invocations",
+    clipper_invocations="clipper-invocations",
+    clipper_primitives_out="clipper-primitives-out",
+    fragment_shader_invocations="fragment-shader-invocations",
+    compute_shader_invocations="compute-shader-invocations",
+)  #:
 
 ErrorFilter = Enum(
     "ErrorFilter", none="none", out_of_memory="out-of-memory", validation="validation",

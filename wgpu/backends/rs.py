@@ -39,7 +39,7 @@ from weakref import WeakKeyDictionary
 
 from cffi import FFI, __version_info__ as cffi_version_info
 
-from .. import base, flags, _structs
+from .. import base, flags, enums, _structs
 from .. import _register_backend
 from .._coreutils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
@@ -445,7 +445,17 @@ class GPUAdapter(base.GPUAdapter):
 
 class GPUDevice(base.GPUDevice):
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
-    def create_buffer(self, *, label="", size: int, usage: "GPUBufferUsageFlags"):
+    def create_buffer(
+        self,
+        *,
+        label="",
+        size: int,
+        usage: "GPUBufferUsageFlags",
+        mapped_at_creation: bool = False,
+    ):
+        # Weird, that mapped_at_creation flag. It's as if in IDL they wanted to
+        # merge the create_buffer and create_buffer_mapped functions, buy failed
+        # to remove the mapped version ...
         c_label = ffi.new("char []", label.encode())
         size = int(size)
         struct = new_struct_p(
@@ -457,7 +467,12 @@ class GPUDevice(base.GPUDevice):
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
     def create_buffer_mapped(
-        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
+        self,
+        *,
+        label="",
+        size: int,
+        usage: "GPUBufferUsageFlags",
+        mapped_at_creation: bool = False,
     ):
 
         c_label = ffi.new("char []", label.encode())
@@ -552,9 +567,11 @@ class GPUDevice(base.GPUDevice):
             _check_struct("BindGroupLayoutEntry", entry)
             type = entry["type"]
             if "texture" in type:
-                need = {"view_dimension", "texture_component_type"}
+                need = {"view_dimension"}
                 if "storage" in type:
                     need.add("storage_texture_format")
+                else:
+                    need.add("texture_component_type")
                 assert all(
                     x in entry for x in need
                 ), f"{type} binding should specify {need}"
@@ -563,10 +580,15 @@ class GPUDevice(base.GPUDevice):
                 binding=int(entry["binding"]),
                 visibility=int(entry["visibility"]),
                 ty=type,
-                multisampled=bool(entry.get("multisampled", False)),
+                # Used for uniform buffer and storage buffer bindings.
                 has_dynamic_offset=bool(entry.get("has_dynamic_offset", False)),
+                # Used for sampled texture and storage texture bindings.
                 view_dimension=entry.get("view_dimension", "2d"),
+                # Used for sampled texture bindings.
                 texture_component_type=entry.get("texture_component_type", "float"),
+                # Used for sampled texture bindings.
+                multisampled=bool(entry.get("multisampled", False)),
+                # Used for storage texture bindings.
                 storage_texture_format=entry.get("storage_texture_format", 0),
             )
             c_entries_list.append(c_entry)
@@ -667,7 +689,7 @@ class GPUDevice(base.GPUDevice):
         return GPUPipelineLayout(label, id, self, bind_group_layouts)
 
     # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
-    def create_shader_module(self, *, label="", code: str):
+    def create_shader_module(self, *, label="", code: str, source_map: "dict" = None):
 
         if isinstance(code, bytes):
             data = code  # Assume it's Spirv
@@ -699,7 +721,7 @@ class GPUDevice(base.GPUDevice):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout",
+        layout: "GPUPipelineLayout" = None,
         compute_stage: "GPUProgrammableStageDescriptor",
     ):
         _check_struct("ProgrammableStageDescriptor", compute_stage)
@@ -717,14 +739,14 @@ class GPUDevice(base.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_compute_pipeline(self._internal, struct)
-        return GPUComputePipeline(label, id, self)
+        return GPUComputePipeline(label, id, self, layout)
 
     # wgpu.help('RenderPipelineDescriptor', 'devicecreaterenderpipeline', dev=True)
     def create_render_pipeline(
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout",
+        layout: "GPUPipelineLayout" = None,
         vertex_stage: "GPUProgrammableStageDescriptor",
         fragment_stage: "GPUProgrammableStageDescriptor" = None,
         primitive_topology: "GPUPrimitiveTopology",
@@ -881,7 +903,7 @@ class GPUDevice(base.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_render_pipeline(self._internal, struct)
-        return GPURenderPipeline(label, id, self)
+        return GPURenderPipeline(label, id, self, layout)
 
     # wgpu.help('CommandEncoderDescriptor', 'devicecreatecommandencoder', dev=True)
     def create_command_encoder(self, *, label=""):
@@ -908,8 +930,23 @@ class GPUDevice(base.GPUDevice):
 
 
 class GPUBuffer(base.GPUBuffer):
-    # wgpu.help('buffermapreadasync', dev=True)
-    def map_read(self):
+    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
+    def map(self, mode, offset=0, size=0):
+        if size == 0 and offset < self.size:  # specified by WebGPU spec
+            size = self.size - offset
+        if not (offset == 0 and size == self.size):
+            raise ValueError(
+                f"Cannot (yet) map buffers with nonzero offset and non-full size."
+            )
+
+        if mode == flags.MapMode.READ:
+            return self._map_read()
+        elif mode == flags.MapMode.WRITE:
+            return self._map_write()
+        else:
+            raise ValueError(f"Invalid MapMode flag: {mode}")
+
+    def _map_read(self):
         data = None
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
@@ -935,8 +972,7 @@ class GPUBuffer(base.GPUBuffer):
         self._mapping = data
         return data
 
-    # wgpu.help('buffermapwriteasync', dev=True)
-    def map_write(self):
+    def _map_write(self):
         data = None
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
@@ -962,15 +998,10 @@ class GPUBuffer(base.GPUBuffer):
         self._mapping = data
         return data
 
-    # wgpu.help('buffermapreadasync', dev=True)
-    async def map_read_async(self):
+    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
+    async def map_async(self, mode, offset=0, size=0):
         # todo: actually make this async
         return self.map_read()  # no-cover
-
-    # wgpu.help('buffermapwriteasync', dev=True)
-    async def map_write_async(self):
-        # todo: actually make this async
-        return self.map_write()  # no-cover
 
     # wgpu.help('bufferunmap', dev=True)
     def unmap(self):
@@ -1064,6 +1095,10 @@ class GPUPipelineLayout(base.GPUPipelineLayout):
 
 
 class GPUShaderModule(base.GPUShaderModule):
+    # wgpu.help('shadermodulecompilationinfo', dev=True)
+    async def compilation_info(self):
+        return await super().compilation_info()
+
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal

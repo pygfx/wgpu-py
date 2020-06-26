@@ -23,7 +23,7 @@ class Flags:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# %% flags (4)
+# %% flags (5)
 
 BufferUsage = Flags(
     "BufferUsage",
@@ -38,6 +38,8 @@ BufferUsage = Flags(
     INDIRECT=256,
     QUERY_RESOLVE=512,
 )  #:
+
+MapMode = Flags("MapMode", READ=1, WRITE=2,)  #:
 
 TextureUsage = Flags(
     "TextureUsage", COPY_SRC=1, COPY_DST=2, SAMPLED=4, STORAGE=8, OUTPUT_ATTACHMENT=16,
