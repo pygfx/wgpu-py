@@ -948,7 +948,7 @@ class GPUCommandEncoder(GPUObject):
 
         Arguments:
             source (GPUBuffer): A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
-            destination (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            destination (GPUTexture): A dict with fields: texture, mip_level, origin.
             copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()
@@ -959,7 +959,7 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a texture (view) to a buffer.
 
         Arguments:
-            source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            source (GPUTexture): A dict with fields: texture, mip_level, origin.
             destination (GPUBuffer):  A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
             copy_size (int): The number of bytes to copy.
         """
@@ -971,8 +971,8 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a texture (view) to another texture (view).
 
         Arguments:
-            source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
-            destination (GPUTexture):  A dict with fields: texture, mip_level, array_layer, origin.
+            source (GPUTexture): A dict with fields: texture, mip_level, origin.
+            destination (GPUTexture):  A dict with fields: texture, mip_level, origin.
             copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()

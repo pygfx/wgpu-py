@@ -8,18 +8,17 @@
 *  c: NONE:0, VERTEX:1, FRAGMENT:2, COMPUTE:4
 *  i: VERTEX:1, FRAGMENT:2, COMPUTE:4
 *   BufferUsage
-*  c: MAP_READ:1, MAP_WRITE:2, COPY_SRC:4, COPY_DST:8, INDEX:16, VERTEX:32, UNIFORM:64, STORAGE:128, INDIRECT:256, STORAGE_READ:512, NONE:0
+*  c: MAP_READ:1, MAP_WRITE:2, COPY_SRC:4, COPY_DST:8, INDEX:16, VERTEX:32, UNIFORM:64, STORAGE:128, INDIRECT:256
 *  i: MAP_READ:1, MAP_WRITE:2, COPY_SRC:4, COPY_DST:8, INDEX:16, VERTEX:32, UNIFORM:64, STORAGE:128, INDIRECT:256, QUERY_RESOLVE:512
 *   ColorWrite
 *  c: RED:1, GREEN:2, BLUE:4, ALPHA:8, COLOR:7, ALL:15
 *  i: RED:1, GREEN:2, BLUE:4, ALPHA:8, ALL:15
-*   TextureUsage
-*  c: COPY_SRC:1, COPY_DST:2, SAMPLED:4, STORAGE:8, OUTPUT_ATTACHMENT:16, NONE:0, UNINITIALIZED:65535
-*  i: COPY_SRC:1, COPY_DST:2, SAMPLED:4, STORAGE:8, OUTPUT_ATTACHMENT:16
 
 ### Comparing enums
 *  BufferMapAsyncStatus enum missing in .idl
+*  LogLevel enum missing in .idl
 *  PresentMode enum missing in .idl
+*  SwapChainStatus enum missing in .idl
 *  BindingResource_Tag enum missing in .idl
 *  ExtensionName enum missing in .h
 *  QueryType enum missing in .h
@@ -32,6 +31,7 @@
 *  RawPass struct missing in .idl
 *  RenderPassColorAttachmentDescriptorBase_TextureViewId struct missing in .idl
 *  RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId struct missing in .idl
+*  TextureDataLayout struct missing in .idl
 *  Origin3d struct missing in .idl
 *  Extent3d struct missing in .idl
 *  BindingResource_WGPUBuffer_Body struct missing in .idl
@@ -57,20 +57,23 @@
 *   RenderPassDescriptor
 *  c: ['color_attachments', 'color_attachments_length', 'depth_stencil_attachment']
 *  i: ['label', 'colorAttachments', 'depthStencilAttachment', 'occlusionQuerySet']
+*   BufferCopyView
+*  c: ['buffer', 'layout']
+*  i: ['buffer', 'offset', 'bytesPerRow', 'rowsPerImage']
+*   TextureCopyView
+*  c: ['texture', 'mip_level', 'origin']
+*  i: ['texture', 'mipLevel', 'arrayLayer', 'origin']
 *   BindGroupLayoutEntry
 *  c: ['binding', 'visibility', 'ty', 'multisampled', 'has_dynamic_offset', 'view_dimension', 'texture_component_type', 'storage_texture_format']
 *  i: ['binding', 'visibility', 'type', 'viewDimension', 'textureComponentType', 'storageTextureFormat', 'multisampled', 'hasDynamicOffset']
 *   SwapChainDescriptor
 *  c: ['usage', 'format', 'width', 'height', 'present_mode']
 *  i: ['label', 'device', 'format', 'usage']
-*   TextureDescriptor
-*  c: ['label', 'size', 'array_layer_count', 'mip_level_count', 'sample_count', 'dimension', 'format', 'usage']
-*  i: ['label', 'size', 'mipLevelCount', 'sampleCount', 'dimension', 'format', 'usage']
 *   RequestAdapterOptions
 *  c: ['power_preference', 'compatible_surface']
 *  i: ['powerPreference']
 *   TextureViewDescriptor
-*  c: ['format', 'dimension', 'aspect', 'base_mip_level', 'level_count', 'base_array_layer', 'array_layer_count']
+*  c: ['label', 'format', 'dimension', 'aspect', 'base_mip_level', 'level_count', 'base_array_layer', 'array_layer_count']
 *  i: ['label', 'format', 'dimension', 'aspect', 'baseMipLevel', 'mipLevelCount', 'baseArrayLayer', 'arrayLayerCount']
 
 ## Generate API code
