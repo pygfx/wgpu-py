@@ -676,6 +676,7 @@ class GPUBuffer(GPUObject):
         return self._state
 
     # IDL specifies getMappedRange, but there is no equivalent in wgpu yet
+    # IDL also has as map_mode property
 
     # NOTE: this attribute is not specified by IDL, I think its still undecided how to
     #       expose the memory
@@ -733,6 +734,46 @@ class GPUTexture(GPUObject):
     Create a texture using :func:`GPUDevice.create_texture`.
     """
 
+    def __init__(self, label, internal, device, tex_info):
+        super().__init__(label, internal, device)
+        self._tex_info = tex_info
+
+    @property
+    def texture_size(self):
+        """ The size of the texture in mipmap level 0, as a 3-tuple of ints.
+        """
+        return self._tex_info["size"]
+
+    @property
+    def mip_level_count(self):
+        """ The total number of the mipmap levels of the texture.
+        """
+        return self._tex_info["mip_level_count"]
+
+    @property
+    def sample_count(self):
+        """ The number of samples in each texel of the texture.
+        """
+        return self._tex_info["sample_count"]
+
+    @property
+    def dimension(self):
+        """ The dimension of the texture.
+        """
+        return self._tex_info["dimension"]
+
+    @property
+    def format(self):
+        """ The format of the texture.
+        """
+        return self._tex_info["format"]
+
+    @property
+    def texture_usage(self):  # Not sure why there's a "texture_" prefix
+        """ The allowed usages for this texture.
+        """
+        return self._tex_info["usage"]
+
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
     # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {});
     def create_view(
@@ -781,6 +822,16 @@ class GPUTextureView(GPUObject):
 
     Create a texture view using :func:`GPUTexture.create_view`.
     """
+
+    def __init__(self, label, internal, device, texture):
+        super().__init__(label, internal, device)
+        self._texture = texture
+
+    @property
+    def texture(self):
+        """ The texture object to which this is a view.
+        """
+        return self._texture
 
 
 class GPUSampler(GPUObject):
@@ -854,9 +905,17 @@ class PipelineBase(GPUObject):
         super().__init__(label, internal, device)
         self._layout = layout
 
+    @property
+    def layout(self):
+        """ The the layout of this pipeline.
+        """
+        return self._layout
+
     # wgpu.help('pipelinebasegetbindgrouplayout', dev=True)
     # IDL: GPUBindGroupLayout getBindGroupLayout(unsigned long index);
     def get_bind_group_layout(self, index):
+        """ Get the bind group layout at the given index.
+        """
         return self._layout._layouts[index]
 
 

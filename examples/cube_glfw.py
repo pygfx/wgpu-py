@@ -149,7 +149,7 @@ command_encoder.copy_buffer_to_texture(
         "bytes_per_row": texture_data.strides[0],
         "rows_per_image": 0,
     },
-    {"texture": texture_view, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0),},
+    {"texture": texture_view, "mip_level": 0, "origin": (0, 0, 0),},
     copy_size=texture_size,
 )
 device.default_queue.submit([command_encoder.finish()])

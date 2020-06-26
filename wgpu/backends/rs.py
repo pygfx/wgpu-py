@@ -39,7 +39,7 @@ from weakref import WeakKeyDictionary
 
 from cffi import FFI, __version_info__ as cffi_version_info
 
-from .. import base, flags, enums, _structs
+from .. import base, flags, _structs
 from .. import _register_backend
 from .._coreutils import get_resource_filename
 from .._mappings import cstructfield2enum, enummap
@@ -524,7 +524,15 @@ class GPUDevice(base.GPUDevice):
         )
         id = _lib.wgpu_device_create_texture(self._internal, struct)
 
-        return GPUTexture(label, id, self)
+        tex_info = {
+            "size": size,
+            "mip_level_count": mip_level_count,
+            "sample_count": sample_count,
+            "dimension": dimension,
+            "format": format,
+            "usage": usage,
+        }
+        return GPUTexture(label, id, self, tex_info)
 
     # wgpu.help('SamplerDescriptor', 'devicecreatesampler', dev=True)
     def create_sampler(
@@ -936,7 +944,7 @@ class GPUBuffer(base.GPUBuffer):
             size = self.size - offset
         if not (offset == 0 and size == self.size):
             raise ValueError(
-                f"Cannot (yet) map buffers with nonzero offset and non-full size."
+                "Cannot (yet) map buffers with nonzero offset and non-full size."
             )
 
         if mode == flags.MapMode.READ:
@@ -1068,7 +1076,7 @@ class GPUTexture(base.GPUTexture):
             )
             id = _lib.wgpu_texture_create_view(self._internal, struct)
 
-        return base.GPUTextureView(label, id, self)
+        return base.GPUTextureView(label, id, self._device, self)
 
     # wgpu.help('texturedestroy', dev=True)
     def destroy(self):
@@ -1602,7 +1610,9 @@ class GPUSwapChain(base.GPUSwapChain):
             raise RuntimeError(
                 f"Swap chain status is not good: {swap_chain_output.status}"
             )
-        return base.GPUTextureView("swap_chain", swap_chain_output.view_id, self)
+        return base.GPUTextureView(
+            "swap_chain", swap_chain_output.view_id, self._device, None
+        )
 
     def __exit__(self, type, value, tb):
         # Present the current texture
