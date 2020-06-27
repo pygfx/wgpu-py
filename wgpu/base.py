@@ -907,7 +907,9 @@ class GPUShaderModule(GPUObject):
         """
         return []
 
-    async def compilation_info_async(self):  # no-cover
+    # wgpu.help('shadermodulecompilationinfo', dev=True)
+    # IDL: Promise<GPUCompilationInfo> compilationInfo();
+    async def compilation_info_async(self):
         """ Async version of compilation_info()
         """
         return self.compilation_info()

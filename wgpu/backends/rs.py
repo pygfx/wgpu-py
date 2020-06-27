@@ -1609,14 +1609,17 @@ class GPUSwapChain(base.GPUSwapChain):
         # Get the current texture view, and make sure it is presented when done
         self._create_native_swap_chain_if_needed()
         swap_chain_output = _lib.wgpu_swap_chain_get_next_texture(self._internal)
-        # todo: this wont work :P
-        if swap_chain_output.status == 0:  # wgpu.SwapChainStatus.good:
+        if swap_chain_output.status == _lib.WGPUSwapChainStatus_Good:
             pass
-        # elif swap_chain_output.status == wgpu.SwapChainStatus.suboptimal:
-        # pass  # warn?
+        elif swap_chain_output.status == _lib.WGPUSwapChainStatus_Suboptimal:
+            if not getattr(self, "_warned_swap_chain_suboptimal", False):
+                logger.warning(f"Swap chain status of {self} is suboptimal")
+                self._warned_swap_chain_suboptimal = True
         else:  # no-cover
+            status = swap_chain_output.status
+            status_str = swap_chain_status_map.get(status, "")
             raise RuntimeError(
-                f"Swap chain status is not good: {swap_chain_output.status}"
+                f"Swap chain status is not good: {status_str} ({status})"
             )
         return base.GPUTextureView(
             "swap_chain", swap_chain_output.view_id, self._device, None
@@ -1626,6 +1629,11 @@ class GPUSwapChain(base.GPUSwapChain):
         # Present the current texture
         _lib.wgpu_swap_chain_present(self._internal)
 
+
+swap_chain_status_map = {
+    getattr(_lib, "WGPUSwapChainStatus_" + x): x
+    for x in ("Good", "Suboptimal", "Lost", "Outdated", "OutOfMemory", "Timeout")
+}
 
 # %%
 

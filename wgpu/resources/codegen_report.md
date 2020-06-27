@@ -104,7 +104,7 @@
 ## Checking and patching hand-written API code
 
 ### Check functions in base.py
-*  Found 60 functions already implemented
+*  Found 61 functions already implemented
 *  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
 *  Not implemented: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0); (buffergetmappedrange)
 *  Not implemented: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex); (commandencoderwritetimestamp)
