@@ -28,7 +28,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 * Test coverage of the API is 100%.
 * Support for Windows, Linux and MacOS.
 * Until WebGPU settles as a standard, its specification
-  may change, and with that our API will probably too.
+  may change, and with that our API will probably too. Check the [changelog](CHANGELOG.md) when you upgrade!
 
 
 ## Installation

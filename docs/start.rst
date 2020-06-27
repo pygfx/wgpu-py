@@ -36,3 +36,13 @@ This library presents a Pythonic API for the `WebGPU spec
 hardware. Like OpenGL, but modern.
 GPU programming is a craft that requires knowledge of how GPU's work.
 See the guide for more info and links to resources.
+
+
+What's new in this version?
+---------------------------
+
+Since the API changes with each release, and we do not yet make things
+backwards compatible. You may want to check the changelog when you
+upgrade to a newer version of wgpu:
+
+https://github.com/pygfx/wgpu-py/blob/master/CHANGELOG.md
