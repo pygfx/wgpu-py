@@ -85,6 +85,9 @@ def test_struct_checking():
         func("ProgrammableStageDescriptor", {"module": None, "foo": None})
     assert "Unexpected keys" in str(e.value)
 
+    if not can_use_wgpu_lib:
+        return
+
     # Neither does this
     device = wgpu.utils.get_default_device()
     with raises(ValueError) as e:
