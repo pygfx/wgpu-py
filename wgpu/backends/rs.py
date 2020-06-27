@@ -1014,7 +1014,7 @@ class GPUBuffer(base.GPUBuffer):
 
     # wgpu.help('bufferunmap', dev=True)
     def unmap(self):
-        if self._state == "mapped":
+        if self._map_mode:
             _lib.wgpu_buffer_unmap(self._internal)
             self._state = "unmapped"
             self._map_mode = 0

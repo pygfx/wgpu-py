@@ -137,7 +137,7 @@ def test_help3(capsys):
     assert captured.err == ""
     assert "1 flags" in captured.out
     assert "3 enums" in captured.out
-    assert "16 functions" in captured.out
+    assert "15 functions" in captured.out
 
 
 def test_help4(capsys):
