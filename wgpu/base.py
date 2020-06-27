@@ -710,7 +710,7 @@ class GPUBuffer(GPUObject):
     # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
     # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
     async def map_async(self, mode, offset=0, size=0):
-        """ Async version of ``map_read()``.
+        """ Async version of ``map()``.
         """
         raise NotImplementedError()
 
@@ -901,6 +901,8 @@ class GPUShaderModule(GPUObject):
     # wgpu.help('shadermodulecompilationinfo', dev=True)
     # IDL: Promise<GPUCompilationInfo> compilationInfo();
     async def compilation_info(self):
+        """ Get shader compilation info. Always returns empty string at the moment.
+        """
         return []
 
 

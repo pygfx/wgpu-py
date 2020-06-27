@@ -25,7 +25,7 @@ def upload_to_texture(device, texture, data, nx, ny, nz):
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
         {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
-        {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
     device.default_queue.submit([command_encoder.finish()])
@@ -41,14 +41,14 @@ def download_from_texture(device, texture, data_type, nx, ny, nz):
     # Copy to buffer
     command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_buffer(
-        {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
         {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
         (nx, ny, nz),
     )
     device.default_queue.submit([command_encoder.finish()])
 
     # Download
-    mapped_array = buffer.map_read()
+    mapped_array = buffer.map(wgpu.MapMode.READ)
     data = data_type.from_buffer(mapped_array)
     buffer.unmap()
     return data
@@ -178,14 +178,14 @@ def render_to_texture(
     render_pass.pop_debug_group()
     render_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
-        {"texture": texture, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
         {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
         (nx, ny, 1),
     )
     device.default_queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer - numpy is much easier to work with
-    array_uint8 = buffer.map_read()  # slow, can also be done async
+    array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
     data = (ctypes.c_uint8 * 4 * nx * ny).from_buffer(array_uint8)
     return np.frombuffer(data, dtype=np.uint8).reshape(size[0], size[1], 4)
 

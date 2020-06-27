@@ -7,7 +7,8 @@ import wgpu.backends.rs  # noqa
 import numpy as np
 
 from pytest import skip
-from testutils import can_use_wgpu_lib, get_default_device, can_use_vulkan_sdk
+from testutils import run_tests, get_default_device
+from testutils import can_use_wgpu_lib, can_use_vulkan_sdk
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
@@ -472,7 +473,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
             "bytes_per_row": bpp * nx,
             "rows_per_image": ny,
         },
-        {"texture": texture1, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": texture1, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
     compute_pass = command_encoder.begin_compute_pass()
@@ -488,7 +489,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     compute_pass.pop_debug_group()
     compute_pass.end_pass()
     command_encoder.copy_texture_to_buffer(
-        {"texture": texture2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": texture2, "mip_level": 0, "origin": (0, 0, 0)},
         {
             "buffer": buffer,
             "offset": 0,
@@ -500,7 +501,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     device.default_queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer
-    array_uint8 = buffer.map_read()  # slow, can also be done async
+    array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
     data2 = data1.__class__.from_buffer(array_uint8)
 
     # Numpy arrays are easier to work with
@@ -519,17 +520,4 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
 
 
 if __name__ == "__main__":
-    test_compute_tex_1d_rgba8uint()
-    test_compute_tex_1d_rg16sint()
-    test_compute_tex_1d_r16sint()
-    test_compute_tex_1d_r32float()
-
-    test_compute_tex_2d_rgba8uint()
-    test_compute_tex_2d_rg16sint()
-    test_compute_tex_2d_r16sint()
-    test_compute_tex_2d_r32float()
-
-    test_compute_tex_3d_rgba8uint()
-    test_compute_tex_3d_rg16sint()
-    test_compute_tex_3d_r16sint()
-    test_compute_tex_3d_r32float()
+    run_tests(globals())

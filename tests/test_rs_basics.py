@@ -6,7 +6,7 @@ import wgpu.utils
 import wgpu.backends.rs
 import pyshader
 
-from testutils import can_use_wgpu_lib, iters_equal
+from testutils import run_tests, can_use_wgpu_lib, iters_equal
 from pytest import mark, raises
 
 
@@ -149,7 +149,7 @@ def test_do_a_copy_roundtrip():
 
     # Upload from CPU to buffer
     assert buf1.state == "unmapped"
-    mapped_data = buf1.map_write()
+    mapped_data = buf1.map(wgpu.MapMode.WRITE)
     assert buf1.state == "mapped"
     ctypes.memmove(mapped_data, data1, nbytes)
     buf1.unmap()
@@ -159,22 +159,22 @@ def test_do_a_copy_roundtrip():
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
         {"buffer": buf1, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
-        {"texture": tex2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": tex2, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
     device.default_queue.submit([command_encoder.finish()])
     # Copy from texture to texture
     command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_texture(
-        {"texture": tex2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"texture": tex3, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": tex2, "mip_level": 0, "origin": (0, 0, 0)},
+        {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
     device.default_queue.submit([command_encoder.finish()])
     # Copy from texture to buffer
     command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_buffer(
-        {"texture": tex3, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
         {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
@@ -186,7 +186,7 @@ def test_do_a_copy_roundtrip():
 
     # Download from buffer to CPU
     assert buf5.state == "unmapped"
-    mapped_data = buf5.map_read()  # always an uint8 array
+    mapped_data = buf5.map(wgpu.MapMode.READ)  # always an uint8 array
     assert buf5.state == "mapped"
 
     # CHECK!
@@ -200,7 +200,7 @@ def test_do_a_copy_roundtrip():
 
     # Upload from CPU to buffer
     assert buf1.state == "unmapped"
-    mapped_data = buf1.map_write()
+    mapped_data = buf1.map(wgpu.MapMode.WRITE)
     assert buf1.state == "mapped"
     ctypes.memmove(mapped_data, data3, nbytes)
     buf1.unmap()
@@ -210,18 +210,18 @@ def test_do_a_copy_roundtrip():
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
         {"buffer": buf1, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
-        {"texture": tex2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": tex2, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
     # Copy from texture to texture
     command_encoder.copy_texture_to_texture(
-        {"texture": tex2, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
-        {"texture": tex3, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": tex2, "mip_level": 0, "origin": (0, 0, 0)},
+        {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
     # Copy from texture to buffer
     command_encoder.copy_texture_to_buffer(
-        {"texture": tex3, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0)},
+        {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
         {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
@@ -232,7 +232,7 @@ def test_do_a_copy_roundtrip():
 
     # Download from buffer to CPU
     assert buf5.state == "unmapped"
-    mapped_data = buf5.map_read()  # always an uint8 array
+    mapped_data = buf5.map(wgpu.MapMode.READ)  # always an uint8 array
     assert buf5.state == "mapped"
 
     # CHECK!
@@ -242,7 +242,4 @@ def test_do_a_copy_roundtrip():
 
 
 if __name__ == "__main__":
-    test_override_wgpu_lib_path()
-    test_tuple_from_tuple_or_dict()
-    test_shader_module_creation()
-    test_do_a_copy_roundtrip()
+    run_tests(globals())

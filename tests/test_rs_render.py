@@ -9,7 +9,7 @@ from pyshader import python2shader, f32, vec2, vec4, i32
 from pyshader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip, raises
-from testutils import can_use_wgpu_lib, get_default_device
+from testutils import run_tests, can_use_wgpu_lib, get_default_device
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
@@ -612,18 +612,4 @@ def test_render_orange_dots():
 
 
 if __name__ == "__main__":
-
-    test_render_orange_square()
-
-    test_render_orange_square_indexed()
-    test_render_orange_square_indirect()
-    test_render_orange_square_indexed_indirect()
-    test_render_orange_square_color_attachment1()
-    test_render_orange_square_color_attachment2()
-    test_render_orange_square_vbo()
-
-    test_render_orange_square_viewport()
-    test_render_orange_square_scissor()
-    test_render_orange_square_depth()
-
-    test_render_orange_dots()
+    run_tests(globals())

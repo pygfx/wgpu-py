@@ -4,6 +4,7 @@ import subprocess
 import wgpu
 
 from pytest import raises
+from testutils import run_tests
 
 
 def test_basic_api():
@@ -136,7 +137,7 @@ def test_help3(capsys):
     assert captured.err == ""
     assert "1 flags" in captured.out
     assert "3 enums" in captured.out
-    assert "18 functions" in captured.out
+    assert "16 functions" in captured.out
 
 
 def test_help4(capsys):
@@ -174,3 +175,7 @@ def test_register_backend_fails():
 
     finally:
         wgpu.request_adapter = old_request_adapter
+
+
+if __name__ == "__main__":
+    run_tests(globals())

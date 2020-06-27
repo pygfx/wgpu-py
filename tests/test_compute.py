@@ -7,7 +7,7 @@ import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
 from pytest import skip, raises
-from testutils import can_use_wgpu_lib, iters_equal
+from testutils import run_tests, can_use_wgpu_lib, iters_equal
 
 
 if not can_use_wgpu_lib:
@@ -145,7 +145,7 @@ def test_compute_indirect():
     device.default_queue.submit([command_encoder.finish()])
 
     # Read result
-    out1 = in1.__class__.from_buffer(buffer2.map_read())
+    out1 = in1.__class__.from_buffer(buffer2.map(wgpu.MapMode.READ))
     in2 = list(in1)[:]
     out2 = [i - 1 for i in out1]
     # The shader was applied to all but the last two elements
@@ -195,7 +195,4 @@ def test_compute_fails():
 
 
 if __name__ == "__main__":
-    test_compute_0_1()
-    test_compute_1_3()
-    test_compute_indirect()
-    test_compute_fails()
+    run_tests(globals())
