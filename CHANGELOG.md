@@ -10,16 +10,19 @@ be precise about tracking changes to the public API.
 Additions and improvements:
 
 * Targets wgpu-native v.0.5.2. The first release build from the wgpu-native repo itself.
-* Several GPU objects (most notably the texture) have more properties to query
-  the parameters that they were created with.
-* The shader object got a `compilation_info` method, but it does not do anything yet.
+* The texture object has more properties to query the parameters that it was created with.
+* The texture view object has a `texture` property.
+* The buffer object has a property `map_mode`.
+* The render and compute pipeline objects have a property `layout` and a method `get_bind_group_layout()`.
+* The shader object got a `compilation_info` method, but this does not do anything yet.
+* The `create_shader_module()` has a `source_map` attribute, but this is yet unused.
 
 API changes:
 
-* The `offset` and `size` arguments in `set_index_buffer` and `set_vertex_buffer`
-  have become optional.
-* The buffer's `map_read` and `map_write` methods have been replaced with `map`,
+* The buffer `map_read` and `map_write` methods have been replaced with `map`,
   where the first argument is e.g. `wgpu.MapMode.READ`.
+* The device `create_buffer_mapped` is removed, instead `create_buffer`
+  has a `mapped_at_creation` argument.
 * The `array_layer` in copy operations involving a texture is removed.
 
 
@@ -38,7 +41,7 @@ API changes:
 
 * `bindings` in bind groups and bind group layouts are now called `entries`.
 * There is no more generic storage texture, only a readonly and a writeonly one.
-* `set_index_buffer` and `set_vertex_buffer` got a mandatory `size` argument.
+* `set_index_buffer` and `set_vertex_buffer` got a `size` argument.
 * `row_pitch` and `image_height` in copy operations involving a texture
   are renamed to `bytes_per_row` and `rows_per_image`.
 * Rendering is now done under the swap_chain's context: `with swap_chain as current_texture_view`

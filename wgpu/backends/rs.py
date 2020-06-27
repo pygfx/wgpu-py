@@ -444,6 +444,7 @@ class GPUAdapter(base.GPUAdapter):
 
 
 class GPUDevice(base.GPUDevice):
+
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
     def create_buffer(
         self,
@@ -462,11 +463,24 @@ class GPUDevice(base.GPUDevice):
             "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
         )
 
-        id = _lib.wgpu_device_create_buffer(self._internal, struct)
-        return GPUBuffer(label, id, self, size, usage, "unmapped", None)
+        if mapped_at_creation:
+            # Pointer that device_create_buffer_mapped sets
+            buffer_memory_pointer = ffi.new("uint8_t * *")
+            id = _lib.wgpu_device_create_buffer_mapped(
+                self._internal, struct, buffer_memory_pointer
+            )
+            # Map a ctypes array onto the data
+            pointer_as_int = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
+            mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
+            return GPUBuffer(
+                label, id, self, size, usage, "mapped at creation", mem_as_ctypes
+            )
+        else:
+            id = _lib.wgpu_device_create_buffer(self._internal, struct)
+            return GPUBuffer(label, id, self, size, usage, "unmapped", None)
 
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    def create_buffer_mapped(
+    # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
+    async def create_buffer_async(
         self,
         *,
         label="",
@@ -474,26 +488,9 @@ class GPUDevice(base.GPUDevice):
         usage: "GPUBufferUsageFlags",
         mapped_at_creation: bool = False,
     ):
-
-        c_label = ffi.new("char []", label.encode())
-        size = int(size)
-        struct = new_struct_p(
-            "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
+        return self.create_buffer(
+            label=label, size=size, usage=usage, mapped_at_creation=mapped_at_creation
         )
-
-        # Pointer that device_create_buffer_mapped sets, so that we can write stuff
-        # there
-        buffer_memory_pointer = ffi.new("uint8_t * *")
-
-        id = _lib.wgpu_device_create_buffer_mapped(
-            self._internal, struct, buffer_memory_pointer
-        )
-
-        # Map a ctypes array onto the data
-        pointer_as_int = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
-        mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
-
-        return GPUBuffer(label, id, self, size, usage, "mapped", mem_as_ctypes)
 
     # wgpu.help('TextureDescriptor', 'devicecreatetexture', dev=True)
     def create_texture(
@@ -971,6 +968,7 @@ class GPUBuffer(base.GPUBuffer):
         )
 
         # Let it do some cycles
+        self._state = "mapping pending"
         _lib.wgpu_device_poll(self._device._internal, True)
 
         if data is None:  # no-cover
@@ -998,6 +996,7 @@ class GPUBuffer(base.GPUBuffer):
         )
 
         # Let it do some cycles
+        self._state = "mapping pending"
         _lib.wgpu_device_poll(self._device._internal, True)
 
         if data is None:  # no-cover

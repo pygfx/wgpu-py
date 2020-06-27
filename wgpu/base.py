@@ -207,12 +207,17 @@ class GPUDevice(GPUObject):
             label (str): A human readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (BufferUsageFlags): The ways in which this buffer will be used.
+            mapped_at_creation (bool): Whether the buffer is initially mapped.
         """
         raise NotImplementedError()
 
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    def create_buffer_mapped(
+    # NOTE: no create_buffer_mapped() - the IDL does specify it, but I think it's
+    # an oversight, because the WebGPU "guid" does not mention it and we now have
+    # that mapped_at_creation argument.
+
+    # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
+    # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
+    async def create_buffer_async(
         self,
         *,
         label="",
@@ -220,27 +225,7 @@ class GPUDevice(GPUObject):
         usage: "GPUBufferUsageFlags",
         mapped_at_creation: bool = False,
     ):
-        """ Create a :class:`GPUBuffer` object that is mapped from the start. It must
-        be unmapped before using it in a pipeline.
-
-        Arguments:
-            label (str): A human readable label. Optional.
-            size (int): The size of the buffer in bytes.
-            usage (BufferUsageFlags): The ways in which this buffer will be used.
-        """
-        raise NotImplementedError()
-
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    async def create_buffer_mapped_async(
-        self,
-        *,
-        label="",
-        size: int,
-        usage: "GPUBufferUsageFlags",
-        mapped_at_creation: bool = False,
-    ):
-        """ Async version of ``create_buffer_mapped()``.
+        """ Async version of ``create_buffer()``.
         """
         raise NotImplementedError()
 
@@ -646,7 +631,7 @@ class GPUBuffer(GPUObject):
         self._size = size
         self._usage = usage
         self._state = state
-        self._map_mode = 0
+        self._map_mode = 0 if mapping is None else 3
         self._mapping = mapping
 
     @property

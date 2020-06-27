@@ -59,8 +59,8 @@ device = wgpu.utils.get_default_device()
 cshader = device.create_shader_module(code=compute_shader)
 
 # Create buffer objects, input buffer is mapped.
-buffer1 = device.create_buffer_mapped(
-    size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE
+buffer1 = device.create_buffer(
+    mapped_at_creation=True, size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE
 )
 buffer2 = device.create_buffer(
     size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ

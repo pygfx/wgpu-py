@@ -15,7 +15,9 @@ def upload_to_texture(device, texture, data, nx, ny, nz):
     bpp = nbytes // (nx * ny * nz)
 
     # Create a buffer to get the data into the GPU
-    buffer = device.create_buffer_mapped(size=nbytes, usage=wgpu.BufferUsage.COPY_SRC)
+    buffer = device.create_buffer(
+        mapped_at_creation=True, size=nbytes, usage=wgpu.BufferUsage.COPY_SRC
+    )
 
     # Upload to buffer
     ctypes.memmove(buffer.mapping, data, nbytes)

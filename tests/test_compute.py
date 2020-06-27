@@ -80,8 +80,8 @@ def test_compute_indirect():
     cshader = device.create_shader_module(code=compute_shader)
 
     # Create input buffer and upload data to in
-    buffer1 = device.create_buffer_mapped(
-        size=ctypes.sizeof(in1), usage=wgpu.BufferUsage.STORAGE
+    buffer1 = device.create_buffer(
+        mapped_at_creation=True, size=ctypes.sizeof(in1), usage=wgpu.BufferUsage.STORAGE
     )
     ctypes.memmove(buffer1.mapping, in1, ctypes.sizeof(in1))
     buffer1.unmap()
@@ -94,8 +94,10 @@ def test_compute_indirect():
 
     # Create buffer to hold the dispatch parameters for the indirect call
     params = (ctypes.c_int32 * 3)(n - 2, 1, 1)  # note the minus 2!
-    buffer3 = device.create_buffer_mapped(
-        size=ctypes.sizeof(params), usage=wgpu.BufferUsage.INDIRECT
+    buffer3 = device.create_buffer(
+        mapped_at_creation=True,
+        size=ctypes.sizeof(params),
+        usage=wgpu.BufferUsage.INDIRECT,
     )
     ctypes.memmove(buffer3.mapping, params, ctypes.sizeof(params))
     buffer3.unmap()
