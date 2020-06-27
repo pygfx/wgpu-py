@@ -149,6 +149,8 @@ class GPUObject:
     def __del__(self):
         self._destroy()
 
+    # Public destroy() methods are implemented on classes as the WebGPU spec specifies.
+
 
 class GPUDevice(GPUObject):
     """
