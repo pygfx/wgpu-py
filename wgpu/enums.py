@@ -20,7 +20,7 @@ class Enum:
 
     def __repr__(self):
         options = ", ".join(f"'{x}'" for x in self)
-        if _use_sphinx_repr:
+        if _use_sphinx_repr:  # no-cover
             return options
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 

@@ -465,6 +465,8 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         layout=pipeline_layout,
         compute_stage={"module": cshader, "entry_point": "main"},
     )
+    assert compute_pipeline.layout is pipeline_layout
+    assert compute_pipeline.get_bind_group_layout(0) is bind_group_layout
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
         {

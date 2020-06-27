@@ -74,13 +74,35 @@ def test_tuple_from_tuple_or_dict():
         assert func({"x": 1}, ("x", "y"))
 
 
+def test_struct_checking():
+    func = wgpu.backends.rs._check_struct
+
+    # This works
+    func("ProgrammableStageDescriptor", {"module": None, "entry_point": None})
+
+    # This does not
+    with raises(ValueError) as e:
+        func("ProgrammableStageDescriptor", {"module": None, "foo": None})
+    assert "Unexpected keys" in str(e.value)
+
+    # Neither does this
+    device = wgpu.utils.get_default_device()
+    with raises(ValueError) as e:
+        device.create_compute_pipeline(
+            layout=None, compute_stage={"module": None, "foo": None}
+        )
+    assert "Unexpected keys" in str(e.value)
+
+
+@pyshader.python2shader
+def compute_shader(
+    index: ("input", "GlobalInvocationId", "i32"), out: ("buffer", 0, "Array(i32)"),
+):
+    out[index] = index
+
+
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_shader_module_creation():
-    @pyshader.python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", "i32"), out: ("buffer", 0, "Array(i32)"),
-    ):
-        out[index] = index
 
     device = wgpu.utils.get_default_device()
 
@@ -90,9 +112,12 @@ def test_shader_module_creation():
     code3 = type("CodeObject", (object,), {"to_spirv": lambda: code1})
     code4 = type("CodeObject", (object,), {})
 
-    device.create_shader_module(code=code1)
-    device.create_shader_module(code=code2)
-    device.create_shader_module(code=code3)
+    m1 = device.create_shader_module(code=code1)
+    m2 = device.create_shader_module(code=code2)
+    m3 = device.create_shader_module(code=code3)
+
+    for m in (m1, m2, m3):
+        assert m.compilation_info() == []
 
     with raises(TypeError):
         device.create_shader_module(code=code4)
@@ -147,6 +172,15 @@ def test_do_a_copy_roundtrip():
         size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
     )
 
+    # Check texture stats
+    assert tex2.texture_size == (nx, ny, nz)
+    assert tex2.mip_level_count == 1
+    assert tex2.sample_count == 1
+    assert tex2.dimension == wgpu.TextureDimension.d1
+    assert tex2.format == texture_format
+    assert tex2.texture_usage == wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST
+    assert tex2.create_view().texture is tex2
+
     # Upload from CPU to buffer
     assert buf1.state == "unmapped"
     mapped_data = buf1.map(wgpu.MapMode.WRITE)
@@ -186,8 +220,10 @@ def test_do_a_copy_roundtrip():
 
     # Download from buffer to CPU
     assert buf5.state == "unmapped"
+    assert buf5.map_mode == 0
     mapped_data = buf5.map(wgpu.MapMode.READ)  # always an uint8 array
     assert buf5.state == "mapped"
+    assert buf5.map_mode == wgpu.MapMode.READ
 
     # CHECK!
     data2 = data1.__class__.from_buffer(mapped_data)
@@ -200,11 +236,14 @@ def test_do_a_copy_roundtrip():
 
     # Upload from CPU to buffer
     assert buf1.state == "unmapped"
+    assert buf1.map_mode == 0
     mapped_data = buf1.map(wgpu.MapMode.WRITE)
     assert buf1.state == "mapped"
+    assert buf1.map_mode == wgpu.MapMode.WRITE
     ctypes.memmove(mapped_data, data3, nbytes)
     buf1.unmap()
     assert buf1.state == "unmapped"
+    assert buf1.map_mode == 0
 
     # Copy from buffer to texture
     command_encoder = device.create_command_encoder()

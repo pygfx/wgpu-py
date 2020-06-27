@@ -398,7 +398,7 @@ class GPUAdapter(base.GPUAdapter):
         # todo: enable this
         trace_path = ""
         c_trace_path = ffi.NULL
-        if trace_path:
+        if trace_path:  # no-cover
             c_trace_path = ffi.new("char []", trace_path.encode())
 
         # Handle default limits
@@ -942,7 +942,7 @@ class GPUBuffer(base.GPUBuffer):
     def map(self, mode, offset=0, size=0):
         if not size:
             size = self.size - offset
-        if not (offset == 0 and size == self.size):
+        if not (offset == 0 and size == self.size):  # no-cover
             raise ValueError(
                 "Cannot (yet) map buffers with nonzero offset and non-full size."
             )
@@ -951,7 +951,7 @@ class GPUBuffer(base.GPUBuffer):
             return self._map_read()
         elif mode == flags.MapMode.WRITE:
             return self._map_write()
-        else:
+        else:  # no-cover
             raise ValueError(f"Invalid MapMode flag: {mode}")
 
     def _map_read(self):
@@ -1108,8 +1108,8 @@ class GPUPipelineLayout(base.GPUPipelineLayout):
 
 class GPUShaderModule(base.GPUShaderModule):
     # wgpu.help('shadermodulecompilationinfo', dev=True)
-    async def compilation_info(self):
-        return await super().compilation_info()
+    def compilation_info(self):
+        return super().compilation_info()
 
     def _destroy(self):
         if self._internal is not None:
@@ -1614,7 +1614,7 @@ class GPUSwapChain(base.GPUSwapChain):
             pass
         # elif swap_chain_output.status == wgpu.SwapChainStatus.suboptimal:
         # pass  # warn?
-        else:
+        else:  # no-cover
             raise RuntimeError(
                 f"Swap chain status is not good: {swap_chain_output.status}"
             )

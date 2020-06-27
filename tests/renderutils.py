@@ -160,7 +160,7 @@ def render_to_texture(
     render_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
     for slot, vbo in enumerate(vbos):
         render_pass.insert_debug_marker(f"setting vbo {slot}")
-        render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)
+        render_pass.set_vertex_buffer(slot, vbo, 0, 0)
     render_pass.insert_debug_marker("invoking callback")
     renderpass_callback(render_pass)
     render_pass.insert_debug_marker("draw!")
@@ -170,7 +170,7 @@ def render_to_texture(
         else:
             render_pass.draw_indirect(indirect_buffer, 0)
     else:
-        render_pass.set_index_buffer(ibo, 0, ibo.size)
+        render_pass.set_index_buffer(ibo, 0, 0)
         if indirect_buffer is None:
             render_pass.draw_indexed(6, 1, 0, 0, 0)
         else:

@@ -900,10 +900,15 @@ class GPUShaderModule(GPUObject):
 
     # wgpu.help('shadermodulecompilationinfo', dev=True)
     # IDL: Promise<GPUCompilationInfo> compilationInfo();
-    async def compilation_info(self):
+    def compilation_info(self):
         """ Get shader compilation info. Always returns empty string at the moment.
         """
         return []
+
+    async def compilation_info_async(self):  # no-cover
+        """ Async version of compilation_info()
+        """
+        return self.compilation_info()
 
 
 class PipelineBase(GPUObject):
