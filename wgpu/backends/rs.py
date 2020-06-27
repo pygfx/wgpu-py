@@ -940,7 +940,7 @@ class GPUDevice(base.GPUDevice):
 class GPUBuffer(base.GPUBuffer):
     # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
     def map(self, mode, offset=0, size=0):
-        if size == 0 and offset < self.size:  # specified by WebGPU spec
+        if not size:
             size = self.size - offset
         if not (offset == 0 and size == self.size):
             raise ValueError(
@@ -977,6 +977,7 @@ class GPUBuffer(base.GPUBuffer):
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
+        self._map_mode = flags.MapMode.READ
         self._mapping = data
         return data
 
@@ -1003,19 +1004,21 @@ class GPUBuffer(base.GPUBuffer):
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
+        self._map_mode = flags.MapMode.WRITE
         self._mapping = data
         return data
 
     # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
     async def map_async(self, mode, offset=0, size=0):
         # todo: actually make this async
-        return self.map_read()  # no-cover
+        return self.map_read(mode, offset, size)  # no-cover
 
     # wgpu.help('bufferunmap', dev=True)
     def unmap(self):
         if self._state == "mapped":
             _lib.wgpu_buffer_unmap(self._internal)
             self._state = "unmapped"
+            self._map_mode = 0
             self._mapping = None
 
     # wgpu.help('bufferdestroy', dev=True)
@@ -1026,6 +1029,7 @@ class GPUBuffer(base.GPUBuffer):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             self._state = "destroyed"
+            self._map_mode = 0
             self._mapping = None
             _lib.wgpu_buffer_destroy(internal)
 
@@ -1428,12 +1432,16 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
     def set_index_buffer(self, buffer, offset=0, size=0):
+        if not size:
+            size = buffer.size - offset
         _lib.wgpu_render_pass_set_index_buffer(
             self._internal, buffer._internal, int(offset), int(size)
         )
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
     def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
+        if not size:
+            size = buffer.size - offset
         _lib.wgpu_render_pass_set_vertex_buffer(
             self._internal, int(slot), buffer._internal, int(offset), int(size)
         )

@@ -135,7 +135,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     output = {}
     for binding_index, array_type in output_arrays.items():
         buffer = buffers[binding_index]
-        array_uint8 = buffer.map_read()  # slow, can also be done async
+        array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
         output[binding_index] = array_type.from_buffer(array_uint8)
 
     return output

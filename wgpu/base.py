@@ -644,6 +644,7 @@ class GPUBuffer(GPUObject):
         self._size = size
         self._usage = usage
         self._state = state
+        self._map_mode = 0
         self._mapping = mapping
 
     @property
@@ -675,6 +676,12 @@ class GPUBuffer(GPUObject):
         """
         return self._state
 
+    @property
+    def map_mode(self):
+        """ The map mode flag. Zero if unmapped.
+        """
+        return self._map_mode
+
     # IDL specifies getMappedRange, but there is no equivalent in wgpu yet
     # IDL also has as map_mode property
 
@@ -696,7 +703,7 @@ class GPUBuffer(GPUObject):
     def map(self, mode, offset=0, size=0):
         """ Make the buffer memory accessable to the CPU for reading or writing.
         Sets the ``mapping`` property and returns the mapped memory as
-        a ctypes array.
+        a ctypes array. If size is zero, the remaining size (after offset) is used.
         """
         raise NotImplementedError()
 
@@ -1215,7 +1222,8 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         Arguments:
             buffer (GPUBuffer): The buffer that contains the indices.
             offset (int): The byte offset in the buffer. Default 0.
-            size (int): The number of bytes to use. Default 0.
+            size (int): The number of bytes to use. If zero, the remaining size
+                (after offset) of the buffer is used. Default 0.
         """
         raise NotImplementedError()
 
@@ -1228,7 +1236,8 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             slot (int): The binding slot for the vertex buffer.
             buffer (GPUBuffer): The buffer that contains the vertex data.
             offset (int): The byte offset in the buffer. Default 0.
-            size (int): The number of bytes to use. Default 0.
+            size (int): The number of bytes to use. If zero, the remaining size
+                (after offset) of the buffer is used. Default 0.
         """
         raise NotImplementedError()
 
