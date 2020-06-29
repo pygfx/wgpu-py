@@ -26,16 +26,16 @@ def get_current_version():
 
 
 def write_current_version(version, commit_sha):
-    with open(VERSION_FILE) as fh:
-        file_content = fh.read()
+    with open(VERSION_FILE, "rb") as fh:
+        file_content = fh.read().decode()
     file_content = re.sub(
         r"__version__ = \".*?\"", f'__version__ = "{version}"', file_content,
     )
     file_content = re.sub(
         r"__commit_sha__ = \".*?\"", f'__commit_sha__ = "{commit_sha}"', file_content,
     )
-    with open(VERSION_FILE, mode="w") as fh:
-        fh.write(file_content)
+    with open(VERSION_FILE, mode="wb") as fh:
+        fh.write(file_content.encode())
 
 
 def download_file(url, filename):
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         default=arch_string,
         choices=("32", "64"),
     )
-    upstream = "Korijn/wgpu-bin"
+    upstream = "gfx-rs/wgpu-native"
     parser.add_argument(
         "--upstream",
         help=f"Upstream repository to download release from (default: {upstream})",

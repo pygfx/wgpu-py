@@ -151,6 +151,9 @@ Pipelines define how the shader is run, and with what resources.
 .. autoclass:: wgpu.GPUShaderModule
     :members:
 
+.. autoclass:: wgpu.PipelineBase
+    :members:
+
 .. autoclass:: wgpu.GPUComputePipeline
     :members:
 

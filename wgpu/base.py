@@ -20,7 +20,7 @@ logger = logging.getLogger("wgpu")
 
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
-# IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
+# IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
 def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
     """ Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
     implementation, from which one can request a :class:`GPUDevice`.
@@ -38,7 +38,7 @@ def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
 
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
-# IDL: Promise<GPUAdapter> requestAdapter(optional GPURequestAdapterOptions options = {});
+# IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
 async def request_adapter_async(*, canvas, power_preference: "GPUPowerPreference"):
     """ Async version of ``request_adapter()``.
     """
@@ -72,7 +72,7 @@ class GPUAdapter:  # Not a GPUObject
         return self._extensions
 
     # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    # IDL: Promise<GPUDevice?> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     def request_device(
         self,
         *,
@@ -90,7 +90,7 @@ class GPUAdapter:  # Not a GPUObject
         raise NotImplementedError()
 
     # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    # IDL: Promise<GPUDevice?> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     async def request_device_async(
         self,
         *,
@@ -149,6 +149,8 @@ class GPUObject:
     def __del__(self):
         self._destroy()
 
+    # Public destroy() methods are implemented on classes as the WebGPU spec specifies.
+
 
 class GPUDevice(GPUObject):
     """
@@ -191,37 +193,39 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
-    def create_buffer(self, *, label="", size: int, usage: "GPUBufferUsageFlags"):
+    def create_buffer(
+        self,
+        *,
+        label="",
+        size: int,
+        usage: "GPUBufferUsageFlags",
+        mapped_at_creation: bool = False,
+    ):
         """ Create a :class:`GPUBuffer` object.
 
         Arguments:
             label (str): A human readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (BufferUsageFlags): The ways in which this buffer will be used.
+            mapped_at_creation (bool): Whether the buffer is initially mapped.
         """
         raise NotImplementedError()
 
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    def create_buffer_mapped(
-        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
-    ):
-        """ Create a :class:`GPUBuffer` object that is mapped from the start. It must
-        be unmapped before using it in a pipeline.
+    # NOTE: no create_buffer_mapped() - the IDL does specify it, but I think it's
+    # an oversight, because the WebGPU "guid" does not mention it and we now have
+    # that mapped_at_creation argument.
 
-        Arguments:
-            label (str): A human readable label. Optional.
-            size (int): The size of the buffer in bytes.
-            usage (BufferUsageFlags): The ways in which this buffer will be used.
-        """
-        raise NotImplementedError()
-
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    async def create_buffer_mapped_async(
-        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
+    # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
+    # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
+    async def create_buffer_async(
+        self,
+        *,
+        label="",
+        size: int,
+        usage: "GPUBufferUsageFlags",
+        mapped_at_creation: bool = False,
     ):
-        """ Async version of ``create_buffer_mapped()``.
+        """ Async version of ``create_buffer()``.
         """
         raise NotImplementedError()
 
@@ -406,7 +410,7 @@ class GPUDevice(GPUObject):
 
     # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
-    def create_shader_module(self, *, label="", code: str):
+    def create_shader_module(self, *, label="", code: str, source_map: "dict" = None):
         """ Create a :class:`GPUShaderModule` object from shader source.
 
         Currently, only SpirV is supported. One can compile glsl shaders to
@@ -426,7 +430,7 @@ class GPUDevice(GPUObject):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout",
+        layout: "GPUPipelineLayout" = None,
         compute_stage: "GPUProgrammableStageDescriptor",
     ):
         """ Create a :class:`GPUComputePipeline` object.
@@ -444,7 +448,7 @@ class GPUDevice(GPUObject):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout",
+        layout: "GPUPipelineLayout" = None,
         vertex_stage: "GPUProgrammableStageDescriptor",
         fragment_stage: "GPUProgrammableStageDescriptor" = None,
         primitive_topology: "GPUPrimitiveTopology",
@@ -627,6 +631,7 @@ class GPUBuffer(GPUObject):
         self._size = size
         self._usage = usage
         self._state = state
+        self._map_mode = 0 if mapping is None else 3
         self._mapping = mapping
 
     @property
@@ -648,11 +653,24 @@ class GPUBuffer(GPUObject):
         """ The current state of the GPUBuffer:
 
         * "mapped" when the buffer is available for CPU operations.
+        * "mapped at creation" where the GPUBuffer was just created and
+          is available for CPU operations on its content.
+        * "mapping pending" where the GPUBuffer is being made available
+          for CPU operations on its content.
         * "unmapped" when the buffer is available for GPU operations.
         * "destroyed", when the buffer is no longer available for any
           operations except destroy.
         """
         return self._state
+
+    @property
+    def map_mode(self):
+        """ The map mode flag. Zero if unmapped.
+        """
+        return self._map_mode
+
+    # IDL specifies getMappedRange, but there is no equivalent in wgpu yet
+    # IDL also has as map_mode property
 
     # NOTE: this attribute is not specified by IDL, I think its still undecided how to
     #       expose the memory
@@ -667,35 +685,19 @@ class GPUBuffer(GPUObject):
         """
         return self._mapping
 
-    # wgpu.help('buffermapreadasync', dev=True)
-    # IDL: Promise<ArrayBuffer> mapReadAsync();
-    def map_read(self):
-        """ Make the buffer memory accessable to the CPU for reading.
+    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
+    # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    def map(self, mode, offset=0, size=0):
+        """ Make the buffer memory accessable to the CPU for reading or writing.
         Sets the ``mapping`` property and returns the mapped memory as
-        a ctypes array.
+        a ctypes array. If size is zero, the remaining size (after offset) is used.
         """
         raise NotImplementedError()
 
-    # wgpu.help('buffermapreadasync', dev=True)
-    # IDL: Promise<ArrayBuffer> mapReadAsync();
-    async def map_read_async(self):
-        """ Async version of ``map_read()``.
-        """
-        raise NotImplementedError()
-
-    # wgpu.help('buffermapwriteasync', dev=True)
-    # IDL: Promise<ArrayBuffer> mapWriteAsync();
-    def map_write(self):
-        """ Make the buffer memory accessable to the CPU for writing.
-        Sets the ``mapping`` property and returns the mapped memory as
-        a ctypes array.
-        """
-        raise NotImplementedError()
-
-    # wgpu.help('buffermapwriteasync', dev=True)
-    # IDL: Promise<ArrayBuffer> mapWriteAsync();
-    async def map_write_async(self):
-        """ Async version of ``map_write()``.
+    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
+    # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    async def map_async(self, mode, offset=0, size=0):
+        """ Async version of ``map()``.
         """
         raise NotImplementedError()
 
@@ -725,6 +727,46 @@ class GPUTexture(GPUObject):
 
     Create a texture using :func:`GPUDevice.create_texture`.
     """
+
+    def __init__(self, label, internal, device, tex_info):
+        super().__init__(label, internal, device)
+        self._tex_info = tex_info
+
+    @property
+    def texture_size(self):
+        """ The size of the texture in mipmap level 0, as a 3-tuple of ints.
+        """
+        return self._tex_info["size"]
+
+    @property
+    def mip_level_count(self):
+        """ The total number of the mipmap levels of the texture.
+        """
+        return self._tex_info["mip_level_count"]
+
+    @property
+    def sample_count(self):
+        """ The number of samples in each texel of the texture.
+        """
+        return self._tex_info["sample_count"]
+
+    @property
+    def dimension(self):
+        """ The dimension of the texture.
+        """
+        return self._tex_info["dimension"]
+
+    @property
+    def format(self):
+        """ The format of the texture.
+        """
+        return self._tex_info["format"]
+
+    @property
+    def texture_usage(self):  # Not sure why there's a "texture_" prefix
+        """ The allowed usages for this texture.
+        """
+        return self._tex_info["usage"]
 
     # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
     # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {});
@@ -774,6 +816,16 @@ class GPUTextureView(GPUObject):
 
     Create a texture view using :func:`GPUTexture.create_view`.
     """
+
+    def __init__(self, label, internal, device, texture):
+        super().__init__(label, internal, device)
+        self._texture = texture
+
+    @property
+    def texture(self):
+        """ The texture object to which this is a view.
+        """
+        return self._texture
 
 
 class GPUSampler(GPUObject):
@@ -833,8 +885,44 @@ class GPUShaderModule(GPUObject):
     Create a shader module using :func:`GPUDevice.create_shader_module`.
     """
 
+    # wgpu.help('shadermodulecompilationinfo', dev=True)
+    # IDL: Promise<GPUCompilationInfo> compilationInfo();
+    def compilation_info(self):
+        """ Get shader compilation info. Always returns empty string at the moment.
+        """
+        return []
 
-class GPUComputePipeline(GPUObject):
+    # wgpu.help('shadermodulecompilationinfo', dev=True)
+    # IDL: Promise<GPUCompilationInfo> compilationInfo();
+    async def compilation_info_async(self):
+        """ Async version of compilation_info()
+        """
+        return self.compilation_info()
+
+
+class PipelineBase(GPUObject):
+    """ Base object for compute and render pipelines.
+    """
+
+    def __init__(self, label, internal, device, layout):
+        super().__init__(label, internal, device)
+        self._layout = layout
+
+    @property
+    def layout(self):
+        """ The the layout of this pipeline.
+        """
+        return self._layout
+
+    # wgpu.help('pipelinebasegetbindgrouplayout', dev=True)
+    # IDL: GPUBindGroupLayout getBindGroupLayout(unsigned long index);
+    def get_bind_group_layout(self, index):
+        """ Get the bind group layout at the given index.
+        """
+        return self._layout._layouts[index]
+
+
+class GPUComputePipeline(PipelineBase):
     """
     A compute pipeline represents a single pipeline for computations (no rendering).
 
@@ -842,7 +930,7 @@ class GPUComputePipeline(GPUObject):
     """
 
 
-class GPURenderPipeline(GPUObject):
+class GPURenderPipeline(PipelineBase):
     """
     A render pipeline represents a single pipeline to draw something
     using a vertex and a fragment shader. The render target can come
@@ -948,7 +1036,7 @@ class GPUCommandEncoder(GPUObject):
 
         Arguments:
             source (GPUBuffer): A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
-            destination (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            destination (GPUTexture): A dict with fields: texture, mip_level, origin.
             copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()
@@ -959,7 +1047,7 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a texture (view) to a buffer.
 
         Arguments:
-            source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
+            source (GPUTexture): A dict with fields: texture, mip_level, origin.
             destination (GPUBuffer):  A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
             copy_size (int): The number of bytes to copy.
         """
@@ -971,14 +1059,14 @@ class GPUCommandEncoder(GPUObject):
         """ Copy the contents of a texture (view) to another texture (view).
 
         Arguments:
-            source (GPUTexture): A dict with fields: texture, mip_level, array_layer, origin.
-            destination (GPUTexture):  A dict with fields: texture, mip_level, array_layer, origin.
+            source (GPUTexture): A dict with fields: texture, mip_level, origin.
+            destination (GPUTexture):  A dict with fields: texture, mip_level, origin.
             copy_size (int): The number of bytes to copy.
         """
         raise NotImplementedError()
 
     # wgpu.help('commandencoderpushdebuggroup', dev=True)
-    # IDL: void pushDebugGroup(DOMString groupLabel);
+    # IDL: void pushDebugGroup(USVString groupLabel);
     def push_debug_group(self, group_label):
         """ TODO: not yet available in wgpu-native
         """
@@ -992,7 +1080,7 @@ class GPUCommandEncoder(GPUObject):
         raise NotImplementedError()
 
     # wgpu.help('commandencoderinsertdebugmarker', dev=True)
-    # IDL: void insertDebugMarker(DOMString markerLabel);
+    # IDL: void insertDebugMarker(USVString markerLabel);
     def insert_debug_marker(self, marker_label):
         """ TODO: not yet available in wgpu-native
         """
@@ -1038,7 +1126,7 @@ class GPUProgrammablePassEncoder(GPUObject):
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
-    # IDL: void pushDebugGroup(DOMString groupLabel);
+    # IDL: void pushDebugGroup(USVString groupLabel);
     def push_debug_group(self, group_label):
         """ Push a named debug group into the command stream.
         """
@@ -1052,7 +1140,7 @@ class GPUProgrammablePassEncoder(GPUObject):
         raise NotImplementedError()
 
     # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
-    # IDL: void insertDebugMarker(DOMString markerLabel);
+    # IDL: void insertDebugMarker(USVString markerLabel);
     def insert_debug_marker(self, marker_label):
         """ Insert the given message into the debug message queue.
         """
@@ -1130,7 +1218,8 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         Arguments:
             buffer (GPUBuffer): The buffer that contains the indices.
             offset (int): The byte offset in the buffer. Default 0.
-            size (int): The number of bytes to use. Default 0.
+            size (int): The number of bytes to use. If zero, the remaining size
+                (after offset) of the buffer is used. Default 0.
         """
         raise NotImplementedError()
 
@@ -1143,7 +1232,8 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             slot (int): The binding slot for the vertex buffer.
             buffer (GPUBuffer): The buffer that contains the vertex data.
             offset (int): The byte offset in the buffer. Default 0.
-            size (int): The number of bytes to use. Default 0.
+            size (int): The number of bytes to use. If zero, the remaining size
+                (after offset) of the buffer is used. Default 0.
         """
         raise NotImplementedError()
 

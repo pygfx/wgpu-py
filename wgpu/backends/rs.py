@@ -48,8 +48,8 @@ from .._mappings import cstructfield2enum, enummap
 logger = logging.getLogger("wgpu")  # noqa
 
 # wgpu-native version
-__version__ = "0.5.1"
-__commit_sha__ = "83d4981"
+__version__ = "0.5.2"
+__commit_sha__ = "160be433dbec0fc7a27d25f2aba3423666ccfa10"
 version_info = tuple(map(int, __version__.split(".")))
 
 
@@ -395,6 +395,12 @@ class GPUAdapter(base.GPUAdapter):
         limits: "GPULimits" = {},
     ):
 
+        # todo: enable this
+        trace_path = ""
+        c_trace_path = ffi.NULL
+        if trace_path:  # no-cover
+            c_trace_path = ffi.new("char []", trace_path.encode())
+
         # Handle default limits
         _check_struct("Limits", limits)
         limits2 = base.default_limits.copy()
@@ -408,8 +414,7 @@ class GPUAdapter(base.GPUAdapter):
         struct = new_struct_p(
             "WGPUDeviceDescriptor *", extensions=c_extensions, limits=c_limits
         )
-
-        device_id = _lib.wgpu_adapter_request_device(self._id, struct)
+        device_id = _lib.wgpu_adapter_request_device(self._id, struct, c_trace_path)
 
         # Get the actual limits reported by the device
         c_limits = new_struct_p("WGPULimits *")
@@ -439,41 +444,53 @@ class GPUAdapter(base.GPUAdapter):
 
 
 class GPUDevice(base.GPUDevice):
+
     # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
-    def create_buffer(self, *, label="", size: int, usage: "GPUBufferUsageFlags"):
-        c_label = ffi.new("char []", label.encode())
-        size = int(size)
-        struct = new_struct_p(
-            "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
-        )
-
-        id = _lib.wgpu_device_create_buffer(self._internal, struct)
-        return GPUBuffer(label, id, self, size, usage, "unmapped", None)
-
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    def create_buffer_mapped(
-        self, *, label="", size: int, usage: "GPUBufferUsageFlags"
+    def create_buffer(
+        self,
+        *,
+        label="",
+        size: int,
+        usage: "GPUBufferUsageFlags",
+        mapped_at_creation: bool = False,
     ):
-
+        # Weird, that mapped_at_creation flag. It's as if in IDL they wanted to
+        # merge the create_buffer and create_buffer_mapped functions, buy failed
+        # to remove the mapped version ...
         c_label = ffi.new("char []", label.encode())
         size = int(size)
         struct = new_struct_p(
             "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
         )
 
-        # Pointer that device_create_buffer_mapped sets, so that we can write stuff
-        # there
-        buffer_memory_pointer = ffi.new("uint8_t * *")
+        if mapped_at_creation:
+            # Pointer that device_create_buffer_mapped sets
+            buffer_memory_pointer = ffi.new("uint8_t * *")
+            id = _lib.wgpu_device_create_buffer_mapped(
+                self._internal, struct, buffer_memory_pointer
+            )
+            # Map a ctypes array onto the data
+            pointer_as_int = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
+            mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
+            return GPUBuffer(
+                label, id, self, size, usage, "mapped at creation", mem_as_ctypes
+            )
+        else:
+            id = _lib.wgpu_device_create_buffer(self._internal, struct)
+            return GPUBuffer(label, id, self, size, usage, "unmapped", None)
 
-        id = _lib.wgpu_device_create_buffer_mapped(
-            self._internal, struct, buffer_memory_pointer
+    # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
+    async def create_buffer_async(
+        self,
+        *,
+        label="",
+        size: int,
+        usage: "GPUBufferUsageFlags",
+        mapped_at_creation: bool = False,
+    ):
+        return self.create_buffer(
+            label=label, size=size, usage=usage, mapped_at_creation=mapped_at_creation
         )
-
-        # Map a ctypes array onto the data
-        pointer_as_int = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
-        mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
-
-        return GPUBuffer(label, id, self, size, usage, "mapped", mem_as_ctypes)
 
     # wgpu.help('TextureDescriptor', 'devicecreatetexture', dev=True)
     def create_texture(
@@ -496,7 +513,6 @@ class GPUDevice(base.GPUDevice):
             "WGPUTextureDescriptor *",
             label=c_label,
             size=c_size,
-            array_layer_count=1,
             mip_level_count=mip_level_count,
             sample_count=sample_count,
             dimension=dimension,
@@ -505,7 +521,15 @@ class GPUDevice(base.GPUDevice):
         )
         id = _lib.wgpu_device_create_texture(self._internal, struct)
 
-        return GPUTexture(label, id, self)
+        tex_info = {
+            "size": size,
+            "mip_level_count": mip_level_count,
+            "sample_count": sample_count,
+            "dimension": dimension,
+            "format": format,
+            "usage": usage,
+        }
+        return GPUTexture(label, id, self, tex_info)
 
     # wgpu.help('SamplerDescriptor', 'devicecreatesampler', dev=True)
     def create_sampler(
@@ -522,8 +546,10 @@ class GPUDevice(base.GPUDevice):
         lod_max_clamp: float = 0xFFFFFFFF,
         compare: "GPUCompareFunction" = None,
     ):
+        c_label = ffi.new("char []", label.encode())
         struct = new_struct_p(
             "WGPUSamplerDescriptor *",
+            label=c_label,
             address_mode_u=address_mode_u,
             address_mode_v=address_mode_v,
             mag_filter=mag_filter,
@@ -546,9 +572,11 @@ class GPUDevice(base.GPUDevice):
             _check_struct("BindGroupLayoutEntry", entry)
             type = entry["type"]
             if "texture" in type:
-                need = {"view_dimension", "texture_component_type"}
+                need = {"view_dimension"}
                 if "storage" in type:
                     need.add("storage_texture_format")
+                else:
+                    need.add("texture_component_type")
                 assert all(
                     x in entry for x in need
                 ), f"{type} binding should specify {need}"
@@ -557,10 +585,15 @@ class GPUDevice(base.GPUDevice):
                 binding=int(entry["binding"]),
                 visibility=int(entry["visibility"]),
                 ty=type,
-                multisampled=bool(entry.get("multisampled", False)),
+                # Used for uniform buffer and storage buffer bindings.
                 has_dynamic_offset=bool(entry.get("has_dynamic_offset", False)),
+                # Used for sampled texture and storage texture bindings.
                 view_dimension=entry.get("view_dimension", "2d"),
+                # Used for sampled texture bindings.
                 texture_component_type=entry.get("texture_component_type", "float"),
+                # Used for sampled texture bindings.
+                multisampled=bool(entry.get("multisampled", False)),
+                # Used for storage texture bindings.
                 storage_texture_format=entry.get("storage_texture_format", 0),
             )
             c_entries_list.append(c_entry)
@@ -641,7 +674,7 @@ class GPUDevice(base.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_bind_group(self._internal, struct)
-        return base.GPUBindGroup(label, id, self, entries)
+        return GPUBindGroup(label, id, self, entries)
 
     # wgpu.help('PipelineLayoutDescriptor', 'devicecreatepipelinelayout', dev=True)
     def create_pipeline_layout(
@@ -658,10 +691,10 @@ class GPUDevice(base.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_pipeline_layout(self._internal, struct)
-        return base.GPUPipelineLayout(label, id, self, bind_group_layouts)
+        return GPUPipelineLayout(label, id, self, bind_group_layouts)
 
     # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
-    def create_shader_module(self, *, label="", code: str):
+    def create_shader_module(self, *, label="", code: str, source_map: "dict" = None):
 
         if isinstance(code, bytes):
             data = code  # Assume it's Spirv
@@ -686,14 +719,14 @@ class GPUDevice(base.GPUDevice):
         struct = new_struct_p("WGPUShaderModuleDescriptor *", code=c_code)
 
         id = _lib.wgpu_device_create_shader_module(self._internal, struct)
-        return base.GPUShaderModule(label, id, self)
+        return GPUShaderModule(label, id, self)
 
     # wgpu.help('ComputePipelineDescriptor', 'devicecreatecomputepipeline', dev=True)
     def create_compute_pipeline(
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout",
+        layout: "GPUPipelineLayout" = None,
         compute_stage: "GPUProgrammableStageDescriptor",
     ):
         _check_struct("ProgrammableStageDescriptor", compute_stage)
@@ -711,14 +744,14 @@ class GPUDevice(base.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_compute_pipeline(self._internal, struct)
-        return base.GPUComputePipeline(label, id, self)
+        return GPUComputePipeline(label, id, self, layout)
 
     # wgpu.help('RenderPipelineDescriptor', 'devicecreaterenderpipeline', dev=True)
     def create_render_pipeline(
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout",
+        layout: "GPUPipelineLayout" = None,
         vertex_stage: "GPUProgrammableStageDescriptor",
         fragment_stage: "GPUProgrammableStageDescriptor" = None,
         primitive_topology: "GPUPrimitiveTopology",
@@ -875,7 +908,7 @@ class GPUDevice(base.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_render_pipeline(self._internal, struct)
-        return base.GPURenderPipeline(label, id, self)
+        return GPURenderPipeline(label, id, self, layout)
 
     # wgpu.help('CommandEncoderDescriptor', 'devicecreatecommandencoder', dev=True)
     def create_command_encoder(self, *, label=""):
@@ -902,8 +935,23 @@ class GPUDevice(base.GPUDevice):
 
 
 class GPUBuffer(base.GPUBuffer):
-    # wgpu.help('buffermapreadasync', dev=True)
-    def map_read(self):
+    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
+    def map(self, mode, offset=0, size=0):
+        if not size:
+            size = self.size - offset
+        if not (offset == 0 and size == self.size):  # no-cover
+            raise ValueError(
+                "Cannot (yet) map buffers with nonzero offset and non-full size."
+            )
+
+        if mode == flags.MapMode.READ:
+            return self._map_read()
+        elif mode == flags.MapMode.WRITE:
+            return self._map_write()
+        else:  # no-cover
+            raise ValueError(f"Invalid MapMode flag: {mode}")
+
+    def _map_read(self):
         data = None
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
@@ -920,17 +968,18 @@ class GPUBuffer(base.GPUBuffer):
         )
 
         # Let it do some cycles
+        self._state = "mapping pending"
         _lib.wgpu_device_poll(self._device._internal, True)
 
         if data is None:  # no-cover
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
+        self._map_mode = flags.MapMode.READ
         self._mapping = data
         return data
 
-    # wgpu.help('buffermapwriteasync', dev=True)
-    def map_write(self):
+    def _map_write(self):
         data = None
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
@@ -947,30 +996,28 @@ class GPUBuffer(base.GPUBuffer):
         )
 
         # Let it do some cycles
+        self._state = "mapping pending"
         _lib.wgpu_device_poll(self._device._internal, True)
 
         if data is None:  # no-cover
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
+        self._map_mode = flags.MapMode.WRITE
         self._mapping = data
         return data
 
-    # wgpu.help('buffermapreadasync', dev=True)
-    async def map_read_async(self):
+    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
+    async def map_async(self, mode, offset=0, size=0):
         # todo: actually make this async
-        return self.map_read()  # no-cover
-
-    # wgpu.help('buffermapwriteasync', dev=True)
-    async def map_write_async(self):
-        # todo: actually make this async
-        return self.map_write()  # no-cover
+        return self.map_read(mode, offset, size)  # no-cover
 
     # wgpu.help('bufferunmap', dev=True)
     def unmap(self):
-        if self._state == "mapped":
+        if self._map_mode:
             _lib.wgpu_buffer_unmap(self._internal)
             self._state = "unmapped"
+            self._map_mode = 0
             self._mapping = None
 
     # wgpu.help('bufferdestroy', dev=True)
@@ -981,6 +1028,7 @@ class GPUBuffer(base.GPUBuffer):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             self._state = "destroyed"
+            self._map_mode = 0
             self._mapping = None
             _lib.wgpu_buffer_destroy(internal)
 
@@ -1017,8 +1065,10 @@ class GPUTexture(base.GPUTexture):
             id = _lib.wgpu_texture_create_view(self._internal, ffi.NULL)
 
         else:
+            c_label = ffi.new("char []", label.encode())
             struct = new_struct_p(
                 "WGPUTextureViewDescriptor *",
+                label=c_label,
                 format=format,
                 dimension=dimension,
                 aspect=aspect,
@@ -1029,7 +1079,7 @@ class GPUTexture(base.GPUTexture):
             )
             id = _lib.wgpu_texture_create_view(self._internal, struct)
 
-        return base.GPUTextureView(label, id, self)
+        return base.GPUTextureView(label, id, self._device, self)
 
     # wgpu.help('texturedestroy', dev=True)
     def destroy(self):
@@ -1039,6 +1089,45 @@ class GPUTexture(base.GPUTexture):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             _lib.wgpu_texture_destroy(internal)
+
+
+class GPUBindGroup(base.GPUBindGroup):
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            _lib.wgpu_bind_group_layout_destroy(internal)
+
+
+class GPUPipelineLayout(base.GPUPipelineLayout):
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            _lib.wgpu_pipeline_layout_destroy(internal)
+
+
+class GPUShaderModule(base.GPUShaderModule):
+    # wgpu.help('shadermodulecompilationinfo', dev=True)
+    def compilation_info(self):
+        return super().compilation_info()
+
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            _lib.wgpu_shader_module_destroy(internal)
+
+
+class GPUComputePipeline(base.GPUComputePipeline):
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            _lib.wgpu_compute_pipeline_destroy(internal)
+
+
+class GPURenderPipeline(base.GPURenderPipeline):
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            _lib.wgpu_render_pipeline_destroy(internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder):
@@ -1149,9 +1238,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         c_source = new_struct_p(
             "WGPUBufferCopyView *",
             buffer=source["buffer"]._internal,
-            offset=int(source.get("offset", 0)),
-            bytes_per_row=int(source["bytes_per_row"]),
-            rows_per_image=int(source.get("rows_per_image", 0)),
+            layout=new_struct(
+                "WGPUTextureDataLayout",
+                offset=int(source.get("offset", 0)),
+                bytes_per_row=int(source["bytes_per_row"]),
+                rows_per_image=int(source.get("rows_per_image", 0)),
+            ),
         )
 
         ori = _tuple_from_tuple_or_dict(destination["origin"], "xyz")
@@ -1160,13 +1252,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             "WGPUTextureCopyView *",
             texture=destination["texture"]._internal,
             mip_level=int(destination.get("mip_level", 0)),
-            array_layer=int(destination.get("array_layer", 0)),
             origin=c_origin,
         )
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
-        c_copy_size = new_struct(
-            "WGPUExtent3d", width=size[0], height=size[1], depth=size[2],
+        c_copy_size = new_struct_p(
+            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_buffer_to_texture(
@@ -1185,21 +1276,23 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             "WGPUTextureCopyView *",
             texture=source["texture"]._internal,
             mip_level=int(source.get("mip_level", 0)),
-            array_layer=int(source.get("array_layer", 0)),
             origin=c_origin,
         )
 
         c_destination = new_struct_p(
             "WGPUBufferCopyView *",
             buffer=destination["buffer"]._internal,
-            offset=int(destination.get("offset", 0)),
-            bytes_per_row=int(destination["bytes_per_row"]),
-            rows_per_image=int(destination.get("rows_per_image", 0)),
+            layout=new_struct(
+                "WGPUTextureDataLayout",
+                offset=int(destination.get("offset", 0)),
+                bytes_per_row=int(destination["bytes_per_row"]),
+                rows_per_image=int(destination.get("rows_per_image", 0)),
+            ),
         )
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
-        c_copy_size = new_struct(
-            "WGPUExtent3d", width=size[0], height=size[1], depth=size[2],
+        c_copy_size = new_struct_p(
+            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_texture_to_buffer(
@@ -1218,7 +1311,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             "WGPUTextureCopyView *",
             texture=source["texture"]._internal,
             mip_level=int(source.get("mip_level", 0)),
-            array_layer=int(source.get("array_layer", 0)),
             origin=c_origin1,
         )
 
@@ -1228,13 +1320,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             "WGPUTextureCopyView *",
             texture=destination["texture"]._internal,
             mip_level=int(destination.get("mip_level", 0)),
-            array_layer=int(destination.get("array_layer", 0)),
             origin=c_origin2,
         )
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
-        c_copy_size = new_struct(
-            "WGPUExtent3d", width=size[0], height=size[1], depth=size[2],
+        c_copy_size = new_struct_p(
+            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_texture_to_texture(
@@ -1323,8 +1414,6 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
     def end_pass(self):
         _lib.wgpu_compute_pass_end_pass(self._internal)
 
-    # todo: const uint8_t *wgpu_compute_pass_finish(WGPURawPass *pass, uintptr_t *length);
-
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
@@ -1342,12 +1431,16 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
 
     # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
     def set_index_buffer(self, buffer, offset=0, size=0):
+        if not size:
+            size = buffer.size - offset
         _lib.wgpu_render_pass_set_index_buffer(
             self._internal, buffer._internal, int(offset), int(size)
         )
 
     # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
     def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
+        if not size:
+            size = buffer.size - offset
         _lib.wgpu_render_pass_set_vertex_buffer(
             self._internal, int(slot), buffer._internal, int(offset), int(size)
         )
@@ -1389,8 +1482,6 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
         _lib.wgpu_render_pass_draw_indexed_indirect(
             self._internal, buffer_id, int(indirect_offset)
         )
-
-    # todo: uint8_t *wgpu_render_pass_finish(WGPURawPass *pass, uintptr_t *length);
 
     def _destroy(self):
         if self._internal is not None:
@@ -1473,6 +1564,9 @@ class GPUQueue(base.GPUQueue):
     # def copy_image_bitmap_to_texture(self, source, destination, copy_size):
     #     ...
 
+    # todo: def wgpu_queue_write_buffer
+    # todo: def wgpu_queue_write_texture
+
 
 class GPUSwapChain(base.GPUSwapChain):
     def __init__(self, device, canvas, format, usage):
@@ -1514,12 +1608,31 @@ class GPUSwapChain(base.GPUSwapChain):
         # Get the current texture view, and make sure it is presented when done
         self._create_native_swap_chain_if_needed()
         swap_chain_output = _lib.wgpu_swap_chain_get_next_texture(self._internal)
-        return base.GPUTextureView("swap_chain", swap_chain_output.view_id, self)
+        if swap_chain_output.status == _lib.WGPUSwapChainStatus_Good:
+            pass
+        elif swap_chain_output.status == _lib.WGPUSwapChainStatus_Suboptimal:
+            if not getattr(self, "_warned_swap_chain_suboptimal", False):
+                logger.warning(f"Swap chain status of {self} is suboptimal")
+                self._warned_swap_chain_suboptimal = True
+        else:  # no-cover
+            status = swap_chain_output.status
+            status_str = swap_chain_status_map.get(status, "")
+            raise RuntimeError(
+                f"Swap chain status is not good: {status_str} ({status})"
+            )
+        return base.GPUTextureView(
+            "swap_chain", swap_chain_output.view_id, self._device, None
+        )
 
     def __exit__(self, type, value, tb):
         # Present the current texture
         _lib.wgpu_swap_chain_present(self._internal)
 
+
+swap_chain_status_map = {
+    getattr(_lib, "WGPUSwapChainStatus_" + x): x
+    for x in ("Good", "Suboptimal", "Lost", "Outdated", "OutOfMemory", "Timeout")
+}
 
 # %%
 

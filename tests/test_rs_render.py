@@ -9,7 +9,7 @@ from pyshader import python2shader, f32, vec2, vec4, i32
 from pyshader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip, raises
-from testutils import can_use_wgpu_lib, get_default_device
+from testutils import run_tests, can_use_wgpu_lib, get_default_device
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
@@ -94,7 +94,8 @@ def test_render_orange_square_indexed():
 
     # Index buffer
     indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
-    ibo = device.create_buffer_mapped(
+    ibo = device.create_buffer(
+        mapped_at_creation=True,
         size=ctypes.sizeof(indices),
         usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
     )
@@ -143,8 +144,10 @@ def test_render_orange_square_indirect():
 
     # Buffer with draw parameters for indirect draw call
     params = (ctypes.c_int32 * 4)(4, 1, 0, 0)
-    indirect_buffer = device.create_buffer_mapped(
-        size=ctypes.sizeof(params), usage=wgpu.BufferUsage.INDIRECT
+    indirect_buffer = device.create_buffer(
+        mapped_at_creation=True,
+        size=ctypes.sizeof(params),
+        usage=wgpu.BufferUsage.INDIRECT,
     )
     ctypes.memmove(indirect_buffer.mapping, params, ctypes.sizeof(params))
     indirect_buffer.unmap()
@@ -186,7 +189,8 @@ def test_render_orange_square_indexed_indirect():
 
     # Index buffer
     indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
-    ibo = device.create_buffer_mapped(
+    ibo = device.create_buffer(
+        mapped_at_creation=True,
         size=ctypes.sizeof(indices),
         usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
     )
@@ -195,8 +199,10 @@ def test_render_orange_square_indexed_indirect():
 
     # Buffer with draw parameters for indirect draw call
     params = (ctypes.c_int32 * 5)(6, 1, 0, 0, 0)
-    indirect_buffer = device.create_buffer_mapped(
-        size=ctypes.sizeof(params), usage=wgpu.BufferUsage.INDIRECT
+    indirect_buffer = device.create_buffer(
+        mapped_at_creation=True,
+        size=ctypes.sizeof(params),
+        usage=wgpu.BufferUsage.INDIRECT,
     )
     ctypes.memmove(indirect_buffer.mapping, params, ctypes.sizeof(params))
     indirect_buffer.unmap()
@@ -250,7 +256,8 @@ def test_render_orange_square_vbo():
 
     # Vertex buffer
     pos_data = (ctypes.c_float * 8)(-0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5)
-    vbo = device.create_buffer_mapped(
+    vbo = device.create_buffer(
+        mapped_at_creation=True,
         size=ctypes.sizeof(pos_data),
         usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.MAP_WRITE,
     )
@@ -612,18 +619,4 @@ def test_render_orange_dots():
 
 
 if __name__ == "__main__":
-
-    test_render_orange_square()
-
-    test_render_orange_square_indexed()
-    test_render_orange_square_indirect()
-    test_render_orange_square_indexed_indirect()
-    test_render_orange_square_color_attachment1()
-    test_render_orange_square_color_attachment2()
-    test_render_orange_square_vbo()
-
-    test_render_orange_square_viewport()
-    test_render_orange_square_scissor()
-    test_render_orange_square_depth()
-
-    test_render_orange_dots()
+    run_tests(globals())

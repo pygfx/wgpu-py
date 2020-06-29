@@ -97,8 +97,8 @@ uniform_data = np.asarray(shadertype_as_ctype(uniform_type)())
 # %% Create resource objects (buffers, textures, samplers)
 
 # Create vertex buffer, and upload data
-vertex_buffer = device.create_buffer_mapped(
-    size=vertex_data.nbytes, usage=wgpu.BufferUsage.VERTEX
+vertex_buffer = device.create_buffer(
+    mapped_at_creation=True, size=vertex_data.nbytes, usage=wgpu.BufferUsage.VERTEX
 )
 ctypes.memmove(
     ctypes.addressof(vertex_buffer.mapping),
@@ -109,8 +109,8 @@ vertex_buffer.unmap()
 
 
 # Create index buffer, and upload data
-index_buffer = device.create_buffer_mapped(
-    size=index_data.nbytes, usage=wgpu.BufferUsage.INDEX
+index_buffer = device.create_buffer(
+    mapped_at_creation=True, size=index_data.nbytes, usage=wgpu.BufferUsage.INDEX
 )
 ctypes.memmove(
     ctypes.addressof(index_buffer.mapping), index_data.ctypes.data, index_data.nbytes,
@@ -134,8 +134,8 @@ texture = device.create_texture(
     sample_count=1,
 )
 texture_view = texture.create_view()
-tmp_buffer = device.create_buffer_mapped(
-    size=texture_data.nbytes, usage=wgpu.BufferUsage.COPY_SRC
+tmp_buffer = device.create_buffer(
+    mapped_at_creation=True, size=texture_data.nbytes, usage=wgpu.BufferUsage.COPY_SRC
 )
 ctypes.memmove(
     ctypes.addressof(tmp_buffer.mapping), texture_data.ctypes.data, texture_data.nbytes,
@@ -149,7 +149,7 @@ command_encoder.copy_buffer_to_texture(
         "bytes_per_row": texture_data.strides[0],
         "rows_per_image": 0,
     },
-    {"texture": texture_view, "mip_level": 0, "array_layer": 0, "origin": (0, 0, 0),},
+    {"texture": texture_view, "mip_level": 0, "origin": (0, 0, 0),},
     copy_size=texture_size,
 )
 device.default_queue.submit([command_encoder.finish()])
@@ -354,8 +354,8 @@ def draw_frame():
 
     # Upload the uniform struct
     uniform_nbytes = uniform_data.nbytes
-    tmp_buffer = device.create_buffer_mapped(
-        size=uniform_nbytes, usage=wgpu.BufferUsage.COPY_SRC
+    tmp_buffer = device.create_buffer(
+        mapped_at_creation=True, size=uniform_nbytes, usage=wgpu.BufferUsage.COPY_SRC
     )
     ctypes.memmove(
         ctypes.addressof(tmp_buffer.mapping), uniform_data.ctypes.data, uniform_nbytes
@@ -380,8 +380,8 @@ def draw_frame():
         )
 
         render_pass.set_pipeline(render_pipeline)
-        render_pass.set_index_buffer(index_buffer, 0, 0)
-        render_pass.set_vertex_buffer(0, vertex_buffer, 0, 0)
+        render_pass.set_index_buffer(index_buffer)
+        render_pass.set_vertex_buffer(0, vertex_buffer)
         for bind_group_id, bind_group in enumerate(bind_groups):
             render_pass.set_bind_group(bind_group_id, bind_group, [], 0, 99)
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)

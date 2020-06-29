@@ -11,7 +11,7 @@ from pyshader import python2shader, vec4, i32
 from pyshader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip
-from testutils import can_use_wgpu_lib
+from testutils import run_tests, can_use_wgpu_lib
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
@@ -251,9 +251,5 @@ def _get_draw_function(device, canvas):
 
 if __name__ == "__main__":
     setup_module()
-
-    test_glfw_canvas_basics()
-    test_glfw_canvas_render()
-    test_glfw_canvas_render_custom_canvas()
-
+    run_tests(globals())
     teardown_module()

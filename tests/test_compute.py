@@ -7,7 +7,7 @@ import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
 from pytest import skip, raises
-from testutils import can_use_wgpu_lib, iters_equal
+from testutils import run_tests, can_use_wgpu_lib, iters_equal
 
 
 if not can_use_wgpu_lib:
@@ -80,8 +80,8 @@ def test_compute_indirect():
     cshader = device.create_shader_module(code=compute_shader)
 
     # Create input buffer and upload data to in
-    buffer1 = device.create_buffer_mapped(
-        size=ctypes.sizeof(in1), usage=wgpu.BufferUsage.STORAGE
+    buffer1 = device.create_buffer(
+        mapped_at_creation=True, size=ctypes.sizeof(in1), usage=wgpu.BufferUsage.STORAGE
     )
     ctypes.memmove(buffer1.mapping, in1, ctypes.sizeof(in1))
     buffer1.unmap()
@@ -94,8 +94,10 @@ def test_compute_indirect():
 
     # Create buffer to hold the dispatch parameters for the indirect call
     params = (ctypes.c_int32 * 3)(n - 2, 1, 1)  # note the minus 2!
-    buffer3 = device.create_buffer_mapped(
-        size=ctypes.sizeof(params), usage=wgpu.BufferUsage.INDIRECT
+    buffer3 = device.create_buffer(
+        mapped_at_creation=True,
+        size=ctypes.sizeof(params),
+        usage=wgpu.BufferUsage.INDIRECT,
     )
     ctypes.memmove(buffer3.mapping, params, ctypes.sizeof(params))
     buffer3.unmap()
@@ -145,7 +147,7 @@ def test_compute_indirect():
     device.default_queue.submit([command_encoder.finish()])
 
     # Read result
-    out1 = in1.__class__.from_buffer(buffer2.map_read())
+    out1 = in1.__class__.from_buffer(buffer2.map(wgpu.MapMode.READ))
     in2 = list(in1)[:]
     out2 = [i - 1 for i in out1]
     # The shader was applied to all but the last two elements
@@ -195,7 +197,4 @@ def test_compute_fails():
 
 
 if __name__ == "__main__":
-    test_compute_0_1()
-    test_compute_1_3()
-    test_compute_indirect()
-    test_compute_fails()
+    run_tests(globals())

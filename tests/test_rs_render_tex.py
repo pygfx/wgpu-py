@@ -9,7 +9,8 @@ import pyshader
 from pyshader import python2shader, f32, vec2, vec4, i32
 import wgpu.backends.rs  # noqa
 from pytest import skip, raises
-from testutils import can_use_wgpu_lib, get_default_device, can_use_vulkan_sdk
+from testutils import run_tests, get_default_device
+from testutils import can_use_wgpu_lib, can_use_vulkan_sdk
 from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
 
 
@@ -472,18 +473,4 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
 
 
 if __name__ == "__main__":
-    test_render_textured_square_rgba8unorm()
-    test_render_textured_square_rgba8uint()
-    test_render_textured_square_rgba16sint()
-    test_render_textured_square_rgba32float()
-
-    test_render_textured_square_rg8unorm()
-    test_render_textured_square_rg8uint()
-    test_render_textured_square_rg16sint()
-    test_render_textured_square_rg32float()
-
-    test_render_textured_square_r8unorm()
-    test_render_textured_square_r8uint()
-    test_render_textured_square_r16sint()
-    test_render_textured_square_r32sint()
-    test_render_textured_square_r32float()
+    run_tests(globals())

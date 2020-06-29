@@ -79,7 +79,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
         usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_WRITE
         if binding_index in output_arrays:
             usage |= wgpu.BufferUsage.MAP_READ
-        buffer = device.create_buffer_mapped(size=nbytes, usage=usage)
+        buffer = device.create_buffer(mapped_at_creation=True, size=nbytes, usage=usage)
         # Copy data from array to buffer
         ctypes.memmove(buffer.mapping, array, nbytes)
         buffer.unmap()
@@ -135,7 +135,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     output = {}
     for binding_index, array_type in output_arrays.items():
         buffer = buffers[binding_index]
-        array_uint8 = buffer.map_read()  # slow, can also be done async
+        array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
         output[binding_index] = array_type.from_buffer(array_uint8)
 
     return output
