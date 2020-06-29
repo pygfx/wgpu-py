@@ -41,7 +41,7 @@ from cffi import FFI, __version_info__ as cffi_version_info
 
 from .. import base, flags, _structs
 from .. import _register_backend
-from .._coreutils import get_resource_filename
+from .._coreutils import get_resource_filename, logger_set_level_callbacks
 from .._mappings import cstructfield2enum, enummap
 
 
@@ -55,6 +55,9 @@ version_info = tuple(map(int, __version__.split(".")))
 
 if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
+
+
+# %% Load the lib and connect logging system
 
 
 def _get_wgpu_h():
@@ -118,31 +121,62 @@ _lib = ffi.dlopen(_get_wgpu_lib_path())
 
 # Get the actual wgpu-native version
 _version_int = _lib.wgpu_get_version()
-version_info_lib = tuple((_version_int >> bits) & 0xff for bits in (16, 8, 0))
+version_info_lib = tuple((_version_int >> bits) & 0xFF for bits in (16, 8, 0))
 if version_info_lib != version_info:
-    logger.warning(f"Expected wgpu-native version {version_info} but got {version_info_lib}")
+    logger.warning(
+        f"Expected wgpu-native version {version_info} but got {version_info_lib}"
+    )
 
 
 @ffi.callback("void(int level, const char *)")
 def _logger_callback(level, c_msg):
+    """ Called when Rust emits a log message.
+    """
     msg = ffi.string(c_msg).decode(errors="ignore")  # makes a copy
+    if msg.startswith(
+        (
+            "Unknown decoration",
+            "Failed to parse shader",
+            "Shader module will not be validated",
+        )
+    ):
+        return  # todo: We currently skip these to avoid spam. These are false negatives.
     m = {
-        1: logger.error,
-        2: logger.warning,
-        3: logger.info,
-        4: logger.debug,
-        5: logger.debug,  # trace
+        _lib.WGPULogLevel_Error: logger.error,
+        _lib.WGPULogLevel_Warn: logger.warning,
+        _lib.WGPULogLevel_Info: logger.info,
+        _lib.WGPULogLevel_Debug: logger.debug,
+        _lib.WGPULogLevel_Trace: logger.debug,
     }
-
-    func = m.get(level, logger.warn)
+    func = m.get(level, logger.warning)
     func(msg)
 
 
-# Set log callback. Levels -> 1: error, 2: warn, 3: info, 4: debug
+def _logger_set_level_callback(level):
+    """ Called when the log level is set from Python.
+    """
+    if level >= 40:
+        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Error)
+    elif level >= 30:
+        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Warn)
+    elif level >= 20:
+        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Info)
+    elif level >= 10:
+        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Debug)
+    elif level >= 5:
+        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Trace)  # extra level
+    else:
+        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Off)
+
+
+# Connect Rust logging with Python logging
 _lib.wgpu_set_log_callback(_logger_callback)
-_lib.wgpu_set_log_level(2)
-logger.setLevel(logging.WARN)
-# todo: somehow keep log levels in sync. At least automate log-level mapping
+logger_set_level_callbacks.append(_logger_set_level_callback)
+_logger_set_level_callback(logger.level)
+
+
+# %% Helper functions and objects
+
 
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()

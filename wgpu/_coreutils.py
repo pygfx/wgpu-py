@@ -4,9 +4,8 @@ Core utilities that are loaded into the root namespace or used internally.
 
 import os
 import inspect
+import logging
 from pkg_resources import resource_filename
-
-from . import base as m_classes, flags as m_flags, enums as m_enums
 
 
 def get_resource_filename(name):
@@ -15,12 +14,32 @@ def get_resource_filename(name):
     return resource_filename("wgpu.resources", name)
 
 
+class WGPULogger(logging.getLoggerClass()):
+    """ A custom logger for which we can detect changes in its level.
+    """
+
+    def setLevel(self, level):  # noqa: N802
+        super().setLevel(level)
+        for cb in logger_set_level_callbacks:
+            cb(self.level)  # use arg that is always an int
+
+
+logger_set_level_callbacks = []
+_original_logger_cls = logging.getLoggerClass()
+logging.setLoggerClass(WGPULogger)
+logger = logging.getLogger("wgpu")
+logging.setLoggerClass(_original_logger_cls)
+assert isinstance(logger, WGPULogger)
+logger.setLevel(logging.WARNING)
+
+
 def help(*searches, dev=False):
     """ Print constants, enums, structs, and functions that contain the given searches.
     If dev is True, will also print info from the definitions in .idl and .h, which
     can be useful during debugging and dev.
     """
 
+    from . import base as m_classes, flags as m_flags, enums as m_enums
     from ._parsers import IdlParser, HParser, to_neutral_name
 
     # Strip prefixes used in .idl and .h
