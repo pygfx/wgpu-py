@@ -316,7 +316,7 @@ def test_get_memoryview_and_address():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_write_buffer():
+def test_write_buffer1():
     device = wgpu.utils.get_default_device()
 
     nx, ny, nz = 100, 1, 1
@@ -338,6 +338,64 @@ def test_write_buffer():
     data2 = data1.__class__.from_buffer(mapped_data)
     buf4.unmap()
     assert iters_equal(data1, data2)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_write_buffer2():
+    device = wgpu.utils.get_default_device()
+
+    nx, ny, nz = 100, 1, 1
+    data0 = (ctypes.c_float * 100)(*[random.random() for i in range(nx * ny * nz)])
+    data1 = (ctypes.c_float * 100)()
+    nbytes = ctypes.sizeof(data1)
+
+    # Create buffer
+    buf4 = device.create_buffer(
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+    )
+
+    for i in range(len(data1)):
+        data1[i] = data0[i]
+
+    # Upload from CPU to buffer
+    device.create_command_encoder()  # we seem to need to create one
+    device.default_queue.write_buffer(buf4, 0, data1)
+
+    # We swipe the data. You could also think that we passed something into
+    # write_buffer without holding a referene to it. Anyway, write_buffer
+    # seems to copy the data at the moment it is called.
+    for i in range(len(data1)):
+        data1[i] = 1
+
+    device.default_queue.submit([])
+
+    # Download from buffer to CPU
+    mapped_data = buf4.map(wgpu.MapMode.READ)
+    data2 = data1.__class__.from_buffer(mapped_data)
+    buf4.unmap()
+    assert iters_equal(data0, data2)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_write_buffer3():
+    device = wgpu.utils.get_default_device()
+    nbytes = 12
+
+    # Create buffer
+    buf4 = device.create_buffer(
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+    )
+
+    # Upload from CPU to buffer, using bytes
+    device.create_command_encoder()  # we seem to need to create one
+    device.default_queue.write_buffer(buf4, 0, b"abcdefghijkl")
+    device.default_queue.submit([])
+
+    # Download from buffer to CPU
+    mapped_data = buf4.map(wgpu.MapMode.READ)
+    result = ctypes.string_at(mapped_data)
+    buf4.unmap()
+    assert result == b"abcdefghijkl"
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
