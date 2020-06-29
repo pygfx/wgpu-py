@@ -57,7 +57,7 @@ if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
 
 
-# %% Load the lib and connect logging system
+# %% Load the lib and integrate logging system
 
 
 def _get_wgpu_h():
