@@ -132,7 +132,7 @@ if version_info_lib != version_info:
 def _logger_callback(level, c_msg):
     """ Called when Rust emits a log message.
     """
-    msg = ffi.string(c_msg).decode(errors="ignore")  # makes a copy
+    msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
     # todo: We currently skip some false negatives to avoid spam.
     false_negatives = (
         "Unknown decoration",
