@@ -133,14 +133,14 @@ def _logger_callback(level, c_msg):
     """ Called when Rust emits a log message.
     """
     msg = ffi.string(c_msg).decode(errors="ignore")  # makes a copy
-    if msg.startswith(
-        (
-            "Unknown decoration",
-            "Failed to parse shader",
-            "Shader module will not be validated",
-        )
-    ):
-        return  # todo: We currently skip these to avoid spam. These are false negatives.
+    # todo: We currently skip some false negatives to avoid spam.
+    false_negatives = (
+        "Unknown decoration",
+        "Failed to parse shader",
+        "Shader module will not be validated",
+    )
+    if msg.startswith(false_negatives):
+        return
     m = {
         _lib.WGPULogLevel_Error: logger.error,
         _lib.WGPULogLevel_Warn: logger.warning,
