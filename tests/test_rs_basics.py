@@ -329,6 +329,7 @@ def test_write_buffer():
     )
 
     # Upload from CPU to buffer
+    device.create_command_encoder()  # we seem to need to create one
     device.default_queue.write_buffer(buf4, 0, data1)
     device.default_queue.submit([])
 
@@ -362,6 +363,7 @@ def test_write_texture():
     )
 
     # Upload from CPU to texture
+    command_encoder = device.create_command_encoder()
     device.default_queue.write_texture(
         {"texture": tex3},
         data1,
@@ -371,7 +373,6 @@ def test_write_texture():
     # device.default_queue.submit([])  -> call further down
 
     # Copy from texture to buffer
-    command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_buffer(
         {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
         {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
