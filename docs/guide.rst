@@ -60,7 +60,7 @@ Communicating array data
 The wgpu-py library makes no assumptions about how you store your data.
 In places where you provide data to the API, it can consume any data
 that supports the buffer protocol, which includes ``bytes``,
-``bytearray``, ctypes arrays, and numpy arrays.
+``bytearray``, ``memoryview``, ctypes arrays, and numpy arrays.
 
 In places where data is returned, the API returns a ``memoryview``
 object. These objects provide a quite versatile view on ndarray data:
