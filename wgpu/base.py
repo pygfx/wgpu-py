@@ -1420,9 +1420,9 @@ class GPUQueue(GPUObject):
     # IDL: void writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, [AllowShared] ArrayBuffer data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
         """ Takes the data contents and schedules a write operation of
-        these contents to the buffer. Any subsequent modifications to
-        data do not affect what is written at the time that the
-        scheduled operation runs.
+        these contents to the buffer. A snapshot of the data is taken;
+        any changes to the data after this function is called do not
+        affect the buffer contents.
 
         Arguments:
             buffer: The :class:`GPUBuffer` object to write to.
@@ -1437,9 +1437,9 @@ class GPUQueue(GPUObject):
     # IDL: void writeTexture( GPUTextureCopyView destination, [AllowShared] ArrayBuffer data, GPUTextureDataLayout dataLayout, GPUExtent3D size);
     def write_texture(self, destination, data, data_layout, size):
         """ Takes the data contents and schedules a write operation of
-        these contents to the destination texture in the queue. Any
-        subsequent modifications to data do not affect what is written
-        at the time that the scheduled operation runs.
+        these contents to the destination texture in the queue. A
+        snapshot of the data is taken; any changes to the data after
+        this function is called do not affect the texture contents.
 
         Arguments:
             destination: A dict with fields: "texture" (a texture object),

@@ -399,7 +399,7 @@ def test_write_buffer3():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_write_texture():
+def test_write_texture1():
     device = wgpu.utils.get_default_device()
 
     nx, ny, nz = 100, 1, 1
@@ -443,6 +443,61 @@ def test_write_texture():
     data2 = data1.__class__.from_buffer(mapped_data)
     buf4.unmap()
     assert iters_equal(data1, data2)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_write_texture2():
+    device = wgpu.utils.get_default_device()
+
+    nx, ny, nz = 100, 1, 1
+    data0 = (ctypes.c_float * 100)(*[random.random() for i in range(nx * ny * nz)])
+    data1 = (ctypes.c_float * 100)()
+    nbytes = ctypes.sizeof(data1)
+    bpp = nbytes // (nx * ny * nz)
+    texture_format = wgpu.TextureFormat.r32float
+    texture_dim = wgpu.TextureDimension.d1
+
+    # Create buffers and textures
+    tex3 = device.create_texture(
+        size=(nx, ny, nz),
+        dimension=texture_dim,
+        format=texture_format,
+        usage=wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST,
+    )
+    buf4 = device.create_buffer(
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+    )
+
+    for i in range(len(data1)):
+        data1[i] = data0[i]
+
+    # Upload from CPU to texture
+    command_encoder = device.create_command_encoder()
+    device.default_queue.write_texture(
+        {"texture": tex3},
+        data1,
+        {"bytes_per_row": bpp * nx, "rows_per_image": ny},
+        (nx, ny, nz),
+    )
+    # device.default_queue.submit([])  -> call further down
+
+    # Invalidate the data now, to show that write_texture has made a copy
+    for i in range(len(data1)):
+        data1[i] = 1
+
+    # Copy from texture to buffer
+    command_encoder.copy_texture_to_buffer(
+        {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
+        {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
+        (nx, ny, nz),
+    )
+    device.default_queue.submit([command_encoder.finish()])
+
+    # Download from buffer to CPU
+    mapped_data = buf4.map(wgpu.MapMode.READ)
+    data2 = data1.__class__.from_buffer(mapped_data)
+    buf4.unmap()
+    assert iters_equal(data0, data2)
 
 
 if __name__ == "__main__":

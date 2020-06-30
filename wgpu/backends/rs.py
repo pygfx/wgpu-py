@@ -360,28 +360,32 @@ def _get_memoryview_and_address(data):
     The data object must support the buffer protocol.
     """
 
+    # To get the address from a memoryview, there are multiple options.
+    # The most obvious is using ctypes:
+    #
+    #   c_array = (ctypes.c_uint8 * nbytes).from_buffer(m)
+    #   address = ctypes.addressof(c_array)
+    #
+    # Unfortunately, this call fails if the memoryview is readonly, e.g. if
+    # the data is a bytes object or readonly numpy array. One could then
+    # use from_buffer_copy(), but that introduces an extra data copy, which
+    # can hurt performance when the data is large.
+    #
+    # Another alternative that can be used for objects implementing the array
+    # interface (like numpy arrays) is to directly read the address:
+    #
+    #   address = data.__array_interface__["data"][0]
+    #
+    # But what seems to work best (at the moment) is using cffi.
+
+    # Convert data to a memoryview. That way we have something consistent
+    # to work with, which supports all objects implementing the buffer protocol.
     m = memoryview(data)
 
-    if True:
-        # Get the address via ffi. In contrast to ctypes, this also
-        # works for readonly data (e.g. bytes)
-        c_data = ffi.from_buffer("uint8_t []", m)
-        address = int(ffi.cast("uintptr_t", c_data))
-    elif hasattr(data, "__array_interface__"):
-        # e.g. a Numpy array - we can get the address easily
-        address = data.__array_interface__["data"][0]
-    elif not m.readonly:
-        # e.g. a bytearray - get the address via ctypes
-        c_array = (ctypes.c_uint8 * m.nbytes).from_buffer(m)
-        address = ctypes.addressof(c_array)
-    else:
-        # e.g. bytes - make a copy or error
-        raise ValueError(
-            "Cannot get address of readonly buffer (unless it supports the __array_interface__)"
-        )
-        # c_array = (ctypes.c_uint8 * m.nbytes).from_buffer_copy(m)
-        # m = memoryview(c_array)
-        # address = ctypes.addressof(c_array)
+    # Get the address via ffi. In contrast to ctypes, this also
+    # works for readonly data (e.g. bytes)
+    c_data = ffi.from_buffer("uint8_t []", m)
+    address = int(ffi.cast("uintptr_t", c_data))
 
     return m, address
 
@@ -1683,6 +1687,9 @@ class GPUQueue(base.GPUQueue):
         assert 0 <= data_length <= (nbytes - data_offset)
         assert data_length <= buffer.size - buffer_offset
 
+        # Make the call. Note that this call copies the data - it's ok
+        # if we lose our reference to the data once we leave this
+        # function.
         c_data = ffi.cast("uint8_t *", address + data_offset)
         _lib.wgpu_queue_write_buffer(
             self._internal, buffer._internal, buffer_offset, c_data, data_length
