@@ -14,12 +14,6 @@ if not can_use_wgpu_lib:
     skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
-def test_compute_formats():
-    # Test that we have a size for all supported formats
-    for c in set(wgpu.utils._compute.FORMAT_MAP.values()):
-        assert c in wgpu.utils._compute.FORMAT_SIZES
-
-
 def test_compute_0_1_ctype():
     @python2shader
     def compute_shader(
@@ -48,7 +42,7 @@ def test_compute_0_1_tuple():
     ):
         out[index] = index
 
-    out = compute_with_buffers({}, {0: (100, "i32")}, compute_shader)
+    out = compute_with_buffers({}, {0: (100, "i")}, compute_shader)
     assert isinstance(out, dict) and len(out) == 1
     assert isinstance(out[0], memoryview)
     assert out[0].tolist() == list(range(100))
@@ -61,7 +55,7 @@ def test_compute_0_1_str():
     ):
         out[index] = index
 
-    out = compute_with_buffers({}, {0: "100xi4"}, compute_shader)
+    out = compute_with_buffers({}, {0: "100xi"}, compute_shader)
     assert isinstance(out, dict) and len(out) == 1
     assert isinstance(out[0], memoryview)
     assert out[0].tolist() == list(range(100))

@@ -21,11 +21,12 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
             it probably makes your code easier to follow).
         output_arrays (dict): A dict mapping int bindings to output shapes.
             If the value is int, it represents the size (in bytes) of
-            the buffer. If the value is a tuple, it must have at least
-            2 elements, where the last is a format string and the
-            preceding elements the shape. The returned memoryview will
-            be cast accordingly. If the value is a ctypes array type,
-            the result will be cast to that instead of a memoryview.
+            the buffer. If the value is a tuple, its last element
+            specifies the format (see below), and the preceding elements
+            specify the shape. These are used to ``cast()`` the
+            memoryview object before it is returned. If the value is a
+            ctypes array type, the result will be cast to that instead
+            of a memoryview.
         shader (bytes, shader-object): The SpirV representing the shader,
             as raw bytes or an object implementing ``to_spirv()``
             (e.g. a pyshader SpirV module).
@@ -35,6 +36,14 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
     Returns:
         output (dict): A dict mapping int bindings to memoryviews.
+
+    The format characters to cast a ``memoryview`` are hard to remember, so
+    here's a refresher:
+
+    * "b" and "B" are signed and unsiged 8-bit ints.
+    * "h" and "H" are signed and unsiged 16-bit ints.
+    * "i" and "I" are signed and unsiged 32-bit ints.
+    * "e" and "f" are 16-bit and 32-bit floats.
     """
 
     # Check input arrays
@@ -65,13 +74,13 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
         elif isinstance(array_descr, tuple):
             format = array_descr[-1]
             try:
-                format = FORMAT_MAP[format]
+                format_size = FORMAT_SIZES[format]
             except KeyError:
                 raise ValueError(f"Invalid format for output array {key}: {format}")
             shape = tuple(int(i) for i in array_descr[:-1])
             if not (shape and all(i > 0 for i in shape)):
                 raise ValueError(f"Invalid shape for output array {key}: {shape}")
-            nbytes = FORMAT_SIZES[format]
+            nbytes = format_size
             for i in shape:
                 nbytes *= i
             output_infos[key] = {
@@ -177,39 +186,8 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
 FORMAT_SIZES = {"b": 1, "B": 1, "h": 2, "H": 2, "i": 4, "I": 4, "e": 2, "f": 4}
 
-FORMAT_MAP = {
-    # Alt struct types
-    "?": "B",
-    "c": "B",
-    "l": "i",
-    "L": "I",
-    # Numpy-ish
-    "int8": "b",
-    "uint8": "B",
-    "in16": "h",
-    "uint16": "H",
-    "int32": "i",
-    "uint32": "I",
-    "float16": "e",
-    "float32": "f",
-    # Short notation
-    "i8": "b",
-    "u8": "B",
-    "i16": "h",
-    "u16": "H",
-    "i32": "i",
-    "u32": "I",
-    "f16": "e",
-    "f32": "f",
-    # Alt short notation
-    "i1": "b",
-    "u1": "B",
-    "i2": "h",
-    "u2": "H",
-    "i4": "i",
-    "u4": "I",
-    "f2": "e",
-    "f4": "f",
-}
-
-FORMAT_MAP.update({k: k for k in FORMAT_SIZES})
+# It's tempting to allow for other formats, like "int32" and "f4", but
+# users who like numpy will simply specify the number of bytes and
+# convert the result. Users who will work with the memoryview directly
+# should not be confused with other formats than memoryview.cast()
+# normally  supports.
