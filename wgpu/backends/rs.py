@@ -122,7 +122,7 @@ _lib = ffi.dlopen(_get_wgpu_lib_path())
 # Get the actual wgpu-native version
 _version_int = _lib.wgpu_get_version()
 version_info_lib = tuple((_version_int >> bits) & 0xFF for bits in (16, 8, 0))
-if version_info_lib != version_info:
+if version_info_lib != version_info:  # no-cover
     logger.warning(
         f"Expected wgpu-native version {version_info} but got {version_info_lib}"
     )
@@ -390,6 +390,15 @@ def _get_memoryview_and_address(data):
     return m, address
 
 
+def _get_memoryview_from_address(address, nbytes, format="B"):
+    """ Get a memoryview from an int memory address and a byte count,
+    """
+    # The default format is "<B", which seems to confuse some memoryview
+    # operations, so we always cast it.
+    c_array = (ctypes.c_uint8 * nbytes).from_address(address)
+    return memoryview(c_array).cast(format, shape=(nbytes,))
+
+
 def _check_struct(what, d):
     """ Check that the given dict does not have any unexpected keys
     (which may be there because of typos or api changes).
@@ -551,33 +560,22 @@ class GPUDevice(base.GPUDevice):
         usage: "GPUBufferUsageFlags",
         mapped_at_creation: bool = False,
     ):
-        # Weird, that mapped_at_creation flag. It's as if in IDL they wanted to
-        # merge the create_buffer and create_buffer_mapped functions, buy failed
-        # to remove the mapped version ...
-        c_label = ffi.new("char []", label.encode())
         size = int(size)
+        if mapped_at_creation:
+            raise ValueError(
+                "In wgpu-py, mapped_at_creation must be False. Use create_buffer_with_data() instead."
+            )
+        # Create a buffer object
+        c_label = ffi.new("char []", label.encode())
         struct = new_struct_p(
             "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
         )
+        id = _lib.wgpu_device_create_buffer(self._internal, struct)
+        # Return wrapped buffer
+        return GPUBuffer(label, id, self, size, usage, "unmapped")
 
-        if mapped_at_creation:
-            # Pointer that device_create_buffer_mapped sets
-            buffer_memory_pointer = ffi.new("uint8_t * *")
-            id = _lib.wgpu_device_create_buffer_mapped(
-                self._internal, struct, buffer_memory_pointer
-            )
-            # Map a ctypes array onto the data
-            pointer_as_int = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
-            mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
-            return GPUBuffer(
-                label, id, self, size, usage, "mapped at creation", mem_as_ctypes
-            )
-        else:
-            id = _lib.wgpu_device_create_buffer(self._internal, struct)
-            return GPUBuffer(label, id, self, size, usage, "unmapped", None)
-
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
-    async def create_buffer_async(
+    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
+    def create_buffer_mapped(
         self,
         *,
         label="",
@@ -585,9 +583,43 @@ class GPUDevice(base.GPUDevice):
         usage: "GPUBufferUsageFlags",
         mapped_at_creation: bool = False,
     ):
-        return self.create_buffer(
-            label=label, size=size, usage=usage, mapped_at_creation=mapped_at_creation
+        size = int(size)
+        # Create a buffer object, and get a memory pointer to its mapped memory
+        c_label = ffi.new("char []", label.encode())
+        struct = new_struct_p(
+            "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
         )
+        buffer_memory_pointer = ffi.new("uint8_t * *")
+        id = _lib.wgpu_device_create_buffer_mapped(
+            self._internal, struct, buffer_memory_pointer
+        )
+        address = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
+        # Return buffer + memoryview
+        buf = GPUBuffer(label, id, self, size, usage, "mapped at creation")
+        return buf, _get_memoryview_from_address(address, size)
+
+    def create_buffer_with_data(self, *, label="", data, usage: "GPUBufferUsageFlags"):
+        # Get a memoryview of the data
+        m, src_address = _get_memoryview_and_address(data)
+        if not m.contiguous:  # no-cover
+            raise ValueError("The given texture data is not contiguous")
+        m = m.cast("B", shape=(m.nbytes,))
+        # Create a buffer object, and get a memory pointer to its mapped memory
+        c_label = ffi.new("char []", label.encode())
+        struct = new_struct_p(
+            "WGPUBufferDescriptor *", label=c_label, size=m.nbytes, usage=usage
+        )
+        buffer_memory_pointer = ffi.new("uint8_t * *")
+        id = _lib.wgpu_device_create_buffer_mapped(
+            self._internal, struct, buffer_memory_pointer
+        )
+        # Copy the data to the mapped memory
+        dst_address = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
+        dst_m = _get_memoryview_from_address(dst_address, m.nbytes)
+        dst_m[:] = m  # nicer than ctypes.memmove(dst_address, src_address, m.nbytes)
+        _lib.wgpu_buffer_unmap(id)
+        # Return the wrapped buffer
+        return GPUBuffer(label, id, self, m.nbytes, usage, "unmapped")
 
     # wgpu.help('TextureDescriptor', 'devicecreatetexture', dev=True)
     def create_texture(
@@ -1055,9 +1087,8 @@ class GPUBuffer(base.GPUBuffer):
         def _map_read_callback(status, buffer_data_p, user_data_p):
             nonlocal data
             if status == 0:
-                pointer_as_int = int(ffi.cast("intptr_t", buffer_data_p))
-                mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
-                data = mem_as_ctypes
+                address = int(ffi.cast("intptr_t", buffer_data_p))
+                data = _get_memoryview_from_address(address, size)
 
         start, size = 0, self.size
         _lib.wgpu_buffer_map_read_async(
@@ -1073,8 +1104,7 @@ class GPUBuffer(base.GPUBuffer):
 
         self._state = "mapped"
         self._map_mode = flags.MapMode.READ
-        self._mapping = data
-        return data
+        return memoryview(data)
 
     def _map_write(self):
         data = None
@@ -1083,9 +1113,8 @@ class GPUBuffer(base.GPUBuffer):
         def _map_write_callback(status, buffer_data_p, user_data_p):
             nonlocal data
             if status == 0:
-                pointer_as_int = int(ffi.cast("intptr_t", buffer_data_p))
-                mem_as_ctypes = (ctypes.c_uint8 * size).from_address(pointer_as_int)
-                data = mem_as_ctypes
+                address = int(ffi.cast("intptr_t", buffer_data_p))
+                data = _get_memoryview_from_address(address, size)
 
         start, size = 0, self.size
         _lib.wgpu_buffer_map_write_async(
@@ -1101,8 +1130,7 @@ class GPUBuffer(base.GPUBuffer):
 
         self._state = "mapped"
         self._map_mode = flags.MapMode.WRITE
-        self._mapping = data
-        return data
+        return memoryview(data)
 
     # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
     async def map_async(self, mode, offset=0, size=0):
@@ -1115,7 +1143,6 @@ class GPUBuffer(base.GPUBuffer):
             _lib.wgpu_buffer_unmap(self._internal)
             self._state = "unmapped"
             self._map_mode = 0
-            self._mapping = None
 
     # wgpu.help('bufferdestroy', dev=True)
     def destroy(self):
@@ -1126,7 +1153,6 @@ class GPUBuffer(base.GPUBuffer):
             self._internal, internal = None, self._internal
             self._state = "destroyed"
             self._map_mode = 0
-            self._mapping = None
             _lib.wgpu_buffer_destroy(internal)
 
 
@@ -1671,8 +1697,8 @@ class GPUQueue(base.GPUQueue):
         nbytes = m.nbytes
 
         # Checks
-        if not m.contiguous:
-            raise ValueError("The given buffer data is not continuous")
+        if not m.contiguous:  # no-cover
+            raise ValueError("The given buffer data is not contiguous")
 
         # Deal with offset and size
         buffer_offset = int(buffer_offset)
@@ -1688,8 +1714,7 @@ class GPUQueue(base.GPUQueue):
         assert data_length <= buffer.size - buffer_offset
 
         # Make the call. Note that this call copies the data - it's ok
-        # if we lose our reference to the data once we leave this
-        # function.
+        # if we lose our reference to the data once we leave this function.
         c_data = ffi.cast("uint8_t *", address + data_offset)
         _lib.wgpu_queue_write_buffer(
             self._internal, buffer._internal, buffer_offset, c_data, data_length
@@ -1699,10 +1724,11 @@ class GPUQueue(base.GPUQueue):
     def write_texture(self, destination, data, data_layout, size):
 
         m, address = _get_memoryview_and_address(data)
+        # todo: could we not derive the size from trhe shape of m?
 
         # Checks
-        if not m.contiguous:
-            raise ValueError("The given texture data is not continuous")
+        if not m.contiguous:  # no-cover
+            raise ValueError("The given texture data is not contiguous")
 
         c_data = ffi.cast("uint8_t *", address)
         data_length = m.nbytes
@@ -1772,22 +1798,20 @@ class GPUSwapChain(base.GPUSwapChain):
     def __enter__(self):
         # Get the current texture view, and make sure it is presented when done
         self._create_native_swap_chain_if_needed()
-        swap_chain_output = _lib.wgpu_swap_chain_get_next_texture(self._internal)
-        if swap_chain_output.status == _lib.WGPUSwapChainStatus_Good:
+        sc_output = _lib.wgpu_swap_chain_get_next_texture(self._internal)
+        if sc_output.status == _lib.WGPUSwapChainStatus_Good:
             pass
-        elif swap_chain_output.status == _lib.WGPUSwapChainStatus_Suboptimal:
+        elif sc_output.status == _lib.WGPUSwapChainStatus_Suboptimal:  # no-cover
             if not getattr(self, "_warned_swap_chain_suboptimal", False):
                 logger.warning(f"Swap chain status of {self} is suboptimal")
                 self._warned_swap_chain_suboptimal = True
         else:  # no-cover
-            status = swap_chain_output.status
+            status = sc_output.status
             status_str = swap_chain_status_map.get(status, "")
             raise RuntimeError(
                 f"Swap chain status is not good: {status_str} ({status})"
             )
-        return base.GPUTextureView(
-            "swap_chain", swap_chain_output.view_id, self._device, None
-        )
+        return base.GPUTextureView("swap_chain", sc_output.view_id, self._device, None)
 
     def __exit__(self, type, value, tb):
         # Present the current texture

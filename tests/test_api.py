@@ -1,4 +1,5 @@
 import sys
+import logging
 import subprocess
 
 import wgpu
@@ -19,6 +20,29 @@ def test_basic_api():
         wgpu.base.request_adapter.__code__.co_varnames
         == wgpu.base.request_adapter_async.__code__.co_varnames
     )
+
+
+def test_logging():
+    level = [-1]
+
+    def set_level_test(lvl):
+        level[0] = lvl
+
+    wgpu._coreutils.logger_set_level_callbacks.append(set_level_test)
+    logger = logging.getLogger("wgpu")
+    logger.setLevel("ERROR")
+    assert level[0] == 40
+    logger.setLevel("INFO")
+    assert level[0] == 20
+    logger.setLevel("DEBUG")
+    assert level[0] == 10
+    logger.setLevel(5)
+    assert level[0] == 5  # "trace" in wgpu-native
+    logger.setLevel(0)
+    assert level[0] == 0  # off
+    # Reset
+    logger.setLevel("WARNING")
+    assert level[0] == 30
 
 
 def test_enums_and_flags():
@@ -137,7 +161,7 @@ def test_help3(capsys):
     assert captured.err == ""
     assert "1 flags" in captured.out
     assert "3 enums" in captured.out
-    assert "15 functions" in captured.out
+    assert "17 functions" in captured.out
 
 
 def test_help4(capsys):

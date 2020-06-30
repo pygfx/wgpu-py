@@ -105,7 +105,6 @@
 
 ### Check functions in base.py
 *  Found 62 functions already implemented
-*  Not implemented: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor); (devicecreatebuffermapped)
 *  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
 *  Not implemented: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0); (buffergetmappedrange)
 *  Not implemented: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex); (commandencoderwritetimestamp)
@@ -123,13 +122,13 @@
 *  Not implemented: GPUFenceValue getCompletedValue(); (fencegetcompletedvalue)
 *  Not implemented: Promise<void> onCompletion(GPUFenceValue completionValue); (fenceoncompletion)
 *  Not implemented: void destroy(); (querysetdestroy)
+*  Found unknown function create_buffer_with_data (devicecreatebufferwithdata)
 *  Found unknown function configure_swap_chain (deviceconfigureswapchain)
 *  Found unknown function get_swap_chain_preferred_format (devicegetswapchainpreferredformat)
 *  Injected IDL lines into base.py
 
 ### Check functions in backends/rs.py
 *  Found 52 functions already implemented
-*  Not implemented: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor); (devicecreatebuffermapped)
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor); (devicecreaterenderbundleencoder)
 *  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
 *  Not implemented: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0); (buffergetmappedrange)
@@ -157,5 +156,6 @@
 *  Not implemented: void destroy(); (querysetdestroy)
 *  Not implemented: GPUTexture getCurrentTexture(); (swapchaingetcurrenttexture)
 *  Found unknown function new_struct_p (newstructp)
+*  Found unknown function create_buffer_with_data (devicecreatebufferwithdata)
 *  Found unknown function configure_swap_chain (deviceconfigureswapchain)
 *  Injected IDL lines into backends/rs.py

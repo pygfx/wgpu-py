@@ -425,11 +425,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         | wgpu.BufferUsage.COPY_SRC
         | wgpu.BufferUsage.COPY_DST
     )
-    buffer = device.create_buffer(
-        mapped_at_creation=True, size=nbytes, usage=buffer_usage
-    )
-    ctypes.memmove(buffer.mapping, data1, nbytes)
-    buffer.unmap()
+    buffer = device.create_buffer_with_data(data=data1, usage=buffer_usage)
     assert buffer.usage == buffer_usage
 
     # Define bindings

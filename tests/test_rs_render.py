@@ -94,13 +94,9 @@ def test_render_orange_square_indexed():
 
     # Index buffer
     indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
-    ibo = device.create_buffer(
-        mapped_at_creation=True,
-        size=ctypes.sizeof(indices),
-        usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
+    ibo = device.create_buffer_with_data(
+        data=indices, usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
     )
-    ctypes.memmove(ibo.mapping, indices, ctypes.sizeof(indices))
-    ibo.unmap()
 
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
@@ -144,13 +140,9 @@ def test_render_orange_square_indirect():
 
     # Buffer with draw parameters for indirect draw call
     params = (ctypes.c_int32 * 4)(4, 1, 0, 0)
-    indirect_buffer = device.create_buffer(
-        mapped_at_creation=True,
-        size=ctypes.sizeof(params),
-        usage=wgpu.BufferUsage.INDIRECT,
+    indirect_buffer = device.create_buffer_with_data(
+        data=params, usage=wgpu.BufferUsage.INDIRECT,
     )
-    ctypes.memmove(indirect_buffer.mapping, params, ctypes.sizeof(params))
-    indirect_buffer.unmap()
 
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
@@ -189,23 +181,15 @@ def test_render_orange_square_indexed_indirect():
 
     # Index buffer
     indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
-    ibo = device.create_buffer(
-        mapped_at_creation=True,
-        size=ctypes.sizeof(indices),
-        usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
+    ibo = device.create_buffer_with_data(
+        data=indices, usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
     )
-    ctypes.memmove(ibo.mapping, indices, ctypes.sizeof(indices))
-    ibo.unmap()
 
     # Buffer with draw parameters for indirect draw call
     params = (ctypes.c_int32 * 5)(6, 1, 0, 0, 0)
-    indirect_buffer = device.create_buffer(
-        mapped_at_creation=True,
-        size=ctypes.sizeof(params),
-        usage=wgpu.BufferUsage.INDIRECT,
+    indirect_buffer = device.create_buffer_with_data(
+        data=params, usage=wgpu.BufferUsage.INDIRECT,
     )
-    ctypes.memmove(indirect_buffer.mapping, params, ctypes.sizeof(params))
-    indirect_buffer.unmap()
 
     # Render
     render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
@@ -256,13 +240,9 @@ def test_render_orange_square_vbo():
 
     # Vertex buffer
     pos_data = (ctypes.c_float * 8)(-0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5)
-    vbo = device.create_buffer(
-        mapped_at_creation=True,
-        size=ctypes.sizeof(pos_data),
-        usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.MAP_WRITE,
+    vbo = device.create_buffer_with_data(
+        data=pos_data, usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.MAP_WRITE,
     )
-    ctypes.memmove(vbo.mapping, pos_data, ctypes.sizeof(pos_data))
-    vbo.unmap()
 
     # Vertex buffer views
     vbo_view = {
