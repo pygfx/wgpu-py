@@ -373,30 +373,30 @@ def test_get_memoryview_and_address():
 
     get_memoryview_and_address = wgpu.backends.rs._get_memoryview_and_address
 
-    data = b"bytes are readonly, so this does not work"
+    data = b"bytes are readonly, but we can map it. Don't abuse this :)"
     m, address = get_memoryview_and_address(data)
-    assert m.nbytes > 0
+    assert m.nbytes == len(data)
     assert address > 0
 
-    data = bytearray(b"but a bytearray works")
+    data = bytearray(b"A bytearray works too")
     m, address = get_memoryview_and_address(data)
-    assert m.nbytes > 0
+    assert m.nbytes == len(data)
     assert address > 0
 
     data = (ctypes.c_float * 100)()
     m, address = get_memoryview_and_address(data)
-    assert m.nbytes > 0
+    assert m.nbytes == ctypes.sizeof(data)
     assert address > 0
 
     data = np.array([1, 2, 3, 4])
     m, address = get_memoryview_and_address(data)
-    assert m.nbytes > 0
+    assert m.nbytes == data.nbytes
     assert address > 0
 
     data = np.array([1, 2, 3, 4])
     data.flags.writeable = False
     m, address = get_memoryview_and_address(data)
-    assert m.nbytes > 0
+    assert m.nbytes == data.nbytes
     assert address > 0
 
 
