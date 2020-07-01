@@ -501,8 +501,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     device.default_queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer
-    array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
-    data2 = data1.__class__.from_buffer(array_uint8)
+    data2 = data1.__class__.from_buffer(buffer.read_data())
 
     # Numpy arrays are easier to work with
     a1 = np.ctypeslib.as_array(data1).reshape(nz, ny, nx, nc)

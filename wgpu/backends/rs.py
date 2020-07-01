@@ -574,30 +574,6 @@ class GPUDevice(base.GPUDevice):
         # Return wrapped buffer
         return GPUBuffer(label, id, self, size, usage, "unmapped")
 
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    def create_buffer_mapped(
-        self,
-        *,
-        label="",
-        size: int,
-        usage: "GPUBufferUsageFlags",
-        mapped_at_creation: bool = False,
-    ):
-        size = int(size)
-        # Create a buffer object, and get a memory pointer to its mapped memory
-        c_label = ffi.new("char []", label.encode())
-        struct = new_struct_p(
-            "WGPUBufferDescriptor *", label=c_label, size=size, usage=usage
-        )
-        buffer_memory_pointer = ffi.new("uint8_t * *")
-        id = _lib.wgpu_device_create_buffer_mapped(
-            self._internal, struct, buffer_memory_pointer
-        )
-        address = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
-        # Return buffer + memoryview
-        buf = GPUBuffer(label, id, self, size, usage, "mapped at creation")
-        return buf, _get_memoryview_from_address(address, size)
-
     def create_buffer_with_data(self, *, label="", data, usage: "GPUBufferUsageFlags"):
         # Get a memoryview of the data
         m, src_address = _get_memoryview_and_address(data)
@@ -1064,23 +1040,50 @@ class GPUDevice(base.GPUDevice):
 
 
 class GPUBuffer(base.GPUBuffer):
-    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
-    def map(self, mode, offset=0, size=0):
+
+    # def map(self, mode, offset=0, size=0):
+    #     if not size:
+    #         size = self.size - offset
+    #     if not (offset == 0 and size == self.size):  # no-cover
+    #         raise ValueError(
+    #             "Cannot (yet) map buffers with nonzero offset and non-full size."
+    #         )
+    #
+    #     if mode == flags.MapMode.READ:
+    #         return self._map_read()
+    #     elif mode == flags.MapMode.WRITE:
+    #         return self._map_write()
+    #     else:  # no-cover
+    #         raise ValueError(f"Invalid MapMode flag: {mode}")
+
+    def read_data(self, offset=0, size=0):
         if not size:
             size = self.size - offset
-        if not (offset == 0 and size == self.size):  # no-cover
-            raise ValueError(
-                "Cannot (yet) map buffers with nonzero offset and non-full size."
-            )
+        assert 0 <= offset < self.size
+        assert 0 <= size <= (self.size - offset)
 
-        if mode == flags.MapMode.READ:
-            return self._map_read()
-        elif mode == flags.MapMode.WRITE:
-            return self._map_write()
-        else:  # no-cover
-            raise ValueError(f"Invalid MapMode flag: {mode}")
+        mapped_mem = self._map_read(offset, size)
+        new_mem = memoryview((ctypes.c_uint8 * mapped_mem.nbytes)()).cast("B")
+        new_mem[:] = mapped_mem
+        self._unmap()
+        return new_mem
 
-    def _map_read(self):
+    async def read_data_async(self, offset=0, size=0):
+        return self.read_data(offset, size)
+
+    def write_data(self, data, offset=0):
+        m = memoryview(data).cast("B")
+        if not m.contiguous:  # no-cover
+            raise ValueError("The given buffer data is not contiguous")
+        size = m.nbytes
+        assert 0 <= offset < self.size
+        assert 0 <= size <= (self.size - offset)
+
+        mapped_mem = self._map_write(offset, size)
+        mapped_mem[:] = m
+        self._unmap()
+
+    def _map_read(self, start, size):
         data = None
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
@@ -1090,23 +1093,22 @@ class GPUBuffer(base.GPUBuffer):
                 address = int(ffi.cast("intptr_t", buffer_data_p))
                 data = _get_memoryview_from_address(address, size)
 
-        start, size = 0, self.size
         _lib.wgpu_buffer_map_read_async(
             self._internal, start, size, _map_read_callback, ffi.NULL
         )
 
         # Let it do some cycles
         self._state = "mapping pending"
+        self._map_mode = flags.MapMode.READ
         _lib.wgpu_device_poll(self._device._internal, True)
 
         if data is None:  # no-cover
             raise RuntimeError("Could not read buffer data.")
 
         self._state = "mapped"
-        self._map_mode = flags.MapMode.READ
-        return memoryview(data)
+        return data
 
-    def _map_write(self):
+    def _map_write(self, start, size):
         data = None
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, uint8_t*, uint8_t*)")
@@ -1116,7 +1118,6 @@ class GPUBuffer(base.GPUBuffer):
                 address = int(ffi.cast("intptr_t", buffer_data_p))
                 data = _get_memoryview_from_address(address, size)
 
-        start, size = 0, self.size
         _lib.wgpu_buffer_map_write_async(
             self._internal, start, size, _map_write_callback, ffi.NULL
         )
@@ -1132,17 +1133,10 @@ class GPUBuffer(base.GPUBuffer):
         self._map_mode = flags.MapMode.WRITE
         return memoryview(data)
 
-    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
-    async def map_async(self, mode, offset=0, size=0):
-        # todo: actually make this async
-        return self.map_read(mode, offset, size)  # no-cover
-
-    # wgpu.help('bufferunmap', dev=True)
-    def unmap(self):
-        if self._map_mode:
-            _lib.wgpu_buffer_unmap(self._internal)
-            self._state = "unmapped"
-            self._map_mode = 0
+    def _unmap(self):
+        _lib.wgpu_buffer_unmap(self._internal)
+        self._state = "unmapped"
+        self._map_mode = 0
 
     # wgpu.help('bufferdestroy', dev=True)
     def destroy(self):

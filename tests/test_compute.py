@@ -178,7 +178,7 @@ def test_compute_indirect():
     device.default_queue.submit([command_encoder.finish()])
 
     # Read result
-    out1 = in1.__class__.from_buffer(buffer2.map(wgpu.MapMode.READ))
+    out1 = in1.__class__.from_buffer(buffer2.read_data())
     in2 = list(in1)[:]
     out2 = [i - 1 for i in out1]
     # The shader was applied to all but the last two elements

@@ -207,29 +207,8 @@ class GPUDevice(GPUObject):
             label (str): A human readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (BufferUsageFlags): The ways in which this buffer will be used.
-            mapped_at_creation (bool): Must be False.
-        """
-        raise NotImplementedError()
-
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffermapped', dev=True)
-    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    def create_buffer_mapped(
-        self,
-        *,
-        label="",
-        size: int,
-        usage: "GPUBufferUsageFlags",
-        mapped_at_creation: bool = False,
-    ):
-        """ Create a :class:`GPUBuffer` object. Returns a tuple with
-        the buffer object and a memoryview representing the mapped
-        memory. Don't forget to unmap the buffer before usage.
-
-        Arguments:
-            label (str): A human readable label. Optional.
-            size (int): The size of the buffer in bytes.
-            usage (BufferUsageFlags): The ways in which this buffer will be used.
-            mapped_at_creation (bool): This value is ignored.
+            mapped_at_creation (bool): Must be False, because we currently
+                use read_data() and write_data() instead of buffer mapping.
         """
         raise NotImplementedError()
 
@@ -662,50 +641,77 @@ class GPUBuffer(GPUObject):
         """
         return self._usage
 
-    @property
-    def state(self):
-        """ The current state of the GPUBuffer:
-
-        * "mapped" when the buffer is available for CPU operations.
-        * "mapped at creation" where the GPUBuffer was just created and
-          is available for CPU operations on its content.
-        * "mapping pending" where the GPUBuffer is being made available
-          for CPU operations on its content.
-        * "unmapped" when the buffer is available for GPU operations.
-        * "destroyed", when the buffer is no longer available for any
-          operations except destroy.
-        """
-        return self._state
-
-    @property
-    def map_mode(self):
-        """ The map mode flag. Zero if unmapped.
-        """
-        return self._map_mode
-
+    # WebGPU specifies an API to sync data with the buffer via mapping.
+    # The idea is to (async) request mapped data, read from / write to
+    # this memory (using getMappedRange), and then unmap.  A buffer
+    # must be unmapped before it can be used in a pipeline.
+    #
+    # This means that the mapped memory is reclaimed (i.e. invalid)
+    # when unmap is called, and that whatever object we expose the
+    # memory with to the user, must be set to a state where it can no
+    # longer be used. I currently can't think of a good way to do this.
+    #
+    # So instead, we can use mapping internally to allow reading and
+    # writing but not expose it via the public API. The only
+    # disadvantage (AFAIK) is that there could be use-cases where a
+    # memory copy could be avoided when using mapping.
+    #
+    #
     # IDL specifies getMappedRange, but there is no equivalent in wgpu yet
+    #
+    # @property
+    # def state(self):
+    #     """ The current state of the GPUBuffer:
+    #
+    #     * "mapped" when the buffer is available for CPU operations.
+    #     * "mapped at creation" where the GPUBuffer was just created and
+    #       is available for CPU operations on its content.
+    #     * "mapping pending" where the GPUBuffer is being made available
+    #       for CPU operations on its content.
+    #     * "unmapped" when the buffer is available for GPU operations.
+    #     * "destroyed", when the buffer is no longer available for any
+    #       operations except destroy.
+    #     """
+    #     return self._state
+    #
+    # @property
+    # def map_mode(self):
+    #     """ The map mode flag. Zero if unmapped.
+    #     """
+    #     return self._map_mode
+    #
+    # def map(self, mode, offset=0, size=0):
+    #     """ Make the buffer memory accessable to the CPU for reading or writing.
+    #     If size is zero, the remaining size (after offset) is used.
+    #     Returns the mapped memory as a memoryview, which can be mapped
+    #     to e.g. a ctypes array or numpy array.
+    #     """
+    #     raise NotImplementedError()
+    #
+    # async def map_async(self, mode, offset=0, size=0):
+    #     """ Async version of ``map()``.
+    #     """
+    #     raise NotImplementedError()
+    #
+    # def unmap(self):
+    #     """ Unmap the buffer so that it can be used in a GPU pipeline.
+    #     """
+    #     raise NotImplementedError()
 
-    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
-    # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def map(self, mode, offset=0, size=0):
-        """ Make the buffer memory accessable to the CPU for reading or writing.
+    def read_data(self, offset=0, size=0):
+        """ Read buffer data. Returns the mapped memory as a memoryview,
+        which can be mapped to e.g. a ctypes array or numpy array.
         If size is zero, the remaining size (after offset) is used.
-        Returns the mapped memory as a memoryview, which can be mapped
-        to e.g. a ctypes array or numpy array.
         """
         raise NotImplementedError()
 
-    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
-    # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    async def map_async(self, mode, offset=0, size=0):
-        """ Async version of ``map()``.
+    async def read_data_async(self, offset=0, size=0):
+        """ Asnc version of read_data().
         """
-        raise NotImplementedError()
 
-    # wgpu.help('bufferunmap', dev=True)
-    # IDL: void unmap();
-    def unmap(self):
-        """ Unmap the buffer so that it can be used in a GPU pipeline.
+    def write_data(self, data, offset=0):
+        """ Write data to the buffer. The data can be any object
+        supporting the buffer protocol.
         """
         raise NotImplementedError()
 

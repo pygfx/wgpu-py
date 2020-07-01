@@ -98,7 +98,5 @@ compute_pass.end_pass()
 device.default_queue.submit([command_encoder.finish()])
 
 # Read result
-result = buffer2.map(wgpu.MapMode.READ).cast("i")
-buffer2.unmap()
-
+result = buffer2.read_data().cast("i")
 print(result.tolist())

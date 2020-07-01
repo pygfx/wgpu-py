@@ -44,10 +44,7 @@ def download_from_texture(device, texture, data_type, nx, ny, nz):
     device.default_queue.submit([command_encoder.finish()])
 
     # Download
-    mapped_array = buffer.map(wgpu.MapMode.READ)
-    buffer.unmap()
-    data = data_type.from_buffer(mapped_array)
-    return data
+    return data_type.from_buffer(buffer.read_data())
 
 
 def render_to_texture(
@@ -181,8 +178,8 @@ def render_to_texture(
     device.default_queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer - numpy is much easier to work with
-    array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
-    data = (ctypes.c_uint8 * 4 * nx * ny).from_buffer(array_uint8)
+    mem = buffer.read_data()  # slow, can also be done async
+    data = (ctypes.c_uint8 * 4 * nx * ny).from_buffer(mem)
     return np.frombuffer(data, dtype=np.uint8).reshape(size[0], size[1], 4)
 
 

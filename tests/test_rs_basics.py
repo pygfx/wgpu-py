@@ -167,35 +167,33 @@ def test_buffer_init1():
     buf = device.create_buffer_with_data(data=data1, usage=wgpu.BufferUsage.MAP_READ)
 
     # Download from buffer to CPU
-    data2 = buf.map(wgpu.MapMode.READ).tobytes()
-    buf.unmap()
+    data2 = buf.read_data()
     assert data1 == data2
 
 
-@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_buffer_init2():
-    # Initializing a buffer as mapped, to directly set the data
-
-    device = wgpu.utils.get_default_device()
-    data1 = b"abcdefghijkl"
-
-    # Create buffer
-    buf, data2 = device.create_buffer_mapped(
-        size=len(data1), usage=wgpu.BufferUsage.MAP_READ
-    )
-    data2[:] = data1
-    buf.unmap()
-
-    # Download from buffer to CPU
-    data3 = buf.map(wgpu.MapMode.READ).tobytes()
-    buf.unmap()
-    assert data1 == data3
+# @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+# def test_buffer_init2():
+#     # Initializing a buffer as mapped, to directly set the data
+#
+#     device = wgpu.utils.get_default_device()
+#     data1 = b"abcdefghijkl"
+#
+#     # Create buffer
+#     buf, data2 = device.create_buffer_mapped(
+#         size=len(data1), usage=wgpu.BufferUsage.MAP_READ
+#     )
+#     data2[:] = data1
+#     buf.unmap()
+#
+#     # Download from buffer to CPU
+#     data3 = buf.map(wgpu.MapMode.READ).tobytes()
+#     buf.unmap()
+#     assert data1 == data3
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_buffer_init3():
-    # Initializing a buffer unmapped, then mapping it.
-    # Note the extra usage that we need in this case.
+    # Initializing an empty buffer, then writing to it
 
     device = wgpu.utils.get_default_device()
     data1 = b"abcdefghijkl"
@@ -211,14 +209,11 @@ def test_buffer_init3():
         size=len(data1), usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.MAP_WRITE
     )
 
-    # Map it
-    data2 = buf.map(wgpu.MapMode.WRITE)
-    data2[:] = data1
-    buf.unmap()
+    # Write data to it
+    buf.write_data(data1)
 
     # Download from buffer to CPU
-    data3 = buf.map(wgpu.MapMode.READ).tobytes()
-    buf.unmap()
+    data3 = buf.read_data()
     assert data1 == data3
 
 
@@ -269,12 +264,13 @@ def test_do_a_copy_roundtrip():
     assert tex2.create_view().texture is tex2
 
     # Upload from CPU to buffer
-    assert buf1.state == "unmapped"
-    mapped_data = buf1.map(wgpu.MapMode.WRITE)
-    assert buf1.state == "mapped"
-    mapped_data.cast("f")[:] = data1
-    buf1.unmap()
-    assert buf1.state == "unmapped"
+    # assert buf1.state == "unmapped"
+    # mapped_data = buf1.map(wgpu.MapMode.WRITE)
+    # assert buf1.state == "mapped"
+    # mapped_data.cast("f")[:] = data1
+    # buf1.unmap()
+    # assert buf1.state == "unmapped"
+    buf1.write_data(data1)
 
     # Copy from buffer to texture
     command_encoder = device.create_command_encoder()
@@ -306,16 +302,17 @@ def test_do_a_copy_roundtrip():
     device.default_queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
-    assert buf5.state == "unmapped"
-    assert buf5.map_mode == 0
-    mapped_data = buf5.map(wgpu.MapMode.READ)  # a memoryview
-    assert buf5.state == "mapped"
-    assert buf5.map_mode == wgpu.MapMode.READ
-    buf5.unmap()
-    assert buf5.state == "unmapped"
+    # assert buf5.state == "unmapped"
+    # assert buf5.map_mode == 0
+    # result_data = buf5.map(wgpu.MapMode.READ)  # a memoryview
+    # assert buf5.state == "mapped"
+    # assert buf5.map_mode == wgpu.MapMode.READ
+    # buf5.unmap()
+    # assert buf5.state == "unmapped"
+    result_data = buf5.read_data()
 
     # CHECK!
-    data2 = np.frombuffer(mapped_data, dtype=np.float32)
+    data2 = np.frombuffer(result_data, dtype=np.float32)
     assert np.all(data1 == data2)
 
     # Do another round-trip, but now using a single pass
@@ -323,15 +320,16 @@ def test_do_a_copy_roundtrip():
     assert np.all(data1 != data3)
 
     # Upload from CPU to buffer
-    assert buf1.state == "unmapped"
-    assert buf1.map_mode == 0
-    mapped_data = buf1.map(wgpu.MapMode.WRITE)
-    assert buf1.state == "mapped"
-    assert buf1.map_mode == wgpu.MapMode.WRITE
-    mapped_data.cast("f")[:] = data3
-    buf1.unmap()
-    assert buf1.state == "unmapped"
-    assert buf1.map_mode == 0
+    # assert buf1.state == "unmapped"
+    # assert buf1.map_mode == 0
+    # mapped_data = buf1.map(wgpu.MapMode.WRITE)
+    # assert buf1.state == "mapped"
+    # assert buf1.map_mode == wgpu.MapMode.WRITE
+    # mapped_data.cast("f")[:] = data3
+    # buf1.unmap()
+    # assert buf1.state == "unmapped"
+    # assert buf1.map_mode == 0
+    buf1.write_data(data3)
 
     # Copy from buffer to texture
     command_encoder = device.create_command_encoder()
@@ -358,14 +356,15 @@ def test_do_a_copy_roundtrip():
     device.default_queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
-    assert buf5.state == "unmapped"
-    mapped_data = buf5.map(wgpu.MapMode.READ)  # always an uint8 array
-    assert buf5.state == "mapped"
-    buf5.unmap()
-    assert buf5.state == "unmapped"
+    # assert buf5.state == "unmapped"
+    # result_data = buf5.map(wgpu.MapMode.READ)  # always an uint8 array
+    # assert buf5.state == "mapped"
+    # buf5.unmap()
+    # assert buf5.state == "unmapped"
+    result_data = buf5.read_data()
 
     # CHECK!
-    data4 = np.frombuffer(mapped_data, dtype=np.float32)
+    data4 = np.frombuffer(result_data, dtype=np.float32)
     assert np.all(data3 == data4)
 
 
@@ -417,8 +416,7 @@ def test_write_buffer1():
     device.default_queue.submit([])
 
     # Download from buffer to CPU
-    data2 = buf4.map(wgpu.MapMode.READ).cast("f")
-    buf4.unmap()
+    data2 = buf4.read_data().cast("f")
     assert data1 == data2
 
     # Yes, you can compare memoryviews! Check this:
@@ -456,9 +454,7 @@ def test_write_buffer2():
     device.default_queue.submit([])
 
     # Download from buffer to CPU
-    mapped_data = buf4.map(wgpu.MapMode.READ)
-    data2 = data1.__class__.from_buffer(mapped_data)
-    buf4.unmap()
+    data2 = data1.__class__.from_buffer(buf4.read_data())
     assert iters_equal(data0, data2)
 
 
@@ -478,9 +474,7 @@ def test_write_buffer3():
     device.default_queue.submit([])
 
     # Download from buffer to CPU
-    mapped_data = buf4.map(wgpu.MapMode.READ)
-    buf4.unmap()
-    assert mapped_data.tobytes() == b"abcdefghijkl"
+    assert buf4.read_data().tobytes() == b"abcdefghijkl"
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -523,8 +517,7 @@ def test_write_texture1():
     device.default_queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
-    data2 = buf4.map(wgpu.MapMode.READ).cast("f")
-    buf4.unmap()
+    data2 = buf4.read_data().cast("f")
     assert data1 == data2
 
 
@@ -577,9 +570,7 @@ def test_write_texture2():
     device.default_queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
-    mapped_data = buf4.map(wgpu.MapMode.READ)
-    data2 = data1.__class__.from_buffer(mapped_data)
-    buf4.unmap()
+    data2 = data1.__class__.from_buffer(buf4.read_data())
     assert iters_equal(data0, data2)
 
 
