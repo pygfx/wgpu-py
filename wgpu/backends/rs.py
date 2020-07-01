@@ -1214,7 +1214,7 @@ class GPUTexture(base.GPUTexture):
             )
             id = _lib.wgpu_texture_create_view(self._internal, struct)
 
-        return base.GPUTextureView(label, id, self._device, self)
+        return base.GPUTextureView(label, id, self._device, self, self.texture_size)
 
     # wgpu.help('texturedestroy', dev=True)
     def destroy(self):
@@ -1811,19 +1811,20 @@ class GPUSwapChain(base.GPUSwapChain):
         # Get the current texture view, and make sure it is presented when done
         self._create_native_swap_chain_if_needed()
         sc_output = _lib.wgpu_swap_chain_get_next_texture(self._internal)
-        if sc_output.status == _lib.WGPUSwapChainStatus_Good:
+        status, view_id = sc_output.status, sc_output.view_id
+        if status == _lib.WGPUSwapChainStatus_Good:
             pass
-        elif sc_output.status == _lib.WGPUSwapChainStatus_Suboptimal:  # no-cover
+        elif status == _lib.WGPUSwapChainStatus_Suboptimal:  # no-cover
             if not getattr(self, "_warned_swap_chain_suboptimal", False):
                 logger.warning(f"Swap chain status of {self} is suboptimal")
                 self._warned_swap_chain_suboptimal = True
         else:  # no-cover
-            status = sc_output.status
             status_str = swap_chain_status_map.get(status, "")
             raise RuntimeError(
                 f"Swap chain status is not good: {status_str} ({status})"
             )
-        return base.GPUTextureView("swap_chain", sc_output.view_id, self._device, None)
+        size = self._surface_size[0], self._surface_size[1], 1
+        return base.GPUTextureView("swap_chain", view_id, self._device, None, size)
 
     def __exit__(self, type, value, tb):
         # Present the current texture

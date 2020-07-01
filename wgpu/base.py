@@ -824,9 +824,16 @@ class GPUTextureView(GPUObject):
     Create a texture view using :func:`GPUTexture.create_view`.
     """
 
-    def __init__(self, label, internal, device, texture):
+    def __init__(self, label, internal, device, texture, size):
         super().__init__(label, internal, device)
         self._texture = texture
+        self._size = size
+
+    @property
+    def size(self):
+        """ The texture size (as a 3-tuple).
+        """
+        return self._size
 
     @property
     def texture(self):
