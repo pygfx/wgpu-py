@@ -14,7 +14,7 @@ if not can_use_wgpu_lib:
     skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
-def test_compute_0_1():
+def test_compute_0_1_ctype():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", i32), out: ("buffer", 0, Array(i32)),
@@ -33,6 +33,45 @@ def test_compute_0_1():
     assert isinstance(out[0], ctypes.Array)
     out0 = (c_int32 * 20).from_buffer(out[0])  # cast (a view in np)
     assert iters_equal(out0, range(20))
+
+
+def test_compute_0_1_tuple():
+    @python2shader
+    def compute_shader(
+        index: ("input", "GlobalInvocationId", i32), out: ("buffer", 0, Array(i32)),
+    ):
+        out[index] = index
+
+    out = compute_with_buffers({}, {0: (100, "i")}, compute_shader)
+    assert isinstance(out, dict) and len(out) == 1
+    assert isinstance(out[0], memoryview)
+    assert out[0].tolist() == list(range(100))
+
+
+def test_compute_0_1_str():
+    @python2shader
+    def compute_shader(
+        index: ("input", "GlobalInvocationId", i32), out: ("buffer", 0, Array(i32)),
+    ):
+        out[index] = index
+
+    out = compute_with_buffers({}, {0: "100xi"}, compute_shader)
+    assert isinstance(out, dict) and len(out) == 1
+    assert isinstance(out[0], memoryview)
+    assert out[0].tolist() == list(range(100))
+
+
+def test_compute_0_1_int():
+    @python2shader
+    def compute_shader(
+        index: ("input", "GlobalInvocationId", i32), out: ("buffer", 0, Array(i32)),
+    ):
+        out[index] = index
+
+    out = compute_with_buffers({}, {0: 400}, compute_shader)
+    assert isinstance(out, dict) and len(out) == 1
+    assert isinstance(out[0], memoryview)
+    assert out[0].cast("i").tolist() == list(range(100))
 
 
 def test_compute_1_3():
@@ -80,11 +119,7 @@ def test_compute_indirect():
     cshader = device.create_shader_module(code=compute_shader)
 
     # Create input buffer and upload data to in
-    buffer1 = device.create_buffer(
-        mapped_at_creation=True, size=ctypes.sizeof(in1), usage=wgpu.BufferUsage.STORAGE
-    )
-    ctypes.memmove(buffer1.mapping, in1, ctypes.sizeof(in1))
-    buffer1.unmap()
+    buffer1 = device.create_buffer_with_data(data=in1, usage=wgpu.BufferUsage.STORAGE)
 
     # Create output buffer
     buffer2 = device.create_buffer(
@@ -94,13 +129,9 @@ def test_compute_indirect():
 
     # Create buffer to hold the dispatch parameters for the indirect call
     params = (ctypes.c_int32 * 3)(n - 2, 1, 1)  # note the minus 2!
-    buffer3 = device.create_buffer(
-        mapped_at_creation=True,
-        size=ctypes.sizeof(params),
-        usage=wgpu.BufferUsage.INDIRECT,
+    buffer3 = device.create_buffer_with_data(
+        data=params, usage=wgpu.BufferUsage.INDIRECT,
     )
-    ctypes.memmove(buffer3.mapping, params, ctypes.sizeof(params))
-    buffer3.unmap()
 
     # Setup layout and bindings
     binding_layouts = [
@@ -147,7 +178,7 @@ def test_compute_indirect():
     device.default_queue.submit([command_encoder.finish()])
 
     # Read result
-    out1 = in1.__class__.from_buffer(buffer2.map(wgpu.MapMode.READ))
+    out1 = in1.__class__.from_buffer(buffer2.read_data())
     in2 = list(in1)[:]
     out2 = [i - 1 for i in out1]
     # The shader was applied to all but the last two elements
@@ -186,6 +217,15 @@ def test_compute_fails():
         compute_with_buffers({0: in1}, {"0": c_int32 * 100}, compute_shader)
     with raises(TypeError):  # output_arrays value not a ctypes Array type
         compute_with_buffers({0: in1}, {0: "foobar"}, compute_shader)
+
+    with raises(ValueError):  # output_arrays format invalid
+        compute_with_buffers({0: in1}, {0: "10xfoo"}, compute_shader)
+    with raises(ValueError):  # output_arrays shape invalid
+        compute_with_buffers({0: in1}, {0: ("i",)}, compute_shader)
+    with raises(ValueError):  # output_arrays shape invalid
+        compute_with_buffers({0: in1}, {0: (0, "i",)}, compute_shader)
+    with raises(ValueError):  # output_arrays shape invalid
+        compute_with_buffers({0: in1}, {0: (-1, "i",)}, compute_shader)
 
     with raises(TypeError):  # invalid n
         compute_with_buffers({0: in1}, {0: c_int32 * 100}, compute_shader, n="100")

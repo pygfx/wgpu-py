@@ -13,16 +13,20 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     using storage buffer objects.
 
     Parameters:
-        input_arrays (dict): A dict mapping int bindings to ctypes arrays.
-            The type of the array does not need to match the type with which
-            the shader will interpret the buffer data (though it probably
-            makes the code easier to follow).
-        output_arrays (dict): A dict mapping int bindings to ctypes
-            array types. This function uses the given type to determine
-            the buffer size (in bytes), and returns arrays of matching
-            type. Example: ``ctypes.c_float * 20``. If you don't care
-            about the type (e.g. because you re-cast it later), you can
-            just specify the buffer size using ``ctypes.c_ubyte * nbytes``.
+        input_arrays (dict): A dict mapping int bindings to arrays. The array
+            can be anything that supports the buffer protocol, including
+            bytes, memoryviews, ctypes arrays and numpy arrays. The
+            type and shape of the array does not need to match the type
+            with which the shader will interpret the buffer data (though
+            it probably makes your code easier to follow).
+        output_arrays (dict): A dict mapping int bindings to output shapes.
+            If the value is int, it represents the size (in bytes) of
+            the buffer. If the value is a tuple, its last element
+            specifies the format (see below), and the preceding elements
+            specify the shape. These are used to ``cast()`` the
+            memoryview object before it is returned. If the value is a
+            ctypes array type, the result will be cast to that instead
+            of a memoryview.
         shader (bytes, shader-object): The SpirV representing the shader,
             as raw bytes or an object implementing ``to_spirv()``
             (e.g. a pyshader SpirV module).
@@ -31,9 +35,15 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
             the length of the first output array type is used.
 
     Returns:
-        output (dict): A dict mapping int bindings to ctypes arrays. The
-        keys match those of ``output_arrays``, and the arrays are instances
-        of the corresponding array types.
+        output (dict): A dict mapping int bindings to memoryviews.
+
+    The format characters to cast a ``memoryview`` are hard to remember, so
+    here's a refresher:
+
+    * "b" and "B" are signed and unsiged 8-bit ints.
+    * "h" and "H" are signed and unsiged 16-bit ints.
+    * "i" and "I" are signed and unsiged 32-bit ints.
+    * "e" and "f" are 16-bit and 32-bit floats.
     """
 
     # Check input arrays
@@ -42,22 +52,58 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     for key, array in input_arrays.items():
         if not isinstance(key, int):
             raise TypeError("keys of input_arrays must be int.")
-        if not isinstance(array, ctypes.Array):
-            raise TypeError("values of input_arrays must be ctypes arrays.")
+        # Simply wrapping in a memoryview ensures that it supports the buffer protocol
+        memoryview(array)
 
     # Check output arrays
+    output_infos = {}
     if not isinstance(output_arrays, dict) or not output_arrays:
         raise TypeError("output_arrays must be a nonempty dict.")
-    for key, array_type in output_arrays.items():
+    for key, array_descr in output_arrays.items():
         if not isinstance(key, int):
             raise TypeError("keys of output_arrays must be int.")
-        if not (isinstance(array_type, type) and issubclass(array_type, ctypes.Array)):
-            raise TypeError("values of output_arrays must be ctypes array subclasses.")
+        if isinstance(array_descr, str) and "x" in array_descr:
+            array_descr = tuple(array_descr.split("x"))
+        if isinstance(array_descr, int):
+            output_infos[key] = {
+                "length": array_descr,
+                "nbytes": array_descr,
+                "format": "B",
+                "shape": (array_descr,),
+            }
+        elif isinstance(array_descr, tuple):
+            format = array_descr[-1]
+            try:
+                format_size = FORMAT_SIZES[format]
+            except KeyError:
+                raise ValueError(f"Invalid format for output array {key}: {format}")
+            shape = tuple(int(i) for i in array_descr[:-1])
+            if not (shape and all(i > 0 for i in shape)):
+                raise ValueError(f"Invalid shape for output array {key}: {shape}")
+            nbytes = format_size
+            for i in shape:
+                nbytes *= i
+            output_infos[key] = {
+                "length": shape[0],
+                "nbytes": nbytes,
+                "format": format,
+                "shape": shape,
+            }
+        elif isinstance(array_descr, type) and issubclass(array_descr, ctypes.Array):
+            output_infos[key] = {
+                "length": array_descr._length_,
+                "nbytes": ctypes.sizeof(array_descr),
+                "ctypes_array_type": array_descr,
+            }
+        else:
+            raise TypeError(
+                f"Invalid value for output array description: {array_descr}"
+            )
 
     # Get nx, ny, nz from n
     if n is None:
-        array_type = list(output_arrays.values())[0]
-        nx, ny, nz = array_type._length_, 1, 1
+        output_info = list(output_infos.values())[0]
+        nx, ny, nz = output_info["length"], 1, 1
     elif isinstance(n, int):
         nx, ny, nz = int(n), 1, 1
     elif isinstance(n, tuple) and len(n) == 3:
@@ -73,38 +119,31 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
     # Create buffers for input and output arrays
     buffers = {}
-    for binding_index, array in input_arrays.items():
-        # Create the buffer object
-        nbytes = ctypes.sizeof(array)
+    for index, array in input_arrays.items():
         usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_WRITE
-        if binding_index in output_arrays:
+        if index in output_arrays:
             usage |= wgpu.BufferUsage.MAP_READ
-        buffer = device.create_buffer(mapped_at_creation=True, size=nbytes, usage=usage)
-        # Copy data from array to buffer
-        ctypes.memmove(buffer.mapping, array, nbytes)
-        buffer.unmap()
-        # Store
-        buffers[binding_index] = buffer
-    for binding_index, array_type in output_arrays.items():
-        if binding_index in input_arrays:
+        buffer = device.create_buffer_with_data(data=array, usage=usage)
+        buffers[index] = buffer
+    for index, info in output_infos.items():
+        if index in input_arrays:
             continue  # We already have this buffer
-        nbytes = ctypes.sizeof(array_type)
         usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
-        buffers[binding_index] = device.create_buffer(size=nbytes, usage=usage)
+        buffers[index] = device.create_buffer(size=info["nbytes"], usage=usage)
 
     # Create bindings and binding layouts
     bindings = []
     binding_layouts = []
-    for binding_index, buffer in buffers.items():
+    for index, buffer in buffers.items():
         bindings.append(
             {
-                "binding": binding_index,
+                "binding": index,
                 "resource": {"buffer": buffer, "offset": 0, "size": buffer.size},
             }
         )
         binding_layouts.append(
             {
-                "binding": binding_index,
+                "binding": index,
                 "visibility": wgpu.ShaderStage.COMPUTE,
                 "type": wgpu.BindingType.storage_buffer,
                 "has_dynamic_offset": False,
@@ -133,9 +172,21 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
     # Read the current data of the output buffers
     output = {}
-    for binding_index, array_type in output_arrays.items():
-        buffer = buffers[binding_index]
-        array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
-        output[binding_index] = array_type.from_buffer(array_uint8)
+    for index, info in output_infos.items():
+        buffer = buffers[index]
+        m = buffer.read_data()  # slow, can also be done async
+        if "ctypes_array_type" in info:
+            output[index] = info["ctypes_array_type"].from_buffer(m)
+        else:
+            output[index] = m.cast(info["format"], shape=info["shape"])
 
     return output
+
+
+FORMAT_SIZES = {"b": 1, "B": 1, "h": 2, "H": 2, "i": 4, "I": 4, "e": 2, "f": 4}
+
+# It's tempting to allow for other formats, like "int32" and "f4", but
+# users who like numpy will simply specify the number of bytes and
+# convert the result. Users who will work with the memoryview directly
+# should not be confused with other formats than memoryview.cast()
+# normally  supports.

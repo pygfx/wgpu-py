@@ -3,7 +3,6 @@ This example renders a simple textured rotating cube.
 """
 
 import time
-import ctypes
 
 import glfw
 import wgpu
@@ -97,26 +96,14 @@ uniform_data = np.asarray(shadertype_as_ctype(uniform_type)())
 # %% Create resource objects (buffers, textures, samplers)
 
 # Create vertex buffer, and upload data
-vertex_buffer = device.create_buffer(
-    mapped_at_creation=True, size=vertex_data.nbytes, usage=wgpu.BufferUsage.VERTEX
+vertex_buffer = device.create_buffer_with_data(
+    data=vertex_data, usage=wgpu.BufferUsage.VERTEX
 )
-ctypes.memmove(
-    ctypes.addressof(vertex_buffer.mapping),
-    vertex_data.ctypes.data,
-    vertex_data.nbytes,
-)
-vertex_buffer.unmap()
-
 
 # Create index buffer, and upload data
-index_buffer = device.create_buffer(
-    mapped_at_creation=True, size=index_data.nbytes, usage=wgpu.BufferUsage.INDEX
+index_buffer = device.create_buffer_with_data(
+    data=index_data, usage=wgpu.BufferUsage.INDEX
 )
-ctypes.memmove(
-    ctypes.addressof(index_buffer.mapping), index_data.ctypes.data, index_data.nbytes,
-)
-index_buffer.unmap()
-
 
 # Create uniform buffer - data is uploaded each frame
 uniform_buffer = device.create_buffer(
@@ -134,13 +121,9 @@ texture = device.create_texture(
     sample_count=1,
 )
 texture_view = texture.create_view()
-tmp_buffer = device.create_buffer(
-    mapped_at_creation=True, size=texture_data.nbytes, usage=wgpu.BufferUsage.COPY_SRC
+tmp_buffer = device.create_buffer_with_data(
+    data=texture_data, usage=wgpu.BufferUsage.COPY_SRC
 )
-ctypes.memmove(
-    ctypes.addressof(tmp_buffer.mapping), texture_data.ctypes.data, texture_data.nbytes,
-)
-vertex_buffer.unmap()
 command_encoder = device.create_command_encoder()
 command_encoder.copy_buffer_to_texture(
     {
@@ -354,13 +337,9 @@ def draw_frame():
 
     # Upload the uniform struct
     uniform_nbytes = uniform_data.nbytes
-    tmp_buffer = device.create_buffer(
-        mapped_at_creation=True, size=uniform_nbytes, usage=wgpu.BufferUsage.COPY_SRC
+    tmp_buffer = device.create_buffer_with_data(
+        data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
     )
-    ctypes.memmove(
-        ctypes.addressof(tmp_buffer.mapping), uniform_data.ctypes.data, uniform_nbytes
-    )
-    tmp_buffer.unmap()
 
     with swap_chain as current_texture_view:
         command_encoder = device.create_command_encoder()

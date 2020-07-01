@@ -7,23 +7,34 @@ be precise about tracking changes to the public API.
 
 ### v0.3.0
 
+With this update we're using a later release of wgpu-native, and follow changes
+is the WebGPU spec. Further, we've removed the need for ctypes to communicate
+data arrays. Instead, wgpu-py can consume any object that supports the buffer
+protocol, and it returns `memoryview` objects.
+
 Additions and improvements:
 
 * Targets wgpu-native v.0.5.2. The first release build from the wgpu-native repo itself.
 * The texture object has more properties to query the parameters that it was created with.
 * The texture view object has a `texture` property.
-* The buffer object has a property `map_mode`.
 * The render and compute pipeline objects have a property `layout` and a method `get_bind_group_layout()`.
 * The shader object got a `compilation_info` method, but this does not do anything yet.
 * The `create_shader_module()` has a `source_map` attribute, but this is yet unused.
+* Log messages from wgpu-native (Rust) are now injected into Python's logger.
+* The `queue` object got two new methods `write_buffer` and `write_texture`.
 
 API changes:
 
-* The buffer `map_read` and `map_write` methods have been replaced with `map`,
-  where the first argument is e.g. `wgpu.MapMode.READ`.
-* The device `create_buffer_mapped` is removed, instead `create_buffer`
-  has a `mapped_at_creation` argument.
+* The buffer no longer exposes a data mapping API. Instead it has functions
+  `read_data()` and `write_data()`
+* The device `create_buffer_mapped` method is similarly removed. The
+  device `create_buffer_with_data` is added as a convenience function.
 * The `array_layer` in copy operations involving a texture is removed.
+* The `utils.compute_with_buffers` function now accepts *any* data dat supports
+  the buffer protocol (not just ctypes arrays). The outputs are `memoryview` objects,
+  which shape and format can be specified. When a ctypes array type is specified,
+  the output will be an instance of that type. This means that these changes are
+  fully backwards compatible.
 
 
 ### v0.2.0

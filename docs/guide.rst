@@ -54,6 +54,36 @@ be between 0.0 and 1.0 inclusive. Vertices out of this range in NDC
 will not introduce any errors, but they will be clipped.
 
 
+Communicating array data
+------------------------
+
+The wgpu-py library makes no assumptions about how you store your data.
+In places where you provide data to the API, it can consume any data
+that supports the buffer protocol, which includes ``bytes``,
+``bytearray``, ``memoryview``, ctypes arrays, and numpy arrays.
+
+In places where data is returned, the API returns a ``memoryview``
+object. These objects provide a quite versatile view on ndarray data:
+
+.. code-block:: py
+
+    # One could, for instance read the content of a buffer
+    m = buffer.read_data()
+    # Cast it to float32
+    m = m.cast("f")
+    # Index it
+    m[0]
+    # Show the content
+    print(m.tolist())
+
+Chances are that you prefer Numpy. Converting the ``memoryview`` to a
+numpy array (without copying the data) is easy:
+
+.. code-block:: py
+
+    array = np.frombuffer(m, np.float32)
+
+
 Debugging
 ---------
 

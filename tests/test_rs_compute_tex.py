@@ -425,11 +425,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         | wgpu.BufferUsage.COPY_SRC
         | wgpu.BufferUsage.COPY_DST
     )
-    buffer = device.create_buffer(
-        mapped_at_creation=True, size=nbytes, usage=buffer_usage
-    )
-    ctypes.memmove(buffer.mapping, data1, nbytes)
-    buffer.unmap()
+    buffer = device.create_buffer_with_data(data=data1, usage=buffer_usage)
     assert buffer.usage == buffer_usage
 
     # Define bindings
@@ -505,8 +501,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     device.default_queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer
-    array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
-    data2 = data1.__class__.from_buffer(array_uint8)
+    data2 = data1.__class__.from_buffer(buffer.read_data())
 
     # Numpy arrays are easier to work with
     a1 = np.ctypeslib.as_array(data1).reshape(nz, ny, nx, nc)

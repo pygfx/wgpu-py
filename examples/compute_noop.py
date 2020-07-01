@@ -3,8 +3,6 @@ Example compute shader that does ... nothing but copy a value from one
 buffer into another.
 """
 
-import ctypes
-
 import wgpu
 import wgpu.backends.rs  # Select backend
 from wgpu.utils import compute_with_buffers  # Convenience function
@@ -23,33 +21,33 @@ def compute_shader(
     data2[index] = data1[index]
 
 
-# Create input data as a ctypes array
+# Create input data as a memoryview
 n = 20
-IntArrayType = ctypes.c_int32 * n
-data = IntArrayType(*range(n))
+data = memoryview(bytearray(n * 4)).cast("i")
+for i in range(n):
+    data[i] = i
 
 
-# %% The short version, using ctypes arrays
+# %% The short version, using memoryview
 
 # The first arg is the input data, per binding
 # The second arg are the ouput types, per binding
-out = compute_with_buffers({0: data}, {1: IntArrayType}, compute_shader, n=n)
+out = compute_with_buffers({0: data}, {1: (n, "i")}, compute_shader, n=n)
 
 # The result is a dict matching the output types
 # Select data from buffer at binding 1
 result = out[1]
-print(result[:])
+print(result.tolist())
 
 
 # %% The short version, using numpy
 
 # import numpy as np
 #
-# numpy_data = np.arange(n, dtype=np.int32)
-#
-# data = IntArrayType.from_address(numpy_data.ctypes.data)
-# out = compute_with_buffers({0: data}, {1: IntArrayType}, compute_shader, n=n)
-# print(np.frombuffer(out[1], dtype=np.int32))
+# numpy_data = np.frombuffer(data, np.int32)
+# out = compute_with_buffers({0: numpy_data}, {1: numpy_data.nbytes}, compute_shader, n=n)
+# result = np.frombuffer(out[1], dtype=np.int32)
+# print(result)
 
 
 # %% The long version using the wgpu API
@@ -59,21 +57,10 @@ device = wgpu.utils.get_default_device()
 cshader = device.create_shader_module(code=compute_shader)
 
 # Create buffer objects, input buffer is mapped.
-buffer1 = device.create_buffer(
-    mapped_at_creation=True, size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE
-)
+buffer1 = device.create_buffer_with_data(data=data, usage=wgpu.BufferUsage.STORAGE)
 buffer2 = device.create_buffer(
-    size=ctypes.sizeof(data), usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
+    size=data.nbytes, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
 )
-
-# Cast buffer array
-array1 = IntArrayType.from_buffer(buffer1.mapping)
-# With Numpy this would be:
-# array1 = np.frombuffer(buffer1.mapping, np.int32)
-
-# Copy data and then unmap
-array1[:] = data
-buffer1.unmap()
 
 # Setup layout and bindings
 binding_layouts = [
@@ -111,9 +98,5 @@ compute_pass.end_pass()
 device.default_queue.submit([command_encoder.finish()])
 
 # Read result
-result = buffer2.map(wgpu.MapMode.READ)
-result = IntArrayType.from_buffer(result)  # cast
-print(result[:])
-
-# With Numpy this would be:
-# print(np.frombuffer(buffer2.mapRead(), np.int32))
+result = buffer2.read_data().cast("i")
+print(result.tolist())

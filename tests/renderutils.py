@@ -15,13 +15,7 @@ def upload_to_texture(device, texture, data, nx, ny, nz):
     bpp = nbytes // (nx * ny * nz)
 
     # Create a buffer to get the data into the GPU
-    buffer = device.create_buffer(
-        mapped_at_creation=True, size=nbytes, usage=wgpu.BufferUsage.COPY_SRC
-    )
-
-    # Upload to buffer
-    ctypes.memmove(buffer.mapping, data, nbytes)
-    buffer.unmap()
+    buffer = device.create_buffer_with_data(data=data, usage=wgpu.BufferUsage.COPY_SRC)
 
     # Copy to texture (rows_per_image must only be nonzero for 3D textures)
     command_encoder = device.create_command_encoder()
@@ -50,10 +44,7 @@ def download_from_texture(device, texture, data_type, nx, ny, nz):
     device.default_queue.submit([command_encoder.finish()])
 
     # Download
-    mapped_array = buffer.map(wgpu.MapMode.READ)
-    data = data_type.from_buffer(mapped_array)
-    buffer.unmap()
-    return data
+    return data_type.from_buffer(buffer.read_data())
 
 
 def render_to_texture(
@@ -187,8 +178,8 @@ def render_to_texture(
     device.default_queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer - numpy is much easier to work with
-    array_uint8 = buffer.map(wgpu.MapMode.READ)  # slow, can also be done async
-    data = (ctypes.c_uint8 * 4 * nx * ny).from_buffer(array_uint8)
+    mem = buffer.read_data()  # slow, can also be done async
+    data = (ctypes.c_uint8 * 4 * nx * ny).from_buffer(mem)
     return np.frombuffer(data, dtype=np.uint8).reshape(size[0], size[1], 4)
 
 

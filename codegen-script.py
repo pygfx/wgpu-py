@@ -372,6 +372,10 @@ for fname in ("base.py", "backends/rs.py"):
             args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
             args = [arg.strip() for arg in args if arg.strip()]
             defaults = [arg.partition("=")[2].strip() for arg in args]
+            defaults = [
+                default or (arg.startswith("optional ") and "None")
+                for default, arg in zip(defaults, args)
+            ]
             argnames = [arg.split("=")[0].split()[-1] for arg in args]
             argnames = [to_python_name(argname) for argname in argnames]
             argnames = [(f"{n}={v}" if v else n) for n, v in zip(argnames, defaults)]

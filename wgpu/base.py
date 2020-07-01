@@ -207,25 +207,19 @@ class GPUDevice(GPUObject):
             label (str): A human readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (BufferUsageFlags): The ways in which this buffer will be used.
-            mapped_at_creation (bool): Whether the buffer is initially mapped.
+            mapped_at_creation (bool): Must be False, because we currently
+                use read_data() and write_data() instead of buffer mapping.
         """
         raise NotImplementedError()
 
-    # NOTE: no create_buffer_mapped() - the IDL does specify it, but I think it's
-    # an oversight, because the WebGPU "guid" does not mention it and we now have
-    # that mapped_at_creation argument.
+    def create_buffer_with_data(self, *, label="", data, usage: "GPUBufferUsageFlags"):
+        """ Create a :class:`GPUBuffer` object initialized with the given data.
 
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
-    # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
-    async def create_buffer_async(
-        self,
-        *,
-        label="",
-        size: int,
-        usage: "GPUBufferUsageFlags",
-        mapped_at_creation: bool = False,
-    ):
-        """ Async version of ``create_buffer()``.
+        Arguments:
+            label (str): A human readable label. Optional.
+            data: Any object supporting the Python buffer protocol (this
+                includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
+            usage (BufferUsageFlags): The ways in which this buffer will be used.
         """
         raise NotImplementedError()
 
@@ -592,7 +586,7 @@ class GPUDevice(GPUObject):
         In the WebGPU spec this is a method of the canvas. In wgpu-py
         it's a method of the device.
 
-        Parameters:
+        Arguments:
             canvas (WgpuCanvasInterface): An object implementing the canvas interface.
             format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
             usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
@@ -621,18 +615,17 @@ class GPUBuffer(GPUObject):
     :func:`GPUDevice.create_buffer_mapped` or :func:`GPUDevice.create_buffer_mapped_async`.
 
     One can sync data in a buffer by mapping it (or by creating a mapped
-    buffer) and then setting/getting the values in the mapped array.
+    buffer) and then setting/getting the values in the mapped memoryview.
     Alternatively, one can tell the GPU (via the command encoder) to
     copy data between buffers and textures.
     """
 
-    def __init__(self, label, internal, device, size, usage, state, mapping):
+    def __init__(self, label, internal, device, size, usage, state):
         super().__init__(label, internal, device)
         self._size = size
         self._usage = usage
         self._state = state
-        self._map_mode = 0 if mapping is None else 3
-        self._mapping = mapping
+        self._map_mode = 3 if state == "mapped at creation" else 0
 
     @property
     def size(self):
@@ -648,63 +641,77 @@ class GPUBuffer(GPUObject):
         """
         return self._usage
 
-    @property
-    def state(self):
-        """ The current state of the GPUBuffer:
-
-        * "mapped" when the buffer is available for CPU operations.
-        * "mapped at creation" where the GPUBuffer was just created and
-          is available for CPU operations on its content.
-        * "mapping pending" where the GPUBuffer is being made available
-          for CPU operations on its content.
-        * "unmapped" when the buffer is available for GPU operations.
-        * "destroyed", when the buffer is no longer available for any
-          operations except destroy.
-        """
-        return self._state
-
-    @property
-    def map_mode(self):
-        """ The map mode flag. Zero if unmapped.
-        """
-        return self._map_mode
-
+    # WebGPU specifies an API to sync data with the buffer via mapping.
+    # The idea is to (async) request mapped data, read from / write to
+    # this memory (using getMappedRange), and then unmap.  A buffer
+    # must be unmapped before it can be used in a pipeline.
+    #
+    # This means that the mapped memory is reclaimed (i.e. invalid)
+    # when unmap is called, and that whatever object we expose the
+    # memory with to the user, must be set to a state where it can no
+    # longer be used. I currently can't think of a good way to do this.
+    #
+    # So instead, we can use mapping internally to allow reading and
+    # writing but not expose it via the public API. The only
+    # disadvantage (AFAIK) is that there could be use-cases where a
+    # memory copy could be avoided when using mapping.
+    #
+    #
     # IDL specifies getMappedRange, but there is no equivalent in wgpu yet
-    # IDL also has as map_mode property
+    #
+    # @property
+    # def state(self):
+    #     """ The current state of the GPUBuffer:
+    #
+    #     * "mapped" when the buffer is available for CPU operations.
+    #     * "mapped at creation" where the GPUBuffer was just created and
+    #       is available for CPU operations on its content.
+    #     * "mapping pending" where the GPUBuffer is being made available
+    #       for CPU operations on its content.
+    #     * "unmapped" when the buffer is available for GPU operations.
+    #     * "destroyed", when the buffer is no longer available for any
+    #       operations except destroy.
+    #     """
+    #     return self._state
+    #
+    # @property
+    # def map_mode(self):
+    #     """ The map mode flag. Zero if unmapped.
+    #     """
+    #     return self._map_mode
+    #
+    # def map(self, mode, offset=0, size=0):
+    #     """ Make the buffer memory accessable to the CPU for reading or writing.
+    #     If size is zero, the remaining size (after offset) is used.
+    #     Returns the mapped memory as a memoryview, which can be mapped
+    #     to e.g. a ctypes array or numpy array.
+    #     """
+    #     raise NotImplementedError()
+    #
+    # async def map_async(self, mode, offset=0, size=0):
+    #     """ Async version of ``map()``.
+    #     """
+    #     raise NotImplementedError()
+    #
+    # def unmap(self):
+    #     """ Unmap the buffer so that it can be used in a GPU pipeline.
+    #     """
+    #     raise NotImplementedError()
 
-    # NOTE: this attribute is not specified by IDL, I think its still undecided how to
-    #       expose the memory
-    @property
-    def mapping(self):
-        """ The mapped memory of the buffer, exposed as a ctypes array.
-        Is only not ``None`` when the buffer is mapped. Can be cast to a
-        ctypes array of appropriate type using
-        ``your_array_type.from_buffer(b.mapping)``. Or use something
-        like ``np.frombuffer(b.mapping, np.float32)`` to map it to a
-        numpy array of appropriate dtype and shape.
-        """
-        return self._mapping
-
-    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
-    # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def map(self, mode, offset=0, size=0):
-        """ Make the buffer memory accessable to the CPU for reading or writing.
-        Sets the ``mapping`` property and returns the mapped memory as
-        a ctypes array. If size is zero, the remaining size (after offset) is used.
+    def read_data(self, offset=0, size=0):
+        """ Read buffer data. Returns the mapped memory as a memoryview,
+        which can be mapped to e.g. a ctypes array or numpy array.
+        If size is zero, the remaining size (after offset) is used.
         """
         raise NotImplementedError()
 
-    # wgpu.help('MapModeFlags', 'Size64', 'buffermapasync', dev=True)
-    # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    async def map_async(self, mode, offset=0, size=0):
-        """ Async version of ``map()``.
+    async def read_data_async(self, offset=0, size=0):
+        """ Asnc version of read_data().
         """
-        raise NotImplementedError()
 
-    # wgpu.help('bufferunmap', dev=True)
-    # IDL: void unmap();
-    def unmap(self):
-        """ Unmap the buffer so that it can be used in a GPU pipeline.
+    def write_data(self, data, offset=0):
+        """ Write data to the buffer. The data can be any object
+        supporting the buffer protocol.
         """
         raise NotImplementedError()
 
@@ -897,7 +904,7 @@ class GPUShaderModule(GPUObject):
     async def compilation_info_async(self):
         """ Async version of compilation_info()
         """
-        return self.compilation_info()
+        return self.compilation_info()  # no-cover
 
 
 class PipelineBase(GPUObject):
@@ -964,7 +971,7 @@ class GPUCommandEncoder(GPUObject):
         """ Record the beginning of a compute pass. Returns a
         :class:`GPUComputePassEncoder` object.
 
-        Parameters:
+        Arguments:
             label (str): A human readable label. Optional.
         """
         raise NotImplementedError()
@@ -1092,7 +1099,7 @@ class GPUCommandEncoder(GPUObject):
         """ Finish recording. Returns a :class:`GPUCommandBuffer` to
         submit to a :class:`GPUQueue`.
 
-        Parameters:
+        Arguments:
             label (str): A human readable label. Optional.
         """
         raise NotImplementedError()
@@ -1385,7 +1392,7 @@ class GPURenderBundleEncoder(GPURenderEncoderBase):
     def finish(self, *, label=""):
         """ Finish recording and return a :class:`GPURenderBundle`.
 
-        Parameters:
+        Arguments:
             label (str): A human readable label. Optional.
         """
         raise NotImplementedError()
@@ -1413,6 +1420,41 @@ class GPUQueue(GPUObject):
     def copy_image_bitmap_to_texture(self, source, destination, copy_size):
         """
         TODO: not yet available in wgpu-native
+        """
+        raise NotImplementedError()
+
+    # wgpu.help('Buffer', 'Size64', 'queuewritebuffer', dev=True)
+    # IDL: void writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, [AllowShared] ArrayBuffer data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
+    def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
+        """ Takes the data contents and schedules a write operation of
+        these contents to the buffer. A snapshot of the data is taken;
+        any changes to the data after this function is called do not
+        affect the buffer contents.
+
+        Arguments:
+            buffer: The :class:`GPUBuffer` object to write to.
+            buffer_offset (int): The offset in the buffer to start writing at.
+            data: The data to write.
+            data_offset: The byte offset in the data. Default 0.
+            size: The number of bytes to write. Default all minus offset.
+        """
+        raise NotImplementedError()
+
+    # wgpu.help('Extent3D', 'TextureCopyView', 'TextureDataLayout', 'queuewritetexture', dev=True)
+    # IDL: void writeTexture( GPUTextureCopyView destination, [AllowShared] ArrayBuffer data, GPUTextureDataLayout dataLayout, GPUExtent3D size);
+    def write_texture(self, destination, data, data_layout, size):
+        """ Takes the data contents and schedules a write operation of
+        these contents to the destination texture in the queue. A
+        snapshot of the data is taken; any changes to the data after
+        this function is called do not affect the texture contents.
+
+        Arguments:
+            destination: A dict with fields: "texture" (a texture object),
+                "origin" (a 3-tuple), "mip_level" (an int, default 0).
+            data: The data to write.
+            data_layout: A dict with fields: "offset" (an int, default 0),
+                "bytes_per_row" (an int), "rows_per_image" (an int, default 0).
+            size: A 3-tuple of ints specifying the size to write.
         """
         raise NotImplementedError()
 
