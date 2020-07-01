@@ -87,19 +87,30 @@ numpy array (without copying the data) is easy:
 Debugging
 ---------
 
-If you want to debug your application, it's adviced to use a debug build
-of wgpu-native, because this will enable the validation layers.
-
-You can run your application via RenderDoc, which is able to capture a
-frame, including all API calls, objects and the complete pipeline state
-and displays all of that information within a nice UI.
+The log messages produced (by Rust) in wgpu-native are captured and
+injected into Python's "wgpu" logger. One can set the log level to
+"INFO" or even "DEBUG" to get detailed logging information.
 
 Many GPU objects can be given a string label. This label will be used
 in Rust validation errors, and are also used in e.g. RenderDoc to
-identify objects.
+identify objects. Additionally, you can insert debug markers at the
+render/compute pass object, which will then show up in RenderDoc.
 
-Additionally, you can insert debug markers at the render/compute pass
-object, which will then show up in RenderDoc.
+Eventually, wgpu-native will fully validate API input. Until then, it
+may be worthwhile to enable the Vulkan validation layers. To do so, run
+a debug build of wgpu-native and make sure that the Lunar Vulkan SDK
+is installed.
+
+You can run your application via RenderDoc, which is able to capture a
+frame, including all API calls, objects and the complete pipeline state,
+and display all of that information within a nice UI.
+
+You can use ``adapter.request_device_tracing()`` to provide a directory path
+where a trace of all API calls will be written. This trace can then be used
+to re-play your use-case elsewhere (it's cross-platform).
+
+Also see wgpu-core's section on debugging:
+https://github.com/gfx-rs/wgpu/wiki/Debugging-wgpu-Applications
 
 
 Examples

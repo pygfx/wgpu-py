@@ -500,9 +500,27 @@ class GPUAdapter(base.GPUAdapter):
         extensions: "GPUExtensionName-list" = [],
         limits: "GPULimits" = {},
     ):
+        return self._request_device(label, extensions, limits, "")
 
-        # todo: enable this
-        trace_path = ""
+    def request_device_tracing(
+        self,
+        trace_path,
+        *,
+        label="",
+        extensions: "GPUExtensionName-list" = [],
+        limits: "GPULimits" = {},
+    ):
+        """ Write a trace of all commands to a file so it can be reproduced
+        elsewhere. The trace is cross-platform!
+        """
+        if not os.path.isdir(trace_path):
+            os.makedirs(trace_path, exist_ok=True)
+        elif os.listdir(trace_path):
+            logger.warning(f"Trace directory not empty: {trace_path}")
+        return self._request_device(label, extensions, limits, trace_path)
+
+    def _request_device(self, label, extensions, limits, trace_path):
+
         c_trace_path = ffi.NULL
         if trace_path:  # no-cover
             c_trace_path = ffi.new("char []", trace_path.encode())
@@ -541,7 +559,7 @@ class GPUAdapter(base.GPUAdapter):
         extensions: "GPUExtensionName-list" = [],
         limits: "GPULimits" = {},
     ):
-        return self.request_device(extensions=extensions, limits=limits)  # no-cover
+        return self._request_device(label, extensions, limits, "")  # no-cover
 
     def _destroy(self):
         if self._id is not None:
