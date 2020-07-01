@@ -104,9 +104,12 @@
 ## Checking and patching hand-written API code
 
 ### Check functions in base.py
-*  Found 62 functions already implemented
+*  Found 58 functions already implemented
+*  Not implemented: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor); (devicecreatebuffermapped)
 *  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
+*  Not implemented: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0); (buffermapasync)
 *  Not implemented: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0); (buffergetmappedrange)
+*  Not implemented: void unmap(); (bufferunmap)
 *  Not implemented: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex); (commandencoderwritetimestamp)
 *  Not implemented: void resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset); (commandencoderresolvequeryset)
 *  Not implemented: void beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex); (computepassencoderbeginpipelinestatisticsquery)
@@ -125,13 +128,19 @@
 *  Found unknown function create_buffer_with_data (devicecreatebufferwithdata)
 *  Found unknown function configure_swap_chain (deviceconfigureswapchain)
 *  Found unknown function get_swap_chain_preferred_format (devicegetswapchainpreferredformat)
+*  Found unknown function read_data (bufferreaddata)
+*  Found unknown function read_data_async (bufferreaddataasync)
+*  Found unknown function write_data (bufferwritedata)
 *  Injected IDL lines into base.py
 
 ### Check functions in backends/rs.py
-*  Found 52 functions already implemented
+*  Found 48 functions already implemented
+*  Not implemented: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor); (devicecreatebuffermapped)
 *  Not implemented: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor); (devicecreaterenderbundleencoder)
 *  Not implemented: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); (devicecreatequeryset)
+*  Not implemented: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0); (buffermapasync)
 *  Not implemented: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0); (buffergetmappedrange)
+*  Not implemented: void unmap(); (bufferunmap)
 *  Not implemented: GPUBindGroupLayout getBindGroupLayout(unsigned long index); (pipelinebasegetbindgrouplayout)
 *  Not implemented: void pushDebugGroup(USVString groupLabel); (commandencoderpushdebuggroup)
 *  Not implemented: void popDebugGroup(); (commandencoderpopdebuggroup)
@@ -158,4 +167,7 @@
 *  Found unknown function new_struct_p (newstructp)
 *  Found unknown function create_buffer_with_data (devicecreatebufferwithdata)
 *  Found unknown function configure_swap_chain (deviceconfigureswapchain)
+*  Found unknown function read_data (bufferreaddata)
+*  Found unknown function read_data_async (bufferreaddataasync)
+*  Found unknown function write_data (bufferwritedata)
 *  Injected IDL lines into backends/rs.py

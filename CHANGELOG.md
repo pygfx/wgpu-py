@@ -17,7 +17,6 @@ Additions and improvements:
 * Targets wgpu-native v.0.5.2. The first release build from the wgpu-native repo itself.
 * The texture object has more properties to query the parameters that it was created with.
 * The texture view object has a `texture` property.
-* The buffer object has a property `map_mode`.
 * The render and compute pipeline objects have a property `layout` and a method `get_bind_group_layout()`.
 * The shader object got a `compilation_info` method, but this does not do anything yet.
 * The `create_shader_module()` has a `source_map` attribute, but this is yet unused.
@@ -26,12 +25,10 @@ Additions and improvements:
 
 API changes:
 
-* The buffer no longer has a `mapped` attribute.
-* The buffer `map_read` and `map_write` methods have been replaced with `map`,
-  where the first argument is e.g. `wgpu.MapMode.READ`. This method returns
-  a `memoryview` object that can be read from or written to.
-* The device `create_buffer_mapped` method now returns a tuple (buffer, mapped_mem).
-* The device `create_buffer_with_data` is added as a convenience function.
+* The buffer no longer exposes a data mapping API. Instead it has functions
+  `read_data()` and `write_data()`
+* The device `create_buffer_mapped` method is similarly removed. The
+  device `create_buffer_with_data` is added as a convenience function.
 * The `array_layer` in copy operations involving a texture is removed.
 * The `utils.compute_with_buffers` function now accepts *any* data dat supports
   the buffer protocol (not just ctypes arrays). The outputs are `memoryview` objects,

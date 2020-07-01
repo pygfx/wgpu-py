@@ -68,8 +68,7 @@ object. These objects provide a quite versatile view on ndarray data:
 .. code-block:: py
 
     # One could, for instance read the content of a buffer
-    m = buffer.map(wgpu.MapMode.READ)
-    buffer.unmap()
+    m = buffer.read_data()
     # Cast it to float32
     m = m.cast("f")
     # Index it
