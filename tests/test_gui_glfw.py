@@ -97,7 +97,7 @@ def test_glfw_canvas_render():
         frame_counter += 1
         draw_frame1()
 
-    canvas.draw_frame = draw_frame2
+    canvas.request_draw(draw_frame2)
 
     # Give it a few rounds to start up
     for i in range(5):

@@ -108,7 +108,7 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
             raise ValueError("Window width and height must not be negative")
         self.resize(width, height)  # See note on pixel ratio below
 
-    def request_draw(self):
+    def _request_draw(self):
         self.update()
 
     def close(self):

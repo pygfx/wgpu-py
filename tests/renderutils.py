@@ -301,7 +301,7 @@ def render_to_screen(
             render_pass.end_pass()
             device.default_queue.submit([command_encoder.finish()])
 
-    canvas.draw_frame = draw_frame
+    canvas.request_draw(draw_frame)
 
     # Enter main loop
     while update_glfw_canvasses():

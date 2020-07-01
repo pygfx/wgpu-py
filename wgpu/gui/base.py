@@ -69,9 +69,18 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     def draw_frame(self):
         """ The function that gets called at each draw. You can implement
-        this method in a subclass, or assign the attribute directly.
+        this method in a subclass, or set it via a call to request_draw().
         """
         pass
+
+    def request_draw(self, draw_function=None):
+        """ Request from the main loop to schedule a new draw event,
+        so that the canvas will be updated. If draw_function is not
+        given, the last set drawing function is used.
+        """
+        if draw_function is not None:
+            self.draw_frame = draw_function
+        self._request_draw()
 
     def _draw_frame_and_present(self):
         """ Draw the frame and present the swapchain. Errors are logged to the
@@ -125,12 +134,6 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """
         raise NotImplementedError()
 
-    def request_draw(self):
-        """ Request from the main loop to schedule a new draw event,
-        so that the canvas will be updated.
-        """
-        raise NotImplementedError()
-
     def close(self):
         """ Close the window.
         """
@@ -139,4 +142,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def is_closed(self):
         """ Get whether the window is closed.
         """
+        raise NotImplementedError()
+
+    def _request_draw(self):
         raise NotImplementedError()
