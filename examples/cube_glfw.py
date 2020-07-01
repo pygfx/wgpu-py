@@ -371,7 +371,7 @@ def draw_frame():
     canvas.request_draw()
 
 
-canvas.draw_frame = draw_frame
+canvas.request_draw(draw_frame)
 
 
 # %% Run the event loop

@@ -53,9 +53,8 @@ library you are using by looking what module has been imported.
     # Instantiate the canvas
     canvas = WgpuCanvas(title="Example")
 
-    # Tell the canvas what function to draw to update itself.
-    # Alternatively you can create a subclass and implement draw_frame().
-    canvas.draw_frame = your_draw_function
+    # Tell the canvas what drawing function to call
+    canvas.request_draw(your_draw_function)
 
     # Enter Qt's event loop, as usual
     app.exec_()
@@ -83,9 +82,8 @@ Glfw is a lightweight windowing toolkit. Install it with ``pip install glfw``.
     # Instantiate the canvas
     canvas = WgpuCanvas(title="Example")
 
-    # Tell the canvas what function to draw to update itself.
-    # Alternatively you can create a subclass and implement draw_frame().
-    canvas.draw_frame = your_draw_function
+    # Tell the canvas what drawing function to call
+    canvas.request_draw(your_draw_function)
 
     # Enter a main loop (this stops when all windows are closed)
     while update_glfw_canvasses():

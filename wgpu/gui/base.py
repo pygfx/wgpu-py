@@ -69,7 +69,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     def draw_frame(self):
         """ The function that gets called at each draw. You can implement
-        this method in a subclass, or assign the attribute directly.
+        this method in a subclass, or set it via a call to request_draw().
         """
         pass
 

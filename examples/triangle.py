@@ -136,4 +136,4 @@ def _main(canvas, device):
             render_pass.end_pass()
             device.default_queue.submit([command_encoder.finish()])
 
-    canvas.draw_frame = draw_frame
+    canvas.request_draw(draw_frame)
