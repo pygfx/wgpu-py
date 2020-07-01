@@ -181,7 +181,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self._logical_size = float(width), float(height)
         self._set_logical_size()
 
-    def request_draw(self):
+    def _request_draw(self):
         self._need_draw = True
         glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
 

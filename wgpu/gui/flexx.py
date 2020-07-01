@@ -27,7 +27,7 @@ class WgpuCanvas(flx.CanvasWidget):
         self._draw_pending = False
         self.draw_frame()
 
-    def request_draw(self):
+    def _request_draw(self):
         if not self._draw_pending:
             self._draw_pending = True
             window.requestAnimationFrame(self._draw_frame_and_present)
