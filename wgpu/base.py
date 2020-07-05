@@ -703,6 +703,7 @@ class GPUBuffer(GPUObject):
         """ Read buffer data. Returns the mapped memory as a memoryview,
         which can be mapped to e.g. a ctypes array or numpy array.
         If size is zero, the remaining size (after offset) is used.
+        The buffer usage must include MAP_READ.
         """
         raise NotImplementedError()
 
@@ -712,7 +713,10 @@ class GPUBuffer(GPUObject):
 
     def write_data(self, data, offset=0):
         """ Write data to the buffer. The data can be any object
-        supporting the buffer protocol.
+        supporting the buffer protocol. The buffer usage must include MAP_WRITE.
+
+        Note: this method deviates from the WebGPU spec, and it could be deprecated.
+        Better use ``device.create_buffer_with_data()`` or ``queue.write_buffer()``.
         """
         raise NotImplementedError()
 
