@@ -547,7 +547,7 @@ class GPUAdapter(base.GPUAdapter):
 
         # Get the queue to which commands can be submitted
         queue_id = _lib.wgpu_device_get_default_queue(device_id)
-        queue = GPUQueue("", queue_id, self)
+        queue = GPUQueue("", queue_id, None)
 
         return GPUDevice(label, device_id, self, extensions, limits3, queue)
 
@@ -1206,7 +1206,7 @@ class GPUTexture(base.GPUTexture):
                 label=c_label,
                 format=format,
                 dimension=dimension,
-                aspect=aspect,
+                aspect=aspect or "all",
                 base_mip_level=base_mip_level,
                 level_count=mip_level_count,
                 base_array_layer=base_array_layer,
@@ -1721,7 +1721,7 @@ class GPUQueue(base.GPUQueue):
             data_length = int(size)
 
         assert 0 <= buffer_offset < buffer.size
-        assert 0 <= data_offset < nbytes
+        assert 0 <= data_offset <= nbytes
         assert 0 <= data_length <= (nbytes - data_offset)
         assert data_length <= buffer.size - buffer_offset
 
@@ -1736,7 +1736,7 @@ class GPUQueue(base.GPUQueue):
     def write_texture(self, destination, data, data_layout, size):
 
         m, address = _get_memoryview_and_address(data)
-        # todo: could we not derive the size from trhe shape of m?
+        # todo: could we not derive the size from the shape of m?
 
         # Checks
         if not m.contiguous:  # no-cover

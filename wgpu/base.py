@@ -171,6 +171,7 @@ class GPUDevice(GPUObject):
         self._extensions = tuple(sorted([str(x) for x in extensions]))
         self._limits = limits.copy()
         self._default_queue = default_queue
+        default_queue._device = self  # because it could not be set earlier
 
     @property
     def extensions(self):
@@ -1441,7 +1442,7 @@ class GPUQueue(GPUObject):
         Arguments:
             buffer: The :class:`GPUBuffer` object to write to.
             buffer_offset (int): The offset in the buffer to start writing at.
-            data: The data to write.
+            data: The data to write. Must be contiguous.
             data_offset: The byte offset in the data. Default 0.
             size: The number of bytes to write. Default all minus offset.
         """
