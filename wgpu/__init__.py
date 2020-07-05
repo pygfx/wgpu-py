@@ -10,7 +10,7 @@ from .gui import WgpuCanvasInterface  # noqa: F401,F403
 from . import base
 
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 version_info = tuple(map(int, __version__.split(".")))
 
 
