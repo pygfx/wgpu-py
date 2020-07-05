@@ -1721,7 +1721,7 @@ class GPUQueue(base.GPUQueue):
             data_length = int(size)
 
         assert 0 <= buffer_offset < buffer.size
-        assert 0 <= data_offset <= nbytes
+        assert 0 <= data_offset < nbytes
         assert 0 <= data_length <= (nbytes - data_offset)
         assert data_length <= buffer.size - buffer_offset
 
