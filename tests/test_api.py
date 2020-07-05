@@ -68,7 +68,10 @@ def test_base_wgpu_api():
 
     # Fake a device and an adapter
     adapter = wgpu.base.GPUAdapter("adapter07", [])
-    device = wgpu.base.GPUDevice("device08", -1, adapter, [42, 43], {}, None)
+    queue = wgpu.GPUQueue("", None, None)
+    device = wgpu.base.GPUDevice("device08", -1, adapter, [42, 43], {}, queue)
+
+    assert queue._device is device
 
     assert adapter.name == "adapter07"
     assert adapter.extensions == ()
