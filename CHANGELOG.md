@@ -5,6 +5,11 @@ not yet attempt to make things backwards compatible. Instead we try to
 be precise about tracking changes to the public API.
 
 
+### v0.4 (future)
+
+* Maybe restore functionality for mapped buffers.
+
+
 ### v0.3.0
 
 With this update we're using a later release of wgpu-native, and follow changes
@@ -25,8 +30,8 @@ Additions and improvements:
 
 API changes:
 
-* The buffer no longer exposes a data mapping API. Instead it has functions
-  `read_data()` and `write_data()`
+* The buffer (for now) no longer exposes a data mapping API. Instead it has
+  functions `read_data()` and `write_data()`
 * The device `create_buffer_mapped` method is similarly removed. The
   device `create_buffer_with_data` is added as a convenience function.
 * The `array_layer` in copy operations involving a texture is removed.
