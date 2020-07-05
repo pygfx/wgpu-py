@@ -171,6 +171,7 @@ class GPUDevice(GPUObject):
         self._extensions = tuple(sorted([str(x) for x in extensions]))
         self._limits = limits.copy()
         self._default_queue = default_queue
+        default_queue._device = self  # because it could not be set earlier
 
     @property
     def extensions(self):
@@ -702,6 +703,7 @@ class GPUBuffer(GPUObject):
         """ Read buffer data. Returns the mapped memory as a memoryview,
         which can be mapped to e.g. a ctypes array or numpy array.
         If size is zero, the remaining size (after offset) is used.
+        The buffer usage must include MAP_READ.
         """
         raise NotImplementedError()
 
@@ -711,7 +713,10 @@ class GPUBuffer(GPUObject):
 
     def write_data(self, data, offset=0):
         """ Write data to the buffer. The data can be any object
-        supporting the buffer protocol.
+        supporting the buffer protocol. The buffer usage must include MAP_WRITE.
+
+        Note: this method deviates from the WebGPU spec, and it could be deprecated.
+        Better use ``device.create_buffer_with_data()`` or ``queue.write_buffer()``.
         """
         raise NotImplementedError()
 
@@ -1441,7 +1446,7 @@ class GPUQueue(GPUObject):
         Arguments:
             buffer: The :class:`GPUBuffer` object to write to.
             buffer_offset (int): The offset in the buffer to start writing at.
-            data: The data to write.
+            data: The data to write. Must be contiguous.
             data_offset: The byte offset in the data. Default 0.
             size: The number of bytes to write. Default all minus offset.
         """
