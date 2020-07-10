@@ -45,15 +45,15 @@ def download_file(url, filename):
             fh.write(chunk)
 
 
-def extract_files(zip_filename, members, path):
+def extract_file(zip_filename, member, path):
     z = ZipFile(zip_filename)
-    for member in members:
-        z.extract(member, path=path)
-        if member.endswith(".h") and FORCE_SIMPLE_NEWLINES:
-            filename = os.path.join(path, member)
-            bb = open(filename, "rb").read()
-            with open(filename, "wb") as f:
-                f.write(bb.replace(b"\r\n", b"\n"))
+    os.makedirs(path, exist_ok=True)
+    z.extract(member, path=path)
+    if member.endswith(".h") and FORCE_SIMPLE_NEWLINES:
+        filename = os.path.join(path, member)
+        bb = open(filename, "rb").read()
+        with open(filename, "wb") as f:
+            f.write(bb.replace(b"\r\n", b"\n"))
 
 
 def get_os_string():
@@ -74,24 +74,34 @@ def get_arch():
     return "64" if sys.maxsize > 2 ** 32 else "32"  # True on 64-bit Python interpreters
 
 
-def main(version, os_string, arch, upstream, build):
-    filename = f"wgpu-{os_string}-{arch}-{build}.zip"
-    url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
-    tmp = tempfile.gettempdir()
-    zip_filename = os.path.join(tmp, filename)
-    print(f"Downloading {url} to {zip_filename}")
-    download_file(url, zip_filename)
-    members = ["wgpu.h"]
-    if os_string == "linux":
-        members.append("libwgpu_native.so")
-    elif os_string == "macos":
-        members.append("libwgpu_native.dylib")
-    elif os_string == "windows":
-        members.append("wgpu_native.dll")
-    else:
-        raise RuntimeError(f"Platform '{os_string}' not supported")
-    print(f"Extracting {members} to {RESOURCE_DIR}")
-    extract_files(zip_filename, members, RESOURCE_DIR)
+def main(version, os_string, arch, upstream):
+    for build in ("release", "debug"):
+        filename = f"wgpu-{os_string}-{arch}-{build}.zip"
+        url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
+        tmp = tempfile.gettempdir()
+        zip_filename = os.path.join(tmp, filename)
+        print(f"Downloading {url} to {zip_filename}")
+        download_file(url, zip_filename)
+        headerfile = "wgpu.h"
+        binaryfile = None
+        if os_string == "linux":
+            binaryfile = "libwgpu_native.so"
+        elif os_string == "macos":
+            binaryfile = "libwgpu_native.dylib"
+        elif os_string == "windows":
+            binaryfile = "wgpu_native.dll"
+        else:
+            raise RuntimeError(f"Platform '{os_string}' not supported")
+        root, ext = os.path.splitext(binaryfile)
+        binaryfile_name = root + "-" + build + ext
+        print(f"Extracting {headerfile} to {RESOURCE_DIR}")
+        extract_file(zip_filename, headerfile, RESOURCE_DIR)
+        print(f"Extracting {binaryfile} to {RESOURCE_DIR}")
+        extract_file(zip_filename, binaryfile, RESOURCE_DIR)
+        os.rename(
+            os.path.join(RESOURCE_DIR, binaryfile),
+            os.path.join(RESOURCE_DIR, binaryfile_name),
+        )
     current_version = get_current_version()
     if version != current_version:
         print(f"Version changed, updating {VERSION_FILE}")
@@ -133,13 +143,6 @@ if __name__ == "__main__":
         help=f"Upstream repository to download release from (default: {upstream})",
         default=upstream,
     )
-    build = "release"
-    parser.add_argument(
-        "--build",
-        help=f"Type of build to download (default: {build})",
-        default=build,
-        choices=("debug", "release"),
-    )
     args = parser.parse_args()
 
-    main(args.version, args.os, args.arch, args.upstream, args.build)
+    main(args.version, args.os, args.arch, args.upstream)
