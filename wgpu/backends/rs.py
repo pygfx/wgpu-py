@@ -90,13 +90,17 @@ def _get_wgpu_lib_path():
     if override_path:
         return override_path
 
+    # Load the debug binary if requested
+    debug_mode = bool(os.getenv("WGPU_DEBUG", "").strip())
+    build = "debug" if debug_mode else "release"
+
     # Get lib filename for supported platforms
     if sys.platform.startswith("win"):  # no-cover
-        lib_filename = "wgpu_native.dll"
+        lib_filename = f"wgpu_native-{build}.dll"
     elif sys.platform.startswith("darwin"):  # no-cover
-        lib_filename = "libwgpu_native.dylib"
+        lib_filename = f"libwgpu_native-{build}.dylib"
     elif sys.platform.startswith("linux"):  # no-cover
-        lib_filename = "libwgpu_native.so"
+        lib_filename = f"libwgpu_native-{build}.so"
     else:  # no-cover
         raise RuntimeError(
             f"No WGPU library shipped for platform {sys.platform}. Set WGPU_LIB_PATH instead."
