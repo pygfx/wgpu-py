@@ -91,7 +91,7 @@ def _get_wgpu_lib_path():
         return override_path
 
     # Load the debug binary if requested
-    debug_mode = bool(os.getenv("WGPU_DEBUG", "").strip())
+    debug_mode = os.getenv("WGPU_DEBUG", "").strip() == "1"
     build = "debug" if debug_mode else "release"
 
     # Get lib filename for supported platforms
