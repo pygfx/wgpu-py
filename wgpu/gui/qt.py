@@ -21,6 +21,11 @@ else:
         "Import one of PySide2, PyQt5 before the WgpuCanvas to select a Qt toolkit"
     )
 
+# Make Qt not ignore XDG_SESSION_TYPE
+# is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+# if is_wayland:
+#     os.environ["QT_QPA_PLATFORM"] = "wayland"
+
 
 def enable_hidpi():
     """ Enable high-res displays.
