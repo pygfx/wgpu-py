@@ -141,11 +141,15 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
                 "resource": {"buffer": buffer, "offset": 0, "size": buffer.size},
             }
         )
+        storage_types = (
+            wgpu.BindingType.readonly_storage_buffer,
+            wgpu.BindingType.storage_buffer,
+        )
         binding_layouts.append(
             {
                 "binding": index,
                 "visibility": wgpu.ShaderStage.COMPUTE,
-                "type": wgpu.BindingType.storage_buffer,
+                "type": storage_types[index in output_infos],
                 "has_dynamic_offset": False,
             }
         )

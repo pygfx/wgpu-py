@@ -100,9 +100,9 @@ def test_struct_checking():
 
 @pyshader.python2shader
 def compute_shader(
-    index: ("input", "GlobalInvocationId", "i32"), out: ("buffer", 0, "Array(i32)"),
+    index: ("input", "GlobalInvocationId", "ivec3"), out: ("buffer", 0, "Array(i32)"),
 ):
-    out[index] = index
+    out[index.x] = index.x
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
