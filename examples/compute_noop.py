@@ -6,7 +6,7 @@ buffer into another.
 import wgpu
 import wgpu.backends.rs  # Select backend
 from wgpu.utils import compute_with_buffers  # Convenience function
-from pyshader import python2shader, i32, Array
+from pyshader import python2shader, ivec3, i32, Array
 
 
 # %% Shader and data
@@ -14,11 +14,12 @@ from pyshader import python2shader, i32, Array
 
 @python2shader
 def compute_shader(
-    index: ("input", "GlobalInvocationId", i32),
+    index: ("input", "GlobalInvocationId", ivec3),
     data1: ("buffer", 0, Array(i32)),
     data2: ("buffer", 1, Array(i32)),
 ):
-    data2[index] = data1[index]
+    i = index.x
+    data2[i] = data1[i]
 
 
 # Create input data as a memoryview

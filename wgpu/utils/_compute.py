@@ -26,7 +26,8 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
             specify the shape. These are used to ``cast()`` the
             memoryview object before it is returned. If the value is a
             ctypes array type, the result will be cast to that instead
-            of a memoryview.
+            of a memoryview. Note that any buffer that is NOT in the
+            output arrays dict will be considered readonly in the shader.
         shader (bytes, shader-object): The SpirV representing the shader,
             as raw bytes or an object implementing ``to_spirv()``
             (e.g. a pyshader SpirV module).
@@ -141,11 +142,15 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
                 "resource": {"buffer": buffer, "offset": 0, "size": buffer.size},
             }
         )
+        storage_types = (
+            wgpu.BindingType.readonly_storage_buffer,
+            wgpu.BindingType.storage_buffer,
+        )
         binding_layouts.append(
             {
                 "binding": index,
                 "visibility": wgpu.ShaderStage.COMPUTE,
-                "type": wgpu.BindingType.storage_buffer,
+                "type": storage_types[index in output_infos],
                 "has_dynamic_offset": False,
             }
         )

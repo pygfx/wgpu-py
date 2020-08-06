@@ -16,7 +16,6 @@ class WgpuCanvasInterface:
     def __init__(self, *args, **kwargs):
         # The args/kwargs are there because we may be mixed with e.g. a Qt widget
         super().__init__(*args, **kwargs)
-        self._display_id = None
 
     def get_window_id(self):
         """ Get the native window id. This is used by the backends
@@ -30,7 +29,7 @@ class WgpuCanvasInterface:
         the X11 lib to get the display id.
         """
         # Re-use to avoid creating loads of id's
-        if self._display_id is not None:
+        if getattr(self, "_display_id", None) is not None:
             return self._display_id
 
         if sys.platform.startswith("linux"):
