@@ -22,6 +22,7 @@ if glfw_version_info < (1, 9):
     raise ImportError("wgpu-py requires glfw 1.9 or higher.")
 
 # Do checks to prevent pitfalls on hybrid Xorg/Wayland systems
+is_wayland = False
 if sys.platform.startswith("linux"):
     is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
     if is_wayland and not hasattr(glfw, "get_wayland_window"):
@@ -68,7 +69,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # see https://github.com/FlorianRhiem/pyGLFW/issues/42
         # Alternatively, from pyGLFW 1.10 one can set glfw.ERROR_REPORTING='warn'
         if sys.platform.startswith("linux"):
-            if "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower():
+            if is_wayland:
                 glfw.window_hint(glfw.FOCUSED, False)  # prevent Wayland focus error
 
         # Create the window (the initial size may not be in logical pixels)
@@ -76,6 +77,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
         # Register ourselves
         self._need_draw = True
+        self._changing_pixel_ratio = False
         all_glfw_canvases.add(self)
 
         # Register callbacks. We may get notified too often, but that's
@@ -92,7 +94,13 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
     # Callbacks
 
     def _on_pixelratio_change(self, *args):
-        self._set_logical_size()
+        if self._changing_pixel_ratio:
+            return
+        self._changing_pixel_ratio = True  # prevent recursion (on Wayland)
+        try:
+            self._set_logical_size()
+        finally:
+            self._changing_pixel_ratio = False
         self._need_draw = True
 
     def _on_size_change(self, *args):
@@ -100,7 +108,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self._need_draw = True
 
     def _on_close(self, *args):
-        print("closing")
         all_glfw_canvases.discard(self)
         glfw.hide_window(self._window)
 
@@ -131,13 +138,22 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # The current screen size and physical size, and its ratio
         ssize = glfw.get_window_size(self._window)
         psize = glfw.get_framebuffer_size(self._window)
-        screen_ratio = ssize[0] / psize[0]
         # Apply
-        glfw.set_window_size(
-            self._window,
-            int(lsize[0] * pixel_ratio / screen_ratio),
-            int(lsize[1] * pixel_ratio / screen_ratio),
-        )
+        if is_wayland:
+            # Not sure why, but on Wayland things work differently
+            screen_ratio = ssize[0] / lsize[0]
+            glfw.set_window_size(
+                self._window,
+                int(lsize[0] / screen_ratio),
+                int(lsize[1] / screen_ratio),
+            )
+        else:
+            screen_ratio = ssize[0] / psize[0]
+            glfw.set_window_size(
+                self._window,
+                int(lsize[0] * pixel_ratio / screen_ratio),
+                int(lsize[1] * pixel_ratio / screen_ratio),
+            )
 
     # API
 
@@ -147,7 +163,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         elif sys.platform.startswith("darwin"):
             return int(glfw.get_cocoa_window(self._window))
         elif sys.platform.startswith("linux"):
-            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
             if is_wayland:
                 return int(glfw.get_wayland_window(self._window))
             else:
@@ -157,7 +172,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
     def get_display_id(self):
         if sys.platform.startswith("linux"):
-            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
             if is_wayland:
                 return glfw.get_wayland_display()
             else:

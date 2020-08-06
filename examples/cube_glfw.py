@@ -17,6 +17,7 @@ from pyshader import Struct, mat4, vec4, vec2
 
 # Create a canvas to render to
 glfw.init()
+glfw.ERROR_REPORTING = "warn"
 canvas = WgpuCanvas(title="wgpu cube with GLFW")
 
 # Create a wgpu device
