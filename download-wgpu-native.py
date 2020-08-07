@@ -98,7 +98,7 @@ def main(version, os_string, arch, upstream):
         extract_file(zip_filename, headerfile, RESOURCE_DIR)
         print(f"Extracting {binaryfile} to {RESOURCE_DIR}")
         extract_file(zip_filename, binaryfile, RESOURCE_DIR)
-        os.rename(
+        os.replace(
             os.path.join(RESOURCE_DIR, binaryfile),
             os.path.join(RESOURCE_DIR, binaryfile_name),
         )
