@@ -2,8 +2,7 @@ import re
 import sys
 
 from setuptools import find_packages, setup
-from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
-from wheel.pep425tags import get_platform
+from wheel.bdist_wheel import get_platform, bdist_wheel as _bdist_wheel
 
 
 NAME = "wgpu"
