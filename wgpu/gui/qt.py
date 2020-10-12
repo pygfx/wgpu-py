@@ -4,6 +4,7 @@ can be used as a standalone window or in a larger GUI.
 """
 
 import sys
+import time
 import ctypes
 import importlib
 
@@ -72,6 +73,13 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self.setLayout(layout)
         layout.addWidget(self._subwidget)
 
+        # A timer for limiting fps
+        self._target_fps = 30  # subclasses could edit this value
+        self._request_draw_timer = QtCore.QTimer()
+        self._request_draw_timer.setTimerType(QtCore.Qt.PreciseTimer)
+        self._request_draw_timer.setSingleShot(True)
+        self._request_draw_timer.timeout.connect(self.update)
+
         self.show()
 
     # Qt methods
@@ -114,7 +122,11 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self.resize(width, height)  # See note on pixel ratio below
 
     def _request_draw(self):
-        self.update()
+        if not self._request_draw_timer.isActive():
+            now = time.perf_counter()
+            target_time = self._subwidget._draw_time + 1 / self._target_fps
+            wait_time = max(0, target_time - now)
+            self._request_draw_timer.start(wait_time * 1000)
 
     def close(self):
         super().close()
@@ -131,12 +143,14 @@ class WgpuSubWidget(QtWidgets.QWidget):
         super().__init__(parent)
         self.setAttribute(QtCore.Qt.WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
+        self._draw_time = 0
 
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
         return None
 
     def paintEvent(self, event):  # noqa: N802 - this is a Qt method
+        self._draw_time = time.perf_counter()
         self.parent()._draw_frame_and_present()
 
 
