@@ -61,8 +61,7 @@ if cffi_version_info < (1, 10):  # no-cover
 
 
 def _get_wgpu_h():
-    """ Read header file and strip some stuff that cffi would stumble on.
-    """
+    """Read header file and strip some stuff that cffi would stumble on."""
     lines = []
     with open(get_resource_filename("wgpu.h")) as f:
         for line in f.readlines():
@@ -81,7 +80,7 @@ def _get_wgpu_h():
 
 
 def _get_wgpu_lib_path():
-    """ Get the path to the wgpu library, taking into account the
+    """Get the path to the wgpu library, taking into account the
     WGPU_LIB_PATH environment variable.
     """
 
@@ -134,8 +133,7 @@ if version_info_lib != version_info:  # no-cover
 
 @ffi.callback("void(int level, const char *)")
 def _logger_callback(level, c_msg):
-    """ Called when Rust emits a log message.
-    """
+    """Called when Rust emits a log message."""
     msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
     # todo: We currently skip some false negatives to avoid spam.
     false_negatives = (
@@ -157,8 +155,7 @@ def _logger_callback(level, c_msg):
 
 
 def _logger_set_level_callback(level):
-    """ Called when the log level is set from Python.
-    """
+    """Called when the log level is set from Python."""
     if level >= 40:
         _lib.wgpu_set_log_level(_lib.WGPULogLevel_Error)
     elif level >= 30:
@@ -196,7 +193,7 @@ _cstructfield2enum_alt = {
 
 
 def new_struct_p(ctype, **kwargs):
-    """ Create a pointer to an ffi struct. Provides a flatter syntax
+    """Create a pointer to an ffi struct. Provides a flatter syntax
     and converts our string enums to int enums needed in C. The passed
     kwargs are also bound to the lifetime of the new struct.
     """
@@ -214,7 +211,7 @@ def new_struct_p(ctype, **kwargs):
 
 
 def new_struct(ctype, **kwargs):
-    """ Create an ffi value struct. The passed kwargs are also bound
+    """Create an ffi value struct. The passed kwargs are also bound
     to the lifetime of the new struct.
     """
     assert not ctype.endswith("*")
@@ -240,7 +237,7 @@ def _new_struct_p(ctype, **kwargs):
 
 
 def get_surface_id_from_canvas(canvas):
-    """ Get an id representing the surface to render to. The way to
+    """Get an id representing the surface to render to. The way to
     obtain this id differs per platform and GUI toolkit.
     """
     win_id = canvas.get_window_id()
@@ -325,7 +322,7 @@ def get_surface_id_from_canvas(canvas):
 
 
 def _tuple_from_tuple_or_dict(ob, fields):
-    """ Given a tuple/list/dict, return a tuple. Also checks tuple size.
+    """Given a tuple/list/dict, return a tuple. Also checks tuple size.
 
     >> # E.g.
     >> _tuple_from_tuple_or_dict({"x": 1, "y": 2}, ("x", "y"))
@@ -348,7 +345,7 @@ def _tuple_from_tuple_or_dict(ob, fields):
 
 
 def _loadop_and_clear_from_value(value):
-    """ In WebGPU, the load op, can be given either as "load" or a value.
+    """In WebGPU, the load op, can be given either as "load" or a value.
     The latter translates to "clear" plus that value in wgpu-native.
     The value can be float/int/color, but we don't deal with that here.
     """
@@ -360,7 +357,7 @@ def _loadop_and_clear_from_value(value):
 
 
 def _get_memoryview_and_address(data):
-    """ Get a memoryview for the given data and its memory address.
+    """Get a memoryview for the given data and its memory address.
     The data object must support the buffer protocol.
     """
 
@@ -395,8 +392,7 @@ def _get_memoryview_and_address(data):
 
 
 def _get_memoryview_from_address(address, nbytes, format="B"):
-    """ Get a memoryview from an int memory address and a byte count,
-    """
+    """Get a memoryview from an int memory address and a byte count,"""
     # The default format is "<B", which seems to confuse some memoryview
     # operations, so we always cast it.
     c_array = (ctypes.c_uint8 * nbytes).from_address(address)
@@ -404,7 +400,7 @@ def _get_memoryview_from_address(address, nbytes, format="B"):
 
 
 def _check_struct(what, d):
-    """ Check that the given dict does not have any unexpected keys
+    """Check that the given dict does not have any unexpected keys
     (which may be there because of typos or api changes).
     """
     fields = set(d.keys())
@@ -421,7 +417,7 @@ def _check_struct(what, d):
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
-    """ Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
+    """Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
     implementation, from which one can request a :class:`GPUDevice`.
 
     This is the implementation based on the Rust wgpu-native library.
@@ -481,7 +477,7 @@ def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
 
 # wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
 async def request_adapter_async(*, canvas, power_preference: "GPUPowerPreference"):
-    """ Async version of ``request_adapter()``.
+    """Async version of ``request_adapter()``.
     This function uses the Rust WGPU library.
     """
     return request_adapter(canvas=canvas, power_preference=power_preference)  # no-cover
@@ -514,7 +510,7 @@ class GPUAdapter(base.GPUAdapter):
         extensions: "GPUExtensionName-list" = [],
         limits: "GPULimits" = {},
     ):
-        """ Write a trace of all commands to a file so it can be reproduced
+        """Write a trace of all commands to a file so it can be reproduced
         elsewhere. The trace is cross-platform!
         """
         if not os.path.isdir(trace_path):
@@ -634,7 +630,10 @@ class GPUDevice(base.GPUDevice):
         c_label = ffi.new("char []", label.encode())
         size = _tuple_from_tuple_or_dict(size, ("width", "height", "depth"))
         c_size = new_struct(
-            "WGPUExtent3d", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d",
+            width=size[0],
+            height=size[1],
+            depth=size[2],
         )
         struct = new_struct_p(
             "WGPUTextureDescriptor *",
@@ -919,7 +918,8 @@ class GPUDevice(base.GPUDevice):
         for color_state in color_states:
             _check_struct("ColorStateDescriptor", color_state)
             alpha_blend = _tuple_from_tuple_or_dict(
-                color_state["alpha_blend"], ("src_factor", "dst_factor", "operation"),
+                color_state["alpha_blend"],
+                ("src_factor", "dst_factor", "operation"),
             )
             c_alpha_blend = new_struct(
                 "WGPUBlendDescriptor",
@@ -928,7 +928,8 @@ class GPUDevice(base.GPUDevice):
                 operation=alpha_blend[2],
             )
             color_blend = _tuple_from_tuple_or_dict(
-                color_state["color_blend"], ("src_factor", "dst_factor", "operation"),
+                color_state["color_blend"],
+                ("src_factor", "dst_factor", "operation"),
             )
             c_color_blend = new_struct(
                 "WGPUBlendDescriptor",
@@ -1396,11 +1397,17 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct_p(
-            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d *",
+            width=size[0],
+            height=size[1],
+            depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_buffer_to_texture(
-            self._internal, c_source, c_destination, c_copy_size,
+            self._internal,
+            c_source,
+            c_destination,
+            c_copy_size,
         )
 
     # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopytexturetobuffer', dev=True)
@@ -1431,11 +1438,17 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct_p(
-            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d *",
+            width=size[0],
+            height=size[1],
+            depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_texture_to_buffer(
-            self._internal, c_source, c_destination, c_copy_size,
+            self._internal,
+            c_source,
+            c_destination,
+            c_copy_size,
         )
 
     # wgpu.help('Extent3D', 'TextureCopyView', 'commandencodercopytexturetotexture', dev=True)
@@ -1464,11 +1477,17 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
 
         size = _tuple_from_tuple_or_dict(copy_size, ("width", "height", "depth"))
         c_copy_size = new_struct_p(
-            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d *",
+            width=size[0],
+            height=size[1],
+            depth=size[2],
         )
 
         _lib.wgpu_command_encoder_copy_texture_to_texture(
-            self._internal, c_source, c_destination, c_copy_size,
+            self._internal,
+            c_source,
+            c_destination,
+            c_copy_size,
         )
 
     # wgpu.help('CommandBufferDescriptor', 'commandencoderfinish', dev=True)
@@ -1530,8 +1549,7 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
 
 
 class GPUComputePassEncoder(GPUProgrammablePassEncoder):
-    """
-    """
+    """"""
 
     # wgpu.help('ComputePipeline', 'computepassencodersetpipeline', dev=True)
     def set_pipeline(self, pipeline):
@@ -1560,8 +1578,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
 
 
 class GPURenderEncoderBase(GPUProgrammablePassEncoder):
-    """
-    """
+    """"""
 
     # wgpu.help('RenderPipeline', 'renderencoderbasesetpipeline', dev=True)
     def set_pipeline(self, pipeline):
@@ -1767,7 +1784,10 @@ class GPUQueue(base.GPUQueue):
 
         size = _tuple_from_tuple_or_dict(size, ("width", "height", "depth"))
         c_size = new_struct_p(
-            "WGPUExtent3d *", width=size[0], height=size[1], depth=size[2],
+            "WGPUExtent3d *",
+            width=size[0],
+            height=size[1],
+            depth=size[2],
         )
 
         _lib.wgpu_queue_write_texture(

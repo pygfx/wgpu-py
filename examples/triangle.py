@@ -36,7 +36,8 @@ def vertex_shader(
 
 @python2shader
 def fragment_shader(
-    in_color: (RES_INPUT, 0, vec3), out_color: (RES_OUTPUT, 0, vec4),
+    in_color: (RES_INPUT, 0, vec3),
+    out_color: (RES_OUTPUT, 0, vec4),
 ):
     out_color = vec4(in_color, 1.0)  # noqa
 
@@ -45,16 +46,14 @@ def fragment_shader(
 
 
 def main(canvas):
-    """ Regular function to setup a viz on the given canvas.
-    """
+    """Regular function to setup a viz on the given canvas."""
     adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
     device = adapter.request_device(extensions=[], limits={})
     return _main(canvas, device)
 
 
 async def main_async(canvas):
-    """ Async function to setup a viz on the given canvas.
-    """
+    """Async function to setup a viz on the given canvas."""
     adapter = await wgpu.request_adapter_async(
         canvas=canvas, power_preference="high-performance"
     )

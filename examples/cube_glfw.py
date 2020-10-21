@@ -133,7 +133,11 @@ command_encoder.copy_buffer_to_texture(
         "bytes_per_row": texture_data.strides[0],
         "rows_per_image": 0,
     },
-    {"texture": texture_view, "mip_level": 0, "origin": (0, 0, 0),},
+    {
+        "texture": texture_view,
+        "mip_level": 0,
+        "origin": (0, 0, 0),
+    },
     copy_size=texture_size,
 )
 device.default_queue.submit([command_encoder.finish()])
@@ -317,7 +321,14 @@ def draw_frame():
     a1 = -0.3
     a2 = time.time()
     s = 0.6
-    ortho = np.array([[s, 0, 0, 0], [0, s, 0, 0], [0, 0, s, 0], [0, 0, 0, 1],],)
+    ortho = np.array(
+        [
+            [s, 0, 0, 0],
+            [0, s, 0, 0],
+            [0, 0, s, 0],
+            [0, 0, 0, 1],
+        ],
+    )
     rot1 = np.array(
         [
             [1, 0, 0, 0],

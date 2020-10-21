@@ -8,7 +8,7 @@ import wgpu.utils
 
 
 def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
-    """ Apply the given compute shader to the given input_arrays and return
+    """Apply the given compute shader to the given input_arrays and return
     output arrays. Both input and output arrays are represented on the GPU
     using storage buffer objects.
 

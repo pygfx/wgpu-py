@@ -39,12 +39,33 @@ BufferUsage = Flags(
     QUERY_RESOLVE=512,
 )  #:
 
-MapMode = Flags("MapMode", READ=1, WRITE=2,)  #:
-
-TextureUsage = Flags(
-    "TextureUsage", COPY_SRC=1, COPY_DST=2, SAMPLED=4, STORAGE=8, OUTPUT_ATTACHMENT=16,
+MapMode = Flags(
+    "MapMode",
+    READ=1,
+    WRITE=2,
 )  #:
 
-ShaderStage = Flags("ShaderStage", VERTEX=1, FRAGMENT=2, COMPUTE=4,)  #:
+TextureUsage = Flags(
+    "TextureUsage",
+    COPY_SRC=1,
+    COPY_DST=2,
+    SAMPLED=4,
+    STORAGE=8,
+    OUTPUT_ATTACHMENT=16,
+)  #:
 
-ColorWrite = Flags("ColorWrite", RED=1, GREEN=2, BLUE=4, ALPHA=8, ALL=15,)  #:
+ShaderStage = Flags(
+    "ShaderStage",
+    VERTEX=1,
+    FRAGMENT=2,
+    COMPUTE=4,
+)  #:
+
+ColorWrite = Flags(
+    "ColorWrite",
+    RED=1,
+    GREEN=2,
+    BLUE=4,
+    ALPHA=8,
+    ALL=15,
+)  #:

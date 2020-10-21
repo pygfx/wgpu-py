@@ -77,8 +77,14 @@ binding_layouts = [
     },
 ]
 bindings = [
-    {"binding": 0, "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},},
-    {"binding": 1, "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},},
+    {
+        "binding": 0,
+        "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},
+    },
+    {
+        "binding": 1,
+        "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},
+    },
 ]
 
 # Put everything together
@@ -88,7 +94,8 @@ bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings
 
 # Create and run the pipeline
 compute_pipeline = device.create_compute_pipeline(
-    layout=pipeline_layout, compute_stage={"module": cshader, "entry_point": "main"},
+    layout=pipeline_layout,
+    compute_stage={"module": cshader, "entry_point": "main"},
 )
 command_encoder = device.create_command_encoder()
 compute_pass = command_encoder.begin_compute_pass()

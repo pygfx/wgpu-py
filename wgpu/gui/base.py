@@ -7,7 +7,7 @@ logger = logging.getLogger("wgpu")
 
 
 class WgpuCanvasInterface:
-    """ This is the interface that a canvas object must implement in order
+    """This is the interface that a canvas object must implement in order
     to be a valid canvas that wgpu can work with.
     """
 
@@ -18,13 +18,13 @@ class WgpuCanvasInterface:
         super().__init__(*args, **kwargs)
 
     def get_window_id(self):
-        """ Get the native window id. This is used by the backends
+        """Get the native window id. This is used by the backends
         to obtain a surface id.
         """
         raise NotImplementedError()
 
     def get_display_id(self):
-        """ Get the native display id on Linux. This is used by the backends
+        """Get the native display id on Linux. This is used by the backends
         to obtain a surface id on Linux. The default implementation calls into
         the X11 lib to get the display id.
         """
@@ -48,13 +48,12 @@ class WgpuCanvasInterface:
         return self._display_id
 
     def get_physical_size(self):
-        """ Get the physical size in integer pixels.
-        """
+        """Get the physical size in integer pixels."""
         raise NotImplementedError()
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
-    """ An abstract class, extending :class:`WgpuCanvasInterface`,
+    """An abstract class, extending :class:`WgpuCanvasInterface`,
     that provides a base canvas for various GUI toolkits, so
     that basic canvas functionality is available via a common API.
 
@@ -67,13 +66,13 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._err_hashes = {}
 
     def draw_frame(self):
-        """ The function that gets called at each draw. You can implement
+        """The function that gets called at each draw. You can implement
         this method in a subclass, or set it via a call to request_draw().
         """
         pass
 
     def request_draw(self, draw_function=None):
-        """ Request from the main loop to schedule a new draw event,
+        """Request from the main loop to schedule a new draw event,
         so that the canvas will be updated. If draw_function is not
         given, the last set drawing function is used.
         """
@@ -82,7 +81,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._request_draw()
 
     def _draw_frame_and_present(self):
-        """ Draw the frame and present the swapchain. Errors are logged to the
+        """Draw the frame and present the swapchain. Errors are logged to the
         "wgpu" logger. Should be called by the subclass at an appropriate time.
         """
         # Perform the user-defined drawing code. When this errors,
@@ -93,7 +92,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
             self._log_exception("Draw error", err)
 
     def _log_exception(self, kind, err):
-        """ Log the given exception instance, but only log a one-liner for
+        """Log the given exception instance, but only log a one-liner for
         subsequent occurances of the same error to avoid spamming (which
         can happen easily with errors in the drawing code).
         """
@@ -114,33 +113,27 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     # Methods that must be overloaded
 
     def get_pixel_ratio(self):
-        """ Get the float ratio between logical and physical pixels.
-        """
+        """Get the float ratio between logical and physical pixels."""
         raise NotImplementedError()
 
     def get_logical_size(self):
-        """ Get the logical size in float pixels.
-        """
+        """Get the logical size in float pixels."""
         raise NotImplementedError()
 
     def get_physical_size(self):
-        """ Get the physical size in integer pixels.
-        """
+        """Get the physical size in integer pixels."""
         raise NotImplementedError()
 
     def set_logical_size(self, width, height):
-        """ Set the window size (in logical pixels).
-        """
+        """Set the window size (in logical pixels)."""
         raise NotImplementedError()
 
     def close(self):
-        """ Close the window.
-        """
+        """Close the window."""
         raise NotImplementedError()
 
     def is_closed(self):
-        """ Get whether the window is closed.
-        """
+        """Get whether the window is closed."""
         raise NotImplementedError()
 
     def _request_draw(self):

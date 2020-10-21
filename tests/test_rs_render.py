@@ -19,7 +19,8 @@ if not can_use_wgpu_lib:
 
 @python2shader
 def vertex_shader(
-    index: (RES_INPUT, "VertexId", i32), pos: (RES_OUTPUT, "Position", vec4),
+    index: (RES_INPUT, "VertexId", i32),
+    pos: (RES_OUTPUT, "Position", vec4),
 ):
     positions = [
         vec3(-0.5, -0.5, 0.1),
@@ -35,8 +36,7 @@ def vertex_shader(
 
 
 def test_render_orange_square():
-    """ Render an orange square and check that there is an orange square.
-    """
+    """Render an orange square and check that there is an orange square."""
 
     device = get_default_device()
 
@@ -44,7 +44,9 @@ def test_render_orange_square():
     # With 0.5 some drivers would produce 127 and others 128.
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
@@ -76,13 +78,14 @@ def test_render_orange_square():
 
 
 def test_render_orange_square_indexed():
-    """ Render an orange square, using an index buffer.
-    """
+    """Render an orange square, using an index buffer."""
 
     device = get_default_device()
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
@@ -95,7 +98,8 @@ def test_render_orange_square_indexed():
     # Index buffer
     indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
     ibo = device.create_buffer_with_data(
-        data=indices, usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
+        data=indices,
+        usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
     )
 
     # Render
@@ -122,13 +126,14 @@ def test_render_orange_square_indexed():
 
 
 def test_render_orange_square_indirect():
-    """ Render an orange square and check that there is an orange square.
-    """
+    """Render an orange square and check that there is an orange square."""
 
     device = get_default_device()
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
@@ -141,7 +146,8 @@ def test_render_orange_square_indirect():
     # Buffer with draw parameters for indirect draw call
     params = (ctypes.c_int32 * 4)(4, 1, 0, 0)
     indirect_buffer = device.create_buffer_with_data(
-        data=params, usage=wgpu.BufferUsage.INDIRECT,
+        data=params,
+        usage=wgpu.BufferUsage.INDIRECT,
     )
 
     # Render
@@ -163,13 +169,14 @@ def test_render_orange_square_indirect():
 
 
 def test_render_orange_square_indexed_indirect():
-    """ Render an orange square, using an index buffer.
-    """
+    """Render an orange square, using an index buffer."""
 
     device = get_default_device()
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
@@ -182,13 +189,15 @@ def test_render_orange_square_indexed_indirect():
     # Index buffer
     indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
     ibo = device.create_buffer_with_data(
-        data=indices, usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
+        data=indices,
+        usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.MAP_WRITE,
     )
 
     # Buffer with draw parameters for indirect draw call
     params = (ctypes.c_int32 * 5)(6, 1, 0, 0, 0)
     indirect_buffer = device.create_buffer_with_data(
-        data=params, usage=wgpu.BufferUsage.INDIRECT,
+        data=params,
+        usage=wgpu.BufferUsage.INDIRECT,
     )
 
     # Render
@@ -216,19 +225,21 @@ def test_render_orange_square_indexed_indirect():
 
 
 def test_render_orange_square_vbo():
-    """ Render an orange square, using a VBO.
-    """
+    """Render an orange square, using a VBO."""
 
     device = get_default_device()
 
     @python2shader
     def vertex_shader(
-        pos_in: (RES_INPUT, 0, vec2), pos: (RES_OUTPUT, "Position", vec4),
+        pos_in: (RES_INPUT, 0, vec2),
+        pos: (RES_OUTPUT, "Position", vec4),
     ):
         pos = vec4(pos_in, 0.0, 1.0)  # noqa
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
@@ -241,7 +252,8 @@ def test_render_orange_square_vbo():
     # Vertex buffer
     pos_data = (ctypes.c_float * 8)(-0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5)
     vbo = device.create_buffer_with_data(
-        data=pos_data, usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.MAP_WRITE,
+        data=pos_data,
+        usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.MAP_WRITE,
     )
 
     # Vertex buffer views
@@ -249,7 +261,11 @@ def test_render_orange_square_vbo():
         "array_stride": 4 * 2,
         "step_mode": "vertex",
         "attributes": [
-            {"format": wgpu.VertexFormat.float2, "offset": 0, "shader_location": 0,},
+            {
+                "format": wgpu.VertexFormat.float2,
+                "offset": 0,
+                "shader_location": 0,
+            },
         ],
     }
 
@@ -272,13 +288,14 @@ def test_render_orange_square_vbo():
 
 
 def test_render_orange_square_color_attachment1():
-    """ Render an orange square on a blue background, testing the load_value.
-    """
+    """Render an orange square on a blue background, testing the load_value."""
 
     device = get_default_device()
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
@@ -314,14 +331,16 @@ def test_render_orange_square_color_attachment1():
 
 
 def test_render_orange_square_color_attachment2():
-    """ Render an orange square on a blue background, testing the LoadOp.load,
+    """Render an orange square on a blue background, testing the LoadOp.load,
     though in this case the result is the same as the normal square test.
     """
 
     device = get_default_device()
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout
@@ -359,13 +378,14 @@ def test_render_orange_square_color_attachment2():
 
 
 def test_render_orange_square_viewport():
-    """ Render an orange square, in a sub-viewport of the rendered area.
-    """
+    """Render an orange square, in a sub-viewport of the rendered area."""
 
     device = get_default_device()
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     def cb(renderpass):
@@ -403,13 +423,14 @@ def test_render_orange_square_viewport():
 
 
 def test_render_orange_square_scissor():
-    """ Render an orange square, but scissor half the screen away.
-    """
+    """Render an orange square, but scissor half the screen away."""
 
     device = get_default_device()
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     def cb(renderpass):
@@ -443,14 +464,14 @@ def test_render_orange_square_scissor():
 
 
 def test_render_orange_square_depth():
-    """ Render an orange square, but disable half of it using a depth test.
-    """
+    """Render an orange square, but disable half of it using a depth test."""
 
     device = get_default_device()
 
     @python2shader
     def vertex_shader2(
-        index: (RES_INPUT, "VertexId", i32), pos: (RES_OUTPUT, "Position", vec4),
+        index: (RES_INPUT, "VertexId", i32),
+        pos: (RES_OUTPUT, "Position", vec4),
     ):
         positions = [
             vec3(-0.5, -0.5, 0.0),
@@ -461,7 +482,9 @@ def test_render_orange_square_depth():
         pos = vec4(positions[index], 1.0)  # noqa
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     def cb(renderpass):
@@ -539,8 +562,7 @@ def test_render_orange_square_depth():
 
 
 def test_render_orange_dots():
-    """ Render four orange dots and check that there are four orange square dots.
-    """
+    """Render four orange dots and check that there are four orange square dots."""
 
     @python2shader
     def vertex_shader(
@@ -561,7 +583,9 @@ def test_render_orange_dots():
     device = get_default_device()
 
     @python2shader
-    def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+    def fragment_shader(
+        out_color: (RES_OUTPUT, 0, vec4),
+    ):
         out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
 
     # Bindings and layout

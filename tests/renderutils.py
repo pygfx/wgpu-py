@@ -200,8 +200,7 @@ def render_to_screen(
     depth_stencil_attachment=None,
     renderpass_callback=lambda *args: None,
 ):
-    """ Render to a window on screen, for debugging purposes.
-    """
+    """Render to a window on screen, for debugging purposes."""
     import glfw
     from wgpu.gui.glfw import WgpuCanvas, update_glfw_canvasses
 

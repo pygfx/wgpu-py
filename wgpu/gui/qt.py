@@ -29,8 +29,7 @@ else:
 
 
 def enable_hidpi():
-    """ Enable high-res displays.
-    """
+    """Enable high-res displays."""
     try:
         # See https://github.com/pyzo/pyzo/pull/700 why we seem to need both
         ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
@@ -136,8 +135,7 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
 
 
 class WgpuSubWidget(QtWidgets.QWidget):
-    """ The widget that actually provides the surface to render to.
-    """
+    """The widget that actually provides the surface to render to."""
 
     def __init__(self, parent):
         super().__init__(parent)
