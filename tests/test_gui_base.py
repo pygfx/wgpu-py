@@ -28,7 +28,7 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
 
 
 def test_canvas_logging(caplog):
-    """ As we attempt to draw, the canvas will error, which are logged.
+    """As we attempt to draw, the canvas will error, which are logged.
     Each first occurance is logged with a traceback. Subsequent same errors
     are much shorter and have a counter.
     """

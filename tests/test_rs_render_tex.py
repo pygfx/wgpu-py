@@ -39,8 +39,7 @@ def vertex_shader(
 
 
 def test_render_textured_square_rgba8unorm():
-    """ Test a texture with format rgba8unorm.
-    """
+    """Test a texture with format rgba8unorm."""
 
     @python2shader
     def fragment_shader(
@@ -63,8 +62,7 @@ def test_render_textured_square_rgba8unorm():
 
 
 def test_render_textured_square_rgba8uint():
-    """ Test a texture with format rgba8uint.
-    """
+    """Test a texture with format rgba8uint."""
 
     @python2shader
     def fragment_shader(
@@ -87,8 +85,7 @@ def test_render_textured_square_rgba8uint():
 
 
 def test_render_textured_square_rgba16sint():
-    """ Test a texture with format rgba16sint.
-    """
+    """Test a texture with format rgba16sint."""
 
     @python2shader
     def fragment_shader(
@@ -111,8 +108,7 @@ def test_render_textured_square_rgba16sint():
 
 
 def test_render_textured_square_rgba32float():
-    """ Test a texture with format rgba32float.
-    """
+    """Test a texture with format rgba32float."""
 
     @python2shader
     def fragment_shader(
@@ -138,7 +134,7 @@ def test_render_textured_square_rgba32float():
 
 
 def test_render_textured_square_rg8unorm():
-    """ Test a texture with format rg8unorm.
+    """Test a texture with format rg8unorm.
     The GPU considers blue to be 0 and alpha to be 1.
     """
 
@@ -163,7 +159,7 @@ def test_render_textured_square_rg8unorm():
 
 
 def test_render_textured_square_rg8uint():
-    """ Test a texture with format rg8uint.
+    """Test a texture with format rg8uint.
     The GPU considers blue to be 0 and alpha to be 1.
     """
 
@@ -189,7 +185,7 @@ def test_render_textured_square_rg8uint():
 
 
 def test_render_textured_square_rg16sint():
-    """ Test a texture with format rg16sint.
+    """Test a texture with format rg16sint.
     The GPU considers blue to be 0 and alpha to be 1.
     """
 
@@ -215,7 +211,7 @@ def test_render_textured_square_rg16sint():
 
 
 def test_render_textured_square_rg32float():
-    """ Test a texture with format rg32float.
+    """Test a texture with format rg32float.
     The GPU considers blue to be 0 and alpha to be 1.
     """
 
@@ -244,8 +240,7 @@ def test_render_textured_square_rg32float():
 
 
 def test_render_textured_square_r8unorm():
-    """ Test a texture with format r8unorm.
-    """
+    """Test a texture with format r8unorm."""
 
     @python2shader
     def fragment_shader(
@@ -269,8 +264,7 @@ def test_render_textured_square_r8unorm():
 
 
 def test_render_textured_square_r8uint():
-    """ Test a texture with format r8uint.
-    """
+    """Test a texture with format r8uint."""
 
     @python2shader
     def fragment_shader(
@@ -294,8 +288,7 @@ def test_render_textured_square_r8uint():
 
 
 def test_render_textured_square_r16sint():
-    """ Test a texture with format r16sint. Because e.g. CT data.
-    """
+    """Test a texture with format r16sint. Because e.g. CT data."""
 
     @python2shader
     def fragment_shader(
@@ -319,8 +312,7 @@ def test_render_textured_square_r16sint():
 
 
 def test_render_textured_square_r32sint():
-    """ Test a texture with format r32sint. Because e.g. CT data.
-    """
+    """Test a texture with format r32sint. Because e.g. CT data."""
 
     @python2shader
     def fragment_shader(
@@ -344,8 +336,7 @@ def test_render_textured_square_r32sint():
 
 
 def test_render_textured_square_r32float():
-    """ Test a texture with format r32float.
-    """
+    """Test a texture with format r32float."""
 
     @python2shader
     def fragment_shader(
@@ -372,7 +363,7 @@ def test_render_textured_square_r32float():
 
 
 def render_textured_square(fragment_shader, texture_format, texture_size, texture_data):
-    """ Render, and test the result. The resulting image must be a
+    """Render, and test the result. The resulting image must be a
     gradient on R and B, zeros on G and ones on A.
     """
     nx, ny, nz = texture_size
@@ -395,13 +386,18 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     # texture_view = texture.create_view()
     # or:
     texture_view = texture.create_view(
-        format=texture_format, dimension=wgpu.TextureDimension.d2,
+        format=texture_format,
+        dimension=wgpu.TextureDimension.d2,
     )
     # But not like these ...
     with raises(ValueError):
-        texture_view = texture.create_view(dimension=wgpu.TextureDimension.d2,)
+        texture_view = texture.create_view(
+            dimension=wgpu.TextureDimension.d2,
+        )
     with raises(ValueError):
-        texture_view = texture.create_view(mip_level_count=1,)
+        texture_view = texture.create_view(
+            mip_level_count=1,
+        )
 
     sampler = device.create_sampler(mag_filter="linear", min_filter="linear")
 

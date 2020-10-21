@@ -100,7 +100,8 @@ def test_struct_checking():
 
 @pyshader.python2shader
 def compute_shader(
-    index: ("input", "GlobalInvocationId", "ivec3"), out: ("buffer", 0, "Array(i32)"),
+    index: ("input", "GlobalInvocationId", "ivec3"),
+    out: ("buffer", 0, "Array(i32)"),
 ):
     out[index.x] = index.x
 

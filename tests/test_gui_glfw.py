@@ -32,8 +32,7 @@ def teardown_module():
 
 
 def test_glfw_canvas_basics():
-    """ Create a window and check some of its behavior. No wgpu calls here.
-    """
+    """Create a window and check some of its behavior. No wgpu calls here."""
 
     import glfw
     from wgpu.gui.glfw import WgpuCanvas
@@ -60,7 +59,8 @@ def test_glfw_canvas_basics():
 
 @python2shader
 def vertex_shader(
-    index: (RES_INPUT, "VertexId", i32), pos: (RES_OUTPUT, "Position", vec4),
+    index: (RES_INPUT, "VertexId", i32),
+    pos: (RES_OUTPUT, "Position", vec4),
 ):
     positions = [
         vec3(-0.5, -0.5, 0.1),
@@ -73,13 +73,14 @@ def vertex_shader(
 
 
 @python2shader
-def fragment_shader(out_color: (RES_OUTPUT, 0, vec4),):
+def fragment_shader(
+    out_color: (RES_OUTPUT, 0, vec4),
+):
     out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
 
 
 def test_glfw_canvas_render():
-    """ Render an orange square ... in a glfw window.
-    """
+    """Render an orange square ... in a glfw window."""
 
     import glfw
     from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
@@ -132,7 +133,7 @@ def test_glfw_canvas_render():
 
 
 def test_glfw_canvas_render_custom_canvas():
-    """ Render an orange square ... in a glfw window. But not using WgpuCanvas.
+    """Render an orange square ... in a glfw window. But not using WgpuCanvas.
     This helps make sure that WgpuCanvasInterface is indeed the minimal
     required canvas API.
     """
@@ -217,7 +218,10 @@ def _get_draw_function(device, canvas):
                 "write_mask": wgpu.ColorWrite.ALL,
             }
         ],
-        vertex_state={"index_format": wgpu.IndexFormat.uint32, "vertex_buffers": [],},
+        vertex_state={
+            "index_format": wgpu.IndexFormat.uint32,
+            "vertex_buffers": [],
+        },
         sample_count=1,
         sample_mask=0xFFFFFFFF,
         alpha_to_coverage_enabled=False,
@@ -239,7 +243,9 @@ def _get_draw_function(device, canvas):
                 "load_value": (0, 0, 0, 0),
                 "store_op": wgpu.StoreOp.store,
             }
-            render_pass = command_encoder.begin_render_pass(color_attachments=[ca],)
+            render_pass = command_encoder.begin_render_pass(
+                color_attachments=[ca],
+            )
 
             render_pass.set_pipeline(render_pipeline)
             render_pass.set_bind_group(0, bind_group, [], 0, 999999)

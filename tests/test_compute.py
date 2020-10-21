@@ -17,7 +17,8 @@ if not can_use_wgpu_lib:
 def test_compute_0_1_ctype():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), out: ("buffer", 0, Array(i32)),
+        index: ("input", "GlobalInvocationId", ivec3),
+        out: ("buffer", 0, Array(i32)),
     ):
         out[index.x] = index.x
 
@@ -38,7 +39,8 @@ def test_compute_0_1_ctype():
 def test_compute_0_1_tuple():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), out: ("buffer", 0, Array(i32)),
+        index: ("input", "GlobalInvocationId", ivec3),
+        out: ("buffer", 0, Array(i32)),
     ):
         out[index.x] = index.x
 
@@ -51,7 +53,8 @@ def test_compute_0_1_tuple():
 def test_compute_0_1_str():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), out: ("buffer", 0, Array(i32)),
+        index: ("input", "GlobalInvocationId", ivec3),
+        out: ("buffer", 0, Array(i32)),
     ):
         out[index.x] = index.x
 
@@ -64,7 +67,8 @@ def test_compute_0_1_str():
 def test_compute_0_1_int():
     @python2shader
     def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3), out: ("buffer", 0, Array(i32)),
+        index: ("input", "GlobalInvocationId", ivec3),
+        out: ("buffer", 0, Array(i32)),
     ):
         out[index.x] = index.x
 
@@ -131,7 +135,8 @@ def test_compute_indirect():
     # Create buffer to hold the dispatch parameters for the indirect call
     params = (ctypes.c_int32 * 3)(n - 2, 1, 1)  # note the minus 2!
     buffer3 = device.create_buffer_with_data(
-        data=params, usage=wgpu.BufferUsage.INDIRECT,
+        data=params,
+        usage=wgpu.BufferUsage.INDIRECT,
     )
 
     # Setup layout and bindings
@@ -224,9 +229,27 @@ def test_compute_fails():
     with raises(ValueError):  # output_arrays shape invalid
         compute_with_buffers({0: in1}, {0: ("i",)}, compute_shader)
     with raises(ValueError):  # output_arrays shape invalid
-        compute_with_buffers({0: in1}, {0: (0, "i",)}, compute_shader)
+        compute_with_buffers(
+            {0: in1},
+            {
+                0: (
+                    0,
+                    "i",
+                )
+            },
+            compute_shader,
+        )
     with raises(ValueError):  # output_arrays shape invalid
-        compute_with_buffers({0: in1}, {0: (-1, "i",)}, compute_shader)
+        compute_with_buffers(
+            {0: in1},
+            {
+                0: (
+                    -1,
+                    "i",
+                )
+            },
+            compute_shader,
+        )
 
     with raises(TypeError):  # invalid n
         compute_with_buffers({0: in1}, {0: c_int32 * 100}, compute_shader, n="100")

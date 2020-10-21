@@ -9,14 +9,12 @@ from pkg_resources import resource_filename
 
 
 def get_resource_filename(name):
-    """ Get the filename to a wgpu resource.
-    """
+    """Get the filename to a wgpu resource."""
     return resource_filename("wgpu.resources", name)
 
 
 class WGPULogger(logging.getLoggerClass()):
-    """ A custom logger for which we can detect changes in its level.
-    """
+    """A custom logger for which we can detect changes in its level."""
 
     def setLevel(self, level):  # noqa: N802
         super().setLevel(level)
@@ -34,7 +32,7 @@ logger.setLevel(logging.WARNING)
 
 
 def help(*searches, dev=False):
-    """ Print constants, enums, structs, and functions that contain the given searches.
+    """Print constants, enums, structs, and functions that contain the given searches.
     If dev is True, will also print info from the definitions in .idl and .h, which
     can be useful during debugging and dev.
     """

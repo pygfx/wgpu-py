@@ -20,7 +20,7 @@ use a neutral name as key in some places, and convert to Python name in others:
 
 
 def to_neutral_name(name):
-    """ Convert a name to the neutral name with no capitals, underscores or dots.
+    """Convert a name to the neutral name with no capitals, underscores or dots.
     Used primarily to match function names of IDL and .h specs.
     """
     name = name.lower()
@@ -34,7 +34,7 @@ def to_neutral_name(name):
 
 
 def to_python_name(name):
-    """ Convert someName and some_name to the Python flavor.
+    """Convert someName and some_name to the Python flavor.
     To convert function names and function argument names.
     """
     name2 = ""
@@ -47,7 +47,7 @@ def to_python_name(name):
 
 
 class BaseParser:
-    """ An object that can be used to walk over a str in an easy way.
+    """An object that can be used to walk over a str in an easy way.
 
     Our parsers have the following attributes:
 
@@ -122,8 +122,7 @@ class BaseParser:
 
 
 class StructField:
-    """ A little object to specify the field of a struct.
-    """
+    """A little object to specify the field of a struct."""
 
     def __init__(self, line, name, typename, default=None):
         self.line = line
@@ -154,11 +153,10 @@ class StructField:
 
 
 class IdlParser(BaseParser):
-    """ Parse (part of) IDL files to obtain info about flags, enums and structs.
-    """
+    """Parse (part of) IDL files to obtain info about flags, enums and structs."""
 
     def _normalize(self):
-        """ We don't do any name format normalization in the parser code itself;
+        """We don't do any name format normalization in the parser code itself;
         we do that here.
         """
 
@@ -350,11 +348,10 @@ class IdlParser(BaseParser):
 
 
 class HParser(BaseParser):
-    """ Parse (part of) .h files to obtain info about flags, enums and structs.
-    """
+    """Parse (part of) .h files to obtain info about flags, enums and structs."""
 
     def _normalize(self):
-        """ We don't do any name format normalization in the parser code itself;
+        """We don't do any name format normalization in the parser code itself;
         we do that here.
         """
 

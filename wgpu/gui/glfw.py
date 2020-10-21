@@ -36,7 +36,7 @@ all_glfw_canvases = weakref.WeakSet()
 
 
 def update_glfw_canvasses():
-    """ Call this in your glfw event loop to draw each canvas that needs
+    """Call this in your glfw event loop to draw each canvas that needs
     an update. Returns the number of visible canvases.
     """
     # Note that _draw_frame_and_present already catches errors, it can
@@ -50,8 +50,7 @@ def update_glfw_canvasses():
 
 
 class GlfwWgpuCanvas(WgpuCanvasBase):
-    """ A canvas object wrapping a glfw window.
-    """
+    """A canvas object wrapping a glfw window."""
 
     # See https://www.glfw.org/docs/latest/group__window.html
 

@@ -23,7 +23,7 @@ from wgpu._parsers import IdlParser, HParser, to_neutral_name, to_python_name
 
 
 def blacken(src, singleline=False):
-    """ Format the given src string by calling black in a subprocess.
+    """Format the given src string by calling black in a subprocess.
     If singleline is True, all signatures become single-line, so they can
     be parsed and updated.
     """
@@ -51,8 +51,7 @@ def blacken(src, singleline=False):
 
 
 def print(*args, **kwargs):
-    """ Report something (will be printed and added to a file.
-    """
+    """Report something (will be printed and added to a file."""
     __builtins__.print(*args, **kwargs)
     if args and not args[0].lstrip().startswith("#"):
         args = ("* ",) + args
@@ -317,8 +316,7 @@ print(f"\n## Checking and patching hand-written API code")
 
 
 def get_func_id_match(func_id, d):
-    """ Find matching func_id, taking into account sync/async method pairs.
-    """
+    """Find matching func_id, taking into account sync/async method pairs."""
     for func_id_try in [func_id, func_id.replace("async", ""), func_id + "async"]:
         if func_id_try in d:
             return func_id_try

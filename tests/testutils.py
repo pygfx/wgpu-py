@@ -6,8 +6,7 @@ from wgpu.utils import get_default_device  # noqa
 
 
 def run_tests(scope):
-    """ Run all test functions in the given scope.
-    """
+    """Run all test functions in the given scope."""
     for func in list(scope.values()):
         if callable(func) and func.__name__.startswith("test_"):
             if func.__code__.co_argcount == 0:
@@ -39,7 +38,11 @@ def _determine_can_use_wgpu_lib():
     code = "import wgpu.utils; wgpu.utils.get_default_device()"
     try:
         subprocess.check_output(
-            [sys.executable, "-c", code,]
+            [
+                sys.executable,
+                "-c",
+                code,
+            ]
         )
     except Exception:
         return False
