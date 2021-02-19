@@ -48,8 +48,8 @@ from .._mappings import cstructfield2enum, enummap
 logger = logging.getLogger("wgpu")  # noqa
 
 # wgpu-native version that we target/expect
-__version__ = "0.5.2"
-__commit_sha__ = "160be433dbec0fc7a27d25f2aba3423666ccfa10"
+__version__ = "0.6.0"
+__commit_sha__ = "b5daa1f7c7dfa2a6af0feb9c28486ef70c2ae483"
 version_info = tuple(map(int, __version__.split(".")))
 
 
