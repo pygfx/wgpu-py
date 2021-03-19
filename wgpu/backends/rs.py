@@ -48,6 +48,7 @@ from .._mappings import cstructfield2enum, enummap
 logger = logging.getLogger("wgpu")  # noqa
 
 # wgpu-native version that we target/expect
+# todo: call this expected version?
 __version__ = "0.5.2"
 __commit_sha__ = "160be433dbec0fc7a27d25f2aba3423666ccfa10"
 version_info = tuple(map(int, __version__.split(".")))
@@ -124,7 +125,10 @@ _lib = ffi.dlopen(_get_wgpu_lib_path())
 
 # Get the actual wgpu-native version
 _version_int = _lib.wgpu_get_version()
-version_info_lib = tuple((_version_int >> bits) & 0xFF for bits in (16, 8, 0))
+if _version_int < 65536:  # old version encoding with 3 ints
+    version_info_lib = tuple((_version_int >> bits) & 0xFF for bits in (16, 8, 0))
+else:
+    version_info_lib = tuple((_version_int >> bits) & 0xFF for bits in (24, 16, 8, 0))
 if version_info_lib != version_info:  # no-cover
     logger.warning(
         f"Expected wgpu-native version {version_info} but got {version_info_lib}"
