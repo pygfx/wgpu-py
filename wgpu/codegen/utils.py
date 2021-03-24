@@ -74,7 +74,7 @@ def blacken(src, singleline=False):
             else:
                 lines2.append(line)
                 line_nc = line.split("#")[0].strip()
-                if line_nc.startswith(("def ", "class ")) and "(" in line_nc:
+                if line_nc.startswith(("def ", "async def", "class ")) and "(" in line_nc:
                     if not line_nc.endswith("):"):
                         in_sig = True
         lines2.append("")
@@ -180,7 +180,7 @@ class Patcher:
                     current_def = None
                 if not sline.startswith("    "):
                     break  # exit class
-            if line.startswith("    def "):
+            if line.startswith(("    def ", "    async def ")):
                 name = line.split("(")[0].split()[-1]
                 if prop_mark and find_props:
                     current_def = name, prop_mark
