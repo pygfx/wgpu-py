@@ -24,10 +24,10 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
         super().__init__(*args, **kwargs)
 
     def get_window_id(self):
-        return int(self.GetId())
+        return int(self.GetHandle())
 
     def get_pixel_ratio(self):
-        return self.GetDPIScaleFactor()
+        return self.GetContentScaleFactor()
 
     def get_logical_size(self):
         lsize = self.GetWidth(), self.GetHeight()
@@ -36,7 +36,7 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
     def get_physical_size(self):
         lsize = self.GetWidth(), self.GetHeight()
         lsize = float(lsize[0]), float(lsize[1])
-        ratio = self.GetDPIScaleFactor()
+        ratio = self.GetContentScaleFactor()
         return round(lsize[0] * ratio), round(lsize[1] * ratio)
 
     def set_logical_size(self, width, height):
