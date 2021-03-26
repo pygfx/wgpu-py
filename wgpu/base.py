@@ -32,7 +32,9 @@ default_limits = dict(
 
 
 class GPU:
-    # FIXME: was request_adapter(self, *, canvas, power_preference: "GPUPowerPreference"):
+
+    # todo: bring back the canvas argument?
+
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     def request_adapter(self, *, power_preference: "GPUPowerPreference" = None):
         """Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
@@ -49,7 +51,6 @@ class GPU:
             "Select a backend (by importing wgpu.rs) before requesting an adapter!"
         )
 
-    # FIXME: was request_adapter_async(self, *, canvas, power_preference: "GPUPowerPreference"):
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     async def request_adapter_async(
         self, *, power_preference: "GPUPowerPreference" = None
@@ -72,12 +73,12 @@ class GPUCanvasContext:
         format: "GPUTextureFormat",
         usage: "GPUTextureUsageFlags" = 0x10,
     ):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: Promise<GPUTextureFormat> getSwapChainPreferredFormat(GPUDevice device);
     def get_swap_chain_preferred_format(self, device):
-        pass
+        raise NotImplementedError()
 
 
 class GPUAdapter:
@@ -121,8 +122,6 @@ class GPUAdapter:
         """
         raise NotImplementedError()
 
-    # FIXME: was request_device_async(self, *, label="", extensions: "GPUExtensionName-list" = [], limits: "GPULimits" = {}):
-    # FIXME: was request_device_async(self, *, label="", extensions: "GPUExtensionName-list" = [], limits: "GPULimits" = {}):
     # IDL: Promise<GPUDevice?> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     async def request_device_async(
         self,
@@ -206,11 +205,29 @@ class GPUDevice(GPUObjectBase):
         """A dict exposing the limits with which this device was created."""
         return self._limits
 
-    # FIXME: unknown prop GPUDevice.default_queue
+    # IDL: [SameObject] readonly attribute GPUQueue defaultQueue;
     @property
     def default_queue(self):
         """The default :class:`GPUQueue` for this device."""
         return self._default_queue
+
+    # IDL: [SameObject] readonly attribute GPUAdapter adapter;
+    @property
+    def adapter(self):
+        """ The adapter from which this device was created."""
+        return self._adapter
+
+    # FIXME: new prop to implement
+    # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
+    @property
+    def lost(self):
+        raise NotImplementedError()
+
+    # FIXME: new prop to implement
+    # IDL: attribute EventHandler onuncapturederror;
+    @property
+    def onuncapturederror(self):
+        raise NotImplementedError()
 
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def create_buffer(
@@ -230,6 +247,18 @@ class GPUDevice(GPUObjectBase):
             mapped_at_creation (bool): Must be False, because we currently
                 use read_data() and write_data() instead of buffer mapping.
         """
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
+    def create_buffer_mapped(
+        self,
+        *,
+        label="",
+        size: int,
+        usage: "GPUBufferUsageFlags",
+        mapped_at_creation: bool = False,
+    ):
         raise NotImplementedError()
 
     # FIXME: unknown method GPUDevice.create_buffer_with_data
@@ -615,42 +644,6 @@ class GPUDevice(GPUObjectBase):
         """
         return "bgra8unorm-srgb"  # seems to be a good default
 
-    # FIXME: new prop to implement
-    # IDL: [SameObject] readonly attribute GPUAdapter adapter;
-    @property
-    def adapter(self):
-        pass
-
-    # FIXME: new prop to implement
-    # IDL: [SameObject] readonly attribute GPUQueue defaultQueue;
-    @property
-    def defaultQueue(self):
-        pass
-
-    # FIXME: new prop to implement
-    # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
-    @property
-    def lost(self):
-        pass
-
-    # FIXME: new prop to implement
-    # IDL: attribute EventHandler onuncapturederror;
-    @property
-    def onuncapturederror(self):
-        pass
-
-    # FIXME: new method to implement
-    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    def create_buffer_mapped(
-        self,
-        *,
-        label="",
-        size: int,
-        usage: "GPUBufferUsageFlags",
-        mapped_at_creation: bool = False,
-    ):
-        pass
-
     # FIXME: new method to implement
     # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
     def create_query_set(
@@ -661,17 +654,17 @@ class GPUDevice(GPUObjectBase):
         count: "GPUSize32",
         pipeline_statistics: "GPUPipelineStatisticName-list" = [],
     ):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void pushErrorScope(GPUErrorFilter filter);
     def push_error_scope(self, filter):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: Promise<GPUError?> popErrorScope();
     def pop_error_scope(self):
-        pass
+        raise NotImplementedError()
 
 
 class GPUBuffer(GPUObjectBase):
@@ -727,8 +720,7 @@ class GPUBuffer(GPUObjectBase):
     # writing but not expose it via the public API. The only
     # disadvantage (AFAIK) is that there could be use-cases where a
     # memory copy could be avoided when using mapping.
-    #
-    #
+
     # IDL specifies getMappedRange, but there is no equivalent in wgpu yet
     #
     # @property
@@ -745,30 +737,6 @@ class GPUBuffer(GPUObjectBase):
     #       operations except destroy.
     #     """
     #     return self._state
-    #
-    # @property
-    # def map_mode(self):
-    #     """ The map mode flag. Zero if unmapped.
-    #     """
-    #     return self._map_mode
-    #
-    # def map(self, mode, offset=0, size=0):
-    #     """ Make the buffer memory accessable to the CPU for reading or writing.
-    #     If size is zero, the remaining size (after offset) is used.
-    #     Returns the mapped memory as a memoryview, which can be mapped
-    #     to e.g. a ctypes array or numpy array.
-    #     """
-    #     raise NotImplementedError()
-    #
-    # async def map_async(self, mode, offset=0, size=0):
-    #     """ Async version of ``map()``.
-    #     """
-    #     raise NotImplementedError()
-    #
-    # def unmap(self):
-    #     """ Unmap the buffer so that it can be used in a GPU pipeline.
-    #     """
-    #     raise NotImplementedError()
 
     # FIXME: unknown method GPUBuffer.read_data
     def read_data(self, offset=0, size=0):
@@ -802,19 +770,19 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     # FIXME: new method to implement
-    # FIXME: unknown method GPUBuffer.map_async
-    def map_async(self, mode, offset=0, size=0):
-        pass
-
-    # FIXME: new method to implement
     # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
     def get_mapped_range(self, offset=0, size=0):
-        pass
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    # FIXME: unknown method GPUBuffer.map_async
+    async def map_async(self, mode, offset=0, size=0):
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void unmap();
     def unmap(self):
-        pass
+        raise NotImplementedError()
 
 
 class GPUTexture(GPUObjectBase):
@@ -994,8 +962,6 @@ class GPUShaderModule(GPUObjectBase):
         """Get shader compilation info. Always returns empty string at the moment."""
         return []
 
-    # FIXME: was compilation_info_async(self):
-    # FIXME: was compilation_info_async(self):
     # IDL: Promise<GPUCompilationInfo> compilationInfo();
     async def compilation_info_async(self):
         """Async version of compilation_info()"""
@@ -1007,11 +973,11 @@ class GPUPipelineBase:
         super().__init__(label, internal, device)
         self._layout = layout
 
-    # Not in IDL
-    # @property
-    # def layout(self):
-    #     """The layout of this pipeline."""
-    #     return self._layout
+    # FIXME: unknown prop GPUPipelineBase.layout
+    @property
+    def layout(self):
+        """The layout of this pipeline."""
+        return self._layout
 
     # IDL: GPUBindGroupLayout getBindGroupLayout(unsigned long index);
     def get_bind_group_layout(self, index):
@@ -1184,14 +1150,14 @@ class GPUCommandEncoder(GPUObjectBase):
     # FIXME: new method to implement
     # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
     ):
-        pass
+        raise NotImplementedError()
 
 
 class GPUProgrammablePassEncoder:
@@ -1281,17 +1247,17 @@ class GPUComputePassEncoder(GPUObjectBase, GPUProgrammablePassEncoder):
     # FIXME: new method to implement
     # IDL: void beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
     def begin_pipeline_statistics_query(self, query_set, query_index):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void endPipelineStatisticsQuery();
     def end_pipeline_statistics_query(self):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
-        pass
+        raise NotImplementedError()
 
 
 class GPURenderEncoderBase:
@@ -1458,27 +1424,27 @@ class GPURenderPassEncoder(
     # FIXME: new method to implement
     # IDL: void beginOcclusionQuery(GPUSize32 queryIndex);
     def begin_occlusion_query(self, query_index):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void endOcclusionQuery();
     def end_occlusion_query(self):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
     def begin_pipeline_statistics_query(self, query_set, query_index):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void endPipelineStatisticsQuery();
     def end_pipeline_statistics_query(self):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
-        pass
+        raise NotImplementedError()
 
 
 class GPURenderBundle(GPUObjectBase):
@@ -1569,12 +1535,12 @@ class GPUQueue(GPUObjectBase):
     # FIXME: new method to implement
     # IDL: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
     def create_fence(self, *, label="", initial_value: "GPUFenceValue" = 0):
-        pass
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void signal(GPUFence fence, GPUFenceValue signalValue);
     def signal(self, fence, signal_value):
-        pass
+        raise NotImplementedError()
 
 
 class GPUSwapChain(GPUObjectBase):
@@ -1624,77 +1590,29 @@ class GPUSwapChain(GPUObjectBase):
 # %% Further non-GPUObject classes
 
 
-# FIXME: new class to implement
-class GPUCompilationMessage:
-    # FIXME: new prop to implement
-    # IDL: readonly attribute DOMString message;
-    @property
-    def message(self):
-        pass
-
-    # FIXME: new prop to implement
-    # IDL: readonly attribute GPUCompilationMessageType type;
-    @property
-    def type(self):
-        pass
-
-    # FIXME: new prop to implement
-    # IDL: readonly attribute unsigned long long lineNum;
-    @property
-    def lineNum(self):
-        pass
-
-    # FIXME: new prop to implement
-    # IDL: readonly attribute unsigned long long linePos;
-    @property
-    def linePos(self):
-        pass
-
-
-# FIXME: new class to implement
-class GPUCompilationInfo:
-    # FIXME: new prop to implement
-    # IDL: readonly attribute sequence<GPUCompilationMessage> messages;
-    @property
-    def messages(self):
-        pass
-
-
-# FIXME: new class to implement
-class GPUFence(GPUObjectBase):
-    # FIXME: new method to implement
-    # IDL: GPUFenceValue getCompletedValue();
-    def get_completed_value(self):
-        pass
-
-    # FIXME: new method to implement
-    # IDL: Promise<void> onCompletion(GPUFenceValue completionValue);
-    def on_completion(self, completion_value):
-        pass
-
-
-# FIXME: new class to implement
-class GPUQuerySet(GPUObjectBase):
-    # FIXME: new method to implement
-    # IDL: void destroy();
-    def destroy(self):
-        pass
-
-
 class GPUDeviceLostInfo:
+    """ An object that contains information about the device being lost."""
+
+    def __init__(self, message):
+        self._message = message
+
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
-        pass
+        return self._message
 
 
 class GPUOutOfMemoryError(Exception):
+    """ An error raised when the GPU is out of memory. """
+
     # IDL: constructor();
     def __init__(self):
-        pass
+        super().__init__("GPU is out of memory.")
 
 
 class GPUValidationError(Exception):
+    """ An error raised when the pipeline could not be validated. """
+
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
@@ -1705,12 +1623,86 @@ class GPUValidationError(Exception):
         self._message = message
 
 
+# %% Not implemented
+
+
+# FIXME: new class to implement
+class GPUCompilationMessage:
+
+    # FIXME: new prop to implement
+    # IDL: readonly attribute DOMString message;
+    @property
+    def message(self):
+        raise NotImplementedError()
+
+    # FIXME: new prop to implement
+    # IDL: readonly attribute GPUCompilationMessageType type;
+    @property
+    def type(self):
+        raise NotImplementedError()
+
+    # FIXME: new prop to implement
+    # IDL: readonly attribute unsigned long long lineNum;
+    @property
+    def lineNum(self):
+        raise NotImplementedError()
+
+    # FIXME: new prop to implement
+    # IDL: readonly attribute unsigned long long linePos;
+    @property
+    def linePos(self):
+        raise NotImplementedError()
+
+    # FIXME: new prop to implement
+    # IDL: readonly attribute unsigned long long lineNum;
+    @property
+    def line_num(self):
+        raise NotImplementedError()
+
+    # FIXME: new prop to implement
+    # IDL: readonly attribute unsigned long long linePos;
+    @property
+    def line_pos(self):
+        raise NotImplementedError()
+
+
+# FIXME: new class to implement
+class GPUCompilationInfo:
+    # FIXME: new prop to implement
+    # IDL: readonly attribute sequence<GPUCompilationMessage> messages;
+    @property
+    def messages(self):
+        raise NotImplementedError()
+
+
+# FIXME: new class to implement
+class GPUFence(GPUObjectBase):
+    # FIXME: new method to implement
+    # IDL: GPUFenceValue getCompletedValue();
+    def get_completed_value(self):
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    # IDL: Promise<void> onCompletion(GPUFenceValue completionValue);
+    def on_completion(self, completion_value):
+        raise NotImplementedError()
+
+
+# FIXME: new class to implement
+class GPUQuerySet(GPUObjectBase):
+    # FIXME: new method to implement
+    # IDL: void destroy();
+    def destroy(self):
+        raise NotImplementedError()
+
+
+# FIXME: new class to implement
 class GPUUncapturedErrorEvent:
     # IDL: [SameObject] readonly attribute GPUError error;
     @property
     def error(self):
-        pass
+        raise NotImplementedError()
 
     # IDL: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
     def __init__(self, type, gpu_uncaptured_error_event_init_dict):
-        pass
+        raise NotImplementedError()

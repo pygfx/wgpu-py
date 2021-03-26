@@ -14,16 +14,25 @@ __version__ = "0.3.0"
 version_info = tuple(map(int, __version__.split(".")))
 
 
-def _register_backend(func, func_async):
-    if not (callable(func) and func.__name__ == "request_adapter"):
+_gpu_backend = None
+
+def _register_backend(gpu_cls):
+    global _gpu
+    if not (
+        hasattr(gpu_cls, "request_adapter") and
+        callable(gpu_cls.request_adapter) and
+        hasattr(gpu_cls, "request_adapter_async") and
+        callable(gpu_cls.request_adapter_async)
+    ):
         raise RuntimeError(
-            "WGPU backend must be registered with function called request_adapter."
+            "The registered WGPU backend object must have methods " +
+            "'request_adapter' and 'request_adapter_async'"
         )
-    if not (callable(func_async) and func_async.__name__ == "request_adapter_async"):
-        raise RuntimeError(
-            "WGPU backend must be registered with function called request_adapter_async."
-        )
-    if globals()["request_adapter"] is not base.request_adapter:
+
+    # Set gpu object and reset request_adapter-functions
+    if globals()["_gpu_backend"]:
         raise RuntimeError("WGPU backend can only be set once.")
-    globals()["request_adapter"] = func
-    globals()["request_adapter_async"] = func_async
+    gpu = gpu_cls()
+    globals()["_gpu_backend"] = gpu
+    globals()["request_adapter"] = gpu.request_adapter
+    globals()["request_adapter_async"] = gpu.request_adapter_async
