@@ -11,11 +11,15 @@ import importlib
 from .base import WgpuCanvasBase
 
 # Select GUI toolkit
-for libname in ("PySide2", "PyQt5", "PySide", "PyQt4"):
+for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5", "PySide", "PyQt4"):
     if libname in sys.modules:
         QtCore = importlib.import_module(libname + ".QtCore")
         widgets_modname = "QtGui" if QtCore.qVersion()[0] == "4" else "QtWidgets"
         QtWidgets = importlib.import_module(libname + "." + widgets_modname)
+        try:
+            WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
+        except AttributeError:
+            WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
         break
 else:
     raise ImportError(
@@ -139,7 +143,7 @@ class WgpuSubWidget(QtWidgets.QWidget):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.setAttribute(QtCore.Qt.WA_PaintOnScreen, True)
+        self.setAttribute(WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
         self._draw_time = 0
 
