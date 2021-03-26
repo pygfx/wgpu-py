@@ -16,17 +16,18 @@ version_info = tuple(map(int, __version__.split(".")))
 
 _gpu_backend = None
 
+
 def _register_backend(gpu_cls):
     global _gpu
     if not (
-        hasattr(gpu_cls, "request_adapter") and
-        callable(gpu_cls.request_adapter) and
-        hasattr(gpu_cls, "request_adapter_async") and
-        callable(gpu_cls.request_adapter_async)
+        hasattr(gpu_cls, "request_adapter")
+        and callable(gpu_cls.request_adapter)
+        and hasattr(gpu_cls, "request_adapter_async")
+        and callable(gpu_cls.request_adapter_async)
     ):
         raise RuntimeError(
-            "The registered WGPU backend object must have methods " +
-            "'request_adapter' and 'request_adapter_async'"
+            "The registered WGPU backend object must have methods "
+            + "'request_adapter' and 'request_adapter_async'"
         )
 
     # Set gpu object and reset request_adapter-functions

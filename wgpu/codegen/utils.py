@@ -74,7 +74,10 @@ def blacken(src, singleline=False):
             else:
                 lines2.append(line)
                 line_nc = line.split("#")[0].strip()
-                if line_nc.startswith(("def ", "async def", "class ")) and "(" in line_nc:
+                if (
+                    line_nc.startswith(("def ", "async def", "class "))
+                    and "(" in line_nc
+                ):
                     if not line_nc.endswith("):"):
                         in_sig = True
         lines2.append("")
@@ -88,17 +91,15 @@ class Patcher:
     lines, classes, functions), and applying diffs (replace, remove, insert).
     """
 
-    def __init__(self, text_or_filename):
-        if "\n" in text_or_filename:
-            self._filename = None
-            text = text_or_filename
-        else:
-            self._filename = text_or_filename
-            with open(text_or_filename, "rb") as f:
-                text = f.read().decode()
-        self.lines = blacken(text, True).splitlines()  # inf line length
+    def __init__(self, code=None):
+        self._init(code)
+
+    def _init(self, code):
+        self.lines = []
         self._diffs = {}
         self._classes = {}
+        if code:
+            self.lines = blacken(code, True).splitlines()  # inf line length
 
     def remove_line(self, i):
         assert i not in self._diffs, f"Line {i} already has a diff"
@@ -134,12 +135,6 @@ class Patcher:
         if format:
             text = blacken(text)
         return text
-
-    def dump(self, format=True):
-        assert self._filename, "Was not given a filename during init"
-        text = self.dumps(format)
-        with open(self._filename, "wb") as f:
-            f.write(text.encode())
 
     def iter_lines(self, start_line=0):
         for i in range(start_line, len(self.lines)):

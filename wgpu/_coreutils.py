@@ -31,6 +31,44 @@ assert isinstance(logger, WGPULogger)
 logger.setLevel(logging.WARNING)
 
 
+class ApiDiff:
+    """Helper class to define differences in the API by
+    annotating methods.
+    """
+
+    def __init__(self):
+        self.hidden = {}
+        self.added = {}
+        self.changed = {}
+
+    def hide(self, func_or_text):
+        return self._diff("hidden", func_or_text)
+
+    def add(self, func_or_text):
+        return self._diff("added", func_or_text)
+
+    def change(self, func_or_text):
+        return self._diff("changed", func_or_text)
+
+    def _diff(self, method, func_or_text):
+        def wrapper(f):
+            d = getattr(self, method)
+            d[f.__qualname__] = text
+
+        if callable(func_or_text):
+            text = None
+            return wrapper(func_or_text)
+        else:
+            text = func_or_text
+            return wrapper
+
+    def remove_hidden_methods(self, scope):
+        for name in self.hidden:
+            classname, _, methodname = name.partition(".")
+            cls = scope[classname]
+            delattr(cls, methodname)
+
+
 def help(*searches, dev=False):
     """Print constants, enums, structs, and functions that contain the given searches.
     If dev is True, will also print info from the definitions in .idl and .h, which

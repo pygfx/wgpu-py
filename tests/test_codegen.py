@@ -84,7 +84,6 @@ def test_blacken_singleline():
     assert code3 == code2
 
 
-
 def test_blacken_comments():
     code1 = """
     def foo():  # hi
@@ -115,4 +114,3 @@ def test_blacken_comments():
 
 if __name__ == "__main__":
     run_tests(globals())
-

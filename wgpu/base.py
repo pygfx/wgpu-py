@@ -16,6 +16,9 @@ Developer notes and tips:
 
 import logging
 
+from ._coreutils import ApiDiff
+
+
 logger = logging.getLogger("wgpu")
 
 
@@ -31,12 +34,13 @@ default_limits = dict(
 )
 
 
+apidiff = ApiDiff()
+
+
 class GPU:
-
-    # todo: bring back the canvas argument?
-
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
-    def request_adapter(self, *, power_preference: "GPUPowerPreference" = None):
+    @apidiff.change("arguments include a canvas object")
+    def request_adapter(self, *, canvas, power_preference=None):
         """Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a :class:`GPUDevice`.
 
@@ -52,6 +56,7 @@ class GPU:
         )
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
+    @apidiff.change("arguments include a canvas object")
     async def request_adapter_async(
         self, *, power_preference: "GPUPowerPreference" = None
     ):
@@ -63,7 +68,6 @@ class GPU:
 
 # FIXME: new class to implement
 class GPUCanvasContext:
-    # FIXME: new method to implement
     # IDL: GPUSwapChain configureSwapChain(GPUSwapChainDescriptor descriptor);
     def configure_swap_chain(
         self,
@@ -75,7 +79,6 @@ class GPUCanvasContext:
     ):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: Promise<GPUTextureFormat> getSwapChainPreferredFormat(GPUDevice device);
     def get_swap_chain_preferred_format(self, device):
         raise NotImplementedError()
@@ -89,9 +92,10 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
-    def __init__(self, name, extensions):
+    def __init__(self, name, extensions, internal):
         self._name = name
         self._extensions = tuple(extensions)
+        self._internal = internal
 
     # IDL: readonly attribute DOMString name;
     @property
@@ -249,8 +253,8 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
+    @apidiff.hide
     def create_buffer_mapped(
         self,
         *,
@@ -261,7 +265,7 @@ class GPUDevice(GPUObjectBase):
     ):
         raise NotImplementedError()
 
-    # FIXME: unknown method GPUDevice.create_buffer_with_data
+    @apidiff.add("replaces ``create_bufer_mapped``")
     def create_buffer_with_data(self, *, label="", data, usage: "GPUBufferUsageFlags"):
         """Create a :class:`GPUBuffer` object initialized with the given data.
 
@@ -656,13 +660,13 @@ class GPUDevice(GPUObjectBase):
     ):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: void pushErrorScope(GPUErrorFilter filter);
+    @apidiff.hide
     def push_error_scope(self, filter):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: Promise<GPUError?> popErrorScope();
+    @apidiff.hide
     def pop_error_scope(self):
         raise NotImplementedError()
 
@@ -738,7 +742,7 @@ class GPUBuffer(GPUObjectBase):
     #     """
     #     return self._state
 
-    # FIXME: unknown method GPUBuffer.read_data
+    @apidiff.add("Replaces mapping API")
     def read_data(self, offset=0, size=0):
         """Read buffer data. Returns the mapped memory as a memoryview,
         which can be mapped to e.g. a ctypes array or numpy array.
@@ -747,11 +751,12 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: unknown method GPUBuffer.read_data_async
+    @apidiff.add("Replaces mapping API")
     async def read_data_async(self, offset=0, size=0):
         """Asnc version of read_data()."""
+        raise NotImplementedError()
 
-    # FIXME: unknown method GPUBuffer.write_data
+    @apidiff.add("Replaces mapping API")
     def write_data(self, data, offset=0):
         """Write data to the buffer. The data can be any object
         supporting the buffer protocol. The buffer usage must include MAP_WRITE.
@@ -769,19 +774,19 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    @apidiff.hide
     def get_mapped_range(self, offset=0, size=0):
-        raise NotImplementedError()
+        raise NotImplementedError("The Python API differs from WebGPU here")
 
-    # FIXME: new method to implement
-    # FIXME: unknown method GPUBuffer.map_async
-    async def map_async(self, mode, offset=0, size=0):
-        raise NotImplementedError()
-
-    # FIXME: new method to implement
     # IDL: void unmap();
+    @apidiff.hide
     def unmap(self):
+        raise NotImplementedError("The Python API differs from WebGPU here")
+
+    # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    @apidiff.hide
+    async def map_async(self, mode, offset=0, size=0):
         raise NotImplementedError()
 
 
@@ -985,7 +990,7 @@ class GPUPipelineBase:
         return self._layout._layouts[index]
 
 
-class GPUComputePipeline(GPUObjectBase, GPUPipelineBase):
+class GPUComputePipeline(GPUPipelineBase, GPUObjectBase):
     """
     A compute pipeline represents a single pipeline for computations (no rendering).
 
@@ -993,7 +998,7 @@ class GPUComputePipeline(GPUObjectBase, GPUPipelineBase):
     """
 
 
-class GPURenderPipeline(GPUObjectBase, GPUPipelineBase):
+class GPURenderPipeline(GPUPipelineBase, GPUObjectBase):
     """
     A render pipeline represents a single pipeline to draw something
     using a vertex and a fragment shader. The render target can come
@@ -1202,7 +1207,7 @@ class GPUProgrammablePassEncoder:
         raise NotImplementedError()
 
 
-class GPUComputePassEncoder(GPUObjectBase, GPUProgrammablePassEncoder):
+class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
     """
     A compute-pass encoder records commands related to a compute pass.
 
@@ -1244,13 +1249,13 @@ class GPUComputePassEncoder(GPUObjectBase, GPUProgrammablePassEncoder):
         """Record the end of the compute pass."""
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: void beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
+    @apidiff.hide
     def begin_pipeline_statistics_query(self, query_set, query_index):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: void endPipelineStatisticsQuery();
+    @apidiff.hide
     def end_pipeline_statistics_query(self):
         raise NotImplementedError()
 
@@ -1354,7 +1359,7 @@ class GPURenderEncoderBase:
 
 
 class GPURenderPassEncoder(
-    GPUObjectBase, GPUProgrammablePassEncoder, GPURenderEncoderBase
+    GPUProgrammablePassEncoder, GPURenderEncoderBase, GPUObjectBase
 ):
     """
     A render-pass encoder records commands related to a render pass.
@@ -1431,13 +1436,13 @@ class GPURenderPassEncoder(
     def end_occlusion_query(self):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: void beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
+    @apidiff.hide
     def begin_pipeline_statistics_query(self, query_set, query_index):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: void endPipelineStatisticsQuery();
+    @apidiff.hide
     def end_pipeline_statistics_query(self):
         raise NotImplementedError()
 
@@ -1454,7 +1459,7 @@ class GPURenderBundle(GPUObjectBase):
 
 
 class GPURenderBundleEncoder(
-    GPUObjectBase, GPUProgrammablePassEncoder, GPURenderEncoderBase
+    GPUProgrammablePassEncoder, GPURenderEncoderBase, GPUObjectBase
 ):
     """
     TODO: not yet available in wgpu-native
@@ -1532,13 +1537,13 @@ class GPUQueue(GPUObjectBase):
     # Fence.getCompletedValue
     # Fence.onCompletion
 
-    # FIXME: new method to implement
     # IDL: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
+    @apidiff.hide
     def create_fence(self, *, label="", initial_value: "GPUFenceValue" = 0):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: void signal(GPUFence fence, GPUFenceValue signalValue);
+    @apidiff.hide
     def signal(self, fence, signal_value):
         raise NotImplementedError()
 
@@ -1628,38 +1633,31 @@ class GPUValidationError(Exception):
 
 # FIXME: new class to implement
 class GPUCompilationMessage:
-
-    # FIXME: new prop to implement
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
         raise NotImplementedError()
 
-    # FIXME: new prop to implement
     # IDL: readonly attribute GPUCompilationMessageType type;
     @property
     def type(self):
         raise NotImplementedError()
 
-    # FIXME: new prop to implement
     # IDL: readonly attribute unsigned long long lineNum;
     @property
     def lineNum(self):
         raise NotImplementedError()
 
-    # FIXME: new prop to implement
     # IDL: readonly attribute unsigned long long linePos;
     @property
     def linePos(self):
         raise NotImplementedError()
 
-    # FIXME: new prop to implement
     # IDL: readonly attribute unsigned long long lineNum;
     @property
     def line_num(self):
         raise NotImplementedError()
 
-    # FIXME: new prop to implement
     # IDL: readonly attribute unsigned long long linePos;
     @property
     def line_pos(self):
@@ -1668,7 +1666,6 @@ class GPUCompilationMessage:
 
 # FIXME: new class to implement
 class GPUCompilationInfo:
-    # FIXME: new prop to implement
     # IDL: readonly attribute sequence<GPUCompilationMessage> messages;
     @property
     def messages(self):
@@ -1677,12 +1674,10 @@ class GPUCompilationInfo:
 
 # FIXME: new class to implement
 class GPUFence(GPUObjectBase):
-    # FIXME: new method to implement
     # IDL: GPUFenceValue getCompletedValue();
     def get_completed_value(self):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: Promise<void> onCompletion(GPUFenceValue completionValue);
     def on_completion(self, completion_value):
         raise NotImplementedError()
@@ -1690,7 +1685,6 @@ class GPUFence(GPUObjectBase):
 
 # FIXME: new class to implement
 class GPUQuerySet(GPUObjectBase):
-    # FIXME: new method to implement
     # IDL: void destroy();
     def destroy(self):
         raise NotImplementedError()
@@ -1705,4 +1699,9 @@ class GPUUncapturedErrorEvent:
 
     # IDL: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
     def __init__(self, type, gpu_uncaptured_error_event_init_dict):
-        raise NotImplementedError()
+        pass
+
+
+# %%%%% Post processing
+
+apidiff.remove_hidden_methods(globals())
