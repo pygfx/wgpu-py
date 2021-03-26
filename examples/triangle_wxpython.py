@@ -3,7 +3,7 @@ Import the viz from triangle.py and run it in a wxPython window.
 """
 
 import wx
-from wgpu.gui.wxpython import WxWgpuCanvas
+from wgpu.gui.wxpython import WgpuCanvas
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 # Import the (async) function that we must call to run the visualization
@@ -14,7 +14,7 @@ class AppFrame(wx.Frame):
     def __init__(self, *args, **kwargs):
         wx.Frame.__init__(self, *args, **kwargs)
 
-        self.canvas = WxWgpuCanvas(self)
+        self.canvas = WgpuCanvas(self)
 
         self.Bind(wx.EVT_CLOSE, self.OnDestroy)
 

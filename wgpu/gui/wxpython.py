@@ -22,6 +22,15 @@ except Exception:
 class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+    
+        self.Bind(wx.EVT_PAINT, self.on_paint)
+        self.Bind(wx.EVT_ERASE_BACKGROUND, lambda x: None)
+
+    def on_paint(self, event):
+        dc = wx.PaintDC(self)  # needed for wx
+        self._draw_frame_and_present()
+        del dc
+        event.Skip()
 
     def get_window_id(self):
         return int(self.GetHandle())
@@ -30,11 +39,11 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
         return self.GetContentScaleFactor()
 
     def get_logical_size(self):
-        lsize = self.GetWidth(), self.GetHeight()
+        lsize = self.Size[0], self.Size[1]
         return float(lsize[0]), float(lsize[1])
 
     def get_physical_size(self):
-        lsize = self.GetWidth(), self.GetHeight()
+        lsize = self.Size[0], self.Size[1]
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self.GetContentScaleFactor()
         return round(lsize[0] * ratio), round(lsize[1] * ratio)
@@ -52,3 +61,6 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
 
     def is_closed(self):
         return not self.IsShown()
+
+
+WgpuCanvas = WxWgpuCanvas
