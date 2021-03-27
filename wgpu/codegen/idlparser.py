@@ -2,9 +2,6 @@
 The logic to parse the IDL file, from this, we generate the API.
 """
 
-from .utils import to_snake_case
-
-
 class StructField:
     """A little object to specify the field of a struct."""
 
@@ -19,18 +16,6 @@ class StructField:
 
     def to_str(self):
         return self.line
-
-    def py_arg(self):
-        name = to_snake_case(self.name)
-        t = self.typename
-        d = self.default
-        if t not in ("bool", "int", "float", "str"):
-            t = f"'{t}'"
-        if d is not None:
-            d = {"false": "False", "true": "True"}.get(d, d)
-            return f"{name}: {t}={d}"
-        else:
-            return f"{name}: {t}"
 
 
 class Interface:
@@ -335,9 +320,3 @@ class IdlParser:
         for name in list(self.structs):
             if name.endswith("Base"):
                 self.structs.pop(name)
-
-        # Turn funcs into python name
-        for cls in self.classes.values():
-            for funcname in list(cls.functions.keys()):
-                funcname2 = to_snake_case(funcname)
-                cls.functions[funcname2] = cls.functions.pop(funcname)

@@ -6,7 +6,7 @@ spec (IDL), and the backend implementations from the base API.
 import os
 
 from .idlparser import IdlParser
-from .utils import lib_dir, blacken, to_snake_case, Patcher
+from .utils import lib_dir, blacken, to_snake_case, to_camel_case, Patcher
 
 
 def patch_base_api(code):
@@ -115,7 +115,7 @@ class AbstractApiPatcher(Patcher):
             seen_classes.add(classname)
             if self.class_is_known(classname):
                 old_line = self.lines[i1]
-                new_line = self.get_class_def(classname) + " foo"
+                new_line = self.get_class_def(classname)
                 if old_line != new_line:
                     fixme_line = "# FIXME: was " + old_line.split("class ", 1)[-1]
                     self.replace_line(i1, f"{fixme_line}\n{new_line}")
@@ -123,7 +123,6 @@ class AbstractApiPatcher(Patcher):
                 self.patch_methods(classname, i1 + 1, i2)
             else:
                 self.insert_line(i1, f"# FIXME: unknown class {classname}")
-                print(f"Unknown class {classname}")
 
         # Add missing classes
         lines = []
@@ -161,7 +160,6 @@ class AbstractApiPatcher(Patcher):
                 self.insert_line(
                     j1, f"    # FIXME: unknown prop {classname}.{propname}"
                 )
-                print(f"Unknown prop {classname}.{propname}")
 
         # Add missing properties for this class
         lines = self.get_missing_properties(classname, seen_props)
@@ -192,7 +190,6 @@ class AbstractApiPatcher(Patcher):
                 self.insert_line(
                     j1, f"    # FIXME: unknown method {classname}.{methodname}"
                 )
-                print(f"Unknown method {classname}.{methodname}")
 
         # Add missing methods for this class
         lines = self.get_missing_methods(classname, seen_funcs)
@@ -222,40 +219,19 @@ class AbstractApiPatcher(Patcher):
 
 class IdlPatcherMixin:
 
-    _map_funcname_idl2py = {"constructor": "__init__"}
-    _map_funcname_py2idl = {v: k for k, v in _map_funcname_idl2py.items()}
-
     def __init__(self, idl):
         super().__init__()
         self.idl = idl
 
-    def methodname_py2idl(self, name):
-        return self._map_funcname_py2idl.get(name, name)
+    def name2idl(self, name):
+        m = {"__init__": "constructor"}
+        name = m.get(name, name)
+        return to_camel_case(name)
 
-    def methodname_idl2py(self, name):
-        return self._map_funcname_idl2py.get(name, name)
-
-    def propname_py2idl(self, name):
-        is_capital = False
-        name2 = ""
-        for c in name:
-            if c == "_":
-                is_capital = True
-            elif is_capital:
-                name2 += c.upper()
-                is_capital = False
-            else:
-                name2 += c
-        return name2
-
-    def propname_idl2py(self, name):
-        name2 = ""
-        for c in name:
-            c_ = c.lower()
-            if c_ != c:
-                name2 += "_"
-            name2 += c_
-        return name2
+    def name2py(self, name):
+        m = {"constructor": "__init__"}
+        name = m.get(name, name)
+        return to_snake_case(name)
 
     def class_is_known(self, classname):
         return classname in self.idl.classes
@@ -275,9 +251,9 @@ class IdlPatcherMixin:
     def get_method_def(self, classname, methodname):
         # Get the corresponding IDL line
         functions = self.idl.classes[classname].functions
-        name_idl = self.methodname_py2idl(methodname)
+        name_idl = self.name2idl(methodname)
         if methodname.endswith("_async") and name_idl not in functions:
-            name_idl = self.methodname_py2idl(methodname.replace("_async", ""))
+            name_idl = self.name2idl(methodname.replace("_async", ""))
         idl_line = functions[name_idl]
 
         # Construct preamble
@@ -298,11 +274,11 @@ class IdlPatcherMixin:
         argnames = [(f"{n}={v}" if v else n) for n, v in zip(argnames, defaults)]
         argtypes = [arg.split("=")[0].split()[-2] for arg in args]
 
-        # Get Python args, if one arg that is a dict, flatten dict to kwargs
+        # If one arg that is a dict, flatten dict to kwargs
         if len(argtypes) == 1 and argtypes[0].endswith(("Options", "Descriptor")):
             assert argtypes[0].startswith("GPU")
-            arg_struct = self.idl.structs[argtypes[0][3:]]
-            py_args = [field.py_arg() for field in arg_struct.values()]
+            fields = self.idl.structs[argtypes[0][3:]].values()  # struct fields
+            py_args = [self._arg_from_struct_field(field) for field in fields]
             if py_args[0].startswith("label: str"):
                 py_args[0] = 'label=""'
             py_args = ["self", "*"] + py_args
@@ -314,15 +290,27 @@ class IdlPatcherMixin:
         line = blacken(line, True).split("):")[0] + "):"
         return "    " + line
 
+    def _arg_from_struct_field(self, field):
+        name = to_snake_case(field.name)
+        t = field.typename
+        d = field.default
+        if t not in ("bool", "int", "float", "str"):
+            t = f"'{t}'"
+        if d is not None:
+            d = {"false": "False", "true": "True"}.get(d, d)
+            return f"{name}: {t}={d}"
+        else:
+            return f"{name}: {t}"
+
     def prop_is_known(self, classname, propname):
-        propname_idl = self.propname_py2idl(propname)
+        propname_idl = self.name2idl(propname)
         return propname_idl in self.idl.classes[classname].attributes
 
     def method_is_known(self, classname, methodname):
         functions = self.idl.classes[classname].functions
-        name_idl = self.methodname_py2idl(methodname)
+        name_idl = self.name2idl(methodname)
         if "_async" in methodname and name_idl not in functions:
-            name_idl = self.methodname_py2idl(methodname.replace("_async", ""))
+            name_idl = self.name2idl(methodname.replace("_async", ""))
         return name_idl if name_idl in functions else None
 
     def get_class_names(self):
@@ -330,11 +318,11 @@ class IdlPatcherMixin:
 
     def get_required_prop_names(self, classname):
         propnames_idl = self.idl.classes[classname].attributes.keys()
-        return [self.propname_idl2py(x) for x in propnames_idl]
+        return [self.name2py(x) for x in propnames_idl]
 
     def get_required_method_names(self, classname):
         methodnames_idl = self.idl.classes[classname].functions.keys()
-        return [self.methodname_idl2py(x) for x in methodnames_idl]
+        return [self.name2py(x) for x in methodnames_idl]
 
 
 class BaseApiPatcher(IdlPatcherMixin, AbstractApiPatcher):
@@ -351,7 +339,7 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
 
     def get_prop_comment(self, classname, propname):
         if self.prop_is_known(classname, propname):
-            propname_idl = self.propname_py2idl(propname)
+            propname_idl = self.name2idl(propname)
             return "    # IDL: " + self.idl.classes[classname].attributes[propname_idl]
 
     def get_method_comment(self, classname, methodname):

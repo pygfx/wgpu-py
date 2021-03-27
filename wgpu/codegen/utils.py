@@ -11,8 +11,8 @@ lib_dir = os.path.abspath(os.path.join(__file__, "..", ".."))
 
 
 def to_snake_case(name):
-    """Convert someName and some_name to the Python flavor.
-    To convert function names and function argument names.
+    """Convert a name from camelCase to snake_case. Names that already are
+    snake_case remain the same.
     """
     name2 = ""
     for c in name:
@@ -20,6 +20,23 @@ def to_snake_case(name):
         if c2 != c and len(name2) > 0 and name2[-1] != "_":
             name2 += "_"
         name2 += c2
+    return name2
+
+
+def to_camel_case(name):
+    """ Convert a name from snake_case to camelCase. Names that already are
+    camelCase remain the same.
+    """
+    is_capital = False
+    name2 = ""
+    for c in name:
+        if c == "_" and name2:
+            is_capital = True
+        elif is_capital:
+            name2 += c.upper()
+            is_capital = False
+        else:
+            name2 += c
     return name2
 
 
@@ -88,6 +105,8 @@ class Patcher:
         self._init(code)
 
     def _init(self, code):
+        """ Subclasses can call this to reset the patcher.
+        """
         self.lines = []
         self._diffs = {}
         self._classes = {}
@@ -95,10 +114,17 @@ class Patcher:
             self.lines = blacken(code, True).splitlines()  # inf line length
 
     def remove_line(self, i):
+        """ Remove the line at the given position. There must not have been
+        an action on line i.
+        """
         assert i not in self._diffs, f"Line {i} already has a diff"
         self._diffs[i] = i, "remove"
 
     def insert_line(self, i, line):
+        """ Insert a new line at the given position. It's ok if there
+        has already been an insertion an line i, but there must not have been
+        any other actions.
+        """
         if i in self._diffs and self._diffs[i][1] == "insert":
             cur_line = self._diffs[i][2]
             self._diffs[i] = i, "insert", cur_line + "\n" + line
@@ -107,10 +133,15 @@ class Patcher:
             self._diffs[i] = i, "insert", line
 
     def replace_line(self, i, line):
+        """ Replace the line at the given position with another line.
+        There must not have been an action on line i.
+        """
         assert i not in self._diffs, f"Line {i} already has a diff"
         self._diffs[i] = i, "replace", line
 
     def dumps(self, format=True):
+        """ Return the patched result as a string.
+        """
         lines = self.lines.copy()
         # Apply diff
         diffs = sorted(self._diffs.values())
@@ -137,30 +168,47 @@ class Patcher:
         return text
 
     def iter_lines(self, start_line=0):
+        """ Generator to iterate over the lines.
+        Each iteration yields (line, linenr)
+        """
         for i in range(start_line, len(self.lines)):
             line = self.lines[i]
             yield line, i
 
     def iter_classes(self, start_line=0):
+        """ Generator to iterate over the classes.
+        Each iteration yields (classname, linenr_start, linenr_end),
+        where linenr_end is the last line of code.
+        """
         current_class = None
         for i in range(start_line, len(self.lines)):
             line = self.lines[i]
             sline = line.rstrip()
-            if sline and not sline.startswith("    "):
-                if current_class:
-                    yield current_class + (i - 1,)
+            if current_class and sline:
+                if sline.startswith("    "):
+                    current_class[2] = i
+                else:  # code has less indentation -> something new
+                    yield current_class
                     current_class = None
             if line.startswith("class "):
                 name = line.split(":")[0].split("(")[0].split()[-1]
-                current_class = name, i
-                # self._classes[current_class] = i, current_class, {}
+                current_class = [name, i, i]
         if current_class:
-            yield current_class + (i - 1,)
+            yield current_class
 
     def iter_properties(self, start_line=0):
+        """ Generator to iterate over the properties.
+        Each iteration yields (classname, linenr_start, linenr_end),
+        where linenr_start is the line that says `@property`,
+        and linenr_end is the last line of code.
+        """
         return self._iter_props_and_methods(start_line, True)
 
     def iter_methods(self, start_line=0):
+        """ Generator to iterate over the methods.
+        Each iteration yields (classname, linenr_start, linenr_end)
+        where linenr_end is the last line of code.
+        """
         return self._iter_props_and_methods(start_line, False)
 
     def _iter_props_and_methods(self, start_line, find_props):
@@ -169,22 +217,24 @@ class Patcher:
         for i in range(start_line, len(self.lines)):
             line = self.lines[i]
             sline = line.rstrip()
-            if sline and not sline.startswith("        "):
-                if current_def:
-                    yield current_def + (i - 1,)
+            if current_def and sline:
+                if sline.startswith("        "):
+                    current_def[2] = i
+                else:
+                    yield current_def
                     current_def = None
-                if not sline.startswith("    "):
-                    break  # exit class
+            if sline and not sline.startswith("    "):
+                break  # exit class
             if line.startswith(("    def ", "    async def ")):
                 name = line.split("(")[0].split()[-1]
                 if prop_mark and find_props:
-                    current_def = name, prop_mark
+                    current_def = [name, prop_mark, i]
                 elif not prop_mark and not find_props:
-                    current_def = name, i
+                    current_def = [name, i, i]
             if line.startswith("    @property"):
                 prop_mark = i
             elif sline and not sline.startswith("#"):
                 prop_mark = None
 
         if current_def:
-            yield current_def + (i - 1,)
+            yield current_def
