@@ -1,6 +1,9 @@
-import sys
+import os
 
 import black
+
+
+lib_dir = os.path.abspath(os.path.join(__file__, "..", ".."))
 
 
 def to_neutral_name(name):

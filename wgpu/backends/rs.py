@@ -1215,10 +1215,6 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             self._map_mode = 0
             _lib.wgpu_buffer_destroy(internal)
 
-    # FIXME: new method to implement
-    def read_data(self, offset=0, size=0):
-        raise NotImplementedError()
-
 
 class GPUTexture(base.GPUTexture, GPUObjectBase):
     def create_view(

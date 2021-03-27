@@ -2,7 +2,7 @@
 The logic to parse the IDL file, from this, we generate the API.
 """
 
-from .utils import to_python_name, to_neutral_name
+from .utils import to_python_name
 
 
 class StructField:
@@ -99,7 +99,7 @@ class IdlParser:
         self.enums = {}
 
         if verbose:
-            print(f"##### Parsing IDL ...")
+            print("##### Parsing IDL ...")
 
         self._reset()
         self._parse()
