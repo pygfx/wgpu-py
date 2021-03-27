@@ -2,7 +2,7 @@
 The logic to parse the IDL file, from this, we generate the API.
 """
 
-from .utils import to_python_name
+from .utils import to_snake_case
 
 
 class StructField:
@@ -21,7 +21,7 @@ class StructField:
         return self.line
 
     def py_arg(self):
-        name = to_python_name(self.name)
+        name = to_snake_case(self.name)
         t = self.typename
         d = self.default
         if t not in ("bool", "int", "float", "str"):
@@ -339,5 +339,5 @@ class IdlParser:
         # Turn funcs into python name
         for cls in self.classes.values():
             for funcname in list(cls.functions.keys()):
-                funcname2 = to_python_name(funcname)
+                funcname2 = to_snake_case(funcname)
                 cls.functions[funcname2] = cls.functions.pop(funcname)

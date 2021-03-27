@@ -1,3 +1,7 @@
+"""
+Codegen utils.
+"""
+
 import os
 
 import black
@@ -6,21 +10,7 @@ import black
 lib_dir = os.path.abspath(os.path.join(__file__, "..", ".."))
 
 
-def to_neutral_name(name):
-    """Convert a name to the neutral name with no capitals, underscores or dots.
-    Used primarily to match function names of IDL and .h specs.
-    """
-    name = name.lower()
-    if name.startswith("gpu"):
-        name = name[3:]
-    if name.startswith("wgpu"):
-        name = name[4:]
-    for c in " -_.":
-        name = name.replace(c, "")
-    return name
-
-
-def to_python_name(name):
+def to_snake_case(name):
     """Convert someName and some_name to the Python flavor.
     To convert function names and function argument names.
     """
@@ -136,7 +126,14 @@ class Patcher:
         # Format
         text = "\n".join(lines)
         if format:
-            text = blacken(text)
+            try:
+                text = blacken(text)
+            except black.InvalidInput as err:
+                # If you get this error, it helps to dumps(False) the code,
+                # copy/write it into a temporary .py file, and then check
+                # what the syntax error is (e.g. by loading it into an IDE).
+                raise RuntimeError(f"It appears that the patcher has generated invalid Python: {err}")
+
         return text
 
     def iter_lines(self, start_line=0):
@@ -191,21 +188,3 @@ class Patcher:
 
         if current_def:
             yield current_def + (i - 1,)
-
-    def parse_public_api(self):
-        current_class = None
-        for i, line in enumerate(self.lines):
-            if line.startswith("class "):
-                current_class = line.split(":")[0].split("(")[0].split()[-1]
-                self._classes[current_class] = i, current_class, {}
-            if line.lstrip().startswith(("def ", "async def")):
-                indent = len(line) - len(line.lstrip())
-                funcname = line.split("(")[0].split()[-1]
-                if not funcname.startswith("_"):
-                    if not self.lines[i - 1].lstrip().startswith("@property"):
-                        func_id = funcname
-                        funcname = to_python_name(funcname)
-                        if indent:
-                            func_id = current_class + "." + func_id
-                        func_id = to_neutral_name(func_id)
-                        api_functions[func_id] = funcname, i, indent

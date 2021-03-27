@@ -1,11 +1,12 @@
 """
-Provide functionality to generate/patch a Python API based on the WebGPU spec (IDL).
+Provide functionality to generate/patch the base API from the WebGPU
+spec (IDL), and the backend implementations from the base API.
 """
 
 import os
 
 from .idlparser import IdlParser
-from .utils import lib_dir, blacken, to_python_name, Patcher
+from .utils import lib_dir, blacken, to_snake_case, Patcher
 
 
 def patch_base_api(code):
@@ -114,7 +115,7 @@ class AbstractApiPatcher(Patcher):
             seen_classes.add(classname)
             if self.class_is_known(classname):
                 old_line = self.lines[i1]
-                new_line = self.get_class_def(classname)
+                new_line = self.get_class_def(classname) + " foo"
                 if old_line != new_line:
                     fixme_line = "# FIXME: was " + old_line.split("class ", 1)[-1]
                     self.replace_line(i1, f"{fixme_line}\n{new_line}")
@@ -280,7 +281,7 @@ class IdlPatcherMixin:
         idl_line = functions[name_idl]
 
         # Construct preamble
-        preamble = "def " + to_python_name(methodname) + "("
+        preamble = "def " + to_snake_case(methodname) + "("
         if "async" in methodname:
             preamble = "async " + preamble
 
@@ -293,7 +294,7 @@ class IdlPatcherMixin:
             for default, arg in zip(defaults, args)
         ]
         argnames = [arg.split("=")[0].split()[-1] for arg in args]
-        argnames = [to_python_name(argname) for argname in argnames]
+        argnames = [to_snake_case(argname) for argname in argnames]
         argnames = [(f"{n}={v}" if v else n) for n, v in zip(argnames, defaults)]
         argtypes = [arg.split("=")[0].split()[-2] for arg in args]
 
