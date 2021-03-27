@@ -1,5 +1,5 @@
 """
-The logic to parse the IDL file, from this, we generate the API.
+The logic to parse the IDL file, from this we generate the base API.
 """
 
 class StructField:
