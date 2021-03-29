@@ -18,7 +18,7 @@ class AppFrame(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.OnDestroy)
 
-    def OnDestroy(self, event):
+    def OnDestroy(self, event):  # noqa: N802
         self.Destroy()
 
 
