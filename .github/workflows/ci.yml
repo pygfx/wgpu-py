@@ -68,6 +68,10 @@ jobs:
       if: matrix.SKIPTEST != 1
       run: |
           pytest -v tests
+    - name: Test codegen
+      if: matrix.SKIPTEST != 1
+      run: |
+          pytest -v codegen
     - name: Test PyInstaller
       if: matrix.SKIPTEST != 1 && (matrix.pyversion == '3.6' || matrix.pyversion == '3.7')
       run: |

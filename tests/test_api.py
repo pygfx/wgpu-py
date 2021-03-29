@@ -13,12 +13,11 @@ def test_basic_api():
 
     assert isinstance(wgpu.__version__, str)
     assert isinstance(wgpu.version_info, tuple)
-    assert wgpu.help
     assert wgpu.request_adapter
     assert wgpu.request_adapter_async
     assert (
-        wgpu.base.request_adapter.__code__.co_varnames
-        == wgpu.base.request_adapter_async.__code__.co_varnames
+        wgpu.base.GPU.request_adapter.__code__.co_varnames
+        == wgpu.base.GPU.request_adapter_async.__code__.co_varnames
     )
 
 
@@ -62,12 +61,13 @@ def test_enums_and_flags():
 
 def test_base_wgpu_api():
 
+    gpu = wgpu.base.GPU()
     with raises(RuntimeError) as error:
-        wgpu.base.request_adapter(canvas=None, power_preference="high-performance")
+        gpu.request_adapter(canvas=None, power_preference="high-performance")
     assert "select a backend" in str(error.value).lower()
 
     # Fake a device and an adapter
-    adapter = wgpu.base.GPUAdapter("adapter07", [])
+    adapter = wgpu.base.GPUAdapter("adapter07", [], None)
     queue = wgpu.GPUQueue("", None, None)
     device = wgpu.base.GPUDevice("device08", -1, adapter, [42, 43], {}, queue)
 
@@ -76,7 +76,7 @@ def test_base_wgpu_api():
     assert adapter.name == "adapter07"
     assert adapter.extensions == ()
 
-    assert isinstance(device, wgpu.base.GPUObject)
+    assert isinstance(device, wgpu.base.GPUObjectBase)
     assert device.label == "device08"
     assert device.extensions == ("42", "43")
     assert device.limits == {}
@@ -91,13 +91,14 @@ def test_that_all_docstrings_are_there():
             continue
         if cls.__name__.startswith("_"):
             continue
-        assert cls.__doc__
+        assert cls.__doc__, f"No docstring on {cls.__name__}"
         for name, attr in cls.__dict__.items():
             if not (callable(attr) or isinstance(attr, property)):
                 continue
             if name.startswith("_"):
                 continue
-            assert attr.__doc__
+            func = attr.fget if isinstance(attr, property) else attr
+            assert func.__doc__, f"No docstring on {func.__name__}"
 
 
 def get_output_from_subprocess(code):
@@ -132,76 +133,36 @@ def test_do_not_import_utils_subpackage():
     assert out.strip().endswith("False"), out
 
 
-def test_help1(capsys):
-    x = wgpu.help("foobar")
-    captured = capsys.readouterr()
-
-    assert x is None
-    assert captured.err == ""
-    assert "0 flags" in captured.out
-    assert "0 enums" in captured.out
-    assert "0 functions" in captured.out
-
-
-def test_help2(capsys):
-    x = wgpu.help("request device")
-    captured = capsys.readouterr()
-
-    assert x is None
-    assert captured.err == ""
-    assert "0 flags" in captured.out
-    assert "0 enums" in captured.out
-    assert "2 functions" in captured.out
-    assert "request_device(" in captured.out
-    assert "request_device_async(" in captured.out
-
-
-def test_help3(capsys):
-    x = wgpu.help("buffer")
-    captured = capsys.readouterr()
-
-    assert x is None
-    assert captured.err == ""
-    assert "1 flags" in captured.out
-    assert "3 enums" in captured.out
-    assert "0 functions" not in captured.out
-
-
-def test_help4(capsys):
-    x = wgpu.help("WGPUBufferDescriptor", dev=True)
-    captured = capsys.readouterr()
-
-    assert x is None
-    assert captured.err == ""
-    assert "2 structs in .idl" in captured.out
-    assert "2 structs in .h" in captured.out
-
-
 def test_register_backend_fails():
-    def request_adapter():
+    class GPU:
         pass
 
-    async def request_adapter_async():
-        pass
-
-    old_request_adapter = wgpu.request_adapter
+    ori_GPU = wgpu.GPU  # noqa: N806
     try:
-        wgpu.request_adapter = wgpu.base.request_adapter
+        wgpu.GPU = wgpu.base.GPU
 
         with raises(RuntimeError):
-            wgpu._register_backend("foo", "foo")
+            wgpu._register_backend("foo")
         with raises(RuntimeError):
-            wgpu._register_backend(request_adapter, "foo")
-        wgpu._register_backend(request_adapter, request_adapter_async)
-        assert wgpu.request_adapter is request_adapter
-        assert wgpu.request_adapter_async is request_adapter_async
+            wgpu._register_backend(GPU)
 
-        wgpu.request_adapter = "anything not base.request_adapter"
+        GPU.request_adapter = lambda self: None
         with raises(RuntimeError):
-            wgpu._register_backend(request_adapter, request_adapter_async)
+            wgpu._register_backend(GPU)
+
+        GPU.request_adapter_async = lambda self: None
+        wgpu._register_backend(GPU)
+
+        assert wgpu.GPU is GPU
+        assert wgpu.request_adapter.__func__ is GPU.request_adapter
+        assert wgpu.request_adapter_async.__func__ is GPU.request_adapter_async
+
+        with raises(RuntimeError):
+            wgpu._register_backend(GPU)  # Cannot register twice once wgpu.GPU is set
 
     finally:
-        wgpu.request_adapter = old_request_adapter
+        wgpu.GPU = wgpu.base.GPU
+        wgpu._register_backend(ori_GPU)
 
 
 if __name__ == "__main__":
