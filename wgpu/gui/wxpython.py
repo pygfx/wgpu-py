@@ -22,7 +22,7 @@ except Exception:
 class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
+
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda x: None)
 

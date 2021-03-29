@@ -21,6 +21,7 @@ class AppFrame(wx.Frame):
     def OnDestroy(self, event):
         self.Destroy()
 
+
 app = wx.App()
 frm = AppFrame(parent=None, title="wgpu triangle with wxPython")
 frm.Show()
