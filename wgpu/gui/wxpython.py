@@ -3,10 +3,7 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
-import sys
-import time
 import ctypes
-import importlib
 
 from .base import WgpuCanvasBase
 
@@ -22,7 +19,7 @@ except Exception:
 class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
+
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda x: None)
 
