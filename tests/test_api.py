@@ -137,7 +137,7 @@ def test_register_backend_fails():
     class GPU:
         pass
 
-    ori_GPU = wgpu.GPU
+    ori_GPU = wgpu.GPU  # noqa: N806
     try:
         wgpu.GPU = wgpu.base.GPU
 

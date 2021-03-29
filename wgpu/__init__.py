@@ -11,11 +11,12 @@ from .gui import WgpuCanvasInterface  # noqa: F401,F403
 __version__ = "0.3.0"
 version_info = tuple(map(int, __version__.split(".")))
 
-_base_GPU = GPU  # noqa: F405
+_base_GPU = GPU  # noqa: F405, N816
 
 
-def _register_backend(GPU):
+def _register_backend(cls):
     """Backends call this to acticate themselves."""
+    GPU = cls  # noqa: N806
     if not (
         hasattr(GPU, "request_adapter")
         and callable(GPU.request_adapter)
