@@ -45,4 +45,4 @@ Since the API changes with each release, and we do not yet make things
 backwards compatible. You may want to check the changelog when you
 upgrade to a newer version of wgpu:
 
-https://github.com/pygfx/wgpu-py/blob/master/CHANGELOG.md
+https://github.com/pygfx/wgpu-py/blob/main/CHANGELOG.md

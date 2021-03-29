@@ -59,7 +59,7 @@ library you are using by looking what module has been imported.
     # Enter Qt's event loop, as usual
     app.exec_()
 
-Also see the `Qt triangle example <https://github.com/pygfx/wgpu-py/blob/master/examples/triangle_qt.py>`_.
+Also see the `Qt triangle example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_qt.py>`_.
 
 
 Support for glfw
@@ -90,5 +90,5 @@ Glfw is a lightweight windowing toolkit. Install it with ``pip install glfw``.
         glfw.poll_events()
 
 
-Also see the `GLFW triangle example <https://github.com/pygfx/wgpu-py/blob/master/examples/triangle_glfw.py>`_
-and the `async GLFW example <https://github.com/pygfx/wgpu-py/blob/master/examples/triangle_glfw_asyncio.py>`_.
+Also see the `GLFW triangle example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_glfw.py>`_
+and the `async GLFW example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_glfw_asyncio.py>`_.
