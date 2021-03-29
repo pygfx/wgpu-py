@@ -37,4 +37,4 @@ def _register_backend(cls):
 
 
 _base_GPU = GPU  # noqa: F405, N816
-_register_backend(GPU)
+_register_backend(_base_GPU)

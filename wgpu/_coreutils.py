@@ -84,7 +84,7 @@ class ApiDiff:
 
     @property
     def __doc__(self):
-        """ Generate a docstring for this instance. This way we can
+        """Generate a docstring for this instance. This way we can
         automatically document API differences.
         """
         lines = [""]

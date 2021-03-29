@@ -1607,7 +1607,9 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
 
-@apidiff.change("the swapchain should be used as a context manager to obtain the texture view")
+@apidiff.change(
+    "the swapchain should be used as a context manager to obtain the texture view"
+)
 class GPUSwapChain(GPUObjectBase):
     """
     A swap chain is a placeholder for a texture to be presented to the screen,
