@@ -164,7 +164,7 @@ jobs:
         dockerImage: i386/python:3.6-slim-buster
       run: |
         CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $dockerImage sleep infinity)
-        echo "::set-env name=CID::$CID"
+        echo "CID=$CID" >> $GITHUB_ENV
         docker start $CID
         docker exec -i $CID bash -c "\
           cp -r /tmp/src/. . && \
