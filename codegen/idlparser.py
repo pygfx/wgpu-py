@@ -1,5 +1,10 @@
 """
 The logic to parse the IDL file, from this we generate the base API.
+
+This module may need tweaks as the used IDL syntax/constructs changes.
+
+It would be good to occasionally check the coverage of this module to
+identify and remove code paths that are no longer used.
 """
 
 

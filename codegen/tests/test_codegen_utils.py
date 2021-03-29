@@ -1,3 +1,7 @@
+"""
+Strive for full coverage of the codegen utils module.
+"""
+
 from codegen.utils import blacken, Patcher, to_snake_case, to_camel_case
 
 from pytest import raises

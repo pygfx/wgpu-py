@@ -5,6 +5,7 @@ from codegen.utils import lib_dir
 
 
 def test_that_code_is_up_to_date():
+    """Test that running the codegen does not introduce changes."""
 
     # Check base API
     filename = os.path.join(lib_dir, "base.py")

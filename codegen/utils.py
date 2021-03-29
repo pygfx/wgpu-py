@@ -99,7 +99,8 @@ def blacken(src, singleline=False):
 
 class Patcher:
     """Class to help patch a Python module. Supports iterating (over
-    lines, classes, functions), and applying diffs (replace, remove, insert).
+    lines, classes, properties, methods), and applying diffs (replace,
+    remove, insert).
     """
 
     def __init__(self, code=None):

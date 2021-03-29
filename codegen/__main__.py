@@ -1,3 +1,7 @@
+"""
+The entrypoint / script to apply automatic patches to the code.
+"""
+
 import os
 import sys
 
@@ -7,9 +11,6 @@ from codegen.utils import lib_dir
 
 # Little trick to allow running this file as a script
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
-
-
-# todo: check code coverage and remove old code-paths
 
 
 def patch_api():

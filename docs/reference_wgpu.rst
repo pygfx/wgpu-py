@@ -52,10 +52,12 @@ to use your own version of that library instead, set the ``WGPU_LIB_PATH``
 environment variable.
 
 
-How this API differs from WebGPU
---------------------------------
+Differences from WebGPU
+-----------------------
 
-This API is derived from the WebGPU spec, but differs in a few places:
+This API is derived from the WebGPU spec, but differs in a few ways.
+For example, methods that in WebGPU accept a descriptor/struct/dict,
+here accept the fields in that struct as keyword arguments.
 
 
 .. autodata:: wgpu.base.apidiff

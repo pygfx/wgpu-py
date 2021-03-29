@@ -1,5 +1,5 @@
 """
-Provide functionality to generate/patch the base API from the WebGPU
+The logic to generate/patch the base API from the WebGPU
 spec (IDL), and the backend implementations from the base API.
 """
 
