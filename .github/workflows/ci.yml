@@ -154,68 +154,6 @@ jobs:
         path: dist
         name: dist
 
-  docker-build:
-    name: Linux-32
-    runs-on: ubuntu-16.04
-    steps:
-    - uses: actions/checkout@v2
-    - name: Create and start & prepare container
-      env:
-        dockerImage: i386/python:3.6-slim-buster
-      run: |
-        CID=$(docker create -t -w /tmp/wrk -v $PWD:/tmp/src:ro $dockerImage sleep infinity)
-        echo "CID=$CID" >> $GITHUB_ENV
-        docker start $CID
-        docker exec -i $CID bash -c "\
-          cp -r /tmp/src/. . && \
-          apt-get update && \
-          apt-get install -y build-essential git libssl-dev zip"
-    - name: Install development requirements
-      run: |
-        docker exec -i $CID bash -c "\
-          python -m pip install -U pip && \
-          pip install -U -r dev-requirements.txt"
-    - name: Build wheel
-      run: |
-        docker exec -i $CID bash -c "\
-          python download-wgpu-native.py && \
-          python setup.py bdist_wheel"
-    - name: Manylinux1 tag
-      run: |
-        docker exec -i $CID bash -c "\
-          apt-get install -y patchelf && \
-          auditwheel repair dist/*.whl && \
-          rm dist/*.whl && \
-          cp wheelhouse/*.whl dist/."
-        mkdir -p dist
-        docker cp $CID:/tmp/wrk/dist/. dist/.
-    - name: Test wheel
-      run: |
-        docker exec -i $CID bash -c "\
-          python setup.py develop --uninstall && \
-          python setup.py clean --all && \
-          rm -rf ./wgpu && \
-          mkdir -p /tmp/test && \
-          pushd /tmp/test && \
-          pip install /tmp/wrk/dist/*.whl && \
-          popd && \
-          pytest -v tests && \
-          pip uninstall -y wgpu && \
-          git reset --hard HEAD"
-    - name: Twine check
-      run: |
-        docker exec -i $CID bash -c "\
-          twine check dist/*"
-    - name: Upload distributions
-      uses: actions/upload-artifact@v2
-      with:
-        path: dist
-        name: dist
-    - name: Post-job - stop and remove container
-      run: |
-        docker stop $CID
-        docker rm $CID
-
   publish:
     name: Publish release to Github and Pypi
     runs-on: ubuntu-latest
