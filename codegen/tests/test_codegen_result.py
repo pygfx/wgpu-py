@@ -1,9 +1,7 @@
 import os
 
-from testutils import run_tests
-
-from wgpu.codegen.apiwriter import patch_base_api, patch_backend_api
-from wgpu.codegen.utils import lib_dir
+from codegen.apiwriter import patch_base_api, patch_backend_api
+from codegen.utils import lib_dir
 
 
 def test_that_code_is_up_to_date():
@@ -26,4 +24,4 @@ def test_that_code_is_up_to_date():
 
 
 if __name__ == "__main__":
-    run_tests(globals())
+    test_that_code_is_up_to_date()

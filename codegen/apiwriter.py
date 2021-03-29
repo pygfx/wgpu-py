@@ -218,7 +218,6 @@ class AbstractApiPatcher(Patcher):
 
 
 class IdlPatcherMixin:
-
     def __init__(self, idl):
         super().__init__()
         self.idl = idl

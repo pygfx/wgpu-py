@@ -492,8 +492,9 @@ class GPU(base.GPU):
         extensions = []
         return GPUAdapter("WGPU", extensions, adapter_id)
 
+    # FIXME: was request_adapter_async(self, *, power_preference: "GPUPowerPreference" = None):
     async def request_adapter_async(
-        self, *, power_preference: "GPUPowerPreference" = None
+        self, *, canvas, power_preference: "GPUPowerPreference" = None
     ):
         """Async version of ``request_adapter()``.
         This function uses the Rust WGPU library.

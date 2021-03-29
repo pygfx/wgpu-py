@@ -32,8 +32,9 @@ logger.setLevel(logging.WARNING)
 
 
 class ApiDiff:
-    """Helper class to define differences in the API by
-    annotating methods.
+    """Helper class to define differences in the API by annotating
+    methods. This way, these difference are made explicit, plus they're
+    logged so we can automatically included these changes in the docs.
     """
 
     def __init__(self):
@@ -42,18 +43,30 @@ class ApiDiff:
         self.changed = {}
 
     def hide(self, func_or_text):
+        """Decorator to discard certain methods from the "reference" API.
+        Intended only for the base API where we deviate from WebGPU.
+        """
         return self._diff("hidden", func_or_text)
 
     def add(self, func_or_text):
+        """Decorator to add certain methods that are not part of the "reference" spec.
+        Intended for the base API where we implement additional/alternative API,
+        and in the backend implementations where additional methods are provided.
+        """
         return self._diff("added", func_or_text)
 
     def change(self, func_or_text):
+        """Decorator to mark certain methods as having a different signature
+        as the "reference" spec. Intended only for the base API where we deviate
+        from WebGPU.
+        """
         return self._diff("changed", func_or_text)
 
     def _diff(self, method, func_or_text):
         def wrapper(f):
             d = getattr(self, method)
             d[f.__qualname__] = text
+            return f
 
         if callable(func_or_text):
             text = None
@@ -63,13 +76,15 @@ class ApiDiff:
             return wrapper
 
     def remove_hidden_methods(self, scope):
+        """Call this to remove methods from the API that were decorated as hidden."""
         for name in self.hidden:
             classname, _, methodname = name.partition(".")
             cls = scope[classname]
             delattr(cls, methodname)
 
 
-def help(*searches, dev=False):
+# todo: remove or revive part of this for the rs codegen/maintenance
+def _help(*searches, dev=False):
     """Print constants, enums, structs, and functions that contain the given searches.
     If dev is True, will also print info from the definitions in .idl and .h, which
     can be useful during debugging and dev.

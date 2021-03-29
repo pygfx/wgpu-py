@@ -2,6 +2,7 @@
 The logic to parse the IDL file, from this we generate the base API.
 """
 
+
 class StructField:
     """A little object to specify the field of a struct."""
 

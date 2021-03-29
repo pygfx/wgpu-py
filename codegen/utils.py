@@ -3,11 +3,12 @@ Codegen utils.
 """
 
 import os
+import tempfile
 
 import black
 
 
-lib_dir = os.path.abspath(os.path.join(__file__, "..", ".."))
+lib_dir = os.path.abspath(os.path.join(__file__, "..", "..", "wgpu"))
 
 
 def to_snake_case(name):
@@ -24,7 +25,7 @@ def to_snake_case(name):
 
 
 def to_camel_case(name):
-    """ Convert a name from snake_case to camelCase. Names that already are
+    """Convert a name from snake_case to camelCase. Names that already are
     camelCase remain the same.
     """
     is_capital = False
@@ -105,8 +106,7 @@ class Patcher:
         self._init(code)
 
     def _init(self, code):
-        """ Subclasses can call this to reset the patcher.
-        """
+        """Subclasses can call this to reset the patcher."""
         self.lines = []
         self._diffs = {}
         self._classes = {}
@@ -114,14 +114,14 @@ class Patcher:
             self.lines = blacken(code, True).splitlines()  # inf line length
 
     def remove_line(self, i):
-        """ Remove the line at the given position. There must not have been
+        """Remove the line at the given position. There must not have been
         an action on line i.
         """
         assert i not in self._diffs, f"Line {i} already has a diff"
         self._diffs[i] = i, "remove"
 
     def insert_line(self, i, line):
-        """ Insert a new line at the given position. It's ok if there
+        """Insert a new line at the given position. It's ok if there
         has already been an insertion an line i, but there must not have been
         any other actions.
         """
@@ -133,15 +133,14 @@ class Patcher:
             self._diffs[i] = i, "insert", line
 
     def replace_line(self, i, line):
-        """ Replace the line at the given position with another line.
+        """Replace the line at the given position with another line.
         There must not have been an action on line i.
         """
         assert i not in self._diffs, f"Line {i} already has a diff"
         self._diffs[i] = i, "replace", line
 
     def dumps(self, format=True):
-        """ Return the patched result as a string.
-        """
+        """Return the patched result as a string."""
         lines = self.lines.copy()
         # Apply diff
         diffs = sorted(self._diffs.values())
@@ -152,23 +151,31 @@ class Patcher:
                 lines.insert(diff[0], diff[2])
             elif diff[1] == "replace":
                 lines[diff[0]] = diff[2]
-            else:
+            else:  # pragma: no cover
                 raise ValueError(f"Unknown diff: {diff}")
         # Format
         text = "\n".join(lines)
         if format:
             try:
                 text = blacken(text)
-            except black.InvalidInput as err:
-                # If you get this error, it helps to dumps(False) the code,
-                # copy/write it into a temporary .py file, and then check
-                # what the syntax error is (e.g. by loading it into an IDE).
-                raise RuntimeError(f"It appears that the patcher has generated invalid Python: {err}")
+            except black.InvalidInput as err:  # pragma: no cover
+                # If you get this error, it really helps to load the code
+                # in an IDE to see where the error is. Let's help with that ...
+                filename = os.path.join(tempfile.gettempdir(), "wgpu_patcher_fail.py")
+                with open(filename, "wb") as f:
+                    f.write(text.encode())
+                err = str(err)
+                err = err if len(err) < 78 else err[:77] + "…"
+                raise RuntimeError(
+                    f"It appears that the patcher has generated invalid Python:"
+                    f"\n\n    {err}\n\n"
+                    f'Wrote the generated (but unblackened) code to:\n\n  "{filename}"'
+                )
 
         return text
 
     def iter_lines(self, start_line=0):
-        """ Generator to iterate over the lines.
+        """Generator to iterate over the lines.
         Each iteration yields (line, linenr)
         """
         for i in range(start_line, len(self.lines)):
@@ -176,7 +183,7 @@ class Patcher:
             yield line, i
 
     def iter_classes(self, start_line=0):
-        """ Generator to iterate over the classes.
+        """Generator to iterate over the classes.
         Each iteration yields (classname, linenr_start, linenr_end),
         where linenr_end is the last line of code.
         """
@@ -197,7 +204,7 @@ class Patcher:
             yield current_class
 
     def iter_properties(self, start_line=0):
-        """ Generator to iterate over the properties.
+        """Generator to iterate over the properties.
         Each iteration yields (classname, linenr_start, linenr_end),
         where linenr_start is the line that says `@property`,
         and linenr_end is the last line of code.
@@ -205,7 +212,7 @@ class Patcher:
         return self._iter_props_and_methods(start_line, True)
 
     def iter_methods(self, start_line=0):
-        """ Generator to iterate over the methods.
+        """Generator to iterate over the methods.
         Each iteration yields (classname, linenr_start, linenr_end)
         where linenr_end is the last line of code.
         """

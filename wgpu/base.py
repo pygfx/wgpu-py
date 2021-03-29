@@ -38,6 +38,9 @@ apidiff = ApiDiff()
 
 
 class GPU:
+    """Class that represents the root namespace of the API. The methods
+    of this class are present as ``wgpu.xx``."""
+
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
     def request_adapter(self, *, canvas, power_preference=None):
@@ -58,7 +61,7 @@ class GPU:
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
     async def request_adapter_async(
-        self, *, power_preference: "GPUPowerPreference" = None
+        self, *, canvas, power_preference: "GPUPowerPreference" = None
     ):
         """Async version of ``request_adapter()``."""
         raise RuntimeError(
@@ -68,6 +71,8 @@ class GPU:
 
 # FIXME: new class to implement
 class GPUCanvasContext:
+    """We've made this part of device, but maybe we need to make it part of canvas?"""
+
     # IDL: GPUSwapChain configureSwapChain(GPUSwapChainDescriptor descriptor);
     def configure_swap_chain(
         self,
@@ -77,11 +82,19 @@ class GPUCanvasContext:
         format: "GPUTextureFormat",
         usage: "GPUTextureUsageFlags" = 0x10,
     ):
+        """Get a :class:`GPUSwapChain` object for this canvas.
+
+        Arguments:
+            device (WgpuDevice): The GPU device object.
+            format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
+            usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
+        """
         raise NotImplementedError()
 
     # IDL: Promise<GPUTextureFormat> getSwapChainPreferredFormat(GPUDevice device);
     def get_swap_chain_preferred_format(self, device):
-        raise NotImplementedError()
+        """Get the preferred swap chain format."""
+        return "bgra8unorm-srgb"  # seems to be a good default
 
 
 class GPUAdapter:
@@ -225,12 +238,14 @@ class GPUDevice(GPUObjectBase):
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @property
     def lost(self):
+        """ Provides information about why the device is lost. """
         raise NotImplementedError()
 
     # FIXME: new prop to implement
     # IDL: attribute EventHandler onuncapturederror;
     @property
     def onuncapturederror(self):
+        """ Method called when an error is capured?"""
         raise NotImplementedError()
 
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
@@ -658,6 +673,7 @@ class GPUDevice(GPUObjectBase):
         count: "GPUSize32",
         pipeline_statistics: "GPUPipelineStatisticName-list" = [],
     ):
+        """ Create a :class:`GPUQuerySet` object. """
         raise NotImplementedError()
 
     # IDL: void pushErrorScope(GPUErrorFilter filter);
@@ -974,6 +990,8 @@ class GPUShaderModule(GPUObjectBase):
 
 
 class GPUPipelineBase:
+    """ A mixin class for render and compute pipelines. """
+
     def __init__(self, label, internal, device, layout):
         super().__init__(label, internal, device)
         self._layout = layout
@@ -1155,6 +1173,7 @@ class GPUCommandEncoder(GPUObjectBase):
     # FIXME: new method to implement
     # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
+        """ TODO """
         raise NotImplementedError()
 
     # FIXME: new method to implement
@@ -1162,6 +1181,7 @@ class GPUCommandEncoder(GPUObjectBase):
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
     ):
+        """ TODO """
         raise NotImplementedError()
 
 
@@ -1262,6 +1282,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
     # FIXME: new method to implement
     # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
+        """ TODO """
         raise NotImplementedError()
 
 
@@ -1429,11 +1450,13 @@ class GPURenderPassEncoder(
     # FIXME: new method to implement
     # IDL: void beginOcclusionQuery(GPUSize32 queryIndex);
     def begin_occlusion_query(self, query_index):
+        """ TODO """
         raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: void endOcclusionQuery();
     def end_occlusion_query(self):
+        """ TODO """
         raise NotImplementedError()
 
     # IDL: void beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
@@ -1449,6 +1472,7 @@ class GPURenderPassEncoder(
     # FIXME: new method to implement
     # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
+        """ TODO """
         raise NotImplementedError()
 
 
@@ -1604,6 +1628,7 @@ class GPUDeviceLostInfo:
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
+        """ The error message specifying the reason for the device being lost. """
         return self._message
 
 
@@ -1621,6 +1646,7 @@ class GPUValidationError(Exception):
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
+        """ The error message specifying the reason for invalidation. """
         return self._message
 
     # IDL: constructor(DOMString message);
@@ -1633,68 +1659,77 @@ class GPUValidationError(Exception):
 
 # FIXME: new class to implement
 class GPUCompilationMessage:
+    """An object that contains information about a problem with shader compilation."""
+
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
+        """ The warning/error message. """
         raise NotImplementedError()
 
     # IDL: readonly attribute GPUCompilationMessageType type;
     @property
     def type(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long long lineNum;
-    @property
-    def lineNum(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long long linePos;
-    @property
-    def linePos(self):
+        """ The type of warning/problem. """
         raise NotImplementedError()
 
     # IDL: readonly attribute unsigned long long lineNum;
     @property
     def line_num(self):
+        """ The corresponding line number in the shader source. """
         raise NotImplementedError()
 
     # IDL: readonly attribute unsigned long long linePos;
     @property
     def line_pos(self):
+        """ The position on the line in the shader source. """
         raise NotImplementedError()
 
 
 # FIXME: new class to implement
 class GPUCompilationInfo:
+    """TODO"""
+
     # IDL: readonly attribute sequence<GPUCompilationMessage> messages;
     @property
     def messages(self):
+        """ A list of ``GPUCompilationMessage`` objects. """
         raise NotImplementedError()
 
 
 # FIXME: new class to implement
 class GPUFence(GPUObjectBase):
+    """TODO"""
+
     # IDL: GPUFenceValue getCompletedValue();
     def get_completed_value(self):
+        """ The the completed value :) """
         raise NotImplementedError()
 
     # IDL: Promise<void> onCompletion(GPUFenceValue completionValue);
     def on_completion(self, completion_value):
+        """ TODO, also must this be async? """
         raise NotImplementedError()
 
 
 # FIXME: new class to implement
 class GPUQuerySet(GPUObjectBase):
+    """TODO"""
+
     # IDL: void destroy();
     def destroy(self):
+        """ Destrory the queryset."""
         raise NotImplementedError()
 
 
 # FIXME: new class to implement
 class GPUUncapturedErrorEvent:
+    """TODO"""
+
     # IDL: [SameObject] readonly attribute GPUError error;
     @property
     def error(self):
+        """ The error object."""
         raise NotImplementedError()
 
     # IDL: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );

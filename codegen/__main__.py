@@ -1,7 +1,13 @@
 import os
+import sys
 
-from wgpu.codegen import apiwriter
-from wgpu.codegen.utils import lib_dir
+from codegen import apiwriter
+from codegen.utils import lib_dir
+
+
+# Little trick to allow running this file as a script
+sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
+
 
 # todo: check code coverage and remove old code-paths
 
