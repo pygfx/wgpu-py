@@ -82,6 +82,24 @@ class ApiDiff:
             cls = scope[classname]
             delattr(cls, methodname)
 
+    @property
+    def __doc__(self):
+        """ Generate a docstring for this instance. This way we can
+        automatically document API differences.
+        """
+        lines = [""]
+        for name, msg in self.hidden.items():
+            line = f"    * Hides ``{name}()``"
+            lines.append(f"{line} - {msg}" if msg else line)
+        for name, msg in self.added.items():
+            line = f"    * Adds ``{name}()``"
+            lines.append(f"{line} - {msg}" if msg else line)
+        for name, msg in self.changed.items():
+            line = f"    * Changes ``{name}()``"
+            lines.append(f"{line} - {msg}" if msg else line)
+        lines.append("")
+        return "\n".join(sorted(lines))
+
 
 # todo: remove or revive part of this for the rs codegen/maintenance
 def _help(*searches, dev=False):

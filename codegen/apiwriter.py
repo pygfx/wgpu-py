@@ -19,6 +19,15 @@ def patch_base_api(code):
         idl = IdlParser(f.read().decode())
     idl.parse(verbose=True)
 
+    # Write __all__
+    part1, found_all, part2 = code.partition("\n__all__ =")
+    if found_all:
+        part2 = part2.split("]", 1)[-1]
+        line = "\n__all__ = ["
+        line += ", ".join(f'"{name}"' for name in idl.classes.keys())
+        line += "]"
+        code = part1 + line + part2
+
     # Patch!
     for patcher in [CommentRemover(), BaseApiPatcher(idl), IdlCommentInjector(idl)]:
         patcher.apply(code)

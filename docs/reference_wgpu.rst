@@ -52,6 +52,20 @@ to use your own version of that library instead, set the ``WGPU_LIB_PATH``
 environment variable.
 
 
+How this API differs from WebGPU
+--------------------------------
+
+This API is derived from the WebGPU spec, but differs in a few places:
+
+
+.. autodata:: wgpu.base.apidiff
+    :annotation: Differences of base API:
+
+
+.. autodata:: wgpu.backends.rs.apidiff
+    :annotation: Differences of rs backend:
+
+
 Adapter
 -------
 
@@ -59,6 +73,9 @@ To start using the GPU for computations or rendering, a device object
 is required. One first requests an adapter, which represens a GPU
 implementation on the current system. The device can then be requested
 from the adapter.
+
+
+.. autoclass:: wgpu.GPU
 
 .. autofunction:: wgpu.request_adapter
 
@@ -77,7 +94,7 @@ But not for every operation (e.g. in unit tests).
 Also see :func:`wgpu.utils.get_default_device`.
 
 
-.. autoclass:: wgpu.GPUObject
+.. autoclass:: wgpu.GPUObjectBase
     :members:
 
 
@@ -151,7 +168,7 @@ Pipelines define how the shader is run, and with what resources.
 .. autoclass:: wgpu.GPUShaderModule
     :members:
 
-.. autoclass:: wgpu.PipelineBase
+.. autoclass:: wgpu.GPUPipelineBase
     :members:
 
 .. autoclass:: wgpu.GPUComputePipeline
@@ -196,4 +213,36 @@ Queue and swap chain
     :members:
 
 .. autoclass:: wgpu.GPUSwapChain
+    :members:
+
+
+Other
+-----
+
+
+.. autoclass:: wgpu.GPUCanvasContext
+    :members:
+
+.. autoclass:: wgpu.GPUQuerySet
+    :members:
+
+.. autoclass:: wgpu.GPUFence
+    :members:
+
+.. autoclass:: wgpu.GPUDeviceLostInfo
+    :members:
+
+.. autoclass:: wgpu.GPUOutOfMemoryError
+    :members:
+
+.. autoclass:: wgpu.GPUValidationError
+    :members:
+
+.. autoclass:: wgpu.GPUCompilationInfo
+    :members:
+
+.. autoclass:: wgpu.GPUCompilationMessage
+    :members:
+
+.. autoclass:: wgpu.GPUUncapturedErrorEvent
     :members:

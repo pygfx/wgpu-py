@@ -560,7 +560,7 @@ class GPUAdapter(base.GPUAdapter):
 
         # Handle default limits
         _check_struct("Limits", limits)
-        limits2 = base.default_limits.copy()
+        limits2 = base.DEFAULT_LIMITS.copy()
         limits2.update(limits or {})
 
         c_extensions = new_struct(

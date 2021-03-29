@@ -25,29 +25,19 @@ import wgpu.gui  # noqa: E402
 # Ensure that our API docs are complete
 with open(os.path.join(ROOT_DIR, "docs", "reference_wgpu.rst"), "rb") as f:
     wgpu_api_docs_text = f.read().decode()
-for cls in wgpu.base.__dict__.values():
-    if not isinstance(cls, type):
-        continue
-    expected_line = f".. autoclass:: wgpu.{cls.__name__}\n"
-    assert expected_line in wgpu_api_docs_text, f"Missing docs for {cls.__name__}"
+for cls_name in wgpu.base.__all__:
+    expected_line = f".. autoclass:: wgpu.{cls_name}\n"
+    assert expected_line in wgpu_api_docs_text, f"Missing docs for {cls_name}"
 
 # Make flags and enum appear better in docs
 wgpu.enums._use_sphinx_repr = True
 wgpu.flags._use_sphinx_repr = True
 
-# Simplify the signature of the two root functions
-wgpu.request_adapter.__doc__ = (
-    "request_adapter(**parameters)\n\n    " + wgpu.request_adapter.__doc__.lstrip()
-)
-wgpu.request_adapter_async.__doc__ = (
-    "request_adapter_async(**parameters)\n\n    "
-    + wgpu.request_adapter_async.__doc__.lstrip()
-)
-
 # Also tweak docstrings of classes and their methods
-for cls in wgpu.base.__dict__.values():
-    if not isinstance(cls, type):
+for cls_name, cls in wgpu.base.__dict__.items():
+    if cls_name not in wgpu.base.__all__:
         continue
+
     # Change class docstring to include a link to the base class,
     # and the class' signature is not shown
     base_info = ""
@@ -67,7 +57,7 @@ for cls in wgpu.base.__dict__.values():
 # -- Project information -----------------------------------------------------
 
 project = "wgpu-py"
-copyright = "2020, Almar Klein, Korijn van Golen"
+copyright = "2020-2021, Almar Klein, Korijn van Golen"
 author = "Almar Klein, Korijn van Golen"
 release = wgpu.__version__
 

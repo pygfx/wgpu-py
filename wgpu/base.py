@@ -18,11 +18,47 @@ import logging
 
 from ._coreutils import ApiDiff
 
+__all__ = [
+    "GPUObjectBase",
+    "GPU",
+    "GPUAdapter",
+    "GPUDevice",
+    "GPUBuffer",
+    "GPUTexture",
+    "GPUTextureView",
+    "GPUSampler",
+    "GPUBindGroupLayout",
+    "GPUBindGroup",
+    "GPUPipelineLayout",
+    "GPUCompilationMessage",
+    "GPUCompilationInfo",
+    "GPUShaderModule",
+    "GPUPipelineBase",
+    "GPUComputePipeline",
+    "GPURenderPipeline",
+    "GPUCommandBuffer",
+    "GPUCommandEncoder",
+    "GPUProgrammablePassEncoder",
+    "GPUComputePassEncoder",
+    "GPURenderEncoderBase",
+    "GPURenderPassEncoder",
+    "GPURenderBundle",
+    "GPURenderBundleEncoder",
+    "GPUQueue",
+    "GPUFence",
+    "GPUQuerySet",
+    "GPUCanvasContext",
+    "GPUSwapChain",
+    "GPUDeviceLostInfo",
+    "GPUOutOfMemoryError",
+    "GPUValidationError",
+    "GPUUncapturedErrorEvent",
+]
 
 logger = logging.getLogger("wgpu")
 
 
-default_limits = dict(
+DEFAULT_LIMITS = dict(
     max_bind_groups=4,
     max_dynamic_uniform_buffers_per_pipeline_layout=8,
     max_dynamic_storage_buffers_per_pipeline_layout=4,
@@ -38,8 +74,7 @@ apidiff = ApiDiff()
 
 
 class GPU:
-    """Class that represents the root namespace of the API. The methods
-    of this class are present as ``wgpu.xx``."""
+    """Class that represents the root namespace of the API."""
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
@@ -758,7 +793,7 @@ class GPUBuffer(GPUObjectBase):
     #     """
     #     return self._state
 
-    @apidiff.add("Replaces mapping API")
+    @apidiff.add("replaces mapping API")
     def read_data(self, offset=0, size=0):
         """Read buffer data. Returns the mapped memory as a memoryview,
         which can be mapped to e.g. a ctypes array or numpy array.
@@ -767,12 +802,12 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("Replaces mapping API")
+    @apidiff.add("replaces mapping API")
     async def read_data_async(self, offset=0, size=0):
         """Asnc version of read_data()."""
         raise NotImplementedError()
 
-    @apidiff.add("Replaces mapping API")
+    @apidiff.add("replaces mapping API")
     def write_data(self, data, offset=0):
         """Write data to the buffer. The data can be any object
         supporting the buffer protocol. The buffer usage must include MAP_WRITE.
@@ -1572,6 +1607,7 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
 
+@apidiff.change("the swapchain should be used as a context manager to obtain the texture view")
 class GPUSwapChain(GPUObjectBase):
     """
     A swap chain is a placeholder for a texture to be presented to the screen,

@@ -5,13 +5,12 @@ This a Python implementation of the next generation GPU API.
 from .flags import *  # noqa: F401,F403
 from .enums import *  # noqa: F401,F403
 from .base import *  # noqa: F401,F403
+from .base import DEFAULT_LIMITS  # noqa: F401,F403
 from .gui import WgpuCanvasInterface  # noqa: F401,F403
 
 
 __version__ = "0.3.0"
 version_info = tuple(map(int, __version__.split(".")))
-
-_base_GPU = GPU  # noqa: F405, N816
 
 
 def _register_backend(cls):
@@ -35,3 +34,7 @@ def _register_backend(cls):
     globals()["GPU"] = GPU
     globals()["request_adapter"] = gpu.request_adapter
     globals()["request_adapter_async"] = gpu.request_adapter_async
+
+
+_base_GPU = GPU  # noqa: F405, N816
+_register_backend(GPU)
