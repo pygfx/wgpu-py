@@ -3,6 +3,7 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
+import math
 import ctypes
 
 from .base import WgpuCanvasBase
@@ -43,7 +44,7 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
         lsize = self.Size[0], self.Size[1]
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self.GetContentScaleFactor()
-        return round(lsize[0] * ratio), round(lsize[1] * ratio)
+        return math.ceil(lsize[0] * ratio), math.ceil(lsize[1] * ratio)
 
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:

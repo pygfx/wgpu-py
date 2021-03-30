@@ -5,17 +5,24 @@ can be used as a standalone window or in a larger GUI.
 
 import sys
 import time
+import math
 import ctypes
 import importlib
 
 from .base import WgpuCanvasBase
 
 # Select GUI toolkit
-for libname in ("PySide2", "PyQt5", "PySide", "PyQt4"):
+for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5", "PySide", "PyQt4"):
     if libname in sys.modules:
         QtCore = importlib.import_module(libname + ".QtCore")
         widgets_modname = "QtGui" if QtCore.qVersion()[0] == "4" else "QtWidgets"
         QtWidgets = importlib.import_module(libname + "." + widgets_modname)
+        try:
+            WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
+            PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
+        except AttributeError:
+            WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
+            PreciseTimer = QtCore.Qt.PreciseTimer
         break
 else:
     raise ImportError(
@@ -75,7 +82,7 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         # A timer for limiting fps
         self._target_fps = 30  # subclasses could edit this value
         self._request_draw_timer = QtCore.QTimer()
-        self._request_draw_timer.setTimerType(QtCore.Qt.PreciseTimer)
+        self._request_draw_timer.setTimerType(PreciseTimer)
         self._request_draw_timer.setSingleShot(True)
         self._request_draw_timer.timeout.connect(self.update)
 
@@ -113,7 +120,7 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         lsize = self._subwidget.width(), self._subwidget.height()
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self._subwidget.devicePixelRatioF()
-        return round(lsize[0] * ratio), round(lsize[1] * ratio)
+        return math.ceil(lsize[0] * ratio), math.ceil(lsize[1] * ratio)
 
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
@@ -139,7 +146,7 @@ class WgpuSubWidget(QtWidgets.QWidget):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.setAttribute(QtCore.Qt.WA_PaintOnScreen, True)
+        self.setAttribute(WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
         self._draw_time = 0
 
