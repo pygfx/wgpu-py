@@ -3,11 +3,8 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
-import sys
-import time
 import math
 import ctypes
-import importlib
 
 from .base import WgpuCanvasBase
 

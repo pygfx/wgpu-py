@@ -41,7 +41,7 @@ from cffi import FFI, __version_info__ as cffi_version_info
 
 from .. import base, flags, _structs
 from .. import _register_backend
-from .._coreutils import get_resource_filename, logger_set_level_callbacks
+from .._coreutils import get_resource_filename, logger_set_level_callbacks, ApiDiff
 from .._mappings import cstructfield2enum, enummap
 
 
@@ -55,6 +55,9 @@ version_info = tuple(map(int, __version__.split(".")))
 
 if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
+
+
+apidiff = ApiDiff()
 
 
 # %% Load the lib and integrate logging system
@@ -177,6 +180,12 @@ _logger_set_level_callback(logger.level)
 
 
 # %% Helper functions and objects
+
+
+swap_chain_status_map = {
+    getattr(_lib, "WGPUSwapChainStatus_" + x): x
+    for x in ("Good", "Suboptimal", "Lost", "Outdated", "OutOfMemory", "Timeout")
+}
 
 
 # Object to be able to bind the lifetime of objects to other objects
@@ -415,84 +424,107 @@ def _check_struct(what, d):
 # %% The API
 
 
-# wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
-def request_adapter(*, canvas, power_preference: "GPUPowerPreference"):
-    """Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
-    implementation, from which one can request a :class:`GPUDevice`.
-
-    This is the implementation based on the Rust wgpu-native library.
-
-    Arguments:
-        canvas (WgpuCanvas): The canvas that the adapter should be able to
-            render to (to create a swap chain for, to be precise). Can be None
-            if you're not rendering to screen (or if you're confident that the
-            returned adapter will work just fine).
-        powerPreference(PowerPreference): "high-performance" or "low-power"
-    """
-
-    # Get surface id that the adapter must be compatible with. If we
-    # don't pass a valid surface id, there is no guarantee we'll be
-    # able to create a swapchain for it (from this adapter).
-    if canvas is None:
-        surface_id = 0
-    else:
-        surface_id = get_surface_id_from_canvas(canvas)
-
-    # Convert the descriptor
-    struct = new_struct_p(
-        "WGPURequestAdapterOptions *",
-        power_preference=power_preference,
-        compatible_surface=surface_id,
-    )
-
-    # Select possible backends. This is not exposed in the WebGPU API
-    # 1 => Backend::Empty,
-    # 2 => Backend::Vulkan,
-    # 4 => Backend::Metal,
-    # 8 => Backend::Dx12,  (buggy)
-    # 16 => Backend::Dx11,  (not implemented yet)
-    # 32 => Backend::Gl,  (not implemented yet)
-    backend_mask = 2 | 4  # Vulkan or Metal
-
-    # Do the API call and get the adapter id
-
-    adapter_id = None
-
-    @ffi.callback("void(unsigned long long, void *)")
-    def _request_adapter_callback(received, userdata):
-        nonlocal adapter_id
-        adapter_id = received
-
-    _lib.wgpu_request_adapter_async(
-        struct, backend_mask, _request_adapter_callback, ffi.NULL
-    )  # userdata, stub
-
-    # For now, Rust will call the callback immediately
-    # todo: when wgpu gets an event loop -> while run wgpu event loop or something
-
-    assert adapter_id is not None
-    extensions = []
-    return GPUAdapter("WGPU", extensions, adapter_id)
+API_CHANGES = {"hidden": set(), "added": set(), "changed": set()}
 
 
-# wgpu.help('RequestAdapterOptions', 'requestadapter', dev=True)
-async def request_adapter_async(*, canvas, power_preference: "GPUPowerPreference"):
-    """Async version of ``request_adapter()``.
-    This function uses the Rust WGPU library.
-    """
-    return request_adapter(canvas=canvas, power_preference=power_preference)  # no-cover
+def api_added(f):
+    API_CHANGES["added"].add(f.__qualname__)
+    return f
 
 
-# Mark as the backend at import time
-_register_backend(request_adapter, request_adapter_async)
+@_register_backend
+class GPU(base.GPU):
+    def request_adapter(self, *, canvas, power_preference=None):
+        """Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
+        implementation, from which one can request a :class:`GPUDevice`.
+
+        This is the implementation based on the Rust wgpu-native library.
+
+        Arguments:
+            canvas (WgpuCanvas): The canvas that the adapter should be able to
+                render to (to create a swap chain for, to be precise). Can be None
+                if you're not rendering to screen (or if you're confident that the
+                returned adapter will work just fine).
+            powerPreference(PowerPreference): "high-performance" or "low-power"
+        """
+
+        # Get surface id that the adapter must be compatible with. If we
+        # don't pass a valid surface id, there is no guarantee we'll be
+        # able to create a swapchain for it (from this adapter).
+        if canvas is None:
+            surface_id = 0
+        else:
+            surface_id = get_surface_id_from_canvas(canvas)
+
+        # Convert the descriptor
+        struct = new_struct_p(
+            "WGPURequestAdapterOptions *",
+            power_preference=power_preference,
+            compatible_surface=surface_id,
+        )
+
+        # Select possible backends. This is not exposed in the WebGPU API
+        # 1 => Backend::Empty,
+        # 2 => Backend::Vulkan,
+        # 4 => Backend::Metal,
+        # 8 => Backend::Dx12,  (buggy)
+        # 16 => Backend::Dx11,  (not implemented yet)
+        # 32 => Backend::Gl,  (not implemented yet)
+        backend_mask = 2 | 4  # Vulkan or Metal
+
+        # Do the API call and get the adapter id
+
+        adapter_id = None
+
+        @ffi.callback("void(unsigned long long, void *)")
+        def _request_adapter_callback(received, userdata):
+            nonlocal adapter_id
+            adapter_id = received
+
+        _lib.wgpu_request_adapter_async(
+            struct, backend_mask, _request_adapter_callback, ffi.NULL
+        )  # userdata, stub
+
+        # For now, Rust will call the callback immediately
+        # todo: when wgpu gets an event loop -> while run wgpu event loop or something
+
+        assert adapter_id is not None
+        extensions = []
+        return GPUAdapter("WGPU", extensions, adapter_id)
+
+    # FIXME: was request_adapter_async(self, *, power_preference: "GPUPowerPreference" = None):
+    async def request_adapter_async(
+        self, *, canvas, power_preference: "GPUPowerPreference" = None
+    ):
+        """Async version of ``request_adapter()``.
+        This function uses the Rust WGPU library.
+        """
+        return request_adapter(
+            canvas=canvas, power_preference=power_preference
+        )  # no-cover
+
+
+# FIXME: new class to implement
+class GPUCanvasContext(base.GPUCanvasContext):
+    def configure_swap_chain(
+        self,
+        *,
+        label="",
+        device: "GPUDevice",
+        format: "GPUTextureFormat",
+        usage: "GPUTextureUsageFlags" = 0x10,
+    ):
+        raise NotImplementedError()
+
+    def get_swap_chain_preferred_format(self, device):
+        raise NotImplementedError()
+
+
+class GPUObjectBase(base.GPUObjectBase):
+    pass
 
 
 class GPUAdapter(base.GPUAdapter):
-    def __init__(self, name, extensions, id):
-        super().__init__(name, extensions)
-        self._id = id
-
-    # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
     def request_device(
         self,
         *,
@@ -502,6 +534,7 @@ class GPUAdapter(base.GPUAdapter):
     ):
         return self._request_device(label, extensions, limits, "")
 
+    @apidiff.add("a sweet bonus feature from wgpu-native")
     def request_device_tracing(
         self,
         trace_path,
@@ -527,7 +560,7 @@ class GPUAdapter(base.GPUAdapter):
 
         # Handle default limits
         _check_struct("Limits", limits)
-        limits2 = base.default_limits.copy()
+        limits2 = base.DEFAULT_LIMITS.copy()
         limits2.update(limits or {})
 
         c_extensions = new_struct(
@@ -538,7 +571,9 @@ class GPUAdapter(base.GPUAdapter):
         struct = new_struct_p(
             "WGPUDeviceDescriptor *", extensions=c_extensions, limits=c_limits
         )
-        device_id = _lib.wgpu_adapter_request_device(self._id, struct, c_trace_path)
+        device_id = _lib.wgpu_adapter_request_device(
+            self._internal, struct, c_trace_path
+        )
 
         # Get the actual limits reported by the device
         c_limits = new_struct_p("WGPULimits *")
@@ -551,7 +586,6 @@ class GPUAdapter(base.GPUAdapter):
 
         return GPUDevice(label, device_id, self, extensions, limits3, queue)
 
-    # wgpu.help('DeviceDescriptor', 'adapterrequestdevice', dev=True)
     async def request_device_async(
         self,
         *,
@@ -562,14 +596,12 @@ class GPUAdapter(base.GPUAdapter):
         return self._request_device(label, extensions, limits, "")  # no-cover
 
     def _destroy(self):
-        if self._id is not None:
-            self._id, id = None, self._id
+        if self._internal is not None:
+            self._internal, id = None, self._internal
             _lib.wgpu_adapter_destroy(id)
 
 
-class GPUDevice(base.GPUDevice):
-
-    # wgpu.help('BufferDescriptor', 'devicecreatebuffer', dev=True)
+class GPUDevice(base.GPUDevice, GPUObjectBase):
     def create_buffer(
         self,
         *,
@@ -615,7 +647,6 @@ class GPUDevice(base.GPUDevice):
         # Return the wrapped buffer
         return GPUBuffer(label, id, self, m.nbytes, usage, "unmapped")
 
-    # wgpu.help('TextureDescriptor', 'devicecreatetexture', dev=True)
     def create_texture(
         self,
         *,
@@ -657,7 +688,6 @@ class GPUDevice(base.GPUDevice):
         }
         return GPUTexture(label, id, self, tex_info)
 
-    # wgpu.help('SamplerDescriptor', 'devicecreatesampler', dev=True)
     def create_sampler(
         self,
         *,
@@ -687,9 +717,8 @@ class GPUDevice(base.GPUDevice):
         )
 
         id = _lib.wgpu_device_create_sampler(self._internal, struct)
-        return base.GPUSampler(label, id, self)
+        return GPUSampler(label, id, self)
 
-    # wgpu.help('BindGroupLayoutDescriptor', 'devicecreatebindgrouplayout', dev=True)
     def create_bind_group_layout(
         self, *, label="", entries: "GPUBindGroupLayoutEntry-list"
     ):
@@ -734,9 +763,8 @@ class GPUDevice(base.GPUDevice):
 
         id = _lib.wgpu_device_create_bind_group_layout(self._internal, struct)
 
-        return base.GPUBindGroupLayout(label, id, self, entries)
+        return GPUBindGroupLayout(label, id, self, entries)
 
-    # wgpu.help('BindGroupDescriptor', 'devicecreatebindgroup', dev=True)
     def create_bind_group(
         self,
         *,
@@ -750,14 +778,14 @@ class GPUDevice(base.GPUDevice):
             _check_struct("BindGroupEntry", entry)
             # The resource can be a sampler, texture view, or buffer descriptor
             resource = entry["resource"]
-            if isinstance(resource, base.GPUSampler):
+            if isinstance(resource, GPUSampler):
                 c_resource_kwargs = {
                     "tag": 1,  # WGPUBindingResource_Tag.WGPUBindingResource_Sampler
                     "sampler": new_struct(
                         "WGPUBindingResource_WGPUSampler_Body", _0=resource._internal
                     ),
                 }
-            elif isinstance(resource, base.GPUTextureView):
+            elif isinstance(resource, GPUTextureView):
                 c_resource_kwargs = {
                     "tag": 2,  # WGPUBindingResource_Tag.WGPUBindingResource_TextureView
                     "texture_view": new_struct(
@@ -802,7 +830,6 @@ class GPUDevice(base.GPUDevice):
         id = _lib.wgpu_device_create_bind_group(self._internal, struct)
         return GPUBindGroup(label, id, self, entries)
 
-    # wgpu.help('PipelineLayoutDescriptor', 'devicecreatepipelinelayout', dev=True)
     def create_pipeline_layout(
         self, *, label="", bind_group_layouts: "GPUBindGroupLayout-list"
     ):
@@ -819,7 +846,6 @@ class GPUDevice(base.GPUDevice):
         id = _lib.wgpu_device_create_pipeline_layout(self._internal, struct)
         return GPUPipelineLayout(label, id, self, bind_group_layouts)
 
-    # wgpu.help('ShaderModuleDescriptor', 'devicecreateshadermodule', dev=True)
     def create_shader_module(self, *, label="", code: str, source_map: "dict" = None):
 
         if isinstance(code, bytes):
@@ -847,7 +873,6 @@ class GPUDevice(base.GPUDevice):
         id = _lib.wgpu_device_create_shader_module(self._internal, struct)
         return GPUShaderModule(label, id, self)
 
-    # wgpu.help('ComputePipelineDescriptor', 'devicecreatecomputepipeline', dev=True)
     def create_compute_pipeline(
         self,
         *,
@@ -872,7 +897,6 @@ class GPUDevice(base.GPUDevice):
         id = _lib.wgpu_device_create_compute_pipeline(self._internal, struct)
         return GPUComputePipeline(label, id, self, layout)
 
-    # wgpu.help('RenderPipelineDescriptor', 'devicecreaterenderpipeline', dev=True)
     def create_render_pipeline(
         self,
         *,
@@ -1038,7 +1062,6 @@ class GPUDevice(base.GPUDevice):
         id = _lib.wgpu_device_create_render_pipeline(self._internal, struct)
         return GPURenderPipeline(label, id, self, layout)
 
-    # wgpu.help('CommandEncoderDescriptor', 'devicecreatecommandencoder', dev=True)
     def create_command_encoder(self, *, label=""):
         c_label = ffi.new("char []", label.encode())
         struct = new_struct_p("WGPUCommandEncoderDescriptor *", label=c_label)
@@ -1061,8 +1084,30 @@ class GPUDevice(base.GPUDevice):
         usage = flags.TextureUsage.OUTPUT_ATTACHMENT if usage is None else usage
         return GPUSwapChain(self, canvas, format, usage)
 
+    # FIXME: new method to implement
+    def create_render_bundle_encoder(
+        self,
+        *,
+        label="",
+        color_formats: "GPUTextureFormat-list",
+        depth_stencil_format: "GPUTextureFormat" = None,
+        sample_count: "GPUSize32" = 1,
+    ):
+        raise NotImplementedError()
 
-class GPUBuffer(base.GPUBuffer):
+    # FIXME: new method to implement
+    def create_query_set(
+        self,
+        *,
+        label="",
+        type: "GPUQueryType",
+        count: "GPUSize32",
+        pipeline_statistics: "GPUPipelineStatisticName-list" = [],
+    ):
+        raise NotImplementedError()
+
+
+class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
     # def map(self, mode, offset=0, size=0):
     #     if not size:
@@ -1161,7 +1206,6 @@ class GPUBuffer(base.GPUBuffer):
         self._state = "unmapped"
         self._map_mode = 0
 
-    # wgpu.help('bufferdestroy', dev=True)
     def destroy(self):
         self._destroy()  # no-cover
 
@@ -1173,9 +1217,7 @@ class GPUBuffer(base.GPUBuffer):
             _lib.wgpu_buffer_destroy(internal)
 
 
-class GPUTexture(base.GPUTexture):
-
-    # wgpu.help('TextureViewDescriptor', 'texturecreateview', dev=True)
+class GPUTexture(base.GPUTexture, GPUObjectBase):
     def create_view(
         self,
         *,
@@ -1219,9 +1261,8 @@ class GPUTexture(base.GPUTexture):
             )
             id = _lib.wgpu_texture_create_view(self._internal, struct)
 
-        return base.GPUTextureView(label, id, self._device, self, self.texture_size)
+        return GPUTextureView(label, id, self._device, self, self.texture_size)
 
-    # wgpu.help('texturedestroy', dev=True)
     def destroy(self):
         self._destroy()  # no-cover
 
@@ -1231,22 +1272,33 @@ class GPUTexture(base.GPUTexture):
             _lib.wgpu_texture_destroy(internal)
 
 
-class GPUBindGroup(base.GPUBindGroup):
+class GPUTextureView(base.GPUTextureView, GPUObjectBase):
+    pass
+
+
+class GPUSampler(base.GPUSampler, GPUObjectBase):
+    pass
+
+
+class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
+    pass
+
+
+class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             _lib.wgpu_bind_group_layout_destroy(internal)
 
 
-class GPUPipelineLayout(base.GPUPipelineLayout):
+class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             _lib.wgpu_pipeline_layout_destroy(internal)
 
 
-class GPUShaderModule(base.GPUShaderModule):
-    # wgpu.help('shadermodulecompilationinfo', dev=True)
+class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
     def compilation_info(self):
         return super().compilation_info()
 
@@ -1256,28 +1308,34 @@ class GPUShaderModule(base.GPUShaderModule):
             _lib.wgpu_shader_module_destroy(internal)
 
 
-class GPUComputePipeline(base.GPUComputePipeline):
+class GPUPipelineBase(base.GPUPipelineBase):
+    pass
+
+
+class GPUComputePipeline(base.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             _lib.wgpu_compute_pipeline_destroy(internal)
 
 
-class GPURenderPipeline(base.GPURenderPipeline):
+class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             _lib.wgpu_render_pipeline_destroy(internal)
 
 
-class GPUCommandEncoder(base.GPUCommandEncoder):
-    # wgpu.help('ComputePassDescriptor', 'commandencoderbegincomputepass', dev=True)
+class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
+    pass
+
+
+class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
     def begin_compute_pass(self, *, label=""):
         struct = new_struct_p("WGPUComputePassDescriptor *", todo=0)
         raw_pass = _lib.wgpu_command_encoder_begin_compute_pass(self._internal, struct)
         return GPUComputePassEncoder(label, raw_pass, self)
 
-    # wgpu.help('RenderPassDescriptor', 'commandencoderbeginrenderpass', dev=True)
     def begin_render_pass(
         self,
         *,
@@ -1291,7 +1349,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         c_color_attachments_list = []
         for color_attachment in color_attachments:
             _check_struct("RenderPassColorAttachmentDescriptor", color_attachment)
-            assert isinstance(color_attachment["attachment"], base.GPUTextureView)
+            assert isinstance(color_attachment["attachment"], GPUTextureView)
             texture_view_id = color_attachment["attachment"]._internal
             c_resolve_target = (
                 0
@@ -1354,7 +1412,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
         raw_pass = _lib.wgpu_command_encoder_begin_render_pass(self._internal, struct)
         return GPURenderPassEncoder(label, raw_pass, self)
 
-    # wgpu.help('Buffer', 'Size64', 'commandencodercopybuffertobuffer', dev=True)
     def copy_buffer_to_buffer(
         self, source, source_offset, destination, destination_offset, size
     ):
@@ -1369,7 +1426,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             int(size),
         )
 
-    # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopybuffertotexture', dev=True)
     def copy_buffer_to_texture(self, source, destination, copy_size):
 
         _check_struct("BufferCopyView", source)
@@ -1410,7 +1466,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             c_copy_size,
         )
 
-    # wgpu.help('BufferCopyView', 'Extent3D', 'TextureCopyView', 'commandencodercopytexturetobuffer', dev=True)
     def copy_texture_to_buffer(self, source, destination, copy_size):
 
         _check_struct("TextureCopyView", source)
@@ -1451,7 +1506,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             c_copy_size,
         )
 
-    # wgpu.help('Extent3D', 'TextureCopyView', 'commandencodercopytexturetotexture', dev=True)
     def copy_texture_to_texture(self, source, destination, copy_size):
 
         _check_struct("TextureCopyView", source)
@@ -1490,20 +1544,35 @@ class GPUCommandEncoder(base.GPUCommandEncoder):
             c_copy_size,
         )
 
-    # wgpu.help('CommandBufferDescriptor', 'commandencoderfinish', dev=True)
     def finish(self, *, label=""):
         struct = new_struct_p("WGPUCommandBufferDescriptor *", todo=0)
         id = _lib.wgpu_command_encoder_finish(self._internal, struct)
-        return base.GPUCommandBuffer(label, id, self)
+        return GPUCommandBuffer(label, id, self)
 
-    # todo: these do not exist yet for command_encoder in wgpu-native
-    # def push_debug_group(self, group_label):
-    # def pop_debug_group(self):
-    # def insert_debug_marker(self, marker_label):
+    # FIXME: new method to implement
+    def push_debug_group(self, group_label):
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    def pop_debug_group(self):
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    def insert_debug_marker(self, marker_label):
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    def write_timestamp(self, query_set, query_index):
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    def resolve_query_set(
+        self, query_set, first_query, query_count, destination, destination_offset
+    ):
+        raise NotImplementedError()
 
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
-    # wgpu.help('BindGroup', 'Index32', 'Size32', 'Size64', 'programmablepassencodersetbindgroup', dev=True)
     def set_bind_group(
         self,
         index,
@@ -1524,7 +1593,6 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
                 self._internal, index, bind_group_id, c_offsets, len(offsets)
             )
 
-    # wgpu.help('programmablepassencoderpushdebuggroup', dev=True)
     def push_debug_group(self, group_label):
         c_group_label = ffi.new("char []", group_label.encode())
         if isinstance(self, GPUComputePassEncoder):
@@ -1532,14 +1600,12 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
         else:
             _lib.wgpu_render_pass_push_debug_group(self._internal, c_group_label)
 
-    # wgpu.help('programmablepassencoderpopdebuggroup', dev=True)
     def pop_debug_group(self):
         if isinstance(self, GPUComputePassEncoder):
             _lib.wgpu_compute_pass_pop_debug_group(self._internal)
         else:
             _lib.wgpu_render_pass_pop_debug_group(self._internal)
 
-    # wgpu.help('programmablepassencoderinsertdebugmarker', dev=True)
     def insert_debug_marker(self, marker_label):
         c_marker_label = ffi.new("char []", marker_label.encode())
         if isinstance(self, GPUComputePassEncoder):
@@ -1548,26 +1614,24 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
             _lib.wgpu_render_pass_insert_debug_marker(self._internal, c_marker_label)
 
 
-class GPUComputePassEncoder(GPUProgrammablePassEncoder):
+class GPUComputePassEncoder(
+    base.GPUComputePassEncoder, GPUProgrammablePassEncoder, GPUObjectBase
+):
     """"""
 
-    # wgpu.help('ComputePipeline', 'computepassencodersetpipeline', dev=True)
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
         _lib.wgpu_compute_pass_set_pipeline(self._internal, pipeline_id)
 
-    # wgpu.help('Size32', 'computepassencoderdispatch', dev=True)
     def dispatch(self, x, y=1, z=1):
         _lib.wgpu_compute_pass_dispatch(self._internal, x, y, z)
 
-    # wgpu.help('Buffer', 'Size64', 'computepassencoderdispatchindirect', dev=True)
     def dispatch_indirect(self, indirect_buffer, indirect_offset):
         buffer_id = indirect_buffer._internal
         _lib.wgpu_compute_pass_dispatch_indirect(
             self._internal, buffer_id, int(indirect_offset)
         )
 
-    # wgpu.help('computepassencoderendpass', dev=True)
     def end_pass(self):
         _lib.wgpu_compute_pass_end_pass(self._internal)
 
@@ -1576,16 +1640,18 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder):
             self._internal, internal = None, self._internal
             internal  # todo: crashes _lib.wgpu_compute_pass_destroy(internal)
 
+    # FIXME: new method to implement
+    def write_timestamp(self, query_set, query_index):
+        raise NotImplementedError()
 
-class GPURenderEncoderBase(GPUProgrammablePassEncoder):
+
+class GPURenderEncoderBase(base.GPURenderEncoderBase):
     """"""
 
-    # wgpu.help('RenderPipeline', 'renderencoderbasesetpipeline', dev=True)
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
         _lib.wgpu_render_pass_set_pipeline(self._internal, pipeline_id)
 
-    # wgpu.help('Buffer', 'Size64', 'renderencoderbasesetindexbuffer', dev=True)
     def set_index_buffer(self, buffer, offset=0, size=0):
         if not size:
             size = buffer.size - offset
@@ -1593,7 +1659,6 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             self._internal, buffer._internal, int(offset), int(size)
         )
 
-    # wgpu.help('Buffer', 'Index32', 'Size64', 'renderencoderbasesetvertexbuffer', dev=True)
     def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
         if not size:
             size = buffer.size - offset
@@ -1601,20 +1666,17 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             self._internal, int(slot), buffer._internal, int(offset), int(size)
         )
 
-    # wgpu.help('Size32', 'renderencoderbasedraw', dev=True)
     def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
         _lib.wgpu_render_pass_draw(
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
 
-    # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindirect', dev=True)
     def draw_indirect(self, indirect_buffer, indirect_offset):
         buffer_id = indirect_buffer._internal
         _lib.wgpu_render_pass_draw_indirect(
             self._internal, buffer_id, int(indirect_offset)
         )
 
-    # wgpu.help('SignedOffset32', 'Size32', 'renderencoderbasedrawindexed', dev=True)
     def draw_indexed(
         self,
         index_count,
@@ -1632,7 +1694,6 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             first_instance,
         )
 
-    # wgpu.help('Buffer', 'Size64', 'renderencoderbasedrawindexedindirect', dev=True)
     def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
         buffer_id = indirect_buffer._internal
         _lib.wgpu_render_pass_draw_indexed_indirect(
@@ -1645,11 +1706,12 @@ class GPURenderEncoderBase(GPUProgrammablePassEncoder):
             internal  # todo: crashes _lib.wgpu_render_pass_destroy(internal)
 
 
-class GPURenderPassEncoder(GPURenderEncoderBase):
-
-    # Note: this does not inherit from base.GPURenderPassEncoder!
-
-    # wgpu.help('renderpassencodersetviewport', dev=True)
+class GPURenderPassEncoder(
+    base.GPURenderPassEncoder,
+    GPUProgrammablePassEncoder,
+    GPURenderEncoderBase,
+    GPUObjectBase,
+):
     def set_viewport(self, x, y, width, height, min_depth, max_depth):
         _lib.wgpu_render_pass_set_viewport(
             self._internal,
@@ -1661,13 +1723,11 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
             float(max_depth),
         )
 
-    # wgpu.help('IntegerCoordinate', 'renderpassencodersetscissorrect', dev=True)
     def set_scissor_rect(self, x, y, width, height):
         _lib.wgpu_render_pass_set_scissor_rect(
             self._internal, int(x), int(y), int(width), int(height)
         )
 
-    # wgpu.help('Color', 'renderpassencodersetblendcolor', dev=True)
     def set_blend_color(self, color):
         color = _tuple_from_tuple_or_dict(color, "rgba")
         c_color = new_struct_p(
@@ -1675,7 +1735,6 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
         )
         _lib.wgpu_render_pass_set_blend_color(self._internal, c_color)
 
-    # wgpu.help('StencilValue', 'renderpassencodersetstencilreference', dev=True)
     def set_stencil_reference(self, reference):
         _lib.wgpu_render_pass_set_stencil_reference(self._internal, int(reference))
 
@@ -1684,7 +1743,7 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     # def execute_bundles(self, bundles):
     #     bundles2 = []
     #     for bundle in bundles:
-    #         if isinstance(bundle, base.GPURenderBundle):
+    #         if isinstance(bundle, GPURenderBundle):
     #             bundles2.append(bundle._internal)
     #         else:
     #             bundles2.append(int(bundle))
@@ -1694,21 +1753,44 @@ class GPURenderPassEncoder(GPURenderEncoderBase):
     #         self._internal, c_bundles_array, len(bundles2),
     #     )
 
-    # wgpu.help('renderpassencoderendpass', dev=True)
     def end_pass(self):
         _lib.wgpu_render_pass_end_pass(self._internal)
 
+    # FIXME: new method to implement
+    def execute_bundles(self, bundles):
+        raise NotImplementedError()
 
-class GPURenderBundleEncoder(base.GPURenderBundleEncoder):
+    # FIXME: new method to implement
+    def begin_occlusion_query(self, query_index):
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    def end_occlusion_query(self):
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    def write_timestamp(self, query_set, query_index):
+        raise NotImplementedError()
+
+
+class GPURenderBundleEncoder(
+    base.GPURenderBundleEncoder,
+    GPUProgrammablePassEncoder,
+    GPURenderEncoderBase,
+    GPUObjectBase,
+):
     pass
 
     # Not yet implemented in wgpu-native
     # def finish(self, *, label=""):
     #     ...
 
+    # FIXME: new method to implement
+    def finish(self, *, label=""):
+        raise NotImplementedError()
 
-class GPUQueue(base.GPUQueue):
-    # wgpu.help('queuesubmit', dev=True)
+
+class GPUQueue(base.GPUQueue, GPUObjectBase):
     def submit(self, command_buffers):
         command_buffer_ids = [cb._internal for cb in command_buffers]
         c_command_buffers = ffi.new("WGPUCommandBufferId []", command_buffer_ids)
@@ -1716,11 +1798,6 @@ class GPUQueue(base.GPUQueue):
             self._internal, c_command_buffers, len(command_buffer_ids)
         )
 
-    # Seems not yet implemented in wgpu-native
-    # def copy_image_bitmap_to_texture(self, source, destination, copy_size):
-    #     ...
-
-    # wgpu.help('Buffer', 'Size64', 'queuewritebuffer', dev=True)
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
 
         # We support anything that memoryview supports, i.e. anything
@@ -1753,7 +1830,6 @@ class GPUQueue(base.GPUQueue):
             self._internal, buffer._internal, buffer_offset, c_data, data_length
         )
 
-    # wgpu.help('Extent3D', 'TextureCopyView', 'TextureDataLayout', 'queuewritetexture', dev=True)
     def write_texture(self, destination, data, data_layout, size):
 
         m, address = _get_memoryview_and_address(data)
@@ -1794,8 +1870,12 @@ class GPUQueue(base.GPUQueue):
             self._internal, c_destination, c_data, data_length, c_data_layout, c_size
         )
 
+    # FIXME: new method to implement -> does not exist in wgpu-native
+    def copy_image_bitmap_to_texture(self, source, destination, copy_size):
+        raise NotImplementedError()
 
-class GPUSwapChain(base.GPUSwapChain):
+
+class GPUSwapChain(base.GPUSwapChain, GPUObjectBase):
     def __init__(self, device, canvas, format, usage):
         super().__init__("", None, device)
         self._canvas = canvas
@@ -1848,24 +1928,67 @@ class GPUSwapChain(base.GPUSwapChain):
                 f"Swap chain status is not good: {status_str} ({status})"
             )
         size = self._surface_size[0], self._surface_size[1], 1
-        return base.GPUTextureView("swap_chain", view_id, self._device, None, size)
+        return GPUTextureView("swap_chain", view_id, self._device, None, size)
 
     def __exit__(self, type, value, tb):
         # Present the current texture
         _lib.wgpu_swap_chain_present(self._internal)
 
 
-swap_chain_status_map = {
-    getattr(_lib, "WGPUSwapChainStatus_" + x): x
-    for x in ("Good", "Suboptimal", "Lost", "Outdated", "OutOfMemory", "Timeout")
-}
+class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
+    pass
+
+
+class GPUDeviceLostInfo(base.GPUDeviceLostInfo):
+    pass
+
+
+class GPUOutOfMemoryError(base.GPUOutOfMemoryError, Exception):
+    pass
+
+
+class GPUValidationError(base.GPUValidationError, Exception):
+    pass
+
+
+class GPUCompilationMessage(base.GPUCompilationMessage):
+    pass
+
+
+class GPUCompilationInfo(base.GPUCompilationInfo):
+    pass
+
+
+class GPUFence(base.GPUFence, GPUObjectBase):
+    pass
+
+    # FIXME: new method to implement
+    def get_completed_value(self):
+        raise NotImplementedError()
+
+    # FIXME: new method to implement
+    def on_completion(self, completion_value):
+        raise NotImplementedError()
+
+
+class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
+    pass
+
+    # FIXME: new method to implement
+    def destroy(self):
+        raise NotImplementedError()
+
+
+class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):
+    pass
+
 
 # %%
 
 
 def _copy_docstrings():
     for ob in globals().values():
-        if not (isinstance(ob, type) and issubclass(ob, base.GPUObject)):
+        if not (isinstance(ob, type) and issubclass(ob, GPUObjectBase)):
             continue
         elif ob.__module__ != __name__:
             continue  # no-cover

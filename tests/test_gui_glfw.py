@@ -144,19 +144,19 @@ def test_glfw_canvas_render_custom_canvas():
         def __init__(self):
             glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
             glfw.window_hint(glfw.RESIZABLE, True)
-            self.__window = glfw.create_window(300, 200, "canvas", None, None)
+            self.window = glfw.create_window(300, 200, "canvas", None, None)
 
         def get_window_id(self):
             if sys.platform.startswith("win"):
-                return int(glfw.get_win32_window(self.__window))
+                return int(glfw.get_win32_window(self.window))
             elif sys.platform.startswith("darwin"):
-                return int(glfw.get_cocoa_window(self.__window))
+                return int(glfw.get_cocoa_window(self.window))
             elif sys.platform.startswith("linux"):
                 is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
                 if is_wayland:
-                    return int(glfw.get_wayland_window(self.__window))
+                    return int(glfw.get_wayland_window(self.window))
                 else:
-                    return int(glfw.get_x11_window(self.__window))
+                    return int(glfw.get_x11_window(self.window))
             else:
                 raise RuntimeError(f"Cannot get GLFW window id on {sys.platform}.")
 
@@ -164,7 +164,7 @@ def test_glfw_canvas_render_custom_canvas():
             return wgpu.WgpuCanvasInterface.get_display_id(self)
 
         def get_physical_size(self):
-            psize = glfw.get_framebuffer_size(self.__window)
+            psize = glfw.get_framebuffer_size(self.window)
             return int(psize[0]), int(psize[1])
 
     canvas = CustomCanvas()
@@ -177,6 +177,8 @@ def test_glfw_canvas_render_custom_canvas():
         time.sleep(0.01)
         glfw.poll_events()
         draw_frame()
+
+    glfw.hide_window(canvas.window)
 
 
 def _get_draw_function(device, canvas):
