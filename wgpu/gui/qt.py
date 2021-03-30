@@ -18,8 +18,10 @@ for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5", "PySide", "PyQt4"):
         QtWidgets = importlib.import_module(libname + "." + widgets_modname)
         try:
             WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
+            PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
         except AttributeError:
             WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
+            PreciseTimer = QtCore.Qt.PreciseTimer
         break
 else:
     raise ImportError(
@@ -79,7 +81,7 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         # A timer for limiting fps
         self._target_fps = 30  # subclasses could edit this value
         self._request_draw_timer = QtCore.QTimer()
-        self._request_draw_timer.setTimerType(QtCore.Qt.PreciseTimer)
+        self._request_draw_timer.setTimerType(PreciseTimer)
         self._request_draw_timer.setSingleShot(True)
         self._request_draw_timer.timeout.connect(self.update)
 

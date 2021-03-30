@@ -1,9 +1,15 @@
 """
 Import the viz from triangle.py and run it in a Qt window.
-Works with either PyQt5 or PySide2.
+Works with either PyQt6, PyQt5 or PySide2.
 """
 
-from PyQt5 import QtWidgets  # Use either PyQt5 or Pyside2
+try:
+	from PyQt6 import QtWidgets  # Use either PyQt5 or Pyside2
+except ModuleNotFoundError:
+	try:
+		from PyQt5 import QtWidgets
+	except ModuleNotFoundError:
+		from Pyside2 import QtWidgets
 from wgpu.gui.qt import WgpuCanvas  # WgpuCanvas is a QWidget subclass
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
@@ -15,7 +21,10 @@ app = QtWidgets.QApplication([])
 canvas = WgpuCanvas(title="wgpu triangle with Qt")
 
 main(canvas)
-app.exec_()
+try:
+	app.exec()
+except Exception:
+	app.exec_()
 
 
 # For those interested, this is a simple way to integrate Qt's event
