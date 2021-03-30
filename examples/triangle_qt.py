@@ -4,12 +4,12 @@ Works with either PyQt6, PyQt5 or PySide2.
 """
 
 try:
-	from PyQt6 import QtWidgets  # Use either PyQt5 or Pyside2
+    from PyQt6 import QtWidgets
 except ModuleNotFoundError:
-	try:
-		from PyQt5 import QtWidgets
-	except ModuleNotFoundError:
-		from Pyside2 import QtWidgets
+    try:
+        from PyQt5 import QtWidgets
+    except ModuleNotFoundError:
+        from Pyside2 import QtWidgets
 from wgpu.gui.qt import WgpuCanvas  # WgpuCanvas is a QWidget subclass
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
@@ -22,9 +22,9 @@ canvas = WgpuCanvas(title="wgpu triangle with Qt")
 
 main(canvas)
 try:
-	app.exec()
+    app.exec()
 except Exception:
-	app.exec_()
+    app.exec_()
 
 
 # For those interested, this is a simple way to integrate Qt's event
