@@ -5,6 +5,7 @@ can be used as a standalone window or in a larger GUI.
 
 import sys
 import time
+import math
 import ctypes
 import importlib
 
@@ -22,7 +23,7 @@ except Exception:
 class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-    
+
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda x: None)
 
@@ -46,7 +47,7 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Window):
         lsize = self.Size[0], self.Size[1]
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self.GetContentScaleFactor()
-        return round(lsize[0] * ratio), round(lsize[1] * ratio)
+        return math.ceil(lsize[0] * ratio), math.ceil(lsize[1] * ratio)
 
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
