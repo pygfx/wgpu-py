@@ -5,6 +5,7 @@ can be used as a standalone window or in a larger GUI.
 
 import sys
 import time
+import math
 import ctypes
 import importlib
 
@@ -119,7 +120,7 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         lsize = self._subwidget.width(), self._subwidget.height()
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self._subwidget.devicePixelRatioF()
-        return round(lsize[0] * ratio), round(lsize[1] * ratio)
+        return math.ceil(lsize[0] * ratio), math.ceil(lsize[1] * ratio)
 
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
