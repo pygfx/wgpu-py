@@ -45,6 +45,15 @@ class WxWgpuCanvas(WgpuCanvasBase):
         del dc
         event.Skip()
 
+    def set_logical_size(self, width, height):
+        if width < 0 or height < 0:
+            raise ValueError("Window width and height must not be negative")
+        self.SetSize(width, height)
+
+    def get_logical_size(self):
+        lsize = self.Size[0], self.Size[1]
+        return float(lsize[0]), float(lsize[1])
+
     def close(self):
         self.Hide()
 
@@ -68,23 +77,15 @@ class WxWgpuWindow(WxWgpuCanvas, wx.Window):
         # * On Win10 this always returns 1 - so hidpi is effectively broken
         return self.GetContentScaleFactor()
 
-    def get_logical_size(self):
-        lsize = self.Size[0], self.Size[1]
-        return float(lsize[0]), float(lsize[1])
-
     def get_physical_size(self):
         lsize = self.Size[0], self.Size[1]
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self.GetContentScaleFactor()
         return round(lsize[0] * ratio), round(lsize[1] * ratio)
 
-    def set_logical_size(self, width, height):
-        if width < 0 or height < 0:
-            raise ValueError("Window width and height must not be negative")
-        self.SetSize(width, height)
-
     def _request_draw(self):
         # todo: this does the draw *directly* which is not what we want
+        # e.g. it would cause recursion errors in most pygfx examples
         self.Refresh()  # Invalidates the canvas
         self.Update()  # Redraw
 
@@ -96,8 +97,13 @@ class WxWgpuFrame(WxWgpuCanvas, wx.Frame):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+        size = kwargs.pop("size", None) or (640, 480)
+        self.set_logical_size(*size)
+
         self.canvas = WxWgpuWindow(parent=self)
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
+
         self.Show()
 
     def get_window_id(self):
@@ -106,14 +112,8 @@ class WxWgpuFrame(WxWgpuCanvas, wx.Frame):
     def get_pixel_ratio(self):
         return self.canvas.get_pixel_ratio()
 
-    def get_logical_size(self):
-        return self.canvas.get_logical_size()
-
     def get_physical_size(self):
         return self.canvas.get_physical_size()
-
-    def set_logical_size(self, width, height):
-        return self.canvas.set_logical_size(width, height)
 
     def _request_draw(self):
         pass
