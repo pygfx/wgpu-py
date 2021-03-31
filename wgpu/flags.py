@@ -24,6 +24,7 @@ class Flags:
 
 
 # There are 5 flags
+
 BufferUsage = Flags(
     "BufferUsage",
     MAP_READ=1,

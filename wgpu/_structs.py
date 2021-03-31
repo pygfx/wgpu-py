@@ -6,6 +6,7 @@ All wgpu structs.
 
 
 # There are 45 structs
+
 RequestAdapterOptions = {"power_preference": "GPUPowerPreference"}
 
 DeviceDescriptor = {

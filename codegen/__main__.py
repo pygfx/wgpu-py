@@ -18,8 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 def update_api():
 
     # Load idl
-    with open(os.path.join(lib_dir, "resources", "webgpu.idl"), "rb") as f:
-        idl = IdlParser(f.read().decode())
+    idl = IdlParser()
     idl.parse(verbose=True)
 
     # Write the simple stuff

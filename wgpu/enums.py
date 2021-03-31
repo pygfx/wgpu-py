@@ -26,6 +26,7 @@ class Enum:
 
 
 # There are 26 enums
+
 PowerPreference = Enum(
     "PowerPreference",
     low_power="low-power",

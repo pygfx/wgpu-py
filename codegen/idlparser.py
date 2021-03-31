@@ -7,6 +7,10 @@ It would be good to occasionally check the coverage of this module to
 identify and remove code paths that are no longer used.
 """
 
+import os
+
+from codegen.utils import lib_dir
+
 
 class StructField:
     """A little object to specify the field of a struct."""
@@ -48,7 +52,9 @@ class IdlParser:
 
     """
 
-    def __init__(self, text):
+    def __init__(self):
+        with open(os.path.join(lib_dir, "resources", "webgpu.idl"), "rb") as f:
+            text = f.read().decode()
         self._text = self._pre_process(text)
         self._length = len(self._text)
         self._pos = 0

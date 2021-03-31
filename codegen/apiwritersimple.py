@@ -82,6 +82,7 @@ class Enum:
 
 
 def write_enums(idl):
+    # Generate code
     pylines = [enums_preamble]
     pylines.append(f"# There are {len(idl.enums)} enums\n")
     for name, d in idl.enums.items():

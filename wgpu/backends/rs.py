@@ -39,9 +39,9 @@ from weakref import WeakKeyDictionary
 from .. import base, flags, _structs
 from .. import _register_backend
 from .._coreutils import ApiDiff
-from .._mappings import cstructfield2enum, enummap
 
 from .rs_ffi import ffi, lib as _lib, check_expected_version
+from .rs_mappings import cstructfield2enum, enummap
 from .rs_helpers import (
     get_surface_id_from_canvas,
     get_memoryview_from_address,
