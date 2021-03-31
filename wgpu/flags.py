@@ -23,7 +23,7 @@ class Flags:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# %% flags (5)
+# There are 5 flags
 
 BufferUsage = Flags(
     "BufferUsage",

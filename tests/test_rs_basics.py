@@ -31,7 +31,7 @@ def test_override_wgpu_lib_path():
 
     # Current version
     try:
-        old_path = wgpu.backends.rs._get_wgpu_lib_path()
+        old_path = wgpu.backends.rs_ffi.get_wgpu_lib_path()
     except RuntimeError:
         old_path = None
 
@@ -40,7 +40,7 @@ def test_override_wgpu_lib_path():
     os.environ["WGPU_LIB_PATH"] = "foo/bar"
 
     # Check
-    assert wgpu.backends.rs._get_wgpu_lib_path() == "foo/bar"
+    assert wgpu.backends.rs_ffi.get_wgpu_lib_path() == "foo/bar"
 
     # Change it back
     if old_env_var is None:
@@ -50,7 +50,7 @@ def test_override_wgpu_lib_path():
 
     # Still the same as before?
     try:
-        path = wgpu.backends.rs._get_wgpu_lib_path()
+        path = wgpu.backends.rs_ffi.get_wgpu_lib_path()
     except RuntimeError:
         path = None
     assert path == old_path
@@ -371,7 +371,7 @@ def test_do_a_copy_roundtrip():
 
 def test_get_memoryview_and_address():
 
-    get_memoryview_and_address = wgpu.backends.rs._get_memoryview_and_address
+    get_memoryview_and_address = wgpu.backends.rs_helpers.get_memoryview_and_address
 
     data = b"bytes are readonly, but we can map it. Don't abuse this :)"
     m, address = get_memoryview_and_address(data)

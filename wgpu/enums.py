@@ -25,7 +25,7 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# %% Enums (26)
+# There are 26 enums
 
 PowerPreference = Enum(
     "PowerPreference",
