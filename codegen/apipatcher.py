@@ -296,13 +296,47 @@ class IdlPatcherMixin:
         name = to_snake_case(field.name)
         t = field.typename
         d = field.default
-        if t not in ("bool", "int", "float", "str"):
-            t = f"'{t}'"
-        if d is not None:
-            d = {"false": "False", "true": "True"}.get(d, d)
-            return f"{name}: {t}={d}"
+        if t in ("bool", "int", "float", "str", "dict", "list", "tuple"):
+            pass  # ok
+        elif t in self.idl.classes:
+            t = f"'{t}'"  # ok, but wrap as string because can be declared later
         else:
-            return f"{name}: {t}"
+            assert t.startswith("GPU")
+            # Prepare
+            wrap_in_list = False
+            t = t[3:]
+            if t.endswith("Flags"):
+                t = t[:-5]
+            if t.endswith("-list"):
+                wrap_in_list = True
+                t = t[:-5]
+            # Write it
+            if t in self.idl.flags:
+                t = f"flags.{t}"
+            elif t in self.idl.enums:
+                t = f"enums.{t}"
+            elif t.endswith(("Descriptor", "Entry", "Layout")):
+                t = None
+            elif t in ("Limits", "Extent3D", "BindGroupLayout"):
+                t = None
+            else:
+                raise RuntimeError("Not sure what to do with", t)
+                t = None
+            # Wrap it
+            if not t:
+                pass
+            elif wrap_in_list:
+                t = f"'list({t})'"
+            else:
+                t = f"'{t}'"
+        # Write with or without default value
+        result = name
+        if t:
+            result += f": {t}"
+        if d:
+            d = {"false": "False", "true": "True"}.get(d, d)
+            result += f"={d}"
+        return result
 
     def prop_is_known(self, classname, propname):
         propname_idl = self.name2idl(propname)

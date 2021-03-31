@@ -269,6 +269,10 @@ class IdlParser:
                         "unsigned long",
                         "unsigned long long",
                         "GPUSize64",
+                        "GPUSize32",
+                        "GPUIntegerCoordinate",
+                        "GPUSampleMask",
+                        "GPUFenceValue",
                         "[Clamp] unsigned short",
                     ]:
                         t = "int"
