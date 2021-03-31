@@ -1,9 +1,9 @@
 """
 WGPU backend implementation based on wgpu-native
 
-The wgpu-native project (https://github.com/gfx-rs/wgpu) is a Rust library
-based on gfx-hal, which wraps Metal, Vulkan, DX12 and more in the
-future. It can compile into a dynamic library exposing a C-API,
+The wgpu-native project (https://github.com/gfx-rs/wgpu) is a Rust
+library based on gfx-hal, which wraps Metal, Vulkan, DX12 and more in
+the future. It compiles to a dynamic library exposing a C-API,
 accompanied by a C header file. We wrap this using cffi, which uses the
 header file to do most type conversions for us.
 
@@ -31,152 +31,32 @@ Developer notes and tips:
 
 
 import os
-import sys
 import ctypes
 import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
 
-from cffi import FFI, __version_info__ as cffi_version_info
-
 from .. import base, flags, _structs
 from .. import _register_backend
-from .._coreutils import get_resource_filename, logger_set_level_callbacks, ApiDiff
+from .._coreutils import ApiDiff
 from .._mappings import cstructfield2enum, enummap
+
+from .rs_ffi import ffi, lib as _lib, check_expected_version
+from .rs_helpers import (
+    get_surface_id_from_canvas,
+    get_memoryview_from_address,
+    get_memoryview_and_address,
+)
 
 
 logger = logging.getLogger("wgpu")  # noqa
+apidiff = ApiDiff()
 
-# wgpu-native version that we target/expect
+# The wgpu-native version that we target/expect
 __version__ = "0.5.2"
 __commit_sha__ = "160be433dbec0fc7a27d25f2aba3423666ccfa10"
 version_info = tuple(map(int, __version__.split(".")))
-
-
-if cffi_version_info < (1, 10):  # no-cover
-    raise ImportError(f"{__name__} needs cffi 1.10 or later.")
-
-
-apidiff = ApiDiff()
-
-
-# %% Load the lib and integrate logging system
-
-
-def _get_wgpu_h():
-    """Read header file and strip some stuff that cffi would stumble on."""
-    lines = []
-    with open(get_resource_filename("wgpu.h")) as f:
-        for line in f.readlines():
-            if not line.startswith(
-                (
-                    "#include ",
-                    "#define WGPU_LOCAL",
-                    "#define WGPUColor",
-                    "#define WGPUOrigin3d_ZERO",
-                    "#if defined",
-                    "#endif",
-                )
-            ):
-                lines.append(line)
-    return "".join(lines)
-
-
-def _get_wgpu_lib_path():
-    """Get the path to the wgpu library, taking into account the
-    WGPU_LIB_PATH environment variable.
-    """
-
-    # If path is given, use that or fail trying
-    override_path = os.getenv("WGPU_LIB_PATH", "").strip()
-    if override_path:
-        return override_path
-
-    # Load the debug binary if requested
-    debug_mode = os.getenv("WGPU_DEBUG", "").strip() == "1"
-    build = "debug" if debug_mode else "release"
-
-    # Get lib filename for supported platforms
-    if sys.platform.startswith("win"):  # no-cover
-        lib_filename = f"wgpu_native-{build}.dll"
-    elif sys.platform.startswith("darwin"):  # no-cover
-        lib_filename = f"libwgpu_native-{build}.dylib"
-    elif sys.platform.startswith("linux"):  # no-cover
-        lib_filename = f"libwgpu_native-{build}.so"
-    else:  # no-cover
-        raise RuntimeError(
-            f"No WGPU library shipped for platform {sys.platform}. Set WGPU_LIB_PATH instead."
-        )
-
-    # Note that this can be a false positive, e.g. ARM linux.
-    embedded_path = get_resource_filename(lib_filename)
-    if not os.path.isfile(embedded_path):  # no-cover
-        raise RuntimeError(f"Could not find WGPU library in {embedded_path}")
-    else:
-        return embedded_path
-
-
-# Configure cffi and load the dynamic library
-# NOTE: `import wgpu.backends.rs` is used in pyinstaller tests to verify
-# that we can load the DLL after freezing
-ffi = FFI()
-ffi.cdef(_get_wgpu_h())
-ffi.set_source("wgpu.h", None)
-_lib = ffi.dlopen(_get_wgpu_lib_path())
-
-
-# Get the actual wgpu-native version
-_version_int = _lib.wgpu_get_version()
-version_info_lib = tuple((_version_int >> bits) & 0xFF for bits in (16, 8, 0))
-if version_info_lib != version_info:  # no-cover
-    logger.warning(
-        f"Expected wgpu-native version {version_info} but got {version_info_lib}"
-    )
-
-
-@ffi.callback("void(int level, const char *)")
-def _logger_callback(level, c_msg):
-    """Called when Rust emits a log message."""
-    msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
-    # todo: We currently skip some false negatives to avoid spam.
-    false_negatives = (
-        "Unknown decoration",
-        "Failed to parse shader",
-        "Shader module will not be validated",
-    )
-    if msg.startswith(false_negatives):
-        return
-    m = {
-        _lib.WGPULogLevel_Error: logger.error,
-        _lib.WGPULogLevel_Warn: logger.warning,
-        _lib.WGPULogLevel_Info: logger.info,
-        _lib.WGPULogLevel_Debug: logger.debug,
-        _lib.WGPULogLevel_Trace: logger.debug,
-    }
-    func = m.get(level, logger.warning)
-    func(msg)
-
-
-def _logger_set_level_callback(level):
-    """Called when the log level is set from Python."""
-    if level >= 40:
-        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Error)
-    elif level >= 30:
-        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Warn)
-    elif level >= 20:
-        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Info)
-    elif level >= 10:
-        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Debug)
-    elif level >= 5:
-        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Trace)  # extra level
-    else:
-        _lib.wgpu_set_log_level(_lib.WGPULogLevel_Off)
-
-
-# Connect Rust logging with Python logging
-_lib.wgpu_set_log_callback(_logger_callback)
-logger_set_level_callbacks.append(_logger_set_level_callback)
-_logger_set_level_callback(logger.level)
+check_expected_version(version_info)  # produces a warning on mismatch
 
 
 # %% Helper functions and objects
@@ -245,91 +125,6 @@ def _new_struct_p(ctype, **kwargs):
     return struct_p
 
 
-def get_surface_id_from_canvas(canvas):
-    """Get an id representing the surface to render to. The way to
-    obtain this id differs per platform and GUI toolkit.
-    """
-    win_id = canvas.get_window_id()
-
-    if sys.platform.startswith("win"):  # no-cover
-        # wgpu_create_surface_from_windows_hwnd(void *_hinstance, void *hwnd)
-        hwnd = ffi.cast("void *", int(win_id))
-        hinstance = ffi.NULL
-        return _lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
-
-    elif sys.platform.startswith("darwin"):  # no-cover
-        # wgpu_create_surface_from_metal_layer(void *layer)
-        # This is what the triangle example from wgpu-native does:
-        # #if WGPU_TARGET == WGPU_TARGET_MACOS
-        #     {
-        #         id metal_layer = NULL;
-        #         NSWindow *ns_window = glfwGetCocoaWindow(window);
-        #         [ns_window.contentView setWantsLayer:YES];
-        #         metal_layer = [CAMetalLayer layer];
-        #         [ns_window.contentView setLayer:metal_layer];
-        #         surface = wgpu_create_surface_from_metal_layer(metal_layer);
-        #     }
-        window = ctypes.c_void_p(win_id)
-
-        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
-        objc.objc_getClass.restype = ctypes.c_void_p
-        objc.sel_registerName.restype = ctypes.c_void_p
-        objc.objc_msgSend.restype = ctypes.c_void_p
-        objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
-
-        content_view_sel = objc.sel_registerName(b"contentView")
-        set_wants_layer_sel = objc.sel_registerName(b"setWantsLayer:")
-        responds_to_sel_sel = objc.sel_registerName(b"respondsToSelector:")
-        layer_sel = objc.sel_registerName(b"layer")
-        set_layer_sel = objc.sel_registerName(b"setLayer:")
-
-        # Try some duck typing to see what kind of object the window pointer points to
-        # Qt doesn't return a NSWindow, but a QNSView instead, which is subclass of NSView.
-        if objc.objc_msgSend(
-            window, responds_to_sel_sel, ctypes.c_void_p(content_view_sel)
-        ):
-            # NSWindow instances respond to contentView selector
-            content_view = objc.objc_msgSend(window, content_view_sel)
-        elif objc.objc_msgSend(window, responds_to_sel_sel, ctypes.c_void_p(layer_sel)):
-            # NSView instances respond to layer selector
-            # Let's assume that the given window pointer is actually the content view
-            content_view = window
-        else:
-            # If the code reaches this part, we know that `window` is an
-            # objective-c object but the type is neither NSView or NSWindow.
-            raise RuntimeError("Received unidentified objective-c object.")
-
-        # [ns_window.contentView setWantsLayer:YES]
-        objc.objc_msgSend(content_view, set_wants_layer_sel, True)
-
-        # metal_layer = [CAMetalLayer layer];
-        ca_metal_layer_class = objc.objc_getClass(b"CAMetalLayer")
-        metal_layer = objc.objc_msgSend(ca_metal_layer_class, layer_sel)
-
-        # [ns_window.content_view setLayer:metal_layer];
-        objc.objc_msgSend(content_view, set_layer_sel, ctypes.c_void_p(metal_layer))
-
-        metal_layer_ffi_pointer = ffi.cast("void *", metal_layer)
-        return _lib.wgpu_create_surface_from_metal_layer(metal_layer_ffi_pointer)
-
-    elif sys.platform.startswith("linux"):  # no-cover
-        # wgpu_create_surface_from_wayland(void *surface, void *display)
-        # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
-        display_id = canvas.get_display_id()
-        is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-        if is_wayland:
-            # todo: works, but have not yet been able to test drawing to the window
-            surface = ffi.cast("void *", win_id)
-            display = ffi.cast("void *", display_id)
-            return _lib.wgpu_create_surface_from_wayland(surface, display)
-        else:
-            display = ffi.cast("void **", display_id)
-            return _lib.wgpu_create_surface_from_xlib(display, win_id)
-
-    else:  # no-cover
-        raise RuntimeError("Cannot get surface id: unsupported platform.")
-
-
 def _tuple_from_tuple_or_dict(ob, fields):
     """Given a tuple/list/dict, return a tuple. Also checks tuple size.
 
@@ -365,49 +160,6 @@ def _loadop_and_clear_from_value(value):
         return 0, value  # WGPULoadOp_Clear and the value
 
 
-def _get_memoryview_and_address(data):
-    """Get a memoryview for the given data and its memory address.
-    The data object must support the buffer protocol.
-    """
-
-    # To get the address from a memoryview, there are multiple options.
-    # The most obvious is using ctypes:
-    #
-    #   c_array = (ctypes.c_uint8 * nbytes).from_buffer(m)
-    #   address = ctypes.addressof(c_array)
-    #
-    # Unfortunately, this call fails if the memoryview is readonly, e.g. if
-    # the data is a bytes object or readonly numpy array. One could then
-    # use from_buffer_copy(), but that introduces an extra data copy, which
-    # can hurt performance when the data is large.
-    #
-    # Another alternative that can be used for objects implementing the array
-    # interface (like numpy arrays) is to directly read the address:
-    #
-    #   address = data.__array_interface__["data"][0]
-    #
-    # But what seems to work best (at the moment) is using cffi.
-
-    # Convert data to a memoryview. That way we have something consistent
-    # to work with, which supports all objects implementing the buffer protocol.
-    m = memoryview(data)
-
-    # Get the address via ffi. In contrast to ctypes, this also
-    # works for readonly data (e.g. bytes)
-    c_data = ffi.from_buffer("uint8_t []", m)
-    address = int(ffi.cast("uintptr_t", c_data))
-
-    return m, address
-
-
-def _get_memoryview_from_address(address, nbytes, format="B"):
-    """Get a memoryview from an int memory address and a byte count,"""
-    # The default format is "<B", which seems to confuse some memoryview
-    # operations, so we always cast it.
-    c_array = (ctypes.c_uint8 * nbytes).from_address(address)
-    return memoryview(c_array).cast(format, shape=(nbytes,))
-
-
 def _check_struct(what, d):
     """Check that the given dict does not have any unexpected keys
     (which may be there because of typos or api changes).
@@ -422,14 +174,6 @@ def _check_struct(what, d):
 
 
 # %% The API
-
-
-API_CHANGES = {"hidden": set(), "added": set(), "changed": set()}
-
-
-def api_added(f):
-    API_CHANGES["added"].add(f.__qualname__)
-    return f
 
 
 @_register_backend
@@ -626,7 +370,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
     def create_buffer_with_data(self, *, label="", data, usage: "GPUBufferUsageFlags"):
         # Get a memoryview of the data
-        m, src_address = _get_memoryview_and_address(data)
+        m, src_address = get_memoryview_and_address(data)
         if not m.contiguous:  # no-cover
             raise ValueError("The given texture data is not contiguous")
         m = m.cast("B", shape=(m.nbytes,))
@@ -641,7 +385,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
         # Copy the data to the mapped memory
         dst_address = int(ffi.cast("intptr_t", buffer_memory_pointer[0]))
-        dst_m = _get_memoryview_from_address(dst_address, m.nbytes)
+        dst_m = get_memoryview_from_address(dst_address, m.nbytes)
         dst_m[:] = m  # nicer than ctypes.memmove(dst_address, src_address, m.nbytes)
         _lib.wgpu_buffer_unmap(id)
         # Return the wrapped buffer
@@ -1159,7 +903,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             nonlocal data
             if status == 0:
                 address = int(ffi.cast("intptr_t", buffer_data_p))
-                data = _get_memoryview_from_address(address, size)
+                data = get_memoryview_from_address(address, size)
 
         _lib.wgpu_buffer_map_read_async(
             self._internal, start, size, _map_read_callback, ffi.NULL
@@ -1184,7 +928,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             nonlocal data
             if status == 0:
                 address = int(ffi.cast("intptr_t", buffer_data_p))
-                data = _get_memoryview_from_address(address, size)
+                data = get_memoryview_from_address(address, size)
 
         _lib.wgpu_buffer_map_write_async(
             self._internal, start, size, _map_write_callback, ffi.NULL
@@ -1803,7 +1547,7 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         # We support anything that memoryview supports, i.e. anything
         # that implements the buffer protocol, including, bytes,
         # bytearray, ctypes arrays, numpy arrays, etc.
-        m, address = _get_memoryview_and_address(data)
+        m, address = get_memoryview_and_address(data)
         nbytes = m.nbytes
 
         # Checks
@@ -1832,7 +1576,7 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
 
     def write_texture(self, destination, data, data_layout, size):
 
-        m, address = _get_memoryview_and_address(data)
+        m, address = get_memoryview_and_address(data)
         # todo: could we not derive the size from the shape of m?
 
         # Checks
