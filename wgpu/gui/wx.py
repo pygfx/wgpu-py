@@ -115,9 +115,6 @@ class WxWgpuFrame(WxWgpuCanvas, wx.Frame):
     def get_physical_size(self):
         return self.canvas.get_physical_size()
 
-    def _request_draw(self):
-        pass
-
     def request_draw(self, func=None):
         return self.canvas.request_draw(func)
 

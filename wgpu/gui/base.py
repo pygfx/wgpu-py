@@ -137,4 +137,9 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         raise NotImplementedError()
 
     def _request_draw(self):
+        """This should invoke a new draw in a later event loop
+        iteration (i.e. the call itself should return directly).
+        Multiple calls should result in a single new draw. Preferably
+        the FPS is limited to avoid draining CPU and power.
+        """
         raise NotImplementedError()
