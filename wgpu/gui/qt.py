@@ -5,7 +5,6 @@ can be used as a standalone window or in a larger GUI.
 
 import sys
 import time
-import math
 import ctypes
 import importlib
 
@@ -57,6 +56,8 @@ enable_hidpi()
 
 
 class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
+    """A Qt widget providing a wgpu canvas."""
+
     def __init__(self, *args, size=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -105,8 +106,9 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         return int(self._subwidget.winId())
 
     def get_pixel_ratio(self):
-        # The pixel ratio always seems to be a whole number. When setting
-        # the scale in Windows 10 to 175%, Qt pretends its 2.0.
+        # Observations:
+        # * On Win10 + PyQt5 the ratio is a whole number (175% becomes 2).
+        # * On Win10 + PyQt6 the ratio is correct (non-integer).
         return self._subwidget.devicePixelRatioF()
 
     def get_logical_size(self):
@@ -120,7 +122,13 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         lsize = self._subwidget.width(), self._subwidget.height()
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self._subwidget.devicePixelRatioF()
-        return math.ceil(lsize[0] * ratio), math.ceil(lsize[1] * ratio)
+        # When the ratio is not integer (qt6), we need to somehow round
+        # it. It turns out that we need to round it, but also add a
+        # small offset. Tested on Win10 with several different OS
+        # scales. Would be nice if we could ask Qt for the exact
+        # physical size! Not an issue on qt5, because ratio is always
+        # integer then.
+        return round(lsize[0] * ratio + 0.01), round(lsize[1] * ratio + 0.01)
 
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
@@ -159,4 +167,5 @@ class WgpuSubWidget(QtWidgets.QWidget):
         self.parent()._draw_frame_and_present()
 
 
+# Make available under a name that is the same for all gui backends
 WgpuCanvas = QtWgpuCanvas
