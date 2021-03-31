@@ -50,7 +50,7 @@ def update_glfw_canvasses():
 
 
 class GlfwWgpuCanvas(WgpuCanvasBase):
-    """A canvas object wrapping a glfw window."""
+    """A glfw window providing a wgpu canvas."""
 
     # See https://www.glfw.org/docs/latest/group__window.html
 
@@ -206,4 +206,5 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         return glfw.window_should_close(self._window)
 
 
+# Make available under a name that is the same for all gui backends
 WgpuCanvas = GlfwWgpuCanvas
