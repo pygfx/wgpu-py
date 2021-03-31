@@ -14,7 +14,7 @@ if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
 
 
-def _get_wgpu_h():
+def get_wgpu_h():
     """Read header file and strip some stuff that cffi would stumble on."""
     lines = []
     with open(get_resource_filename("wgpu.h")) as f:
@@ -33,7 +33,7 @@ def _get_wgpu_h():
     return "".join(lines)
 
 
-def _get_wgpu_lib_path():
+def get_wgpu_lib_path():
     """Get the path to the wgpu library, taking into account the
     WGPU_LIB_PATH environment variable.
     """
@@ -71,9 +71,9 @@ def _get_wgpu_lib_path():
 # NOTE: `import wgpu.backends.rs` is used in pyinstaller tests to verify
 # that we can load the DLL after freezing
 ffi = FFI()
-ffi.cdef(_get_wgpu_h())
+ffi.cdef(get_wgpu_h())
 ffi.set_source("wgpu.h", None)
-lib = ffi.dlopen(_get_wgpu_lib_path())
+lib = ffi.dlopen(get_wgpu_lib_path())
 
 
 def check_expected_version(version_info):

@@ -9,8 +9,7 @@ def test_that_code_is_up_to_date():
     """Test that running the codegen does not introduce changes."""
 
     # Load idl
-    with open(os.path.join(lib_dir, "resources", "webgpu.idl"), "rb") as f:
-        idl = IdlParser(f.read().decode())
+    idl = IdlParser()
     idl.parse(verbose=False)
 
     # Check base API
