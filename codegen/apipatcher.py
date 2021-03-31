@@ -5,19 +5,13 @@ spec (IDL), and the backend implementations from the base API.
 
 import os
 
-from .idlparser import IdlParser
 from .utils import lib_dir, blacken, to_snake_case, to_camel_case, Patcher
 
 
-def patch_base_api(code):
+def patch_base_api(code, idl):
     """Given the Python code, applies patches to make the code conform
     to the IDL.
     """
-
-    # Obtain the idl definition
-    with open(os.path.join(lib_dir, "resources", "webgpu.idl"), "rb") as f:
-        idl = IdlParser(f.read().decode())
-    idl.parse(verbose=True)
 
     # Write __all__
     part1, found_all, part2 = code.partition("\n__all__ =")
