@@ -95,6 +95,10 @@ class IdlParser:
         self.flags = {}
         self.enums = {}
 
+        # Init typedefs with JS -> Py
+        self.typedefs = {}
+        self._init_typedefs()
+
         if verbose:
             print("##### Parsing IDL ...")
 
@@ -142,9 +146,41 @@ class IdlParser:
                     lines.append(line)
         return "\n".join(lines)
 
-    def _parse(self):
+    def _init_typedefs(self):
+        """Put items in typedef dict so we can resolve some of the IDL
+        types to Python types.
+        """
 
-        typedefs = {}
+        typedefs = self.typedefs
+
+        for x in ["DOMString", "DOMString?", "USVString"]:
+            typedefs[x] = "str"
+        for x in ["long", "unsigned long", "unsigned long long", "unsigned short"]:
+            typedefs[x] = "int"
+        for x in ["GPUIntegerCoordinate", "GPUSampleMask", "GPUFenceValue"]:
+            typedefs[x] = "int"
+        for x in ["GPUSize64", "GPUSize32"]:
+            typedefs[x] = "int"
+        for x in ["double"]:
+            typedefs[x] = "float"
+        for x in ["boolean"]:
+            typedefs[x] = "bool"
+        for x in ["object"]:
+            typedefs[x] = "dict"
+        typedefs["ImageBitmap"] = "memoryview"
+
+    def resolve_type(self, typename):
+        """Resolve a type to a simpler name. Can be a Python type, but can also
+        be a class/interface, enum, flag or struct.
+        """
+        while typename in self.typedefs:
+            new_name = self.typedefs[typename]
+            if new_name == typename:
+                break
+            typename = new_name
+        return typename
+
+    def _parse(self):
 
         while not self.end_reached():
 
@@ -153,7 +189,15 @@ class IdlParser:
             if not line.strip():
                 pass
             elif line.startswith("typedef "):
-                pass
+                if " or " in line:
+                    # Meh, union types are complicated, lets not do these yet
+                    continue
+                parts = [
+                    part
+                    for part in line.split()
+                    if not part.startswith(("[", "typedef"))
+                ]
+                self.typedefs[parts[-1]] = " ".join(parts[:-1])
             elif line.startswith(("interface ", "partial interface ")):
                 # A class or a set of flags
                 # Collect lines that define this interface
@@ -261,49 +305,7 @@ class IdlParser:
                         assert default is None
                     else:
                         default = default or "None"
-                    arg_type = typedefs.get(arg_type, arg_type)
-                    if arg_type in ["double", "float"]:
-                        t = "float"
-                    elif arg_type in [
-                        "long",
-                        "unsigned long",
-                        "unsigned long long",
-                        "GPUSize64",
-                        "GPUSize32",
-                        "GPUIntegerCoordinate",
-                        "GPUSampleMask",
-                        "GPUFenceValue",
-                        "[Clamp] unsigned short",
-                    ]:
-                        t = "int"
-                    elif arg_type in ["boolean"]:
-                        t = "bool"
-                    elif arg_type in ["DOMString", "DOMString?", "USVString"]:
-                        t = "str"
-                    elif arg_type in ["object", "record<DOMString, GPUSize32>"]:
-                        t = "dict"
-                    elif arg_type.startswith("GPU"):
-                        t = arg_type
-                    elif arg_type.startswith("sequence<GPU"):
-                        t = arg_type[9:-1] + "-list"
-                    elif arg_type == "ImageBitmap":
-                        t = "array"
-                    elif arg_type in [
-                        "(GPULoadOp or GPUColor)",
-                        "(GPULoadOp or GPUStencilValue)",
-                        "(GPULoadOp or float)",
-                        "(GPULoadOp or unsigned long)",
-                    ]:
-                        # GPURenderPassColorAttachmentDescriptor
-                        # GPURenderPassDepthStencilAttachmentDescriptor
-                        t = (
-                            arg_type[1:-1]
-                            .replace(" ", "-")
-                            .replace("unsigned-long", "int")
-                        )
-                    else:
-                        assert False
-                    d[arg_name] = StructField(line, arg_name, t, default)
+                    d[arg_name] = StructField(line, arg_name, arg_type, default)
                 self.structs[name] = d
             elif line.startswith(("[Exposed=", "[Serializable]")):
                 pass
