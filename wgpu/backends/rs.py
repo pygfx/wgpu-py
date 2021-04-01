@@ -239,7 +239,7 @@ class GPU(base.GPU):
         """Async version of ``request_adapter()``.
         This function uses the Rust WGPU library.
         """
-        return request_adapter(
+        return self.request_adapter(
             canvas=canvas, power_preference=power_preference
         )  # no-cover
 
