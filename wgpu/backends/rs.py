@@ -36,7 +36,7 @@ import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
 
-from .. import base, flags, _structs
+from .. import base, flags, enums, _structs, _structs as structs
 from .. import _register_backend
 from .._coreutils import ApiDiff
 
@@ -235,10 +235,7 @@ class GPU(base.GPU):
         extensions = []
         return GPUAdapter("WGPU", extensions, adapter_id)
 
-    # FIXME: was request_adapter_async(self, *, power_preference: "GPUPowerPreference" = None):
-    async def request_adapter_async(
-        self, *, canvas, power_preference: "GPUPowerPreference" = None
-    ):
+    async def request_adapter_async(self, *, canvas, power_preference=None):
         """Async version of ``request_adapter()``.
         This function uses the Rust WGPU library.
         """
@@ -254,8 +251,8 @@ class GPUCanvasContext(base.GPUCanvasContext):
         *,
         label="",
         device: "GPUDevice",
-        format: "GPUTextureFormat",
-        usage: "GPUTextureUsageFlags" = 0x10,
+        format: "enums.TextureFormat",
+        usage: "flags.TextureUsage" = 0x10,
     ):
         raise NotImplementedError()
 
@@ -272,8 +269,8 @@ class GPUAdapter(base.GPUAdapter):
         self,
         *,
         label="",
-        extensions: "GPUExtensionName-list" = [],
-        limits: "GPULimits" = {},
+        extensions: "list(enums.ExtensionName)" = [],
+        limits: "structs.Limits" = {},
     ):
         return self._request_device(label, extensions, limits, "")
 
@@ -283,8 +280,8 @@ class GPUAdapter(base.GPUAdapter):
         trace_path,
         *,
         label="",
-        extensions: "GPUExtensionName-list" = [],
-        limits: "GPULimits" = {},
+        extensions: "list(enums.ExtensionName)" = [],
+        limits: "structs.Limits" = {},
     ):
         """Write a trace of all commands to a file so it can be reproduced
         elsewhere. The trace is cross-platform!
@@ -333,8 +330,8 @@ class GPUAdapter(base.GPUAdapter):
         self,
         *,
         label="",
-        extensions: "GPUExtensionName-list" = [],
-        limits: "GPULimits" = {},
+        extensions: "list(enums.ExtensionName)" = [],
+        limits: "structs.Limits" = {},
     ):
         return self._request_device(label, extensions, limits, "")  # no-cover
 
@@ -350,7 +347,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         *,
         label="",
         size: int,
-        usage: "GPUBufferUsageFlags",
+        usage: "flags.BufferUsage",
         mapped_at_creation: bool = False,
     ):
         size = int(size)
@@ -367,7 +364,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         # Return wrapped buffer
         return GPUBuffer(label, id, self, size, usage, "unmapped")
 
-    def create_buffer_with_data(self, *, label="", data, usage: "GPUBufferUsageFlags"):
+    def create_buffer_with_data(self, *, label="", data, usage: "flags.BufferUsage"):
         # Get a memoryview of the data
         m, src_address = get_memoryview_and_address(data)
         if not m.contiguous:  # no-cover
@@ -394,12 +391,12 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        size: "GPUExtent3D",
-        mip_level_count: "GPUIntegerCoordinate" = 1,
-        sample_count: "GPUSize32" = 1,
-        dimension: "GPUTextureDimension" = "2d",
-        format: "GPUTextureFormat",
-        usage: "GPUTextureUsageFlags",
+        size: "structs.Extent3D",
+        mip_level_count: int = 1,
+        sample_count: int = 1,
+        dimension: "enums.TextureDimension" = "2d",
+        format: "enums.TextureFormat",
+        usage: "flags.TextureUsage",
     ):
         c_label = ffi.new("char []", label.encode())
         size = _tuple_from_tuple_or_dict(size, ("width", "height", "depth"))
@@ -435,15 +432,15 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        address_mode_u: "GPUAddressMode" = "clamp-to-edge",
-        address_mode_v: "GPUAddressMode" = "clamp-to-edge",
-        address_mode_w: "GPUAddressMode" = "clamp-to-edge",
-        mag_filter: "GPUFilterMode" = "nearest",
-        min_filter: "GPUFilterMode" = "nearest",
-        mipmap_filter: "GPUFilterMode" = "nearest",
+        address_mode_u: "enums.AddressMode" = "clamp-to-edge",
+        address_mode_v: "enums.AddressMode" = "clamp-to-edge",
+        address_mode_w: "enums.AddressMode" = "clamp-to-edge",
+        mag_filter: "enums.FilterMode" = "nearest",
+        min_filter: "enums.FilterMode" = "nearest",
+        mipmap_filter: "enums.FilterMode" = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 0xFFFFFFFF,
-        compare: "GPUCompareFunction" = None,
+        compare: "enums.CompareFunction" = None,
     ):
         c_label = ffi.new("char []", label.encode())
         struct = new_struct_p(
@@ -463,7 +460,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return GPUSampler(label, id, self)
 
     def create_bind_group_layout(
-        self, *, label="", entries: "GPUBindGroupLayoutEntry-list"
+        self, *, label="", entries: "list(structs.BindGroupLayoutEntry)"
     ):
         c_entries_list = []
         for entry in entries:
@@ -513,7 +510,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         *,
         label="",
         layout: "GPUBindGroupLayout",
-        entries: "GPUBindGroupEntry-list",
+        entries: "list(structs.BindGroupEntry)",
     ):
 
         c_entries_list = []
@@ -574,7 +571,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return GPUBindGroup(label, id, self, entries)
 
     def create_pipeline_layout(
-        self, *, label="", bind_group_layouts: "GPUBindGroupLayout-list"
+        self, *, label="", bind_group_layouts: "list(GPUBindGroupLayout)"
     ):
 
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
@@ -589,7 +586,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = lib.wgpu_device_create_pipeline_layout(self._internal, struct)
         return GPUPipelineLayout(label, id, self, bind_group_layouts)
 
-    def create_shader_module(self, *, label="", code: str, source_map: "dict" = None):
+    def create_shader_module(self, *, label="", code: str, source_map: dict = None):
 
         if isinstance(code, bytes):
             data = code  # Assume it's Spirv
@@ -621,7 +618,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         *,
         label="",
         layout: "GPUPipelineLayout" = None,
-        compute_stage: "GPUProgrammableStageDescriptor",
+        compute_stage: "structs.ProgrammableStageDescriptor",
     ):
         _check_struct("ProgrammableStageDescriptor", compute_stage)
 
@@ -645,15 +642,15 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         *,
         label="",
         layout: "GPUPipelineLayout" = None,
-        vertex_stage: "GPUProgrammableStageDescriptor",
-        fragment_stage: "GPUProgrammableStageDescriptor" = None,
-        primitive_topology: "GPUPrimitiveTopology",
-        rasterization_state: "GPURasterizationStateDescriptor" = {},
-        color_states: "GPUColorStateDescriptor-list",
-        depth_stencil_state: "GPUDepthStencilStateDescriptor" = None,
-        vertex_state: "GPUVertexStateDescriptor" = {},
-        sample_count: "GPUSize32" = 1,
-        sample_mask: "GPUSampleMask" = 0xFFFFFFFF,
+        vertex_stage: "structs.ProgrammableStageDescriptor",
+        fragment_stage: "structs.ProgrammableStageDescriptor" = None,
+        primitive_topology: "enums.PrimitiveTopology",
+        rasterization_state: "structs.RasterizationStateDescriptor" = {},
+        color_states: "list(structs.ColorStateDescriptor)",
+        depth_stencil_state: "structs.DepthStencilStateDescriptor" = None,
+        vertex_state: "structs.VertexStateDescriptor" = {},
+        sample_count: int = 1,
+        sample_mask: int = 0xFFFFFFFF,
         alpha_to_coverage_enabled: bool = False,
     ):
         _check_struct("ProgrammableStageDescriptor", vertex_stage)
@@ -828,24 +825,26 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return GPUSwapChain(self, canvas, format, usage)
 
     # FIXME: new method to implement
+
     def create_render_bundle_encoder(
         self,
         *,
         label="",
-        color_formats: "GPUTextureFormat-list",
-        depth_stencil_format: "GPUTextureFormat" = None,
-        sample_count: "GPUSize32" = 1,
+        color_formats: "list(enums.TextureFormat)",
+        depth_stencil_format: "enums.TextureFormat" = None,
+        sample_count: int = 1,
     ):
         raise NotImplementedError()
 
     # FIXME: new method to implement
+
     def create_query_set(
         self,
         *,
         label="",
-        type: "GPUQueryType",
-        count: "GPUSize32",
-        pipeline_statistics: "GPUPipelineStatisticName-list" = [],
+        type: "enums.QueryType",
+        count: int,
+        pipeline_statistics: "list(enums.PipelineStatisticName)" = [],
     ):
         raise NotImplementedError()
 
@@ -965,13 +964,13 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
         self,
         *,
         label="",
-        format: "GPUTextureFormat" = None,
-        dimension: "GPUTextureViewDimension" = None,
-        aspect: "GPUTextureAspect" = "all",
-        base_mip_level: "GPUIntegerCoordinate" = 0,
-        mip_level_count: "GPUIntegerCoordinate" = 0,
-        base_array_layer: "GPUIntegerCoordinate" = 0,
-        array_layer_count: "GPUIntegerCoordinate" = 0,
+        format: "enums.TextureFormat" = None,
+        dimension: "enums.TextureViewDimension" = None,
+        aspect: "enums.TextureAspect" = "all",
+        base_mip_level: int = 0,
+        mip_level_count: int = 0,
+        base_array_layer: int = 0,
+        array_layer_count: int = 0,
     ):
         if format is None or dimension is None:
             if not (
@@ -1083,8 +1082,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         self,
         *,
         label="",
-        color_attachments: "GPURenderPassColorAttachmentDescriptor-list",
-        depth_stencil_attachment: "GPURenderPassDepthStencilAttachmentDescriptor" = None,
+        color_attachments: "list(structs.RenderPassColorAttachmentDescriptor)",
+        depth_stencil_attachment: "structs.RenderPassDepthStencilAttachmentDescriptor" = None,
         occlusion_query_set: "GPUQuerySet" = None,
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.
