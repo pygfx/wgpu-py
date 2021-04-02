@@ -86,10 +86,12 @@ def test_base_wgpu_api():
 
 def test_that_all_docstrings_are_there():
 
+    exclude = ["Union", "List"]
+
     for cls in wgpu.base.__dict__.values():
         if not isinstance(cls, type):
             continue
-        if cls.__name__.startswith("_"):
+        if cls.__name__.startswith("_") or cls.__name__ in exclude:
             continue
         assert cls.__doc__, f"No docstring on {cls.__name__}"
         for name, attr in cls.__dict__.items():
