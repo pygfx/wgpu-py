@@ -17,7 +17,7 @@ Developer notes and tips:
 import logging
 
 from ._coreutils import ApiDiff
-from . import flags, enums, _structs as structs
+from . import flags, enums, structs
 
 
 __all__ = [

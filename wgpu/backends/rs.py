@@ -36,7 +36,7 @@ import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
 
-from .. import base, flags, enums, _structs, _structs as structs
+from .. import base, flags, enums, structs
 from .. import _register_backend
 from .._coreutils import ApiDiff
 
@@ -164,7 +164,7 @@ def _check_struct(what, d):
     (which may be there because of typos or api changes).
     """
     fields = set(d.keys())
-    ref_fields = getattr(_structs, what).keys()
+    ref_fields = tuple(getattr(structs, what))
     unexpected = fields.difference(ref_fields)
     if unexpected:
         s1 = ", ".join(unexpected)
