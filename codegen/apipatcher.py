@@ -295,46 +295,7 @@ class IdlPatcherMixin:
     def _arg_from_struct_field(self, field):
         name = to_snake_case(field.name)
         d = field.default
-        t = field.typename
-        t = self.idl.resolve_type(t)
-        # A sequence?
-        wrap_in_list = False
-        wrap_in_str = False
-        if t.startswith("sequence<"):
-            wrap_in_list = True
-            t = t.split("<")[-1].rstrip(">")
-            t = self.idl.resolve_type(t)
-        if t in __builtins__:
-            pass  # ok
-        elif t in self.idl.classes:
-            wrap_in_str = True  # ok, but wrap in string because can be declared later
-        else:
-            assert t.startswith("GPU")
-            wrap_in_str = True
-            # Prepare
-            t = t[3:]
-            if t.endswith("Flags"):
-                t = t[:-5]
-            # Write it
-            if t in self.idl.flags:
-                t = f"flags.{t}"
-            elif t in self.idl.enums:
-                t = f"enums.{t}"
-            elif t in self.idl.structs:
-                t = f"structs.{t}"
-            else:
-                # When this happens, you may want to update the code abover,
-                # or the _init_typedefs() method in the idl parser.
-                raise RuntimeError("Encountered unknown IDL type: ", t)
-                t = None
-        # Wrap t
-        if not t:
-            pass
-        elif wrap_in_list:
-            t = f"'list({t})'"
-        elif wrap_in_str:
-            t = f"'{t}'"
-        # Write with or without default value
+        t = self.idl.resolve_type(field.typename)
         result = name
         if t:
             result += f": {t}"

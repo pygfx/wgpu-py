@@ -327,12 +327,13 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
+    # FIXME: was create_texture(self, *, label="", size: "structs.Extent3D", mip_level_count: int = 1, sample_count: int = 1, dimension: "enums.TextureDimension" = "2d", format: "enums.TextureFormat", usage: "flags.TextureUsage"):
     # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor);
     def create_texture(
         self,
         *,
         label="",
-        size: "structs.Extent3D",
+        size: "list(int) or structs.Extent3D",
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: "enums.TextureDimension" = "2d",

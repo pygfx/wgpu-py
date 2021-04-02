@@ -7,224 +7,229 @@ All wgpu structs.
 
 # There are 45 structs
 
-RequestAdapterOptions = {"power_preference": "GPUPowerPreference"}
+RequestAdapterOptions = {"power_preference": "'enums.PowerPreference'"}
 
 DeviceDescriptor = {
     "label": "str",
-    "extensions": "GPUExtensionName-list",
-    "limits": "GPULimits",
+    "extensions": "'list(enums.ExtensionName)'",
+    "limits": "'structs.Limits'",
 }
 
 Limits = {
-    "max_bind_groups": "GPUSize32",
-    "max_dynamic_uniform_buffers_per_pipeline_layout": "GPUSize32",
-    "max_dynamic_storage_buffers_per_pipeline_layout": "GPUSize32",
-    "max_sampled_textures_per_shader_stage": "GPUSize32",
-    "max_samplers_per_shader_stage": "GPUSize32",
-    "max_storage_buffers_per_shader_stage": "GPUSize32",
-    "max_storage_textures_per_shader_stage": "GPUSize32",
-    "max_uniform_buffers_per_shader_stage": "GPUSize32",
-    "max_uniform_buffer_binding_size": "GPUSize32",
+    "max_bind_groups": "int",
+    "max_dynamic_uniform_buffers_per_pipeline_layout": "int",
+    "max_dynamic_storage_buffers_per_pipeline_layout": "int",
+    "max_sampled_textures_per_shader_stage": "int",
+    "max_samplers_per_shader_stage": "int",
+    "max_storage_buffers_per_shader_stage": "int",
+    "max_storage_textures_per_shader_stage": "int",
+    "max_uniform_buffers_per_shader_stage": "int",
+    "max_uniform_buffer_binding_size": "int",
 }
 
 BufferDescriptor = {
     "label": "str",
     "size": "int",
-    "usage": "GPUBufferUsageFlags",
+    "usage": "'flags.BufferUsage'",
     "mapped_at_creation": "bool",
 }
 
 TextureDescriptor = {
     "label": "str",
-    "size": "GPUExtent3D",
-    "mip_level_count": "GPUIntegerCoordinate",
-    "sample_count": "GPUSize32",
-    "dimension": "GPUTextureDimension",
-    "format": "GPUTextureFormat",
-    "usage": "GPUTextureUsageFlags",
+    "size": "'list(int) or structs.Extent3D'",
+    "mip_level_count": "int",
+    "sample_count": "int",
+    "dimension": "'enums.TextureDimension'",
+    "format": "'enums.TextureFormat'",
+    "usage": "'flags.TextureUsage'",
 }
 
 TextureViewDescriptor = {
     "label": "str",
-    "format": "GPUTextureFormat",
-    "dimension": "GPUTextureViewDimension",
-    "aspect": "GPUTextureAspect",
-    "base_mip_level": "GPUIntegerCoordinate",
-    "mip_level_count": "GPUIntegerCoordinate",
-    "base_array_layer": "GPUIntegerCoordinate",
-    "array_layer_count": "GPUIntegerCoordinate",
+    "format": "'enums.TextureFormat'",
+    "dimension": "'enums.TextureViewDimension'",
+    "aspect": "'enums.TextureAspect'",
+    "base_mip_level": "int",
+    "mip_level_count": "int",
+    "base_array_layer": "int",
+    "array_layer_count": "int",
 }
 
 SamplerDescriptor = {
     "label": "str",
-    "address_mode_u": "GPUAddressMode",
-    "address_mode_v": "GPUAddressMode",
-    "address_mode_w": "GPUAddressMode",
-    "mag_filter": "GPUFilterMode",
-    "min_filter": "GPUFilterMode",
-    "mipmap_filter": "GPUFilterMode",
+    "address_mode_u": "'enums.AddressMode'",
+    "address_mode_v": "'enums.AddressMode'",
+    "address_mode_w": "'enums.AddressMode'",
+    "mag_filter": "'enums.FilterMode'",
+    "min_filter": "'enums.FilterMode'",
+    "mipmap_filter": "'enums.FilterMode'",
     "lod_min_clamp": "float",
     "lod_max_clamp": "float",
-    "compare": "GPUCompareFunction",
+    "compare": "'enums.CompareFunction'",
 }
 
-BindGroupLayoutDescriptor = {"label": "str", "entries": "GPUBindGroupLayoutEntry-list"}
+BindGroupLayoutDescriptor = {
+    "label": "str",
+    "entries": "'list(structs.BindGroupLayoutEntry)'",
+}
 
 BindGroupLayoutEntry = {
-    "binding": "GPUIndex32",
-    "visibility": "GPUShaderStageFlags",
-    "type": "GPUBindingType",
+    "binding": "int",
+    "visibility": "'flags.ShaderStage'",
+    "type": "'enums.BindingType'",
     "has_dynamic_offset": "bool",
     "min_buffer_binding_size": "int",
-    "view_dimension": "GPUTextureViewDimension",
-    "texture_component_type": "GPUTextureComponentType",
+    "view_dimension": "'enums.TextureViewDimension'",
+    "texture_component_type": "'enums.TextureComponentType'",
     "multisampled": "bool",
-    "storage_texture_format": "GPUTextureFormat",
+    "storage_texture_format": "'enums.TextureFormat'",
 }
 
 BindGroupDescriptor = {
     "label": "str",
-    "layout": "GPUBindGroupLayout",
-    "entries": "GPUBindGroupEntry-list",
+    "layout": "'GPUBindGroupLayout'",
+    "entries": "'list(structs.BindGroupEntry)'",
 }
 
-BindGroupEntry = {"binding": "GPUIndex32", "resource": "GPUBindingResource"}
+BindGroupEntry = {
+    "binding": "int",
+    "resource": "'GPUSampler or GPUTextureView or structs.BufferBinding'",
+}
 
-BufferBinding = {"buffer": "GPUBuffer", "offset": "int", "size": "int"}
+BufferBinding = {"buffer": "'GPUBuffer'", "offset": "int", "size": "int"}
 
 PipelineLayoutDescriptor = {
     "label": "str",
-    "bind_group_layouts": "GPUBindGroupLayout-list",
+    "bind_group_layouts": "'list(GPUBindGroupLayout)'",
 }
 
 ShaderModuleDescriptor = {"label": "str", "code": "str", "source_map": "dict"}
 
-ProgrammableStageDescriptor = {"module": "GPUShaderModule", "entry_point": "str"}
+ProgrammableStageDescriptor = {"module": "'GPUShaderModule'", "entry_point": "str"}
 
 ComputePipelineDescriptor = {
     "label": "str",
-    "layout": "GPUPipelineLayout",
-    "compute_stage": "GPUProgrammableStageDescriptor",
+    "layout": "'GPUPipelineLayout'",
+    "compute_stage": "'structs.ProgrammableStageDescriptor'",
 }
 
 RenderPipelineDescriptor = {
     "label": "str",
-    "layout": "GPUPipelineLayout",
-    "vertex_stage": "GPUProgrammableStageDescriptor",
-    "fragment_stage": "GPUProgrammableStageDescriptor",
-    "primitive_topology": "GPUPrimitiveTopology",
-    "rasterization_state": "GPURasterizationStateDescriptor",
-    "color_states": "GPUColorStateDescriptor-list",
-    "depth_stencil_state": "GPUDepthStencilStateDescriptor",
-    "vertex_state": "GPUVertexStateDescriptor",
-    "sample_count": "GPUSize32",
-    "sample_mask": "GPUSampleMask",
+    "layout": "'GPUPipelineLayout'",
+    "vertex_stage": "'structs.ProgrammableStageDescriptor'",
+    "fragment_stage": "'structs.ProgrammableStageDescriptor'",
+    "primitive_topology": "'enums.PrimitiveTopology'",
+    "rasterization_state": "'structs.RasterizationStateDescriptor'",
+    "color_states": "'list(structs.ColorStateDescriptor)'",
+    "depth_stencil_state": "'structs.DepthStencilStateDescriptor'",
+    "vertex_state": "'structs.VertexStateDescriptor'",
+    "sample_count": "int",
+    "sample_mask": "int",
     "alpha_to_coverage_enabled": "bool",
 }
 
 RasterizationStateDescriptor = {
-    "front_face": "GPUFrontFace",
-    "cull_mode": "GPUCullMode",
-    "depth_bias": "GPUDepthBias",
+    "front_face": "'enums.FrontFace'",
+    "cull_mode": "'enums.CullMode'",
+    "depth_bias": "int",
     "depth_bias_slope_scale": "float",
     "depth_bias_clamp": "float",
 }
 
 ColorStateDescriptor = {
-    "format": "GPUTextureFormat",
-    "alpha_blend": "GPUBlendDescriptor",
-    "color_blend": "GPUBlendDescriptor",
-    "write_mask": "GPUColorWriteFlags",
+    "format": "'enums.TextureFormat'",
+    "alpha_blend": "'structs.BlendDescriptor'",
+    "color_blend": "'structs.BlendDescriptor'",
+    "write_mask": "'flags.ColorWrite'",
 }
 
 BlendDescriptor = {
-    "src_factor": "GPUBlendFactor",
-    "dst_factor": "GPUBlendFactor",
-    "operation": "GPUBlendOperation",
+    "src_factor": "'enums.BlendFactor'",
+    "dst_factor": "'enums.BlendFactor'",
+    "operation": "'enums.BlendOperation'",
 }
 
 DepthStencilStateDescriptor = {
-    "format": "GPUTextureFormat",
+    "format": "'enums.TextureFormat'",
     "depth_write_enabled": "bool",
-    "depth_compare": "GPUCompareFunction",
-    "stencil_front": "GPUStencilStateFaceDescriptor",
-    "stencil_back": "GPUStencilStateFaceDescriptor",
-    "stencil_read_mask": "GPUStencilValue",
-    "stencil_write_mask": "GPUStencilValue",
+    "depth_compare": "'enums.CompareFunction'",
+    "stencil_front": "'structs.StencilStateFaceDescriptor'",
+    "stencil_back": "'structs.StencilStateFaceDescriptor'",
+    "stencil_read_mask": "int",
+    "stencil_write_mask": "int",
 }
 
 StencilStateFaceDescriptor = {
-    "compare": "GPUCompareFunction",
-    "fail_op": "GPUStencilOperation",
-    "depth_fail_op": "GPUStencilOperation",
-    "pass_op": "GPUStencilOperation",
+    "compare": "'enums.CompareFunction'",
+    "fail_op": "'enums.StencilOperation'",
+    "depth_fail_op": "'enums.StencilOperation'",
+    "pass_op": "'enums.StencilOperation'",
 }
 
 VertexStateDescriptor = {
-    "index_format": "GPUIndexFormat",
-    "vertex_buffers": "GPUVertexBufferLayoutDescriptor?-list",
+    "index_format": "'enums.IndexFormat'",
+    "vertex_buffers": "'list(structs.VertexBufferLayoutDescriptor)'",
 }
 
 VertexBufferLayoutDescriptor = {
     "array_stride": "int",
-    "step_mode": "GPUInputStepMode",
-    "attributes": "GPUVertexAttributeDescriptor-list",
+    "step_mode": "'enums.InputStepMode'",
+    "attributes": "'list(structs.VertexAttributeDescriptor)'",
 }
 
 VertexAttributeDescriptor = {
-    "format": "GPUVertexFormat",
+    "format": "'enums.VertexFormat'",
     "offset": "int",
-    "shader_location": "GPUIndex32",
+    "shader_location": "int",
 }
 
 CommandBufferDescriptor = {"label": "str"}
 
 CommandEncoderDescriptor = {"label": "str"}
 
-TextureDataLayout = {
-    "offset": "int",
-    "bytes_per_row": "GPUSize32",
-    "rows_per_image": "GPUSize32",
-}
+TextureDataLayout = {"offset": "int", "bytes_per_row": "int", "rows_per_image": "int"}
 
 BufferCopyView = {
     "offset": "int",
-    "bytes_per_row": "GPUSize32",
-    "rows_per_image": "GPUSize32",
-    "buffer": "GPUBuffer",
+    "bytes_per_row": "int",
+    "rows_per_image": "int",
+    "buffer": "'GPUBuffer'",
 }
 
 TextureCopyView = {
-    "texture": "GPUTexture",
-    "mip_level": "GPUIntegerCoordinate",
-    "origin": "GPUOrigin3D",
+    "texture": "'GPUTexture'",
+    "mip_level": "int",
+    "origin": "'list(int) or structs.Origin3D'",
 }
 
-ImageBitmapCopyView = {"image_bitmap": "array", "origin": "GPUOrigin2D"}
+ImageBitmapCopyView = {
+    "image_bitmap": "memoryview",
+    "origin": "'list(int) or structs.Origin2D'",
+}
 
 ComputePassDescriptor = {"label": "str"}
 
 RenderPassDescriptor = {
     "label": "str",
-    "color_attachments": "GPURenderPassColorAttachmentDescriptor-list",
-    "depth_stencil_attachment": "GPURenderPassDepthStencilAttachmentDescriptor",
-    "occlusion_query_set": "GPUQuerySet",
+    "color_attachments": "'list(structs.RenderPassColorAttachmentDescriptor)'",
+    "depth_stencil_attachment": "'structs.RenderPassDepthStencilAttachmentDescriptor'",
+    "occlusion_query_set": "'GPUQuerySet'",
 }
 
 RenderPassColorAttachmentDescriptor = {
-    "attachment": "GPUTextureView",
-    "resolve_target": "GPUTextureView",
-    "load_value": "GPULoadOp-or-GPUColor",
-    "store_op": "GPUStoreOp",
+    "attachment": "'GPUTextureView'",
+    "resolve_target": "'GPUTextureView'",
+    "load_value": "'enums.LoadOp or list(float) or structs.Color'",
+    "store_op": "'enums.StoreOp'",
 }
 
 RenderPassDepthStencilAttachmentDescriptor = {
-    "attachment": "GPUTextureView",
-    "depth_load_value": "GPULoadOp-or-float",
-    "depth_store_op": "GPUStoreOp",
+    "attachment": "'GPUTextureView'",
+    "depth_load_value": "'enums.LoadOp or float'",
+    "depth_store_op": "'enums.StoreOp'",
     "depth_read_only": "bool",
-    "stencil_load_value": "GPULoadOp-or-GPUStencilValue",
-    "stencil_store_op": "GPUStoreOp",
+    "stencil_load_value": "'enums.LoadOp or int'",
+    "stencil_store_op": "'enums.StoreOp'",
     "stencil_read_only": "bool",
 }
 
@@ -232,41 +237,33 @@ RenderBundleDescriptor = {"label": "str"}
 
 RenderBundleEncoderDescriptor = {
     "label": "str",
-    "color_formats": "GPUTextureFormat-list",
-    "depth_stencil_format": "GPUTextureFormat",
-    "sample_count": "GPUSize32",
+    "color_formats": "'list(enums.TextureFormat)'",
+    "depth_stencil_format": "'enums.TextureFormat'",
+    "sample_count": "int",
 }
 
-FenceDescriptor = {"label": "str", "initial_value": "GPUFenceValue"}
+FenceDescriptor = {"label": "str", "initial_value": "int"}
 
 QuerySetDescriptor = {
     "label": "str",
-    "type": "GPUQueryType",
-    "count": "GPUSize32",
-    "pipeline_statistics": "GPUPipelineStatisticName-list",
+    "type": "'enums.QueryType'",
+    "count": "int",
+    "pipeline_statistics": "'list(enums.PipelineStatisticName)'",
 }
 
 SwapChainDescriptor = {
     "label": "str",
-    "device": "GPUDevice",
-    "format": "GPUTextureFormat",
-    "usage": "GPUTextureUsageFlags",
+    "device": "'GPUDevice'",
+    "format": "'enums.TextureFormat'",
+    "usage": "'flags.TextureUsage'",
 }
 
-UncapturedErrorEventInit = {"error": "GPUError"}
+UncapturedErrorEventInit = {"error": "'GPUOutOfMemoryError or GPUValidationError'"}
 
 Color = {"r": "float", "g": "float", "b": "float", "a": "float"}
 
-Origin2D = {"x": "GPUIntegerCoordinate", "y": "GPUIntegerCoordinate"}
+Origin2D = {"x": "int", "y": "int"}
 
-Origin3D = {
-    "x": "GPUIntegerCoordinate",
-    "y": "GPUIntegerCoordinate",
-    "z": "GPUIntegerCoordinate",
-}
+Origin3D = {"x": "int", "y": "int", "z": "int"}
 
-Extent3D = {
-    "width": "GPUIntegerCoordinate",
-    "height": "GPUIntegerCoordinate",
-    "depth": "GPUIntegerCoordinate",
-}
+Extent3D = {"width": "int", "height": "int", "depth": "int"}

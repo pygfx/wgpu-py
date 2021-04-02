@@ -387,11 +387,12 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         # Return the wrapped buffer
         return GPUBuffer(label, id, self, m.nbytes, usage, "unmapped")
 
+    # FIXME: was create_texture(self, *, label="", size: "structs.Extent3D", mip_level_count: int = 1, sample_count: int = 1, dimension: "enums.TextureDimension" = "2d", format: "enums.TextureFormat", usage: "flags.TextureUsage"):
     def create_texture(
         self,
         *,
         label="",
-        size: "structs.Extent3D",
+        size: "list(int) or structs.Extent3D",
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: "enums.TextureDimension" = "2d",

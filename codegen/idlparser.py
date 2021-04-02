@@ -95,9 +95,7 @@ class IdlParser:
         self.flags = {}
         self.enums = {}
 
-        # Init typedefs with JS -> Py
         self.typedefs = {}
-        self._init_typedefs()
 
         if verbose:
             print("##### Parsing IDL ...")
@@ -146,39 +144,74 @@ class IdlParser:
                     lines.append(line)
         return "\n".join(lines)
 
-    def _init_typedefs(self):
-        """Put items in typedef dict so we can resolve some of the IDL
-        types to Python types.
-        """
-
-        typedefs = self.typedefs
-
-        for x in ["DOMString", "DOMString?", "USVString"]:
-            typedefs[x] = "str"
-        for x in ["long", "unsigned long", "unsigned long long", "unsigned short"]:
-            typedefs[x] = "int"
-        for x in ["GPUIntegerCoordinate", "GPUSampleMask", "GPUFenceValue"]:
-            typedefs[x] = "int"
-        for x in ["GPUSize64", "GPUSize32"]:
-            typedefs[x] = "int"
-        for x in ["double"]:
-            typedefs[x] = "float"
-        for x in ["boolean"]:
-            typedefs[x] = "bool"
-        for x in ["object"]:
-            typedefs[x] = "dict"
-        typedefs["ImageBitmap"] = "memoryview"
-
     def resolve_type(self, typename):
-        """Resolve a type to a simpler name. Can be a Python type, but can also
-        be a class/interface, enum, flag or struct.
+        """Resolve a type to a suitable name that is also valid so that flake8
+        wont complain when this is used as a type annotation.
         """
-        while typename in self.typedefs:
-            new_name = self.typedefs[typename]
-            if new_name == typename:
+
+        name = typename.strip().strip("?")
+
+        # We want the flag, not the type that is an alias for int
+        name = name[:-5] if name.endswith("Flags") else name
+
+        # First resolve using typedefs that we found in the IDL
+        while name in self.typedefs:
+            new_name = self.typedefs[name]
+            if new_name == name:
                 break
-            typename = new_name
-        return typename
+            name = new_name
+
+        # Resolve to a Python type (maybe)
+        pythonmap = {
+            "DOMString": "str",
+            "DOMString?": "str",
+            "USVString": "str",
+            "long": "int",
+            "unsigned long": "int",
+            "unsigned long long": "int",
+            "unsigned short": "int",
+            "GPUIntegerCoordinate": "int",
+            "GPUSampleMask": "int",
+            "GPUFenceValue": "int",
+            "GPUSize64": "int",
+            "GPUSize32": "int",
+            "GPUIndex32": "int",
+            "double": "float",
+            "boolean": "bool",
+            "object": "dict",
+            "ImageBitmap": "memoryview",
+        }
+        name = pythonmap.get(name, name)
+
+        # Is this a case for which we need to recurse?
+        if name.startswith("sequence<") and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            name = self.resolve_type(name).strip("'")
+            return f"'list({name})'"
+        elif " or " in name:
+            name = name.strip("()")
+            names = [self.resolve_type(t) for t in name.split(" or ")]
+            name = " or ".join(t.strip("'") for t in names)
+            return f"'{name}'"
+
+        # Triage
+        if name in __builtins__:
+            return name  # ok
+        elif name in self.classes:
+            return f"'{name}'"  # ok, but wrap in string because can be declared later
+        else:
+            assert name.startswith("GPU")
+            name = name[3:]
+            name = name[:-4] if name.endswith("Dict") else name
+            if name in self.flags:
+                return f"'flags.{name}'"
+            elif name in self.enums:
+                return f"'enums.{name}'"
+            elif name in self.structs:
+                return f"'structs.{name}'"
+            else:
+                # When this happens, update the code above or the pythonmap
+                raise RuntimeError("Encountered unknown IDL type: ", name)
 
     def _parse(self):
 
@@ -189,15 +222,19 @@ class IdlParser:
             if not line.strip():
                 pass
             elif line.startswith("typedef "):
-                if " or " in line:
-                    # Meh, union types are complicated, lets not do these yet
-                    continue
-                parts = [
-                    part
-                    for part in line.split()
-                    if not part.startswith(("[", "typedef"))
-                ]
-                self.typedefs[parts[-1]] = " ".join(parts[:-1])
+                # Get the important bit
+                value = line.split(" ", 1)[-1]
+                if value.startswith("["):
+                    value = value.split("]")[-1]
+                # Parse
+                if value.startswith("("):  # Union type
+                    assert value.count("(") == 1 and value.count(")") == 1
+                    value = value.split("(")[1]
+                    val, _, key = value.partition(")")
+                else:  # Singleton type
+                    val, _, key = value.rpartition(" ")
+                key = key.strip().strip(";").strip()
+                self.typedefs[key] = val.strip()
             elif line.startswith(("interface ", "partial interface ")):
                 # A class or a set of flags
                 # Collect lines that define this interface
