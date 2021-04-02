@@ -114,6 +114,7 @@ def _new_struct_p(ctype, **kwargs):
     struct_p = ffi.new(ctype)
     for key, val in kwargs.items():
         if isinstance(val, str) and isinstance(getattr(struct_p, key), int):
+            # An enum - these are ints in C, but str in our public API
             if key in _cstructfield2enum_alt:
                 structname = _cstructfield2enum_alt[key]
             else:

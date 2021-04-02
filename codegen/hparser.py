@@ -7,7 +7,7 @@ from codegen.utils import lib_dir
 
 
 class HParser:
-    """Object to parse the wgpu.h header file."""
+    """Object to parse the wgpu.h header file, by letting cffi do the heavy lifting."""
 
     def __init__(self):
         pass
@@ -33,14 +33,31 @@ class HParser:
 
         self.flags = flags = {}
         self.enums = enums = {}
+        self.structs = structs = {}
 
         self.ffi = ffi = FFI()
         ffi.cdef(self._get_wgpu_h())
-        # lib = ffi.dlopen(os.path.join(lib_dir, "resources", "wgpu_native-release.dll"))
 
-        # Warning: we access private ffi stuff here
+        # Iterate over all types. Some will resolve to C types, the rest are structs.
+        for names in ffi.list_types():
+            for name in names:
+                name = ffi.getctype(name)
+                if name.startswith("WGPU"):
+                    structs[name] = d = {}
+                    t = ffi.typeof(name)
+                    if not hasattr(t, "fields"):
+                        continue  # probably an enum
+                    s = ffi.new(f"{name} *")
+                    for key, field in t.fields:
+                        typename = ffi.getctype(field.type.cname)
+                        if typename.startswith("WGPU"):
+                            val = typename  # Enum or struct
+                        else:
+                            val = type(getattr(s, key))
+                        d[key] = val
 
-        # Collect enums and functions
+        # Collect enums and functions. Warning: we access private ffi
+        # stuff here. It seems its either this or load the lib.
         for key, (tp, _) in ffi._parser._declarations.items():
             tag, name = key.split(" ", 1)
             if isinstance(tp, EnumType):
@@ -50,7 +67,7 @@ class HParser:
             elif tag == "function":
                 pass  # print("function", name)
 
-        # Collect flags by iterationg over constants that are not enums
+        # Collect flags by iterating over constants that are not enums.
         for key, value in ffi._parser._int_constants.items():
             if key.startswith("WGPU"):
                 if key.upper() == key or "_" not in key:
@@ -61,8 +78,3 @@ class HParser:
                     continue
                 fields = flags.setdefault(name, {})
                 fields[field] = value
-
-
-# for name in ffi.list_types():
-#     print(name)
-#     s = ffi.new(f"{name} *")
