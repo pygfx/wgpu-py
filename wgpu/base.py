@@ -15,6 +15,7 @@ Developer notes and tips:
 """
 
 import logging
+from typing import List, Union
 
 from ._coreutils import ApiDiff
 from . import flags, enums, structs
@@ -162,7 +163,7 @@ class GPUAdapter:
         self,
         *,
         label="",
-        extensions: "list(enums.ExtensionName)" = [],
+        extensions: "List[enums.ExtensionName]" = [],
         limits: "structs.Limits" = {},
     ):
         """Request a :class:`GPUDevice` from the adapter.
@@ -179,7 +180,7 @@ class GPUAdapter:
         self,
         *,
         label="",
-        extensions: "list(enums.ExtensionName)" = [],
+        extensions: "List[enums.ExtensionName]" = [],
         limits: "structs.Limits" = {},
     ):
         """Async version of ``request_device()``."""
@@ -327,13 +328,12 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: was create_texture(self, *, label="", size: "structs.Extent3D", mip_level_count: int = 1, sample_count: int = 1, dimension: "enums.TextureDimension" = "2d", format: "enums.TextureFormat", usage: "flags.TextureUsage"):
     # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor);
     def create_texture(
         self,
         *,
         label="",
-        size: "list(int) or structs.Extent3D",
+        size: "Union[List[int], structs.Extent3D]",
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: "enums.TextureDimension" = "2d",
@@ -390,7 +390,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
     def create_bind_group_layout(
-        self, *, label="", entries: "list(structs.BindGroupLayoutEntry)"
+        self, *, label="", entries: "List[structs.BindGroupLayoutEntry]"
     ):
         """Create a :class:`GPUBindGroupLayout` object. One or more
         such objects are passed to :func:`create_pipeline_layout` to
@@ -451,7 +451,7 @@ class GPUDevice(GPUObjectBase):
         *,
         label="",
         layout: "GPUBindGroupLayout",
-        entries: "list(structs.BindGroupEntry)",
+        entries: "List[structs.BindGroupEntry]",
     ):
         """Create a :class:`GPUBindGroup` object, which can be used in
         :func:`pass.set_bind_group() <GPUProgrammablePassEncoder.set_bind_group>`
@@ -491,7 +491,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
     def create_pipeline_layout(
-        self, *, label="", bind_group_layouts: "list(GPUBindGroupLayout)"
+        self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
     ):
         """Create a :class:`GPUPipelineLayout` object, which can be
         used in :func:`create_render_pipeline` or :func:`create_compute_pipeline`.
@@ -544,7 +544,7 @@ class GPUDevice(GPUObjectBase):
         fragment_stage: "structs.ProgrammableStageDescriptor" = None,
         primitive_topology: "enums.PrimitiveTopology",
         rasterization_state: "structs.RasterizationStateDescriptor" = {},
-        color_states: "list(structs.ColorStateDescriptor)",
+        color_states: "List[structs.ColorStateDescriptor]",
         depth_stencil_state: "structs.DepthStencilStateDescriptor" = None,
         vertex_state: "structs.VertexStateDescriptor" = {},
         sample_count: int = 1,
@@ -666,7 +666,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label="",
-        color_formats: "list(enums.TextureFormat)",
+        color_formats: "List[enums.TextureFormat]",
         depth_stencil_format: "enums.TextureFormat" = None,
         sample_count: int = 1,
     ):
@@ -708,7 +708,7 @@ class GPUDevice(GPUObjectBase):
         label="",
         type: "enums.QueryType",
         count: int,
-        pipeline_statistics: "list(enums.PipelineStatisticName)" = [],
+        pipeline_statistics: "List[enums.PipelineStatisticName]" = [],
     ):
         """ Create a :class:`GPUQuerySet` object. """
         raise NotImplementedError()
@@ -1096,7 +1096,7 @@ class GPUCommandEncoder(GPUObjectBase):
         self,
         *,
         label="",
-        color_attachments: "list(structs.RenderPassColorAttachmentDescriptor)",
+        color_attachments: "List[structs.RenderPassColorAttachmentDescriptor]",
         depth_stencil_attachment: "structs.RenderPassDepthStencilAttachmentDescriptor" = None,
         occlusion_query_set: "GPUQuerySet" = None,
     ):

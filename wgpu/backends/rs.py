@@ -35,6 +35,7 @@ import ctypes
 import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
+from typing import List, Union
 
 from .. import base, flags, enums, structs
 from .. import _register_backend
@@ -269,7 +270,7 @@ class GPUAdapter(base.GPUAdapter):
         self,
         *,
         label="",
-        extensions: "list(enums.ExtensionName)" = [],
+        extensions: "List[enums.ExtensionName]" = [],
         limits: "structs.Limits" = {},
     ):
         return self._request_device(label, extensions, limits, "")
@@ -330,7 +331,7 @@ class GPUAdapter(base.GPUAdapter):
         self,
         *,
         label="",
-        extensions: "list(enums.ExtensionName)" = [],
+        extensions: "List[enums.ExtensionName]" = [],
         limits: "structs.Limits" = {},
     ):
         return self._request_device(label, extensions, limits, "")  # no-cover
@@ -387,12 +388,11 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         # Return the wrapped buffer
         return GPUBuffer(label, id, self, m.nbytes, usage, "unmapped")
 
-    # FIXME: was create_texture(self, *, label="", size: "structs.Extent3D", mip_level_count: int = 1, sample_count: int = 1, dimension: "enums.TextureDimension" = "2d", format: "enums.TextureFormat", usage: "flags.TextureUsage"):
     def create_texture(
         self,
         *,
         label="",
-        size: "list(int) or structs.Extent3D",
+        size: "Union[List[int], structs.Extent3D]",
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: "enums.TextureDimension" = "2d",
@@ -461,7 +461,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return GPUSampler(label, id, self)
 
     def create_bind_group_layout(
-        self, *, label="", entries: "list(structs.BindGroupLayoutEntry)"
+        self, *, label="", entries: "List[structs.BindGroupLayoutEntry]"
     ):
         c_entries_list = []
         for entry in entries:
@@ -511,7 +511,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         *,
         label="",
         layout: "GPUBindGroupLayout",
-        entries: "list(structs.BindGroupEntry)",
+        entries: "List[structs.BindGroupEntry]",
     ):
 
         c_entries_list = []
@@ -572,7 +572,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return GPUBindGroup(label, id, self, entries)
 
     def create_pipeline_layout(
-        self, *, label="", bind_group_layouts: "list(GPUBindGroupLayout)"
+        self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
     ):
 
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
@@ -647,7 +647,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         fragment_stage: "structs.ProgrammableStageDescriptor" = None,
         primitive_topology: "enums.PrimitiveTopology",
         rasterization_state: "structs.RasterizationStateDescriptor" = {},
-        color_states: "list(structs.ColorStateDescriptor)",
+        color_states: "List[structs.ColorStateDescriptor]",
         depth_stencil_state: "structs.DepthStencilStateDescriptor" = None,
         vertex_state: "structs.VertexStateDescriptor" = {},
         sample_count: int = 1,
@@ -831,7 +831,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        color_formats: "list(enums.TextureFormat)",
+        color_formats: "List[enums.TextureFormat]",
         depth_stencil_format: "enums.TextureFormat" = None,
         sample_count: int = 1,
     ):
@@ -845,7 +845,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         label="",
         type: "enums.QueryType",
         count: int,
-        pipeline_statistics: "list(enums.PipelineStatisticName)" = [],
+        pipeline_statistics: "List[enums.PipelineStatisticName]" = [],
     ):
         raise NotImplementedError()
 
@@ -1083,7 +1083,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         self,
         *,
         label="",
-        color_attachments: "list(structs.RenderPassColorAttachmentDescriptor)",
+        color_attachments: "List[structs.RenderPassColorAttachmentDescriptor]",
         depth_stencil_attachment: "structs.RenderPassDepthStencilAttachmentDescriptor" = None,
         occlusion_query_set: "GPUQuerySet" = None,
     ):

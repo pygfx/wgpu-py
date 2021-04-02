@@ -33,7 +33,7 @@ RequestAdapterOptions = Struct(
 DeviceDescriptor = Struct(
     "DeviceDescriptor",
     label=str,
-    extensions="list(enums.ExtensionName)",
+    extensions="List[enums.ExtensionName]",
     limits="structs.Limits",
 )  #:
 
@@ -61,7 +61,7 @@ BufferDescriptor = Struct(
 TextureDescriptor = Struct(
     "TextureDescriptor",
     label=str,
-    size="list(int) or structs.Extent3D",
+    size="Union[List[int], structs.Extent3D]",
     mip_level_count=int,
     sample_count=int,
     dimension="enums.TextureDimension",
@@ -98,7 +98,7 @@ SamplerDescriptor = Struct(
 BindGroupLayoutDescriptor = Struct(
     "BindGroupLayoutDescriptor",
     label=str,
-    entries="list(structs.BindGroupLayoutEntry)",
+    entries="List[structs.BindGroupLayoutEntry]",
 )  #:
 
 BindGroupLayoutEntry = Struct(
@@ -118,13 +118,13 @@ BindGroupDescriptor = Struct(
     "BindGroupDescriptor",
     label=str,
     layout="GPUBindGroupLayout",
-    entries="list(structs.BindGroupEntry)",
+    entries="List[structs.BindGroupEntry]",
 )  #:
 
 BindGroupEntry = Struct(
     "BindGroupEntry",
     binding=int,
-    resource="GPUSampler or GPUTextureView or structs.BufferBinding",
+    resource="Union[GPUSampler, GPUTextureView, structs.BufferBinding]",
 )  #:
 
 BufferBinding = Struct(
@@ -137,7 +137,7 @@ BufferBinding = Struct(
 PipelineLayoutDescriptor = Struct(
     "PipelineLayoutDescriptor",
     label=str,
-    bind_group_layouts="list(GPUBindGroupLayout)",
+    bind_group_layouts="List[GPUBindGroupLayout]",
 )  #:
 
 ShaderModuleDescriptor = Struct(
@@ -168,7 +168,7 @@ RenderPipelineDescriptor = Struct(
     fragment_stage="structs.ProgrammableStageDescriptor",
     primitive_topology="enums.PrimitiveTopology",
     rasterization_state="structs.RasterizationStateDescriptor",
-    color_states="list(structs.ColorStateDescriptor)",
+    color_states="List[structs.ColorStateDescriptor]",
     depth_stencil_state="structs.DepthStencilStateDescriptor",
     vertex_state="structs.VertexStateDescriptor",
     sample_count=int,
@@ -222,14 +222,14 @@ StencilStateFaceDescriptor = Struct(
 VertexStateDescriptor = Struct(
     "VertexStateDescriptor",
     index_format="enums.IndexFormat",
-    vertex_buffers="list(structs.VertexBufferLayoutDescriptor)",
+    vertex_buffers="List[structs.VertexBufferLayoutDescriptor]",
 )  #:
 
 VertexBufferLayoutDescriptor = Struct(
     "VertexBufferLayoutDescriptor",
     array_stride=int,
     step_mode="enums.InputStepMode",
-    attributes="list(structs.VertexAttributeDescriptor)",
+    attributes="List[structs.VertexAttributeDescriptor]",
 )  #:
 
 VertexAttributeDescriptor = Struct(
@@ -268,13 +268,13 @@ TextureCopyView = Struct(
     "TextureCopyView",
     texture="GPUTexture",
     mip_level=int,
-    origin="list(int) or structs.Origin3D",
+    origin="Union[List[int], structs.Origin3D]",
 )  #:
 
 ImageBitmapCopyView = Struct(
     "ImageBitmapCopyView",
     image_bitmap=memoryview,
-    origin="list(int) or structs.Origin2D",
+    origin="Union[List[int], structs.Origin2D]",
 )  #:
 
 ComputePassDescriptor = Struct(
@@ -285,7 +285,7 @@ ComputePassDescriptor = Struct(
 RenderPassDescriptor = Struct(
     "RenderPassDescriptor",
     label=str,
-    color_attachments="list(structs.RenderPassColorAttachmentDescriptor)",
+    color_attachments="List[structs.RenderPassColorAttachmentDescriptor]",
     depth_stencil_attachment="structs.RenderPassDepthStencilAttachmentDescriptor",
     occlusion_query_set="GPUQuerySet",
 )  #:
@@ -294,17 +294,17 @@ RenderPassColorAttachmentDescriptor = Struct(
     "RenderPassColorAttachmentDescriptor",
     attachment="GPUTextureView",
     resolve_target="GPUTextureView",
-    load_value="enums.LoadOp or list(float) or structs.Color",
+    load_value="Union[enums.LoadOp, Union[List[float], structs.Color]]",
     store_op="enums.StoreOp",
 )  #:
 
 RenderPassDepthStencilAttachmentDescriptor = Struct(
     "RenderPassDepthStencilAttachmentDescriptor",
     attachment="GPUTextureView",
-    depth_load_value="enums.LoadOp or float",
+    depth_load_value="Union[enums.LoadOp, float]",
     depth_store_op="enums.StoreOp",
     depth_read_only=bool,
-    stencil_load_value="enums.LoadOp or int",
+    stencil_load_value="Union[enums.LoadOp, int]",
     stencil_store_op="enums.StoreOp",
     stencil_read_only=bool,
 )  #:
@@ -317,7 +317,7 @@ RenderBundleDescriptor = Struct(
 RenderBundleEncoderDescriptor = Struct(
     "RenderBundleEncoderDescriptor",
     label=str,
-    color_formats="list(enums.TextureFormat)",
+    color_formats="List[enums.TextureFormat]",
     depth_stencil_format="enums.TextureFormat",
     sample_count=int,
 )  #:
@@ -333,7 +333,7 @@ QuerySetDescriptor = Struct(
     label=str,
     type="enums.QueryType",
     count=int,
-    pipeline_statistics="list(enums.PipelineStatisticName)",
+    pipeline_statistics="List[enums.PipelineStatisticName]",
 )  #:
 
 SwapChainDescriptor = Struct(
@@ -346,7 +346,7 @@ SwapChainDescriptor = Struct(
 
 UncapturedErrorEventInit = Struct(
     "UncapturedErrorEventInit",
-    error="GPUOutOfMemoryError or GPUValidationError",
+    error="Union[GPUOutOfMemoryError, GPUValidationError]",
 )  #:
 
 Color = Struct(

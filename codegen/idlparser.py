@@ -187,12 +187,11 @@ class IdlParser:
         if name.startswith("sequence<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             name = self.resolve_type(name).strip("'")
-            return f"'list({name})'"
+            return f"'List[{name}]'"
         elif " or " in name:
             name = name.strip("()")
-            names = [self.resolve_type(t) for t in name.split(" or ")]
-            name = " or ".join(t.strip("'") for t in names)
-            return f"'{name}'"
+            names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
+            return f"'Union[{', '.join(names)}]'"
 
         # Triage
         if name in __builtins__:
