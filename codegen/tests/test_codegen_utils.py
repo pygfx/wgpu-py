@@ -179,6 +179,35 @@ def test_patcher():
     assert code2 == code
 
 
+def test_patcher2():
+    code = """
+    class Foo1:
+        def bar1(self):
+            pass
+        @property
+        def bar2(self):
+            pass
+    """
+
+    p = Patcher(dedent(code))
+
+    # Check property line indices
+    for classname, i1, i2 in p.iter_classes():
+        for funcname, j1, j2 in p.iter_properties(i1 + 1):
+            line = p.lines[j1].lstrip()
+            assert line.startswith("def")
+            assert funcname in line
+            assert "pass" in p.lines[j2]
+
+    # Check method line indices
+    for classname, i1, i2 in p.iter_classes():
+        for funcname, j1, j2 in p.iter_methods(i1 + 1):
+            line = p.lines[j1].lstrip()
+            assert line.startswith("def")
+            assert funcname in line
+            assert "pass" in p.lines[j2]
+
+
 if __name__ == "__main__":
     for func in list(globals().values()):
         if callable(func) and func.__name__.startswith("test_"):

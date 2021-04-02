@@ -206,16 +206,17 @@ class Patcher:
 
     def iter_properties(self, start_line=0):
         """Generator to iterate over the properties.
-        Each iteration yields (classname, linenr_start, linenr_end),
-        where linenr_start is the line that says `@property`,
-        and linenr_end is the last line of code.
+        Each iteration yields (classname, linenr_first, linenr_last),
+        where linenr_first is the line that startswith `def`,
+        and linenr_last is the last line of code.
         """
         return self._iter_props_and_methods(start_line, True)
 
     def iter_methods(self, start_line=0):
         """Generator to iterate over the methods.
-        Each iteration yields (classname, linenr_start, linenr_end)
-        where linenr_end is the last line of code.
+        Each iteration yields (classname, linenr_first, linenr_last)
+        where linenr_first is the line that startswith `def`,
+        and linenr_last is the last line of code.
         """
         return self._iter_props_and_methods(start_line, False)
 
@@ -236,12 +237,12 @@ class Patcher:
             if line.startswith(("    def ", "    async def ")):
                 name = line.split("(")[0].split()[-1]
                 if prop_mark and find_props:
-                    current_def = [name, prop_mark, i]
+                    current_def = [name, i, i]
                 elif not prop_mark and not find_props:
                     current_def = [name, i, i]
             if line.startswith("    @property"):
                 prop_mark = i
-            elif sline and not sline.startswith("#"):
+            elif sline and not sline.lstrip().startswith("#"):
                 prop_mark = None
 
         if current_def:

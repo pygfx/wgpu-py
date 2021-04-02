@@ -95,6 +95,8 @@ class IdlParser:
         self.flags = {}
         self.enums = {}
 
+        self.typedefs = {}
+
         if verbose:
             print("##### Parsing IDL ...")
 
@@ -142,9 +144,75 @@ class IdlParser:
                     lines.append(line)
         return "\n".join(lines)
 
-    def _parse(self):
+    def resolve_type(self, typename):
+        """Resolve a type to a suitable name that is also valid so that flake8
+        wont complain when this is used as a type annotation.
+        """
 
-        typedefs = {}
+        name = typename.strip().strip("?")
+
+        # We want the flag, not the type that is an alias for int
+        name = name[:-5] if name.endswith("Flags") else name
+
+        # First resolve using typedefs that we found in the IDL
+        while name in self.typedefs:
+            new_name = self.typedefs[name]
+            if new_name == name:
+                break
+            name = new_name
+
+        # Resolve to a Python type (maybe)
+        pythonmap = {
+            "DOMString": "str",
+            "DOMString?": "str",
+            "USVString": "str",
+            "long": "int",
+            "unsigned long": "int",
+            "unsigned long long": "int",
+            "unsigned short": "int",
+            "GPUIntegerCoordinate": "int",
+            "GPUSampleMask": "int",
+            "GPUFenceValue": "int",
+            "GPUSize64": "int",
+            "GPUSize32": "int",
+            "GPUIndex32": "int",
+            "double": "float",
+            "boolean": "bool",
+            "object": "dict",
+            "ImageBitmap": "memoryview",
+        }
+        name = pythonmap.get(name, name)
+
+        # Is this a case for which we need to recurse?
+        if name.startswith("sequence<") and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            name = self.resolve_type(name).strip("'")
+            return f"'List[{name}]'"
+        elif " or " in name:
+            name = name.strip("()")
+            names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
+            return f"'Union[{', '.join(names)}]'"
+
+        # Triage
+        if name in __builtins__:
+            return name  # ok
+        elif name in self.classes:
+            return f"'{name}'"  # ok, but wrap in string because can be declared later
+        else:
+            assert name.startswith("GPU")
+            name = name[3:]
+            name = name[:-4] if name.endswith("Dict") else name
+            if name in self.flags:
+                return f"'flags.{name}'"
+            elif name in self.enums:
+                return f"'enums.{name}'"
+            elif name in self.structs:
+                return f"'structs.{name}'"
+            else:
+                # When this happens, update the code above or the pythonmap
+                raise RuntimeError("Encountered unknown IDL type: ", name)
+
+    def _parse(self):
 
         while not self.end_reached():
 
@@ -153,7 +221,19 @@ class IdlParser:
             if not line.strip():
                 pass
             elif line.startswith("typedef "):
-                pass
+                # Get the important bit
+                value = line.split(" ", 1)[-1]
+                if value.startswith("["):
+                    value = value.split("]")[-1]
+                # Parse
+                if value.startswith("("):  # Union type
+                    assert value.count("(") == 1 and value.count(")") == 1
+                    value = value.split("(")[1]
+                    val, _, key = value.partition(")")
+                else:  # Singleton type
+                    val, _, key = value.rpartition(" ")
+                key = key.strip().strip(";").strip()
+                self.typedefs[key] = val.strip()
             elif line.startswith(("interface ", "partial interface ")):
                 # A class or a set of flags
                 # Collect lines that define this interface
@@ -261,45 +341,7 @@ class IdlParser:
                         assert default is None
                     else:
                         default = default or "None"
-                    arg_type = typedefs.get(arg_type, arg_type)
-                    if arg_type in ["double", "float"]:
-                        t = "float"
-                    elif arg_type in [
-                        "long",
-                        "unsigned long",
-                        "unsigned long long",
-                        "GPUSize64",
-                        "[Clamp] unsigned short",
-                    ]:
-                        t = "int"
-                    elif arg_type in ["boolean"]:
-                        t = "bool"
-                    elif arg_type in ["DOMString", "DOMString?", "USVString"]:
-                        t = "str"
-                    elif arg_type in ["object", "record<DOMString, GPUSize32>"]:
-                        t = "dict"
-                    elif arg_type.startswith("GPU"):
-                        t = arg_type
-                    elif arg_type.startswith("sequence<GPU"):
-                        t = arg_type[9:-1] + "-list"
-                    elif arg_type == "ImageBitmap":
-                        t = "array"
-                    elif arg_type in [
-                        "(GPULoadOp or GPUColor)",
-                        "(GPULoadOp or GPUStencilValue)",
-                        "(GPULoadOp or float)",
-                        "(GPULoadOp or unsigned long)",
-                    ]:
-                        # GPURenderPassColorAttachmentDescriptor
-                        # GPURenderPassDepthStencilAttachmentDescriptor
-                        t = (
-                            arg_type[1:-1]
-                            .replace(" ", "-")
-                            .replace("unsigned-long", "int")
-                        )
-                    else:
-                        assert False
-                    d[arg_name] = StructField(line, arg_name, t, default)
+                    d[arg_name] = StructField(line, arg_name, arg_type, default)
                 self.structs[name] = d
             elif line.startswith(("[Exposed=", "[Serializable]")):
                 pass
