@@ -62,6 +62,10 @@ class AbstractCommentInjector(Patcher):
     """A base patcher that can insert  helpful comments in front of
     properties, methods, and classes. It does not mark any as new or unknown,
     since that is the task of the API patchers.
+
+    Also moves decorators just above the def. Doing this here in a
+    post-processing step means we dont have to worry about decorators
+    in the other patchers, keeping them simpler.
     """
 
     # Note that in terms of structure, this class is basically a simplified
@@ -85,15 +89,21 @@ class AbstractCommentInjector(Patcher):
             comment = self.get_prop_comment(classname, propname)
             if comment:
                 self.insert_line(j1, comment)
+            self._move_decorator_below_comments(j1)
 
     def patch_methods(self, classname, i1, i2):
         for methodname, j1, j2 in self.iter_methods(i1):
             comment = self.get_method_comment(classname, methodname)
             if comment:
-                if self.lines[j1 - 1].lstrip().startswith("@apidiff"):
-                    self.insert_line(j1 - 1, comment)
-                else:
-                    self.insert_line(j1, comment)
+                self.insert_line(j1, comment)
+            self._move_decorator_below_comments(j1)
+
+    def _move_decorator_below_comments(self, i_def):
+        for i in range(i_def - 3, i_def):
+            line = self.lines[i]
+            if line.lstrip().startswith("@"):
+                self.remove_line(i)
+                self.insert_line(i_def, line)
 
 
 class AbstractApiPatcher(Patcher):
@@ -148,17 +158,11 @@ class AbstractApiPatcher(Patcher):
             seen_props.add(propname)
             if self.prop_is_known(classname, propname):
                 old_line = self.lines[j1]
-                j3 = j1
-                while "def " not in old_line:
-                    j3 += 1
-                    old_line += "\n" + self.lines[j3]
-                new_line = f"    @property\n    def {propname}(self):"
+                new_line = f"    def {propname}(self):"
                 if old_line != new_line:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
-                    for j in range(j1 + 1, j3 + 1):
-                        self.remove_line(j)
             else:
                 self.insert_line(
                     j1, f"    # FIXME: unknown prop {classname}.{propname}"
