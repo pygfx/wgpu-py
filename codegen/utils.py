@@ -47,7 +47,8 @@ def blacken(src, singleline=False):
     and updated.
     """
     # Normal black
-    result = black.format_str(src, mode=black.FileMode())
+    mode = black.FileMode(line_length=999 if singleline else 88)
+    result = black.format_str(src, mode=mode)
 
     # Make defs single-line. You'd think that setting the line length
     # to a very high number would do the trick, but it does not.
