@@ -156,7 +156,7 @@ enummap = {
     "VertexFormat.ushort4norm": 13,
 }
 
-# There are 40 struct-field enum mappings
+# There are 46 struct-field enum mappings
 
 cstructfield2enum = {
     "BindGroupLayoutEntry.storage_texture_format": "TextureFormat",
@@ -171,8 +171,14 @@ cstructfield2enum = {
     "DepthStencilStateDescriptor.format": "TextureFormat",
     "RasterizationStateDescriptor.cull_mode": "CullMode",
     "RasterizationStateDescriptor.front_face": "FrontFace",
+    "RenderPassColorAttachmentDescriptor.load_op": "LoadOp",
+    "RenderPassColorAttachmentDescriptor.store_op": "StoreOp",
     "RenderPassColorAttachmentDescriptorBase_TextureViewId.load_op": "LoadOp",
     "RenderPassColorAttachmentDescriptorBase_TextureViewId.store_op": "StoreOp",
+    "RenderPassDepthStencilAttachmentDescriptor.depth_load_op": "LoadOp",
+    "RenderPassDepthStencilAttachmentDescriptor.depth_store_op": "StoreOp",
+    "RenderPassDepthStencilAttachmentDescriptor.stencil_load_op": "LoadOp",
+    "RenderPassDepthStencilAttachmentDescriptor.stencil_store_op": "StoreOp",
     "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.depth_load_op": "LoadOp",
     "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.depth_store_op": "StoreOp",
     "RenderPassDepthStencilAttachmentDescriptorBase_TextureViewId.stencil_load_op": "LoadOp",
