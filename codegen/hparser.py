@@ -6,28 +6,46 @@ from cffi.model import EnumType
 from codegen.utils import lib_dir
 
 
+_parser = None
+
+
+def get_h_parser():
+    """ Get the global HParser object. """
+
+    # Singleton pattern
+    global _parser
+    if _parser:
+        return _parser
+
+    # Get source
+    lines = []
+    with open(os.path.join(lib_dir, "resources", "wgpu.h")) as f:
+        for line in f.readlines():
+            if not line.startswith(
+                (
+                    "#include ",
+                    "#define WGPU_LOCAL",
+                    "#define WGPUColor",
+                    "#define WGPUOrigin3d_ZERO",
+                    "#if defined",
+                    "#endif",
+                )
+            ):
+                lines.append(line)
+    source = "".join(lines)
+
+    # Create parser
+    hp = HParser(source)
+    hp.parse()
+    _parser = hp
+    return hp
+
+
 class HParser:
     """Object to parse the wgpu.h header file, by letting cffi do the heavy lifting."""
 
-    def __init__(self):
-        pass
-
-    def _get_wgpu_h(self):
-        lines = []
-        with open(os.path.join(lib_dir, "resources", "wgpu.h")) as f:
-            for line in f.readlines():
-                if not line.startswith(
-                    (
-                        "#include ",
-                        "#define WGPU_LOCAL",
-                        "#define WGPUColor",
-                        "#define WGPUOrigin3d_ZERO",
-                        "#if defined",
-                        "#endif",
-                    )
-                ):
-                    lines.append(line)
-        return "".join(lines)
+    def __init__(self, source):
+        self.source = source
 
     def parse(self):
         self.flags = {}
@@ -39,7 +57,7 @@ class HParser:
         self._parse_from_cffi()
 
     def _parse_from_h(self):
-        code = self._get_wgpu_h()
+        code = self.source
 
         # Collect structs
         i1 = i2 = i3 = i4 = 0
@@ -85,7 +103,7 @@ class HParser:
     def _parse_from_cffi(self):
 
         self.ffi = ffi = FFI()
-        ffi.cdef(self._get_wgpu_h())
+        ffi.cdef(self.source)
 
         # Collect structs. We iterate over all types. Some will resolve
         # to C types, the rest are structs. The types for the struct
@@ -124,6 +142,11 @@ class HParser:
                                     ori_struct[key] += "/" + val
                                 else:
                                     ori_struct[key] = val
+                    # Make copies
+                    alt_name = name
+                    while alt_name != ffi.getctype(alt_name):
+                        alt_name = ffi.getctype(alt_name)
+                        self.structs[alt_name] = self.structs[name]
 
         # Collect enums. Warning: we access private ffi
         # stuff here. It seems its either this or load the lib.

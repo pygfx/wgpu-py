@@ -4,7 +4,8 @@ Writes the parts of the API that are simple: flags, enums, structs.
 
 import os
 
-from .utils import lib_dir, blacken, to_snake_case
+from codegen.utils import lib_dir, blacken, to_snake_case
+from codegen.idlparser import get_idl_parser
 
 
 flags_preamble = '''
@@ -35,7 +36,8 @@ class Flags:
 '''.lstrip()
 
 
-def write_flags(idl):
+def write_flags():
+    idl = get_idl_parser()
     # Generate code
     pylines = [flags_preamble]
     pylines.append(f"# There are {len(idl.flags)} flags\n")
@@ -81,7 +83,8 @@ class Enum:
 '''.lstrip()
 
 
-def write_enums(idl):
+def write_enums():
+    idl = get_idl_parser()
     # Generate code
     pylines = [enums_preamble]
     pylines.append(f"# There are {len(idl.enums)} enums\n")
@@ -127,7 +130,8 @@ class Struct:
 '''.lstrip()
 
 
-def write_structs(idl):
+def write_structs():
+    idl = get_idl_parser()
     # Generate code
     pylines = [structs_preamble]
     pylines.append(f"# There are {len(idl.structs)} structs\n")

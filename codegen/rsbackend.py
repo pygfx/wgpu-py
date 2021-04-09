@@ -14,8 +14,8 @@ should be written, this module will:
 import os
 
 from codegen.utils import lib_dir, blacken, Patcher
-from codegen.hparser import HParser
-from codegen.idlparser import IdlParser
+from codegen.hparser import get_h_parser
+from codegen.idlparser import get_idl_parser
 
 
 mappings_preamble = '''
@@ -27,25 +27,49 @@ mappings_preamble = '''
 '''.lstrip()
 
 
+def compare_flags():
+    """For each flag in WebGPU:
+
+    * Verify that there is a corresponding flag in wgpu.h
+    * Verify that all fields are present too.
+    * Verify that the (integer) value is equal.
+
+    Verification fails lead to prints
+    TODO: should also end up in codegen report.
+    """
+
+    idl = get_idl_parser()
+    hp = get_h_parser()
+
+    for name, flag in idl.flags.items():
+        if name not in hp.flags:
+            print(f"Flag {name} missing in wgpu.h")
+        else:
+            for key, val in flag.items():
+                if key not in hp.flags[name]:
+                    print(f"Flag field {name}.{key} missing in wgpu.h")
+                elif val != hp.flags[name][key]:
+                    print(f"Flag field {name}.{key} have different values.")
+                    # todo: can we mark this extra important?
+
+
 def write_mappings():
     """Generate the file with dicts to map enums strings to ints. This
     also compares the enums in wgpu-native with WebGPU, and reports any
     missing ones.
     """
 
-    ip = IdlParser()
-    ip.parse()
-    hp = HParser()
-    hp.parse()
+    idl = get_idl_parser()
+    hp = get_h_parser()
 
     # Create enummap, which allows the rs backend to resolve enum field names
     # to the corresponding integer value.
     enummap = {}
-    for name in ip.enums:
+    for name in idl.enums:
         if name not in hp.enums:
             print(f"Enum {name} missing in wgpu.h")
             continue
-        for ikey in ip.enums[name].values():
+        for ikey in idl.enums[name].values():
             hkey = ikey
             hkey = hkey.replace("1d", "D1").replace("2d", "D2").replace("3d", "D3")
             hkey = hkey.replace("-", " ").title().replace(" ", "")
@@ -61,7 +85,7 @@ def write_mappings():
         for key, val in struct.items():
             if isinstance(val, str) and val.startswith("WGPU"):
                 enumname = val[4:]
-                if enumname in ip.enums:
+                if enumname in idl.enums:
                     cstructfield2enum[f"{structname[4:]}.{key}"] = enumname
                 else:
                     pass  # a struct
@@ -88,73 +112,16 @@ def write_mappings():
     print("Written to rs_mappings.py")
 
 
-def compare_flags():
-    """For each flag in WebGPU:
+def patch_rs_backend(code):
+    """Given the Python code, applies patches to annotate functions
+    calls and struct instantiations.
 
-    * Verify that there is a corresponding flag in wgpu.h
-    * Verify that all fields are present too.
-    * Verify that the (integer) value is equal.
-
-    Verification fails lead to prints
-    TODO: should also end up in codegen report.
-    """
-
-    ip = IdlParser()
-    ip.parse()
-    hp = HParser()
-    hp.parse()
-
-    for name, flag in ip.flags.items():
-        if name not in hp.flags:
-            print(f"Flag {name} missing in wgpu.h")
-        else:
-            for key, val in flag.items():
-                if key not in hp.flags[name]:
-                    print(f"Flag field {name}.{key} missing in wgpu.h")
-                elif val != hp.flags[name][key]:
-                    print(f"Flag field {name}.{key} have different values.")
-                    # todo: can we mark this extra important?
-
-
-def patch_functions():
-    """Patch rs.py to annotate the use of functions:
+    For functions:
 
     * Verify that the function exists in wgpu.h. If not, add a fixme comment.
     * Add a comment showing correspinding signature from wgpu.h.
-    """
 
-    hp = HParser()
-    hp.parse()
-
-    # Read source and wrap it in a patcher
-    filename = os.path.join(lib_dir, "backends", "rs.py")
-    with open(filename, "rb") as f:
-        source = f.read().decode()
-    p = Patcher(source)
-
-    for line, i in p.iter_lines():
-        if line.lstrip().startswith(("# FIXME: unknown", "# cg:")):
-            p.remove_line(i)
-
-        if "lib.wgpu_" in line:
-            start = line.index("lib.wgpu_") + 4
-            end = line.index("(", start)
-            name = line[start:end]
-            indent = " " * (len(line) - len(line.lstrip()))
-            if name not in hp.functions:
-                p.insert_line(i, indent + f"# FIXME: unknown function {name}")
-                print(f"unknown function {name}")
-            else:
-                anno = hp.functions[name].replace(name, "f").strip(";")
-                p.insert_line(i, indent + f"# cg: " + anno)
-
-    # Write back
-    with open(filename, "wb") as f:
-        source = f.write(p.dumps().encode())
-
-
-def patch_structs():
-    """Patch rs.py to annotate the use of structs:
+    For structs:
 
     * Verify that the struct name exists.
     * Verify that the correct form (pointer or not) is used.
@@ -162,128 +129,143 @@ def patch_structs():
     * Annotate any missing fields.
     * Add a comment that shows all fields and their type.
 
-    Verification fails lead to FIXME comments being added to the code.
     """
 
-    hp = HParser()
-    hp.parse()
+    for patcher in [CommentRemover(), FunctionPatcher(), StructPatcher()]:
+        patcher.apply(code)
+        code = patcher.dumps()
+    return code
 
-    # Read source and wrap it in a patcher
-    filename = os.path.join(lib_dir, "backends", "rs.py")
-    with open(filename, "rb") as f:
-        source = f.read().decode()
-    p = Patcher(source)
 
-    line_index = None
-    brace_depth = 0
+class CommentRemover(Patcher):
 
-    for line, i in p.iter_lines():
-        if line.lstrip().startswith(
-            ("# FIXME: unknown", "FIXME: invalid", "# fields:")
-        ):
-            p.remove_line(i)
+    triggers = "# FIXME: unknown", "# cg:", "# FIXME: invalid", "# fields:"
 
-        if "new_struct_p(" in line or "new_struct(" in line:
-            if line.lstrip().startswith("def "):
-                continue  # Implementation
-            if "_new_struct" in line:
-                continue  # Implementation
-            if "new_struct_p()" in line or "new_struct()" in line:
-                continue  # Comments or docs
-            line_index = i
-            j = line.index("new_struct")
-            line = line[j:]  # start brace searching from right pos
-            brace_depth = 0
+    def apply(self, code):
+        self._init(code)
+        for line, i in self.iter_lines():
+            if line.lstrip().startswith(self.triggers):
+                self.remove_line(i)
 
-        if line_index:
-            for c in line:
-                if c == "#":
-                    break
-                elif c == "(":
-                    brace_depth += 1
-                elif c == ")":
-                    brace_depth -= 1
-                    assert brace_depth >= 0
-                    if brace_depth == 0:
-                        _validate_struct(hp, p, line_index, i)
-                        line_index = None
+
+class FunctionPatcher(Patcher):
+    def apply(self, code):
+        self._init(code)
+        hp = get_h_parser()
+
+        for line, i in self.iter_lines():
+            if "lib.wgpu_" in line:
+                start = line.index("lib.wgpu_") + 4
+                end = line.index("(", start)
+                name = line[start:end]
+                indent = " " * (len(line) - len(line.lstrip()))
+                if name not in hp.functions:
+                    self.insert_line(i, indent + f"# FIXME: unknown function {name}")
+                    print(f"unknown function {name}")
+                else:
+                    anno = hp.functions[name].replace(name, "f").strip(";")
+                    self.insert_line(i, indent + f"# cg: " + anno)
+
+
+class StructPatcher(Patcher):
+    def apply(self, code):
+        self._init(code)
+        hp = get_h_parser()
+
+        line_index = -1
+        brace_depth = 0
+
+        for line, i in self.iter_lines():
+
+            if "new_struct_p(" in line or "new_struct(" in line:
+                if line.lstrip().startswith("def "):
+                    continue  # Implementation
+                if "_new_struct" in line:
+                    continue  # Implementation
+                if "new_struct_p()" in line or "new_struct()" in line:
+                    continue  # Comments or docs
+                line_index = i
+                j = line.index("new_struct")
+                line = line[j:]  # start brace searching from right pos
+                brace_depth = 0
+
+            if line_index >= 0:
+                for c in line:
+                    if c == "#":
                         break
+                    elif c == "(":
+                        brace_depth += 1
+                    elif c == ")":
+                        brace_depth -= 1
+                        assert brace_depth >= 0
+                        if brace_depth == 0:
+                            self._validate_struct(hp, line_index, i)
+                            line_index = -1
+                            break
 
-    # Write back
-    with open(filename, "wb") as f:
-        source = f.write(p.dumps().encode())
+    def _validate_struct(self, hp, i1, i2):
+        """Validate a specific struct usage."""
 
+        lines = self.lines[
+            i1 : i2 + 1
+        ]  # note: i2 is the line index where the closing brace is
+        indent = " " * (len(lines[-1]) - len(lines[-1].lstrip()))
 
-def _validate_struct(hp, p, i1, i2):
-    """Validate a specific struct usage."""
+        if len(lines) == 1:
+            # Single line - add a comma before the closing brace
+            print("Making a struct multiline. Rerun codegen to validate the struct.")
+            line = lines[0]
+            i = line.rindex(")")
+            line = line[:i] + "," + line[i:]
+            self.replace_line(i1, line)
+            return
+        elif len(lines) == 3 and lines[1].count("="):
+            # Triplet - add a comma after the last element
+            print("Making a struct multiline. Rerun codegen to validate the struct.")
+            self.replace_line(i1 + 1, self.lines[i1 + 1] + ",")
+            return
 
-    lines = p.lines[
-        i1 : i2 + 1
-    ]  # note: i2 is the line index where the closing brace is
-    indent = " " * (len(lines[-1]) - len(lines[-1].lstrip()))
+        # We can assume that the struct is multi-line and formatted by Black!
+        assert len(lines) >= 3
 
-    if len(lines) == 1:
-        # Single line - add a comma before the closing brace
-        print("Making a struct multiline. Rerun codegen to validate the struct.")
-        line = lines[0]
-        i = line.rindex(")")
-        line = line[:i] + "," + line[i:]
-        p.replace_line(i1, line)
-        return
-    elif len(lines) == 3 and lines[1].count("="):
-        # Triplet - add a comma after the last element
-        print("Making a struct multiline. Rerun codegen to validate the struct.")
-        p.replace_line(i1 + 1, p.lines[i1 + 1] + ",")
-        return
+        # Get struct name, and verify
+        name = lines[1].strip().strip(',"')
+        struct_name = name.strip(" *")
+        if name.endswith("*"):
+            if "new_struct_p" not in lines[0]:
+                self.insert_line(i1, indent + f"# FIXME: invalid, use new_struct_p()")
+        else:
+            if "new_struct_p" in lines[0]:
+                self.insert_line(i1, indent + f"# FIXME: invalid, use new_struct()")
 
-    # We can assume that the struct is multi-line and formatted by Black!
-    assert len(lines) >= 3
+        # Get struct object and create annotation line
+        if struct_name not in hp.structs:
+            print(f"Unknown struct {struct_name}")
+            self.insert_line(i1, indent + f"# FIXME: unknown struct {struct_name}")
+            return
+        else:
+            struct = hp.structs[struct_name]
+            fields = ", ".join(f"{key}: {val}" for key, val in struct.items())
+            self.insert_line(i1, indent + f"# fields: " + fields)
 
-    # Get struct name, and verify
-    name = lines[1].strip().strip(',"')
-    struct_name = name.strip(" *")
-    if name.endswith("*"):
-        if "new_struct_p" not in lines[0]:
-            p.insert_line(i1, indent + f"# FIXME: invalid, use new_struct_p()")
-    else:
-        if "new_struct_p" in lines[0]:
-            p.insert_line(i1, indent + f"# FIXME: invalid, use new_struct()")
+        # Check keys
+        keys_found = []
+        for j in range(2, len(lines) - 1):
+            line = lines[j]
+            key = line.split("=")[0].strip()
+            if key.startswith("# not used:"):
+                key = key.split(":")[1].split("=")[0].strip()
+            elif key.startswith("#"):
+                continue
+            keys_found.append(key)
+            if key not in struct:
+                self.insert_line(i1 + j, indent + f"    # FIXME: unknown field {key}")
+                print(f"Struct {struct_name} does not have key {key}")
 
-    # Get struct object and create annotation line
-    if struct_name not in hp.structs:
-        print(f"Unknown struct {struct_name}")
-        p.insert_line(i1, indent + f"# FIXME: unknown struct {struct_name}")
-        return
-    else:
-        struct = hp.structs[struct_name]
-        fields = ", ".join(f"{key}: {val}" for key, val in struct.items())
-        p.insert_line(i1, indent + f"# fields: " + fields)
-
-    # Check keys
-    keys_found = []
-    for j in range(2, len(lines) - 1):
-        line = lines[j]
-        key = line.split("=")[0].strip()
-        if key.startswith("# not used:"):
-            key = key.split(":")[1].split("=")[0].strip()
-        elif key.startswith("#"):
-            continue
-        keys_found.append(key)
-        if key not in struct:
-            p.insert_line(i1 + j, indent + f"    # FIXME: unknown field {key}")
-            print(f"Struct {struct_name} does not have key {key}")
-
-    # Insert comments for unused keys
-    more_lines = []
-    for key in struct:
-        if key not in keys_found:
-            more_lines.append(indent + f"    # not used: {key}")
-    if more_lines:
-        p.insert_line(i2, "\n".join(more_lines))
-
-
-if __name__ == "__main__":
-    write_mappings()
-    compare_flags()
-    patch_functions()
-    patch_structs()
+        # Insert comments for unused keys
+        more_lines = []
+        for key in struct:
+            if key not in keys_found:
+                more_lines.append(indent + f"    # not used: {key}")
+        if more_lines:
+            self.insert_line(i2, "\n".join(more_lines))
