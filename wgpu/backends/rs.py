@@ -161,19 +161,6 @@ def _loadop_and_clear_from_value(value):
         return 0, value  # WGPULoadOp_Clear and the value
 
 
-def _check_struct(what, d):
-    """Check that the given dict does not have any unexpected keys
-    (which may be there because of typos or api changes).
-    """
-    fields = set(d.keys())
-    ref_fields = tuple(getattr(structs, what))
-    unexpected = fields.difference(ref_fields)
-    if unexpected:
-        s1 = ", ".join(unexpected)
-        s2 = ", ".join(ref_fields)
-        raise ValueError(f"Unexpected keys: {s1}.\n  -> for {what}: {s2}.")
-
-
 # %% The API
 
 
@@ -302,7 +289,6 @@ class GPUAdapter(base.GPUAdapter):
             c_trace_path = ffi.new("char []", trace_path.encode())
 
         # Handle default limits
-        _check_struct("Limits", limits)
         limits2 = base.DEFAULT_LIMITS.copy()
         limits2.update(limits or {})
 
@@ -491,7 +477,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     ):
         c_entries_list = []
         for entry in entries:
-            _check_struct("BindGroupLayoutEntry", entry)
             type = entry["type"]
             if "texture" in type:
                 need = {"view_dimension"}
@@ -544,7 +529,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
         c_entries_list = []
         for entry in entries:
-            _check_struct("BindGroupEntry", entry)
             # The resource can be a sampler, texture view, or buffer descriptor
             resource = entry["resource"]
             if isinstance(resource, GPUSampler):
@@ -566,7 +550,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                     ),
                 }
             elif isinstance(resource, dict):  # Buffer binding
-                _check_struct("BufferBinding", resource)
                 # fields: buffer: WGPUBufferId/int, offset: WGPUBufferAddress/int, size: WGPUBufferAddress/int
                 c_buffer_entry = new_struct(
                     "WGPUBufferBinding",
@@ -584,16 +567,9 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 }
             else:
                 raise TypeError(f"Unexpected resource type {type(resource)}")
-            # fields: tag: WGPUBindingResource_Tag, buffer: WGPUBindingResource_WGPUBuffer_Body, sampler: WGPUBindingResource_WGPUSampler_Body, texture_view: WGPUBindingResource_WGPUTextureView_Body
-            c_resource = new_struct(
-                "WGPUBindingResource",
-                # FIXME: unknown field **c_resource_kwargs,
-                **c_resource_kwargs,
-                # not used: tag
-                # not used: buffer
-                # not used: sampler
-                # not used: texture_view
-            )
+            # Instantiate without write new_struct(), to disable annotation here
+            f = new_struct
+            c_resource = f("WGPUBindingResource", **c_resource_kwargs)
             # fields: binding: int, resource: WGPUBindingResource
             c_entry = new_struct(
                 "WGPUBindGroupEntry",
@@ -671,7 +647,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         layout: "GPUPipelineLayout" = None,
         compute_stage: "structs.ProgrammableStageDescriptor",
     ):
-        _check_struct("ProgrammableStageDescriptor", compute_stage)
 
         # fields: module: WGPUShaderModuleId/int, entry_point: WGPURawString
         c_compute_stage = new_struct(
@@ -706,9 +681,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         sample_mask: int = 0xFFFFFFFF,
         alpha_to_coverage_enabled: bool = False,
     ):
-        _check_struct("ProgrammableStageDescriptor", vertex_stage)
-        _check_struct("RasterizationStateDescriptor", rasterization_state)
-        _check_struct("VertexStateDescriptor", vertex_state)
 
         # fields: module: WGPUShaderModuleId/int, entry_point: WGPURawString
         c_vertex_stage = new_struct(
@@ -718,7 +690,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
         c_fragment_stage = ffi.NULL
         if fragment_stage is not None:
-            _check_struct("ProgrammableStageDescriptor", fragment_stage)
             # fields: module: WGPUShaderModuleId/int, entry_point: WGPURawString
             c_fragment_stage = new_struct_p(
                 "WGPUProgrammableStageDescriptor *",
@@ -736,7 +707,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
         c_color_states_list = []
         for color_state in color_states:
-            _check_struct("ColorStateDescriptor", color_state)
             alpha_blend = _tuple_from_tuple_or_dict(
                 color_state["alpha_blend"],
                 ("src_factor", "dst_factor", "operation"),
@@ -774,9 +744,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         if depth_stencil_state is None:
             c_depth_stencil_state = ffi.NULL
         else:
-            _check_struct("DepthStencilStateDescriptor", depth_stencil_state)
             stencil_front = depth_stencil_state.get("stencil_front", {})
-            _check_struct("StencilStateFaceDescriptor", stencil_front)
             # fields: compare: WGPUCompareFunction, fail_op: WGPUStencilOperation, depth_fail_op: WGPUStencilOperation, pass_op: WGPUStencilOperation
             c_stencil_front = new_struct(
                 "WGPUStencilStateFaceDescriptor",
@@ -813,10 +781,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             )
         c_vertex_buffer_descriptors_list = []
         for buffer_des in vertex_state["vertex_buffers"]:
-            _check_struct("VertexBufferLayoutDescriptor", buffer_des)
             c_attributes_list = []
             for attribute in buffer_des["attributes"]:
-                _check_struct("VertexAttributeDescriptor", attribute)
                 # fields: offset: WGPUBufferAddress/int, format: WGPUVertexFormat, shader_location: WGPUShaderLocation/int
                 c_attribute = new_struct(
                     "WGPUVertexAttributeDescriptor",
@@ -1165,7 +1131,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
 
         c_color_attachments_list = []
         for color_attachment in color_attachments:
-            _check_struct("RenderPassColorAttachmentDescriptor", color_attachment)
             assert isinstance(color_attachment["attachment"], GPUTextureView)
             texture_view_id = color_attachment["attachment"]._internal
             c_resolve_target = (
@@ -1205,9 +1170,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
 
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
-            _check_struct(
-                "RenderPassDepthStencilAttachmentDescriptor", depth_stencil_attachment
-            )
             c_depth_load_op, c_depth_clear = _loadop_and_clear_from_value(
                 depth_stencil_attachment["depth_load_value"]
             )
@@ -1252,9 +1214,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         )
 
     def copy_buffer_to_texture(self, source, destination, copy_size):
-
-        _check_struct("BufferCopyView", source)
-        _check_struct("TextureCopyView", destination)
 
         c_source = new_struct_p(
             "WGPUBufferCopyView *",
@@ -1302,9 +1261,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
 
     def copy_texture_to_buffer(self, source, destination, copy_size):
 
-        _check_struct("TextureCopyView", source)
-        _check_struct("BufferCopyView", destination)
-
         ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
         # fields: x: int, y: int, z: int
         c_origin = new_struct(
@@ -1350,9 +1306,6 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         )
 
     def copy_texture_to_texture(self, source, destination, copy_size):
-
-        _check_struct("TextureCopyView", source)
-        _check_struct("TextureCopyView", destination)
 
         ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
         # fields: x: int, y: int, z: int
