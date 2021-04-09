@@ -18,10 +18,11 @@ mappings_preamble = '''
 '''.lstrip()
 
 
-# todo: this is WIP
-
-
 def write_mappings():
+    """Generate the file with dicts to map enums strings to ints. This
+    also compares the enums in wgpu-native with WebGPU, and reports any
+    missing ones.
+    """
 
     ip = IdlParser()
     ip.parse()
@@ -78,7 +79,44 @@ def write_mappings():
     print("Written to rs_mappings.py")
 
 
+def compare_flags():
+    """For each flag in WebGPU:
+
+    * Verify that there is a corresponding flag in wgpu.h
+    * Verify that all fields are present too.
+    * Verify that the (integer) value is equal.
+
+    Verification fails lead to prints
+    TODO: should also end up in codegen report.
+    """
+
+    ip = IdlParser()
+    ip.parse()
+    hp = HParser()
+    hp.parse()
+
+    for name, flag in ip.flags.items():
+        if name not in hp.flags:
+            print(f"Flag {name} missing in wgpu.h")
+        else:
+            for key, val in flag.items():
+                if key not in hp.flags[name]:
+                    print(f"Flag field {name}.{key} missing in wgpu.h")
+                elif val != hp.flags[name][key]:
+                    print(f"Flag field {name}.{key} have different values.")
+
+
 def patch_structs():
+    """Patch the code to annotate the use of structs:
+
+    * Verify that the struct name exists.
+    * Verify that the correct form (pointer or not) is used.
+    * Verify that all used fields exists.
+    * Annotate any missing fields.
+    * Add a comment that shows all fields and their type.
+
+    Verification fails lead to FIXME comments being added to the code.
+    """
 
     hp = HParser()
     hp.parse()
@@ -126,11 +164,13 @@ def patch_structs():
                         line_index = None
                         break
 
+    # Write
     with open(filename, "wb") as f:
         source = f.write(p.dumps().encode())
 
 
 def _validate_struct(hp, p, i1, i2):
+    """Validate a specific struct usage."""
 
     lines = p.lines[
         i1 : i2 + 1
@@ -199,4 +239,5 @@ def _validate_struct(hp, p, i1, i2):
 
 if __name__ == "__main__":
     write_mappings()
+    compare_flags()
     patch_structs()
