@@ -1,5 +1,14 @@
 """
 Apply codegen to rs backend.
+
+The idea is that when there are any changes in wgpu.h that affect how rs.py
+should be written, this module will:
+
+* For enums: automatically update the mappings.
+* For flags: report discrepancies.
+* For structs and functions: update the code, so a diff of rs.py quickly
+  shows if manual changes are needed.
+
 """
 
 import os
@@ -104,10 +113,48 @@ def compare_flags():
                     print(f"Flag field {name}.{key} missing in wgpu.h")
                 elif val != hp.flags[name][key]:
                     print(f"Flag field {name}.{key} have different values.")
+                    # todo: can we mark this extra important?
+
+
+def patch_functions():
+    """Patch rs.py to annotate the use of functions:
+
+    * Verify that the function exists in wgpu.h. If not, add a fixme comment.
+    * Add a comment showing correspinding signature from wgpu.h.
+    """
+
+    hp = HParser()
+    hp.parse()
+
+    # Read source and wrap it in a patcher
+    filename = os.path.join(lib_dir, "backends", "rs.py")
+    with open(filename, "rb") as f:
+        source = f.read().decode()
+    p = Patcher(source)
+
+    for line, i in p.iter_lines():
+        if line.lstrip().startswith(("# FIXME: unknown", "# cg:")):
+            p.remove_line(i)
+
+        if "lib.wgpu_" in line:
+            start = line.index("lib.wgpu_") + 4
+            end = line.index("(", start)
+            name = line[start:end]
+            indent = " " * (len(line) - len(line.lstrip()))
+            if name not in hp.functions:
+                p.insert_line(i, indent + f"# FIXME: unknown function {name}")
+                print(f"unknown function {name}")
+            else:
+                anno = hp.functions[name].replace(name, "f").strip(";")
+                p.insert_line(i, indent + f"# cg: " + anno)
+
+    # Write back
+    with open(filename, "wb") as f:
+        source = f.write(p.dumps().encode())
 
 
 def patch_structs():
-    """Patch the code to annotate the use of structs:
+    """Patch rs.py to annotate the use of structs:
 
     * Verify that the struct name exists.
     * Verify that the correct form (pointer or not) is used.
@@ -121,15 +168,14 @@ def patch_structs():
     hp = HParser()
     hp.parse()
 
+    # Read source and wrap it in a patcher
     filename = os.path.join(lib_dir, "backends", "rs.py")
     with open(filename, "rb") as f:
         source = f.read().decode()
-
     p = Patcher(source)
 
     line_index = None
     brace_depth = 0
-    struct_lines = []
 
     for line, i in p.iter_lines():
         if line.lstrip().startswith(
@@ -148,7 +194,6 @@ def patch_structs():
             j = line.index("new_struct")
             line = line[j:]  # start brace searching from right pos
             brace_depth = 0
-            struct_lines = []
 
         if line_index:
             for c in line:
@@ -164,7 +209,7 @@ def patch_structs():
                         line_index = None
                         break
 
-    # Write
+    # Write back
     with open(filename, "wb") as f:
         source = f.write(p.dumps().encode())
 
@@ -240,4 +285,5 @@ def _validate_struct(hp, p, i1, i2):
 if __name__ == "__main__":
     write_mappings()
     compare_flags()
+    patch_functions()
     patch_structs()

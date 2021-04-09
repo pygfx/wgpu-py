@@ -33,6 +33,7 @@ class HParser:
         self.flags = {}
         self.enums = {}
         self.structs = {}
+        self.functions = {}
 
         self._parse_from_h()
         self._parse_from_cffi()
@@ -40,18 +41,19 @@ class HParser:
     def _parse_from_h(self):
         code = self._get_wgpu_h()
 
-        # Parsing structs is not that hard
+        # Collect structs
         i1 = i2 = i3 = i4 = 0
         while True:
             # Find struct
             i1 = code.find("typedef struct", i4)
-            if i1 < 0:
-                break
             i2 = code.find("{", i1)
             i3 = code.find("}", i2)
             i4 = code.find(";", i3)
+            if i1 < 0:
+                break
+            # Only do simple structs, not Unions
             if 0 < code.find("{", i2 + 1) < i3:
-                continue  # Union ... not going there
+                continue
             # Decompose
             name = code[i3 + 1 : i4].strip()
             self.structs[name] = struct = {}
@@ -60,12 +62,36 @@ class HParser:
                 key = parts[-1].strip("*")
                 struct[key] = " ".join(parts[:-1])
 
+        # Collect functions
+        i1 = i2 = i3 = 0
+        while True:
+            # Find function
+            i1 = code.find("wgpu_", i3)
+            i2 = code.find("(", i1)
+            i3 = code.find(");", i2)
+            if i1 < 0:
+                break
+            # Extract name, and check whether we found something real
+            name = code[i1:i2]
+            if not (name and name.isidentifier()):
+                i3 = i1 + 5
+                continue
+            # Decompose further
+            i1 = code.rfind("\n", 0, i1)
+            line = code[i1 : i3 + 2]
+            line = " ".join(line.split())  # effective way to put on one line
+            self.functions[name] = line
+
     def _parse_from_cffi(self):
 
         self.ffi = ffi = FFI()
         ffi.cdef(self._get_wgpu_h())
 
-        # Iterate over all types. Some will resolve to C types, the rest are structs.
+        # Collect structs. We iterate over all types. Some will resolve
+        # to C types, the rest are structs. The types for the struct
+        # fields are reduced to the C primitives, making it less useful
+        # for annotations. We update the structs that we've found by
+        # parsing wgpu.h directly.
         for names in ffi.list_types():
             for name in names:
                 # name = ffi.getctype(name) - no, keep original
@@ -99,7 +125,7 @@ class HParser:
                                 else:
                                     ori_struct[key] = val
 
-        # Collect enums and functions. Warning: we access private ffi
+        # Collect enums. Warning: we access private ffi
         # stuff here. It seems its either this or load the lib.
         for key, (tp, _) in ffi._parser._declarations.items():
             tag, name = key.split(" ", 1)
@@ -108,7 +134,11 @@ class HParser:
                 for enumname, val in zip(tp.enumerators, tp.enumvalues):
                     fields[enumname[len(name) + 1 :]] = val
             elif tag == "function":
-                pass  # print("function", name)
+                # We don't process these, because the type info has
+                # been reduced to primitive types, but for annotations
+                # the higher-level type names are more useful. We
+                # extract these by parsing wgpu.h directly
+                pass
 
         # Collect flags by iterating over constants that are not enums.
         for key, value in ffi._parser._int_constants.items():
