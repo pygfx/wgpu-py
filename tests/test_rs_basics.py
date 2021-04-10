@@ -75,29 +75,6 @@ def test_tuple_from_tuple_or_dict():
         assert func({"x": 1}, ("x", "y"))
 
 
-def test_struct_checking():
-    func = wgpu.backends.rs._check_struct
-
-    # This works
-    func("ProgrammableStageDescriptor", {"module": None, "entry_point": None})
-
-    # This does not
-    with raises(ValueError) as e:
-        func("ProgrammableStageDescriptor", {"module": None, "foo": None})
-    assert "Unexpected keys" in str(e.value)
-
-    if not can_use_wgpu_lib:
-        return
-
-    # Neither does this
-    device = wgpu.utils.get_default_device()
-    with raises(ValueError) as e:
-        device.create_compute_pipeline(
-            layout=None, compute_stage={"module": None, "foo": None}
-        )
-    assert "Unexpected keys" in str(e.value)
-
-
 @pyshader.python2shader
 def compute_shader(
     index: ("input", "GlobalInvocationId", "ivec3"),
