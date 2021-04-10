@@ -10,7 +10,11 @@ The purpose of this helper package is to:
 * To validate that our calls into wgpu-native are correct.
 
 We try to hit a balance between automatic code generation and proving
-hints to help with manual updating.
+hints to help with manual updating. It should not be necessarry to check
+the diffs of `webgpu.idl` or `wgpu.h`; any relevant differences should
+result in changes (of code or annotations) in the respective `.py`
+files. That said, during development it can be helpful to use the
+WebGPU spec and the header file as a reference.
 
 This package is *not* part of the wgpu-lib - it is a tool to help
 maintain it. It has its own tests, which try to cover the utils well,
@@ -41,7 +45,7 @@ The update process to follow:
 
 * Download the latest `idlparser.py`.
 * Run `python codegen` to apply the automatic patches to the code.
-* Now go through all FIXME comments that were addes, and apply any necessary
+* Now go through all FIXME comments that were added, and apply any necessary
   changes. Remove the FIXME comment if no further action is needed. Note that all
   new classes/methods/properties (instead those marked as hidden) need a docstring.
 * Run `python wgpu.codegen` again to validate that all is well.
@@ -73,8 +77,8 @@ additions are allowed (which should be used sparingly).
 The `rs.py` backend calls into a C library (wgpu-native). The codegen
 helps here, by parsing the corresponding `wgpu.h` and:
 
-* Detect and report missing enums and enum fields.
 * Detect and report missing flags and flag fields.
+* Detect and report missing enums and enum fields.
 * Generate mappings for enum field names to ints.
 * Validate and annotate struct creations.
 * Validate and annotate function calls into the lib.
@@ -82,14 +86,12 @@ helps here, by parsing the corresponding `wgpu.h` and:
 The update process to follow:
 
 * Download the latest `wgpu.h`.
-* Run `python codegen` to generate code, patches and report.
+* Run `python codegen` to generate code, apply patches, and produce a report.
 * Diff the report for new differences to take into account.
 * Diff `rs.py` to see what structs and functions have changed. Lines
   marked with a FIXME comment should be fixed. Others may or may not.
   Use `wgpu.h` as a reference to check available functions and structs.
-  You can use the codegen to annotate a struct or function call if
-  needed.
-* `python wgpu.codegen` again to validate that all is well.
+* Run `python wgpu.codegen` again to validate that all is well.
 
 
 ## Further tips
