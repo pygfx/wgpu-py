@@ -69,6 +69,13 @@ def test_blacken_singleline():
 
     assert code3 == code2
 
+    # Also test simply long lines
+    code = "foo = 1" + " + 1" * 100
+    assert len(code) > 300
+    assert code.count("\n") == 0
+    assert blacken(code, False).strip().count("\n") > 3
+    assert blacken(code, True).strip().count("\n") == 0
+
 
 def test_blacken_comments():
     code1 = """

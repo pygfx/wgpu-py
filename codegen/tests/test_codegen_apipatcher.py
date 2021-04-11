@@ -1,5 +1,6 @@
-""" Test some parts of the apipatcher.
+""" Test some parts of apipatcher.py, and Implicitly tests idlparser.py.
 """
+
 from codegen.utils import blacken
 from codegen.apipatcher import CommentRemover, AbstractCommentInjector
 

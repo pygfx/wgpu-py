@@ -6,12 +6,14 @@ spec (IDL), and the backend implementations from the base API.
 import os
 
 from .utils import lib_dir, blacken, to_snake_case, to_camel_case, Patcher
+from .idlparser import get_idl_parser
 
 
-def patch_base_api(code, idl):
+def patch_base_api(code):
     """Given the Python code, applies patches to make the code conform
     to the IDL.
     """
+    idl = get_idl_parser()
 
     # Write __all__
     part1, found_all, part2 = code.partition("\n__all__ =")
@@ -23,7 +25,7 @@ def patch_base_api(code, idl):
         code = part1 + line + part2
 
     # Patch!
-    for patcher in [CommentRemover(), BaseApiPatcher(idl), IdlCommentInjector(idl)]:
+    for patcher in [CommentRemover(), BaseApiPatcher(), IdlCommentInjector()]:
         patcher.apply(code)
         code = patcher.dumps()
     return code
@@ -51,10 +53,12 @@ class CommentRemover(Patcher):
     to prevent accumulating comments.
     """
 
+    triggers = "# IDL:", "# FIXME: unknown", "# wgpu.help"
+
     def apply(self, code):
         self._init(code)
         for line, i in self.iter_lines():
-            if line.lstrip().startswith(("# IDL:", "# FIXME: unknown", "# wgpu.help")):
+            if line.lstrip().startswith(self.triggers):
                 self.remove_line(i)
 
 
@@ -225,9 +229,9 @@ class AbstractApiPatcher(Patcher):
 
 
 class IdlPatcherMixin:
-    def __init__(self, idl):
+    def __init__(self):
         super().__init__()
-        self.idl = idl
+        self.idl = get_idl_parser()
 
     def name2idl(self, name):
         m = {"__init__": "constructor"}

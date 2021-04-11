@@ -12,6 +12,28 @@ import os
 from codegen.utils import lib_dir
 
 
+_parser = None
+
+
+def get_idl_parser():
+    """ Get the global IdlParser object. """
+
+    # Singleton pattern
+    global _parser
+    if _parser:
+        return _parser
+
+    # Get source
+    with open(os.path.join(lib_dir, "resources", "webgpu.idl"), "rb") as f:
+        source = f.read().decode()
+
+    # Create parser
+    idl = IdlParser(source)
+    idl.parse()
+    _parser = idl
+    return idl
+
+
 class StructField:
     """A little object to specify the field of a struct."""
 
@@ -52,11 +74,10 @@ class IdlParser:
 
     """
 
-    def __init__(self):
-        with open(os.path.join(lib_dir, "resources", "webgpu.idl"), "rb") as f:
-            text = f.read().decode()
-        self._text = self._pre_process(text)
-        self._length = len(self._text)
+    def __init__(self, source):
+
+        self.source = self._pre_process(source)
+        self._length = len(self.source)
         self._pos = 0
 
     def _reset(self):
@@ -68,10 +89,10 @@ class IdlParser:
     def read_until(self, char):
         start = self._pos
         while self._pos < self._length:
-            c = self._text[self._pos]
+            c = self.source[self._pos]
             self._pos += 1
             if c == char:
-                return self._text[start : self._pos]
+                return self.source[start : self._pos]
         return ""
 
     def read_line(self):
@@ -81,10 +102,10 @@ class IdlParser:
         char = "\n"
         start = pos = self._pos
         while pos < self._length:
-            c = self._text[pos]
+            c = self.source[pos]
             pos += 1
             if c == char:
-                return self._text[start:pos]
+                return self.source[start:pos]
         return ""
 
     def parse(self, verbose=False):
