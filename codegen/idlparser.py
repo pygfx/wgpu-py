@@ -15,12 +15,12 @@ from codegen.utils import print, lib_dir
 _parser = None
 
 
-def get_idl_parser():
+def get_idl_parser(*, allow_cache=True):
     """ Get the global IdlParser object. """
 
     # Singleton pattern
     global _parser
-    if _parser:
+    if _parser and allow_cache:
         return _parser
 
     # Get source

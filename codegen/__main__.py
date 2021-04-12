@@ -72,8 +72,8 @@ def main():
     print("# Code generatation report")
 
     print("## Preparing")
-    idlparser.get_idl_parser()
-    hparser.get_h_parser()
+    idlparser.get_idl_parser(allow_cache=False)
+    hparser.get_h_parser(allow_cache=False)
 
     update_api()
     update_rs()

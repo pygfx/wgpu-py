@@ -9,12 +9,12 @@ from codegen.utils import print, lib_dir
 _parser = None
 
 
-def get_h_parser():
+def get_h_parser(*, allow_cache=True):
     """ Get the global HParser object. """
 
     # Singleton pattern
     global _parser
-    if _parser:
+    if _parser and allow_cache:
         return _parser
 
     # Get source
