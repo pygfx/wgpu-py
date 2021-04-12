@@ -16,6 +16,7 @@ changing_files = {
     os.path.join(lib_dir, "structs.py"),
     os.path.join(lib_dir, "backends", "rs.py"),
     os.path.join(lib_dir, "backends", "rs_mappings.py"),
+    os.path.join(lib_dir, "resources", "codegen_report.md"),
 }
 
 

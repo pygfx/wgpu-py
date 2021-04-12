@@ -14,9 +14,9 @@ def test_comment_remover():
     #
     # a comment
     # IDL: some idl spec
-    # FIXME: unknown method
-    # FIXME: unknown property
-    # FIXME: unknown class
+    # FIXME: unknown api method
+    # FIXME: unknown api property
+    # FIXME: unknown api class
     # FIXME: new method - only user should remove
     # FIXME: was changed - only user should remove
     """
