@@ -1,7 +1,7 @@
 """ Test some parts of rsbackend.py, and implicitly tests hparser.py.
 """
 
-from codegen.rsbackend import patch_rs_backend
+from codegen.rspatcher import patch_rs_backend
 
 
 def dedent(code):

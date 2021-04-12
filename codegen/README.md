@@ -10,7 +10,7 @@ The purpose of this helper package is to:
 * To validate that our calls into wgpu-native are correct.
 
 We try to hit a balance between automatic code generation and proving
-hints to help with manual updating. It should not be necessarry to check
+hints to help with manual updating. It should *not* be necessarry to check
 the diffs of `webgpu.idl` or `wgpu.h`; any relevant differences should
 result in changes (of code or annotations) in the respective `.py`
 files. That said, during development it can be helpful to use the
@@ -28,13 +28,24 @@ tests, because we are the only users. If it breaks, we fix it.
 * C header: https://github.com/gfx-rs/wgpu/blob/master/ffi/wgpu.h
 
 
+## Types of work that the codegen does
+
+* Fully automatically generate modules (e.g. for constants and mappings).
+* Patch manually written code:
+    * Insert annotation-comments with IDL or C definitions.
+    * Insert FIXME comments for code that is new or wrong.
+* Generate a summarizing report. This report also contains information about
+  flag/enum mismatches between IDL and wgpu.h.
+
+
 ## Updating the base API
 
 The WebGPU API is specified by `webgpu.idl` (in the resources directory).
 We parse this file with a custom parser (`idlparser.py`) to obtain a description
 of the interfaces, enums, and flags.
 
-Next, this information is used to update the Python base API in `base.py`:
+The Python implementation of the flags, enums and structs is automatically generated.
+Next, the Python base API (`base.py`) is updated:
 
 * Add missing classes, methods and properties, along with a FIXME comment.
 * Modify changed signatures, along with a FIXME comment.
@@ -66,10 +77,9 @@ In this case the source is the base API (instead of the IDL).
 
 The update process is similar to the generation of the base API, except
 that methods are only added if they `raise NotImplementedError()` in
-the base implementation.
-
-Another difference is that this API should not deviate from the base API - only
-additions are allowed (which should be used sparingly).
+the base implementation. Another difference is that this API should not
+deviate from the base API - only additions are allowed (which should
+be used sparingly).
 
 
 ## Updating the Rust backend (`rs.py`)

@@ -3,18 +3,18 @@ import os
 from cffi import FFI
 from cffi.model import EnumType
 
-from codegen.utils import lib_dir
+from codegen.utils import print, lib_dir
 
 
 _parser = None
 
 
-def get_h_parser():
+def get_h_parser(*, allow_cache=True):
     """ Get the global HParser object. """
 
     # Singleton pattern
     global _parser
-    if _parser:
+    if _parser and allow_cache:
         return _parser
 
     # Get source
@@ -47,7 +47,7 @@ class HParser:
     def __init__(self, source):
         self.source = source
 
-    def parse(self):
+    def parse(self, verbose=True):
         self.flags = {}
         self.enums = {}
         self.structs = {}
@@ -55,6 +55,12 @@ class HParser:
 
         self._parse_from_h()
         self._parse_from_cffi()
+
+        if verbose:
+            print(f"The wgpu.h defines {len(self.functions)} functions")
+            keys = "flags", "enums", "structs"
+            stats = ", ".join(f"{len(getattr(self, key))} {key}" for key in keys)
+            print("The wgpu.h defines " + stats)
 
     def _parse_from_h(self):
         code = self.source

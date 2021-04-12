@@ -9,11 +9,13 @@ should be written, this module will:
 * For structs and functions: update the code, so a diff of rs.py quickly
   shows if manual changes are needed.
 
+Note that the apipatcher will also patch rs.py, but where that codegen
+focuses on the API, here we focus on the C library usage.
 """
 
 import os
 
-from codegen.utils import lib_dir, blacken, Patcher
+from codegen.utils import print, lib_dir, blacken, Patcher
 from codegen.hparser import get_h_parser
 from codegen.idlparser import get_idl_parser
 
@@ -49,8 +51,7 @@ def compare_flags():
                 if key not in hp.flags[name]:
                     print(f"Flag field {name}.{key} missing in wgpu.h")
                 elif val != hp.flags[name][key]:
-                    print(f"Flag field {name}.{key} have different values.")
-                    # todo: can we mark this extra important?
+                    print(f"Warning: Flag field {name}.{key} have different values.")
 
 
 def write_mappings():
@@ -76,7 +77,7 @@ def write_mappings():
             if hkey in hp.enums[name]:
                 enummap[name + "." + ikey] = hp.enums[name][hkey]
             else:
-                print(f"Enum field {name}.{ikey} missing in .h")
+                print(f"Enum field {name}.{ikey} missing in wgpu.h")
 
     # Some structs have fields that are enum values. The rs backend
     # must be able to resolve these too.
@@ -109,7 +110,9 @@ def write_mappings():
     code = blacken("\n".join(pylines))  # just in case; code is already black
     with open(os.path.join(lib_dir, "backends", "rs_mappings.py"), "wb") as f:
         f.write(code.encode())
-    print("Written to rs_mappings.py")
+    print(
+        f"Wrote {len(enummap)} enum mappings and {len(cstructfield2enum)} struct-field mappings to rs_mappings.py"
+    )
 
 
 def patch_rs_backend(code):
@@ -139,7 +142,7 @@ def patch_rs_backend(code):
 
 class CommentRemover(Patcher):
 
-    triggers = "# FIXME: unknown", "# cg:", "# FIXME: invalid", "# fields:"
+    triggers = "# FIXME: unknown C", "# FIXME: invalid C", "# H:"
 
     def apply(self, code):
         self._init(code)
@@ -152,6 +155,7 @@ class FunctionPatcher(Patcher):
     def apply(self, code):
         self._init(code)
         hp = get_h_parser()
+        count = 0
 
         for line, i in self.iter_lines():
             if "lib.wgpu_" in line:
@@ -160,11 +164,15 @@ class FunctionPatcher(Patcher):
                 name = line[start:end]
                 indent = " " * (len(line) - len(line.lstrip()))
                 if name not in hp.functions:
-                    self.insert_line(i, indent + f"# FIXME: unknown function {name}")
-                    print(f"unknown function {name}")
+                    msg = f"unknown C function {name}"
+                    self.insert_line(i, f"{indent}# FIXME: {msg}")
+                    print(f"Error: {msg}")
                 else:
                     anno = hp.functions[name].replace(name, "f").strip(";")
-                    self.insert_line(i, indent + f"# cg: " + anno)
+                    self.insert_line(i, indent + f"# H: " + anno)
+                    count += 1
+
+        print(f"Validated {count} C function calls")
 
 
 class StructPatcher(Patcher):
@@ -172,6 +180,7 @@ class StructPatcher(Patcher):
         self._init(code)
         hp = get_h_parser()
 
+        count = 0
         line_index = -1
         brace_depth = 0
 
@@ -200,8 +209,11 @@ class StructPatcher(Patcher):
                         assert brace_depth >= 0
                         if brace_depth == 0:
                             self._validate_struct(hp, line_index, i)
+                            count += 1
                             line_index = -1
                             break
+
+        print(f"Validated {count} C structs")
 
     def _validate_struct(self, hp, i1, i2):
         """Validate a specific struct usage."""
@@ -213,7 +225,9 @@ class StructPatcher(Patcher):
 
         if len(lines) == 1:
             # Single line - add a comma before the closing brace
-            print("Making a struct multiline. Rerun codegen to validate the struct.")
+            print(
+                "Notice: made a struct multiline. Rerun codegen to validate the struct."
+            )
             line = lines[0]
             i = line.rindex(")")
             line = line[:i] + "," + line[i:]
@@ -221,7 +235,9 @@ class StructPatcher(Patcher):
             return
         elif len(lines) == 3 and lines[1].count("="):
             # Triplet - add a comma after the last element
-            print("Making a struct multiline. Rerun codegen to validate the struct.")
+            print(
+                "Notice: made a struct multiline. Rerun codegen to validate the struct."
+            )
             self.replace_line(i1 + 1, self.lines[i1 + 1] + ",")
             return
 
@@ -233,20 +249,25 @@ class StructPatcher(Patcher):
         struct_name = name.strip(" *")
         if name.endswith("*"):
             if "new_struct_p" not in lines[0]:
-                self.insert_line(i1, indent + f"# FIXME: invalid, use new_struct_p()")
+                self.insert_line(
+                    i1, indent + f"# FIXME: invalid C struct, use new_struct_p()"
+                )
         else:
             if "new_struct_p" in lines[0]:
-                self.insert_line(i1, indent + f"# FIXME: invalid, use new_struct()")
+                self.insert_line(
+                    i1, indent + f"# FIXME: invalid C struct, use new_struct()"
+                )
 
         # Get struct object and create annotation line
         if struct_name not in hp.structs:
-            print(f"Unknown struct {struct_name}")
-            self.insert_line(i1, indent + f"# FIXME: unknown struct {struct_name}")
+            msg = f"unknown C struct {struct_name}"
+            self.insert_line(i1, f"{indent}# FIXME: {msg}")
+            print(f"Error: {msg}")
             return
         else:
             struct = hp.structs[struct_name]
             fields = ", ".join(f"{key}: {val}" for key, val in struct.items())
-            self.insert_line(i1, indent + f"# fields: " + fields)
+            self.insert_line(i1, indent + f"# H: " + fields)
 
         # Check keys
         keys_found = []
@@ -259,8 +280,9 @@ class StructPatcher(Patcher):
                 continue
             keys_found.append(key)
             if key not in struct:
-                self.insert_line(i1 + j, indent + f"    # FIXME: unknown field {key}")
-                print(f"Struct {struct_name} does not have key {key}")
+                msg = f"unknown C struct field {struct_name}.{key}"
+                self.insert_line(i1 + j, f"{indent}# FIXME: {msg}")
+                print(f"Error: {msg}")
 
         # Insert comments for unused keys
         more_lines = []

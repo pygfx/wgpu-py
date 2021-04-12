@@ -3,6 +3,7 @@ Codegen utils.
 """
 
 import os
+import sys
 import tempfile
 
 import black
@@ -39,6 +40,35 @@ def to_camel_case(name):
         else:
             name2 += c
     return name2
+
+
+_file_objects_to_print_to = [sys.stdout]
+
+
+def print(*args, **kwargs):
+    """Report something (will be printed and added to a file."""
+    # __builtins__.print(*args, **kwargs)
+    if args and not args[0].lstrip().startswith("#"):
+        args = ("* ",) + args
+    for f in _file_objects_to_print_to:
+        __builtins__["print"](*args, file=f, flush=True, **kwargs)
+
+
+class PrintToFile:
+    """ Context manager to print to file. """
+
+    def __init__(self, f):
+        if isinstance(f, str):
+            f = open(f, "wt", encoding="utf-8", newline="\n")
+        self.f = f
+
+    def __enter__(self):
+        _file_objects_to_print_to.append(self.f)
+
+    def __exit__(self, type, value, tb):
+        while self.f in _file_objects_to_print_to:
+            _file_objects_to_print_to.remove(self.f)
+        self.f.close()
 
 
 def blacken(src, singleline=False):
