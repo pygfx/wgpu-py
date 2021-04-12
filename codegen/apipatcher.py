@@ -157,7 +157,7 @@ class AbstractApiPatcher(Patcher):
                 more_lines += self.get_missing_methods(classname, set())
                 lines.extend(more_lines or ["    pass"])
         if lines:
-            self.insert_line(i2, "\n".join(lines))
+            self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["classes"] += len(seen_classes)
 
@@ -182,7 +182,7 @@ class AbstractApiPatcher(Patcher):
         # Add missing properties for this class
         lines = self.get_missing_properties(classname, seen_props)
         if lines:
-            self.insert_line(i2, "\n".join(lines))
+            self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["properties"] += len(seen_props)
 
@@ -214,7 +214,7 @@ class AbstractApiPatcher(Patcher):
         # Add missing methods for this class
         lines = self.get_missing_methods(classname, seen_funcs)
         if lines:
-            self.insert_line(i2, "\n".join(lines))
+            self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["methods"] += len(seen_funcs)
 
@@ -224,7 +224,7 @@ class AbstractApiPatcher(Patcher):
             if propname not in seen_props:
                 lines.append("    # FIXME: new prop to implement")
                 lines.append("    @property")
-                lines.append("    def {propname}(self):")
+                lines.append(f"    def {propname}(self):")
                 lines.append("        raise NotImplementedError()")
                 lines.append("")
         return lines
