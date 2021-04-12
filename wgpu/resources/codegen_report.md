@@ -9,8 +9,6 @@
 * Wrote 26 enums to enums.py
 * Wrote 45 structs to structs.py
 ### Patching API for base.py
-* Warning: unknown api: method GPUDevice.configure_swap_chain
-* Warning: unknown api: method GPUDevice.get_swap_chain_preferred_format
 * Warning: unknown api: prop GPUBuffer.size
 * Warning: unknown api: prop GPUBuffer.usage
 * Warning: unknown api: prop GPUTexture.texture_size
@@ -22,9 +20,9 @@
 * Warning: unknown api: prop GPUTextureView.size
 * Warning: unknown api: prop GPUTextureView.texture
 * Warning: unknown api: prop GPUPipelineBase.layout
-* Validated 34 classes, 109 methods, 28 properties
+* Validated 34 classes, 108 methods, 28 properties
 ### Patching API for backends/rs.py
-* Validated 34 classes, 91 methods, 0 properties
+* Validated 34 classes, 88 methods, 0 properties
 ## Validating rs.py
 * Flag field BufferUsage.QUERY_RESOLVE missing in wgpu.h
 * Flag MapMode missing in wgpu.h

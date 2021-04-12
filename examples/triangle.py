@@ -106,11 +106,7 @@ def _main(canvas, device):
         alpha_to_coverage_enabled=False,
     )
 
-    swap_chain = device.configure_swap_chain(
-        canvas,
-        device.get_swap_chain_preferred_format(canvas),
-        wgpu.TextureUsage.OUTPUT_ATTACHMENT,
-    )
+    swap_chain = canvas.configure_swap_chain(device=device)
 
     def draw_frame():
         with swap_chain as current_texture_view:

@@ -14,6 +14,7 @@ Developer notes and tips:
 
 """
 
+import sys
 import logging
 from typing import List, Union
 
@@ -105,7 +106,6 @@ class GPU:
         )  # no-cover
 
 
-# FIXME: new class to implement
 class GPUCanvasContext:
     """We've made this part of device, but maybe we need to make it part of canvas?"""
 
@@ -125,7 +125,9 @@ class GPUCanvasContext:
             format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
             usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
         """
-        raise NotImplementedError()
+        usage = usage or flags.TextureUsage.OUTPUT_ATTACHMENT
+        GPUSwapChain = sys.modules[device.__module__].GPUSwapChain  # noqa: N806
+        return GPUSwapChain(label, None, device, self, format, usage)
 
     # IDL: Promise<GPUTextureFormat> getSwapChainPreferredFormat(GPUDevice device);
     def get_swap_chain_preferred_format(self, device):
@@ -676,31 +678,7 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: unknown api: method GPUDevice.configure_swap_chain
-    def configure_swap_chain(self, canvas, format, usage=None):
-        """Get a :class:`GPUSwapChain` object for the given canvas.
-        In the WebGPU spec this is a method of the canvas. In wgpu-py
-        it's a method of the device.
-
-        Arguments:
-            canvas (WgpuCanvasInterface): An object implementing the canvas interface.
-            format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
-            usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
-        """
-        # This was made a method of device to help decouple the canvas
-        # implementation from the wgpu API.
-        raise NotImplementedError()
-
-    # FIXME: unknown api: method GPUDevice.get_swap_chain_preferred_format
-    def get_swap_chain_preferred_format(self, canvas):
-        """Get the preferred swap chain format. In the WebGPU spec
-        this is a method of the canvas. In wgpu-py it's a method of the
-        device.
-        """
-        return "bgra8unorm-srgb"  # seems to be a good default
-
     # FIXME: new method to implement
-
     # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
     def create_query_set(
         self,
@@ -1639,6 +1617,12 @@ class GPUSwapChain(GPUObjectBase):
     You can obtain a swap chain using :func:`device.configure_swap_chain() <GPUDevice.configure_swap_chain>`.
     """
 
+    def __init__(self, label, internal, device, canvas, format, usage):
+        super().__init__(label, internal, device)
+        self._canvas = canvas
+        self._format = format
+        self._usage = usage
+
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
         """WebGPU defines this method, but we deviate from the spec here:
@@ -1758,7 +1742,7 @@ class GPUQuerySet(GPUObjectBase):
 
     # IDL: void destroy();
     def destroy(self):
-        """ Destrory the queryset."""
+        """ Destroy the queryset."""
         raise NotImplementedError()
 
 

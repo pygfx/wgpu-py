@@ -307,12 +307,7 @@ render_pipeline = device.create_render_pipeline(
 
 # %% Setup the render function
 
-
-swap_chain = device.configure_swap_chain(
-    canvas,
-    device.get_swap_chain_preferred_format(canvas),
-    wgpu.TextureUsage.OUTPUT_ATTACHMENT,
-)
+swap_chain = canvas.configure_swap_chain(device=device)
 
 
 def draw_frame():
