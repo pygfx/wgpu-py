@@ -676,7 +676,7 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: unknown method GPUDevice.configure_swap_chain
+    # FIXME: unknown api: method GPUDevice.configure_swap_chain
     def configure_swap_chain(self, canvas, format, usage=None):
         """Get a :class:`GPUSwapChain` object for the given canvas.
         In the WebGPU spec this is a method of the canvas. In wgpu-py
@@ -691,7 +691,7 @@ class GPUDevice(GPUObjectBase):
         # implementation from the wgpu API.
         raise NotImplementedError()
 
-    # FIXME: unknown method GPUDevice.get_swap_chain_preferred_format
+    # FIXME: unknown api: method GPUDevice.get_swap_chain_preferred_format
     def get_swap_chain_preferred_format(self, canvas):
         """Get the preferred swap chain format. In the WebGPU spec
         this is a method of the canvas. In wgpu-py it's a method of the
@@ -748,13 +748,13 @@ class GPUBuffer(GPUObjectBase):
         self._state = state
         self._map_mode = 3 if state == "mapped at creation" else 0
 
-    # FIXME: unknown prop GPUBuffer.size
+    # FIXME: unknown api: prop GPUBuffer.size
     @property
     def size(self):
         """The length of the GPUBuffer allocation in bytes."""
         return self._size
 
-    # FIXME: unknown prop GPUBuffer.usage
+    # FIXME: unknown api: prop GPUBuffer.usage
     @property
     def usage(self):
         """The allowed usages (int bitmap) for this GPUBuffer, specifying
@@ -857,37 +857,37 @@ class GPUTexture(GPUObjectBase):
         super().__init__(label, internal, device)
         self._tex_info = tex_info
 
-    # FIXME: unknown prop GPUTexture.texture_size
+    # FIXME: unknown api: prop GPUTexture.texture_size
     @property
     def texture_size(self):
         """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
         return self._tex_info["size"]
 
-    # FIXME: unknown prop GPUTexture.mip_level_count
+    # FIXME: unknown api: prop GPUTexture.mip_level_count
     @property
     def mip_level_count(self):
         """The total number of the mipmap levels of the texture."""
         return self._tex_info["mip_level_count"]
 
-    # FIXME: unknown prop GPUTexture.sample_count
+    # FIXME: unknown api: prop GPUTexture.sample_count
     @property
     def sample_count(self):
         """The number of samples in each texel of the texture."""
         return self._tex_info["sample_count"]
 
-    # FIXME: unknown prop GPUTexture.dimension
+    # FIXME: unknown api: prop GPUTexture.dimension
     @property
     def dimension(self):
         """The dimension of the texture."""
         return self._tex_info["dimension"]
 
-    # FIXME: unknown prop GPUTexture.format
+    # FIXME: unknown api: prop GPUTexture.format
     @property
     def format(self):
         """The format of the texture."""
         return self._tex_info["format"]
 
-    # FIXME: unknown prop GPUTexture.texture_usage
+    # FIXME: unknown api: prop GPUTexture.texture_usage
     @property
     def texture_usage(self):  # Not sure why there's a "texture_" prefix
         """The allowed usages for this texture."""
@@ -945,13 +945,13 @@ class GPUTextureView(GPUObjectBase):
         self._texture = texture
         self._size = size
 
-    # FIXME: unknown prop GPUTextureView.size
+    # FIXME: unknown api: prop GPUTextureView.size
     @property
     def size(self):
         """The texture size (as a 3-tuple)."""
         return self._size
 
-    # FIXME: unknown prop GPUTextureView.texture
+    # FIXME: unknown api: prop GPUTextureView.texture
     @property
     def texture(self):
         """The texture object to which this is a view."""
@@ -1033,7 +1033,7 @@ class GPUPipelineBase:
         super().__init__(label, internal, device)
         self._layout = layout
 
-    # FIXME: unknown prop GPUPipelineBase.layout
+    # FIXME: unknown api: prop GPUPipelineBase.layout
     @property
     def layout(self):
         """The layout of this pipeline."""
