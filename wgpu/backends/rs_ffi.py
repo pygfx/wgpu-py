@@ -77,8 +77,15 @@ lib = ffi.dlopen(get_wgpu_lib_path())
 
 
 def check_expected_version(version_info):
-    _version_int = lib.wgpu_get_version()
-    version_info_lib = tuple((_version_int >> bits) & 0xFF for bits in (16, 8, 0))
+    # Get lib version
+    version_int = lib.wgpu_get_version()
+    if version_int < 65536:  # old version encoding with 3 ints
+        version_info_lib = tuple((version_int >> bits) & 0xFF for bits in (16, 8, 0))
+    else:
+        version_info_lib = tuple(
+            (version_int >> bits) & 0xFF for bits in (24, 16, 8, 0)
+        )
+    # Compare
     if version_info_lib != version_info:  # no-cover
         logger.warning(
             f"Expected wgpu-native version {version_info} but got {version_info_lib}"
