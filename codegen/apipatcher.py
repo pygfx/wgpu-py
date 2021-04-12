@@ -5,7 +5,7 @@ spec (IDL), and the backend implementations from the base API.
 
 import os
 
-from .utils import lib_dir, blacken, to_snake_case, to_camel_case, Patcher
+from .utils import print, lib_dir, blacken, to_snake_case, to_camel_case, Patcher
 from .idlparser import get_idl_parser
 
 
@@ -53,7 +53,7 @@ class CommentRemover(Patcher):
     to prevent accumulating comments.
     """
 
-    triggers = "# IDL:", "# FIXME: unknown", "# wgpu.help"
+    triggers = "# IDL:", "# FIXME: unknown api"
 
     def apply(self, code):
         self._init(code)
@@ -122,7 +122,10 @@ class AbstractApiPatcher(Patcher):
 
     def apply(self, code):
         self._init(code)
+        self._counts = {"classes": 0, "methods": 0, "properties": 0}
         self.patch_classes()
+        stats = ", ".join(f"{self._counts[key]} {key}" for key in self._counts)
+        print("Validated " + stats)
 
     def patch_classes(self):
         seen_classes = set()
@@ -139,7 +142,9 @@ class AbstractApiPatcher(Patcher):
                 self.patch_properties(classname, i1 + 1, i2)
                 self.patch_methods(classname, i1 + 1, i2)
             else:
-                self.insert_line(i1, f"# FIXME: unknown class {classname}")
+                msg = f"unknown api: class {classname}"
+                self.insert_line(i1, "# FIXME: " + msg)
+                print("Warning: " + msg)
 
         # Add missing classes
         lines = []
@@ -153,6 +158,8 @@ class AbstractApiPatcher(Patcher):
                 lines.extend(more_lines or ["    pass"])
         if lines:
             self.insert_line(i2, "\n".join(lines))
+
+        self._counts["classes"] += len(seen_classes)
 
     def patch_properties(self, classname, i1, i2):
         seen_props = set()
@@ -168,14 +175,16 @@ class AbstractApiPatcher(Patcher):
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
             else:
-                self.insert_line(
-                    j1, f"    # FIXME: unknown prop {classname}.{propname}"
-                )
+                msg = f"unknown api: prop {classname}.{propname}"
+                self.insert_line(j1, "    # FIXME: " + msg)
+                print("Warning: " + msg)
 
         # Add missing properties for this class
         lines = self.get_missing_properties(classname, seen_props)
         if lines:
             self.insert_line(i2, "\n".join(lines))
+
+        self._counts["properties"] += len(seen_props)
 
     def patch_methods(self, classname, i1, i2):
         seen_funcs = set()
@@ -198,14 +207,16 @@ class AbstractApiPatcher(Patcher):
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
             elif not methodname.startswith("_"):
-                self.insert_line(
-                    j1, f"    # FIXME: unknown method {classname}.{methodname}"
-                )
+                msg = f"unknown api: method {classname}.{methodname}"
+                self.insert_line(j1, "    # FIXME: " + msg)
+                print("Warning: " + msg)
 
         # Add missing methods for this class
         lines = self.get_missing_methods(classname, seen_funcs)
         if lines:
             self.insert_line(i2, "\n".join(lines))
+
+        self._counts["methods"] += len(seen_funcs)
 
     def get_missing_properties(self, classname, seen_props):
         lines = []

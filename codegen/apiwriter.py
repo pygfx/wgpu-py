@@ -4,7 +4,7 @@ Writes the parts of the API that are simple: flags, enums, structs.
 
 import os
 
-from codegen.utils import lib_dir, blacken, to_snake_case
+from codegen.utils import print, lib_dir, blacken, to_snake_case
 from codegen.idlparser import get_idl_parser
 
 
@@ -38,9 +38,10 @@ class Flags:
 
 def write_flags():
     idl = get_idl_parser()
+    n = len(idl.flags)
     # Generate code
     pylines = [flags_preamble]
-    pylines.append(f"# There are {len(idl.flags)} flags\n")
+    pylines.append(f"# There are {n} flags\n")
     for name, d in idl.flags.items():
         pylines.append(f'{name} = Flags(\n    "{name}",')
         for key, val in d.items():
@@ -50,7 +51,7 @@ def write_flags():
     code = blacken("\n".join(pylines))
     with open(os.path.join(lib_dir, "flags.py"), "wb") as f:
         f.write(code.encode())
-    print("Written to flags.py")
+    print(f"Wrote {n} flags to flags.py")
 
 
 enums_preamble = '''
@@ -85,9 +86,10 @@ class Enum:
 
 def write_enums():
     idl = get_idl_parser()
+    n = len(idl.enums)
     # Generate code
     pylines = [enums_preamble]
-    pylines.append(f"# There are {len(idl.enums)} enums\n")
+    pylines.append(f"# There are {n} enums\n")
     for name, d in idl.enums.items():
         pylines.append(f'{name} = Enum(\n    "{name}",')
         for key, val in d.items():
@@ -97,7 +99,7 @@ def write_enums():
     code = blacken("\n".join(pylines))
     with open(os.path.join(lib_dir, "enums.py"), "wb") as f:
         f.write(code.encode())
-    print("Written to enums.py")
+    print(f"Wrote {n} enums to enums.py")
 
 
 structs_preamble = '''
@@ -132,9 +134,10 @@ class Struct:
 
 def write_structs():
     idl = get_idl_parser()
+    n = len(idl.structs)
     # Generate code
     pylines = [structs_preamble]
-    pylines.append(f"# There are {len(idl.structs)} structs\n")
+    pylines.append(f"# There are {n} structs\n")
     for name, d in idl.structs.items():
         pylines.append(f'{name} = Struct(\n    "{name}",')
         for field in d.values():
@@ -147,4 +150,4 @@ def write_structs():
     code = blacken("\n".join(pylines))
     with open(os.path.join(lib_dir, "structs.py"), "wb") as f:
         f.write(code.encode())
-    print("Written to structs.py")
+    print(f"Wrote {n} structs to structs.py")

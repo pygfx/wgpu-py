@@ -9,7 +9,7 @@ identify and remove code paths that are no longer used.
 
 import os
 
-from codegen.utils import lib_dir
+from codegen.utils import print, lib_dir
 
 
 _parser = None
@@ -108,7 +108,7 @@ class IdlParser:
                 return self.source[start:pos]
         return ""
 
-    def parse(self, verbose=False):
+    def parse(self, verbose=True):
 
         self._interfaces = {}
         self.classes = {}
@@ -118,18 +118,18 @@ class IdlParser:
 
         self.typedefs = {}
 
-        if verbose:
-            print("##### Parsing IDL ...")
-
         self._reset()
         self._parse()
         self._post_process()
 
         if verbose:
-            func_count = sum(len(cls.functions) for cls in self.classes.values())
-            print(f"Found {len(self.classes)} classes with {func_count} functions")
-            for thing in ["structs", "flags", "enums"]:
-                print(f"Found {len(getattr(self, thing))} {thing}")
+            f_count = sum(len(cls.functions) for cls in self.classes.values())
+            print(
+                f"The webgpu.idl defines {len(self.classes)} classes with {f_count} functions"
+            )
+            keys = "flags", "enums", "structs"
+            stats = ", ".join(f"{len(getattr(self, key))} {key}" for key in keys)
+            print("The webgpu.idl defines " + stats)
 
     def _pre_process(self, text):
         """Pre-process the text to make it a bit easier to parse.
