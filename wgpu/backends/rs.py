@@ -234,20 +234,8 @@ class GPU(base.GPU):
         )  # no-cover
 
 
-# FIXME: new class to implement
 class GPUCanvasContext(base.GPUCanvasContext):
-    def configure_swap_chain(
-        self,
-        *,
-        label="",
-        device: "GPUDevice",
-        format: "enums.TextureFormat",
-        usage: "flags.TextureUsage" = 0x10,
-    ):
-        raise NotImplementedError()
-
-    def get_swap_chain_preferred_format(self, device):
-        raise NotImplementedError()
+    pass
 
 
 class GPUObjectBase(base.GPUObjectBase):
@@ -861,23 +849,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = lib.wgpu_device_create_command_encoder(self._internal, struct)
         return GPUCommandEncoder(label, id, self)
 
-    # Not yet implemented in wgpu-native
-    # def create_render_bundle_encoder(
-    #     self,
-    #     *,
-    #     label="",
-    #     color_formats: "GPUTextureFormat-list",
-    #     depth_stencil_format: "GPUTextureFormat" = None,
-    #     sample_count: "GPUSize32" = 1,
-    # ):
-    #     pass
-
-    def configure_swap_chain(self, canvas, format, usage=None):
-        usage = flags.TextureUsage.OUTPUT_ATTACHMENT if usage is None else usage
-        return GPUSwapChain(self, canvas, format, usage)
-
     # FIXME: new method to implement
-
     def create_render_bundle_encoder(
         self,
         *,
@@ -889,7 +861,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         raise NotImplementedError()
 
     # FIXME: new method to implement
-
     def create_query_set(
         self,
         *,
@@ -1772,11 +1743,9 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
 
 
 class GPUSwapChain(base.GPUSwapChain, GPUObjectBase):
-    def __init__(self, device, canvas, format, usage):
-        super().__init__("", None, device)
-        self._canvas = canvas
-        self._format = format
-        self._usage = usage
+    def __init__(self, label, internal, device, canvas, format, usage):
+        super().__init__(label, internal, device, canvas, format, usage)
+        assert internal is None  # we set it later
         self._surface_size = (-1, -1)
         self._surface_id = None
         self._create_native_swap_chain_if_needed()

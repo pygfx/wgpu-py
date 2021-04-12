@@ -3,10 +3,13 @@ import sys
 import logging
 import ctypes.util
 
+from .. import base, GPUDevice, flags, enums
+
+
 logger = logging.getLogger("wgpu")
 
 
-class WgpuCanvasInterface:
+class WgpuCanvasInterface(base.GPUCanvasContext):
     """This is the interface that a canvas object must implement in order
     to be a valid canvas that wgpu can work with.
     """
@@ -50,6 +53,25 @@ class WgpuCanvasInterface:
     def get_physical_size(self):
         """Get the physical size in integer pixels."""
         raise NotImplementedError()
+
+    def configure_swap_chain(
+        self,
+        *,
+        label="",
+        device: "GPUDevice",
+        format: "enums.TextureFormat" = None,
+        usage: "flags.TextureUsage" = None,
+    ):
+        """ Obtain a swap-chain object. """
+        # Let's be nice and allow not-specifying the format
+        format = format or self.get_swap_chain_preferred_format()
+        return super().configure_swap_chain(
+            label=label, device=device, format=format, usage=usage
+        )
+
+    def get_swap_chain_preferred_format(self):
+        """ Get the preferred swap-chain texture format for this canvas. """
+        return "bgra8unorm-srgb"  # seems to be a good default, can be overridden
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
