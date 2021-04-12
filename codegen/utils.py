@@ -42,6 +42,9 @@ def to_camel_case(name):
     return name2
 
 
+_file_objects_to_print_to = [sys.stdout]
+
+
 def print(*args, **kwargs):
     """Report something (will be printed and added to a file."""
     # __builtins__.print(*args, **kwargs)
@@ -51,13 +54,21 @@ def print(*args, **kwargs):
         __builtins__["print"](*args, file=f, flush=True, **kwargs)
 
 
-_file_objects_to_print_to = [sys.stdout]
+class PrintToFile:
+    """ Context manager to print to file. """
 
+    def __init__(self, f):
+        if isinstance(f, str):
+            f = open(f, "wt", encoding="utf-8", newline="\n")
+        self.f = f
 
-def add_file_object_to_print_to(f):
-    """ Add a file object to print to during code generation. """
-    assert hasattr(f, "write"), f"Does not look like a file object: {f}"
-    _file_objects_to_print_to.append(f)
+    def __enter__(self):
+        _file_objects_to_print_to.append(self.f)
+
+    def __exit__(self, type, value, tb):
+        while self.f in _file_objects_to_print_to:
+            _file_objects_to_print_to.remove(self.f)
+        self.f.close()
 
 
 def blacken(src, singleline=False):

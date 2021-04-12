@@ -6,11 +6,18 @@ See README.md for more information.
 import os
 import sys
 
-from codegen.utils import print, lib_dir, add_file_object_to_print_to
+from codegen.utils import print, lib_dir, PrintToFile
 from codegen import apiwriter, apipatcher, rspatcher, idlparser, hparser
 
 # Little trick to allow running this file as a script
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
+
+
+def prepare():
+    """Force parsing (and caching) the IDL and C header."""
+    print("## Preparing")
+    idlparser.get_idl_parser(allow_cache=False)
+    hparser.get_h_parser(allow_cache=False)
 
 
 def update_api():
@@ -61,24 +68,13 @@ def update_rs():
 
 
 def main():
+    """ Codegen entry point. """
 
-    f = open(
-        os.path.join(lib_dir, "resources", "codegen_report.md"),
-        "wt",
-        encoding="utf-8",
-        newline="\n",
-    )
-    add_file_object_to_print_to(f)
-    print("# Code generatation report")
-
-    print("## Preparing")
-    idlparser.get_idl_parser(allow_cache=False)
-    hparser.get_h_parser(allow_cache=False)
-
-    update_api()
-    update_rs()
-
-    f.close()
+    with PrintToFile(os.path.join(lib_dir, "resources", "codegen_report.md")):
+        print("# Code generatation report")
+        prepare()
+        update_api()
+        update_rs()
 
 
 if __name__ == "__main__":
