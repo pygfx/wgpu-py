@@ -133,6 +133,7 @@ class AbstractApiPatcher(Patcher):
         # Update existing classes in the Python code
         for classname, i1, i2 in self.iter_classes():
             seen_classes.add(classname)
+            self._apidiffs = set()
             if self.class_is_known(classname):
                 old_line = self.lines[i1]
                 new_line = self.get_class_def(classname)
@@ -145,6 +146,8 @@ class AbstractApiPatcher(Patcher):
                 msg = f"unknown api: class {classname}"
                 self.insert_line(i1, "# FIXME: " + msg)
                 print("Warning: " + msg)
+            if self._apidiffs:
+                print(f"Diffs for {classname}:", ", ".join(sorted(self._apidiffs)))
 
         # Add missing classes
         lines = []
@@ -167,7 +170,11 @@ class AbstractApiPatcher(Patcher):
         # Update existing properties in Python code
         for propname, j1, j2 in self.iter_properties(i1):
             seen_props.add(propname)
-            if self.prop_is_known(classname, propname):
+            pre_lines = "\n".join(self.lines[j1 - 3 : j1])
+            self._apidiffs_from_lines(pre_lines, propname)
+            if "@apidiff.add" in pre_lines:
+                pass
+            elif self.prop_is_known(classname, propname):
                 old_line = self.lines[j1]
                 new_line = f"    def {propname}(self):"
                 if old_line != new_line:
@@ -193,6 +200,7 @@ class AbstractApiPatcher(Patcher):
         for methodname, j1, j2 in self.iter_methods(i1):
             seen_funcs.add(methodname)
             pre_lines = "\n".join(self.lines[j1 - 3 : j1])
+            self._apidiffs_from_lines(pre_lines, methodname)
             if "@apidiff.add" in pre_lines:
                 pass
             elif self.method_is_known(classname, methodname):
@@ -237,6 +245,11 @@ class AbstractApiPatcher(Patcher):
                 lines.append(self.get_method_def(classname, methodname))
                 lines.append("        raise NotImplementedError()\n")
         return lines
+
+    def _apidiffs_from_lines(self, text, what):
+        diffs = [x.replace("(", " ").split()[0] for x in text.split("@apidiff.")[1:]]
+        if diffs:
+            self._apidiffs.add(f"{'/'.join(diffs)} {what}")
 
 
 class IdlPatcherMixin:
