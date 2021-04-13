@@ -172,15 +172,19 @@ class AbstractApiPatcher(Patcher):
             seen_props.add(propname)
             pre_lines = "\n".join(self.lines[j1 - 3 : j1])
             self._apidiffs_from_lines(pre_lines, propname)
-            if "@apidiff.add" in pre_lines:
-                pass
-            elif self.prop_is_known(classname, propname):
+            if self.prop_is_known(classname, propname):
+                if "@apidiff.add" in pre_lines:
+                    print(f"Error: apidiff.add for known {classname}.{propname}")
+                elif "@apidiff.hide" in pre_lines:
+                    pass  # continue as normal
                 old_line = self.lines[j1]
                 new_line = f"    def {propname}(self):"
                 if old_line != new_line:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
+            elif "@apidiff.add" in pre_lines:
+                pass
             else:
                 msg = f"unknown api: prop {classname}.{propname}"
                 self.insert_line(j1, "    # FIXME: " + msg)
@@ -201,10 +205,10 @@ class AbstractApiPatcher(Patcher):
             seen_funcs.add(methodname)
             pre_lines = "\n".join(self.lines[j1 - 3 : j1])
             self._apidiffs_from_lines(pre_lines, methodname)
-            if "@apidiff.add" in pre_lines:
-                pass
-            elif self.method_is_known(classname, methodname):
-                if "@apidiff.hide" in pre_lines:
+            if self.method_is_known(classname, methodname):
+                if "@apidiff.add" in pre_lines:
+                    print(f"Error: apidiff.add for known {classname}.{methodname}")
+                elif "@apidiff.hide" in pre_lines:
                     pass  # continue as normal
                 elif "@apidiff.change" in pre_lines:
                     continue
@@ -214,7 +218,11 @@ class AbstractApiPatcher(Patcher):
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
-            elif not methodname.startswith("_"):
+            elif "@apidiff.add" in pre_lines:
+                pass
+            elif methodname.startswith("_"):
+                pass
+            else:
                 msg = f"unknown api: method {classname}.{methodname}"
                 self.insert_line(j1, "    # FIXME: " + msg)
                 print("Warning: " + msg)
