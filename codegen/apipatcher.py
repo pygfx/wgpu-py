@@ -133,6 +133,7 @@ class AbstractApiPatcher(Patcher):
         # Update existing classes in the Python code
         for classname, i1, i2 in self.iter_classes():
             seen_classes.add(classname)
+            self._apidiffs = set()
             if self.class_is_known(classname):
                 old_line = self.lines[i1]
                 new_line = self.get_class_def(classname)
@@ -145,6 +146,8 @@ class AbstractApiPatcher(Patcher):
                 msg = f"unknown api: class {classname}"
                 self.insert_line(i1, "# FIXME: " + msg)
                 print("Warning: " + msg)
+            if self._apidiffs:
+                print(f"Diffs for {classname}:", ", ".join(sorted(self._apidiffs)))
 
         # Add missing classes
         lines = []
@@ -167,13 +170,21 @@ class AbstractApiPatcher(Patcher):
         # Update existing properties in Python code
         for propname, j1, j2 in self.iter_properties(i1):
             seen_props.add(propname)
+            pre_lines = "\n".join(self.lines[j1 - 3 : j1])
+            self._apidiffs_from_lines(pre_lines, propname)
             if self.prop_is_known(classname, propname):
+                if "@apidiff.add" in pre_lines:
+                    print(f"Error: apidiff.add for known {classname}.{propname}")
+                elif "@apidiff.hide" in pre_lines:
+                    pass  # continue as normal
                 old_line = self.lines[j1]
                 new_line = f"    def {propname}(self):"
                 if old_line != new_line:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
+            elif "@apidiff.add" in pre_lines:
+                pass
             else:
                 msg = f"unknown api: prop {classname}.{propname}"
                 self.insert_line(j1, "    # FIXME: " + msg)
@@ -193,10 +204,11 @@ class AbstractApiPatcher(Patcher):
         for methodname, j1, j2 in self.iter_methods(i1):
             seen_funcs.add(methodname)
             pre_lines = "\n".join(self.lines[j1 - 3 : j1])
-            if "@apidiff.add" in pre_lines:
-                pass
-            elif self.method_is_known(classname, methodname):
-                if "@apidiff.hide" in pre_lines:
+            self._apidiffs_from_lines(pre_lines, methodname)
+            if self.method_is_known(classname, methodname):
+                if "@apidiff.add" in pre_lines:
+                    print(f"Error: apidiff.add for known {classname}.{methodname}")
+                elif "@apidiff.hide" in pre_lines:
                     pass  # continue as normal
                 elif "@apidiff.change" in pre_lines:
                     continue
@@ -206,7 +218,11 @@ class AbstractApiPatcher(Patcher):
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
-            elif not methodname.startswith("_"):
+            elif "@apidiff.add" in pre_lines:
+                pass
+            elif methodname.startswith("_"):
+                pass
+            else:
                 msg = f"unknown api: method {classname}.{methodname}"
                 self.insert_line(j1, "    # FIXME: " + msg)
                 print("Warning: " + msg)
@@ -237,6 +253,11 @@ class AbstractApiPatcher(Patcher):
                 lines.append(self.get_method_def(classname, methodname))
                 lines.append("        raise NotImplementedError()\n")
         return lines
+
+    def _apidiffs_from_lines(self, text, what):
+        diffs = [x.replace("(", " ").split()[0] for x in text.split("@apidiff.")[1:]]
+        if diffs:
+            self._apidiffs.add(f"{'/'.join(diffs)} {what}")
 
 
 class IdlPatcherMixin:

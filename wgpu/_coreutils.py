@@ -65,7 +65,8 @@ class ApiDiff:
     def _diff(self, method, func_or_text):
         def wrapper(f):
             d = getattr(self, method)
-            d[f.__qualname__] = text
+            name = f.__qualname__ if hasattr(f, "__qualname__") else f.fget.__qualname__
+            d[name] = text
             return f
 
         if callable(func_or_text):

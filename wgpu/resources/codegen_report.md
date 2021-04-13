@@ -9,19 +9,17 @@
 * Wrote 26 enums to enums.py
 * Wrote 45 structs to structs.py
 ### Patching API for base.py
-* Warning: unknown api: prop GPUBuffer.size
-* Warning: unknown api: prop GPUBuffer.usage
-* Warning: unknown api: prop GPUTexture.texture_size
-* Warning: unknown api: prop GPUTexture.mip_level_count
-* Warning: unknown api: prop GPUTexture.sample_count
-* Warning: unknown api: prop GPUTexture.dimension
-* Warning: unknown api: prop GPUTexture.format
-* Warning: unknown api: prop GPUTexture.texture_usage
-* Warning: unknown api: prop GPUTextureView.size
-* Warning: unknown api: prop GPUTextureView.texture
-* Warning: unknown api: prop GPUPipelineBase.layout
-* Validated 34 classes, 108 methods, 28 properties
+* Diffs for GPU: change request_adapter, change request_adapter_async
+* Diffs for GPUDevice: add create_buffer_with_data, hide create_buffer_mapped, hide pop_error_scope, hide push_error_scope
+* Diffs for GPUBuffer: add read_data, add read_data_async, add size, add usage, add write_data, hide get_mapped_range, hide map_async, hide unmap
+* Diffs for GPUTexture: add dimension, add format, add mip_level_count, add sample_count, add size, add usage
+* Diffs for GPUTextureView: add size, add texture
+* Diffs for GPUComputePassEncoder: hide begin_pipeline_statistics_query, hide end_pipeline_statistics_query
+* Diffs for GPURenderPassEncoder: hide begin_pipeline_statistics_query, hide end_pipeline_statistics_query
+* Diffs for GPUQueue: hide create_fence, hide signal
+* Validated 34 classes, 108 methods, 27 properties
 ### Patching API for backends/rs.py
+* Diffs for GPUAdapter: add request_device_tracing
 * Validated 34 classes, 88 methods, 0 properties
 ## Validating rs.py
 * Flag field BufferUsage.QUERY_RESOLVE missing in wgpu.h
