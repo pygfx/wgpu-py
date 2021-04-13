@@ -726,13 +726,13 @@ class GPUBuffer(GPUObjectBase):
         self._state = state
         self._map_mode = 3 if state == "mapped at creation" else 0
 
-    # FIXME: unknown api: prop GPUBuffer.size
+    @apidiff.add("Too useful to not-have")
     @property
     def size(self):
         """The length of the GPUBuffer allocation in bytes."""
         return self._size
 
-    # FIXME: unknown api: prop GPUBuffer.usage
+    @apidiff.add("Too useful to not-have")
     @property
     def usage(self):
         """The allowed usages (int bitmap) for this GPUBuffer, specifying
@@ -835,39 +835,39 @@ class GPUTexture(GPUObjectBase):
         super().__init__(label, internal, device)
         self._tex_info = tex_info
 
-    # FIXME: unknown api: prop GPUTexture.texture_size
+    @apidiff.add("Too useful to not-have")
     @property
-    def texture_size(self):
+    def size(self):
         """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
         return self._tex_info["size"]
 
-    # FIXME: unknown api: prop GPUTexture.mip_level_count
+    @apidiff.add("Too useful to not-have")
     @property
     def mip_level_count(self):
         """The total number of the mipmap levels of the texture."""
         return self._tex_info["mip_level_count"]
 
-    # FIXME: unknown api: prop GPUTexture.sample_count
+    @apidiff.add("Too useful to not-have")
     @property
     def sample_count(self):
         """The number of samples in each texel of the texture."""
         return self._tex_info["sample_count"]
 
-    # FIXME: unknown api: prop GPUTexture.dimension
+    @apidiff.add("Too useful to not-have")
     @property
     def dimension(self):
         """The dimension of the texture."""
         return self._tex_info["dimension"]
 
-    # FIXME: unknown api: prop GPUTexture.format
+    @apidiff.add("Too useful to not-have")
     @property
     def format(self):
         """The format of the texture."""
         return self._tex_info["format"]
 
-    # FIXME: unknown api: prop GPUTexture.texture_usage
+    @apidiff.add("Too useful to not-have")
     @property
-    def texture_usage(self):  # Not sure why there's a "texture_" prefix
+    def usage(self):
         """The allowed usages for this texture."""
         return self._tex_info["usage"]
 
@@ -923,13 +923,13 @@ class GPUTextureView(GPUObjectBase):
         self._texture = texture
         self._size = size
 
-    # FIXME: unknown api: prop GPUTextureView.size
+    @apidiff.add("Too useful to not-have")
     @property
     def size(self):
         """The texture size (as a 3-tuple)."""
         return self._size
 
-    # FIXME: unknown api: prop GPUTextureView.texture
+    @apidiff.add("Too useful to not-have")
     @property
     def texture(self):
         """The texture object to which this is a view."""
@@ -1010,12 +1010,6 @@ class GPUPipelineBase:
     def __init__(self, label, internal, device, layout):
         super().__init__(label, internal, device)
         self._layout = layout
-
-    # FIXME: unknown api: prop GPUPipelineBase.layout
-    @property
-    def layout(self):
-        """The layout of this pipeline."""
-        return self._layout
 
     # IDL: GPUBindGroupLayout getBindGroupLayout(unsigned long index);
     def get_bind_group_layout(self, index):
