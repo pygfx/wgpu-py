@@ -228,9 +228,6 @@ Other
 .. autoclass:: wgpu.GPUQuerySet
     :members:
 
-.. autoclass:: wgpu.GPUFence
-    :members:
-
 .. autoclass:: wgpu.GPUDeviceLostInfo
     :members:
 
