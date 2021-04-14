@@ -6,7 +6,6 @@ from ._coreutils import logger  # noqa: F401,F403
 from .flags import *  # noqa: F401,F403
 from .enums import *  # noqa: F401,F403
 from .base import *  # noqa: F401,F403
-from .base import DEFAULT_LIMITS  # noqa: F401,F403
 from .gui import WgpuCanvasInterface  # noqa: F401,F403
 
 __version__ = "0.3.0"

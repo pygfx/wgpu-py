@@ -34,7 +34,7 @@ import ctypes
 import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
-from typing import List, Union
+from typing import List, Dict
 
 from .. import base, flags, enums, structs
 from .. import _register_backend
@@ -291,7 +291,7 @@ class GPUAdapter(base.GPUAdapter):
             c_trace_path = ffi.new("char []", trace_path.encode())
 
         # Handle default limits
-        limits2 = base.DEFAULT_LIMITS.copy()
+        limits2 = base.DEFAULT_ADAPTER_LIMITS.copy()
         limits2.update(limits or {})
 
         # H: anisotropic_filtering: bool

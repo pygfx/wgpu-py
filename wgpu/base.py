@@ -16,7 +16,7 @@ Developer notes and tips:
 
 import sys
 import logging
-from typing import List, Union
+from typing import List, Dict
 
 from ._coreutils import ApiDiff
 from . import flags, enums, structs
@@ -562,6 +562,7 @@ class GPUDevice(GPUObjectBase):
         layout: "GPUPipelineLayout" = None,
         compute: "structs.ProgrammableStage",
     ):
+        """Async version of create_compute_pipeline(). """
         raise NotImplementedError()
 
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
@@ -1107,10 +1108,10 @@ class GPUCommandBuffer(GPUObjectBase):
     Create a command buffer using :func:`GPUCommandEncoder.finish`.
     """
 
-    # FIXME: new prop to implement
     # IDL: readonly attribute Promise<double> executionTime;
     @property
     def execution_time(self):
+        """ Returns a future that, if measureExecutionTime is true, resolves after the command buffer executes."""
         raise NotImplementedError()
 
 
