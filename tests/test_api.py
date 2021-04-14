@@ -86,7 +86,7 @@ def test_base_wgpu_api():
 
 def test_that_all_docstrings_are_there():
 
-    exclude = ["Union", "List"]
+    exclude = ["Union", "List", "Dict"]
 
     for cls in wgpu.base.__dict__.values():
         if not isinstance(cls, type):
