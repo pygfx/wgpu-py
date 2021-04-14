@@ -48,7 +48,7 @@ def fragment_shader(
 def main(canvas):
     """Regular function to setup a viz on the given canvas."""
     adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
-    device = adapter.request_device(extensions=[], limits={})
+    device = adapter.request_device()
     return _main(canvas, device)
 
 
@@ -75,35 +75,44 @@ def _main(canvas, device):
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
-        vertex_stage={"module": vshader, "entry_point": "main"},
-        fragment_stage={"module": fshader, "entry_point": "main"},
-        primitive_topology=wgpu.PrimitiveTopology.triangle_list,
-        rasterization_state={
+        vertex={
+            "module": vshader,
+            "entry_point": "main",
+            "buffers": [],
+        },
+        primitive={
+            "topology": wgpu.PrimitiveTopology.triangle_list,
+            "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
-            "depth_bias": 0,
-            "depth_bias_slope_scale": 0.0,
-            "depth_bias_clamp": 0.0,
         },
-        color_states=[
-            {
-                "format": wgpu.TextureFormat.bgra8unorm_srgb,
-                "alpha_blend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "color_blend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-            }
-        ],
-        vertex_state={"index_format": wgpu.IndexFormat.uint32, "vertex_buffers": []},
-        sample_count=1,
-        sample_mask=0xFFFFFFFF,
-        alpha_to_coverage_enabled=False,
+        depth_stencil=None,
+        multisample={
+            "count": 1,
+            "mask": 0xFFFFFFFF,
+            "alpha_to_coverage_enabled": False,
+        },
+        fragment={
+            "module": fshader,
+            "entry_point": "main",
+            "targets": [
+                {
+                    "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                    "blend": {
+                        "color": (
+                            wgpu.BlendFactor.one,
+                            wgpu.BlendFactor.zero,
+                            wgpu.BlendOperation.add,
+                        ),
+                        "alpha": (
+                            wgpu.BlendFactor.one,
+                            wgpu.BlendFactor.zero,
+                            wgpu.BlendOperation.add,
+                        ),
+                    },
+                },
+            ],
+        },
     )
 
     swap_chain = canvas.configure_swap_chain(device=device)
@@ -115,7 +124,7 @@ def _main(canvas, device):
             render_pass = command_encoder.begin_render_pass(
                 color_attachments=[
                     {
-                        "attachment": current_texture_view,
+                        "view": current_texture_view,
                         "resolve_target": None,
                         "load_value": (0, 0, 0, 1),  # LoadOp.load or color
                         "store_op": wgpu.StoreOp.store,
@@ -129,6 +138,6 @@ def _main(canvas, device):
             )  # last 2 elements not used
             render_pass.draw(3, 1, 0, 0)
             render_pass.end_pass()
-            device.default_queue.submit([command_encoder.finish()])
+            device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw(draw_frame)
