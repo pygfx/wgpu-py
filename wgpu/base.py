@@ -24,7 +24,6 @@ from . import flags, enums, structs
 
 __all__ = [
     "GPUObjectBase",
-    "GPUAdapterLimits",
     "GPU",
     "GPUAdapter",
     "GPUDevice",
@@ -62,19 +61,28 @@ __all__ = [
 logger = logging.getLogger("wgpu")
 
 
-DEFAULT_LIMITS = dict(
-    max_bind_groups=4,
-    max_dynamic_uniform_buffers_per_pipeline_layout=8,
-    max_dynamic_storage_buffers_per_pipeline_layout=4,
-    max_sampled_textures_per_shader_stage=16,
-    max_samplers_per_shader_stage=16,
-    max_storage_buffers_per_shader_stage=4,
-    max_storage_textures_per_shader_stage=4,
-    max_uniform_buffers_per_shader_stage=12,
-)
-
-
 apidiff = ApiDiff()
+
+
+DEFAULT_ADAPTER_LIMITS = {
+    "max_texture_dimension1d": 8192,
+    "max_texture_dimension2d": 8192,
+    "max_texture_dimension3d": 2048,
+    "max_texture_array_layers": 2048,
+    "max_bind_groups": 4,
+    "max_dynamic_uniform_buffers_per_pipeline_layout": 8,
+    "max_dynamic_storage_buffers_per_pipeline_layout": 4,
+    "max_sampled_textures_per_shader_stage": 16,
+    "max_samplers_per_shader_stage": 16,
+    "max_storage_buffers_per_shader_stage": 4,
+    "max_storage_textures_per_shader_stage": 4,
+    "max_uniform_buffers_per_shader_stage": 12,
+    "max_uniform_buffer_binding_size": 16384,
+    "max_storage_buffer_binding_size": 134217728,
+    "max_vertex_buffers": 8,
+    "max_vertex_attributes": 16,
+    "max_vertex_buffer_array_stride": 2048,
+}
 
 
 class GPU:
@@ -147,7 +155,7 @@ class GPUAdapter:
         self._name = name
         self._features = features
         self._internal = internal
-        self._limits = GPUAdapterLimits()
+        self._limits = DEFAULT_ADAPTER_LIMITS.copy()
 
     # IDL: readonly attribute DOMString name;
     @property
@@ -164,7 +172,7 @@ class GPUAdapter:
     # IDL: [SameObject] readonly attribute GPUAdapterLimits limits;
     @property
     def limits(self):
-        """a GPUAdapterLimits object."""
+        """ A dict with the adapter limits."""
         return self._limits
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
@@ -200,118 +208,6 @@ class GPUAdapter:
 
     def __del__(self):
         self._destroy()
-
-
-class GPUAdapterLimits:
-    """An object providing information on the adapter limits."""
-
-    def __init__(self, **kwargs):
-        defaults = {
-            "maxTextureDimension1D": 8192,
-            "maxTextureDimension2D": 8192,
-            "maxTextureDimension3D": 2048,
-            "maxTextureArrayLayers": 2048,
-            "maxBindGroups": 4,
-            "maxDynamicUniformBuffersPerPipelineLayout": 8,
-            "maxDynamicStorageBuffersPerPipelineLayout": 4,
-            "maxSampledTexturesPerShaderStage": 16,
-            "maxSamplersPerShaderStage": 16,
-            "maxStorageBuffersPerShaderStage": 4,
-            "maxStorageTexturesPerShaderStage": 4,
-            "maxUniformBuffersPerShaderStage": 12,
-            "maxUniformBufferBindingSize": 16384,
-            "maxStorageBufferBindingSize": 134217728,
-            "maxVertexBuffers": 8,
-            "maxVertexAttributes": 16,
-            "maxVertexBufferArrayStride": 2048,
-        }
-        for key, val in defaults.items():
-            setattr(self, "_" + key, kwargs.get(key, val))
-
-    # IDL: readonly attribute unsigned long maxTextureDimension1D;
-    @property
-    def max_texture_dimension1_d(self):
-        return self._max_texture_dimension1_d
-
-    # IDL: readonly attribute unsigned long maxTextureDimension2D;
-    @property
-    def max_texture_dimension2_d(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxTextureDimension3D;
-    @property
-    def max_texture_dimension3_d(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxTextureArrayLayers;
-    @property
-    def max_texture_array_layers(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxBindGroups;
-    @property
-    def max_bind_groups(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxDynamicUniformBuffersPerPipelineLayout;
-    @property
-    def max_dynamic_uniform_buffers_per_pipeline_layout(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxDynamicStorageBuffersPerPipelineLayout;
-    @property
-    def max_dynamic_storage_buffers_per_pipeline_layout(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxSampledTexturesPerShaderStage;
-    @property
-    def max_sampled_textures_per_shader_stage(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxSamplersPerShaderStage;
-    @property
-    def max_samplers_per_shader_stage(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxStorageBuffersPerShaderStage;
-    @property
-    def max_storage_buffers_per_shader_stage(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxStorageTexturesPerShaderStage;
-    @property
-    def max_storage_textures_per_shader_stage(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxUniformBuffersPerShaderStage;
-    @property
-    def max_uniform_buffers_per_shader_stage(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxUniformBufferBindingSize;
-    @property
-    def max_uniform_buffer_binding_size(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxStorageBufferBindingSize;
-    @property
-    def max_storage_buffer_binding_size(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxVertexBuffers;
-    @property
-    def max_vertex_buffers(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxVertexAttributes;
-    @property
-    def max_vertex_attributes(self):
-        raise NotImplementedError()
-
-    # IDL: readonly attribute unsigned long maxVertexBufferArrayStride;
-    @property
-    def max_vertex_buffer_array_stride(self):
-        raise NotImplementedError()
 
 
 class GPUObjectBase:

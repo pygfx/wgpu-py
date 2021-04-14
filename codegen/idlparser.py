@@ -387,7 +387,7 @@ class IdlParser:
         """
 
         # Drop some toplevel names
-        for name in ["NavigatorGPU", "GPUSupportedFeatures"]:
+        for name in ["NavigatorGPU", "GPUAdapterLimits", "GPUSupportedFeatures"]:
             self._interfaces.pop(name, None)
 
         # Divide flags and actual class definitions

@@ -350,10 +350,6 @@ class GPUAdapter(base.GPUAdapter):
             lib.wgpu_adapter_destroy(id)
 
 
-class GPUAdapterLimits(base.GPUAdapterLimits):
-    pass
-
-
 class GPUDevice(base.GPUDevice, GPUObjectBase):
 
     # FIXME: new method

@@ -59,7 +59,10 @@ The update process to follow:
 * Now go through all FIXME comments that were added, and apply any necessary
   changes. Remove the FIXME comment if no further action is needed. Note that all
   new classes/methods/properties (instead those marked as hidden) need a docstring.
+* Also check the diff of `flags.py`, `enums.py`, `structs.py` for any changes that might need manual work.
 * Run `python wgpu.codegen` again to validate that all is well.
+* Make a summary of the API changes to put in the release notes.
+* Update downstream code, like our own tests and examples, but also e.g. pygfx.
 
 In some cases we may want to deviate from the WebGPU API, because well ... Python
 is not JavaScript. To tell the patcher logic how we deviate from the WebGPU spec:
@@ -80,6 +83,8 @@ that methods are only added if they `raise NotImplementedError()` in
 the base implementation. Another difference is that this API should not
 deviate from the base API - only additions are allowed (which should
 be used sparingly).
+
+You'd typically update the backends while you're updating `base.py`.
 
 
 ## Updating the Rust backend (`rs.py`)
@@ -102,9 +107,13 @@ The update process to follow:
   marked with a FIXME comment should be fixed. Others may or may not.
   Use `wgpu.h` as a reference to check available functions and structs.
 * Run `python wgpu.codegen` again to validate that all is well.
+* Make sure that the tests run and provide full coverage.
+* This process typically does not introduce changes to the API, but certain
+  features that were previously not supported could be after an update.
 
 
 ## Further tips
 
-* It's probably easier to update `wgpu.h` before updating `webgpu.idl`.
-* It's probably easier to update relatively often, so each increment is small.
+* It's probably easier to update relatively often, so that each increment is small.
+* Sometimes certain features or changes are present in WebGPU, but not in wgpu-native. This may result in some manual mappings etc. which make the code less elegant. These hacks are generally temporary though.
+* It's generally recommended to update `webgpu.idl` and `wgpu.h` separately. Though it could also be advantageous to combine them, to avoid the hacky stuff mentioned in the previous point.
