@@ -24,6 +24,7 @@ from . import flags, enums, structs
 
 __all__ = [
     "GPUObjectBase",
+    "GPUAdapterLimits",
     "GPU",
     "GPUAdapter",
     "GPUDevice",
@@ -49,7 +50,6 @@ __all__ = [
     "GPURenderBundle",
     "GPURenderBundleEncoder",
     "GPUQueue",
-    "GPUFence",
     "GPUQuerySet",
     "GPUCanvasContext",
     "GPUSwapChain",
@@ -125,12 +125,12 @@ class GPUCanvasContext:
             format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
             usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
         """
-        usage = usage or flags.TextureUsage.OUTPUT_ATTACHMENT
+        usage = usage or flags.TextureUsage.RENDER_ATTACHMENT
         GPUSwapChain = sys.modules[device.__module__].GPUSwapChain  # noqa: N806
         return GPUSwapChain(label, None, device, self, format, usage)
 
-    # IDL: Promise<GPUTextureFormat> getSwapChainPreferredFormat(GPUDevice device);
-    def get_swap_chain_preferred_format(self, device):
+    # IDL: GPUTextureFormat getSwapChainPreferredFormat(GPUAdapter adapter);
+    def get_swap_chain_preferred_format(self, adapter):
         """Get the preferred swap chain format."""
         return "bgra8unorm-srgb"  # seems to be a good default
 
@@ -143,10 +143,11 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
-    def __init__(self, name, extensions, internal):
+    def __init__(self, name, features, internal):
         self._name = name
-        self._extensions = tuple(extensions)
+        self._features = features
         self._internal = internal
+        self._limits = GPUAdapterLimits()
 
     # IDL: readonly attribute DOMString name;
     @property
@@ -154,36 +155,42 @@ class GPUAdapter:
         """A human-readable name identifying the adapter."""
         return self._name
 
-    # IDL: readonly attribute FrozenArray<GPUExtensionName> extensions;
+    # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
-    def extensions(self):
-        """A tuple that represents the extensions supported by the adapter."""
-        return self._extensions
+    def features(self):
+        """ A tuple of supported feature names. """
+        return tuple()
 
-    # IDL: Promise<GPUDevice?> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    # IDL: [SameObject] readonly attribute GPUAdapterLimits limits;
+    @property
+    def limits(self):
+        """a GPUAdapterLimits object."""
+        return self._limits
+
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     def request_device(
         self,
         *,
         label="",
-        extensions: "List[enums.ExtensionName]" = [],
-        limits: "structs.Limits" = {},
+        non_guaranteed_features: "List[enums.FeatureName]" = [],
+        non_guaranteed_limits: "Dict[str, int]" = {},
     ):
         """Request a :class:`GPUDevice` from the adapter.
 
         Arguments:
             label (str): A human readable label. Optional.
-            extensions (list of str): the extensions that you need. Default [].
-            limits (dict): the various limits that you need. Default {}.
+            non_guaranteed_features (list of str): the features (extensions) that you need. Default [].
+            non_guaranteed_limits (dict): the various limits that you need. Default {}.
         """
         raise NotImplementedError()
 
-    # IDL: Promise<GPUDevice?> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     async def request_device_async(
         self,
         *,
         label="",
-        extensions: "List[enums.ExtensionName]" = [],
-        limits: "structs.Limits" = {},
+        non_guaranteed_features: "List[enums.FeatureName]" = [],
+        non_guaranteed_limits: "Dict[str, int]" = {},
     ):
         """Async version of ``request_device()``."""
         raise NotImplementedError()
@@ -193,6 +200,118 @@ class GPUAdapter:
 
     def __del__(self):
         self._destroy()
+
+
+class GPUAdapterLimits:
+    """An object providing information on the adapter limits."""
+
+    def __init__(self, **kwargs):
+        defaults = {
+            "maxTextureDimension1D": 8192,
+            "maxTextureDimension2D": 8192,
+            "maxTextureDimension3D": 2048,
+            "maxTextureArrayLayers": 2048,
+            "maxBindGroups": 4,
+            "maxDynamicUniformBuffersPerPipelineLayout": 8,
+            "maxDynamicStorageBuffersPerPipelineLayout": 4,
+            "maxSampledTexturesPerShaderStage": 16,
+            "maxSamplersPerShaderStage": 16,
+            "maxStorageBuffersPerShaderStage": 4,
+            "maxStorageTexturesPerShaderStage": 4,
+            "maxUniformBuffersPerShaderStage": 12,
+            "maxUniformBufferBindingSize": 16384,
+            "maxStorageBufferBindingSize": 134217728,
+            "maxVertexBuffers": 8,
+            "maxVertexAttributes": 16,
+            "maxVertexBufferArrayStride": 2048,
+        }
+        for key, val in defaults.items():
+            setattr(self, "_" + key, kwargs.get(key, val))
+
+    # IDL: readonly attribute unsigned long maxTextureDimension1D;
+    @property
+    def max_texture_dimension1_d(self):
+        return self._max_texture_dimension1_d
+
+    # IDL: readonly attribute unsigned long maxTextureDimension2D;
+    @property
+    def max_texture_dimension2_d(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxTextureDimension3D;
+    @property
+    def max_texture_dimension3_d(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxTextureArrayLayers;
+    @property
+    def max_texture_array_layers(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxBindGroups;
+    @property
+    def max_bind_groups(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxDynamicUniformBuffersPerPipelineLayout;
+    @property
+    def max_dynamic_uniform_buffers_per_pipeline_layout(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxDynamicStorageBuffersPerPipelineLayout;
+    @property
+    def max_dynamic_storage_buffers_per_pipeline_layout(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxSampledTexturesPerShaderStage;
+    @property
+    def max_sampled_textures_per_shader_stage(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxSamplersPerShaderStage;
+    @property
+    def max_samplers_per_shader_stage(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxStorageBuffersPerShaderStage;
+    @property
+    def max_storage_buffers_per_shader_stage(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxStorageTexturesPerShaderStage;
+    @property
+    def max_storage_textures_per_shader_stage(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxUniformBuffersPerShaderStage;
+    @property
+    def max_uniform_buffers_per_shader_stage(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxUniformBufferBindingSize;
+    @property
+    def max_uniform_buffer_binding_size(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxStorageBufferBindingSize;
+    @property
+    def max_storage_buffer_binding_size(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxVertexBuffers;
+    @property
+    def max_vertex_buffers(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxVertexAttributes;
+    @property
+    def max_vertex_attributes(self):
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long maxVertexBufferArrayStride;
+    @property
+    def max_vertex_buffer_array_stride(self):
+        raise NotImplementedError()
 
 
 class GPUObjectBase:
@@ -237,22 +356,28 @@ class GPUDevice(GPUObjectBase):
     :func:`GPUAdapter.request_device_async`.
     """
 
-    def __init__(self, label, internal, adapter, extensions, limits, default_queue):
+    def __init__(self, label, internal, adapter, features, limits, queue):
         super().__init__(label, internal, None)
         assert isinstance(adapter, GPUAdapter)
         self._adapter = adapter
-        self._extensions = tuple(sorted([str(x) for x in extensions]))
+        self._features = tuple(sorted([str(x) for x in features]))
         self._limits = limits.copy()
-        self._default_queue = default_queue
-        default_queue._device = self  # because it could not be set earlier
+        self._queue = queue
+        queue._device = self  # because it could not be set earlier
 
-    # IDL: readonly attribute FrozenArray<GPUExtensionName> extensions;
+    @apidiff.add("Too useful to not-have")
     @property
-    def extensions(self):
-        """A tuple of strings representing the extensions with which this
-        device was created.
+    def adapter(self):
+        """The adapter object corresponding to this device."""
+        return self._adapter
+
+    # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
+    @property
+    def features(self):
+        """A tuple of strings representing the features (i.e. extensions) with
+        which this device was created.
         """
-        return self._extensions
+        return self._features
 
     # IDL: readonly attribute object limits;
     @property
@@ -260,17 +385,11 @@ class GPUDevice(GPUObjectBase):
         """A dict exposing the limits with which this device was created."""
         return self._limits
 
-    # IDL: [SameObject] readonly attribute GPUQueue defaultQueue;
+    # IDL: [SameObject] readonly attribute GPUQueue queue;
     @property
-    def default_queue(self):
+    def queue(self):
         """The default :class:`GPUQueue` for this device."""
-        return self._default_queue
-
-    # IDL: [SameObject] readonly attribute GPUAdapter adapter;
-    @property
-    def adapter(self):
-        """ The adapter from which this device was created."""
-        return self._adapter
+        return self._queue
 
     # FIXME: new prop to implement
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
@@ -285,6 +404,11 @@ class GPUDevice(GPUObjectBase):
     def onuncapturederror(self):
         """ Method called when an error is capured?"""
         raise NotImplementedError()
+
+    # IDL: undefined destroy();
+    def destroy(self):
+        """ Destroy this device. """
+        return self._destroy()
 
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def create_buffer(
@@ -306,19 +430,7 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUMappedBuffer createBufferMapped(GPUBufferDescriptor descriptor);
-    @apidiff.hide
-    def create_buffer_mapped(
-        self,
-        *,
-        label="",
-        size: int,
-        usage: "flags.BufferUsage",
-        mapped_at_creation: bool = False,
-    ):
-        raise NotImplementedError()
-
-    @apidiff.add("replaces ``create_bufer_mapped``")
+    @apidiff.add("replaces WebGPU's mapping API'")
     def create_buffer_with_data(self, *, label="", data, usage: "flags.BufferUsage"):
         """Create a :class:`GPUBuffer` object initialized with the given data.
 
@@ -335,7 +447,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label="",
-        size: "Union[List[int], structs.Extent3D]",
+        size: "structs.Extent3D",
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: "enums.TextureDimension" = "2d",
@@ -346,7 +458,8 @@ class GPUDevice(GPUObjectBase):
 
         Arguments:
             label (str): A human readable label. Optional.
-            size (tuple or dict): The texture size with fields (width, height, depth).
+            size (tuple or dict): The texture size as a 3-tuple or a
+                dict (width, height, depth_or_array_layers).
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
             dimension (TextureDimension): The dimensionality of the texture. Default 2d.
@@ -369,6 +482,7 @@ class GPUDevice(GPUObjectBase):
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 0xFFFFFFFF,
         compare: "enums.CompareFunction" = None,
+        max_anisotropy: int = 1,
     ):
         """Create a :class:`GPUSampler` object. Samplers specify how a texture is sampled.
 
@@ -387,6 +501,8 @@ class GPUDevice(GPUObjectBase):
             lod_max_clamp (float): The maxium level of detail. Default inf.
             compare (CompareFunction): The sample compare operation for depth textures.
                 Only specify this for depth textures. Default None.
+            max_anisotropy (int): The maximum anisotropy value clamp used by the sample,
+                betweet 1 and 16, default 1.
         """
         raise NotImplementedError()
 
@@ -411,33 +527,39 @@ class GPUDevice(GPUObjectBase):
             {
                 "binding": 0,
                 "visibility": wgpu.ShaderStage.COMPUTE,
-                "type": wgpu.BindingType.storage_buffer,
-                "has_dynamic_offset": False,  # optional
+                "buffer": {
+                    "type": wgpu.BufferBindingType.storage_buffer,
+                    "has_dynamic_offset": False,  # optional
+                    "min_binding_size": 0  # optional
+                }
             },
             # Sampler
             {
                 "binding": 1,
                 "visibility": wgpu.ShaderStage.COMPUTE,
-                "type": wgpu.BindingType.sampler,
+                "sampler": {
+                    "type": wgpu.SamplerBindingType.filtering,
+                }
             },
             # Sampled texture
             {
                 "binding": 2,
                 "visibility": wgpu.ShaderStage.FRAGMENT,
-                "type": wgpu.BindingType.sampled_texture,
-                "view_dimension": wgpu.TextureViewDimension.d2,
-                "texture_component_type": wgpu.TextureComponentType.float,
-                "multisampled": False,  # optional
+                "texture": {
+                    "sample_type": wgpu.TextureSampleType.float,  # optional
+                    "view_dimension": wgpu.TextureViewDimension.d2,  # optional
+                    "multisampled": False,  # optional
+                }
             },
             # Storage texture
             {
-                "binding": 2,
+                "binding": 3,
                 "visibility": wgpu.ShaderStage.FRAGMENT,
-                "type": wgpu.BindingType.readonly_storage_texture,
-                "view_dimension": wgpu.TextureViewDimension.d2,
-                "texture_component_type": wgpu.TextureComponentType.float,
-                "storage_texture_format": wgpu.TextureFormat.r32float,
-                "multisampled": False,  # optional
+                "storage_texture": {
+                    "access": wgpu.StorageTextureAccess.read_only,
+                    "format": wgpu.TextureFormat.r32float,
+                    "view_dimension": wgpu.TextureViewDimension.d2,
+                }
             },
 
         About ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
@@ -525,15 +647,25 @@ class GPUDevice(GPUObjectBase):
         *,
         label="",
         layout: "GPUPipelineLayout" = None,
-        compute_stage: "structs.ProgrammableStageDescriptor",
+        compute: "structs.ProgrammableStage",
     ):
         """Create a :class:`GPUComputePipeline` object.
 
         Arguments:
             label (str): A human readable label. Optional.
             layout (GPUPipelineLayout): object created with ``create_pipeline_layout()``.
-            compute_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``.
+            compute (dict): E.g. ``{"module": shader_module, entry_point="main"}``.
         """
+        raise NotImplementedError()
+
+    # IDL: Promise<GPUComputePipeline> createComputePipelineAsync(GPUComputePipelineDescriptor descriptor);
+    async def create_compute_pipeline_async(
+        self,
+        *,
+        label="",
+        layout: "GPUPipelineLayout" = None,
+        compute: "structs.ProgrammableStage",
+    ):
         raise NotImplementedError()
 
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
@@ -542,98 +674,40 @@ class GPUDevice(GPUObjectBase):
         *,
         label="",
         layout: "GPUPipelineLayout" = None,
-        vertex_stage: "structs.ProgrammableStageDescriptor",
-        fragment_stage: "structs.ProgrammableStageDescriptor" = None,
-        primitive_topology: "enums.PrimitiveTopology",
-        rasterization_state: "structs.RasterizationStateDescriptor" = {},
-        color_states: "List[structs.ColorStateDescriptor]",
-        depth_stencil_state: "structs.DepthStencilStateDescriptor" = None,
-        vertex_state: "structs.VertexStateDescriptor" = {},
-        sample_count: int = 1,
-        sample_mask: int = 0xFFFFFFFF,
-        alpha_to_coverage_enabled: bool = False,
+        vertex: "structs.VertexState",
+        primitive: "structs.PrimitiveState" = {},
+        depth_stencil: "structs.DepthStencilState" = None,
+        multisample: "structs.MultisampleState" = {},
+        fragment: "structs.FragmentState" = None,
     ):
         """Create a :class:`GPURenderPipeline` object.
 
         Arguments:
             label (str): A human readable label. Optional.
             layout (GPUPipelineLayout): A layout created with ``create_pipeline_layout()``.
-            vertex_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``
-            fragment_stage (dict): E.g. ``{"module": shader_module, entry_point="main"}``. Default None.
-            primitive_topology (PrimitiveTopology): The topology, e.g. triangles or lines.
-            rasterization_state (dict): Specify rasterization rules. See below. Default None.
-            color_states (list of dict): Specify color blending rules. See below.
-            depth_stencil_state (dict): Specify texture for depth and stencil. See below. Default None.
-            vertex_state (dict): Specify index and vertex buffer info. See below.
-            sample_count (int): Set higher than one for subsampling. Default 1.
-            sample_mask (int): Sample bitmask. Default all ones.
-            alpha_to_coverage_enabled (bool): Wheher to anable alpha coverage. Default False.
+            vertex (VertexState): Describes the vertex shader entry point of the pipeline and its input buffer layouts.
+            primitive (PrimitiveState): Describes the the primitive-related properties of the pipeline.
+            depth_stencil (DepthStencilState): Describes the optional depth-stencil properties, including the testing, operations, and bias. Optional.
+            multisample (MultisampleState): Describes the multi-sampling properties of the pipeline.
+            fragment (FragmentState): Describes the fragment shader
+                entry point of the pipeline and its output colors. If it’s
+                None, the No Color Output mode is enabled: the pipeline
+                does not produce any color attachment outputs. It still
+                performs rasterization and produces depth values based on
+                the vertex position output. The depth testing and stencil
+                operations can still be used.
 
         In the example dicts below, the values that are marked as optional,
         the shown value is the default.
 
-        Example rasterization state dict:
+        Example vertex (VertexState) dict:
 
         .. code-block:: py
 
             {
-                "front_face": wgpu.FrontFace.ccw,  # optional
-                "cull_mode": wgpu.CullMode.none,  # optional
-                "depth_bias": 0,  # optional
-                "depth_bias_slope_scale": 0.0,  # optional
-                "depth_bias_clamp": 0.0  # optional
-            }
-
-        Example color state dict:
-
-        .. code-block:: py
-
-            {
-                "format": wgpu.TextureFormat.bgra8unorm_srgb,
-                "alpha_blend": (
-                    wgpu.BlendFactor.One,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "color_blend": (
-                    wgpu.BlendFactor.One,
-                    wgpu.BlendFactor.zero,
-                    gpu.BlendOperation.add,
-                ),
-                "write_mask": wgpu.ColorWrite.ALL  # optional
-            }
-
-        Example depth-stencil state dict:
-
-        .. code-block:: py
-
-            {
-                "format": wgpu.TextureFormat.depth24plus_stencil8,
-                "depth_write_enabled": False,  # optional
-                "depth_compare": wgpu.CompareFunction.always,  # optional
-                "stencil_front": {  # optional
-                    "compare": wgpu.CompareFunction.equal,
-                    "fail_op": wgpu.StencilOperation.keep,
-                    "depth_fail_op": wgpu.StencilOperation.keep,
-                    "pass_op": wgpu.StencilOperation.keep,
-                },
-                "stencil_back": {  # optional
-                    "compare": wgpu.CompareFunction.equal,
-                    "fail_op": wgpu.StencilOperation.keep,
-                    "depth_fail_op": wgpu.StencilOperation.keep,
-                    "pass_op": wgpu.StencilOperation.keep,
-                },
-                "stencil_read_mask": 0xFFFFFFFF,  # optional
-                "stencil_write_mask": 0xFFFFFFFF,  # optional
-            }
-
-        Example vertex state dict:
-
-        .. code-block:: py
-
-            {
-                "indexFormat": wgpu.IndexFormat.uint32,
-                "vertexBuffers": [
+                "module": shader_module,
+                "entry_point": "main",
+                "buffers": [
                     {
                         "array_stride": 8,
                         "step_mode": wgpu.InputStepMode.vertex,  # optional
@@ -649,17 +723,110 @@ class GPUDevice(GPUObjectBase):
                     ...
                 ]
             }
+
+        Example primitive (GPUPrimitiveState) dict:
+
+        .. code-block:: py
+
+            {
+                "topology": wgpu.PrimitiveTopology.triangle_list,
+                "strip_index_format": wgpu.IndexFormat.uint32,
+                "front_face": wgpu.FrontFace.ccw,  # optional
+                "cull_mode": wgpu.CullMode.none,  # optional
+            }
+
+        Example depth_stencil (GPUDepthStencilState) dict:
+
+        .. code-block:: py
+
+            {
+                "format": wgpu.TextureFormat.depth24plus_stencil8,
+                "depth_write_enabled": False,  # optional
+                "depth_compare": wgpu.CompareFunction.always,  # optional
+                "front": {  # optional
+                    "compare": wgpu.CompareFunction.equal,
+                    "fail_op": wgpu.StencilOperation.keep,
+                    "depth_fail_op": wgpu.StencilOperation.keep,
+                    "pass_op": wgpu.StencilOperation.keep,
+                },
+                "back": {  # optional
+                    "compare": wgpu.CompareFunction.equal,
+                    "fail_op": wgpu.StencilOperation.keep,
+                    "depth_fail_op": wgpu.StencilOperation.keep,
+                    "pass_op": wgpu.StencilOperation.keep,
+                },
+                "stencil_read_mask": 0xFFFFFFFF,  # optional
+                "stencil_write_mask": 0xFFFFFFFF,  # optional
+                "depth_bias": 0,  # optional
+                "depth_bias_slope_scale": 0.0,  # optional
+                "depth_bias_clamp": 0.0,  # optional
+            }
+
+        Example multisample (MultisampleState) dict:
+
+        .. code-block:: py
+
+            {
+                "count": 1,  # optional
+                "mask": 0xFFFFFFFF,  # optional
+                "alpha_to_coverage_enabled": False  # optional
+            }
+
+        Example fragment (FragmentState) dict:
+
+        .. code-block:: py
+
+            {
+                "module": shader_module,
+                "entry_point": "main",
+                "targets": [
+                    {
+                        "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                        "blend": {
+                            "color": (
+                                wgpu.BlendFactor.One,
+                                wgpu.BlendFactor.zero,
+                                gpu.BlendOperation.add,
+                            ),
+                            "alpha": (
+                                wgpu.BlendFactor.One,
+                                wgpu.BlendFactor.zero,
+                                wgpu.BlendOperation.add,
+                            ),
+                        }
+                        "write_mask": wgpu.ColorWrite.ALL  # optional
+                    },
+                    ...
+                ]
+            }
+
         """
         raise NotImplementedError()
 
+    # IDL: Promise<GPURenderPipeline> createRenderPipelineAsync(GPURenderPipelineDescriptor descriptor);
+    async def create_render_pipeline_async(
+        self,
+        *,
+        label="",
+        layout: "GPUPipelineLayout" = None,
+        vertex: "structs.VertexState",
+        primitive: "structs.PrimitiveState" = {},
+        depth_stencil: "structs.DepthStencilState" = None,
+        multisample: "structs.MultisampleState" = {},
+        fragment: "structs.FragmentState" = None,
+    ):
+        """ Async version of create_render_pipeline(). """
+        raise NotImplementedError()
+
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
-    def create_command_encoder(self, *, label=""):
+    def create_command_encoder(self, *, label="", measure_execution_time: bool = False):
         """Create a :class:`GPUCommandEncoder` object. A command
         encoder is used to record commands, which can then be submitted
         at once to the GPU.
 
         Arguments:
             label (str): A human readable label. Optional.
+            measure_execution_time (bool): Whether to measure the execution time. Default False.
         """
         raise NotImplementedError()
 
@@ -691,7 +858,7 @@ class GPUDevice(GPUObjectBase):
         """ Create a :class:`GPUQuerySet` object. """
         raise NotImplementedError()
 
-    # IDL: void pushErrorScope(GPUErrorFilter filter);
+    # IDL: undefined pushErrorScope(GPUErrorFilter filter);
     @apidiff.hide
     def push_error_scope(self, filter):
         raise NotImplementedError()
@@ -797,7 +964,7 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void destroy();
+    # IDL: undefined destroy();
     def destroy(self):
         """An application that no longer requires a buffer can choose
         to destroy it. Note that this is automatically called when the
@@ -805,19 +972,19 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size);
     @apidiff.hide
-    def get_mapped_range(self, offset=0, size=0):
+    def get_mapped_range(self, offset=0, size=None):
         raise NotImplementedError("The Python API differs from WebGPU here")
 
-    # IDL: void unmap();
+    # IDL: undefined unmap();
     @apidiff.hide
     def unmap(self):
         raise NotImplementedError("The Python API differs from WebGPU here")
 
-    # IDL: Promise<void> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     @apidiff.hide
-    async def map_async(self, mode, offset=0, size=0):
+    async def map_async(self, mode, offset=0, size=None):
         raise NotImplementedError()
 
 
@@ -880,9 +1047,9 @@ class GPUTexture(GPUObjectBase):
         dimension: "enums.TextureViewDimension" = None,
         aspect: "enums.TextureAspect" = "all",
         base_mip_level: int = 0,
-        mip_level_count: int = 0,
+        mip_level_count: int = None,
         base_array_layer: int = 0,
-        array_layer_count: int = 0,
+        array_layer_count: int = None,
     ):
         """Create a :class:`GPUTextureView` object.
 
@@ -896,13 +1063,13 @@ class GPUTexture(GPUObjectBase):
             aspect (TextureAspect): Whether this view is used for depth, stencil, or all.
                 Default all.
             base_mip_level (int): The starting mip level. Default 0.
-            mip_level_count (int): The number of mip levels. Default 0.
+            mip_level_count (int): The number of mip levels. Default None.
             base_array_layer (int): The starting array layer. Default 0.
-            array_layer_count (int): The number of array layers. Default 0.
+            array_layer_count (int): The number of array layers. Default None.
         """
         raise NotImplementedError()
 
-    # IDL: void destroy();
+    # IDL: undefined destroy();
     def destroy(self):
         """An application that no longer requires a texture can choose
         to destroy it. Note that this is automatically called when the
@@ -1044,6 +1211,12 @@ class GPUCommandBuffer(GPUObjectBase):
     Create a command buffer using :func:`GPUCommandEncoder.finish`.
     """
 
+    # FIXME: new prop to implement
+    # IDL: readonly attribute Promise<double> executionTime;
+    @property
+    def execution_time(self):
+        raise NotImplementedError()
+
 
 class GPUCommandEncoder(GPUObjectBase):
     """
@@ -1068,8 +1241,8 @@ class GPUCommandEncoder(GPUObjectBase):
         self,
         *,
         label="",
-        color_attachments: "List[structs.RenderPassColorAttachmentDescriptor]",
-        depth_stencil_attachment: "structs.RenderPassDepthStencilAttachmentDescriptor" = None,
+        color_attachments: "List[structs.RenderPassColorAttachment]",
+        depth_stencil_attachment: "structs.RenderPassDepthStencilAttachment" = None,
         occlusion_query_set: "GPUQuerySet" = None,
     ):
         """Record the beginning of a render pass. Returns a
@@ -1086,7 +1259,7 @@ class GPUCommandEncoder(GPUObjectBase):
         .. code-block:: py
 
             {
-                "attachment": texture_view,
+                "view": texture_view,
                 "resolve_target": None,  # optional
                 "load_value": (0, 0, 0, 0),  # LoadOp.load or a color
                 "store_op": wgpu.StoreOp.store,  # optional
@@ -1097,7 +1270,7 @@ class GPUCommandEncoder(GPUObjectBase):
         .. code-block:: py
 
             {
-                "attachment": texture_view,
+                "view": texture_view,
                 "depth_load_value": 0.0,
                 "depth_store_op": wgpu.StoreOp.store,
                 "stencil_load_value": wgpu.LoadOp.load,
@@ -1106,7 +1279,7 @@ class GPUCommandEncoder(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, GPUSize64 size);
+    # IDL: undefined copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, GPUSize64 size);
     def copy_buffer_to_buffer(
         self, source, source_offset, destination, destination_offset, size
     ):
@@ -1121,7 +1294,7 @@ class GPUCommandEncoder(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void copyBufferToTexture( GPUBufferCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
+    # IDL: undefined copyBufferToTexture( GPUImageCopyBuffer source, GPUImageCopyTexture destination, GPUExtent3D copySize);
     def copy_buffer_to_texture(self, source, destination, copy_size):
         """Copy the contents of a buffer to a texture (view).
 
@@ -1132,7 +1305,7 @@ class GPUCommandEncoder(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void copyTextureToBuffer( GPUTextureCopyView source, GPUBufferCopyView destination, GPUExtent3D copySize);
+    # IDL: undefined copyTextureToBuffer( GPUImageCopyTexture source, GPUImageCopyBuffer destination, GPUExtent3D copySize);
     def copy_texture_to_buffer(self, source, destination, copy_size):
         """Copy the contents of a texture (view) to a buffer.
 
@@ -1143,7 +1316,7 @@ class GPUCommandEncoder(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void copyTextureToTexture( GPUTextureCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
+    # IDL: undefined copyTextureToTexture( GPUImageCopyTexture source, GPUImageCopyTexture destination, GPUExtent3D copySize);
     def copy_texture_to_texture(self, source, destination, copy_size):
         """Copy the contents of a texture (view) to another texture (view).
 
@@ -1154,17 +1327,17 @@ class GPUCommandEncoder(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void pushDebugGroup(USVString groupLabel);
+    # IDL: undefined pushDebugGroup(USVString groupLabel);
     def push_debug_group(self, group_label):
         """TODO: not yet available in wgpu-native"""
         raise NotImplementedError()
 
-    # IDL: void popDebugGroup();
+    # IDL: undefined popDebugGroup();
     def pop_debug_group(self):
         """TODO: not yet available in wgpu-native"""
         raise NotImplementedError()
 
-    # IDL: void insertDebugMarker(USVString markerLabel);
+    # IDL: undefined insertDebugMarker(USVString markerLabel);
     def insert_debug_marker(self, marker_label):
         """TODO: not yet available in wgpu-native"""
         raise NotImplementedError()
@@ -1180,13 +1353,13 @@ class GPUCommandEncoder(GPUObjectBase):
         raise NotImplementedError()
 
     # FIXME: new method to implement
-    # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
+    # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
         """ TODO """
         raise NotImplementedError()
 
     # FIXME: new method to implement
-    # IDL: void resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
+    # IDL: undefined resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
     ):
@@ -1199,7 +1372,7 @@ class GPUProgrammablePassEncoder:
     Base class for the different pass encoder classes.
     """
 
-    # IDL: void setBindGroup(GPUIndex32 index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  GPUSize64 dynamicOffsetsDataStart,  GPUSize32 dynamicOffsetsDataLength);
+    # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  GPUSize64 dynamicOffsetsDataStart,  GPUSize32 dynamicOffsetsDataLength);
     def set_bind_group(
         self,
         index,
@@ -1220,17 +1393,17 @@ class GPUProgrammablePassEncoder:
         """
         raise NotImplementedError()
 
-    # IDL: void pushDebugGroup(USVString groupLabel);
+    # IDL: undefined pushDebugGroup(USVString groupLabel);
     def push_debug_group(self, group_label):
         """Push a named debug group into the command stream."""
         raise NotImplementedError()
 
-    # IDL: void popDebugGroup();
+    # IDL: undefined popDebugGroup();
     def pop_debug_group(self):
         """Pop the active debug group."""
         raise NotImplementedError()
 
-    # IDL: void insertDebugMarker(USVString markerLabel);
+    # IDL: undefined insertDebugMarker(USVString markerLabel);
     def insert_debug_marker(self, marker_label):
         """Insert the given message into the debug message queue."""
         raise NotImplementedError()
@@ -1243,7 +1416,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
     Create a compute pass encoder using :func:`GPUCommandEncoder.begin_compute_pass`.
     """
 
-    # IDL: void setPipeline(GPUComputePipeline pipeline);
+    # IDL: undefined setPipeline(GPUComputePipeline pipeline);
     def set_pipeline(self, pipeline):
         """Set the pipeline for this compute pass.
 
@@ -1252,7 +1425,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void dispatch(GPUSize32 x, optional GPUSize32 y = 1, optional GPUSize32 z = 1);
+    # IDL: undefined dispatch(GPUSize32 x, optional GPUSize32 y = 1, optional GPUSize32 z = 1);
     def dispatch(self, x, y=1, z=1):
         """Run the compute shader.
 
@@ -1263,7 +1436,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void dispatchIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+    # IDL: undefined dispatchIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def dispatch_indirect(self, indirect_buffer, indirect_offset):
         """Like ``dispatch()``, but the function arguments are in a buffer.
 
@@ -1273,23 +1446,23 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void endPass();
+    # IDL: undefined endPass();
     def end_pass(self):
         """Record the end of the compute pass."""
         raise NotImplementedError()
 
-    # IDL: void beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
+    # IDL: undefined beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
     @apidiff.hide
     def begin_pipeline_statistics_query(self, query_set, query_index):
         raise NotImplementedError()
 
-    # IDL: void endPipelineStatisticsQuery();
+    # IDL: undefined endPipelineStatisticsQuery();
     @apidiff.hide
     def end_pipeline_statistics_query(self):
         raise NotImplementedError()
 
     # FIXME: new method to implement
-    # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
+    # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
         """ TODO """
         raise NotImplementedError()
@@ -1300,7 +1473,7 @@ class GPURenderEncoderBase:
     Base class for different render-pass encoder classes.
     """
 
-    # IDL: void setPipeline(GPURenderPipeline pipeline);
+    # IDL: undefined setPipeline(GPURenderPipeline pipeline);
     def set_pipeline(self, pipeline):
         """Set the pipeline for this render pass.
 
@@ -1309,8 +1482,9 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # IDL: void setIndexBuffer(GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def set_index_buffer(self, buffer, offset=0, size=0):
+    # FIXME: was set_index_buffer(self, buffer, offset=0, size=0):
+    # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    def set_index_buffer(self, buffer, index_format, offset=0, size=0):
         """Set the index buffer for this render pass.
 
         Arguments:
@@ -1321,7 +1495,7 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # IDL: void setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
+    # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
     def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
         """Associate a vertex buffer with a bind slot.
 
@@ -1334,7 +1508,7 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # IDL: void draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
+    # IDL: undefined draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
     def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
         """Run the render pipeline without an index buffer.
 
@@ -1346,7 +1520,7 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # IDL: void drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+    # IDL: undefined drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indirect(self, indirect_buffer, indirect_offset):
         """Like ``draw()``, but the function arguments are in a buffer.
 
@@ -1356,7 +1530,7 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # IDL: void drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstIndex = 0,  optional GPUSignedOffset32 baseVertex = 0,  optional GPUSize32 firstInstance = 0);
+    # IDL: undefined drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstIndex = 0,  optional GPUSignedOffset32 baseVertex = 0,  optional GPUSize32 firstInstance = 0);
     def draw_indexed(
         self,
         index_count,
@@ -1376,7 +1550,7 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # IDL: void drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+    # IDL: undefined drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
         """
         Like ``draw_indexed()``, but the function arguments are in a buffer.
@@ -1397,7 +1571,7 @@ class GPURenderPassEncoder(
     Create a render pass encoder using :func:`GPUCommandEncoder.begin_render_pass`.
     """
 
-    # IDL: void setViewport(float x, float y,  float width, float height,  float minDepth, float maxDepth);
+    # IDL: undefined setViewport(float x, float y,  float width, float height,  float minDepth, float maxDepth);
     def set_viewport(self, x, y, width, height, min_depth, max_depth):
         """Set the viewport for this render pass. The whole scene is rendered
         to this sub-rectangle.
@@ -1413,7 +1587,7 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: void setScissorRect(GPUIntegerCoordinate x, GPUIntegerCoordinate y,  GPUIntegerCoordinate width, GPUIntegerCoordinate height);
+    # IDL: undefined setScissorRect(GPUIntegerCoordinate x, GPUIntegerCoordinate y,  GPUIntegerCoordinate width, GPUIntegerCoordinate height);
     def set_scissor_rect(self, x, y, width, height):
         """Set the scissor rectangle for this render pass. The scene
         is rendered as usual, but is only applied to this sub-rectangle.
@@ -1426,7 +1600,7 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: void setBlendColor(GPUColor color);
+    # IDL: undefined setBlendColor(GPUColor color);
     def set_blend_color(self, color):
         """Set the blend color for the render pass.
 
@@ -1435,7 +1609,7 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: void setStencilReference(GPUStencilValue reference);
+    # IDL: undefined setStencilReference(GPUStencilValue reference);
     def set_stencil_reference(self, reference):
         """Set the reference stencil value for this render pass.
 
@@ -1444,42 +1618,42 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: void executeBundles(sequence<GPURenderBundle> bundles);
+    # IDL: undefined executeBundles(sequence<GPURenderBundle> bundles);
     def execute_bundles(self, bundles):
         """
         TODO: not yet available in wgpu-native
         """
         raise NotImplementedError()
 
-    # IDL: void endPass();
+    # IDL: undefined endPass();
     def end_pass(self):
         """Record the end of the render pass."""
         raise NotImplementedError()
 
     # FIXME: new method to implement
-    # IDL: void beginOcclusionQuery(GPUSize32 queryIndex);
+    # IDL: undefined beginOcclusionQuery(GPUSize32 queryIndex);
     def begin_occlusion_query(self, query_index):
         """ TODO """
         raise NotImplementedError()
 
     # FIXME: new method to implement
-    # IDL: void endOcclusionQuery();
+    # IDL: undefined endOcclusionQuery();
     def end_occlusion_query(self):
         """ TODO """
         raise NotImplementedError()
 
-    # IDL: void beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
+    # IDL: undefined beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
     @apidiff.hide
     def begin_pipeline_statistics_query(self, query_set, query_index):
         raise NotImplementedError()
 
-    # IDL: void endPipelineStatisticsQuery();
+    # IDL: undefined endPipelineStatisticsQuery();
     @apidiff.hide
     def end_pipeline_statistics_query(self):
         raise NotImplementedError()
 
     # FIXME: new method to implement
-    # IDL: void writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
+    # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
         """ TODO """
         raise NotImplementedError()
@@ -1515,7 +1689,7 @@ class GPUQueue(GPUObjectBase):
     You can obtain a queue object via the :attr:`GPUDevice.default_queue` property.
     """
 
-    # IDL: void submit(sequence<GPUCommandBuffer> commandBuffers);
+    # IDL: undefined submit(sequence<GPUCommandBuffer> commandBuffers);
     def submit(self, command_buffers):
         """Submit a :class:`GPUCommandBuffer` to the queue.
 
@@ -1524,14 +1698,14 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void copyImageBitmapToTexture( GPUImageBitmapCopyView source, GPUTextureCopyView destination, GPUExtent3D copySize);
+    # IDL: undefined copyImageBitmapToTexture( GPUImageCopyImageBitmap source, GPUImageCopyTexture destination, GPUExtent3D copySize);
     def copy_image_bitmap_to_texture(self, source, destination, copy_size):
         """
         TODO: not yet available in wgpu-native
         """
         raise NotImplementedError()
 
-    # IDL: void writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, [AllowShared] ArrayBuffer data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
+    # IDL: undefined writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, [AllowShared] BufferSource data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
         """Takes the data contents and schedules a write operation of
         these contents to the buffer. A snapshot of the data is taken;
@@ -1547,7 +1721,7 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: void writeTexture( GPUTextureCopyView destination, [AllowShared] ArrayBuffer data, GPUTextureDataLayout dataLayout, GPUExtent3D size);
+    # IDL: undefined writeTexture( GPUImageCopyTexture destination, [AllowShared] BufferSource data, GPUImageDataLayout dataLayout, GPUExtent3D size);
     def write_texture(self, destination, data, data_layout, size):
         """Takes the data contents and schedules a write operation of
         these contents to the destination texture in the queue. A
@@ -1564,20 +1738,10 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # Not implemented, because fences do not yet have a use
-    # def createFence(self):
-    # def signal(self):
-    # Fence.getCompletedValue
-    # Fence.onCompletion
-
-    # IDL: GPUFence createFence(optional GPUFenceDescriptor descriptor = {});
-    @apidiff.hide
-    def create_fence(self, *, label="", initial_value: int = 0):
-        raise NotImplementedError()
-
-    # IDL: void signal(GPUFence fence, GPUFenceValue signalValue);
-    @apidiff.hide
-    def signal(self, fence, signal_value):
+    # FIXME: new method to implement
+    # IDL: Promise<undefined> onSubmittedWorkDone();
+    def on_submitted_work_done(self):
+        """ TODO """
         raise NotImplementedError()
 
 
@@ -1640,7 +1804,8 @@ class GPUSwapChain(GPUObjectBase):
 class GPUDeviceLostInfo:
     """ An object that contains information about the device being lost."""
 
-    def __init__(self, message):
+    def __init__(self, reason, message):
+        self._reason = reason
         self._message = message
 
     # IDL: readonly attribute DOMString message;
@@ -1648,6 +1813,12 @@ class GPUDeviceLostInfo:
     def message(self):
         """ The error message specifying the reason for the device being lost. """
         return self._message
+
+    # IDL: readonly attribute (GPUDeviceLostReason or undefined) reason;
+    @property
+    def reason(self):
+        """ The reason (enums.GPUDeviceLostReason) for the device getting lost. Can be None. """
+        return self._reason
 
 
 class GPUOutOfMemoryError(Exception):
@@ -1708,7 +1879,7 @@ class GPUCompilationMessage:
 class GPUCompilationInfo:
     """TODO"""
 
-    # IDL: readonly attribute sequence<GPUCompilationMessage> messages;
+    # IDL: readonly attribute FrozenArray<GPUCompilationMessage> messages;
     @property
     def messages(self):
         """ A list of ``GPUCompilationMessage`` objects. """
@@ -1716,25 +1887,10 @@ class GPUCompilationInfo:
 
 
 # FIXME: new class to implement
-class GPUFence(GPUObjectBase):
-    """TODO"""
-
-    # IDL: GPUFenceValue getCompletedValue();
-    def get_completed_value(self):
-        """ The the completed value :) """
-        raise NotImplementedError()
-
-    # IDL: Promise<void> onCompletion(GPUFenceValue completionValue);
-    def on_completion(self, completion_value):
-        """ TODO, also must this be async? """
-        raise NotImplementedError()
-
-
-# FIXME: new class to implement
 class GPUQuerySet(GPUObjectBase):
     """TODO"""
 
-    # IDL: void destroy();
+    # IDL: undefined destroy();
     def destroy(self):
         """ Destroy the queryset."""
         raise NotImplementedError()

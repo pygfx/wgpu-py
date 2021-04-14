@@ -51,7 +51,7 @@ TextureUsage = Flags(
     COPY_DST=2,
     SAMPLED=4,
     STORAGE=8,
-    OUTPUT_ATTACHMENT=16,
+    RENDER_ATTACHMENT=16,
 )  #:
 
 ShaderStage = Flags(

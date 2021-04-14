@@ -25,7 +25,7 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 26 enums
+# There are 29 enums
 
 PowerPreference = Enum(
     "PowerPreference",
@@ -33,10 +33,13 @@ PowerPreference = Enum(
     high_performance="high-performance",
 )  #:
 
-ExtensionName = Enum(
-    "ExtensionName",
-    texture_compression_bc="texture-compression-bc",
+FeatureName = Enum(
+    "FeatureName",
+    depth_clamping="depth-clamping",
+    depth24unorm_stencil8="depth24unorm-stencil8",
+    depth32float_stencil8="depth32float-stencil8",
     pipeline_statistics_query="pipeline-statistics-query",
+    texture_compression_bc="texture-compression-bc",
     timestamp_query="timestamp-query",
 )  #:
 
@@ -90,8 +93,9 @@ TextureFormat = Enum(
     rgba8sint="rgba8sint",
     bgra8unorm="bgra8unorm",
     bgra8unorm_srgb="bgra8unorm-srgb",
+    rgb9e5ufloat="rgb9e5ufloat",
     rgb10a2unorm="rgb10a2unorm",
-    rg11b10float="rg11b10float",
+    rg11b10ufloat="rg11b10ufloat",
     rg32uint="rg32uint",
     rg32sint="rg32sint",
     rg32float="rg32float",
@@ -101,9 +105,11 @@ TextureFormat = Enum(
     rgba32uint="rgba32uint",
     rgba32sint="rgba32sint",
     rgba32float="rgba32float",
-    depth32float="depth32float",
+    stencil8="stencil8",
+    depth16unorm="depth16unorm",
     depth24plus="depth24plus",
     depth24plus_stencil8="depth24plus-stencil8",
+    depth32float="depth32float",
     bc1_rgba_unorm="bc1-rgba-unorm",
     bc1_rgba_unorm_srgb="bc1-rgba-unorm-srgb",
     bc2_rgba_unorm="bc2-rgba-unorm",
@@ -115,16 +121,11 @@ TextureFormat = Enum(
     bc5_rg_unorm="bc5-rg-unorm",
     bc5_rg_snorm="bc5-rg-snorm",
     bc6h_rgb_ufloat="bc6h-rgb-ufloat",
-    bc6h_rgb_sfloat="bc6h-rgb-sfloat",
+    bc6h_rgb_float="bc6h-rgb-float",
     bc7_rgba_unorm="bc7-rgba-unorm",
     bc7_rgba_unorm_srgb="bc7-rgba-unorm-srgb",
-)  #:
-
-TextureComponentType = Enum(
-    "TextureComponentType",
-    float="float",
-    sint="sint",
-    uint="uint",
+    depth24unorm_stencil8="depth24unorm-stencil8",
+    depth32float_stencil8="depth32float-stencil8",
 )  #:
 
 AddressMode = Enum(
@@ -152,16 +153,33 @@ CompareFunction = Enum(
     always="always",
 )  #:
 
-BindingType = Enum(
-    "BindingType",
-    uniform_buffer="uniform-buffer",
-    storage_buffer="storage-buffer",
-    readonly_storage_buffer="readonly-storage-buffer",
-    sampler="sampler",
-    comparison_sampler="comparison-sampler",
-    sampled_texture="sampled-texture",
-    readonly_storage_texture="readonly-storage-texture",
-    writeonly_storage_texture="writeonly-storage-texture",
+BufferBindingType = Enum(
+    "BufferBindingType",
+    uniform="uniform",
+    storage="storage",
+    read_only_storage="read-only-storage",
+)  #:
+
+SamplerBindingType = Enum(
+    "SamplerBindingType",
+    filtering="filtering",
+    non_filtering="non-filtering",
+    comparison="comparison",
+)  #:
+
+TextureSampleType = Enum(
+    "TextureSampleType",
+    float="float",
+    unfilterable_float="unfilterable-float",
+    depth="depth",
+    sint="sint",
+    uint="uint",
+)  #:
+
+StorageTextureAccess = Enum(
+    "StorageTextureAccess",
+    read_only="read-only",
+    write_only="write-only",
 )  #:
 
 CompilationMessageType = Enum(
@@ -197,17 +215,17 @@ BlendFactor = Enum(
     "BlendFactor",
     zero="zero",
     one="one",
-    src_color="src-color",
-    one_minus_src_color="one-minus-src-color",
+    src_component="src-component",
+    one_minus_src_component="one-minus-src-component",
     src_alpha="src-alpha",
     one_minus_src_alpha="one-minus-src-alpha",
-    dst_color="dst-color",
-    one_minus_dst_color="one-minus-dst-color",
+    dst_component="dst-component",
+    one_minus_dst_component="one-minus-dst-component",
     dst_alpha="dst-alpha",
     one_minus_dst_alpha="one-minus-dst-alpha",
     src_alpha_saturated="src-alpha-saturated",
-    blend_color="blend-color",
-    one_minus_blend_color="one-minus-blend-color",
+    blendcolor_component="blendcolor-component",
+    one_minus_blendcolor_component="one-minus-blendcolor-component",
 )  #:
 
 BlendOperation = Enum(
@@ -239,36 +257,36 @@ IndexFormat = Enum(
 
 VertexFormat = Enum(
     "VertexFormat",
-    uchar2="uchar2",
-    uchar4="uchar4",
-    char2="char2",
-    char4="char4",
-    uchar2norm="uchar2norm",
-    uchar4norm="uchar4norm",
-    char2norm="char2norm",
-    char4norm="char4norm",
-    ushort2="ushort2",
-    ushort4="ushort4",
-    short2="short2",
-    short4="short4",
-    ushort2norm="ushort2norm",
-    ushort4norm="ushort4norm",
-    short2norm="short2norm",
-    short4norm="short4norm",
-    half2="half2",
-    half4="half4",
-    float="float",
-    float2="float2",
-    float3="float3",
-    float4="float4",
-    uint="uint",
-    uint2="uint2",
-    uint3="uint3",
-    uint4="uint4",
-    int="int",
-    int2="int2",
-    int3="int3",
-    int4="int4",
+    uint8x2="uint8x2",
+    uint8x4="uint8x4",
+    sint8x2="sint8x2",
+    sint8x4="sint8x4",
+    unorm8x2="unorm8x2",
+    unorm8x4="unorm8x4",
+    snorm8x2="snorm8x2",
+    snorm8x4="snorm8x4",
+    uint16x2="uint16x2",
+    uint16x4="uint16x4",
+    sint16x2="sint16x2",
+    sint16x4="sint16x4",
+    unorm16x2="unorm16x2",
+    unorm16x4="unorm16x4",
+    snorm16x2="snorm16x2",
+    snorm16x4="snorm16x4",
+    float16x2="float16x2",
+    float16x4="float16x4",
+    float32="float32",
+    float32x2="float32x2",
+    float32x3="float32x3",
+    float32x4="float32x4",
+    uint32="uint32",
+    uint32x2="uint32x2",
+    uint32x3="uint32x3",
+    uint32x4="uint32x4",
+    sint32="sint32",
+    sint32x2="sint32x2",
+    sint32x3="sint32x3",
+    sint32x4="sint32x4",
 )  #:
 
 InputStepMode = Enum(
@@ -304,9 +322,13 @@ PipelineStatisticName = Enum(
     compute_shader_invocations="compute-shader-invocations",
 )  #:
 
+DeviceLostReason = Enum(
+    "DeviceLostReason",
+    destroyed="destroyed",
+)  #:
+
 ErrorFilter = Enum(
     "ErrorFilter",
-    none="none",
     out_of_memory="out-of-memory",
     validation="validation",
 )  #:
