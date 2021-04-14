@@ -143,14 +143,16 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
             }
         )
         storage_types = (
-            wgpu.BindingType.readonly_storage_buffer,
-            wgpu.BindingType.storage_buffer,
+            wgpu.BufferBindingType.read_only_storage,
+            wgpu.BufferBindingType.storage,
         )
         binding_layouts.append(
             {
                 "binding": index,
                 "visibility": wgpu.ShaderStage.COMPUTE,
-                "type": storage_types[index in output_infos],
+                "buffer": {
+                    "type": storage_types[index in output_infos],
+                },
                 "has_dynamic_offset": False,
             }
         )
@@ -165,7 +167,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     # Create a pipeline and "run it"
     compute_pipeline = device.create_compute_pipeline(
         layout=pipeline_layout,
-        compute_stage={"module": cshader, "entry_point": "main"},
+        compute={"module": cshader, "entry_point": "main"},
     )
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
@@ -173,7 +175,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 args not used
     compute_pass.dispatch(nx, ny, nz)
     compute_pass.end_pass()
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffers
     output = {}
@@ -194,4 +196,4 @@ FORMAT_SIZES = {"b": 1, "B": 1, "h": 2, "H": 2, "i": 4, "I": 4, "e": 2, "f": 4}
 # users who like numpy will simply specify the number of bytes and
 # convert the result. Users who will work with the memoryview directly
 # should not be confused with other formats than memoryview.cast()
-# normally  supports.
+# normally supports.

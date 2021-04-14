@@ -411,14 +411,6 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     texture_view1 = texture1.create_view()
     texture_view2 = texture2.create_view()
 
-    # Determine texture component type from the format
-    if texture_format.endswith(("norm", "float")):
-        texture_component_type = wgpu.TextureComponentType.float
-    elif "uint" in texture_format:
-        texture_component_type = wgpu.TextureComponentType.uint
-    else:
-        texture_component_type = wgpu.TextureComponentType.sint
-
     # Create buffer that we need to upload the data
     buffer_usage = (
         wgpu.BufferUsage.MAP_READ
@@ -438,18 +430,20 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         {
             "binding": 0,
             "visibility": wgpu.ShaderStage.COMPUTE,
-            "type": wgpu.BindingType.readonly_storage_texture,  # <-
-            "view_dimension": texture_dim,
-            "storage_texture_format": texture_format,
-            "texture_component_type": texture_component_type,
+            "storage_texture": {
+                "access": wgpu.StorageTextureAccess.read_only,  # <-
+                "format": texture_format,
+                "view_dimension": texture_dim,
+            },
         },
         {
             "binding": 1,
             "visibility": wgpu.ShaderStage.COMPUTE,
-            "type": wgpu.BindingType.writeonly_storage_texture,  # <-
-            "view_dimension": texture_dim,
-            "storage_texture_format": texture_format,
-            "texture_component_type": texture_component_type,
+            "storage_texture": {
+                "access": wgpu.StorageTextureAccess.write_only,  # <-
+                "format": texture_format,
+                "view_dimension": texture_dim,
+            },
         },
     ]
     bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
@@ -461,9 +455,8 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     # Create a pipeline and run it
     compute_pipeline = device.create_compute_pipeline(
         layout=pipeline_layout,
-        compute_stage={"module": cshader, "entry_point": "main"},
+        compute={"module": cshader, "entry_point": "main"},
     )
-    assert compute_pipeline.layout is pipeline_layout
     assert compute_pipeline.get_bind_group_layout(0) is bind_group_layout
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
@@ -498,7 +491,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         },
         (nx, ny, nz),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer
     data2 = data1.__class__.from_buffer(buffer.read_data())

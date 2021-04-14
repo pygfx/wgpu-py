@@ -47,10 +47,10 @@ def test_logging():
 def test_enums_and_flags():
 
     # Enums are str
-    assert isinstance(wgpu.BindingType.storage_buffer, str)
+    assert isinstance(wgpu.BufferBindingType.storage, str)
 
     # Enum groups show their values
-    assert "storage-buffer" in repr(wgpu.BindingType)
+    assert "storage" in repr(wgpu.BufferBindingType)
 
     # Flags are ints
     assert isinstance(wgpu.BufferUsage.STORAGE, int)
@@ -74,11 +74,11 @@ def test_base_wgpu_api():
     assert queue._device is device
 
     assert adapter.name == "adapter07"
-    assert adapter.extensions == ()
+    assert adapter.features == ()
 
     assert isinstance(device, wgpu.base.GPUObjectBase)
     assert device.label == "device08"
-    assert device.extensions == ("42", "43")
+    assert device.features == ("42", "43")
     assert device.limits == {}
     assert hex(id(device)) in repr(device)
     assert device.label in repr(device)

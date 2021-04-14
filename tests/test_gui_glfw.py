@@ -167,6 +167,13 @@ def test_glfw_canvas_render_custom_canvas():
             psize = glfw.get_framebuffer_size(self.window)
             return int(psize[0]), int(psize[1])
 
+        def configure_swap_chain(self, *, device):
+            format = "bgra8unorm-srgb"
+            usage = wgpu.TextureUsage.RENDER_ATTACHMENT
+            return wgpu.GPUCanvasContext.configure_swap_chain(
+                self, device=device, format=format, usage=usage
+            )
+
     canvas = CustomCanvas()
 
     adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
@@ -194,53 +201,54 @@ def _get_draw_function(device, canvas):
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
-        vertex_stage={"module": vshader, "entry_point": "main"},
-        fragment_stage={"module": fshader, "entry_point": "main"},
-        primitive_topology=wgpu.PrimitiveTopology.triangle_strip,
-        rasterization_state={
+        vertex={
+            "module": vshader,
+            "entry_point": "main",
+            "buffers": [],
+        },
+        primitive={
+            "topology": wgpu.PrimitiveTopology.triangle_strip,
+            "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
-            "depth_bias": 0,
-            "depth_bias_slope_scale": 0.0,
-            "depth_bias_clamp": 0.0,
         },
-        color_states=[
-            {
-                "format": wgpu.TextureFormat.bgra8unorm_srgb,
-                "alpha_blend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "color_blend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "write_mask": wgpu.ColorWrite.ALL,
-            }
-        ],
-        vertex_state={
-            "index_format": wgpu.IndexFormat.uint32,
-            "vertex_buffers": [],
+        depth_stencil=None,
+        multisample={
+            "count": 1,
+            "mask": 0xFFFFFFFF,
+            "alpha_to_coverage_enabled": False,
         },
-        sample_count=1,
-        sample_mask=0xFFFFFFFF,
-        alpha_to_coverage_enabled=False,
+        fragment={
+            "module": fshader,
+            "entry_point": "main",
+            "targets": [
+                {
+                    "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                    "blend": {
+                        "color": (
+                            wgpu.BlendFactor.one,
+                            wgpu.BlendFactor.zero,
+                            wgpu.BlendOperation.add,
+                        ),
+                        "alpha": (
+                            wgpu.BlendFactor.one,
+                            wgpu.BlendFactor.zero,
+                            wgpu.BlendOperation.add,
+                        ),
+                    },
+                },
+            ],
+        },
     )
 
-    swap_chain = device.configure_swap_chain(
-        canvas,
-        device.get_swap_chain_preferred_format(canvas),
-        wgpu.TextureUsage.OUTPUT_ATTACHMENT,
-    )
+    swap_chain = canvas.configure_swap_chain(device=device)
 
     def draw_frame():
         with swap_chain as current_texture_view:
             command_encoder = device.create_command_encoder()
 
             ca = {
-                "attachment": current_texture_view,
+                "view": current_texture_view,
                 "resolve_target": None,
                 "load_value": (0, 0, 0, 0),
                 "store_op": wgpu.StoreOp.store,
@@ -253,7 +261,7 @@ def _get_draw_function(device, canvas):
             render_pass.set_bind_group(0, bind_group, [], 0, 999999)
             render_pass.draw(4, 1, 0, 0)
             render_pass.end_pass()
-            device.default_queue.submit([command_encoder.finish()])
+            device.queue.submit([command_encoder.finish()])
 
     return draw_frame
 
