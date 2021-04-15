@@ -153,7 +153,7 @@ class GPUAdapter:
 
     def __init__(self, name, features, internal):
         self._name = name
-        self._features = features
+        self._features = tuple(sorted(str(x) for x in features))
         self._internal = internal
         self._limits = DEFAULT_ADAPTER_LIMITS.copy()
 
@@ -167,7 +167,7 @@ class GPUAdapter:
     @property
     def features(self):
         """ A tuple of supported feature names. """
-        return tuple()
+        return self._features
 
     # IDL: [SameObject] readonly attribute GPUAdapterLimits limits;
     @property
@@ -256,16 +256,10 @@ class GPUDevice(GPUObjectBase):
         super().__init__(label, internal, None)
         assert isinstance(adapter, GPUAdapter)
         self._adapter = adapter
-        self._features = tuple(sorted([str(x) for x in features]))
+        self._features = tuple(sorted(str(x) for x in features))
         self._limits = limits.copy()
         self._queue = queue
         queue._device = self  # because it could not be set earlier
-
-    @apidiff.add("Too useful to not-have")
-    @property
-    def adapter(self):
-        """The adapter object corresponding to this device."""
-        return self._adapter
 
     # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
@@ -286,6 +280,12 @@ class GPUDevice(GPUObjectBase):
     def queue(self):
         """The default :class:`GPUQueue` for this device."""
         return self._queue
+
+    @apidiff.add("Too useful to not-have")
+    @property
+    def adapter(self):
+        """The adapter object corresponding to this device."""
+        return self._adapter
 
     # FIXME: new prop to implement
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
@@ -583,7 +583,13 @@ class GPUDevice(GPUObjectBase):
             label (str): A human readable label. Optional.
             layout (GPUPipelineLayout): A layout created with ``create_pipeline_layout()``.
             vertex (VertexState): Describes the vertex shader entry point of the pipeline and its input buffer layouts.
-            primitive (PrimitiveState): Describes the the primitive-related properties of the pipeline.
+            primitive (PrimitiveState): Describes the the primitive-related properties
+                of the pipeline. If `strip_index_format` is persent (which means the
+                primitive topology is a strip), and the drawCall is indexed, the
+                vertex index list is split into sub-lists using the maximum value of this
+                index format as a separator. Example: a list with values
+                `[1, 2, 65535, 4, 5, 6]` of type "uint16" will be split in sub-lists
+                `[1, 2]` and `[4, 5, 6]`.
             depth_stencil (DepthStencilState): Describes the optional depth-stencil properties, including the testing, operations, and bias. Optional.
             multisample (MultisampleState): Describes the multi-sampling properties of the pipeline.
             fragment (FragmentState): Describes the fragment shader
@@ -1379,13 +1385,17 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # FIXME: was set_index_buffer(self, buffer, offset=0, size=0):
     # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
     def set_index_buffer(self, buffer, index_format, offset=0, size=0):
         """Set the index buffer for this render pass.
 
         Arguments:
             buffer (GPUBuffer): The buffer that contains the indices.
+            index_format (GPUIndexFormat): The format of the index data
+                contained in buffer. If `strip_index_format` is given in the
+                call to `create_render_pipeline()`, it must match.
+                NOTE: at the moment this value is ignored, and strip_index_format
+                defines the index format, until wgpu-native catches up.
             offset (int): The byte offset in the buffer. Default 0.
             size (int): The number of bytes to use. If zero, the remaining size
                 (after offset) of the buffer is used. Default 0.

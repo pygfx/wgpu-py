@@ -141,16 +141,7 @@ def _tuple_from_tuple_or_dict(ob, fields):
         return tuple(ob)
     elif isinstance(ob, dict):
         try:
-            res = []
-            for key in fields:
-                if "_or_" in key:  # Convenience for e.g. depth_or_array_layers
-                    keys = key.split("_or_")
-                    keys.append(key)
-                    for key in keys:
-                        if key in fields:
-                            break
-                res.append(ob[key])
-            return tuple(res)  # tuple(ob[key] for key in fields)
+            return tuple(ob[key] for key in fields)
         except KeyError:
             raise ValueError(error_msg.format(", ".join(fields)))
     else:
@@ -231,7 +222,7 @@ class GPU(base.GPU):
         # todo: when wgpu gets an event loop -> while run wgpu event loop or something
 
         assert adapter_id is not None
-        features = set()
+        features = tuple()
         return GPUAdapter("WGPU", features, adapter_id)
 
     async def request_adapter_async(self, *, canvas, power_preference=None):
@@ -754,20 +745,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     ):
         return self.create_compute_pipeline(label=label, layout=layout, compute=compute)
 
-    # FIXME: was create_render_pipeline(
-    #     self, *, label="",
-    #     layout: "GPUPipelineLayout" = None,
-    #     vertex_stage: "structs.ProgrammableStageDescriptor",
-    #     fragment_stage: "structs.ProgrammableStageDescriptor" = None,
-    #     primitive_topology: "enums.PrimitiveTopology",
-    #     rasterization_state: "structs.RasterizationStateDescriptor" = {},
-    #     color_states: "List[structs.ColorStateDescriptor]",
-    #     depth_stencil_state: "structs.DepthStencilStateDescriptor" = None,
-    #     vertex_state: "structs.VertexStateDescriptor" = {},
-    #     sample_count: int = 1,
-    #     sample_mask: int = 0xFFFFFFFF,
-    #     alpha_to_coverage_enabled: bool = False
-    # ):
     def create_render_pipeline(
         self,
         *,
@@ -780,6 +757,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         fragment: "structs.FragmentState" = None,
     ):
         depth_stencil = depth_stencil or {}
+        multisample = multisample or {}
 
         # Little helper, remove after june 2021 or so
         assert "stencil_front" not in depth_stencil, "stencil_front -> front"
@@ -924,9 +902,11 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             color_states_length=len(c_color_states_list),
             depth_stencil_state=c_depth_stencil_state,
             vertex_state=c_vertex_state,
-            sample_count=multisample["count"],
-            sample_mask=multisample["mask"],
-            alpha_to_coverage_enabled=multisample["alpha_to_coverage_enabled"],
+            sample_count=multisample.get("count", 1),
+            sample_mask=multisample.get("mask", 0xFFFFFFFF),
+            alpha_to_coverage_enabled=multisample.get(
+                "alpha_to_coverage_enabled", False
+            ),
         )
 
         # H: WGPURenderPipelineId f(WGPUDeviceId device_id, const WGPURenderPipelineDescriptor *desc)
@@ -1615,8 +1595,9 @@ class GPURenderEncoderBase(base.GPURenderEncoderBase):
         # H: void f(WGPURawPass *pass, WGPURenderPipelineId pipeline_id)
         lib.wgpu_render_pass_set_pipeline(self._internal, pipeline_id)
 
-    # FIXME: was set_index_buffer(self, buffer, offset=0, size=0):
     def set_index_buffer(self, buffer, index_format, offset=0, size=0):
+        # Note: index_format is now ignored, strip_index_format is used in wgpu-native for now.
+        # -> update docstring of this method in base.py when this is fixed.
         if not size:
             size = buffer.size - offset
         # H: void f(WGPURawPass *pass, WGPUBufferId buffer_id, WGPUBufferAddress offset, WGPUBufferAddress size)
