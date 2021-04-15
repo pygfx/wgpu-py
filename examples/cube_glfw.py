@@ -22,7 +22,7 @@ canvas = WgpuCanvas(title="wgpu cube with GLFW")
 
 # Create a wgpu device
 adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
-device = adapter.request_device(extensions=[], limits={})
+device = adapter.request_device()
 
 
 # %% Generate data
@@ -140,7 +140,7 @@ command_encoder.copy_buffer_to_texture(
     },
     copy_size=texture_size,
 )
-device.default_queue.submit([command_encoder.finish()])
+device.queue.submit([command_encoder.finish()])
 
 
 # Create a sampler
@@ -206,7 +206,7 @@ bind_groups_layout_entries[UNIFORM_BINDING[0]].append(
     {
         "binding": UNIFORM_BINDING[1],
         "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-        "type": wgpu.BindingType.uniform_buffer,
+        "buffer": {"type": wgpu.BufferBindingType.uniform},
     }
 )
 
@@ -217,7 +217,7 @@ bind_groups_layout_entries[SAMPLER_BINDING[0]].append(
     {
         "binding": SAMPLER_BINDING[1],
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "type": wgpu.BindingType.sampler,
+        "sampler": {"type": wgpu.SamplerBindingType.filtering},
     }
 )
 
@@ -228,9 +228,10 @@ bind_groups_layout_entries[TEXTURE_BINDING[0]].append(
     {
         "binding": TEXTURE_BINDING[1],
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "type": wgpu.BindingType.sampled_texture,
-        "view_dimension": wgpu.TextureViewDimension.d2,
-        "texture_component_type": wgpu.TextureComponentType.uint,
+        "texture": {
+            "sample_type": wgpu.TextureSampleType.uint,
+            "view_dimension": wgpu.TextureViewDimension.d2,
+        },
     }
 )
 
@@ -253,45 +254,21 @@ pipeline_layout = device.create_pipeline_layout(bind_group_layouts=bind_group_la
 
 render_pipeline = device.create_render_pipeline(
     layout=pipeline_layout,
-    vertex_stage={"module": vshader, "entry_point": "main"},
-    fragment_stage={"module": fshader, "entry_point": "main"},
-    primitive_topology=wgpu.PrimitiveTopology.triangle_list,
-    rasterization_state={
-        "front_face": wgpu.FrontFace.ccw,
-        "cull_mode": wgpu.CullMode.back,
-        "depth_bias": 0,
-        "depth_bias_slope_scale": 0.0,
-        "depth_bias_clamp": 0.0,
-    },
-    color_states=[
-        {
-            "format": wgpu.TextureFormat.bgra8unorm_srgb,
-            "alpha_blend": (
-                wgpu.BlendFactor.one,
-                wgpu.BlendFactor.zero,
-                wgpu.BlendOperation.add,
-            ),
-            "color_blend": (
-                wgpu.BlendFactor.one,
-                wgpu.BlendFactor.zero,
-                wgpu.BlendOperation.add,
-            ),
-        }
-    ],
-    vertex_state={
-        "index_format": wgpu.IndexFormat.uint32,
-        "vertex_buffers": [
+    vertex={
+        "module": vshader,
+        "entry_point": "main",
+        "buffers": [
             {
                 "array_stride": 4 * 6,
                 "step_mode": wgpu.InputStepMode.vertex,
                 "attributes": [
                     {
-                        "format": wgpu.VertexFormat.float4,
+                        "format": wgpu.VertexFormat.float32x4,
                         "offset": 0,
                         "shader_location": 0,
                     },
                     {
-                        "format": wgpu.VertexFormat.float2,
+                        "format": wgpu.VertexFormat.float32x2,
                         "offset": 4 * 4,
                         "shader_location": 1,
                     },
@@ -299,9 +276,35 @@ render_pipeline = device.create_render_pipeline(
             },
         ],
     },
-    sample_count=1,
-    sample_mask=0xFFFFFFFF,
-    alpha_to_coverage_enabled=False,
+    primitive={
+        "topology": wgpu.PrimitiveTopology.triangle_list,
+        "strip_index_format": wgpu.IndexFormat.uint32,
+        "front_face": wgpu.FrontFace.ccw,
+        "cull_mode": wgpu.CullMode.back,
+    },
+    depth_stencil=None,
+    multisample=None,
+    fragment={
+        "module": fshader,
+        "entry_point": "main",
+        "targets": [
+            {
+                "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                "blend": {
+                    "alpha": (
+                        wgpu.BlendFactor.one,
+                        wgpu.BlendFactor.zero,
+                        wgpu.BlendOperation.add,
+                    ),
+                    "color": (
+                        wgpu.BlendFactor.one,
+                        wgpu.BlendFactor.zero,
+                        wgpu.BlendOperation.add,
+                    ),
+                },
+            }
+        ],
+    },
 )
 
 
@@ -357,7 +360,7 @@ def draw_frame():
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
                 {
-                    "attachment": current_texture_view,
+                    "view": current_texture_view,
                     "resolve_target": None,
                     "load_value": (0.1, 0.3, 0.2, 1),
                     "store_op": wgpu.StoreOp.store,
@@ -366,14 +369,14 @@ def draw_frame():
         )
 
         render_pass.set_pipeline(render_pipeline)
-        render_pass.set_index_buffer(index_buffer)
+        render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
         render_pass.set_vertex_buffer(0, vertex_buffer)
         for bind_group_id, bind_group in enumerate(bind_groups):
             render_pass.set_bind_group(bind_group_id, bind_group, [], 0, 99)
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
 
         render_pass.end_pass()
-        device.default_queue.submit([command_encoder.finish()])
+        device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw()
 
