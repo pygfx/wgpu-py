@@ -821,9 +821,11 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         c_color_states_array = ffi.new(
             "WGPUColorStateDescriptor []", c_color_states_list
         )
-        if depth_stencil.get("front", None) is None:
-            c_depth_stencil_state = ffi.NULL
-        else:
+        c_depth_stencil_state = ffi.NULL
+        if depth_stencil:
+            assert (
+                depth_stencil.get("format", None) is not None
+            ), "depth_stencil needs format"
             stencil_front = depth_stencil.get("front", {})
             # H: compare: WGPUCompareFunction, fail_op: WGPUStencilOperation, depth_fail_op: WGPUStencilOperation, pass_op: WGPUStencilOperation
             c_stencil_front = new_struct(
