@@ -584,7 +584,7 @@ class GPUDevice(GPUObjectBase):
             layout (GPUPipelineLayout): A layout created with ``create_pipeline_layout()``.
             vertex (VertexState): Describes the vertex shader entry point of the pipeline and its input buffer layouts.
             primitive (PrimitiveState): Describes the the primitive-related properties
-                of the pipeline. If `strip_index_format` is persent (which means the
+                of the pipeline. If `strip_index_format` is present (which means the
                 primitive topology is a strip), and the drawCall is indexed, the
                 vertex index list is split into sub-lists using the maximum value of this
                 index format as a separator. Example: a list with values
