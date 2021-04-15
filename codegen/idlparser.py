@@ -190,6 +190,7 @@ class IdlParser:
             "long": "int",
             "unsigned long": "int",
             "unsigned long long": "int",
+            "[Clamp] unsigned short": "int",
             "unsigned short": "int",
             "GPUIntegerCoordinate": "int",
             "GPUSampleMask": "int",
@@ -209,6 +210,10 @@ class IdlParser:
             name = name.split("<")[-1].rstrip(">")
             name = self.resolve_type(name).strip("'")
             return f"'List[{name}]'"
+        elif name.startswith("record<") and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            names = [self.resolve_type(t).strip("'") for t in name.split(",")]
+            return f"'Dict[{', '.join(names)}]'"
         elif " or " in name:
             name = name.strip("()")
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
@@ -309,6 +314,13 @@ class IdlParser:
                             .replace("  ", " ")
                         )
                         interface.functions[funcname] = line
+            elif " includes " in line:
+                parts = line.strip(";").split()
+                assert len(parts) == 3 and parts[1] == "includes"
+                classname, _, base = parts
+                if classname not in self._interfaces:
+                    self._interfaces[classname] = Interface(classname, [])
+                self._interfaces[classname].bases.append(parts[2])
             elif line.startswith("enum "):
                 line += self.read_until("}") + self.read_line()
                 lines = line.strip().split("\n")
@@ -373,6 +385,10 @@ class IdlParser:
         """We don't do any name format normalization in the parser code itself;
         we do that here.
         """
+
+        # Drop some toplevel names
+        for name in ["NavigatorGPU", "GPUAdapterLimits", "GPUSupportedFeatures"]:
+            self._interfaces.pop(name, None)
 
         # Divide flags and actual class definitions
         for name, interface in self._interfaces.items():

@@ -233,12 +233,12 @@ def test_do_a_copy_roundtrip():
     )
 
     # Check texture stats
-    assert tex2.texture_size == (nx, ny, nz)
+    assert tex2.size == (nx, ny, nz)
     assert tex2.mip_level_count == 1
     assert tex2.sample_count == 1
     assert tex2.dimension == wgpu.TextureDimension.d1
     assert tex2.format == texture_format
-    assert tex2.texture_usage == wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST
+    assert tex2.usage == wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST
     assert tex2.create_view().texture is tex2
 
     # Upload from CPU to buffer
@@ -257,7 +257,7 @@ def test_do_a_copy_roundtrip():
         {"texture": tex2, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
     # Copy from texture to texture
     command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_texture(
@@ -265,7 +265,7 @@ def test_do_a_copy_roundtrip():
         {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
     # Copy from texture to buffer
     command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_buffer(
@@ -273,11 +273,11 @@ def test_do_a_copy_roundtrip():
         {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
     # Copy from buffer to buffer
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_buffer(buf4, 0, buf5, 0, nbytes)
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
     # assert buf5.state == "unmapped"
@@ -331,7 +331,7 @@ def test_do_a_copy_roundtrip():
 
     # Copy from buffer to buffer
     command_encoder.copy_buffer_to_buffer(buf4, 0, buf5, 0, nbytes)
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
     # assert buf5.state == "unmapped"
@@ -390,8 +390,8 @@ def test_write_buffer1():
 
     # Upload from CPU to buffer
     device.create_command_encoder()  # we seem to need to create one
-    device.default_queue.write_buffer(buf4, 0, data1)
-    device.default_queue.submit([])
+    device.queue.write_buffer(buf4, 0, data1)
+    device.queue.submit([])
 
     # Download from buffer to CPU
     data2 = buf4.read_data().cast("f")
@@ -421,7 +421,7 @@ def test_write_buffer2():
 
     # Upload from CPU to buffer
     device.create_command_encoder()  # we seem to need to create one
-    device.default_queue.write_buffer(buf4, 0, data1)
+    device.queue.write_buffer(buf4, 0, data1)
 
     # We swipe the data. You could also think that we passed something into
     # write_buffer without holding a referene to it. Anyway, write_buffer
@@ -429,7 +429,7 @@ def test_write_buffer2():
     for i in range(len(data1)):
         data1[i] = 1
 
-    device.default_queue.submit([])
+    device.queue.submit([])
 
     # Download from buffer to CPU
     data2 = data1.__class__.from_buffer(buf4.read_data())
@@ -448,8 +448,8 @@ def test_write_buffer3():
 
     # Upload from CPU to buffer, using bytes
     device.create_command_encoder()  # we seem to need to create one
-    device.default_queue.write_buffer(buf4, 0, b"abcdefghijkl", 0, nbytes)
-    device.default_queue.submit([])
+    device.queue.write_buffer(buf4, 0, b"abcdefghijkl", 0, nbytes)
+    device.queue.submit([])
 
     # Download from buffer to CPU
     assert buf4.read_data().tobytes() == b"abcdefghijkl"
@@ -478,13 +478,13 @@ def test_write_texture1():
 
     # Upload from CPU to texture
     command_encoder = device.create_command_encoder()
-    device.default_queue.write_texture(
+    device.queue.write_texture(
         {"texture": tex3},
         data1,
         {"bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
-    # device.default_queue.submit([])  -> call further down
+    # device.queue.submit([])  -> call further down
 
     # Copy from texture to buffer
     command_encoder.copy_texture_to_buffer(
@@ -492,7 +492,7 @@ def test_write_texture1():
         {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
     data2 = buf4.read_data().cast("f")
@@ -527,13 +527,13 @@ def test_write_texture2():
 
     # Upload from CPU to texture
     command_encoder = device.create_command_encoder()
-    device.default_queue.write_texture(
+    device.queue.write_texture(
         {"texture": tex3},
         data1,
         {"bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
-    # device.default_queue.submit([])  -> call further down
+    # device.queue.submit([])  -> call further down
 
     # Invalidate the data now, to show that write_texture has made a copy
     for i in range(len(data1)):
@@ -545,7 +545,7 @@ def test_write_texture2():
         {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
         (nx, ny, nz),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
     data2 = data1.__class__.from_buffer(buf4.read_data())

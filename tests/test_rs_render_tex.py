@@ -396,18 +396,18 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
         )
     with raises(ValueError):
         texture_view = texture.create_view(
-            mip_level_count=1,
+            format=texture_format,
         )
 
     sampler = device.create_sampler(mag_filter="linear", min_filter="linear")
 
     # Determine texture component type from the format
     if texture_format.endswith(("norm", "float")):
-        texture_component_type = wgpu.TextureComponentType.float
+        texture_component_type = wgpu.TextureSampleType.float
     elif "uint" in texture_format:
-        texture_component_type = wgpu.TextureComponentType.uint
+        texture_component_type = wgpu.TextureSampleType.uint
     else:
-        texture_component_type = wgpu.TextureComponentType.sint
+        texture_component_type = wgpu.TextureSampleType.sint
 
     # Bindings and layout
     bindings = [
@@ -418,14 +418,17 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
         {
             "binding": 0,
             "visibility": wgpu.ShaderStage.FRAGMENT,
-            "type": wgpu.BindingType.sampled_texture,
-            "view_dimension": wgpu.TextureViewDimension.d2,
-            "texture_component_type": texture_component_type,
+            "texture": {
+                "sample_type": texture_component_type,
+                "view_dimension": wgpu.TextureViewDimension.d2,
+            },
         },
         {
             "binding": 1,
             "visibility": wgpu.ShaderStage.FRAGMENT,
-            "type": wgpu.BindingType.sampler,
+            "sampler": {
+                "type": wgpu.SamplerBindingType.filtering,
+            },
         },
     ]
     bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)

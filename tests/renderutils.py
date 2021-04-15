@@ -24,7 +24,7 @@ def upload_to_texture(device, texture, data, nx, ny, nz):
         {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
 
 def download_from_texture(device, texture, data_type, nx, ny, nz):
@@ -41,7 +41,7 @@ def download_from_texture(device, texture, data_type, nx, ny, nz):
         {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
         (nx, ny, nz),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Download
     return data_type.from_buffer(buffer.read_data())
@@ -82,7 +82,7 @@ def render_to_texture(
         size=(nx, ny, 1),
         dimension=wgpu.TextureDimension.d2,
         format=texture_format,
-        usage=wgpu.TextureUsage.OUTPUT_ATTACHMENT | wgpu.TextureUsage.COPY_SRC,
+        usage=wgpu.TextureUsage.RENDER_ATTACHMENT | wgpu.TextureUsage.COPY_SRC,
     )
     current_texture_view = texture.create_view()
 
@@ -96,40 +96,45 @@ def render_to_texture(
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
-        vertex_stage={"module": vshader, "entry_point": "main"},
-        fragment_stage={"module": fshader, "entry_point": "main"},
-        primitive_topology=topology,
-        rasterization_state={
+        vertex={
+            "module": vshader,
+            "entry_point": "main",
+            "buffers": vbo_views,
+        },
+        primitive={
+            "topology": topology,
+            "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
-            "depth_bias": 0,
-            "depth_bias_slope_scale": 0.0,
-            "depth_bias_clamp": 0.0,
         },
-        color_states=[
-            {
-                "format": texture_format,
-                "alpha_blend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "color_blend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "write_mask": wgpu.ColorWrite.ALL,
-            }
-        ],
-        depth_stencil_state=depth_stencil_state,
-        vertex_state={
-            "index_format": wgpu.IndexFormat.uint32,
-            "vertex_buffers": vbo_views,
+        depth_stencil=depth_stencil_state,
+        multisample={
+            "count": 1,
+            "mask": 0xFFFFFFFF,
+            "alpha_to_coverage_enabled": False,
         },
-        sample_count=1,
-        sample_mask=0xFFFFFFFF,
-        alpha_to_coverage_enabled=False,
+        fragment={
+            "module": fshader,
+            "entry_point": "main",
+            "targets": [
+                {
+                    "format": texture_format,
+                    "blend": {
+                        "color": (
+                            wgpu.BlendFactor.one,
+                            wgpu.BlendFactor.zero,
+                            wgpu.BlendOperation.add,
+                        ),
+                        "alpha": (
+                            wgpu.BlendFactor.one,
+                            wgpu.BlendFactor.zero,
+                            wgpu.BlendOperation.add,
+                        ),
+                    },
+                    "write_mask": wgpu.ColorWrite.ALL,
+                },
+            ],
+        },
     )
 
     command_encoder = device.create_command_encoder()
@@ -139,7 +144,7 @@ def render_to_texture(
         "load_value": (0, 0, 0, 0),  # LoadOp.load or color
         "store_op": wgpu.StoreOp.store,
     }
-    color_attachment["attachment"] = current_texture_view
+    color_attachment["view"] = current_texture_view
     render_pass = command_encoder.begin_render_pass(
         color_attachments=[color_attachment],
         depth_stencil_attachment=depth_stencil_attachment,
@@ -175,7 +180,7 @@ def render_to_texture(
         {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
         (nx, ny, 1),
     )
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer - numpy is much easier to work with
     mem = buffer.read_data()  # slow, can also be done async
@@ -216,45 +221,48 @@ def render_to_screen(
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
-        vertex_stage={"module": vshader, "entry_point": "main"},
-        fragment_stage={"module": fshader, "entry_point": "main"},
-        primitive_topology=topology,
-        rasterization_state={
+        vertex={
+            "module": vshader,
+            "entry_point": "main",
+            "buffers": vbo_views,
+        },
+        primitive={
+            "topology": topology,
+            "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
-            "depth_bias": 0,
-            "depth_bias_slope_scale": 0.0,
-            "depth_bias_clamp": 0.0,
         },
-        color_states=[
-            {
-                "format": wgpu.TextureFormat.bgra8unorm_srgb,
-                "alpha_blend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "color_blend": (
-                    wgpu.BlendFactor.one,
-                    wgpu.BlendFactor.zero,
-                    wgpu.BlendOperation.add,
-                ),
-                "write_mask": wgpu.ColorWrite.ALL,
-            }
-        ],
-        depth_stencil_state=depth_stencil_state,
-        vertex_state={
-            "index_format": wgpu.IndexFormat.uint32,
-            "vertex_buffers": vbo_views,
+        depth_stencil=depth_stencil_state,
+        multisample={
+            "count": 1,
+            "mask": 0xFFFFFFFF,
+            "alpha_to_coverage_enabled": False,
         },
-        sample_count=1,
-        sample_mask=0xFFFFFFFF,
-        alpha_to_coverage_enabled=False,
+        fragment={
+            "module": fshader,
+            "entry_point": "main",
+            "targets": [
+                {
+                    "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                    "blend": {
+                        "color": (
+                            wgpu.BlendFactor.one,
+                            wgpu.BlendFactor.zero,
+                            wgpu.BlendOperation.add,
+                        ),
+                        "alpha": (
+                            wgpu.BlendFactor.one,
+                            wgpu.BlendFactor.zero,
+                            wgpu.BlendOperation.add,
+                        ),
+                    },
+                    "write_mask": wgpu.ColorWrite.ALL,
+                },
+            ],
+        },
     )
 
-    swap_chain = device.configure_swap_chain(
-        canvas, wgpu.TextureFormat.bgra8unorm_srgb, wgpu.TextureUsage.OUTPUT_ATTACHMENT
-    )
+    swap_chain = canvas.configure_swap_chain(device=device)
 
     def draw_frame():
         with swap_chain as current_texture_view:
@@ -265,7 +273,7 @@ def render_to_screen(
                 "load_value": (0, 0, 0, 0),  # LoadOp.load or color
                 "store_op": wgpu.StoreOp.store,
             }
-            ca["attachment"] = current_texture_view
+            ca["view"] = current_texture_view
             render_pass = command_encoder.begin_render_pass(
                 color_attachments=[ca],
                 depth_stencil_attachment=depth_stencil_attachment,
@@ -298,7 +306,7 @@ def render_to_screen(
                     render_pass.draw_indexed_indirect(indirect_buffer, 0)
             render_pass.pop_debug_group()
             render_pass.end_pass()
-            device.default_queue.submit([command_encoder.finish()])
+            device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw(draw_frame)
 

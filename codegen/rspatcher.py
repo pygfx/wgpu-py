@@ -73,6 +73,20 @@ def write_mappings():
         for ikey in idl.enums[name].values():
             hkey = ikey
             hkey = hkey.replace("1d", "D1").replace("2d", "D2").replace("3d", "D3")
+            if "index" not in name.lower():
+                # Yuk! but wgpu.h will probably align to WebGPU soon, so should be temporary
+                hkey = (
+                    hkey.replace("uint8", "Uchar")
+                    .replace("uint16", "Ushort")
+                    .replace("uint32", "Uint")
+                )
+                hkey = (
+                    hkey.replace("sint8", "Char")
+                    .replace("sint16", "Short")
+                    .replace("sint32", "Int")
+                )
+                hkey = hkey.replace("float16", "Half").replace("float32", "Float")
+                hkey = hkey.replace("x2", "2").replace("x3", "3").replace("x4", "4")
             hkey = hkey.replace("-", " ").title().replace(" ", "")
             if hkey in hp.enums[name]:
                 enummap[name + "." + ikey] = hp.enums[name][hkey]

@@ -144,12 +144,16 @@ def test_compute_indirect():
         {
             "binding": 0,
             "visibility": wgpu.ShaderStage.COMPUTE,
-            "type": wgpu.BindingType.storage_buffer,
+            "buffer": {
+                "type": wgpu.BufferBindingType.storage,
+            },
         },
         {
             "binding": 1,
             "visibility": wgpu.ShaderStage.COMPUTE,
-            "type": wgpu.BindingType.storage_buffer,
+            "buffer": {
+                "type": wgpu.BufferBindingType.storage,
+            },
         },
     ]
     bindings = [
@@ -173,7 +177,7 @@ def test_compute_indirect():
     # Create and run the pipeline
     compute_pipeline = device.create_compute_pipeline(
         layout=pipeline_layout,
-        compute_stage={"module": cshader, "entry_point": "main"},
+        compute={"module": cshader, "entry_point": "main"},
     )
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
@@ -181,7 +185,7 @@ def test_compute_indirect():
     compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 args not used
     compute_pass.dispatch_indirect(buffer3, 0)
     compute_pass.end_pass()
-    device.default_queue.submit([command_encoder.finish()])
+    device.queue.submit([command_encoder.finish()])
 
     # Read result
     out1 = in1.__class__.from_buffer(buffer2.read_data())

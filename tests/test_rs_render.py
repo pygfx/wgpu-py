@@ -262,7 +262,7 @@ def test_render_orange_square_vbo():
         "step_mode": "vertex",
         "attributes": [
             {
-                "format": wgpu.VertexFormat.float2,
+                "format": wgpu.VertexFormat.float32x2,
                 "offset": 0,
                 "shader_location": 0,
             },
@@ -503,20 +503,20 @@ def test_render_orange_square_depth():
         # size=(640, 480, 1),  # when rendering to screen
         dimension=wgpu.TextureDimension.d2,
         format=wgpu.TextureFormat.depth24plus_stencil8,
-        usage=wgpu.TextureUsage.OUTPUT_ATTACHMENT,
+        usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
     )
 
     depth_stencil_state = dict(
         format=wgpu.TextureFormat.depth24plus_stencil8,
         depth_write_enabled=True,
         depth_compare=wgpu.CompareFunction.less_equal,
-        stencil_front={
+        front={
             "compare": wgpu.CompareFunction.equal,
             "fail_op": wgpu.StencilOperation.keep,
             "depth_fail_op": wgpu.StencilOperation.keep,
             "pass_op": wgpu.StencilOperation.keep,
         },
-        stencil_back={
+        back={
             "compare": wgpu.CompareFunction.equal,
             "fail_op": wgpu.StencilOperation.keep,
             "depth_fail_op": wgpu.StencilOperation.keep,
@@ -524,10 +524,13 @@ def test_render_orange_square_depth():
         },
         stencil_read_mask=0,
         stencil_write_mask=0,
+        depth_bias=0,
+        depth_bias_slope_scale=0.0,
+        depth_bias_clamp=0.0,
     )
 
     depth_stencil_attachment = dict(
-        attachment=depth_stencil_texture.create_view(),
+        view=depth_stencil_texture.create_view(),
         depth_load_value=0.1,
         depth_store_op=wgpu.StoreOp.store,
         stencil_load_value=wgpu.LoadOp.load,
