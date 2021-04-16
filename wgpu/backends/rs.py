@@ -239,7 +239,7 @@ class GPU(base.GPU):
         limits = {key: getattr(c_limits, key) for key in dir(c_limits)}
 
         # H: WGPUFeatures f(WGPUAdapterId adapter_id)
-        c_features_flag = lib.wgpu_adapter_features(adapter_id)
+        c_features_flag = lib.wgpu_adapter_features(adapter_id)  # noqa
         features = tuple()  # todo: resolve flag into list of feature names
 
         return GPUAdapter("WGPU", adapter_id, features, limits)
@@ -1047,7 +1047,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         # Let it do some cycles
         # H: void f(WGPUDeviceId device_id, bool force_wait)
-        lib.wgpu_device_poll(device._internal, True)
+        lib.wgpu_device_poll(self._device._internal, True)
 
         if status != 0:  # no-cover
             raise RuntimeError(f"Could not read buffer data ({status}).")

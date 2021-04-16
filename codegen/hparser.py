@@ -34,7 +34,7 @@ def get_h_parser(*, allow_cache=True):
                 continue
             elif line.startswith("#define ") and "(" in line and ")" in line:
                 i1, i2 = line.index("("), line.index(")")
-                line = line[:i1] + line[i2+1:]
+                line = line[:i1] + line[i2 + 1 :]
             lines.append(line)
     source = "".join(lines)
 
