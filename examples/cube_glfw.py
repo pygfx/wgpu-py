@@ -87,6 +87,8 @@ texture_data = np.array(
     ],
     dtype=np.uint8,
 )
+texture_data = np.repeat(texture_data, 64, 0)
+texture_data = np.repeat(texture_data, 64, 1)
 texture_size = texture_data.shape[1], texture_data.shape[0], 1
 
 
@@ -278,7 +280,6 @@ render_pipeline = device.create_render_pipeline(
     },
     primitive={
         "topology": wgpu.PrimitiveTopology.triangle_list,
-        "strip_index_format": wgpu.IndexFormat.uint32,
         "front_face": wgpu.FrontFace.ccw,
         "cull_mode": wgpu.CullMode.back,
     },

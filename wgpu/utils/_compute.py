@@ -121,15 +121,15 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     # Create buffers for input and output arrays
     buffers = {}
     for index, array in input_arrays.items():
-        usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_WRITE
+        usage = wgpu.BufferUsage.STORAGE
         if index in output_arrays:
-            usage |= wgpu.BufferUsage.MAP_READ
+            usage |= wgpu.BufferUsage.COPY_SRC
         buffer = device.create_buffer_with_data(data=array, usage=usage)
         buffers[index] = buffer
     for index, info in output_infos.items():
         if index in input_arrays:
             continue  # We already have this buffer
-        usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
+        usage = wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC
         buffers[index] = device.create_buffer(size=info["nbytes"], usage=usage)
 
     # Create bindings and binding layouts
@@ -181,7 +181,8 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     output = {}
     for index, info in output_infos.items():
         buffer = buffers[index]
-        m = buffer.read_data()  # slow, can also be done async
+        # m = buffer.read_data()  # old API
+        m = device.queue.read_buffer(buffer)  # slow, can also be done async
         if "ctypes_array_type" in info:
             output[index] = info["ctypes_array_type"].from_buffer(m)
         else:

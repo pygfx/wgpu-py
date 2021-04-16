@@ -60,7 +60,7 @@ cshader = device.create_shader_module(code=compute_shader)
 # Create buffer objects, input buffer is mapped.
 buffer1 = device.create_buffer_with_data(data=data, usage=wgpu.BufferUsage.STORAGE)
 buffer2 = device.create_buffer(
-    size=data.nbytes, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ
+    size=data.nbytes, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC
 )
 
 # Setup layout and bindings
@@ -110,5 +110,6 @@ compute_pass.end_pass()
 device.queue.submit([command_encoder.finish()])
 
 # Read result
-result = buffer2.read_data().cast("i")
+# result = buffer2.read_data().cast("i")
+result = device.queue.read_buffer(buffer2).cast("i")
 print(result.tolist())
