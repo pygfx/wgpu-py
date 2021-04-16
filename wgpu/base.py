@@ -151,11 +151,12 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
-    def __init__(self, name, features, internal):
+    def __init__(self, name, internal, features, limits):
         self._name = name
         self._features = tuple(sorted(str(x) for x in features))
         self._internal = internal
         self._limits = DEFAULT_ADAPTER_LIMITS.copy()
+        self._limits.update(limits)
 
     # IDL: readonly attribute DOMString name;
     @property
@@ -257,7 +258,8 @@ class GPUDevice(GPUObjectBase):
         assert isinstance(adapter, GPUAdapter)
         self._adapter = adapter
         self._features = tuple(sorted(str(x) for x in features))
-        self._limits = limits.copy()
+        self._limits = DEFAULT_ADAPTER_LIMITS.copy()
+        self._limits.update(limits)
         self._queue = queue
         queue._device = self  # because it could not be set earlier
 
@@ -321,8 +323,7 @@ class GPUDevice(GPUObjectBase):
             label (str): A human readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (BufferUsageFlags): The ways in which this buffer will be used.
-            mapped_at_creation (bool): Must be False, because we currently
-                use read_data() and write_data() instead of buffer mapping.
+            mapped_at_creation (bool): Must be False, use create_buffer_with_data() instead.
         """
         raise NotImplementedError()
 
@@ -335,6 +336,8 @@ class GPUDevice(GPUObjectBase):
             data: Any object supporting the Python buffer protocol (this
                 includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
             usage (BufferUsageFlags): The ways in which this buffer will be used.
+
+        Also see ``GPUQueue.write_buffer()`` and ``GPUQueue.read_buffer()``.
         """
         raise NotImplementedError()
 
@@ -633,7 +636,7 @@ class GPUDevice(GPUObjectBase):
 
             {
                 "topology": wgpu.PrimitiveTopology.triangle_list,
-                "strip_index_format": wgpu.IndexFormat.uint32,
+                "strip_index_format": wgpu.IndexFormat.uint32,  # see note
                 "front_face": wgpu.FrontFace.ccw,  # optional
                 "cull_mode": wgpu.CullMode.none,  # optional
             }
@@ -789,12 +792,10 @@ class GPUBuffer(GPUObjectBase):
     copy data between buffers and textures.
     """
 
-    def __init__(self, label, internal, device, size, usage, state):
+    def __init__(self, label, internal, device, size, usage):
         super().__init__(label, internal, device)
         self._size = size
         self._usage = usage
-        self._state = state
-        self._map_mode = 3 if state == "mapped at creation" else 0
 
     @apidiff.add("Too useful to not-have")
     @property
@@ -825,47 +826,6 @@ class GPUBuffer(GPUObjectBase):
     # writing but not expose it via the public API. The only
     # disadvantage (AFAIK) is that there could be use-cases where a
     # memory copy could be avoided when using mapping.
-
-    # IDL specifies getMappedRange, but there is no equivalent in wgpu yet
-    #
-    # @property
-    # def state(self):
-    #     """ The current state of the GPUBuffer:
-    #
-    #     * "mapped" when the buffer is available for CPU operations.
-    #     * "mapped at creation" where the GPUBuffer was just created and
-    #       is available for CPU operations on its content.
-    #     * "mapping pending" where the GPUBuffer is being made available
-    #       for CPU operations on its content.
-    #     * "unmapped" when the buffer is available for GPU operations.
-    #     * "destroyed", when the buffer is no longer available for any
-    #       operations except destroy.
-    #     """
-    #     return self._state
-
-    @apidiff.add("replaces mapping API")
-    def read_data(self, offset=0, size=0):
-        """Read buffer data. Returns the mapped memory as a memoryview,
-        which can be mapped to e.g. a ctypes array or numpy array.
-        If size is zero, the remaining size (after offset) is used.
-        The buffer usage must include MAP_READ.
-        """
-        raise NotImplementedError()
-
-    @apidiff.add("replaces mapping API")
-    async def read_data_async(self, offset=0, size=0):
-        """Asnc version of read_data()."""
-        raise NotImplementedError()
-
-    @apidiff.add("replaces mapping API")
-    def write_data(self, data, offset=0):
-        """Write data to the buffer. The data can be any object
-        supporting the buffer protocol. The buffer usage must include MAP_WRITE.
-
-        Note: this method deviates from the WebGPU spec, and it could be deprecated.
-        Better use ``device.create_buffer_with_data()`` or ``queue.write_buffer()``.
-        """
-        raise NotImplementedError()
 
     # IDL: undefined destroy();
     def destroy(self):
@@ -1394,8 +1354,6 @@ class GPURenderEncoderBase:
             index_format (GPUIndexFormat): The format of the index data
                 contained in buffer. If `strip_index_format` is given in the
                 call to `create_render_pipeline()`, it must match.
-                NOTE: at the moment this value is ignored, and strip_index_format
-                defines the index format, until wgpu-native catches up.
             offset (int): The byte offset in the buffer. Default 0.
             size (int): The number of bytes to use. If zero, the remaining size
                 (after offset) of the buffer is used. Default 0.
@@ -1625,6 +1583,19 @@ class GPUQueue(GPUObjectBase):
             data: The data to write. Must be contiguous.
             data_offset: The byte offset in the data. Default 0.
             size: The number of bytes to write. Default all minus offset.
+
+        Also see ``GPUDevice.create_buffer_with_data()``.
+        """
+        raise NotImplementedError()
+
+    @apidiff.add("replaces WebGPU's mapping API'")
+    def read_buffer(self, buffer, buffer_offset=0, size=None):
+        """Takes the data contents of the buffer and return them as a memoryview.
+
+        Arguments:
+            buffer: The :class:`GPUBuffer` object to read from.
+            buffer_offset (int): The offset in the buffer to start reading from.
+            size: The number of bytes to read. Default all minus offset.
         """
         raise NotImplementedError()
 
@@ -1644,6 +1615,8 @@ class GPUQueue(GPUObjectBase):
             size: A 3-tuple of ints specifying the size to write.
         """
         raise NotImplementedError()
+
+    # todo: a read_texture() seems appropriate too
 
     # FIXME: new method to implement
     # IDL: Promise<undefined> onSubmittedWorkDone();

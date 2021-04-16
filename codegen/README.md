@@ -100,7 +100,7 @@ helps here, by parsing the corresponding `wgpu.h` and:
 
 The update process to follow:
 
-* Download the latest `wgpu.h`.
+* Download the latest `wgpu.h` using `python download-wgpu-native.py --version xx`
 * Run `python codegen` to generate code, apply patches, and produce a report.
 * Diff the report for new differences to take into account.
 * Diff `rs.py` to see what structs and functions have changed. Lines

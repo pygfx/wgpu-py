@@ -21,7 +21,7 @@ def get_h_parser(*, allow_cache=True):
     lines = []
     with open(os.path.join(lib_dir, "resources", "wgpu.h")) as f:
         for line in f.readlines():
-            if not line.startswith(
+            if line.startswith(
                 (
                     "#include ",
                     "#define WGPU_LOCAL",
@@ -31,7 +31,11 @@ def get_h_parser(*, allow_cache=True):
                     "#endif",
                 )
             ):
-                lines.append(line)
+                continue
+            elif line.startswith("#define ") and "(" in line and ")" in line:
+                i1, i2 = line.index("("), line.index(")")
+                line = line[:i1] + line[i2+1:]
+            lines.append(line)
     source = "".join(lines)
 
     # Create parser
@@ -82,6 +86,7 @@ class HParser:
             name = code[i3 + 1 : i4].strip()
             self.structs[name] = struct = {}
             for f in code[i2 + 1 : i3].strip().strip(";").split(";"):
+                # todo: strip comments
                 parts = f.strip().split()
                 key = parts[-1].strip("*")
                 struct[key] = " ".join(parts[:-1])
@@ -123,6 +128,8 @@ class HParser:
                     t = ffi.typeof(name)
                     if not hasattr(t, "fields"):
                         continue  # probably an enum
+                    elif not t.fields:
+                        continue  # base struct / alias
                     s = ffi.new(f"{name} *")
                     # Construct struct
                     struct = {}
@@ -145,7 +152,8 @@ class HParser:
                                 if val.startswith("_"):  # _CDataBase
                                     pass
                                 elif ori_struct[key].startswith("WGPU"):
-                                    ori_struct[key] += "/" + val
+                                    if "/" not in ori_struct[key]:
+                                        ori_struct[key] += "/" + val
                                 else:
                                     ori_struct[key] = val
                     # Make copies

@@ -99,7 +99,7 @@ def write_mappings():
     for structname, struct in hp.structs.items():
         for key, val in struct.items():
             if isinstance(val, str) and val.startswith("WGPU"):
-                enumname = val[4:]
+                enumname = val[4:].split("/")[0]
                 if enumname in idl.enums:
                     cstructfield2enum[f"{structname[4:]}.{key}"] = enumname
                 else:

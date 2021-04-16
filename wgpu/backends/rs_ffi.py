@@ -19,7 +19,7 @@ def get_wgpu_h():
     lines = []
     with open(get_resource_filename("wgpu.h")) as f:
         for line in f.readlines():
-            if not line.startswith(
+            if line.startswith(
                 (
                     "#include ",
                     "#define WGPU_LOCAL",
@@ -29,7 +29,11 @@ def get_wgpu_h():
                     "#endif",
                 )
             ):
-                lines.append(line)
+                continue
+            elif line.startswith("#define ") and "(" in line and ")" in line:
+                i1, i2 = line.index("("), line.index(")")
+                line = line[:i1] + line[i2+1:]
+            lines.append(line)
     return "".join(lines)
 
 
