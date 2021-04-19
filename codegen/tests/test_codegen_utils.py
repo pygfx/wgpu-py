@@ -2,7 +2,7 @@
 Strive for full coverage of the codegen utils module.
 """
 
-from codegen.utils import blacken, Patcher, to_snake_case, to_camel_case
+from codegen.utils import remove_c_comments, blacken, Patcher, to_snake_case, to_camel_case
 
 from pytest import raises
 
@@ -23,6 +23,33 @@ def test_to_camel_case():
     assert to_camel_case("_foo_bar_spam") == "_fooBarSpam"
     assert to_camel_case("fooBarSpam") == "fooBarSpam"
     assert to_camel_case("_fooBarSpam") == "_fooBarSpam"
+
+
+def test_remove_c_comments():
+
+    code1 = """
+    x1 hello// comment
+    // comment
+    x2 hello/* comment */
+    x3/* comment */ hello
+    x4 /* comment
+    comment
+    */hello
+    """
+
+    code3 = """
+    x1 hello
+
+    x2 hello
+    x3 hello
+    x4 hello
+    """
+
+    code1, code3 = dedent(code1), dedent(code3)
+
+    code2 = remove_c_comments(code1)
+
+    assert code2 == code3
 
 
 def test_blacken_singleline():

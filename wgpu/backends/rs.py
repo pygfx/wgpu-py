@@ -199,7 +199,7 @@ class GPU(base.GPU):
             surface_id = get_surface_id_from_canvas(canvas)
 
         # Convert the descriptor
-        # H: power_preference: WGPUPowerPreference, compatible_surface: int
+        # H: power_preference: WGPUPowerPreference, compatible_surface: WGPUOption_SurfaceId/int
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
             power_preference=power_preference,
@@ -402,7 +402,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _create_buffer(self, label, size, usage, mapped_at_creation):
 
         # Create a buffer object
-        # H: label: /** * Debug label of a buffer. This will show up in graphics debuggers for easy identification. */ WGPULabel, size: int, usage: int, mapped_at_creation: bool
+        # H: label: WGPULabel, size: WGPUBufferAddress/int, usage: WGPUBufferUsage/int, mapped_at_creation: bool
         struct = new_struct_p(
             "WGPUBufferDescriptor *",
             label=to_c_label(label),
@@ -436,7 +436,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             height=size[1],
             depth=size[2],
         )
-        # H: label: /** * Debug label of the texture. This will show up in graphics debuggers for easy identification. */ WGPULabel, size: WGPUExtent3d, mip_level_count: int, sample_count: int, dimension: WGPUTextureDimension, format: WGPUTextureFormat, usage: int
+        # H: label: WGPULabel, size: WGPUExtent3d, mip_level_count: int, sample_count: int, dimension: WGPUTextureDimension, format: WGPUTextureFormat, usage: WGPUTextureUsage/int
         struct = new_struct_p(
             "WGPUTextureDescriptor *",
             label=to_c_label(label),
@@ -956,7 +956,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
 
     def create_command_encoder(self, *, label="", measure_execution_time: bool = False):
-        # H: label: /** * Debug label for the command encoder. This will show up in graphics debuggers for easy identification. */ WGPULabel
+        # H: label: WGPULabel
         struct = new_struct_p(
             "WGPUCommandEncoderDescriptor *",
             label=to_c_label(label),
@@ -1253,7 +1253,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
                 clear_value=c_clear_color,
                 read_only=True,
             )
-            # H: attachment: int, resolve_target: int, channel: WGPUPassChannel_Color
+            # H: attachment: WGPUTextureViewId/int, resolve_target: WGPUOption_TextureViewId/int, channel: WGPUPassChannel_Color
             c_attachment = new_struct(
                 "WGPUColorAttachmentDescriptor",
                 attachment=texture_view_id,
@@ -1289,7 +1289,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
                 clear_value=int(c_stencil_clear),
                 # not used: read_only
             )
-            # H: attachment: int, depth: WGPUPassChannel_f32, stencil: WGPUPassChannel_u32
+            # H: attachment: WGPUTextureViewId/int, depth: WGPUPassChannel_f32, stencil: WGPUPassChannel_u32
             c_depth_stencil_attachment = new_struct_p(
                 "WGPUDepthStencilAttachmentDescriptor *",
                 attachment=depth_stencil_attachment["view"]._internal,
@@ -1336,7 +1336,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         c_source = new_struct_p(
             "WGPUBufferCopyView *",
             buffer=source["buffer"]._internal,
-            # H: offset: int, bytes_per_row: int, rows_per_image: int
+            # H: offset: WGPUBufferAddress/int, bytes_per_row: int, rows_per_image: int
             layout=new_struct(
                 "WGPUTextureDataLayout",
                 offset=int(source.get("offset", 0)),
@@ -1401,7 +1401,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         c_destination = new_struct_p(
             "WGPUBufferCopyView *",
             buffer=destination["buffer"]._internal,
-            # H: offset: int, bytes_per_row: int, rows_per_image: int
+            # H: offset: WGPUBufferAddress/int, bytes_per_row: int, rows_per_image: int
             layout=new_struct(
                 "WGPUTextureDataLayout",
                 offset=int(destination.get("offset", 0)),
@@ -1850,7 +1850,7 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
             origin=c_origin,
         )
 
-        # H: offset: int, bytes_per_row: int, rows_per_image: int
+        # H: offset: WGPUBufferAddress/int, bytes_per_row: int, rows_per_image: int
         c_data_layout = new_struct_p(
             "WGPUTextureDataLayout *",
             offset=data_layout.get("offset", 0),
@@ -1900,7 +1900,7 @@ class GPUSwapChain(base.GPUSwapChain, GPUObjectBase):
 
         # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
 
-        # H: usage: int, format: WGPUTextureFormat, width: int, height: int, present_mode: WGPUPresentMode
+        # H: usage: WGPUTextureUsage/int, format: WGPUTextureFormat, width: int, height: int, present_mode: WGPUPresentMode
         struct = new_struct_p(
             "WGPUSwapChainDescriptor *",
             usage=self._usage,

@@ -21,7 +21,7 @@ def test_patch_functions():
     assert all(line[4:] in code2 for line in code1 if line.strip())
 
     # But also an annotation
-    assert "WGPUAdapterId adapter_id, const WGPUDeviceDescriptor" in code2
+    assert "WGPUAdapterId adapter_id, const struct WGPUDeviceDescriptor" in code2
     # And a notification that foo_bar is unknown
     assert code2.count("# FIXME:") == 1
     assert code2.count("foo_bar") == 2
@@ -40,7 +40,7 @@ def test_patch_structs():
     """
     code2 = patch_rs_backend(dedent(code1))
     assert all(line[4:] in code2 for line in code1 if line.strip())
-    assert "label: WGPULabel, size: WGPU" in code2
+    assert "label: WGPULabel, size: " in code2
     assert "# FIXME:" not in code2
     assert code2 == patch_rs_backend(code2)  # Don't stack comments
 

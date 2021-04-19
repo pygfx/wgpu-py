@@ -3,7 +3,7 @@ import os
 from cffi import FFI
 from cffi.model import EnumType
 
-from codegen.utils import print, lib_dir
+from codegen.utils import print, lib_dir, remove_c_comments
 
 
 _parser = None
@@ -86,8 +86,7 @@ class HParser:
             name = code[i3 + 1 : i4].strip()
             self.structs[name] = struct = {}
             for f in code[i2 + 1 : i3].strip().strip(";").split(";"):
-                # todo: strip comments
-                parts = f.strip().split()
+                parts = remove_c_comments(f).strip().split()
                 key = parts[-1].strip("*")
                 struct[key] = " ".join(parts[:-1])
 
