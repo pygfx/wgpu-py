@@ -351,17 +351,12 @@ class GPUAdapter(base.GPUAdapter):
 
     def _destroy(self):
         if self._internal is not None:
-            self._internal, id = None, self._internal
+            self._internal, internal = None, self._internal
             # H: void f(WGPUAdapterId adapter_id)
-            lib.wgpu_adapter_destroy(id)
+            lib.wgpu_adapter_destroy(internal)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
-
-    # FIXME: new method
-    def _destroy(self):
-        pass
-
     def create_buffer(
         self,
         *,
@@ -988,6 +983,12 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     ):
         raise NotImplementedError()
 
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPUDeviceId device_id)
+            internal  # todo: crashes (last checked 2021-04)  lib.wgpu_device_destroy(internal)
+
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
     def _map_read(self):
@@ -1137,11 +1138,19 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
 
 
 class GPUTextureView(base.GPUTextureView, GPUObjectBase):
-    pass
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPUTextureViewId texture_view_id, bool now)
+            internal  # todo: crashes (last checked 2021-04)  todoplib.wgpu_texture_view_destroy(internal, False)
 
 
 class GPUSampler(base.GPUSampler, GPUObjectBase):
-    pass
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPUSamplerId sampler_id)
+            lib.wgpu_sampler_destroy(internal)
 
 
 class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
@@ -1156,7 +1165,7 @@ class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
-            # H: void f(WGPUBindGroupLayoutId bind_group_layout_id)
+            # H: void f(WGPUBindGroupId bind_group_id)
             lib.wgpu_bind_group_destroy(internal)
 
 
@@ -1200,7 +1209,11 @@ class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
 
 
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
-    pass
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPUCommandBufferId command_buffer_id)
+            internal  # todo: crashes (last checked 2021-04)  lib.wgpu_command_buffer_destroy(internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
@@ -1524,6 +1537,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
     ):
         raise NotImplementedError()
 
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPUCommandEncoderId command_encoder_id)
+            internal  # todo: crashes (last checked 2021-04)  lib.wgpu_command_encoder_destroy(internal)
+
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
     def set_bind_group(
@@ -1606,15 +1625,15 @@ class GPUComputePassEncoder(
         # H: void f(struct WGPUComputePass *pass)
         lib.wgpu_compute_pass_end_pass(self._internal)
 
+    # FIXME: new method to implement
+    def write_timestamp(self, query_set, query_index):
+        raise NotImplementedError()
+
     def _destroy(self):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             # H: void f(struct WGPUComputePass *pass)
-            internal  # todo: crashes lib.wgpu_compute_pass_destroy(internal)
-
-    # FIXME: new method to implement
-    def write_timestamp(self, query_set, query_index):
-        raise NotImplementedError()
+            internal  # todo: crashes (last checked 2021-04) lib.wgpu_compute_pass_destroy(internal)
 
 
 class GPURenderEncoderBase(base.GPURenderEncoderBase):
@@ -1684,7 +1703,7 @@ class GPURenderEncoderBase(base.GPURenderEncoderBase):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             # H: void f(struct WGPURenderPass *pass)
-            internal  # todo: crashes lib.wgpu_render_pass_destroy(internal)
+            internal  # todo: crashes (last checked 2021-04-19) lib.wgpu_render_pass_destroy(internal)
 
 
 class GPURenderPassEncoder(
@@ -1755,11 +1774,6 @@ class GPURenderBundleEncoder(
     GPURenderEncoderBase,
     GPUObjectBase,
 ):
-    pass
-
-    # Not yet implemented in wgpu-native
-    # def finish(self, *, label=""):
-    #     ...
 
     # FIXME: new method to implement
     def finish(self, *, label=""):
@@ -1961,7 +1975,11 @@ class GPUSwapChain(base.GPUSwapChain, GPUObjectBase):
 
 
 class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
-    pass
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPURenderBundleId render_bundle_id)
+            lib.wgpu_render_bundle_destroy(internal)
 
 
 class GPUDeviceLostInfo(base.GPUDeviceLostInfo):
