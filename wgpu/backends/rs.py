@@ -1145,7 +1145,11 @@ class GPUSampler(base.GPUSampler, GPUObjectBase):
 
 
 class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
-    pass
+    def _destroy(self):
+        if self._internal is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPUBindGroupLayoutId bind_group_layout_id)
+            lib.wgpu_bind_group_layout_destroy(internal)
 
 
 class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
@@ -1153,7 +1157,7 @@ class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBindGroupLayoutId bind_group_layout_id)
-            lib.wgpu_bind_group_layout_destroy(internal)
+            lib.wgpu_bind_group_destroy(internal)
 
 
 class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
@@ -1381,6 +1385,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         )
 
     def copy_texture_to_buffer(self, source, destination, copy_size):
+        row_alignment = lib.WGPUCOPY_BYTES_PER_ROW_ALIGNMENT
+        bytes_per_row = int(destination["bytes_per_row"])
+        if (bytes_per_row % row_alignment) != 0:
+            raise ValueError(
+                f"bytes_per_row must ({bytes_per_row}) be a multiple of {row_alignment}"
+            )
 
         ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
         # H: x: int, y: int, z: int
@@ -1405,7 +1415,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             layout=new_struct(
                 "WGPUTextureDataLayout",
                 offset=int(destination.get("offset", 0)),
-                bytes_per_row=int(destination["bytes_per_row"]),
+                bytes_per_row=bytes_per_row,
                 rows_per_image=int(destination.get("rows_per_image", 0)),
             ),
         )
@@ -1540,12 +1550,13 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
 
     def push_debug_group(self, group_label):
         c_group_label = ffi.new("char []", group_label.encode())
+        color = 0
         if isinstance(self, GPUComputePassEncoder):
             # H: void f(struct WGPUComputePass *pass, WGPURawString label, uint32_t color)
-            lib.wgpu_compute_pass_push_debug_group(self._internal, c_group_label)
+            lib.wgpu_compute_pass_push_debug_group(self._internal, c_group_label, color)
         else:
             # H: void f(struct WGPURenderPass *pass, WGPURawString label, uint32_t color)
-            lib.wgpu_render_pass_push_debug_group(self._internal, c_group_label)
+            lib.wgpu_render_pass_push_debug_group(self._internal, c_group_label, color)
 
     def pop_debug_group(self):
         if isinstance(self, GPUComputePassEncoder):
@@ -1557,12 +1568,17 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
 
     def insert_debug_marker(self, marker_label):
         c_marker_label = ffi.new("char []", marker_label.encode())
+        color = 0
         if isinstance(self, GPUComputePassEncoder):
             # H: void f(struct WGPUComputePass *pass, WGPURawString label, uint32_t color)
-            lib.wgpu_compute_pass_insert_debug_marker(self._internal, c_marker_label)
+            lib.wgpu_compute_pass_insert_debug_marker(
+                self._internal, c_marker_label, color
+            )
         else:
             # H: void f(struct WGPURenderPass *pass, WGPURawString label, uint32_t color)
-            lib.wgpu_render_pass_insert_debug_marker(self._internal, c_marker_label)
+            lib.wgpu_render_pass_insert_debug_marker(
+                self._internal, c_marker_label, color
+            )
 
 
 class GPUComputePassEncoder(

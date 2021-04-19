@@ -2,7 +2,13 @@
 Strive for full coverage of the codegen utils module.
 """
 
-from codegen.utils import remove_c_comments, blacken, Patcher, to_snake_case, to_camel_case
+from codegen.utils import (
+    remove_c_comments,
+    blacken,
+    Patcher,
+    to_snake_case,
+    to_camel_case,
+)
 
 from pytest import raises
 

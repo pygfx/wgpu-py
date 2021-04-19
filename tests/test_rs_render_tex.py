@@ -35,6 +35,20 @@ def vertex_shader(
     tcoord = vec2(p + 0.5)  # noqa - map to 0..1
 
 
+def _create_data(v1, v2, v3, v4):
+    assert len(v1) == len(v2)
+    assert len(v1) == len(v3)
+    assert len(v1) == len(v4)
+    data = []
+    for y in range(128):
+        data.extend(list(v1) * 128)
+        data.extend(list(v2) * 128)
+    for y in range(128):
+        data.extend(list(v3) * 128)
+        data.extend(list(v4) * 128)
+    return data
+
+
 # %% rgba textures
 
 
@@ -51,8 +65,10 @@ def test_render_textured_square_rgba8unorm():
         out_color = tex.sample(sampler, tcoord)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 50, 0, 255, 100, 100, 0, 255, 150, 150, 0, 255, 200, 200, 0, 255]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data(
+        (50, 50, 0, 255), (100, 100, 0, 255), (150, 150, 0, 255), (200, 200, 0, 255)
+    )
     texture_data = (ctypes.c_uint8 * (4 * nx * ny))(*x)
 
     # Render and validate
@@ -74,8 +90,10 @@ def test_render_textured_square_rgba8uint():
         out_color = vec4(tex.sample(sampler, tcoord)) / 255.0  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 50, 0, 255, 100, 100, 0, 255, 150, 150, 0, 255, 200, 200, 0, 255]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data(
+        (50, 50, 0, 255), (100, 100, 0, 255), (150, 150, 0, 255), (200, 200, 0, 255)
+    )
     texture_data = (ctypes.c_uint8 * (4 * nx * ny))(*x)
 
     # Render and validate
@@ -97,8 +115,10 @@ def test_render_textured_square_rgba16sint():
         out_color = vec4(tex.sample(sampler, tcoord)) / 255.0  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 50, 0, 255, 100, 100, 0, 255, 150, 150, 0, 255, 200, 200, 0, 255]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data(
+        (50, 50, 0, 255), (100, 100, 0, 255), (150, 150, 0, 255), (200, 200, 0, 255)
+    )
     texture_data = (ctypes.c_int16 * (4 * nx * ny))(*x)
 
     # Render and validate
@@ -120,8 +140,10 @@ def test_render_textured_square_rgba32float():
         out_color = tex.sample(sampler, tcoord) / 255.0  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 50, 0, 255, 100, 100, 0, 255, 150, 150, 0, 255, 200, 200, 0, 255]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data(
+        (50, 50, 0, 255), (100, 100, 0, 255), (150, 150, 0, 255), (200, 200, 0, 255)
+    )
     texture_data = (ctypes.c_float * (4 * nx * ny))(*x)
 
     # Render and validate
@@ -148,8 +170,8 @@ def test_render_textured_square_rg8unorm():
         out_color = tex.sample(sampler, tcoord)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 50, 100, 100, 150, 150, 200, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50, 50), (100, 100), (150, 150), (200, 200))
     texture_data = (ctypes.c_ubyte * (2 * nx * ny))(*x)
 
     # Render and validate
@@ -174,8 +196,8 @@ def test_render_textured_square_rg8uint():
         out_color = vec4(val.rg / 255.0, 0, 1.0)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 50, 100, 100, 150, 150, 200, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50, 50), (100, 100), (150, 150), (200, 200))
     texture_data = (ctypes.c_ubyte * (2 * nx * ny))(*x)
 
     # Render and validate
@@ -200,8 +222,8 @@ def test_render_textured_square_rg16sint():
         out_color = vec4(val.rg / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 50, 100, 100, 150, 150, 200, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50, 50), (100, 100), (150, 150), (200, 200))
     texture_data = (ctypes.c_int16 * (2 * nx * ny))(*x)
 
     # Render and validate
@@ -226,8 +248,8 @@ def test_render_textured_square_rg32float():
         out_color = vec4(val.rg / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 50, 100, 100, 150, 150, 200, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50, 50), (100, 100), (150, 150), (200, 200))
     texture_data = (ctypes.c_float * (2 * nx * ny))(*x)
 
     # Render and validate
@@ -253,8 +275,8 @@ def test_render_textured_square_r8unorm():
         out_color = vec4(val, val, 0.0, 1.0)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 100, 150, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50,), (100,), (150,), (200,))
     texture_data = (ctypes.c_uint8 * (1 * nx * ny))(*x)
 
     # Render and validate
@@ -277,8 +299,8 @@ def test_render_textured_square_r8uint():
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 100, 150, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50,), (100,), (150,), (200,))
     texture_data = (ctypes.c_uint8 * (1 * nx * ny))(*x)
 
     # Render and validate
@@ -301,8 +323,8 @@ def test_render_textured_square_r16sint():
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 100, 150, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50,), (100,), (150,), (200,))
     texture_data = (ctypes.c_int16 * (1 * nx * ny))(*x)
 
     # Render and validate
@@ -325,8 +347,8 @@ def test_render_textured_square_r32sint():
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 100, 150, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50,), (100,), (150,), (200,))
     texture_data = (ctypes.c_int32 * (1 * nx * ny))(*x)
 
     # Render and validate
@@ -349,8 +371,8 @@ def test_render_textured_square_r32float():
         out_color = vec4(val / 255.0, val / 255.0, 0.0, 1.0)  # noqa
 
     # Create texture data
-    nx, ny, nz = 2, 2, 1
-    x = [50, 100, 150, 200]
+    nx, ny, nz = 256, 256, 1
+    x = _create_data((50,), (100,), (150,), (200,))
     texture_data = (ctypes.c_float * (1 * nx * ny))(*x)
 
     # Render and validate
@@ -452,14 +474,14 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     # Check the square
     sq = a[16:-16, 16:-16, :]
     ref1 = [
-        [150, 150, 150, 150, 150, 150, 150, 150, 152, 155, 158, 161],
-        [164, 167, 170, 173, 177, 180, 183, 186, 189, 192],
-        [195, 198, 200, 200, 200, 200, 200, 200, 200, 200],
+        [150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150],
+        [150, 150, 150, 200, 200, 200],
+        [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200],
     ]
     ref2 = [
-        [150, 150, 150, 150, 150, 150, 150, 150, 147, 141, 134, 128],
-        [122, 116, 109, 103, 97, 91, 84, 78, 72, 66],
-        [59, 53, 50, 50, 50, 50, 50, 50, 50, 50],
+        [150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150, 150],
+        [150, 150, 150, 50, 50, 50],
+        [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50],
     ]
     ref1, ref2 = sum(ref1, []), sum(ref2, [])
 

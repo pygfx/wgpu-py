@@ -129,7 +129,7 @@ def test_compute_indirect():
     # Create output buffer
     buffer2 = device.create_buffer(
         size=ctypes.sizeof(in1),
-        usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ,
+        usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC,
     )
 
     # Create buffer to hold the dispatch parameters for the indirect call
@@ -188,7 +188,7 @@ def test_compute_indirect():
     device.queue.submit([command_encoder.finish()])
 
     # Read result
-    out1 = in1.__class__.from_buffer(buffer2.read_data())
+    out1 = in1.__class__.from_buffer(device.queue.read_buffer(buffer2))
     in2 = list(in1)[:]
     out2 = [i - 1 for i in out1]
     # The shader was applied to all but the last two elements

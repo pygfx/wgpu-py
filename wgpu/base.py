@@ -364,6 +364,10 @@ class GPUDevice(GPUObjectBase):
             dimension (TextureDimension): The dimensionality of the texture. Default 2d.
             format (TextureFormat): What channels it stores and how.
             usage (TextureUsageFlags): The ways in which the texture will be used.
+
+        See https://gpuweb.github.io/gpuweb/#texture-format-caps for a
+        list of available texture formats. Note that less formats are
+        available for storage usage.
         """
         raise NotImplementedError()
 
@@ -1192,17 +1196,17 @@ class GPUCommandEncoder(GPUObjectBase):
 
     # IDL: undefined pushDebugGroup(USVString groupLabel);
     def push_debug_group(self, group_label):
-        """TODO: not yet available in wgpu-native"""
+        """Push a label on the debug group stack. (todo: docs)"""
         raise NotImplementedError()
 
     # IDL: undefined popDebugGroup();
     def pop_debug_group(self):
-        """TODO: not yet available in wgpu-native"""
+        """Pop a label from the debug group stack. """
         raise NotImplementedError()
 
     # IDL: undefined insertDebugMarker(USVString markerLabel);
     def insert_debug_marker(self, marker_label):
-        """TODO: not yet available in wgpu-native"""
+        """Insert a debug label in stack."""
         raise NotImplementedError()
 
     # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {});

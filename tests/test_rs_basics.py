@@ -142,10 +142,10 @@ def test_buffer_init1():
     data1 = b"abcdefghijkl"
 
     # Create buffer
-    buf = device.create_buffer_with_data(data=data1, usage=wgpu.BufferUsage.MAP_READ)
+    buf = device.create_buffer_with_data(data=data1, usage=wgpu.BufferUsage.COPY_SRC)
 
     # Download from buffer to CPU
-    data2 = buf.read_data()
+    data2 = device.queue.read_buffer(buf)
     assert data1 == data2
 
 
@@ -179,19 +179,19 @@ def test_buffer_init3():
     # First fail
     with raises(ValueError):
         device.create_buffer(
-            mapped_at_creation=True, size=len(data1), usage=wgpu.BufferUsage.MAP_READ
+            mapped_at_creation=True, size=len(data1), usage=wgpu.BufferUsage.COPY_DST
         )
 
     # Create buffer
     buf = device.create_buffer(
-        size=len(data1), usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.MAP_WRITE
+        size=len(data1), usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
 
     # Write data to it
-    buf.write_data(data1)
+    device.queue.write_buffer(buf, 0, data1)
 
     # Download from buffer to CPU
-    data3 = buf.read_data()
+    data3 = device.queue.read_buffer(buf)
     assert data1 == data3
 
 
@@ -202,7 +202,7 @@ def test_do_a_copy_roundtrip():
 
     device = wgpu.utils.get_default_device()
 
-    nx, ny, nz = 100, 1, 1
+    nx, ny, nz = 128, 1, 1
     data1 = np.random.random(size=nx * ny * nz).astype(np.float32)
     nbytes = data1.nbytes
     bpp = nbytes // (nx * ny * nz)
@@ -211,7 +211,7 @@ def test_do_a_copy_roundtrip():
 
     # Create buffers and textures
     buf1 = device.create_buffer(
-        size=nbytes, usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
     tex2 = device.create_texture(
         size=(nx, ny, nz),
@@ -229,7 +229,7 @@ def test_do_a_copy_roundtrip():
         size=nbytes, usage=wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.COPY_DST
     )
     buf5 = device.create_buffer(
-        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
 
     # Check texture stats
@@ -248,7 +248,7 @@ def test_do_a_copy_roundtrip():
     # mapped_data.cast("f")[:] = data1
     # buf1.unmap()
     # assert buf1.state == "unmapped"
-    buf1.write_data(data1)
+    device.queue.write_buffer(buf1, 0, data1)
 
     # Copy from buffer to texture
     command_encoder = device.create_command_encoder()
@@ -287,7 +287,7 @@ def test_do_a_copy_roundtrip():
     # assert buf5.map_mode == wgpu.MapMode.READ
     # buf5.unmap()
     # assert buf5.state == "unmapped"
-    result_data = buf5.read_data()
+    result_data = device.queue.read_buffer(buf5)
 
     # CHECK!
     data2 = np.frombuffer(result_data, dtype=np.float32)
@@ -307,7 +307,7 @@ def test_do_a_copy_roundtrip():
     # buf1.unmap()
     # assert buf1.state == "unmapped"
     # assert buf1.map_mode == 0
-    buf1.write_data(data3)
+    device.queue.write_buffer(buf1, 0, data3)
 
     # Copy from buffer to texture
     command_encoder = device.create_command_encoder()
@@ -339,7 +339,7 @@ def test_do_a_copy_roundtrip():
     # assert buf5.state == "mapped"
     # buf5.unmap()
     # assert buf5.state == "unmapped"
-    result_data = buf5.read_data()
+    result_data = device.queue.read_buffer(buf5)
 
     # CHECK!
     data4 = np.frombuffer(result_data, dtype=np.float32)
@@ -385,7 +385,7 @@ def test_write_buffer1():
 
     # Create buffer
     buf4 = device.create_buffer(
-        size=data1.nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+        size=data1.nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
 
     # Upload from CPU to buffer
@@ -394,7 +394,7 @@ def test_write_buffer1():
     device.queue.submit([])
 
     # Download from buffer to CPU
-    data2 = buf4.read_data().cast("f")
+    data2 = device.queue.read_buffer(buf4).cast("f")
     assert data1 == data2
 
     # Yes, you can compare memoryviews! Check this:
@@ -413,7 +413,7 @@ def test_write_buffer2():
 
     # Create buffer
     buf4 = device.create_buffer(
-        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
 
     for i in range(len(data1)):
@@ -432,7 +432,7 @@ def test_write_buffer2():
     device.queue.submit([])
 
     # Download from buffer to CPU
-    data2 = data1.__class__.from_buffer(buf4.read_data())
+    data2 = data1.__class__.from_buffer(device.queue.read_buffer(buf4))
     assert iters_equal(data0, data2)
 
 
@@ -443,7 +443,7 @@ def test_write_buffer3():
 
     # Create buffer
     buf4 = device.create_buffer(
-        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
 
     # Upload from CPU to buffer, using bytes
@@ -452,15 +452,15 @@ def test_write_buffer3():
     device.queue.submit([])
 
     # Download from buffer to CPU
-    assert buf4.read_data().tobytes() == b"abcdefghijkl"
+    assert device.queue.read_buffer(buf4).tobytes() == b"abcdefghijkl"
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_write_texture1():
     device = wgpu.utils.get_default_device()
 
-    nx, ny, nz = 100, 1, 1
-    data1 = memoryview(np.random.random(size=100).astype(np.float32))
+    nx, ny, nz = 128, 1, 1
+    data1 = memoryview(np.random.random(size=nx).astype(np.float32))
     bpp = data1.nbytes // (nx * ny * nz)
     texture_format = wgpu.TextureFormat.r32float
     texture_dim = wgpu.TextureDimension.d1
@@ -473,7 +473,7 @@ def test_write_texture1():
         usage=wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST,
     )
     buf4 = device.create_buffer(
-        size=data1.nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+        size=data1.nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
 
     # Upload from CPU to texture
@@ -495,7 +495,7 @@ def test_write_texture1():
     device.queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
-    data2 = buf4.read_data().cast("f")
+    data2 = device.queue.read_buffer(buf4).cast("f")
     assert data1 == data2
 
 
@@ -503,9 +503,9 @@ def test_write_texture1():
 def test_write_texture2():
     device = wgpu.utils.get_default_device()
 
-    nx, ny, nz = 100, 1, 1
-    data0 = (ctypes.c_float * 100)(*[random.random() for i in range(nx * ny * nz)])
-    data1 = (ctypes.c_float * 100)()
+    nx, ny, nz = 128, 1, 1
+    data0 = (ctypes.c_float * nx)(*[random.random() for i in range(nx * ny * nz)])
+    data1 = (ctypes.c_float * nx)()
     nbytes = ctypes.sizeof(data1)
     bpp = nbytes // (nx * ny * nz)
     texture_format = wgpu.TextureFormat.r32float
@@ -519,7 +519,7 @@ def test_write_texture2():
         usage=wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST,
     )
     buf4 = device.create_buffer(
-        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
 
     for i in range(len(data1)):
@@ -548,7 +548,7 @@ def test_write_texture2():
     device.queue.submit([command_encoder.finish()])
 
     # Download from buffer to CPU
-    data2 = data1.__class__.from_buffer(buf4.read_data())
+    data2 = data1.__class__.from_buffer(device.queue.read_buffer(buf4))
     assert iters_equal(data0, data2)
 
 

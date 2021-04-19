@@ -72,8 +72,7 @@ class PrintToFile:
 
 
 def remove_c_comments(code):
-    """ Remove C-style comments from the given code.
-    """
+    """Remove C-style comments from the given code."""
     pos = 0
     new_code = ""
 
