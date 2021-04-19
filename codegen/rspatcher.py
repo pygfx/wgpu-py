@@ -192,7 +192,12 @@ class FunctionPatcher(Patcher):
 
         # Determine what functions were not detected
         # There are still quite a few, so we don't list them yet
-        ignore = "wgpu_create_surface_from", "wgpu_set_log_level",  "wgpu_get_version", "wgpu_set_log_callback"
+        ignore = (
+            "wgpu_create_surface_from",
+            "wgpu_set_log_level",
+            "wgpu_get_version",
+            "wgpu_set_log_callback",
+        )
         unused = set(hp.functions).difference(encountered).difference(ignore)
         print(f"Not using {len(unused)} functions")
 

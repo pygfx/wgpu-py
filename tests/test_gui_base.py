@@ -27,6 +27,13 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
         1 / 0
 
 
+def test_base_canvas_context():
+    assert issubclass(wgpu.gui.WgpuCanvasInterface, wgpu.base.GPUCanvasContext)
+    # Provides good default already
+    ctx = wgpu.GPUCanvasContext()
+    assert ctx.get_swap_chain_preferred_format(None) == "bgra8unorm-srgb"
+
+
 def test_canvas_logging(caplog):
     """As we attempt to draw, the canvas will error, which are logged.
     Each first occurance is logged with a traceback. Subsequent same errors

@@ -1828,9 +1828,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
 
     def read_buffer(self, buffer, buffer_offset=0, size=None):
 
-        # todo: remove buffer.read_data and buffer.write_data
-        # todo: or ... put all of these on buffer? Feels nicer?
-
         if not size:
             data_length = buffer.size - buffer_offset
         else:

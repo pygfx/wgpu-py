@@ -2,8 +2,6 @@
 Core utilities that are loaded into the root namespace or used internally.
 """
 
-import os
-import inspect
 import logging
 from pkg_resources import resource_filename
 

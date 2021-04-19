@@ -200,6 +200,7 @@ def _get_draw_function(device, canvas):
     fshader = device.create_shader_module(code=fragment_shader)
 
     render_pipeline = device.create_render_pipeline(
+        label="my-debug-pipeline",
         layout=pipeline_layout,
         vertex={
             "module": vshader,
@@ -246,7 +247,7 @@ def _get_draw_function(device, canvas):
     def draw_frame():
         with swap_chain as current_texture_view:
             command_encoder = device.create_command_encoder()
-
+            assert current_texture_view.size
             ca = {
                 "view": current_texture_view,
                 "resolve_target": None,

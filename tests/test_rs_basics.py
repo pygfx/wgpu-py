@@ -1,6 +1,8 @@
 import os
+import shutil
 import random
 import ctypes
+import tempfile
 
 import wgpu.utils
 import wgpu.backends.rs
@@ -98,6 +100,27 @@ def test_logging():
     # and see from the coverage that we touched the logger integration code,
     # we're doing pretty good ...
     # (capsys does not work because it logs to the raw stderr)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_rs_tracer():
+    tempdir = os.path.join(tempfile.gettempdir(), "wgpu-tracer-test")
+    adapter = wgpu.utils.get_default_device().adapter
+
+    # Make empty
+    shutil.rmtree(tempdir, ignore_errors=True)
+    assert not os.path.isdir(tempdir)
+
+    # Works!
+    adapter.request_device_tracing(tempdir)
+    assert os.path.isdir(tempdir)
+
+    # Make dir not empty
+    with open(os.path.join(tempdir, "stub.txt"), "wb"):
+        pass
+
+    # Still works, but produces warning
+    adapter.request_device_tracing(tempdir)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
