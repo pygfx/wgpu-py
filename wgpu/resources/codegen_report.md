@@ -59,5 +59,6 @@
 * Enum DeviceLostReason missing in wgpu.h
 * Enum ErrorFilter missing in wgpu.h
 * Wrote 134 enum mappings and 38 struct-field mappings to rs_mappings.py
-* Validated 80 C function calls
+* Validated 81 C function calls
+* Not using 31 functions
 * Validated 61 C structs

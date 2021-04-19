@@ -242,6 +242,10 @@ class GPU(base.GPU):
         c_features_flag = lib.wgpu_adapter_features(adapter_id)  # noqa
         features = tuple()  # todo: resolve flag into list of feature names
 
+        # Meh, all I got was ints that we'd have to look up. Implement later.
+        # H: void f(WGPUAdapterId adapter_id, struct WGPUAdapterInfo *info)
+        # lib.wgpu_adapter_get_info(adapter_id, c_info)
+
         return GPUAdapter("WGPU", adapter_id, features, limits)
 
     async def request_adapter_async(self, *, canvas, power_preference=None):
@@ -327,8 +331,8 @@ class GPUAdapter(base.GPUAdapter):
         limits3 = {key: getattr(c_limits, key) for key in dir(c_limits)}
 
         # Get actual features reported by the device
-        # H: WGPUFeatures f(WGPUAdapterId adapter_id)
-        c_features_flag = lib.wgpu_adapter_features(device_id)
+        # H: WGPUFeatures f(WGPUDeviceId device_id)
+        c_features_flag = lib.wgpu_device_features(device_id)
         features = tuple()
 
         # Get the queue to which commands can be submitted

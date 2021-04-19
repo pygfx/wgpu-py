@@ -170,6 +170,7 @@ class FunctionPatcher(Patcher):
         self._init(code)
         hp = get_h_parser()
         count = 0
+        encountered = set()
 
         for line, i in self.iter_lines():
             if "lib.wgpu_" in line:
@@ -182,11 +183,18 @@ class FunctionPatcher(Patcher):
                     self.insert_line(i, f"{indent}# FIXME: {msg}")
                     print(f"Error: {msg}")
                 else:
+                    encountered.add(name)
                     anno = hp.functions[name].replace(name, "f").strip(";")
                     self.insert_line(i, indent + f"# H: " + anno)
                     count += 1
 
         print(f"Validated {count} C function calls")
+
+        # Determine what functions were not detected
+        # There are still quite a few, so we don't list them yet
+        ignore = "wgpu_create_surface_from", "wgpu_set_log_level",  "wgpu_get_version", "wgpu_set_log_callback"
+        unused = set(hp.functions).difference(encountered).difference(ignore)
+        print(f"Not using {len(unused)} functions")
 
 
 class StructPatcher(Patcher):
