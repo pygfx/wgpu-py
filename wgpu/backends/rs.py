@@ -928,8 +928,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             # not used: nextInChain
         )
 
-        # Note: WTF why the sudden switch to camelCase for only this function?
-
         id = lib.wgpuDeviceCreateRenderPipeline(self._internal, struct)
         return GPURenderPipeline(label, id, self, layout)
 
@@ -1827,6 +1825,11 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         )
 
     def read_buffer(self, buffer, buffer_offset=0, size=None):
+
+        # Note that write_buffer probably does a very similar thing
+        # using a temporaty buffer. But write_buffer is official API
+        # so it's a single call, while here we must create the temporary
+        # buffer and do the copying ourselves.
 
         if not size:
             data_length = buffer.size - buffer_offset

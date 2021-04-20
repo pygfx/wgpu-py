@@ -20,21 +20,34 @@ Possible sections in each release:
 
 ### [v0.4] - future
 
-API changes:
+Added:
+
+* Added `GPUQueue.read_buffer` as extra API (next to `write_buffer` which is original WebGPU API).
+
+Removed:
+
+* Removed `GPUBuffer.read_data()`. Use `device.queue.read_buffer()` instead. Note that `usage` `MAP_READ` should be replaced with `COPY_SRC`.
+* Removed `GPUBuffer.write_data()`. Use `device.queue.write_buffer()` instead. Note that `usage` `MAP_WRITE` should be replaced with `COPY_DST`.
+
+Changed:
 
 * `GPUCanvasContext.get_swap_chain_preferred_format()`: now takes an `adapter` instead of a `device`.
 * `GPUAdapter.extensions`: is now called `features`.
 * `GPUAdapter.request_device()`: the `extensions` and `limit` args are now `non_guaranteed_features` and `non_guaranteed_limits`.
-* `Device.default_queue`: is now called `queue`.
-* `Device.create_compute_pipeline()`: the `compute_stage` arg is now called `compute`.
-* `Device.create_bind_group_layout()` has changed the required structure of the layout enty dicts.
-* `Device.create_render_pipeline()` has changed *a lot* in terms of shape of input dicts. See new docs.
-* `Texture.create_view()`: args `mip_level_count` and `array_layer_count` are default `None` instead of `0`.
+* `GPUDevice.default_queue`: is now called `queue`.
+* `GPUDevice.create_compute_pipeline()`: the `compute_stage` arg is now called `compute`.
+* `GPUDevice.create_bind_group_layout()` has changed the required structure of the layout enty dicts.
+* `GPUDevice.create_render_pipeline()` has changed *a lot* in terms of shape of input dicts. See new docs.
+* `GPUTexture.create_view()`: args `mip_level_count` and `array_layer_count` are default `None` instead of `0`.
 * `GPUCommandEncoder.begin_render_pass()`: the `color_attachments` and `depth_stencil_attachment` arguments have their `attachment` field renamed to `view`.
+* `GPURenderEncoderBase.set_index_buffer()` has an extra argument (after the buffer) to specify the format. The index format is no longer specified in `device.create_render_pipeline()`.
 * Flag `TextureUsage` has field OUTPUT_ATTACHMENT renamed to RENDER_ATTACHMENT.
 * Enum `BindingType` is split up in different enums for buffer, sampler, sampled texture and storage texture.
 * Enum `BlendFactor` has some of its field names changed.
 * Enum `VertexFormat` has its field names changed, e.g. ushort2 -> uint16x2.
+* The API is more restrictive in the use of buffer/texture usage combinations.
+* The API is more restrictive in formats for storage buffers/textures.
+* When copying from/to textures, the `bytes_per_row` must now be a multiple of 256.
 
 
 ### [v0.3.0] - 2020-07-05

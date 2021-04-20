@@ -60,5 +60,5 @@
 * Enum ErrorFilter missing in wgpu.h
 * Wrote 134 enum mappings and 38 struct-field mappings to rs_mappings.py
 * Validated 81 C function calls
-* Not using 31 functions
+* Not using 26 C functions
 * Validated 61 C structs
