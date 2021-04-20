@@ -185,3 +185,29 @@ cstructfield2enum = {
     "VertexBufferLayoutDescriptor.stepMode": "InputStepMode",
     "VertexStateDescriptor.indexFormat": "IndexFormat",
 }
+
+# Inverse flag map for features
+
+feature_names = {
+    1: "depth_clamping",
+    2: "texture_compression_bc",
+    4: "timestamp_query",
+    8: "pipeline_statistics_query",
+    65535: "all_webgpu",
+    65536: "mappable_primary_buffers",
+    131072: "sampled_texture_binding_array",
+    262144: "sampled_texture_array_dynamic_indexing",
+    524288: "sampled_texture_array_non_uniform_indexing",
+    1048576: "unsized_binding_array",
+    2097152: "multi_draw_indirect",
+    4194304: "multi_draw_indirect_count",
+    8388608: "push_constants",
+    16777216: "address_mode_clamp_to_border",
+    33554432: "non_fill_polygon_mode",
+    67108864: "texture_compression_etc2",
+    134217728: "texture_compression_astc_ldr",
+    268435456: "texture_adapter_specific_format_features",
+    536870912: "shader_float64",
+    1073741824: "vertex_attribute_64bit",
+    18446744073709486080: "all_native",
+}

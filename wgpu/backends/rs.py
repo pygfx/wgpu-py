@@ -41,7 +41,7 @@ from .. import _register_backend
 from .._coreutils import ApiDiff
 
 from .rs_ffi import ffi, lib, check_expected_version
-from .rs_mappings import cstructfield2enum, enummap
+from .rs_mappings import cstructfield2enum, enummap, feature_names
 from .rs_helpers import (
     get_surface_id_from_canvas,
     get_memoryview_from_address,
@@ -171,6 +171,16 @@ def to_c_label(label):
         return ffi.new("char []", label.encode())
 
 
+def feature_flag_to_feature_names(flag):
+    """ Convert a feature flags into a tuple of names. """
+    features = []
+    for i in range(32):
+        val = int(2 ** i)
+        if flag & val:
+            features.append(feature_names.get(val, val))
+    return tuple(sorted(features))
+
+
 # %% The API
 
 
@@ -240,7 +250,7 @@ class GPU(base.GPU):
 
         # H: WGPUFeatures f(WGPUAdapterId adapter_id)
         c_features_flag = lib.wgpu_adapter_features(adapter_id)  # noqa
-        features = tuple()  # todo: resolve flag into list of feature names
+        features = feature_flag_to_feature_names(c_features_flag)
 
         # Meh, all I got was ints that we'd have to look up. Implement later.
         # H: void f(WGPUAdapterId adapter_id, struct WGPUAdapterInfo *info)
@@ -303,7 +313,8 @@ class GPUAdapter(base.GPUAdapter):
             c_trace_path = ffi.new("char []", trace_path.encode())
 
         # Handle features
-        c_features_flag = 0  # <-- resolve name list into flag
+        # todo: actually enable features
+        c_features_flag = 0
 
         # Handle default limits
         limits2 = base.DEFAULT_ADAPTER_LIMITS.copy()
@@ -333,7 +344,7 @@ class GPUAdapter(base.GPUAdapter):
         # Get actual features reported by the device
         # H: WGPUFeatures f(WGPUDeviceId device_id)
         c_features_flag = lib.wgpu_device_features(device_id)
-        features = tuple()
+        features = feature_flag_to_feature_names(c_features_flag)
 
         # Get the queue to which commands can be submitted
         # H: WGPUQueueId f(WGPUDeviceId device_id)
