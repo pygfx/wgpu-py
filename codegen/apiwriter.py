@@ -143,6 +143,8 @@ def write_structs():
         for field in d.values():
             key = to_snake_case(field.name)
             val = idl.resolve_type(field.typename)
+            if not val.startswith(("'", '"')):
+                val = f"'{val}'"
             pylines.append(f"    {key}={val},")
         pylines.append(")  #:\n")  # That #: is for Sphinx
 

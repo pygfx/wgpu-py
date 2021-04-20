@@ -58,9 +58,9 @@ def test_enums_and_flags_and_structs():
     # Flag groups show their field names (in uppercase)
     assert "STORAGE" in repr(wgpu.BufferUsage)
 
-    # Structs are dict-like, their values either a type or str
+    # Structs are dict-like, their values str
     assert isinstance(wgpu.structs.DeviceDescriptor, wgpu.structs.Struct)
-    assert isinstance(wgpu.structs.DeviceDescriptor.label, type)
+    assert isinstance(wgpu.structs.DeviceDescriptor.label, str)
     assert isinstance(wgpu.structs.DeviceDescriptor.non_guaranteed_features, str)
 
     # Structs show their field names
