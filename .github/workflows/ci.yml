@@ -121,7 +121,7 @@ jobs:
       run: |
           python download-wgpu-native.py
           python setup.py bdist_wheel
-    - name: Manylinux1 tag
+    - name: Manylinux2010 tag
       if: startsWith(matrix.os, 'ubuntu')
       run: |
           sudo apt-get update
