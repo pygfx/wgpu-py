@@ -23,7 +23,7 @@ def test_get_wgpu_version():
 
     assert isinstance(version_info, tuple)
     assert all(isinstance(i, int) for i in version_info)
-    assert len(version_info) == 3
+    assert len(version_info) == 4
 
     assert isinstance(commit_sha, str)
     assert len(commit_sha) > 0
@@ -479,6 +479,36 @@ def test_write_buffer3():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_buffer_map_read_and_write():
+    # Do a mini round-trip using mapped buffers
+
+    device = wgpu.utils.get_default_device()
+    nbytes = 12
+
+    # Create buffers
+    buf1 = device.create_buffer(
+        size=nbytes, usage=wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.MAP_WRITE
+    )
+    buf2 = device.create_buffer(
+        size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.MAP_READ
+    )
+
+    # Upload
+    data1 = b"abcdefghijkl"
+    buf1.map_write(data1)
+
+    # Copy
+    command_encoder = device.create_command_encoder()
+    command_encoder.copy_buffer_to_buffer(buf1, 0, buf2, 0, nbytes)
+    device.queue.submit([command_encoder.finish()])
+
+    # Download
+    data2 = buf2.map_read()
+
+    assert data1 == data2
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_write_texture1():
     device = wgpu.utils.get_default_device()
 
@@ -521,12 +551,22 @@ def test_write_texture1():
     data2 = device.queue.read_buffer(buf4).cast("f")
     assert data1 == data2
 
+    # That last step can also be done easier
+    data3 = device.queue.read_texture(
+        {
+            "texture": tex3,
+        },
+        {"bytes_per_row": bpp * nx},
+        (nx, ny, nz),
+    ).cast("f")
+    assert data1 == data3
+
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_write_texture2():
     device = wgpu.utils.get_default_device()
 
-    nx, ny, nz = 128, 1, 1
+    nx, ny, nz = 100, 1, 1
     data0 = (ctypes.c_float * nx)(*[random.random() for i in range(nx * ny * nz)])
     data1 = (ctypes.c_float * nx)()
     nbytes = ctypes.sizeof(data1)
@@ -562,16 +602,29 @@ def test_write_texture2():
     for i in range(len(data1)):
         data1[i] = 1
 
-    # Copy from texture to buffer
-    command_encoder.copy_texture_to_buffer(
-        {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
-        {"buffer": buf4, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": ny},
+    # Copy from texture to buffer -
+    # FAIL! because bytes_per_row is not multiple of 256!
+    with raises(ValueError):
+        command_encoder.copy_texture_to_buffer(
+            {"texture": tex3, "mip_level": 0, "origin": (0, 0, 0)},
+            {
+                "buffer": buf4,
+                "offset": 0,
+                "bytes_per_row": bpp * nx,
+                "rows_per_image": ny,
+            },
+            (nx, ny, nz),
+        )
+
+    # Download from texture to CPU (via a temp buffer)
+    # No requirent on bytes_per_row!
+    data2 = device.queue.read_texture(
+        {"texture": tex3},
+        {"bytes_per_row": bpp * nx},
         (nx, ny, nz),
     )
-    device.queue.submit([command_encoder.finish()])
+    data2 = data1.__class__.from_buffer(data2)
 
-    # Download from buffer to CPU
-    data2 = data1.__class__.from_buffer(device.queue.read_buffer(buf4))
     assert iters_equal(data0, data2)
 
 

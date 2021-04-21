@@ -327,7 +327,7 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("replaces WebGPU's mapping API'")
+    @apidiff.add("replaces WebGPU's mapping API")
     def create_buffer_with_data(self, *, label="", data, usage: "flags.BufferUsage"):
         """Create a :class:`GPUBuffer` object initialized with the given data.
 
@@ -839,6 +839,24 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
+    @apidiff.add("Alternative to mapping API")
+    def map_read(self):
+        """Map the buffer and read the data from it, then unmap.
+        Return a memoryview object. Requires the buffer usage to include MAP_READ.
+
+        See `queue.read_buffer()` for a simpler alternative.
+        """
+        raise NotImplementedError()
+
+    @apidiff.add("Alternative to mapping API")
+    def map_write(self, data):
+        """Map the buffer and write the data to it, then unmap.
+        Return a memoryview object. Requires the buffer usage to include MAP_WRITE.
+
+        See `queue.write_buffer()` for a simpler alternative.
+        """
+        raise NotImplementedError()
+
     # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size);
     @apidiff.hide
     def get_mapped_range(self, offset=0, size=None):
@@ -1154,10 +1172,10 @@ class GPUCommandEncoder(GPUObjectBase):
 
         Arguments:
             source (GPUBuffer): The source buffer.
-            source_offset (int): The byte offset.
+            source_offset (int): The byte offset (a multiple of 4).
             destination (GPUBuffer): The target buffer.
-            destination_offset (int): The byte offset in the destination buffer.
-            size (int): The number of bytes to copy.
+            destination_offset (int): The byte offset in the destination buffer (a multiple of 4).
+            size (int): The number of bytes to copy (a multiple of 4).
         """
         raise NotImplementedError()
 
@@ -1169,6 +1187,8 @@ class GPUCommandEncoder(GPUObjectBase):
             source (GPUBuffer): A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
             destination (GPUTexture): A dict with fields: texture, mip_level, origin.
             copy_size (int): The number of bytes to copy.
+
+        Note that the `bytes_per_row` must be a multiple of 256.
         """
         raise NotImplementedError()
 
@@ -1180,6 +1200,8 @@ class GPUCommandEncoder(GPUObjectBase):
             source (GPUTexture): A dict with fields: texture, mip_level, origin.
             destination (GPUBuffer):  A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
             copy_size (int): The number of bytes to copy.
+
+        Note that the `bytes_per_row` must be a multiple of 256.
         """
         raise NotImplementedError()
 
@@ -1588,11 +1610,15 @@ class GPUQueue(GPUObjectBase):
             data_offset: The byte offset in the data. Default 0.
             size: The number of bytes to write. Default all minus offset.
 
-        Also see ``GPUDevice.create_buffer_with_data()``.
+        This maps the data to a temporary buffer and then copies that buffer
+        to the given buffer. The given buffer's usage must include COPY_DST.
+
+        Also see ``GPUDevice.create_buffer_with_data()`` and ``GPUBuffer.map_write()``.
+
         """
         raise NotImplementedError()
 
-    @apidiff.add("replaces WebGPU's mapping API'")
+    @apidiff.add("replaces WebGPU's mapping API")
     def read_buffer(self, buffer, buffer_offset=0, size=None):
         """Takes the data contents of the buffer and return them as a memoryview.
 
@@ -1600,6 +1626,12 @@ class GPUQueue(GPUObjectBase):
             buffer: The :class:`GPUBuffer` object to read from.
             buffer_offset (int): The offset in the buffer to start reading from.
             size: The number of bytes to read. Default all minus offset.
+
+        This copies the data in the given buffer to a temporary buffer
+        and then maps that buffer to read the data. The given buffer's
+        usage must include COPY_SRC.
+
+        Also see ``GPUBuffer.map_read()``.
         """
         raise NotImplementedError()
 
@@ -1617,10 +1649,30 @@ class GPUQueue(GPUObjectBase):
             data_layout: A dict with fields: "offset" (an int, default 0),
                 "bytes_per_row" (an int), "rows_per_image" (an int, default 0).
             size: A 3-tuple of ints specifying the size to write.
+
+        Unlike ``GPUCommandEncoder.copyBufferToTexture()``, there is
+        no alignment requirement on `bytes_per_row`.
         """
         raise NotImplementedError()
 
-    # todo: a read_texture() seems appropriate too
+    @apidiff.add("For symmetry, and to help work around the bytes_per_row constraint")
+    def read_texture(self, source, data_layout, size):
+        """Reads the contents of the texture and return them as a memoryview.
+
+        Arguments:
+            source: A dict with fields: "texture" (a texture object),
+                "origin" (a 3-tuple), "mip_level" (an int, default 0).
+            data_layout: A dict with fields: "offset" (an int, default 0),
+                "bytes_per_row" (an int), "rows_per_image" (an int, default 0).
+            size: A 3-tuple of ints specifying the size to write.
+
+        Unlike ``GPUCommandEncoder.copyBufferToTexture()``, there is
+        no alignment requirement on `bytes_per_row`, although in the
+        current implementation there will be a performance penalty if
+        ``bytes_per_row`` is not a multiple of 256 (because we'll be
+        copying data row-by-row in Python).
+        """
+        raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: Promise<undefined> onSubmittedWorkDone();

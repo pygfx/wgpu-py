@@ -1004,7 +1004,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
-    def _map_read(self):
+    def map_read(self):
         size = self.size
 
         # Prepare
@@ -1039,7 +1039,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         self._unmap()
         return data
 
-    def _map_write(self, data):
+    def map_write(self, data):
         size = self.size
 
         data = memoryview(data).cast("B")
@@ -1343,6 +1343,10 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
     def copy_buffer_to_buffer(
         self, source, source_offset, destination, destination_offset, size
     ):
+        assert source_offset % 4 == 0, "source_offsetmust be a multiple of 4"
+        assert destination_offset % 4 == 0, "destination_offset must be a multiple of 4"
+        assert size % 4 == 0, "size must be a multiple of 4"
+
         assert isinstance(source, GPUBuffer)
         assert isinstance(destination, GPUBuffer)
         # H: void f(WGPUCommandEncoderId command_encoder_id, WGPUBufferId source, WGPUBufferAddress source_offset, WGPUBufferId destination, WGPUBufferAddress destination_offset, WGPUBufferAddress size)
@@ -1375,7 +1379,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             ),
         )
 
-        ori = _tuple_from_tuple_or_dict(destination["origin"], "xyz")
+        ori = _tuple_from_tuple_or_dict(destination.get("origin", (0, 0, 0)), "xyz")
         # H: x: int, y: int, z: int
         c_origin = new_struct(
             "WGPUOrigin3d",
@@ -1418,7 +1422,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
                 f"bytes_per_row must ({bytes_per_row}) be a multiple of {row_alignment}"
             )
 
-        ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
+        ori = _tuple_from_tuple_or_dict(source.get("origin", (0, 0, 0)), "xyz")
         # H: x: int, y: int, z: int
         c_origin = new_struct(
             "WGPUOrigin3d",
@@ -1467,7 +1471,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
 
     def copy_texture_to_texture(self, source, destination, copy_size):
 
-        ori = _tuple_from_tuple_or_dict(source["origin"], "xyz")
+        ori = _tuple_from_tuple_or_dict(source.get("origin", (0, 0, 0)), "xyz")
         # H: x: int, y: int, z: int
         c_origin1 = new_struct(
             "WGPUOrigin3d",
@@ -1483,7 +1487,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             origin=c_origin1,
         )
 
-        ori = _tuple_from_tuple_or_dict(destination["origin"], "xyz")
+        ori = _tuple_from_tuple_or_dict(destination.get("origin", (0, 0, 0)), "xyz")
         # H: x: int, y: int, z: int
         c_origin2 = new_struct(
             "WGPUOrigin3d",
@@ -1862,12 +1866,15 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        data = tmp_buffer._map_read()
+        data = tmp_buffer.map_read()
         tmp_buffer.destroy()
 
         return data
 
     def write_texture(self, destination, data, data_layout, size):
+
+        # Note that the bytes_per_row restriction does not apply for
+        # this function; wgpu-native deals with it.
 
         m, address = get_memoryview_and_address(data)
         # todo: could we not derive the size from the shape of m?
@@ -1918,6 +1925,63 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         lib.wgpu_queue_write_texture(
             self._internal, c_destination, c_data, data_length, c_data_layout, c_size
         )
+
+    def read_texture(self, source, data_layout, size):
+
+        # Note that the bytes_per_row restriction does not apply for
+        # this function; we have to deal with it.
+
+        device = source["texture"]._device
+
+        # Get and calculate striding info
+        ori_offset = data_layout.get("offset", 0)
+        ori_stride = data_layout["bytes_per_row"]
+        extra_stride = (256 - ori_stride % 256) % 256
+        full_stride = ori_stride + extra_stride
+
+        size = _tuple_from_tuple_or_dict(
+            size, ("width", "height", "depth_or_array_layers")
+        )
+
+        # Create temporary buffer
+        data_length = full_stride * size[1] * size[2]
+        tmp_usage = flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ
+        tmp_buffer = device._create_buffer("", data_length, tmp_usage, False)
+
+        destination = {
+            "buffer": tmp_buffer,
+            "offset": 0,
+            "bytes_per_row": full_stride,
+            "rows_per_image": data_layout.get("rows_per_image", 0),
+        }
+
+        # Copy data to temp buffer
+        encoder = device.create_command_encoder()
+        encoder.copy_texture_to_buffer(source, destination, size)
+        command_buffer = encoder.finish()
+        self.submit([command_buffer])
+
+        # Download from mappable buffer
+        data = tmp_buffer.map_read()
+        tmp_buffer.destroy()
+
+        # Fix data strides if necessary
+        # Ugh, cannot do striding with memoryviews (yet: https://bugs.python.org/issue41226)
+        # and Numpy is not a dependency.
+        if extra_stride or ori_offset:
+            data_length2 = ori_stride * size[1] * size[2] + ori_offset
+            data2 = memoryview((ctypes.c_uint8 * data_length2)()).cast(data.format)
+            for i in range(size[1] * size[2]):
+                row = data[i * full_stride : i * full_stride + ori_stride]
+                data2[
+                    ori_offset
+                    + i * ori_stride : ori_offset
+                    + i * ori_stride
+                    + ori_stride
+                ] = row
+            data = data2
+
+        return data
 
     # FIXME: new method to implement -> does not exist in wgpu-native
     def copy_image_bitmap_to_texture(self, source, destination, copy_size):
