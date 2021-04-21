@@ -30,7 +30,7 @@ def test_compute_tex_1d_rgba8uint():
         tex2.write(index.x, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 1, 1, 4
+    nx, ny, nz, nc = 64, 1, 1, 4
     data1 = (ctypes.c_uint8 * nc * nx)()
     for x in range(nx):
         for c in range(nc):
@@ -46,19 +46,19 @@ def test_compute_tex_1d_rgba8uint():
     )
 
 
-def test_compute_tex_1d_rg16sint():
+def test_compute_tex_1d_rgba16sint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "1d rg16i"),
-        tex2: ("texture", 1, "1d rg16i"),
+        tex1: ("texture", 0, "1d rgba16i"),
+        tex2: ("texture", 1, "1d rgba16i"),
     ):
         color = tex1.read(index.x)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
         tex2.write(index.x, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 1, 1, 2
+    nx, ny, nz, nc = 128, 1, 1, 4
     data1 = (ctypes.c_int16 * nc * nx)()
     for x in range(nx):
         for c in range(nc):
@@ -67,27 +67,27 @@ def test_compute_tex_1d_rg16sint():
     # Compute and validate
     _compute_texture(
         compute_shader,
-        wgpu.TextureFormat.rg16sint,
+        wgpu.TextureFormat.rgba16sint,
         wgpu.TextureDimension.d1,
         (nx, ny, nz, nc),
         data1,
     )
 
 
-def test_compute_tex_1d_r16sint():
+def test_compute_tex_1d_r32sint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "1d r16i"),
-        tex2: ("texture", 1, "1d r16i"),
+        tex1: ("texture", 0, "1d r32i"),
+        tex2: ("texture", 1, "1d r32i"),
     ):
         color = tex1.read(index.x)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
         tex2.write(index.x, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 1, 1, 1
-    data1 = (ctypes.c_int16 * nc * nx)()
+    nx, ny, nz, nc = 256, 1, 1, 1
+    data1 = (ctypes.c_int32 * nc * nx)()
     for x in range(nx):
         for c in range(nc):
             data1[x][c] = random.randint(0, 20)
@@ -95,7 +95,7 @@ def test_compute_tex_1d_r16sint():
     # Compute and validate
     _compute_texture(
         compute_shader,
-        wgpu.TextureFormat.r16sint,
+        wgpu.TextureFormat.r32sint,
         wgpu.TextureDimension.d1,
         (nx, ny, nz, nc),
         data1,
@@ -114,7 +114,7 @@ def test_compute_tex_1d_r32float():
         tex2.write(index.x, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 1, 1, 1
+    nx, ny, nz, nc = 256, 1, 1, 1
     data1 = (ctypes.c_float * nc * nx)()
     for x in range(nx):
         for c in range(nc):
@@ -146,7 +146,7 @@ def test_compute_tex_2d_rgba8uint():
         stdlib.write(tex2, index.xy, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 8, 1, 4
+    nx, ny, nz, nc = 64, 8, 1, 4
     data1 = (ctypes.c_uint8 * nc * nx * ny)()
     for y in range(ny):
         for x in range(nx):
@@ -163,19 +163,19 @@ def test_compute_tex_2d_rgba8uint():
     )
 
 
-def test_compute_tex_2d_rg16sint():
+def test_compute_tex_2d_rgba16sint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "2d rg16i"),
-        tex2: ("texture", 1, "2d rg16i"),
+        tex1: ("texture", 0, "2d rgba16i"),
+        tex2: ("texture", 1, "2d rgba16i"),
     ):
         color = tex1.read(index.xy)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
         tex2.write(index.xy, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 8, 1, 2
+    nx, ny, nz, nc = 128, 8, 1, 4
     data1 = (ctypes.c_int16 * nc * nx * ny)()
     for y in range(ny):
         for x in range(nx):
@@ -185,27 +185,27 @@ def test_compute_tex_2d_rg16sint():
     # Compute and validate
     _compute_texture(
         compute_shader,
-        wgpu.TextureFormat.rg16sint,
+        wgpu.TextureFormat.rgba16sint,
         wgpu.TextureDimension.d2,
         (nx, ny, nz, nc),
         data1,
     )
 
 
-def test_compute_tex_2d_r16sint():
+def test_compute_tex_2d_r32sint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "2d r16i"),
-        tex2: ("texture", 1, "2d r16i"),
+        tex1: ("texture", 0, "2d r32i"),
+        tex2: ("texture", 1, "2d r32i"),
     ):
         color = tex1.read(index.xy)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
         tex2.write(index.xy, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 8, 1, 1
-    data1 = (ctypes.c_int16 * nc * nx * ny)()
+    nx, ny, nz, nc = 256, 8, 1, 1
+    data1 = (ctypes.c_int32 * nc * nx * ny)()
     for y in range(ny):
         for x in range(nx):
             for c in range(nc):
@@ -214,7 +214,7 @@ def test_compute_tex_2d_r16sint():
     # Compute and validate
     _compute_texture(
         compute_shader,
-        wgpu.TextureFormat.r16sint,
+        wgpu.TextureFormat.r32sint,
         wgpu.TextureDimension.d2,
         (nx, ny, nz, nc),
         data1,
@@ -233,7 +233,7 @@ def test_compute_tex_2d_r32float():
         tex2.write(index.xy, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 8, 1, 1
+    nx, ny, nz, nc = 256, 8, 1, 1
     data1 = (ctypes.c_float * nc * nx * ny)()
     for y in range(ny):
         for x in range(nx):
@@ -265,7 +265,7 @@ def test_compute_tex_3d_rgba8uint():
         tex2.write(index.xyz, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 8, 6, 4
+    nx, ny, nz, nc = 64, 8, 6, 4
     data1 = (ctypes.c_uint8 * nc * nx * ny * nz)()
     for z in range(nz):
         for y in range(ny):
@@ -283,19 +283,19 @@ def test_compute_tex_3d_rgba8uint():
     )
 
 
-def test_compute_tex_3d_rg16sint():
+def test_compute_tex_3d_rgba16sint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "3d rg16i"),
-        tex2: ("texture", 1, "3d rg16i"),
+        tex1: ("texture", 0, "3d rgba16i"),
+        tex2: ("texture", 1, "3d rgba16i"),
     ):
         color = tex1.read(index.xyz)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
         tex2.write(index.xyz, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 8, 6, 2
+    nx, ny, nz, nc = 128, 8, 6, 4
     data1 = (ctypes.c_int16 * nc * nx * ny * nz)()
     for z in range(nz):
         for y in range(ny):
@@ -306,27 +306,27 @@ def test_compute_tex_3d_rg16sint():
     # Compute and validate
     _compute_texture(
         compute_shader,
-        wgpu.TextureFormat.rg16sint,
+        wgpu.TextureFormat.rgba16sint,
         wgpu.TextureDimension.d3,
         (nx, ny, nz, nc),
         data1,
     )
 
 
-def test_compute_tex_3d_r16sint():
+def test_compute_tex_3d_r32sint():
     @python2shader
     def compute_shader(
         index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "3d r16i"),
-        tex2: ("texture", 1, "3d r16i"),
+        tex1: ("texture", 0, "3d r32i"),
+        tex2: ("texture", 1, "3d r32i"),
     ):
         color = tex1.read(index.xyz)
         color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
         tex2.write(index.xyz, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 8, 6, 1
-    data1 = (ctypes.c_int16 * nc * nx * ny * nz)()
+    nx, ny, nz, nc = 256, 8, 6, 1
+    data1 = (ctypes.c_int32 * nc * nx * ny * nz)()
     for z in range(nz):
         for y in range(ny):
             for x in range(nx):
@@ -336,7 +336,7 @@ def test_compute_tex_3d_r16sint():
     # Compute and validate
     _compute_texture(
         compute_shader,
-        wgpu.TextureFormat.r16sint,
+        wgpu.TextureFormat.r32sint,
         wgpu.TextureDimension.d3,
         (nx, ny, nz, nc),
         data1,
@@ -355,7 +355,7 @@ def test_compute_tex_3d_r32float():
         tex2.write(index.xyz, color)
 
     # Generate data
-    nx, ny, nz, nc = 7, 8, 6, 1
+    nx, ny, nz, nc = 64, 8, 6, 1
     data1 = (ctypes.c_float * nc * nx * ny * nz)()
     for z in range(nz):
         for y in range(ny):
@@ -412,11 +412,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     texture_view2 = texture2.create_view()
 
     # Create buffer that we need to upload the data
-    buffer_usage = (
-        wgpu.BufferUsage.MAP_READ
-        | wgpu.BufferUsage.COPY_SRC
-        | wgpu.BufferUsage.COPY_DST
-    )
+    buffer_usage = wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.COPY_DST
     buffer = device.create_buffer_with_data(data=data1, usage=buffer_usage)
     assert buffer.usage == buffer_usage
 
@@ -494,7 +490,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     device.queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer
-    data2 = data1.__class__.from_buffer(buffer.read_data())
+    data2 = data1.__class__.from_buffer(device.queue.read_buffer(buffer))
 
     # Numpy arrays are easier to work with
     a1 = np.ctypeslib.as_array(data1).reshape(nz, ny, nx, nc)

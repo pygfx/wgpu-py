@@ -63,6 +63,9 @@ def write_mappings():
     idl = get_idl_parser()
     hp = get_h_parser()
 
+    # Init generated code
+    pylines = [mappings_preamble]
+
     # Create enummap, which allows the rs backend to resolve enum field names
     # to the corresponding integer value.
     enummap = {}
@@ -93,34 +96,43 @@ def write_mappings():
             else:
                 print(f"Enum field {name}.{ikey} missing in wgpu.h")
 
-    # Some structs have fields that are enum values. The rs backend
-    # must be able to resolve these too.
-    cstructfield2enum = {}
-    for structname, struct in hp.structs.items():
-        for key, val in struct.items():
-            if isinstance(val, str) and val.startswith("WGPU"):
-                enumname = val[4:]
-                if enumname in idl.enums:
-                    cstructfield2enum[f"{structname[4:]}.{key}"] = enumname
-                else:
-                    pass  # a struct
-
-    # Generate code
-    pylines = [mappings_preamble]
-
+    # Write enummap
     pylines.append(f"# There are {len(enummap)} enum mappings\n")
     pylines.append("enummap = {")
     for key in sorted(enummap.keys()):
         pylines.append(f'    "{key}": {enummap[key]!r},')
     pylines.append("}\n")
 
+    # Some structs have fields that are enum values. The rs backend
+    # must be able to resolve these too.
+    cstructfield2enum = {}
+    for structname, struct in hp.structs.items():
+        for key, val in struct.items():
+            if isinstance(val, str) and val.startswith("WGPU"):
+                enumname = val[4:].split("/")[0]
+                if enumname in idl.enums:
+                    cstructfield2enum[f"{structname[4:]}.{key}"] = enumname
+                else:
+                    pass  # a struct
+
+    # Write cstructfield2enum
     pylines.append(f"# There are {len(cstructfield2enum)} struct-field enum mappings\n")
     pylines.append("cstructfield2enum = {")
     for key in sorted(cstructfield2enum.keys()):
         pylines.append(f'    "{key}": {cstructfield2enum[key]!r},')
     pylines.append("}\n")
 
-    # Write
+    # We need to resolve feature flags into names
+    features_names = {}
+    for name, val in hp.flags["Features"].items():
+        features_names[val] = name.lower()
+    pylines.append(f"# Inverse flag map for features\n")
+    pylines.append("feature_names = {")
+    for key in sorted(features_names.keys()):
+        pylines.append(f"    {key}: {features_names[key]!r},")
+    pylines.append("}\n")
+
+    # Wrap up
     code = blacken("\n".join(pylines))  # just in case; code is already black
     with open(os.path.join(lib_dir, "backends", "rs_mappings.py"), "wb") as f:
         f.write(code.encode())
@@ -170,6 +182,7 @@ class FunctionPatcher(Patcher):
         self._init(code)
         hp = get_h_parser()
         count = 0
+        detected = set()
 
         for line, i in self.iter_lines():
             if "lib.wgpu_" in line:
@@ -182,11 +195,24 @@ class FunctionPatcher(Patcher):
                     self.insert_line(i, f"{indent}# FIXME: {msg}")
                     print(f"Error: {msg}")
                 else:
+                    detected.add(name)
                     anno = hp.functions[name].replace(name, "f").strip(";")
                     self.insert_line(i, indent + f"# H: " + anno)
                     count += 1
 
         print(f"Validated {count} C function calls")
+
+        # Determine what functions were not detected
+        # There are still quite a few, so we don't list them yet
+        ignore = (
+            "wgpu_create_surface_from",
+            "wgpu_set_log_level",
+            "wgpu_get_version",
+            "wgpu_set_log_callback",
+        )
+        unused = set(name for name in hp.functions if not name.startswith(ignore))
+        unused.difference_update(detected)
+        print(f"Not using {len(unused)} C functions")
 
 
 class StructPatcher(Patcher):

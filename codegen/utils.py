@@ -71,6 +71,40 @@ class PrintToFile:
         self.f.close()
 
 
+def remove_c_comments(code):
+    """Remove C-style comments from the given code."""
+    pos = 0
+    new_code = ""
+
+    while True:
+        # Find start of comment
+        lookfor = None
+        i1 = code.find("//", pos)
+        i2 = code.find("/*", pos)
+        if i1 >= 0:
+            lookfor = "\n"
+            comment_start = i1
+        if i2 >= 0:
+            if not (i1 >= 0 and i1 < i2):
+                lookfor = "*/"
+                comment_start = i2
+        # Found a start?
+        if not lookfor:
+            new_code += code[pos:]
+            break
+        else:
+            new_code += code[pos:comment_start]
+        # Find the end
+        comment_end = code.find(lookfor, comment_start + 2)
+        if comment_end < 0:
+            break
+        if lookfor == "\n":
+            pos = comment_end
+        else:
+            pos = comment_end + len(lookfor)
+    return new_code
+
+
 def blacken(src, singleline=False):
     """Format the given src string using black. If singleline is True,
     all function signatures become single-line, so they can be parsed

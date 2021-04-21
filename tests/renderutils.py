@@ -44,7 +44,7 @@ def download_from_texture(device, texture, data_type, nx, ny, nz):
     device.queue.submit([command_encoder.finish()])
 
     # Download
-    return data_type.from_buffer(buffer.read_data())
+    return data_type.from_buffer(device.queue.read_buffer(buffer))
 
 
 def render_to_texture(
@@ -88,7 +88,7 @@ def render_to_texture(
 
     # Also a buffer to read the data to CPU
     buffer = device.create_buffer(
-        size=nbytes, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST
+        size=nbytes, usage=wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.COPY_DST
     )
 
     vshader = device.create_shader_module(code=vertex_shader)
@@ -103,7 +103,6 @@ def render_to_texture(
         },
         primitive={
             "topology": topology,
-            "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
         },
@@ -168,7 +167,7 @@ def render_to_texture(
         else:
             render_pass.draw_indirect(indirect_buffer, 0)
     else:
-        render_pass.set_index_buffer(ibo, 0, 0)
+        render_pass.set_index_buffer(ibo, wgpu.IndexFormat.uint32, 0, 0)
         if indirect_buffer is None:
             render_pass.draw_indexed(6, 1, 0, 0, 0)
         else:
@@ -183,7 +182,7 @@ def render_to_texture(
     device.queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer - numpy is much easier to work with
-    mem = buffer.read_data()  # slow, can also be done async
+    mem = device.queue.read_buffer(buffer)
     data = (ctypes.c_uint8 * 4 * nx * ny).from_buffer(mem)
     return np.frombuffer(data, dtype=np.uint8).reshape(size[0], size[1], 4)
 
@@ -228,7 +227,6 @@ def render_to_screen(
         },
         primitive={
             "topology": topology,
-            "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
         },
@@ -299,7 +297,7 @@ def render_to_screen(
                 else:
                     render_pass.draw_indirect(indirect_buffer, 0)
             else:
-                render_pass.set_index_buffer(ibo, 0, ibo.size)
+                render_pass.set_index_buffer(ibo, wgpu.IndexFormat.uint32, 0, ibo.size)
                 if indirect_buffer is None:
                     render_pass.draw_indexed(6, 1, 0, 0, 0)
                 else:

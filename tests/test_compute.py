@@ -94,13 +94,11 @@ def test_compute_1_3():
     in1 = [int(random.uniform(0, 100)) for i in range(100)]
     in1 = (c_int32 * 100)(*in1)
 
-    outspecs = {0: 100 * c_int32, 1: 100 * c_int32, 2: 100 * c_int32}
+    outspecs = {1: 100 * c_int32, 2: 100 * c_int32}
     out = compute_with_buffers({0: in1}, outspecs, compute_shader)
-    assert isinstance(out, dict) and len(out) == 3
-    assert isinstance(out[0], ctypes.Array)
+    assert isinstance(out, dict) and len(out) == 2
     assert isinstance(out[1], ctypes.Array)
     assert isinstance(out[2], ctypes.Array)
-    assert iters_equal(out[0], in1)  # because it's the same buffer
     assert iters_equal(out[1], in1)  # because the shader copied the data
     assert iters_equal(out[2], range(100))  # because this is the index
 
@@ -129,7 +127,7 @@ def test_compute_indirect():
     # Create output buffer
     buffer2 = device.create_buffer(
         size=ctypes.sizeof(in1),
-        usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.MAP_READ,
+        usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC,
     )
 
     # Create buffer to hold the dispatch parameters for the indirect call
@@ -188,7 +186,7 @@ def test_compute_indirect():
     device.queue.submit([command_encoder.finish()])
 
     # Read result
-    out1 = in1.__class__.from_buffer(buffer2.read_data())
+    out1 = in1.__class__.from_buffer(device.queue.read_buffer(buffer2))
     in2 = list(in1)[:]
     out2 = [i - 1 for i in out1]
     # The shader was applied to all but the last two elements

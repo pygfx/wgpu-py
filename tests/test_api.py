@@ -44,7 +44,7 @@ def test_logging():
     assert level[0] == 30
 
 
-def test_enums_and_flags():
+def test_enums_and_flags_and_structs():
 
     # Enums are str
     assert isinstance(wgpu.BufferBindingType.storage, str)
@@ -58,6 +58,15 @@ def test_enums_and_flags():
     # Flag groups show their field names (in uppercase)
     assert "STORAGE" in repr(wgpu.BufferUsage)
 
+    # Structs are dict-like, their values str
+    assert isinstance(wgpu.structs.DeviceDescriptor, wgpu.structs.Struct)
+    assert isinstance(wgpu.structs.DeviceDescriptor.label, str)
+    assert isinstance(wgpu.structs.DeviceDescriptor.non_guaranteed_features, str)
+
+    # Structs show their field names
+    for key in wgpu.structs.DeviceDescriptor:
+        assert key in repr(wgpu.structs.DeviceDescriptor)
+
 
 def test_base_wgpu_api():
 
@@ -67,21 +76,31 @@ def test_base_wgpu_api():
     assert "select a backend" in str(error.value).lower()
 
     # Fake a device and an adapter
-    adapter = wgpu.base.GPUAdapter("adapter07", [], None)
+    adapter = wgpu.base.GPUAdapter("adapter07", None, [], {})
     queue = wgpu.GPUQueue("", None, None)
     device = wgpu.base.GPUDevice("device08", -1, adapter, [42, 43], {}, queue)
 
     assert queue._device is device
 
     assert adapter.name == "adapter07"
+    assert isinstance(adapter.features, tuple)
     assert adapter.features == ()
+    assert isinstance(adapter.limits, dict)
+    assert set(device.limits.keys()) == set(wgpu.base.DEFAULT_ADAPTER_LIMITS.keys())
 
     assert isinstance(device, wgpu.base.GPUObjectBase)
     assert device.label == "device08"
     assert device.features == ("42", "43")
-    assert device.limits == {}
     assert hex(id(device)) in repr(device)
     assert device.label in repr(device)
+
+
+def test_that_we_know_how_our_api_differs():
+
+    doc = wgpu.base.apidiff.__doc__
+    assert isinstance(doc, str)
+    assert "GPUBuffer.get_mapped_range" in doc
+    assert "GPUDevice.create_buffer_with_data" in doc
 
 
 def test_that_all_docstrings_are_there():

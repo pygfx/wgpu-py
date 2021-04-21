@@ -82,7 +82,7 @@ def _main(canvas, device):
         },
         primitive={
             "topology": wgpu.PrimitiveTopology.triangle_list,
-            "strip_index_format": wgpu.IndexFormat.uint32,
+            # "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
         },

@@ -19,7 +19,7 @@ def get_wgpu_h():
     lines = []
     with open(get_resource_filename("wgpu.h")) as f:
         for line in f.readlines():
-            if not line.startswith(
+            if line.startswith(
                 (
                     "#include ",
                     "#define WGPU_LOCAL",
@@ -29,7 +29,11 @@ def get_wgpu_h():
                     "#endif",
                 )
             ):
-                lines.append(line)
+                continue
+            elif line.startswith("#define ") and "(" in line and ")" in line:
+                i1, i2 = line.index("("), line.index(")")
+                line = line[:i1] + line[i2 + 1 :]
+            lines.append(line)
     return "".join(lines)
 
 
@@ -79,12 +83,15 @@ lib = ffi.dlopen(get_wgpu_lib_path())
 def check_expected_version(version_info):
     # Get lib version
     version_int = lib.wgpu_get_version()
-    if version_int < 65536:  # old version encoding with 3 ints
+    if version_int < 65536:  # no-cover - old version encoding with 3 ints
         version_info_lib = tuple((version_int >> bits) & 0xFF for bits in (16, 8, 0))
     else:
         version_info_lib = tuple(
             (version_int >> bits) & 0xFF for bits in (24, 16, 8, 0)
         )
+    # When the 0.7.0 tag was made, the version was not bumped.
+    if version_info_lib == (0, 6, 0, 0):
+        version_info_lib = (0, 7, 0)
     # Compare
     if version_info_lib != version_info:  # no-cover
         logger.warning(
@@ -96,14 +103,6 @@ def check_expected_version(version_info):
 def _logger_callback(level, c_msg):
     """Called when Rust emits a log message."""
     msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
-    # todo: We currently skip some false negatives to avoid spam.
-    false_negatives = (
-        "Unknown decoration",
-        "Failed to parse shader",
-        "Shader module will not be validated",
-    )
-    if msg.startswith(false_negatives):
-        return
     m = {
         lib.WGPULogLevel_Error: logger.error,
         lib.WGPULogLevel_Warn: logger.warning,

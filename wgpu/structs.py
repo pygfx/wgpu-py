@@ -32,25 +32,25 @@ RequestAdapterOptions = Struct(
 
 DeviceDescriptor = Struct(
     "DeviceDescriptor",
-    label=str,
+    label="str",
     non_guaranteed_features="List[enums.FeatureName]",
     non_guaranteed_limits="Dict[str, int]",
 )  #:
 
 BufferDescriptor = Struct(
     "BufferDescriptor",
-    label=str,
-    size=int,
+    label="str",
+    size="int",
     usage="flags.BufferUsage",
-    mapped_at_creation=bool,
+    mapped_at_creation="bool",
 )  #:
 
 TextureDescriptor = Struct(
     "TextureDescriptor",
-    label=str,
+    label="str",
     size="structs.Extent3D",
-    mip_level_count=int,
-    sample_count=int,
+    mip_level_count="int",
+    sample_count="int",
     dimension="enums.TextureDimension",
     format="enums.TextureFormat",
     usage="flags.TextureUsage",
@@ -58,40 +58,40 @@ TextureDescriptor = Struct(
 
 TextureViewDescriptor = Struct(
     "TextureViewDescriptor",
-    label=str,
+    label="str",
     format="enums.TextureFormat",
     dimension="enums.TextureViewDimension",
     aspect="enums.TextureAspect",
-    base_mip_level=int,
-    mip_level_count=int,
-    base_array_layer=int,
-    array_layer_count=int,
+    base_mip_level="int",
+    mip_level_count="int",
+    base_array_layer="int",
+    array_layer_count="int",
 )  #:
 
 SamplerDescriptor = Struct(
     "SamplerDescriptor",
-    label=str,
+    label="str",
     address_mode_u="enums.AddressMode",
     address_mode_v="enums.AddressMode",
     address_mode_w="enums.AddressMode",
     mag_filter="enums.FilterMode",
     min_filter="enums.FilterMode",
     mipmap_filter="enums.FilterMode",
-    lod_min_clamp=float,
-    lod_max_clamp=float,
+    lod_min_clamp="float",
+    lod_max_clamp="float",
     compare="enums.CompareFunction",
-    max_anisotropy=int,
+    max_anisotropy="int",
 )  #:
 
 BindGroupLayoutDescriptor = Struct(
     "BindGroupLayoutDescriptor",
-    label=str,
+    label="str",
     entries="List[structs.BindGroupLayoutEntry]",
 )  #:
 
 BindGroupLayoutEntry = Struct(
     "BindGroupLayoutEntry",
-    binding=int,
+    binding="int",
     visibility="flags.ShaderStage",
     buffer="structs.BufferBindingLayout",
     sampler="structs.SamplerBindingLayout",
@@ -102,8 +102,8 @@ BindGroupLayoutEntry = Struct(
 BufferBindingLayout = Struct(
     "BufferBindingLayout",
     type="enums.BufferBindingType",
-    has_dynamic_offset=bool,
-    min_binding_size=int,
+    has_dynamic_offset="bool",
+    min_binding_size="int",
 )  #:
 
 SamplerBindingLayout = Struct(
@@ -115,7 +115,7 @@ TextureBindingLayout = Struct(
     "TextureBindingLayout",
     sample_type="enums.TextureSampleType",
     view_dimension="enums.TextureViewDimension",
-    multisampled=bool,
+    multisampled="bool",
 )  #:
 
 StorageTextureBindingLayout = Struct(
@@ -127,53 +127,53 @@ StorageTextureBindingLayout = Struct(
 
 BindGroupDescriptor = Struct(
     "BindGroupDescriptor",
-    label=str,
+    label="str",
     layout="GPUBindGroupLayout",
     entries="List[structs.BindGroupEntry]",
 )  #:
 
 BindGroupEntry = Struct(
     "BindGroupEntry",
-    binding=int,
+    binding="int",
     resource="Union[GPUSampler, GPUTextureView, structs.BufferBinding]",
 )  #:
 
 BufferBinding = Struct(
     "BufferBinding",
     buffer="GPUBuffer",
-    offset=int,
-    size=int,
+    offset="int",
+    size="int",
 )  #:
 
 PipelineLayoutDescriptor = Struct(
     "PipelineLayoutDescriptor",
-    label=str,
+    label="str",
     bind_group_layouts="List[GPUBindGroupLayout]",
 )  #:
 
 ShaderModuleDescriptor = Struct(
     "ShaderModuleDescriptor",
-    label=str,
-    code=str,
-    source_map=dict,
+    label="str",
+    code="str",
+    source_map="dict",
 )  #:
 
 ProgrammableStage = Struct(
     "ProgrammableStage",
     module="GPUShaderModule",
-    entry_point=str,
+    entry_point="str",
 )  #:
 
 ComputePipelineDescriptor = Struct(
     "ComputePipelineDescriptor",
-    label=str,
+    label="str",
     layout="GPUPipelineLayout",
     compute="structs.ProgrammableStage",
 )  #:
 
 RenderPipelineDescriptor = Struct(
     "RenderPipelineDescriptor",
-    label=str,
+    label="str",
     layout="GPUPipelineLayout",
     vertex="structs.VertexState",
     primitive="structs.PrimitiveState",
@@ -188,20 +188,20 @@ PrimitiveState = Struct(
     strip_index_format="enums.IndexFormat",
     front_face="enums.FrontFace",
     cull_mode="enums.CullMode",
-    clamp_depth=bool,
+    clamp_depth="bool",
 )  #:
 
 MultisampleState = Struct(
     "MultisampleState",
-    count=int,
-    mask=int,
-    alpha_to_coverage_enabled=bool,
+    count="int",
+    mask="int",
+    alpha_to_coverage_enabled="bool",
 )  #:
 
 FragmentState = Struct(
     "FragmentState",
     module="GPUShaderModule",
-    entry_point=str,
+    entry_point="str",
     targets="List[structs.ColorTargetState]",
 )  #:
 
@@ -228,15 +228,15 @@ BlendComponent = Struct(
 DepthStencilState = Struct(
     "DepthStencilState",
     format="enums.TextureFormat",
-    depth_write_enabled=bool,
+    depth_write_enabled="bool",
     depth_compare="enums.CompareFunction",
     stencil_front="structs.StencilFaceState",
     stencil_back="structs.StencilFaceState",
-    stencil_read_mask=int,
-    stencil_write_mask=int,
-    depth_bias=int,
-    depth_bias_slope_scale=float,
-    depth_bias_clamp=float,
+    stencil_read_mask="int",
+    stencil_write_mask="int",
+    depth_bias="int",
+    depth_bias_slope_scale="float",
+    depth_bias_clamp="float",
 )  #:
 
 StencilFaceState = Struct(
@@ -250,13 +250,13 @@ StencilFaceState = Struct(
 VertexState = Struct(
     "VertexState",
     module="GPUShaderModule",
-    entry_point=str,
+    entry_point="str",
     buffers="List[structs.VertexBufferLayout]",
 )  #:
 
 VertexBufferLayout = Struct(
     "VertexBufferLayout",
-    array_stride=int,
+    array_stride="int",
     step_mode="enums.InputStepMode",
     attributes="List[structs.VertexAttribute]",
 )  #:
@@ -264,58 +264,58 @@ VertexBufferLayout = Struct(
 VertexAttribute = Struct(
     "VertexAttribute",
     format="enums.VertexFormat",
-    offset=int,
-    shader_location=int,
+    offset="int",
+    shader_location="int",
 )  #:
 
 CommandBufferDescriptor = Struct(
     "CommandBufferDescriptor",
-    label=str,
+    label="str",
 )  #:
 
 CommandEncoderDescriptor = Struct(
     "CommandEncoderDescriptor",
-    label=str,
-    measure_execution_time=bool,
+    label="str",
+    measure_execution_time="bool",
 )  #:
 
 ImageDataLayout = Struct(
     "ImageDataLayout",
-    offset=int,
-    bytes_per_row=int,
-    rows_per_image=int,
+    offset="int",
+    bytes_per_row="int",
+    rows_per_image="int",
 )  #:
 
 ImageCopyBuffer = Struct(
     "ImageCopyBuffer",
-    offset=int,
-    bytes_per_row=int,
-    rows_per_image=int,
+    offset="int",
+    bytes_per_row="int",
+    rows_per_image="int",
     buffer="GPUBuffer",
 )  #:
 
 ImageCopyTexture = Struct(
     "ImageCopyTexture",
     texture="GPUTexture",
-    mip_level=int,
+    mip_level="int",
     origin="Union[List[int], structs.Origin3D]",
     aspect="enums.TextureAspect",
 )  #:
 
 ImageCopyImageBitmap = Struct(
     "ImageCopyImageBitmap",
-    image_bitmap=memoryview,
+    image_bitmap="memoryview",
     origin="Union[List[int], structs.Origin2D]",
 )  #:
 
 ComputePassDescriptor = Struct(
     "ComputePassDescriptor",
-    label=str,
+    label="str",
 )  #:
 
 RenderPassDescriptor = Struct(
     "RenderPassDescriptor",
-    label=str,
+    label="str",
     color_attachments="List[structs.RenderPassColorAttachment]",
     depth_stencil_attachment="structs.RenderPassDepthStencilAttachment",
     occlusion_query_set="GPUQuerySet",
@@ -334,36 +334,36 @@ RenderPassDepthStencilAttachment = Struct(
     view="GPUTextureView",
     depth_load_value="Union[enums.LoadOp, float]",
     depth_store_op="enums.StoreOp",
-    depth_read_only=bool,
+    depth_read_only="bool",
     stencil_load_value="Union[enums.LoadOp, int]",
     stencil_store_op="enums.StoreOp",
-    stencil_read_only=bool,
+    stencil_read_only="bool",
 )  #:
 
 RenderBundleDescriptor = Struct(
     "RenderBundleDescriptor",
-    label=str,
+    label="str",
 )  #:
 
 RenderBundleEncoderDescriptor = Struct(
     "RenderBundleEncoderDescriptor",
-    label=str,
+    label="str",
     color_formats="List[enums.TextureFormat]",
     depth_stencil_format="enums.TextureFormat",
-    sample_count=int,
+    sample_count="int",
 )  #:
 
 QuerySetDescriptor = Struct(
     "QuerySetDescriptor",
-    label=str,
+    label="str",
     type="enums.QueryType",
-    count=int,
+    count="int",
     pipeline_statistics="List[enums.PipelineStatisticName]",
 )  #:
 
 SwapChainDescriptor = Struct(
     "SwapChainDescriptor",
-    label=str,
+    label="str",
     device="GPUDevice",
     format="enums.TextureFormat",
     usage="flags.TextureUsage",
@@ -376,28 +376,28 @@ UncapturedErrorEventInit = Struct(
 
 Color = Struct(
     "Color",
-    r=float,
-    g=float,
-    b=float,
-    a=float,
+    r="float",
+    g="float",
+    b="float",
+    a="float",
 )  #:
 
 Origin2D = Struct(
     "Origin2D",
-    x=int,
-    y=int,
+    x="int",
+    y="int",
 )  #:
 
 Origin3D = Struct(
     "Origin3D",
-    x=int,
-    y=int,
-    z=int,
+    x="int",
+    y="int",
+    z="int",
 )  #:
 
 Extent3D = Struct(
     "Extent3D",
-    width=int,
-    height=int,
-    depth_or_array_layers=int,
+    width="int",
+    height="int",
+    depth_or_array_layers="int",
 )  #:
