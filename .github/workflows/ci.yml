@@ -126,7 +126,7 @@ jobs:
       run: |
           sudo apt-get update
           sudo apt-get install -y patchelf
-          auditwheel repair --plat manylinux2010 dist/*.whl
+          auditwheel repair --plat manylinux2010_x86_64 dist/*.whl
           rm dist/*.whl
           cp wheelhouse/*.whl dist/.
     - name: Test wheel
