@@ -89,9 +89,9 @@ def check_expected_version(version_info):
         version_info_lib = tuple(
             (version_int >> bits) & 0xFF for bits in (24, 16, 8, 0)
         )
-        # A tag was made, but version was not bumped. The real 0.6.0 is on the old version int
-        if version_info_lib == (0, 6, 0, 0):
-            version_info_lib = (0, 7, 0, 0)
+    # When the 0.7.0 tag was made, the version was not bumped.
+    if version_info_lib == (0, 6, 0, 0):
+        version_info_lib = (0, 7, 0)
     # Compare
     if version_info_lib != version_info:  # no-cover
         logger.warning(
