@@ -692,32 +692,40 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
     def create_shader_module(self, *, label="", code: str, source_map: dict = None):
 
-        if isinstance(code, bytes):
-            data = code  # Assume it's Spirv
-        elif hasattr(code, "to_bytes"):
-            data = code.to_bytes()
-        elif hasattr(code, "to_spirv"):
-            data = code.to_spirv()
+        if isinstance(code, str):
+            # WGSL
+            source_struct = new_struct_p(
+                "WGPUShaderModuleWGSLDescriptor *",
+                source=ffi.new("char []", code.encode()),
+            )
+            source_struct[0].chain.next = ffi.NULL
+            source_struct[0].chain.s_type = lib.WGPUSType_ShaderModuleWGSLDescriptor
         else:
-            raise TypeError("Need bytes or ob with ob.to_spirv() for shader.")
-
-        magic_nr = b"\x03\x02#\x07"  # 0x7230203
-        if data[:4] != magic_nr:
-            raise ValueError("Given shader data does not look like a SpirV module")
-
-        # From bytes to WGPUU32Array
-        data_u8 = ffi.new("uint8_t[]", data)
-        data_u32 = ffi.cast("uint32_t *", data_u8)
-
-        # H: chain: WGPUChainedStruct, code_size: int, code: const uint32_t
-        source_struct = new_struct_p(
-            "WGPUShaderModuleSPIRVDescriptor *",
-            code=data_u32,
-            code_size=len(data) // 4,
-            # not used: chain
-        )
-        source_struct[0].chain.next = ffi.NULL
-        source_struct[0].chain.s_type = lib.WGPUSType_ShaderModuleSPIRVDescriptor
+            # Must be Spirv then
+            if isinstance(code, bytes):
+                data = code
+            elif hasattr(code, "to_bytes"):
+                data = code.to_bytes()
+            elif hasattr(code, "to_spirv"):
+                data = code.to_spirv()
+            else:
+                raise TypeError("Shader code must be str for WGSL, or bytes for SpirV.")
+            # Validate
+            magic_nr = b"\x03\x02#\x07"  # 0x7230203
+            if data[:4] != magic_nr:
+                raise ValueError("Given shader data does not look like a SpirV module")
+            # From bytes to WGPUU32Array
+            data_u8 = ffi.new("uint8_t[]", data)
+            data_u32 = ffi.cast("uint32_t *", data_u8)
+            # H: chain: WGPUChainedStruct, code_size: int, code: const uint32_t
+            source_struct = new_struct_p(
+                "WGPUShaderModuleSPIRVDescriptor *",
+                code=data_u32,
+                code_size=len(data) // 4,
+                # not used: chain
+            )
+            source_struct[0].chain.next = ffi.NULL
+            source_struct[0].chain.s_type = lib.WGPUSType_ShaderModuleSPIRVDescriptor
 
         # H: next_in_chain: WGPUChainedStruct *, label: WGPULabel, flags: WGPUShaderFlags/int
         struct = new_struct_p(
