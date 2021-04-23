@@ -539,8 +539,8 @@ class GPUDevice(GPUObjectBase):
 
         Arguments:
             label (str): A human readable label. Optional.
-            code (bytes): The shadercode, as binary SpirV, or an object
-                implementing ``to_spirv()`` or ``to_bytes()``.
+            code (str | bytes): The shadercode, as WGSL text or binary SpirV
+            (or an object implementing ``to_spirv()`` or ``to_bytes()``).
         """
         raise NotImplementedError()
 
