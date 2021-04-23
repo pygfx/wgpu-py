@@ -32,6 +32,11 @@ def get_memoryview_and_address(data):
     # to work with, which supports all objects implementing the buffer protocol.
     m = memoryview(data)
 
+    # Test that the data is contiguous.
+    # Note that pypy does not have the contiguous attribute, so we assume it is.
+    if not getattr(m, "contiguous", True):
+        raise ValueError("The given texture data is not contiguous")
+
     # Get the address via ffi. In contrast to ctypes, this also
     # works for readonly data (e.g. bytes)
     c_data = ffi.from_buffer("uint8_t []", m)

@@ -391,8 +391,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
         # Get a memoryview of the data
         m, src_address = get_memoryview_and_address(data)
-        if not m.contiguous:  # no-cover
-            raise ValueError("The given texture data is not contiguous")
         m = m.cast("B", shape=(m.nbytes,))
         size = m.nbytes
 
@@ -1814,10 +1812,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         m, address = get_memoryview_and_address(data)
         nbytes = m.nbytes
 
-        # Checks
-        if not m.contiguous:  # no-cover
-            raise ValueError("The given buffer data is not contiguous")
-
         # Deal with offset and size
         buffer_offset = int(buffer_offset)
         data_offset = int(data_offset)
@@ -1878,10 +1872,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
 
         m, address = get_memoryview_and_address(data)
         # todo: could we not derive the size from the shape of m?
-
-        # Checks
-        if not m.contiguous:  # no-cover
-            raise ValueError("The given texture data is not contiguous")
 
         c_data = ffi.cast("uint8_t *", address)
         data_length = m.nbytes
