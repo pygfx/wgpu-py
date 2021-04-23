@@ -694,9 +694,11 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
         if isinstance(code, str):
             # WGSL
+            # H: chain: WGPUChainedStruct, source: const char
             source_struct = new_struct_p(
                 "WGPUShaderModuleWGSLDescriptor *",
                 source=ffi.new("char []", code.encode()),
+                # not used: chain
             )
             source_struct[0].chain.next = ffi.NULL
             source_struct[0].chain.s_type = lib.WGPUSType_ShaderModuleWGSLDescriptor
