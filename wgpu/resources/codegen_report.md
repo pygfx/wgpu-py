@@ -21,6 +21,14 @@
 ### Patching API for backends/rs.py
 * Diffs for GPUAdapter: add request_device_tracing
 * Validated 33 classes, 96 methods, 0 properties
+* ERROR: missing check_struct in create_texture: {'Extent3D'}
+* ERROR: missing check_struct in create_bind_group_layout: {'SamplerBindingLayout', 'TextureBindingLayout', 'StorageTextureBindingLayout', 'BufferBindingLayout', 'BindGroupLayoutEntry'}
+* ERROR: missing check_struct in create_bind_group: {'BindGroupEntry'}
+* ERROR: missing check_struct in create_compute_pipeline: {'ProgrammableStage'}
+* ERROR: missing check_struct in create_compute_pipeline_async: {'ProgrammableStage'}
+* ERROR: missing check_struct in create_render_pipeline: {'StencilFaceState', 'PrimitiveState', 'DepthStencilState', 'VertexState', 'MultisampleState', 'FragmentState'}
+* ERROR: missing check_struct in create_render_pipeline_async: {'StencilFaceState', 'PrimitiveState', 'DepthStencilState', 'VertexState', 'MultisampleState', 'FragmentState'}
+* ERROR: missing check_struct in begin_render_pass: {'RenderPassDepthStencilAttachment', 'RenderPassColorAttachment'}
 ## Validating rs.py
 * Flag field BufferUsage.QUERY_RESOLVE missing in wgpu.h
 * Flag MapMode missing in wgpu.h

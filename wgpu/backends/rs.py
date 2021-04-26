@@ -294,7 +294,7 @@ class GPUAdapter(base.GPUAdapter):
         *,
         label="",
         non_guaranteed_features: "list(enums.FeatureName)" = [],
-        non_guaranteed_limits: "structs.Limits" = {},
+        non_guaranteed_limits: "Dict[str, int]" = {},
     ):
         """Write a trace of all commands to a file so it can be reproduced
         elsewhere. The trace is cross-platform!
@@ -423,6 +423,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         # Return wrapped buffer
         return GPUBuffer(label, id, self, size, usage)
 
+    # FIXME: missing check_struct in create_texture: {'Extent3D'}
     def create_texture(
         self,
         *,
@@ -505,6 +506,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = lib.wgpu_device_create_sampler(self._internal, struct)
         return GPUSampler(label, id, self)
 
+    # FIXME: missing check_struct in create_bind_group_layout: {'SamplerBindingLayout', 'TextureBindingLayout', 'StorageTextureBindingLayout', 'BufferBindingLayout', 'BindGroupLayoutEntry'}
     def create_bind_group_layout(
         self, *, label="", entries: "List[structs.BindGroupLayoutEntry]"
     ):
@@ -608,6 +610,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
         return GPUBindGroupLayout(label, id, self, entries)
 
+    # FIXME: missing check_struct in create_bind_group: {'BindGroupEntry'}
     def create_bind_group(
         self,
         *,
@@ -741,6 +744,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = lib.wgpu_device_create_shader_module(self._internal, struct)
         return GPUShaderModule(label, id, self)
 
+    # FIXME: missing check_struct in create_compute_pipeline: {'ProgrammableStage'}
     def create_compute_pipeline(
         self,
         *,
@@ -768,6 +772,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = lib.wgpu_device_create_compute_pipeline(self._internal, struct)
         return GPUComputePipeline(label, id, self, layout)
 
+    # FIXME: missing check_struct in create_compute_pipeline_async: {'ProgrammableStage'}
     async def create_compute_pipeline_async(
         self,
         *,
@@ -777,6 +782,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     ):
         return self.create_compute_pipeline(label=label, layout=layout, compute=compute)
 
+    # FIXME: missing check_struct in create_render_pipeline: {'StencilFaceState', 'PrimitiveState', 'DepthStencilState', 'VertexState', 'MultisampleState', 'FragmentState'}
     def create_render_pipeline(
         self,
         *,
@@ -950,6 +956,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = lib.wgpuDeviceCreateRenderPipeline(self._internal, struct)
         return GPURenderPipeline(label, id, self, layout)
 
+    # FIXME: missing check_struct in create_render_pipeline_async: {'StencilFaceState', 'PrimitiveState', 'DepthStencilState', 'VertexState', 'MultisampleState', 'FragmentState'}
     async def create_render_pipeline_async(
         self,
         *,
@@ -1248,6 +1255,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         raw_pass = lib.wgpu_command_encoder_begin_compute_pass(self._internal, struct)
         return GPUComputePassEncoder(label, raw_pass, self)
 
+    # FIXME: missing check_struct in begin_render_pass: {'RenderPassDepthStencilAttachment', 'RenderPassColorAttachment'}
     def begin_render_pass(
         self,
         *,

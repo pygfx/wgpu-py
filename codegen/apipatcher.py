@@ -5,8 +5,8 @@ spec (IDL), and the backend implementations from the base API.
 
 import os
 
-from .utils import print, lib_dir, blacken, to_snake_case, to_camel_case, Patcher
-from .idlparser import get_idl_parser
+from codegen.utils import print, lib_dir, blacken, to_snake_case, to_camel_case, Patcher
+from codegen.idlparser import get_idl_parser
 
 
 def patch_base_api(code):
@@ -42,7 +42,11 @@ def patch_backend_api(code):
         base_api_code = f.read().decode()
 
     # Patch!
-    for patcher in [CommentRemover(), BackendApiPatcher(base_api_code)]:
+    for patcher in [
+        CommentRemover(),
+        BackendApiPatcher(base_api_code),
+        BackendApiStructValidaitonChecker(),
+    ]:
         patcher.apply(code)
         code = patcher.dumps()
     return code
@@ -53,7 +57,7 @@ class CommentRemover(Patcher):
     to prevent accumulating comments.
     """
 
-    triggers = "# IDL:", "# FIXME: unknown api"
+    triggers = "# IDL:", "# FIXME: unknown api", "# FIXME: missing check_struct"
 
     def apply(self, code):
         self._init(code)
@@ -174,7 +178,7 @@ class AbstractApiPatcher(Patcher):
             self._apidiffs_from_lines(pre_lines, propname)
             if self.prop_is_known(classname, propname):
                 if "@apidiff.add" in pre_lines:
-                    print(f"Error: apidiff.add for known {classname}.{propname}")
+                    print(f"ERROR: apidiff.add for known {classname}.{propname}")
                 elif "@apidiff.hide" in pre_lines:
                     pass  # continue as normal
                 old_line = self.lines[j1]
@@ -207,7 +211,7 @@ class AbstractApiPatcher(Patcher):
             self._apidiffs_from_lines(pre_lines, methodname)
             if self.method_is_known(classname, methodname):
                 if "@apidiff.add" in pre_lines:
-                    print(f"Error: apidiff.add for known {classname}.{methodname}")
+                    print(f"ERROR: apidiff.add for known {classname}.{methodname}")
                 elif "@apidiff.hide" in pre_lines:
                     pass  # continue as normal
                 elif "@apidiff.change" in pre_lines:
@@ -443,3 +447,57 @@ class BackendApiPatcher(AbstractApiPatcher):
     def get_required_method_names(self, classname):
         _, methods = self.classes[classname]
         return list(name for name in methods.keys() if methods[name][1])
+
+
+class BackendApiStructValidaitonChecker(Patcher):
+    """Checks that all structs are vaildated in the methods that have incoming structs."""
+
+    def apply(self, code):
+        self._init(code)
+
+        idl = get_idl_parser()
+        all_structs = set()
+
+        for classname, i1, i2 in self.iter_classes():
+            if classname not in idl.classes:
+                continue
+
+            # For each method ...
+            for methodname, j1, j2 in self.iter_methods(i1 + 1):
+                code = "\n".join(self.lines[j1:j2])
+                # Get signature and cut it up in words
+                sig_words = code.partition("(")[2].split("):")[0]
+                for c in "][(),\"'":
+                    sig_words = sig_words.replace(c, " ")
+                # Collect incoming structs from signature
+                method_structs = set()
+                for word in sig_words.split():
+                    if word.startswith("structs."):
+                        structname = word.partition(".")[2]
+                        method_structs.update(self._get_sub_structs(idl, structname))
+                all_structs.update(method_structs)
+                # Collect structs being checked
+                checked = set()
+                for line in code.splitlines():
+                    line = line.lstrip()
+                    if line.startswith("check_struct("):
+                        name = line.split("(")[1].split(",")[0].strip('"')
+                        checked.add(name)
+                # Test that a matching check is done
+                unchecked = method_structs.difference(checked)
+                if unchecked:
+                    msg = f"missing check_struct in {methodname}: {unchecked}"
+                    self.insert_line(j1, f"# FIXME: {msg}")
+                    print(f"ERROR: {msg}")
+
+        # Test that we did find structs. In case our detection fails for
+        # some reason, this would probably catch that.
+        assert len(all_structs) > 10
+
+    def _get_sub_structs(self, idl, structname):
+        structnames = {structname}
+        for structfield in idl.structs[structname].values():
+            structname2 = structfield.typename[3:]  # remove "GPU"
+            if structname2 in idl.structs:
+                structnames.update(self._get_sub_structs(idl, structname2))
+        return structnames
