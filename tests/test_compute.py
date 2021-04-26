@@ -172,6 +172,13 @@ def test_compute_indirect():
     )
     bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
 
+    # Create and run the pipeline, fail - test check_struct
+    with raises(ValueError):
+        compute_pipeline = device.create_compute_pipeline(
+            layout=pipeline_layout,
+            compute={"module": cshader, "entry_point": "main", "foo": 42},
+        )
+
     # Create and run the pipeline
     compute_pipeline = device.create_compute_pipeline(
         layout=pipeline_layout,
