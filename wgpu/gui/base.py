@@ -62,7 +62,7 @@ class WgpuCanvasInterface(base.GPUCanvasContext):
         format: "enums.TextureFormat" = None,
         usage: "flags.TextureUsage" = None,
     ):
-        """ Obtain a swap-chain object. """
+        """Obtain a swap-chain object."""
         # Let's be nice and allow not-specifying the format
         format = format or self.get_swap_chain_preferred_format(device.adapter)
         return super().configure_swap_chain(
@@ -70,7 +70,7 @@ class WgpuCanvasInterface(base.GPUCanvasContext):
         )
 
     def get_swap_chain_preferred_format(self, adapter):
-        """ Get the preferred swap-chain texture format for this canvas. """
+        """Get the preferred swap-chain texture format for this canvas."""
         return "bgra8unorm-srgb"  # seems to be a good default, can be overridden
 
 

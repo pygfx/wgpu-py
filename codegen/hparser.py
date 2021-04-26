@@ -10,7 +10,7 @@ _parser = None
 
 
 def get_h_parser(*, allow_cache=True):
-    """ Get the global HParser object. """
+    """Get the global HParser object."""
 
     # Singleton pattern
     global _parser

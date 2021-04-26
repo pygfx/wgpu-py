@@ -164,7 +164,7 @@ _empty_label = ffi.new("char []", b"")
 
 
 def to_c_label(label):
-    """ Get the C representation of a label. """
+    """Get the C representation of a label."""
     if not label:
         return _empty_label
     else:
@@ -172,7 +172,7 @@ def to_c_label(label):
 
 
 def feature_flag_to_feature_names(flag):
-    """ Convert a feature flags into a tuple of names. """
+    """Convert a feature flags into a tuple of names."""
     features = []
     for i in range(32):
         val = int(2 ** i)
@@ -1636,7 +1636,7 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
 class GPUComputePassEncoder(
     base.GPUComputePassEncoder, GPUProgrammablePassEncoder, GPUObjectBase
 ):
-    """"""
+    """ """
 
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
@@ -1670,7 +1670,7 @@ class GPUComputePassEncoder(
 
 
 class GPURenderEncoderBase(base.GPURenderEncoderBase):
-    """"""
+    """ """
 
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal

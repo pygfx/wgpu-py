@@ -389,7 +389,7 @@ canvas.request_draw(draw_frame)
 
 
 def simple_event_loop():
-    """ A real simple event loop, but it keeps the CPU busy. """
+    """A real simple event loop, but it keeps the CPU busy."""
     while update_glfw_canvasses():
         glfw.poll_events()
 

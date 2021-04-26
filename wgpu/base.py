@@ -167,13 +167,13 @@ class GPUAdapter:
     # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
     def features(self):
-        """ A tuple of supported feature names. """
+        """A tuple of supported feature names."""
         return self._features
 
     # IDL: [SameObject] readonly attribute GPUAdapterLimits limits;
     @property
     def limits(self):
-        """ A dict with the adapter limits."""
+        """A dict with the adapter limits."""
         return self._limits
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
@@ -293,19 +293,19 @@ class GPUDevice(GPUObjectBase):
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @property
     def lost(self):
-        """ Provides information about why the device is lost. """
+        """Provides information about why the device is lost."""
         raise NotImplementedError()
 
     # FIXME: new prop to implement
     # IDL: attribute EventHandler onuncapturederror;
     @property
     def onuncapturederror(self):
-        """ Method called when an error is capured?"""
+        """Method called when an error is capured?"""
         raise NotImplementedError()
 
     # IDL: undefined destroy();
     def destroy(self):
-        """ Destroy this device. """
+        """Destroy this device."""
         return self._destroy()
 
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
@@ -569,7 +569,7 @@ class GPUDevice(GPUObjectBase):
         layout: "GPUPipelineLayout" = None,
         compute: "structs.ProgrammableStage",
     ):
-        """Async version of create_compute_pipeline(). """
+        """Async version of create_compute_pipeline()."""
         raise NotImplementedError()
 
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
@@ -725,7 +725,7 @@ class GPUDevice(GPUObjectBase):
         multisample: "structs.MultisampleState" = {},
         fragment: "structs.FragmentState" = None,
     ):
-        """ Async version of create_render_pipeline(). """
+        """Async version of create_render_pipeline()."""
         raise NotImplementedError()
 
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
@@ -765,7 +765,7 @@ class GPUDevice(GPUObjectBase):
         count: int,
         pipeline_statistics: "List[enums.PipelineStatisticName]" = [],
     ):
-        """ Create a :class:`GPUQuerySet` object. """
+        """Create a :class:`GPUQuerySet` object."""
         raise NotImplementedError()
 
     # IDL: undefined pushErrorScope(GPUErrorFilter filter);
@@ -1057,7 +1057,7 @@ class GPUShaderModule(GPUObjectBase):
 
 
 class GPUPipelineBase:
-    """ A mixin class for render and compute pipelines. """
+    """A mixin class for render and compute pipelines."""
 
     def __init__(self, label, internal, device, layout):
         super().__init__(label, internal, device)
@@ -1099,7 +1099,7 @@ class GPUCommandBuffer(GPUObjectBase):
     # IDL: readonly attribute Promise<double> executionTime;
     @property
     def execution_time(self):
-        """ Returns a future that, if measureExecutionTime is true, resolves after the command buffer executes."""
+        """Returns a future that, if measureExecutionTime is true, resolves after the command buffer executes."""
         raise NotImplementedError()
 
 
@@ -1223,7 +1223,7 @@ class GPUCommandEncoder(GPUObjectBase):
 
     # IDL: undefined popDebugGroup();
     def pop_debug_group(self):
-        """Pop a label from the debug group stack. """
+        """Pop a label from the debug group stack."""
         raise NotImplementedError()
 
     # IDL: undefined insertDebugMarker(USVString markerLabel);
@@ -1244,7 +1244,7 @@ class GPUCommandEncoder(GPUObjectBase):
     # FIXME: new method to implement
     # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
-        """ TODO """
+        """TODO"""
         raise NotImplementedError()
 
     # FIXME: new method to implement
@@ -1252,7 +1252,7 @@ class GPUCommandEncoder(GPUObjectBase):
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
     ):
-        """ TODO """
+        """TODO"""
         raise NotImplementedError()
 
 
@@ -1353,7 +1353,7 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
     # FIXME: new method to implement
     # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
-        """ TODO """
+        """TODO"""
         raise NotImplementedError()
 
 
@@ -1524,13 +1524,13 @@ class GPURenderPassEncoder(
     # FIXME: new method to implement
     # IDL: undefined beginOcclusionQuery(GPUSize32 queryIndex);
     def begin_occlusion_query(self, query_index):
-        """ TODO """
+        """TODO"""
         raise NotImplementedError()
 
     # FIXME: new method to implement
     # IDL: undefined endOcclusionQuery();
     def end_occlusion_query(self):
-        """ TODO """
+        """TODO"""
         raise NotImplementedError()
 
     # IDL: undefined beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
@@ -1546,7 +1546,7 @@ class GPURenderPassEncoder(
     # FIXME: new method to implement
     # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
-        """ TODO """
+        """TODO"""
         raise NotImplementedError()
 
 
@@ -1677,7 +1677,7 @@ class GPUQueue(GPUObjectBase):
     # FIXME: new method to implement
     # IDL: Promise<undefined> onSubmittedWorkDone();
     def on_submitted_work_done(self):
-        """ TODO """
+        """TODO"""
         raise NotImplementedError()
 
 
@@ -1738,7 +1738,7 @@ class GPUSwapChain(GPUObjectBase):
 
 
 class GPUDeviceLostInfo:
-    """ An object that contains information about the device being lost."""
+    """An object that contains information about the device being lost."""
 
     def __init__(self, reason, message):
         self._reason = reason
@@ -1747,18 +1747,18 @@ class GPUDeviceLostInfo:
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
-        """ The error message specifying the reason for the device being lost. """
+        """The error message specifying the reason for the device being lost."""
         return self._message
 
     # IDL: readonly attribute (GPUDeviceLostReason or undefined) reason;
     @property
     def reason(self):
-        """ The reason (enums.GPUDeviceLostReason) for the device getting lost. Can be None. """
+        """The reason (enums.GPUDeviceLostReason) for the device getting lost. Can be None."""
         return self._reason
 
 
 class GPUOutOfMemoryError(Exception):
-    """ An error raised when the GPU is out of memory. """
+    """An error raised when the GPU is out of memory."""
 
     # IDL: constructor();
     def __init__(self):
@@ -1766,12 +1766,12 @@ class GPUOutOfMemoryError(Exception):
 
 
 class GPUValidationError(Exception):
-    """ An error raised when the pipeline could not be validated. """
+    """An error raised when the pipeline could not be validated."""
 
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
-        """ The error message specifying the reason for invalidation. """
+        """The error message specifying the reason for invalidation."""
         return self._message
 
     # IDL: constructor(DOMString message);
@@ -1789,25 +1789,25 @@ class GPUCompilationMessage:
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
-        """ The warning/error message. """
+        """The warning/error message."""
         raise NotImplementedError()
 
     # IDL: readonly attribute GPUCompilationMessageType type;
     @property
     def type(self):
-        """ The type of warning/problem. """
+        """The type of warning/problem."""
         raise NotImplementedError()
 
     # IDL: readonly attribute unsigned long long lineNum;
     @property
     def line_num(self):
-        """ The corresponding line number in the shader source. """
+        """The corresponding line number in the shader source."""
         raise NotImplementedError()
 
     # IDL: readonly attribute unsigned long long linePos;
     @property
     def line_pos(self):
-        """ The position on the line in the shader source. """
+        """The position on the line in the shader source."""
         raise NotImplementedError()
 
 
@@ -1818,7 +1818,7 @@ class GPUCompilationInfo:
     # IDL: readonly attribute FrozenArray<GPUCompilationMessage> messages;
     @property
     def messages(self):
-        """ A list of ``GPUCompilationMessage`` objects. """
+        """A list of ``GPUCompilationMessage`` objects."""
         raise NotImplementedError()
 
 
@@ -1828,7 +1828,7 @@ class GPUQuerySet(GPUObjectBase):
 
     # IDL: undefined destroy();
     def destroy(self):
-        """ Destroy the queryset."""
+        """Destroy the queryset."""
         raise NotImplementedError()
 
 
@@ -1839,7 +1839,7 @@ class GPUUncapturedErrorEvent:
     # IDL: [SameObject] readonly attribute GPUError error;
     @property
     def error(self):
-        """ The error object."""
+        """The error object."""
         raise NotImplementedError()
 
     # IDL: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
