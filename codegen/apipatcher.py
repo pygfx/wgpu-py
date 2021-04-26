@@ -457,6 +457,7 @@ class BackendApiStructValidaitonChecker(Patcher):
 
         idl = get_idl_parser()
         all_structs = set()
+        ignore_structs = {"Extent3D"}
 
         for classname, i1, i2 in self.iter_classes():
             if classname not in idl.classes:
@@ -464,7 +465,7 @@ class BackendApiStructValidaitonChecker(Patcher):
 
             # For each method ...
             for methodname, j1, j2 in self.iter_methods(i1 + 1):
-                code = "\n".join(self.lines[j1:j2])
+                code = "\n".join(self.lines[j1 : j2 + 1])
                 # Get signature and cut it up in words
                 sig_words = code.partition("(")[2].split("):")[0]
                 for c in "][(),\"'":
@@ -484,8 +485,14 @@ class BackendApiStructValidaitonChecker(Patcher):
                         name = line.split("(")[1].split(",")[0].strip('"')
                         checked.add(name)
                 # Test that a matching check is done
-                unchecked = list(sorted(method_structs.difference(checked)))
-                if unchecked:
+                unchecked = method_structs.difference(checked)
+                unchecked = list(sorted(unchecked.difference(ignore_structs)))
+                if (
+                    methodname.endswith("_async")
+                    and f"return self.{methodname[:-7]}" in code
+                ):
+                    pass
+                elif unchecked:
                     msg = f"missing check_struct in {methodname}: {unchecked}"
                     self.insert_line(j1, f"# FIXME: {msg}")
                     print(f"ERROR: {msg}")
