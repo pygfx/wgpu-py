@@ -144,7 +144,7 @@ def test_shader_module_creation():
     with raises(TypeError):
         device.create_shader_module(code=code4)
     with raises(TypeError):
-        device.create_shader_module(code="not a shader")
+        device.create_shader_module(code={"not", "a", "shader"})
     with raises(ValueError):
         device.create_shader_module(code=b"bytes but no SpirV magic number")
 

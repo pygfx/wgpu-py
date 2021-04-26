@@ -266,7 +266,7 @@ def test_compute_fails():
         compute_with_buffers({0: in1}, {0: c_int32 * 100}, compute_shader, n=-1)
 
     with raises(TypeError):  # invalid shader
-        compute_with_buffers({0: in1}, {0: c_int32 * 100}, "not a shader")
+        compute_with_buffers({0: in1}, {0: c_int32 * 100}, {"not", "a", "shader"})
 
 
 if __name__ == "__main__":

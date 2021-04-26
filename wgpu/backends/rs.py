@@ -183,7 +183,10 @@ def feature_flag_to_feature_names(flag):
 
 def check_struct(struct_name, d):
     """Check that all keys in the given dict exist in the corresponding struct."""
-    pass  # fake it until you make it
+    valid_keys = set(getattr(structs, struct_name))
+    invalid_keys = set(d.keys()).difference(valid_keys)
+    if invalid_keys:
+        raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
 
 
 # %% The API
@@ -808,9 +811,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         check_struct("MultisampleState", multisample)
         check_struct("PrimitiveState", primitive)
 
-        # Little helper, remove after june 2021 or so
-        assert "stencil_front" not in depth_stencil, "stencil_front -> front"
-
         # H: module: WGPUShaderModuleId/int, entry_point: WGPULabel
         c_vertex_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
@@ -880,7 +880,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             assert (
                 depth_stencil.get("format", None) is not None
             ), "depth_stencil needs format"
-            stencil_front = depth_stencil.get("front", {})
+            stencil_front = depth_stencil.get("stencil_front", {})
             check_struct("StencilFaceState", stencil_front)
             # H: compare: WGPUCompareFunction/int, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
             c_stencil_front = new_struct(
@@ -890,7 +890,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 depthFailOp=stencil_front.get("depth_fail_op", "keep"),
                 passOp=stencil_front.get("pass_op", "keep"),
             )
-            stencil_back = depth_stencil.get("back", {})
+            stencil_back = depth_stencil.get("stencil_back", {})
             check_struct("StencilFaceState", stencil_front)
             # H: compare: WGPUCompareFunction/int, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
             c_stencil_back = new_struct(
