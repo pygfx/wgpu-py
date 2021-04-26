@@ -45,7 +45,7 @@ def patch_backend_api(code):
     for patcher in [
         CommentRemover(),
         BackendApiPatcher(base_api_code),
-        BackendApiStructValidaitonChecker(),
+        StructValidationChecker(),
     ]:
         patcher.apply(code)
         code = patcher.dumps()
@@ -449,7 +449,7 @@ class BackendApiPatcher(AbstractApiPatcher):
         return list(name for name in methods.keys() if methods[name][1])
 
 
-class BackendApiStructValidaitonChecker(Patcher):
+class StructValidationChecker(Patcher):
     """Checks that all structs are vaildated in the methods that have incoming structs."""
 
     def apply(self, code):
