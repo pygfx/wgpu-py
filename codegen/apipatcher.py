@@ -484,7 +484,7 @@ class BackendApiStructValidaitonChecker(Patcher):
                         name = line.split("(")[1].split(",")[0].strip('"')
                         checked.add(name)
                 # Test that a matching check is done
-                unchecked = method_structs.difference(checked)
+                unchecked = list(sorted(method_structs.difference(checked)))
                 if unchecked:
                     msg = f"missing check_struct in {methodname}: {unchecked}"
                     self.insert_line(j1, f"# FIXME: {msg}")
