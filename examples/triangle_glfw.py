@@ -21,13 +21,13 @@ main(canvas)
 
 
 def simple_event_loop():
-    """ A real simple event loop, but it keeps the CPU busy. """
+    """A real simple event loop, but it keeps the CPU busy."""
     while update_glfw_canvasses():
         glfw.poll_events()
 
 
 def better_event_loop(max_fps=100):
-    """ A simple event loop that schedules draws. """
+    """A simple event loop that schedules draws."""
     td = 1 / max_fps
     while update_glfw_canvasses():
         # Determine next time to draw

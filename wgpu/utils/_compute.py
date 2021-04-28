@@ -152,8 +152,8 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
                 "visibility": wgpu.ShaderStage.COMPUTE,
                 "buffer": {
                     "type": storage_types[index in output_infos],
+                    "has_dynamic_offset": False,
                 },
-                "has_dynamic_offset": False,
             }
         )
 

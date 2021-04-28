@@ -193,7 +193,7 @@ class FunctionPatcher(Patcher):
                 if name not in hp.functions:
                     msg = f"unknown C function {name}"
                     self.insert_line(i, f"{indent}# FIXME: {msg}")
-                    print(f"Error: {msg}")
+                    print(f"ERROR: {msg}")
                 else:
                     detected.add(name)
                     anno = hp.functions[name].replace(name, "f").strip(";")
@@ -302,7 +302,7 @@ class StructPatcher(Patcher):
         if struct_name not in hp.structs:
             msg = f"unknown C struct {struct_name}"
             self.insert_line(i1, f"{indent}# FIXME: {msg}")
-            print(f"Error: {msg}")
+            print(f"ERROR: {msg}")
             return
         else:
             struct = hp.structs[struct_name]
@@ -322,7 +322,7 @@ class StructPatcher(Patcher):
             if key not in struct:
                 msg = f"unknown C struct field {struct_name}.{key}"
                 self.insert_line(i1 + j, f"{indent}# FIXME: {msg}")
-                print(f"Error: {msg}")
+                print(f"ERROR: {msg}")
 
         # Insert comments for unused keys
         more_lines = []

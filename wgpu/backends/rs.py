@@ -164,7 +164,7 @@ _empty_label = ffi.new("char []", b"")
 
 
 def to_c_label(label):
-    """ Get the C representation of a label. """
+    """Get the C representation of a label."""
     if not label:
         return _empty_label
     else:
@@ -172,13 +172,21 @@ def to_c_label(label):
 
 
 def feature_flag_to_feature_names(flag):
-    """ Convert a feature flags into a tuple of names. """
+    """Convert a feature flags into a tuple of names."""
     features = []
     for i in range(32):
         val = int(2 ** i)
         if flag & val:
             features.append(feature_names.get(val, val))
     return tuple(sorted(features))
+
+
+def check_struct(struct_name, d):
+    """Check that all keys in the given dict exist in the corresponding struct."""
+    valid_keys = set(getattr(structs, struct_name))
+    invalid_keys = set(d.keys()).difference(valid_keys)
+    if invalid_keys:
+        raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
 
 
 # %% The API
@@ -294,7 +302,7 @@ class GPUAdapter(base.GPUAdapter):
         *,
         label="",
         non_guaranteed_features: "list(enums.FeatureName)" = [],
-        non_guaranteed_limits: "structs.Limits" = {},
+        non_guaranteed_limits: "Dict[str, int]" = {},
     ):
         """Write a trace of all commands to a file so it can be reproduced
         elsewhere. The trace is cross-platform!
@@ -510,6 +518,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     ):
         c_entries_list = []
         for entry in entries:
+            check_struct("BindGroupLayoutEntry", entry)
             c_has_dynamic_offset = False
             c_view_dimension = 0
             c_texture_component_type = 0
@@ -517,6 +526,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             c_storage_texture_format = 0
             if entry.get("buffer"):
                 info = entry["buffer"]
+                check_struct("BufferBindingLayout", info)
                 type = info["type"]
                 if type == enums.BufferBindingType.uniform:
                     c_type = lib.WGPUBindingType_UniformBuffer
@@ -530,6 +540,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 min_binding_size = 0  # noqa: not yet supported in wgpy-native
             elif entry.get("sampler"):
                 info = entry["sampler"]
+                check_struct("SamplerBindingLayout", info)
                 type = info["type"]
                 if type == enums.SamplerBindingType.filtering:
                     c_type = lib.WGPUBindingType_Sampler
@@ -541,6 +552,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                     raise ValueError(f"Unknown sampler binding type {type}")
             elif entry.get("texture"):
                 info = entry["texture"]
+                check_struct("TextureBindingLayout", info)
                 c_type = lib.WGPUBindingType_SampledTexture
                 type = info.get("sample_type", "float")
                 if type == enums.TextureSampleType.float:
@@ -558,6 +570,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 c_multisampled = info.get("multisampled", False)
             elif entry.get("storage_texture"):
                 info = entry["storage_texture"]
+                check_struct("StorageTextureBindingLayout", info)
                 access = info["access"]
                 if access == enums.StorageTextureAccess.read_only:
                     c_type = lib.WGPUBindingType_ReadonlyStorageTexture
@@ -618,6 +631,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
         c_entries_list = []
         for entry in entries:
+            check_struct("BindGroupEntry", entry)
             # The resource can be a sampler, texture view, or buffer descriptor
             resource = entry["resource"]
             if isinstance(resource, GPUSampler):
@@ -748,7 +762,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         layout: "GPUPipelineLayout" = None,
         compute: "structs.ProgrammableStage",
     ):
-
+        check_struct("ProgrammableStage", compute)
         # H: module: WGPUShaderModuleId/int, entry_point: WGPULabel
         c_compute_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
@@ -790,9 +804,12 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     ):
         depth_stencil = depth_stencil or {}
         multisample = multisample or {}
+        primitive = primitive or {}
 
-        # Little helper, remove after june 2021 or so
-        assert "stencil_front" not in depth_stencil, "stencil_front -> front"
+        check_struct("VertexState", vertex)
+        check_struct("DepthStencilState", depth_stencil)
+        check_struct("MultisampleState", multisample)
+        check_struct("PrimitiveState", primitive)
 
         # H: module: WGPUShaderModuleId/int, entry_point: WGPULabel
         c_vertex_stage = new_struct(
@@ -802,6 +819,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
         c_fragment_stage = ffi.NULL
         if fragment is not None:
+            check_struct("FragmentState", fragment)
             # H: module: WGPUShaderModuleId/int, entry_point: WGPULabel
             c_fragment_stage = new_struct_p(
                 "WGPUProgrammableStageDescriptor *",
@@ -862,7 +880,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             assert (
                 depth_stencil.get("format", None) is not None
             ), "depth_stencil needs format"
-            stencil_front = depth_stencil.get("front", {})
+            stencil_front = depth_stencil.get("stencil_front", {})
+            check_struct("StencilFaceState", stencil_front)
             # H: compare: WGPUCompareFunction/int, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
             c_stencil_front = new_struct(
                 "WGPUStencilStateFaceDescriptor",
@@ -871,7 +890,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 depthFailOp=stencil_front.get("depth_fail_op", "keep"),
                 passOp=stencil_front.get("pass_op", "keep"),
             )
-            stencil_back = depth_stencil.get("back", {})
+            stencil_back = depth_stencil.get("stencil_back", {})
+            check_struct("StencilFaceState", stencil_front)
             # H: compare: WGPUCompareFunction/int, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
             c_stencil_back = new_struct(
                 "WGPUStencilStateFaceDescriptor",
@@ -1260,6 +1280,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
 
         c_color_attachments_list = []
         for color_attachment in color_attachments:
+            check_struct("RenderPassColorAttachment", color_attachment)
             assert isinstance(color_attachment["view"], GPUTextureView)
             texture_view_id = color_attachment["view"]._internal
             c_resolve_target = (
@@ -1305,6 +1326,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
 
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
+            check_struct("RenderPassDepthStencilAttachment", depth_stencil_attachment)
             c_depth_load_op, c_depth_clear = _loadop_and_clear_from_value(
                 depth_stencil_attachment["depth_load_value"]
             )
@@ -1628,7 +1650,7 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
 class GPUComputePassEncoder(
     base.GPUComputePassEncoder, GPUProgrammablePassEncoder, GPUObjectBase
 ):
-    """"""
+    """ """
 
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
@@ -1662,7 +1684,7 @@ class GPUComputePassEncoder(
 
 
 class GPURenderEncoderBase(base.GPURenderEncoderBase):
-    """"""
+    """ """
 
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal

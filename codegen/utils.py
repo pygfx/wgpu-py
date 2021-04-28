@@ -55,7 +55,7 @@ def print(*args, **kwargs):
 
 
 class PrintToFile:
-    """ Context manager to print to file. """
+    """Context manager to print to file."""
 
     def __init__(self, f):
         if isinstance(f, str):

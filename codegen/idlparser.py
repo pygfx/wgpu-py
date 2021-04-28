@@ -16,7 +16,7 @@ _parser = None
 
 
 def get_idl_parser(*, allow_cache=True):
-    """ Get the global IdlParser object. """
+    """Get the global IdlParser object."""
 
     # Singleton pattern
     global _parser

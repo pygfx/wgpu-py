@@ -21,7 +21,7 @@ def prepare():
 
 
 def update_api():
-    """ Update the public API and patch the public-facing API of the backends. """
+    """Update the public API and patch the public-facing API of the backends."""
 
     print("## Updating API")
 
@@ -50,7 +50,7 @@ def update_api():
 
 
 def update_rs():
-    """ Update and check the rs backend. """
+    """Update and check the rs backend."""
 
     print("## Validating rs.py")
 
@@ -68,7 +68,7 @@ def update_rs():
 
 
 def main():
-    """ Codegen entry point. """
+    """Codegen entry point."""
 
     with PrintToFile(os.path.join(lib_dir, "resources", "codegen_report.md")):
         print("# Code generatation report")

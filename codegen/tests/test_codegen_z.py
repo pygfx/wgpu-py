@@ -71,5 +71,15 @@ def test_that_code_is_up_to_date():
     print("Codegen check ok!")
 
 
+def test_that_codegen_report_has_no_errors():
+    filename = os.path.join(lib_dir, "resources", "codegen_report.md")
+    with open(filename, "rb") as f:
+        text = f.read().decode()
+
+    # The codegen uses a prefix "ERROR:" for unacceptable things.
+    # All caps, some function names may contain the name "error".
+    assert "ERROR" not in text
+
+
 if __name__ == "__main__":
     test_that_code_is_up_to_date()

@@ -511,13 +511,13 @@ def test_render_orange_square_depth():
         format=wgpu.TextureFormat.depth24plus_stencil8,
         depth_write_enabled=True,
         depth_compare=wgpu.CompareFunction.less_equal,
-        front={
+        stencil_front={
             "compare": wgpu.CompareFunction.equal,
             "fail_op": wgpu.StencilOperation.keep,
             "depth_fail_op": wgpu.StencilOperation.keep,
             "pass_op": wgpu.StencilOperation.keep,
         },
-        back={
+        stencil_back={
             "compare": wgpu.CompareFunction.equal,
             "fail_op": wgpu.StencilOperation.keep,
             "depth_fail_op": wgpu.StencilOperation.keep,
