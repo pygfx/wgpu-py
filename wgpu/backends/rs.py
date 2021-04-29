@@ -1604,7 +1604,11 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
         else:
             # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, uint32_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
             lib.wgpuRenderPassEncoderSetBindGroup(
-                self._internal, index, bind_group_id, len(offsets), c_offsets,
+                self._internal,
+                index,
+                bind_group_id,
+                len(offsets),
+                c_offsets,
             )
 
     def push_debug_group(self, group_label):
@@ -1705,7 +1709,7 @@ class GPURenderEncoderBase(base.GPURenderEncoderBase):
         )
 
     def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
         lib.wgpuRenderPassEncoderDraw(
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
