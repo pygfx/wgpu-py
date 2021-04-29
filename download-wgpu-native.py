@@ -86,7 +86,8 @@ def main(version, os_string, arch, upstream):
         zip_filename = os.path.join(tmp, filename)
         print(f"Downloading {url} to {zip_filename}")
         download_file(url, zip_filename)
-        headerfile = "wgpu.h"
+        headerfile1 = "webgpu.h"
+        headerfile2 = "wgpu.h"
         binaryfile = None
         if os_string == "linux":
             binaryfile = "libwgpu_native.so"
@@ -98,8 +99,10 @@ def main(version, os_string, arch, upstream):
             raise RuntimeError(f"Platform '{os_string}' not supported")
         root, ext = os.path.splitext(binaryfile)
         binaryfile_name = root + "-" + build + ext
-        print(f"Extracting {headerfile} to {RESOURCE_DIR}")
-        extract_file(zip_filename, headerfile, RESOURCE_DIR)
+        print(f"Extracting {headerfile1} to {RESOURCE_DIR}")
+        extract_file(zip_filename, headerfile1, RESOURCE_DIR)
+        print(f"Extracting {headerfile2} to {RESOURCE_DIR}")
+        extract_file(zip_filename, headerfile2, RESOURCE_DIR)
         print(f"Extracting {binaryfile} to {RESOURCE_DIR}")
         extract_file(zip_filename, binaryfile, RESOURCE_DIR)
         os.replace(
