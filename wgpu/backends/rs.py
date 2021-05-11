@@ -62,6 +62,35 @@ check_expected_version(version_info)  # produces a warning on mismatch
 # %% Helper functions and objects
 
 
+import subprocess  # noqa
+import tempfile  # noqa
+
+
+def wgsl_to_spirv_using_system_naga(wgsl):
+    # A dirty hack that only works on my machine, only used during dev until
+    # we've got this shader situation figured out ...
+
+    filename1 = os.path.join(tempfile.gettempdir(), "x.wgsl")
+    filename2 = os.path.join(tempfile.gettempdir(), "x.spv")
+
+    with open(filename1, "wb") as f:
+        f.write(wgsl.encode())
+
+    cmd = ["cargo", "run", "--features", "wgsl-in,spv-out", "--", filename1, filename2]
+    cwd = "c:/dev/rust/naga"
+    try:
+        stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=cwd)
+        print(stdout)
+    except subprocess.CalledProcessError as err:
+        e = "Could not compile wgsl to Spir-V:\n" + err.output.decode()
+        raise Exception(e)
+
+    with open(filename2, "rb") as f:
+        spirv = f.read()
+
+    return spirv
+
+
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
 
@@ -693,6 +722,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
     def create_shader_module(self, *, label="", code: str, source_map: dict = None):
 
+        # Use system naga to turn to spv
+        # if isinstance(code, str):
+        #     code = wgsl_to_spirv_using_system_naga(code)
+
         if isinstance(code, str):
             # WGSL
             # H: chain: WGPUChainedStruct, source: char *
@@ -1131,43 +1164,39 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
         base_array_layer: int = 0,
         array_layer_count: int = None,
     ):
-        mip_level_count = base_mip_level or 0
-        array_layer_count = array_layer_count or 0
+        # Resolve defaults
+        if not format:
+            format = self._tex_info["format"]
+        if not dimension:
+            dimension = self._tex_info["dimension"]  # from create_texture
+        if not aspect:
+            aspect = "all"
+        if not mip_level_count:
+            mip_level_count = self._tex_info["mip_level_count"] - base_mip_level
+        if not array_layer_count:
+            if dimension in ("1d", "2d", "3d"):
+                array_layer_count = 1
+            elif dimension == "cube":
+                array_layer_count = 6
+            elif dimension in ("2d-array", "cube-array"):
+                array_layer_count = self._tex_info["mip_level_count"] - base_mip_level
+            array_layer_count = self._tex_info["size"][2] - base_array_layer
 
-        if format is None or dimension is None:
-            if not (
-                format is None
-                and dimension is None
-                and aspect == "all"
-                and base_mip_level == 0
-                and mip_level_count == 0
-                and base_array_layer == 0
-                and array_layer_count == 0
-            ):
-                raise ValueError(
-                    "In create_view() if any parameter is given, "
-                    + "both format and dimension must be specified."
-                )
-            # H: WGPUTextureView f(WGPUTexture texture, WGPUTextureViewDescriptor const * descriptor)
-            id = lib.wgpuTextureCreateView(self._internal, ffi.NULL)
-
-        else:
-            # H: nextInChain: WGPUChainedStruct *, label: char *, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, baseMipLevel: int, mipLevelCount: int, baseArrayLayer: int, arrayLayerCount: int, aspect: WGPUTextureAspect
-            struct = new_struct_p(
-                "WGPUTextureViewDescriptor *",
-                label=to_c_label(label),
-                format=format,
-                dimension=dimension,
-                aspect=aspect or "all",
-                baseMipLevel=base_mip_level,
-                mipLevelCount=mip_level_count,
-                baseArrayLayer=base_array_layer,
-                arrayLayerCount=array_layer_count,
-                # not used: nextInChain
-            )
-            # H: WGPUTextureView f(WGPUTexture texture, WGPUTextureViewDescriptor const * descriptor)
-            id = lib.wgpuTextureCreateView(self._internal, struct)
-
+        # H: nextInChain: WGPUChainedStruct *, label: char *, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, baseMipLevel: int, mipLevelCount: int, baseArrayLayer: int, arrayLayerCount: int, aspect: WGPUTextureAspect
+        struct = new_struct_p(
+            "WGPUTextureViewDescriptor *",
+            label=to_c_label(label),
+            format=format,
+            dimension=dimension,
+            aspect=aspect,
+            baseMipLevel=base_mip_level,
+            mipLevelCount=mip_level_count,
+            baseArrayLayer=base_array_layer,
+            arrayLayerCount=array_layer_count,
+            # not used: nextInChain
+        )
+        # H: WGPUTextureView f(WGPUTexture texture, WGPUTextureViewDescriptor const * descriptor)
+        id = lib.wgpuTextureCreateView(self._internal, struct)
         return GPUTextureView(label, id, self._device, self, self.size)
 
     def destroy(self):
@@ -1373,12 +1402,14 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         )
 
     def copy_buffer_to_texture(self, source, destination, copy_size):
-        row_alignment = lib.WGPUCOPY_BYTES_PER_ROW_ALIGNMENT
+        row_alignment = 256
         bytes_per_row = int(source["bytes_per_row"])
         if (bytes_per_row % row_alignment) != 0:
             raise ValueError(
                 f"bytes_per_row must ({bytes_per_row}) be a multiple of {row_alignment}"
             )
+        if isinstance(destination["texture"], GPUTextureView):
+            raise ValueError("copy destination texture must be a texture, not a view")
 
         c_source = new_struct_p(
             "WGPUImageCopyBuffer *",
@@ -1431,12 +1462,14 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         )
 
     def copy_texture_to_buffer(self, source, destination, copy_size):
-        row_alignment = lib.WGPUCOPY_BYTES_PER_ROW_ALIGNMENT
+        row_alignment = 256
         bytes_per_row = int(destination["bytes_per_row"])
         if (bytes_per_row % row_alignment) != 0:
             raise ValueError(
                 f"bytes_per_row must ({bytes_per_row}) be a multiple of {row_alignment}"
             )
+        if isinstance(source["texture"], GPUTextureView):
+            raise ValueError("copy source texture must be a texture, not a view")
 
         ori = _tuple_from_tuple_or_dict(source.get("origin", (0, 0, 0)), "xyz")
         # H: x: int, y: int, z: int
@@ -1489,6 +1522,11 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         )
 
     def copy_texture_to_texture(self, source, destination, copy_size):
+
+        if isinstance(source["texture"], GPUTextureView):
+            raise ValueError("copy source texture must be a texture, not a view")
+        if isinstance(destination["texture"], GPUTextureView):
+            raise ValueError("copy destination texture must be a texture, not a view")
 
         ori = _tuple_from_tuple_or_dict(source.get("origin", (0, 0, 0)), "xyz")
         # H: x: int, y: int, z: int
@@ -1898,6 +1936,9 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
 
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
+
+        if isinstance(destination["texture"], GPUTextureView):
+            raise ValueError("copy destination texture must be a texture, not a view")
 
         m, address = get_memoryview_and_address(data)
         # todo: could we not derive the size from the shape of m?

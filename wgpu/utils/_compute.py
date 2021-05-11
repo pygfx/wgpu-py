@@ -28,9 +28,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
             ctypes array type, the result will be cast to that instead
             of a memoryview. Note that any buffer that is NOT in the
             output arrays dict will be considered readonly in the shader.
-        shader (bytes, shader-object): The SpirV representing the shader,
-            as raw bytes or an object implementing ``to_spirv()``
-            (e.g. a pyshader SpirV module).
+        shader (str or bytes): The shader as a string of WGSL code or SpirV bytes.
         n (int, tuple, optional): The dispatch counts. Can be an int
             or a 3-tuple of ints to specify (x, y, z). If not given or None,
             the length of the first output array type is used.
