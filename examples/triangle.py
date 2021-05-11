@@ -14,9 +14,6 @@ Similar example in other languages / API's:
 """
 
 import wgpu
-from pyshader import python2shader
-from pyshader import RES_INPUT, RES_OUTPUT
-from pyshader import vec2, vec3, vec4, i32
 
 
 # %% Shaders
@@ -36,7 +33,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     let positions = array<vec2<f32>, 3>(vec2<f32>(0.0, -0.5), vec2<f32>(0.5, 0.5), vec2<f32>(-0.5, 0.7));
     let p: vec2<f32> = positions[in.vertex_index];
 
-    var out : VertexOutput;
+    var out: VertexOutput;
     out.pos = vec4<f32>(p, 0.0, 1.0);
     out.color = vec4<f32>(p, 0.5, 1.0);
     return out;
