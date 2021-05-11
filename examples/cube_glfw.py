@@ -113,7 +113,6 @@ uniform_buffer = device.create_buffer(
     size=uniform_data.nbytes, usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST
 )
 
-
 # Create texture, and upload data
 texture = device.create_texture(
     size=texture_size,
@@ -127,6 +126,7 @@ texture_view = texture.create_view()
 tmp_buffer = device.create_buffer_with_data(
     data=texture_data, usage=wgpu.BufferUsage.COPY_SRC
 )
+
 command_encoder = device.create_command_encoder()
 command_encoder.copy_buffer_to_texture(
     {
@@ -136,7 +136,7 @@ command_encoder.copy_buffer_to_texture(
         "rows_per_image": 0,
     },
     {
-        "texture": texture_view,
+        "texture": texture,
         "mip_level": 0,
         "origin": (0, 0, 0),
     },
@@ -151,9 +151,9 @@ sampler = device.create_sampler()
 
 # %% The shaders
 
-# Define the bindings (bind_group, slot). These are used in the shader
-# creating, and further down where the bind groups and bind group
-# layouts are created.
+# # Define the bindings (bind_group, slot). These are used in the shader
+# # creating, and further down where the bind groups and bind group
+# # layouts are created.
 UNIFORM_BINDING = 0, 0
 SAMPLER_BINDING = 0, 1
 TEXTURE_BINDING = 0, 2
@@ -183,8 +183,45 @@ def fragment_shader(
     out_color = vec4(value, value, value, 1.0)  # noqa - shader output
 
 
-vshader = device.create_shader_module(code=vertex_shader)
-fshader = device.create_shader_module(code=fragment_shader)
+shader_source = """
+[[block]]
+struct Locals {
+    transform: mat4x4<f32>;
+};
+[[group(0), binding(0)]]
+var r_locals: Locals;
+
+struct VertexInput {
+    [[location(0)]] pos : vec4<f32>;
+    [[location(1)]] texcoord: vec2<f32>;
+};
+struct VertexOutput {
+    [[location(0)]] texcoord: vec2<f32>;
+    [[builtin(position)]] pos: vec4<f32>;
+};
+
+[[stage(vertex)]]
+fn vs_main(in: VertexInput) -> VertexOutput {
+    let ndc: vec4<f32> = r_locals.transform * in.pos;
+    var out: VertexOutput;
+    out.pos = vec4<f32>(ndc.x, ndc.y, 0.0, 1.0);
+    out.texcoord = in.texcoord;
+    return out;
+}
+
+[[group(0), binding(1)]]
+var r_sampler: sampler;
+[[group(0), binding(2)]]
+var r_tex: texture_2d<f32>;
+
+[[stage(fragment)]]
+fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+    let value = f32(textureSample(r_tex, r_sampler, in.texcoord).r) / 255.0;
+    return vec4<f32>(value, value, value, 1.0);
+}
+"""
+
+shader = device.create_shader_module(code=shader_source)
 
 
 # %% The bind groups
@@ -257,8 +294,8 @@ pipeline_layout = device.create_pipeline_layout(bind_group_layouts=bind_group_la
 render_pipeline = device.create_render_pipeline(
     layout=pipeline_layout,
     vertex={
-        "module": vshader,
-        "entry_point": "main",
+        "module": shader,
+        "entry_point": "vs_main",
         "buffers": [
             {
                 "array_stride": 4 * 6,
@@ -286,8 +323,8 @@ render_pipeline = device.create_render_pipeline(
     depth_stencil=None,
     multisample=None,
     fragment={
-        "module": fshader,
-        "entry_point": "main",
+        "module": shader,
+        "entry_point": "fs_main",
         "targets": [
             {
                 "format": wgpu.TextureFormat.bgra8unorm_srgb,
