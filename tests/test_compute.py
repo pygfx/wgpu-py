@@ -215,33 +215,33 @@ def test_compute_fails():
 
     # Baseline; this works
     out = compute_with_buffers(
-        {0: in1}, {0: c_int32 * 100}, compute_shader, n=(100, 1, 1)
+        {0: in1}, {1: c_int32 * 100}, compute_shader, n=(100, 1, 1)
     )
-    assert iters_equal(out[0], in1)
+    assert iters_equal(out[1], in1)
 
     with raises(TypeError):  # input_arrays is not a dict
-        compute_with_buffers([in1], {0: c_int32 * 100}, compute_shader)
+        compute_with_buffers([in1], {1: c_int32 * 100}, compute_shader)
     with raises(TypeError):  # input_arrays key not int
-        compute_with_buffers({"0": in1}, {0: c_int32 * 100}, compute_shader)
+        compute_with_buffers({"0": in1}, {1: c_int32 * 100}, compute_shader)
     with raises(TypeError):  # input_arrays value not ctypes array
-        compute_with_buffers({0: list(in1)}, {0: c_int32 * 100}, compute_shader)
+        compute_with_buffers({0: list(in1)}, {1: c_int32 * 100}, compute_shader)
 
     with raises(TypeError):  # output_arrays is not a dict
         compute_with_buffers({0: in1}, [c_int32 * 100], compute_shader)
     with raises(TypeError):  # output_arrays key not int
-        compute_with_buffers({0: in1}, {"0": c_int32 * 100}, compute_shader)
+        compute_with_buffers({0: in1}, {"1": c_int32 * 100}, compute_shader)
     with raises(TypeError):  # output_arrays value not a ctypes Array type
-        compute_with_buffers({0: in1}, {0: "foobar"}, compute_shader)
+        compute_with_buffers({0: in1}, {1: "foobar"}, compute_shader)
 
     with raises(ValueError):  # output_arrays format invalid
-        compute_with_buffers({0: in1}, {0: "10xfoo"}, compute_shader)
+        compute_with_buffers({0: in1}, {1: "10xfoo"}, compute_shader)
     with raises(ValueError):  # output_arrays shape invalid
-        compute_with_buffers({0: in1}, {0: ("i",)}, compute_shader)
+        compute_with_buffers({0: in1}, {1: ("i",)}, compute_shader)
     with raises(ValueError):  # output_arrays shape invalid
         compute_with_buffers(
             {0: in1},
             {
-                0: (
+                1: (
                     0,
                     "i",
                 )
@@ -252,7 +252,7 @@ def test_compute_fails():
         compute_with_buffers(
             {0: in1},
             {
-                0: (
+                1: (
                     -1,
                     "i",
                 )
@@ -261,12 +261,12 @@ def test_compute_fails():
         )
 
     with raises(TypeError):  # invalid n
-        compute_with_buffers({0: in1}, {0: c_int32 * 100}, compute_shader, n="100")
+        compute_with_buffers({0: in1}, {1: c_int32 * 100}, compute_shader, n="100")
     with raises(ValueError):  # invalid n
-        compute_with_buffers({0: in1}, {0: c_int32 * 100}, compute_shader, n=-1)
+        compute_with_buffers({0: in1}, {1: c_int32 * 100}, compute_shader, n=-1)
 
     with raises(TypeError):  # invalid shader
-        compute_with_buffers({0: in1}, {0: c_int32 * 100}, {"not", "a", "shader"})
+        compute_with_buffers({0: in1}, {1: c_int32 * 100}, {"not", "a", "shader"})
 
 
 if __name__ == "__main__":
