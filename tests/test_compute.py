@@ -1,8 +1,8 @@
 import random
 import ctypes
+import base64
 from ctypes import c_int32, c_ubyte
 
-from pyshader import python2shader, Array, i32, ivec3
 import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
@@ -14,13 +14,52 @@ if not can_use_wgpu_lib:
     skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
+simple_compute_shader = """
+    [[block]]
+    struct DataContainer { data: [[stride(4)]] array<i32>; };
+
+    [[group(0), binding(0)]]
+    var<storage> data2: [[access(write)]] DataContainer;
+
+    [[stage(compute), workgroup_size(1)]]
+    fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+        let i: u32 = index.x;
+        data2.data[i] = i32(i);
+    }
+"""
+
+# To generate compute_shader_spirv from a Python function
+#
+# from pyshader import python2shader, Array, i32, ivec3
+#
+# def simple_compute_shader_py(
+#     index: ("input", "GlobalInvocationId", ivec3),
+#     out: ("buffer", 0, Array(i32)),
+# ):
+#     out[index.x] = index.x
+#
+# print(base64.encodebytes(python2shader(simple_compute_shader_py).to_spirv()).decode())
+
+simple_compute_shader_spirv = base64.decodebytes(
+    """
+AwIjBwADAQAAAAAAFgAAAAAAAAARAAIAAQAAAA4AAwAAAAAAAAAAAA8ABgAFAAAAAQAAAG1haW4A
+AAAACAAAABAABgABAAAAEQAAAAEAAAABAAAAAQAAAAUABAABAAAAbWFpbgAAAAAFAAQACAAAAGlu
+ZGV4AAAABQADAAwAAABvdXQABQADAA0AAAAwAAAARwAEAAgAAAALAAAAHAAAAEcABAAJAAAABgAA
+AAQAAABIAAUACgAAAAAAAAAjAAAAAAAAAEcAAwAKAAAAAwAAAEcABAAMAAAAIgAAAAAAAABHAAQA
+DAAAACEAAAAAAAAAEwACAAIAAAAhAAMAAwAAAAIAAAAVAAQABQAAACAAAAABAAAAFwAEAAYAAAAF
+AAAAAwAAACAABAAHAAAAAQAAAAYAAAA7AAQABwAAAAgAAAABAAAAHQADAAkAAAAFAAAAHgADAAoA
+AAAJAAAAIAAEAAsAAAACAAAACgAAADsABAALAAAADAAAAAIAAAArAAQABQAAAA0AAAAAAAAAIAAE
+AA4AAAACAAAABQAAACAABAAQAAAAAQAAAAUAAAAgAAQAEwAAAAEAAAAFAAAANgAFAAIAAAABAAAA
+AAAAAAMAAAD4AAIABAAAAEEABQAQAAAAEQAAAAgAAAANAAAAPQAEAAUAAAASAAAAEQAAAEEABgAO
+AAAADwAAAAwAAAANAAAAEgAAAEEABQATAAAAFAAAAAgAAAANAAAAPQAEAAUAAAAVAAAAFAAAAD4A
+AwAPAAAAFQAAAP0AAQA4AAEA
+""".encode()
+)
+
+
 def test_compute_0_1_ctype():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        out: ("buffer", 0, Array(i32)),
-    ):
-        out[index.x] = index.x
+    compute_shader = simple_compute_shader
+    assert isinstance(compute_shader, str)
 
     # Create some ints!
     out = compute_with_buffers({}, {0: c_int32 * 100}, compute_shader)
@@ -37,12 +76,7 @@ def test_compute_0_1_ctype():
 
 
 def test_compute_0_1_tuple():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        out: ("buffer", 0, Array(i32)),
-    ):
-        out[index.x] = index.x
+    compute_shader = simple_compute_shader
 
     out = compute_with_buffers({}, {0: (100, "i")}, compute_shader)
     assert isinstance(out, dict) and len(out) == 1
@@ -51,12 +85,7 @@ def test_compute_0_1_tuple():
 
 
 def test_compute_0_1_str():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        out: ("buffer", 0, Array(i32)),
-    ):
-        out[index.x] = index.x
+    compute_shader = simple_compute_shader
 
     out = compute_with_buffers({}, {0: "100xi"}, compute_shader)
     assert isinstance(out, dict) and len(out) == 1
@@ -65,12 +94,7 @@ def test_compute_0_1_str():
 
 
 def test_compute_0_1_int():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        out: ("buffer", 0, Array(i32)),
-    ):
-        out[index.x] = index.x
+    compute_shader = simple_compute_shader
 
     out = compute_with_buffers({}, {0: 400}, compute_shader)
     assert isinstance(out, dict) and len(out) == 1
@@ -78,17 +102,38 @@ def test_compute_0_1_int():
     assert out[0].cast("i").tolist() == list(range(100))
 
 
+def test_compute_0_1_spirv():
+    compute_shader = simple_compute_shader_spirv
+    assert isinstance(compute_shader, bytes)
+
+    out = compute_with_buffers({}, {0: c_int32 * 100}, compute_shader)
+    assert isinstance(out, dict) and len(out) == 1
+    assert isinstance(out[0], ctypes.Array)
+    assert iters_equal(out[0], range(100))
+
+
 def test_compute_1_3():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        in1: ("buffer", 0, Array(i32)),
-        out1: ("buffer", 1, Array(i32)),
-        out2: ("buffer", 2, Array(i32)),
-    ):
-        i = index.x
-        out1[i] = in1[i]
-        out2[i] = i
+
+    compute_shader = """
+        [[block]]
+        struct DataContainer { data: [[stride(4)]] array<i32>; };
+
+        [[group(0), binding(0)]]
+        var<storage> data0: [[access(read)]] DataContainer;
+
+        [[group(0), binding(1)]]
+        var<storage> data1: [[access(write)]] DataContainer;
+
+        [[group(0), binding(2)]]
+        var<storage> data2: [[access(write)]] DataContainer;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = i32(index.x);
+            data1.data[i] = data0.data[i];
+            data2.data[i] = i;
+        }
+    """
 
     # Create an array of 100 random int32
     in1 = [int(random.uniform(0, 100)) for i in range(100)]
@@ -104,13 +149,23 @@ def test_compute_1_3():
 
 
 def test_compute_indirect():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        data1: ("buffer", 0, Array(i32)),
-        data2: ("buffer", 1, Array(i32)),
-    ):
-        data2[index.x] = data1[index.x] + 1
+
+    compute_shader = """
+        [[block]]
+        struct DataContainer { data: [[stride(4)]] array<i32>; };
+
+        [[group(0), binding(0)]]
+        var<storage> data1: [[access(read)]] DataContainer;
+
+        [[group(0), binding(1)]]
+        var<storage> data2: [[access(write)]] DataContainer;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = i32(index.x);
+            data2.data[i] = data1.data[i] + 1;
+        }
+    """
 
     # Create an array of 100 random int32
     n = 100
@@ -202,13 +257,22 @@ def test_compute_indirect():
 
 
 def test_compute_fails():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        in1: ("buffer", 0, Array(i32)),
-        out1: ("buffer", 1, Array(i32)),
-    ):
-        out1[index.x] = in1[index.x]
+    compute_shader = """
+        [[block]]
+        struct DataContainer { data: [[stride(4)]] array<i32>; };
+
+        [[group(0), binding(0)]]
+        var<storage> data1: [[access(read)]] DataContainer;
+
+        [[group(0), binding(1)]]
+        var<storage> data2: [[access(write)]] DataContainer;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = i32(index.x);
+            data2.data[i] = data1.data[i];
+        }
+    """
 
     in1 = [int(random.uniform(0, 100)) for i in range(100)]
     in1 = (c_int32 * 100)(*in1)

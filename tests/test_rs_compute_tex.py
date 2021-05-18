@@ -1,14 +1,12 @@
 import random
 import ctypes
 
-import pyshader
-from pyshader import python2shader, ivec3
 import wgpu.backends.rs  # noqa
 import numpy as np
 
 from pytest import skip
 from testutils import run_tests, get_default_device
-from testutils import can_use_wgpu_lib, can_use_vulkan_sdk
+from testutils import can_use_wgpu_lib
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
@@ -19,15 +17,22 @@ if not can_use_wgpu_lib:
 
 
 def test_compute_tex_1d_rgba8uint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "1d rgba8ui"),
-        tex2: ("texture", 1, "1d rgba8ui"),
-    ):
-        color = tex1.read(index.x)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex2.write(index.x, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_1d<rgba8uint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_1d<rgba8uint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i: i32 = i32(index.x);
+            let color1 = vec4<i32>(textureLoad(r_tex1, i));
+            let color2 = vec4<i32>(color1.x + i, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, vec4<u32>(color2));
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 64, 1, 1, 4
@@ -47,15 +52,22 @@ def test_compute_tex_1d_rgba8uint():
 
 
 def test_compute_tex_1d_rgba16sint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "1d rgba16i"),
-        tex2: ("texture", 1, "1d rgba16i"),
-    ):
-        color = tex1.read(index.x)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex2.write(index.x, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_1d<rgba16sint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_1d<rgba16sint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i: i32 = i32(index.x);
+            let color1 : vec4<i32> = textureLoad(r_tex1, i);
+            let color2 = vec4<i32>(color1.x + i, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 128, 1, 1, 4
@@ -75,15 +87,22 @@ def test_compute_tex_1d_rgba16sint():
 
 
 def test_compute_tex_1d_r32sint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "1d r32i"),
-        tex2: ("texture", 1, "1d r32i"),
-    ):
-        color = tex1.read(index.x)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex2.write(index.x, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_1d<r32sint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_1d<r32sint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i: i32 = i32(index.x);
+            let color1 : vec4<i32> = textureLoad(r_tex1, i);
+            let color2 = vec4<i32>(color1.x + i, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 256, 1, 1, 1
@@ -103,15 +122,22 @@ def test_compute_tex_1d_r32sint():
 
 
 def test_compute_tex_1d_r32float():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "1d r32f"),
-        tex2: ("texture", 1, "1d r32f"),
-    ):
-        color = tex1.read(index.x)
-        color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        tex2.write(index.x, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_1d<r32float>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_1d<r32float>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i: i32 = i32(index.x);
+            let color1 : vec4<f32> = textureLoad(r_tex1, i);
+            let color2 = vec4<f32>(color1.x + f32(i), color1.y + 1.0, color1.z * 2.0, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 256, 1, 1, 1
@@ -134,16 +160,22 @@ def test_compute_tex_1d_r32float():
 
 
 def test_compute_tex_2d_rgba8uint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "2d rgba8ui"),
-        tex2: ("texture", 1, "2d rgba8ui"),
-    ):
-        color = tex1.read(index.xy)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        # tex2.write(index.xy, color)  # is syntactic sugar for:
-        stdlib.write(tex2, index.xy, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_2d<rgba8uint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_2d<rgba8uint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec2<i32>(index.xy);
+            let color1 = vec4<i32>(textureLoad(r_tex1, i));
+            let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, vec4<u32>(color2));
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 64, 8, 1, 4
@@ -164,15 +196,22 @@ def test_compute_tex_2d_rgba8uint():
 
 
 def test_compute_tex_2d_rgba16sint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "2d rgba16i"),
-        tex2: ("texture", 1, "2d rgba16i"),
-    ):
-        color = tex1.read(index.xy)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex2.write(index.xy, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_2d<rgba16sint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_2d<rgba16sint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec2<i32>(index.xy);
+            let color1: vec4<i32> = textureLoad(r_tex1, i);
+            let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 128, 8, 1, 4
@@ -193,15 +232,21 @@ def test_compute_tex_2d_rgba16sint():
 
 
 def test_compute_tex_2d_r32sint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "2d r32i"),
-        tex2: ("texture", 1, "2d r32i"),
-    ):
-        color = tex1.read(index.xy)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex2.write(index.xy, color)
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_2d<r32sint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_2d<r32sint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec2<i32>(index.xy);
+            let color1: vec4<i32> = textureLoad(r_tex1, i);
+            let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 256, 8, 1, 1
@@ -222,15 +267,22 @@ def test_compute_tex_2d_r32sint():
 
 
 def test_compute_tex_2d_r32float():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "2d r32f"),
-        tex2: ("texture", 1, "2d r32f"),
-    ):
-        color = tex1.read(index.xy)
-        color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        tex2.write(index.xy, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_2d<r32float>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_2d<r32float>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec2<i32>(index.xy);
+            let color1: vec4<f32> = textureLoad(r_tex1, i);
+            let color2 = vec4<f32>(color1.x + f32(i.x), color1.y + 1.0, color1.z * 2.0, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 256, 8, 1, 1
@@ -254,15 +306,22 @@ def test_compute_tex_2d_r32float():
 
 
 def test_compute_tex_3d_rgba8uint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "3d rgba8ui"),
-        tex2: ("texture", 1, "3d rgba8ui"),
-    ):
-        color = tex1.read(index.xyz)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex2.write(index.xyz, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_3d<rgba8uint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_3d<rgba8uint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec3<i32>(index);
+            let color1 = vec4<i32>(textureLoad(r_tex1, i));
+            let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, vec4<u32>(color2));
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 64, 8, 6, 4
@@ -284,15 +343,22 @@ def test_compute_tex_3d_rgba8uint():
 
 
 def test_compute_tex_3d_rgba16sint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "3d rgba16i"),
-        tex2: ("texture", 1, "3d rgba16i"),
-    ):
-        color = tex1.read(index.xyz)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex2.write(index.xyz, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_3d<rgba16sint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_3d<rgba16sint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec3<i32>(index);
+            let color1: vec4<i32> = textureLoad(r_tex1, i);
+            let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 128, 8, 6, 4
@@ -314,15 +380,22 @@ def test_compute_tex_3d_rgba16sint():
 
 
 def test_compute_tex_3d_r32sint():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "3d r32i"),
-        tex2: ("texture", 1, "3d r32i"),
-    ):
-        color = tex1.read(index.xyz)
-        color = ivec4(color.x + index.x, color.y + 1, color.z * 2, color.a)
-        tex2.write(index.xyz, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_3d<r32sint>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_3d<r32sint>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec3<i32>(index);
+            let color1: vec4<i32> = textureLoad(r_tex1, i);
+            let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 256, 8, 6, 1
@@ -344,15 +417,22 @@ def test_compute_tex_3d_r32sint():
 
 
 def test_compute_tex_3d_r32float():
-    @python2shader
-    def compute_shader(
-        index: ("input", "GlobalInvocationId", ivec3),
-        tex1: ("texture", 0, "3d r32f"),
-        tex2: ("texture", 1, "3d r32f"),
-    ):
-        color = tex1.read(index.xyz)
-        color = vec4(color.x + f32(index.x), color.y + 1.0, color.z * 2.0, color.a)
-        tex2.write(index.xyz, color)
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: [[access(read)]] texture_storage_3d<r32float>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: [[access(write)]] texture_storage_3d<r32float>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec3<i32>(index);
+            let color1: vec4<f32> = textureLoad(r_tex1, i);
+            let color2 = vec4<f32>(color1.x + f32(i.x), color1.y + 1.0, color1.z * 2.0, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
 
     # Generate data
     nx, ny, nz, nc = 64, 8, 6, 1
@@ -389,8 +469,8 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     nbytes = ctypes.sizeof(data1)
     bpp = nbytes // (nx * ny * nz)  # bytes per pixel
 
-    if can_use_vulkan_sdk:
-        pyshader.dev.validate(compute_shader)
+    # if isinstance(compute_shader, bytes) and can_use_vulkan_sdk:
+    #     pyshader.dev.validate(compute_shader)
 
     device = get_default_device()
     cshader = device.create_shader_module(code=compute_shader)

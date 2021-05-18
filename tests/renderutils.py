@@ -49,8 +49,7 @@ def download_from_texture(device, texture, data_type, nx, ny, nz):
 
 def render_to_texture(
     device,
-    vertex_shader,
-    fragment_shader,
+    shader_source,
     pipeline_layout,
     bind_group,
     *,
@@ -91,14 +90,13 @@ def render_to_texture(
         size=nbytes, usage=wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.COPY_DST
     )
 
-    vshader = device.create_shader_module(code=vertex_shader)
-    fshader = device.create_shader_module(code=fragment_shader)
+    shader = device.create_shader_module(code=shader_source)
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
         vertex={
-            "module": vshader,
-            "entry_point": "main",
+            "module": shader,
+            "entry_point": "vs_main",
             "buffers": vbo_views,
         },
         primitive={
@@ -113,8 +111,8 @@ def render_to_texture(
             "alpha_to_coverage_enabled": False,
         },
         fragment={
-            "module": fshader,
-            "entry_point": "main",
+            "module": shader,
+            "entry_point": "fs_main",
             "targets": [
                 {
                     "format": texture_format,
@@ -154,7 +152,10 @@ def render_to_texture(
     render_pass.insert_debug_marker("setting pipeline")
     render_pass.set_pipeline(render_pipeline)
     render_pass.insert_debug_marker("setting bind group")
-    render_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
+    if bind_group:
+        render_pass.set_bind_group(
+            0, bind_group, [], 0, 999999
+        )  # last 2 elements not used
     for slot, vbo in enumerate(vbos):
         render_pass.insert_debug_marker(f"setting vbo {slot}")
         render_pass.set_vertex_buffer(slot, vbo, 0, 0)
@@ -189,8 +190,7 @@ def render_to_texture(
 
 def render_to_screen(
     device,
-    vertex_shader,
-    fragment_shader,
+    shader_source,
     pipeline_layout,
     bind_group,
     *,
@@ -215,14 +215,13 @@ def render_to_screen(
     glfw.init()
     canvas = WgpuCanvas(title="wgpu test render with GLFW")
 
-    vshader = device.create_shader_module(code=vertex_shader)
-    fshader = device.create_shader_module(code=fragment_shader)
+    shader = device.create_shader_module(code=shader_source)
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
         vertex={
-            "module": vshader,
-            "entry_point": "main",
+            "module": shader,
+            "entry_point": "vs_main",
             "buffers": vbo_views,
         },
         primitive={
@@ -237,8 +236,8 @@ def render_to_screen(
             "alpha_to_coverage_enabled": False,
         },
         fragment={
-            "module": fshader,
-            "entry_point": "main",
+            "module": shader,
+            "entry_point": "fs_main",
             "targets": [
                 {
                     "format": wgpu.TextureFormat.bgra8unorm_srgb,
