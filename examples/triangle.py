@@ -69,12 +69,8 @@ def _main(canvas, device):
 
     shader = device.create_shader_module(code=shader_source)
 
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    # No bind group and layout, we should not create empty ones.
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
@@ -85,7 +81,6 @@ def _main(canvas, device):
         },
         primitive={
             "topology": wgpu.PrimitiveTopology.triangle_list,
-            # "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
         },
@@ -136,9 +131,7 @@ def _main(canvas, device):
             )
 
             render_pass.set_pipeline(render_pipeline)
-            render_pass.set_bind_group(
-                0, bind_group, [], 0, 999999
-            )  # last 2 elements not used
+            # render_pass.set_bind_group(0, no_bind_group, [], 0, 1)
             render_pass.draw(3, 1, 0, 0)
             render_pass.end_pass()
             device.queue.submit([command_encoder.finish()])
