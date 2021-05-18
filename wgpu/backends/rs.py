@@ -621,11 +621,15 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             )
             c_entries_list.append(c_entry)
 
+        c_entries_array = ffi.NULL
+        if c_entries_list:
+            c_entries_array = ffi.new("WGPUBindGroupLayoutEntry []", c_entries_list)
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, entryCount: int, entries: WGPUBindGroupLayoutEntry *
         struct = new_struct_p(
             "WGPUBindGroupLayoutDescriptor *",
             label=to_c_label(label),
-            entries=ffi.new("WGPUBindGroupLayoutEntry []", c_entries_list),
+            entries=c_entries_array,
             entryCount=len(c_entries_list),
             # not used: nextInChain
         )
@@ -685,7 +689,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 raise TypeError(f"Unexpected resource type {type(resource)}")
             c_entries_list.append(c_entry)
 
-        c_entries_array = ffi.new("WGPUBindGroupEntry []", c_entries_list)
+        c_entries_array = ffi.NULL
+        if c_entries_list:
+            c_entries_array = ffi.new("WGPUBindGroupEntry []", c_entries_list)
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUBindGroupLayout, entryCount: int, entries: WGPUBindGroupEntry *
         struct = new_struct_p(
             "WGPUBindGroupDescriptor *",
@@ -1179,8 +1186,7 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
             elif dimension == "cube":
                 array_layer_count = 6
             elif dimension in ("2d-array", "cube-array"):
-                array_layer_count = self._tex_info["mip_level_count"] - base_mip_level
-            array_layer_count = self._tex_info["size"][2] - base_array_layer
+                array_layer_count = self._tex_info["size"][2] - base_array_layer
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, baseMipLevel: int, mipLevelCount: int, baseArrayLayer: int, arrayLayerCount: int, aspect: WGPUTextureAspect
         struct = new_struct_p(
@@ -1652,6 +1658,8 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
     def push_debug_group(self, group_label):
         c_group_label = ffi.new("char []", group_label.encode())
         color = 0
+        # todo: these functions are temporarily not available in wgpu-native
+        return  # noqa
         if isinstance(self, GPUComputePassEncoder):
             # H: void f(WGPUComputePassEncoder computePassEncoder, char const * groupLabel)
             lib.wgpuComputePassEncoderPushDebugGroup(
@@ -1664,6 +1672,8 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
             )
 
     def pop_debug_group(self):
+        # todo: these functions are temporarily not available in wgpu-native
+        return  # noqa
         if isinstance(self, GPUComputePassEncoder):
             # H: void f(WGPUComputePassEncoder computePassEncoder)
             lib.wgpuComputePassEncoderPopDebugGroup(self._internal)
@@ -1674,6 +1684,8 @@ class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
     def insert_debug_marker(self, marker_label):
         c_marker_label = ffi.new("char []", marker_label.encode())
         color = 0
+        # todo: these functions are temporarily not available in wgpu-native
+        return  # noqa
         if isinstance(self, GPUComputePassEncoder):
             # H: void f(WGPUComputePassEncoder computePassEncoder, char const * markerLabel)
             lib.wgpuComputePassEncoderInsertDebugMarker(
