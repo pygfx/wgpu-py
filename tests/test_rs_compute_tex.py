@@ -6,7 +6,7 @@ import numpy as np
 
 from pytest import skip
 from testutils import run_tests, get_default_device
-from testutils import can_use_wgpu_lib
+from testutils import can_use_wgpu_lib, can_use_vulkan_sdk
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
@@ -469,8 +469,8 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     nbytes = ctypes.sizeof(data1)
     bpp = nbytes // (nx * ny * nz)  # bytes per pixel
 
-    # if isinstance(compute_shader, bytes) and can_use_vulkan_sdk:
-    #     pyshader.dev.validate(compute_shader)
+    if can_use_vulkan_sdk:
+        pass  # todo: Validate shader with Naga
 
     device = get_default_device()
     cshader = device.create_shader_module(code=compute_shader)

@@ -8,7 +8,7 @@ import numpy as np
 import wgpu.backends.rs  # noqa
 from pytest import skip
 from testutils import run_tests, get_default_device
-from testutils import can_use_wgpu_lib
+from testutils import can_use_wgpu_lib, can_use_vulkan_sdk
 from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
 
 
@@ -458,9 +458,8 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
 
     shader_source = default_vertex_shader + fragment_shader
 
-    # if can_use_vulkan_sdk:
-    #     pyshader.dev.validate(vertex_shader)
-    #     pyshader.dev.validate(fragment_shader)
+    if can_use_vulkan_sdk:
+        pass  # todo: Validate shader with Naga
 
     # Create texture
     texture = device.create_texture(
