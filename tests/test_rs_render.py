@@ -41,15 +41,13 @@ def test_render_orange_square():
     # NOTE: the 0.499 instead of 0.5 is to make sure the resulting value is 127.
     # With 0.5 some drivers would produce 127 and others 128.
 
-    shader_source = (
-        default_vertex_shader
-        + """
+    fragment_shader = """
         [[stage(fragment)]]
         fn fs_main() -> [[location(0)]] vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
     """
-    )
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
     bind_group = None
@@ -81,15 +79,13 @@ def test_render_orange_square_indexed():
 
     device = get_default_device()
 
-    shader_source = (
-        default_vertex_shader
-        + """
+    fragment_shader = """
         [[stage(fragment)]]
         fn fs_main() -> [[location(0)]] vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
     """
-    )
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
     bind_group = None
@@ -130,15 +126,13 @@ def test_render_orange_square_indirect():
 
     device = get_default_device()
 
-    shader_source = (
-        default_vertex_shader
-        + """
+    fragment_shader = """
         [[stage(fragment)]]
         fn fs_main() -> [[location(0)]] vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
     """
-    )
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
     bind_group = None
@@ -174,15 +168,13 @@ def test_render_orange_square_indexed_indirect():
 
     device = get_default_device()
 
-    shader_source = (
-        default_vertex_shader
-        + """
+    fragment_shader = """
         [[stage(fragment)]]
         fn fs_main() -> [[location(0)]] vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
     """
-    )
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
     bind_group = None
@@ -290,15 +282,13 @@ def test_render_orange_square_color_attachment1():
 
     device = get_default_device()
 
-    shader_source = (
-        default_vertex_shader
-        + """
+    fragment_shader = """
         [[stage(fragment)]]
         fn fs_main() -> [[location(0)]] vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
     """
-    )
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
     bind_group = None
@@ -336,15 +326,13 @@ def test_render_orange_square_color_attachment2():
 
     device = get_default_device()
 
-    shader_source = (
-        default_vertex_shader
-        + """
+    fragment_shader = """
         [[stage(fragment)]]
         fn fs_main() -> [[location(0)]] vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
     """
-    )
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
     bind_group = None
@@ -383,15 +371,13 @@ def test_render_orange_square_viewport():
 
     device = get_default_device()
 
-    shader_source = (
-        default_vertex_shader
-        + """
+    fragment_shader = """
         [[stage(fragment)]]
         fn fs_main() -> [[location(0)]] vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
     """
-    )
+    shader_source = default_vertex_shader + fragment_shader
 
     def cb(renderpass):
         renderpass.set_viewport(10, 20, 32, 32, 0, 1)
@@ -423,15 +409,13 @@ def test_render_orange_square_scissor():
 
     device = get_default_device()
 
-    shader_source = (
-        default_vertex_shader
-        + """
+    fragment_shader = """
         [[stage(fragment)]]
         fn fs_main() -> [[location(0)]] vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
     """
-    )
+    shader_source = default_vertex_shader + fragment_shader
 
     def cb(renderpass):
         renderpass.set_scissor_rect(0, 0, 32, 32)
@@ -608,17 +592,14 @@ def test_render_orange_dots():
     assert np.all(bg == 0)
 
     # Check the square
-    # todo: Ideally we'd want to set the point_size (gl_PointSize) to 16 but
-    # this is (currently?) not supported with WGSL, so our points are 1 px.
+    # Ideally we'd want to set the point_size (gl_PointSize) to 16 but
+    # this is not supported in WGPU, see https://github.com/gpuweb/gpuweb/issues/332
+    # So our points are 1px
     for dot in (
         a[15:16, 15:16, :],
         a[15:16, 47:48, :],
         a[47:48, 15:16, :],
         a[47:48, 47:48, :],
-        # a[8:24, 8:24, :],
-        # a[8:24, 40:56, :],
-        # a[40:56, 8:24, :],
-        # a[40:56, 40:56, :],
     ):
         assert np.all(dot[:, :, 0] == 255)  # red
         assert np.all(dot[:, :, 1] == 127)  # green
