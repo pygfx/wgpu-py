@@ -53,4 +53,4 @@ def _determine_can_use_wgpu_lib():
 
 can_use_vulkan_sdk = _determine_can_use_vulkan_sdk()
 can_use_wgpu_lib = _determine_can_use_wgpu_lib()
-is_ci = os.getenv("CI", None)
+is_ci = bool(os.getenv("CI", None))
