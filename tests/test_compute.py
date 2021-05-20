@@ -104,7 +104,8 @@ def test_compute_0_1_int():
 
 def test_compute_0_1_spirv():
     if is_ci:
-        pass  # Any CI capable of even running wgpu will only work with WGSL
+        # Any CI capable of even running wgpu will only work with WGSL
+        skip("Dont SpirV on CI")
 
     compute_shader = simple_compute_shader_spirv
     assert isinstance(compute_shader, bytes)
