@@ -9,7 +9,7 @@ import wgpu.utils
 import wgpu.backends.rs
 import numpy as np
 
-from testutils import run_tests, can_use_wgpu_lib, iters_equal
+from testutils import run_tests, can_use_wgpu_lib, is_ci, iters_equal
 from pytest import mark, raises
 
 
@@ -147,6 +147,7 @@ def test_rs_tracer():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+@mark.skipif(is_ci, reason="Dont SpirV on CI")
 def test_shader_module_creation_spirv():
 
     device = wgpu.utils.get_default_device()

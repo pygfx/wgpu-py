@@ -6,7 +6,7 @@ from ctypes import c_int32, c_ubyte
 import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
 
-from pytest import skip, raises
+from pytest import skip, mark, raises
 from testutils import run_tests, can_use_wgpu_lib, is_ci, iters_equal
 
 
@@ -102,10 +102,8 @@ def test_compute_0_1_int():
     assert out[0].cast("i").tolist() == list(range(100))
 
 
+@mark.skipif(is_ci, reason="Dont SpirV on CI")
 def test_compute_0_1_spirv():
-    if is_ci:
-        # Any CI capable of even running wgpu will only work with WGSL
-        skip("Dont SpirV on CI")
 
     compute_shader = simple_compute_shader_spirv
     assert isinstance(compute_shader, bytes)
