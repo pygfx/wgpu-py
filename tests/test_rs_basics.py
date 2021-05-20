@@ -147,7 +147,7 @@ def test_rs_tracer():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-@mark.skipif(is_ci, reason="Dont SpirV on CI")
+@mark.skipif(is_ci, reason="Cannot use SpirV shader on dx12")
 def test_shader_module_creation_spirv():
 
     device = wgpu.utils.get_default_device()

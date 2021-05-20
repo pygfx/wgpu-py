@@ -102,7 +102,7 @@ def test_compute_0_1_int():
     assert out[0].cast("i").tolist() == list(range(100))
 
 
-@mark.skipif(is_ci, reason="Dont SpirV on CI")
+@mark.skipif(is_ci, reason="Cannot use SpirV shader on dx12")
 def test_compute_0_1_spirv():
 
     compute_shader = simple_compute_shader_spirv
