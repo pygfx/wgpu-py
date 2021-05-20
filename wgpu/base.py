@@ -533,13 +533,9 @@ class GPUDevice(GPUObjectBase):
     def create_shader_module(self, *, label="", code: str, source_map: dict = None):
         """Create a :class:`GPUShaderModule` object from shader source.
 
-        Currently, only SpirV is supported. One can compile glsl shaders to
-        SpirV ahead of time, or use the pyshader package to write shaders
-        in Python.
-
         Arguments:
             label (str): A human readable label. Optional.
-            code (str | bytes): The shadercode, as WGSL text or binary SpirV
+            code (str | bytes): The shader code, as WGSL text or binary SpirV
             (or an object implementing ``to_spirv()`` or ``to_bytes()``).
         """
         raise NotImplementedError()

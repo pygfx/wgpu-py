@@ -9,7 +9,6 @@ import wgpu
 from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 import numpy as np
-from pyshader import Struct, mat4, shadertype_as_ctype
 
 
 # %% Create canvas and device
@@ -90,9 +89,9 @@ texture_data = np.repeat(texture_data, 64, 0)
 texture_data = np.repeat(texture_data, 64, 1)
 texture_size = texture_data.shape[1], texture_data.shape[0], 1
 
-
-uniform_type = Struct(transform=mat4)
-uniform_data = np.asarray(shadertype_as_ctype(uniform_type)())
+# Use numpy to create a struct for the uniform
+uniform_dtype = [("transform", "float32", (4, 4))]
+uniform_data = np.zeros((), dtype=uniform_dtype)
 
 
 # %% Create resource objects (buffers, textures, samplers)
@@ -345,10 +344,9 @@ def draw_frame():
             [0, 0, 0, 1],
         ],
     )
-    uniform_data["transform"] = (rot2 @ rot1 @ ortho).flat
+    uniform_data["transform"] = rot2 @ rot1 @ ortho
 
     # Upload the uniform struct
-    uniform_nbytes = uniform_data.nbytes
     tmp_buffer = device.create_buffer_with_data(
         data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
     )
@@ -356,7 +354,7 @@ def draw_frame():
     with swap_chain as current_texture_view:
         command_encoder = device.create_command_encoder()
         command_encoder.copy_buffer_to_buffer(
-            tmp_buffer, 0, uniform_buffer, 0, uniform_nbytes
+            tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
         )
 
         render_pass = command_encoder.begin_render_pass(
