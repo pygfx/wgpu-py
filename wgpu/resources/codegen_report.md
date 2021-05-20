@@ -36,6 +36,6 @@
 * Enum field BlendFactor.one-minus-blendcolor-component missing in wgpu.h
 * Enum DeviceLostReason missing in wgpu.h
 * Wrote 169 enum mappings and 45 struct-field mappings to rs_mappings.py
-* Validated 66 C function calls
+* Validated 65 C function calls
 * Not using 46 C functions
 * Validated 65 C structs
