@@ -12,7 +12,7 @@ from renderutils import render_to_texture, render_to_screen  # noqa
 
 if not can_use_wgpu_lib:
     skip("Skipping tests that need the wgpu lib", allow_module_level=True)
-if is_ci:
+elif is_ci:
     skip("These tests fail on dx12 for some reason", allow_module_level=True)
 
 # %% 1D
