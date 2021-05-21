@@ -62,35 +62,6 @@ check_expected_version(version_info)  # produces a warning on mismatch
 # %% Helper functions and objects
 
 
-import subprocess  # noqa
-import tempfile  # noqa
-
-
-def wgsl_to_spirv_using_system_naga(wgsl):
-    # A dirty hack that only works on my machine, only used during dev until
-    # we've got this shader situation figured out ...
-
-    filename1 = os.path.join(tempfile.gettempdir(), "x.wgsl")
-    filename2 = os.path.join(tempfile.gettempdir(), "x.spv")
-
-    with open(filename1, "wb") as f:
-        f.write(wgsl.encode())
-
-    cmd = ["cargo", "run", "--features", "wgsl-in,spv-out", "--", filename1, filename2]
-    cwd = "c:/dev/rust/naga"
-    try:
-        stdout = subprocess.check_output(cmd, stderr=subprocess.STDOUT, cwd=cwd)
-        print(stdout)
-    except subprocess.CalledProcessError as err:
-        e = "Could not compile wgsl to Spir-V:\n" + err.output.decode()
-        raise Exception(e)
-
-    with open(filename2, "rb") as f:
-        spirv = f.read()
-
-    return spirv
-
-
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
 
@@ -728,10 +699,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return GPUPipelineLayout(label, id, self, bind_group_layouts)
 
     def create_shader_module(self, *, label="", code: str, source_map: dict = None):
-
-        # Use system naga to turn to spv
-        # if isinstance(code, str):
-        #     code = wgsl_to_spirv_using_system_naga(code)
 
         if isinstance(code, str):
             # WGSL
