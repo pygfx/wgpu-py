@@ -23,7 +23,7 @@ class Struct:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 50 structs
+# There are 52 structs
 
 RequestAdapterOptions = Struct(
     "RequestAdapterOptions",
@@ -68,6 +68,13 @@ TextureViewDescriptor = Struct(
     array_layer_count="int",
 )  #:
 
+ExternalTextureDescriptor = Struct(
+    "ExternalTextureDescriptor",
+    label="str",
+    source="object",
+    color_space="enums.PredefinedColorSpace",
+)  #:
+
 SamplerDescriptor = Struct(
     "SamplerDescriptor",
     label="str",
@@ -97,6 +104,7 @@ BindGroupLayoutEntry = Struct(
     sampler="structs.SamplerBindingLayout",
     texture="structs.TextureBindingLayout",
     storage_texture="structs.StorageTextureBindingLayout",
+    external_texture="structs.ExternalTextureBindingLayout",
 )  #:
 
 BufferBindingLayout = Struct(
@@ -125,6 +133,10 @@ StorageTextureBindingLayout = Struct(
     view_dimension="enums.TextureViewDimension",
 )  #:
 
+ExternalTextureBindingLayout = Struct(
+    "ExternalTextureBindingLayout",
+)  #:
+
 BindGroupDescriptor = Struct(
     "BindGroupDescriptor",
     label="str",
@@ -135,7 +147,7 @@ BindGroupDescriptor = Struct(
 BindGroupEntry = Struct(
     "BindGroupEntry",
     binding="int",
-    resource="Union[GPUSampler, GPUTextureView, structs.BufferBinding]",
+    resource="Union[GPUSampler, GPUTextureView, structs.BufferBinding, GPUExternalTexture]",
 )  #:
 
 BufferBinding = Struct(
@@ -302,9 +314,9 @@ ImageCopyTexture = Struct(
     aspect="enums.TextureAspect",
 )  #:
 
-ImageCopyImageBitmap = Struct(
-    "ImageCopyImageBitmap",
-    image_bitmap="memoryview",
+ImageCopyExternalImage = Struct(
+    "ImageCopyExternalImage",
+    source="Union[memoryview, object, object]",
     origin="Union[List[int], structs.Origin2D]",
 )  #:
 
@@ -367,6 +379,7 @@ SwapChainDescriptor = Struct(
     device="GPUDevice",
     format="enums.TextureFormat",
     usage="flags.TextureUsage",
+    compositing_alpha_mode="enums.CanvasCompositingAlphaMode",
 )  #:
 
 UncapturedErrorEventInit = Struct(

@@ -224,6 +224,10 @@ class IdlParser:
             return name  # ok
         elif name in self.classes:
             return f"'{name}'"  # ok, but wrap in string because can be declared later
+        elif name.startswith("HTML"):
+            return "object"  # anything, we ignore this stuff anyway
+        elif name in ["OffscreenCanvas"]:
+            return "object"
         else:
             assert name.startswith("GPU")
             name = name[3:]
