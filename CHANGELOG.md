@@ -18,11 +18,43 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.4] - future
+### [v0.5] - may 2021
+
+This release uses a new version of wgpu-native which has changed quite a bit iternally. There
+is more validation (thus more restrictions). There are only a few changes to the API.
+However, one big change is that shaders can now be provided as both SpirV and WGSL. Due to
+the strict validation, most shaders compiled by PyShader are not usable anymore. We
+recommend using WGSL instead.
+
+Added:
+
+* Added `GPUAdaper.properties` (the amount of information it contains will increase in the future).
+* Added proper support for WGSL.
+
+Changed:
+
+* Stricter validation of SpirV shaders.
+* Float32 texture formats must now use a non-filtering sampler and texture-sample-type.
+* Integer texture formats can no longer use a texture (use `textureLoad` instead).
+* ... and more tighter restrictions.
+
+Removed:
+
+* The API concerning debug markers and groups is temporarily removed.
+* Adapter and device features is temporarily removed.
+* Adapter and device limits is temporarily removed.
+
+
+### [v0.4] - 21-05-2021
+
+This release represents about half a year of progress on the WebGPU API, so the API
+has changed quite a bit. The wgpu-py API more closely reflects the webgpu API - wgpu-native does
+not affect the API except for a few additional features.
 
 Added:
 
 * Added `GPUQueue.read_buffer` as extra API (next to `write_buffer` which is original WebGPU API).
+* Added `GPUQueue.read_texture` as extra API.
 
 Removed:
 
