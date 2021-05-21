@@ -36,8 +36,6 @@ def compare_flags():
     * Verify that all fields are present too.
     * Verify that the (integer) value is equal.
 
-    Verification fails lead to prints
-    TODO: should also end up in codegen report.
     """
 
     idl = get_idl_parser()
