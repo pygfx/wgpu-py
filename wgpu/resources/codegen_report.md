@@ -10,6 +10,7 @@
 * Wrote 50 structs to structs.py
 ### Patching API for base.py
 * Diffs for GPU: change request_adapter, change request_adapter_async
+* Diffs for GPUAdapter: add properties
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide pop_error_scope, hide push_error_scope
 * Diffs for GPUBuffer: add map_read, add map_write, add size, add usage, hide get_mapped_range, hide map_async, hide unmap
 * Diffs for GPUTexture: add dimension, add format, add mip_level_count, add sample_count, add size, add usage
@@ -17,7 +18,7 @@
 * Diffs for GPUComputePassEncoder: hide begin_pipeline_statistics_query, hide end_pipeline_statistics_query
 * Diffs for GPURenderPassEncoder: hide begin_pipeline_statistics_query, hide end_pipeline_statistics_query
 * Diffs for GPUQueue: add read_buffer, add read_texture
-* Validated 33 classes, 108 methods, 30 properties
+* Validated 33 classes, 108 methods, 31 properties
 ### Patching API for backends/rs.py
 * Diffs for GPUAdapter: add request_device_tracing
 * Validated 33 classes, 96 methods, 0 properties

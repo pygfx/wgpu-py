@@ -240,7 +240,7 @@ class GPU(base.GPU):
 
         # Get info on the adapter
         # H: nextInChain: WGPUChainedStruct *, deviceID: int, vendorID: int, name: char *, driverDescription: char *, adapterType: WGPUAdapterType, backendType: WGPUBackendType
-        properties = new_struct_p(
+        c_properties = new_struct_p(
             "WGPUAdapterProperties *",
             # not used: nextInChain
             # not used: deviceID
@@ -251,10 +251,19 @@ class GPU(base.GPU):
             # not used: backendType
         )
 
-        # Get info. This function exists in the headerfile but not in the lib (yet)
+        # todo: This function exists in the headerfile but not in the lib (yet)
         # H: void f(WGPUAdapter adapter, WGPUAdapterProperties * properties)
-        # lib.wgpuAdapterGetProperties(adapter_id, properties)
-        properties  # noqa
+        # lib.wgpuAdapterGetProperties(adapter_id, c_properties)
+        properties = {
+            "name": "",
+            "vendorID": c_properties.vendorID,
+            "deviceID": c_properties.deviceID,
+            "driverDescription": "",
+            "adapterType": c_properties.adapterType,
+            "backendType": c_properties.backendType,
+        }
+        if c_properties.name:
+            properties["name"] = ffi.string(c_properties.name).decode(errors="ignore")
 
         # Limits are (temporarily? not supported)
         # c_limits = xx.wgpuAdapterLimits(adapter_id)
@@ -266,7 +275,7 @@ class GPU(base.GPU):
         # features = feature_flag_to_feature_names(c_features_flag)
         features = ()
 
-        return GPUAdapter("WGPU", adapter_id, features, limits)
+        return GPUAdapter("WGPU", adapter_id, features, limits, properties)
 
     async def request_adapter_async(self, *, canvas, power_preference=None):
         """Async version of ``request_adapter()``.
