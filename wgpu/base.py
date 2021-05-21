@@ -548,7 +548,7 @@ class GPUDevice(GPUObjectBase):
         Arguments:
             label (str): A human readable label. Optional.
             code (str | bytes): The shader code, as WGSL text or binary SpirV
-            (or an object implementing ``to_spirv()`` or ``to_bytes()``).
+                (or an object implementing ``to_spirv()`` or ``to_bytes()``).
         """
         raise NotImplementedError()
 
@@ -1879,8 +1879,8 @@ class GPUUncapturedErrorEvent:
         pass
 
 
-class GPUExternalTexture(GPUObjectBase):  # Specific to browsers
-    pass
+class GPUExternalTexture(GPUObjectBase):
+    """ Ignore this - specific to browsers. """
 
 
 # %%%%% Post processing

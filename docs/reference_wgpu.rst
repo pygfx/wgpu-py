@@ -245,3 +245,6 @@ Other
 
 .. autoclass:: wgpu.GPUUncapturedErrorEvent
     :members:
+
+.. autoclass:: wgpu.GPUExternalTexture
+    :members:
