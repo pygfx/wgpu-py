@@ -33,6 +33,7 @@ Added:
 
 Changed:
 
+* Renamed `renderpass.set_blend_color` -> `set_blend_constant`.
 * Stricter validation of SpirV shaders.
 * Float32 texture formats must now use a non-filtering sampler and texture-sample-type.
 * Integer texture formats can no longer use a texture (use `textureLoad` instead).
