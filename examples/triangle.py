@@ -14,32 +14,36 @@ Similar example in other languages / API's:
 """
 
 import wgpu
-from pyshader import python2shader
-from pyshader import RES_INPUT, RES_OUTPUT
-from pyshader import vec2, vec3, vec4, i32
 
 
 # %% Shaders
 
 
-@python2shader
-def vertex_shader(
-    index: (RES_INPUT, "VertexId", i32),
-    pos: (RES_OUTPUT, "Position", vec4),
-    color: (RES_OUTPUT, 0, vec3),
-):
-    positions = [vec2(+0.0, -0.5), vec2(+0.5, +0.5), vec2(-0.5, +0.7)]
-    p = positions[index]
-    pos = vec4(p, 0.0, 1.0)  # noqa
-    color = vec3(p, 0.5)  # noqa
+shader_source = """
+struct VertexInput {
+    [[builtin(vertex_index)]] vertex_index : u32;
+};
+struct VertexOutput {
+    [[location(0)]] color : vec4<f32>;
+    [[builtin(position)]] pos: vec4<f32>;
+};
 
+[[stage(vertex)]]
+fn vs_main(in: VertexInput) -> VertexOutput {
+    let positions = array<vec2<f32>, 3>(vec2<f32>(0.0, -0.5), vec2<f32>(0.5, 0.5), vec2<f32>(-0.5, 0.7));
+    let p: vec2<f32> = positions[in.vertex_index];
 
-@python2shader
-def fragment_shader(
-    in_color: (RES_INPUT, 0, vec3),
-    out_color: (RES_OUTPUT, 0, vec4),
-):
-    out_color = vec4(in_color, 1.0)  # noqa
+    var out: VertexOutput;
+    out.pos = vec4<f32>(p, 0.0, 1.0);
+    out.color = vec4<f32>(p, 0.5, 1.0);
+    return out;
+}
+
+[[stage(fragment)]]
+fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+    return in.color;
+}
+"""
 
 
 # %% The wgpu calls
@@ -63,26 +67,20 @@ async def main_async(canvas):
 
 def _main(canvas, device):
 
-    vshader = device.create_shader_module(code=vertex_shader)
-    fshader = device.create_shader_module(code=fragment_shader)
+    shader = device.create_shader_module(code=shader_source)
 
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    # No bind group and layout, we should not create empty ones.
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
         vertex={
-            "module": vshader,
-            "entry_point": "main",
+            "module": shader,
+            "entry_point": "vs_main",
             "buffers": [],
         },
         primitive={
             "topology": wgpu.PrimitiveTopology.triangle_list,
-            # "strip_index_format": wgpu.IndexFormat.uint32,
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.none,
         },
@@ -93,8 +91,8 @@ def _main(canvas, device):
             "alpha_to_coverage_enabled": False,
         },
         fragment={
-            "module": fshader,
-            "entry_point": "main",
+            "module": shader,
+            "entry_point": "fs_main",
             "targets": [
                 {
                     "format": wgpu.TextureFormat.bgra8unorm_srgb,
@@ -133,9 +131,7 @@ def _main(canvas, device):
             )
 
             render_pass.set_pipeline(render_pipeline)
-            render_pass.set_bind_group(
-                0, bind_group, [], 0, 999999
-            )  # last 2 elements not used
+            # render_pass.set_bind_group(0, no_bind_group, [], 0, 1)
             render_pass.draw(3, 1, 0, 0)
             render_pass.end_pass()
             device.queue.submit([command_encoder.finish()])

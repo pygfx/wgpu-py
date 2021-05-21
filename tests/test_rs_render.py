@@ -5,31 +5,31 @@ Test render pipeline, by drawing a whole lot of orange squares ...
 import ctypes
 import numpy as np
 
-from pyshader import python2shader, f32, vec2, vec4, i32
-from pyshader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
-from pytest import skip, raises
-from testutils import run_tests, can_use_wgpu_lib, get_default_device
+from pytest import skip
+from testutils import run_tests, can_use_wgpu_lib, is_ci, get_default_device
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
 if not can_use_wgpu_lib:
     skip("Skipping tests that need the wgpu lib", allow_module_level=True)
+elif is_ci:
+    skip("These tests fail on dx12 for some reason", allow_module_level=True)
 
 
-@python2shader
-def vertex_shader(
-    index: (RES_INPUT, "VertexId", i32),
-    pos: (RES_OUTPUT, "Position", vec4),
-):
-    positions = [
-        vec3(-0.5, -0.5, 0.1),
-        vec3(-0.5, +0.5, 0.1),
-        vec3(+0.5, -0.5, 0.1),
-        vec3(+0.5, +0.5, 0.1),
-    ]
-    p = positions[index]
-    pos = vec4(p, 1.0)  # noqa
+default_vertex_shader = """
+[[stage(vertex)]]
+fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> [[builtin(position)]] vec4<f32> {
+    let positions = array<vec3<f32>, 4>(
+        vec3<f32>(-0.5, -0.5, 0.1),
+        vec3<f32>(-0.5,  0.5, 0.1),
+        vec3<f32>( 0.5, -0.5, 0.1),
+        vec3<f32>( 0.5,  0.5, 0.1),
+    );
+    let p: vec3<f32> = positions[vertex_index];
+    return vec4<f32>(p, 1.0);
+}
+"""
 
 
 # %% Simple square
@@ -43,21 +43,20 @@ def test_render_orange_square():
     # NOTE: the 0.499 instead of 0.5 is to make sure the resulting value is 127.
     # With 0.5 some drivers would produce 127 and others 128.
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    fragment_shader = """
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args)
     a = render_to_texture(*render_args, size=(64, 64))
 
@@ -82,18 +81,17 @@ def test_render_orange_square_indexed():
 
     device = get_default_device()
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    fragment_shader = """
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Index buffer
     indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
@@ -103,7 +101,7 @@ def test_render_orange_square_indexed():
     )
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, topology=wgpu.PrimitiveTopology.triangle_list, ibo=ibo)
     a = render_to_texture(
         *render_args,
@@ -130,18 +128,17 @@ def test_render_orange_square_indirect():
 
     device = get_default_device()
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    fragment_shader = """
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Buffer with draw parameters for indirect draw call
     params = (ctypes.c_int32 * 4)(4, 1, 0, 0)
@@ -151,7 +148,7 @@ def test_render_orange_square_indirect():
     )
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, indirect_buffer=indirect_buffer)
     a = render_to_texture(*render_args, size=(64, 64), indirect_buffer=indirect_buffer)
 
@@ -173,18 +170,17 @@ def test_render_orange_square_indexed_indirect():
 
     device = get_default_device()
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    fragment_shader = """
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Index buffer
     indices = (ctypes.c_int32 * 6)(0, 1, 2, 2, 1, 3)
@@ -201,7 +197,7 @@ def test_render_orange_square_indexed_indirect():
     )
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, topology=wgpu.PrimitiveTopology.triangle_list, ibo=ibo, indirect_buffer=indirect_buffer)
     a = render_to_texture(
         *render_args,
@@ -229,25 +225,21 @@ def test_render_orange_square_vbo():
 
     device = get_default_device()
 
-    @python2shader
-    def vertex_shader(
-        pos_in: (RES_INPUT, 0, vec2),
-        pos: (RES_OUTPUT, "Position", vec4),
-    ):
-        pos = vec4(pos_in, 0.0, 1.0)  # noqa
+    shader_source = """
+        [[stage(vertex)]]
+        fn vs_main([[location(0)]] pos : vec2<f32>) -> [[builtin(position)]] vec4<f32> {
+            return vec4<f32>(pos, 0.0, 1.0);
+        }
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Vertex buffer
     pos_data = (ctypes.c_float * 8)(-0.5, -0.5, -0.5, +0.5, +0.5, -0.5, +0.5, +0.5)
@@ -270,7 +262,7 @@ def test_render_orange_square_vbo():
     }
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, vbos=[vbo], vbo_views=[vbo_view])
     a = render_to_texture(*render_args, size=(64, 64), vbos=[vbo], vbo_views=[vbo_view])
 
@@ -292,18 +284,17 @@ def test_render_orange_square_color_attachment1():
 
     device = get_default_device()
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    fragment_shader = """
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     ca = {
         "resolve_target": None,
@@ -312,7 +303,7 @@ def test_render_orange_square_color_attachment1():
     }
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, color_attachment=ca)
     a = render_to_texture(*render_args, size=(64, 64), color_attachment=ca)
 
@@ -337,18 +328,17 @@ def test_render_orange_square_color_attachment2():
 
     device = get_default_device()
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    fragment_shader = """
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
+    shader_source = default_vertex_shader + fragment_shader
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     ca = {
         "resolve_target": None,
@@ -357,7 +347,7 @@ def test_render_orange_square_color_attachment2():
     }
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, color_attachment=ca)
     a = render_to_texture(*render_args, size=(64, 64), color_attachment=ca)
 
@@ -383,30 +373,23 @@ def test_render_orange_square_viewport():
 
     device = get_default_device()
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    fragment_shader = """
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
+    shader_source = default_vertex_shader + fragment_shader
 
     def cb(renderpass):
         renderpass.set_viewport(10, 20, 32, 32, 0, 1)
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
-
-    # Fiddled in a small test to covers the raising of an exception
-    with raises(TypeError):
-        device.create_bind_group(
-            layout=bind_group_layout, entries=[{"resource": device}]
-        )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, renderpass_callback=cb)
     a = render_to_texture(*render_args, size=(64, 64), renderpass_callback=cb)
 
@@ -428,11 +411,13 @@ def test_render_orange_square_scissor():
 
     device = get_default_device()
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    fragment_shader = """
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
+    shader_source = default_vertex_shader + fragment_shader
 
     def cb(renderpass):
         renderpass.set_scissor_rect(0, 0, 32, 32)
@@ -440,14 +425,11 @@ def test_render_orange_square_scissor():
         renderpass.set_blend_color((0, 0, 0, 1))
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, renderpass_callback=cb)
     a = render_to_texture(*render_args, size=(64, 64), renderpass_callback=cb)
 
@@ -469,34 +451,31 @@ def test_render_orange_square_depth():
 
     device = get_default_device()
 
-    @python2shader
-    def vertex_shader2(
-        index: (RES_INPUT, "VertexId", i32),
-        pos: (RES_OUTPUT, "Position", vec4),
-    ):
-        positions = [
-            vec3(-0.5, -0.5, 0.0),
-            vec3(-0.5, +0.5, 0.0),
-            vec3(+0.5, -0.5, 0.2),
-            vec3(+0.5, +0.5, 0.2),
-        ]
-        pos = vec4(positions[index], 1.0)  # noqa
+    shader_source = """
+        [[stage(vertex)]]
+        fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> [[builtin(position)]] vec4<f32> {
+            let positions = array<vec3<f32>, 4>(
+                vec3<f32>(-0.5, -0.5, 0.0),
+                vec3<f32>(-0.5,  0.5, 0.0),
+                vec3<f32>( 0.5, -0.5, 0.2),
+                vec3<f32>( 0.5,  0.5, 0.2),
+            );
+            let p: vec3<f32> = positions[vertex_index];
+            return vec4<f32>(p, 1.0);
+        }
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
 
     def cb(renderpass):
         renderpass.set_stencil_reference(42)
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Create dept-stencil texture
     depth_stencil_texture = device.create_texture(
@@ -539,7 +518,7 @@ def test_render_orange_square_depth():
     )
 
     # Render
-    render_args = device, vertex_shader2, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, renderpass_callback=cb, depth_stencil_state=depth_stencil_state, depth_stencil_attachment=depth_stencil_attachment)
     a = render_to_texture(
         *render_args,
@@ -568,39 +547,40 @@ def test_render_orange_square_depth():
 def test_render_orange_dots():
     """Render four orange dots and check that there are four orange square dots."""
 
-    @python2shader
-    def vertex_shader(
-        index: (RES_INPUT, "VertexId", i32),
-        pos: (RES_OUTPUT, "Position", vec4),
-        pointsize: (RES_OUTPUT, "PointSize", f32),
-    ):
-        positions = [
-            vec2(-0.5, -0.5),
-            vec2(-0.5, +0.5),
-            vec2(+0.5, -0.5),
-            vec2(+0.5, +0.5),
-        ]
-        p = positions[index]
-        pos = vec4(p, 0.0, 1.0)  # noqa
-        pointsize = 16.0  # noqa
-
     device = get_default_device()
 
-    @python2shader
-    def fragment_shader(
-        out_color: (RES_OUTPUT, 0, vec4),
-    ):
-        out_color = vec4(1.0, 0.499, 0.0, 1.0)  # noqa
+    shader_source = """
+        struct VertexOutput {
+            [[builtin(position)]] position: vec4<f32>;
+            //[[builtin(gl_PointSize]] point_size: f32;
+        };
+
+        [[stage(vertex)]]
+        fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> VertexOutput {
+            let positions = array<vec3<f32>, 4>(
+                vec3<f32>(-0.5, -0.5, 0.0),
+                vec3<f32>(-0.5,  0.5, 0.0),
+                vec3<f32>( 0.5, -0.5, 0.2),
+                vec3<f32>( 0.5,  0.5, 0.2),
+            );
+            var out: VertexOutput;
+            out.position =  vec4<f32>(positions[vertex_index], 1.0);
+            //out.point_size = 16.0;
+            return out;
+        }
+
+        [[stage(fragment)]]
+        fn fs_main() -> [[location(0)]] vec4<f32> {
+            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+        }
+    """
 
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    bind_group = None
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Render
-    render_args = device, vertex_shader, fragment_shader, pipeline_layout, bind_group
+    render_args = device, shader_source, pipeline_layout, bind_group
     top = wgpu.PrimitiveTopology.point_list
     # render_to_screen(*render_args, topology=top)
     a = render_to_texture(*render_args, size=(64, 64), topology=top)
@@ -614,11 +594,14 @@ def test_render_orange_dots():
     assert np.all(bg == 0)
 
     # Check the square
+    # Ideally we'd want to set the point_size (gl_PointSize) to 16 but
+    # this is not supported in WGPU, see https://github.com/gpuweb/gpuweb/issues/332
+    # So our points are 1px
     for dot in (
-        a[8:24, 8:24, :],
-        a[8:24, 40:56, :],
-        a[40:56, 8:24, :],
-        a[40:56, 40:56, :],
+        a[15:16, 15:16, :],
+        a[15:16, 47:48, :],
+        a[47:48, 15:16, :],
+        a[47:48, 47:48, :],
     ):
         assert np.all(dot[:, :, 0] == 255)  # red
         assert np.all(dot[:, :, 1] == 127)  # green

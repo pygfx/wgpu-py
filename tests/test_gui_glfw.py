@@ -7,15 +7,13 @@ import os
 import sys
 import time
 
-from pyshader import python2shader, vec4, i32
-from pyshader import RES_INPUT, RES_OUTPUT
 import wgpu.backends.rs  # noqa
 from pytest import skip
-from testutils import run_tests, can_use_wgpu_lib
+from testutils import run_tests, can_use_wgpu_lib, is_ci
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
-if os.getenv("CI") or not can_use_wgpu_lib:
+if is_ci or not can_use_wgpu_lib:
     skip("Skipping tests that need a window or the wgpu lib", allow_module_level=True)
 
 
@@ -57,26 +55,19 @@ def test_glfw_canvas_basics():
         assert canvas.is_closed()
 
 
-@python2shader
-def vertex_shader(
-    index: (RES_INPUT, "VertexId", i32),
-    pos: (RES_OUTPUT, "Position", vec4),
-):
-    positions = [
-        vec3(-0.5, -0.5, 0.1),
-        vec3(-0.5, +0.5, 0.1),
-        vec3(+0.5, -0.5, 0.1),
-        vec3(+0.5, +0.5, 0.1),
-    ]
-    p = positions[index]
-    pos = vec4(p, 1.0)  # noqa
+shader_source = """
+[[stage(vertex)]]
+fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> [[builtin(position)]] vec4<f32> {
+    let positions = array<vec2<f32>, 3>(vec2<f32>(0.0, -0.5), vec2<f32>(0.5, 0.5), vec2<f32>(-0.5, 0.7));
+    let p: vec2<f32> = positions[vertex_index];
+    return vec4<f32>(p, 0.0, 1.0);
+}
 
-
-@python2shader
-def fragment_shader(
-    out_color: (RES_OUTPUT, 0, vec4),
-):
-    out_color = vec4(1.0, 0.5, 0.0, 1.0)  # noqa
+[[stage(fragment)]]
+fn fs_main() -> [[location(0)]] vec4<f32> {
+    return vec4<f32>(1.0, 0.5, 0.0, 1.0);
+}
+"""
 
 
 def test_glfw_canvas_render():
@@ -190,21 +181,16 @@ def test_glfw_canvas_render_custom_canvas():
 
 def _get_draw_function(device, canvas):
     # Bindings and layout
-    bind_group_layout = device.create_bind_group_layout(entries=[])  # zero bindings
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=[])
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
+    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
-    vshader = device.create_shader_module(code=vertex_shader)
-    fshader = device.create_shader_module(code=fragment_shader)
+    shader = device.create_shader_module(code=shader_source)
 
     render_pipeline = device.create_render_pipeline(
         label="my-debug-pipeline",
         layout=pipeline_layout,
         vertex={
-            "module": vshader,
-            "entry_point": "main",
+            "module": shader,
+            "entry_point": "vs_main",
             "buffers": [],
         },
         primitive={
@@ -220,8 +206,8 @@ def _get_draw_function(device, canvas):
             "alpha_to_coverage_enabled": False,
         },
         fragment={
-            "module": fshader,
-            "entry_point": "main",
+            "module": shader,
+            "entry_point": "fs_main",
             "targets": [
                 {
                     "format": wgpu.TextureFormat.bgra8unorm_srgb,
@@ -259,7 +245,6 @@ def _get_draw_function(device, canvas):
             )
 
             render_pass.set_pipeline(render_pipeline)
-            render_pass.set_bind_group(0, bind_group, [], 0, 999999)
             render_pass.draw(4, 1, 0, 0)
             render_pass.end_pass()
             device.queue.submit([command_encoder.finish()])

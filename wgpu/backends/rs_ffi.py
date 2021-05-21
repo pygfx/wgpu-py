@@ -14,27 +14,32 @@ if cffi_version_info < (1, 10):  # no-cover
     raise ImportError(f"{__name__} needs cffi 1.10 or later.")
 
 
-def get_wgpu_h():
+def get_wgpu_header():
     """Read header file and strip some stuff that cffi would stumble on."""
-    lines = []
-    with open(get_resource_filename("wgpu.h")) as f:
-        for line in f.readlines():
-            if line.startswith(
-                (
-                    "#include ",
-                    "#define WGPU_LOCAL",
-                    "#define WGPUColor",
-                    "#define WGPUOrigin3d_ZERO",
-                    "#if defined",
-                    "#endif",
-                )
-            ):
-                continue
-            elif line.startswith("#define ") and "(" in line and ")" in line:
-                i1, i2 = line.index("("), line.index(")")
-                line = line[:i1] + line[i2 + 1 :]
-            lines.append(line)
-    return "".join(lines)
+    return _get_wgpu_header(
+        get_resource_filename("webgpu.h"),
+        get_resource_filename("wgpu.h"),
+    )
+
+
+def _get_wgpu_header(*filenames):
+    """Func written so we can use this in both rs_ffi.py and codegen/hparser.py"""
+    # Read files
+    lines1 = []
+    for filename in filenames:
+        with open(filename) as f:
+            lines1.extend(f.readlines())
+    # Deal with pre-processor commands, because cffi cannot handle them.
+    # Just removing them, plus a few extra lines, seems to do the trick.
+    lines2 = []
+    for line in lines1:
+        if line.startswith("#"):
+            continue
+        elif 'extern "C"' in line:
+            continue
+        line = line.replace("WGPU_EXPORT ", "")
+        lines2.append(line)
+    return "".join(lines2)
 
 
 def get_wgpu_lib_path():
@@ -75,14 +80,14 @@ def get_wgpu_lib_path():
 # NOTE: `import wgpu.backends.rs` is used in pyinstaller tests to verify
 # that we can load the DLL after freezing
 ffi = FFI()
-ffi.cdef(get_wgpu_h())
+ffi.cdef(get_wgpu_header())
 ffi.set_source("wgpu.h", None)
 lib = ffi.dlopen(get_wgpu_lib_path())
 
 
 def check_expected_version(version_info):
     # Get lib version
-    version_int = lib.wgpu_get_version()
+    version_int = lib.wgpuGetVersion()
     if version_int < 65536:  # no-cover - old version encoding with 3 ints
         version_info_lib = tuple((version_int >> bits) & 0xFF for bits in (16, 8, 0))
     else:
@@ -99,7 +104,7 @@ def check_expected_version(version_info):
         )
 
 
-@ffi.callback("void(int level, const char *)")
+@ffi.callback("void(WGPULogLevel, char *)")
 def _logger_callback(level, c_msg):
     """Called when Rust emits a log message."""
     msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
@@ -117,20 +122,20 @@ def _logger_callback(level, c_msg):
 def _logger_set_level_callback(level):
     """Called when the log level is set from Python."""
     if level >= 40:
-        lib.wgpu_set_log_level(lib.WGPULogLevel_Error)
+        lib.wgpuSetLogLevel(lib.WGPULogLevel_Error)
     elif level >= 30:
-        lib.wgpu_set_log_level(lib.WGPULogLevel_Warn)
+        lib.wgpuSetLogLevel(lib.WGPULogLevel_Warn)
     elif level >= 20:
-        lib.wgpu_set_log_level(lib.WGPULogLevel_Info)
+        lib.wgpuSetLogLevel(lib.WGPULogLevel_Info)
     elif level >= 10:
-        lib.wgpu_set_log_level(lib.WGPULogLevel_Debug)
+        lib.wgpuSetLogLevel(lib.WGPULogLevel_Debug)
     elif level >= 5:
-        lib.wgpu_set_log_level(lib.WGPULogLevel_Trace)  # extra level
+        lib.wgpuSetLogLevel(lib.WGPULogLevel_Trace)  # extra level
     else:
-        lib.wgpu_set_log_level(lib.WGPULogLevel_Off)
+        lib.wgpuSetLogLevel(lib.WGPULogLevel_Off)
 
 
 # Connect Rust logging with Python logging
-lib.wgpu_set_log_callback(_logger_callback)
+lib.wgpuSetLogCallback(_logger_callback)
 logger_set_level_callbacks.append(_logger_set_level_callback)
 _logger_set_level_callback(logger.level)

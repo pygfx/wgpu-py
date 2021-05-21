@@ -151,12 +151,13 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
-    def __init__(self, name, internal, features, limits):
+    def __init__(self, name, internal, features, limits, properties=None):
         self._name = name
         self._features = tuple(sorted(str(x) for x in features))
         self._internal = internal
         self._limits = DEFAULT_ADAPTER_LIMITS.copy()
         self._limits.update(limits)
+        self._properties = properties or {}
 
     # IDL: readonly attribute DOMString name;
     @property
@@ -175,6 +176,12 @@ class GPUAdapter:
     def limits(self):
         """A dict with the adapter limits."""
         return self._limits
+
+    @apidiff.add("useful for desktop")
+    @property
+    def properties(self):
+        """A dict with the adapter properties (info on device, backend, etc.)"""
+        return self._properties
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     def request_device(
@@ -533,13 +540,9 @@ class GPUDevice(GPUObjectBase):
     def create_shader_module(self, *, label="", code: str, source_map: dict = None):
         """Create a :class:`GPUShaderModule` object from shader source.
 
-        Currently, only SpirV is supported. One can compile glsl shaders to
-        SpirV ahead of time, or use the pyshader package to write shaders
-        in Python.
-
         Arguments:
             label (str): A human readable label. Optional.
-            code (str | bytes): The shadercode, as WGSL text or binary SpirV
+            code (str | bytes): The shader code, as WGSL text or binary SpirV
             (or an object implementing ``to_spirv()`` or ``to_bytes()``).
         """
         raise NotImplementedError()

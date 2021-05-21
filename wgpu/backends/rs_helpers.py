@@ -60,13 +60,12 @@ def get_surface_id_from_canvas(canvas):
     win_id = canvas.get_window_id()
 
     if sys.platform.startswith("win"):  # no-cover
-        # wgpu_create_surface_from_windows_hwnd(void *_hinstance, void *hwnd)
-        hwnd = ffi.cast("void *", int(win_id))
-        hinstance = ffi.NULL
-        return lib.wgpu_create_surface_from_windows_hwnd(hinstance, hwnd)
+        struct = ffi.new("WGPUSurfaceDescriptorFromWindowsHWND *")
+        struct.hinstance = ffi.NULL
+        struct.hwnd = ffi.cast("void *", int(win_id))
+        struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWindowsHWND
 
     elif sys.platform.startswith("darwin"):  # no-cover
-        # wgpu_create_surface_from_metal_layer(void *layer)
         # This is what the triangle example from wgpu-native does:
         # #if WGPU_TARGET == WGPU_TARGET_MACOS
         #     {
@@ -117,22 +116,31 @@ def get_surface_id_from_canvas(canvas):
         # [ns_window.content_view setLayer:metal_layer];
         objc.objc_msgSend(content_view, set_layer_sel, ctypes.c_void_p(metal_layer))
 
-        metal_layer_ffi_pointer = ffi.cast("void *", metal_layer)
-        return lib.wgpu_create_surface_from_metal_layer(metal_layer_ffi_pointer)
+        struct = ffi.new("WGPUSurfaceDescriptorFromMetalLayer *")
+        struct.layer = ffi.cast("void *", metal_layer)
+        struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromMetalLayer
 
     elif sys.platform.startswith("linux"):  # no-cover
-        # wgpu_create_surface_from_wayland(void *surface, void *display)
-        # wgpu_create_surface_from_xlib(const void **display, uint64_t window)
         display_id = canvas.get_display_id()
         is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
         if is_wayland:
-            # todo: works, but have not yet been able to test drawing to the window
-            surface = ffi.cast("void *", win_id)
-            display = ffi.cast("void *", display_id)
-            return lib.wgpu_create_surface_from_wayland(surface, display)
+            # todo: probably does not work since we dont have WGPUSurfaceDescriptorFromWayland
+            struct = ffi.new("WGPUSurfaceDescriptorFromXlib *")
+            struct.display = ffi.cast("void *", display_id)
+            struct.window = int(win_id)
+            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlib
         else:
-            display = ffi.cast("void **", display_id)
-            return lib.wgpu_create_surface_from_xlib(display, win_id)
+            struct = ffi.new("WGPUSurfaceDescriptorFromXlib *")
+            struct.display = ffi.cast("void *", display_id)
+            struct.window = int(win_id)
+            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlib
 
     else:  # no-cover
         raise RuntimeError("Cannot get surface id: unsupported platform.")
+
+    surface_descriptor = ffi.new("WGPUSurfaceDescriptor *")
+    surface_descriptor.label = ffi.NULL
+    surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
+
+    instance_id = ffi.NULL
+    return lib.wgpuInstanceCreateSurface(instance_id, surface_descriptor)

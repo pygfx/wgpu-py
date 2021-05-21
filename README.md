@@ -35,7 +35,6 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 ```
 pip install wgpu
-pip install pyshader  # optional - our examples use this
 ```
 
 The library ships with Rust binaries for Windows, MacOS and Linux. If you want to use

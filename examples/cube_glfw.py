@@ -9,8 +9,6 @@ import wgpu
 from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 import numpy as np
-from pyshader import python2shader, shadertype_as_ctype
-from pyshader import Struct, mat4, vec4, vec2
 
 
 # %% Create canvas and device
@@ -91,9 +89,9 @@ texture_data = np.repeat(texture_data, 64, 0)
 texture_data = np.repeat(texture_data, 64, 1)
 texture_size = texture_data.shape[1], texture_data.shape[0], 1
 
-
-uniform_type = Struct(transform=mat4)
-uniform_data = np.asarray(shadertype_as_ctype(uniform_type)())
+# Use numpy to create a struct for the uniform
+uniform_dtype = [("transform", "float32", (4, 4))]
+uniform_data = np.zeros((), dtype=uniform_dtype)
 
 
 # %% Create resource objects (buffers, textures, samplers)
@@ -113,13 +111,12 @@ uniform_buffer = device.create_buffer(
     size=uniform_data.nbytes, usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST
 )
 
-
 # Create texture, and upload data
 texture = device.create_texture(
     size=texture_size,
     usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.SAMPLED,
     dimension=wgpu.TextureDimension.d2,
-    format=wgpu.TextureFormat.r8uint,
+    format=wgpu.TextureFormat.r8unorm,
     mip_level_count=1,
     sample_count=1,
 )
@@ -127,6 +124,7 @@ texture_view = texture.create_view()
 tmp_buffer = device.create_buffer_with_data(
     data=texture_data, usage=wgpu.BufferUsage.COPY_SRC
 )
+
 command_encoder = device.create_command_encoder()
 command_encoder.copy_buffer_to_texture(
     {
@@ -136,7 +134,7 @@ command_encoder.copy_buffer_to_texture(
         "rows_per_image": 0,
     },
     {
-        "texture": texture_view,
+        "texture": texture,
         "mip_level": 0,
         "origin": (0, 0, 0),
     },
@@ -151,52 +149,58 @@ sampler = device.create_sampler()
 
 # %% The shaders
 
-# Define the bindings (bind_group, slot). These are used in the shader
-# creating, and further down where the bind groups and bind group
-# layouts are created.
-UNIFORM_BINDING = 0, 0
-SAMPLER_BINDING = 0, 1
-TEXTURE_BINDING = 0, 2
 
+shader_source = """
+[[block]]
+struct Locals {
+    transform: mat4x4<f32>;
+};
+[[group(0), binding(0)]]
+var r_locals: Locals;
 
-@python2shader
-def vertex_shader(
-    in_pos: ("input", 0, vec4),
-    in_texcoord: ("input", 1, vec2),
-    out_pos: ("output", "Position", vec4),
-    v_texcoord: ("output", 0, vec2),
-    u_locals: ("uniform", UNIFORM_BINDING, uniform_type),
-):
-    ndc = u_locals.transform * in_pos
-    out_pos = vec4(ndc.xy, 0, 1)  # noqa - shader output
-    v_texcoord = in_texcoord  # noqa - shader output
+struct VertexInput {
+    [[location(0)]] pos : vec4<f32>;
+    [[location(1)]] texcoord: vec2<f32>;
+};
+struct VertexOutput {
+    [[location(0)]] texcoord: vec2<f32>;
+    [[builtin(position)]] pos: vec4<f32>;
+};
 
+[[stage(vertex)]]
+fn vs_main(in: VertexInput) -> VertexOutput {
+    let ndc: vec4<f32> = r_locals.transform * in.pos;
+    var out: VertexOutput;
+    out.pos = vec4<f32>(ndc.x, ndc.y, 0.0, 1.0);
+    out.texcoord = in.texcoord;
+    return out;
+}
 
-@python2shader
-def fragment_shader(
-    v_texcoord: ("input", 0, vec2),
-    s_sam: ("sampler", SAMPLER_BINDING, ""),
-    t_tex: ("texture", TEXTURE_BINDING, "2d i32"),
-    out_color: ("output", 0, vec4),
-):
-    value = f32(t_tex.sample(s_sam, v_texcoord).r) / 255.0
-    out_color = vec4(value, value, value, 1.0)  # noqa - shader output
+[[group(0), binding(1)]]
+var r_tex: texture_2d<f32>;
+[[group(0), binding(2)]]
+var r_sampler: sampler;
 
+[[stage(fragment)]]
+fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+    let value = textureSample(r_tex, r_sampler, in.texcoord).r;;
+    return vec4<f32>(value, value, value, 1.0);
+}
+"""
 
-vshader = device.create_shader_module(code=vertex_shader)
-fshader = device.create_shader_module(code=fragment_shader)
+shader = device.create_shader_module(code=shader_source)
 
 
 # %% The bind groups
 
 # We always have two bind groups, so we can play distributing our
 # resources over these two groups in different configurations.
-bind_groups_entries = [], []
-bind_groups_layout_entries = [], []
+bind_groups_entries = [[]]
+bind_groups_layout_entries = [[]]
 
-bind_groups_entries[UNIFORM_BINDING[0]].append(
+bind_groups_entries[0].append(
     {
-        "binding": UNIFORM_BINDING[1],
+        "binding": 0,
         "resource": {
             "buffer": uniform_buffer,
             "offset": 0,
@@ -204,36 +208,32 @@ bind_groups_entries[UNIFORM_BINDING[0]].append(
         },
     }
 )
-bind_groups_layout_entries[UNIFORM_BINDING[0]].append(
+bind_groups_layout_entries[0].append(
     {
-        "binding": UNIFORM_BINDING[1],
+        "binding": 0,
         "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
         "buffer": {"type": wgpu.BufferBindingType.uniform},
     }
 )
 
-bind_groups_entries[SAMPLER_BINDING[0]].append(
-    {"binding": SAMPLER_BINDING[1], "resource": sampler}
-)
-bind_groups_layout_entries[SAMPLER_BINDING[0]].append(
+bind_groups_entries[0].append({"binding": 1, "resource": texture_view})
+bind_groups_layout_entries[0].append(
     {
-        "binding": SAMPLER_BINDING[1],
+        "binding": 1,
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "sampler": {"type": wgpu.SamplerBindingType.filtering},
+        "texture": {
+            "sample_type": wgpu.TextureSampleType.float,
+            "view_dimension": wgpu.TextureViewDimension.d2,
+        },
     }
 )
 
-bind_groups_entries[TEXTURE_BINDING[0]].append(
-    {"binding": TEXTURE_BINDING[1], "resource": texture_view}
-)
-bind_groups_layout_entries[TEXTURE_BINDING[0]].append(
+bind_groups_entries[0].append({"binding": 2, "resource": sampler})
+bind_groups_layout_entries[0].append(
     {
-        "binding": TEXTURE_BINDING[1],
+        "binding": 2,
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "texture": {
-            "sample_type": wgpu.TextureSampleType.uint,
-            "view_dimension": wgpu.TextureViewDimension.d2,
-        },
+        "sampler": {"type": wgpu.SamplerBindingType.filtering},
     }
 )
 
@@ -257,8 +257,8 @@ pipeline_layout = device.create_pipeline_layout(bind_group_layouts=bind_group_la
 render_pipeline = device.create_render_pipeline(
     layout=pipeline_layout,
     vertex={
-        "module": vshader,
-        "entry_point": "main",
+        "module": shader,
+        "entry_point": "vs_main",
         "buffers": [
             {
                 "array_stride": 4 * 6,
@@ -286,8 +286,8 @@ render_pipeline = device.create_render_pipeline(
     depth_stencil=None,
     multisample=None,
     fragment={
-        "module": fshader,
-        "entry_point": "main",
+        "module": shader,
+        "entry_point": "fs_main",
         "targets": [
             {
                 "format": wgpu.TextureFormat.bgra8unorm_srgb,
@@ -344,10 +344,9 @@ def draw_frame():
             [0, 0, 0, 1],
         ],
     )
-    uniform_data["transform"] = (rot2 @ rot1 @ ortho).flat
+    uniform_data["transform"] = rot2 @ rot1 @ ortho
 
     # Upload the uniform struct
-    uniform_nbytes = uniform_data.nbytes
     tmp_buffer = device.create_buffer_with_data(
         data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
     )
@@ -355,7 +354,7 @@ def draw_frame():
     with swap_chain as current_texture_view:
         command_encoder = device.create_command_encoder()
         command_encoder.copy_buffer_to_buffer(
-            tmp_buffer, 0, uniform_buffer, 0, uniform_nbytes
+            tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
         )
 
         render_pass = command_encoder.begin_render_pass(

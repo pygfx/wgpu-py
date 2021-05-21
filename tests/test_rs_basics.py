@@ -1,4 +1,5 @@
 import os
+import base64
 import shutil
 import random
 import ctypes
@@ -6,10 +7,9 @@ import tempfile
 
 import wgpu.utils
 import wgpu.backends.rs
-import pyshader
 import numpy as np
 
-from testutils import run_tests, can_use_wgpu_lib, iters_equal
+from testutils import run_tests, can_use_wgpu_lib, is_ci, iters_equal
 from pytest import mark, raises
 
 
@@ -23,7 +23,7 @@ def test_get_wgpu_version():
 
     assert isinstance(version_info, tuple)
     assert all(isinstance(i, int) for i in version_info)
-    assert len(version_info) == 3
+    assert len(version_info) == 4
 
     assert isinstance(commit_sha, str)
     assert len(commit_sha) > 0
@@ -77,12 +77,35 @@ def test_tuple_from_tuple_or_dict():
         assert func({"x": 1}, ("x", "y"))
 
 
-@pyshader.python2shader
-def compute_shader(
-    index: ("input", "GlobalInvocationId", "ivec3"),
-    out: ("buffer", 0, "Array(i32)"),
-):
-    out[index.x] = index.x
+compute_shader_wgsl = """
+[[block]]
+struct ArrayContainer { data: [[stride(4)]] array<i32>; };
+
+[[group(0), binding(0)]]
+var<storage> out1: [[access(write)]] ArrayContainer;
+
+[[stage(compute), workgroup_size(1)]]
+fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+    let i: u32 = index.x;
+    out1.data[i] = i32(i);
+}
+"""
+
+compute_shader_spirv = base64.decodebytes(
+    """
+AwIjBwADAQAAAAAAFgAAAAAAAAARAAIAAQAAAA4AAwAAAAAAAAAAAA8ABgAFAAAAAQAAAG1haW4A
+AAAACAAAABAABgABAAAAEQAAAAEAAAABAAAAAQAAAAUABAABAAAAbWFpbgAAAAAFAAQACAAAAGlu
+ZGV4AAAABQADAAwAAABvdXQABQADAA0AAAAwAAAARwAEAAgAAAALAAAAHAAAAEcABAAJAAAABgAA
+AAQAAABIAAUACgAAAAAAAAAjAAAAAAAAAEcAAwAKAAAAAwAAAEcABAAMAAAAIgAAAAAAAABHAAQA
+DAAAACEAAAAAAAAAEwACAAIAAAAhAAMAAwAAAAIAAAAVAAQABQAAACAAAAABAAAAFwAEAAYAAAAF
+AAAAAwAAACAABAAHAAAAAQAAAAYAAAA7AAQABwAAAAgAAAABAAAAHQADAAkAAAAFAAAAHgADAAoA
+AAAJAAAAIAAEAAsAAAACAAAACgAAADsABAALAAAADAAAAAIAAAArAAQABQAAAA0AAAAAAAAAIAAE
+AA4AAAACAAAABQAAACAABAAQAAAAAQAAAAUAAAAgAAQAEwAAAAEAAAAFAAAANgAFAAIAAAABAAAA
+AAAAAAMAAAD4AAIABAAAAEEABQAQAAAAEQAAAAgAAAANAAAAPQAEAAUAAAASAAAAEQAAAEEABgAO
+AAAADwAAAAwAAAANAAAAEgAAAEEABQATAAAAFAAAAAgAAAANAAAAPQAEAAUAAAAVAAAAFAAAAD4A
+AwAPAAAAFQAAAP0AAQA4AAEA
+""".encode()
+)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -92,7 +115,7 @@ def test_logging():
 
     wgpu.logger.setLevel("DEBUG")
 
-    device.create_shader_module(code=compute_shader.to_spirv())
+    device.create_shader_module(code=compute_shader_wgsl)
 
     wgpu.logger.setLevel("WARNING")
 
@@ -124,11 +147,12 @@ def test_rs_tracer():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_shader_module_creation():
+@mark.skipif(is_ci, reason="Cannot use SpirV shader on dx12")
+def test_shader_module_creation_spirv():
 
     device = wgpu.utils.get_default_device()
 
-    code1 = compute_shader.to_spirv()
+    code1 = compute_shader_spirv
     assert isinstance(code1, bytes)
     code2 = type("CodeObject", (object,), {"to_bytes": lambda: code1})
     code3 = type("CodeObject", (object,), {"to_spirv": lambda: code1})
@@ -233,6 +257,7 @@ def test_do_a_copy_roundtrip():
     texture_dim = wgpu.TextureDimension.d1
 
     # Create buffers and textures
+    stubusage = wgpu.TextureUsage.STORAGE
     buf1 = device.create_buffer(
         size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
@@ -240,13 +265,13 @@ def test_do_a_copy_roundtrip():
         size=(nx, ny, nz),
         dimension=texture_dim,
         format=texture_format,
-        usage=wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST,
+        usage=wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST | stubusage,
     )
     tex3 = device.create_texture(
         size=(nx, ny, nz),
         dimension=texture_dim,
         format=texture_format,
-        usage=wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST,
+        usage=wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST | stubusage,
     )
     buf4 = device.create_buffer(
         size=nbytes, usage=wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.COPY_DST
@@ -261,7 +286,8 @@ def test_do_a_copy_roundtrip():
     assert tex2.sample_count == 1
     assert tex2.dimension == wgpu.TextureDimension.d1
     assert tex2.format == texture_format
-    assert tex2.usage == wgpu.TextureUsage.COPY_SRC | wgpu.TextureUsage.COPY_DST
+    assert tex2.usage & wgpu.TextureUsage.COPY_SRC
+    assert tex2.usage & wgpu.TextureUsage.COPY_DST
     assert tex2.create_view().texture is tex2
 
     # Upload from CPU to buffer

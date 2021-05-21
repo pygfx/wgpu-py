@@ -6,21 +6,29 @@ buffer into another.
 import wgpu
 import wgpu.backends.rs  # Select backend
 from wgpu.utils import compute_with_buffers  # Convenience function
-from pyshader import python2shader, ivec3, i32, Array
 
 
 # %% Shader and data
 
+shader_source = """
 
-@python2shader
-def compute_shader(
-    index: ("input", "GlobalInvocationId", ivec3),
-    data1: ("buffer", 0, Array(i32)),
-    data2: ("buffer", 1, Array(i32)),
-):
-    i = index.x
-    data2[i] = data1[i]
+[[block]]
+struct DataContainer {
+    data: [[stride(4)]] array<i32>;
+};
 
+[[group(0), binding(0)]]
+var<storage> data1: [[access(read)]] DataContainer;
+
+[[group(0), binding(1)]]
+var<storage> data2: [[access(write)]] DataContainer;
+
+[[stage(compute), workgroup_size(1)]]
+fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+    let i: u32 = index.x;
+    data2.data[i] = data1.data[i];
+}
+"""
 
 # Create input data as a memoryview
 n = 20
@@ -33,7 +41,7 @@ for i in range(n):
 
 # The first arg is the input data, per binding
 # The second arg are the ouput types, per binding
-out = compute_with_buffers({0: data}, {1: (n, "i")}, compute_shader, n=n)
+out = compute_with_buffers({0: data}, {1: (n, "i")}, shader_source, n=n)
 
 # The result is a dict matching the output types
 # Select data from buffer at binding 1
@@ -55,7 +63,7 @@ print(result.tolist())
 
 # Create device and shader object
 device = wgpu.utils.get_default_device()
-cshader = device.create_shader_module(code=compute_shader)
+cshader = device.create_shader_module(code=shader_source)
 
 # Create buffer objects, input buffer is mapped.
 buffer1 = device.create_buffer_with_data(data=data, usage=wgpu.BufferUsage.STORAGE)

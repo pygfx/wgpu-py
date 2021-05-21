@@ -1,12 +1,31 @@
 import os
 
 from cffi import FFI
-from cffi.model import EnumType
 
 from codegen.utils import print, lib_dir, remove_c_comments
 
 
 _parser = None
+
+
+def _get_wgpu_header(*filenames):
+    """Func written so we can use this in both rs_ffi.py and codegen/hparser.py"""
+    # Read files
+    lines1 = []
+    for filename in filenames:
+        with open(filename) as f:
+            lines1.extend(f.readlines())
+    # Deal with pre-processor commands, because cffi cannot handle them.
+    # Just removing them, plus a few extra lines, seems to do the trick.
+    lines2 = []
+    for line in lines1:
+        if line.startswith("#"):
+            continue
+        elif 'extern "C"' in line:
+            continue
+        line = line.replace("WGPU_EXPORT ", "")
+        lines2.append(line)
+    return "".join(lines2)
 
 
 def get_h_parser(*, allow_cache=True):
@@ -17,26 +36,10 @@ def get_h_parser(*, allow_cache=True):
     if _parser and allow_cache:
         return _parser
 
-    # Get source
-    lines = []
-    with open(os.path.join(lib_dir, "resources", "wgpu.h")) as f:
-        for line in f.readlines():
-            if line.startswith(
-                (
-                    "#include ",
-                    "#define WGPU_LOCAL",
-                    "#define WGPUColor",
-                    "#define WGPUOrigin3d_ZERO",
-                    "#if defined",
-                    "#endif",
-                )
-            ):
-                continue
-            elif line.startswith("#define ") and "(" in line and ")" in line:
-                i1, i2 = line.index("("), line.index(")")
-                line = line[:i1] + line[i2 + 1 :]
-            lines.append(line)
-    source = "".join(lines)
+    source = _get_wgpu_header(
+        os.path.join(lib_dir, "resources", "webgpu.h"),
+        os.path.join(lib_dir, "resources", "wgpu.h"),
+    )
 
     # Create parser
     hp = HParser(source)
@@ -69,7 +72,42 @@ class HParser:
     def _parse_from_h(self):
         code = self.source
 
-        # Collect structs
+        # Collect enums and flags. This is easy.
+        # Note that flags are defines as enums and then defined as flags later.
+        i1 = i2 = i3 = i4 = 0
+        while True:
+            # Find enum
+            i1 = code.find("typedef enum", i4)
+            i2 = code.find("{", i1)
+            i3 = code.find("}", i2)
+            i4 = code.find(";", i3)
+            if i1 < 0:
+                break
+            # Decompose "typedef enum XX {...} XX;"
+            name1 = code[i1 + 13 : i2].strip()
+            name2 = code[i3 + 1 : i4].strip()
+            assert name1 == name2
+            assert name1.startswith("WGPU")
+            name = name1[4:]
+            self.enums[name] = enum = {}
+            for f in code[i2 + 1 : i3].strip().strip(";").split(","):
+                parts = remove_c_comments(f).strip().split()
+                key, val = parts[0], parts[-1]
+                assert key.startswith("WGPU") and "_" in key
+                key = key.split("_")[1]
+                enum[key] = int(val, 16) if val.startswith("0x") else int(val)
+
+        # Turn some enums into flags
+        for line in code.splitlines():
+            if line.startswith("typedef WGPUFlags "):
+                name = line.strip().strip(";").split()[-1]
+                if name.endswith("Flags"):
+                    assert name.startswith("WGPU")
+                    name = name[4:-5]
+                self.flags[name] = self.enums.pop(name)
+
+        # Collect structs. This is relatively easy, since we only need the C code.
+        # But we dont deal with union structs.
         i1 = i2 = i3 = i4 = 0
         while True:
             # Find struct
@@ -87,14 +125,16 @@ class HParser:
             self.structs[name] = struct = {}
             for f in code[i2 + 1 : i3].strip().strip(";").split(";"):
                 parts = remove_c_comments(f).strip().split()
+                typename = " ".join(parts[:-1])
+                typename = typename.replace("const ", "")
                 key = parts[-1].strip("*")
-                struct[key] = " ".join(parts[:-1])
+                struct[key] = typename
 
-        # Collect functions
+        # Collect functions. This is not too hard, since we only need the C code.
         i1 = i2 = i3 = 0
         while True:
             # Find function
-            i1 = code.find("wgpu_", i3)
+            i1 = code.find("wgpu", i3)
             i2 = code.find("(", i1)
             i3 = code.find(");", i2)
             if i1 < 0:
@@ -123,7 +163,7 @@ class HParser:
         for names in ffi.list_types():
             for name in names:
                 # name = ffi.getctype(name) - no, keep original
-                if name.startswith("WGPU"):
+                if name.startswith("WGPU") and not name.endswith("Impl"):
                     t = ffi.typeof(name)
                     if not hasattr(t, "fields"):
                         continue  # probably an enum
@@ -160,30 +200,3 @@ class HParser:
                     while alt_name != ffi.getctype(alt_name):
                         alt_name = ffi.getctype(alt_name)
                         self.structs[alt_name] = self.structs[name]
-
-        # Collect enums. Warning: we access private ffi
-        # stuff here. It seems its either this or load the lib.
-        for key, (tp, _) in ffi._parser._declarations.items():
-            tag, name = key.split(" ", 1)
-            if isinstance(tp, EnumType):
-                self.enums[name[4:]] = fields = {}
-                for enumname, val in zip(tp.enumerators, tp.enumvalues):
-                    fields[enumname[len(name) + 1 :]] = val
-            elif tag == "function":
-                # We don't process these, because the type info has
-                # been reduced to primitive types, but for annotations
-                # the higher-level type names are more useful. We
-                # extract these by parsing wgpu.h directly
-                pass
-
-        # Collect flags by iterating over constants that are not enums.
-        for key, value in ffi._parser._int_constants.items():
-            if key.startswith("WGPU"):
-                if key.upper() == key or "_" not in key:
-                    continue
-                name, _, field = key.partition("_")
-                name = name[4:]  # strip "WGPU"
-                if name in self.enums:
-                    continue
-                fields = self.flags.setdefault(name, {})
-                fields[field] = value

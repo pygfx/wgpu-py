@@ -36,18 +36,20 @@ def compare_flags():
     * Verify that all fields are present too.
     * Verify that the (integer) value is equal.
 
-    Verification fails lead to prints
-    TODO: should also end up in codegen report.
     """
 
     idl = get_idl_parser()
     hp = get_h_parser()
 
+    name_map = {"ColorWrite": "ColorWriteMask"}
+
     for name, flag in idl.flags.items():
+        name = name_map.get(name, name)
         if name not in hp.flags:
             print(f"Flag {name} missing in wgpu.h")
         else:
             for key, val in flag.items():
+                key = key.title().replace("_", "")  # MAP_READ -> MapRead
                 if key not in hp.flags[name]:
                     print(f"Flag field {name}.{key} missing in wgpu.h")
                 elif val != hp.flags[name][key]:
@@ -73,26 +75,11 @@ def write_mappings():
         if name not in hp.enums:
             print(f"Enum {name} missing in wgpu.h")
             continue
+        hp_enum = {key.lower(): val for key, val in hp.enums[name].items()}
         for ikey in idl.enums[name].values():
-            hkey = ikey
-            hkey = hkey.replace("1d", "D1").replace("2d", "D2").replace("3d", "D3")
-            if "index" not in name.lower():
-                # Yuk! but wgpu.h will probably align to WebGPU soon, so should be temporary
-                hkey = (
-                    hkey.replace("uint8", "Uchar")
-                    .replace("uint16", "Ushort")
-                    .replace("uint32", "Uint")
-                )
-                hkey = (
-                    hkey.replace("sint8", "Char")
-                    .replace("sint16", "Short")
-                    .replace("sint32", "Int")
-                )
-                hkey = hkey.replace("float16", "Half").replace("float32", "Float")
-                hkey = hkey.replace("x2", "2").replace("x3", "3").replace("x4", "4")
-            hkey = hkey.replace("-", " ").title().replace(" ", "")
-            if hkey in hp.enums[name]:
-                enummap[name + "." + ikey] = hp.enums[name][hkey]
+            hkey = ikey.lower().replace("-", "")
+            if hkey in hp_enum:
+                enummap[name + "." + ikey] = hp_enum[hkey]
             else:
                 print(f"Enum field {name}.{ikey} missing in wgpu.h")
 
@@ -120,16 +107,6 @@ def write_mappings():
     pylines.append("cstructfield2enum = {")
     for key in sorted(cstructfield2enum.keys()):
         pylines.append(f'    "{key}": {cstructfield2enum[key]!r},')
-    pylines.append("}\n")
-
-    # We need to resolve feature flags into names
-    features_names = {}
-    for name, val in hp.flags["Features"].items():
-        features_names[val] = name.lower()
-    pylines.append(f"# Inverse flag map for features\n")
-    pylines.append("feature_names = {")
-    for key in sorted(features_names.keys()):
-        pylines.append(f"    {key}: {features_names[key]!r},")
     pylines.append("}\n")
 
     # Wrap up
@@ -185,8 +162,8 @@ class FunctionPatcher(Patcher):
         detected = set()
 
         for line, i in self.iter_lines():
-            if "lib.wgpu_" in line:
-                start = line.index("lib.wgpu_") + 4
+            if "lib.wgpu" in line:
+                start = line.index("lib.wgpu") + 4
                 end = line.index("(", start)
                 name = line[start:end]
                 indent = " " * (len(line) - len(line.lstrip()))
