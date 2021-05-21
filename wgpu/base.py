@@ -1879,8 +1879,7 @@ class GPUUncapturedErrorEvent:
         pass
 
 
-@apidiff.hide("Specific to browsers.")
-class GPUExternalTexture(GPUObjectBase):
+class GPUExternalTexture(GPUObjectBase):  # Specific to browsers
     pass
 
 
