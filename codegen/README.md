@@ -24,7 +24,8 @@ tests, because we are the only users. If it breaks, we fix it.
 
 ## Links
 
-* Spec and IDL: https://gpuweb.github.io/gpuweb/
+* WebGPU Spec: https://gpuweb.github.io/gpuweb/
+* IDL: https://gpuweb.github.io/gpuweb/webgpu.idl
 * C header: https://github.com/gfx-rs/wgpu/blob/master/ffi/wgpu.h
 
 

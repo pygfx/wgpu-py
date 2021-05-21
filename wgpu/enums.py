@@ -25,7 +25,12 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 29 enums
+# There are 31 enums
+
+PredefinedColorSpace = Enum(
+    "PredefinedColorSpace",
+    srgb="srgb",
+)  #:
 
 PowerPreference = Enum(
     "PowerPreference",
@@ -215,17 +220,17 @@ BlendFactor = Enum(
     "BlendFactor",
     zero="zero",
     one="one",
-    src_component="src-component",
-    one_minus_src_component="one-minus-src-component",
+    src="src",
+    one_minus_src="one-minus-src",
     src_alpha="src-alpha",
     one_minus_src_alpha="one-minus-src-alpha",
-    dst_component="dst-component",
-    one_minus_dst_component="one-minus-dst-component",
+    dst="dst",
+    one_minus_dst="one-minus-dst",
     dst_alpha="dst-alpha",
     one_minus_dst_alpha="one-minus-dst-alpha",
     src_alpha_saturated="src-alpha-saturated",
-    blendcolor_component="blendcolor-component",
-    one_minus_blendcolor_component="one-minus-blendcolor-component",
+    constant="constant",
+    one_minus_constant="one-minus-constant",
 )  #:
 
 BlendOperation = Enum(
@@ -320,6 +325,12 @@ PipelineStatisticName = Enum(
     clipper_primitives_out="clipper-primitives-out",
     fragment_shader_invocations="fragment-shader-invocations",
     compute_shader_invocations="compute-shader-invocations",
+)  #:
+
+CanvasCompositingAlphaMode = Enum(
+    "CanvasCompositingAlphaMode",
+    opaque="opaque",
+    premultiplied="premultiplied",
 )  #:
 
 DeviceLostReason = Enum(

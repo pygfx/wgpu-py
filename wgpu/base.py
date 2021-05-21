@@ -30,13 +30,14 @@ __all__ = [
     "GPUBuffer",
     "GPUTexture",
     "GPUTextureView",
+    "GPUExternalTexture",
     "GPUSampler",
     "GPUBindGroupLayout",
     "GPUBindGroup",
     "GPUPipelineLayout",
+    "GPUShaderModule",
     "GPUCompilationMessage",
     "GPUCompilationInfo",
-    "GPUShaderModule",
     "GPUPipelineBase",
     "GPUComputePipeline",
     "GPURenderPipeline",
@@ -125,6 +126,7 @@ class GPUCanvasContext:
         device: "GPUDevice",
         format: "enums.TextureFormat",
         usage: "flags.TextureUsage" = 0x10,
+        compositing_alpha_mode: "enums.CanvasCompositingAlphaMode" = "opaque",
     ):
         """Get a :class:`GPUSwapChain` object for this canvas.
 
@@ -132,10 +134,13 @@ class GPUCanvasContext:
             device (WgpuDevice): The GPU device object.
             format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
             usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
+            compositing_alpha_mode (CanvasCompositingAlphaMode): Default opaque.
         """
         usage = usage or flags.TextureUsage.RENDER_ATTACHMENT
         GPUSwapChain = sys.modules[device.__module__].GPUSwapChain  # noqa: N806
-        return GPUSwapChain(label, None, device, self, format, usage)
+        return GPUSwapChain(
+            label, None, device, self, format, usage, compositing_alpha_mode
+        )
 
     # IDL: GPUTextureFormat getSwapChainPreferredFormat(GPUAdapter adapter);
     def get_swap_chain_preferred_format(self, adapter):
@@ -543,7 +548,7 @@ class GPUDevice(GPUObjectBase):
         Arguments:
             label (str): A human readable label. Optional.
             code (str | bytes): The shader code, as WGSL text or binary SpirV
-            (or an object implementing ``to_spirv()`` or ``to_bytes()``).
+                (or an object implementing ``to_spirv()`` or ``to_bytes()``).
         """
         raise NotImplementedError()
 
@@ -779,6 +784,17 @@ class GPUDevice(GPUObjectBase):
     # IDL: Promise<GPUError?> popErrorScope();
     @apidiff.hide
     def pop_error_scope(self):
+        raise NotImplementedError()
+
+    # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor);
+    @apidiff.hide("Specific to browsers.")
+    def import_external_texture(
+        self,
+        *,
+        label="",
+        source: object,
+        color_space: "enums.PredefinedColorSpace" = "srgb",
+    ):
         raise NotImplementedError()
 
 
@@ -1494,8 +1510,8 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined setBlendColor(GPUColor color);
-    def set_blend_color(self, color):
+    # IDL: undefined setBlendConstant(GPUColor color);
+    def set_blend_constant(self, color):
         """Set the blend color for the render pass.
 
         Arguments:
@@ -1592,13 +1608,6 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined copyImageBitmapToTexture( GPUImageCopyImageBitmap source, GPUImageCopyTexture destination, GPUExtent3D copySize);
-    def copy_image_bitmap_to_texture(self, source, destination, copy_size):
-        """
-        TODO: not yet available in wgpu-native
-        """
-        raise NotImplementedError()
-
     # IDL: undefined writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, [AllowShared] BufferSource data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
         """Takes the data contents and schedules a write operation of
@@ -1683,6 +1692,11 @@ class GPUQueue(GPUObjectBase):
         """TODO"""
         raise NotImplementedError()
 
+    # IDL: undefined copyExternalImageToTexture( GPUImageCopyExternalImage source, GPUImageCopyTexture destination, GPUExtent3D copySize);
+    @apidiff.hide("Specific to browsers.")
+    def copy_external_image_to_texture(self, source, destination, copy_size):
+        raise NotImplementedError()
+
 
 @apidiff.change(
     "the swapchain should be used as a context manager to obtain the texture view"
@@ -1714,11 +1728,14 @@ class GPUSwapChain(GPUObjectBase):
     You can obtain a swap chain using :func:`device.configure_swap_chain() <GPUDevice.configure_swap_chain>`.
     """
 
-    def __init__(self, label, internal, device, canvas, format, usage):
+    def __init__(
+        self, label, internal, device, canvas, format, usage, compositing_alpha_mode
+    ):
         super().__init__(label, internal, device)
         self._canvas = canvas
         self._format = format
         self._usage = usage
+        self._compositing_alpha_mode = compositing_alpha_mode
 
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
@@ -1813,6 +1830,18 @@ class GPUCompilationMessage:
         """The position on the line in the shader source."""
         raise NotImplementedError()
 
+    # IDL: readonly attribute unsigned long long offset;
+    @property
+    def offset(self):
+        """Offset of ..."""
+        raise NotImplementedError()
+
+    # IDL: readonly attribute unsigned long long length;
+    @property
+    def length(self):
+        """The length of the line?"""
+        raise NotImplementedError()
+
 
 # FIXME: new class to implement
 class GPUCompilationInfo:
@@ -1848,6 +1877,10 @@ class GPUUncapturedErrorEvent:
     # IDL: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
     def __init__(self, type, gpu_uncaptured_error_event_init_dict):
         pass
+
+
+class GPUExternalTexture(GPUObjectBase):
+    """Ignore this - specific to browsers."""
 
 
 # %%%%% Post processing
