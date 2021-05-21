@@ -1122,7 +1122,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         if self._internal is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBuffer buffer)
-            internal  # todo: exists in h but not in lib lib.wgpuBufferDestroy(internal, False)
+            lib.wgpuBufferDestroy(internal)
 
 
 class GPUTexture(base.GPUTexture, GPUObjectBase):
@@ -2084,7 +2084,7 @@ class GPUSwapChain(base.GPUSwapChain, GPUObjectBase):
         # Present the current texture
         # H: void f(WGPUSwapChain swapChain)
         lib.wgpuSwapChainPresent(self._internal)
-        # todo: we use to get info on the status here
+        # todo: we used to get info on the status here
 
 
 class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
