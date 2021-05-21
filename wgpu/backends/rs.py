@@ -588,6 +588,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 raise ValueError(
                     "Bind group layout entry did not contain field 'buffer', 'sampler', 'texture', nor 'storage_texture'"
                 )
+                # Unreachable - fool the codegen
+                check_struct("ExternalTextureBindingLayout", info)
             # H: nextInChain: WGPUChainedStruct *, binding: int, visibility: WGPUShaderStageFlags/int, buffer: WGPUBufferBindingLayout, sampler: WGPUSamplerBindingLayout, texture: WGPUTextureBindingLayout, storageTexture: WGPUStorageTextureBindingLayout
             c_entry = new_struct(
                 "WGPUBindGroupLayoutEntry",
@@ -1802,7 +1804,7 @@ class GPURenderPassEncoder(
             self._internal, int(x), int(y), int(width), int(height)
         )
 
-    def set_blend_color(self, color):
+    def set_blend_constant(self, color):
         color = _tuple_from_tuple_or_dict(color, "rgba")
         # H: r: float, g: float, b: float, a: float
         c_color = new_struct_p(
@@ -2034,18 +2036,18 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
 
         return data
 
-    # FIXME: new method to implement -> does not exist in wgpu-native
-    def copy_image_bitmap_to_texture(self, source, destination, copy_size):
-        raise NotImplementedError()
-
     # FIXME: new method to implement
     def on_submitted_work_done(self):
         raise NotImplementedError()
 
 
 class GPUSwapChain(base.GPUSwapChain, GPUObjectBase):
-    def __init__(self, label, internal, device, canvas, format, usage):
-        super().__init__(label, internal, device, canvas, format, usage)
+    def __init__(
+        self, label, internal, device, canvas, format, usage, compositing_alpha_mode
+    ):
+        super().__init__(
+            label, internal, device, canvas, format, usage, compositing_alpha_mode
+        )
         assert internal is None  # we set it later
         self._surface_size = (-1, -1)
         self._surface_id = None
@@ -2134,6 +2136,10 @@ class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
 
 
 class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):
+    pass
+
+
+class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):
     pass
 
 
