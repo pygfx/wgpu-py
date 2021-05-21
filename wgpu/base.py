@@ -1880,7 +1880,7 @@ class GPUUncapturedErrorEvent:
 
 
 class GPUExternalTexture(GPUObjectBase):
-    """ Ignore this - specific to browsers. """
+    """Ignore this - specific to browsers."""
 
 
 # %%%%% Post processing
