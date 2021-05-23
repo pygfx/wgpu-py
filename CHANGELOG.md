@@ -18,7 +18,12 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.5] - may 2021
+### [v0.6] - (upcoming)
+
+No changes yet.
+
+
+### [v0.5.2] - 23-05-2021
 
 This release uses a new version of wgpu-native which has changed quite a bit iternally. There
 is more validation (thus more restrictions). There are only a few changes to the API.
