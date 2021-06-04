@@ -23,6 +23,22 @@ Possible sections in each release:
 No changes yet.
 
 
+### [v0.5.3] - 04-06-2021
+
+Added:
+
+* `adapter.properties` now has actual values, allowing inspeciton of the selected
+    GPU and backend.
+* Added back support for filtering float32 textures by enabling a certain wgpu feature
+  by default.
+
+Fixed:
+
+* An error in the docs of `create_render_pipeline`.
+* Vulkan backend is now forced to prevent DX12 being select and causing probems
+  because it's less mature.
+
+
 ### [v0.5.2] - 23-05-2021
 
 This release uses a new version of wgpu-native which has changed quite a bit iternally. There
