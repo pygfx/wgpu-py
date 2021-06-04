@@ -227,3 +227,32 @@ cstructfield2enum = {
     "VertexAttribute.format": "VertexFormat",
     "VertexBufferLayout.stepMode": "InputStepMode",
 }
+
+enum_str2int = {
+    "BackendType": {
+        "Null": 0,
+        "D3D11": 1,
+        "D3D12": 2,
+        "Metal": 3,
+        "Vulkan": 4,
+        "OpenGL": 5,
+        "OpenGLES": 6,
+    }
+}
+enum_int2str = {
+    "BackendType": {
+        0: "Null",
+        1: "D3D11",
+        2: "D3D12",
+        3: "Metal",
+        4: "Vulkan",
+        5: "OpenGL",
+        6: "OpenGLES",
+    },
+    "AdapterType": {
+        0: "DiscreteGPU",
+        1: "IntegratedGPU",
+        2: "CPU",
+        3: "Unknown",
+    },
+}
