@@ -109,6 +109,28 @@ def write_mappings():
         pylines.append(f'    "{key}": {cstructfield2enum[key]!r},')
     pylines.append("}\n")
 
+    # Write a few native-only mappings: key => int
+    pylines.append("enum_str2int = {")
+    for name in ["BackendType"]:
+        pylines.append(f'    "{name}":' + " {")
+        for key, val in hp.enums[name].items():
+            if key == "Force32":
+                continue
+            pylines.append(f'        "{key}": {val},')
+        pylines.append("    }")
+    pylines.append("}")
+
+    # Write a few native-only mappings: int => key
+    pylines.append("enum_int2str = {")
+    for name in ["BackendType", "AdapterType"]:
+        pylines.append(f'    "{name}":' + " {")
+        for key, val in hp.enums[name].items():
+            if key == "Force32":
+                continue
+            pylines.append(f'        {val}: "{key}",')
+        pylines.append("    },")
+    pylines.append("}")
+
     # Wrap up
     code = blacken("\n".join(pylines))  # just in case; code is already black
     with open(os.path.join(lib_dir, "backends", "rs_mappings.py"), "wb") as f:

@@ -41,7 +41,7 @@ from .. import _register_backend
 from .._coreutils import ApiDiff
 
 from .rs_ffi import ffi, lib, check_expected_version
-from .rs_mappings import cstructfield2enum, enummap
+from .rs_mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
 from .rs_helpers import (
     get_surface_id_from_canvas,
     get_memoryview_from_address,
@@ -53,8 +53,8 @@ logger = logging.getLogger("wgpu")  # noqa
 apidiff = ApiDiff()
 
 # The wgpu-native version that we target/expect
-__version__ = "0.8.0.1"
-__commit_sha__ = "691468c9817b51a81530fb277a9b30fcc4a71ea7"
+__version__ = "0.8.0.2"
+__commit_sha__ = "66a4139579f2499a67b7ade1a6c3bcb414046c64"
 version_info = tuple(map(int, __version__.split(".")))
 check_expected_version(version_info)  # produces a warning on mismatch
 
@@ -212,12 +212,27 @@ class GPU(base.GPU):
         else:
             surface_id = get_surface_id_from_canvas(canvas)
 
+        # Force Vulkan on Windows, to avoid DX12 which seems to ignore
+        # the NVidia control panel settings. I guess Vulkan is more
+        # mature than Metal too, so let's just force that for now.
+        # See https://github.com/gfx-rs/wgpu/issues/1416
+        # force_backend = lib.WGPUBackendType_Vulkan
+        force_backend = enum_str2int["BackendType"]["Vulkan"]
+
+        # H: chain: WGPUChainedStruct, backend: WGPUBackendType
+        extras = new_struct_p(
+            "WGPUAdapterExtras *",
+            backend=force_backend,
+            # not used: chain
+        )
+        extras.chain.sType = lib.WGPUSType_AdapterExtras
+
         # Convert the descriptor
         # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
             compatibleSurface=surface_id,
-            # not used: nextInChain
+            nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
         )
 
         # Do the API call and get the adapter id
@@ -251,16 +266,19 @@ class GPU(base.GPU):
             # not used: backendType
         )
 
-        # todo: This function exists in the headerfile but not in the lib (yet)
         # H: void f(WGPUAdapter adapter, WGPUAdapterProperties * properties)
-        # lib.wgpuAdapterGetProperties(adapter_id, c_properties)
+        lib.wgpuAdapterGetProperties(adapter_id, c_properties)
         properties = {
             "name": "",
             "vendorID": c_properties.vendorID,
             "deviceID": c_properties.deviceID,
             "driverDescription": "",
-            "adapterType": c_properties.adapterType,
-            "backendType": c_properties.backendType,
+            "adapterType": enum_int2str["AdapterType"].get(
+                c_properties.adapterType, "unknown"
+            ),
+            "backendType": enum_int2str["BackendType"].get(
+                c_properties.backendType, "unknown"
+            ),
         }
         if c_properties.name:
             properties["name"] = ffi.string(c_properties.name).decode(errors="ignore")
@@ -335,13 +353,26 @@ class GPUAdapter(base.GPUAdapter):
         limits2 = base.DEFAULT_ADAPTER_LIMITS.copy()
         limits2.update(limits or {})
 
-        # H: chain: WGPUChainedStruct, maxBindGroups: int, label: char*, tracePath: char*
+        # Vanilla WGPU does not support interpolating samplers for float32 textures,
+        # which is sad for scientific data in particular. We can enable it
+        # (on the hardware were wgpu-py likely runs) using the feature:
+        # WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
+
+        # H: chain: WGPUChainedStruct, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxStorageBuffersPerShaderStage: int, maxStorageBufferBindingSize: int, nativeFeatures: WGPUNativeFeature, label: char*, tracePath: char*
         extras = new_struct_p(
             "WGPUDeviceExtras *",
             label=to_c_label(label),
             maxBindGroups=limits2["max_bind_groups"],
+            maxStorageBuffersPerShaderStage=6,
             tracePath=c_trace_path,
+            nativeFeatures=lib.WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
             # not used: chain
+            # not used: maxTextureDimension1D
+            # not used: maxTextureDimension2D
+            # not used: maxTextureDimension3D
+            # not used: maxTextureArrayLayers
+            # not used: maxDynamicStorageBuffersPerPipelineLayout
+            # not used: maxStorageBufferBindingSize
         )
         extras.chain.sType = lib.WGPUSType_DeviceExtras
 
@@ -917,34 +948,37 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         if fragment is not None:
             c_color_targets_list = []
             for target in fragment["targets"]:
-                alpha_blend = _tuple_from_tuple_or_dict(
-                    target["blend"]["alpha"],
-                    ("src_factor", "dst_factor", "operation"),
-                )
-                # H: srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor, operation: WGPUBlendOperation
-                c_alpha_blend = new_struct(
-                    "WGPUBlendComponent",
-                    srcFactor=alpha_blend[0],
-                    dstFactor=alpha_blend[1],
-                    operation=alpha_blend[2],
-                )
-                color_blend = _tuple_from_tuple_or_dict(
-                    target["blend"]["color"],
-                    ("src_factor", "dst_factor", "operation"),
-                )
-                # H: srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor, operation: WGPUBlendOperation
-                c_color_blend = new_struct(
-                    "WGPUBlendComponent",
-                    srcFactor=color_blend[0],
-                    dstFactor=color_blend[1],
-                    operation=color_blend[2],
-                )
-                # H: color: WGPUBlendComponent, alpha: WGPUBlendComponent
-                c_blend = new_struct_p(
-                    "WGPUBlendState *",
-                    color=c_color_blend,
-                    alpha=c_alpha_blend,
-                )
+                if not target.get("blend", None):
+                    c_blend = ffi.NULL
+                else:
+                    alpha_blend = _tuple_from_tuple_or_dict(
+                        target["blend"]["alpha"],
+                        ("src_factor", "dst_factor", "operation"),
+                    )
+                    # H: srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor, operation: WGPUBlendOperation
+                    c_alpha_blend = new_struct(
+                        "WGPUBlendComponent",
+                        srcFactor=alpha_blend[0],
+                        dstFactor=alpha_blend[1],
+                        operation=alpha_blend[2],
+                    )
+                    color_blend = _tuple_from_tuple_or_dict(
+                        target["blend"]["color"],
+                        ("src_factor", "dst_factor", "operation"),
+                    )
+                    # H: srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor, operation: WGPUBlendOperation
+                    c_color_blend = new_struct(
+                        "WGPUBlendComponent",
+                        srcFactor=color_blend[0],
+                        dstFactor=color_blend[1],
+                        operation=color_blend[2],
+                    )
+                    # H: color: WGPUBlendComponent, alpha: WGPUBlendComponent
+                    c_blend = new_struct_p(
+                        "WGPUBlendState *",
+                        color=c_color_blend,
+                        alpha=c_alpha_blend,
+                    )
                 # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, blend: WGPUBlendState *, writeMask: WGPUColorWriteMaskFlags/int
                 c_color_state = new_struct(
                     "WGPUColorTargetState",
