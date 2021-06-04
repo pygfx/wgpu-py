@@ -661,13 +661,13 @@ class GPUDevice(GPUObjectBase):
                 "format": wgpu.TextureFormat.depth24plus_stencil8,
                 "depth_write_enabled": False,  # optional
                 "depth_compare": wgpu.CompareFunction.always,  # optional
-                "front": {  # optional
+                "stencil_front": {  # optional
                     "compare": wgpu.CompareFunction.equal,
                     "fail_op": wgpu.StencilOperation.keep,
                     "depth_fail_op": wgpu.StencilOperation.keep,
                     "pass_op": wgpu.StencilOperation.keep,
                 },
-                "back": {  # optional
+                "stencil_back": {  # optional
                     "compare": wgpu.CompareFunction.equal,
                     "fail_op": wgpu.StencilOperation.keep,
                     "depth_fail_op": wgpu.StencilOperation.keep,
@@ -690,7 +690,8 @@ class GPUDevice(GPUObjectBase):
                 "alpha_to_coverage_enabled": False  # optional
             }
 
-        Example fragment (FragmentState) dict:
+        Example fragment (FragmentState) dict. The `blend` parameter can be None
+        to disable blending (not all texture formats support blending).
 
         .. code-block:: py
 
