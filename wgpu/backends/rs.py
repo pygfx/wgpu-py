@@ -215,7 +215,7 @@ class GPU(base.GPU):
         # Force Vulkan on Windows, to avoid DX12 which seems to ignore
         # the NVidia control panel settings. I guess Vulkan is more
         # mature than Metal too, so let's just force that for now.
-        # see https://github.com/gfx-rs/wgpu/issues/1416
+        # See https://github.com/gfx-rs/wgpu/issues/1416
         # force_backend = lib.WGPUBackendType_Vulkan
         force_backend = enum_str2int["BackendType"]["Vulkan"]
 
@@ -352,6 +352,11 @@ class GPUAdapter(base.GPUAdapter):
         # Handle default limits
         limits2 = base.DEFAULT_ADAPTER_LIMITS.copy()
         limits2.update(limits or {})
+
+        # Vanilla WGPU does not support interpolating samplers for float32 textures,
+        # which is sad for scientific data in particular. We can enable it
+        # (on the hardware were wgpu-py likely runs) using the feature:
+        # WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
 
         # H: chain: WGPUChainedStruct, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxStorageBuffersPerShaderStage: int, maxStorageBufferBindingSize: int, nativeFeatures: WGPUNativeFeature, label: char*, tracePath: char*
         extras = new_struct_p(

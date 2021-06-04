@@ -492,9 +492,11 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     # Determine sampler type.
     # Note that integer texture types cannot even use a sampler.
     sampler_type = wgpu.SamplerBindingType.filtering
-    if "32float" in texture_format:
-        sampler_type = wgpu.SamplerBindingType.non_filtering
-        texture_sample_type = wgpu.TextureSampleType.unfilterable_float
+    # On Vanilla wgpu, float32 textures cannot use a filtering
+    # (interpolating) texture, but we request a feature so that we can.
+    # if "32float" in texture_format:
+    #     sampler_type = wgpu.SamplerBindingType.non_filtering
+    #     texture_sample_type = wgpu.TextureSampleType.unfilterable_float
 
     # Bindings and layout
     bindings = [
