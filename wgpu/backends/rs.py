@@ -30,6 +30,7 @@ Developer notes and tips:
 
 
 import os
+import sys
 import ctypes
 import logging
 import ctypes.util
@@ -217,7 +218,9 @@ class GPU(base.GPU):
         # mature than Metal too, so let's just force that for now.
         # See https://github.com/gfx-rs/wgpu/issues/1416
         # force_backend = lib.WGPUBackendType_Vulkan
-        force_backend = enum_str2int["BackendType"]["Vulkan"]
+        force_backend = enum_str2int["BackendType"][
+            "Vulkan" if sys.platform.startswith("win") else "Null"
+        ]
 
         # H: chain: WGPUChainedStruct, backend: WGPUBackendType
         extras = new_struct_p(
