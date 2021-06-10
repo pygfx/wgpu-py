@@ -34,7 +34,7 @@ runtime_deps = ["cffi>=1.10"]
 setup(
     name=NAME,
     version=VERSION,
-    packages=find_packages(exclude=["tests", "tests.*", "examples", "examples.*"]),
+    packages=find_packages(exclude=["codegen", "codegen.*", "tests", "tests.*", "examples", "examples.*"]),
     package_data={f"{NAME}.resources": resources_globs},
     python_requires=">=3.6.0",
     install_requires=runtime_deps,
