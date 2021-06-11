@@ -213,14 +213,35 @@ class GPU(base.GPU):
         else:
             surface_id = get_surface_id_from_canvas(canvas)
 
-        # Force Vulkan on Windows, to avoid DX12 which seems to ignore
-        # the NVidia control panel settings. I guess Vulkan is more
-        # mature than Metal too, so let's just force that for now.
+        # Try to read the WGPU_BACKEND_TYPE environment variable to see
+        # if a backend should be forced. When you run into trouble with
+        # the automatic selection of wgpu, you can use this variable
+        # to force a specific backend. For instance, on Windows you
+        # might want to force Vulkan, to avoid DX12 which seems to ignore
+        # the NVidia control panel settings.
         # See https://github.com/gfx-rs/wgpu/issues/1416
-        # force_backend = lib.WGPUBackendType_Vulkan
-        force_backend = enum_str2int["BackendType"][
-            "Vulkan" if sys.platform.startswith("win") else "Null"
-        ]
+        force_backend = enum_str2int["BackendType"]["Null"]
+        if "WGPU_BACKEND_TYPE" in os.environ:
+            try:
+                backend = int(os.environ["WGPU_BACKEND_TYPE"])
+                value = next(
+                    (
+                        key
+                        for key, value in enum_str2int["BackendType"].items()
+                        if value == backend
+                    ),
+                    None,
+                )
+                if not value:
+                    logger.warn(f"Invalid value for WGPU_BACKEND_TYPE: '{backend}'")
+                else:
+                    logger.warn(f"Forcing backend: {value} ({backend})")
+                    force_backend = backend
+            except ValueError:
+                logger.warn(
+                    "Could not parse value for WGPU_BACKEND_TYPE: "
+                    f"{os.environ.get('WGPU_BACKEND_TYPE')}."
+                )
 
         # H: chain: WGPUChainedStruct, backend: WGPUBackendType
         extras = new_struct_p(
