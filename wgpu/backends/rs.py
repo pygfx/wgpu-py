@@ -223,24 +223,13 @@ class GPU(base.GPU):
         force_backend = enum_str2int["BackendType"]["Null"]
         if "WGPU_BACKEND_TYPE" in os.environ:
             try:
-                backend = int(os.environ["WGPU_BACKEND_TYPE"])
-                value = next(
-                    (
-                        key
-                        for key, value in enum_str2int["BackendType"].items()
-                        if value == backend
-                    ),
-                    None,
-                )
-                if not value:
-                    logger.warn(f"Invalid value for WGPU_BACKEND_TYPE: '{backend}'")
-                else:
-                    logger.warn(f"Forcing backend: {value} ({backend})")
-                    force_backend = backend
-            except ValueError:
+                backend = os.environ["WGPU_BACKEND_TYPE"]
+                force_backend = enum_str2int["BackendType"][backend]
+                logger.warn(f"Forcing backend: {backend} ({force_backend})")
+            except KeyError:
                 logger.warn(
-                    "Could not parse value for WGPU_BACKEND_TYPE: "
-                    f"{os.environ.get('WGPU_BACKEND_TYPE')}."
+                    f"Invalid value for WGPU_BACKEND_TYPE: '{backend}'.\n"
+                    f"Valid values are: {list(enum_str2int['BackendType'].keys())}"
                 )
 
         # H: chain: WGPUChainedStruct, backend: WGPUBackendType
