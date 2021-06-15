@@ -76,6 +76,10 @@ is required. One first requests an adapter, which represens a GPU
 implementation on the current system. The device can then be requested
 from the adapter.
 
+WGPU supports a variety of wgpu-backends. By default one is selected automatically.
+This can be overridden by setting the
+`WGPU_BACKEND_TYPE` environment variable to "Vulkan", "Metal", "D3D12", "D3D11", or "OpenGL".
+
 
 .. autoclass:: wgpu.GPU
 
