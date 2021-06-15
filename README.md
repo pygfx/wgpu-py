@@ -43,10 +43,10 @@ a custom build instead, you can set the environment variable `WGPU_LIB_PATH`.
 
 ## Platform requirements
 
-Under the hood, `wgpu` runs on Vulkan or Metal, and eventually also DX12 or OpenGL.
+Under the hood, `wgpu` runs on Vulkan, Metal, or DX12. The wgpu-backend is selected automatically, but can be overridden by setting the `WGPU_BACKEND_TYPE` environment variable to "Vulkan", "Metal", "D3D12", "D3D11", or "OpenGL".
 
-On Windows 10, things should just work. On older Windows versions you may need
-to install the Vulkan drivers (or wait for the DX12 backend to become more mature).
+On Windows 10, things should just work. On older Windows versions you
+may need to install the Vulkan drivers. You may want to force "Vulkan" while "D3D12" is less mature.
 
 On Linux, it's advisable to install the proprietary drivers of your GPU
 (if you have a dedicated GPU). You may need to `apt install mesa-vulkan-drivers`.
