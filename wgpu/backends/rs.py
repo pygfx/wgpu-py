@@ -219,22 +219,23 @@ class GPU(base.GPU):
         # might want to force Vulkan, to avoid DX12 which seems to ignore
         # the NVidia control panel settings.
         # See https://github.com/gfx-rs/wgpu/issues/1416
-        force_backend = enum_str2int["BackendType"]["Null"]
-        if "WGPU_BACKEND_TYPE" in os.environ:
+        force_backend = os.getenv("WGPU_BACKEND_TYPE", "")
+        backend = enum_str2int["BackendType"]["Null"]
+        if force_backend:
             try:
-                backend = os.environ["WGPU_BACKEND_TYPE"]
-                force_backend = enum_str2int["BackendType"][backend]
-                logger.warn(f"Forcing backend: {backend} ({force_backend})")
+                backend = enum_str2int["BackendType"][force_backend]
             except KeyError:
                 logger.warn(
-                    f"Invalid value for WGPU_BACKEND_TYPE: '{backend}'.\n"
+                    f"Invalid value for WGPU_BACKEND_TYPE: '{force_backend}'.\n"
                     f"Valid values are: {list(enum_str2int['BackendType'].keys())}"
                 )
+            else:
+                logger.warn(f"Forcing backend: {force_backend} ({backend})")
 
         # H: chain: WGPUChainedStruct, backend: WGPUBackendType
         extras = new_struct_p(
             "WGPUAdapterExtras *",
-            backend=force_backend,
+            backend=backend,
             # not used: chain
         )
         extras.chain.sType = lib.WGPUSType_AdapterExtras
