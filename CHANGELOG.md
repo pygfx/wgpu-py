@@ -23,6 +23,13 @@ Possible sections in each release:
 No changes yet.
 
 
+### [v0.5.4] - 11-06-2021
+
+Changed:
+
+* The backend selection is automatic by default. To force a backend, the `WGPU_BACKEND_TYPE` evironment variable can be set to e.g. "Vulkan". It could be good to do this on Windows to prevent selection of DX12 for now.
+
+
 ### [v0.5.3] - 04-06-2021
 
 Added:
