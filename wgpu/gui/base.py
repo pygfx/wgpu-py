@@ -16,6 +16,9 @@ class WgpuCanvasInterface(base.GPUCanvasContext):
 
     # NOTE: It is not necessary to actually subclass this class.
 
+    # Whether to present to a surface or to a texture
+    _PRESENT_TO_SURFACE = True
+
     def __init__(self, *args, **kwargs):
         # The args/kwargs are there because we may be mixed with e.g. a Qt widget
         super().__init__(*args, **kwargs)
@@ -72,6 +75,10 @@ class WgpuCanvasInterface(base.GPUCanvasContext):
     def get_swap_chain_preferred_format(self, adapter):
         """Get the preferred swap-chain texture format for this canvas."""
         return "bgra8unorm-srgb"  # seems to be a good default, can be overridden
+
+    def _present(self, texture_view):
+        """Offscreen canvases must implement this and set _PRESENT_TO_SURFACE to False."""
+        raise NotImplementedError()
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):

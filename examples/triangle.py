@@ -72,6 +72,7 @@ def _main(canvas, device):
     # No bind group and layout, we should not create empty ones.
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
+    render_texture_format = canvas.get_swap_chain_preferred_format(device.adapter)
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
         vertex={
@@ -95,7 +96,7 @@ def _main(canvas, device):
             "entry_point": "fs_main",
             "targets": [
                 {
-                    "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                    "format": render_texture_format,
                     "blend": {
                         "color": (
                             wgpu.BlendFactor.one,

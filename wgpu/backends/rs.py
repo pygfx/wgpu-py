@@ -209,8 +209,10 @@ class GPU(base.GPU):
         # able to create a swapchain for it (from this adapter).
         if canvas is None:
             surface_id = ffi.NULL
-        else:
+        elif canvas._PRESENT_TO_SURFACE:
             surface_id = get_surface_id_from_canvas(canvas)
+        else:
+            surface_id = ffi.NULL  # off-screen canvas
 
         # Try to read the WGPU_BACKEND_TYPE environment variable to see
         # if a backend should be forced. When you run into trouble with
