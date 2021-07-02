@@ -1758,38 +1758,6 @@ class GPUSwapChain(GPUObjectBase):
         raise NotImplementedError()  # Present the current texture
 
 
-class GPUSwapChainOffScreen(GPUSwapChain):
-    """Helper class for canvases that render to a texture."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._surface_size = (-1, -1)
-        self._texture = None
-
-    def _create_new_texture_if_needed(self):
-        canvas = self._canvas
-        psize = canvas.get_physical_size()
-        if psize == self._surface_size:
-            return
-        self._surface_size = psize
-
-        self._texture = self._device.create_texture(
-            label="swapchain",
-            size=(max(psize[0], 1), max(psize[1], 1), 1),
-            format=self._format,
-            usage=self._usage | flags.TextureUsage.COPY_SRC,
-        )
-        self._texture_view = self._texture.create_view()
-
-    def __enter__(self):
-        # Get the current texture view, and make sure it is presented when done
-        self._create_new_texture_if_needed()
-        return self._texture_view
-
-    def __exit__(self, type, value, tb):
-        self._canvas._present(self._texture_view)
-
-
 # %% Further non-GPUObject classes
 
 
