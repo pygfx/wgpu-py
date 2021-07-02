@@ -140,7 +140,7 @@ class GPUCanvasContext:
         if self._PRESENT_TO_SURFACE:
             GPUSwapChain = sys.modules[device.__module__].GPUSwapChain  # noqa: N806
         else:
-            GPUSwapChain = GPUSwapChainOffScreen  # noqa: N806
+            GPUSwapChain = GPUSwapChainOffScreen  # noqa: F821, N806
         return GPUSwapChain(
             label, None, device, self, format, usage, compositing_alpha_mode
         )
