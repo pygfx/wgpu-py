@@ -16,6 +16,9 @@ class WgpuCanvasInterface(base.GPUCanvasContext):
 
     # NOTE: It is not necessary to actually subclass this class.
 
+    # Whether to present to a surface or to a texture
+    _PRESENT_TO_SURFACE = True
+
     def __init__(self, *args, **kwargs):
         # The args/kwargs are there because we may be mixed with e.g. a Qt widget
         super().__init__(*args, **kwargs)
@@ -72,6 +75,10 @@ class WgpuCanvasInterface(base.GPUCanvasContext):
     def get_swap_chain_preferred_format(self, adapter):
         """Get the preferred swap-chain texture format for this canvas."""
         return "bgra8unorm-srgb"  # seems to be a good default, can be overridden
+
+    def _present(self, texture_view):
+        """Offscreen canvases must implement this and set _PRESENT_TO_SURFACE to False."""
+        raise NotImplementedError()
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
@@ -165,3 +172,39 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         the FPS is limited to avoid draining CPU and power.
         """
         raise NotImplementedError()
+
+
+class GPUSwapChainOffScreen(base.GPUSwapChain):
+    """Helper class for canvases that render to a texture."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._surface_size = (-1, -1)
+        self._texture = None
+
+    def _create_new_texture_if_needed(self):
+        canvas = self._canvas
+        psize = canvas.get_physical_size()
+        if psize == self._surface_size:
+            return
+        self._surface_size = psize
+
+        self._texture = self._device.create_texture(
+            label="swapchain",
+            size=(max(psize[0], 1), max(psize[1], 1), 1),
+            format=self._format,
+            usage=self._usage | flags.TextureUsage.COPY_SRC,
+        )
+        self._texture_view = self._texture.create_view()
+
+    def __enter__(self):
+        # Get the current texture view, and make sure it is presented when done
+        self._create_new_texture_if_needed()
+        return self._texture_view
+
+    def __exit__(self, type, value, tb):
+        self._canvas._present(self._texture_view)
+
+
+# todo: ugly hack to avoid circular import. Fix that when we refactor swap chain
+base.GPUSwapChainOffScreen = GPUSwapChainOffScreen

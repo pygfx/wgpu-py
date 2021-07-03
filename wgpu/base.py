@@ -137,7 +137,10 @@ class GPUCanvasContext:
             compositing_alpha_mode (CanvasCompositingAlphaMode): Default opaque.
         """
         usage = usage or flags.TextureUsage.RENDER_ATTACHMENT
-        GPUSwapChain = sys.modules[device.__module__].GPUSwapChain  # noqa: N806
+        if self._PRESENT_TO_SURFACE:
+            GPUSwapChain = sys.modules[device.__module__].GPUSwapChain  # noqa: N806
+        else:
+            GPUSwapChain = GPUSwapChainOffScreen  # noqa: F821, N806
         return GPUSwapChain(
             label, None, device, self, format, usage, compositing_alpha_mode
         )
