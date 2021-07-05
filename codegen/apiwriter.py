@@ -133,12 +133,15 @@ class Struct:
 
 
 def write_structs():
+    ignore = ["ImageCopyTextureTagged"]
     idl = get_idl_parser()
     n = len(idl.structs)
     # Generate code
     pylines = [structs_preamble]
     pylines.append(f"# There are {n} structs\n")
     for name, d in idl.structs.items():
+        if name in ignore:
+            continue
         pylines.append(f'{name} = Struct(\n    "{name}",')
         for field in d.values():
             key = to_snake_case(field.name)

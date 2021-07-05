@@ -318,16 +318,6 @@ ImageCopyTexture = Struct(
     aspect="enums.TextureAspect",
 )  #:
 
-ImageCopyTextureTagged = Struct(
-    "ImageCopyTextureTagged",
-    texture="GPUTexture",
-    mip_level="int",
-    origin="Union[List[int], structs.Origin3D]",
-    aspect="enums.TextureAspect",
-    color_space="enums.PredefinedColorSpace",
-    premultiplied_alpha="bool",
-)  #:
-
 ImageCopyExternalImage = Struct(
     "ImageCopyExternalImage",
     source="Union[memoryview, object, object]",
