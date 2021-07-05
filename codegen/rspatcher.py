@@ -65,6 +65,8 @@ def write_mappings():
     idl = get_idl_parser()
     hp = get_h_parser()
 
+    field_map = {"discard": "clear"}
+
     # Init generated code
     pylines = [mappings_preamble]
 
@@ -77,7 +79,10 @@ def write_mappings():
             continue
         hp_enum = {key.lower(): val for key, val in hp.enums[name].items()}
         for ikey in idl.enums[name].values():
-            hkey = ikey.lower().replace("-", "")
+            if ikey in field_map:
+                hkey = field_map[ikey]
+            else:
+                hkey = ikey.lower().replace("-", "")
             if hkey in hp_enum:
                 enummap[name + "." + ikey] = hp_enum[hkey]
             else:

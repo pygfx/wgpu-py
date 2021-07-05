@@ -73,7 +73,7 @@ enummap = {
     "StencilOperation.zero": 1,
     "StorageTextureAccess.read-only": 1,
     "StorageTextureAccess.write-only": 2,
-    "StoreOp.clear": 1,
+    "StoreOp.discard": 1,
     "StoreOp.store": 0,
     "TextureAspect.all": 0,
     "TextureAspect.depth-only": 2,

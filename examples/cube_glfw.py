@@ -22,6 +22,11 @@ canvas = WgpuCanvas(title="wgpu cube with GLFW")
 adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
 device = adapter.request_device()
 
+# Prepare present context
+present_context = canvas.get_context()
+render_texture_format = present_context.get_preferred_format(device.adapter)
+present_context.configure(device=device, format=render_texture_format)
+
 
 # %% Generate data
 
@@ -290,7 +295,7 @@ render_pipeline = device.create_render_pipeline(
         "entry_point": "fs_main",
         "targets": [
             {
-                "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                "format": render_texture_format,
                 "blend": {
                     "alpha": (
                         wgpu.BlendFactor.one,
@@ -310,8 +315,6 @@ render_pipeline = device.create_render_pipeline(
 
 
 # %% Setup the render function
-
-swap_chain = canvas.configure_swap_chain(device=device)
 
 
 def draw_frame():
@@ -351,32 +354,32 @@ def draw_frame():
         data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
     )
 
-    with swap_chain as current_texture_view:
-        command_encoder = device.create_command_encoder()
-        command_encoder.copy_buffer_to_buffer(
-            tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
-        )
+    current_texture_view = present_context.get_current_texture()
+    command_encoder = device.create_command_encoder()
+    command_encoder.copy_buffer_to_buffer(
+        tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
+    )
 
-        render_pass = command_encoder.begin_render_pass(
-            color_attachments=[
-                {
-                    "view": current_texture_view,
-                    "resolve_target": None,
-                    "load_value": (0.1, 0.3, 0.2, 1),
-                    "store_op": wgpu.StoreOp.store,
-                }
-            ],
-        )
+    render_pass = command_encoder.begin_render_pass(
+        color_attachments=[
+            {
+                "view": current_texture_view,
+                "resolve_target": None,
+                "load_value": (0.1, 0.3, 0.2, 1),
+                "store_op": wgpu.StoreOp.store,
+            }
+        ],
+    )
 
-        render_pass.set_pipeline(render_pipeline)
-        render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
-        render_pass.set_vertex_buffer(0, vertex_buffer)
-        for bind_group_id, bind_group in enumerate(bind_groups):
-            render_pass.set_bind_group(bind_group_id, bind_group, [], 0, 99)
-        render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
+    render_pass.set_pipeline(render_pipeline)
+    render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
+    render_pass.set_vertex_buffer(0, vertex_buffer)
+    for bind_group_id, bind_group in enumerate(bind_groups):
+        render_pass.set_bind_group(bind_group_id, bind_group, [], 0, 99)
+    render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
 
-        render_pass.end_pass()
-        device.queue.submit([command_encoder.finish()])
+    render_pass.end_pass()
+    device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw()
 

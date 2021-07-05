@@ -31,10 +31,14 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
 
 
 def test_base_canvas_context():
-    assert issubclass(wgpu.gui.WgpuCanvasInterface, wgpu.base.GPUCanvasContext)
+    assert not issubclass(
+        wgpu.gui.WgpuCanvasInterface, wgpu.base.GPUPresentationContext
+    )
+    assert hasattr(wgpu.gui.WgpuCanvasInterface, "get_context")
     # Provides good default already
-    ctx = wgpu.GPUCanvasContext()
-    assert ctx.get_swap_chain_preferred_format(None) == "bgra8unorm-srgb"
+    canvas = wgpu.gui.WgpuCanvasInterface()
+    ctx = wgpu.GPUPresentationContext(canvas)
+    assert ctx.get_preferred_format(None) == "bgra8unorm-srgb"
 
 
 def test_canvas_logging(caplog):
@@ -74,9 +78,7 @@ def test_canvas_logging(caplog):
     assert text.count("division by zero") == 4
 
 
-class MyOffscreenCanvas(wgpu.gui.WgpuCanvasBase):
-    _PRESENT_TO_SURFACE = False
-
+class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvas):
     def get_pixel_ratio(self):
         return 1
 
@@ -86,14 +88,11 @@ class MyOffscreenCanvas(wgpu.gui.WgpuCanvasBase):
     def get_physical_size(self):
         return 100, 100
 
-    def get_swap_chain_preferred_format(self, adapter):
-        return "rgba8unorm"
-
     def _request_draw(self):
         # Note: this would normaly schedule a call in a later event loop iteration
         self._draw_frame_and_present()
 
-    def _present(self, texture_view):
+    def present(self, texture_view):
         device = texture_view._device
         size = texture_view.size
         bytes_per_pixel = 4
@@ -118,24 +117,25 @@ def test_offscreen_canvas():
 
     canvas = MyOffscreenCanvas()
     device = wgpu.utils.get_default_device()
-    swap_chain = canvas.configure_swap_chain(device=device)
+    present_context = canvas.get_context()
+    present_context.configure(device=device, format=None)
 
     @canvas.request_draw
     def draw_frame():
-        with swap_chain as current_texture_view:
-            command_encoder = device.create_command_encoder()
-            render_pass = command_encoder.begin_render_pass(
-                color_attachments=[
-                    {
-                        "view": current_texture_view,
-                        "resolve_target": None,
-                        "load_value": (0, 1, 0, 1),  # LoadOp.load or color
-                        "store_op": wgpu.StoreOp.store,
-                    }
-                ],
-            )
-            render_pass.end_pass()
-            device.queue.submit([command_encoder.finish()])
+        current_texture_view = present_context.get_current_texture()
+        command_encoder = device.create_command_encoder()
+        render_pass = command_encoder.begin_render_pass(
+            color_attachments=[
+                {
+                    "view": current_texture_view,
+                    "resolve_target": None,
+                    "load_value": (0, 1, 0, 1),  # LoadOp.load or color
+                    "store_op": wgpu.StoreOp.store,
+                }
+            ],
+        )
+        render_pass.end_pass()
+        device.queue.submit([command_encoder.finish()])
 
     assert canvas.array.shape == (100, 100, 4)
     assert np.all(canvas.array[:, :, 0] == 0)

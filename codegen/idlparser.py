@@ -202,6 +202,7 @@ class IdlParser:
             "boolean": "bool",
             "object": "dict",
             "ImageBitmap": "memoryview",
+            "GPUPipelineConstantValue": "float",
         }
         name = pythonmap.get(name, name)
 
@@ -391,7 +392,7 @@ class IdlParser:
         """
 
         # Drop some toplevel names
-        for name in ["NavigatorGPU", "GPUAdapterLimits", "GPUSupportedFeatures"]:
+        for name in ["NavigatorGPU", "GPUSupportedLimits", "GPUSupportedFeatures"]:
             self._interfaces.pop(name, None)
 
         # Divide flags and actual class definitions

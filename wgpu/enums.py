@@ -308,7 +308,7 @@ LoadOp = Enum(
 StoreOp = Enum(
     "StoreOp",
     store="store",
-    clear="clear",
+    discard="discard",
 )  #:
 
 QueryType = Enum(

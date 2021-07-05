@@ -3,35 +3,30 @@ import sys
 import logging
 import ctypes.util
 
-from .. import base, GPUDevice, flags, enums
-
-
 logger = logging.getLogger("wgpu")
 
 
-class WgpuCanvasInterface(base.GPUCanvasContext):
+class WgpuCanvasInterface:
     """This is the interface that a canvas object must implement in order
     to be a valid canvas that wgpu can work with.
     """
 
-    # NOTE: It is not necessary to actually subclass this class.
-
-    # Whether to present to a surface or to a texture
-    _PRESENT_TO_SURFACE = True
+    # NOTE: This is an interface - it should not be necessary to actually subclass
 
     def __init__(self, *args, **kwargs):
         # The args/kwargs are there because we may be mixed with e.g. a Qt widget
         super().__init__(*args, **kwargs)
+        self._present_context = None
 
     def get_window_id(self):
-        """Get the native window id. This is used by the backends
-        to obtain a surface id.
+        """Get the native window id. This is used to obtain a surface id,
+        so that wgpu can render to the region of the screen occupied by the canvas.
         """
         raise NotImplementedError()
 
     def get_display_id(self):
-        """Get the native display id on Linux. This is used by the backends
-        to obtain a surface id on Linux. The default implementation calls into
+        """Get the native display id on Linux. This is needed in addition to the
+        window id to obtain a surface id. The default implementation calls into
         the X11 lib to get the display id.
         """
         # Re-use to avoid creating loads of id's
@@ -54,39 +49,31 @@ class WgpuCanvasInterface(base.GPUCanvasContext):
         return self._display_id
 
     def get_physical_size(self):
-        """Get the physical size in integer pixels."""
+        """Get the physical size of the canvas in integer pixels."""
         raise NotImplementedError()
 
-    def configure_swap_chain(
-        self,
-        *,
-        label="",
-        device: "GPUDevice",
-        format: "enums.TextureFormat" = None,
-        usage: "flags.TextureUsage" = None,
-    ):
-        """Obtain a swap-chain object."""
-        # Let's be nice and allow not-specifying the format
-        format = format or self.get_swap_chain_preferred_format(device.adapter)
-        return super().configure_swap_chain(
-            label=label, device=device, format=format, usage=usage
-        )
-
-    def get_swap_chain_preferred_format(self, adapter):
-        """Get the preferred swap-chain texture format for this canvas."""
-        return "bgra8unorm-srgb"  # seems to be a good default, can be overridden
-
-    def _present(self, texture_view):
-        """Offscreen canvases must implement this and set _PRESENT_TO_SURFACE to False."""
-        raise NotImplementedError()
+    def get_context(self, kind="gpupresent"):
+        """Get the GPUPresentationContext object corresponding to this canvas,
+        which can be used to e.g. obtain a texture to render to.
+        """
+        # Note that this function is analog to HtmlCanvas.get_context(), except
+        # here the only valid arg is 'gpupresent', which is also made the default.
+        assert kind == "gpupresent"
+        if self._present_context is None:
+            # Get the active wgpu backend module
+            backend_module = sys.modules["wgpu"].GPU.__module__
+            # Instantiate the context
+            PC = sys.modules[backend_module].GPUPresentationContext  # noqa: N806
+            self._present_context = PC(self)
+        return self._present_context
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
-    """An abstract class, extending :class:`WgpuCanvasInterface`,
+    """An abstract class extending :class:`WgpuCanvasInterface`,
     that provides a base canvas for various GUI toolkits, so
     that basic canvas functionality is available via a common API.
 
-    It convenient, but not required to use this class (or any of its
+    It is convenient - but not required - to use this class (or any of its
     subclasses) to use wgpu-py.
     """
 
@@ -110,7 +97,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._request_draw()
 
     def _draw_frame_and_present(self):
-        """Draw the frame and present the swapchain. Errors are logged to the
+        """Draw the frame and present the result. Errors are logged to the
         "wgpu" logger. Should be called by the subclass at an appropriate time.
         """
         # Perform the user-defined drawing code. When this errors,
@@ -119,6 +106,11 @@ class WgpuCanvasBase(WgpuCanvasInterface):
             self.draw_frame()
         except Exception as err:
             self._log_exception("Draw error", err)
+        try:
+            if self._present_context:
+                self._present_context.present()
+        except Exception as err:
+            self._log_exception("Present error", err)
 
     def _log_exception(self, kind, err):
         """Log the given exception instance, but only log a one-liner for
@@ -172,39 +164,3 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         the FPS is limited to avoid draining CPU and power.
         """
         raise NotImplementedError()
-
-
-class GPUSwapChainOffScreen(base.GPUSwapChain):
-    """Helper class for canvases that render to a texture."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._surface_size = (-1, -1)
-        self._texture = None
-
-    def _create_new_texture_if_needed(self):
-        canvas = self._canvas
-        psize = canvas.get_physical_size()
-        if psize == self._surface_size:
-            return
-        self._surface_size = psize
-
-        self._texture = self._device.create_texture(
-            label="swapchain",
-            size=(max(psize[0], 1), max(psize[1], 1), 1),
-            format=self._format,
-            usage=self._usage | flags.TextureUsage.COPY_SRC,
-        )
-        self._texture_view = self._texture.create_view()
-
-    def __enter__(self):
-        # Get the current texture view, and make sure it is presented when done
-        self._create_new_texture_if_needed()
-        return self._texture_view
-
-    def __exit__(self, type, value, tb):
-        self._canvas._present(self._texture_view)
-
-
-# todo: ugly hack to avoid circular import. Fix that when we refactor swap chain
-base.GPUSwapChainOffScreen = GPUSwapChainOffScreen

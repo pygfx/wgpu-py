@@ -321,7 +321,9 @@ class IdlPatcherMixin:
         argtypes = [arg.split("=")[0].split()[-2] for arg in args]
 
         # If one arg that is a dict, flatten dict to kwargs
-        if len(argtypes) == 1 and argtypes[0].endswith(("Options", "Descriptor")):
+        if len(argtypes) == 1 and argtypes[0].endswith(
+            ("Options", "Descriptor", "Configuration")
+        ):
             assert argtypes[0].startswith("GPU")
             fields = self.idl.structs[argtypes[0][3:]].values()  # struct fields
             py_args = [self._arg_from_struct_field(field) for field in fields]

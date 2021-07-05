@@ -136,6 +136,7 @@ def test_glfw_canvas_render_custom_canvas():
             glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
             glfw.window_hint(glfw.RESIZABLE, True)
             self.window = glfw.create_window(300, 200, "canvas", None, None)
+            self._present_context = None
 
         def get_window_id(self):
             if sys.platform.startswith("win"):
@@ -158,12 +159,12 @@ def test_glfw_canvas_render_custom_canvas():
             psize = glfw.get_framebuffer_size(self.window)
             return int(psize[0]), int(psize[1])
 
-        def configure_swap_chain(self, *, device):
-            format = "bgra8unorm-srgb"
-            usage = wgpu.TextureUsage.RENDER_ATTACHMENT
-            return wgpu.GPUCanvasContext.configure_swap_chain(
-                self, device=device, format=format, usage=usage
-            )
+        def get_context(self):
+            if self._present_context is None:
+                backend_module = sys.modules["wgpu"].GPU.__module__
+                PC = sys.modules[backend_module].GPUPresentationContext  # noqa N806
+                self._present_context = PC(self)
+            return self._present_context
 
     canvas = CustomCanvas()
 
@@ -175,6 +176,7 @@ def test_glfw_canvas_render_custom_canvas():
         time.sleep(0.01)
         glfw.poll_events()
         draw_frame()
+        canvas.get_context().present()  # WgpuCanvasBase normally automates this
 
     glfw.hide_window(canvas.window)
 
@@ -184,6 +186,10 @@ def _get_draw_function(device, canvas):
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     shader = device.create_shader_module(code=shader_source)
+
+    present_context = canvas.get_context()
+    render_texture_format = present_context.get_preferred_format(device.adapter)
+    present_context.configure(device=device, format=render_texture_format)
 
     render_pipeline = device.create_render_pipeline(
         label="my-debug-pipeline",
@@ -210,7 +216,7 @@ def _get_draw_function(device, canvas):
             "entry_point": "fs_main",
             "targets": [
                 {
-                    "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                    "format": render_texture_format,
                     "blend": {
                         "color": (
                             wgpu.BlendFactor.one,
@@ -228,26 +234,24 @@ def _get_draw_function(device, canvas):
         },
     )
 
-    swap_chain = canvas.configure_swap_chain(device=device)
-
     def draw_frame():
-        with swap_chain as current_texture_view:
-            command_encoder = device.create_command_encoder()
-            assert current_texture_view.size
-            ca = {
-                "view": current_texture_view,
-                "resolve_target": None,
-                "load_value": (0, 0, 0, 0),
-                "store_op": wgpu.StoreOp.store,
-            }
-            render_pass = command_encoder.begin_render_pass(
-                color_attachments=[ca],
-            )
+        current_texture_view = present_context.get_current_texture()
+        command_encoder = device.create_command_encoder()
+        assert current_texture_view.size
+        ca = {
+            "view": current_texture_view,
+            "resolve_target": None,
+            "load_value": (0, 0, 0, 0),
+            "store_op": wgpu.StoreOp.store,
+        }
+        render_pass = command_encoder.begin_render_pass(
+            color_attachments=[ca],
+        )
 
-            render_pass.set_pipeline(render_pipeline)
-            render_pass.draw(4, 1, 0, 0)
-            render_pass.end_pass()
-            device.queue.submit([command_encoder.finish()])
+        render_pass.set_pipeline(render_pipeline)
+        render_pass.draw(4, 1, 0, 0)
+        render_pass.end_pass()
+        device.queue.submit([command_encoder.finish()])
 
     return draw_frame
 
