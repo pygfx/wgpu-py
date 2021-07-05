@@ -316,6 +316,7 @@ render_pipeline = device.create_render_pipeline(
 
 # %% Setup the render function
 
+
 def draw_frame():
 
     # Update uniform transform

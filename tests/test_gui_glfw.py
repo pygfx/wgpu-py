@@ -162,8 +162,8 @@ def test_glfw_canvas_render_custom_canvas():
         def get_context(self):
             if self._present_context is None:
                 backend_module = sys.modules["wgpu"].GPU.__module__
-                GPUPresentationContext = sys.modules[backend_module].GPUPresentationContext
-                self._present_context = GPUPresentationContext(self)
+                PC = sys.modules[backend_module].GPUPresentationContext  # noqa N806
+                self._present_context = PC(self)
             return self._present_context
 
     canvas = CustomCanvas()
@@ -186,6 +186,10 @@ def _get_draw_function(device, canvas):
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     shader = device.create_shader_module(code=shader_source)
+
+    present_context = canvas.get_context()
+    render_texture_format = present_context.get_preferred_format(device.adapter)
+    present_context.configure(device=device, format=render_texture_format)
 
     render_pipeline = device.create_render_pipeline(
         label="my-debug-pipeline",
@@ -212,7 +216,7 @@ def _get_draw_function(device, canvas):
             "entry_point": "fs_main",
             "targets": [
                 {
-                    "format": wgpu.TextureFormat.bgra8unorm_srgb,
+                    "format": render_texture_format,
                     "blend": {
                         "color": (
                             wgpu.BlendFactor.one,
@@ -229,10 +233,6 @@ def _get_draw_function(device, canvas):
             ],
         },
     )
-
-    present_context = canvas.get_context()
-    render_texture_format = present_context.get_preferred_format(device.adapter)
-    present_context.configure(device=device, format=None)
 
     def draw_frame():
         current_texture_view = present_context.get_current_texture()

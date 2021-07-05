@@ -3,26 +3,24 @@ from ..gui.base import WgpuCanvasBase
 
 
 class WgpuOffscreenCanvas(WgpuCanvasBase):
-    """ Base class for off-screen canvases, providing a custom presentation
+    """Base class for off-screen canvases, providing a custom presentation
     context that renders to a tetxure instead of a surface/screen.
     The resulting texture view is passed to the ``present()`` method.
     """
 
     def get_window_id(self):
-        """ This canvas does not correspond to an on-screen window.
-        """
+        """This canvas does not correspond to an on-screen window."""
         return None
 
-    def get_context(self, kind='gpupresent'):
-        """ Get the GPUPresentationContext object to obtain a texture to render to.
-        """
+    def get_context(self, kind="gpupresent"):
+        """Get the GPUPresentationContext object to obtain a texture to render to."""
         assert kind == "gpupresent"
         if self._present_context is None:
             self._present_context = GPUPresentationContextOffline(self)
         return self._present_context
 
     def present(self, texture_view):
-        """ Method that gets called at the end of each draw event. Subclasses
+        """Method that gets called at the end of each draw event. Subclasses
         should provide the approproate implementation.
         """
         pass

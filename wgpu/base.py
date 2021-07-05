@@ -14,7 +14,6 @@ Developer notes and tips:
 
 """
 
-import sys
 import weakref
 import logging
 from typing import List, Dict
@@ -267,7 +266,7 @@ class GPUAdapter:
     # IDL: readonly attribute boolean isSoftware;
     @property
     def is_software(self):
-        """ Whether this adapter runs on software (rather than dedicated hardware)."""
+        """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._properties.get("adapterType", "").lower() in ("software", "cpu")
 
 

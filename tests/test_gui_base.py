@@ -31,7 +31,9 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
 
 
 def test_base_canvas_context():
-    assert not issubclass(wgpu.gui.WgpuCanvasInterface, wgpu.base.GPUPresentationContext)
+    assert not issubclass(
+        wgpu.gui.WgpuCanvasInterface, wgpu.base.GPUPresentationContext
+    )
     assert hasattr(wgpu.gui.WgpuCanvasInterface, "get_context")
     # Provides good default already
     canvas = wgpu.gui.WgpuCanvasInterface()
@@ -77,7 +79,6 @@ def test_canvas_logging(caplog):
 
 
 class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvas):
-
     def get_pixel_ratio(self):
         return 1
 
