@@ -259,51 +259,52 @@ def render_to_screen(
         },
     )
 
-    swap_chain = canvas.configure_swap_chain(device=device)
+    present_context = canvas.get_context()
+    present_context.configure(device=device, format=None)
 
     def draw_frame():
-        with swap_chain as current_texture_view:
-            command_encoder = device.create_command_encoder()
+        current_texture_view = present_context.get_current_texture()
+        command_encoder = device.create_command_encoder()
 
-            ca = color_attachment or {
-                "resolve_target": None,
-                "load_value": (0, 0, 0, 0),  # LoadOp.load or color
-                "store_op": wgpu.StoreOp.store,
-            }
-            ca["view"] = current_texture_view
-            render_pass = command_encoder.begin_render_pass(
-                color_attachments=[ca],
-                depth_stencil_attachment=depth_stencil_attachment,
-                occlusion_query_set=None,
-            )
-            render_pass.push_debug_group("foo")
+        ca = color_attachment or {
+            "resolve_target": None,
+            "load_value": (0, 0, 0, 0),  # LoadOp.load or color
+            "store_op": wgpu.StoreOp.store,
+        }
+        ca["view"] = current_texture_view
+        render_pass = command_encoder.begin_render_pass(
+            color_attachments=[ca],
+            depth_stencil_attachment=depth_stencil_attachment,
+            occlusion_query_set=None,
+        )
+        render_pass.push_debug_group("foo")
 
-            render_pass.insert_debug_marker("setting pipeline")
-            render_pass.set_pipeline(render_pipeline)
-            render_pass.insert_debug_marker("setting bind group")
-            render_pass.set_bind_group(
-                0, bind_group, [], 0, 999999
-            )  # last 2 elements not used
-            for slot, vbo in enumerate(vbos):
-                render_pass.insert_debug_marker(f"setting vbo {slot}")
-                render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)
-            render_pass.insert_debug_marker("invoking callback")
-            renderpass_callback(render_pass)
-            render_pass.insert_debug_marker("draw!")
-            if ibo is None:
-                if indirect_buffer is None:
-                    render_pass.draw(4, 1, 0, 0)
-                else:
-                    render_pass.draw_indirect(indirect_buffer, 0)
+        render_pass.insert_debug_marker("setting pipeline")
+        render_pass.set_pipeline(render_pipeline)
+        render_pass.insert_debug_marker("setting bind group")
+        render_pass.set_bind_group(
+            0, bind_group, [], 0, 999999
+        )  # last 2 elements not used
+        for slot, vbo in enumerate(vbos):
+            render_pass.insert_debug_marker(f"setting vbo {slot}")
+            render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)
+        render_pass.insert_debug_marker("invoking callback")
+        renderpass_callback(render_pass)
+        render_pass.insert_debug_marker("draw!")
+        if ibo is None:
+            if indirect_buffer is None:
+                render_pass.draw(4, 1, 0, 0)
             else:
-                render_pass.set_index_buffer(ibo, wgpu.IndexFormat.uint32, 0, ibo.size)
-                if indirect_buffer is None:
-                    render_pass.draw_indexed(6, 1, 0, 0, 0)
-                else:
-                    render_pass.draw_indexed_indirect(indirect_buffer, 0)
-            render_pass.pop_debug_group()
-            render_pass.end_pass()
-            device.queue.submit([command_encoder.finish()])
+                render_pass.draw_indirect(indirect_buffer, 0)
+        else:
+            render_pass.set_index_buffer(ibo, wgpu.IndexFormat.uint32, 0, ibo.size)
+            if indirect_buffer is None:
+                render_pass.draw_indexed(6, 1, 0, 0, 0)
+            else:
+                render_pass.draw_indexed_indirect(indirect_buffer, 0)
+        render_pass.pop_debug_group()
+        render_pass.end_pass()
+        device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw(draw_frame)
 

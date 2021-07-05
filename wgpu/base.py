@@ -267,7 +267,8 @@ class GPUAdapter:
     # IDL: readonly attribute boolean isSoftware;
     @property
     def is_software(self):
-        raise NotImplementedError()
+        """ Whether this adapter runs on software (rather than dedicated hardware)."""
+        return self._properties.get("adapterType", "").lower() in ("software", "cpu")
 
 
 class GPUObjectBase:
