@@ -4,7 +4,7 @@
 
 # flake8: noqa
 
-# There are 169 enum mappings
+# There are 168 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
@@ -73,7 +73,6 @@ enummap = {
     "StencilOperation.zero": 1,
     "StorageTextureAccess.read-only": 1,
     "StorageTextureAccess.write-only": 2,
-    "StoreOp.clear": 1,
     "StoreOp.store": 0,
     "TextureAspect.all": 0,
     "TextureAspect.depth-only": 2,

@@ -23,18 +23,19 @@ class Struct:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 52 structs
+# There are 53 structs
 
 RequestAdapterOptions = Struct(
     "RequestAdapterOptions",
     power_preference="enums.PowerPreference",
+    force_software="bool",
 )  #:
 
 DeviceDescriptor = Struct(
     "DeviceDescriptor",
     label="str",
-    non_guaranteed_features="List[enums.FeatureName]",
-    non_guaranteed_limits="Dict[str, int]",
+    required_features="List[enums.FeatureName]",
+    required_limits="Dict[str, int]",
 )  #:
 
 BufferDescriptor = Struct(
@@ -174,6 +175,7 @@ ProgrammableStage = Struct(
     "ProgrammableStage",
     module="GPUShaderModule",
     entry_point="str",
+    constants="Dict[str, float]",
 )  #:
 
 ComputePipelineDescriptor = Struct(
@@ -214,6 +216,7 @@ FragmentState = Struct(
     "FragmentState",
     module="GPUShaderModule",
     entry_point="str",
+    constants="Dict[str, float]",
     targets="List[structs.ColorTargetState]",
 )  #:
 
@@ -263,6 +266,7 @@ VertexState = Struct(
     "VertexState",
     module="GPUShaderModule",
     entry_point="str",
+    constants="Dict[str, float]",
     buffers="List[structs.VertexBufferLayout]",
 )  #:
 
@@ -312,6 +316,16 @@ ImageCopyTexture = Struct(
     mip_level="int",
     origin="Union[List[int], structs.Origin3D]",
     aspect="enums.TextureAspect",
+)  #:
+
+ImageCopyTextureTagged = Struct(
+    "ImageCopyTextureTagged",
+    texture="GPUTexture",
+    mip_level="int",
+    origin="Union[List[int], structs.Origin3D]",
+    aspect="enums.TextureAspect",
+    color_space="enums.PredefinedColorSpace",
+    premultiplied_alpha="bool",
 )  #:
 
 ImageCopyExternalImage = Struct(
@@ -373,13 +387,14 @@ QuerySetDescriptor = Struct(
     pipeline_statistics="List[enums.PipelineStatisticName]",
 )  #:
 
-SwapChainDescriptor = Struct(
-    "SwapChainDescriptor",
-    label="str",
+PresentationConfiguration = Struct(
+    "PresentationConfiguration",
     device="GPUDevice",
     format="enums.TextureFormat",
     usage="flags.TextureUsage",
+    color_space="enums.PredefinedColorSpace",
     compositing_alpha_mode="enums.CanvasCompositingAlphaMode",
+    size="structs.Extent3D",
 )  #:
 
 UncapturedErrorEventInit = Struct(

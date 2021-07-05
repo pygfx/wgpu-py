@@ -15,6 +15,7 @@ Developer notes and tips:
 """
 
 import sys
+import weakref
 import logging
 from typing import List, Dict
 
@@ -51,8 +52,7 @@ __all__ = [
     "GPURenderBundleEncoder",
     "GPUQueue",
     "GPUQuerySet",
-    "GPUCanvasContext",
-    "GPUSwapChain",
+    "GPUPresentationContext",
     "GPUDeviceLostInfo",
     "GPUOutOfMemoryError",
     "GPUValidationError",
@@ -115,40 +115,79 @@ class GPU:
         )  # no-cover
 
 
-class GPUCanvasContext:
-    """We've made this part of device, but maybe we need to make it part of canvas?"""
+class GPUPresentationContext:
+    """A context object associated with a canvas, to present what has been drawn."""
 
-    # IDL: GPUSwapChain configureSwapChain(GPUSwapChainDescriptor descriptor);
-    def configure_swap_chain(
+    def __init__(self, canvas):
+        self._canvas_ref = weakref.ref(canvas)
+
+    def _get_canvas(self):
+        """Allows subclasses to obtain the canvas object."""
+        return self._canvas_ref()
+
+    # IDL: undefined configure(GPUPresentationConfiguration configuration);
+    def configure(
         self,
         *,
-        label="",
         device: "GPUDevice",
         format: "enums.TextureFormat",
         usage: "flags.TextureUsage" = 0x10,
+        color_space: "enums.PredefinedColorSpace" = "srgb",
         compositing_alpha_mode: "enums.CanvasCompositingAlphaMode" = "opaque",
+        size: "structs.Extent3D" = None,
     ):
-        """Get a :class:`GPUSwapChain` object for this canvas.
+        """Configures the presentation context for the associated canvas.
+        Destroys any textures produced with a previous configuration.
 
         Arguments:
             device (WgpuDevice): The GPU device object.
             format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
+                Default uses the preferred_format.
             usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
+            color_space (PredefinedColorSpace): Default "srgb".
             compositing_alpha_mode (CanvasCompositingAlphaMode): Default opaque.
+            size: The 3D size of the texture to draw to. Default use canvas' physical size.
         """
-        usage = usage or flags.TextureUsage.RENDER_ATTACHMENT
-        if self._PRESENT_TO_SURFACE:
-            GPUSwapChain = sys.modules[device.__module__].GPUSwapChain  # noqa: N806
-        else:
-            GPUSwapChain = GPUSwapChainOffScreen  # noqa: F821, N806
-        return GPUSwapChain(
-            label, None, device, self, format, usage, compositing_alpha_mode
-        )
+        self.unconfigure()
+        self._device = device
+        self._format = format or self.get_preferred_format(device.adapter)
+        self._usage = usage or flags.TextureUsage.RENDER_ATTACHMENT
+        self._color_space = color_space
+        self._compositing_alpha_mode = compositing_alpha_mode
+        self._size = size
 
-    # IDL: GPUTextureFormat getSwapChainPreferredFormat(GPUAdapter adapter);
-    def get_swap_chain_preferred_format(self, adapter):
+    # IDL: undefined unconfigure();
+    def unconfigure(self):
+        """Removes the presentation context configuration.
+        Destroys any textures produced while configured."""
+        self._device = None
+        self._format = None
+        self._usage = None
+        self._color_space = None
+        self._compositing_alpha_mode = None
+        self._size = None
+
+    # IDL: GPUTextureFormat getPreferredFormat(GPUAdapter adapter);
+    def get_preferred_format(self, adapter):
         """Get the preferred swap chain format."""
         return "bgra8unorm-srgb"  # seems to be a good default
+
+    # IDL: GPUTexture getCurrentTexture();
+    def get_current_texture(self):
+        """Get the ``GPUTexture`` that will be composited to the canvas
+        by the context next.
+
+        NOTE: for the time being, this could return a ``GPUTextureView`` instead.
+        """
+        raise NotImplementedError()
+
+    @apidiff.add("Present method is exposed")
+    def present(self):
+        """Present what has been drawn to the current texture, by compositing it
+        to the canvas. Note that a canvas based on ``WgpuCanvasBase`` will call this
+        method automatically at the end of each draw event.
+        """
+        raise NotImplementedError()
 
 
 class GPUAdapter:
@@ -179,7 +218,7 @@ class GPUAdapter:
         """A tuple of supported feature names."""
         return self._features
 
-    # IDL: [SameObject] readonly attribute GPUAdapterLimits limits;
+    # IDL: [SameObject] readonly attribute GPUSupportedLimits limits;
     @property
     def limits(self):
         """A dict with the adapter limits."""
@@ -196,15 +235,15 @@ class GPUAdapter:
         self,
         *,
         label="",
-        non_guaranteed_features: "List[enums.FeatureName]" = [],
-        non_guaranteed_limits: "Dict[str, int]" = {},
+        required_features: "List[enums.FeatureName]" = [],
+        required_limits: "Dict[str, int]" = {},
     ):
         """Request a :class:`GPUDevice` from the adapter.
 
         Arguments:
             label (str): A human readable label. Optional.
-            non_guaranteed_features (list of str): the features (extensions) that you need. Default [].
-            non_guaranteed_limits (dict): the various limits that you need. Default {}.
+            required_features (list of str): the features (extensions) that you need. Default [].
+            required_limits (dict): the various limits that you need. Default {}.
         """
         raise NotImplementedError()
 
@@ -213,8 +252,8 @@ class GPUAdapter:
         self,
         *,
         label="",
-        non_guaranteed_features: "List[enums.FeatureName]" = [],
-        non_guaranteed_limits: "Dict[str, int]" = {},
+        required_features: "List[enums.FeatureName]" = [],
+        required_limits: "Dict[str, int]" = {},
     ):
         """Async version of ``request_device()``."""
         raise NotImplementedError()
@@ -224,6 +263,11 @@ class GPUAdapter:
 
     def __del__(self):
         self._destroy()
+
+    # IDL: readonly attribute boolean isSoftware;
+    @property
+    def is_software(self):
+        raise NotImplementedError()
 
 
 class GPUObjectBase:
@@ -286,7 +330,7 @@ class GPUDevice(GPUObjectBase):
         """
         return self._features
 
-    # IDL: readonly attribute object limits;
+    # IDL: [SameObject] readonly attribute GPUSupportedLimits limits;
     @property
     def limits(self):
         """A dict exposing the limits with which this device was created."""
@@ -1394,8 +1438,8 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def set_index_buffer(self, buffer, index_format, offset=0, size=0):
+    # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    def set_index_buffer(self, buffer, index_format, offset=0, size=None):
         """Set the index buffer for this render pass.
 
         Arguments:
@@ -1409,8 +1453,8 @@ class GPURenderEncoderBase:
         """
         raise NotImplementedError()
 
-    # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size = 0);
-    def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
+    # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
         """Associate a vertex buffer with a bind slot.
 
         Arguments:
@@ -1696,66 +1740,10 @@ class GPUQueue(GPUObjectBase):
         """TODO"""
         raise NotImplementedError()
 
-    # IDL: undefined copyExternalImageToTexture( GPUImageCopyExternalImage source, GPUImageCopyTexture destination, GPUExtent3D copySize);
+    # IDL: undefined copyExternalImageToTexture( GPUImageCopyExternalImage source, GPUImageCopyTextureTagged destination, GPUExtent3D copySize);
     @apidiff.hide("Specific to browsers.")
     def copy_external_image_to_texture(self, source, destination, copy_size):
         raise NotImplementedError()
-
-
-@apidiff.change(
-    "the swapchain should be used as a context manager to obtain the texture view"
-)
-class GPUSwapChain(GPUObjectBase):
-    """
-    A swap chain is a placeholder for a texture to be presented to the screen,
-    so that you can provide the corresponding texture view as a color attachment
-    to :func:`GPUCommandEncoder.begin_render_pass`. The texture view can be
-    obtained by using the swap-chain in a with-statement. The swap-chain is
-    presented to the screen when the context exits.
-
-    Example:
-
-    .. code-block:: py
-
-        with swap_chain as texture_view:
-            ...
-            command_encoder.begin_render_pass(
-                color_attachments=[
-                    {
-                        "attachment": texture_view,
-                        ...
-                    }
-                ],
-                ...
-            )
-
-    You can obtain a swap chain using :func:`device.configure_swap_chain() <GPUDevice.configure_swap_chain>`.
-    """
-
-    def __init__(
-        self, label, internal, device, canvas, format, usage, compositing_alpha_mode
-    ):
-        super().__init__(label, internal, device)
-        self._canvas = canvas
-        self._format = format
-        self._usage = usage
-        self._compositing_alpha_mode = compositing_alpha_mode
-
-    # IDL: GPUTexture getCurrentTexture();
-    def get_current_texture(self):
-        """WebGPU defines this method, but we deviate from the spec here:
-        you should use the swap-chain object as a context manager to obtain
-        a texture view to render to.
-        """
-        raise NotImplementedError(
-            "Use the swap-chain as a context manager to get a texture view."
-        )
-
-    def __enter__(self):
-        raise NotImplementedError()  # Get the current texture view
-
-    def __exit__(self, type, value, tb):
-        raise NotImplementedError()  # Present the current texture
 
 
 # %% Further non-GPUObject classes

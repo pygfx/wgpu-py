@@ -207,12 +207,12 @@ class GPU(base.GPU):
         # Get surface id that the adapter must be compatible with. If we
         # don't pass a valid surface id, there is no guarantee we'll be
         # able to create a swapchain for it (from this adapter).
-        if canvas is None:
-            surface_id = ffi.NULL
-        elif canvas._PRESENT_TO_SURFACE:
-            surface_id = get_surface_id_from_canvas(canvas)
-        else:
-            surface_id = ffi.NULL  # off-screen canvas
+        surface_id = ffi.NULL
+        if canvas is not None:
+            window_id = canvas.get_window_id()
+            if window_id is not None:  # e.g. could be an off-screen canvas
+                surface_id = get_surface_id_from_canvas(canvas)
+                surface_id = ffi.NULL  # off-screen canvas
 
         # Try to read the WGPU_BACKEND_TYPE environment variable to see
         # if a backend should be forced. When you run into trouble with
@@ -319,8 +319,58 @@ class GPU(base.GPU):
         )  # no-cover
 
 
-class GPUCanvasContext(base.GPUCanvasContext):
-    pass
+class GPUPresentationContext(base.GPUPresentationContext):
+    def __init__(self, canvas):
+        super().__init__(canvas)
+        self._surface_size = (-1, -1)
+        self._surface_id = None
+        self._internal = None
+
+    def get_current_texture(self):
+        if self._device is None:
+            raise RuntimeError(
+                "Preset context must be configured before get_current_texture()."
+            )
+        self._create_native_swap_chain_if_needed()
+        # H: WGPUTextureView f(WGPUSwapChain swapChain)
+        view_id = lib.wgpuSwapChainGetCurrentTextureView(self._internal)
+        size = self._surface_size[0], self._surface_size[1], 1
+        return GPUTextureView("swap_chain", view_id, self._device, None, size)
+
+    def present(self):
+        if self._internal is not None:
+            # H: void f(WGPUSwapChain swapChain)
+            lib.wgpuSwapChainPresent(self._internal)
+
+    def _create_native_swap_chain_if_needed(self):
+        canvas = self._get_canvas()
+        psize = canvas.get_physical_size()
+        if psize == self._surface_size:
+            return
+        self._surface_size = psize
+
+        # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
+
+        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
+        struct = new_struct_p(
+            "WGPUSwapChainDescriptor *",
+            usage=self._usage,
+            format=self._format,
+            width=max(1, psize[0]),
+            height=max(1, psize[1]),
+            presentMode=2,
+            # not used: nextInChain
+            # not used: label
+        )
+        # present_mode -> 0: Immediate, 1: Mailbox, 2: Fifo
+
+        if self._surface_id is None:
+            self._surface_id = get_surface_id_from_canvas(canvas)
+
+        # H: WGPUSwapChain f(WGPUDevice device, WGPUSurface surface, WGPUSwapChainDescriptor const * descriptor)
+        self._internal = lib.wgpuDeviceCreateSwapChain(
+            self._device._internal, self._surface_id, struct
+        )
 
 
 class GPUObjectBase(base.GPUObjectBase):
@@ -332,12 +382,10 @@ class GPUAdapter(base.GPUAdapter):
         self,
         *,
         label="",
-        non_guaranteed_features: "List[enums.FeatureName]" = [],
-        non_guaranteed_limits: "Dict[str, int]" = {},
+        required_features: "List[enums.FeatureName]" = [],
+        required_limits: "Dict[str, int]" = {},
     ):
-        return self._request_device(
-            label, non_guaranteed_features, non_guaranteed_limits, ""
-        )
+        return self._request_device(label, required_features, required_limits, "")
 
     @apidiff.add("a sweet bonus feature from wgpu-native")
     def request_device_tracing(
@@ -345,8 +393,8 @@ class GPUAdapter(base.GPUAdapter):
         trace_path,
         *,
         label="",
-        non_guaranteed_features: "list(enums.FeatureName)" = [],
-        non_guaranteed_limits: "Dict[str, int]" = {},
+        required_features: "list(enums.FeatureName)" = [],
+        required_limits: "Dict[str, int]" = {},
     ):
         """Write a trace of all commands to a file so it can be reproduced
         elsewhere. The trace is cross-platform!
@@ -356,7 +404,7 @@ class GPUAdapter(base.GPUAdapter):
         elif os.listdir(trace_path):
             logger.warning(f"Trace directory not empty: {trace_path}")
         return self._request_device(
-            label, non_guaranteed_features, non_guaranteed_limits, trace_path
+            label, required_features, required_limits, trace_path
         )
 
     def _request_device(self, label, features, limits, trace_path):
@@ -430,11 +478,11 @@ class GPUAdapter(base.GPUAdapter):
         self,
         *,
         label="",
-        non_guaranteed_features: "List[enums.FeatureName]" = [],
-        non_guaranteed_limits: "Dict[str, int]" = {},
+        required_features: "List[enums.FeatureName]" = [],
+        required_limits: "Dict[str, int]" = {},
     ):
         return self._request_device(
-            label, non_guaranteed_features, non_guaranteed_limits, ""
+            label, required_features, required_limits, ""
         )  # no-cover
 
     def _destroy(self):
@@ -1768,7 +1816,7 @@ class GPURenderEncoderBase(base.GPURenderEncoderBase):
         # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
         lib.wgpuRenderPassEncoderSetPipeline(self._internal, pipeline_id)
 
-    def set_index_buffer(self, buffer, index_format, offset=0, size=0):
+    def set_index_buffer(self, buffer, index_format, offset=0, size=None):
         if not size:
             size = buffer.size - offset
         c_index_format = enummap[f"IndexFormat.{index_format}"]
@@ -1777,7 +1825,7 @@ class GPURenderEncoderBase(base.GPURenderEncoderBase):
             self._internal, buffer._internal, c_index_format, int(offset), int(size)
         )
 
-    def set_vertex_buffer(self, slot, buffer, offset=0, size=0):
+    def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
         if not size:
             size = buffer.size - offset
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
@@ -2088,63 +2136,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
     # FIXME: new method to implement
     def on_submitted_work_done(self):
         raise NotImplementedError()
-
-
-class GPUSwapChain(base.GPUSwapChain, GPUObjectBase):
-    def __init__(
-        self, label, internal, device, canvas, format, usage, compositing_alpha_mode
-    ):
-        super().__init__(
-            label, internal, device, canvas, format, usage, compositing_alpha_mode
-        )
-        assert internal is None  # we set it later
-        self._surface_size = (-1, -1)
-        self._surface_id = None
-        self._create_native_swap_chain_if_needed()
-
-    def _create_native_swap_chain_if_needed(self):
-        canvas = self._canvas
-        psize = canvas.get_physical_size()
-        if psize == self._surface_size:
-            return
-        self._surface_size = psize
-
-        # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
-
-        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
-        struct = new_struct_p(
-            "WGPUSwapChainDescriptor *",
-            usage=self._usage,
-            format=self._format,
-            width=max(1, psize[0]),
-            height=max(1, psize[1]),
-            presentMode=2,
-            # not used: nextInChain
-            # not used: label
-        )
-        # present_mode -> 0: Immediate, 1: Mailbox, 2: Fifo
-
-        if self._surface_id is None:
-            self._surface_id = get_surface_id_from_canvas(canvas)
-
-        # H: WGPUSwapChain f(WGPUDevice device, WGPUSurface surface, WGPUSwapChainDescriptor const * descriptor)
-        self._internal = lib.wgpuDeviceCreateSwapChain(
-            self._device._internal, self._surface_id, struct
-        )
-
-    def __enter__(self):
-        # Get the current texture view, and make sure it is presented when done
-        self._create_native_swap_chain_if_needed()
-        # H: WGPUTextureView f(WGPUSwapChain swapChain)
-        view_id = lib.wgpuSwapChainGetCurrentTextureView(self._internal)
-        size = self._surface_size[0], self._surface_size[1], 1
-        return GPUTextureView("swap_chain", view_id, self._device, None, size)
-
-    def __exit__(self, type, value, tb):
-        # Present the current texture
-        # H: void f(WGPUSwapChain swapChain)
-        lib.wgpuSwapChainPresent(self._internal)
-        # todo: we used to get info on the status here
 
 
 class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
