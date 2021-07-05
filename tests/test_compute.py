@@ -96,7 +96,7 @@ def test_compute_0_1_str():
 def test_compute_0_1_int():
     compute_shader = simple_compute_shader
 
-    out = compute_with_buffers({}, {0: 400}, compute_shader)
+    out = compute_with_buffers({}, {0: 400}, compute_shader, n=100)
     assert isinstance(out, dict) and len(out) == 1
     assert isinstance(out[0], memoryview)
     assert out[0].cast("i").tolist() == list(range(100))

@@ -20,7 +20,7 @@ elif is_ci:
 default_vertex_shader = """
 [[stage(vertex)]]
 fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> [[builtin(position)]] vec4<f32> {
-    let positions = array<vec3<f32>, 4>(
+    var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
         vec3<f32>(-0.5, -0.5, 0.1),
         vec3<f32>(-0.5,  0.5, 0.1),
         vec3<f32>( 0.5, -0.5, 0.1),
@@ -454,7 +454,7 @@ def test_render_orange_square_depth():
     shader_source = """
         [[stage(vertex)]]
         fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> [[builtin(position)]] vec4<f32> {
-            let positions = array<vec3<f32>, 4>(
+            var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
                 vec3<f32>(-0.5, -0.5, 0.0),
                 vec3<f32>(-0.5,  0.5, 0.0),
                 vec3<f32>( 0.5, -0.5, 0.2),
@@ -557,7 +557,7 @@ def test_render_orange_dots():
 
         [[stage(vertex)]]
         fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> VertexOutput {
-            let positions = array<vec3<f32>, 4>(
+            var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
                 vec3<f32>(-0.5, -0.5, 0.0),
                 vec3<f32>(-0.5,  0.5, 0.0),
                 vec3<f32>( 0.5, -0.5, 0.2),
