@@ -43,7 +43,6 @@ def compare_flags():
 
     name_map = {"ColorWrite": "ColorWriteMask"}
 
-
     for name, flag in idl.flags.items():
         name = name_map.get(name, name)
         if name not in hp.flags:
