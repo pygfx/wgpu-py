@@ -14,8 +14,7 @@ The canvas interface
 
 To render to a window, an object is needed that implements the few
 functions on the canvas interface, and provide that object to
-:func:`request_adapter() <wgpu.request_adapter>` and
-:func:`device.configure_swap_chain() <wgpu.GPUDevice.configure_swap_chain>`.
+:func:`request_adapter() <wgpu.request_adapter>`.
 This interface makes it possible to hook wgpu-py to any GUI that supports GPU rendering.
 
 .. autoclass:: wgpu.gui.WgpuCanvasInterface
@@ -25,11 +24,22 @@ This interface makes it possible to hook wgpu-py to any GUI that supports GPU re
 The WgpuCanvas classes
 ----------------------
 
-For each GUI toolkit that wgpu-py has builtin support, there is a
+For each GUI toolkit that wgpu-py has builtin support for, there is a
 ``WgpuCanvas`` class, which all derive from the following class. This thus
 provides a single (simple) API to work with windows.
 
 .. autoclass:: wgpu.gui.WgpuCanvasBase
+    :members:
+
+
+Offscreen canvases
+------------------
+
+A base class is provided to implement off-screen canvases. Note that you can
+render to a texture without using any canvas object, but in some cases it's
+convenient to do so with a canvas-like API, which is what this class provides.
+
+.. autoclass:: wgpu.gui.WgpuOffscreenCanvas
     :members:
 
 
