@@ -2187,8 +2187,9 @@ class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):
 
 
 def _copy_docstrings():
+    base_classes = GPUObjectBase, GPUPresentationContext
     for ob in globals().values():
-        if not (isinstance(ob, type) and issubclass(ob, GPUObjectBase)):
+        if not (isinstance(ob, type) and issubclass(ob, base_classes)):
             continue
         elif ob.__module__ != __name__:
             continue  # no-cover

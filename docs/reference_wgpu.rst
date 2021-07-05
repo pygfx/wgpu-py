@@ -212,21 +212,14 @@ Command buffers and encoders
     :members:
 
 
-Queue and swap chain
---------------------
-
-.. autoclass:: wgpu.GPUQueue
-    :members:
-
-.. autoclass:: wgpu.GPUSwapChain
-    :members:
-
 
 Other
 -----
 
+.. autoclass:: wgpu.GPUPresentationContext
+    :members:
 
-.. autoclass:: wgpu.GPUCanvasContext
+.. autoclass:: wgpu.GPUQueue
     :members:
 
 .. autoclass:: wgpu.GPUQuerySet
