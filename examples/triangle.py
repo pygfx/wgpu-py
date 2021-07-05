@@ -72,7 +72,10 @@ def _main(canvas, device):
     # No bind group and layout, we should not create empty ones.
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
-    render_texture_format = canvas.get_swap_chain_preferred_format(device.adapter)
+    present_context = canvas.get_context()
+    render_texture_format = present_context.get_preferred_format(device.adapter)
+    present_context.configure(device=device, format=render_texture_format)
+
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
         vertex={
@@ -114,27 +117,25 @@ def _main(canvas, device):
         },
     )
 
-    swap_chain = canvas.configure_swap_chain(device=device)
-
     def draw_frame():
-        with swap_chain as current_texture_view:
-            command_encoder = device.create_command_encoder()
+        current_texture_view = present_context.get_current_texture()
+        command_encoder = device.create_command_encoder()
 
-            render_pass = command_encoder.begin_render_pass(
-                color_attachments=[
-                    {
-                        "view": current_texture_view,
-                        "resolve_target": None,
-                        "load_value": (0, 0, 0, 1),  # LoadOp.load or color
-                        "store_op": wgpu.StoreOp.store,
-                    }
-                ],
-            )
+        render_pass = command_encoder.begin_render_pass(
+            color_attachments=[
+                {
+                    "view": current_texture_view,
+                    "resolve_target": None,
+                    "load_value": (0, 0, 0, 1),  # LoadOp.load or color
+                    "store_op": wgpu.StoreOp.store,
+                }
+            ],
+        )
 
-            render_pass.set_pipeline(render_pipeline)
-            # render_pass.set_bind_group(0, no_bind_group, [], 0, 1)
-            render_pass.draw(3, 1, 0, 0)
-            render_pass.end_pass()
-            device.queue.submit([command_encoder.finish()])
+        render_pass.set_pipeline(render_pipeline)
+        # render_pass.set_bind_group(0, no_bind_group, [], 0, 1)
+        render_pass.draw(3, 1, 0, 0)
+        render_pass.end_pass()
+        device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw(draw_frame)
