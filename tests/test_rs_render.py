@@ -552,7 +552,7 @@ def test_render_orange_dots():
     shader_source = """
         struct VertexOutput {
             [[builtin(position)]] position: vec4<f32>;
-            //[[builtin(gl_PointSize]] point_size: f32;
+            //[[builtin(pointSize]] point_size: f32;
         };
 
         [[stage(vertex)]]

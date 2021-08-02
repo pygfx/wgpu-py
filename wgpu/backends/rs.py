@@ -558,12 +558,12 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         size = _tuple_from_tuple_or_dict(
             size, ("width", "height", "depth_or_array_layers")
         )
-        # H: width: int, height: int, depth: int
+        # H: width: int, height: int, depthOrArrayLayers: int
         c_size = new_struct(
             "WGPUExtent3D",
             width=size[0],
             height=size[1],
-            depth=size[2],
+            depthOrArrayLayers=size[2],
         )
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, dimension: WGPUTextureDimension, size: WGPUExtent3D, format: WGPUTextureFormat, mipLevelCount: int, sampleCount: int
         struct = new_struct_p(
@@ -1408,10 +1408,10 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
                 b=clr[2],
                 a=clr[3],
             )
-            # H: attachment: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearColor: WGPUColor
+            # H: view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearColor: WGPUColor
             c_attachment = new_struct(
-                "WGPURenderPassColorAttachmentDescriptor",
-                attachment=texture_view_id,
+                "WGPURenderPassColorAttachment",
+                view=texture_view_id,
                 resolveTarget=c_resolve_target,
                 loadOp=c_load_op,
                 storeOp=color_attachment.get("store_op", "store"),
@@ -1420,7 +1420,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             )
             c_color_attachments_list.append(c_attachment)
         c_color_attachments_array = ffi.new(
-            "WGPURenderPassColorAttachmentDescriptor []", c_color_attachments_list
+            "WGPURenderPassColorAttachment []", c_color_attachments_list
         )
 
         c_depth_stencil_attachment = ffi.NULL
@@ -1432,10 +1432,10 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             c_stencil_load_op, c_stencil_clear = _loadop_and_clear_from_value(
                 depth_stencil_attachment["stencil_load_value"]
             )
-            # H: attachment: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, clearDepth: float, depthReadOnly: bool, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, clearStencil: int, stencilReadOnly: bool
+            # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, clearDepth: float, depthReadOnly: bool, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, clearStencil: int, stencilReadOnly: bool
             c_depth_stencil_attachment = new_struct_p(
-                "WGPURenderPassDepthStencilAttachmentDescriptor *",
-                attachment=depth_stencil_attachment["view"]._internal,
+                "WGPURenderPassDepthStencilAttachment *",
+                view=depth_stencil_attachment["view"]._internal,
                 depthLoadOp=c_depth_load_op,
                 depthStoreOp=depth_stencil_attachment["depth_store_op"],
                 clearDepth=float(c_depth_clear),
@@ -1448,7 +1448,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
                 ),
             )
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachmentDescriptor *, depthStencilAttachment: WGPURenderPassDepthStencilAttachmentDescriptor *, occlusionQuerySet: WGPUQuerySet
+        # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet
         struct = new_struct_p(
             "WGPURenderPassDescriptor *",
             label=to_c_label(label),
@@ -1526,12 +1526,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         size = _tuple_from_tuple_or_dict(
             copy_size, ("width", "height", "depth_or_array_layers")
         )
-        # H: width: int, height: int, depth: int
+        # H: width: int, height: int, depthOrArrayLayers: int
         c_copy_size = new_struct_p(
             "WGPUExtent3D *",
             width=size[0],
             height=size[1],
-            depth=size[2],
+            depthOrArrayLayers=size[2],
         )
 
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUImageCopyBuffer const * source, WGPUImageCopyTexture const * destination, WGPUExtent3D const * copySize)
@@ -1586,12 +1586,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         size = _tuple_from_tuple_or_dict(
             copy_size, ("width", "height", "depth_or_array_layers")
         )
-        # H: width: int, height: int, depth: int
+        # H: width: int, height: int, depthOrArrayLayers: int
         c_copy_size = new_struct_p(
             "WGPUExtent3D *",
             width=size[0],
             height=size[1],
-            depth=size[2],
+            depthOrArrayLayers=size[2],
         )
 
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUImageCopyTexture const * source, WGPUImageCopyBuffer const * destination, WGPUExtent3D const * copySize)
@@ -1648,12 +1648,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         size = _tuple_from_tuple_or_dict(
             copy_size, ("width", "height", "depth_or_array_layers")
         )
-        # H: width: int, height: int, depth: int
+        # H: width: int, height: int, depthOrArrayLayers: int
         c_copy_size = new_struct_p(
             "WGPUExtent3D *",
             width=size[0],
             height=size[1],
-            depth=size[2],
+            depthOrArrayLayers=size[2],
         )
 
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUImageCopyTexture const * source, WGPUImageCopyTexture const * destination, WGPUExtent3D const * copySize)
@@ -1912,7 +1912,7 @@ class GPURenderPassEncoder(
             a=color[3],
         )
         # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUColor const * color)
-        lib.wgpuRenderPassEncoderSetBlendColor(self._internal, c_color)
+        lib.wgpuRenderPassEncoderSetBlendConstant(self._internal, c_color)
 
     def set_stencil_reference(self, reference):
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t reference)
@@ -2063,12 +2063,12 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         size = _tuple_from_tuple_or_dict(
             size, ("width", "height", "depth_or_array_layers")
         )
-        # H: width: int, height: int, depth: int
+        # H: width: int, height: int, depthOrArrayLayers: int
         c_size = new_struct_p(
             "WGPUExtent3D *",
             width=size[0],
             height=size[1],
-            depth=size[2],
+            depthOrArrayLayers=size[2],
         )
 
         # H: void f(WGPUQueue queue, WGPUImageCopyTexture const * destination, void const * data, size_t dataSize, WGPUTextureDataLayout const * dataLayout, WGPUExtent3D const * writeSize)

@@ -4,16 +4,22 @@
 
 # flake8: noqa
 
-# There are 169 enum mappings
+# There are 175 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
     "AddressMode.mirror-repeat": 1,
     "AddressMode.repeat": 0,
+    "BlendFactor.constant": 11,
+    "BlendFactor.dst": 6,
     "BlendFactor.dst-alpha": 8,
     "BlendFactor.one": 1,
+    "BlendFactor.one-minus-constant": 12,
+    "BlendFactor.one-minus-dst": 7,
     "BlendFactor.one-minus-dst-alpha": 9,
+    "BlendFactor.one-minus-src": 3,
     "BlendFactor.one-minus-src-alpha": 5,
+    "BlendFactor.src": 2,
     "BlendFactor.src-alpha": 4,
     "BlendFactor.src-alpha-saturated": 10,
     "BlendFactor.zero": 0,
@@ -195,12 +201,12 @@ cstructfield2enum = {
     "PrimitiveState.topology": "PrimitiveTopology",
     "QuerySetDescriptor.type": "QueryType",
     "RenderBundleEncoderDescriptor.depthStencilFormat": "TextureFormat",
-    "RenderPassColorAttachmentDescriptor.loadOp": "LoadOp",
-    "RenderPassColorAttachmentDescriptor.storeOp": "StoreOp",
-    "RenderPassDepthStencilAttachmentDescriptor.depthLoadOp": "LoadOp",
-    "RenderPassDepthStencilAttachmentDescriptor.depthStoreOp": "StoreOp",
-    "RenderPassDepthStencilAttachmentDescriptor.stencilLoadOp": "LoadOp",
-    "RenderPassDepthStencilAttachmentDescriptor.stencilStoreOp": "StoreOp",
+    "RenderPassColorAttachment.loadOp": "LoadOp",
+    "RenderPassColorAttachment.storeOp": "StoreOp",
+    "RenderPassDepthStencilAttachment.depthLoadOp": "LoadOp",
+    "RenderPassDepthStencilAttachment.depthStoreOp": "StoreOp",
+    "RenderPassDepthStencilAttachment.stencilLoadOp": "LoadOp",
+    "RenderPassDepthStencilAttachment.stencilStoreOp": "StoreOp",
     "SamplerBindingLayout.type": "SamplerBindingType",
     "SamplerDescriptor.addressModeU": "AddressMode",
     "SamplerDescriptor.addressModeV": "AddressMode",

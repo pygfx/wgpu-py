@@ -101,7 +101,6 @@ def test_compute_0_1_int():
     assert isinstance(out[0], memoryview)
     assert out[0].cast("i").tolist() == list(range(100))
 
-
 @mark.skipif(is_ci, reason="Cannot use SpirV shader on dx12")
 def test_compute_0_1_spirv():
 

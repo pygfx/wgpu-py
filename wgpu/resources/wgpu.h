@@ -1,7 +1,7 @@
 #ifndef WGPU_H_
 #define WGPU_H_
 
-#include "webgpu.h"
+#include "webgpu-headers/webgpu.h"
 
 typedef enum WGPUNativeSType {
     // Start at 6 to prevent collisions with webgpu STypes
