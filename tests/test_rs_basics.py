@@ -68,11 +68,11 @@ def test_tuple_from_tuple_or_dict():
     assert func({"width": 10, "height": 20}, ("width", "height")) == (10, 20)
 
     with raises(TypeError):
-        func("not tuple/dict", ("x", "y")) == (1, 2)
+        func("not tuple/dict", ("x", "y"))
     with raises(ValueError):
-        func([1], ("x", "y")) == (1, 2)
+        func([1], ("x", "y"))
     with raises(ValueError):
-        func([1, 2, 3], ("x", "y")) == (1, 2)
+        func([1, 2, 3], ("x", "y"))
     with raises(ValueError):
         assert func({"x": 1}, ("x", "y"))
 
