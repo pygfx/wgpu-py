@@ -26,7 +26,7 @@ struct VertexOutput {
 
 [[stage(vertex)]]
 fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> VertexOutput {
-    let positions = array<vec2<f32>, 4>(
+    var positions: array<vec2<f32>, 4> = array<vec2<f32>, 4>(
         vec2<f32>(-0.5, -0.5),
         vec2<f32>(-0.5,  0.5),
         vec2<f32>( 0.5, -0.5),
