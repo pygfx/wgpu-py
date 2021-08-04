@@ -121,12 +121,12 @@ jobs:
       run: |
           python download-wgpu-native.py
           python setup.py bdist_wheel
-    - name: Manylinux2010 tag
+    - name: Manylinux tag
       if: startsWith(matrix.os, 'ubuntu')
       run: |
           sudo apt-get update
           sudo apt-get install -y patchelf
-          auditwheel repair --plat manylinux2010_x86_64 dist/*.whl
+          auditwheel repair --plat manylinux_2_24_x86_64 dist/*.whl
           rm dist/*.whl
           cp wheelhouse/*.whl dist/.
     - name: Test wheel
