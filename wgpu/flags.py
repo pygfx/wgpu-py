@@ -49,8 +49,8 @@ TextureUsage = Flags(
     "TextureUsage",
     COPY_SRC=1,
     COPY_DST=2,
-    SAMPLED=4,
-    STORAGE=8,
+    TEXTURE_BINDING=4,
+    STORAGE_BINDING=8,
     RENDER_ATTACHMENT=16,
 )  #:
 

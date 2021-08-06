@@ -319,7 +319,7 @@ class GPU(base.GPU):
         )  # no-cover
 
 
-class GPUPresentationContext(base.GPUPresentationContext):
+class GPUCanvasContext(base.GPUCanvasContext):
     def __init__(self, canvas):
         super().__init__(canvas)
         self._surface_size = (-1, -1)
@@ -338,7 +338,7 @@ class GPUPresentationContext(base.GPUPresentationContext):
         return GPUTextureView("swap_chain", view_id, self._device, None, size)
 
     def present(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             # H: void f(WGPUSwapChain swapChain)
             lib.wgpuSwapChainPresent(self._internal)
 
@@ -486,7 +486,7 @@ class GPUAdapter(base.GPUAdapter):
         )  # no-cover
 
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_adapter_destroy(internal)
 
@@ -601,7 +601,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         min_filter: "enums.FilterMode" = "nearest",
         mipmap_filter: "enums.FilterMode" = "nearest",
         lod_min_clamp: float = 0,
-        lod_max_clamp: float = 0xFFFFFFFF,
+        lod_max_clamp: float = 32,
         compare: "enums.CompareFunction" = None,
         max_anisotropy: int = 1,
     ):
@@ -1123,6 +1123,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         color_formats: "List[enums.TextureFormat]",
         depth_stencil_format: "enums.TextureFormat" = None,
         sample_count: int = 1,
+        depth_read_only: bool = False,
+        stencil_read_only: bool = False,
     ):
         raise NotImplementedError()
 
@@ -1138,7 +1140,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         raise NotImplementedError()
 
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_device_destroy(internal)
 
@@ -1227,7 +1229,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         self._destroy()  # no-cover
 
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBuffer buffer)
             lib.wgpuBufferDestroy(internal)
@@ -1284,7 +1286,7 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
         self._destroy()  # no-cover
 
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUTexture texture)
             lib.wgpuTextureDestroy(internal)
@@ -1292,35 +1294,35 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
 
 class GPUTextureView(base.GPUTextureView, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_texture_view_destroy(internal, False)
 
 
 class GPUSampler(base.GPUSampler, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_sampler_destroy(internal)
 
 
 class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_bind_group_layout_destroy(internal)
 
 
 class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_bind_group_destroy(internal)
 
 
 class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_pipeline_layout_destroy(internal)
 
@@ -1330,7 +1332,7 @@ class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
         return super().compilation_info()
 
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_shader_module_destroy(internal)
 
@@ -1341,21 +1343,21 @@ class GPUPipelineBase(base.GPUPipelineBase):
 
 class GPUComputePipeline(base.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_compute_pipeline_destroy(internal)
 
 
 class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_render_pipeline_destroy(internal)
 
 
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_command_buffer_destroy(internal)
 
@@ -1698,7 +1700,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         raise NotImplementedError()
 
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_command_encoder_destroy(internal)
 
@@ -1803,7 +1805,7 @@ class GPUComputePassEncoder(
         raise NotImplementedError()
 
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_compute_pass_destroy(internal)
 
@@ -1872,7 +1874,7 @@ class GPURenderEncoderBase(base.GPURenderEncoderBase):
         )
 
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_render_pass_destroy(internal)
 
@@ -2140,7 +2142,7 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
 
 class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
     def _destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpu_render_bundle_destroy(internal)
 
@@ -2169,7 +2171,7 @@ class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
     pass
 
     def destroy(self):
-        if self._internal is not None:
+        if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUQuerySet querySet)
             lib.wgpuQuerySetDestroy(internal)
@@ -2187,7 +2189,7 @@ class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):
 
 
 def _copy_docstrings():
-    base_classes = GPUObjectBase, GPUPresentationContext
+    base_classes = GPUObjectBase, GPUCanvasContext
     for ob in globals().values():
         if not (isinstance(ob, type) and issubclass(ob, base_classes)):
             continue

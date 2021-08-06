@@ -53,7 +53,7 @@ class WgpuCanvasInterface:
         raise NotImplementedError()
 
     def get_context(self, kind="gpupresent"):
-        """Get the GPUPresentationContext object corresponding to this canvas,
+        """Get the GPUCanvasContext object corresponding to this canvas,
         which can be used to e.g. obtain a texture to render to.
         """
         # Note that this function is analog to HtmlCanvas.get_context(), except
@@ -63,7 +63,7 @@ class WgpuCanvasInterface:
             # Get the active wgpu backend module
             backend_module = sys.modules["wgpu"].GPU.__module__
             # Instantiate the context
-            PC = sys.modules[backend_module].GPUPresentationContext  # noqa: N806
+            PC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
             self._present_context = PC(self)
         return self._present_context
 

@@ -183,7 +183,6 @@ TextureSampleType = Enum(
 
 StorageTextureAccess = Enum(
     "StorageTextureAccess",
-    read_only="read-only",
     write_only="write-only",
 )  #:
 
@@ -294,8 +293,8 @@ VertexFormat = Enum(
     sint32x4="sint32x4",
 )  #:
 
-InputStepMode = Enum(
-    "InputStepMode",
+VertexStepMode = Enum(
+    "VertexStepMode",
     vertex="vertex",
     instance="instance",
 )  #:
