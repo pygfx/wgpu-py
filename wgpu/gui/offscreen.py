@@ -17,9 +17,9 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         # Normally this creates a GPUCanvasContext object provided by
         # the backend (e.g. rs), but here we use our own context.
         assert kind == "gpupresent"
-        if self._present_context is None:
-            self._present_context = GPUCanvasContextOffline(self)
-        return self._present_context
+        if self._canvas_context is None:
+            self._canvas_context = GPUCanvasContextOffline(self)
+        return self._canvas_context
 
     def present(self, texture_view):
         """Method that gets called at the end of each draw event. Subclasses
