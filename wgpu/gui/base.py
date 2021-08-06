@@ -102,13 +102,14 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """
         # Perform the user-defined drawing code. When this errors,
         # we should report the error and then continue, otherwise we crash.
+        # Returns the result of the context's present() call or None.
         try:
             self.draw_frame()
         except Exception as err:
             self._log_exception("Draw error", err)
         try:
             if self._present_context:
-                self._present_context.present()
+                return self._present_context.present()
         except Exception as err:
             self._log_exception("Present error", err)
 

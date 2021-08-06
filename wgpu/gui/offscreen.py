@@ -14,6 +14,8 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
 
     def get_context(self, kind="gpupresent"):
         """Get the GPUCanvasContext object to obtain a texture to render to."""
+        # Normally this creates a GPUCanvasContext object provided by
+        # the backend (e.g. rs), but here we use our own context.
         assert kind == "gpupresent"
         if self._present_context is None:
             self._present_context = GPUCanvasContextOffline(self)
@@ -51,7 +53,7 @@ class GPUCanvasContextOffline(base.GPUCanvasContext):
     def present(self):
         if self._texture_view is not None:
             canvas = self._get_canvas()
-            canvas.present(self._texture_view)
+            return canvas.present(self._texture_view)
 
     def _create_new_texture_if_needed(self):
         canvas = self._get_canvas()
