@@ -13,10 +13,10 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         return None
 
     def get_context(self, kind="gpupresent"):
-        """Get the GPUPresentationContext object to obtain a texture to render to."""
+        """Get the GPUCanvasContext object to obtain a texture to render to."""
         assert kind == "gpupresent"
         if self._present_context is None:
-            self._present_context = GPUPresentationContextOffline(self)
+            self._present_context = GPUCanvasContextOffline(self)
         return self._present_context
 
     def present(self, texture_view):
@@ -26,7 +26,7 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         pass
 
 
-class GPUPresentationContextOffline(base.GPUPresentationContext):
+class GPUCanvasContextOffline(base.GPUCanvasContext):
     """Helper class for canvases that render to a texture."""
 
     def __init__(self, canvas):

@@ -119,7 +119,7 @@ uniform_buffer = device.create_buffer(
 # Create texture, and upload data
 texture = device.create_texture(
     size=texture_size,
-    usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.SAMPLED,
+    usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
     dimension=wgpu.TextureDimension.d2,
     format=wgpu.TextureFormat.r8unorm,
     mip_level_count=1,
@@ -267,7 +267,7 @@ render_pipeline = device.create_render_pipeline(
         "buffers": [
             {
                 "array_stride": 4 * 6,
-                "step_mode": wgpu.InputStepMode.vertex,
+                "step_mode": wgpu.VertexStepMode.vertex,
                 "attributes": [
                     {
                         "format": wgpu.VertexFormat.float32x4,

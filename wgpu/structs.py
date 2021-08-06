@@ -23,7 +23,7 @@ class Struct:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 53 structs
+# There are 54 structs
 
 RequestAdapterOptions = Struct(
     "RequestAdapterOptions",
@@ -273,7 +273,7 @@ VertexState = Struct(
 VertexBufferLayout = Struct(
     "VertexBufferLayout",
     array_stride="int",
-    step_mode="enums.InputStepMode",
+    step_mode="enums.VertexStepMode",
     attributes="List[structs.VertexAttribute]",
 )  #:
 
@@ -356,6 +356,14 @@ RenderPassDepthStencilAttachment = Struct(
     stencil_read_only="bool",
 )  #:
 
+RenderPassLayout = Struct(
+    "RenderPassLayout",
+    label="str",
+    color_formats="List[enums.TextureFormat]",
+    depth_stencil_format="enums.TextureFormat",
+    sample_count="int",
+)  #:
+
 RenderBundleDescriptor = Struct(
     "RenderBundleDescriptor",
     label="str",
@@ -367,6 +375,8 @@ RenderBundleEncoderDescriptor = Struct(
     color_formats="List[enums.TextureFormat]",
     depth_stencil_format="enums.TextureFormat",
     sample_count="int",
+    depth_read_only="bool",
+    stencil_read_only="bool",
 )  #:
 
 QuerySetDescriptor = Struct(
@@ -377,8 +387,8 @@ QuerySetDescriptor = Struct(
     pipeline_statistics="List[enums.PipelineStatisticName]",
 )  #:
 
-PresentationConfiguration = Struct(
-    "PresentationConfiguration",
+CanvasConfiguration = Struct(
+    "CanvasConfiguration",
     device="GPUDevice",
     format="enums.TextureFormat",
     usage="flags.TextureUsage",

@@ -4,7 +4,7 @@
 
 # flake8: noqa
 
-# There are 175 enum mappings
+# There are 174 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
@@ -50,8 +50,6 @@ enummap = {
     "FrontFace.cw": 1,
     "IndexFormat.uint16": 1,
     "IndexFormat.uint32": 2,
-    "InputStepMode.instance": 1,
-    "InputStepMode.vertex": 0,
     "LoadOp.load": 1,
     "PipelineStatisticName.clipper-invocations": 1,
     "PipelineStatisticName.clipper-primitives-out": 2,
@@ -77,7 +75,6 @@ enummap = {
     "StencilOperation.keep": 0,
     "StencilOperation.replace": 2,
     "StencilOperation.zero": 1,
-    "StorageTextureAccess.read-only": 1,
     "StorageTextureAccess.write-only": 2,
     "StoreOp.discard": 1,
     "StoreOp.store": 0,
@@ -182,6 +179,8 @@ enummap = {
     "VertexFormat.unorm16x4": 14,
     "VertexFormat.unorm8x2": 5,
     "VertexFormat.unorm8x4": 6,
+    "VertexStepMode.instance": 1,
+    "VertexStepMode.vertex": 0,
 }
 
 # There are 45 struct-field enum mappings
@@ -231,7 +230,7 @@ cstructfield2enum = {
     "TextureViewDescriptor.dimension": "TextureViewDimension",
     "TextureViewDescriptor.format": "TextureFormat",
     "VertexAttribute.format": "VertexFormat",
-    "VertexBufferLayout.stepMode": "InputStepMode",
+    "VertexBufferLayout.stepMode": "VertexStepMode",
 }
 
 enum_str2int = {

@@ -18,9 +18,31 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.6] - (upcoming)
+### [v0.5.5] - (upcoming)
 
-No changes yet.
+Added:
+
+* The wgpu backend can be forced using the `WGPU_BACKEND_TYPE` env variable.
+  Values can be e.g. "D3D12", "Metal", "Vulkan".
+* Initial support for off-screen canvases.
+* Adds `adapter.is_software` property.
+
+Changed:
+
+* The `GPUPresentationContext` class has been renamed to `GPUCanvasContext`.
+* The functionality of the swap-chain has moved to the `GPUCanvasContext`.
+* The now removed `GPUSwapChain` was used as a context manager. Instead,
+  the frame is presented (ala GL swapbuffers) automatically at the end of a draw.
+* The `canvas.configure_swap_chain()` method has been removed. Instead,
+  `canvas.get_context()` should be used, to obtain a present/canvas context.
+* The `adapter.request_device()` method has its arguments `non_guaranteed_features`
+  and `non_guaranteed_limits` replaced with `required_features` and `required_limits`.
+* The enum field `StoreOp.clear` is now `StoreOp.discard`.
+* The flag field `TextureUsage.SAMPLED ` is now `TextureUsage.TEXTURE_BINDING `.
+* The flag field `TextureUsage.STORAGE ` is now `TextureUsage.STORAGE_BINDING `.
+* The enum `InputStepMode` is now `VertexStepMode`.
+* WGSL: `var arrays` need a type annotation.
+* WGSL: storage classes are written differently.
 
 
 ### [v0.5.4] - 11-06-2021
@@ -85,6 +107,7 @@ Added:
 * Added `GPUQueue.read_buffer` as extra API (next to `write_buffer` which is original WebGPU API).
 * Added `GPUQueue.read_texture` as extra API.
 
+y
 Removed:
 
 * Removed `GPUBuffer.read_data()`. Use `device.queue.read_buffer()` instead. Note that `usage` `MAP_READ` should be replaced with `COPY_SRC`.

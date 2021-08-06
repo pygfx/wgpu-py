@@ -82,7 +82,7 @@ compute_shader_wgsl = """
 struct ArrayContainer { data: [[stride(4)]] array<i32>; };
 
 [[group(0), binding(0)]]
-var<storage> out1: [[access(write)]] ArrayContainer;
+var<storage,read_write> out1: ArrayContainer;
 
 [[stage(compute), workgroup_size(1)]]
 fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
@@ -257,7 +257,7 @@ def test_do_a_copy_roundtrip():
     texture_dim = wgpu.TextureDimension.d1
 
     # Create buffers and textures
-    stubusage = wgpu.TextureUsage.STORAGE
+    stubusage = wgpu.TextureUsage.STORAGE_BINDING
     buf1 = device.create_buffer(
         size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )

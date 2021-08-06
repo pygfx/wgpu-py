@@ -51,7 +51,7 @@ __all__ = [
     "GPURenderBundleEncoder",
     "GPUQueue",
     "GPUQuerySet",
-    "GPUPresentationContext",
+    "GPUCanvasContext",
     "GPUDeviceLostInfo",
     "GPUOutOfMemoryError",
     "GPUValidationError",
@@ -114,17 +114,23 @@ class GPU:
         )  # no-cover
 
 
-class GPUPresentationContext:
+class GPUCanvasContext:
     """A context object associated with a canvas, to present what has been drawn."""
 
     def __init__(self, canvas):
         self._canvas_ref = weakref.ref(canvas)
 
     def _get_canvas(self):
-        """Allows subclasses to obtain the canvas object."""
+        """Getter method for internal use."""
         return self._canvas_ref()
 
-    # IDL: undefined configure(GPUPresentationConfiguration configuration);
+    # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
+    @property
+    def canvas(self):
+        """The associated canvas object."""
+        return self._canvas_ref()
+
+    # IDL: undefined configure(GPUCanvasConfiguration configuration);
     def configure(
         self,
         *,
@@ -442,7 +448,7 @@ class GPUDevice(GPUObjectBase):
         min_filter: "enums.FilterMode" = "nearest",
         mipmap_filter: "enums.FilterMode" = "nearest",
         lod_min_clamp: float = 0,
-        lod_max_clamp: float = 0xFFFFFFFF,
+        lod_max_clamp: float = 32,
         compare: "enums.CompareFunction" = None,
         max_anisotropy: int = 1,
     ):
@@ -460,7 +466,7 @@ class GPUDevice(GPUObjectBase):
             min_filter (FilterMode): Interpolation when zoomed out. Default 'nearest'.
             mipmap_filter: (FilterMode): Interpolation between mip levels. Default 'nearest'.
             lod_min_clamp (float): The minimum level of detail. Default 0.
-            lod_max_clamp (float): The maxium level of detail. Default inf.
+            lod_max_clamp (float): The maxium level of detail. Default 32.
             compare (CompareFunction): The sample compare operation for depth textures.
                 Only specify this for depth textures. Default None.
             max_anisotropy (int): The maximum anisotropy value clamp used by the sample,
@@ -675,7 +681,7 @@ class GPUDevice(GPUObjectBase):
                 "buffers": [
                     {
                         "array_stride": 8,
-                        "step_mode": wgpu.InputStepMode.vertex,  # optional
+                        "step_mode": wgpu.VertexStepMode.vertex,  # optional
                         "attributes": [
                             {
                                 "format": wgpu.VertexFormat.float2,
@@ -804,6 +810,8 @@ class GPUDevice(GPUObjectBase):
         color_formats: "List[enums.TextureFormat]",
         depth_stencil_format: "enums.TextureFormat" = None,
         sample_count: int = 1,
+        depth_read_only: bool = False,
+        stencil_read_only: bool = False,
     ):
         """Create a :class:`GPURenderBundle` object.
 

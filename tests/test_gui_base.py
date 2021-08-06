@@ -31,13 +31,11 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
 
 
 def test_base_canvas_context():
-    assert not issubclass(
-        wgpu.gui.WgpuCanvasInterface, wgpu.base.GPUPresentationContext
-    )
+    assert not issubclass(wgpu.gui.WgpuCanvasInterface, wgpu.base.GPUCanvasContext)
     assert hasattr(wgpu.gui.WgpuCanvasInterface, "get_context")
     # Provides good default already
     canvas = wgpu.gui.WgpuCanvasInterface()
-    ctx = wgpu.GPUPresentationContext(canvas)
+    ctx = wgpu.GPUCanvasContext(canvas)
     assert ctx.get_preferred_format(None) == "bgra8unorm-srgb"
 
 

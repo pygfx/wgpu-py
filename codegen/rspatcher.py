@@ -41,7 +41,11 @@ def compare_flags():
     idl = get_idl_parser()
     hp = get_h_parser()
 
-    name_map = {"ColorWrite": "ColorWriteMask"}
+    name_map = {
+        "ColorWrite": "ColorWriteMask",
+        "TextureUsage.TextureBinding": "Sampled",
+        "TextureUsage.StorageBinding": "Storage",
+    }
 
     for name, flag in idl.flags.items():
         name = name_map.get(name, name)
@@ -50,6 +54,7 @@ def compare_flags():
         else:
             for key, val in flag.items():
                 key = key.title().replace("_", "")  # MAP_READ -> MapRead
+                key = name_map.get(f"{name}.{key}") or key
                 if key not in hp.flags[name]:
                     print(f"Flag field {name}.{key} missing in wgpu.h")
                 elif val != hp.flags[name][key]:
@@ -65,7 +70,11 @@ def write_mappings():
     idl = get_idl_parser()
     hp = get_h_parser()
 
-    field_map = {"discard": "clear"}
+    name_map = {
+        "VertexStepMode": "InputStepMode",
+        "StoreOp.discard": "clear",
+    }
+    name_map_i = {v: k for k, v in name_map.items()}
 
     # Init generated code
     pylines = [mappings_preamble]
@@ -74,15 +83,14 @@ def write_mappings():
     # to the corresponding integer value.
     enummap = {}
     for name in idl.enums:
-        if name not in hp.enums:
-            print(f"Enum {name} missing in wgpu.h")
+        hname = name_map.get(name, name)
+        if hname not in hp.enums:
+            print(f"Enum {hname} missing in wgpu.h")
             continue
-        hp_enum = {key.lower(): val for key, val in hp.enums[name].items()}
+        hp_enum = {key.lower(): val for key, val in hp.enums[hname].items()}
         for ikey in idl.enums[name].values():
-            if ikey in field_map:
-                hkey = field_map[ikey]
-            else:
-                hkey = ikey.lower().replace("-", "")
+            hkey = ikey.lower().replace("-", "")
+            hkey = name_map.get(f"{name}.{hkey}") or hkey
             if hkey in hp_enum:
                 enummap[name + "." + ikey] = hp_enum[hkey]
             else:
@@ -101,7 +109,8 @@ def write_mappings():
     for structname, struct in hp.structs.items():
         for key, val in struct.items():
             if isinstance(val, str) and val.startswith("WGPU"):
-                enumname = val[4:].split("/")[0]
+                henumname = val[4:].split("/")[0]
+                enumname = name_map_i.get(henumname, henumname)
                 if enumname in idl.enums:
                     cstructfield2enum[f"{structname[4:]}.{key}"] = enumname
                 else:

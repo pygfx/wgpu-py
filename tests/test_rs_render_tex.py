@@ -468,7 +468,7 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
         size=(nx, ny, nz),
         dimension=wgpu.TextureDimension.d2,
         format=texture_format,
-        usage=wgpu.TextureUsage.SAMPLED | wgpu.TextureUsage.COPY_DST,
+        usage=wgpu.TextureUsage.TEXTURE_BINDING | wgpu.TextureUsage.COPY_DST,
     )
     upload_to_texture(device, texture, texture_data, nx, ny, nz)
 
