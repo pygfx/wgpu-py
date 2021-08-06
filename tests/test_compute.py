@@ -19,7 +19,7 @@ simple_compute_shader = """
     struct DataContainer { data: [[stride(4)]] array<i32>; };
 
     [[group(0), binding(0)]]
-    var<storage> data2: [[access(write)]] DataContainer;
+    var<storage,read_write> data2: DataContainer;
 
     [[stage(compute), workgroup_size(1)]]
     fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
@@ -121,13 +121,13 @@ def test_compute_1_3():
         struct DataContainer { data: [[stride(4)]] array<i32>; };
 
         [[group(0), binding(0)]]
-        var<storage> data0: [[access(read)]] DataContainer;
+        var<storage,read> data0: DataContainer;
 
         [[group(0), binding(1)]]
-        var<storage> data1: [[access(write)]] DataContainer;
+        var<storage,read_write> data1: DataContainer;
 
         [[group(0), binding(2)]]
-        var<storage> data2: [[access(write)]] DataContainer;
+        var<storage,read_write> data2: DataContainer;
 
         [[stage(compute), workgroup_size(1)]]
         fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
@@ -157,10 +157,10 @@ def test_compute_indirect():
         struct DataContainer { data: [[stride(4)]] array<i32>; };
 
         [[group(0), binding(0)]]
-        var<storage> data1: [[access(read)]] DataContainer;
+        var<storage,read> data1: DataContainer;
 
         [[group(0), binding(1)]]
-        var<storage> data2: [[access(write)]] DataContainer;
+        var<storage,read_write> data2: DataContainer;
 
         [[stage(compute), workgroup_size(1)]]
         fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
@@ -200,7 +200,7 @@ def test_compute_indirect():
             "binding": 0,
             "visibility": wgpu.ShaderStage.COMPUTE,
             "buffer": {
-                "type": wgpu.BufferBindingType.storage,
+                "type": wgpu.BufferBindingType.read_only_storage,
             },
         },
         {
@@ -264,10 +264,10 @@ def test_compute_fails():
         struct DataContainer { data: [[stride(4)]] array<i32>; };
 
         [[group(0), binding(0)]]
-        var<storage> data1: [[access(read)]] DataContainer;
+        var<storage,read> data1: DataContainer;
 
         [[group(0), binding(1)]]
-        var<storage> data2: [[access(write)]] DataContainer;
+        var<storage,read_write> data2: DataContainer;
 
         [[stage(compute), workgroup_size(1)]]
         fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {

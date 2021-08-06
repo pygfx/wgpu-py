@@ -18,10 +18,10 @@ struct DataContainer {
 };
 
 [[group(0), binding(0)]]
-var<storage> data1: [[access(read)]] DataContainer;
+var<storage,read> data1: DataContainer;
 
 [[group(0), binding(1)]]
-var<storage> data2: [[access(write)]] DataContainer;
+var<storage,read_write> data2: DataContainer;
 
 [[stage(compute), workgroup_size(1)]]
 fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
@@ -77,7 +77,7 @@ binding_layouts = [
         "binding": 0,
         "visibility": wgpu.ShaderStage.COMPUTE,
         "buffer": {
-            "type": wgpu.BufferBindingType.storage,
+            "type": wgpu.BufferBindingType.read_only_storage,
         },
     },
     {

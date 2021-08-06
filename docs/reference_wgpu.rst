@@ -216,7 +216,7 @@ Command buffers and encoders
 Other
 -----
 
-.. autoclass:: wgpu.GPUPresentationContext
+.. autoclass:: wgpu.GPUCanvasContext
     :members:
 
 .. autoclass:: wgpu.GPUQueue
