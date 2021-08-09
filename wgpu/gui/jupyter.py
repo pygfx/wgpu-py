@@ -83,6 +83,14 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         )
         return np.frombuffer(data, np.uint8).reshape(size[1], size[0], 4)
 
+    def get_preferred_format(self):
+        # Use a format that maps well to PNG: rgba8norm.
+        # Use srgb for perseptive color mapping. You probably want to
+        # apply this before displaying on screen, but you do not want
+        # to duplicate it. When a PNG is shown on screen in the browser
+        # it's shown as-is (at least it was when I just tried).
+        return "rgba8unorm-srgb"
+
 
 # Make available under a name that is the same for all gui backends
 WgpuCanvas = JupyterWgpuCanvas
