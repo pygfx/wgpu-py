@@ -109,7 +109,7 @@ Support for Jupyter lab and notebook
 
 WGPU can be used in Jupyter lab and the Jupyter notebook. This canvas
 is based on `jupyter_rfb <https://github.com/vispy/jupyter_rfb>`_ an ipywidget
-subclass implementing a remote frame-buffer.
+subclass implementing a remote frame-buffer. There are also some `wgpu examples <https://jupyter-rfb.readthedocs.io/en/latest/examples/>`_.
 
 To implement interaction, create a subclass and overload the ``handle_event()``
 method (and call ``super().handle_event(event)``).
