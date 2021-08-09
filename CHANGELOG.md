@@ -17,8 +17,10 @@ Possible sections in each release:
 * Fixed: for any bug fixes.
 * Security: in case of vulnerabilities.
 
+### [v0.x.y] - upcoming
 
-### [v0.5.5] - (upcoming)
+
+### [v0.5.5] - 09-08-2021
 
 Added:
 
@@ -41,7 +43,7 @@ Changed:
 * The flag field `TextureUsage.SAMPLED ` is now `TextureUsage.TEXTURE_BINDING `.
 * The flag field `TextureUsage.STORAGE ` is now `TextureUsage.STORAGE_BINDING `.
 * The enum `InputStepMode` is now `VertexStepMode`.
-* WGSL: `var arrays` need a type annotation.
+* WGSL: `arrays` must be declared as `var` (not `let`) in order to allow dynamic indexing.
 * WGSL: storage classes are written differently.
 
 
