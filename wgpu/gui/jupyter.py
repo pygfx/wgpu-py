@@ -53,7 +53,7 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         self.css_height = f"{height}px"
 
     def close(self):
-        RemoteFrameBuffer.close()
+        RemoteFrameBuffer.close(self)
 
     def is_closed(self):
         return self._is_closed
