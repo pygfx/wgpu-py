@@ -80,6 +80,9 @@ from wgpu.gui.glfw import WgpuCanvas
 # Import PySide2, PyQt5, PySide or PyQt4 before running the line below.
 # The code will detect and use the library that is imported.
 from wgpu.gui.qt import WgpuCanvas
+
+# You can also show wgpu visualizations in Jupyter
+from wgpu.gui.jupyter import WgpuCanvas
 ```
 
 Some functions in the original `wgpu-native` API are async. In the Python API,

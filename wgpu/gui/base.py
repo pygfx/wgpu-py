@@ -16,7 +16,7 @@ class WgpuCanvasInterface:
     def __init__(self, *args, **kwargs):
         # The args/kwargs are there because we may be mixed with e.g. a Qt widget
         super().__init__(*args, **kwargs)
-        self._present_context = None
+        self._canvas_context = None
 
     def get_window_id(self):
         """Get the native window id. This is used to obtain a surface id,
@@ -59,13 +59,13 @@ class WgpuCanvasInterface:
         # Note that this function is analog to HtmlCanvas.get_context(), except
         # here the only valid arg is 'gpupresent', which is also made the default.
         assert kind == "gpupresent"
-        if self._present_context is None:
+        if self._canvas_context is None:
             # Get the active wgpu backend module
             backend_module = sys.modules["wgpu"].GPU.__module__
             # Instantiate the context
             PC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
-            self._present_context = PC(self)
-        return self._present_context
+            self._canvas_context = PC(self)
+        return self._canvas_context
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
@@ -102,13 +102,14 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """
         # Perform the user-defined drawing code. When this errors,
         # we should report the error and then continue, otherwise we crash.
+        # Returns the result of the context's present() call or None.
         try:
             self.draw_frame()
         except Exception as err:
             self._log_exception("Draw error", err)
         try:
-            if self._present_context:
-                self._present_context.present()
+            if self._canvas_context:
+                return self._canvas_context.present()
         except Exception as err:
             self._log_exception("Present error", err)
 

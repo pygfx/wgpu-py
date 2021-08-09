@@ -14,16 +14,28 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
 
     def get_context(self, kind="gpupresent"):
         """Get the GPUCanvasContext object to obtain a texture to render to."""
+        # Normally this creates a GPUCanvasContext object provided by
+        # the backend (e.g. rs), but here we use our own context.
         assert kind == "gpupresent"
-        if self._present_context is None:
-            self._present_context = GPUCanvasContextOffline(self)
-        return self._present_context
+        if self._canvas_context is None:
+            self._canvas_context = GPUCanvasContextOffline(self)
+        return self._canvas_context
 
     def present(self, texture_view):
         """Method that gets called at the end of each draw event. Subclasses
         should provide the approproate implementation.
         """
         pass
+
+    def get_preferred_format(self):
+        """Get the preferred format for this canvas. This method can
+        be overloaded to control the used texture format. The default
+        is "rgba8unorm" (not including srgb colormapping).
+        """
+        # Use rgba because that order is more common for processing and storage.
+        # Use 8unorm because 8bit is enough and common in most cases.
+        # We DO NOT use srgb colormapping here; we return the "raw" output.
+        return "rgba8unorm"
 
 
 class GPUCanvasContextOffline(base.GPUCanvasContext):
@@ -41,7 +53,11 @@ class GPUCanvasContextOffline(base.GPUCanvasContext):
         self._texture = None
 
     def get_preferred_format(self, adapter):
-        return "rgba8unorm"
+        canvas = self._get_canvas()
+        if canvas:
+            return canvas.get_preferred_format()
+        else:
+            return "rgba8unorm"
 
     def get_current_texture(self):
         self._create_new_texture_if_needed()
@@ -51,7 +67,7 @@ class GPUCanvasContextOffline(base.GPUCanvasContext):
     def present(self):
         if self._texture_view is not None:
             canvas = self._get_canvas()
-            canvas.present(self._texture_view)
+            return canvas.present(self._texture_view)
 
     def _create_new_texture_if_needed(self):
         canvas = self._get_canvas()
