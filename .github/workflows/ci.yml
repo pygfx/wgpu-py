@@ -78,8 +78,7 @@ jobs:
     - name: Test PyInstaller
       if: matrix.SKIPTEST != 1 && (matrix.pyversion == '3.6' || matrix.pyversion == '3.7')
       run: |
-          pip install psutil
-          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.zip
+          pip install psutil pyinstaller>=4
           pytest -v wgpu/__pyinstaller
 
   # The release builds are done for the platforms that we want to build wheels for.
