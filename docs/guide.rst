@@ -118,6 +118,14 @@ Also see wgpu-core's section on debugging:
 https://github.com/gfx-rs/wgpu/wiki/Debugging-wgpu-Applications
 
 
+Freezing apps with wgpu
+-----------------------
+
+Wgpu implements a hook for PyInstaller to help simplify the freezing process
+(it e.g. ensures that the wgpu-native DLL is included). This hook requires
+PyInstaller version 4+.
+
+
 Examples
 --------
 
