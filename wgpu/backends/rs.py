@@ -30,6 +30,7 @@ Developer notes and tips:
 
 
 import os
+import sys
 import ctypes
 import logging
 import ctypes.util
@@ -221,7 +222,9 @@ class GPU(base.GPU):
         # might want to force Vulkan, to avoid DX12 which seems to ignore
         # the NVidia control panel settings.
         # See https://github.com/gfx-rs/wgpu/issues/1416
-        force_backend = os.getenv("WGPU_BACKEND_TYPE", "")
+        # todo: for the moment we default to forcing Vulkan on Windows
+        default_force = "Vulkan" if sys.platform.startswith("win") else ""
+        force_backend = os.getenv("WGPU_BACKEND_TYPE", default_force)
         backend = enum_str2int["BackendType"]["Null"]
         if force_backend:
             try:
