@@ -222,10 +222,11 @@ class GPU(base.GPU):
         # the NVidia control panel settings.
         # See https://github.com/gfx-rs/wgpu/issues/1416
         # todo: for the moment we default to forcing Vulkan on Windows
-        default_force = "Vulkan" if sys.platform.startswith("win") else ""
-        force_backend = os.getenv("WGPU_BACKEND_TYPE", default_force)
+        force_backend = os.getenv("WGPU_BACKEND_TYPE", None)
         backend = enum_str2int["BackendType"]["Null"]
-        if force_backend:
+        if force_backend is None:  # Allow OUR defaults
+            force_backend = "Vulkan" if sys.platform.startswith("win") else ""
+        elif force_backend:
             try:
                 backend = enum_str2int["BackendType"][force_backend]
             except KeyError:
