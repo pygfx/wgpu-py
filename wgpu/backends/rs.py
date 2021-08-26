@@ -225,7 +225,8 @@ class GPU(base.GPU):
         force_backend = os.getenv("WGPU_BACKEND_TYPE", None)
         backend = enum_str2int["BackendType"]["Null"]
         if force_backend is None:  # Allow OUR defaults
-            force_backend = "Vulkan" if sys.platform.startswith("win") else ""
+            if sys.platform.startswith("win"):
+                backend = enum_str2int["BackendType"]["Vulkan"]
         elif force_backend:
             try:
                 backend = enum_str2int["BackendType"][force_backend]
