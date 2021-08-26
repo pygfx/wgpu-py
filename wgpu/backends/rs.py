@@ -213,7 +213,6 @@ class GPU(base.GPU):
             window_id = canvas.get_window_id()
             if window_id is not None:  # e.g. could be an off-screen canvas
                 surface_id = get_surface_id_from_canvas(canvas)
-                surface_id = ffi.NULL  # off-screen canvas
 
         # Try to read the WGPU_BACKEND_TYPE environment variable to see
         # if a backend should be forced. When you run into trouble with
@@ -328,22 +327,29 @@ class GPUCanvasContext(base.GPUCanvasContext):
         self._surface_size = (-1, -1)
         self._surface_id = None
         self._internal = None
+        self._current_texture = None
 
     def get_current_texture(self):
         if self._device is None:
             raise RuntimeError(
                 "Preset context must be configured before get_current_texture()."
             )
-        self._create_native_swap_chain_if_needed()
-        # H: WGPUTextureView f(WGPUSwapChain swapChain)
-        view_id = lib.wgpuSwapChainGetCurrentTextureView(self._internal)
-        size = self._surface_size[0], self._surface_size[1], 1
-        return GPUTextureView("swap_chain", view_id, self._device, None, size)
+        if self._current_texture is None:
+            self._create_native_swap_chain_if_needed()
+            # H: WGPUTextureView f(WGPUSwapChain swapChain)
+            view_id = lib.wgpuSwapChainGetCurrentTextureView(self._internal)
+            size = self._surface_size[0], self._surface_size[1], 1
+            self._current_texture = GPUTextureView(
+                "swap_chain", view_id, self._device, None, size
+            )
+        return self._current_texture
 
     def present(self):
         if self._internal is not None and lib is not None:
             # H: void f(WGPUSwapChain swapChain)
             lib.wgpuSwapChainPresent(self._internal)
+        # Reset - always ask for a fresh texture (exactly once) on each draw
+        self._current_texture = None
 
     def _create_native_swap_chain_if_needed(self):
         canvas = self._get_canvas()
