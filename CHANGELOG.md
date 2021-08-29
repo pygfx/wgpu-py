@@ -20,6 +20,24 @@ Possible sections in each release:
 ### [v0.x.y] - upcoming
 
 
+### [v0.5.6] - 30-08-2021
+
+Added:
+
+* An offscreen canvas to take snapshots without needing a window.
+
+
+Changed:
+
+* On Windows, the Vulkan backend is now forced unless `WGPU_BACKEND_TYPE` is set.
+
+Fixed:
+
+* Better support for multiple canvases by fixing a specific Qt issue.
+* Fixed that canvas was not passed to low level function of `request_adapter`.
+* Support calling `get_current_texture()` multiple times during a draw.
+
+
 ### [v0.5.5] - 09-08-2021
 
 Added:
