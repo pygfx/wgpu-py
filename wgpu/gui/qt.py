@@ -87,6 +87,11 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self._request_draw_timer.setSingleShot(True)
         self._request_draw_timer.timeout.connect(self.update)
 
+        # Get the window id one time. For some reason this is needed
+        # to "activate" the canvas. Otherwise the viz is not shown if
+        # one does not provide canvas to request_adapter().
+        self.get_window_id()
+
         self.show()
 
     # Qt methods

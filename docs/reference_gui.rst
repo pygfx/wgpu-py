@@ -32,6 +32,17 @@ These all derive from the same base class, which defines the common API.
     :members:
 
 
+
+Base offscreen class
+--------------------
+
+A base class is provided to implement off-screen canvases for different
+purposes.
+
+.. autoclass:: wgpu.gui.WgpuOffscreenCanvas
+    :members:
+
+
 Support for Qt
 --------------
 
@@ -70,13 +81,13 @@ Glfw is a lightweight windowing toolkit. Install it with ``pip install glfw``.
 .. code-block:: py
 
     # Import glfw itself
-    glfw.init()
+    import glfw
 
     # Then import the WgpuCanvas
     from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
 
     # Initialize glfw, as usual
-    import glfw
+    glfw.init()
 
     # Instantiate the canvas
     canvas = WgpuCanvas(title="Example")
@@ -93,15 +104,27 @@ Also see the `GLFW triangle example <https://github.com/pygfx/wgpu-py/blob/main/
 and the `async GLFW example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_glfw_asyncio.py>`_.
 
 
-Offscreen canvases
-------------------
+Support for offscreen
+---------------------
 
-A base class is provided to implement off-screen canvases. Note that you can
-render to a texture without using any canvas object, but in some cases it's
-convenient to do so with a canvas-like API.
+You can also use a "fake" canvas to draw offscreen and get the result as a numpy array.
+Note that you can render to a texture without using any canvas
+object, but in some cases it's convenient to do so with a canvas-like API.
 
-.. autoclass:: wgpu.gui.WgpuOffscreenCanvas
-    :members:
+.. code-block:: py
+
+    from wgpu.gui.offscreen import WgpuCanvas
+
+    # Instantiate the canvas
+    canvas = WgpuCanvas(640, 480)
+
+    # ...
+
+    # Tell the canvas what drawing function to call
+    canvas.request_draw(your_draw_function)
+
+    # Perform a draw
+    array = canvas.draw()
 
 
 Support for Jupyter lab and notebook

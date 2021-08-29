@@ -3,7 +3,7 @@ Support for rendering in a Jupyter widget. Provides a widget subclass that
 can be used as cell output, or embedded in a ipywidgets gui.
 """
 
-from .offscreen import WgpuOffscreenCanvas
+from ._offscreen import WgpuOffscreenCanvas
 
 import numpy as np
 from jupyter_rfb import RemoteFrameBuffer
