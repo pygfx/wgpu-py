@@ -21,7 +21,7 @@ from triangle import main  # The function to call to run the visualization
 app = QtWidgets.QApplication([])
 canvas = WgpuCanvas(title="wgpu triangle with Qt")
 
-main(canvas)
+device = main(canvas)
 
 # Enter Qt event loop (compatible with qt5/qt6)
 app.exec() if hasattr(app, "exec") else app.exec_()
