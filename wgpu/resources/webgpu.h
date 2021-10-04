@@ -659,7 +659,7 @@ typedef struct WGPULimits {
     uint32_t maxTextureDimension3D;
     uint32_t maxTextureArrayLayers;
     uint32_t maxBindGroups;
-    uint32_t maxDynamicUniformBufffersPerPipelineLayout;
+    uint32_t maxDynamicUniformBuffersPerPipelineLayout;
     uint32_t maxDynamicStorageBuffersPerPipelineLayout;
     uint32_t maxSampledTexturesPerShaderStage;
     uint32_t maxSamplersPerShaderStage;
