@@ -233,12 +233,12 @@ class GPU(base.GPU):
             try:
                 backend = enum_str2int["BackendType"][force_backend]
             except KeyError:
-                logger.warn(
+                logger.warning(
                     f"Invalid value for WGPU_BACKEND_TYPE: '{force_backend}'.\n"
                     f"Valid values are: {list(enum_str2int['BackendType'].keys())}"
                 )
             else:
-                logger.warn(f"Forcing backend: {force_backend} ({backend})")
+                logger.warning(f"Forcing backend: {force_backend} ({backend})")
 
         # H: chain: WGPUChainedStruct, backend: WGPUBackendType
         extras = new_struct_p(
