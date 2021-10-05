@@ -47,6 +47,8 @@ from .rs_helpers import (
     get_surface_id_from_canvas,
     get_memoryview_from_address,
     get_memoryview_and_address,
+    to_snake_case,
+    to_camel_case,
 )
 
 
@@ -54,8 +56,8 @@ logger = logging.getLogger("wgpu")  # noqa
 apidiff = ApiDiff()
 
 # The wgpu-native version that we target/expect
-__version__ = "0.9.2.2"
-__commit_sha__ = "b10496e7eed9349f0fd541e6dfe5029cb436de74"
+__version__ = "0.10.4.1"
+__commit_sha__ = "b4dd62d1781c923ae0b52195fb9e710a7fc6b177"
 version_info = tuple(map(int, __version__.split(".")))
 check_expected_version(version_info)  # produces a warning on mismatch
 
@@ -231,12 +233,12 @@ class GPU(base.GPU):
             try:
                 backend = enum_str2int["BackendType"][force_backend]
             except KeyError:
-                logger.warn(
+                logger.warning(
                     f"Invalid value for WGPU_BACKEND_TYPE: '{force_backend}'.\n"
                     f"Valid values are: {list(enum_str2int['BackendType'].keys())}"
                 )
             else:
-                logger.warn(f"Forcing backend: {force_backend} ({backend})")
+                logger.warning(f"Forcing backend: {force_backend} ({backend})")
 
         # H: chain: WGPUChainedStruct, backend: WGPUBackendType
         extras = new_struct_p(
@@ -247,21 +249,25 @@ class GPU(base.GPU):
         extras.chain.sType = lib.WGPUSType_AdapterExtras
 
         # Convert the descriptor
-        # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface
+        # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface, powerPreference: WGPUPowerPreference, forceFallbackAdapter: bool
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
             compatibleSurface=surface_id,
             nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
+            powerPreference=power_preference or "high-performance",
+            forceFallbackAdapter=False,
         )
 
         # Do the API call and get the adapter id
 
         adapter_id = None
 
-        @ffi.callback("void(WGPUAdapter, void *)")
-        def callback(received, userdata):
+        @ffi.callback("void(WGPURequestAdapterStatus, WGPUAdapter, char *, void *)")
+        def callback(status, result, message, userdata):
+            assert status == 0, "Request adapter not successful"
+            # message is not used yet in wgpu-native
             nonlocal adapter_id
-            adapter_id = received
+            adapter_id = result
 
         # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata)
         lib.wgpuInstanceRequestAdapter(
@@ -273,7 +279,7 @@ class GPU(base.GPU):
         assert adapter_id is not None
 
         # Get info on the adapter
-        # H: nextInChain: WGPUChainedStruct *, deviceID: int, vendorID: int, name: char *, driverDescription: char *, adapterType: WGPUAdapterType, backendType: WGPUBackendType
+        # H: nextInChain: WGPUChainedStructOut *, vendorID: int, deviceID: int, name: char *, driverDescription: char *, adapterType: WGPUAdapterType, backendType: WGPUBackendType
         c_properties = new_struct_p(
             "WGPUAdapterProperties *",
             # not used: nextInChain
@@ -302,10 +308,18 @@ class GPU(base.GPU):
         if c_properties.name:
             properties["name"] = ffi.string(c_properties.name).decode(errors="ignore")
 
-        # Limits are (temporarily? not supported)
-        # c_limits = xx.wgpuAdapterLimits(adapter_id)
-        # limits = {key: getattr(c_limits, key) for key in dir(c_limits)}
-        limits = {}
+        # Get limits
+        # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
+        c_supported_limits = new_struct_p(
+            "WGPUSupportedLimits *",
+            # not used: nextInChain
+            # not used: limits
+        )
+        c_limits = c_supported_limits.limits
+        # H: bool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
+        lib.wgpuAdapterGetLimits(adapter_id, c_supported_limits)
+        limits = {to_snake_case(key): getattr(c_limits, key) for key in dir(c_limits)}
+        limits = {key: val for key, val in limits.items() if val}  # filter zeros
 
         # Features are (temporarily? not supported)
         # c_features_flag = xx.wgpu_adapter_features(adapter_id)  # noqa
@@ -418,50 +432,55 @@ class GPUAdapter(base.GPUAdapter):
             label, required_features, required_limits, trace_path
         )
 
-    def _request_device(self, label, features, limits, trace_path):
+    def _request_device(self, label, features, required_limits, trace_path):
         c_trace_path = ffi.NULL
         if trace_path:  # no-cover
             c_trace_path = ffi.new("char []", trace_path.encode())
-
-        # Handle default limits
-        limits2 = base.DEFAULT_ADAPTER_LIMITS.copy()
-        limits2.update(limits or {})
 
         # Vanilla WGPU does not support interpolating samplers for float32 textures,
         # which is sad for scientific data in particular. We can enable it
         # (on the hardware were wgpu-py likely runs) using the feature:
         # WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
 
-        # H: chain: WGPUChainedStruct, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxStorageBuffersPerShaderStage: int, maxStorageBufferBindingSize: int, nativeFeatures: WGPUNativeFeature, label: char*, tracePath: char*
+        # H: chain: WGPUChainedStruct, nativeFeatures: WGPUNativeFeature, label: char*, tracePath: char*
         extras = new_struct_p(
             "WGPUDeviceExtras *",
             label=to_c_label(label),
-            maxBindGroups=limits2["max_bind_groups"],
-            maxStorageBuffersPerShaderStage=6,
             tracePath=c_trace_path,
             nativeFeatures=lib.WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
             # not used: chain
-            # not used: maxTextureDimension1D
-            # not used: maxTextureDimension2D
-            # not used: maxTextureDimension3D
-            # not used: maxTextureArrayLayers
-            # not used: maxDynamicStorageBuffersPerPipelineLayout
-            # not used: maxStorageBufferBindingSize
         )
         extras.chain.sType = lib.WGPUSType_DeviceExtras
 
-        # H: nextInChain: WGPUChainedStruct *
+        # Set limits
+        # H: nextInChain: WGPUChainedStruct *, limits: WGPULimits
+        c_required_limits = new_struct_p(
+            "WGPURequiredLimits *",
+            # not used: nextInChain
+            # not used: limits
+        )
+        c_limits = c_required_limits.limits
+        required_limits = required_limits or {}
+        for key, val in required_limits.items():
+            setattr(c_limits, to_camel_case(key), val)
+
+        # H: nextInChain: WGPUChainedStruct *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
             nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
+            requiredFeaturesCount=0,
+            requiredFeatures=ffi.new("WGPUFeatureName []", []),
+            requiredLimits=c_required_limits,
         )
 
         device_id = None
 
-        @ffi.callback("void(WGPUDevice, void *)")
-        def callback(received, userdata):
+        @ffi.callback("void(WGPURequestDeviceStatus, WGPUDevice, char *, void *)")
+        def callback(status, result, message, userdata):
+            assert status == 0, "Request device not successful"
+            # message is not used yet in wgpu-native
             nonlocal device_id
-            device_id = received
+            device_id = result
 
         # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallback callback, void * userdata)
         lib.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
@@ -469,9 +488,17 @@ class GPUAdapter(base.GPUAdapter):
         assert device_id is not None
 
         # Get the actual limits reported by the device
-        # c_limits = xx.wgpu_device_limits(device_id)
-        # limits3 = {key: getattr(c_limits, key) for key in dir(c_limits)}
-        limits3 = {}
+        # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
+        c_supported_limits = new_struct_p(
+            "WGPUSupportedLimits *",
+            # not used: nextInChain
+            # not used: limits
+        )
+        c_limits = c_supported_limits.limits
+        # H: bool f(WGPUDevice device, WGPUSupportedLimits * limits)
+        lib.wgpuDeviceGetLimits(device_id, c_supported_limits)
+        limits = {to_snake_case(key): getattr(c_limits, key) for key in dir(c_limits)}
+        limits = {key: val for key, val in limits.items() if val}  # filter zeros
 
         # Get actual features reported by the device
         # c_features_flag = xx.wgpu_device_features(device_id)
@@ -483,7 +510,7 @@ class GPUAdapter(base.GPUAdapter):
         queue_id = lib.wgpuDeviceGetQueue(device_id)
         queue = GPUQueue("", queue_id, None)
 
-        return GPUDevice(label, device_id, self, features, limits3, queue)
+        return GPUDevice(label, device_id, self, features, limits, queue)
 
     async def request_device_async(
         self,
@@ -740,7 +767,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             # The resource can be a sampler, texture view, or buffer descriptor
             resource = entry["resource"]
             if isinstance(resource, GPUSampler):
-                # H: binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
+                # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
                 c_entry = new_struct(
                     "WGPUBindGroupEntry",
                     binding=int(entry["binding"]),
@@ -749,9 +776,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                     size=0,
                     sampler=resource._internal,
                     textureView=ffi.NULL,
+                    # not used: nextInChain
                 )
             elif isinstance(resource, GPUTextureView):
-                # H: binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
+                # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
                 c_entry = new_struct(
                     "WGPUBindGroupEntry",
                     binding=int(entry["binding"]),
@@ -760,9 +788,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                     size=0,
                     sampler=ffi.NULL,
                     textureView=resource._internal,
+                    # not used: nextInChain
                 )
             elif isinstance(resource, dict):  # Buffer binding
-                # H: binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
+                # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
                 c_entry = new_struct(
                     "WGPUBindGroupEntry",
                     binding=int(entry["binding"]),
@@ -771,6 +800,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                     size=resource["size"],
                     sampler=ffi.NULL,
                     textureView=ffi.NULL,
+                    # not used: nextInChain
                 )
             else:
                 raise TypeError(f"Unexpected resource type {type(resource)}")
@@ -873,21 +903,24 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         compute: "structs.ProgrammableStage",
     ):
         check_struct("ProgrammableStage", compute)
-        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *
+        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *
         c_compute_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
             module=compute["module"]._internal,
             entryPoint=ffi.new("char []", compute["entry_point"].encode()),
             # not used: nextInChain
+            # not used: constantCount
+            # not used: constants
         )
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, computeStage: WGPUProgrammableStageDescriptor
+        # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
         struct = new_struct_p(
             "WGPUComputePipelineDescriptor *",
             label=to_c_label(label),
             layout=layout._internal,
-            computeStage=c_compute_stage,
+            compute=c_compute_stage,
             # not used: nextInChain
+            # not used: compute
         )
 
         # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
@@ -936,7 +969,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 )
                 c_attributes_list.append(c_attribute)
             c_attributes_array = ffi.new("WGPUVertexAttribute []", c_attributes_list)
-            # H: arrayStride: int, stepMode: WGPUInputStepMode, attributeCount: int, attributes: WGPUVertexAttribute *
+            # H: arrayStride: int, stepMode: WGPUVertexStepMode, attributeCount: int, attributes: WGPUVertexAttribute *
             c_vertex_buffer_descriptor = new_struct(
                 "WGPUVertexBufferLayout",
                 arrayStride=buffer_des["array_stride"],
@@ -948,7 +981,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         c_vertex_buffer_descriptors_array = ffi.new(
             "WGPUVertexBufferLayout []", c_vertex_buffer_layout_list
         )
-        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, bufferCount: int, buffers: WGPUVertexBufferLayout *
+        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, bufferCount: int, buffers: WGPUVertexBufferLayout *
         c_vertex_state = new_struct(
             "WGPUVertexState",
             module=vertex["module"]._internal,
@@ -956,6 +989,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             buffers=c_vertex_buffer_descriptors_array,
             bufferCount=len(c_vertex_buffer_layout_list),
             # not used: nextInChain
+            # not used: constantCount
+            # not used: constants
         )
 
         # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode
@@ -1029,7 +1064,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                         target["blend"]["alpha"],
                         ("src_factor", "dst_factor", "operation"),
                     )
-                    # H: srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor, operation: WGPUBlendOperation
+                    # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
                     c_alpha_blend = new_struct(
                         "WGPUBlendComponent",
                         srcFactor=alpha_blend[0],
@@ -1040,7 +1075,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                         target["blend"]["color"],
                         ("src_factor", "dst_factor", "operation"),
                     )
-                    # H: srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor, operation: WGPUBlendOperation
+                    # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
                     c_color_blend = new_struct(
                         "WGPUBlendComponent",
                         srcFactor=color_blend[0],
@@ -1066,7 +1101,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 "WGPUColorTargetState []", c_color_targets_list
             )
             check_struct("FragmentState", fragment)
-            # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, targetCount: int, targets: WGPUColorTargetState *
+            # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, targetCount: int, targets: WGPUColorTargetState *
             c_fragment_state = new_struct_p(
                 "WGPUFragmentState *",
                 module=fragment["module"]._internal,
@@ -1074,6 +1109,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 targets=c_color_targets_array,
                 targetCount=len(c_color_targets_list),
                 # not used: nextInChain
+                # not used: constantCount
+                # not used: constants
             )
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, vertex: WGPUVertexState, primitive: WGPUPrimitiveState, depthStencil: WGPUDepthStencilState *, multisample: WGPUMultisampleState, fragment: WGPUFragmentState *

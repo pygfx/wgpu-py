@@ -144,3 +144,38 @@ def get_surface_id_from_canvas(canvas):
 
     instance_id = ffi.NULL
     return lib.wgpuInstanceCreateSurface(instance_id, surface_descriptor)
+
+
+# The functions below are copied from codegen/utils.py
+
+
+def to_snake_case(name):
+    """Convert a name from camelCase to snake_case. Names that already are
+    snake_case remain the same.
+    """
+    name2 = ""
+    for c in name:
+        c2 = c.lower()
+        if c2 != c and len(name2) > 0 and name2[-1] not in "_123":
+            name2 += "_"
+        name2 += c2
+    return name2
+
+
+def to_camel_case(name):
+    """Convert a name from snake_case to camelCase. Names that already are
+    camelCase remain the same.
+    """
+    is_capital = False
+    name2 = ""
+    for c in name:
+        if c == "_" and name2:
+            is_capital = True
+        elif is_capital:
+            name2 += c.upper()
+            is_capital = False
+        else:
+            name2 += c
+    if name2.endswith(("1d", "2d", "3d")):
+        name2 = name2[:-1] + "D"
+    return name2

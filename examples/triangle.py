@@ -50,10 +50,10 @@ fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
 # %% The wgpu calls
 
 
-def main(canvas):
+def main(canvas, power_preference="high-performance", limits=None):
     """Regular function to setup a viz on the given canvas."""
-    adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
-    device = adapter.request_device()
+    adapter = wgpu.request_adapter(canvas=canvas, power_preference=power_preference)
+    device = adapter.request_device(required_limits=limits)
     return _main(canvas, device)
 
 
@@ -140,3 +140,4 @@ def _main(canvas, device):
         device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw(draw_frame)
+    return device
