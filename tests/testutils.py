@@ -39,15 +39,18 @@ def _determine_can_use_wgpu_lib():
     # For some reason, since wgpu-native 5c304b5ea1b933574edb52d5de2d49ea04a053db
     # the process' exit code is not zero, so we test more pragmatically.
     code = "import wgpu.utils; wgpu.utils.get_default_device(); print('ok')"
-    status, out = subprocess.getstatusoutput(
+    result = subprocess.run(
         [
             sys.executable,
             "-c",
             code,
-        ]
+        ],
+        capture_output=True,
     )
-    print("_determine_can_use_wgpu_lib() status code:", status)
-    return out.startswith("ok") and "traceback" not in out.lower()
+    print("_determine_can_use_wgpu_lib() status code:", result.returncode)
+    out = result.stdout.decode("utf-8")
+    err = result.stderr.decode("utf-8")
+    return out.startswith("ok") and "traceback" not in err.lower()
 
 
 can_use_vulkan_sdk = _determine_can_use_vulkan_sdk()
