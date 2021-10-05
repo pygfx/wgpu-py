@@ -48,8 +48,8 @@ def _determine_can_use_wgpu_lib():
         capture_output=True,
     )
     print("_determine_can_use_wgpu_lib() status code:", result.returncode)
-    out = result.stdout.decode("utf-8")
     err = result.stderr.decode("utf-8")
+    out = result.stdout.decode("utf-8")
     return out.startswith("ok") and "traceback" not in err.lower()
 
 
