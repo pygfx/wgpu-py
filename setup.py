@@ -28,7 +28,7 @@ elif sys.platform.startswith("darwin"):
 else:
     pass  # don't include binaries; user will have to arrange for the lib
 
-runtime_deps = ["cffi>=1.10"]
+runtime_deps = ["cffi>=1.10", "rubicon-objc>=0.4.1"]
 
 
 setup(
