@@ -526,7 +526,7 @@ class GPUAdapter(base.GPUAdapter):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_adapter_destroy(internal)
+            internal  # doesnotexist.wgpuAdapterDrop(internal)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
@@ -1190,7 +1190,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_device_destroy(internal)
+            # H: void f(WGPUDevice device)
+            internal  # lib.wgpuDeviceDrop(internal)  # Causes a hang
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
@@ -1280,7 +1281,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBuffer buffer)
-            lib.wgpuBufferDestroy(internal)
+            lib.wgpuBufferDrop(internal)
 
 
 class GPUTexture(base.GPUTexture, GPUObjectBase):
@@ -1337,42 +1338,47 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUTexture texture)
-            lib.wgpuTextureDestroy(internal)
+            lib.wgpuTextureDrop(internal)
 
 
 class GPUTextureView(base.GPUTextureView, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_texture_view_destroy(internal, False)
+            # H: void f(WGPUTextureView textureView)
+            lib.wgpuTextureViewDrop(internal)
 
 
 class GPUSampler(base.GPUSampler, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_sampler_destroy(internal)
+            # H: void f(WGPUSampler sampler)
+            lib.wgpuSamplerDrop(internal)
 
 
 class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_bind_group_layout_destroy(internal)
+            # H: void f(WGPUBindGroupLayout bindGroupLayout)
+            lib.wgpuBindGroupLayoutDrop(internal)
 
 
 class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_bind_group_destroy(internal)
+            # H: void f(WGPUBindGroup bindGroup)
+            lib.wgpuBindGroupDrop(internal)
 
 
 class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_pipeline_layout_destroy(internal)
+            # H: void f(WGPUPipelineLayout pipelineLayout)
+            lib.wgpuPipelineLayoutDrop(internal)
 
 
 class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
@@ -1382,7 +1388,8 @@ class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_shader_module_destroy(internal)
+            # H: void f(WGPUShaderModule shaderModule)
+            lib.wgpuShaderModuleDrop(internal)
 
 
 class GPUPipelineBase(base.GPUPipelineBase):
@@ -1393,21 +1400,24 @@ class GPUComputePipeline(base.GPUComputePipeline, GPUPipelineBase, GPUObjectBase
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_compute_pipeline_destroy(internal)
+            # H: void f(WGPUComputePipeline computePipeline)
+            lib.wgpuComputePipelineDrop(internal)
 
 
 class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_render_pipeline_destroy(internal)
+            # H: void f(WGPURenderPipeline renderPipeline)
+            lib.wgpuRenderPipelineDrop(internal)
 
 
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_command_buffer_destroy(internal)
+            # H: void f(WGPUCommandBuffer commandBuffer)
+            internal  # lib.wgpuCommandBufferDrop(internal)  # Causes 'Cannot remove a vacant resource'
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
@@ -1750,7 +1760,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_command_encoder_destroy(internal)
+            # H: void f(WGPUCommandEncoder commandEncoder)
+            internal  # lib.wgpuCommandEncoderDrop(internal)  # Causes 'Cannot remove a vacant resource'
 
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
@@ -1855,7 +1866,7 @@ class GPUComputePassEncoder(
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_compute_pass_destroy(internal)
+            internal  # doesnotexist.wgpuComputePassDrop(internal)
 
 
 class GPURenderEncoderBase(base.GPURenderEncoderBase):
@@ -1924,7 +1935,7 @@ class GPURenderEncoderBase(base.GPURenderEncoderBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_render_pass_destroy(internal)
+            internal  # doesnotexist.wgpuRenderPassDrop(internal)
 
 
 class GPURenderPassEncoder(
@@ -2192,7 +2203,8 @@ class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpu_render_bundle_destroy(internal)
+            # H: void f(WGPURenderBundle renderBundle)
+            lib.wgpuRenderBundleDrop(internal)
 
 
 class GPUDeviceLostInfo(base.GPUDeviceLostInfo):
@@ -2222,7 +2234,7 @@ class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUQuerySet querySet)
-            lib.wgpuQuerySetDestroy(internal)
+            lib.wgpuQuerySetDrop(internal)
 
 
 class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):

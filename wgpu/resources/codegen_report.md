@@ -29,6 +29,6 @@
 * Enum field TextureFormat.depth32float-stencil8 missing in wgpu.h
 * Enum CanvasCompositingAlphaMode missing in wgpu.h
 * Wrote 187 enum mappings and 47 struct-field mappings to rs_mappings.py
-* Validated 67 C function calls
-* Not using 66 C functions
+* Validated 79 C function calls
+* Not using 54 C functions
 * Validated 69 C structs
