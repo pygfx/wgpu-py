@@ -2,6 +2,7 @@ import random
 import ctypes
 import base64
 from ctypes import c_int32, c_ubyte
+import sys
 
 import wgpu.backends.rs  # noqa
 from wgpu.utils import compute_with_buffers
@@ -102,7 +103,7 @@ def test_compute_0_1_int():
     assert out[0].cast("i").tolist() == list(range(100))
 
 
-@mark.skipif(is_ci, reason="Cannot use SpirV shader on dx12")
+@mark.skipif(is_ci and sys.platform == "win32", reason="Cannot use SpirV shader on dx12")
 def test_compute_0_1_spirv():
 
     compute_shader = simple_compute_shader_spirv

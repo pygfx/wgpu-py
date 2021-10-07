@@ -56,6 +56,17 @@ def _determine_can_use_wgpu_lib():
     )
 
 
+def _determine_can_use_glfw():
+    code = "import glfw;exit(0) if glfw.init() else exit(1)"
+    try:
+        subprocess.check_output([sys.executable, "-c", code])
+    except Exception:
+        return False
+    else:
+        return True
+
+
 can_use_vulkan_sdk = _determine_can_use_vulkan_sdk()
 can_use_wgpu_lib = _determine_can_use_wgpu_lib()
+can_use_glfw = _determine_can_use_glfw()
 is_ci = bool(os.getenv("CI", None))
