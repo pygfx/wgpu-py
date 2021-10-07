@@ -26,15 +26,6 @@ def iters_equal(iter1, iter2):
     return False
 
 
-def _determine_can_use_vulkan_sdk():
-    try:
-        subprocess.check_output(["spirv-val", "--version"])
-    except Exception:
-        return False
-    else:
-        return True
-
-
 def _determine_can_use_wgpu_lib():
     # For some reason, since wgpu-native 5c304b5ea1b933574edb52d5de2d49ea04a053db
     # the process' exit code is not zero, so we test more pragmatically.
@@ -66,7 +57,6 @@ def _determine_can_use_glfw():
         return True
 
 
-can_use_vulkan_sdk = _determine_can_use_vulkan_sdk()
 can_use_wgpu_lib = _determine_can_use_wgpu_lib()
 can_use_glfw = _determine_can_use_glfw()
 is_ci = bool(os.getenv("CI", None))
