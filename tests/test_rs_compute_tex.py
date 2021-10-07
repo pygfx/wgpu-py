@@ -1,18 +1,19 @@
 import random
 import ctypes
+import sys
 
 import wgpu.backends.rs  # noqa
 import numpy as np
 
 from pytest import skip
 from testutils import run_tests, get_default_device
-from testutils import can_use_wgpu_lib, can_use_vulkan_sdk, is_ci
+from testutils import can_use_wgpu_lib, is_ci
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
 if not can_use_wgpu_lib:
     skip("Skipping tests that need the wgpu lib", allow_module_level=True)
-elif is_ci:
+elif is_ci and sys.platform == "win32":
     skip("These tests fail on dx12 for some reason", allow_module_level=True)
 
 # %% 1D
@@ -470,9 +471,6 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     nx, ny, nz, nc = texture_size
     nbytes = ctypes.sizeof(data1)
     bpp = nbytes // (nx * ny * nz)  # bytes per pixel
-
-    if can_use_vulkan_sdk:
-        pass  # todo: Validate shader with Naga
 
     device = get_default_device()
     cshader = device.create_shader_module(code=compute_shader)
