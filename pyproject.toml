@@ -6,25 +6,17 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
+# we only build on one python version since the wheels are not bound to it
 build = "cp39-*"
-# skip = ""
-# test-skip = ""
 
-# archs = ["auto"]
-# build-frontend = "pip"
-# dependency-versions = "pinned"
-# environment = {}
-# build-verbosity = ""
-
-# before-all = ""
+# we can't list requests under build-system.requires because
+# that step happens _after_ the before-build command
 before-build = "pip install requests && python download-wgpu-native.py"
-# repair-wheel-command = ""
 
-# test-command = ""
-# before-test = ""
-# test-requires = []
-# test-extras = []
+# this is sufficient to trigger an install of the built wheel
+test-command = "echo Wheel installed"
 
+# this is the minimum supported manylinux version
 manylinux-x86_64-image = "manylinux_2_24"
 manylinux-i686-image = "manylinux_2_24"
 manylinux-aarch64-image = "manylinux_2_24"
@@ -34,14 +26,6 @@ manylinux-pypy_x86_64-image = "manylinux_2_24"
 manylinux-pypy_i686-image = "manylinux_2_24"
 manylinux-pypy_aarch64-image = "manylinux_2_24"
 
-
-# [tool.cibuildwheel.linux]
-# repair-wheel-command = "auditwheel repair -w {dest_dir} {wheel}"
-
-# [tool.cibuildwheel.macos]
-# repair-wheel-command = [
-#   "delocate-listdeps {wheel}",
-#   "delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}",
-# ]
-
-# [tool.cibuildwheel.windows]
+[tool.cibuildwheel.macos]
+# also create apple silicon wheels
+archs = ["x86_64", "universal2", "arm64"]
