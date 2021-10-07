@@ -45,7 +45,9 @@ def _determine_can_use_wgpu_lib():
             "-c",
             code,
         ],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
     )
     print("_determine_can_use_wgpu_lib() status code:", result.returncode)
     err = result.stderr.decode("utf-8")
