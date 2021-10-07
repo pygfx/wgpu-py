@@ -4,6 +4,7 @@ import re
 import requests
 import sys
 import tempfile
+import platform
 from zipfile import ZipFile
 
 
@@ -75,7 +76,17 @@ def get_os_string():
 
 
 def get_arch():
-    return "64" if sys.maxsize > 2 ** 32 else "32"  # True on 64-bit Python interpreters
+    # See e.g.: https://stackoverflow.com/questions/45124888
+    is_64_bit = sys.maxsize > 2 ** 32
+    machine = platform.machine()
+    if not is_64_bit:
+        return "i686"
+    elif machine.startswith(("arm", "aarch64")):
+        # Includes Raspberry Pi, MacOS M1, ...
+        return "arm64"
+    else:
+        # Assume its x86 then
+        return "x86_64"
 
 
 def main(version, os_string, arch, upstream):
@@ -90,11 +101,11 @@ def main(version, os_string, arch, upstream):
         headerfile2 = "wgpu.h"
         binaryfile = None
         if os_string == "linux":
-            binaryfile = "libwgpu_native.so"
+            binaryfile = "libwgpu.so"
         elif os_string == "macos":
-            binaryfile = "libwgpu_native.dylib"
+            binaryfile = "libwgpu.dylib"
         elif os_string == "windows":
-            binaryfile = "wgpu_native.dll"
+            binaryfile = "libwgpu.dll"
         else:
             raise RuntimeError(f"Platform '{os_string}' not supported")
         root, ext = os.path.splitext(binaryfile)

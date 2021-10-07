@@ -58,11 +58,11 @@ def get_wgpu_lib_path():
 
     # Get lib filename for supported platforms
     if sys.platform.startswith("win"):  # no-cover
-        lib_filename = f"wgpu_native-{build}.dll"
+        lib_filename = f"libwgpu-{build}.dll"
     elif sys.platform.startswith("darwin"):  # no-cover
-        lib_filename = f"libwgpu_native-{build}.dylib"
+        lib_filename = f"libwgpu-{build}.dylib"
     elif sys.platform.startswith("linux"):  # no-cover
-        lib_filename = f"libwgpu_native-{build}.so"
+        lib_filename = f"libwgpu-{build}.so"
     else:  # no-cover
         raise RuntimeError(
             f"No WGPU library shipped for platform {sys.platform}. Set WGPU_LIB_PATH instead."

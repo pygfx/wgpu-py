@@ -19,7 +19,7 @@ def to_snake_case(name):
     name2 = ""
     for c in name:
         c2 = c.lower()
-        if c2 != c and len(name2) > 0 and name2[-1] != "_":
+        if c2 != c and len(name2) > 0 and name2[-1] not in "_123":
             name2 += "_"
         name2 += c2
     return name2
@@ -39,6 +39,8 @@ def to_camel_case(name):
             is_capital = False
         else:
             name2 += c
+    if name2.endswith(("1d", "2d", "3d")):
+        name2 = name2[:-1] + "D"
     return name2
 
 

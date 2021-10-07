@@ -43,8 +43,6 @@ def compare_flags():
 
     name_map = {
         "ColorWrite": "ColorWriteMask",
-        "TextureUsage.TextureBinding": "Sampled",
-        "TextureUsage.StorageBinding": "Storage",
     }
 
     for name, flag in idl.flags.items():
@@ -70,10 +68,7 @@ def write_mappings():
     idl = get_idl_parser()
     hp = get_h_parser()
 
-    name_map = {
-        "VertexStepMode": "InputStepMode",
-        "StoreOp.discard": "clear",
-    }
+    name_map = {}
     name_map_i = {v: k for k, v in name_map.items()}
 
     # Init generated code

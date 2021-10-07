@@ -46,13 +46,13 @@ purposes.
 Support for Qt
 --------------
 
-There is support fo PyQt4, PyQt5, PySide and PySide2. The wgpu library detects what
+There is support fo PyQt4, PyQt5, PyQt6, PySide, PySide2 and PySide6. The wgpu library detects what
 library you are using by looking what module has been imported.
 
 .. code-block:: py
 
     # First import any of the Qt libraries
-    from PyQt5 import QtWidgets
+    from PySide6 import QtWidgets
 
     # Then import the WgpuCanvas, which is a subclass of QWidget
     from wgpu.gui.qt import WgpuCanvas
