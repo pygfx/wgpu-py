@@ -265,7 +265,7 @@ class IdlParser:
                     val, _, key = value.rpartition(" ")
                 key = key.strip().strip(";").strip()
                 self.typedefs[key] = val.strip()
-            elif line.startswith(("interface ", "partial interface ")):
+            elif line.startswith(("namespace ", "interface ", "partial interface ")):
                 # A class or a set of flags
                 # Collect lines that define this interface
                 lines = [line]
