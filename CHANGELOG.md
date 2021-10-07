@@ -17,7 +17,16 @@ Possible sections in each release:
 * Fixed: for any bug fixes.
 * Security: in case of vulnerabilities.
 
-### [v0.x.y] - upcoming
+
+### [v0.5.7] - 07-10-2021
+
+Changed:
+
+* Update to the latest wgpu-native (including latest Naga).
+* The power-preference is actually taken into account.
+* The adapter actually reports its limits.
+* The limits in `request_device` are actually used.
+* The `Adapter.is_software` property is renamed to `Adapter.is_fallback_adapter`.
 
 
 ### [v0.5.6] - 30-08-2021
@@ -25,7 +34,6 @@ Possible sections in each release:
 Added:
 
 * An offscreen canvas to take snapshots without needing a window.
-
 
 Changed:
 
