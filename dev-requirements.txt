@@ -4,6 +4,7 @@ numpy
 pytest
 black
 flake8
+flake8-black
 pep8-naming
 sphinx
 
@@ -12,3 +13,4 @@ wheel
 setuptools
 twine
 auditwheel; sys_platform == 'linux'
+cibuildwheel
