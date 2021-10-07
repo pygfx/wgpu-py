@@ -1,9 +1,9 @@
 """
 An example demonstrating a qt app with a wgpu viz inside.
-If needed, change the PyQt5 import to e.g. PyQt6, PySide6, or PySide2.
+If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
 """
 
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 from wgpu.gui.qt import WgpuCanvas
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
