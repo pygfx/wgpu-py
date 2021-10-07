@@ -28,4 +28,7 @@ manylinux-pypy_aarch64-image = "manylinux_2_24"
 
 [tool.cibuildwheel.macos]
 # also create apple silicon wheels
-archs = ["x86_64", "universal2", "arm64"]
+archs = ["x86_64", "arm64"]
+
+# the upstream binaries are not universal yet
+# archs = ["x86_64", "universal2", "arm64"]
