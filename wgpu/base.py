@@ -101,6 +101,7 @@ class GPU:
                 confident that the returned adapter will work just fine).
             powerPreference(PowerPreference): "high-performance" or "low-power"
         """
+        # todo: include forceFallbackAdapter arg when this is also correctly applied in wgpu-native (currently its not)
         raise RuntimeError(
             "Select a backend (by importing wgpu.rs) before requesting an adapter!"
         )
@@ -269,9 +270,9 @@ class GPUAdapter:
     def __del__(self):
         self._destroy()
 
-    # IDL: readonly attribute boolean isSoftware;
+    # IDL: readonly attribute boolean isFallbackAdapter;
     @property
-    def is_software(self):
+    def is_fallback_adapter(self):
         """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._properties.get("adapterType", "").lower() in ("software", "cpu")
 

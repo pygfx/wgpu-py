@@ -28,7 +28,7 @@ class Struct:
 RequestAdapterOptions = Struct(
     "RequestAdapterOptions",
     power_preference="enums.PowerPreference",
-    force_software="bool",
+    force_fallback_adapter="bool",
 )  #:
 
 DeviceDescriptor = Struct(
@@ -235,9 +235,9 @@ BlendState = Struct(
 
 BlendComponent = Struct(
     "BlendComponent",
+    operation="enums.BlendOperation",
     src_factor="enums.BlendFactor",
     dst_factor="enums.BlendFactor",
-    operation="enums.BlendOperation",
 )  #:
 
 DepthStencilState = Struct(
