@@ -50,7 +50,7 @@ def _determine_can_use_wgpu_lib():
     print("_determine_can_use_wgpu_lib() status code:", result.returncode)
     err = result.stderr.decode("utf-8")
     out = result.stdout.decode("utf-8")
-    return out.startswith("ok") and "traceback" not in err.lower()
+    return out.strip().endswith("ok") and "traceback" not in err.lower()
 
 
 can_use_vulkan_sdk = _determine_can_use_vulkan_sdk()
