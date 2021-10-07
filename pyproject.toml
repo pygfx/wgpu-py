@@ -2,7 +2,6 @@
 requires = [
     "setuptools>=42",
     "wheel",
-    "requests",
 ]
 build-backend = "setuptools.build_meta"
 
@@ -18,7 +17,7 @@ build = "cp39-*"
 # build-verbosity = ""
 
 # before-all = ""
-before-build = "python download-wgpu-native.py"
+before-build = "pip install requests && python download-wgpu-native.py"
 # repair-wheel-command = ""
 
 # test-command = ""

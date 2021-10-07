@@ -107,9 +107,10 @@ jobs:
   # The release builds are done for the platforms that we want to build wheels for.
   # We build wheels, test them, and then upload the wheel as an artifact.
   release-builds:
-    name: wheel ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
@@ -128,9 +129,10 @@ jobs:
           name: dist
 
   sdist-builds:
-    name: sdist ${{ matrix.name }}
+    name: Build sdist on ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - name: Linux-64
