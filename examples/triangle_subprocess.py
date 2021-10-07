@@ -23,7 +23,7 @@ from triangle import main
 
 code = """
 import sys
-from PyQt5 import QtWidgets  # Use either PyQt5 or Pyside2
+from PySide6 import QtWidgets  # Use either PySide6 or PyQt6
 from wgpu.gui.qt import WgpuCanvas  # WgpuCanvas is a QWidget subclass
 
 app = QtWidgets.QApplication([])

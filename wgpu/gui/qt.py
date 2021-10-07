@@ -25,7 +25,7 @@ for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5", "PySide", "PyQt4"):
         break
 else:
     raise ImportError(
-        "Import one of PySide2, PyQt5 before the WgpuCanvas to select a Qt toolkit"
+        "Import one of PySide6, PySide2, PySide, PyQt6, PyQt5 or PyQt4 before the WgpuCanvas to select a Qt toolkit"
     )
 
 # Make Qt not ignore XDG_SESSION_TYPE
