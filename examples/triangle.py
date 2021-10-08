@@ -62,7 +62,7 @@ async def main_async(canvas):
     adapter = await wgpu.request_adapter_async(
         canvas=canvas, power_preference="high-performance"
     )
-    device = await adapter.request_device_async(extensions=[], limits={})
+    device = await adapter.request_device_async(required_limits={})
     return _main(canvas, device)
 
 
