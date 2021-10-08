@@ -9,11 +9,11 @@ import time
 
 import wgpu.backends.rs  # noqa
 from pytest import skip
-from testutils import run_tests, can_use_wgpu_lib, is_ci
+from testutils import run_tests, can_use_glfw, can_use_wgpu_lib
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
-if is_ci or not can_use_wgpu_lib:
+if not can_use_glfw or not can_use_wgpu_lib:
     skip("Skipping tests that need a window or the wgpu lib", allow_module_level=True)
 
 

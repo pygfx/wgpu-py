@@ -3,6 +3,7 @@ import base64
 import shutil
 import random
 import ctypes
+import sys
 import tempfile
 
 import wgpu.utils
@@ -147,7 +148,9 @@ def test_rs_tracer():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-@mark.skipif(is_ci, reason="Cannot use SpirV shader on dx12")
+@mark.skipif(
+    is_ci and sys.platform == "win32", reason="Cannot use SpirV shader on dx12"
+)
 def test_shader_module_creation_spirv():
 
     device = wgpu.utils.get_default_device()

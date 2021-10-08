@@ -4,17 +4,18 @@ Test render pipeline by rendering to a texture.
 
 import ctypes
 import numpy as np
+import sys
 
 import wgpu.backends.rs  # noqa
 from pytest import skip
 from testutils import run_tests, get_default_device
-from testutils import can_use_wgpu_lib, can_use_vulkan_sdk, is_ci
+from testutils import can_use_wgpu_lib, is_ci
 from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
 
 
 if not can_use_wgpu_lib:
     skip("Skipping tests that need the wgpu lib", allow_module_level=True)
-elif is_ci:
+elif is_ci and sys.platform == "win32":
     skip("These tests fail on dx12 for some reason", allow_module_level=True)
 
 
@@ -459,9 +460,6 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     device = get_default_device()
 
     shader_source = default_vertex_shader + fragment_shader
-
-    if can_use_vulkan_sdk:
-        pass  # todo: Validate shader with Naga
 
     # Create texture
     texture = device.create_texture(
