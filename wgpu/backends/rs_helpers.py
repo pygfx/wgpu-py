@@ -81,8 +81,9 @@ def get_surface_id_from_canvas(canvas):
         # }
         window = ctypes.c_void_p(win_id)
 
+        cw = ObjCInstance(window)
         try:
-            cv = ObjCInstance(window).contentView
+            cv = cw.contentView
         except AttributeError:
             # With wxPython, ObjCInstance is actually already a wxNSView and
             # not a NSWindow so no need to get the contentView (which is a
