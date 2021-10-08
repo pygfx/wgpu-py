@@ -136,7 +136,7 @@ jobs:
           name: dist
 
   sdist-build:
-    name: Build sdist on Linux-64
+    name: Build sdist on ubuntu-latest
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
