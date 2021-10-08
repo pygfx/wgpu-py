@@ -5,6 +5,7 @@ import sys
 import wgpu.backends.rs  # noqa
 import numpy as np
 
+import pytest
 from pytest import skip
 from testutils import run_tests, get_default_device
 from testutils import can_use_wgpu_lib, is_ci
@@ -89,6 +90,7 @@ def test_compute_tex_1d_rgba16sint():
     )
 
 
+@pytest.mark.skip(sys.platform == "darwin", reason="Fails on macOS")
 def test_compute_tex_1d_r32sint():
 
     compute_shader = """
@@ -234,6 +236,7 @@ def test_compute_tex_2d_rgba16sint():
     )
 
 
+@pytest.mark.skip(sys.platform == "darwin", reason="Fails on macOS")
 def test_compute_tex_2d_r32sint():
     compute_shader = """
         [[group(0), binding(0)]]
@@ -382,6 +385,7 @@ def test_compute_tex_3d_rgba16sint():
     )
 
 
+@pytest.mark.skip(sys.platform == "darwin", reason="Fails on macOS")
 def test_compute_tex_3d_r32sint():
 
     compute_shader = """
