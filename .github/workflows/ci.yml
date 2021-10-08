@@ -98,7 +98,7 @@ jobs:
     - name: Install in development mode
       run: |
           python download-wgpu-native.py
-          python setup.py develop
+          pip install -e .
     - name: Test on repo
       run: |
           pytest -v tests
