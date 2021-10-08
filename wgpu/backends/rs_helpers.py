@@ -87,12 +87,12 @@ def get_surface_id_from_canvas(canvas):
             # With wxPython, ObjCInstance is actually already a wxNSView and
             # not a NSWindow so no need to get the contentView (which is a
             # NSWindow method)
-            wxView = ObjCInstance(window)
+            wx_view = ObjCInstance(window)
             # Creating a metal layer directly in the wxNSView does not seem to
             # work, so instead add a subview with the same bounds that resizes
             # with the wxNSView and add a metal layer to that
-            if not len(wxView.subviews):
-                new_view = ObjCClass("NSView").alloc().initWithFrame(wxView.bounds)
+            if not len(wx_view.subviews):
+                new_view = ObjCClass("NSView").alloc().initWithFrame(wx_view.bounds)
                 # typedef NS_OPTIONS(NSUInteger, NSAutoresizingMaskOptions) {
                 #     ...
                 #     NSViewWidthSizable          =  2,
@@ -102,9 +102,9 @@ def get_surface_id_from_canvas(canvas):
                 # Make subview resize with superview by combining
                 # NSViewHeightSizable and NSViewWidthSizable
                 new_view.setAutoresizingMask(18)
-                wxView.setAutoresizesSubviews(True)
-                wxView.addSubview(new_view)
-            cv = wxView.subviews[0]
+                wx_view.setAutoresizesSubviews(True)
+                wx_view.addSubview(new_view)
+            cv = wx_view.subviews[0]
 
         if cv.layer and cv.layer.isKindOfClass(ObjCClass("CAMetalLayer")):
             # No need to create a metal layer again
