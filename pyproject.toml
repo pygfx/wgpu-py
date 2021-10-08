@@ -1,0 +1,34 @@
+[build-system]
+requires = [
+    "setuptools>=42",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+# we only build on one python version since the wheels are not bound to it
+build = "cp39-*"
+
+# we can't list requests under build-system.requires because
+# that step happens _after_ the before-build command
+before-build = "pip install requests && python download-wgpu-native.py"
+
+# this is sufficient to trigger an install of the built wheel
+test-command = "echo Wheel installed"
+
+# this is the minimum supported manylinux version
+manylinux-x86_64-image = "manylinux_2_24"
+manylinux-i686-image = "manylinux_2_24"
+manylinux-aarch64-image = "manylinux_2_24"
+manylinux-ppc64le-image = "manylinux_2_24"
+manylinux-s390x-image = "manylinux_2_24"
+manylinux-pypy_x86_64-image = "manylinux_2_24"
+manylinux-pypy_i686-image = "manylinux_2_24"
+manylinux-pypy_aarch64-image = "manylinux_2_24"
+
+[tool.cibuildwheel.macos]
+# also create apple silicon wheels
+archs = ["x86_64", "arm64"]
+
+# the upstream binaries are not universal yet
+# archs = ["x86_64", "universal2", "arm64"]
