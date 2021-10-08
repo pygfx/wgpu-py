@@ -4,6 +4,9 @@ import ctypes
 
 from .rs_ffi import ffi, lib
 
+if sys.platform.startswith("darwin"):
+    from rubicon.objc.api import ObjCInstance, ObjCClass
+
 
 def get_memoryview_and_address(data):
     """Get a memoryview for the given data and its memory address.
@@ -67,57 +70,53 @@ def get_surface_id_from_canvas(canvas):
 
     elif sys.platform.startswith("darwin"):  # no-cover
         # This is what the triangle example from wgpu-native does:
-        # #if WGPU_TARGET == WGPU_TARGET_MACOS
-        #     {
-        #         id metal_layer = NULL;
-        #         NSWindow *ns_window = glfwGetCocoaWindow(window);
-        #         [ns_window.contentView setWantsLayer:YES];
-        #         metal_layer = [CAMetalLayer layer];
-        #         [ns_window.contentView setLayer:metal_layer];
-        #         surface = wgpu_create_surface_from_metal_layer(metal_layer);
-        #     }
+        # if WGPU_TARGET == WGPU_TARGET_MACOS
+        # {
+        #     id metal_layer = NULL;
+        #     NSWindow *ns_window = glfwGetCocoaWindow(window);
+        #     [ns_window.contentView setWantsLayer:YES];
+        #     metal_layer = [CAMetalLayer layer];
+        #     [ns_window.contentView setLayer:metal_layer];
+        #     surface = wgpu_create_surface_from_metal_layer(metal_layer);
+        # }
         window = ctypes.c_void_p(win_id)
 
-        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
-        objc.objc_getClass.restype = ctypes.c_void_p
-        objc.sel_registerName.restype = ctypes.c_void_p
-        objc.objc_msgSend.restype = ctypes.c_void_p
-        objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        cw = ObjCInstance(window)
+        try:
+            cv = cw.contentView
+        except AttributeError:
+            # With wxPython, ObjCInstance is actually already a wxNSView and
+            # not a NSWindow so no need to get the contentView (which is a
+            # NSWindow method)
+            wx_view = ObjCInstance(window)
+            # Creating a metal layer directly in the wxNSView does not seem to
+            # work, so instead add a subview with the same bounds that resizes
+            # with the wxNSView and add a metal layer to that
+            if not len(wx_view.subviews):
+                new_view = ObjCClass("NSView").alloc().initWithFrame(wx_view.bounds)
+                # typedef NS_OPTIONS(NSUInteger, NSAutoresizingMaskOptions) {
+                #     ...
+                #     NSViewWidthSizable          =  2,
+                #     NSViewHeightSizable         = 16,
+                #     ...
+                # };
+                # Make subview resize with superview by combining
+                # NSViewHeightSizable and NSViewWidthSizable
+                new_view.setAutoresizingMask(18)
+                wx_view.setAutoresizesSubviews(True)
+                wx_view.addSubview(new_view)
+            cv = wx_view.subviews[0]
 
-        content_view_sel = objc.sel_registerName(b"contentView")
-        set_wants_layer_sel = objc.sel_registerName(b"setWantsLayer:")
-        responds_to_sel_sel = objc.sel_registerName(b"respondsToSelector:")
-        layer_sel = objc.sel_registerName(b"layer")
-        set_layer_sel = objc.sel_registerName(b"setLayer:")
-
-        # Try some duck typing to see what kind of object the window pointer points to
-        # Qt doesn't return a NSWindow, but a QNSView instead, which is subclass of NSView.
-        if objc.objc_msgSend(
-            window, responds_to_sel_sel, ctypes.c_void_p(content_view_sel)
-        ):
-            # NSWindow instances respond to contentView selector
-            content_view = objc.objc_msgSend(window, content_view_sel)
-        elif objc.objc_msgSend(window, responds_to_sel_sel, ctypes.c_void_p(layer_sel)):
-            # NSView instances respond to layer selector
-            # Let's assume that the given window pointer is actually the content view
-            content_view = window
+        if cv.layer and cv.layer.isKindOfClass(ObjCClass("CAMetalLayer")):
+            # No need to create a metal layer again
+            metal_layer = cv.layer
         else:
-            # If the code reaches this part, we know that `window` is an
-            # objective-c object but the type is neither NSView or NSWindow.
-            raise RuntimeError("Received unidentified objective-c object.")
-
-        # [ns_window.contentView setWantsLayer:YES]
-        objc.objc_msgSend(content_view, set_wants_layer_sel, True)
-
-        # metal_layer = [CAMetalLayer layer];
-        ca_metal_layer_class = objc.objc_getClass(b"CAMetalLayer")
-        metal_layer = objc.objc_msgSend(ca_metal_layer_class, layer_sel)
-
-        # [ns_window.content_view setLayer:metal_layer];
-        objc.objc_msgSend(content_view, set_layer_sel, ctypes.c_void_p(metal_layer))
+            metal_layer = ObjCClass("CAMetalLayer").layer()
+            cv.setLayer(metal_layer)
+            cv.setWantsLayer(True)
 
         struct = ffi.new("WGPUSurfaceDescriptorFromMetalLayer *")
-        struct.layer = ffi.cast("void *", metal_layer)
+        struct.layer = ffi.cast("void *", metal_layer.ptr.value)
         struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromMetalLayer
 
     elif sys.platform.startswith("linux"):  # no-cover
