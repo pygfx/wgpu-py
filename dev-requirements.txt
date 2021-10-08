@@ -7,6 +7,7 @@ flake8
 flake8-black
 pep8-naming
 sphinx
+cffi>=1.15.0rc2
 
 # Building wheels
 wheel
