@@ -4,6 +4,8 @@ import ctypes
 
 from .rs_ffi import ffi, lib
 
+if sys.platform.startswith("darwin"):
+    from rubicon.objc.api import ObjCInstance, ObjCClass
 
 def get_memoryview_and_address(data):
     """Get a memoryview for the given data and its memory address.
@@ -90,34 +92,13 @@ def get_surface_id_from_canvas(canvas):
         layer_sel = objc.sel_registerName(b"layer")
         set_layer_sel = objc.sel_registerName(b"setLayer:")
 
-        # Try some duck typing to see what kind of object the window pointer points to
-        # Qt doesn't return a NSWindow, but a QNSView instead, which is subclass of NSView.
-        if objc.objc_msgSend(
-            window, responds_to_sel_sel, ctypes.c_void_p(content_view_sel)
-        ):
-            # NSWindow instances respond to contentView selector
-            content_view = objc.objc_msgSend(window, content_view_sel)
-        elif objc.objc_msgSend(window, responds_to_sel_sel, ctypes.c_void_p(layer_sel)):
-            # NSView instances respond to layer selector
-            # Let's assume that the given window pointer is actually the content view
-            content_view = window
-        else:
-            # If the code reaches this part, we know that `window` is an
-            # objective-c object but the type is neither NSView or NSWindow.
-            raise RuntimeError("Received unidentified objective-c object.")
-
-        # [ns_window.contentView setWantsLayer:YES]
-        objc.objc_msgSend(content_view, set_wants_layer_sel, True)
-
-        # metal_layer = [CAMetalLayer layer];
-        ca_metal_layer_class = objc.objc_getClass(b"CAMetalLayer")
-        metal_layer = objc.objc_msgSend(ca_metal_layer_class, layer_sel)
-
-        # [ns_window.content_view setLayer:metal_layer];
-        objc.objc_msgSend(content_view, set_layer_sel, ctypes.c_void_p(metal_layer))
+        cv = ObjCInstance(window).contentView
+        cv.setWantsLayer(True)
+        metal_layer = ObjCClass("CAMetalLayer").layer()
+        cv.setLayer(metal_layer)
 
         struct = ffi.new("WGPUSurfaceDescriptorFromMetalLayer *")
-        struct.layer = ffi.cast("void *", metal_layer)
+        struct.layer = ffi.cast("void *", metal_layer.ptr.value)
         struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromMetalLayer
 
     elif sys.platform.startswith("linux"):  # no-cover
