@@ -146,6 +146,12 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
                 int(lsize[0] / screen_ratio),
                 int(lsize[1] / screen_ratio),
             )
+        elif sys.platform.startswith("darwin"):
+            glfw.set_window_size(
+                self._window,
+                int(lsize[0]),
+                int(lsize[1]),
+            )
         else:
             screen_ratio = ssize[0] / psize[0]
             glfw.set_window_size(
