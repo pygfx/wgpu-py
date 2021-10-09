@@ -18,6 +18,18 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+
+### [v0.5.8] - 09-10-2021
+
+Added:
+
+* Experimental support for macos_arm64 (M1).
+
+Changed:
+
+* The Qt examples use PySide6 instead of PyQt5.
+
+
 ### [v0.5.7] - 07-10-2021
 
 Changed:
