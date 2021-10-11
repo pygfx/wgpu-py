@@ -162,7 +162,7 @@ if __name__ == "__main__":
         "--arch",
         help=f"Architecture to download for (default: {arch_string})",
         default=arch_string,
-        choices=("32", "64"),
+        choices=("x86_64", "i686", "arm64"),
     )
     upstream = "gfx-rs/wgpu-native"
     parser.add_argument(
