@@ -79,6 +79,15 @@ def get_arch():
     # See e.g.: https://stackoverflow.com/questions/45124888
     is_64_bit = sys.maxsize > 2 ** 32
     machine = platform.machine()
+
+    # See if this is run by cibuildwheel and check to see if ARCHFLAGS is
+    # specified (only done on macOS). This allows to select the proper binaries.
+    # For specifics of CIBUILDWHEEL and macOS build envs, see:
+    # https://github.com/pypa/cibuildwheel/blob/4307b52ff28b631519d38bfa0dd09d6a9b39a81e/cibuildwheel/macos.py#L277
+    if os.environ.get("CIBUILDWHEEL") == "1" and "ARCHFLAGS" in os.environ:
+        archflags = os.environ["ARCHFLAGS"]
+        return "arm64" if "arm64" in archflags else "x86_64"
+
     if not is_64_bit:
         return "i686"
     elif machine.startswith(("arm", "aarch64")):
