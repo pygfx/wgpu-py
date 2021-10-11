@@ -19,6 +19,14 @@ Possible sections in each release:
 
 
 
+### [v0.5.9] - 11-10-2021
+
+Fixed:
+
+* Include the correct binaries in macOS arm64 wheels
+* Options for arch argument of download-wgpu-native.py script
+
+
 ### [v0.5.8] - 09-10-2021
 
 Added:
