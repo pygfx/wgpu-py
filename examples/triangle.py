@@ -141,3 +141,17 @@ def _main(canvas, device):
 
     canvas.request_draw(draw_frame)
     return device
+
+
+if __name__ == "__main__":
+
+    import wgpu.backends.rs  # noqa: F401, Select Rust backend
+    from wgpu.gui.auto import WgpuCanvas, run
+
+    class MyCanvas(WgpuCanvas):
+        def handle_event(self, event):
+            print(event)
+
+    canvas = MyCanvas(size=(640, 480), title="wgpu triangle with GLFW")
+    main(canvas)
+    run()

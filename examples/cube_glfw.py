@@ -6,7 +6,7 @@ import time
 
 import glfw
 import wgpu
-from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
+from wgpu.gui.auto import WgpuCanvas, run
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 import numpy as np
 
@@ -386,15 +386,4 @@ def draw_frame():
 
 canvas.request_draw(draw_frame)
 
-
-# %% Run the event loop
-
-
-def simple_event_loop():
-    """A real simple event loop, but it keeps the CPU busy."""
-    while update_glfw_canvasses():
-        glfw.poll_events()
-
-
-simple_event_loop()
-glfw.terminate()
+run()
