@@ -3,20 +3,30 @@ Support for rendering in a Jupyter widget. Provides a widget subclass that
 can be used as cell output, or embedded in a ipywidgets gui.
 """
 
+import weakref
+import asyncio
+
 from ._offscreen import WgpuOffscreenCanvas
 
 import numpy as np
 from jupyter_rfb import RemoteFrameBuffer
+from IPython.display import display
+
+
+all_jupyter_canvases = weakref.WeakSet()
 
 
 class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
     """An ipywidgets widget providing a wgpu canvas. Needs the jupyter_rfb library."""
 
-    def __init__(self):
+    def __init__(self, *, size=None, title=None):
         super().__init__()
         self._pixel_ratio = 1
         self._logical_size = 0, 0
         self._is_closed = False
+        if size is not None:
+            self.set_logical_size(*size)
+        all_jupyter_canvases.add(self)
 
     # Implementation needed for RemoteFrameBuffer
 
@@ -24,6 +34,7 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         event_type = event.get("event_type", "")
         if event_type == "close":
             self._is_closed = True
+            all_jupyter_canvases.discard(self)
         elif event_type == "resize":
             self._pixel_ratio = event["pixel_ratio"]
             self._logical_size = event["width"], event["height"]
@@ -94,3 +105,15 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
 
 # Make available under a name that is the same for all gui backends
 WgpuCanvas = JupyterWgpuCanvas
+
+
+def call_later(delay, callback, *args):
+    loop = asyncio.get_event_loop()
+    loop.call_later(delay, callback, *args)
+
+
+def run():
+    # Show all widgets that have been created so far.
+    # No need to actually start an event loop, since Jupyter already runs it.
+    for widget in all_jupyter_canvases:
+        display(widget)
