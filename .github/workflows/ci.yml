@@ -71,6 +71,9 @@ jobs:
             os: ubuntu-latest
             pyversion: '3.9'
             PYINSTALLER: 1
+          - name: Test Linux py310
+            os: ubuntu-latest
+            pyversion: '3.10'
           # Pypy3 fails on installing a 3d party dependency
           #- name: Test Linux pypy3
           #  os: ubuntu-latest
