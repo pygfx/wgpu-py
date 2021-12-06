@@ -13,7 +13,7 @@ from jupyter_rfb import RemoteFrameBuffer
 from IPython.display import display
 
 
-all_jupyter_canvases = weakref.WeakSet()
+pending_jupyter_canvases = []
 
 
 class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
@@ -26,7 +26,7 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         self._is_closed = False
         if size is not None:
             self.set_logical_size(*size)
-        all_jupyter_canvases.add(self)
+        pending_jupyter_canvases.append(weakref.ref(self))
 
     # Implementation needed for RemoteFrameBuffer
 
@@ -34,7 +34,6 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         event_type = event.get("event_type", "")
         if event_type == "close":
             self._is_closed = True
-            all_jupyter_canvases.discard(self)
         elif event_type == "resize":
             self._pixel_ratio = event["pixel_ratio"]
             self._logical_size = event["width"], event["height"]
@@ -115,5 +114,8 @@ def call_later(delay, callback, *args):
 def run():
     # Show all widgets that have been created so far.
     # No need to actually start an event loop, since Jupyter already runs it.
-    for widget in all_jupyter_canvases:
-        display(widget)
+    canvases = [r() for r in pending_jupyter_canvases]
+    pending_jupyter_canvases.clear()
+    for w in canvases:
+        if w and not w.is_closed():
+            display(w)
