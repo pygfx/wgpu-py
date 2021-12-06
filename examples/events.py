@@ -12,5 +12,5 @@ class MyCanvas(WgpuCanvas):
 
 
 if __name__ == "__main__":
-    canvas = MyCanvas(size=(640, 480), title="wgpu triangle with GLFW")
+    canvas = MyCanvas(size=(640, 480), title="wgpu events")
     run()

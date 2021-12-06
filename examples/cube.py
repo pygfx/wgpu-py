@@ -4,7 +4,6 @@ This example renders a simple textured rotating cube.
 
 import time
 
-import glfw
 import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
@@ -14,9 +13,7 @@ import numpy as np
 # %% Create canvas and device
 
 # Create a canvas to render to
-glfw.init()
-glfw.ERROR_REPORTING = "warn"
-canvas = WgpuCanvas(title="wgpu cube with GLFW")
+canvas = WgpuCanvas(title="wgpu cube")
 
 # Create a wgpu device
 adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
@@ -386,4 +383,5 @@ def draw_frame():
 
 canvas.request_draw(draw_frame)
 
-run()
+if __name__ == "__main__":
+    run()

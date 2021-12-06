@@ -1,6 +1,8 @@
 """
-Example use of webgpu API to draw a triangle. See the triangle_glfw.py
-script (and related scripts) for actually running this.
+Example use of the wgpu API to draw a triangle. This example is set up
+so it can be run on canvases provided by any backend. Running this file
+as a script will use the auto-backend (using either glfw or jupyter).
+
 
 Similar example in other languages / API's:
 
@@ -148,10 +150,6 @@ if __name__ == "__main__":
     import wgpu.backends.rs  # noqa: F401, Select Rust backend
     from wgpu.gui.auto import WgpuCanvas, run
 
-    class MyCanvas(WgpuCanvas):
-        def handle_event(self, event):
-            print(event)
-
-    canvas = MyCanvas(size=(640, 480), title="wgpu triangle with GLFW")
+    canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle")
     main(canvas)
     run()
