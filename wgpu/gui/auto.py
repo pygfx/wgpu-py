@@ -21,4 +21,9 @@ def is_jupyter():
 if is_jupyter():
     from .jupyter import WgpuCanvas, run, call_later  # noqa
 else:
-    from .glfw import WgpuCanvas, run, call_later  # noqa
+    try:
+        from .glfw import WgpuCanvas, run, call_later  # noqa
+    except ImportError as err:
+        raise ImportError(
+            str(err) + "\n\n  Install glfw using e.g. ``pip install -U glfw``"
+        )
