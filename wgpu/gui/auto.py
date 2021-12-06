@@ -4,7 +4,15 @@ Automatic GUI backend selection.
 
 
 def is_jupyter():
-    return False
+    """Determine whether the user is executing in a Jupyter Notebook / Lab."""
+    try:
+        ip = get_ipython()
+        if ip.has_trait("kernel"):
+            return True
+        else:
+            return False
+    except NameError:
+        return False
 
 
 if is_jupyter():
