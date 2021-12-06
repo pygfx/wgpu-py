@@ -1,5 +1,8 @@
 """
 Automatic GUI backend selection.
+
+Right now we only chose between GLFW and Jupyter. We might add suport
+for e.g. Qt later. Or we might decide to stick with these two.
 """
 
 

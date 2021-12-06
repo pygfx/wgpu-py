@@ -51,6 +51,52 @@ def update_glfw_canvasses():
     return len(canvases)
 
 
+# Map keys to JS key definitions
+# https://www.glfw.org/docs/3.3/group__keys.html
+# https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
+KEY_MAP = {
+    glfw.KEY_DOWN: "ArrowDown",
+    glfw.KEY_UP: "ArrowUp",
+    glfw.KEY_LEFT: "ArrowLeft",
+    glfw.KEY_RIGHT: "ArrowRight",
+    glfw.KEY_BACKSPACE: "Backspace",
+    glfw.KEY_CAPS_LOCK: "CapsLock",
+    glfw.KEY_DELETE: "Delete",
+    glfw.KEY_END: "End",
+    glfw.KEY_ENTER: "Enter",  # aka return
+    glfw.KEY_ESCAPE: "Escape",
+    glfw.KEY_F1: "F1",
+    glfw.KEY_F2: "F2",
+    glfw.KEY_F3: "F3",
+    glfw.KEY_F4: "F4",
+    glfw.KEY_F5: "F5",
+    glfw.KEY_F6: "F6",
+    glfw.KEY_F7: "F7",
+    glfw.KEY_F8: "F8",
+    glfw.KEY_F9: "F9",
+    glfw.KEY_F10: "F10",
+    glfw.KEY_F11: "F11",
+    glfw.KEY_F12: "F12",
+    glfw.KEY_HOME: "Home",
+    glfw.KEY_INSERT: "Insert",
+    glfw.KEY_LEFT_ALT: "Alt",
+    glfw.KEY_LEFT_CONTROL: "Control",
+    glfw.KEY_LEFT_SHIFT: "Shift",
+    glfw.KEY_LEFT_SUPER: "Meta",  # in glfw super means Windows or MacOS-command
+    glfw.KEY_NUM_LOCK: "NumLock",
+    glfw.KEY_PAGE_DOWN: "PageDown",
+    glfw.KEY_PAGE_UP: "Pageup",
+    glfw.KEY_PAUSE: "Pause",
+    glfw.KEY_PRINT_SCREEN: "PrintScreen",
+    glfw.KEY_RIGHT_ALT: "Alt",
+    glfw.KEY_RIGHT_CONTROL: "Control",
+    glfw.KEY_RIGHT_SHIFT: "Shift",
+    glfw.KEY_RIGHT_SUPER: "Meta",
+    glfw.KEY_SCROLL_LOCK: "ScrollLock",
+    glfw.KEY_TAB: "Tab",
+}
+
+
 class GlfwWgpuCanvas(WgpuCanvasBase):
     """A glfw window providing a wgpu canvas."""
 
@@ -245,7 +291,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
     # User events
 
     def _on_mouse_button(self, window, but, action, mods):
-        # todo: double-click
 
         # Map button being changed, which we use to update self._pointer_buttons.
         button_map = {
@@ -281,9 +326,12 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         }
         self.handle_event(ev)
 
-        self._handle_double_click(action, button)
+        self._follow_double_click(action, button)
 
-    def _handle_double_click(self, action, button):
+    def _follow_double_click(self, action, button):
+        # If a sequence of down-up-down-up is made in nearly the same
+        # spot, and within a short time, we emit the double-click event.
+
         x, y = self._pointer_pos[0], self._pointer_pos[1]
         state = self._double_click_state
 
@@ -379,59 +427,14 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         else:  # glfw.REPEAT
             return
 
-        # Map keys to JS key definitions
-        # https://www.glfw.org/docs/3.3/group__keys.html
-        # https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
-        keymap = {
-            glfw.KEY_DOWN: "ArrowDown",
-            glfw.KEY_UP: "ArrowUp",
-            glfw.KEY_LEFT: "ArrowLeft",
-            glfw.KEY_RIGHT: "ArrowRight",
-            glfw.KEY_BACKSPACE: "Backspace",
-            glfw.KEY_CAPS_LOCK: "CapsLock",
-            glfw.KEY_DELETE: "Delete",
-            glfw.KEY_END: "End",
-            glfw.KEY_ENTER: "Enter",  # aka return
-            glfw.KEY_ESCAPE: "Escape",
-            glfw.KEY_F1: "F1",
-            glfw.KEY_F2: "F2",
-            glfw.KEY_F3: "F3",
-            glfw.KEY_F4: "F4",
-            glfw.KEY_F5: "F5",
-            glfw.KEY_F6: "F6",
-            glfw.KEY_F7: "F7",
-            glfw.KEY_F8: "F8",
-            glfw.KEY_F9: "F9",
-            glfw.KEY_F10: "F10",
-            glfw.KEY_F11: "F11",
-            glfw.KEY_F12: "F12",
-            glfw.KEY_HOME: "Home",
-            glfw.KEY_INSERT: "Insert",
-            glfw.KEY_LEFT_ALT: "Alt",
-            glfw.KEY_LEFT_CONTROL: "Control",
-            glfw.KEY_LEFT_SHIFT: "Shift",
-            glfw.KEY_LEFT_SUPER: "Meta",  # in glfw super means Windows or MacOS-command
-            glfw.KEY_NUM_LOCK: "NumLock",
-            glfw.KEY_PAGE_DOWN: "PageDown",
-            glfw.KEY_PAGE_UP: "Pageup",
-            glfw.KEY_PAUSE: "Pause",
-            glfw.KEY_PRINT_SCREEN: "PrintScreen",
-            glfw.KEY_RIGHT_ALT: "Alt",
-            glfw.KEY_RIGHT_CONTROL: "Control",
-            glfw.KEY_RIGHT_SHIFT: "Shift",
-            glfw.KEY_RIGHT_SUPER: "Meta",
-            glfw.KEY_SCROLL_LOCK: "ScrollLock",
-            glfw.KEY_TAB: "Tab",
-        }
-
         # Note that if the user holds shift while pressing "5", will result in "5",
         # and not in the "%" that you'd expect on a US keyboard. Glfw wants us to
         # use set_char_callback for text input, but then we'd only get an event for
         # key presses (down followed by up). So we accept that GLFW is less complete
-        # in this respec.
+        # in this respect.
 
-        if key in keymap:
-            keyname = keymap[key]
+        if key in KEY_MAP:
+            keyname = KEY_MAP[key]
         else:
             keyname = chr(key)
             if "Shift" not in self._key_modifiers:
