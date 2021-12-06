@@ -236,7 +236,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         Subclasses can overload this method. Events include widget
         resize, mouse/touch interaction, key events, and more. An event
         is a dict with at least the key event_type. For details, see
-        https://jupyter-rfb.readthedocs.io/en/latest/reference.html#module-jupyter_rfb.events
+        https://jupyter-rfb.readthedocs.io/en/latest/events.html
         """
         pass
 
@@ -259,7 +259,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         button = button_map.get(but, 0)
 
         if action == glfw.PRESS:
-            event_type = "pointer__down"
+            event_type = "pointer_down"
             self._pointer_buttons.add(button)
         elif action == glfw.RELEASE:
             event_type = "pointer_up"
@@ -281,7 +281,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
     def _on_cursor_pos(self, window, x, y):
         # Store pointer position in logical coordinates
-        # todo: check up/down
         self._pointer_pos = x / self._pixel_ratio, y / self._pixel_ratio
 
         ev = {
@@ -297,11 +296,11 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self.handle_event(ev)
 
     def _on_scroll(self, window, dx, dy):
-        # todo: wheel is 1 or -1 in glfw, is this also the case for js?
+        # wheel is 1 or -1 in glfw, in jupyter_rfb this is ~100
         ev = {
             "event_type": "wheel",
-            "dx": dx,
-            "dy": dy,
+            "dx": 100.0 * dx,
+            "dy": -100.0 * dy,
             "x": self._pointer_pos[0],
             "y": self._pointer_pos[1],
             "modifiers": list(self._key_modifiers),
@@ -323,9 +322,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             modifiers.append("Meta")
         self._key_modifiers = modifiers
 
-        # todo: check uppercase vs lowercase
-        # todo: check if arrow keys are correctly named (need to define in jupyter_rfb)
-
         if action == glfw.PRESS:
             event_type = "key_down"
         elif action == glfw.RELEASE:
@@ -337,10 +333,10 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # https://www.glfw.org/docs/3.3/group__keys.html
         # https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
         keymap = {
-            glfw.KEY_DOWN: "Down",
-            glfw.KEY_UP: "Up",
-            glfw.KEY_LEFT: "Left",
-            glfw.KEY_RIGHT: "Right",
+            glfw.KEY_DOWN: "ArrowDown",
+            glfw.KEY_UP: "ArrowUp",
+            glfw.KEY_LEFT: "ArrowLeft",
+            glfw.KEY_RIGHT: "ArrowRight",
             glfw.KEY_BACKSPACE: "Backspace",
             glfw.KEY_CAPS_LOCK: "CapsLock",
             glfw.KEY_DELETE: "Delete",
@@ -364,7 +360,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             glfw.KEY_LEFT_ALT: "Alt",
             glfw.KEY_LEFT_CONTROL: "Control",
             glfw.KEY_LEFT_SHIFT: "Shift",
-            glfw.KEY_LEFT_SUPER: "Meta",  # in glfw super means Windowsor MacOS-command
+            glfw.KEY_LEFT_SUPER: "Meta",  # in glfw super means Windows or MacOS-command
             glfw.KEY_NUM_LOCK: "NumLock",
             glfw.KEY_PAGE_DOWN: "PageDown",
             glfw.KEY_PAGE_UP: "Pageup",
@@ -377,9 +373,16 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             glfw.KEY_SCROLL_LOCK: "ScrollLock",
             glfw.KEY_TAB: "Tab",
         }
-        try:
+
+        # Note that if the user holds shift while pressing "5", will result in "5",
+        # and not in the "%" that you'd expect on a US keyboard. Glfw wants us to
+        # use set_char_callback for text input, but then we'd only get an event for
+        # key presses (down followed by up). So we accept that GLFW is less complete
+        # in this respec.
+
+        if key in keymap:
             keyname = keymap[key]
-        except KeyError:
+        else:
             keyname = chr(key)
             if "Shift" not in self._key_modifiers:
                 keyname = keyname.lower()
