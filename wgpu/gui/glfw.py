@@ -9,6 +9,7 @@ or ``sudo apt install libglfw3-wayland`` when using Wayland.
 
 import os
 import sys
+import time
 import weakref
 import asyncio
 
@@ -93,6 +94,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self._key_modifiers = set()
         self._pointer_buttons = set()
         self._pointer_pos = 0, 0
+        self._double_click_state = {"clicks": 0}
         glfw.set_mouse_button_callback(self._window, self._on_mouse_button)
         glfw.set_cursor_pos_callback(self._window, self._on_cursor_pos)
         glfw.set_scroll_callback(self._window, self._on_scroll)
@@ -278,6 +280,54 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "touches": {},
         }
         self.handle_event(ev)
+
+        self._handle_double_click(action, button)
+
+    def _handle_double_click(self, action, button):
+        x, y = self._pointer_pos[0], self._pointer_pos[1]
+        state = self._double_click_state
+
+        timeout = 0.25
+        distance = 5
+
+        # Clear the state if it does no longer match
+        if state["clicks"] > 0:
+            d = ((x - state["x"]) ** 2 + (y - state["y"]) ** 2) ** 0.5
+            if (
+                d > distance
+                or time.perf_counter() - state["time"] > timeout
+                or button != state["button"]
+            ):
+                self._double_click_state = {"clicks": 0}
+
+        clicks = self._double_click_state["clicks"]
+
+        # Check and update order. Emit event if we make it to the final step
+        if clicks == 0 and action == glfw.PRESS:
+            self._double_click_state = {
+                "clicks": 1,
+                "button": button,
+                "time": time.perf_counter(),
+                "x": x,
+                "y": y,
+            }
+        elif clicks == 1 and action == glfw.RELEASE:
+            self._double_click_state["clicks"] = 2
+        elif clicks == 2 and action == glfw.PRESS:
+            self._double_click_state["clicks"] = 3
+        elif clicks == 3 and action == glfw.RELEASE:
+            self._double_click_state = {"clicks": 0}
+            ev = {
+                "event_type": "double_click",
+                "x": self._pointer_pos[0],
+                "y": self._pointer_pos[1],
+                "button": button,
+                "buttons": list(self._pointer_buttons),
+                "modifiers": list(self._key_modifiers),
+                "ntouches": 0,  # glfw dows not have touch support
+                "touches": {},
+            }
+            self.handle_event(ev)
 
     def _on_cursor_pos(self, window, x, y):
         # Store pointer position in logical coordinates
