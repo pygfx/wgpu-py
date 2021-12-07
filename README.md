@@ -108,12 +108,13 @@ This code is distributed under the 2-clause BSD license.
 
 * Clone the repo.
 * Install devtools using `pip install -r dev-requirements.txt` (you can replace `pip` with `pipenv` to install to a virtualenv).
-* Install wgpu-py in editable mode by running `pip install -e .`, this will also install our only runtime dependency `cffi`
+* Install wgpu-py in editable mode by running `pip install -e .`, this will also install runtime dependencies as needed.
 * Run `python download-wgpu-native.py` to download the upstream wgpu-native binaries.
   * Or alternatively point the `WGPU_LIB_PATH` environment variable to a custom build.
 * Use `black .` to apply autoformatting.
 * Use `flake8 .` to check for flake errors.
 * Use `pytest .` to run the tests.
+* Use `pip wheel --no-deps .` to build a wheel.
 
 
 ### Changing the upstream wgpu-native version
