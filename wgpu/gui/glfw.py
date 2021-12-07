@@ -9,7 +9,9 @@ or ``sudo apt install libglfw3-wayland`` when using Wayland.
 
 import os
 import sys
+import time
 import weakref
+import asyncio
 
 import glfw
 
@@ -47,6 +49,52 @@ def update_glfw_canvasses():
             canvas._need_draw = False
             canvas._draw_frame_and_present()
     return len(canvases)
+
+
+# Map keys to JS key definitions
+# https://www.glfw.org/docs/3.3/group__keys.html
+# https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key/Key_Values
+KEY_MAP = {
+    glfw.KEY_DOWN: "ArrowDown",
+    glfw.KEY_UP: "ArrowUp",
+    glfw.KEY_LEFT: "ArrowLeft",
+    glfw.KEY_RIGHT: "ArrowRight",
+    glfw.KEY_BACKSPACE: "Backspace",
+    glfw.KEY_CAPS_LOCK: "CapsLock",
+    glfw.KEY_DELETE: "Delete",
+    glfw.KEY_END: "End",
+    glfw.KEY_ENTER: "Enter",  # aka return
+    glfw.KEY_ESCAPE: "Escape",
+    glfw.KEY_F1: "F1",
+    glfw.KEY_F2: "F2",
+    glfw.KEY_F3: "F3",
+    glfw.KEY_F4: "F4",
+    glfw.KEY_F5: "F5",
+    glfw.KEY_F6: "F6",
+    glfw.KEY_F7: "F7",
+    glfw.KEY_F8: "F8",
+    glfw.KEY_F9: "F9",
+    glfw.KEY_F10: "F10",
+    glfw.KEY_F11: "F11",
+    glfw.KEY_F12: "F12",
+    glfw.KEY_HOME: "Home",
+    glfw.KEY_INSERT: "Insert",
+    glfw.KEY_LEFT_ALT: "Alt",
+    glfw.KEY_LEFT_CONTROL: "Control",
+    glfw.KEY_LEFT_SHIFT: "Shift",
+    glfw.KEY_LEFT_SUPER: "Meta",  # in glfw super means Windows or MacOS-command
+    glfw.KEY_NUM_LOCK: "NumLock",
+    glfw.KEY_PAGE_DOWN: "PageDown",
+    glfw.KEY_PAGE_UP: "Pageup",
+    glfw.KEY_PAUSE: "Pause",
+    glfw.KEY_PRINT_SCREEN: "PrintScreen",
+    glfw.KEY_RIGHT_ALT: "Alt",
+    glfw.KEY_RIGHT_CONTROL: "Control",
+    glfw.KEY_RIGHT_SHIFT: "Shift",
+    glfw.KEY_RIGHT_SUPER: "Meta",
+    glfw.KEY_SCROLL_LOCK: "ScrollLock",
+    glfw.KEY_TAB: "Tab",
+}
 
 
 class GlfwWgpuCanvas(WgpuCanvasBase):
@@ -87,72 +135,99 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         glfw.set_window_refresh_callback(self._window, self._on_window_dirty)
         glfw.set_window_focus_callback(self._window, self._on_window_dirty)
         glfw.set_window_maximize_callback(self._window, self._on_window_dirty)
+
+        # User input
+        self._key_modifiers = set()
+        self._pointer_buttons = set()
+        self._pointer_pos = 0, 0
+        self._double_click_state = {"clicks": 0}
+        glfw.set_mouse_button_callback(self._window, self._on_mouse_button)
+        glfw.set_cursor_pos_callback(self._window, self._on_cursor_pos)
+        glfw.set_scroll_callback(self._window, self._on_scroll)
+        glfw.set_key_callback(self._window, self._on_key)
+
         # Initialize the size
+        self._pixel_ratio = -1
         self.set_logical_size(*size)
 
-    # Callbacks
+    # Callbacks to provide a minimal working canvas for wgpu
 
     def _on_pixelratio_change(self, *args):
         if self._changing_pixel_ratio:
             return
         self._changing_pixel_ratio = True  # prevent recursion (on Wayland)
         try:
-            self._set_logical_size()
+            self._set_logical_size(self._logical_size)
         finally:
             self._changing_pixel_ratio = False
         self._need_draw = True
 
     def _on_size_change(self, *args):
-        self._logical_size = self._get_logical_size()
+        self._determine_size()
         self._need_draw = True
 
     def _on_close(self, *args):
         all_glfw_canvases.discard(self)
         glfw.hide_window(self._window)
+        self.handle_event({"event_type": "close"})
 
     def _on_window_dirty(self, *args):
         self._need_draw = True
 
     # Helpers
 
-    def _get_logical_size(self):
-        # Because the value of get_window_size is in physical pixels
-        # on some systems and logical pixels on other, we use the
+    def _determine_size(self):
+        # Because the value of get_window_size is in physical-pixels
+        # on some systems and in logical-pixels on other, we use the
         # framebuffer size and pixel ratio to derive the logical size.
+        pixel_ratio = glfw.get_window_content_scale(self._window)[0]
         psize = glfw.get_framebuffer_size(self._window)
         psize = int(psize[0]), int(psize[1])
-        ratio = glfw.get_window_content_scale(self._window)[0]
-        return psize[0] / ratio, psize[1] / ratio
 
-    def _set_logical_size(self):
+        self._pixel_ratio = pixel_ratio
+        self._physical_size = psize
+        self._logical_size = psize[0] / pixel_ratio, psize[1] / pixel_ratio
+
+        ev = {
+            "event_type": "resize",
+            "width": self._logical_size[0],
+            "height": self._logical_size[1],
+            "pixel_ratio": self._pixel_ratio,
+        }
+        self.handle_event(ev)
+
+    def _set_logical_size(self, new_logical_size):
         # There is unclarity about the window size in "screen pixels".
         # It appears that on Windows and X11 its the same as the
         # framebuffer size, and on macOS it's logical pixels.
         # See https://github.com/glfw/glfw/issues/845
         # Here, we simply do a quick test so we can compensate.
 
-        # The target logical size
-        lsize = self._logical_size
-        pixel_ratio = glfw.get_window_content_scale(self._window)[0]
         # The current screen size and physical size, and its ratio
+        pixel_ratio = glfw.get_window_content_scale(self._window)[0]
         ssize = glfw.get_window_size(self._window)
         psize = glfw.get_framebuffer_size(self._window)
+
         # Apply
         if is_wayland:
             # Not sure why, but on Wayland things work differently
-            screen_ratio = ssize[0] / lsize[0]
+            screen_ratio = ssize[0] / new_logical_size[0]
             glfw.set_window_size(
                 self._window,
-                int(lsize[0] / screen_ratio),
-                int(lsize[1] / screen_ratio),
+                int(new_logical_size[0] / screen_ratio),
+                int(new_logical_size[1] / screen_ratio),
             )
         else:
             screen_ratio = ssize[0] / psize[0]
             glfw.set_window_size(
                 self._window,
-                int(lsize[0] * pixel_ratio / screen_ratio),
-                int(lsize[1] * pixel_ratio / screen_ratio),
+                int(new_logical_size[0] * pixel_ratio / screen_ratio),
+                int(new_logical_size[1] * pixel_ratio / screen_ratio),
             )
+        # If this causes the widget size to change, then _on_size_change will
+        # be called, but we may want force redetermining the size.
+        if pixel_ratio != self._pixel_ratio:
+            self._determine_size()
 
     # API
 
@@ -179,20 +254,18 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             raise RuntimeError(f"Cannot get GLFW display id on {sys.platform}.")
 
     def get_pixel_ratio(self):
-        return glfw.get_window_content_scale(self._window)[0]
+        return self._pixel_ratio
 
     def get_logical_size(self):
         return self._logical_size
 
     def get_physical_size(self):
-        psize = glfw.get_framebuffer_size(self._window)
-        return int(psize[0]), int(psize[1])
+        return self._physical_size
 
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
             raise ValueError("Window width and height must not be negative")
-        self._logical_size = float(width), float(height)
-        self._set_logical_size()
+        self._set_logical_size((float(width), float(height)))
 
     def _request_draw(self):
         self._need_draw = True
@@ -205,6 +278,199 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
     def is_closed(self):
         return glfw.window_should_close(self._window)
 
+    def handle_event(self, event):
+        """Handle an incoming event.
+
+        Subclasses can overload this method. Events include widget
+        resize, mouse/touch interaction, key events, and more. An event
+        is a dict with at least the key event_type. For details, see
+        https://jupyter-rfb.readthedocs.io/en/latest/events.html
+        """
+        pass
+
+    # User events
+
+    def _on_mouse_button(self, window, but, action, mods):
+
+        # Map button being changed, which we use to update self._pointer_buttons.
+        button_map = {
+            glfw.MOUSE_BUTTON_1: 1,  # == MOUSE_BUTTON_LEFT
+            glfw.MOUSE_BUTTON_2: 2,  # == MOUSE_BUTTON_RIGHT
+            glfw.MOUSE_BUTTON_3: 3,  # == MOUSE_BUTTON_MIDDLE
+            glfw.MOUSE_BUTTON_4: 4,
+            glfw.MOUSE_BUTTON_5: 5,
+            glfw.MOUSE_BUTTON_6: 6,
+            glfw.MOUSE_BUTTON_7: 7,
+            glfw.MOUSE_BUTTON_8: 8,
+        }
+        button = button_map.get(but, 0)
+
+        if action == glfw.PRESS:
+            event_type = "pointer_down"
+            self._pointer_buttons.add(button)
+        elif action == glfw.RELEASE:
+            event_type = "pointer_up"
+            self._pointer_buttons.discard(button)
+        else:
+            return
+
+        ev = {
+            "event_type": event_type,
+            "x": self._pointer_pos[0],
+            "y": self._pointer_pos[1],
+            "button": button,
+            "buttons": list(self._pointer_buttons),
+            "modifiers": list(self._key_modifiers),
+            "ntouches": 0,  # glfw dows not have touch support
+            "touches": {},
+        }
+        self.handle_event(ev)
+
+        self._follow_double_click(action, button)
+
+    def _follow_double_click(self, action, button):
+        # If a sequence of down-up-down-up is made in nearly the same
+        # spot, and within a short time, we emit the double-click event.
+
+        x, y = self._pointer_pos[0], self._pointer_pos[1]
+        state = self._double_click_state
+
+        timeout = 0.25
+        distance = 5
+
+        # Clear the state if it does no longer match
+        if state["clicks"] > 0:
+            d = ((x - state["x"]) ** 2 + (y - state["y"]) ** 2) ** 0.5
+            if (
+                d > distance
+                or time.perf_counter() - state["time"] > timeout
+                or button != state["button"]
+            ):
+                self._double_click_state = {"clicks": 0}
+
+        clicks = self._double_click_state["clicks"]
+
+        # Check and update order. Emit event if we make it to the final step
+        if clicks == 0 and action == glfw.PRESS:
+            self._double_click_state = {
+                "clicks": 1,
+                "button": button,
+                "time": time.perf_counter(),
+                "x": x,
+                "y": y,
+            }
+        elif clicks == 1 and action == glfw.RELEASE:
+            self._double_click_state["clicks"] = 2
+        elif clicks == 2 and action == glfw.PRESS:
+            self._double_click_state["clicks"] = 3
+        elif clicks == 3 and action == glfw.RELEASE:
+            self._double_click_state = {"clicks": 0}
+            ev = {
+                "event_type": "double_click",
+                "x": self._pointer_pos[0],
+                "y": self._pointer_pos[1],
+                "button": button,
+                "buttons": list(self._pointer_buttons),
+                "modifiers": list(self._key_modifiers),
+                "ntouches": 0,  # glfw dows not have touch support
+                "touches": {},
+            }
+            self.handle_event(ev)
+
+    def _on_cursor_pos(self, window, x, y):
+        # Store pointer position in logical coordinates
+        self._pointer_pos = x / self._pixel_ratio, y / self._pixel_ratio
+
+        ev = {
+            "event_type": "pointer_move",
+            "x": self._pointer_pos[0],
+            "y": self._pointer_pos[1],
+            "button": 0,
+            "buttons": list(self._pointer_buttons),
+            "modifiers": list(self._key_modifiers),
+            "ntouches": 0,  # glfw dows not have touch support
+            "touches": {},
+        }
+        self.handle_event(ev)
+
+    def _on_scroll(self, window, dx, dy):
+        # wheel is 1 or -1 in glfw, in jupyter_rfb this is ~100
+        ev = {
+            "event_type": "wheel",
+            "dx": 100.0 * dx,
+            "dy": -100.0 * dy,
+            "x": self._pointer_pos[0],
+            "y": self._pointer_pos[1],
+            "modifiers": list(self._key_modifiers),
+        }
+        self.handle_event(ev)
+
+    def _on_key(self, window, key, scancode, action, mods):
+
+        # Map modifier keys, and update self._key_modifiers.
+        # If this callback is for Shift being pressed, then Shift is already in mods.
+        modifiers = []
+        if glfw.MOD_SHIFT & mods:
+            modifiers.append("Shift")
+        if glfw.MOD_CONTROL & mods:
+            modifiers.append("Control")
+        if glfw.MOD_ALT & mods:
+            modifiers.append("Alt")
+        if glfw.MOD_SUPER & mods:
+            modifiers.append("Meta")
+        self._key_modifiers = modifiers
+
+        if action == glfw.PRESS:
+            event_type = "key_down"
+        elif action == glfw.RELEASE:
+            event_type = "key_up"
+        else:  # glfw.REPEAT
+            return
+
+        # Note that if the user holds shift while pressing "5", will result in "5",
+        # and not in the "%" that you'd expect on a US keyboard. Glfw wants us to
+        # use set_char_callback for text input, but then we'd only get an event for
+        # key presses (down followed by up). So we accept that GLFW is less complete
+        # in this respect.
+
+        if key in KEY_MAP:
+            keyname = KEY_MAP[key]
+        else:
+            keyname = chr(key)
+            if "Shift" not in self._key_modifiers:
+                keyname = keyname.lower()
+
+        ev = {
+            "event_type": event_type,
+            "key": keyname,
+            "modifiers": list(self._key_modifiers),
+        }
+        self.handle_event(ev)
+
 
 # Make available under a name that is the same for all gui backends
 WgpuCanvas = GlfwWgpuCanvas
+
+
+# We initialize glfw upon import
+glfw.init()
+
+
+def call_later(delay, callback, *args):
+    loop = asyncio.get_event_loop()
+    loop.call_later(delay, callback, *args)
+
+
+async def mainloop():
+    loop = asyncio.get_event_loop()
+    while update_glfw_canvasses():
+        await asyncio.sleep(0.001)
+        glfw.poll_events()
+    loop.stop()
+    glfw.terminate()
+
+
+def run():
+    loop = asyncio.get_event_loop()
+    loop.create_task(mainloop())
+    loop.run_forever()

@@ -14,7 +14,6 @@ import wgpu.backends.rs  # noqa: F401, Select Rust backend
 from triangle import main
 
 
-glfw.init()
 glfw.ERROR_REPORTING = "warn"
 canvas = WgpuCanvas(title="wgpu triangle with GLFW")
 main(canvas)

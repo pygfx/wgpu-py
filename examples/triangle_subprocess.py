@@ -24,7 +24,7 @@ from triangle import main
 code = """
 import sys
 from PySide6 import QtWidgets  # Use either PySide6 or PyQt6
-from wgpu.gui.qt import WgpuCanvas  # WgpuCanvas is a QWidget subclass
+from wgpu.gui.qt import WgpuCanvas
 
 app = QtWidgets.QApplication([])
 canvas = WgpuCanvas(title="wgpu triangle in Qt subprocess")
@@ -40,6 +40,7 @@ app.exec_()
 
 class ProxyCanvas(WgpuCanvasBase):
     def __init__(self):
+        super().__init__()
         self._window_id = int(p.stdout.readline().decode())
         self._psize = tuple(
             int(x) for x in p.stdout.readline().decode().strip().strip("()").split(",")
