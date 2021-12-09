@@ -25,8 +25,7 @@ and uses the same principals, but is much easier to work with. This is the
 will be using to write GPU code for the browser. And for desktop and mobile.
 
 As WebGPU spec is being developed, a reference implementation is also
-being build. It's written in Rust, and is likely going to power the
-WebGPU implementation in Firefox.
+being build. It's written in Rust, and is powering the WebGPU implementation in Firefox.
 This reference implementation, called `wgpu-native <https://github.com/gfx-rs/wgpu>`_,
 also exposes a C-api, which means that it can be wrapped in Python. And this is what
 wgpu-py does.
