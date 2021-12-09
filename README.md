@@ -38,9 +38,9 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 pip install wgpu
 ```
 
-The wheels include the prebuild binaries. If you want to use
+The wheels include the prebuilt binaries. If you want to use
 a custom build instead, you can set the environment variable `WGPU_LIB_PATH`.
-You probably also want to install ``glwf`` (for desktop) and/or ``jupyter_rfb`` (for Jupyter).
+You probably also want to install `glwf` (for desktop) and/or `jupyter_rfb` (for Jupyter).
 
 
 ## Platform requirements
