@@ -55,8 +55,8 @@ def enable_hidpi():
 enable_hidpi()
 
 
-class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
-    """A Qt widget providing a wgpu canvas."""
+class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
+    """A toplevel Qt widget providing a wgpu canvas."""
 
     def __init__(self, *args, size=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,24 +73,12 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         # the logical surface size is actually integer. Otherwise the window
         # size can be set to subpixel (logical) values, without being able to
         # detect this. See https://github.com/pygfx/wgpu-py/pull/68
-        self._subwidget = WgpuSubWidget(self)
+        self._subwidget = QWgpuWidget(self)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
         layout.addWidget(self._subwidget)
-
-        # A timer for limiting fps
-        self._target_fps = 30  # subclasses could edit this value
-        self._request_draw_timer = QtCore.QTimer()
-        self._request_draw_timer.setTimerType(PreciseTimer)
-        self._request_draw_timer.setSingleShot(True)
-        self._request_draw_timer.timeout.connect(self.update)
-
-        # Get the window id one time. For some reason this is needed
-        # to "activate" the canvas. Otherwise the viz is not shown if
-        # one does not provide canvas to request_adapter().
-        self.get_window_id()
 
         self.show()
 
@@ -103,30 +91,109 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
     # Methods that we add from wgpu (snake_case)
 
     def get_display_id(self):
+        return self._subwidget.get_display_id()
+
+    def get_window_id(self):
+        return self._subwidget.get_window_id()
+
+    def get_pixel_ratio(self):
+        return self._subwidget.get_pixel_ratio()
+
+    def get_logical_size(self):
+        return self._subwidget.get_logical_size()
+
+    def get_physical_size(self):
+        return self._subwidget.get_physical_size()
+
+    def set_logical_size(self, width, height):
+        if width < 0 or height < 0:
+            raise ValueError("Window width and height must not be negative")
+        self.resize(width, height)  # See comment on pixel ratio
+
+    def _request_draw(self):
+        return self._subwidget._request_draw()
+
+    def close(self):
+        super().close()
+
+    def is_closed(self):
+        return not self.isVisible()
+
+    # Methods that we need to explicitly delegate to the subwidget
+
+    def get_context(self, *args, **kwargs):
+        return self._subwidget.get_context(*args, **kwargs)
+
+    def request_draw(self, *args, **kwargs):
+        return self._subwidget.request_draw(*args, **kwargs)
+
+
+class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
+    """The wgpu canvas that can be embedded in a Qt application."""
+
+    def __init__(self, *args, size=None, title=None, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if size:
+            width, height = size
+            self.resize(width, height)
+        if title:
+            self.setWindowTitle(title)
+
+        # Configure how Qt renders this widget
+        self.setAttribute(WA_PaintOnScreen, True)
+        self.setAutoFillBackground(False)
+
+        # Variables to limit the fps
+        self._draw_time = 0
+        self._target_fps = 30
+
+        # A timer for limiting fps
+        self._request_draw_timer = QtCore.QTimer()
+        self._request_draw_timer.setTimerType(PreciseTimer)
+        self._request_draw_timer.setSingleShot(True)
+        self._request_draw_timer.timeout.connect(self.update)
+
+        # Get the window id one time. For some reason this is needed
+        # to "activate" the canvas. Otherwise the viz is not shown if
+        # one does not provide canvas to request_adapter().
+        self.get_window_id()
+
+    def paintEngine(self):  # noqa: N802 - this is a Qt method
+        # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
+        return None
+
+    def paintEvent(self, event):  # noqa: N802 - this is a Qt method
+        self._draw_time = time.perf_counter()
+        self._draw_frame_and_present()
+
+    # Methods that we add from wgpu (snake_case)
+
+    def get_display_id(self):
         # There is qx11info, but it is rarely available.
         # https://doc.qt.io/qt-5/qx11info.html#display
         return super().get_display_id()  # uses X11 lib
 
     def get_window_id(self):
-        return int(self._subwidget.winId())
+        return int(self.winId())
 
     def get_pixel_ratio(self):
         # Observations:
         # * On Win10 + PyQt5 the ratio is a whole number (175% becomes 2).
         # * On Win10 + PyQt6 the ratio is correct (non-integer).
-        return self._subwidget.devicePixelRatioF()
+        return self.devicePixelRatioF()
 
     def get_logical_size(self):
         # Sizes in Qt are logical
-        lsize = self._subwidget.width(), self._subwidget.height()
+        lsize = self.width(), self.height()
         return float(lsize[0]), float(lsize[1])
 
     def get_physical_size(self):
         # https://doc.qt.io/qt-5/qpaintdevice.html
         # https://doc.qt.io/qt-5/highdpi.html
-        lsize = self._subwidget.width(), self._subwidget.height()
+        lsize = self.width(), self.height()
         lsize = float(lsize[0]), float(lsize[1])
-        ratio = self._subwidget.devicePixelRatioF()
+        ratio = self.devicePixelRatioF()
         # When the ratio is not integer (qt6), we need to somehow round
         # it. It turns out that we need to round it, but also add a
         # small offset. Tested on Win10 with several different OS
@@ -138,12 +205,12 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
             raise ValueError("Window width and height must not be negative")
-        self.resize(width, height)  # See note on pixel ratio below
+        self.resize(width, height)  # See comment on pixel ratio
 
     def _request_draw(self):
         if not self._request_draw_timer.isActive():
             now = time.perf_counter()
-            target_time = self._subwidget._draw_time + 1 / self._target_fps
+            target_time = self._draw_time + 1 / self._target_fps
             wait_time = max(0, target_time - now)
             self._request_draw_timer.start(wait_time * 1000)
 
@@ -154,23 +221,6 @@ class QtWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         return not self.isVisible()
 
 
-class WgpuSubWidget(QtWidgets.QWidget):
-    """The widget that actually provides the surface to render to."""
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.setAttribute(WA_PaintOnScreen, True)
-        self.setAutoFillBackground(False)
-        self._draw_time = 0
-
-    def paintEngine(self):  # noqa: N802 - this is a Qt method
-        # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
-        return None
-
-    def paintEvent(self, event):  # noqa: N802 - this is a Qt method
-        self._draw_time = time.perf_counter()
-        self.parent()._draw_frame_and_present()
-
-
 # Make available under a name that is the same for all gui backends
-WgpuCanvas = QtWgpuCanvas
+WgpuCanvas = QWgpuCanvas
+WgpuWidget = QWgpuWidget
