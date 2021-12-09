@@ -3,7 +3,7 @@ An example demonstrating a wx app with a wgpu viz inside.
 """
 
 import wx
-from wgpu.gui.wx import WgpuCanvas
+from wgpu.gui.wx import WgpuWidget
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 from examples.triangle import main
@@ -17,8 +17,8 @@ class Example(wx.Frame):
         splitter = wx.SplitterWindow(self)
 
         self.button = wx.Button(self, -1, "Hello world")
-        self.canvas1 = WgpuCanvas(splitter)
-        self.canvas2 = WgpuCanvas(splitter)
+        self.canvas1 = WgpuWidget(splitter)
+        self.canvas2 = WgpuWidget(splitter)
 
         splitter.SplitVertically(self.canvas1, self.canvas2)
         splitter.SetSashGravity(0.5)

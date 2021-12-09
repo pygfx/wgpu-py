@@ -10,7 +10,7 @@ from examples.triangle import main  # The function to call to run the visualizat
 
 
 app = wx.App()
-canvas = WgpuCanvas(parent=None, title="wgpu triangle with wxPython")
+canvas = WgpuCanvas()
 
 main(canvas)
 app.MainLoop()

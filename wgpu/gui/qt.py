@@ -55,88 +55,14 @@ def enable_hidpi():
 enable_hidpi()
 
 
-class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
-    """A toplevel Qt widget providing a wgpu canvas."""
-
-    def __init__(self, *args, size=None, title=None, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if size:
-            width, height = size
-            self.resize(width, height)
-        elif "parent" not in kwargs:
-            self.resize(640, 480)
-        if title:
-            self.setWindowTitle(title)
-
-        # The actual surface is held by a subwidget. This is to make sure that
-        # the logical surface size is actually integer. Otherwise the window
-        # size can be set to subpixel (logical) values, without being able to
-        # detect this. See https://github.com/pygfx/wgpu-py/pull/68
-        self._subwidget = QWgpuWidget(self)
-
-        layout = QtWidgets.QHBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(layout)
-        layout.addWidget(self._subwidget)
-
-        self.show()
-
-    # Qt methods
-
-    def update(self):
-        super().update()
-        self._subwidget.update()
-
-    # Methods that we add from wgpu (snake_case)
-
-    def get_display_id(self):
-        return self._subwidget.get_display_id()
-
-    def get_window_id(self):
-        return self._subwidget.get_window_id()
-
-    def get_pixel_ratio(self):
-        return self._subwidget.get_pixel_ratio()
-
-    def get_logical_size(self):
-        return self._subwidget.get_logical_size()
-
-    def get_physical_size(self):
-        return self._subwidget.get_physical_size()
-
-    def set_logical_size(self, width, height):
-        if width < 0 or height < 0:
-            raise ValueError("Window width and height must not be negative")
-        self.resize(width, height)  # See comment on pixel ratio
-
-    def _request_draw(self):
-        return self._subwidget._request_draw()
-
-    def close(self):
-        super().close()
-
-    def is_closed(self):
-        return not self.isVisible()
-
-    # Methods that we need to explicitly delegate to the subwidget
-
-    def get_context(self, *args, **kwargs):
-        return self._subwidget.get_context(*args, **kwargs)
-
-    def request_draw(self, *args, **kwargs):
-        return self._subwidget.request_draw(*args, **kwargs)
-
-
 class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
-    """The wgpu canvas that can be embedded in a Qt application."""
+    """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
 
     def __init__(self, *args, size=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         if size:
-            width, height = size
-            self.resize(width, height)
+            self.resize(*size)
         if title:
             self.setWindowTitle(title)
 
@@ -221,6 +147,75 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         return not self.isVisible()
 
 
+class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
+    """A toplevel Qt widget providing a wgpu canvas."""
+
+    # Most of this is proxying stuff to the inner widget.
+    # We cannot use a toplevel widget directly, otherwise the window
+    # size can be set to subpixel (logical) values, without being able to
+    # detect this. See https://github.com/pygfx/wgpu-py/pull/68
+
+    def __init__(self, *, size=None, title=None, **kwargs):
+        super().__init__(**kwargs)
+
+        self.set_logical_size(*(size or (640, 480)))
+        self.setWindowTitle(title or "qt wgpu canvas")
+
+        self._subwidget = QWgpuWidget(self)
+
+        layout = QtWidgets.QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+        layout.addWidget(self._subwidget)
+
+        self.show()
+
+    # Qt methods
+
+    def update(self):
+        super().update()
+        self._subwidget.update()
+
+    # Methods that we add from wgpu (snake_case)
+
+    def get_display_id(self):
+        return self._subwidget.get_display_id()
+
+    def get_window_id(self):
+        return self._subwidget.get_window_id()
+
+    def get_pixel_ratio(self):
+        return self._subwidget.get_pixel_ratio()
+
+    def get_logical_size(self):
+        return self._subwidget.get_logical_size()
+
+    def get_physical_size(self):
+        return self._subwidget.get_physical_size()
+
+    def set_logical_size(self, width, height):
+        if width < 0 or height < 0:
+            raise ValueError("Window width and height must not be negative")
+        self.resize(width, height)  # See comment on pixel ratio
+
+    def _request_draw(self):
+        return self._subwidget._request_draw()
+
+    def close(self):
+        super().close()
+
+    def is_closed(self):
+        return not self.isVisible()
+
+    # Methods that we need to explicitly delegate to the subwidget
+
+    def get_context(self, *args, **kwargs):
+        return self._subwidget.get_context(*args, **kwargs)
+
+    def request_draw(self, *args, **kwargs):
+        return self._subwidget.request_draw(*args, **kwargs)
+
+
 # Make available under a name that is the same for all gui backends
-WgpuCanvas = QWgpuCanvas
 WgpuWidget = QWgpuWidget
+WgpuCanvas = QWgpuCanvas
