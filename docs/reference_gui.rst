@@ -6,7 +6,7 @@ screen is also possible, but we need a *canvas* for that. Since the Python
 ecosystem provides many different GUI toolkits, we need an interface.
 
 For convenience, the wgpu library has builtin support for a few GUI
-toolkits. At the moment these include GLFW, Qt, and wx (experimental).
+toolkits. At the moment these include GLFW, Jupyter, Qt, and wx.
 
 
 The canvas interface
@@ -43,21 +43,40 @@ purposes.
     :members:
 
 
+The auto GUI backend
+--------------------
+
+The default approach for examples and small applications is to use
+the automatically selected GUI backend.
+
+.. code-block:: py
+
+    from wgpu.gui.auto import WgpuCanvas, run, call_later
+
+    canvas = WgpuCanvas(title="Example")
+    canvas.request_draw(your_draw_function)
+
+    run()
+
+At the moment this selects either the GLFW or Jupyter backend, depending
+on the enviornment. The ``WgpuCanvas`` has a ``handle_event()`` method
+that can be overloaded (by subclassing ``WgpuCanvas``) to process user events.
+See the `event spec <https://jupyter-rfb.readthedocs.io/en/latest/events.html>`_.
+
+
 Support for Qt
 --------------
 
-There is support fo PyQt4, PyQt5, PyQt6, PySide, PySide2 and PySide6. The wgpu library detects what
+There is support for PyQt4, PyQt5, PyQt6, PySide, PySide2 and PySide6. The wgpu library detects what
 library you are using by looking what module has been imported.
 
 .. code-block:: py
 
-    # First import any of the Qt libraries
+    # Import any of the Qt libraries before importing the WgpuCanvas.
+    # This way wgpu knows which Qt library to use.
     from PySide6 import QtWidgets
-
-    # Then import the WgpuCanvas, which is a subclass of QWidget
     from wgpu.gui.qt import WgpuCanvas
 
-    # Create a Qt app, as usual
     app = QtWidgets.QApplication([])
 
     # Instantiate the canvas
@@ -66,28 +85,26 @@ library you are using by looking what module has been imported.
     # Tell the canvas what drawing function to call
     canvas.request_draw(your_draw_function)
 
-    # Enter Qt's event loop, as usual
     app.exec_()
 
-Also see the `Qt triangle example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_qt.py>`_.
+For a toplevel widget, the ``WgpuCanvas`` class can be imported. If you want to
+embed the canvas as a subwidget, use ``WgpuWidget`` instead.
+
+Also see the `Qt triangle example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_qt.py>`_
+and `Qt triangle embed example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_qt_embed.py>`_.
 
 
-Support for glfw
-----------------
+Support for wx
+--------------
 
-Glfw is a lightweight windowing toolkit. Install it with ``pip install glfw``.
-
+There is support for embedding a wgpu visualization in wxPython.
 
 .. code-block:: py
 
-    # Import glfw itself
-    import glfw
+    import wx
+    from wgpu.gui.wx import WgpuCanvas
 
-    # Then import the WgpuCanvas
-    from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
-
-    # Initialize glfw, as usual
-    glfw.init()
+    app = wx.App()
 
     # Instantiate the canvas
     canvas = WgpuCanvas(title="Example")
@@ -95,13 +112,14 @@ Glfw is a lightweight windowing toolkit. Install it with ``pip install glfw``.
     # Tell the canvas what drawing function to call
     canvas.request_draw(your_draw_function)
 
-    # Enter a main loop (this stops when all windows are closed)
-    while update_glfw_canvasses():
-        glfw.poll_events()
+    app.MainLoop()
+
+For a toplevel widget, the ``WgpuCanvas`` class can be imported. If you want to
+embed the canvas as a subwidget, use ``WgpuWidget`` instead.
 
 
-Also see the `GLFW triangle example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_glfw.py>`_
-and the `async GLFW example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_glfw_asyncio.py>`_.
+Also see the `wx triangle example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_wx.py>`_
+and `wx triangle embed example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_wx_embed.py>`_.
 
 
 Support for offscreen
@@ -127,6 +145,18 @@ object, but in some cases it's convenient to do so with a canvas-like API.
     array = canvas.draw()
 
 
+Support for GLFW
+----------------
+
+GLFW is a lightweight windowing toolkit. Install it with ``pip install glfw``.
+The preferred approach is to use the auto backend, but you can replace ``from wgpu.gui.auto``
+with ``from wgpu.gui.glfw`` to force using GLFW.
+
+To implement interaction, create a subclass and overload the ``handle_event()``
+method (and call ``super().handle_event(event)``).
+See the `event spec <https://jupyter-rfb.readthedocs.io/en/latest/events.html>`_.
+
+
 Support for Jupyter lab and notebook
 ------------------------------------
 
@@ -136,11 +166,12 @@ subclass implementing a remote frame-buffer. There are also some `wgpu examples 
 
 To implement interaction, create a subclass and overload the ``handle_event()``
 method (and call ``super().handle_event(event)``).
-
+See the `event spec <https://jupyter-rfb.readthedocs.io/en/latest/events.html>`_.
 
 .. code-block:: py
 
-    from wgpu.gui.jupyter import WgpuCanvas
+    # from wgpu.gui.jupyter import WgpuCanvas  # Direct approach
+    from wgpu.gui.auto import WgpuCanvas  # Approach compatible with desktop usage
 
     canvas = WgpuCanvas()
 

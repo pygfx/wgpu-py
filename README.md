@@ -27,7 +27,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 * Coverage of the WebGPU spec is nearly complete.
 * Test coverage of the API is 100%.
-* Support for Windows, Linux and MacOS.
+* Support for Windows, Linux, and MacOS (Intel and M1).
 * Until WebGPU settles as a standard, its specification
   may change, and with that our API will probably too. Check the [changelog](CHANGELOG.md) when you upgrade!
 
@@ -38,15 +38,16 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 pip install wgpu
 ```
 
-The library ships with Rust binaries for Windows, MacOS and Linux. If you want to use
+The wheels include the prebuilt binaries. If you want to use
 a custom build instead, you can set the environment variable `WGPU_LIB_PATH`.
+You probably also want to install `glwf` (for desktop) and/or `jupyter_rfb` (for Jupyter).
 
 
 ## Platform requirements
 
 Under the hood, `wgpu` runs on Vulkan, Metal, or DX12. The wgpu-backend is selected automatically, but can be overridden by setting the `WGPU_BACKEND_TYPE` environment variable to "Vulkan", "Metal", "D3D12", "D3D11", or "OpenGL".
 
-On Windows 10, things should just work. On older Windows versions you
+On Windows 10+, things should just work. On older Windows versions you
 may need to install the Vulkan drivers. You may want to force "Vulkan" while "D3D12" is less mature.
 
 On Linux, it's advisable to install the proprietary drivers of your GPU
@@ -74,29 +75,22 @@ import wgpu.backend.rs
 To render to the screen you can use a variety of GUI toolkits:
 
 ```py
-# GLFW is a great lightweight windowing toolkit. Install with `pip install glfw`
-from wgpu.gui.glfw import WgpuCanvas
+# The auto backend selects either the glfw or jupyter backend
+from wgpu.gui.auto import WgpuCanvas, run, call_later
 
 # Visualizations can be embedded as a widget in a Qt application.
 # Import PySide6, PyQt6, PySide2, PyQt5, PySide or PyQt4 before running the line below.
 # The code will detect and use the library that is imported.
 from wgpu.gui.qt import WgpuCanvas
 
-# You can also show wgpu visualizations in Jupyter
-from wgpu.gui.jupyter import WgpuCanvas
+# Visualizations can be embedded as a widget in a wx application.
+from wgpu.gui.wx import WgpuCanvas
 ```
 
 Some functions in the original `wgpu-native` API are async. In the Python API,
 the default functions are all sync (blocking), making things easy for general use.
 Async versions of these functions are available, so wgpu can also work
 well with Asyncio or Trio.
-
-
-## Web support
-
-We are considering future support for compiling (Python)
-visualizations to the web via PScript and Flexx. We try to keep that
-option open as long as it does not get in the way too much. No promises.
 
 
 ## License

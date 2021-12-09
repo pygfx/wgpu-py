@@ -22,7 +22,7 @@ from triangle import main  # The function to call to run the visualization
 
 
 app = QtWidgets.QApplication([])
-canvas = WgpuCanvas(title="wgpu triangle with Qt")
+canvas = WgpuCanvas()
 
 device = main(canvas)
 

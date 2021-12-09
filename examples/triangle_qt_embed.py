@@ -4,7 +4,7 @@ If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
 """
 
 from PySide6 import QtWidgets
-from wgpu.gui.qt import WgpuCanvas
+from wgpu.gui.qt import WgpuWidget
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 from triangle import main
@@ -19,8 +19,8 @@ class ExampleWidget(QtWidgets.QWidget):
         splitter = QtWidgets.QSplitter()
 
         self.button = QtWidgets.QPushButton("Hello world", self)
-        self.canvas1 = WgpuCanvas(splitter)
-        self.canvas2 = WgpuCanvas(splitter)
+        self.canvas1 = WgpuWidget(splitter)
+        self.canvas2 = WgpuWidget(splitter)
 
         splitter.addWidget(self.canvas1)
         splitter.addWidget(self.canvas2)
