@@ -3,6 +3,7 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
+import time
 import ctypes
 
 from .base import WgpuCanvasBase
@@ -37,27 +38,21 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._draw_lock = False
-        self._resize_timer = TimerWithCallback(self._request_draw)
+        # Variables to limit the fps
+        self._draw_time = 0
+        self._target_fps = 30
+        self._request_draw_timer = TimerWithCallback(self.Refresh)
 
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda x: None)
-        self.Bind(wx.EVT_SIZE, lambda e: self._request_draw_later())
+        self.Bind(wx.EVT_SIZE, lambda e: self._request_draw())
 
     def on_paint(self, event):
-        if self._draw_lock:
-            return
+        self._draw_time = time.perf_counter()
         dc = wx.PaintDC(self)  # needed for wx
         self._draw_frame_and_present()
         del dc
         event.Skip()
-
-    def _request_draw_later(self):
-        # It appears that when a widget resizes, its internal texture takes
-        # a while to update for some reason. By delaying drawing on a resize
-        # we avoid wgpu errors related to mismatching present sizes.
-        self._draw_lock = True
-        self._resize_timer.Start(100, wx.TIMER_ONE_SHOT)
 
     # Methods that we add from wgpu
 
@@ -86,8 +81,14 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         self.SetSize(width, height)
 
     def _request_draw(self):
-        self.Refresh()  # Invalidates the canvas
-        self._draw_lock = False
+        # Despite the FPS limiting the delayed call to refresh solves two other issues:
+        # * It prevents that drawing only happens when the mouse is down, see #209.
+        # * It prevents issues with mismatching present sizes during resizing (on Linux).
+        if not self._request_draw_timer.IsRunning():
+            now = time.perf_counter()
+            target_time = self._draw_time + 1 / self._target_fps
+            wait_time = max(0, target_time - now)
+            self._request_draw_timer.Start(wait_time * 1000, wx.TIMER_ONE_SHOT)
 
     def close(self):
         self.Hide()
