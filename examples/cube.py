@@ -123,27 +123,21 @@ texture = device.create_texture(
     sample_count=1,
 )
 texture_view = texture.create_view()
-tmp_buffer = device.create_buffer_with_data(
-    data=texture_data, usage=wgpu.BufferUsage.COPY_SRC
-)
 
-command_encoder = device.create_command_encoder()
-command_encoder.copy_buffer_to_texture(
-    {
-        "buffer": tmp_buffer,
-        "offset": 0,
-        "bytes_per_row": texture_data.strides[0],
-        "rows_per_image": 0,
-    },
+device.queue.write_texture(
     {
         "texture": texture,
         "mip_level": 0,
         "origin": (0, 0, 0),
     },
-    copy_size=texture_size,
+    texture_data,
+    {
+        "offset": 0,
+        "bytes_per_row": texture_data.strides[0],
+        "rows_per_image": 0,
+    },
+    texture_size,
 )
-device.queue.submit([command_encoder.finish()])
-
 
 # Create a sampler
 sampler = device.create_sampler()
@@ -351,12 +345,12 @@ def draw_frame():
         data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
     )
 
-    current_texture_view = present_context.get_current_texture()
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_buffer(
         tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
     )
 
+    current_texture_view = present_context.get_current_texture()
     render_pass = command_encoder.begin_render_pass(
         color_attachments=[
             {
@@ -374,8 +368,8 @@ def draw_frame():
     for bind_group_id, bind_group in enumerate(bind_groups):
         render_pass.set_bind_group(bind_group_id, bind_group, [], 0, 99)
     render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
-
     render_pass.end_pass()
+
     device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw()
