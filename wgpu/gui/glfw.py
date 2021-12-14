@@ -432,11 +432,13 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # use set_char_callback for text input, but then we'd only get an event for
         # key presses (down followed by up). So we accept that GLFW is less complete
         # in this respect.
-
         if key in KEY_MAP:
             keyname = KEY_MAP[key]
         else:
-            keyname = chr(key)
+            try:
+                keyname = chr(key)
+            except ValueError:
+                return  # Probably a special key that we don't have in our KEY_MAP
             if "Shift" not in self._key_modifiers:
                 keyname = keyname.lower()
 
