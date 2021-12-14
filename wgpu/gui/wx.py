@@ -29,7 +29,10 @@ class TimerWithCallback(wx.Timer):
         self._callback = callback
 
     def Notify(self, *args):  # noqa: N802
-        self._callback()
+        try:
+            self._callback()
+        except RuntimeError:
+            pass  # wrapped C/C++ object of type WxWgpuWindow has been deleted
 
 
 class WxWgpuWindow(WgpuCanvasBase, wx.Window):
@@ -43,16 +46,30 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         self._target_fps = 30
         self._request_draw_timer = TimerWithCallback(self.Refresh)
 
+        # We also keep a timer to prevent draws during a resize. This prevents
+        # issues with mismatching present sizes during resizing (on Linux).
+        self._resize_timer = TimerWithCallback(self._on_resize_done)
+        self._draw_lock = False
+
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda x: None)
-        self.Bind(wx.EVT_SIZE, lambda e: self._request_draw())
+        self.Bind(wx.EVT_SIZE, self._on_resize)
 
     def on_paint(self, event):
         self._draw_time = time.perf_counter()
         dc = wx.PaintDC(self)  # needed for wx
-        self._draw_frame_and_present()
+        if not self._draw_lock:
+            self._draw_frame_and_present()
         del dc
         event.Skip()
+
+    def _on_resize(self, *args):
+        self._draw_lock = True
+        self._resize_timer.Start(100, wx.TIMER_ONE_SHOT)
+
+    def _on_resize_done(self, *args):
+        self._draw_lock = False
+        self._request_draw()
 
     # Methods that we add from wgpu
 
@@ -81,9 +98,8 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         self.SetSize(width, height)
 
     def _request_draw(self):
-        # Despite the FPS limiting the delayed call to refresh solves two other issues:
-        # * It prevents that drawing only happens when the mouse is down, see #209.
-        # * It prevents issues with mismatching present sizes during resizing (on Linux).
+        # Despite the FPS limiting the delayed call to refresh solves
+        # that drawing only happens when the mouse is down, see #209.
         if not self._request_draw_timer.IsRunning():
             now = time.perf_counter()
             target_time = self._draw_time + 1 / self._target_fps
