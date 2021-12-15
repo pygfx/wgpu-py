@@ -94,11 +94,7 @@ def _main(canvas, device):
             "cull_mode": wgpu.CullMode.none,
         },
         depth_stencil=None,
-        multisample={
-            "count": 1,
-            "mask": 0xFFFFFFFF,
-            "alpha_to_coverage_enabled": False,
-        },
+        multisample=None,
         fragment={
             "module": shader,
             "entry_point": "fs_main",
