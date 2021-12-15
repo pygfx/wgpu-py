@@ -58,7 +58,7 @@ enable_hidpi()
 class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
     """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
 
-    def __init__(self, *args, size=None, title=None, **kwargs):
+    def __init__(self, *args, size=None, title=None, max_fps=30, **kwargs):
         super().__init__(*args, **kwargs)
 
         if size:
@@ -72,7 +72,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
 
         # Variables to limit the fps
         self._draw_time = 0
-        self._target_fps = 30
+        self._max_fps = float(max_fps)
 
         # A timer for limiting fps
         self._request_draw_timer = QtCore.QTimer()
@@ -136,7 +136,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
     def _request_draw(self):
         if not self._request_draw_timer.isActive():
             now = time.perf_counter()
-            target_time = self._draw_time + 1 / self._target_fps
+            target_time = self._draw_time + 1.0 / self._max_fps
             wait_time = max(0, target_time - now)
             self._request_draw_timer.start(wait_time * 1000)
 
@@ -155,13 +155,13 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
     # size can be set to subpixel (logical) values, without being able to
     # detect this. See https://github.com/pygfx/wgpu-py/pull/68
 
-    def __init__(self, *, size=None, title=None, **kwargs):
+    def __init__(self, *, size=None, title=None, max_fps=30, **kwargs):
         super().__init__(**kwargs)
 
         self.set_logical_size(*(size or (640, 480)))
         self.setWindowTitle(title or "qt wgpu canvas")
 
-        self._subwidget = QWgpuWidget(self)
+        self._subwidget = QWgpuWidget(self, max_fps=max_fps)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
