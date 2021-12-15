@@ -46,8 +46,7 @@ def update_glfw_canvasses():
     canvases = tuple(all_glfw_canvases)
     for canvas in canvases:
         if canvas._need_draw:
-            canvas._need_draw = False
-            canvas._draw_frame_and_present()
+            canvas._perform_draw()
     return len(canvases)
 
 
@@ -102,13 +101,13 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
     # See https://www.glfw.org/docs/latest/group__window.html
 
-    def __init__(self, *, size=None, title=None):
+    def __init__(self, *, size=None, title=None, max_fps=30):
         super().__init__()
 
         # Handle inputs
         if not size:
             size = 640, 480
-        title = str(title or "")
+        title = str(title or "glfw wgpu canvas")
 
         # Set window hints
         glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
@@ -122,9 +121,16 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # Create the window (the initial size may not be in logical pixels)
         self._window = glfw.create_window(int(size[0]), int(size[1]), title, None, None)
 
-        # Register ourselves
-        self._need_draw = True
+        # Variables to manage the drawing
+        self._need_draw = False
+        self._request_draw_timer_running = False
+        self._draw_time = 0
+        self._max_fps = float(max_fps)
+
+        # Other internal variables
         self._changing_pixel_ratio = False
+
+        # Register ourselves
         all_glfw_canvases.add(self)
 
         # Register callbacks. We may get notified too often, but that's
@@ -149,6 +155,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # Initialize the size
         self._pixel_ratio = -1
         self.set_logical_size(*size)
+        self._request_draw()
 
     # Callbacks to provide a minimal working canvas for wgpu
 
@@ -160,11 +167,11 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             self._set_logical_size(self._logical_size)
         finally:
             self._changing_pixel_ratio = False
-        self._need_draw = True
+        self._request_draw()
 
     def _on_size_change(self, *args):
         self._determine_size()
-        self._need_draw = True
+        self._request_draw()
 
     def _on_close(self, *args):
         all_glfw_canvases.discard(self)
@@ -172,9 +179,19 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self.handle_event({"event_type": "close"})
 
     def _on_window_dirty(self, *args):
-        self._need_draw = True
+        self._request_draw()
 
     # Helpers
+
+    def _mark_ready_for_draw(self):
+        self._request_draw_timer_running = False
+        self._need_draw = True  # The event loop looks at this flag
+        glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
+
+    def _perform_draw(self):
+        self._need_draw = False
+        self._draw_time = time.perf_counter()
+        self._draw_frame_and_present()
 
     def _determine_size(self):
         # Because the value of get_window_size is in physical-pixels
@@ -268,8 +285,12 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self._set_logical_size((float(width), float(height)))
 
     def _request_draw(self):
-        self._need_draw = True
-        glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
+        if not self._request_draw_timer_running:
+            now = time.perf_counter()
+            target_time = self._draw_time + 1.0 / self._max_fps
+            wait_time = max(0, target_time - now)
+            self._request_draw_timer_running = True
+            call_later(wait_time, self._mark_ready_for_draw)
 
     def close(self):
         glfw.set_window_should_close(self._window, True)
