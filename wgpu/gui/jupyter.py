@@ -3,6 +3,7 @@ Support for rendering in a Jupyter widget. Provides a widget subclass that
 can be used as cell output, or embedded in a ipywidgets gui.
 """
 
+import time
 import weakref
 import asyncio
 
@@ -19,14 +20,25 @@ pending_jupyter_canvases = []
 class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
     """An ipywidgets widget providing a wgpu canvas. Needs the jupyter_rfb library."""
 
-    def __init__(self, *, size=None, title=None):
+    def __init__(self, *, size=None, title=None, max_fps=30):
         super().__init__()
+
+        # Internal variables
         self._pixel_ratio = 1
         self._logical_size = 0, 0
         self._is_closed = False
+
+        # Register so this can be display'ed when run() is called
+        pending_jupyter_canvases.append(weakref.ref(self))
+
+        # Variables to manage the drawing
+        self._request_draw_timer_running = False
+        self._draw_time = 0
+        self._max_fps = float(max_fps)
+
+        # Initialize size
         if size is not None:
             self.set_logical_size(*size)
-        pending_jupyter_canvases.append(weakref.ref(self))
 
     # Implementation needed for RemoteFrameBuffer
 
@@ -39,6 +51,8 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
             self._logical_size = event["width"], event["height"]
 
     def get_frame(self):
+        self._draw_time = time.perf_counter()
+        self._request_draw_timer_running = False
         # The _draw_frame_and_present() does the drawing and then calls
         # present_context.present(), which calls our present() method.
         # The resuls is either a numpy array or None, and this matches
@@ -69,7 +83,12 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         return self._is_closed
 
     def _request_draw(self):
-        RemoteFrameBuffer.request_draw(self)
+        if not self._request_draw_timer_running:
+            now = time.perf_counter()
+            target_time = self._draw_time + 1.0 / self._max_fps
+            wait_time = max(0, target_time - now)
+            self._request_draw_timer_running = True
+            call_later(wait_time, RemoteFrameBuffer.request_draw, self)
 
     # Implementation needed for WgpuOffscreenCanvas
 
