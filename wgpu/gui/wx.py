@@ -3,7 +3,6 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
-import time
 import ctypes
 
 from .base import WgpuCanvasBase
@@ -38,15 +37,13 @@ class TimerWithCallback(wx.Timer):
 class WxWgpuWindow(WgpuCanvasBase, wx.Window):
     """A wx Window representing a wgpu canvas that can be embedded in a wx application."""
 
-    def __init__(self, *args, max_fps=30, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Variables to limit the fps
-        self._draw_time = 0
-        self._max_fps = float(max_fps)
+        # A timer for limiting fps
         self._request_draw_timer = TimerWithCallback(self.Refresh)
 
-        # We also keep a timer to prevent draws during a resize. This prevents
+        # We keep a timer to prevent draws during a resize. This prevents
         # issues with mismatching present sizes during resizing (on Linux).
         self._resize_timer = TimerWithCallback(self._on_resize_done)
         self._draw_lock = False
@@ -56,7 +53,6 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         self.Bind(wx.EVT_SIZE, self._on_resize)
 
     def on_paint(self, event):
-        self._draw_time = time.perf_counter()
         dc = wx.PaintDC(self)  # needed for wx
         if not self._draw_lock:
             self._draw_frame_and_present()
@@ -101,10 +97,9 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         # Despite the FPS limiting the delayed call to refresh solves
         # that drawing only happens when the mouse is down, see #209.
         if not self._request_draw_timer.IsRunning():
-            now = time.perf_counter()
-            target_time = self._draw_time + 1.0 / self._max_fps
-            wait_time = max(0, target_time - now)
-            self._request_draw_timer.Start(wait_time * 1000, wx.TIMER_ONE_SHOT)
+            self._request_draw_timer.Start(
+                self._get_draw_wait_time() * 1000, wx.TIMER_ONE_SHOT
+            )
 
     def close(self):
         self.Hide()
