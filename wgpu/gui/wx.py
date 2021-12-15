@@ -38,12 +38,12 @@ class TimerWithCallback(wx.Timer):
 class WxWgpuWindow(WgpuCanvasBase, wx.Window):
     """A wx Window representing a wgpu canvas that can be embedded in a wx application."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, max_fps=30, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Variables to limit the fps
         self._draw_time = 0
-        self._target_fps = 30
+        self._max_fps = float(max_fps)
         self._request_draw_timer = TimerWithCallback(self.Refresh)
 
         # We also keep a timer to prevent draws during a resize. This prevents
@@ -102,7 +102,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         # that drawing only happens when the mouse is down, see #209.
         if not self._request_draw_timer.IsRunning():
             now = time.perf_counter()
-            target_time = self._draw_time + 1 / self._target_fps
+            target_time = self._draw_time + 1.0 / self._max_fps
             wait_time = max(0, target_time - now)
             self._request_draw_timer.Start(wait_time * 1000, wx.TIMER_ONE_SHOT)
 
@@ -118,13 +118,13 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
 
     # Most of this is proxying stuff to the inner widget.
 
-    def __init__(self, *, parent=None, size=None, title=None, **kwargs):
+    def __init__(self, *, parent=None, size=None, title=None, max_fps=30, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.set_logical_size(*(size or (640, 480)))
         self.SetTitle(title or "wx wgpu canvas")
 
-        self._subwidget = WxWgpuWindow(parent=self)
+        self._subwidget = WxWgpuWindow(parent=self, max_fps=max_fps)
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
 
         self.Show()
