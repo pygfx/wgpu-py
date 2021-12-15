@@ -3,6 +3,7 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
+import time
 import ctypes
 
 from .base import WgpuCanvasBase
@@ -28,36 +29,47 @@ class TimerWithCallback(wx.Timer):
         self._callback = callback
 
     def Notify(self, *args):  # noqa: N802
-        self._callback()
+        try:
+            self._callback()
+        except RuntimeError:
+            pass  # wrapped C/C++ object of type WxWgpuWindow has been deleted
 
 
 class WxWgpuWindow(WgpuCanvasBase, wx.Window):
     """A wx Window representing a wgpu canvas that can be embedded in a wx application."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, max_fps=30, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Variables to limit the fps
+        self._draw_time = 0
+        self._max_fps = float(max_fps)
+        self._request_draw_timer = TimerWithCallback(self.Refresh)
+
+        # We also keep a timer to prevent draws during a resize. This prevents
+        # issues with mismatching present sizes during resizing (on Linux).
+        self._resize_timer = TimerWithCallback(self._on_resize_done)
         self._draw_lock = False
-        self._resize_timer = TimerWithCallback(self._request_draw)
 
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda x: None)
-        self.Bind(wx.EVT_SIZE, lambda e: self._request_draw_later())
+        self.Bind(wx.EVT_SIZE, self._on_resize)
 
     def on_paint(self, event):
-        if self._draw_lock:
-            return
+        self._draw_time = time.perf_counter()
         dc = wx.PaintDC(self)  # needed for wx
-        self._draw_frame_and_present()
+        if not self._draw_lock:
+            self._draw_frame_and_present()
         del dc
         event.Skip()
 
-    def _request_draw_later(self):
-        # It appears that when a widget resizes, its internal texture takes
-        # a while to update for some reason. By delaying drawing on a resize
-        # we avoid wgpu errors related to mismatching present sizes.
+    def _on_resize(self, *args):
         self._draw_lock = True
         self._resize_timer.Start(100, wx.TIMER_ONE_SHOT)
+
+    def _on_resize_done(self, *args):
+        self._draw_lock = False
+        self._request_draw()
 
     # Methods that we add from wgpu
 
@@ -86,8 +98,13 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         self.SetSize(width, height)
 
     def _request_draw(self):
-        self.Refresh()  # Invalidates the canvas
-        self._draw_lock = False
+        # Despite the FPS limiting the delayed call to refresh solves
+        # that drawing only happens when the mouse is down, see #209.
+        if not self._request_draw_timer.IsRunning():
+            now = time.perf_counter()
+            target_time = self._draw_time + 1.0 / self._max_fps
+            wait_time = max(0, target_time - now)
+            self._request_draw_timer.Start(wait_time * 1000, wx.TIMER_ONE_SHOT)
 
     def close(self):
         self.Hide()
@@ -101,13 +118,13 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
 
     # Most of this is proxying stuff to the inner widget.
 
-    def __init__(self, *, parent=None, size=None, title=None, **kwargs):
+    def __init__(self, *, parent=None, size=None, title=None, max_fps=30, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.set_logical_size(*(size or (640, 480)))
         self.SetTitle(title or "wx wgpu canvas")
 
-        self._subwidget = WxWgpuWindow(parent=self)
+        self._subwidget = WxWgpuWindow(parent=self, max_fps=max_fps)
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
 
         self.Show()
