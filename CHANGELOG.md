@@ -18,6 +18,27 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.6.0] - 16-12-2021
+
+Added:
+
+* Official support for Windows 3.10.
+* The `max_fps` argument can be provided to a canvas.
+* The glfw gui backend supports user events in the same manner as the jupyter gui backend,
+  using the [jupyter_rfb event specification](https://jupyter-rfb.readthedocs.io/en/latest/events.html).
+* Introduce the `auto` gui backend, which selects either glfw or jupyter.
+
+Fixed:
+
+* The wx gui backend is now fully functional.
+
+Changed:
+
+* The qt and wx gui backend now contain `WgpuCanvas` for a toplevel window,
+  and `WgpuWidget` for an embeddable widget.
+* All gui backends (can) now limit the FPS.
+* No changes to the wgpu API.
+
 
 ### [v0.5.9] - 11-10-2021
 
@@ -118,7 +139,7 @@ Fixed:
 
 ### [v0.5.2] - 23-05-2021
 
-This release uses a new version of wgpu-native which has changed quite a bit iternally. There
+This release uses a new version of wgpu-native which has changed quite a bit internally. There
 is more validation (thus more restrictions). There are only a few changes to the API.
 However, one big change is that shaders can now be provided as both SpirV and WGSL. Due to
 the strict validation, most shaders compiled by PyShader are not usable anymore. We
