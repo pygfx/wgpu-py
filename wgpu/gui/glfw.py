@@ -46,7 +46,8 @@ def update_glfw_canvasses():
     canvases = tuple(all_glfw_canvases)
     for canvas in canvases:
         if canvas._need_draw:
-            canvas._perform_draw()
+            canvas._need_draw = False
+            canvas._draw_frame_and_present()
     return len(canvases)
 
 
@@ -101,8 +102,8 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
     # See https://www.glfw.org/docs/latest/group__window.html
 
-    def __init__(self, *, size=None, title=None, max_fps=30):
-        super().__init__()
+    def __init__(self, *, size=None, title=None, **kwargs):
+        super().__init__(**kwargs)
 
         # Handle inputs
         if not size:
@@ -121,13 +122,9 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # Create the window (the initial size may not be in logical pixels)
         self._window = glfw.create_window(int(size[0]), int(size[1]), title, None, None)
 
-        # Variables to manage the drawing
+        # Other internal variables
         self._need_draw = False
         self._request_draw_timer_running = False
-        self._draw_time = 0
-        self._max_fps = float(max_fps)
-
-        # Other internal variables
         self._changing_pixel_ratio = False
 
         # Register ourselves
@@ -187,11 +184,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self._request_draw_timer_running = False
         self._need_draw = True  # The event loop looks at this flag
         glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
-
-    def _perform_draw(self):
-        self._need_draw = False
-        self._draw_time = time.perf_counter()
-        self._draw_frame_and_present()
 
     def _determine_size(self):
         # Because the value of get_window_size is in physical-pixels
@@ -286,11 +278,8 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
     def _request_draw(self):
         if not self._request_draw_timer_running:
-            now = time.perf_counter()
-            target_time = self._draw_time + 1.0 / self._max_fps
-            wait_time = max(0, target_time - now)
             self._request_draw_timer_running = True
-            call_later(wait_time, self._mark_ready_for_draw)
+            call_later(self._get_draw_wait_time(), self._mark_ready_for_draw)
 
     def close(self):
         glfw.set_window_should_close(self._window, True)

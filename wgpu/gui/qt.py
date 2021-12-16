@@ -4,7 +4,6 @@ can be used as a standalone window or in a larger GUI.
 """
 
 import sys
-import time
 import ctypes
 import importlib
 
@@ -58,7 +57,7 @@ enable_hidpi()
 class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
     """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
 
-    def __init__(self, *args, size=None, title=None, max_fps=30, **kwargs):
+    def __init__(self, *args, size=None, title=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         if size:
@@ -69,10 +68,6 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         # Configure how Qt renders this widget
         self.setAttribute(WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
-
-        # Variables to limit the fps
-        self._draw_time = 0
-        self._max_fps = float(max_fps)
 
         # A timer for limiting fps
         self._request_draw_timer = QtCore.QTimer()
@@ -90,7 +85,6 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         return None
 
     def paintEvent(self, event):  # noqa: N802 - this is a Qt method
-        self._draw_time = time.perf_counter()
         self._draw_frame_and_present()
 
     # Methods that we add from wgpu (snake_case)
@@ -135,10 +129,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
 
     def _request_draw(self):
         if not self._request_draw_timer.isActive():
-            now = time.perf_counter()
-            target_time = self._draw_time + 1.0 / self._max_fps
-            wait_time = max(0, target_time - now)
-            self._request_draw_timer.start(wait_time * 1000)
+            self._request_draw_timer.start(self._get_draw_wait_time() * 1000)
 
     def close(self):
         super().close()

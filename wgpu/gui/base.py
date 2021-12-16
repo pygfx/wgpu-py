@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import logging
 import ctypes.util
 
@@ -77,8 +78,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     subclasses) to use wgpu-py.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, max_fps=30, **kwargs):
         super().__init__(*args, **kwargs)
+        self._last_draw_time = 0
+        self._max_fps = float(max_fps)
         self._err_hashes = {}
 
     def draw_frame(self):
@@ -100,6 +103,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """Draw the frame and present the result. Errors are logged to the
         "wgpu" logger. Should be called by the subclass at an appropriate time.
         """
+        self._last_draw_time = time.perf_counter()
         # Perform the user-defined drawing code. When this errors,
         # we should report the error and then continue, otherwise we crash.
         # Returns the result of the context's present() call or None.
@@ -112,6 +116,12 @@ class WgpuCanvasBase(WgpuCanvasInterface):
                 return self._canvas_context.present()
         except Exception as err:
             self._log_exception("Present error", err)
+
+    def _get_draw_wait_time(self):
+        """Get time (in seconds) to wait until the next draw in order to honour max_fps."""
+        now = time.perf_counter()
+        target_time = self._last_draw_time + 1.0 / self._max_fps
+        return max(0, target_time - now)
 
     def _log_exception(self, kind, err):
         """Log the given exception instance, but only log a one-liner for
