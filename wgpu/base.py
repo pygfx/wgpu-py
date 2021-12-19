@@ -596,13 +596,21 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
-    def create_shader_module(self, *, label="", code: str, source_map: dict = None):
+    def create_shader_module(
+        self,
+        *,
+        label="",
+        code: str,
+        source_map: dict = None,
+        hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None,
+    ):
         """Create a :class:`GPUShaderModule` object from shader source.
 
         Arguments:
             label (str): A human readable label. Optional.
             code (str | bytes): The shader code, as WGSL text or binary SpirV
                 (or an object implementing ``to_spirv()`` or ``to_bytes()``).
+            hints: unused.
         """
         raise NotImplementedError()
 
@@ -792,14 +800,13 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
-    def create_command_encoder(self, *, label="", measure_execution_time: bool = False):
+    def create_command_encoder(self, *, label=""):
         """Create a :class:`GPUCommandEncoder` object. A command
         encoder is used to record commands, which can then be submitted
         at once to the GPU.
 
         Arguments:
             label (str): A human readable label. Optional.
-            measure_execution_time (bool): Whether to measure the execution time. Default False.
         """
         raise NotImplementedError()
 
@@ -822,14 +829,7 @@ class GPUDevice(GPUObjectBase):
 
     # FIXME: new method to implement
     # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
-    def create_query_set(
-        self,
-        *,
-        label="",
-        type: "enums.QueryType",
-        count: int,
-        pipeline_statistics: "List[enums.PipelineStatisticName]" = [],
-    ):
+    def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
         """Create a :class:`GPUQuerySet` object."""
         raise NotImplementedError()
 
@@ -1172,12 +1172,6 @@ class GPUCommandBuffer(GPUObjectBase):
     Create a command buffer using :func:`GPUCommandEncoder.finish`.
     """
 
-    # IDL: readonly attribute Promise<double> executionTime;
-    @property
-    def execution_time(self):
-        """Returns a future that, if measureExecutionTime is true, resolves after the command buffer executes."""
-        raise NotImplementedError()
-
 
 class GPUCommandEncoder(GPUObjectBase):
     """
@@ -1188,12 +1182,18 @@ class GPUCommandEncoder(GPUObjectBase):
     """
 
     # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
-    def begin_compute_pass(self, *, label=""):
+    def begin_compute_pass(
+        self,
+        *,
+        label="",
+        timestamp_writes: "List[structs.ComputePassTimestampWrite]" = [],
+    ):
         """Record the beginning of a compute pass. Returns a
         :class:`GPUComputePassEncoder` object.
 
         Arguments:
             label (str): A human readable label. Optional.
+            timestamp_writes: unused
         """
         raise NotImplementedError()
 
@@ -1205,6 +1205,7 @@ class GPUCommandEncoder(GPUObjectBase):
         color_attachments: "List[structs.RenderPassColorAttachment]",
         depth_stencil_attachment: "structs.RenderPassDepthStencilAttachment" = None,
         occlusion_query_set: "GPUQuerySet" = None,
+        timestamp_writes: "List[structs.RenderPassTimestampWrite]" = [],
     ):
         """Record the beginning of a render pass. Returns a
         :class:`GPURenderPassEncoder` object.
@@ -1214,6 +1215,7 @@ class GPUCommandEncoder(GPUObjectBase):
             color_attachments (list of dict): List of color attachment dicts. See below.
             depth_stencil_attachment (dict): A depth stencil attachment dict. See below. Default None.
             occlusion_query_set: Default None. TODO NOT IMPLEMENTED in wgpu-native.
+            timestamp_writes: unused
 
         Example color attachment:
 
@@ -1331,6 +1333,12 @@ class GPUCommandEncoder(GPUObjectBase):
         """TODO"""
         raise NotImplementedError()
 
+    # FIXME: new method to implement
+    # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    def clear_buffer(self, buffer, offset=0, size=None):
+        """Set (part of) the given buffer to zeros."""
+        raise NotImplementedError()
+
 
 class GPUProgrammablePassEncoder:
     """
@@ -1414,22 +1422,6 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
     # IDL: undefined endPass();
     def end_pass(self):
         """Record the end of the compute pass."""
-        raise NotImplementedError()
-
-    # IDL: undefined beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
-    @apidiff.hide
-    def begin_pipeline_statistics_query(self, query_set, query_index):
-        raise NotImplementedError()
-
-    # IDL: undefined endPipelineStatisticsQuery();
-    @apidiff.hide
-    def end_pipeline_statistics_query(self):
-        raise NotImplementedError()
-
-    # FIXME: new method to implement
-    # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
-    def write_timestamp(self, query_set, query_index):
-        """TODO"""
         raise NotImplementedError()
 
 
@@ -1606,22 +1598,6 @@ class GPURenderPassEncoder(
     # FIXME: new method to implement
     # IDL: undefined endOcclusionQuery();
     def end_occlusion_query(self):
-        """TODO"""
-        raise NotImplementedError()
-
-    # IDL: undefined beginPipelineStatisticsQuery(GPUQuerySet querySet, GPUSize32 queryIndex);
-    @apidiff.hide
-    def begin_pipeline_statistics_query(self, query_set, query_index):
-        raise NotImplementedError()
-
-    # IDL: undefined endPipelineStatisticsQuery();
-    @apidiff.hide
-    def end_pipeline_statistics_query(self):
-        raise NotImplementedError()
-
-    # FIXME: new method to implement
-    # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
-    def write_timestamp(self, query_set, query_index):
         """TODO"""
         raise NotImplementedError()
 

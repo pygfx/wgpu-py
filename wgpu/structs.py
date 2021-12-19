@@ -23,7 +23,7 @@ class Struct:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 54 structs
+# There are 57 structs
 
 RequestAdapterOptions = Struct(
     "RequestAdapterOptions",
@@ -164,11 +164,17 @@ PipelineLayoutDescriptor = Struct(
     bind_group_layouts="List[GPUBindGroupLayout]",
 )  #:
 
+ShaderModuleCompilationHint = Struct(
+    "ShaderModuleCompilationHint",
+    layout="GPUPipelineLayout",
+)  #:
+
 ShaderModuleDescriptor = Struct(
     "ShaderModuleDescriptor",
     label="str",
     code="str",
     source_map="dict",
+    hints="Dict[str, structs.ShaderModuleCompilationHint]",
 )  #:
 
 ProgrammableStage = Struct(
@@ -202,7 +208,7 @@ PrimitiveState = Struct(
     strip_index_format="enums.IndexFormat",
     front_face="enums.FrontFace",
     cull_mode="enums.CullMode",
-    clamp_depth="bool",
+    unclipped_depth="bool",
 )  #:
 
 MultisampleState = Struct(
@@ -292,7 +298,6 @@ CommandBufferDescriptor = Struct(
 CommandEncoderDescriptor = Struct(
     "CommandEncoderDescriptor",
     label="str",
-    measure_execution_time="bool",
 )  #:
 
 ImageDataLayout = Struct(
@@ -324,9 +329,24 @@ ImageCopyExternalImage = Struct(
     origin="Union[List[int], structs.Origin2D]",
 )  #:
 
+ComputePassTimestampWrite = Struct(
+    "ComputePassTimestampWrite",
+    query_set="GPUQuerySet",
+    query_index="int",
+    location="enums.ComputePassTimestampLocation",
+)  #:
+
 ComputePassDescriptor = Struct(
     "ComputePassDescriptor",
     label="str",
+    timestamp_writes="List[structs.ComputePassTimestampWrite]",
+)  #:
+
+RenderPassTimestampWrite = Struct(
+    "RenderPassTimestampWrite",
+    query_set="GPUQuerySet",
+    query_index="int",
+    location="enums.RenderPassTimestampLocation",
 )  #:
 
 RenderPassDescriptor = Struct(
@@ -335,6 +355,7 @@ RenderPassDescriptor = Struct(
     color_attachments="List[structs.RenderPassColorAttachment]",
     depth_stencil_attachment="structs.RenderPassDepthStencilAttachment",
     occlusion_query_set="GPUQuerySet",
+    timestamp_writes="List[structs.RenderPassTimestampWrite]",
 )  #:
 
 RenderPassColorAttachment = Struct(
@@ -384,7 +405,6 @@ QuerySetDescriptor = Struct(
     label="str",
     type="enums.QueryType",
     count="int",
-    pipeline_statistics="List[enums.PipelineStatisticName]",
 )  #:
 
 CanvasConfiguration = Struct(
