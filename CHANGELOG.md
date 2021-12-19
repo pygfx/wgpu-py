@@ -18,6 +18,14 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.7.0] - TBD
+
+Changed:
+
+* Now targeting wgpu-native v0.11.0.1, containing many upstream fixes and improvements.
+* The `[[block]]` syntax in shaders has been dropped.
+
+
 ### [v0.6.0] - 16-12-2021
 
 Added:
