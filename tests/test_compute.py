@@ -16,7 +16,6 @@ if not can_use_wgpu_lib:
 
 
 simple_compute_shader = """
-    [[block]]
     struct DataContainer { data: [[stride(4)]] array<i32>; };
 
     [[group(0), binding(0)]]
@@ -120,7 +119,6 @@ def test_compute_0_1_spirv():
 def test_compute_1_3():
 
     compute_shader = """
-        [[block]]
         struct DataContainer { data: [[stride(4)]] array<i32>; };
 
         [[group(0), binding(0)]]
@@ -156,7 +154,6 @@ def test_compute_1_3():
 def test_compute_indirect():
 
     compute_shader = """
-        [[block]]
         struct DataContainer { data: [[stride(4)]] array<i32>; };
 
         [[group(0), binding(0)]]
@@ -263,7 +260,6 @@ def test_compute_indirect():
 
 def test_compute_fails():
     compute_shader = """
-        [[block]]
         struct DataContainer { data: [[stride(4)]] array<i32>; };
 
         [[group(0), binding(0)]]

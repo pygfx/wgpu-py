@@ -56,8 +56,8 @@ logger = logging.getLogger("wgpu")  # noqa
 apidiff = ApiDiff()
 
 # The wgpu-native version that we target/expect
-__version__ = "0.10.4.1"
-__commit_sha__ = "b4dd62d1781c923ae0b52195fb9e710a7fc6b177"
+__version__ = "0.11.0.1"
+__commit_sha__ = "9d962ef667ef6006cca7bac7489d5bf303a2a244"
 version_info = tuple(map(int, __version__.split(".")))
 check_expected_version(version_info)  # produces a warning on mismatch
 
@@ -445,10 +445,10 @@ class GPUAdapter(base.GPUAdapter):
         # H: chain: WGPUChainedStruct, nativeFeatures: WGPUNativeFeature, label: char*, tracePath: char*
         extras = new_struct_p(
             "WGPUDeviceExtras *",
-            label=to_c_label(label),
             tracePath=c_trace_path,
             nativeFeatures=lib.WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
             # not used: chain
+            # not used: label
         )
         extras.chain.sType = lib.WGPUSType_DeviceExtras
 
@@ -464,9 +464,10 @@ class GPUAdapter(base.GPUAdapter):
         for key, val in required_limits.items():
             setattr(c_limits, to_camel_case(key), val)
 
-        # H: nextInChain: WGPUChainedStruct *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *
+        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
+            label=to_c_label(label),
             nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
             requiredFeaturesCount=0,
             requiredFeatures=ffi.new("WGPUFeatureName []", []),
@@ -848,10 +849,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
         if isinstance(code, str):
             # WGSL
-            # H: chain: WGPUChainedStruct, source: char *
+            # H: chain: WGPUChainedStruct, code: char *
             source_struct = new_struct_p(
                 "WGPUShaderModuleWGSLDescriptor *",
-                source=ffi.new("char []", code.encode()),
+                code=ffi.new("char []", code.encode()),
                 # not used: chain
             )
             source_struct[0].chain.next = ffi.NULL
@@ -1422,11 +1423,13 @@ class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
 
 class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
     def begin_compute_pass(self, *, label=""):
-        # H: nextInChain: WGPUChainedStruct *, label: char *
+        # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWriteCount: int, timestampWrites: WGPUComputePassTimestampWrite *
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
             label=to_c_label(label),
             # not used: nextInChain
+            # not used: timestampWriteCount
+            # not used: timestampWrites
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
         raw_pass = lib.wgpuCommandEncoderBeginComputePass(self._internal, struct)
@@ -1508,7 +1511,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
                 ),
             )
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet
+        # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet, timestampWriteCount: int, timestampWrites: WGPURenderPassTimestampWrite *
         struct = new_struct_p(
             "WGPURenderPassDescriptor *",
             label=to_c_label(label),
@@ -1517,6 +1520,8 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             depthStencilAttachment=c_depth_stencil_attachment,
             # not used: occlusionQuerySet
             # not used: nextInChain
+            # not used: timestampWriteCount
+            # not used: timestampWrites
         )
 
         # H: WGPURenderPassEncoder f(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor)

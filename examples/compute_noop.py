@@ -12,7 +12,6 @@ from wgpu.utils import compute_with_buffers  # Convenience function
 
 shader_source = """
 
-[[block]]
 struct DataContainer {
     data: [[stride(4)]] array<i32>;
 };

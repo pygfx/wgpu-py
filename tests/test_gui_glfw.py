@@ -6,6 +6,7 @@ like the swap chain.
 import os
 import sys
 import time
+import asyncio
 
 import wgpu.backends.rs  # noqa
 from pytest import skip
@@ -38,7 +39,9 @@ def test_glfw_canvas_basics():
     canvas = WgpuCanvas()
 
     canvas.set_logical_size(300, 200)
-    glfw.poll_events()
+    etime = time.time() + 0.1
+    while time.time() < etime:
+        glfw.poll_events()
     lsize = canvas.get_logical_size()
     assert isinstance(lsize, tuple) and len(lsize) == 2
     assert isinstance(lsize[0], float) and isinstance(lsize[1], float)
@@ -76,7 +79,9 @@ def test_glfw_canvas_render():
     import glfw
     from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
 
-    canvas = WgpuCanvas()
+    loop = asyncio.get_event_loop()
+
+    canvas = WgpuCanvas(max_fps=9999)
 
     # wgpu.utils.get_default_device()
     adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
@@ -93,9 +98,13 @@ def test_glfw_canvas_render():
     canvas.request_draw(draw_frame2)
 
     # Give it a few rounds to start up
-    for i in range(5):
-        glfw.poll_events()
-        update_glfw_canvasses()
+    async def miniloop():
+        for i in range(10):
+            glfw.poll_events()
+            update_glfw_canvasses()
+            await asyncio.sleep(0.01)
+
+    loop.run_until_complete(miniloop())
     # There should have been exactly one draw now
     assert frame_counter == 1
 
@@ -103,20 +112,15 @@ def test_glfw_canvas_render():
     for i in range(5):
         canvas.request_draw()
     # Process evens for a while
-    for i in range(5):
-        glfw.poll_events()
-        update_glfw_canvasses()
+    loop.run_until_complete(miniloop())
     # We should have had just one draw
     assert frame_counter == 2
 
     # Change the canvase size
     canvas.set_logical_size(300, 200)
     canvas.set_logical_size(400, 300)
-    for i in range(5):
-        time.sleep(0.01)
-        glfw.poll_events()
-        update_glfw_canvasses()
     # We should have had just one draw
+    loop.run_until_complete(miniloop())
     assert frame_counter == 3
 
     # canvas.close()
