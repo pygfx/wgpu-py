@@ -24,7 +24,7 @@ Changed:
 
 * Now targeting wgpu-native v0.11.0.1, containing many upstream fixes and improvements.
 * The `[[block]]` syntax in shaders has been dropped.
-
+* Renamed `depth_clamping` -> `depth_clip_control`.
 
 ### [v0.6.0] - 16-12-2021
 

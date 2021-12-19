@@ -1,13 +1,13 @@
 # Code generatation report
 ## Preparing
-* The webgpu.idl defines 33 classes with 83 functions
-* The webgpu.idl defines 5 flags, 31 enums, 54 structs
+* The webgpu.idl defines 33 classes with 78 functions
+* The webgpu.idl defines 5 flags, 32 enums, 57 structs
 * The wgpu.h defines 131 functions
 * The wgpu.h defines 5 flags, 46 enums, 69 structs
 ## Updating API
 * Wrote 5 flags to flags.py
-* Wrote 31 enums to enums.py
-* Wrote 54 structs to structs.py
+* Wrote 32 enums to enums.py
+* Wrote 57 structs to structs.py
 ### Patching API for base.py
 * Diffs for GPU: change request_adapter, change request_adapter_async
 * Diffs for GPUCanvasContext: add present
@@ -16,18 +16,15 @@
 * Diffs for GPUBuffer: add map_read, add map_write, add size, add usage, hide get_mapped_range, hide map_async, hide unmap
 * Diffs for GPUTexture: add dimension, add format, add mip_level_count, add sample_count, add size, add usage
 * Diffs for GPUTextureView: add size, add texture
-* Diffs for GPUComputePassEncoder: hide begin_pipeline_statistics_query, hide end_pipeline_statistics_query
-* Diffs for GPURenderPassEncoder: hide begin_pipeline_statistics_query, hide end_pipeline_statistics_query
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 33 classes, 110 methods, 35 properties
+* Validated 33 classes, 105 methods, 34 properties
 ### Patching API for backends/rs.py
 * Diffs for GPUAdapter: add request_device_tracing
-* Validated 33 classes, 95 methods, 0 properties
+* Validated 33 classes, 94 methods, 0 properties
 ## Validating rs.py
 * Enum PredefinedColorSpace missing in wgpu.h
-* Enum field FeatureName.depth-clamping missing in wgpu.h
 * Enum CanvasCompositingAlphaMode missing in wgpu.h
-* Wrote 188 enum mappings and 47 struct-field mappings to rs_mappings.py
+* Wrote 227 enum mappings and 49 struct-field mappings to rs_mappings.py
 * Validated 79 C function calls
 * Not using 57 C functions
 * Validated 69 C structs

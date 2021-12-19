@@ -25,7 +25,7 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 31 enums
+# There are 32 enums
 
 PredefinedColorSpace = Enum(
     "PredefinedColorSpace",
@@ -40,12 +40,14 @@ PowerPreference = Enum(
 
 FeatureName = Enum(
     "FeatureName",
-    depth_clamping="depth-clamping",
+    depth_clip_control="depth-clip-control",
     depth24unorm_stencil8="depth24unorm-stencil8",
     depth32float_stencil8="depth32float-stencil8",
-    pipeline_statistics_query="pipeline-statistics-query",
     texture_compression_bc="texture-compression-bc",
+    texture_compression_etc2="texture-compression-etc2",
+    texture_compression_astc="texture-compression-astc",
     timestamp_query="timestamp-query",
+    indirect_first_instance="indirect-first-instance",
 )  #:
 
 TextureDimension = Enum(
@@ -115,6 +117,8 @@ TextureFormat = Enum(
     depth24plus="depth24plus",
     depth24plus_stencil8="depth24plus-stencil8",
     depth32float="depth32float",
+    depth24unorm_stencil8="depth24unorm-stencil8",
+    depth32float_stencil8="depth32float-stencil8",
     bc1_rgba_unorm="bc1-rgba-unorm",
     bc1_rgba_unorm_srgb="bc1-rgba-unorm-srgb",
     bc2_rgba_unorm="bc2-rgba-unorm",
@@ -129,8 +133,44 @@ TextureFormat = Enum(
     bc6h_rgb_float="bc6h-rgb-float",
     bc7_rgba_unorm="bc7-rgba-unorm",
     bc7_rgba_unorm_srgb="bc7-rgba-unorm-srgb",
-    depth24unorm_stencil8="depth24unorm-stencil8",
-    depth32float_stencil8="depth32float-stencil8",
+    etc2_rgb8unorm="etc2-rgb8unorm",
+    etc2_rgb8unorm_srgb="etc2-rgb8unorm-srgb",
+    etc2_rgb8a1unorm="etc2-rgb8a1unorm",
+    etc2_rgb8a1unorm_srgb="etc2-rgb8a1unorm-srgb",
+    etc2_rgba8unorm="etc2-rgba8unorm",
+    etc2_rgba8unorm_srgb="etc2-rgba8unorm-srgb",
+    eac_r11unorm="eac-r11unorm",
+    eac_r11snorm="eac-r11snorm",
+    eac_rg11unorm="eac-rg11unorm",
+    eac_rg11snorm="eac-rg11snorm",
+    astc_4x4_unorm="astc-4x4-unorm",
+    astc_4x4_unorm_srgb="astc-4x4-unorm-srgb",
+    astc_5x4_unorm="astc-5x4-unorm",
+    astc_5x4_unorm_srgb="astc-5x4-unorm-srgb",
+    astc_5x5_unorm="astc-5x5-unorm",
+    astc_5x5_unorm_srgb="astc-5x5-unorm-srgb",
+    astc_6x5_unorm="astc-6x5-unorm",
+    astc_6x5_unorm_srgb="astc-6x5-unorm-srgb",
+    astc_6x6_unorm="astc-6x6-unorm",
+    astc_6x6_unorm_srgb="astc-6x6-unorm-srgb",
+    astc_8x5_unorm="astc-8x5-unorm",
+    astc_8x5_unorm_srgb="astc-8x5-unorm-srgb",
+    astc_8x6_unorm="astc-8x6-unorm",
+    astc_8x6_unorm_srgb="astc-8x6-unorm-srgb",
+    astc_8x8_unorm="astc-8x8-unorm",
+    astc_8x8_unorm_srgb="astc-8x8-unorm-srgb",
+    astc_10x5_unorm="astc-10x5-unorm",
+    astc_10x5_unorm_srgb="astc-10x5-unorm-srgb",
+    astc_10x6_unorm="astc-10x6-unorm",
+    astc_10x6_unorm_srgb="astc-10x6-unorm-srgb",
+    astc_10x8_unorm="astc-10x8-unorm",
+    astc_10x8_unorm_srgb="astc-10x8-unorm-srgb",
+    astc_10x10_unorm="astc-10x10-unorm",
+    astc_10x10_unorm_srgb="astc-10x10-unorm-srgb",
+    astc_12x10_unorm="astc-12x10-unorm",
+    astc_12x10_unorm_srgb="astc-12x10-unorm-srgb",
+    astc_12x12_unorm="astc-12x12-unorm",
+    astc_12x12_unorm_srgb="astc-12x12-unorm-srgb",
 )  #:
 
 AddressMode = Enum(
@@ -299,6 +339,18 @@ VertexStepMode = Enum(
     instance="instance",
 )  #:
 
+ComputePassTimestampLocation = Enum(
+    "ComputePassTimestampLocation",
+    beginning="beginning",
+    end="end",
+)  #:
+
+RenderPassTimestampLocation = Enum(
+    "RenderPassTimestampLocation",
+    beginning="beginning",
+    end="end",
+)  #:
+
 LoadOp = Enum(
     "LoadOp",
     load="load",
@@ -313,17 +365,7 @@ StoreOp = Enum(
 QueryType = Enum(
     "QueryType",
     occlusion="occlusion",
-    pipeline_statistics="pipeline-statistics",
     timestamp="timestamp",
-)  #:
-
-PipelineStatisticName = Enum(
-    "PipelineStatisticName",
-    vertex_shader_invocations="vertex-shader-invocations",
-    clipper_invocations="clipper-invocations",
-    clipper_primitives_out="clipper-primitives-out",
-    fragment_shader_invocations="fragment-shader-invocations",
-    compute_shader_invocations="compute-shader-invocations",
 )  #:
 
 CanvasCompositingAlphaMode = Enum(

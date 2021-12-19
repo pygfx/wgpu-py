@@ -845,8 +845,17 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = lib.wgpuDeviceCreatePipelineLayout(self._internal, struct)
         return GPUPipelineLayout(label, id, self, bind_group_layouts)
 
-    def create_shader_module(self, *, label="", code: str, source_map: dict = None):
-
+    def create_shader_module(
+        self,
+        *,
+        label="",
+        code: str,
+        source_map: dict = None,
+        hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None,
+    ):
+        if hints:
+            for val in hints.values():
+                check_struct("ShaderModuleCompilationHint", val)
         if isinstance(code, str):
             # WGSL
             # H: chain: WGPUChainedStruct, code: char *
@@ -1152,7 +1161,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             fragment=fragment,
         )
 
-    def create_command_encoder(self, *, label="", measure_execution_time: bool = False):
+    def create_command_encoder(self, *, label=""):
         # H: nextInChain: WGPUChainedStruct *, label: char *
         struct = new_struct_p(
             "WGPUCommandEncoderDescriptor *",
@@ -1178,14 +1187,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         raise NotImplementedError()
 
     # FIXME: new method to implement
-    def create_query_set(
-        self,
-        *,
-        label="",
-        type: "enums.QueryType",
-        count: int,
-        pipeline_statistics: "List[enums.PipelineStatisticName]" = [],
-    ):
+    def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
         raise NotImplementedError()
 
     def _destroy(self):
@@ -1422,7 +1424,14 @@ class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
-    def begin_compute_pass(self, *, label=""):
+    def begin_compute_pass(
+        self,
+        *,
+        label="",
+        timestamp_writes: "List[structs.ComputePassTimestampWrite]" = [],
+    ):
+        for val in timestamp_writes:
+            check_struct("ComputePassTimestampWrite", val)
         # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWriteCount: int, timestampWrites: WGPUComputePassTimestampWrite *
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
@@ -1442,8 +1451,11 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         color_attachments: "List[structs.RenderPassColorAttachment]",
         depth_stencil_attachment: "structs.RenderPassDepthStencilAttachment" = None,
         occlusion_query_set: "GPUQuerySet" = None,
+        timestamp_writes: "List[structs.RenderPassTimestampWrite]" = [],
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.
+        for val in timestamp_writes:
+            check_struct("RenderPassTimestampWrite", val)
 
         c_color_attachments_list = []
         for color_attachment in color_attachments:
@@ -1768,6 +1780,10 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             # H: void f(WGPUCommandEncoder commandEncoder)
             internal  # lib.wgpuCommandEncoderDrop(internal)  # Causes 'Cannot remove a vacant resource'
 
+    # FIXME: new method to implement
+    def clear_buffer(self, buffer, offset=0, size=None):
+        raise NotImplementedError()
+
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
     def set_bind_group(
@@ -1863,10 +1879,6 @@ class GPUComputePassEncoder(
     def end_pass(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         lib.wgpuComputePassEncoderEndPass(self._internal)
-
-    # FIXME: new method to implement
-    def write_timestamp(self, query_set, query_index):
-        raise NotImplementedError()
 
     def _destroy(self):
         if self._internal is not None and lib is not None:
@@ -1998,10 +2010,6 @@ class GPURenderPassEncoder(
 
     # FIXME: new method to implement
     def end_occlusion_query(self):
-        raise NotImplementedError()
-
-    # FIXME: new method to implement
-    def write_timestamp(self, query_set, query_index):
         raise NotImplementedError()
 
 
