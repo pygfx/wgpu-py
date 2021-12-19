@@ -2,8 +2,8 @@
 ## Preparing
 * The webgpu.idl defines 33 classes with 83 functions
 * The webgpu.idl defines 5 flags, 31 enums, 54 structs
-* The wgpu.h defines 128 functions
-* The wgpu.h defines 5 flags, 43 enums, 67 structs
+* The wgpu.h defines 131 functions
+* The wgpu.h defines 5 flags, 46 enums, 69 structs
 ## Updating API
 * Wrote 5 flags to flags.py
 * Wrote 31 enums to enums.py
@@ -25,10 +25,9 @@
 * Validated 33 classes, 95 methods, 0 properties
 ## Validating rs.py
 * Enum PredefinedColorSpace missing in wgpu.h
-* Enum field TextureFormat.depth24unorm-stencil8 missing in wgpu.h
-* Enum field TextureFormat.depth32float-stencil8 missing in wgpu.h
+* Enum field FeatureName.depth-clamping missing in wgpu.h
 * Enum CanvasCompositingAlphaMode missing in wgpu.h
-* Wrote 187 enum mappings and 47 struct-field mappings to rs_mappings.py
+* Wrote 188 enum mappings and 47 struct-field mappings to rs_mappings.py
 * Validated 79 C function calls
-* Not using 54 C functions
+* Not using 57 C functions
 * Validated 69 C structs
