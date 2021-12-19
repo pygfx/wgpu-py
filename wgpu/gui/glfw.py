@@ -33,6 +33,18 @@ if sys.platform.startswith("linux"):
             + "Did you apt install libglfw3-wayland?"
         )
 
+# Some glfw functions are not always available
+set_window_content_scale_callback = lambda *args: None  # noqa: E731
+set_window_maximize_callback = lambda *args: None  # noqa: E731
+get_window_content_scale = lambda *args: (1, 1)  # noqa: E731
+
+if hasattr(glfw, "set_window_content_scale_callback"):
+    set_window_content_scale_callback = glfw.set_window_content_scale_callback
+if hasattr(glfw, "set_window_maximize_callback"):
+    set_window_maximize_callback = glfw.set_window_maximize_callback
+if hasattr(glfw, "get_window_content_scale"):
+    get_window_content_scale = glfw.get_window_content_scale
+
 
 all_glfw_canvases = weakref.WeakSet()
 
@@ -132,12 +144,12 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
         # Register callbacks. We may get notified too often, but that's
         # ok, they'll result in a single draw.
-        glfw.set_window_content_scale_callback(self._window, self._on_pixelratio_change)
         glfw.set_framebuffer_size_callback(self._window, self._on_size_change)
         glfw.set_window_close_callback(self._window, self._on_close)
         glfw.set_window_refresh_callback(self._window, self._on_window_dirty)
         glfw.set_window_focus_callback(self._window, self._on_window_dirty)
-        glfw.set_window_maximize_callback(self._window, self._on_window_dirty)
+        set_window_content_scale_callback(self._window, self._on_pixelratio_change)
+        set_window_maximize_callback(self._window, self._on_window_dirty)
 
         # User input
         self._key_modifiers = set()
@@ -189,7 +201,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # Because the value of get_window_size is in physical-pixels
         # on some systems and in logical-pixels on other, we use the
         # framebuffer size and pixel ratio to derive the logical size.
-        pixel_ratio = glfw.get_window_content_scale(self._window)[0]
+        pixel_ratio = get_window_content_scale(self._window)[0]
         psize = glfw.get_framebuffer_size(self._window)
         psize = int(psize[0]), int(psize[1])
 
@@ -213,7 +225,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # Here, we simply do a quick test so we can compensate.
 
         # The current screen size and physical size, and its ratio
-        pixel_ratio = glfw.get_window_content_scale(self._window)[0]
+        pixel_ratio = get_window_content_scale(self._window)[0]
         ssize = glfw.get_window_size(self._window)
         psize = glfw.get_framebuffer_size(self._window)
 
