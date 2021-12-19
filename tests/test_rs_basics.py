@@ -79,7 +79,6 @@ def test_tuple_from_tuple_or_dict():
 
 
 compute_shader_wgsl = """
-[[block]]
 struct ArrayContainer { data: [[stride(4)]] array<i32>; };
 
 [[group(0), binding(0)]]
