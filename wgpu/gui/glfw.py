@@ -315,16 +315,16 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             callback(event)
 
     def add_event_handler(self, *args):
-        decorating = callable(args[0])
-        callback = args[0] if decorating else None
-        types = args[1:] if decorating else args
+        decorating = not callable(args[0])
+        callback = None if decorating else args[0]
+        types = args if decorating else args[1:]
 
         def decorator(_callback):
             for type in types:
                 self._event_handlers[type].add(_callback)
             return _callback
 
-        if not decorating:
+        if decorating:
             return decorator
         return decorator(callback)
 
