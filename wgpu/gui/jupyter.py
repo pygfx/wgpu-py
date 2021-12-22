@@ -51,6 +51,35 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
             callback(event)
 
     def add_event_handler(self, *args):
+        """Register an event handler.
+
+        Arguments:
+            callback (callable): The event handler. Must accept a
+                single event argument.
+            *types (list of strings): A list of event types.
+
+        For the available events, see
+        https://jupyter-rfb.readthedocs.io/en/latest/events.html
+
+        Can also be used as a decorator.
+
+        Example:
+
+        .. code-block:: py
+
+            def my_handler(event):
+                print(event)
+
+            canvas.add_event_handler(my_handler, "pointer_up", "pointer_down")
+
+        Decorator usage example:
+
+        .. code-block:: py
+
+            @canvas.add_event_handler("pointer_up", "pointer_down")
+            def my_handler(event):
+                print(event)
+        """
         decorating = not callable(args[0])
         callback = None if decorating else args[0]
         types = args if decorating else args[1:]
@@ -65,6 +94,12 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         return decorator(callback)
 
     def remove_event_handler(self, callback, *types):
+        """Unregister an event hand ler.
+
+        Arguments:
+            callback (callable): The event handler.
+            *types (list of strings): A list of event types.
+        """
         for type in types:
             self._event_handlers[type].remove(callback)
 
