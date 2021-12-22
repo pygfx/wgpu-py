@@ -314,11 +314,23 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         for callback in self._event_handlers[event_type]:
             callback(event)
 
-    def add_event_handler(self, type, callback):
-        self._event_handlers[type].add(callback)
+    def add_event_handler(self, *args):
+        decorating = callable(args[0])
+        callback = args[0] if decorating else None
+        types = args[1:] if decorating else args
 
-    def remove_event_handler(self, type, callback):
-        self._event_handlers[type].remove(callback)
+        def decorator(_callback):
+            for type in types:
+                self._event_handlers[type].add(_callback)
+            return _callback
+
+        if not decorating:
+            return decorator
+        return decorator(callback)
+
+    def remove_event_handler(self, callback, *types):
+        for type in types:
+            self._event_handlers[type].remove(callback)
 
     # User events
 
