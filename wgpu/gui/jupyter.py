@@ -94,7 +94,7 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         return decorator(callback)
 
     def remove_event_handler(self, callback, *types):
-        """Unregister an event hand ler.
+        """Unregister an event handler.
 
         Arguments:
             callback (callable): The event handler.
