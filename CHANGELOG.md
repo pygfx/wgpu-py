@@ -18,6 +18,13 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.7.1] - 22-12-2021
+
+Added:
+
+* #224 - Added `add_event_handler` and `remove_event_handler` to GLFW and Jupyter GUI canvases.
+
+
 ### [v0.7.0] - 21-12-2021
 
 Changed:
