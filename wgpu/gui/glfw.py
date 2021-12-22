@@ -7,6 +7,7 @@ On Linux, install the glfw lib using ``sudo apt install libglfw3``,
 or ``sudo apt install libglfw3-wayland`` when using Wayland.
 """
 
+from collections import defaultdict
 import os
 import sys
 import time
@@ -138,6 +139,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self._need_draw = False
         self._request_draw_timer_running = False
         self._changing_pixel_ratio = False
+        self._event_handlers = defaultdict(set)
 
         # Register ourselves
         all_glfw_canvases.add(self)
@@ -308,7 +310,15 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         is a dict with at least the key event_type. For details, see
         https://jupyter-rfb.readthedocs.io/en/latest/events.html
         """
-        pass
+        event_type = event.get("event_type")
+        for callback in self._event_handlers[event_type]:
+            callback(event)
+
+    def add_event_handler(self, type, callback):
+        self._event_handlers[type].add(callback)
+
+    def remove_event_handler(self, type, callback):
+        self._event_handlers[type].remove(callback)
 
     # User events
 

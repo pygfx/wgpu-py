@@ -3,6 +3,7 @@ Support for rendering in a Jupyter widget. Provides a widget subclass that
 can be used as cell output, or embedded in a ipywidgets gui.
 """
 
+from collections import defaultdict
 import weakref
 import asyncio
 
@@ -27,6 +28,7 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
         self._logical_size = 0, 0
         self._is_closed = False
         self._request_draw_timer_running = False
+        self._event_handlers = defaultdict(set)
 
         # Register so this can be display'ed when run() is called
         pending_jupyter_canvases.append(weakref.ref(self))
@@ -38,12 +40,21 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
     # Implementation needed for RemoteFrameBuffer
 
     def handle_event(self, event):
-        event_type = event.get("event_type", "")
+        event_type = event.get("event_type")
         if event_type == "close":
             self._is_closed = True
         elif event_type == "resize":
             self._pixel_ratio = event["pixel_ratio"]
             self._logical_size = event["width"], event["height"]
+
+        for callback in self._event_handlers[event_type]:
+            callback(event)
+
+    def add_event_handler(self, type, callback):
+        self._event_handlers[type].add(callback)
+
+    def remove_event_handler(self, type, callback):
+        self._event_handlers[type].remove(callback)
 
     def get_frame(self):
         self._request_draw_timer_running = False
