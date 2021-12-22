@@ -26,7 +26,7 @@ import wgpu.gui  # noqa: E402
 with open(os.path.join(ROOT_DIR, "docs", "reference_wgpu.rst"), "rb") as f:
     wgpu_api_docs_text = f.read().decode()
 for cls_name in wgpu.base.__all__:
-    expected_line = f".. autoclass:: wgpu.{cls_name}\n"
+    expected_line = f".. autoclass:: wgpu.{cls_name}"
     assert expected_line in wgpu_api_docs_text, f"Missing docs for {cls_name}"
 
 # Make flags and enum appear better in docs
