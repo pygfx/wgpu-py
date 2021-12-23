@@ -13,6 +13,7 @@ import sys
 import time
 import weakref
 import asyncio
+import traceback
 
 import glfw
 
@@ -198,7 +199,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
     def _on_close(self, *args):
         all_glfw_canvases.discard(self)
         glfw.hide_window(self._window)
-        self.handle_event({"event_type": "close"})
+        self._emit_event({"event_type": "close"})
 
     def _on_window_dirty(self, *args):
         self._request_draw()
@@ -228,7 +229,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "height": self._logical_size[1],
             "pixel_ratio": self._pixel_ratio,
         }
-        self.handle_event(ev)
+        self._emit_event(ev)
 
     def _set_logical_size(self, new_logical_size):
         # There is unclarity about the window size in "screen pixels".
@@ -312,6 +313,16 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
     def is_closed(self):
         return glfw.window_should_close(self._window)
+
+    def _emit_event(self, event):
+        try:
+            self.handle_event(event)
+        except Exception:
+            # Print exception and store exc info for postmortem debugging
+            exc_info = list(sys.exc_info())
+            exc_info[2] = exc_info[2].tb_next  # skip *this* function
+            sys.last_type, sys.last_value, sys.last_traceback = exc_info
+            traceback.print_exception(*exc_info)
 
     def handle_event(self, event):
         """Handle an incoming event.
@@ -414,7 +425,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "ntouches": 0,  # glfw dows not have touch support
             "touches": {},
         }
-        self.handle_event(ev)
+        self._emit_event(ev)
 
         self._follow_double_click(action, button)
 
@@ -465,7 +476,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
                 "ntouches": 0,  # glfw dows not have touch support
                 "touches": {},
             }
-            self.handle_event(ev)
+            self._emit_event(ev)
 
     def _on_cursor_pos(self, window, x, y):
         # Store pointer position in logical coordinates
@@ -481,7 +492,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "ntouches": 0,  # glfw dows not have touch support
             "touches": {},
         }
-        self.handle_event(ev)
+        self._emit_event(ev)
 
     def _on_scroll(self, window, dx, dy):
         # wheel is 1 or -1 in glfw, in jupyter_rfb this is ~100
@@ -493,7 +504,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "y": self._pointer_pos[1],
             "modifiers": list(self._key_modifiers),
         }
-        self.handle_event(ev)
+        self._emit_event(ev)
 
     def _on_key(self, window, key, scancode, action, mods):
 
@@ -530,7 +541,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "key": keyname,
             "modifiers": list(self._key_modifiers),
         }
-        self.handle_event(ev)
+        self._emit_event(ev)
 
 
 # Make available under a name that is the same for all gui backends
