@@ -109,6 +109,17 @@ KEY_MAP = {
     glfw.KEY_TAB: "Tab",
 }
 
+KEY_MAP_MOD = {
+    glfw.KEY_LEFT_SHIFT: "Shift",
+    glfw.KEY_RIGHT_SHIFT: "Shift",
+    glfw.KEY_LEFT_CONTROL: "Control",
+    glfw.KEY_RIGHT_CONTROL: "Control",
+    glfw.KEY_LEFT_ALT: "Alt",
+    glfw.KEY_RIGHT_ALT: "Alt",
+    glfw.KEY_LEFT_SUPER: "Meta",
+    glfw.KEY_RIGHT_SUPER: "Meta",
+}
+
 
 class GlfwWgpuCanvas(WgpuCanvasBase):
     """A glfw window providing a wgpu canvas."""
@@ -486,23 +497,16 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
     def _on_key(self, window, key, scancode, action, mods):
 
-        # Map modifier keys, and update self._key_modifiers.
-        # If this callback is for Shift being pressed, then Shift is already in mods.
-        modifiers = []
-        if glfw.MOD_SHIFT & mods:
-            modifiers.append("Shift")
-        if glfw.MOD_CONTROL & mods:
-            modifiers.append("Control")
-        if glfw.MOD_ALT & mods:
-            modifiers.append("Alt")
-        if glfw.MOD_SUPER & mods:
-            modifiers.append("Meta")
-        self._key_modifiers = modifiers
+        modifier = KEY_MAP_MOD.get(key, None)
 
         if action == glfw.PRESS:
             event_type = "key_down"
+            if modifier:
+                self._key_modifiers.add(modifier)
         elif action == glfw.RELEASE:
             event_type = "key_up"
+            if modifier:
+                self._key_modifiers.discard(modifier)
         else:  # glfw.REPEAT
             return
 
