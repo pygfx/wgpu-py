@@ -18,6 +18,14 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.7.2] - 24-12-2021
+
+Fixed:
+
+* Exceptions in user-interaction callbacks don't break the glfw loop anymore.
+* Pointer events in glfw have the correct key modifiers now.
+
+
 ### [v0.7.1] - 22-12-2021
 
 Added:
