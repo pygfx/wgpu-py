@@ -17,6 +17,13 @@ Possible sections in each release:
 * Fixed: for any bug fixes.
 * Security: in case of vulnerabilities.
 
+### [TBD] - TBD
+
+Added:
+
+* Expanded the `auto` gui backend, which can now also select qt framework if available.
+* The qt gui backend (like the glfw gui backend) supports user events in the same manner as 
+  the jupyter gui backend.
 
 ### [v0.7.2] - 24-12-2021
 
