@@ -353,10 +353,10 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         }
         self._emit_event(ev)
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
 
-    def keyReleaseEvent(self, event):
+    def keyReleaseEvent(self, event):  # noqa: N802
         self._key_event("key_up", event)
 
     def _mouse_event(self, event_type, event, touches=True):
@@ -387,19 +387,19 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
             )
         self._emit_event(ev)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_down", event)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_move", event)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_up", event)
 
-    def mouseDoubleClickEvent(self, event):
+    def mouseDoubleClickEvent(self, event):  # noqa: N802
         self._mouse_event("double_click", event, touches=False)
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event):  # noqa: N802
         # For Qt on macOS Control and Meta are switched
         modifiers = [
             MODIFIERS_MAP[mod]
@@ -417,7 +417,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         }
         self._emit_event(ev)
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event):  # noqa: N802
         ev = {
             "event_type": "resize",
             "width": float(event.size().width()),
@@ -426,7 +426,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         }
         self._emit_event(ev)
 
-    def closeEvent(self, event):
+    def closeEvent(self, event):  # noqa: N802
         self._emit_event({"event_type": "close"})
 
     # Methods that we need to explicitly delegate to the subwidget
