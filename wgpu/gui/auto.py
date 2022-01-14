@@ -7,6 +7,7 @@ for e.g. wx later. Or we might decide to stick with these three.
 
 __all__ = ["WgpuCanvas", "run", "call_later"]
 
+import importlib
 import sys
 
 
@@ -29,6 +30,13 @@ else:
         from .glfw import WgpuCanvas, run, call_later  # noqa
     except ImportError as glfw_err:
         try:
+            for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5", "PySide", "PyQt4"):
+                try:
+                    importlib.import_module(libname)
+                    break
+                except ImportError:
+                    pass
+
             from .qt import WgpuCanvas, QtWidgets, QtCore
 
             # When using Qt, there needs to be an
