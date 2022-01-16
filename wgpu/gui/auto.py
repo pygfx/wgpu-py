@@ -29,29 +29,14 @@ else:
     try:
         from .glfw import WgpuCanvas, run, call_later  # noqa
     except ImportError as glfw_err:
-        try:
-            for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
-                try:
-                    importlib.import_module(libname)
-                    break
-                except ImportError:
-                    pass
-
-            from .qt import WgpuCanvas, QtWidgets, QtCore
-
-            # When using Qt, there needs to be an
-            # application before any widget is created
-            app = QtWidgets.QApplication([])
-
-            def run():
-                app.exec() if hasattr(app, "exec") else app.exec_()
-
-            def call_later(delay, callback, *args):
-                QtCore.QTimer.singleShot(delay * 1000, lambda: callback(*args))
-
-        except ImportError as qt_err:
+        for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
+            try:
+                importlib.import_module(libname)
+                break
+            except ModuleNotFoundError:
+                pass
+        else:
             msg = str(glfw_err)
-            msg += "\n" + str(qt_err)
             msg += "\n\n  Could not find either glfw or Qt framework."
             msg += "\n  Install glfw using e.g. ``pip install -U glfw``,"
             msg += (
@@ -60,3 +45,15 @@ else:
             if sys.platform.startswith("linux"):
                 msg += "\n  You may also need to run the equivalent of ``apt install libglfw3``."
             raise ImportError(msg) from None
+
+        from .qt import WgpuCanvas, QtWidgets, QtCore
+
+        # When using Qt, there needs to be an
+        # application before any widget is created
+        app = QtWidgets.QApplication([])
+
+        def run():
+            app.exec() if hasattr(app, "exec") else app.exec_()
+
+        def call_later(delay, callback, *args):
+            QtCore.QTimer.singleShot(delay * 1000, lambda: callback(*args))
