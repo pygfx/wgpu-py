@@ -2,18 +2,16 @@
 Import the viz from triangle.py and run it in a Qt window.
 Works with either PySide6, PyQt6, PyQt5 or PySide2.
 """
+import importlib
 
 # For the sake of making this example Just Work, we try multiple QT libs
-try:
-    from PySide6 import QtWidgets
-except ModuleNotFoundError:
+for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
     try:
-        from PyQt6 import QtWidgets
+        QtWidgets = importlib.import_module(f"{lib}.QtWidgets")
+        break
     except ModuleNotFoundError:
-        try:
-            from PySide2 import QtWidgets
-        except ModuleNotFoundError:
-            from PyQt5 import QtWidgets
+        pass
+
 
 from wgpu.gui.qt import WgpuCanvas  # WgpuCanvas is a QWidget subclass
 import wgpu.backends.rs  # noqa: F401, Select Rust backend

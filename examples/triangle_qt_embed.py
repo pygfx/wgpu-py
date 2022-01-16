@@ -2,8 +2,17 @@
 An example demonstrating a qt app with a wgpu viz inside.
 If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
 """
+import importlib
 
-from PySide6 import QtWidgets
+# For the sake of making this example Just Work, we try multiple QT libs
+for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
+    try:
+        QtWidgets = importlib.import_module(f"{lib}.QtWidgets")
+        break
+    except ModuleNotFoundError:
+        pass
+
+
 from wgpu.gui.qt import WgpuWidget
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
