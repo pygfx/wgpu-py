@@ -24,10 +24,10 @@ def is_jupyter():
 
 
 if is_jupyter():
-    from .jupyter import WgpuCanvas, run, call_later  # noqa
+    from ..jupyter import WgpuCanvas, run, call_later  # noqa
 else:
     try:
-        from .glfw import WgpuCanvas, run, call_later  # noqa
+        from ..glfw import WgpuCanvas, run, call_later  # noqa
     except ImportError as glfw_err:
         for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
             try:
@@ -46,14 +46,4 @@ else:
                 msg += "\n  You may also need to run the equivalent of ``apt install libglfw3``."
             raise ImportError(msg) from None
 
-        from .qt import WgpuCanvas, QtWidgets, QtCore
-
-        # When using Qt, there needs to be an
-        # application before any widget is created
-        app = QtWidgets.QApplication([])
-
-        def run():
-            app.exec() if hasattr(app, "exec") else app.exec_()
-
-        def call_later(delay, callback, *args):
-            QtCore.QTimer.singleShot(delay * 1000, lambda: callback(*args))
+        from .qt import WgpuCanvas, run, call_later
