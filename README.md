@@ -75,7 +75,7 @@ import wgpu.backend.rs
 To render to the screen you can use a variety of GUI toolkits:
 
 ```py
-# The auto backend selects either the glfw, qt or jupyter backend, 
+# The auto backend selects either the glfw, qt or jupyter backend
 from wgpu.gui.auto import WgpuCanvas, run, call_later
 
 # Visualizations can be embedded as a widget in a Qt application.
