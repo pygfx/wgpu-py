@@ -12,9 +12,9 @@ for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
 
 from ..qt import WgpuCanvas, QtCore, QtWidgets  # noqa: E402
 
-# When using Qt, there needs to be an
-# application before any widget is created
-app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+# Global reference to an app. Will be either instantiated or set to the
+# global Qt instance when the first QAutoWgpuCanvas object is created
+app = None
 
 
 def run():
@@ -85,6 +85,10 @@ KEY_MAP = {
 
 class QAutoWgpuCanvas(WgpuCanvas):
     def __init__(self, *args, **kwargs):
+        # When using Qt, there needs to be an
+        # application before any widget is created
+        global app
+        app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
         super().__init__(*args, **kwargs)
 
         self._event_handlers = defaultdict(set)
