@@ -88,7 +88,8 @@ class QAutoWgpuCanvas(WgpuCanvas):
         # When using Qt, there needs to be an
         # application before any widget is created
         global app
-        app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+        if not app:
+            app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
         super().__init__(*args, **kwargs)
 
         self._event_handlers = defaultdict(set)
