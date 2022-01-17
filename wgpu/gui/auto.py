@@ -24,10 +24,10 @@ def is_jupyter():
 
 
 if is_jupyter():
-    from ..jupyter import WgpuCanvas, run, call_later  # noqa
+    from .jupyter import WgpuCanvas, run, call_later  # noqa
 else:
     try:
-        from ..glfw import WgpuCanvas, run, call_later  # noqa
+        from .glfw import WgpuCanvas, run, call_later  # noqa
     except ImportError as glfw_err:
         for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
             try:
