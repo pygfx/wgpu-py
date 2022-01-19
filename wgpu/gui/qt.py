@@ -29,13 +29,14 @@ else:
         "Import one of PySide6, PySide2, PyQt6 or PyQt5 before the WgpuCanvas to select a Qt toolkit"
     )
 
-# Global reference to an app. Will be either instantiated or set to the
-# global Qt instance when the first QWgpuCanvas object is created
-app = None
+
+def get_app():
+    """Return global instance of Qt app instance or create one if not created yet."""
+    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 
 def run():
-    global app
+    app = get_app()
     app.exec() if hasattr(app, "exec") else app.exec_()
 
 
@@ -218,9 +219,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
     def __init__(self, *, size=None, title=None, max_fps=30, **kwargs):
         # When using Qt, there needs to be an
         # application before any widget is created
-        global app
-        if app is None:
-            app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+        get_app()
 
         super().__init__(**kwargs)
 
