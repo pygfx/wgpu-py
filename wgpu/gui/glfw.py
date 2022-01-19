@@ -256,8 +256,8 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             screen_ratio = ssize[0] / psize[0]
             glfw.set_window_size(
                 self._window,
-                int(new_logical_size[0] * pixel_ratio / screen_ratio),
-                int(new_logical_size[1] * pixel_ratio / screen_ratio),
+                int(new_logical_size[0] * pixel_ratio * screen_ratio),
+                int(new_logical_size[1] * pixel_ratio * screen_ratio),
             )
         # If this causes the widget size to change, then _on_size_change will
         # be called, but we may want force redetermining the size.
