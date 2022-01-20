@@ -67,7 +67,7 @@ See the `event spec <https://jupyter-rfb.readthedocs.io/en/latest/events.html>`_
 Support for Qt
 --------------
 
-There is support for PyQt4, PyQt5, PyQt6, PySide, PySide2 and PySide6. The wgpu library detects what
+There is support for PyQt5, PyQt6, PySide2 and PySide6. The wgpu library detects what
 library you are using by looking what module has been imported.
 
 .. code-block:: py

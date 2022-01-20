@@ -1,12 +1,13 @@
 """
 Automatic GUI backend selection.
 
-Right now we only chose between GLFW and Jupyter. We might add suport
-for e.g. Qt later. Or we might decide to stick with these two.
+Right now we only chose between GLFW, Qt and Jupyter. We might add support
+for e.g. wx later. Or we might decide to stick with these three.
 """
 
 __all__ = ["WgpuCanvas", "run", "call_later"]
 
+import importlib
 import sys
 
 
@@ -27,9 +28,22 @@ if is_jupyter():
 else:
     try:
         from .glfw import WgpuCanvas, run, call_later  # noqa
-    except ImportError as err:
-        msg = str(err)
-        msg += "\n\n  Install glfw using e.g. ``pip install -U glfw``."
-        if sys.platform.startswith("linux"):
-            msg += "\n  You may also need to run the equivalent of ``apt install libglfw3``."
-        raise ImportError(msg) from None
+    except ImportError as glfw_err:
+        for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
+            try:
+                importlib.import_module(libname)
+                break
+            except ModuleNotFoundError:
+                pass
+        else:
+            msg = str(glfw_err)
+            msg += "\n\n  Could not find either glfw or Qt framework."
+            msg += "\n  Install glfw using e.g. ``pip install -U glfw``,"
+            msg += (
+                "\n  or install a qt framework using e.g. ``pip install -U pyside6``."
+            )
+            if sys.platform.startswith("linux"):
+                msg += "\n  You may also need to run the equivalent of ``apt install libglfw3``."
+            raise ImportError(msg) from None
+
+        from .qt import WgpuCanvas, run, call_later
