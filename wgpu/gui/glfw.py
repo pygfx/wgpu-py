@@ -550,7 +550,7 @@ WgpuCanvas = GlfwWgpuCanvas
 
 
 def ensure_app():
-    # Is is safe to call init multiple times:
+    # It is safe to call init multiple times:
     # "Additional calls to this function after successful initialization
     # but before termination will return GLFW_TRUE immediately."
     glfw.init()
