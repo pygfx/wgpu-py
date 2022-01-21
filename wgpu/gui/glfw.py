@@ -128,6 +128,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
     # See https://www.glfw.org/docs/latest/group__window.html
 
     def __init__(self, *, size=None, title=None, **kwargs):
+        ensure_app()
         super().__init__(**kwargs)
 
         # Handle inputs
@@ -548,8 +549,11 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 WgpuCanvas = GlfwWgpuCanvas
 
 
-# We initialize glfw upon import
-glfw.init()
+def ensure_app():
+    # It is safe to call init multiple times:
+    # "Additional calls to this function after successful initialization
+    # but before termination will return GLFW_TRUE immediately."
+    glfw.init()
 
 
 def call_later(delay, callback, *args):
@@ -567,6 +571,7 @@ async def mainloop():
 
 
 def run():
+    ensure_app()
     loop = asyncio.get_event_loop()
     loop.create_task(mainloop())
     loop.run_forever()
