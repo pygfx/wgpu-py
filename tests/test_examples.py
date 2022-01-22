@@ -1,5 +1,5 @@
 """
-Test the force offscreen auto gui mechanism.
+Test that the examples run without error.
 """
 
 import os
