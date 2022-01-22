@@ -16,6 +16,8 @@ Similar example in other languages / API's:
 """
 
 import wgpu
+import wgpu.backends.rs  # noqa: F401, Select Rust backend
+from wgpu.gui.auto import WgpuCanvas, run
 
 
 # %% Shaders
@@ -143,11 +145,9 @@ def _main(canvas, device):
     return device
 
 
+canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle")
+main(canvas)
+
+
 if __name__ == "__main__":
-
-    import wgpu.backends.rs  # noqa: F401, Select Rust backend
-    from wgpu.gui.auto import WgpuCanvas, run
-
-    canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle")
-    main(canvas)
     run()

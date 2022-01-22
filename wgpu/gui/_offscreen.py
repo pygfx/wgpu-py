@@ -8,6 +8,12 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
     The resulting texture view is passed to the ``present()`` method.
     """
 
+    def __init__(self, *args, **kwargs):
+        # we don't pass on constructor arguments; code may
+        # be assuming we are relying on e.g. qt or wx or jupyter
+        # but in the offscreen case we are definitely not
+        super().__init__()
+
     def get_window_id(self):
         """This canvas does not correspond to an on-screen window."""
         return None
