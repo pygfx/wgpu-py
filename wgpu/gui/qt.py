@@ -30,20 +30,6 @@ else:
     )
 
 
-def get_app():
-    """Return global instance of Qt app instance or create one if not created yet."""
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-
-
-def run():
-    app = get_app()
-    app.exec() if hasattr(app, "exec") else app.exec_()
-
-
-def call_later(delay, callback, *args):
-    QtCore.QTimer.singleShot(delay * 1000, lambda: callback(*args))
-
-
 BUTTON_MAP = {
     QtCore.Qt.MouseButton.LeftButton: 1,  # == MOUSE_BUTTON_LEFT
     QtCore.Qt.MouseButton.RightButton: 2,  # == MOUSE_BUTTON_RIGHT
@@ -393,3 +379,17 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 # Make available under a name that is the same for all gui backends
 WgpuWidget = QWgpuWidget
 WgpuCanvas = QWgpuCanvas
+
+
+def get_app():
+    """Return global instance of Qt app instance or create one if not created yet."""
+    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+
+def run():
+    app = get_app()
+    app.exec() if hasattr(app, "exec") else app.exec_()
+
+
+def call_later(delay, callback, *args):
+    QtCore.QTimer.singleShot(delay * 1000, lambda: callback(*args))
