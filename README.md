@@ -128,10 +128,10 @@ To support testing an example, ensure the following requirements are met:
 By default the test will simply verify that the example can be executed without an error, and that an
 image can be rendered using the canvas.
 
-If you additionally want to enable screenshot verification, you can generate the reference screenshot
-like so:
+If a screenshot for the example is available in the `examples/screenshots` folder, the test will additionally
+verify that the rendered image matches the screenshot.
 
-`pytest -k test_examples --regenerate-screenshots`
+You can (re)generate the reference screenshot like so: `pytest -k test_examples --regenerate-screenshots`
 
 If CI fails on screenshot verification, the build will regenerate screenshots and make them available as
 build artifacts so you can download and inspect the differences, and debug locally.
