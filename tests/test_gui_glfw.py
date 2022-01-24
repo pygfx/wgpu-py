@@ -30,6 +30,11 @@ def teardown_module():
     glfw.terminate()
 
 
+def test_is_autogui():
+    from wgpu.gui.glfw import WgpuCanvas
+    assert issubclass(WgpuCanvas, wgpu.gui.base.WgpuAutoGui)
+
+
 def test_glfw_canvas_basics():
     """Create a window and check some of its behavior. No wgpu calls here."""
 
