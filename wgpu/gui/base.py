@@ -178,8 +178,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
 
 class WgpuAutoGui:
-    """ Mixin class for canvases implementing autogui.
-    """
+    """Mixin class for canvases implementing autogui."""
 
     def handle_event(self, event):
         """Handle an incoming event.
