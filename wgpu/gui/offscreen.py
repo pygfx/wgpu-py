@@ -67,7 +67,7 @@ WgpuCanvas = WgpuManualOffscreenCanvas
 
 
 def call_later(delay, callback, *args):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop_policy().get_event_loop()
     loop.call_later(delay, callback, *args)
 
 
@@ -77,5 +77,5 @@ async def mainloop_iter():
 
 def run():
     """Handle all tasks scheduled with call_later and return."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_event_loop_policy().get_event_loop()
     loop.run_until_complete(mainloop_iter())

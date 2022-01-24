@@ -107,7 +107,7 @@ jobs:
       run: |
           pytest -v tests -k test_examples --regenerate-screenshots
     - uses: actions/upload-artifact@v2
-      if: always()
+      if: failure()
       with:
         name: screenshots-${{ matrix.pyversion }}
         path: examples/screenshots/*.png

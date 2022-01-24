@@ -22,7 +22,7 @@ examples_dir = Path(__file__).parent.parent / "examples"
 screenshots_dir = examples_dir / "screenshots"
 
 # find examples that contain the marker comment for inclusion in the test suite
-MARKER_COMMENT = "# test example: true"
+MARKER_COMMENT = "# test_example = true"
 examples_to_test = []
 for example_path in examples_dir.glob("*.py"):
     example_code = example_path.read_text()
