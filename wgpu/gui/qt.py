@@ -26,7 +26,7 @@ for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
         break
 else:
     raise ImportError(
-        "Import one of PySide6, PySide2, PyQt6 or PyQt5 before the WgpuCanvas to select a Qt toolkit"
+        "Before importing wgpu.gui.qt, import one of PySide6/PySide2/PyQt6/PyQt5 to select a Qt toolkit."
     )
 
 
