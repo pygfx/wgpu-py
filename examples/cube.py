@@ -1,5 +1,7 @@
 """
 This example renders a simple textured rotating cube.
+
+# test example: true
 """
 
 import time
