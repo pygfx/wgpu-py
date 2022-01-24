@@ -125,7 +125,7 @@ To support testing an example, ensure the following requirements are met:
 * The `WgpuCanvas` class is imported from the `wgpu.gui.auto` module.
 * The `canvas` instance is exposed as a global in the module.
 
-By default the test will simply verify that the example can be executed without an arrow, and that an
+By default the test will simply verify that the example can be executed without an error, and that an
 image can be rendered using the canvas.
 
 If you additionally want to enable screenshot verification, you can generate the reference screenshot
@@ -134,4 +134,4 @@ like so:
 `pytest -k test_examples --regenerate-screenshots`
 
 If CI fails on screenshot verification, the build will regenerate screenshots and make them available as
-build artifacts so you can download and inspect them, and debug the differences locally.
+build artifacts so you can download and inspect the differences, and debug locally.
