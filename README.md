@@ -115,3 +115,23 @@ This code is distributed under the 2-clause BSD license.
 
 * Use the optional arguments to `python download-wgpu-native.py --help` to download a different version of the upstream wgpu-native binaries.
 * The file `wgpu/resources/wgpu_native-version` will be updated by the script to track which version we depend upon.
+
+### Example screenshot verification
+
+Include the comment `# test_example: true` in an example to have pytest run it as part of the test suite.
+
+To support testing an example, ensure the following requirements are met:
+
+* The `WgpuCanvas` class is imported from the `wgpu.gui.auto` module.
+* The `canvas` instance is exposed as a global in the module.
+
+By default the test will simply verify that the example can be executed without an error, and that an
+image can be rendered using the canvas.
+
+If a screenshot for the example is available in the `examples/screenshots` folder, the test will additionally
+verify that the rendered image matches the screenshot.
+
+You can (re)generate the reference screenshot like so: `pytest -k test_examples --regenerate-screenshots`
+
+If CI fails on screenshot verification, the build will regenerate screenshots and make them available as
+build artifacts so you can download and inspect the differences, and debug locally.

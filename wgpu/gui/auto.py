@@ -8,6 +8,7 @@ for e.g. wx later. Or we might decide to stick with these three.
 __all__ = ["WgpuCanvas", "run", "call_later"]
 
 import importlib
+import os
 import sys
 
 
@@ -23,7 +24,9 @@ def is_jupyter():
         return False
 
 
-if is_jupyter():
+if os.environ.get("WGPU_FORCE_OFFSCREEN") == "true":
+    from .offscreen import WgpuCanvas, run, call_later  # noqa
+elif is_jupyter():
     from .jupyter import WgpuCanvas, run, call_later  # noqa
 else:
     try:

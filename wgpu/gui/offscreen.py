@@ -1,3 +1,5 @@
+import asyncio
+
 import numpy as np
 
 from ._offscreen import WgpuOffscreenCanvas
@@ -8,8 +10,8 @@ class WgpuManualOffscreenCanvas(WgpuOffscreenCanvas):
     method to perform a draw and get the result.
     """
 
-    def __init__(self, width=640, height=480, pixel_ratio=1):
-        super().__init__()
+    def __init__(self, *args, width=640, height=480, pixel_ratio=1, **kwargs):
+        super().__init__(*args, **kwargs)
         self._logical_size = width, height
         self._pixel_ratio = pixel_ratio
 
@@ -62,3 +64,18 @@ class WgpuManualOffscreenCanvas(WgpuOffscreenCanvas):
 
 
 WgpuCanvas = WgpuManualOffscreenCanvas
+
+
+def call_later(delay, callback, *args):
+    loop = asyncio.get_event_loop_policy().get_event_loop()
+    loop.call_later(delay, callback, *args)
+
+
+async def mainloop_iter():
+    pass  # no op
+
+
+def run():
+    """Handle all tasks scheduled with call_later and return."""
+    loop = asyncio.get_event_loop_policy().get_event_loop()
+    loop.run_until_complete(mainloop_iter())
