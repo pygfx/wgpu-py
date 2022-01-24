@@ -68,4 +68,7 @@ def test_examples(module, pytestconfig):
     # if a reference screenshot exists, assert it is equal
     if screenshot_path.exists():
         stored_img = imageio.imread(screenshot_path)
-        assert np.allclose(stored_img, img)
+        assert img.dtype == np.uint8
+        assert img.dtype == stored_img.dtype
+        # allow slight color deviations
+        assert np.allclose(stored_img, img, atol=1)
