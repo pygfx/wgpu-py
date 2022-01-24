@@ -102,6 +102,15 @@ jobs:
     - name: Test on repo
       run: |
           pytest -v tests
+    - name: Regenerate screenshots for inspection
+      if: failure()
+      run: |
+          pytest -v tests -k test_examples --regenerate-screenshots
+    - uses: actions/upload-artifact@v2
+      if: failure()
+      with:
+        name: screenshots-${{ matrix.pyversion }}
+        path: examples/screenshots/*.png
     - name: Test codegen
       run: |
           pytest -v codegen
