@@ -118,7 +118,7 @@ This code is distributed under the 2-clause BSD license.
 
 ### Example screenshot verification
 
-Include the comment `# test example: true` in an example to have pytest run it as part of the test suite.
+Include the comment `# test_example: true` in an example to have pytest run it as part of the test suite.
 
 To support testing an example, ensure the following requirements are met:
 
