@@ -43,7 +43,7 @@ def force_offscreen():
 @pytest.fixture(autouse=True)
 def mock_time():
     """Some examples use time to animate. Fix the return value
-    to for repeatable output."""
+    for repeatable output."""
     with patch("time.time") as time_mock:
         time_mock.return_value = 1.23456
         yield
