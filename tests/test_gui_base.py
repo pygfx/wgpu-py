@@ -140,5 +140,34 @@ def test_offscreen_canvas():
     assert np.all(canvas.array[:, :, 1] == 255)
 
 
+def test_autogui_mixin():
+    c = wgpu.gui.WgpuAutoGui()
+
+    # It's a mixin
+    assert not isinstance(c, wgpu.gui.WgpuCanvasBase)
+
+    # It's event handling mechanism should be fully functional
+
+    events = []
+
+    def handler(event):
+        events.append(event["value"])
+
+    c.add_event_handler(handler, "foo", "bar")
+    c.handle_event({"event_type": "foo", "value": 1})
+    c.handle_event({"event_type": "bar", "value": 2})
+    c.handle_event({"event_type": "spam", "value": 3})
+    c.remove_event_handler(handler, "foo")
+    c.handle_event({"event_type": "foo", "value": 4})
+    c.handle_event({"event_type": "bar", "value": 5})
+    c.handle_event({"event_type": "spam", "value": 6})
+    c.remove_event_handler(handler, "bar")
+    c.handle_event({"event_type": "foo", "value": 7})
+    c.handle_event({"event_type": "bar", "value": 8})
+    c.handle_event({"event_type": "spam", "value": 9})
+
+    assert events == [1, 2, 5]
+
+
 if __name__ == "__main__":
     run_tests(globals())

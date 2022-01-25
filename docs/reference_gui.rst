@@ -58,10 +58,16 @@ the automatically selected GUI backend.
 
     run()
 
-At the moment this selects either the GLFW or Jupyter backend, depending
+At the moment this selects either the GLFW, Qt, or Jupyter backend, depending
 on the enviornment. The ``WgpuCanvas`` has a ``handle_event()`` method
 that can be overloaded (by subclassing ``WgpuCanvas``) to process user events.
 See the `event spec <https://jupyter-rfb.readthedocs.io/en/latest/events.html>`_.
+
+
+Gui backends that support the auto-gui mechanics, implement ``WgpuAutoGui``.
+
+.. autoclass:: wgpu.gui.WgpuAutoGui
+    :members:
 
 
 Support for Qt

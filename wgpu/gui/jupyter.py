@@ -8,6 +8,7 @@ import weakref
 import asyncio
 
 from ._offscreen import WgpuOffscreenCanvas
+from .base import WgpuAutoGui
 
 import numpy as np
 from jupyter_rfb import RemoteFrameBuffer
@@ -17,7 +18,7 @@ from IPython.display import display
 pending_jupyter_canvases = []
 
 
-class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
+class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvas, RemoteFrameBuffer):
     """An ipywidgets widget providing a wgpu canvas. Needs the jupyter_rfb library."""
 
     def __init__(self, *, size=None, title=None, **kwargs):
@@ -47,61 +48,7 @@ class JupyterWgpuCanvas(WgpuOffscreenCanvas, RemoteFrameBuffer):
             self._pixel_ratio = event["pixel_ratio"]
             self._logical_size = event["width"], event["height"]
 
-        for callback in self._event_handlers[event_type]:
-            callback(event)
-
-    def add_event_handler(self, *args):
-        """Register an event handler.
-
-        Arguments:
-            callback (callable): The event handler. Must accept a
-                single event argument.
-            *types (list of strings): A list of event types.
-
-        For the available events, see
-        https://jupyter-rfb.readthedocs.io/en/latest/events.html
-
-        Can also be used as a decorator.
-
-        Example:
-
-        .. code-block:: py
-
-            def my_handler(event):
-                print(event)
-
-            canvas.add_event_handler(my_handler, "pointer_up", "pointer_down")
-
-        Decorator usage example:
-
-        .. code-block:: py
-
-            @canvas.add_event_handler("pointer_up", "pointer_down")
-            def my_handler(event):
-                print(event)
-        """
-        decorating = not callable(args[0])
-        callback = None if decorating else args[0]
-        types = args if decorating else args[1:]
-
-        def decorator(_callback):
-            for type in types:
-                self._event_handlers[type].add(_callback)
-            return _callback
-
-        if decorating:
-            return decorator
-        return decorator(callback)
-
-    def remove_event_handler(self, callback, *types):
-        """Unregister an event handler.
-
-        Arguments:
-            callback (callable): The event handler.
-            *types (list of strings): A list of event types.
-        """
-        for type in types:
-            self._event_handlers[type].remove(callback)
+        super().handle_event(event)
 
     def get_frame(self):
         self._request_draw_timer_running = False

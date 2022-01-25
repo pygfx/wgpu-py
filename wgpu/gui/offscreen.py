@@ -3,9 +3,10 @@ import asyncio
 import numpy as np
 
 from ._offscreen import WgpuOffscreenCanvas
+from .base import WgpuAutoGui
 
 
-class WgpuManualOffscreenCanvas(WgpuOffscreenCanvas):
+class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
     """An offscreen canvas intended for manual use. Call the ``.draw()``
     method to perform a draw and get the result.
     """

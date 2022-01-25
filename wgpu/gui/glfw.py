@@ -7,7 +7,7 @@ On Linux, install the glfw lib using ``sudo apt install libglfw3``,
 or ``sudo apt install libglfw3-wayland`` when using Wayland.
 """
 
-from collections import defaultdict
+
 import os
 import sys
 import time
@@ -17,7 +17,7 @@ import traceback
 
 import glfw
 
-from .base import WgpuCanvasBase
+from .base import WgpuCanvasBase, WgpuAutoGui
 
 
 # Make sure that glfw is new enough
@@ -122,7 +122,7 @@ KEY_MAP_MOD = {
 }
 
 
-class GlfwWgpuCanvas(WgpuCanvasBase):
+class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
     """A glfw window providing a wgpu canvas."""
 
     # See https://www.glfw.org/docs/latest/group__window.html
@@ -152,7 +152,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         self._need_draw = False
         self._request_draw_timer_running = False
         self._changing_pixel_ratio = False
-        self._event_handlers = defaultdict(set)
 
         # Register ourselves
         all_glfw_canvases.add(self)
@@ -324,71 +323,6 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             exc_info[2] = exc_info[2].tb_next  # skip *this* function
             sys.last_type, sys.last_value, sys.last_traceback = exc_info
             traceback.print_exception(*exc_info)
-
-    def handle_event(self, event):
-        """Handle an incoming event.
-
-        Subclasses can overload this method. Events include widget
-        resize, mouse/touch interaction, key events, and more. An event
-        is a dict with at least the key event_type. For details, see
-        https://jupyter-rfb.readthedocs.io/en/latest/events.html
-        """
-        event_type = event.get("event_type")
-        for callback in self._event_handlers[event_type]:
-            callback(event)
-
-    def add_event_handler(self, *args):
-        """Register an event handler.
-
-        Arguments:
-            callback (callable): The event handler. Must accept a
-                single event argument.
-            *types (list of strings): A list of event types.
-
-        For the available events, see
-        https://jupyter-rfb.readthedocs.io/en/latest/events.html
-
-        Can also be used as a decorator.
-
-        Example:
-
-        .. code-block:: py
-
-            def my_handler(event):
-                print(event)
-
-            canvas.add_event_handler(my_handler, "pointer_up", "pointer_down")
-
-        Decorator usage example:
-
-        .. code-block:: py
-
-            @canvas.add_event_handler("pointer_up", "pointer_down")
-            def my_handler(event):
-                print(event)
-        """
-        decorating = not callable(args[0])
-        callback = None if decorating else args[0]
-        types = args if decorating else args[1:]
-
-        def decorator(_callback):
-            for type in types:
-                self._event_handlers[type].add(_callback)
-            return _callback
-
-        if decorating:
-            return decorator
-        return decorator(callback)
-
-    def remove_event_handler(self, callback, *types):
-        """Unregister an event handler.
-
-        Arguments:
-            callback (callable): The event handler.
-            *types (list of strings): A list of event types.
-        """
-        for type in types:
-            self._event_handlers[type].remove(callback)
 
     # User events
 
