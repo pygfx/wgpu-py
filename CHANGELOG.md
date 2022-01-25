@@ -17,13 +17,20 @@ Possible sections in each release:
 * Fixed: for any bug fixes.
 * Security: in case of vulnerabilities.
 
-### [TBD] - TBD
+
+### [v0.7.3] - 25-01-2022
 
 Added:
 
 * Expanded the `auto` gui backend, which can now also select qt framework if available.
-* The qt gui backend (like the glfw gui backend) supports user events in the same manner as 
+* The qt gui backend (like the glfw gui backend) supports user events in the same manner as
   the jupyter gui backend.
+* Expanded the `auto` gui backend to also support an offscreen canvas intended for automated tests.
+
+Fixed:
+
+* Size of glfw windows on MacOS.
+
 
 ### [v0.7.2] - 24-12-2021
 
