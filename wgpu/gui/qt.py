@@ -3,7 +3,6 @@ Support for rendering in a Qt widget. Provides a widget subclass that
 can be used as a standalone window or in a larger GUI.
 """
 
-from collections import defaultdict
 import ctypes
 import importlib
 import sys
@@ -213,7 +212,6 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setWindowTitle(title or "qt wgpu canvas")
 
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
-        self._event_handlers = defaultdict(set)
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

@@ -33,7 +33,8 @@ def teardown_module():
 def test_is_autogui():
     from wgpu.gui.glfw import WgpuCanvas
 
-    assert issubclass(WgpuCanvas, wgpu.gui.base.WgpuAutoGui)
+    assert issubclass(WgpuCanvas, wgpu.gui.WgpuCanvasBase)
+    assert issubclass(WgpuCanvas, wgpu.gui.WgpuAutoGui)
 
 
 def test_glfw_canvas_basics():

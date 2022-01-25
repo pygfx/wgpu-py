@@ -7,7 +7,7 @@ On Linux, install the glfw lib using ``sudo apt install libglfw3``,
 or ``sudo apt install libglfw3-wayland`` when using Wayland.
 """
 
-from collections import defaultdict
+
 import os
 import sys
 import time
@@ -152,7 +152,6 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._need_draw = False
         self._request_draw_timer_running = False
         self._changing_pixel_ratio = False
-        self._event_handlers = defaultdict(set)
 
         # Register ourselves
         all_glfw_canvases.add(self)

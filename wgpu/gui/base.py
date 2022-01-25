@@ -3,6 +3,8 @@ import sys
 import time
 import logging
 import ctypes.util
+from collections import defaultdict
+
 
 logger = logging.getLogger("wgpu")
 
@@ -179,6 +181,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
 class WgpuAutoGui:
     """Mixin class for canvases implementing autogui."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._event_handlers = defaultdict(set)
 
     def handle_event(self, event):
         """Handle an incoming event.
