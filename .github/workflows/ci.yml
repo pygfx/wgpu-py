@@ -117,7 +117,8 @@ jobs:
     - name: Test PyInstaller
       if: matrix.PYINSTALLER == 1
       run: |
-          pip install psutil pyinstaller>=4
+          pip install psutil
+          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.zip
           pyinstaller --version
           pytest -v wgpu/__pyinstaller
 
