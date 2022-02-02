@@ -118,7 +118,7 @@ jobs:
       if: matrix.PYINSTALLER == 1
       run: |
           pip install psutil
-          pip install https://github.com/pyinstaller/pyinstaller/archive/develop.zip
+          pip install https://github.com/pyinstaller/pyinstaller/archive/setuptools-60.7-workaround.zip
           pyinstaller --version
           pytest -v wgpu/__pyinstaller
 
