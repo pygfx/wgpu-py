@@ -77,7 +77,7 @@ def get_os_string():
 
 def get_arch():
     # See e.g.: https://stackoverflow.com/questions/45124888
-    is_64_bit = sys.maxsize > 2 ** 32
+    is_64_bit = sys.maxsize > 2**32
     machine = platform.machine()
 
     # See if this is run by cibuildwheel and check to see if ARCHFLAGS is

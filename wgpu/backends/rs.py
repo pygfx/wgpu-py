@@ -174,7 +174,7 @@ def feature_flag_to_feature_names(flag):
     feature_names = {}  # import this from mappings?
     features = []
     for i in range(32):
-        val = int(2 ** i)
+        val = int(2**i)
         if flag & val:
             features.append(feature_names.get(val, val))
     return tuple(sorted(features))
