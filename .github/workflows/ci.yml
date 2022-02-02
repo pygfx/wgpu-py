@@ -118,6 +118,7 @@ jobs:
       if: matrix.PYINSTALLER == 1
       run: |
           pip install psutil pyinstaller>=4
+          pyinstaller --version
           pytest -v wgpu/__pyinstaller
 
   # The release builds are done for the platforms that we want to build wheels for.
