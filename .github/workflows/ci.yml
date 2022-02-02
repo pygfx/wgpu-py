@@ -115,6 +115,7 @@ jobs:
       run: |
           pytest -v codegen
     - name: Test PyInstaller
+      continue-on-error: true
       if: matrix.PYINSTALLER == 1
       run: |
           pip install psutil
