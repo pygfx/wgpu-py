@@ -177,6 +177,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
         # Initialize the size
         self._pixel_ratio = -1
+        self._screen_size_is_logical = False
         self.set_logical_size(*size)
         self._request_draw()
 
@@ -259,6 +260,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
                 int(new_logical_size[0] * pixel_ratio * screen_ratio),
                 int(new_logical_size[1] * pixel_ratio * screen_ratio),
             )
+        self._screen_size_is_logical = screen_ratio != 1
         # If this causes the widget size to change, then _on_size_change will
         # be called, but we may want force redetermining the size.
         if pixel_ratio != self._pixel_ratio:
@@ -415,7 +417,10 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
     def _on_cursor_pos(self, window, x, y):
         # Store pointer position in logical coordinates
-        self._pointer_pos = x / self._pixel_ratio, y / self._pixel_ratio
+        if self._screen_size_is_logical:
+            self._pointer_pos = x, y
+        else:
+            self._pointer_pos = x / self._pixel_ratio, y / self._pixel_ratio
 
         ev = {
             "event_type": "pointer_move",
