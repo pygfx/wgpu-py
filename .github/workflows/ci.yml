@@ -117,8 +117,7 @@ jobs:
     - name: Test PyInstaller
       if: matrix.PYINSTALLER == 1
       run: |
-          pip install psutil
-          pip install https://github.com/rokm/pyinstaller/archive/refs/heads/setuptools-60.7-workaround.zip
+          pip install psutil pyinstaller>=4.9
           pyinstaller --version
           pytest -v wgpu/__pyinstaller
 
