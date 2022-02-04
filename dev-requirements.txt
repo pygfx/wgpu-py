@@ -7,7 +7,6 @@ flake8
 flake8-black
 pep8-naming
 sphinx
-imageio
 
 # Building wheels
 wheel
