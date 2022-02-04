@@ -18,6 +18,13 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.7.4] - 04-02-2022
+
+Fixed:
+
+* Position of glfw pointer events on MacOS.
+
+
 ### [v0.7.3] - 25-01-2022
 
 Added:
