@@ -7,11 +7,7 @@ from pathlib import Path
 import importlib
 from unittest.mock import patch
 
-import imageio
-import numpy as np
-
 import pytest
-import wgpu.backends.rs  # noqa
 from testutils import can_use_wgpu_lib
 
 
@@ -19,7 +15,6 @@ if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 examples_dir = Path(__file__).parent.parent / "examples"
-screenshots_dir = examples_dir / "screenshots"
 
 # find examples that contain the marker comment for inclusion in the test suite
 MARKER_COMMENT = "# test_example = true"
@@ -50,7 +45,7 @@ def mock_time():
 
 
 @pytest.mark.parametrize("module", examples_to_test)
-def test_examples(module, pytestconfig):
+def test_examples(module):
     """Run every example that supports testing via the auto gui mechanism."""
     example = importlib.import_module(f"examples.{module}")
 
@@ -59,16 +54,3 @@ def test_examples(module, pytestconfig):
 
     # assert something was rendered
     assert img is not None and img.size > 0
-
-    # regenerate screenshot if requested
-    screenshot_path = screenshots_dir / f"{module}.png"
-    if pytestconfig.getoption("regenerate_screenshots"):
-        imageio.imwrite(screenshot_path, img)
-
-    # if a reference screenshot exists, assert it is equal
-    if screenshot_path.exists():
-        stored_img = imageio.imread(screenshot_path)
-        assert img.dtype == np.uint8
-        assert img.dtype == stored_img.dtype
-        # allow slight color deviations
-        assert np.allclose(stored_img, img, atol=1)
