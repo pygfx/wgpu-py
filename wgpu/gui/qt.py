@@ -123,6 +123,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         # Configure how Qt renders this widget
         self.setAttribute(WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
+        self.setMouseTracking(True)
 
         # A timer for limiting fps
         self._request_draw_timer = QtCore.QTimer()
@@ -210,6 +211,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
         self.set_logical_size(*(size or (640, 480)))
         self.setWindowTitle(title or "qt wgpu canvas")
+        self.setMouseTracking(True)
 
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
 
