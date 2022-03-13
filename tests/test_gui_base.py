@@ -141,7 +141,7 @@ def test_offscreen_canvas():
 
 
 def test_autogui_mixin():
-    c = wgpu.gui.WgpuAutoGui()
+    c = wgpu.gui.EventTarget()
 
     # It's a mixin
     assert not isinstance(c, wgpu.gui.WgpuCanvasBase)

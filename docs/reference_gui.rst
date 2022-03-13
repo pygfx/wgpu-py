@@ -64,9 +64,9 @@ that can be overloaded (by subclassing ``WgpuCanvas``) to process user events.
 See the `event spec <https://jupyter-rfb.readthedocs.io/en/latest/events.html>`_.
 
 
-Gui backends that support the auto-gui mechanics, implement ``WgpuAutoGui``.
+Gui backends that support the auto-gui mechanics, implement ``EventTarget``.
 
-.. autoclass:: wgpu.gui.WgpuAutoGui
+.. autoclass:: wgpu.gui.EventTarget
     :members:
 
 

@@ -8,7 +8,7 @@ import weakref
 import asyncio
 
 from ._offscreen import WgpuOffscreenCanvas
-from .base import WgpuAutoGui
+from .events import EventTarget
 
 import numpy as np
 from jupyter_rfb import RemoteFrameBuffer
@@ -18,7 +18,7 @@ from IPython.display import display
 pending_jupyter_canvases = []
 
 
-class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvas, RemoteFrameBuffer):
+class JupyterWgpuCanvas(EventTarget, WgpuOffscreenCanvas, RemoteFrameBuffer):
     """An ipywidgets widget providing a wgpu canvas. Needs the jupyter_rfb library."""
 
     def __init__(self, *, size=None, title=None, **kwargs):

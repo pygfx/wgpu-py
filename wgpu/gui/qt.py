@@ -8,7 +8,8 @@ import importlib
 import sys
 import traceback
 
-from .base import WgpuCanvasBase, WgpuAutoGui
+from .base import WgpuCanvasBase
+from .events import EventTarget
 
 # Select GUI toolkit
 for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
@@ -194,7 +195,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         return not self.isVisible()
 
 
-class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
+class QWgpuCanvas(EventTarget, WgpuCanvasBase, QtWidgets.QWidget):
     """A toplevel Qt widget providing a wgpu canvas."""
 
     # Most of this is proxying stuff to the inner widget.

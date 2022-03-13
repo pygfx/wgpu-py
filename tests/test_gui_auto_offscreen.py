@@ -30,7 +30,7 @@ def test_canvas_class():
 
     assert WgpuCanvas is WgpuManualOffscreenCanvas
     assert issubclass(WgpuCanvas, wgpu.gui.WgpuCanvasBase)
-    assert issubclass(WgpuCanvas, wgpu.gui.WgpuAutoGui)
+    assert issubclass(WgpuCanvas, wgpu.gui.EventTarget)
 
 
 def test_event_loop():

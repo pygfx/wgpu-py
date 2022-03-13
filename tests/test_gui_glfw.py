@@ -34,7 +34,7 @@ def test_is_autogui():
     from wgpu.gui.glfw import WgpuCanvas
 
     assert issubclass(WgpuCanvas, wgpu.gui.WgpuCanvasBase)
-    assert issubclass(WgpuCanvas, wgpu.gui.WgpuAutoGui)
+    assert issubclass(WgpuCanvas, wgpu.gui.EventTarget)
 
 
 def test_glfw_canvas_basics():
