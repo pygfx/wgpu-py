@@ -18,7 +18,13 @@ import traceback
 import glfw
 
 from .base import WgpuCanvasBase
-from .events import EventTarget, KeyboardEvent, PointerEvent, WheelEvent, WindowEvent
+from .events import (
+    EventDispatcher,
+    KeyboardEvent,
+    PointerEvent,
+    WheelEvent,
+    WindowEvent,
+)
 
 
 # Make sure that glfw is new enough
@@ -123,7 +129,7 @@ KEY_MAP_MOD = {
 }
 
 
-class GlfwWgpuCanvas(EventTarget, WgpuCanvasBase):
+class GlfwWgpuCanvas(EventDispatcher, WgpuCanvasBase):
     """A glfw window providing a wgpu canvas."""
 
     # See https://www.glfw.org/docs/latest/group__window.html

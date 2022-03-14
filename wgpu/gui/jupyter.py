@@ -8,7 +8,13 @@ import weakref
 import asyncio
 
 from ._offscreen import WgpuOffscreenCanvas
-from .events import EventTarget, KeyboardEvent, PointerEvent, WheelEvent, WindowEvent
+from .events import (
+    EventDispatcher,
+    KeyboardEvent,
+    PointerEvent,
+    WheelEvent,
+    WindowEvent,
+)
 
 import numpy as np
 from jupyter_rfb import RemoteFrameBuffer
@@ -31,7 +37,7 @@ EVENT_TYPE_MAP = {
 }
 
 
-class JupyterWgpuCanvas(EventTarget, WgpuOffscreenCanvas, RemoteFrameBuffer):
+class JupyterWgpuCanvas(EventDispatcher, WgpuOffscreenCanvas, RemoteFrameBuffer):
     """An ipywidgets widget providing a wgpu canvas. Needs the jupyter_rfb library."""
 
     def __init__(self, *, size=None, title=None, **kwargs):

@@ -8,16 +8,15 @@ class Event:
         type: str,
         *,
         bubbles=True,
-        cancelable=True,
         target: "EventTarget" = None,
         **kwargs,
     ):
         self._type = type
         self._time_stamp = perf_counter_ns() * 1000000
-        self._default_prevented = False
         self._bubbles = bubbles
-        self._cancelable = cancelable
         self._target = target
+        # Save extra unknown kwargs to be able to look them up later
+        # with __getitem__
         self._data = kwargs
 
     @property
@@ -37,17 +36,6 @@ class Event:
         return self._bubbles
 
     @property
-    def cancelable(self) -> bool:
-        """A boolean value indicating whether the event is cancelable."""
-        return self._cancelable
-
-    @property
-    def default_prevented(self) -> bool:
-        """Indicates whether or not the call to ``prevent_default()`` canceled the
-        event."""
-        return self._default_prevented
-
-    @property
     def target(self) -> "EventTarget":
         """The target property of the Event interface is a reference to the object
         onto which the event was dispatched."""
@@ -56,11 +44,6 @@ class Event:
     def stop_propagation(self):
         """Stops the propagation of events further along in the scene tree."""
         self._bubbles = False
-
-    def prevent_default(self):
-        """Cancels the event (if it is cancelable)."""
-        if self._cancelable:
-            self._default_prevented = True
 
     def __getitem__(self, key):
         """Make event work like a dict as well to be compatible with the jupyter_rfb
@@ -78,9 +61,6 @@ class Event:
             and key
             not in [
                 "bubbles",
-                "cancelable",
-                "default_prevented",
-                "prevent_default",
                 "stop_propagation",
                 "time_stamp",
                 "type",
@@ -210,3 +190,23 @@ class EventTarget:
         """
         for type in types:
             self._event_handlers[type].remove(callback)
+
+
+class EventDispatcher(EventTarget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def handle_event(self, event: Event):
+        if (target := event.target) and target is not self:
+            target.handle_event(event)
+            while target := getattr(target, "parent", None):
+                if not event.bubbles:
+                    break
+                if target is not self:
+                    target.handle_event(event)
+            # The EventDispatcher itself does _not_ have to be
+            # part of the hierarchy so we'll handle the event separately
+            if event.bubbles:
+                super().handle_event(event)
+        else:
+            super().handle_event(event)

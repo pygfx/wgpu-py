@@ -3,10 +3,10 @@ import asyncio
 import numpy as np
 
 from ._offscreen import WgpuOffscreenCanvas
-from .events import EventTarget
+from .events import EventDispatcher
 
 
-class WgpuManualOffscreenCanvas(EventTarget, WgpuOffscreenCanvas):
+class WgpuManualOffscreenCanvas(EventDispatcher, WgpuOffscreenCanvas):
     """An offscreen canvas intended for manual use. Call the ``.draw()``
     method to perform a draw and get the result.
     """
