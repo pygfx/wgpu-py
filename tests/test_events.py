@@ -181,17 +181,13 @@ def test_pointer_event_capture():
 
     dispatcher = EventDispatcher()
     dispatcher.handle_event(
-        PointerEvent(
-            type="pointer_down", x=0, y=0, button=1, pointer_id=0, target=child
-        )
+        PointerEvent(type="pointer_down", x=0, y=0, button=1, target=child)
     )
     dispatcher.handle_event(
-        PointerEvent(
-            type="pointer_move", x=1, y=1, button=1, pointer_id=0, target=child
-        )
+        PointerEvent(type="pointer_move", x=1, y=1, button=1, target=child)
     )
     dispatcher.handle_event(
-        PointerEvent(type="pointer_up", x=1, y=1, button=1, pointer_id=0, target=child)
+        PointerEvent(type="pointer_up", x=1, y=1, button=1, target=child)
     )
 
     assert child_called == 3
@@ -205,17 +201,13 @@ def test_pointer_event_capture():
     )
 
     dispatcher.handle_event(
-        PointerEvent(
-            type="pointer_down", x=0, y=0, button=1, pointer_id=1, target=child
-        )
+        PointerEvent(type="pointer_down", x=0, y=0, button=1, target=child)
     )
     dispatcher.handle_event(
-        PointerEvent(
-            type="pointer_move", x=1, y=1, button=1, pointer_id=1, target=child
-        )
+        PointerEvent(type="pointer_move", x=1, y=1, button=1, target=child)
     )
     dispatcher.handle_event(
-        PointerEvent(type="pointer_up", x=1, y=1, button=1, pointer_id=1, target=child)
+        PointerEvent(type="pointer_up", x=1, y=1, button=1, target=child)
     )
 
     assert child_called == 6
