@@ -1,4 +1,5 @@
 from collections import defaultdict
+from itertools import count
 from time import perf_counter_ns
 
 
@@ -79,6 +80,9 @@ class KeyboardEvent(Event):
 
 
 class PointerEvent(Event):
+    pointer_id_iter = count()
+    current_id = None
+
     def __init__(
         self,
         *args,
@@ -99,6 +103,9 @@ class PointerEvent(Event):
         self.modifiers = modifiers or []
         self.ntouches = ntouches
         self.touches = touches or {}
+        if self.type == "pointer_down":
+            PointerEvent.current_id = next(self.pointer_id_iter)
+        self.pointer_id = self.current_id
 
 
 class WheelEvent(Event):
@@ -122,9 +129,17 @@ class WindowEvent(Event):
 class EventTarget:
     """Mixin class for canvases implementing autogui."""
 
+    pointer_captures = {}
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._event_handlers = defaultdict(set)
+
+    def set_pointer_capture(self, pointer_id):
+        self.pointer_captures[pointer_id] = self
+
+    def release_pointer_capture(self, pointer_id):
+        del self.pointer_captures[pointer_id]
 
     def handle_event(self, event: Event):
         """Handle an incoming event.
@@ -197,16 +212,25 @@ class EventDispatcher(EventTarget):
         super().__init__(*args, **kwargs)
 
     def handle_event(self, event: Event):
-        if (target := event.target) and target is not self:
-            target.handle_event(event)
-            while target := getattr(target, "parent", None):
-                if not event.bubbles:
-                    break
-                if target is not self:
-                    target.handle_event(event)
-            # The EventDispatcher itself does _not_ have to be
-            # part of the hierarchy so we'll handle the event separately
-            if event.bubbles:
-                super().handle_event(event)
-        else:
-            super().handle_event(event)
+        target = event.target
+        while target and target is not self:
+            pointer_id = getattr(event, "pointer_id", None)
+            if pointer_id and pointer_id in EventTarget.pointer_captures:
+                capture = EventTarget.pointer_captures[pointer_id]
+                capture.handle_event(event)
+                # Encountered an event with pointer_id while there is a
+                # capture active, so don't bubble, just return immediately
+                return
+            else:
+                target.handle_event(event)
+                if pointer_id and pointer_id in EventTarget.pointer_captures:
+                    # Apparently the set_pointer_capture was called for this
+                    # event.pointer_id, so return immediately
+                    return
+            if not event.bubbles:
+                break
+            target = getattr(target, "parent", None)
+
+        # The EventDispatcher itself does not have to be part
+        # of the hierarchy so we'll handle the event separately
+        super().handle_event(event)
