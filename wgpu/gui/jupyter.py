@@ -8,7 +8,7 @@ import weakref
 import asyncio
 
 from ._offscreen import WgpuOffscreenCanvas
-from .events import EventTarget
+from .events import EventTarget, KeyboardEvent, PointerEvent, WheelEvent, WindowEvent
 
 import numpy as np
 from jupyter_rfb import RemoteFrameBuffer
@@ -16,6 +16,19 @@ from IPython.display import display
 
 
 pending_jupyter_canvases = []
+
+
+EVENT_TYPE_MAP = {
+    "resize": WindowEvent,
+    "close": WindowEvent,
+    "pointer_down": PointerEvent,
+    "pointer_up": PointerEvent,
+    "pointer_move": PointerEvent,
+    "double_click": PointerEvent,
+    "wheel": WheelEvent,
+    "key_down": KeyboardEvent,
+    "key_up": KeyboardEvent,
+}
 
 
 class JupyterWgpuCanvas(EventTarget, WgpuOffscreenCanvas, RemoteFrameBuffer):
@@ -48,7 +61,8 @@ class JupyterWgpuCanvas(EventTarget, WgpuOffscreenCanvas, RemoteFrameBuffer):
             self._pixel_ratio = event["pixel_ratio"]
             self._logical_size = event["width"], event["height"]
 
-        super().handle_event(event)
+        ev = EVENT_TYPE_MAP(event_type)(event_type, **event)
+        super().handle_event(ev)
 
     def get_frame(self):
         self._request_draw_timer_running = False

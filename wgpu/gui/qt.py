@@ -9,7 +9,7 @@ import sys
 import traceback
 
 from .base import WgpuCanvasBase
-from .events import EventTarget
+from .events import EventTarget, KeyboardEvent, PointerEvent, WheelEvent, WindowEvent
 
 # Select GUI toolkit
 for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
@@ -289,11 +289,11 @@ class QWgpuCanvas(EventTarget, WgpuCanvasBase, QtWidgets.QWidget):
             if mod & event.modifiers()
         ]
 
-        ev = {
-            "event_type": event_type,
-            "key": KEY_MAP.get(event.key(), event.text()),
-            "modifiers": modifiers,
-        }
+        ev = KeyboardEvent(
+            type=event_type,
+            key=KEY_MAP.get(event.key(), event.text()),
+            modifiers=modifiers,
+        )
         self._emit_event(ev)
 
     def keyPressEvent(self, event):  # noqa: N802
@@ -302,7 +302,7 @@ class QWgpuCanvas(EventTarget, WgpuCanvasBase, QtWidgets.QWidget):
     def keyReleaseEvent(self, event):  # noqa: N802
         self._key_event("key_up", event)
 
-    def _mouse_event(self, event_type, event, touches=True):
+    def _mouse_event(self, event_type, event):
         button = BUTTON_MAP.get(event.button(), 0)
         buttons = [
             BUTTON_MAP[button]
@@ -317,21 +317,15 @@ class QWgpuCanvas(EventTarget, WgpuCanvasBase, QtWidgets.QWidget):
             if mod & event.modifiers()
         ]
 
-        ev = {
-            "event_type": event_type,
-            "x": event.x(),
-            "y": event.y(),
-            "button": button,
-            "buttons": buttons,
-            "modifiers": modifiers,
-        }
-        if touches:
-            ev.update(
-                {
-                    "ntouches": 0,  # TODO
-                    "touches": {},  # TODO
-                }
-            )
+        # TODO: touch support
+        ev = PointerEvent(
+            type=event_type,
+            x=event.x(),
+            y=event.y(),
+            button=button,
+            buttons=buttons,
+            modifiers=modifiers,
+        )
         self._emit_event(ev)
 
     def mousePressEvent(self, event):  # noqa: N802
@@ -344,7 +338,7 @@ class QWgpuCanvas(EventTarget, WgpuCanvasBase, QtWidgets.QWidget):
         self._mouse_event("pointer_up", event)
 
     def mouseDoubleClickEvent(self, event):  # noqa: N802
-        self._mouse_event("double_click", event, touches=False)
+        self._mouse_event("double_click", event)
 
     def wheelEvent(self, event):  # noqa: N802
         # For Qt on macOS Control and Meta are switched
@@ -354,27 +348,27 @@ class QWgpuCanvas(EventTarget, WgpuCanvasBase, QtWidgets.QWidget):
             if mod & event.modifiers()
         ]
 
-        ev = {
-            "event_type": "wheel",
-            "dx": -event.angleDelta().x(),
-            "dy": -event.angleDelta().y(),
-            "x": event.position().x(),
-            "y": event.position().y(),
-            "modifiers": modifiers,
-        }
+        ev = WheelEvent(
+            "wheel",
+            dx=-event.angleDelta().x(),
+            dy=-event.angleDelta().y(),
+            x=event.position().x(),
+            y=event.position().y(),
+            modifiers=modifiers,
+        )
         self._emit_event(ev)
 
     def resizeEvent(self, event):  # noqa: N802
-        ev = {
-            "event_type": "resize",
-            "width": float(event.size().width()),
-            "height": float(event.size().height()),
-            "pixel_ratio": self.get_pixel_ratio(),
-        }
+        ev = WindowEvent(
+            "resize",
+            width=float(event.size().width()),
+            height=float(event.size().height()),
+            pixel_ratio=self.get_pixel_ratio(),
+        )
         self._emit_event(ev)
 
     def closeEvent(self, event):  # noqa: N802
-        self._emit_event({"event_type": "close"})
+        self._emit_event(WindowEvent("close"))
 
 
 # Make available under a name that is the same for all gui backends

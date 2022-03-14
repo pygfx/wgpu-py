@@ -6,11 +6,11 @@ class Event:
     def __init__(
         self,
         type: str,
+        *,
         bubbles=True,
         cancelable=True,
         target: "EventTarget" = None,
-        *args,
-        **kwargs
+        **kwargs,
     ):
         self._type = type
         self._time_stamp = perf_counter_ns() * 1000000
@@ -18,6 +18,7 @@ class Event:
         self._bubbles = bubbles
         self._cancelable = cancelable
         self._target = target
+        self._data = kwargs
 
     @property
     def type(self) -> str:
@@ -61,6 +62,34 @@ class Event:
         if self._cancelable:
             self._default_prevented = True
 
+    def __getitem__(self, key):
+        """Make event work like a dict as well to be compatible with the jupyter_rfb
+        event spec."""
+        if key == "event_type":
+            return self.type
+        return getattr(self, key, self._data.get(key))
+
+    def __repr__(self):
+        prefix = f"<{type(self).__name__} '{self.type}' "
+        data = [
+            f"{key}={self[key]}"
+            for key in dir(self)
+            if not key.startswith("_")
+            and key
+            not in [
+                "bubbles",
+                "cancelable",
+                "default_prevented",
+                "prevent_default",
+                "stop_propagation",
+                "time_stamp",
+                "type",
+            ]
+        ]
+        middle = ", ".join(data)
+        suffix = ">"
+        return "".join([prefix, middle, suffix])
+
 
 class KeyboardEvent(Event):
     def __init__(self, *args, key, modifiers=None, **kwargs):
@@ -80,7 +109,7 @@ class PointerEvent(Event):
         modifiers=None,
         ntouches=0,
         touches=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.x = x
@@ -89,7 +118,7 @@ class PointerEvent(Event):
         self.buttons = buttons or []
         self.modifiers = modifiers or []
         self.ntouches = ntouches
-        self.touches = touches or []
+        self.touches = touches or {}
 
 
 class WheelEvent(Event):
@@ -125,7 +154,7 @@ class EventTarget:
         is a dict with at least the key event_type. For details, see
         https://jupyter-rfb.readthedocs.io/en/latest/events.html
         """
-        event_type = event.get("event_type")
+        event_type = event.type
         for callback in self._event_handlers[event_type]:
             callback(event)
 

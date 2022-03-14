@@ -18,7 +18,7 @@ import traceback
 import glfw
 
 from .base import WgpuCanvasBase
-from .events import EventTarget
+from .events import EventTarget, KeyboardEvent, PointerEvent, WheelEvent, WindowEvent
 
 
 # Make sure that glfw is new enough
@@ -201,7 +201,7 @@ class GlfwWgpuCanvas(EventTarget, WgpuCanvasBase):
     def _on_close(self, *args):
         all_glfw_canvases.discard(self)
         glfw.hide_window(self._window)
-        self._emit_event({"event_type": "close"})
+        self._emit_event(WindowEvent("close"))
 
     def _on_window_dirty(self, *args):
         self._request_draw()
@@ -225,12 +225,12 @@ class GlfwWgpuCanvas(EventTarget, WgpuCanvasBase):
         self._physical_size = psize
         self._logical_size = psize[0] / pixel_ratio, psize[1] / pixel_ratio
 
-        ev = {
-            "event_type": "resize",
-            "width": self._logical_size[0],
-            "height": self._logical_size[1],
-            "pixel_ratio": self._pixel_ratio,
-        }
+        ev = WindowEvent(
+            "resize",
+            width=self._logical_size[0],
+            height=self._logical_size[1],
+            pixel_ratio=self._pixel_ratio,
+        )
         self._emit_event(ev)
 
     def _set_logical_size(self, new_logical_size):
@@ -330,7 +330,6 @@ class GlfwWgpuCanvas(EventTarget, WgpuCanvasBase):
     # User events
 
     def _on_mouse_button(self, window, but, action, mods):
-
         # Map button being changed, which we use to update self._pointer_buttons.
         button_map = {
             glfw.MOUSE_BUTTON_1: 1,  # == MOUSE_BUTTON_LEFT
@@ -353,16 +352,16 @@ class GlfwWgpuCanvas(EventTarget, WgpuCanvasBase):
         else:
             return
 
-        ev = {
-            "event_type": event_type,
-            "x": self._pointer_pos[0],
-            "y": self._pointer_pos[1],
-            "button": button,
-            "buttons": list(self._pointer_buttons),
-            "modifiers": list(self._key_modifiers),
-            "ntouches": 0,  # glfw dows not have touch support
-            "touches": {},
-        }
+        ev = PointerEvent(
+            type=event_type,
+            x=self._pointer_pos[0],
+            y=self._pointer_pos[1],
+            button=button,
+            buttons=list(self._pointer_buttons),
+            modifiers=list(self._key_modifiers),
+            ntouches=0,  # glfw dows not have touch support
+            touches={},
+        )
         self._emit_event(ev)
 
         self._follow_double_click(action, button)
@@ -404,16 +403,16 @@ class GlfwWgpuCanvas(EventTarget, WgpuCanvasBase):
             self._double_click_state["clicks"] = 3
         elif clicks == 3 and action == glfw.RELEASE:
             self._double_click_state = {"clicks": 0}
-            ev = {
-                "event_type": "double_click",
-                "x": self._pointer_pos[0],
-                "y": self._pointer_pos[1],
-                "button": button,
-                "buttons": list(self._pointer_buttons),
-                "modifiers": list(self._key_modifiers),
-                "ntouches": 0,  # glfw dows not have touch support
-                "touches": {},
-            }
+            ev = PointerEvent(
+                "double_click",
+                x=self._pointer_pos[0],
+                y=self._pointer_pos[1],
+                button=button,
+                buttons=list(self._pointer_buttons),
+                modifiers=list(self._key_modifiers),
+                ntouches=0,  # glfw dows not have touch support
+                touches={},
+            )
             self._emit_event(ev)
 
     def _on_cursor_pos(self, window, x, y):
@@ -423,32 +422,31 @@ class GlfwWgpuCanvas(EventTarget, WgpuCanvasBase):
         else:
             self._pointer_pos = x / self._pixel_ratio, y / self._pixel_ratio
 
-        ev = {
-            "event_type": "pointer_move",
-            "x": self._pointer_pos[0],
-            "y": self._pointer_pos[1],
-            "button": 0,
-            "buttons": list(self._pointer_buttons),
-            "modifiers": list(self._key_modifiers),
-            "ntouches": 0,  # glfw dows not have touch support
-            "touches": {},
-        }
+        ev = PointerEvent(
+            "pointer_move",
+            x=self._pointer_pos[0],
+            y=self._pointer_pos[1],
+            button=0,
+            buttons=list(self._pointer_buttons),
+            modifiers=list(self._key_modifiers),
+            ntouches=0,  # glfw dows not have touch support
+            touches={},
+        )
         self._emit_event(ev)
 
     def _on_scroll(self, window, dx, dy):
         # wheel is 1 or -1 in glfw, in jupyter_rfb this is ~100
-        ev = {
-            "event_type": "wheel",
-            "dx": 100.0 * dx,
-            "dy": -100.0 * dy,
-            "x": self._pointer_pos[0],
-            "y": self._pointer_pos[1],
-            "modifiers": list(self._key_modifiers),
-        }
+        ev = WheelEvent(
+            "wheel",
+            dx=100.0 * dx,
+            dy=-100.0 * dy,
+            x=self._pointer_pos[0],
+            y=self._pointer_pos[1],
+            modifiers=list(self._key_modifiers),
+        )
         self._emit_event(ev)
 
     def _on_key(self, window, key, scancode, action, mods):
-
         modifier = KEY_MAP_MOD.get(key, None)
 
         if action == glfw.PRESS:
@@ -477,11 +475,11 @@ class GlfwWgpuCanvas(EventTarget, WgpuCanvasBase):
             if "Shift" not in self._key_modifiers:
                 keyname = keyname.lower()
 
-        ev = {
-            "event_type": event_type,
-            "key": keyname,
-            "modifiers": list(self._key_modifiers),
-        }
+        ev = KeyboardEvent(
+            type=event_type,
+            key=keyname,
+            modifiers=list(self._key_modifiers),
+        )
         self._emit_event(ev)
 
 
