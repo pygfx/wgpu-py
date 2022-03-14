@@ -1,4 +1,113 @@
 from collections import defaultdict
+from time import perf_counter_ns
+
+
+class Event:
+    def __init__(
+        self,
+        type: str,
+        bubbles=True,
+        cancelable=True,
+        target: "EventTarget" = None,
+        *args,
+        **kwargs
+    ):
+        self._type = type
+        self._time_stamp = perf_counter_ns() * 1000000
+        self._default_prevented = False
+        self._bubbles = bubbles
+        self._cancelable = cancelable
+        self._target = target
+
+    @property
+    def type(self) -> str:
+        """A string representing the name of the event."""
+        return self._type
+
+    @property
+    def time_stamp(self) -> float:
+        """The time at which the event was created (in milliseconds)."""
+        return self._time_stamp
+
+    @property
+    def bubbles(self) -> bool:
+        """A boolean value indicating whether or not the event bubbles up through
+        the scene tree."""
+        return self._bubbles
+
+    @property
+    def cancelable(self) -> bool:
+        """A boolean value indicating whether the event is cancelable."""
+        return self._cancelable
+
+    @property
+    def default_prevented(self) -> bool:
+        """Indicates whether or not the call to ``prevent_default()`` canceled the
+        event."""
+        return self._default_prevented
+
+    @property
+    def target(self) -> "EventTarget":
+        """The target property of the Event interface is a reference to the object
+        onto which the event was dispatched."""
+        return self._target
+
+    def stop_propagation(self):
+        """Stops the propagation of events further along in the scene tree."""
+        self._bubbles = False
+
+    def prevent_default(self):
+        """Cancels the event (if it is cancelable)."""
+        if self._cancelable:
+            self._default_prevented = True
+
+
+class KeyboardEvent(Event):
+    def __init__(self, *args, key, modifiers=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.key = key
+        self.modifiers = modifiers or []
+
+
+class PointerEvent(Event):
+    def __init__(
+        self,
+        *args,
+        x,
+        y,
+        button=0,
+        buttons=None,
+        modifiers=None,
+        ntouches=0,
+        touches=None,
+        **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+        self.x = x
+        self.y = y
+        self.button = button
+        self.buttons = buttons or []
+        self.modifiers = modifiers or []
+        self.ntouches = ntouches
+        self.touches = touches or []
+
+
+class WheelEvent(Event):
+    def __init__(self, *args, dx, dy, x, y, modifiers=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.dx = dx
+        self.dy = dy
+        self.x = x
+        self.y = y
+        self.modifiers = modifiers or []
+
+
+class WindowEvent(Event):
+    def __init__(self, *args, width=None, height=None, pixel_ratio=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.width = width
+        self.height = height
+        self.pixel_ratio = pixel_ratio
 
 
 class EventTarget:
@@ -8,7 +117,7 @@ class EventTarget:
         super().__init__(*args, **kwargs)
         self._event_handlers = defaultdict(set)
 
-    def handle_event(self, event):
+    def handle_event(self, event: Event):
         """Handle an incoming event.
 
         Subclasses can overload this method. Events include widget
