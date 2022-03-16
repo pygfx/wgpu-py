@@ -343,6 +343,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self._mouse_event("pointer_up", event)
 
     def mouseDoubleClickEvent(self, event):  # noqa: N802
+        super().mouseDoubleClickEvent(event)
         self._mouse_event("double_click", event, touches=False)
 
     def wheelEvent(self, event):  # noqa: N802
