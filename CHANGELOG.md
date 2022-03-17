@@ -18,6 +18,14 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.7.5] - 17-03-2022
+
+Fixed:
+
+* Mouse down events were not emitted during double clicks in the Qt canvas.
+* Mouse move events were not emitted no button is pressed in the Qt canvas.
+
+
 ### [v0.7.4] - 04-02-2022
 
 Fixed:

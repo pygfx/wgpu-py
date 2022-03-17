@@ -57,7 +57,7 @@ for cls_name, cls in wgpu.base.__dict__.items():
 # -- Project information -----------------------------------------------------
 
 project = "wgpu-py"
-copyright = "2020-2021, Almar Klein, Korijn van Golen"
+copyright = "2020-2022, Almar Klein, Korijn van Golen"
 author = "Almar Klein, Korijn van Golen"
 release = wgpu.__version__
 
