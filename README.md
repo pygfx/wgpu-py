@@ -8,7 +8,6 @@ Next generation GPU API for Python
 
 ![triangle](https://user-images.githubusercontent.com/3015475/159725890-5656204b-648b-4f6f-88d5-a656d8ad00c6.png)
 
-
 ## Introduction
 
 In short, this is a Python lib wrapping [wgpu-native](https://github.com/gfx-rs/wgpu)
