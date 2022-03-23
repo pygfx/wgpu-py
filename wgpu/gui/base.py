@@ -2,11 +2,43 @@ import os
 import sys
 import time
 import logging
+from contextlib import contextmanager
 import ctypes.util
 from collections import defaultdict
 
 
 logger = logging.getLogger("wgpu")
+
+err_hashes = {}
+
+
+@contextmanager
+def log_exception(kind):
+    """Context manager to log any exceptions, but only log a one-liner
+    for subsequent occurances of the same error to avoid spamming by
+    repeating errors in e.g. a draw function or event callback.
+    """
+    try:
+        yield
+    except Exception as err:
+        # Store exc info for postmortem debugging
+        exc_info = list(sys.exc_info())
+        exc_info[2] = exc_info[2].tb_next  # skip *this* function
+        sys.last_type, sys.last_value, sys.last_traceback = exc_info
+        # Show traceback, or a one-line summary
+        msg = str(err)
+        msgh = hash(msg)
+        if msgh not in err_hashes:
+            # Provide the exception, so the default logger prints a stacktrace.
+            # IDE's can get the exception from the root logger for PM debugging.
+            err_hashes[msgh] = 1
+            logger.error(kind, exc_info=err)
+        else:
+            # We've seen this message before, return a one-liner instead.
+            err_hashes[msgh] = count = err_hashes[msgh] + 1
+            msg = kind + ": " + msg.split("\n")[0].strip()
+            msg = msg if len(msg) <= 70 else msg[:69] + "…"
+            logger.error(msg + f" ({count})")
 
 
 class WgpuCanvasInterface:
@@ -109,40 +141,17 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         # Perform the user-defined drawing code. When this errors,
         # we should report the error and then continue, otherwise we crash.
         # Returns the result of the context's present() call or None.
-        try:
+        with log_exception("Draw error"):
             self.draw_frame()
-        except Exception as err:
-            self._log_exception("Draw error", err)
-        try:
+        with log_exception("Present error"):
             if self._canvas_context:
                 return self._canvas_context.present()
-        except Exception as err:
-            self._log_exception("Present error", err)
 
     def _get_draw_wait_time(self):
         """Get time (in seconds) to wait until the next draw in order to honour max_fps."""
         now = time.perf_counter()
         target_time = self._last_draw_time + 1.0 / self._max_fps
         return max(0, target_time - now)
-
-    def _log_exception(self, kind, err):
-        """Log the given exception instance, but only log a one-liner for
-        subsequent occurances of the same error to avoid spamming (which
-        can happen easily with errors in the drawing code).
-        """
-        msg = str(err)
-        msgh = hash(msg)
-        if msgh not in self._err_hashes:
-            # Provide the exception, so the default logger prints a stacktrace.
-            # IDE's can get the exception from the root logger for PM debugging.
-            self._err_hashes[msgh] = 1
-            logger.error(kind, exc_info=err)
-        else:
-            # We've seen this message before, return a one-liner instead.
-            self._err_hashes[msgh] = count = self._err_hashes[msgh] + 1
-            msg = kind + ": " + msg.split("\n")[0].strip()
-            msg = msg if len(msg) <= 70 else msg[:69] + "…"
-            logger.error(msg + f" ({count})")
 
     # Methods that must be overloaded
 
@@ -184,7 +193,38 @@ class WgpuAutoGui:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._last_event_time = 0
+        self._pending_events = {}
         self._event_handlers = defaultdict(set)
+
+    def _get_event_wait_time(self):
+        rate = 75  # events per second
+        now = time.perf_counter()
+        target_time = self._last_event_time + 1.0 / rate
+        return max(0, target_time - now)
+
+    def _handle_event_rate_limited(self, ev, call_later_func, match_keys, accum_keys):
+        event_type = ev["event_type"]
+        # We may need to emit the old event. Otherwise, we need to update the new one.
+        old = self._pending_events.get(event_type, None)
+        if old:
+            if any(ev[key] != old[key] for key in match_keys):
+                self._dispatch_event(old)
+            else:
+                for key in accum_keys:
+                    ev[key] = old[key] + ev[key]
+        # Make sure that we have scheduled a moment to handle events
+        if not self._pending_events:
+            call_later_func(self._get_event_wait_time(), self._handle_pending_events)
+        # Store the event object
+        self._pending_events[event_type] = ev
+
+    def _handle_pending_events(self):
+        events = self._pending_events.values()
+        self._last_event_time = time.perf_counter()
+        self._pending_events = {}
+        for ev in events:
+            self._dispatch_event(ev)
 
     def handle_event(self, event):
         """Handle an incoming event.
@@ -194,9 +234,15 @@ class WgpuAutoGui:
         is a dict with at least the key event_type. For details, see
         https://jupyter-rfb.readthedocs.io/en/latest/events.html
         """
+        self._handle_pending_events()
+        self._dispatch_event(event)
+
+    def _dispatch_event(self, event):
+        """Dispatch event to the event handlers."""
         event_type = event.get("event_type")
         for callback in self._event_handlers[event_type]:
-            callback(event)
+            with log_exception(f"Error during handling {event['event_type']} event"):
+                callback(event)
 
     def add_event_handler(self, *args):
         """Register an event handler.
