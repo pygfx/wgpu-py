@@ -6,6 +6,9 @@
 
 Next generation GPU API for Python
 
+<img width=300 src='https://user-images.githubusercontent.com/3015475/159725890-5656204b-648b-4f6f-88d5-a656d8ad00c6.png' />
+<img width=300 src='https://user-images.githubusercontent.com/3015475/159726895-2c0cbc7b-ed0a-4cd3-a90c-dd579977eaa4.png' />
+
 
 ## Introduction
 
