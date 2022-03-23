@@ -6,9 +6,9 @@ can be used as a standalone window or in a larger GUI.
 import ctypes
 import importlib
 import sys
-import traceback
 
 from .base import WgpuCanvasBase, WgpuAutoGui
+
 
 # Select GUI toolkit
 for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):

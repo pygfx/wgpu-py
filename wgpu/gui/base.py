@@ -198,12 +198,18 @@ class WgpuAutoGui:
         self._event_handlers = defaultdict(set)
 
     def _get_event_wait_time(self):
+        """Calculate the time to wait for the next event handling (for rate-limited events)."""
         rate = 75  # events per second
         now = time.perf_counter()
         target_time = self._last_event_time + 1.0 / rate
         return max(0, target_time - now)
 
     def _handle_event_rate_limited(self, ev, call_later_func, match_keys, accum_keys):
+        """Alternative `to handle_event()` for events that must be rate-limted.
+        If any of the `match_keys` keys of the new event differ from the currently
+        pending event, the old event is dispatched now. The `accum_keys` keys of
+        the current and new event are added together (e.g. to accumulate wheel delta).
+        """
         event_type = ev["event_type"]
         # We may need to emit the old event. Otherwise, we need to update the new one.
         old = self._pending_events.get(event_type, None)
@@ -215,16 +221,9 @@ class WgpuAutoGui:
                     ev[key] = old[key] + ev[key]
         # Make sure that we have scheduled a moment to handle events
         if not self._pending_events:
-            call_later_func(self._get_event_wait_time(), self._handle_pending_events)
+            call_later_func(self._get_event_wait_time(), self._dispatch_pending_events)
         # Store the event object
         self._pending_events[event_type] = ev
-
-    def _handle_pending_events(self):
-        events = self._pending_events.values()
-        self._last_event_time = time.perf_counter()
-        self._pending_events = {}
-        for ev in events:
-            self._dispatch_event(ev)
 
     def handle_event(self, event):
         """Handle an incoming event.
@@ -234,8 +233,19 @@ class WgpuAutoGui:
         is a dict with at least the key event_type. For details, see
         https://jupyter-rfb.readthedocs.io/en/latest/events.html
         """
-        self._handle_pending_events()
+        # On any not-rate-limited event, we dispatch any pending events.
+        # That way we prevent that e.g. a pointer_move is dispatched
+        # after a pointer_up that actually came later.
+        self._dispatch_pending_events()
         self._dispatch_event(event)
+
+    def _dispatch_pending_events(self):
+        """Handle any pending rate-limited events."""
+        events = self._pending_events.values()
+        self._last_event_time = time.perf_counter()
+        self._pending_events = {}
+        for ev in events:
+            self._dispatch_event(ev)
 
     def _dispatch_event(self, event):
         """Dispatch event to the event handlers."""
