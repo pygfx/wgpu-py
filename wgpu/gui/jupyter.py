@@ -48,6 +48,8 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvas, RemoteFrameBuffer):
             self._pixel_ratio = event["pixel_ratio"]
             self._logical_size = event["width"], event["height"]
 
+        # No need to rate-limit the pointer_move and wheel events;
+        # they're already rate limited by jupyter_rfb in the client.
         super().handle_event(event)
 
     def get_frame(self):

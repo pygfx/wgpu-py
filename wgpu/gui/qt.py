@@ -6,9 +6,9 @@ can be used as a standalone window or in a larger GUI.
 import ctypes
 import importlib
 import sys
-import traceback
 
 from .base import WgpuCanvasBase, WgpuAutoGui
+
 
 # Select GUI toolkit
 for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
@@ -267,18 +267,6 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def request_draw(self, *args, **kwargs):
         return self._subwidget.request_draw(*args, **kwargs)
 
-    # Auto event API
-
-    def _emit_event(self, event):
-        try:
-            self.handle_event(event)
-        except Exception:
-            # Print exception and store exc info for postmortem debugging
-            exc_info = list(sys.exc_info())
-            exc_info[2] = exc_info[2].tb_next  # skip *this* function
-            sys.last_type, sys.last_value, sys.last_traceback = exc_info
-            traceback.print_exception(*exc_info)
-
     # User events to jupyter_rfb events
 
     def _key_event(self, event_type, event):
@@ -293,7 +281,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "key": KEY_MAP.get(event.key(), event.text()),
             "modifiers": modifiers,
         }
-        self._emit_event(ev)
+        self.handle_event(ev)
 
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
@@ -331,7 +319,13 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                     "touches": {},  # TODO
                 }
             )
-        self._emit_event(ev)
+
+        if event_type == "pointer_move":
+            match_keys = {"buttons", "modifiers", "ntouches"}
+            accum_keys = {}
+            self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
+        else:
+            self.handle_event(ev)
 
     def mousePressEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_down", event)
@@ -362,7 +356,9 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "y": event.position().y(),
             "modifiers": modifiers,
         }
-        self._emit_event(ev)
+        match_keys = {"modifiers"}
+        accum_keys = {"dx", "dy"}
+        self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
 
     def resizeEvent(self, event):  # noqa: N802
         ev = {
@@ -371,10 +367,10 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "height": float(event.size().height()),
             "pixel_ratio": self.get_pixel_ratio(),
         }
-        self._emit_event(ev)
+        self.handle_event(ev)
 
     def closeEvent(self, event):  # noqa: N802
-        self._emit_event({"event_type": "close"})
+        self.handle_event({"event_type": "close"})
 
 
 # Make available under a name that is the same for all gui backends
