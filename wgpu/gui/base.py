@@ -198,7 +198,8 @@ class WgpuAutoGui:
         self._event_handlers = defaultdict(set)
 
     def _get_event_wait_time(self):
-        """Calculate the time to wait for the next event handling (for rate-limited events)."""
+        """Calculate the time to wait for the next event dispatching
+        (for rate-limited events)."""
         rate = 75  # events per second
         now = time.perf_counter()
         target_time = self._last_event_time + 1.0 / rate
@@ -209,6 +210,12 @@ class WgpuAutoGui:
         If any of the `match_keys` keys of the new event differ from the currently
         pending event, the old event is dispatched now. The `accum_keys` keys of
         the current and new event are added together (e.g. to accumulate wheel delta).
+
+        This method is called in the following cases:
+        * When the timer runs out.
+        * When a non-rate-limited event is dispatched.
+        * When a rate-limited event of the same type is scheduled
+          that has different match_keys (e.g. modifiers changes).
         """
         event_type = ev["event_type"]
         # We may need to emit the old event. Otherwise, we need to update the new one.
@@ -234,8 +241,7 @@ class WgpuAutoGui:
         https://jupyter-rfb.readthedocs.io/en/latest/events.html
         """
         # On any not-rate-limited event, we dispatch any pending events.
-        # That way we prevent that e.g. a pointer_move is dispatched
-        # after a pointer_up that actually came later.
+        # This is to make sure that the original order of events is preserved.
         self._dispatch_pending_events()
         self._dispatch_event(event)
 
