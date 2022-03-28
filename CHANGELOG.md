@@ -18,6 +18,17 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.7.6] - 28-03-2022
+
+Changed:
+
+* Pointer move and wheel events are now rate-limited, leading to better performance if e.g. picking is done at each event.
+
+Added:
+
+* Added `wgpu.gui.base.log_exception`, a context-manager to catch and log exceptions, e.g. in event callbacks.
+
+
 ### [v0.7.5] - 17-03-2022
 
 Fixed:
