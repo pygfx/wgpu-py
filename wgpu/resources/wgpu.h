@@ -1,7 +1,7 @@
 #ifndef WGPU_H_
 #define WGPU_H_
 
-#include "webgpu.h"
+#include "webgpu-headers/webgpu.h"
 
 typedef enum WGPUNativeSType {
     // Start at 6 to prevent collisions with webgpu STypes
@@ -38,6 +38,10 @@ typedef struct WGPUDeviceExtras {
 
 typedef void (*WGPULogCallback)(WGPULogLevel level, const char *msg);
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void wgpuDevicePoll(WGPUDevice device, bool force_wait);
 
 void wgpuSetLogCallback(WGPULogCallback callback);
@@ -46,7 +50,7 @@ void wgpuSetLogLevel(WGPULogLevel level);
 
 uint32_t wgpuGetVersion(void);
 
-void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStage stages, uint32_t offset, uint32_t sizeBytes, void* const data);
+void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void* const data);
 
 void wgpuBufferDrop(WGPUBuffer buffer);
 void wgpuCommandEncoderDrop(WGPUCommandEncoder commandEncoder);
@@ -63,5 +67,9 @@ void wgpuShaderModuleDrop(WGPUShaderModule shaderModule);
 void wgpuCommandBufferDrop(WGPUCommandBuffer commandBuffer);
 void wgpuRenderBundleDrop(WGPURenderBundle renderBundle);
 void wgpuComputePipelineDrop(WGPUComputePipeline computePipeline);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif

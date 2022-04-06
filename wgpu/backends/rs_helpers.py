@@ -122,17 +122,24 @@ def get_surface_id_from_canvas(canvas):
     elif sys.platform.startswith("linux"):  # no-cover
         display_id = canvas.get_display_id()
         is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+        is_xcb = False
         if is_wayland:
-            # todo: probably does not work since we dont have WGPUSurfaceDescriptorFromWayland
-            struct = ffi.new("WGPUSurfaceDescriptorFromXlib *")
+            # todo: wayland untested
+            struct = ffi.new("WGPUSurfaceDescriptorFromWaylandSurface *")
             struct.display = ffi.cast("void *", display_id)
+            struct.surface = int(win_id)  # must be void *
+            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWaylandSurface
+        elif is_xcb:
+            # todo: xcb untested
+            struct = ffi.new("WGPUSurfaceDescriptorFromXcbWindow *")
+            struct.connection = ffi.NULL  # ?? ffi.cast("void *", display_id)
             struct.window = int(win_id)
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlib
+            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
         else:
-            struct = ffi.new("WGPUSurfaceDescriptorFromXlib *")
+            struct = ffi.new("WGPUSurfaceDescriptorFromXlibWindow *")
             struct.display = ffi.cast("void *", display_id)
             struct.window = int(win_id)
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlib
+            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
 
     else:  # no-cover
         raise RuntimeError("Cannot get surface id: unsupported platform.")

@@ -76,7 +76,8 @@ def write_mappings():
 
     # Create enummap, which allows the rs backend to resolve enum field names
     # to the corresponding integer value.
-    enummap = {}
+    # todo: remove when doing new wgsl
+    enummap = {"MipmapFilterMode.nearest": 0, "MipmapFilterMode.linear": 1}
     for name in idl.enums:
         hname = name_map.get(name, name)
         if hname not in hp.enums:
@@ -100,7 +101,10 @@ def write_mappings():
 
     # Some structs have fields that are enum values. The rs backend
     # must be able to resolve these too.
-    cstructfield2enum = {}
+    # todo: remove when doing new wgsl
+    cstructfield2enum = {
+        "SamplerDescriptor.mipmapFilter": "MipmapFilterMode",
+    }
     for structname, struct in hp.structs.items():
         for key, val in struct.items():
             if isinstance(val, str) and val.startswith("WGPU"):
