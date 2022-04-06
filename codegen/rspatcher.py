@@ -135,7 +135,7 @@ def write_mappings():
 
     # Write a few native-only mappings: int => key
     pylines.append("enum_int2str = {")
-    for name in ["BackendType", "AdapterType"]:
+    for name in ["BackendType", "AdapterType", "ErrorType", "DeviceLostReason"]:
         pylines.append(f'    "{name}":' + " {")
         for key, val in hp.enums[name].items():
             if key == "Force32":

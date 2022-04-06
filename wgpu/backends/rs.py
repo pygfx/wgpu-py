@@ -542,6 +542,40 @@ class GPUAdapter(base.GPUAdapter):
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
+    def __init__(self, label, internal, adapter, features, limits, queue):
+        super().__init__(label, internal, adapter, features, limits, queue)
+
+        @ffi.callback("void(WGPUErrorType, char *, void *)")
+        def uncaptured_error_callback(c_type, c_message, userdata):
+            error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
+            message = ffi.string(c_message).decode(errors="ignore")
+            message = message.replace("\\n", "\n")
+            self._on_error(f"Uncaught WGPU error ({error_type}):\n{message}")
+
+        @ffi.callback("void(WGPUDeviceLostReason, char *, void *)")
+        def device_lost_callback(c_reason, c_message, userdata):
+            reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
+            message = ffi.string(c_message).decode(errors="ignore")
+            message = message.replace("\\n", "\n")
+            self._on_error(f"The WGPU device was lost ({reason}):\n{message}")
+
+        # Keep the refs alive
+        self._uncaptured_error_callback = uncaptured_error_callback
+        self._device_lost_callback = device_lost_callback
+
+        # H: void f(WGPUDevice device, WGPUErrorCallback callback, void * userdata)
+        lib.wgpuDeviceSetUncapturedErrorCallback(
+            self._internal, uncaptured_error_callback, ffi.NULL
+        )
+        # H: void f(WGPUDevice device, WGPUDeviceLostCallback callback, void * userdata)
+        lib.wgpuDeviceSetDeviceLostCallback(
+            self._internal, device_lost_callback, ffi.NULL
+        )
+
+    def _on_error(self, message):
+        """Log the error message (for errors produced by wgpu)."""
+        logger.error(message)
+
     def create_buffer(
         self,
         *,

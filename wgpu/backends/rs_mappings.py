@@ -322,4 +322,15 @@ enum_int2str = {
         2: "CPU",
         3: "Unknown",
     },
+    "ErrorType": {
+        0: "NoError",
+        1: "Validation",
+        2: "OutOfMemory",
+        3: "Unknown",
+        4: "DeviceLost",
+    },
+    "DeviceLostReason": {
+        0: "Undefined",
+        1: "Destroyed",
+    },
 }
