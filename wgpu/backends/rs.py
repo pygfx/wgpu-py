@@ -1493,20 +1493,17 @@ class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
 
 
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
-
-    _submitted = False
-
     def _destroy(self):
         # Since command buffers get destroyed when you submit them, we
         # must only drop them if they've not been submitted, or we get
         # 'Cannot remove a vacant resource'. Got this info from the
         # wgpu chat. Also see
         # https://docs.rs/wgpu-core/latest/src/wgpu_core/device/mod.rs.html#4180-4194
+        # That's why _internal is set to None in submit()
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            if not self._submitted:
-                # H: void f(WGPUCommandBuffer commandBuffer)
-                lib.wgpuCommandBufferDrop(internal)
+            # H: void f(WGPUCommandBuffer commandBuffer)
+            lib.wgpuCommandBufferDrop(internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
@@ -1836,6 +1833,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = lib.wgpuCommandEncoderFinish(self._internal, struct)
+        # WGPU destroys the command encoder when it's finished. So we set
+        # _internal to None to avoid dropping a nonexistent object.
+        self._internal = None
         return GPUCommandBuffer(label, id, self)
 
     # FIXME: new method to implement
@@ -1865,10 +1865,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         raise NotImplementedError()
 
     def _destroy(self):
+        # Note that the natove object gets destroyed on finish.
+        # Also see GPUCommandBuffer._destroy()
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandEncoder commandEncoder)
-            internal  # lib.wgpuCommandEncoderDrop(internal)  # Causes 'Cannot remove a vacant resource'
+            lib.wgpuCommandEncoderDrop(internal)
 
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
@@ -2117,9 +2119,10 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
         # H: void f(WGPUQueue queue, uint32_t commandCount, WGPUCommandBuffer const * commands)
         lib.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
-        # Mark as submitted
+        # WGPU destroys the resource when submitting. We follow this
+        # to avoid dropping a nonexistent object.
         for cb in command_buffers:
-            cb._submitted = True
+            cb._internal = None
 
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
 
