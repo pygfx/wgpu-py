@@ -49,6 +49,7 @@ from .rs_helpers import (
     get_memoryview_and_address,
     to_snake_case,
     to_camel_case,
+    device_dropper,
 )
 
 
@@ -186,32 +187,6 @@ def check_struct(struct_name, d):
     invalid_keys = set(d.keys()).difference(valid_keys)
     if invalid_keys:
         raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
-
-
-class DeviceDropper:
-    """Helps drop devices at a good time."""
-
-    # I found that when wgpuDeviceDrop() was called in Device._destroy,
-    # the tests would hang. I found that the drop call was done around
-    # the time when another device was used (e.g. to create a buffer
-    # or shader module). For some reason, the delay in destruction (by
-    # Python's CG) causes a deadlock or something. We seem to be able
-    # to fix this by doing the actual dropping later - e.g. when the
-    # user creates a new device.
-    def __init__(self):
-        self._devices_to_drop = []
-
-    def drop_soon(self, internal):
-        self._devices_to_drop.append(internal)
-
-    def drop_all_pending(self):
-        while self._devices_to_drop:
-            internal = self._devices_to_drop.pop(0)
-            # H: void f(WGPUDevice device)
-            lib.wgpuDeviceDrop(internal)
-
-
-device_dropper = DeviceDropper()
 
 
 # %% The API
