@@ -21,12 +21,12 @@ elif is_ci and sys.platform == "win32":
 
 default_vertex_shader = """
 struct VertexOutput {
-    [[location(0)]] texcoord : vec2<f32>;
-    [[builtin(position)]] position: vec4<f32>;
+    @location(0) texcoord : vec2<f32>,
+    @builtin(position) position: vec4<f32>,
 };
 
-[[stage(vertex)]]
-fn vs_main([[builtin(vertex_index)]] vertex_index : u32) -> VertexOutput {
+@stage(vertex)
+fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
     var positions: array<vec2<f32>, 4> = array<vec2<f32>, 4>(
         vec2<f32>(-0.5, -0.5),
         vec2<f32>(-0.5,  0.5),
@@ -63,13 +63,13 @@ def test_render_textured_square_rgba8unorm():
     """Test a texture with format rgba8unorm."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<f32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let sample = textureSample(r_tex, r_sampler, in.texcoord);
             return sample;
         }
@@ -92,13 +92,13 @@ def test_render_textured_square_rgba8uint():
     """Test a texture with format rgba8uint."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<u32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             // let sample = textureSample(r_tex, r_sampler, in.texcoord);
             let texcoords_u = vec2<i32>(in.texcoord * vec2<f32>(textureDimensions(r_tex)));
             let sample = textureLoad(r_tex, texcoords_u, 0);
@@ -123,13 +123,13 @@ def test_render_textured_square_rgba16sint():
     """Test a texture with format rgba16sint."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<i32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             // let sample = textureSample(r_tex, r_sampler, in.texcoord);
             let texcoords_u = vec2<i32>(in.texcoord * vec2<f32>(textureDimensions(r_tex)));
             let sample = textureLoad(r_tex, texcoords_u, 0);
@@ -154,13 +154,13 @@ def test_render_textured_square_rgba32float():
     """Test a texture with format rgba32float."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<f32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let sample = textureSample(r_tex, r_sampler, in.texcoord);
             return sample / 255.0;
         }
@@ -188,13 +188,13 @@ def test_render_textured_square_rg8unorm():
     """
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<f32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let sample = textureSample(r_tex, r_sampler, in.texcoord);
             return sample;
         }
@@ -217,13 +217,13 @@ def test_render_textured_square_rg8uint():
     """
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<u32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             // let sample = textureSample(r_tex, r_sampler, in.texcoord);
             let texcoords_u = vec2<i32>(in.texcoord * vec2<f32>(textureDimensions(r_tex)));
             let sample = textureLoad(r_tex, texcoords_u, 0);
@@ -248,13 +248,13 @@ def test_render_textured_square_rg16sint():
     """
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<i32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             // let sample = textureSample(r_tex, r_sampler, in.texcoord);
             let texcoords_u = vec2<i32>(in.texcoord * vec2<f32>(textureDimensions(r_tex)));
             let sample = textureLoad(r_tex, texcoords_u, 0);
@@ -279,13 +279,13 @@ def test_render_textured_square_rg32float():
     """
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<f32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let sample = textureSample(r_tex, r_sampler, in.texcoord);
             return vec4<f32>(sample.rg / 255.0, 0.0, 1.0);
         }
@@ -309,13 +309,13 @@ def test_render_textured_square_r8unorm():
     """Test a texture with format r8unorm."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<f32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let sample = textureSample(r_tex, r_sampler, in.texcoord);
             let val = sample.r;
             return vec4<f32>(val, val, 0.0, 1.0);
@@ -337,13 +337,13 @@ def test_render_textured_square_r8uint():
     """Test a texture with format r8uint."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<u32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let texcoords_u = vec2<i32>(in.texcoord * vec2<f32>(textureDimensions(r_tex)));
             let sample = textureLoad(r_tex, texcoords_u, 0);
             let val = f32(sample.r) / 255.0;
@@ -366,13 +366,13 @@ def test_render_textured_square_r16sint():
     """Test a texture with format r16sint. Because e.g. CT data."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<i32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let texcoords_u = vec2<i32>(in.texcoord * vec2<f32>(textureDimensions(r_tex)));
             let sample = textureLoad(r_tex, texcoords_u, 0);
             let val = f32(sample.r) / 255.0;
@@ -395,13 +395,13 @@ def test_render_textured_square_r32sint():
     """Test a texture with format r32sint. Because e.g. CT data."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<i32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let texcoords_u = vec2<i32>(in.texcoord * vec2<f32>(textureDimensions(r_tex)));
             let sample = textureLoad(r_tex, texcoords_u, 0);
             let val = f32(sample.r) / 255.0;
@@ -424,13 +424,13 @@ def test_render_textured_square_r32float():
     """Test a texture with format r32float."""
 
     fragment_shader = """
-        [[group(0), binding(0)]]
+        @group(0) @binding(0)
         var r_tex: texture_2d<f32>;
-        [[group(0), binding(1)]]
+        @group(0) @binding(1)
         var r_sampler: sampler;
 
-        [[stage(fragment)]]
-        fn fs_main(in: VertexOutput, ) -> [[location(0)]] vec4<f32> {
+        @stage(fragment)
+        fn fs_main(in: VertexOutput, ) -> @location(0) vec4<f32> {
             let sample = textureSample(r_tex, r_sampler, in.texcoord);
             let val = sample.r / 255.0;
             return vec4<f32>(val, val, 0.0, 1.0);

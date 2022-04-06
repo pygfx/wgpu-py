@@ -16,15 +16,15 @@ if not can_use_wgpu_lib:
 
 
 simple_compute_shader = """
-    struct DataContainer { data: [[stride(4)]] array<i32>; };
+    @group(0)
+    @binding(0)
+    var<storage,read_write> data2: array<i32>;
 
-    [[group(0), binding(0)]]
-    var<storage,read_write> data2: DataContainer;
-
-    [[stage(compute), workgroup_size(1)]]
-    fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+    @stage(compute)
+    @workgroup_size(1)
+    fn main(@builtin(global_invocation_id) index: vec3<u32>) {
         let i: u32 = index.x;
-        data2.data[i] = i32(i);
+        data2[i] = i32(i);
     }
 """
 
@@ -119,22 +119,25 @@ def test_compute_0_1_spirv():
 def test_compute_1_3():
 
     compute_shader = """
-        struct DataContainer { data: [[stride(4)]] array<i32>; };
 
-        [[group(0), binding(0)]]
-        var<storage,read> data0: DataContainer;
+        @group(0)
+        @binding(0)
+        var<storage,read> data0: array<i32>;
 
-        [[group(0), binding(1)]]
-        var<storage,read_write> data1: DataContainer;
+        @group(0)
+        @binding(1)
+        var<storage,read_write> data1: array<i32>;
 
-        [[group(0), binding(2)]]
-        var<storage,read_write> data2: DataContainer;
+        @group(0)
+        @binding(2)
+        var<storage,read_write> data2: array<i32>;
 
-        [[stage(compute), workgroup_size(1)]]
-        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+        @stage(compute)
+        @workgroup_size(1)
+        fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = i32(index.x);
-            data1.data[i] = data0.data[i];
-            data2.data[i] = i;
+            data1[i] = data0[i];
+            data2[i] = i;
         }
     """
 
@@ -154,18 +157,19 @@ def test_compute_1_3():
 def test_compute_indirect():
 
     compute_shader = """
-        struct DataContainer { data: [[stride(4)]] array<i32>; };
+        @group(0)
+        @binding(0)
+        var<storage,read> data1: array<i32>;
 
-        [[group(0), binding(0)]]
-        var<storage,read> data1: DataContainer;
+        @group(0)
+        @binding(1)
+        var<storage,read_write> data2: array<i32>;
 
-        [[group(0), binding(1)]]
-        var<storage,read_write> data2: DataContainer;
-
-        [[stage(compute), workgroup_size(1)]]
-        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+        @stage(compute)
+        @workgroup_size(1)
+        fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = i32(index.x);
-            data2.data[i] = data1.data[i] + 1;
+            data2[i] = data1[i] + 1;
         }
     """
 
@@ -260,18 +264,19 @@ def test_compute_indirect():
 
 def test_compute_fails():
     compute_shader = """
-        struct DataContainer { data: [[stride(4)]] array<i32>; };
+        @group(0)
+        @binding(0)
+        var<storage,read> data1: array<i32>;
 
-        [[group(0), binding(0)]]
-        var<storage,read> data1: DataContainer;
+        @group(0)
+        @binding(1)
+        var<storage,read_write> data2: array<i32>;
 
-        [[group(0), binding(1)]]
-        var<storage,read_write> data2: DataContainer;
-
-        [[stage(compute), workgroup_size(1)]]
-        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+        @stage(compute)
+        @workgroup_size(1)
+        fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = i32(index.x);
-            data2.data[i] = data1.data[i];
+            data2[i] = data1[i];
         }
     """
 

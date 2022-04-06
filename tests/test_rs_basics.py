@@ -79,15 +79,15 @@ def test_tuple_from_tuple_or_dict():
 
 
 compute_shader_wgsl = """
-struct ArrayContainer { data: [[stride(4)]] array<i32>; };
+@group(0)
+@binding(0)
+var<storage,read_write> out1: array<i32>;
 
-[[group(0), binding(0)]]
-var<storage,read_write> out1: ArrayContainer;
-
-[[stage(compute), workgroup_size(1)]]
-fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+@stage(compute)
+@workgroup_size(1)
+fn main(@builtin(global_invocation_id) index: vec3<u32>) {
     let i: u32 = index.x;
-    out1.data[i] = i32(i);
+    out1[i] = i32(i);
 }
 """
 

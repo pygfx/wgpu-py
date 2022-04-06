@@ -149,10 +149,9 @@ sampler = device.create_sampler()
 
 shader_source = """
 struct Locals {
-    transform: mat4x4<f32>;
+    transform: mat4x4<f32>,
 };
-@group(0)
-@binding(0)
+@group(0) @binding(0)
 var<uniform> r_locals: Locals;
 
 struct VertexInput {
@@ -173,12 +172,10 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     return out;
 }
 
-@group(0)
-@binding(1)
+@group(0) @binding(1)
 var r_tex: texture_2d<f32>;
 
-@group(0)
-@binding(2)
+@group(0) @binding(2)
 var r_sampler: sampler;
 
 @stage(fragment)
