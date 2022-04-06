@@ -468,6 +468,13 @@ class GPUAdapter(base.GPUAdapter):
         for key, val in required_limits.items():
             setattr(c_limits, to_camel_case(key), val)
 
+        # H: nextInChain: WGPUChainedStruct *, label: char *
+        queue_struct = new_struct(
+            "WGPUQueueDescriptor",
+            label=to_c_label("default_queue"),
+            # not used: nextInChain
+        )
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
@@ -476,9 +483,8 @@ class GPUAdapter(base.GPUAdapter):
             requiredFeaturesCount=0,
             requiredFeatures=ffi.new("WGPUFeatureName []", []),
             requiredLimits=c_required_limits,
-            # not used: defaultQueue
+            defaultQueue=queue_struct,
         )
-        # todo: defaultQueue = WGPUQueueDescriptor
         device_id = None
 
         @ffi.callback("void(WGPURequestDeviceStatus, WGPUDevice, char *, void *)")
@@ -636,7 +642,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         }
         return GPUTexture(label, id, self, tex_info)
 
-    # FIXME: was create_sampler(self, *, label="", address_mode_u: "enums.AddressMode" = "clamp-to-edge", address_mode_v: "enums.AddressMode" = "clamp-to-edge", address_mode_w: "enums.AddressMode" = "clamp-to-edge", mag_filter: "enums.FilterMode" = "nearest", min_filter: "enums.FilterMode" = "nearest", mipmap_filter: "enums.MimapFilterMode" = "nearest", lod_min_clamp: float = 0, lod_max_clamp: float = 32, compare: "enums.CompareFunction" = None, max_anisotropy: int = 1):
     def create_sampler(
         self,
         *,
