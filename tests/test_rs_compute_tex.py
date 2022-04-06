@@ -89,39 +89,39 @@ def test_compute_tex_1d_rgba16sint():
     )
 
 
-# def test_compute_tex_1d_r32sint():
-#
-#     compute_shader = """
-#         [[group(0), binding(0)]]
-#         var r_tex1: texture_1d<i32>;
-#
-#         [[group(0), binding(1)]]
-#         var r_tex2: texture_storage_1d<r32sint, write>;
-#
-#         [[stage(compute), workgroup_size(1)]]
-#         fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
-#             let i: i32 = i32(index.x);
-#             let color1 : vec4<i32> = textureLoad(r_tex1, i, 0);
-#             let color2 = vec4<i32>(color1.x + i, color1.y + 1, color1.z * 2, color1.a);
-#             textureStore(r_tex2, i, color2);
-#         }
-#     """
-#
-#     # Generate data
-#     nx, ny, nz, nc = 256, 1, 1, 1
-#     data1 = (ctypes.c_int32 * nc * nx)()
-#     for x in range(nx):
-#         for c in range(nc):
-#             data1[x][c] = random.randint(0, 20)
-#
-#     # Compute and validate
-#     _compute_texture(
-#         compute_shader,
-#         wgpu.TextureFormat.r32sint,
-#         wgpu.TextureDimension.d1,
-#         (nx, ny, nz, nc),
-#         data1,
-#     )
+def test_compute_tex_1d_r32sint():
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: texture_1d<i32>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: texture_storage_1d<r32sint, write>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i: i32 = i32(index.x);
+            let color1 : vec4<i32> = textureLoad(r_tex1, i, 0);
+            let color2 = vec4<i32>(color1.x + i, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
+
+    # Generate data
+    nx, ny, nz, nc = 256, 1, 1, 1
+    data1 = (ctypes.c_int32 * nc * nx)()
+    for x in range(nx):
+        for c in range(nc):
+            data1[x][c] = random.randint(0, 20)
+
+    # Compute and validate
+    _compute_texture(
+        compute_shader,
+        wgpu.TextureFormat.r32sint,
+        wgpu.TextureDimension.d1,
+        (nx, ny, nz, nc),
+        data1,
+    )
 
 
 def test_compute_tex_1d_r32float():
@@ -234,39 +234,39 @@ def test_compute_tex_2d_rgba16sint():
     )
 
 
-# def test_compute_tex_2d_r32sint():
-#     compute_shader = """
-#         [[group(0), binding(0)]]
-#         var r_tex1: texture_2d<i32>;
-#
-#         [[group(0), binding(1)]]
-#         var r_tex2: texture_storage_2d<r32sint, write>;
-#
-#         [[stage(compute), workgroup_size(1)]]
-#         fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
-#             let i = vec2<i32>(index.xy);
-#             let color1: vec4<i32> = textureLoad(r_tex1, i, 0);
-#             let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
-#             textureStore(r_tex2, i, color2);
-#         }
-#     """
-#
-#     # Generate data
-#     nx, ny, nz, nc = 256, 8, 1, 1
-#     data1 = (ctypes.c_int32 * nc * nx * ny)()
-#     for y in range(ny):
-#         for x in range(nx):
-#             for c in range(nc):
-#                 data1[y][x][c] = random.randint(0, 20)
-#
-#     # Compute and validate
-#     _compute_texture(
-#         compute_shader,
-#         wgpu.TextureFormat.r32sint,
-#         wgpu.TextureDimension.d2,
-#         (nx, ny, nz, nc),
-#         data1,
-#     )
+def test_compute_tex_2d_r32sint():
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: texture_2d<i32>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: texture_storage_2d<r32sint, write>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec2<i32>(index.xy);
+            let color1: vec4<i32> = textureLoad(r_tex1, i, 0);
+            let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
+
+    # Generate data
+    nx, ny, nz, nc = 256, 8, 1, 1
+    data1 = (ctypes.c_int32 * nc * nx * ny)()
+    for y in range(ny):
+        for x in range(nx):
+            for c in range(nc):
+                data1[y][x][c] = random.randint(0, 20)
+
+    # Compute and validate
+    _compute_texture(
+        compute_shader,
+        wgpu.TextureFormat.r32sint,
+        wgpu.TextureDimension.d2,
+        (nx, ny, nz, nc),
+        data1,
+    )
 
 
 def test_compute_tex_2d_r32float():
@@ -382,41 +382,41 @@ def test_compute_tex_3d_rgba16sint():
     )
 
 
-# def test_compute_tex_3d_r32sint():
-#
-#     compute_shader = """
-#         [[group(0), binding(0)]]
-#         var r_tex1: texture_3d<i32>;
-#
-#         [[group(0), binding(1)]]
-#         var r_tex2: texture_storage_3d<r32sint,write>;
-#
-#         [[stage(compute), workgroup_size(1)]]
-#         fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
-#             let i = vec3<i32>(index);
-#             let color1: vec4<i32> = textureLoad(r_tex1, i, 0);
-#             let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
-#             textureStore(r_tex2, i, color2);
-#         }
-#     """
-#
-#     # Generate data
-#     nx, ny, nz, nc = 256, 8, 6, 1
-#     data1 = (ctypes.c_int32 * nc * nx * ny * nz)()
-#     for z in range(nz):
-#         for y in range(ny):
-#             for x in range(nx):
-#                 for c in range(nc):
-#                     data1[z][y][x][c] = random.randint(0, 20)
-#
-#     # Compute and validate
-#     _compute_texture(
-#         compute_shader,
-#         wgpu.TextureFormat.r32sint,
-#         wgpu.TextureDimension.d3,
-#         (nx, ny, nz, nc),
-#         data1,
-#     )
+def test_compute_tex_3d_r32sint():
+
+    compute_shader = """
+        [[group(0), binding(0)]]
+        var r_tex1: texture_3d<i32>;
+
+        [[group(0), binding(1)]]
+        var r_tex2: texture_storage_3d<r32sint,write>;
+
+        [[stage(compute), workgroup_size(1)]]
+        fn main([[builtin(global_invocation_id)]] index: vec3<u32>) {
+            let i = vec3<i32>(index);
+            let color1: vec4<i32> = textureLoad(r_tex1, i, 0);
+            let color2 = vec4<i32>(color1.x + i.x, color1.y + 1, color1.z * 2, color1.a);
+            textureStore(r_tex2, i, color2);
+        }
+    """
+
+    # Generate data
+    nx, ny, nz, nc = 256, 8, 6, 1
+    data1 = (ctypes.c_int32 * nc * nx * ny * nz)()
+    for z in range(nz):
+        for y in range(ny):
+            for x in range(nx):
+                for c in range(nc):
+                    data1[z][y][x][c] = random.randint(0, 20)
+
+    # Compute and validate
+    _compute_texture(
+        compute_shader,
+        wgpu.TextureFormat.r32sint,
+        wgpu.TextureDimension.d3,
+        (nx, ny, nz, nc),
+        data1,
+    )
 
 
 def test_compute_tex_3d_r32float():

@@ -548,8 +548,8 @@ def test_render_orange_square_depth():
 def test_render_orange_dots():
     """Render four orange dots and check that there are four orange square dots."""
 
-    if sys.platform == "darwin":
-        skip("The render-dots tests fails on Metal")
+    # if sys.platform == "darwin":
+    #     skip("The render-dots tests fails on Metal")
 
     device = get_default_device()
 
