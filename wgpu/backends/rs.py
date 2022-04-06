@@ -188,6 +188,32 @@ def check_struct(struct_name, d):
         raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
 
 
+class DeviceDropper:
+    """Helps drop devices at a good time."""
+
+    # I found that when wgpuDeviceDrop() was called in Device._destroy,
+    # the tests would hang. I found that the drop call was done around
+    # the time when another device was used (e.g. to create a buffer
+    # or shader module). For some reason, the delay in destruction (by
+    # Python's CG) causes a deadlock or something. We seem to be able
+    # to fix this by doing the actual dropping later - e.g. when the
+    # user creates a new device.
+    def __init__(self):
+        self._devices_to_drop = []
+
+    def drop_soon(self, internal):
+        self._devices_to_drop.append(internal)
+
+    def drop_all_pending(self):
+        while self._devices_to_drop:
+            internal = self._devices_to_drop.pop(0)
+            # H: void f(WGPUDevice device)
+            lib.wgpuDeviceDrop(internal)
+
+
+device_dropper = DeviceDropper()
+
+
 # %% The API
 
 
@@ -440,6 +466,9 @@ class GPUAdapter(base.GPUAdapter):
         c_trace_path = ffi.NULL
         if trace_path:  # no-cover
             c_trace_path = ffi.new("char []", trace_path.encode())
+
+        # This is a good moment to drop destroyed devices
+        device_dropper.drop_all_pending()
 
         # Vanilla WGPU does not support interpolating samplers for float32 textures,
         # which is sad for scientific data in particular. We can enable it
@@ -1242,8 +1271,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            # H: void f(WGPUDevice device)
-            internal  # lib.wgpuDeviceDrop(internal)  # Causes a hang
+            device_dropper.drop_soon(internal)
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
@@ -1465,11 +1493,20 @@ class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
 
 
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
+
+    _submitted = False
+
     def _destroy(self):
+        # Since command buffers get destroyed when you submit them, we
+        # must only drop them if they've not been submitted, or we get
+        # 'Cannot remove a vacant resource'. Got this info from the
+        # wgpu chat. Also see
+        # https://docs.rs/wgpu-core/latest/src/wgpu_core/device/mod.rs.html#4180-4194
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            # H: void f(WGPUCommandBuffer commandBuffer)
-            internal  # lib.wgpuCommandBufferDrop(internal)  # Causes 'Cannot remove a vacant resource'
+            if not self._submitted:
+                # H: void f(WGPUCommandBuffer commandBuffer)
+                lib.wgpuCommandBufferDrop(internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
@@ -1823,15 +1860,15 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
     ):
         raise NotImplementedError()
 
+    # FIXME: new method to implement
+    def clear_buffer(self, buffer, offset=0, size=None):
+        raise NotImplementedError()
+
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandEncoder commandEncoder)
             internal  # lib.wgpuCommandEncoderDrop(internal)  # Causes 'Cannot remove a vacant resource'
-
-    # FIXME: new method to implement
-    def clear_buffer(self, buffer, offset=0, size=None):
-        raise NotImplementedError()
 
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
@@ -2080,6 +2117,9 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
         # H: void f(WGPUQueue queue, uint32_t commandCount, WGPUCommandBuffer const * commands)
         lib.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
+        # Mark as submitted
+        for cb in command_buffers:
+            cb._submitted = True
 
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
 

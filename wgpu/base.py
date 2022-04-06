@@ -1170,6 +1170,9 @@ class GPUCommandBuffer(GPUObjectBase):
     :class:`GPUCommandEncoder`, to be submitted to a :class:`GPUQueue`.
 
     Create a command buffer using :func:`GPUCommandEncoder.finish`.
+
+    Command buffers are single use, you must only submit them once and
+    submitting them destroys them. Use render bundles to re-use commands.
     """
 
 
