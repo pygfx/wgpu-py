@@ -151,19 +151,20 @@ shader_source = """
 struct Locals {
     transform: mat4x4<f32>;
 };
-[[group(0), binding(0)]]
+@group(0)
+@binding(0)
 var<uniform> r_locals: Locals;
 
 struct VertexInput {
-    [[location(0)]] pos : vec4<f32>;
-    [[location(1)]] texcoord: vec2<f32>;
+    @location(0) pos : vec4<f32>,
+    @location(1) texcoord: vec2<f32>,
 };
 struct VertexOutput {
-    [[location(0)]] texcoord: vec2<f32>;
-    [[builtin(position)]] pos: vec4<f32>;
+    @location(0) texcoord: vec2<f32>,
+    @builtin(position) pos: vec4<f32>,
 };
 
-[[stage(vertex)]]
+@stage(vertex)
 fn vs_main(in: VertexInput) -> VertexOutput {
     let ndc: vec4<f32> = r_locals.transform * in.pos;
     var out: VertexOutput;
@@ -172,14 +173,17 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     return out;
 }
 
-[[group(0), binding(1)]]
+@group(0)
+@binding(1)
 var r_tex: texture_2d<f32>;
-[[group(0), binding(2)]]
+
+@group(0)
+@binding(2)
 var r_sampler: sampler;
 
-[[stage(fragment)]]
-fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
-    let value = textureSample(r_tex, r_sampler, in.texcoord).r;;
+@stage(fragment)
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    let value = textureSample(r_tex, r_sampler, in.texcoord).r;
     return vec4<f32>(value, value, value, 1.0);
 }
 """
