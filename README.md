@@ -55,7 +55,7 @@ may need to install the Vulkan drivers. You may want to force "Vulkan" while "D3
 
 On Linux, it's advisable to install the proprietary drivers of your GPU
 (if you have a dedicated GPU). You may need to `apt install mesa-vulkan-drivers`.
-Wayland currently only works with the GLFW canvas (and is unstable).
+Wayland support is currently broken (we could use a hand to fix this).
 
 On MacOS you need at least 10.13 (High Sierra) to have Vulkan support.
 

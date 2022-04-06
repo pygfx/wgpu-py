@@ -124,10 +124,10 @@ def get_surface_id_from_canvas(canvas):
         is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
         is_xcb = False
         if is_wayland:
-            # todo: wayland untested
+            # todo: wayland seems to be broken right now
             struct = ffi.new("WGPUSurfaceDescriptorFromWaylandSurface *")
             struct.display = ffi.cast("void *", display_id)
-            struct.surface = int(win_id)  # must be void *
+            struct.surface = ffi.cast("void *", win_id)
             struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWaylandSurface
         elif is_xcb:
             # todo: xcb untested
