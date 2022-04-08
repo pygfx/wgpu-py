@@ -327,7 +327,6 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
         self.show()
 
-
     # Qt methods
 
     def update(self):
