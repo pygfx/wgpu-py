@@ -256,7 +256,7 @@ class WgpuAutoGui:
     def _dispatch_event(self, event):
         """Dispatch event to the event handlers."""
         event_type = event.get("event_type")
-        for callback in self._event_handlers[event_type]:
+        for callback in self._event_handlers[event_type].copy():
             with log_exception(f"Error during handling {event['event_type']} event"):
                 callback(event)
 
