@@ -361,7 +361,7 @@ class GPUCanvasContext(base.GPUCanvasContext):
         return self._current_texture
 
     def present(self):
-        if self._internal is not None and lib is not None:
+        if self._internal is not None and lib is not None and self._current_texture is not None:
             # H: void f(WGPUSwapChain swapChain)
             lib.wgpuSwapChainPresent(self._internal)
         # Reset - always ask for a fresh texture (exactly once) on each draw
