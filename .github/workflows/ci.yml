@@ -108,7 +108,7 @@ jobs:
           pytest -v wgpu/__pyinstaller
 
   test-examples-build:
-    name: Test examples
+    name: Test Examples
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
