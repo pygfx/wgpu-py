@@ -44,8 +44,9 @@ out = compute_with_buffers({0: data}, {1: (n, "i")}, shader_source, n=n)
 
 # The result is a dict matching the output types
 # Select data from buffer at binding 1
-result = out[1]
-print(result.tolist())
+result = out[1].tolist()
+print(result)
+assert result == list(range(20))
 
 
 # %% The short version, using numpy
@@ -118,5 +119,7 @@ device.queue.submit([command_encoder.finish()])
 
 # Read result
 # result = buffer2.read_data().cast("i")
-result = device.queue.read_buffer(buffer2).cast("i")
-print(result.tolist())
+out = device.queue.read_buffer(buffer2).cast("i")
+result = out.tolist()
+print(result)
+assert result == list(range(20))
