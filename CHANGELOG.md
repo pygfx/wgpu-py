@@ -18,6 +18,19 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.7.7] - 12-04-2022
+
+Fixed:
+
+* Fixed that event handlers could not be added while in an event handler.
+* Prevent swap chain errors when minimizing a window.
+
+Added:
+
+* The `QWgpuWidget` now also supports the autogui events.
+* Our CI now tests the examples (including image comparisons).
+
+
 ### [v0.7.6] - 28-03-2022
 
 Changed:
