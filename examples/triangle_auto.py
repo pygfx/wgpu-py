@@ -9,7 +9,7 @@ from pathlib import Path
 from wgpu.gui.auto import WgpuCanvas, run
 import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
-sys.path.insert(0, Path(__file__).parent)
+sys.path.insert(0, str(Path(__file__).parent))
 
 from triangle import main  # noqa: E402, The function to call to run the visualization
 
