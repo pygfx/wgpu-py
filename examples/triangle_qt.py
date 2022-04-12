@@ -1,6 +1,8 @@
 """
 Import the viz from triangle.py and run it in a Qt window.
 Works with either PySide6, PyQt6, PyQt5 or PySide2.
+
+# run_example = false
 """
 import importlib
 

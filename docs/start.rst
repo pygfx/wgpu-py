@@ -13,7 +13,7 @@ Installation
 Dependencies
 ------------
 
-* Python 3.6 or higher is required. Pypy is supported.
+* Python 3.7 or higher is required. Pypy is supported.
 * The required ``wgpu-native`` library is distributed as part of the ``wgpu-py`` package.
 * The only other dependency is ``cffi`` (installed automatically by pip).
 

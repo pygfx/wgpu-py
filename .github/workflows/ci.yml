@@ -58,9 +58,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Test Linux py36
-            os: ubuntu-latest
-            pyversion: '3.6'
           - name: Test Linux py37
             os: ubuntu-latest
             pyversion: '3.7'
@@ -95,13 +92,11 @@ jobs:
       run: |
           python -m pip install --upgrade pip
           pip install -U -r dev-requirements.txt
-    - name: Install in development mode
-      run: |
           python download-wgpu-native.py
           pip install -e .
     - name: Test on repo
       run: |
-          pytest -v tests
+          pytest -v -k 'not test_examples' tests
     - name: Test codegen
       run: |
           pytest -v codegen
@@ -111,6 +106,33 @@ jobs:
           pip install psutil pyinstaller>=4.9
           pyinstaller --version
           pytest -v wgpu/__pyinstaller
+
+  test-examples-build:
+    name: Test examples
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+    - name: Install llvmpipe and lavapipe for offscreen canvas
+      run: |
+        sudo apt-get update -y -qq
+        sudo add-apt-repository ppa:oibaf/graphics-drivers -y
+        sudo apt-get update
+        sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
+    - name: Install dev dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install -U -r dev-requirements.txt
+          python download-wgpu-native.py
+          pip install -e .
+    - name: Test examples
+      run: |
+          pytest -v -k 'test_examples' tests
 
   # The release builds are done for the platforms that we want to build wheels for.
   # We build wheels, test them, and then upload the wheel as an artifact.

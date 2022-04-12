@@ -8,6 +8,7 @@ process. Just a proof of concept, this is far from perfect yet:
 * The request_draw should invoke a draw (in asyncio?), not draw directly.
 * Properly handling closing the figure (from both ends).
 
+# run_example = false
 """
 
 import sys
