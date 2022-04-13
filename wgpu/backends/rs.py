@@ -49,6 +49,7 @@ from .rs_helpers import (
     get_memoryview_and_address,
     to_snake_case,
     to_camel_case,
+    device_dropper,
 )
 
 
@@ -56,8 +57,8 @@ logger = logging.getLogger("wgpu")  # noqa
 apidiff = ApiDiff()
 
 # The wgpu-native version that we target/expect
-__version__ = "0.11.0.1"
-__commit_sha__ = "9d962ef667ef6006cca7bac7489d5bf303a2a244"
+__version__ = "0.12.0.1"
+__commit_sha__ = "0ff888a666e6e787af9bc9c9afc35a5055547b5a"
 version_info = tuple(map(int, __version__.split(".")))
 check_expected_version(version_info)  # produces a warning on mismatch
 
@@ -153,9 +154,9 @@ def _loadop_and_clear_from_value(value):
     """
     if isinstance(value, str):
         assert value == "load"
-        return 1, 0  # WGPULoadOp_Load and a stub value
+        return 2, 0  # WGPULoadOp_Load and a stub value
     else:
-        return 0, value  # WGPULoadOp_Clear and the value
+        return 1, value  # WGPULoadOp_Clear and the value
 
 
 _empty_label = ffi.new("char []", b"")
@@ -441,6 +442,9 @@ class GPUAdapter(base.GPUAdapter):
         if trace_path:  # no-cover
             c_trace_path = ffi.new("char []", trace_path.encode())
 
+        # This is a good moment to drop destroyed devices
+        device_dropper.drop_all_pending()
+
         # Vanilla WGPU does not support interpolating samplers for float32 textures,
         # which is sad for scientific data in particular. We can enable it
         # (on the hardware were wgpu-py likely runs) using the feature:
@@ -468,7 +472,14 @@ class GPUAdapter(base.GPUAdapter):
         for key, val in required_limits.items():
             setattr(c_limits, to_camel_case(key), val)
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *
+        # H: nextInChain: WGPUChainedStruct *, label: char *
+        queue_struct = new_struct(
+            "WGPUQueueDescriptor",
+            label=to_c_label("default_queue"),
+            # not used: nextInChain
+        )
+
+        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
             label=to_c_label(label),
@@ -476,8 +487,8 @@ class GPUAdapter(base.GPUAdapter):
             requiredFeaturesCount=0,
             requiredFeatures=ffi.new("WGPUFeatureName []", []),
             requiredLimits=c_required_limits,
+            defaultQueue=queue_struct,
         )
-
         device_id = None
 
         @ffi.callback("void(WGPURequestDeviceStatus, WGPUDevice, char *, void *)")
@@ -535,6 +546,40 @@ class GPUAdapter(base.GPUAdapter):
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
+    def __init__(self, label, internal, adapter, features, limits, queue):
+        super().__init__(label, internal, adapter, features, limits, queue)
+
+        @ffi.callback("void(WGPUErrorType, char *, void *)")
+        def uncaptured_error_callback(c_type, c_message, userdata):
+            error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
+            message = ffi.string(c_message).decode(errors="ignore")
+            message = message.replace("\\n", "\n")
+            self._on_error(f"Uncaught WGPU error ({error_type}):\n{message}")
+
+        @ffi.callback("void(WGPUDeviceLostReason, char *, void *)")
+        def device_lost_callback(c_reason, c_message, userdata):
+            reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
+            message = ffi.string(c_message).decode(errors="ignore")
+            message = message.replace("\\n", "\n")
+            self._on_error(f"The WGPU device was lost ({reason}):\n{message}")
+
+        # Keep the refs alive
+        self._uncaptured_error_callback = uncaptured_error_callback
+        self._device_lost_callback = device_lost_callback
+
+        # H: void f(WGPUDevice device, WGPUErrorCallback callback, void * userdata)
+        lib.wgpuDeviceSetUncapturedErrorCallback(
+            self._internal, uncaptured_error_callback, ffi.NULL
+        )
+        # H: void f(WGPUDevice device, WGPUDeviceLostCallback callback, void * userdata)
+        lib.wgpuDeviceSetDeviceLostCallback(
+            self._internal, device_lost_callback, ffi.NULL
+        )
+
+    def _on_error(self, message):
+        """Log the error message (for errors produced by wgpu)."""
+        logger.error(message)
+
     def create_buffer(
         self,
         *,
@@ -608,7 +653,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             height=size[1],
             depthOrArrayLayers=size[2],
         )
-        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, dimension: WGPUTextureDimension, size: WGPUExtent3D, format: WGPUTextureFormat, mipLevelCount: int, sampleCount: int
+        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, dimension: WGPUTextureDimension, size: WGPUExtent3D, format: WGPUTextureFormat, mipLevelCount: int, sampleCount: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *
         struct = new_struct_p(
             "WGPUTextureDescriptor *",
             label=to_c_label(label),
@@ -619,6 +664,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             format=format,
             usage=usage,
             # not used: nextInChain
+            # not used: viewFormatCount
+            # not used: viewFormats
         )
         # H: WGPUTexture f(WGPUDevice device, WGPUTextureDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateTexture(self._internal, struct)
@@ -648,7 +695,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         compare: "enums.CompareFunction" = None,
         max_anisotropy: int = 1,
     ):
-        # H: nextInChain: WGPUChainedStruct *, label: char *, addressModeU: WGPUAddressMode, addressModeV: WGPUAddressMode, addressModeW: WGPUAddressMode, magFilter: WGPUFilterMode, minFilter: WGPUFilterMode, mipmapFilter: WGPUFilterMode, lodMinClamp: float, lodMaxClamp: float, compare: WGPUCompareFunction, maxAnisotropy: int
+        # H: nextInChain: WGPUChainedStruct *, label: char *, addressModeU: WGPUAddressMode, addressModeV: WGPUAddressMode, addressModeW: WGPUAddressMode, magFilter: WGPUFilterMode, minFilter: WGPUFilterMode, mipmapFilter: WGPUMipmapFilterMode, lodMinClamp: float, lodMaxClamp: float, compare: WGPUCompareFunction, maxAnisotropy: int
         struct = new_struct_p(
             "WGPUSamplerDescriptor *",
             label=to_c_label(label),
@@ -897,12 +944,14 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             source_struct[0].chain.next = ffi.NULL
             source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleSPIRVDescriptor
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *
+        # Note, we could give hints here that specify entrypoint and pipelinelayout before compiling
+        # H: nextInChain: WGPUChainedStruct *, label: char *, hintCount: int, hints: WGPUShaderModuleCompilationHint *
         struct = new_struct_p(
             "WGPUShaderModuleDescriptor *",
             label=to_c_label(label),
             nextInChain=ffi.cast("WGPUChainedStruct *", source_struct),
-            # not used: nextInChain
+            hintCount=0,
+            hints=ffi.NULL,
         )
 
         # H: WGPUShaderModule f(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor)
@@ -1197,8 +1246,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            # H: void f(WGPUDevice device)
-            internal  # lib.wgpuDeviceDrop(internal)  # Causes a hang
+            device_dropper.drop_soon(internal)
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
@@ -1421,10 +1469,16 @@ class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
 
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
     def _destroy(self):
+        # Since command buffers get destroyed when you submit them, we
+        # must only drop them if they've not been submitted, or we get
+        # 'Cannot remove a vacant resource'. Got this info from the
+        # wgpu chat. Also see
+        # https://docs.rs/wgpu-core/latest/src/wgpu_core/device/mod.rs.html#4180-4194
+        # That's why _internal is set to None in submit()
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandBuffer commandBuffer)
-            internal  # lib.wgpuCommandBufferDrop(internal)  # Causes 'Cannot remove a vacant resource'
+            lib.wgpuCommandBufferDrop(internal)
 
 
 class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
@@ -1487,14 +1541,14 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
                 b=clr[2],
                 a=clr[3],
             )
-            # H: view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearColor: WGPUColor
+            # H: view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
             c_attachment = new_struct(
                 "WGPURenderPassColorAttachment",
                 view=texture_view_id,
                 resolveTarget=c_resolve_target,
                 loadOp=c_load_op,
                 storeOp=color_attachment.get("store_op", "store"),
-                clearColor=c_clear_color,
+                clearValue=c_clear_color,
                 # not used: resolveTarget
             )
             c_color_attachments_list.append(c_attachment)
@@ -1511,17 +1565,17 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             c_stencil_load_op, c_stencil_clear = _loadop_and_clear_from_value(
                 depth_stencil_attachment["stencil_load_value"]
             )
-            # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, clearDepth: float, depthReadOnly: bool, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, clearStencil: int, stencilReadOnly: bool
+            # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: bool, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: bool
             c_depth_stencil_attachment = new_struct_p(
                 "WGPURenderPassDepthStencilAttachment *",
                 view=depth_stencil_attachment["view"]._internal,
                 depthLoadOp=c_depth_load_op,
                 depthStoreOp=depth_stencil_attachment["depth_store_op"],
-                clearDepth=float(c_depth_clear),
+                depthClearValue=float(c_depth_clear),
                 depthReadOnly=depth_stencil_attachment.get("depth_read_only", False),
                 stencilLoadOp=c_stencil_load_op,
                 stencilStoreOp=depth_stencil_attachment["stencil_store_op"],
-                clearStencil=int(c_stencil_clear),
+                stencilClearValue=int(c_stencil_clear),
                 stencilReadOnly=depth_stencil_attachment.get(
                     "stencil_read_only", False
                 ),
@@ -1754,6 +1808,9 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = lib.wgpuCommandEncoderFinish(self._internal, struct)
+        # WGPU destroys the command encoder when it's finished. So we set
+        # _internal to None to avoid dropping a nonexistent object.
+        self._internal = None
         return GPUCommandBuffer(label, id, self)
 
     # FIXME: new method to implement
@@ -1778,15 +1835,17 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
     ):
         raise NotImplementedError()
 
-    def _destroy(self):
-        if self._internal is not None and lib is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUCommandEncoder commandEncoder)
-            internal  # lib.wgpuCommandEncoderDrop(internal)  # Causes 'Cannot remove a vacant resource'
-
     # FIXME: new method to implement
     def clear_buffer(self, buffer, offset=0, size=None):
         raise NotImplementedError()
+
+    def _destroy(self):
+        # Note that the natove object gets destroyed on finish.
+        # Also see GPUCommandBuffer._destroy()
+        if self._internal is not None and lib is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPUCommandEncoder commandEncoder)
+            lib.wgpuCommandEncoderDrop(internal)
 
 
 class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
@@ -1870,7 +1929,7 @@ class GPUComputePassEncoder(
         lib.wgpuComputePassEncoderSetPipeline(self._internal, pipeline_id)
 
     def dispatch(self, x, y=1, z=1):
-        # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t x, uint32_t y, uint32_t z)
+        # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ)
         lib.wgpuComputePassEncoderDispatch(self._internal, x, y, z)
 
     def dispatch_indirect(self, indirect_buffer, indirect_offset):
@@ -1882,7 +1941,7 @@ class GPUComputePassEncoder(
 
     def end_pass(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
-        lib.wgpuComputePassEncoderEndPass(self._internal)
+        lib.wgpuComputePassEncoderEnd(self._internal)
 
     def _destroy(self):
         if self._internal is not None and lib is not None:
@@ -2002,7 +2061,7 @@ class GPURenderPassEncoder(
 
     def end_pass(self):
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
-        lib.wgpuRenderPassEncoderEndPass(self._internal)
+        lib.wgpuRenderPassEncoderEnd(self._internal)
 
     # FIXME: new method to implement
     def execute_bundles(self, bundles):
@@ -2035,6 +2094,10 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
         # H: void f(WGPUQueue queue, uint32_t commandCount, WGPUCommandBuffer const * commands)
         lib.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
+        # WGPU destroys the resource when submitting. We follow this
+        # to avoid dropping a nonexistent object.
+        for cb in command_buffers:
+            cb._internal = None
 
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
 

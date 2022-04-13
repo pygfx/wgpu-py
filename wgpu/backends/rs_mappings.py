@@ -4,7 +4,7 @@
 
 # flake8: noqa
 
-# There are 227 enum mappings
+# There are 230 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
@@ -48,8 +48,8 @@ enummap = {
     "CullMode.front": 1,
     "CullMode.none": 0,
     "DeviceLostReason.destroyed": 1,
-    "ErrorFilter.out-of-memory": 2,
-    "ErrorFilter.validation": 1,
+    "ErrorFilter.out-of-memory": 1,
+    "ErrorFilter.validation": 0,
     "FeatureName.depth-clip-control": 1,
     "FeatureName.depth24unorm-stencil8": 2,
     "FeatureName.depth32float-stencil8": 3,
@@ -64,9 +64,12 @@ enummap = {
     "FrontFace.cw": 1,
     "IndexFormat.uint16": 1,
     "IndexFormat.uint32": 2,
-    "LoadOp.load": 1,
+    "LoadOp.load": 2,
+    "MipmapFilterMode.linear": 1,
+    "MipmapFilterMode.nearest": 0,
     "PowerPreference.high-performance": 2,
     "PowerPreference.low-power": 1,
+    "PredefinedColorSpace.srgb": 1,
     "PrimitiveTopology.line-list": 1,
     "PrimitiveTopology.line-strip": 2,
     "PrimitiveTopology.point-list": 0,
@@ -88,8 +91,8 @@ enummap = {
     "StencilOperation.replace": 2,
     "StencilOperation.zero": 1,
     "StorageTextureAccess.write-only": 1,
-    "StoreOp.discard": 1,
-    "StoreOp.store": 0,
+    "StoreOp.discard": 2,
+    "StoreOp.store": 1,
     "TextureAspect.all": 0,
     "TextureAspect.depth-only": 2,
     "TextureAspect.stencil-only": 1,
@@ -270,7 +273,7 @@ cstructfield2enum = {
     "SamplerDescriptor.compare": "CompareFunction",
     "SamplerDescriptor.magFilter": "FilterMode",
     "SamplerDescriptor.minFilter": "FilterMode",
-    "SamplerDescriptor.mipmapFilter": "FilterMode",
+    "SamplerDescriptor.mipmapFilter": "MipmapFilterMode",
     "StencilFaceState.compare": "CompareFunction",
     "StencilFaceState.depthFailOp": "StencilOperation",
     "StencilFaceState.failOp": "StencilOperation",
@@ -318,5 +321,16 @@ enum_int2str = {
         1: "IntegratedGPU",
         2: "CPU",
         3: "Unknown",
+    },
+    "ErrorType": {
+        0: "NoError",
+        1: "Validation",
+        2: "OutOfMemory",
+        3: "Unknown",
+        4: "DeviceLost",
+    },
+    "DeviceLostReason": {
+        0: "Undefined",
+        1: "Destroyed",
     },
 }

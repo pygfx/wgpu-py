@@ -122,17 +122,24 @@ def get_surface_id_from_canvas(canvas):
     elif sys.platform.startswith("linux"):  # no-cover
         display_id = canvas.get_display_id()
         is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+        is_xcb = False
         if is_wayland:
-            # todo: probably does not work since we dont have WGPUSurfaceDescriptorFromWayland
-            struct = ffi.new("WGPUSurfaceDescriptorFromXlib *")
+            # todo: wayland seems to be broken right now
+            struct = ffi.new("WGPUSurfaceDescriptorFromWaylandSurface *")
             struct.display = ffi.cast("void *", display_id)
+            struct.surface = ffi.cast("void *", win_id)
+            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWaylandSurface
+        elif is_xcb:
+            # todo: xcb untested
+            struct = ffi.new("WGPUSurfaceDescriptorFromXcbWindow *")
+            struct.connection = ffi.NULL  # ?? ffi.cast("void *", display_id)
             struct.window = int(win_id)
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlib
+            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
         else:
-            struct = ffi.new("WGPUSurfaceDescriptorFromXlib *")
+            struct = ffi.new("WGPUSurfaceDescriptorFromXlibWindow *")
             struct.display = ffi.cast("void *", display_id)
             struct.window = int(win_id)
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlib
+            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
 
     else:  # no-cover
         raise RuntimeError("Cannot get surface id: unsupported platform.")
@@ -178,3 +185,29 @@ def to_camel_case(name):
     if name2.endswith(("1d", "2d", "3d")):
         name2 = name2[:-1] + "D"
     return name2
+
+
+class DeviceDropper:
+    """Helps drop devices at a good time."""
+
+    # I found that when wgpuDeviceDrop() was called in Device._destroy,
+    # the tests would hang. I found that the drop call was done around
+    # the time when another device was used (e.g. to create a buffer
+    # or shader module). For some reason, the delay in destruction (by
+    # Python's CG) causes a deadlock or something. We seem to be able
+    # to fix this by doing the actual dropping later - e.g. when the
+    # user creates a new device.
+    def __init__(self):
+        self._devices_to_drop = []
+
+    def drop_soon(self, internal):
+        self._devices_to_drop.append(internal)
+
+    def drop_all_pending(self):
+        while self._devices_to_drop:
+            internal = self._devices_to_drop.pop(0)
+            # H: void f(WGPUDevice device)
+            lib.wgpuDeviceDrop(internal)
+
+
+device_dropper = DeviceDropper()

@@ -23,14 +23,14 @@ import wgpu
 
 shader_source = """
 struct VertexInput {
-    [[builtin(vertex_index)]] vertex_index : u32;
+    @builtin(vertex_index) vertex_index : u32,
 };
 struct VertexOutput {
-    [[location(0)]] color : vec4<f32>;
-    [[builtin(position)]] pos: vec4<f32>;
+    @location(0) color : vec4<f32>,
+    @builtin(position) pos: vec4<f32>,
 };
 
-[[stage(vertex)]]
+@stage(vertex)
 fn vs_main(in: VertexInput) -> VertexOutput {
     var positions = array<vec2<f32>, 3>(vec2<f32>(0.0, -0.5), vec2<f32>(0.5, 0.5), vec2<f32>(-0.5, 0.7));
     let index = i32(in.vertex_index);
@@ -42,8 +42,8 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     return out;
 }
 
-[[stage(fragment)]]
-fn fs_main(in: VertexOutput) -> [[location(0)]] vec4<f32> {
+@stage(fragment)
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     return in.color;
 }
 """
