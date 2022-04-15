@@ -363,14 +363,12 @@ class GPUDevice(GPUObjectBase):
         return self._adapter
 
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
-    @apidiff.hide
     @property
     def lost(self):
         """Provides information about why the device is lost."""
         raise NotImplementedError()
 
     # IDL: attribute EventHandler onuncapturederror;
-    @apidiff.hide
     @property
     def onuncapturederror(self):
         """Method called when an error is capured?"""
@@ -846,11 +844,13 @@ class GPUDevice(GPUObjectBase):
     # IDL: undefined pushErrorScope(GPUErrorFilter filter);
     @apidiff.hide
     def push_error_scope(self, filter):
+        """Pushes a new GPU error scope onto the stack."""
         raise NotImplementedError()
 
     # IDL: Promise<GPUError?> popErrorScope();
     @apidiff.hide
     def pop_error_scope(self):
+        """Pops a GPU error scope from the stack."""
         raise NotImplementedError()
 
     # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor);
@@ -862,6 +862,7 @@ class GPUDevice(GPUObjectBase):
         source: object,
         color_space: "enums.PredefinedColorSpace" = "srgb",
     ):
+        """For browsers only."""
         raise NotImplementedError()
 
 
@@ -1875,10 +1876,10 @@ class GPUUncapturedErrorEvent:
 class GPUExternalTexture(GPUObjectBase):
     """Ignore this - specific to browsers."""
 
-    # FIXME: new prop to implement
     # IDL: readonly attribute boolean expired;
     @property
     def expired(self):
+        """Whether the external texture has been destroyed."""
         raise NotImplementedError()
 
 

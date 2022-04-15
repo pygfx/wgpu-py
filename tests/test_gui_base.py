@@ -127,12 +127,13 @@ def test_offscreen_canvas():
                 {
                     "view": current_texture_view,
                     "resolve_target": None,
-                    "load_value": (0, 1, 0, 1),  # LoadOp.load or color
+                    "clear_value": (0, 1, 0, 1),
+                    "load_op": wgpu.LoadOp.clear,
                     "store_op": wgpu.StoreOp.store,
                 }
             ],
         )
-        render_pass.end_pass()
+        render_pass.end()
         device.queue.submit([command_encoder.finish()])
 
     assert canvas.array.shape == (100, 100, 4)

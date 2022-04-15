@@ -249,8 +249,8 @@ def test_compute_indirect():
     compute_pass = command_encoder.begin_compute_pass()
     compute_pass.set_pipeline(compute_pipeline)
     compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 args not used
-    compute_pass.dispatch_indirect(buffer3, 0)
-    compute_pass.end_pass()
+    compute_pass.dispatch_workgroups_indirect(buffer3, 0)
+    compute_pass.end()
     device.queue.submit([command_encoder.finish()])
 
     # Read result

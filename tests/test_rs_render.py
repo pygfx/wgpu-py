@@ -281,7 +281,7 @@ def test_render_orange_square_vbo():
 
 
 def test_render_orange_square_color_attachment1():
-    """Render an orange square on a blue background, testing the load_value."""
+    """Render an orange square on a blue background, testing the load_op."""
 
     device = get_default_device()
 
@@ -299,7 +299,8 @@ def test_render_orange_square_color_attachment1():
 
     ca = {
         "resolve_target": None,
-        "load_value": (0, 0, 0.8, 1),  # LoadOp.load or color
+        "clear_value": (0, 0, 0.8, 1),
+        "load_op": wgpu.LoadOp.clear,
         "store_op": wgpu.StoreOp.store,
     }
 
@@ -343,7 +344,7 @@ def test_render_orange_square_color_attachment2():
 
     ca = {
         "resolve_target": None,
-        "load_value": wgpu.LoadOp.load,  # LoadOp.load or color
+        "load_op": wgpu.LoadOp.load,
         "store_op": wgpu.StoreOp.store,
     }
 
@@ -512,9 +513,10 @@ def test_render_orange_square_depth():
 
     depth_stencil_attachment = dict(
         view=depth_stencil_texture.create_view(),
-        depth_load_value=0.1,
+        depth_clear_value=0.1,
+        depth_load_op=wgpu.LoadOp.clear,
         depth_store_op=wgpu.StoreOp.store,
-        stencil_load_value=wgpu.LoadOp.load,
+        stencil_load_op=wgpu.LoadOp.load,
         stencil_store_op=wgpu.StoreOp.store,
     )
 
