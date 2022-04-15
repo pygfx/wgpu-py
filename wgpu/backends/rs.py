@@ -1649,7 +1649,6 @@ class GPUCommandEncoder(
         raw_pass = lib.wgpuCommandEncoderBeginComputePass(self._internal, struct)
         return GPUComputePassEncoder(label, raw_pass, self)
 
-    # FIXME: missing check_struct in begin_render_pass: ['Color']
     def begin_render_pass(
         self,
         *,
@@ -1673,16 +1672,17 @@ class GPUCommandEncoder(
                 if color_attachment.get("resolve_target", None) is None
                 else color_attachment["resolve_target"]._internal
             )  # this is a TextureViewId or null
-            clear_color = _tuple_from_tuple_or_dict(
-                color_attachment.get("clear_value", (0, 0, 0, 0)), "rgba"
-            )
+            clear_value = color_attachment.get("clear_value", (0, 0, 0, 0))
+            if isinstance(clear_value, dict):
+                check_struct("Color", clear_value)
+                clear_value = _tuple_from_tuple_or_dict("clear_value", "rgba")
             # H: r: float, g: float, b: float, a: float
-            c_clear_color = new_struct(
+            c_clear_value = new_struct(
                 "WGPUColor",
-                r=clear_color[0],
-                g=clear_color[1],
-                b=clear_color[2],
-                a=clear_color[3],
+                r=clear_value[0],
+                g=clear_value[1],
+                b=clear_value[2],
+                a=clear_value[3],
             )
             # H: view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
             c_attachment = new_struct(
@@ -1691,7 +1691,7 @@ class GPUCommandEncoder(
                 resolveTarget=c_resolve_target,
                 loadOp=color_attachment["load_op"],
                 storeOp=color_attachment["store_op"],
-                clearValue=c_clear_color,
+                clearValue=c_clear_value,
                 # not used: resolveTarget
             )
             c_color_attachments_list.append(c_attachment)

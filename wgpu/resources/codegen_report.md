@@ -21,7 +21,6 @@
 ### Patching API for backends/rs.py
 * Diffs for GPUAdapter: add request_device_tracing
 * Validated 35 classes, 92 methods, 0 properties
-* ERROR: missing check_struct in begin_render_pass: ['Color']
 ## Validating rs.py
 * Enum field FeatureName.shader-f16 missing in wgpu.h
 * Enum CanvasCompositingAlphaMode missing in wgpu.h
