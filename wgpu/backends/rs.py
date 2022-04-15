@@ -147,18 +147,6 @@ def _tuple_from_tuple_or_dict(ob, fields):
         raise TypeError(error_msg.format(", ".join(fields)))
 
 
-def _loadop_and_clear_from_value(value):
-    """In WebGPU, the load op, can be given either as "load" or a value.
-    The latter translates to "clear" plus that value in wgpu-native.
-    The value can be float/int/color, but we don't deal with that here.
-    """
-    if isinstance(value, str):
-        assert value == "load"
-        return 2, 0  # WGPULoadOp_Load and a stub value
-    else:
-        return 1, value  # WGPULoadOp_Clear and the value
-
-
 _empty_label = ffi.new("char []", b"")
 
 
@@ -414,8 +402,13 @@ class GPUAdapter(base.GPUAdapter):
         label="",
         required_features: "List[enums.FeatureName]" = [],
         required_limits: "Dict[str, int]" = {},
+        default_queue: "structs.QueueDescriptor" = {},
     ):
-        return self._request_device(label, required_features, required_limits, "")
+        if default_queue:
+            check_struct("QueueDescriptor", default_queue)
+        return self._request_device(
+            label, required_features, required_limits, default_queue, ""
+        )
 
     @apidiff.add("a sweet bonus feature from wgpu-native")
     def request_device_tracing(
@@ -425,19 +418,24 @@ class GPUAdapter(base.GPUAdapter):
         label="",
         required_features: "list(enums.FeatureName)" = [],
         required_limits: "Dict[str, int]" = {},
+        default_queue: "structs.QueueDescriptor" = {},
     ):
         """Write a trace of all commands to a file so it can be reproduced
         elsewhere. The trace is cross-platform!
         """
+        if default_queue:
+            check_struct("QueueDescriptor", default_queue)
         if not os.path.isdir(trace_path):
             os.makedirs(trace_path, exist_ok=True)
         elif os.listdir(trace_path):
             logger.warning(f"Trace directory not empty: {trace_path}")
         return self._request_device(
-            label, required_features, required_limits, trace_path
+            label, required_features, required_limits, default_queue, trace_path
         )
 
-    def _request_device(self, label, features, required_limits, trace_path):
+    def _request_device(
+        self, label, features, required_limits, default_queue, trace_path
+    ):
         c_trace_path = ffi.NULL
         if trace_path:  # no-cover
             c_trace_path = ffi.new("char []", trace_path.encode())
@@ -472,6 +470,7 @@ class GPUAdapter(base.GPUAdapter):
         for key, val in required_limits.items():
             setattr(c_limits, to_camel_case(key), val)
 
+        # Note that the struct QueueDescriptor is currently empty :)
         # H: nextInChain: WGPUChainedStruct *, label: char *
         queue_struct = new_struct(
             "WGPUQueueDescriptor",
@@ -534,9 +533,12 @@ class GPUAdapter(base.GPUAdapter):
         label="",
         required_features: "List[enums.FeatureName]" = [],
         required_limits: "Dict[str, int]" = {},
+        default_queue: "structs.QueueDescriptor" = {},
     ):
+        if default_queue:
+            check_struct("QueueDescriptor", default_queue)
         return self._request_device(
-            label, required_features, required_limits, ""
+            label, required_features, required_limits, default_queue, ""
         )  # no-cover
 
     def _destroy(self):
@@ -642,6 +644,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         dimension: "enums.TextureDimension" = "2d",
         format: "enums.TextureFormat",
         usage: "flags.TextureUsage",
+        view_formats: "List[enums.TextureFormat]" = [],
     ):
         size = _tuple_from_tuple_or_dict(
             size, ("width", "height", "depth_or_array_layers")
@@ -653,6 +656,12 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             height=size[1],
             depthOrArrayLayers=size[2],
         )
+
+        if view_formats:
+            raise NotImplementedError(
+                "create_texture(.. view_formats is not yet supported."
+            )
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, dimension: WGPUTextureDimension, size: WGPUExtent3D, format: WGPUTextureFormat, mipLevelCount: int, sampleCount: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *
         struct = new_struct_p(
             "WGPUTextureDescriptor *",
@@ -689,7 +698,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         address_mode_w: "enums.AddressMode" = "clamp-to-edge",
         mag_filter: "enums.FilterMode" = "nearest",
         min_filter: "enums.FilterMode" = "nearest",
-        mipmap_filter: "enums.FilterMode" = "nearest",
+        mipmap_filter: "enums.MipmapFilterMode" = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 32,
         compare: "enums.CompareFunction" = None,
@@ -1226,7 +1235,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = lib.wgpuDeviceCreateCommandEncoder(self._internal, struct)
         return GPUCommandEncoder(label, id, self)
 
-    # FIXME: new method to implement
     def create_render_bundle_encoder(
         self,
         *,
@@ -1239,7 +1247,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     ):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
         raise NotImplementedError()
 
@@ -1481,7 +1488,147 @@ class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
             lib.wgpuCommandBufferDrop(internal)
 
 
-class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
+class GPUCommandsMixin(base.GPUCommandsMixin):
+    pass
+
+
+class GPUBindingCommandsMixin(base.GPUBindingCommandsMixin):
+    def set_bind_group(
+        self,
+        index,
+        bind_group,
+        dynamic_offsets_data,
+        dynamic_offsets_data_start,
+        dynamic_offsets_data_length,
+    ):
+        offsets = list(dynamic_offsets_data)
+        c_offsets = ffi.new("uint32_t []", offsets)
+        bind_group_id = bind_group._internal
+        if isinstance(self, GPUComputePassEncoder):
+            # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, uint32_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
+            lib.wgpuComputePassEncoderSetBindGroup(
+                self._internal, index, bind_group_id, len(offsets), c_offsets
+            )
+        else:
+            # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, uint32_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
+            lib.wgpuRenderPassEncoderSetBindGroup(
+                self._internal,
+                index,
+                bind_group_id,
+                len(offsets),
+                c_offsets,
+            )
+
+
+class GPUDebugCommandsMixin(base.GPUDebugCommandsMixin):
+    def push_debug_group(self, group_label):
+        c_group_label = ffi.new("char []", group_label.encode())
+        color = 0
+        # todo: these functions are temporarily not available in wgpu-native
+        return  # noqa
+        if isinstance(self, GPUComputePassEncoder):
+            # H: void f(WGPUComputePassEncoder computePassEncoder, char const * groupLabel)
+            lib.wgpuComputePassEncoderPushDebugGroup(
+                self._internal, c_group_label, color
+            )
+        else:
+            # H: void f(WGPURenderPassEncoder renderPassEncoder, char const * groupLabel)
+            lib.wgpuRenderPassEncoderPushDebugGroup(
+                self._internal, c_group_label, color
+            )
+
+    def pop_debug_group(self):
+        # todo: these functions are temporarily not available in wgpu-native
+        return  # noqa
+        if isinstance(self, GPUComputePassEncoder):
+            # H: void f(WGPUComputePassEncoder computePassEncoder)
+            lib.wgpuComputePassEncoderPopDebugGroup(self._internal)
+        else:
+            # H: void f(WGPURenderPassEncoder renderPassEncoder)
+            lib.wgpuRenderPassEncoderPopDebugGroup(self._internal)
+
+    def insert_debug_marker(self, marker_label):
+        c_marker_label = ffi.new("char []", marker_label.encode())
+        color = 0
+        # todo: these functions are temporarily not available in wgpu-native
+        return  # noqa
+        if isinstance(self, GPUComputePassEncoder):
+            # H: void f(WGPUComputePassEncoder computePassEncoder, char const * markerLabel)
+            lib.wgpuComputePassEncoderInsertDebugMarker(
+                self._internal, c_marker_label, color
+            )
+        else:
+            # H: void f(WGPURenderPassEncoder renderPassEncoder, char const * markerLabel)
+            lib.wgpuRenderPassEncoderInsertDebugMarker(
+                self._internal, c_marker_label, color
+            )
+
+
+class GPURenderCommandsMixin(base.GPURenderCommandsMixin):
+    def set_pipeline(self, pipeline):
+        pipeline_id = pipeline._internal
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
+        lib.wgpuRenderPassEncoderSetPipeline(self._internal, pipeline_id)
+
+    def set_index_buffer(self, buffer, index_format, offset=0, size=None):
+        if not size:
+            size = buffer.size - offset
+        c_index_format = enummap[f"IndexFormat.{index_format}"]
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
+        lib.wgpuRenderPassEncoderSetIndexBuffer(
+            self._internal, buffer._internal, c_index_format, int(offset), int(size)
+        )
+
+    def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
+        if not size:
+            size = buffer.size - offset
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
+        lib.wgpuRenderPassEncoderSetVertexBuffer(
+            self._internal, int(slot), buffer._internal, int(offset), int(size)
+        )
+
+    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+        lib.wgpuRenderPassEncoderDraw(
+            self._internal, vertex_count, instance_count, first_vertex, first_instance
+        )
+
+    def draw_indirect(self, indirect_buffer, indirect_offset):
+        buffer_id = indirect_buffer._internal
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
+        lib.wgpuRenderPassEncoderDrawIndirect(
+            self._internal, buffer_id, int(indirect_offset)
+        )
+
+    def draw_indexed(
+        self,
+        index_count,
+        instance_count=1,
+        first_index=0,
+        base_vertex=0,
+        first_instance=0,
+    ):
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
+        lib.wgpuRenderPassEncoderDrawIndexed(
+            self._internal,
+            index_count,
+            instance_count,
+            first_index,
+            base_vertex,
+            first_instance,
+        )
+
+    def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
+        buffer_id = indirect_buffer._internal
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
+        lib.wgpuRenderPassEncoderDrawIndexedIndirect(
+            self._internal, buffer_id, int(indirect_offset)
+        )
+
+
+class GPUCommandEncoder(
+    base.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase
+):
     def begin_compute_pass(
         self,
         *,
@@ -1502,6 +1649,7 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         raw_pass = lib.wgpuCommandEncoderBeginComputePass(self._internal, struct)
         return GPUComputePassEncoder(label, raw_pass, self)
 
+    # FIXME: missing check_struct in begin_render_pass: ['Color']
     def begin_render_pass(
         self,
         *,
@@ -1525,29 +1673,24 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
                 if color_attachment.get("resolve_target", None) is None
                 else color_attachment["resolve_target"]._internal
             )  # this is a TextureViewId or null
-            c_load_op, clear_color = _loadop_and_clear_from_value(
-                color_attachment["load_value"]
+            clear_color = _tuple_from_tuple_or_dict(
+                color_attachment.get("clear_value", (0, 0, 0, 0)), "rgba"
             )
-            clr = (
-                (0.0, 0.0, 0.0, 0.0)
-                if clear_color == 0
-                else _tuple_from_tuple_or_dict(clear_color, "rgba")
-            )
-            # H: r: float, g: float, b: float, a: float
             c_clear_color = new_struct(
                 "WGPUColor",
-                r=clr[0],
-                g=clr[1],
-                b=clr[2],
-                a=clr[3],
+                r=clear_color[0],
+                g=clear_color[1],
+                b=clear_color[2],
+                a=clear_color[3],
             )
+            # H: r: float, g: float, b: float, a: float
             # H: view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
             c_attachment = new_struct(
                 "WGPURenderPassColorAttachment",
                 view=texture_view_id,
                 resolveTarget=c_resolve_target,
-                loadOp=c_load_op,
-                storeOp=color_attachment.get("store_op", "store"),
+                loadOp=color_attachment["load_op"],
+                storeOp=color_attachment["store_op"],
                 clearValue=c_clear_color,
                 # not used: resolveTarget
             )
@@ -1559,23 +1702,19 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
             check_struct("RenderPassDepthStencilAttachment", depth_stencil_attachment)
-            c_depth_load_op, c_depth_clear = _loadop_and_clear_from_value(
-                depth_stencil_attachment["depth_load_value"]
-            )
-            c_stencil_load_op, c_stencil_clear = _loadop_and_clear_from_value(
-                depth_stencil_attachment["stencil_load_value"]
-            )
+            depth_clear_value = depth_stencil_attachment.get("depth_clear_value", 0)
+            stencil_clear_value = depth_stencil_attachment.get("stencil_clear_value", 0)
             # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: bool, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: bool
             c_depth_stencil_attachment = new_struct_p(
                 "WGPURenderPassDepthStencilAttachment *",
                 view=depth_stencil_attachment["view"]._internal,
-                depthLoadOp=c_depth_load_op,
+                depthLoadOp=depth_stencil_attachment["depth_load_op"],
                 depthStoreOp=depth_stencil_attachment["depth_store_op"],
-                depthClearValue=float(c_depth_clear),
+                depthClearValue=float(depth_clear_value),
                 depthReadOnly=depth_stencil_attachment.get("depth_read_only", False),
-                stencilLoadOp=c_stencil_load_op,
+                stencilLoadOp=depth_stencil_attachment["stencil_load_op"],
                 stencilStoreOp=depth_stencil_attachment["stencil_store_op"],
-                stencilClearValue=int(c_stencil_clear),
+                stencilClearValue=int(stencil_clear_value),
                 stencilReadOnly=depth_stencil_attachment.get(
                     "stencil_read_only", False
                 ),
@@ -1813,29 +1952,14 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
         self._internal = None
         return GPUCommandBuffer(label, id, self)
 
-    # FIXME: new method to implement
-    def push_debug_group(self, group_label):
-        raise NotImplementedError()
-
-    # FIXME: new method to implement
-    def pop_debug_group(self):
-        raise NotImplementedError()
-
-    # FIXME: new method to implement
-    def insert_debug_marker(self, marker_label):
-        raise NotImplementedError()
-
-    # FIXME: new method to implement
     def write_timestamp(self, query_set, query_index):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
     ):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     def clear_buffer(self, buffer, offset=0, size=None):
         raise NotImplementedError()
 
@@ -1848,78 +1972,12 @@ class GPUCommandEncoder(base.GPUCommandEncoder, GPUObjectBase):
             lib.wgpuCommandEncoderDrop(internal)
 
 
-class GPUProgrammablePassEncoder(base.GPUProgrammablePassEncoder):
-    def set_bind_group(
-        self,
-        index,
-        bind_group,
-        dynamic_offsets_data,
-        dynamic_offsets_data_start,
-        dynamic_offsets_data_length,
-    ):
-        offsets = list(dynamic_offsets_data)
-        c_offsets = ffi.new("uint32_t []", offsets)
-        bind_group_id = bind_group._internal
-        if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, uint32_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
-            lib.wgpuComputePassEncoderSetBindGroup(
-                self._internal, index, bind_group_id, len(offsets), c_offsets
-            )
-        else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, uint32_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
-            lib.wgpuRenderPassEncoderSetBindGroup(
-                self._internal,
-                index,
-                bind_group_id,
-                len(offsets),
-                c_offsets,
-            )
-
-    def push_debug_group(self, group_label):
-        c_group_label = ffi.new("char []", group_label.encode())
-        color = 0
-        # todo: these functions are temporarily not available in wgpu-native
-        return  # noqa
-        if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder, char const * groupLabel)
-            lib.wgpuComputePassEncoderPushDebugGroup(
-                self._internal, c_group_label, color
-            )
-        else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder, char const * groupLabel)
-            lib.wgpuRenderPassEncoderPushDebugGroup(
-                self._internal, c_group_label, color
-            )
-
-    def pop_debug_group(self):
-        # todo: these functions are temporarily not available in wgpu-native
-        return  # noqa
-        if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder)
-            lib.wgpuComputePassEncoderPopDebugGroup(self._internal)
-        else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder)
-            lib.wgpuRenderPassEncoderPopDebugGroup(self._internal)
-
-    def insert_debug_marker(self, marker_label):
-        c_marker_label = ffi.new("char []", marker_label.encode())
-        color = 0
-        # todo: these functions are temporarily not available in wgpu-native
-        return  # noqa
-        if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder, char const * markerLabel)
-            lib.wgpuComputePassEncoderInsertDebugMarker(
-                self._internal, c_marker_label, color
-            )
-        else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder, char const * markerLabel)
-            lib.wgpuRenderPassEncoderInsertDebugMarker(
-                self._internal, c_marker_label, color
-            )
-
-
 class GPUComputePassEncoder(
-    base.GPUComputePassEncoder, GPUProgrammablePassEncoder, GPUObjectBase
+    base.GPUComputePassEncoder,
+    GPUCommandsMixin,
+    GPUDebugCommandsMixin,
+    GPUBindingCommandsMixin,
+    GPUObjectBase,
 ):
     """ """
 
@@ -1928,18 +1986,22 @@ class GPUComputePassEncoder(
         # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)
         lib.wgpuComputePassEncoderSetPipeline(self._internal, pipeline_id)
 
-    def dispatch(self, x, y=1, z=1):
+    def dispatch_workgroups(
+        self, workgroup_count_x, workgroup_count_y=1, workgroup_count_z=1
+    ):
         # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ)
-        lib.wgpuComputePassEncoderDispatch(self._internal, x, y, z)
+        lib.wgpuComputePassEncoderDispatch(
+            self._internal, workgroup_count_x, workgroup_count_y, workgroup_count_z
+        )
 
-    def dispatch_indirect(self, indirect_buffer, indirect_offset):
+    def dispatch_workgroups_indirect(self, indirect_buffer, indirect_offset):
         buffer_id = indirect_buffer._internal
         # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         lib.wgpuComputePassEncoderDispatchIndirect(
             self._internal, buffer_id, int(indirect_offset)
         )
 
-    def end_pass(self):
+    def end(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         lib.wgpuComputePassEncoderEnd(self._internal)
 
@@ -1949,79 +2011,12 @@ class GPUComputePassEncoder(
             internal  # doesnotexist.wgpuComputePassDrop(internal)
 
 
-class GPURenderEncoderBase(base.GPURenderEncoderBase):
-    """ """
-
-    def set_pipeline(self, pipeline):
-        pipeline_id = pipeline._internal
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
-        lib.wgpuRenderPassEncoderSetPipeline(self._internal, pipeline_id)
-
-    def set_index_buffer(self, buffer, index_format, offset=0, size=None):
-        if not size:
-            size = buffer.size - offset
-        c_index_format = enummap[f"IndexFormat.{index_format}"]
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
-        lib.wgpuRenderPassEncoderSetIndexBuffer(
-            self._internal, buffer._internal, c_index_format, int(offset), int(size)
-        )
-
-    def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
-        if not size:
-            size = buffer.size - offset
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
-        lib.wgpuRenderPassEncoderSetVertexBuffer(
-            self._internal, int(slot), buffer._internal, int(offset), int(size)
-        )
-
-    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
-        lib.wgpuRenderPassEncoderDraw(
-            self._internal, vertex_count, instance_count, first_vertex, first_instance
-        )
-
-    def draw_indirect(self, indirect_buffer, indirect_offset):
-        buffer_id = indirect_buffer._internal
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        lib.wgpuRenderPassEncoderDrawIndirect(
-            self._internal, buffer_id, int(indirect_offset)
-        )
-
-    def draw_indexed(
-        self,
-        index_count,
-        instance_count=1,
-        first_index=0,
-        base_vertex=0,
-        first_instance=0,
-    ):
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
-        lib.wgpuRenderPassEncoderDrawIndexed(
-            self._internal,
-            index_count,
-            instance_count,
-            first_index,
-            base_vertex,
-            first_instance,
-        )
-
-    def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
-        buffer_id = indirect_buffer._internal
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        lib.wgpuRenderPassEncoderDrawIndexedIndirect(
-            self._internal, buffer_id, int(indirect_offset)
-        )
-
-    def _destroy(self):
-        if self._internal is not None and lib is not None:
-            self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpuRenderPassDrop(internal)
-
-
 class GPURenderPassEncoder(
     base.GPURenderPassEncoder,
-    GPUProgrammablePassEncoder,
-    GPURenderEncoderBase,
+    GPUCommandsMixin,
+    GPUDebugCommandsMixin,
+    GPUBindingCommandsMixin,
+    GPURenderCommandsMixin,
     GPUObjectBase,
 ):
     def set_viewport(self, x, y, width, height, min_depth, max_depth):
@@ -2059,31 +2054,28 @@ class GPURenderPassEncoder(
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t reference)
         lib.wgpuRenderPassEncoderSetStencilReference(self._internal, int(reference))
 
-    def end_pass(self):
+    def end(self):
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         lib.wgpuRenderPassEncoderEnd(self._internal)
 
-    # FIXME: new method to implement
     def execute_bundles(self, bundles):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     def begin_occlusion_query(self, query_index):
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     def end_occlusion_query(self):
         raise NotImplementedError()
 
 
 class GPURenderBundleEncoder(
     base.GPURenderBundleEncoder,
-    GPUProgrammablePassEncoder,
-    GPURenderEncoderBase,
+    GPUCommandsMixin,
+    GPUDebugCommandsMixin,
+    GPUBindingCommandsMixin,
+    GPURenderCommandsMixin,
     GPUObjectBase,
 ):
-
-    # FIXME: new method to implement
     def finish(self, *, label=""):
         raise NotImplementedError()
 
@@ -2274,7 +2266,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
 
         return data
 
-    # FIXME: new method to implement
     def on_submitted_work_done(self):
         raise NotImplementedError()
 

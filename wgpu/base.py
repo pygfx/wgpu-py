@@ -42,11 +42,13 @@ __all__ = [
     "GPUComputePipeline",
     "GPURenderPipeline",
     "GPUCommandBuffer",
+    "GPUCommandsMixin",
     "GPUCommandEncoder",
-    "GPUProgrammablePassEncoder",
+    "GPUBindingCommandsMixin",
+    "GPUDebugCommandsMixin",
     "GPUComputePassEncoder",
-    "GPURenderEncoderBase",
     "GPURenderPassEncoder",
+    "GPURenderCommandsMixin",
     "GPURenderBundle",
     "GPURenderBundleEncoder",
     "GPUQueue",
@@ -131,6 +133,7 @@ class GPUCanvasContext:
         """The associated canvas object."""
         return self._canvas_ref()
 
+    # \: was configure(self, *, device: "GPUDevice", format: "enums.TextureFormat", usage: "flags.TextureUsage" = 0x10, color_space: "enums.PredefinedColorSpace" = "srgb", compositing_alpha_mode: "enums.CanvasCompositingAlphaMode" = "opaque", size: "structs.Extent3D" = None):
     # IDL: undefined configure(GPUCanvasConfiguration configuration);
     def configure(
         self,
@@ -138,6 +141,7 @@ class GPUCanvasContext:
         device: "GPUDevice",
         format: "enums.TextureFormat",
         usage: "flags.TextureUsage" = 0x10,
+        view_formats: "List[enums.TextureFormat]" = [],
         color_space: "enums.PredefinedColorSpace" = "srgb",
         compositing_alpha_mode: "enums.CanvasCompositingAlphaMode" = "opaque",
         size: "structs.Extent3D" = None,
@@ -243,6 +247,7 @@ class GPUAdapter:
         label="",
         required_features: "List[enums.FeatureName]" = [],
         required_limits: "Dict[str, int]" = {},
+        default_queue: "structs.QueueDescriptor" = {},
     ):
         """Request a :class:`GPUDevice` from the adapter.
 
@@ -250,6 +255,7 @@ class GPUAdapter:
             label (str): A human readable label. Optional.
             required_features (list of str): the features (extensions) that you need. Default [].
             required_limits (dict): the various limits that you need. Default {}.
+            default_queue (dict, optional): Descriptor for the default queue.
         """
         raise NotImplementedError()
 
@@ -260,6 +266,7 @@ class GPUAdapter:
         label="",
         required_features: "List[enums.FeatureName]" = [],
         required_limits: "Dict[str, int]" = {},
+        default_queue: "structs.QueueDescriptor" = {},
     ):
         """Async version of ``request_device()``."""
         raise NotImplementedError()
@@ -291,7 +298,7 @@ class GPUObjectBase:
     def __repr__(self):
         return f"<{self.__class__.__name__} '{self.label}' at 0x{hex(id(self))}>"
 
-    # IDL: attribute USVString? label;
+    # IDL: attribute (USVString or undefined) label;
     @property
     def label(self):
         """A human-readable name identifying the GPU object."""
@@ -355,15 +362,15 @@ class GPUDevice(GPUObjectBase):
         """The adapter object corresponding to this device."""
         return self._adapter
 
-    # FIXME: new prop to implement
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
+    @apidiff.hide
     @property
     def lost(self):
         """Provides information about why the device is lost."""
         raise NotImplementedError()
 
-    # FIXME: new prop to implement
     # IDL: attribute EventHandler onuncapturederror;
+    @apidiff.hide
     @property
     def onuncapturederror(self):
         """Method called when an error is capured?"""
@@ -418,6 +425,7 @@ class GPUDevice(GPUObjectBase):
         dimension: "enums.TextureDimension" = "2d",
         format: "enums.TextureFormat",
         usage: "flags.TextureUsage",
+        view_formats: "List[enums.TextureFormat]" = [],
     ):
         """Create a :class:`GPUTexture` object.
 
@@ -430,6 +438,9 @@ class GPUDevice(GPUObjectBase):
             dimension (TextureDimension): The dimensionality of the texture. Default 2d.
             format (TextureFormat): What channels it stores and how.
             usage (TextureUsageFlags): The ways in which the texture will be used.
+            view_formats (optional): A list of formats that views are allowed to have
+              in addition to the texture's own view. Using these formats may have
+              a performance penalty.
 
         See https://gpuweb.github.io/gpuweb/#texture-format-caps for a
         list of available texture formats. Note that less formats are
@@ -447,7 +458,7 @@ class GPUDevice(GPUObjectBase):
         address_mode_w: "enums.AddressMode" = "clamp-to-edge",
         mag_filter: "enums.FilterMode" = "nearest",
         min_filter: "enums.FilterMode" = "nearest",
-        mipmap_filter: "enums.FilterMode" = "nearest",
+        mipmap_filter: "enums.MipmapFilterMode" = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 32,
         compare: "enums.CompareFunction" = None,
@@ -465,7 +476,7 @@ class GPUDevice(GPUObjectBase):
                 Default "clamp-to-edge".
             mag_filter (FilterMode): Interpolation when zoomed in. Default 'nearest'.
             min_filter (FilterMode): Interpolation when zoomed out. Default 'nearest'.
-            mipmap_filter: (FilterMode): Interpolation between mip levels. Default 'nearest'.
+            mipmap_filter: (MipmapFilterMode): Interpolation between mip levels. Default 'nearest'.
             lod_min_clamp (float): The minimum level of detail. Default 0.
             lod_max_clamp (float): The maxium level of detail. Default 32.
             compare (CompareFunction): The sample compare operation for depth textures.
@@ -827,7 +838,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
     def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
         """Create a :class:`GPUQuerySet` object."""
@@ -1176,7 +1186,151 @@ class GPUCommandBuffer(GPUObjectBase):
     """
 
 
-class GPUCommandEncoder(GPUObjectBase):
+class GPUCommandsMixin:
+    """Mixin for classes that encode commands."""
+
+    pass
+
+
+class GPUBindingCommandsMixin:
+    """Mixin for classes that defines bindings."""
+
+    # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  GPUSize64 dynamicOffsetsDataStart,  GPUSize32 dynamicOffsetsDataLength);
+    def set_bind_group(
+        self,
+        index,
+        bind_group,
+        dynamic_offsets_data,
+        dynamic_offsets_data_start,
+        dynamic_offsets_data_length,
+    ):
+        """Associate the given bind group (i.e. group or resources) with the
+        given slot/index.
+
+        Arguments:
+            index (int): The slot to bind at.
+            bind_group (GPUBindGroup): The bind group to bind.
+            dynamic_offsets_data (list of int): A list of offsets (one for each bind group).
+            dynamic_offsets_data_start (int): Not used.
+            dynamic_offsets_data_length (int): Not used.
+        """
+        raise NotImplementedError()
+
+
+class GPUDebugCommandsMixin:
+    """Mixin for classes that support debug groups and markers."""
+
+    # IDL: undefined pushDebugGroup(USVString groupLabel);
+    def push_debug_group(self, group_label):
+        """Push a named debug group into the command stream."""
+        raise NotImplementedError()
+
+    # IDL: undefined popDebugGroup();
+    def pop_debug_group(self):
+        """Pop the active debug group."""
+        raise NotImplementedError()
+
+    # IDL: undefined insertDebugMarker(USVString markerLabel);
+    def insert_debug_marker(self, marker_label):
+        """Insert the given message into the debug message queue."""
+        raise NotImplementedError()
+
+
+class GPURenderCommandsMixin:
+    """Mixin for classes that provide rendering commands."""
+
+    # IDL: undefined setPipeline(GPURenderPipeline pipeline);
+    def set_pipeline(self, pipeline):
+        """Set the pipeline for this render pass.
+
+        Arguments:
+            pipeline (GPURenderPipeline): The pipeline to use.
+        """
+        raise NotImplementedError()
+
+    # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    def set_index_buffer(self, buffer, index_format, offset=0, size=None):
+        """Set the index buffer for this render pass.
+
+        Arguments:
+            buffer (GPUBuffer): The buffer that contains the indices.
+            index_format (GPUIndexFormat): The format of the index data
+                contained in buffer. If `strip_index_format` is given in the
+                call to `create_render_pipeline()`, it must match.
+            offset (int): The byte offset in the buffer. Default 0.
+            size (int): The number of bytes to use. If zero, the remaining size
+                (after offset) of the buffer is used. Default 0.
+        """
+        raise NotImplementedError()
+
+    # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
+        """Associate a vertex buffer with a bind slot.
+
+        Arguments:
+            slot (int): The binding slot for the vertex buffer.
+            buffer (GPUBuffer): The buffer that contains the vertex data.
+            offset (int): The byte offset in the buffer. Default 0.
+            size (int): The number of bytes to use. If zero, the remaining size
+                (after offset) of the buffer is used. Default 0.
+        """
+        raise NotImplementedError()
+
+    # IDL: undefined draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
+    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
+        """Run the render pipeline without an index buffer.
+
+        Arguments:
+            vertex_count (int): The number of vertices to draw.
+            instance_count (int):  The number of instances to draw. Default 1.
+            first_vertex (int): The vertex offset. Default 0.
+            first_instance (int):  The instance offset. Default 0.
+        """
+        raise NotImplementedError()
+
+    # IDL: undefined drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+    def draw_indirect(self, indirect_buffer, indirect_offset):
+        """Like ``draw()``, but the function arguments are in a buffer.
+
+        Arguments:
+            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
+            indirect_offset (int): The byte offset at which the arguments are.
+        """
+        raise NotImplementedError()
+
+    # IDL: undefined drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstIndex = 0,  optional GPUSignedOffset32 baseVertex = 0,  optional GPUSize32 firstInstance = 0);
+    def draw_indexed(
+        self,
+        index_count,
+        instance_count=1,
+        first_index=0,
+        base_vertex=0,
+        first_instance=0,
+    ):
+        """Run the render pipeline using an index buffer.
+
+        Arguments:
+            index_count (int): The number of indices to draw.
+            instance_count (int): The number of instances to draw. Default 1.
+            first_index (int):  The index offset. Default 0.
+            base_vertex (int):  A number added to each index in the index buffer. Default 0.
+            first_instance (int): The instance offset. Default 0.
+        """
+        raise NotImplementedError()
+
+    # IDL: undefined drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+    def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
+        """
+        Like ``draw_indexed()``, but the function arguments are in a buffer.
+
+        Arguments:
+            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
+            indirect_offset (int): The byte offset at which the arguments are.
+        """
+        raise NotImplementedError()
+
+
+class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     """
     A command encoder is used to record a series of commands. When done,
     call :func:`finish` to obtain a GPUCommandBuffer object.
@@ -1297,21 +1451,6 @@ class GPUCommandEncoder(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined pushDebugGroup(USVString groupLabel);
-    def push_debug_group(self, group_label):
-        """Push a label on the debug group stack. (todo: docs)"""
-        raise NotImplementedError()
-
-    # IDL: undefined popDebugGroup();
-    def pop_debug_group(self):
-        """Pop a label from the debug group stack."""
-        raise NotImplementedError()
-
-    # IDL: undefined insertDebugMarker(USVString markerLabel);
-    def insert_debug_marker(self, marker_label):
-        """Insert a debug label in stack."""
-        raise NotImplementedError()
-
     # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {});
     def finish(self, *, label=""):
         """Finish recording. Returns a :class:`GPUCommandBuffer` to
@@ -1343,49 +1482,9 @@ class GPUCommandEncoder(GPUObjectBase):
         raise NotImplementedError()
 
 
-class GPUProgrammablePassEncoder:
-    """
-    Base class for the different pass encoder classes.
-    """
-
-    # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup bindGroup,  Uint32Array dynamicOffsetsData,  GPUSize64 dynamicOffsetsDataStart,  GPUSize32 dynamicOffsetsDataLength);
-    def set_bind_group(
-        self,
-        index,
-        bind_group,
-        dynamic_offsets_data,
-        dynamic_offsets_data_start,
-        dynamic_offsets_data_length,
-    ):
-        """Associate the given bind group (i.e. group or resources) with the
-        given slot/index.
-
-        Arguments:
-            index (int): The slot to bind at.
-            bind_group (GPUBindGroup): The bind group to bind.
-            dynamic_offsets_data (list of int): A list of offsets (one for each bind group).
-            dynamic_offsets_data_start (int): Not used.
-            dynamic_offsets_data_length (int): Not used.
-        """
-        raise NotImplementedError()
-
-    # IDL: undefined pushDebugGroup(USVString groupLabel);
-    def push_debug_group(self, group_label):
-        """Push a named debug group into the command stream."""
-        raise NotImplementedError()
-
-    # IDL: undefined popDebugGroup();
-    def pop_debug_group(self):
-        """Pop the active debug group."""
-        raise NotImplementedError()
-
-    # IDL: undefined insertDebugMarker(USVString markerLabel);
-    def insert_debug_marker(self, marker_label):
-        """Insert the given message into the debug message queue."""
-        raise NotImplementedError()
-
-
-class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
+class GPUComputePassEncoder(
+    GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPUObjectBase
+):
     """
     A compute-pass encoder records commands related to a compute pass.
 
@@ -1401,8 +1500,10 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined dispatch(GPUSize32 x, optional GPUSize32 y = 1, optional GPUSize32 z = 1);
-    def dispatch(self, x, y=1, z=1):
+    # IDL: undefined dispatchWorkgroups(GPUSize32 workgroupCountX, optional GPUSize32 workgroupCountY = 1, optional GPUSize32 workgroupCountZ = 1);
+    def dispatch_workgroups(
+        self, workgroup_count_x, workgroup_count_y=1, workgroup_count_z=1
+    ):
         """Run the compute shader.
 
         Arguments:
@@ -1412,9 +1513,9 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined dispatchIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
-    def dispatch_indirect(self, indirect_buffer, indirect_offset):
-        """Like ``dispatch()``, but the function arguments are in a buffer.
+    # IDL: undefined dispatchWorkgroupsIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
+    def dispatch_workgroups_indirect(self, indirect_buffer, indirect_offset):
+        """Like ``dispatch_workgroups()``, but the function arguments are in a buffer.
 
         Arguments:
             indirect_buffer (GPUBuffer): The buffer that contains the arguments.
@@ -1422,110 +1523,18 @@ class GPUComputePassEncoder(GPUProgrammablePassEncoder, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined endPass();
-    def end_pass(self):
+    # IDL: undefined end();
+    def end(self):
         """Record the end of the compute pass."""
         raise NotImplementedError()
 
 
-class GPURenderEncoderBase:
-    """
-    Base class for different render-pass encoder classes.
-    """
-
-    # IDL: undefined setPipeline(GPURenderPipeline pipeline);
-    def set_pipeline(self, pipeline):
-        """Set the pipeline for this render pass.
-
-        Arguments:
-            pipeline (GPURenderPipeline): The pipeline to use.
-        """
-        raise NotImplementedError()
-
-    # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def set_index_buffer(self, buffer, index_format, offset=0, size=None):
-        """Set the index buffer for this render pass.
-
-        Arguments:
-            buffer (GPUBuffer): The buffer that contains the indices.
-            index_format (GPUIndexFormat): The format of the index data
-                contained in buffer. If `strip_index_format` is given in the
-                call to `create_render_pipeline()`, it must match.
-            offset (int): The byte offset in the buffer. Default 0.
-            size (int): The number of bytes to use. If zero, the remaining size
-                (after offset) of the buffer is used. Default 0.
-        """
-        raise NotImplementedError()
-
-    # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
-        """Associate a vertex buffer with a bind slot.
-
-        Arguments:
-            slot (int): The binding slot for the vertex buffer.
-            buffer (GPUBuffer): The buffer that contains the vertex data.
-            offset (int): The byte offset in the buffer. Default 0.
-            size (int): The number of bytes to use. If zero, the remaining size
-                (after offset) of the buffer is used. Default 0.
-        """
-        raise NotImplementedError()
-
-    # IDL: undefined draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
-    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
-        """Run the render pipeline without an index buffer.
-
-        Arguments:
-            vertex_count (int): The number of vertices to draw.
-            instance_count (int):  The number of instances to draw. Default 1.
-            first_vertex (int): The vertex offset. Default 0.
-            first_instance (int):  The instance offset. Default 0.
-        """
-        raise NotImplementedError()
-
-    # IDL: undefined drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
-    def draw_indirect(self, indirect_buffer, indirect_offset):
-        """Like ``draw()``, but the function arguments are in a buffer.
-
-        Arguments:
-            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
-            indirect_offset (int): The byte offset at which the arguments are.
-        """
-        raise NotImplementedError()
-
-    # IDL: undefined drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1,  optional GPUSize32 firstIndex = 0,  optional GPUSignedOffset32 baseVertex = 0,  optional GPUSize32 firstInstance = 0);
-    def draw_indexed(
-        self,
-        index_count,
-        instance_count=1,
-        first_index=0,
-        base_vertex=0,
-        first_instance=0,
-    ):
-        """Run the render pipeline using an index buffer.
-
-        Arguments:
-            index_count (int): The number of indices to draw.
-            instance_count (int): The number of instances to draw. Default 1.
-            first_index (int):  The index offset. Default 0.
-            base_vertex (int):  A number added to each index in the index buffer. Default 0.
-            first_instance (int): The instance offset. Default 0.
-        """
-        raise NotImplementedError()
-
-    # IDL: undefined drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
-    def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
-        """
-        Like ``draw_indexed()``, but the function arguments are in a buffer.
-
-        Arguments:
-            indirect_buffer (GPUBuffer): The buffer that contains the arguments.
-            indirect_offset (int): The byte offset at which the arguments are.
-        """
-        raise NotImplementedError()
-
-
 class GPURenderPassEncoder(
-    GPUProgrammablePassEncoder, GPURenderEncoderBase, GPUObjectBase
+    GPUCommandsMixin,
+    GPUDebugCommandsMixin,
+    GPUBindingCommandsMixin,
+    GPURenderCommandsMixin,
+    GPUObjectBase,
 ):
     """
     A render-pass encoder records commands related to a render pass.
@@ -1587,8 +1596,8 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined endPass();
-    def end_pass(self):
+    # IDL: undefined end();
+    def end(self):
         """Record the end of the render pass."""
         raise NotImplementedError()
 
@@ -1612,7 +1621,11 @@ class GPURenderBundle(GPUObjectBase):
 
 
 class GPURenderBundleEncoder(
-    GPUProgrammablePassEncoder, GPURenderEncoderBase, GPUObjectBase
+    GPUCommandsMixin,
+    GPUDebugCommandsMixin,
+    GPUBindingCommandsMixin,
+    GPURenderCommandsMixin,
+    GPUObjectBase,
 ):
     """
     TODO: not yet available in wgpu-native
@@ -1848,7 +1861,7 @@ class GPUQuerySet(GPUObjectBase):
 class GPUUncapturedErrorEvent:
     """TODO"""
 
-    # IDL: [SameObject] readonly attribute GPUError error;
+    # IDL: readonly attribute GPUError error;
     @property
     def error(self):
         """The error object."""
@@ -1861,6 +1874,12 @@ class GPUUncapturedErrorEvent:
 
 class GPUExternalTexture(GPUObjectBase):
     """Ignore this - specific to browsers."""
+
+    # FIXME: new prop to implement
+    # IDL: readonly attribute boolean expired;
+    @property
+    def expired(self):
+        raise NotImplementedError()
 
 
 # %%%%% Post processing

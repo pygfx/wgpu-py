@@ -4,7 +4,7 @@
 
 # flake8: noqa
 
-# There are 230 enum mappings
+# There are 231 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
@@ -64,6 +64,7 @@ enummap = {
     "FrontFace.cw": 1,
     "IndexFormat.uint16": 1,
     "IndexFormat.uint32": 2,
+    "LoadOp.clear": 1,
     "LoadOp.load": 2,
     "MipmapFilterMode.linear": 1,
     "MipmapFilterMode.nearest": 0,
