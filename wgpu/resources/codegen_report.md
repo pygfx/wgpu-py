@@ -12,7 +12,7 @@
 * Diffs for GPU: change request_adapter, change request_adapter_async
 * Diffs for GPUCanvasContext: add present
 * Diffs for GPUAdapter: add properties
-* Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost, hide onuncapturederror, hide pop_error_scope, hide push_error_scope
+* Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide pop_error_scope, hide push_error_scope
 * Diffs for GPUBuffer: add map_read, add map_write, add size, add usage, hide get_mapped_range, hide map_async, hide unmap
 * Diffs for GPUTexture: add dimension, add format, add mip_level_count, add sample_count, add size, add usage
 * Diffs for GPUTextureView: add size, add texture
