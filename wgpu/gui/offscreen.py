@@ -37,7 +37,7 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
         return False
 
     def _request_draw(self):
-        pass
+        call_later(0, self.draw)
 
     def present(self, texture_view):
         # This gets called at the end of a draw pass via GPUCanvasContextOffline
