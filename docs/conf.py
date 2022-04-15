@@ -41,9 +41,9 @@ for cls_name, cls in wgpu.base.__dict__.items():
     # Change class docstring to include a link to the base class,
     # and the class' signature is not shown
     base_info = ""
-    base_cls = cls.mro()[1]
-    if base_cls is not object:
-        base_info = f"    *Subclass of* :class:`.{base_cls.__name__}`\n\n"
+    base_classes = [f":class:`.{c.__name__}`" for c in cls.mro()[1:-1]]
+    if base_classes:
+        base_info = f"    *Subclass of* {', '.join(base_classes)}\n\n"
     cls.__doc__ = cls.__name__ + "()\n\n" + base_info + "    " + cls.__doc__.lstrip()
     # Change docstring of methods that dont have positional arguments
     for method in cls.__dict__.values():

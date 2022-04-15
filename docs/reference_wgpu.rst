@@ -190,16 +190,22 @@ Command buffers and encoders
 .. autoclass:: wgpu.GPUCommandBuffer
     :members:
 
+.. autoclass:: wgpu.GPUCommandsMixin
+    :members:
+
+.. autoclass:: wgpu.GPUBindingCommandsMixin
+    :members:
+
+.. autoclass:: wgpu.GPUDebugCommandsMixin
+    :members:
+
+.. autoclass:: wgpu.GPURenderCommandsMixin
+    :members:
+
 .. autoclass:: wgpu.GPUCommandEncoder
     :members:
 
-.. autoclass:: wgpu.GPUProgrammablePassEncoder
-    :members:
-
 .. autoclass:: wgpu.GPUComputePassEncoder
-    :members:
-
-.. autoclass:: wgpu.GPURenderEncoderBase
     :members:
 
 .. autoclass:: wgpu.GPURenderPassEncoder
