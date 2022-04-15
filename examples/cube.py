@@ -357,7 +357,8 @@ def draw_frame():
             {
                 "view": current_texture_view,
                 "resolve_target": None,
-                "load_value": (0.1, 0.3, 0.2, 1),
+                "clear_value": (0.1, 0.3, 0.2, 1),
+                "load_op": wgpu.LoadOp.clear,
                 "store_op": wgpu.StoreOp.store,
             }
         ],
@@ -369,7 +370,7 @@ def draw_frame():
     for bind_group_id, bind_group in enumerate(bind_groups):
         render_pass.set_bind_group(bind_group_id, bind_group, [], 0, 99)
     render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
-    render_pass.end_pass()
+    render_pass.end()
 
     device.queue.submit([command_encoder.finish()])
 
