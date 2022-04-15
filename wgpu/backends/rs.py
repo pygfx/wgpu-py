@@ -1676,6 +1676,7 @@ class GPUCommandEncoder(
             clear_color = _tuple_from_tuple_or_dict(
                 color_attachment.get("clear_value", (0, 0, 0, 0)), "rgba"
             )
+            # H: r: float, g: float, b: float, a: float
             c_clear_color = new_struct(
                 "WGPUColor",
                 r=clear_color[0],
@@ -1683,7 +1684,6 @@ class GPUCommandEncoder(
                 b=clear_color[2],
                 a=clear_color[3],
             )
-            # H: r: float, g: float, b: float, a: float
             # H: view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
             c_attachment = new_struct(
                 "WGPURenderPassColorAttachment",
