@@ -131,3 +131,5 @@ Examples
 Some examples with wgpu-py can be found here:
 
 * https://github.com/pygfx/wgpu-py/tree/main/examples
+
+Note: The examples in the main branch of the repository may not match the pip installable version.  Be sure to refer to the examples from the git tag that matches the version of wgpu you have installed.
