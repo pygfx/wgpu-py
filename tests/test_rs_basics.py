@@ -245,6 +245,49 @@ def test_buffer_init3():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_clear_buffer():
+    data0 = b"111111112222222233333333"
+    data1 = b"111111110000000000003333"
+    data2 = b"111100000000000000000000"
+    data3 = b"000000000000000000000000"
+
+    # Prep
+    device = wgpu.utils.get_default_device()
+    buf = device.create_buffer(
+        size=len(data1), usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
+    )
+    device.queue.write_buffer(buf, 0, data0)
+
+    # Download original data
+    res = device.queue.read_buffer(buf)
+    assert res == data0
+
+    # Clear part of the buffer
+    command_encoder = device.create_command_encoder()
+    command_encoder.clear_buffer(buf, 8, 12)
+    device.queue.submit([command_encoder.finish()])
+
+    res = bytes(device.queue.read_buffer(buf)).replace(b"\x00", b"0")
+    assert res == data1
+
+    # Clear the all from index 4
+    command_encoder = device.create_command_encoder()
+    command_encoder.clear_buffer(buf, 4, None)
+    device.queue.submit([command_encoder.finish()])
+
+    res = bytes(device.queue.read_buffer(buf)).replace(b"\x00", b"0")
+    assert res == data2
+
+    # Clear the whole buffer
+    command_encoder = device.create_command_encoder()
+    command_encoder.clear_buffer(buf, 0)
+    device.queue.submit([command_encoder.finish()])
+
+    res = bytes(device.queue.read_buffer(buf)).replace(b"\x00", b"0")
+    assert res == data3
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_do_a_copy_roundtrip():
     # Let's take some data, and copy it to buffer to texture to
     # texture to buffer to buffer and back to CPU.

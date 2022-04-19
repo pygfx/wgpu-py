@@ -1399,6 +1399,11 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
+    # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    def clear_buffer(self, buffer, offset=0, size=None):
+        """Set (part of) the given buffer to zeros. Both offset and size must be a multiple of 4. If size is None, the whole buffer after offset is cleared."""
+        raise NotImplementedError()
+
     # IDL: undefined copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, GPUSize64 size);
     def copy_buffer_to_buffer(
         self, source, source_offset, destination, destination_offset, size
@@ -1471,11 +1476,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self, query_set, first_query, query_count, destination, destination_offset
     ):
         """TODO"""
-        raise NotImplementedError()
-
-    # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def clear_buffer(self, buffer, offset=0, size=None):
-        """Set (part of) the given buffer to zeros."""
         raise NotImplementedError()
 
 

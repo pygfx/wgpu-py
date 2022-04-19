@@ -25,6 +25,6 @@
 * Enum field FeatureName.shader-f16 missing in wgpu.h
 * Enum CanvasCompositingAlphaMode missing in wgpu.h
 * Wrote 231 enum mappings and 49 struct-field mappings to rs_mappings.py
-* Validated 80 C function calls
-* Not using 56 C functions
+* Validated 81 C function calls
+* Not using 55 C functions
 * Validated 70 C structs

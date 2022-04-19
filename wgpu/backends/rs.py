@@ -1737,6 +1737,20 @@ class GPUCommandEncoder(
         raw_pass = lib.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
         return GPURenderPassEncoder(label, raw_pass, self)
 
+    def clear_buffer(self, buffer, offset=0, size=None):
+        offset = int(offset)
+        assert offset % 4 == 0, "offset must be a multiple of 4"
+        if size is None:
+            size = buffer.size - offset
+        size = int(size)
+        assert size > 0, "clear_buffer size must be > 0"
+        assert size % 4 == 0, "size must be a multiple of 4"
+        assert offset + size <= buffer.size, "buffer size out of range"
+        # H: void f(WGPUCommandEncoder commandEncoder, WGPUBuffer buffer, uint64_t offset, uint64_t size)
+        lib.wgpuCommandEncoderClearBuffer(
+            self._internal, buffer._internal, int(offset), size
+        )
+
     def copy_buffer_to_buffer(
         self, source, source_offset, destination, destination_offset, size
     ):
@@ -1958,9 +1972,6 @@ class GPUCommandEncoder(
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
     ):
-        raise NotImplementedError()
-
-    def clear_buffer(self, buffer, offset=0, size=None):
         raise NotImplementedError()
 
     def _destroy(self):
