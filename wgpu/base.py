@@ -133,7 +133,6 @@ class GPUCanvasContext:
         """The associated canvas object."""
         return self._canvas_ref()
 
-    # \: was configure(self, *, device: "GPUDevice", format: "enums.TextureFormat", usage: "flags.TextureUsage" = 0x10, color_space: "enums.PredefinedColorSpace" = "srgb", compositing_alpha_mode: "enums.CanvasCompositingAlphaMode" = "opaque", size: "structs.Extent3D" = None):
     # IDL: undefined configure(GPUCanvasConfiguration configuration);
     def configure(
         self,
@@ -1462,13 +1461,11 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
     def write_timestamp(self, query_set, query_index):
         """TODO"""
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: undefined resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
@@ -1476,7 +1473,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """TODO"""
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def clear_buffer(self, buffer, offset=0, size=None):
         """Set (part of) the given buffer to zeros."""
@@ -1602,13 +1598,11 @@ class GPURenderPassEncoder(
         """Record the end of the render pass."""
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: undefined beginOcclusionQuery(GPUSize32 queryIndex);
     def begin_occlusion_query(self, query_index):
         """TODO"""
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: undefined endOcclusionQuery();
     def end_occlusion_query(self):
         """TODO"""
@@ -1736,7 +1730,6 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: new method to implement
     # IDL: Promise<undefined> onSubmittedWorkDone();
     def on_submitted_work_done(self):
         """TODO"""
@@ -1796,7 +1789,6 @@ class GPUValidationError(Exception):
 # %% Not implemented
 
 
-# FIXME: new class to implement
 class GPUCompilationMessage:
     """An object that contains information about a problem with shader compilation."""
 
@@ -1837,7 +1829,6 @@ class GPUCompilationMessage:
         raise NotImplementedError()
 
 
-# FIXME: new class to implement
 class GPUCompilationInfo:
     """TODO"""
 
@@ -1848,7 +1839,6 @@ class GPUCompilationInfo:
         raise NotImplementedError()
 
 
-# FIXME: new class to implement
 class GPUQuerySet(GPUObjectBase):
     """TODO"""
 
@@ -1858,7 +1848,6 @@ class GPUQuerySet(GPUObjectBase):
         raise NotImplementedError()
 
 
-# FIXME: new class to implement
 class GPUUncapturedErrorEvent:
     """TODO"""
 

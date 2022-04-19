@@ -33,6 +33,8 @@ To update, you need to adjust to the following API changes:
 * The compute encoder's `dispatch()` is renamed `dispatch_workgroups`, and `dispatch_indirect` to `dispatch_workgroups_indirect`.
 * The `load_value` is replaced with `clear_value` and `load_op`.
 * Same for `depth_load_value` and `stencil_load_value`.
+* The `device.create_sampler()` method for mipmap filtering now uses the `MipmapFilterMode` enum instead of the `FilterMode` enum. Since the fields of these enums are the same, you probably don't need to change anything.
+
 
 To update, your shaders need the following changes:
 
