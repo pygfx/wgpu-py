@@ -18,6 +18,34 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.8.0] - xx-04-2022
+
+Changed:
+
+* Now targeting wgpu-native 0.12.0.1.
+* Updated API to the latest WebGPU spec.
+* Better error logging using the new callbacks in wgpu-native.
+* All destructors (drop methods) are now working as they should.
+
+To update, you need to adjust to the following API changes:
+
+* The encoder's `end_pass()` are renamed to `pass()`.
+* The compute encoder's `dispatch()` is renamed `dispatch_workgroups`, and `dispatch_indirect` to `dispatch_workgroups_indirect`.
+* The `load_value` is replaced with `clear_value` and `load_op`.
+* Same for `depth_load_value` and `stencil_load_value`.
+* The `device.create_sampler()` method for mipmap filtering now uses the `MipmapFilterMode` enum instead of the `FilterMode` enum. Since the fields of these enums are the same, you probably don't need to change anything.
+
+
+To update, your shaders need the following changes:
+
+* The decorators have changed from `[[...]]` to `@...`.
+    * E.g. change `[[location(0)]]` to `@location(0)`.
+    * E.g. change `[[group(0), binding(0)]]` to `@group(0) @binding(0)`.
+* Structs now use `,` to separate fields instead of `;`.
+* The `elseif` keyword is now `else if`.
+* Buffers bound as arrays don't need to be defined via a struct anymore.
+
+
 ### [v0.7.7] - 12-04-2022
 
 Fixed:

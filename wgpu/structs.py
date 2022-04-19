@@ -23,7 +23,7 @@ class Struct:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 57 structs
+# There are 58 structs
 
 RequestAdapterOptions = Struct(
     "RequestAdapterOptions",
@@ -36,6 +36,7 @@ DeviceDescriptor = Struct(
     label="str",
     required_features="List[enums.FeatureName]",
     required_limits="Dict[str, int]",
+    default_queue="structs.QueueDescriptor",
 )  #:
 
 BufferDescriptor = Struct(
@@ -55,6 +56,7 @@ TextureDescriptor = Struct(
     dimension="enums.TextureDimension",
     format="enums.TextureFormat",
     usage="flags.TextureUsage",
+    view_formats="List[enums.TextureFormat]",
 )  #:
 
 TextureViewDescriptor = Struct(
@@ -84,7 +86,7 @@ SamplerDescriptor = Struct(
     address_mode_w="enums.AddressMode",
     mag_filter="enums.FilterMode",
     min_filter="enums.FilterMode",
-    mipmap_filter="enums.FilterMode",
+    mipmap_filter="enums.MipmapFilterMode",
     lod_min_clamp="float",
     lod_max_clamp="float",
     compare="enums.CompareFunction",
@@ -327,6 +329,7 @@ ImageCopyExternalImage = Struct(
     "ImageCopyExternalImage",
     source="Union[memoryview, object, object]",
     origin="Union[List[int], structs.Origin2D]",
+    flip_y="bool",
 )  #:
 
 ComputePassTimestampWrite = Struct(
@@ -362,17 +365,20 @@ RenderPassColorAttachment = Struct(
     "RenderPassColorAttachment",
     view="GPUTextureView",
     resolve_target="GPUTextureView",
-    load_value="Union[enums.LoadOp, Union[List[float], structs.Color]]",
+    clear_value="Union[List[float], structs.Color]",
+    load_op="enums.LoadOp",
     store_op="enums.StoreOp",
 )  #:
 
 RenderPassDepthStencilAttachment = Struct(
     "RenderPassDepthStencilAttachment",
     view="GPUTextureView",
-    depth_load_value="Union[enums.LoadOp, float]",
+    depth_clear_value="float",
+    depth_load_op="enums.LoadOp",
     depth_store_op="enums.StoreOp",
     depth_read_only="bool",
-    stencil_load_value="Union[enums.LoadOp, int]",
+    stencil_clear_value="int",
+    stencil_load_op="enums.LoadOp",
     stencil_store_op="enums.StoreOp",
     stencil_read_only="bool",
 )  #:
@@ -400,6 +406,11 @@ RenderBundleEncoderDescriptor = Struct(
     stencil_read_only="bool",
 )  #:
 
+QueueDescriptor = Struct(
+    "QueueDescriptor",
+    label="str",
+)  #:
+
 QuerySetDescriptor = Struct(
     "QuerySetDescriptor",
     label="str",
@@ -412,6 +423,7 @@ CanvasConfiguration = Struct(
     device="GPUDevice",
     format="enums.TextureFormat",
     usage="flags.TextureUsage",
+    view_formats="List[enums.TextureFormat]",
     color_space="enums.PredefinedColorSpace",
     compositing_alpha_mode="enums.CanvasCompositingAlphaMode",
     size="structs.Extent3D",

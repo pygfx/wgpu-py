@@ -252,7 +252,8 @@ def _get_draw_function(device, canvas):
         ca = {
             "view": current_texture_view,
             "resolve_target": None,
-            "load_value": (0, 0, 0, 0),
+            "clear_value": (0, 0, 0, 0),
+            "load_op": wgpu.LoadOp.clear,
             "store_op": wgpu.StoreOp.store,
         }
         render_pass = command_encoder.begin_render_pass(
@@ -261,7 +262,7 @@ def _get_draw_function(device, canvas):
 
         render_pass.set_pipeline(render_pipeline)
         render_pass.draw(4, 1, 0, 0)
-        render_pass.end_pass()
+        render_pass.end()
         device.queue.submit([command_encoder.finish()])
 
     return draw_frame

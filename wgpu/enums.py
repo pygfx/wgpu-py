@@ -25,7 +25,7 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 32 enums
+# There are 33 enums
 
 PredefinedColorSpace = Enum(
     "PredefinedColorSpace",
@@ -48,6 +48,7 @@ FeatureName = Enum(
     texture_compression_astc="texture-compression-astc",
     timestamp_query="timestamp-query",
     indirect_first_instance="indirect-first-instance",
+    shader_f16="shader-f16",
 )  #:
 
 TextureDimension = Enum(
@@ -182,6 +183,12 @@ AddressMode = Enum(
 
 FilterMode = Enum(
     "FilterMode",
+    nearest="nearest",
+    linear="linear",
+)  #:
+
+MipmapFilterMode = Enum(
+    "MipmapFilterMode",
     nearest="nearest",
     linear="linear",
 )  #:
@@ -354,6 +361,7 @@ RenderPassTimestampLocation = Enum(
 LoadOp = Enum(
     "LoadOp",
     load="load",
+    clear="clear",
 )  #:
 
 StoreOp = Enum(

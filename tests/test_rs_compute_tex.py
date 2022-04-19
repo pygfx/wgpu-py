@@ -559,9 +559,9 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
         0, bind_group, [], 0, 999999
     )  # last 2 elements not used
     compute_pass.insert_debug_marker("dispatch!")
-    compute_pass.dispatch(nx, ny, nz)
+    compute_pass.dispatch_workgroups(nx, ny, nz)
     compute_pass.pop_debug_group()
-    compute_pass.end_pass()
+    compute_pass.end()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture2, "mip_level": 0, "origin": (0, 0, 0)},
         {

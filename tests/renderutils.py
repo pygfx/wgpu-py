@@ -138,7 +138,8 @@ def render_to_texture(
 
     color_attachment = color_attachment or {
         "resolve_target": None,
-        "load_value": (0, 0, 0, 0),  # LoadOp.load or color
+        "clear_value": (0, 0, 0, 0),
+        "load_op": wgpu.LoadOp.clear,
         "store_op": wgpu.StoreOp.store,
     }
     color_attachment["view"] = current_texture_view
@@ -174,7 +175,7 @@ def render_to_texture(
         else:
             render_pass.draw_indexed_indirect(indirect_buffer, 0)
     render_pass.pop_debug_group()
-    render_pass.end_pass()
+    render_pass.end()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
         {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
@@ -268,7 +269,8 @@ def render_to_screen(
 
         ca = color_attachment or {
             "resolve_target": None,
-            "load_value": (0, 0, 0, 0),  # LoadOp.load or color
+            "clear_value": (0, 0, 0, 0),
+            "load_op": wgpu.LoadOp.clear,
             "store_op": wgpu.StoreOp.store,
         }
         ca["view"] = current_texture_view
@@ -303,7 +305,7 @@ def render_to_screen(
             else:
                 render_pass.draw_indexed_indirect(indirect_buffer, 0)
         render_pass.pop_debug_group()
-        render_pass.end_pass()
+        render_pass.end()
         device.queue.submit([command_encoder.finish()])
 
     canvas.request_draw(draw_frame)
