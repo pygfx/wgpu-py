@@ -4,7 +4,7 @@
 
 # wgpu-py
 
-Next generation GPU API for Python
+A Python implementation of WebGPU - the next generation GPU API.
 
 <img width=300 src='https://user-images.githubusercontent.com/3015475/159725890-5656204b-648b-4f6f-88d5-a656d8ad00c6.png' />
 <img width=300 src='https://user-images.githubusercontent.com/3015475/159726895-2c0cbc7b-ed0a-4cd3-a90c-dd579977eaa4.png' />
@@ -28,7 +28,7 @@ To get an idea of what this API looks like have a look at [triangle.py](https://
 
 *The wgpu-API has not settled yet, use with care!*
 
-* Coverage of the WebGPU spec is nearly complete.
+* Coverage of the WebGPU spec is complete enough to build e.g. [pygfx](https://github.com/pygfx/pygfx).
 * Test coverage of the API is 100%.
 * Support for Windows, Linux, and MacOS (Intel and M1).
 * Until WebGPU settles as a standard, its specification

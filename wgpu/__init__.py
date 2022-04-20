@@ -1,5 +1,5 @@
 """
-This a Python implementation of the next generation GPU API.
+The wgpu library is a Python implementation of WebGPU.
 """
 
 from ._coreutils import logger  # noqa: F401,F403
