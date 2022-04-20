@@ -8,7 +8,7 @@ from .enums import *  # noqa: F401,F403
 from .base import *  # noqa: F401,F403
 from .gui import WgpuCanvasInterface  # noqa: F401,F403
 
-__version__ = "0.7.7"
+__version__ = "0.8.0"
 version_info = tuple(map(int, __version__.split(".")))
 
 

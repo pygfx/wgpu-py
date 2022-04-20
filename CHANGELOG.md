@@ -18,7 +18,7 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.8.0] - xx-04-2022
+### [v0.8.0] - 20-04-2022
 
 Changed:
 
