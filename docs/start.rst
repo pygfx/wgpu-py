@@ -33,7 +33,7 @@ About this API
 
 This library presents a Pythonic API for the `WebGPU spec
 <https://gpuweb.github.io/gpuweb/>`_. It is an API to control graphics
-hardware. Like OpenGL, but modern.
+hardware. Like OpenGL but modern, or like Vulkan but higher level.
 GPU programming is a craft that requires knowledge of how GPU's work.
 See the guide for more info and links to resources.
 
