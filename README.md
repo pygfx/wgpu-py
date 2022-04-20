@@ -119,7 +119,14 @@ This code is distributed under the 2-clause BSD license.
 * Use the optional arguments to `python download-wgpu-native.py --help` to download a different version of the upstream wgpu-native binaries.
 * The file `wgpu/resources/wgpu_native-version` will be updated by the script to track which version we depend upon.
 
-## Testing examples
+## Testing
+
+The test suite is divided into multiple parts:
+
+* `pytest -v tests` runs the core unit tests.
+* `pytest -v examples` tests the examples.
+* `pytest -v wgpu/__pyinstaller` tests if wgpu is properly supported by pyinstaller.
+* `pytest -v codegen` lints the generated binding code.
 
 There are two types of tests for examples included:
 
