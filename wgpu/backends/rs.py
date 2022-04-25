@@ -1675,7 +1675,7 @@ class GPUCommandEncoder(
             clear_value = color_attachment.get("clear_value", (0, 0, 0, 0))
             if isinstance(clear_value, dict):
                 check_struct("Color", clear_value)
-                clear_value = _tuple_from_tuple_or_dict("clear_value", "rgba")
+                clear_value = _tuple_from_tuple_or_dict(clear_value, "rgba")
             # H: r: float, g: float, b: float, a: float
             c_clear_value = new_struct(
                 "WGPUColor",

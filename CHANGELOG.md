@@ -29,7 +29,7 @@ Changed:
 
 To update, you need to adjust to the following API changes:
 
-* The encoder's `end_pass()` are renamed to `pass()`.
+* The encoder's `end_pass()` are renamed to `end()`.
 * The compute encoder's `dispatch()` is renamed `dispatch_workgroups`, and `dispatch_indirect` to `dispatch_workgroups_indirect`.
 * The `load_value` is replaced with `clear_value` and `load_op`.
 * Same for `depth_load_value` and `stencil_load_value`.
