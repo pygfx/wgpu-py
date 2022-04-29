@@ -18,6 +18,17 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.8.1] - 29-04-2022
+
+Fixed:
+
+* Fixed regression that `canvas.handle_event()` could no longer be overloaded to handle move and wheel events.
+
+Changed:
+
+* Added a note in the docs to explain that the version of the examples must match the runtime version.
+
+
 ### [v0.8.0] - 20-04-2022
 
 Changed:
