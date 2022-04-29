@@ -59,7 +59,7 @@ def update_glfw_canvasses():
     canvases = tuple(all_glfw_canvases)
     for canvas in canvases:
         if canvas._need_draw:
-            if not canvas._is_minimized and glfw.get_window_attrib(canvas._window, glfw.VISIBLE):
+            if not canvas._is_minimized:
                 canvas._need_draw = False
                 canvas._draw_frame_and_present()
     return len(canvases)
