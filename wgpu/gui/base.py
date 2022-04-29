@@ -247,11 +247,12 @@ class WgpuAutoGui:
 
     def _dispatch_pending_events(self):
         """Handle any pending rate-limited events."""
-        events = self._pending_events.values()
-        self._last_event_time = time.perf_counter()
-        self._pending_events = {}
-        for ev in events:
-            self._dispatch_event(ev)
+        if self._pending_events:
+            events = self._pending_events.values()
+            self._last_event_time = time.perf_counter()
+            self._pending_events = {}
+            for ev in events:
+                self.handle_event(ev)
 
     def _dispatch_event(self, event):
         """Dispatch event to the event handlers."""
