@@ -59,8 +59,9 @@ def update_glfw_canvasses():
     canvases = tuple(all_glfw_canvases)
     for canvas in canvases:
         if canvas._need_draw:
-            canvas._need_draw = False
-            canvas._draw_frame_and_present()
+            if not canvas._is_minimized and glfw.get_window_attrib(canvas._window, glfw.VISIBLE):
+                canvas._need_draw = False
+                canvas._draw_frame_and_present()
     return len(canvases)
 
 
@@ -151,6 +152,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._need_draw = False
         self._request_draw_timer_running = False
         self._changing_pixel_ratio = False
+        self._is_minimized = False
 
         # Register ourselves
         all_glfw_canvases.add(self)
@@ -163,6 +165,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         glfw.set_window_focus_callback(self._window, self._on_window_dirty)
         set_window_content_scale_callback(self._window, self._on_pixelratio_change)
         set_window_maximize_callback(self._window, self._on_window_dirty)
+        glfw.set_window_iconify_callback(self._window, self._on_iconify);
 
         # User input
         self._key_modifiers = set()
@@ -204,7 +207,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
     def _on_window_dirty(self, *args):
         self._request_draw()
 
-    # Helpers
+    def _on_iconify(self, window, iconified):
+        self._is_minimized = bool(iconified)
 
     def _mark_ready_for_draw(self):
         self._request_draw_timer_running = False
