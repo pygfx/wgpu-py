@@ -110,6 +110,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     It is convenient - but not required - to use this class (or any of its
     subclasses) to use wgpu-py.
+
+    This class applies draw rate limiting, which can be set with the
+    `max_fps` attribute (default 30). If the `max_fps` is set larger
+    than 100, VSync will be turned off.
     """
 
     def __init__(self, *args, max_fps=30, **kwargs):
