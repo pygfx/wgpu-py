@@ -369,6 +369,22 @@ class GPUCanvasContext(base.GPUCanvasContext):
 
         # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
 
+        # Set the present mode to determine vsync behavior.
+        #
+        # 0 Immediate: no waiting, with risk of tearing.
+        # 1 Mailbox: submit without delay, but present on vsync. Not always available.
+        # 2 Fifo: Wait for vsync.
+        #
+        # In general 2 gives the best result, but sometimes people want to
+        # benchmark something and get the highest FPS possible. Note
+        # that we've observed rate limiting regardless of setting this
+        # to 0, depending on OS or being on battery power.
+        #
+        # Also see:
+        # * https://github.com/gfx-rs/wgpu/blob/e54a36ee/wgpu-types/src/lib.rs#L2663-L2678
+        # * https://github.com/pygfx/wgpu-py/issues/256
+        present_mode = 2 if getattr(canvas, "_vsync", True) else 0
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
         struct = new_struct_p(
             "WGPUSwapChainDescriptor *",
@@ -376,11 +392,10 @@ class GPUCanvasContext(base.GPUCanvasContext):
             format=self._format,
             width=max(1, psize[0]),
             height=max(1, psize[1]),
-            presentMode=2,
+            presentMode=present_mode,
             # not used: nextInChain
             # not used: label
         )
-        # present_mode -> 0: Immediate, 1: Mailbox, 2: Fifo
 
         if self._surface_id is None:
             self._surface_id = get_surface_id_from_canvas(canvas)
