@@ -376,18 +376,14 @@ class GPUCanvasContext(base.GPUCanvasContext):
         # 2 Fifo: Wait for vsync.
         #
         # In general 2 gives the best result, but sometimes people want to
-        # benchmark something and get the highest FPS possible. We can
-        # sortof detect this by looking at the max_fps attribute of the
-        # canvas. Note that we've observed rate limiting regardless of
-        # setting this to 0, depending on OS or being on battery power.
+        # benchmark something and get the highest FPS possible. Note
+        # that we've observed rate limiting regardless of setting this
+        # to 0, depending on OS or being on battery power.
         #
         # Also see:
         # * https://github.com/gfx-rs/wgpu/blob/e54a36ee/wgpu-types/src/lib.rs#L2663-L2678
         # * https://github.com/pygfx/wgpu-py/issues/256
-
-        present_mode = 2
-        if getattr(canvas, "_max_fps", 0) > 100:
-            present_mode = 0
+        present_mode = 2 if getattr(canvas, "_vsync", True) else 0
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
         struct = new_struct_p(
