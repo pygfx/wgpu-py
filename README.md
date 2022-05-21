@@ -72,7 +72,7 @@ import wgpu
 But to use it, you need to select a backend first. You do this by importing it.
 There is currently only one backend:
 ```py
-import wgpu.backend.rs
+import wgpu.backends.rs
 ```
 
 To render to the screen you can use a variety of GUI toolkits:
