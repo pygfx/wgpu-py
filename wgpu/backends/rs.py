@@ -33,6 +33,7 @@ import os
 import sys
 import ctypes
 import logging
+import re
 import ctypes.util
 from weakref import WeakKeyDictionary
 from typing import List, Dict
@@ -563,6 +564,15 @@ class GPUAdapter(base.GPUAdapter):
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
+    __shader_error_tmpl = re.compile(
+        r'Parsing\(ShaderError { source: "(.*)", label:(.*), inner: ParseError (.*) }\)',
+        re.M | re.S,
+    )
+    __inner_error_tmpl = re.compile(
+        r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
+        re.M | re.S,
+    )
+
     def __init__(self, label, internal, adapter, features, limits, queue):
         super().__init__(label, internal, adapter, features, limits, queue)
 
@@ -571,7 +581,39 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
             message = message.replace("\\n", "\n")
-            self._on_error(f"Uncaught WGPU error ({error_type}):\n{message}")
+
+            match = self.__shader_error_tmpl.match(message)
+            if match:
+                source = match.group(1)
+                label = match.group(2)
+                inner_error = match.group(3)
+                self._on_error(f"Shader Error: label: {label}")
+                match2 = self.__inner_error_tmpl.match(inner_error)
+                if match2:
+                    self._on_error(f"error: {match2.group(1)}")
+                    start = int(match2.group(2))
+                    end = int(match2.group(3))
+                    label = match2.group(4)
+                    next_n = source.index("\n", end)
+                    s = source[:next_n]
+                    lines = s.splitlines(True)
+                    line_num = len(lines)
+                    line = lines[-1]
+                    line_pos = start - (next_n - len(line))
+
+                    err_msg = ["\n"]
+                    err_msg.append(f"{' '*4} ┌─ wgsl:{line_num}:{line_pos}")
+                    err_msg.append(f"{' '*4} │")
+                    err_msg.append(f"{line_num:4d} │ {line}")
+                    err_msg.append(
+                        f"{' '*4} │ {' '*line_pos + '^'*(end-start)} {label}"
+                    )
+                    err_msg.append("\n\n")
+
+                    self._on_error("\n".join(err_msg))
+
+            else:
+                self._on_error(f"Uncaught WGPU error ({error_type}):\n{message}")
 
         @ffi.callback("void(WGPUDeviceLostReason, char *, void *)")
         def device_lost_callback(c_reason, c_message, userdata):
