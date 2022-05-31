@@ -1,6 +1,7 @@
 import os
 import sys
 import ctypes
+import re
 
 from .rs_ffi import ffi, lib
 
@@ -150,6 +151,53 @@ def get_surface_id_from_canvas(canvas):
 
     instance_id = ffi.NULL
     return lib.wgpuInstanceCreateSurface(instance_id, surface_descriptor)
+
+
+__shader_error_tmpl = re.compile(
+    r'Parsing\(ShaderError { source: "(.*)", label:(.*), inner: ParseError (.*) }\)',
+    re.M | re.S,
+)
+__inner_error_tmpl = re.compile(
+    r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
+    re.M | re.S,
+)
+
+
+def parse_wgpu_shader_error(message):
+    """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
+
+    err_msg = ["\n"]
+
+    match = __shader_error_tmpl.match(message)
+    if match:
+        source = match.group(1)
+        label = match.group(2)
+        inner_error = match.group(3)
+        err_msg.append(f"Shader error: label: {label}")
+        match2 = __inner_error_tmpl.match(inner_error)
+        if match2:
+            err_msg.append(f"error: {match2.group(1)}")
+            start = int(match2.group(2))
+            end = int(match2.group(3))
+            label = match2.group(4)
+            next_n = source.index("\n", end)
+            s = source[:next_n]
+            lines = s.splitlines(True)
+            line_num = len(lines)
+            line = lines[-1]
+            line_pos = start - (next_n - len(line))
+
+            err_msg.append("\n")
+            err_msg.append(f"{' '*4} ┌─ wgsl:{line_num}:{line_pos}")
+            err_msg.append(f"{' '*4} │")
+            err_msg.append(f"{line_num:4d} │ {line}")
+            err_msg.append(f"{' '*4} │ {' '*line_pos + '^'*(end-start)} {label}")
+            err_msg.append("\n\n")
+
+            return "\n".join(err_msg)
+
+    else:
+        return None
 
 
 # The functions below are copied from codegen/utils.py

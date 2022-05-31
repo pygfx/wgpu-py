@@ -47,6 +47,7 @@ from .rs_helpers import (
     get_surface_id_from_canvas,
     get_memoryview_from_address,
     get_memoryview_and_address,
+    parse_wgpu_shader_error,
     to_snake_case,
     to_camel_case,
     device_dropper,
@@ -571,7 +572,13 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
             message = message.replace("\\n", "\n")
-            self._on_error(f"Uncaught WGPU error ({error_type}):\n{message}")
+
+            shader_error = parse_wgpu_shader_error(message)
+
+            if shader_error:
+                self._on_error(shader_error)
+            else:
+                self._on_error(f"Uncaught WGPU error ({error_type}):\n{message}")
 
         @ffi.callback("void(WGPUDeviceLostReason, char *, void *)")
         def device_lost_callback(c_reason, c_message, userdata):
@@ -977,9 +984,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             hintCount=0,
             hints=ffi.NULL,
         )
-
         # H: WGPUShaderModule f(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateShaderModule(self._internal, struct)
+        if id == ffi.NULL:
+            raise RuntimeError("Shader module creation failed")
         return GPUShaderModule(label, id, self)
 
     def create_compute_pipeline(
