@@ -8,6 +8,7 @@ import tempfile
 
 import wgpu.utils
 import wgpu.backends.rs
+import wgpu.backends.rs_helpers
 import numpy as np
 
 from testutils import run_tests, can_use_wgpu_lib, is_ci, iters_equal
@@ -654,6 +655,72 @@ def test_write_texture2():
     data2 = data1.__class__.from_buffer(data2)
 
     assert iters_equal(data0, data2)
+
+
+def test_parse_shader_error(caplog):
+
+    # invalid attribute access
+    error_source = """
+    struct VertexOutput {
+        @location(0) texcoord : vec2<f32>,
+        @builtin(position) position: vec4<f32>,
+    };
+
+    @stage(vertex)
+    fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
+        var out: VertexOutput;
+        out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
+        return out;
+    }
+    """
+
+    device = wgpu.utils.get_default_device()
+
+    with raises(RuntimeError):
+        device.create_shader_module(code=error_source)
+
+    shader_error = caplog.records[0].msg
+
+    assert (
+        shader_error.strip()
+        == """
+Shader error: label:  Some("")
+error: invalid field accessor `invalid_attr`
+
+
+     ┌─ wgsl:10:12
+     │
+  10 │         out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
+     │             ^^^^^^^^^^^^ invalid accessor
+
+""".strip()
+    )
+
+    # grammar error, expected ',', not ';'
+    error_source = """struct VertexOutput {
+        @location(0) texcoord : vec2<f32>;
+        @builtin(position) position: vec4<f32>,
+    };
+    """
+    with raises(RuntimeError):
+        device.create_shader_module(code=error_source)
+
+    shader_error = caplog.records[1].msg
+
+    assert (
+        shader_error.strip()
+        == """
+Shader error: label:  Some("")
+error: expected ',', found ';'
+
+
+     ┌─ wgsl:2:41
+     │
+   2 │         @location(0) texcoord : vec2<f32>;
+     │                                          ^ expected ','
+
+""".strip()
+    )
 
 
 if __name__ == "__main__":

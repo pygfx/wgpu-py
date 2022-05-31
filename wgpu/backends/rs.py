@@ -984,9 +984,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             hintCount=0,
             hints=ffi.NULL,
         )
-
         # H: WGPUShaderModule f(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateShaderModule(self._internal, struct)
+        if id == ffi.NULL:
+            raise RuntimeError("Shader module creation failed")
         return GPUShaderModule(label, id, self)
 
     def create_compute_pipeline(
