@@ -5,7 +5,6 @@ import random
 import ctypes
 import sys
 import tempfile
-import re
 
 import wgpu.utils
 import wgpu.backends.rs
@@ -661,10 +660,6 @@ def test_parse_shader_error(caplog):
 
     device = wgpu.utils.get_default_device()
 
-    ansi_color_escape = re.compile(
-        r"(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]"
-    )  # ANSI color codes
-
     # test1: invalid attribute access
     error_source = """
     struct VertexOutput {
@@ -683,7 +678,7 @@ def test_parse_shader_error(caplog):
     with raises(RuntimeError):
         device.create_shader_module(code=error_source)
 
-    shader_error = ansi_color_escape.sub("", caplog.records[0].msg)
+    shader_error = caplog.records[0].msg
 
     assert (
         shader_error.strip()
@@ -696,7 +691,8 @@ error: invalid field accessor `invalid_attr`
    │
 10 │         out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
    │             ^^^^^^^^^^^^ invalid accessor
-   = note: 
+   │
+   = note:
 """.strip()  # noqa
     )
 
@@ -709,7 +705,7 @@ error: invalid field accessor `invalid_attr`
     with raises(RuntimeError):
         device.create_shader_module(code=error_source)
 
-    shader_error = ansi_color_escape.sub("", caplog.records[1].msg)
+    shader_error = caplog.records[1].msg
 
     assert (
         shader_error.strip()
@@ -722,6 +718,7 @@ error: expected ',', found ';'
   │
 2 │         @location(0) texcoord : vec2<f32>;
   │                                          ^ expected ','
+  │
   = note: 
 """.strip()  # noqa
     )
@@ -736,7 +733,7 @@ error: expected ',', found ';'
     with raises(RuntimeError):
         device.create_shader_module(code=error_source)
 
-    shader_error = ansi_color_escape.sub("", caplog.records[2].msg)
+    shader_error = caplog.records[2].msg
 
     assert (
         shader_error.strip()
@@ -749,8 +746,8 @@ error: unknown scalar type: 'f3'
   │
 4 │      @builtin(position) position: vec4<f3>,
   │                                        ^^ unknown scalar type
+  │
   = note: "Valid scalar types are f16, f32, f64, i8, i16, i32, i64, u8, u16, u32, u64, bool"
-
 """.strip()  # noqa
     )
 
