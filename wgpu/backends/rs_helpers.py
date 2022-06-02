@@ -171,12 +171,13 @@ def parse_wgpu_shader_error(message):
     match = __shader_error_tmpl.match(message)
     if match:
         source = match.group(1)
+        source = source.replace("\\t", " ")
         label = match.group(2)
         inner_error = match.group(3)
-        err_msg.append(f"Shader error: label: {label}")
+        err_msg.append(f"\033[33mShader error: label: {label}")
         match2 = __inner_error_tmpl.match(inner_error)
         if match2:
-            err_msg.append(f"error: {match2.group(1)}")
+            err_msg.append(f"error: {match2.group(1)}\033[0m")
             start = int(match2.group(2))
             end = int(match2.group(3))
             label = match2.group(4)
@@ -187,11 +188,17 @@ def parse_wgpu_shader_error(message):
             line = lines[-1]
             line_pos = start - (next_n - len(line))
 
+            note = match2.group(5)
+
+            pad = len(str(line_num))
             err_msg.append("\n")
-            err_msg.append(f"{' '*4} ┌─ wgsl:{line_num}:{line_pos}")
-            err_msg.append(f"{' '*4} │")
-            err_msg.append(f"{line_num:4d} │ {line}")
-            err_msg.append(f"{' '*4} │ {' '*line_pos + '^'*(end-start)} {label}")
+            err_msg.append(f"\033[36m{' '*pad} ┌─\033[0m wgsl:{line_num}:{line_pos}")
+            err_msg.append(f"\033[36m{' '*pad} │\033[0m")
+            err_msg.append(f"\033[36m{line_num} │\033[0m {line}")
+            err_msg.append(
+                f"\033[36m{' '*pad} │\033[0m \033[33m{' '*line_pos + '^'*(end-start)} {label}\033[0m"
+            )
+            err_msg.append(f"\033[36m{' '*pad} = note: {note}\033[0m")
             err_msg.append("\n\n")
 
             return "\n".join(err_msg)

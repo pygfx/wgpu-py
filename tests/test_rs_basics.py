@@ -5,10 +5,10 @@ import random
 import ctypes
 import sys
 import tempfile
+import re
 
 import wgpu.utils
 import wgpu.backends.rs
-import wgpu.backends.rs_helpers
 import numpy as np
 
 from testutils import run_tests, can_use_wgpu_lib, is_ci, iters_equal
@@ -659,7 +659,13 @@ def test_write_texture2():
 
 def test_parse_shader_error(caplog):
 
-    # invalid attribute access
+    device = wgpu.utils.get_default_device()
+
+    ansi_color_escape = re.compile(
+        r"(\x9B|\x1B\[)[0-?]*[ -/]*[@-~]"
+    )  # ANSI color codes
+
+    # test1: invalid attribute access
     error_source = """
     struct VertexOutput {
         @location(0) texcoord : vec2<f32>,
@@ -672,14 +678,12 @@ def test_parse_shader_error(caplog):
         out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
         return out;
     }
-    """
-
-    device = wgpu.utils.get_default_device()
+    """  # noqa
 
     with raises(RuntimeError):
         device.create_shader_module(code=error_source)
 
-    shader_error = caplog.records[0].msg
+    shader_error = ansi_color_escape.sub("", caplog.records[0].msg)
 
     assert (
         shader_error.strip()
@@ -688,24 +692,24 @@ Shader error: label:  Some("")
 error: invalid field accessor `invalid_attr`
 
 
-     ┌─ wgsl:10:12
-     │
-  10 │         out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
-     │             ^^^^^^^^^^^^ invalid accessor
-
-""".strip()
+   ┌─ wgsl:10:12
+   │
+10 │         out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
+   │             ^^^^^^^^^^^^ invalid accessor
+   = note: 
+""".strip()  # noqa
     )
 
-    # grammar error, expected ',', not ';'
+    # test2: grammar error, expected ',', not ';'
     error_source = """struct VertexOutput {
         @location(0) texcoord : vec2<f32>;
         @builtin(position) position: vec4<f32>,
     };
-    """
+    """  # noqa
     with raises(RuntimeError):
         device.create_shader_module(code=error_source)
 
-    shader_error = caplog.records[1].msg
+    shader_error = ansi_color_escape.sub("", caplog.records[1].msg)
 
     assert (
         shader_error.strip()
@@ -714,12 +718,40 @@ Shader error: label:  Some("")
 error: expected ',', found ';'
 
 
-     ┌─ wgsl:2:41
-     │
-   2 │         @location(0) texcoord : vec2<f32>;
-     │                                          ^ expected ','
+  ┌─ wgsl:2:41
+  │
+2 │         @location(0) texcoord : vec2<f32>;
+  │                                          ^ expected ','
+  = note: 
+""".strip()  # noqa
+    )
 
-""".strip()
+    # test3: grammar error, contains '\t' and (tab),  unknown scalar type: 'f3'
+    error_source = """
+    struct VertexOutput {
+    \t@location(0) texcoord : vec2<f32>,
+    	@builtin(position) position: vec4<f3>,
+    };
+    """  # noqa
+    with raises(RuntimeError):
+        device.create_shader_module(code=error_source)
+
+    shader_error = ansi_color_escape.sub("", caplog.records[2].msg)
+
+    assert (
+        shader_error.strip()
+        == """
+Shader error: label:  Some("")
+error: unknown scalar type: 'f3'
+
+
+  ┌─ wgsl:4:39
+  │
+4 │      @builtin(position) position: vec4<f3>,
+  │                                        ^^ unknown scalar type
+  = note: "Valid scalar types are f16, f32, f64, i8, i16, i32, i64, u8, u16, u32, u64, bool"
+
+""".strip()  # noqa
     )
 
 
