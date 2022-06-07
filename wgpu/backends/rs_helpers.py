@@ -163,6 +163,71 @@ __inner_error_tmpl = re.compile(
 )
 
 
+# The function below are copied from "https://github.com/django/django/blob/main/django/core/management/color.py"
+
+
+def _terminal_supports_colors():
+    """
+    Return True if the running system's terminal supports color,
+    and False otherwise.
+    """
+
+    def vt_codes_enabled_in_windows_registry():
+        """
+        Check the Windows Registry to see if VT code handling has been enabled
+        by default, see https://superuser.com/a/1300251/447564.
+        """
+        try:
+            # winreg is only available on Windows.
+            import winreg
+        except ImportError:
+            return False
+        else:
+            try:
+                reg_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Console")
+                reg_key_value, _ = winreg.QueryValueEx(reg_key, "VirtualTerminalLevel")
+            except FileNotFoundError:
+                return False
+            else:
+                return reg_key_value == 1
+
+    # isatty is not always implemented, #6223.
+    is_a_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+
+    try:
+        import colorama
+
+        colorama.init()
+    except (ImportError, OSError):
+        has_colorama = False
+    else:
+        has_colorama = True
+
+    return is_a_tty and (
+        sys.platform != "win32"
+        or has_colorama
+        or "ANSICON" in os.environ
+        or
+        # Windows Terminal supports VT codes.
+        "WT_SESSION" in os.environ
+        or
+        # Microsoft Visual Studio Code's built-in terminal supports colors.
+        os.environ.get("TERM_PROGRAM") == "vscode"
+        or vt_codes_enabled_in_windows_registry()
+    )
+
+
+__terminal_supports_colors = _terminal_supports_colors()
+
+
+def _color_string(color, string):
+    """color: ANSI color code. 33 is yellow, 36 is cyan, etc."""
+
+    if not __terminal_supports_colors:
+        return string
+    return f"\033[{color}m{string}\033[0m"
+
+
 def parse_wgpu_shader_error(message):
     """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
 
@@ -171,12 +236,13 @@ def parse_wgpu_shader_error(message):
     match = __shader_error_tmpl.match(message)
     if match:
         source = match.group(1)
+        source = source.replace("\\t", " ")
         label = match.group(2)
         inner_error = match.group(3)
-        err_msg.append(f"Shader error: label: {label}")
+        err_msg.append(_color_string(33, f"Shader error: label: {label}"))
         match2 = __inner_error_tmpl.match(inner_error)
         if match2:
-            err_msg.append(f"error: {match2.group(1)}")
+            err_msg.append(_color_string(33, f"error: {match2.group(1)}"))
             start = int(match2.group(2))
             end = int(match2.group(3))
             label = match2.group(4)
@@ -187,11 +253,24 @@ def parse_wgpu_shader_error(message):
             line = lines[-1]
             line_pos = start - (next_n - len(line))
 
+            note = match2.group(5)
+
+            def pad_str(s):
+                pad = len(str(line_num))
+                return f"{' '*pad} {s}"
+
             err_msg.append("\n")
-            err_msg.append(f"{' '*4} ┌─ wgsl:{line_num}:{line_pos}")
-            err_msg.append(f"{' '*4} │")
-            err_msg.append(f"{line_num:4d} │ {line}")
-            err_msg.append(f"{' '*4} │ {' '*line_pos + '^'*(end-start)} {label}")
+            err_msg.append(
+                pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num}:{line_pos}"
+            )
+            err_msg.append(pad_str(_color_string(36, "│")))
+            err_msg.append(_color_string(36, f"{line_num} │") + f" {line}")
+            err_msg.append(
+                pad_str(_color_string(36, "│"))
+                + _color_string(33, f" {' '*line_pos + '^'*(end-start)} {label}")
+            )
+            err_msg.append(pad_str(_color_string(36, "│")))
+            err_msg.append(pad_str(_color_string(36, f"= note: {note}")))
             err_msg.append("\n\n")
 
             return "\n".join(err_msg)
