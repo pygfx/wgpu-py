@@ -684,7 +684,7 @@ def test_parse_shader_error(caplog):
         shader_error.strip()
         == """
 Shader error: label:  Some("")
-error: invalid field accessor `invalid_attr`
+Parsing error: invalid field accessor `invalid_attr`
 
 
    ┌─ wgsl:10:12
@@ -711,7 +711,7 @@ error: invalid field accessor `invalid_attr`
         shader_error.strip()
         == """
 Shader error: label:  Some("")
-error: expected ',', found ';'
+Parsing error: expected ',', found ';'
 
 
   ┌─ wgsl:2:41
@@ -739,7 +739,7 @@ error: expected ',', found ';'
         shader_error.strip()
         == """
 Shader error: label:  Some("")
-error: unknown scalar type: 'f3'
+Parsing error: unknown scalar type: 'f3'
 
 
   ┌─ wgsl:4:39
@@ -748,6 +748,52 @@ error: unknown scalar type: 'f3'
   │                                        ^^ unknown scalar type
   │
   = note: "Valid scalar types are f16, f32, f64, i8, i16, i32, i64, u8, u16, u32, u64, bool"
+""".strip()  # noqa
+    )
+
+    # test4: Validation error, mat4x4 * vec3
+    error_source = """
+    struct VertexOutput {
+        @location(0) texcoord : vec2<f32>,
+        @builtin(position) position: vec3<f32>,
+    };
+
+    @stage(vertex)
+    fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
+        var out: VertexOutput;
+        var matrix: mat4x4<f32>;
+        out.position = matrix * out.position;
+        return out;
+    }
+    """  # noqa
+    with raises(RuntimeError):
+        device.create_shader_module(code=error_source)
+
+    # skip error info
+    assert (
+        caplog.records[3].msg
+        == """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, width: 4 }"""
+    )
+    assert (
+        caplog.records[4].msg
+        == """Right: Load { pointer: [6] } of type Vector { size: Tri, kind: Float, width: 4 }"""
+    )
+
+    shader_error = caplog.records[5].msg
+
+    assert (
+        shader_error.strip()
+        == """
+Shader error: label:  Some("")
+Validation error: Function(Expression { handle: [8], error: InvalidBinaryOperandTypes(Multiply, [5], [7]) })
+
+
+   ┌─ wgsl:11:22
+   │
+11 │         out.position = matrix * out.position;
+   │                       ^^^^^^^^^^^^^^^^^^^^^^ InvalidBinaryOperandTypes(Multiply, [5], [7])
+   │
+   = note:
 """.strip()  # noqa
     )
 
