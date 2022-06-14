@@ -153,16 +153,6 @@ def get_surface_id_from_canvas(canvas):
     return lib.wgpuInstanceCreateSurface(instance_id, surface_descriptor)
 
 
-__shader_error_tmpl = re.compile(
-    r'Parsing\(ShaderError { source: "(.*)", label:(.*), inner: ParseError (.*) }\)',
-    re.M | re.S,
-)
-__inner_error_tmpl = re.compile(
-    r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
-    re.M | re.S,
-)
-
-
 # The function below are copied from "https://github.com/django/django/blob/main/django/core/management/color.py"
 
 
@@ -228,52 +218,89 @@ def _color_string(color, string):
     return f"\033[{color}m{string}\033[0m"
 
 
+__shader_error_tmpl = re.compile(
+    r'(Parsing|Validation)\(ShaderError { source: "(.*)", label:(.*), inner: (ParseError|WithSpan) (.*) }\)',
+    re.M | re.S,
+)
+__inner_parsing_error_tmpl = re.compile(
+    r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
+    re.M | re.S,
+)
+__inner_validation_error_tmpl = re.compile(
+    r'{ inner: (.*) { (.*), name: "(.*)", error: (.*) }, spans: \[\(Span { start: (\d+), end: (\d+) }, (.*)\)\] }',
+    re.M | re.S,
+)  # TODO: simple error message
+
+__inner_validation_error_info = re.compile(
+    r", error: (.*) [}|,]",
+    re.M | re.S,
+)  # TODO: simple error message
+
+
 def parse_wgpu_shader_error(message):
     """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
 
     err_msg = ["\n"]
 
     match = __shader_error_tmpl.match(message)
+
     if match:
-        source = match.group(1)
+        error_type = match.group(1)
+        source = match.group(2)
         source = source.replace("\\t", " ")
-        label = match.group(2)
-        inner_error = match.group(3)
+        label = match.group(3)
+        # inner_error_type = match.group(4)
+        inner_error = match.group(5)
         err_msg.append(_color_string(33, f"Shader error: label: {label}"))
-        match2 = __inner_error_tmpl.match(inner_error)
-        if match2:
-            err_msg.append(_color_string(33, f"error: {match2.group(1)}"))
-            start = int(match2.group(2))
-            end = int(match2.group(3))
-            label = match2.group(4)
-            next_n = source.index("\n", end)
-            s = source[:next_n]
-            lines = s.splitlines(True)
-            line_num = len(lines)
-            line = lines[-1]
-            line_pos = start - (next_n - len(line))
 
-            note = match2.group(5)
+        if error_type == "Parsing":
+            match2 = __inner_parsing_error_tmpl.match(inner_error)
+            if match2:
+                err_msg.append(_color_string(33, f"Parsing error: {match2.group(1)}"))
+                start = int(match2.group(2))
+                end = int(match2.group(3))
+                label = match2.group(4)
+                note = match2.group(5)
 
-            def pad_str(s):
-                pad = len(str(line_num))
-                return f"{' '*pad} {s}"
-
-            err_msg.append("\n")
-            err_msg.append(
-                pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num}:{line_pos}"
-            )
-            err_msg.append(pad_str(_color_string(36, "│")))
-            err_msg.append(_color_string(36, f"{line_num} │") + f" {line}")
-            err_msg.append(
-                pad_str(_color_string(36, "│"))
-                + _color_string(33, f" {' '*line_pos + '^'*(end-start)} {label}")
-            )
-            err_msg.append(pad_str(_color_string(36, "│")))
-            err_msg.append(pad_str(_color_string(36, f"= note: {note}")))
-            err_msg.append("\n\n")
-
+        elif error_type == "Validation":
+            match2 = __inner_validation_error_tmpl.match(inner_error)
+            if match2:
+                error = match2.group(4)
+                err_msg.append(_color_string(33, f"Validation error: {error}"))
+                start = int(match2.group(5))
+                end = int(match2.group(6))
+                error_match = __inner_validation_error_info.search(error)
+                label = error_match.group(1) if error_match else error
+                note = ""
+        else:
             return "\n".join(err_msg)
+
+        next_n = source.index("\n", end)
+        s = source[:next_n]
+        lines = s.splitlines(True)
+        line_num = len(lines)
+        line = lines[-1]
+        line_pos = start - (next_n - len(line))
+
+        def pad_str(s):
+            pad = len(str(line_num))
+            return f"{' '*pad} {s}"
+
+        err_msg.append("\n")
+        err_msg.append(
+            pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num}:{line_pos}"
+        )
+        err_msg.append(pad_str(_color_string(36, "│")))
+        err_msg.append(_color_string(36, f"{line_num} │") + f" {line}")
+        err_msg.append(
+            pad_str(_color_string(36, "│"))
+            + _color_string(33, f" {' '*line_pos + '^'*(end-start)} {label}")
+        )
+        err_msg.append(pad_str(_color_string(36, "│")))
+        err_msg.append(pad_str(_color_string(36, f"= note: {note}")))
+        err_msg.append("\n\n")
+
+        return "\n".join(err_msg)
 
     else:
         return None
