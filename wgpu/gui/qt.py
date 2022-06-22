@@ -19,9 +19,13 @@ for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
         try:
             WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
+            KeyboardModifiers = QtCore.Qt.KeyboardModifier
+            Keys = QtCore.Qt.Key
         except AttributeError:
             WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.PreciseTimer
+            KeyboardModifiers = QtCore.Qt
+            Keys = QtCore.Qt
         break
 else:
     raise ImportError(
@@ -41,49 +45,47 @@ BUTTON_MAP = {
 }
 
 MODIFIERS_MAP = {
-    QtCore.Qt.ShiftModifier: "Shift",
-    QtCore.Qt.ControlModifier: "Control",
-    QtCore.Qt.AltModifier: "Alt",
-    QtCore.Qt.MetaModifier: "Meta",
+    KeyboardModifiers.ShiftModifier: "Shift",
+    KeyboardModifiers.ControlModifier: "Control",
+    KeyboardModifiers.AltModifier: "Alt",
+    KeyboardModifiers.MetaModifier: "Meta",
 }
 
 KEY_MAP = {
-    int(QtCore.Qt.Key_Down): "ArrowDown",
-    int(QtCore.Qt.Key_Up): "ArrowUp",
-    int(QtCore.Qt.Key_Left): "ArrowLeft",
-    int(QtCore.Qt.Key_Right): "ArrowRight",
-    int(QtCore.Qt.Key_Backspace): "Backspace",
-    int(QtCore.Qt.Key_CapsLock): "CapsLock",
-    int(QtCore.Qt.Key_Delete): "Delete",
-    int(QtCore.Qt.Key_End): "End",
-    int(QtCore.Qt.Key_Enter): "Enter",
-    int(QtCore.Qt.Key_Escape): "Escape",
-    int(QtCore.Qt.Key_F1): "F1",
-    int(QtCore.Qt.Key_F2): "F2",
-    int(QtCore.Qt.Key_F3): "F3",
-    int(QtCore.Qt.Key_F4): "F4",
-    int(QtCore.Qt.Key_F5): "F5",
-    int(QtCore.Qt.Key_F6): "F6",
-    int(QtCore.Qt.Key_F7): "F7",
-    int(QtCore.Qt.Key_F8): "F8",
-    int(QtCore.Qt.Key_F9): "F9",
-    int(QtCore.Qt.Key_F10): "F10",
-    int(QtCore.Qt.Key_F11): "F11",
-    int(QtCore.Qt.Key_F12): "F12",
-    int(QtCore.Qt.Key_Home): "Home",
-    int(QtCore.Qt.Key_Insert): "Insert",
-    int(QtCore.Qt.Key_Alt): "Alt",
-    int(QtCore.Qt.Key_Control): "Control",
-    int(QtCore.Qt.Key_Shift): "Shift",
-    int(
-        QtCore.Qt.Key_Meta
-    ): "Meta",  # meta maps to control in QT on macOS, and vice-versa
-    int(QtCore.Qt.Key_NumLock): "NumLock",
-    int(QtCore.Qt.Key_PageDown): "PageDown",
-    int(QtCore.Qt.Key_PageUp): "Pageup",
-    int(QtCore.Qt.Key_Pause): "Pause",
-    int(QtCore.Qt.Key_ScrollLock): "ScrollLock",
-    int(QtCore.Qt.Key_Tab): "Tab",
+    int(Keys.Key_Down): "ArrowDown",
+    int(Keys.Key_Up): "ArrowUp",
+    int(Keys.Key_Left): "ArrowLeft",
+    int(Keys.Key_Right): "ArrowRight",
+    int(Keys.Key_Backspace): "Backspace",
+    int(Keys.Key_CapsLock): "CapsLock",
+    int(Keys.Key_Delete): "Delete",
+    int(Keys.Key_End): "End",
+    int(Keys.Key_Enter): "Enter",
+    int(Keys.Key_Escape): "Escape",
+    int(Keys.Key_F1): "F1",
+    int(Keys.Key_F2): "F2",
+    int(Keys.Key_F3): "F3",
+    int(Keys.Key_F4): "F4",
+    int(Keys.Key_F5): "F5",
+    int(Keys.Key_F6): "F6",
+    int(Keys.Key_F7): "F7",
+    int(Keys.Key_F8): "F8",
+    int(Keys.Key_F9): "F9",
+    int(Keys.Key_F10): "F10",
+    int(Keys.Key_F11): "F11",
+    int(Keys.Key_F12): "F12",
+    int(Keys.Key_Home): "Home",
+    int(Keys.Key_Insert): "Insert",
+    int(Keys.Key_Alt): "Alt",
+    int(Keys.Key_Control): "Control",
+    int(Keys.Key_Shift): "Shift",
+    int(Keys.Key_Meta): "Meta",  # meta maps to control in QT on macOS, and vice-versa
+    int(Keys.Key_NumLock): "NumLock",
+    int(Keys.Key_PageDown): "PageDown",
+    int(Keys.Key_PageUp): "Pageup",
+    int(Keys.Key_Pause): "Pause",
+    int(Keys.Key_ScrollLock): "ScrollLock",
+    int(Keys.Key_Tab): "Tab",
 }
 
 
@@ -232,8 +234,8 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
         ev = {
             "event_type": event_type,
-            "x": event.x(),
-            "y": event.y(),
+            "x": event.pos().x(),
+            "y": event.pos().y(),
             "button": button,
             "buttons": buttons,
             "modifiers": modifiers,
@@ -395,4 +397,4 @@ def run():
 
 
 def call_later(delay, callback, *args):
-    QtCore.QTimer.singleShot(delay * 1000, lambda: callback(*args))
+    QtCore.QTimer.singleShot(int(delay * 1000), lambda: callback(*args))
