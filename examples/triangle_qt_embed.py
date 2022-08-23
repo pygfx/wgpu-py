@@ -9,7 +9,7 @@ import importlib
 # For the sake of making this example Just Work, we try multiple QT libs
 for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
     try:
-        QtWidgets = importlib.import_module(f"{lib}.QtWidgets")
+        QtWidgets = importlib.import_module(".QtWidgets", lib)
         break
     except ModuleNotFoundError:
         pass

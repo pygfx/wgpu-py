@@ -13,9 +13,8 @@ from .base import WgpuCanvasBase, WgpuAutoGui
 # Select GUI toolkit
 for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
     if libname in sys.modules:
-        QtCore = importlib.import_module(libname + ".QtCore")
-        widgets_modname = "QtGui" if QtCore.qVersion()[0] == "4" else "QtWidgets"
-        QtWidgets = importlib.import_module(libname + "." + widgets_modname)
+        QtCore = importlib.import_module(".QtCore", libname)
+        QtWidgets = importlib.import_module(".QtWidgets", libname)
         try:
             WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
