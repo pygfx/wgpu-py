@@ -20,11 +20,13 @@ for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
             WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
             KeyboardModifiers = QtCore.Qt.KeyboardModifier
+            FocusPolicy = QtCore.Qt.FocusPolicy
             Keys = QtCore.Qt.Key
         except AttributeError:
             WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.PreciseTimer
             KeyboardModifiers = QtCore.Qt
+            FocusPolicy = QtCore.Qt
             Keys = QtCore.Qt
         break
 else:
@@ -126,6 +128,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setAttribute(WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
         self.setMouseTracking(True)
+        self.setFocusPolicy(FocusPolicy.StrongFocus)
 
         # A timer for limiting fps
         self._request_draw_timer = QtCore.QTimer()
