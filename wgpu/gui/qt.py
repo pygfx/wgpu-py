@@ -211,7 +211,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "key": KEY_MAP.get(event.key(), event.text()),
             "modifiers": modifiers,
         }
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
@@ -255,7 +255,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             accum_keys = {}
             self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
         else:
-            self.handle_event(ev)
+            self._handle_event_and_flush(ev)
 
     def mousePressEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_down", event)
@@ -297,10 +297,10 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "height": float(event.size().height()),
             "pixel_ratio": self.get_pixel_ratio(),
         }
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
     def closeEvent(self, event):  # noqa: N802
-        self.handle_event({"event_type": "close"})
+        self._handle_event_and_flush({"event_type": "close"})
 
 
 class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
@@ -323,6 +323,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setMouseTracking(True)
 
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
+        self._subwidget.add_event_handler(self.handle_event, "*")
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -375,12 +376,6 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def request_draw(self, *args, **kwargs):
         return self._subwidget.request_draw(*args, **kwargs)
-
-    def add_event_handler(self, *args, **kwargs):
-        return self._subwidget.add_event_handler(*args, **kwargs)
-
-    def remove_event_handler(self, *args, **kwargs):
-        return self._subwidget.remove_event_handler(*args, **kwargs)
 
 
 # Make available under a name that is the same for all gui backends

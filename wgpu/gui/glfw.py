@@ -201,7 +201,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
     def _on_close(self, *args):
         all_glfw_canvases.discard(self)
         glfw.hide_window(self._window)
-        self.handle_event({"event_type": "close"})
+        self._handle_event_and_flush({"event_type": "close"})
 
     def _on_window_dirty(self, *args):
         self._request_draw()
@@ -234,7 +234,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "height": self._logical_size[1],
             "pixel_ratio": self._pixel_ratio,
         }
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
     def _set_logical_size(self, new_logical_size):
         # There is unclarity about the window size in "screen pixels".
@@ -358,7 +358,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         }
 
         # Emit the current event
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
         # Maybe emit a double-click event
         self._follow_double_click(action, button)
@@ -410,7 +410,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
                 "ntouches": 0,  # glfw dows not have touch support
                 "touches": {},
             }
-            self.handle_event(ev)
+            self._handle_event_and_flush(ev)
 
     def _on_cursor_pos(self, window, x, y):
         # Store pointer position in logical coordinates
@@ -483,7 +483,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "key": keyname,
             "modifiers": list(self._key_modifiers),
         }
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
 
 # Make available under a name that is the same for all gui backends
