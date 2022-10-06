@@ -38,13 +38,14 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
     var out: VertexOutput;
     out.pos = vec4<f32>(p, 0.0, 1.0);
-    out.color = vec4<f32>(p, 0.5, 1.0);
+    out.color = vec4<f32>(max(p, vec2<f32>(0.0)), 0.5, 1.0);
     return out;
 }
 
 @stage(fragment)
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return in.color;
+    let rgb_linear = pow(in.color.rgb, vec3<f32>(2.2));  // gamma correct
+    return vec4<f32>(rgb_linear, in.color.a);
 }
 """
 
