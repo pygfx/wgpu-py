@@ -18,6 +18,27 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.8.2] - 06-10-2022
+
+Fixed:
+
+* Fixed imports for PyQt6.
+* Keyboard events work again for Qt 6.3.
+* Fixed that overloading ``handle_event()`` did not work for a canvas based on a Qt or wx main widget/window.
+
+Added:
+
+* Can now add a wildcard ("*") to ``add_event_handler`` to handle all events.
+* Shader error messages show more context, making shader debugging much easier.
+* VSync can now be turned off to raise the frame rate when needed. Note that FPS measurements are still a poor performance benchmark!
+
+Changed:
+
+* GLFW canvas does not draw when minimized anymore.
+* The offscreen and Jupyter canvas now use the srgb format for consistency with normal canvases.
+* The examples have been adjusted for srgb colors.
+
+
 ### [v0.8.1] - 29-04-2022
 
 Fixed:
