@@ -13,18 +13,19 @@ from .base import WgpuCanvasBase, WgpuAutoGui
 # Select GUI toolkit
 for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
     if libname in sys.modules:
-        QtCore = importlib.import_module(libname + ".QtCore")
-        widgets_modname = "QtGui" if QtCore.qVersion()[0] == "4" else "QtWidgets"
-        QtWidgets = importlib.import_module(libname + "." + widgets_modname)
+        QtCore = importlib.import_module(".QtCore", libname)
+        QtWidgets = importlib.import_module(".QtWidgets", libname)
         try:
             WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
             KeyboardModifiers = QtCore.Qt.KeyboardModifier
+            FocusPolicy = QtCore.Qt.FocusPolicy
             Keys = QtCore.Qt.Key
         except AttributeError:
             WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.PreciseTimer
             KeyboardModifiers = QtCore.Qt
+            FocusPolicy = QtCore.Qt
             Keys = QtCore.Qt
         break
 else:
@@ -126,6 +127,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setAttribute(WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
         self.setMouseTracking(True)
+        self.setFocusPolicy(FocusPolicy.StrongFocus)
 
         # A timer for limiting fps
         self._request_draw_timer = QtCore.QTimer()
@@ -209,7 +211,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "key": KEY_MAP.get(event.key(), event.text()),
             "modifiers": modifiers,
         }
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
@@ -253,7 +255,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             accum_keys = {}
             self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
         else:
-            self.handle_event(ev)
+            self._handle_event_and_flush(ev)
 
     def mousePressEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_down", event)
@@ -295,10 +297,10 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "height": float(event.size().height()),
             "pixel_ratio": self.get_pixel_ratio(),
         }
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
     def closeEvent(self, event):  # noqa: N802
-        self.handle_event({"event_type": "close"})
+        self._handle_event_and_flush({"event_type": "close"})
 
 
 class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
@@ -321,6 +323,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setMouseTracking(True)
 
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
+        self._subwidget.add_event_handler(self.handle_event, "*")
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -373,12 +376,6 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def request_draw(self, *args, **kwargs):
         return self._subwidget.request_draw(*args, **kwargs)
-
-    def add_event_handler(self, *args, **kwargs):
-        return self._subwidget.add_event_handler(*args, **kwargs)
-
-    def remove_event_handler(self, *args, **kwargs):
-        return self._subwidget.remove_event_handler(*args, **kwargs)
 
 
 # Make available under a name that is the same for all gui backends
