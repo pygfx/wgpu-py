@@ -182,8 +182,8 @@ var r_sampler: sampler;
 @stage(fragment)
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let value = textureSample(r_tex, r_sampler, in.texcoord).r;
-    let rgb_linear = vec3<f32>(pow(value, 2.2));  // gamma correct
-    return vec4<f32>(rgb_linear.rgb, 1.0);
+    let physical_color = vec3<f32>(pow(value, 2.2));  // gamma correct
+    return vec4<f32>(physical_color.rgb, 1.0);
 }
 """
 
