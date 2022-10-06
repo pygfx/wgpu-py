@@ -79,6 +79,7 @@ index_data = np.array(
 ).flatten()
 
 
+# Create texture data (srgb gray values)
 texture_data = np.array(
     [
         [50, 100, 150, 200],
@@ -181,7 +182,8 @@ var r_sampler: sampler;
 @stage(fragment)
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let value = textureSample(r_tex, r_sampler, in.texcoord).r;
-    return vec4<f32>(value, value, value, 1.0);
+    let physical_color = vec3<f32>(pow(value, 2.2));  // gamma correct
+    return vec4<f32>(physical_color.rgb, 1.0);
 }
 """
 
@@ -357,7 +359,7 @@ def draw_frame():
             {
                 "view": current_texture_view,
                 "resolve_target": None,
-                "clear_value": (0.1, 0.3, 0.2, 1),
+                "clear_value": (1, 1, 1, 1),
                 "load_op": wgpu.LoadOp.clear,
                 "store_op": wgpu.StoreOp.store,
             }
