@@ -36,12 +36,12 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
     def get_preferred_format(self):
         """Get the preferred format for this canvas. This method can
         be overloaded to control the used texture format. The default
-        is "rgba8unorm" (not including srgb colormapping).
+        is "rgba8unorm-srgb".
         """
         # Use rgba because that order is more common for processing and storage.
-        # Use 8unorm because 8bit is enough and common in most cases.
-        # We DO NOT use srgb colormapping here; we return the "raw" output.
-        return "rgba8unorm"
+        # Use srgb because that's what how colors are usually expected to be.
+        # Use 8unorm because 8bit is enough (when using srgb).
+        return "rgba8unorm-srgb"
 
 
 class GPUCanvasContextOffline(base.GPUCanvasContext):
@@ -63,7 +63,7 @@ class GPUCanvasContextOffline(base.GPUCanvasContext):
         if canvas:
             return canvas.get_preferred_format()
         else:
-            return "rgba8unorm"
+            return "rgba8unorm-srgb"
 
     def get_current_texture(self):
         self._create_new_texture_if_needed()
