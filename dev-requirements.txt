@@ -8,6 +8,8 @@ flake8-black
 pep8-naming
 sphinx
 imageio
+pyinstaller
+psutil
 
 # Building wheels
 wheel
