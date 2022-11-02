@@ -1,5 +1,5 @@
 import re
-import sys
+import platform
 
 from setuptools import find_packages, setup
 from wheel.bdist_wheel import get_platform, bdist_wheel as _bdist_wheel
@@ -19,12 +19,12 @@ class bdist_wheel(_bdist_wheel):  # noqa: N801
 
 
 resources_globs = ["*.h", "*.idl"]
-if sys.platform.startswith("win"):
-    resources_globs.append("*.dll")
-elif sys.platform.startswith("linux"):
-    resources_globs.append("*.so")
-elif sys.platform.startswith("darwin"):
-    resources_globs.append("*.dylib")
+if platform.system() == "Windows":
+    resources_globs.append("libwgpu-release.dll")
+elif platform.system() == "Linux":
+    resources_globs.append("libwgpu-release.so")
+elif platform.system() == "Darwin":
+    resources_globs.append("libwgpu-release.dylib")
 else:
     pass  # don't include binaries; user will have to arrange for the lib
 
