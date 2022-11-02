@@ -43,8 +43,12 @@ pip install wgpu
 
 The wheels include the prebuilt binaries. If you want to use
 a custom build instead, you can set the environment variable `WGPU_LIB_PATH`.
-You probably also want to install `glfw` (for desktop) and/or `jupyter_rfb` (for Jupyter).
 
+You may also want to install a GUI backend: 
+```
+pip install glfw  # a lightweight backend for the desktop
+pip install jupyter_rfb  # only if you plan on using wgpu in Jupyter
+```
 
 ## Platform requirements
 
