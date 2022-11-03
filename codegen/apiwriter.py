@@ -2,10 +2,9 @@
 Writes the parts of the API that are simple: flags, enums, structs.
 """
 
-import os
-
-from codegen.utils import print, lib_dir, blacken, to_snake_case
+from codegen.utils import print, blacken, to_snake_case
 from codegen.idlparser import get_idl_parser
+from codegen.files import file_system
 
 
 flags_preamble = '''
@@ -49,8 +48,7 @@ def write_flags():
         pylines.append(")  #:\n")
     # Write
     code = blacken("\n".join(pylines))
-    with open(os.path.join(lib_dir, "flags.py"), "wb") as f:
-        f.write(code.encode())
+    file_system.write("flags.py", code)
     print(f"Wrote {n} flags to flags.py")
 
 
@@ -97,8 +95,7 @@ def write_enums():
         pylines.append(")  #:\n")  # That #: is for Sphinx
     # Write
     code = blacken("\n".join(pylines))
-    with open(os.path.join(lib_dir, "enums.py"), "wb") as f:
-        f.write(code.encode())
+    file_system.write("enums.py", code)
     print(f"Wrote {n} enums to enums.py")
 
 
@@ -153,6 +150,5 @@ def write_structs():
 
     # Write
     code = blacken("\n".join(pylines))
-    with open(os.path.join(lib_dir, "structs.py"), "wb") as f:
-        f.write(code.encode())
+    file_system.write("structs.py", code)
     print(f"Wrote {n} structs to structs.py")
