@@ -29,7 +29,9 @@ and the other [examples](https://github.com/pygfx/wgpu-py/blob/main/examples/).
 
 ## Status
 
-*The wgpu-API has not settled yet, use with care!*
+> **Note** 
+>
+> The wgpu-API has not settled yet, use with care!
 
 * Coverage of the WebGPU spec is complete enough to build e.g.
   [pygfx](https://github.com/pygfx/pygfx).
