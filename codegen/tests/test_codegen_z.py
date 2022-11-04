@@ -37,7 +37,7 @@ def test_that_code_is_up_to_date():
 
     time.sleep(0.2)
 
-    # Reset the file system
+    # Reset the file cache
     file_cache.reset()
     assert file_cache.filenames_written == set()
 

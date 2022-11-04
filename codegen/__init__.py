@@ -6,8 +6,8 @@ from .files import file_cache
 
 
 def main():
-    """Codegen entry point. This will populate the virtual file system
-    with the updated code, but not write it to disk."""
+    """Codegen entry point. This will populate the file cache with the
+    new code, but not write it to disk."""
 
     log = io.StringIO()
     with PrintToFile(log):
