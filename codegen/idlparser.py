@@ -8,7 +8,7 @@ identify and remove code paths that are no longer used.
 """
 
 from codegen.utils import print
-from codegen.files import file_system
+from codegen.files import read_file
 
 
 _parser = None
@@ -23,7 +23,7 @@ def get_idl_parser(*, allow_cache=True):
         return _parser
 
     # Get source
-    source = file_system.read_external("resources/webgpu.idl")
+    source = read_file("resources", "webgpu.idl")
 
     # Create parser
     idl = IdlParser(source)

@@ -1,19 +1,18 @@
 from cffi import FFI
 
 from codegen.utils import print, remove_c_comments
-from codegen.files import file_system
+from codegen.files import read_file
 
 
 _parser = None
 
 
-def _get_wgpu_header(*fnames):
+def _get_wgpu_header():
     """Func written so we can use this in both rs_ffi.py and codegen/hparser.py"""
     # Read files
     lines1 = []
-    for fname in fnames:
-        lines1.extend(file_system.read_external(fname).splitlines())
-        lines1.append("")
+    lines1.extend(read_file("resources", "webgpu.h").splitlines())
+    lines1.extend(read_file("resources", "wgpu.h").splitlines())
     # Deal with pre-processor commands, because cffi cannot handle them.
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
@@ -35,7 +34,7 @@ def get_h_parser(*, allow_cache=True):
     if _parser and allow_cache:
         return _parser
 
-    source = _get_wgpu_header("resources/webgpu.h", "resources/wgpu.h")
+    source = _get_wgpu_header()
 
     # Create parser
     hp = HParser(source)

@@ -11,9 +11,9 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 
 
-from codegen import main, file_system  # noqa: E402
+from codegen import main, file_cache  # noqa: E402
 
 
 if __name__ == "__main__":
     main()
-    file_system.write_changed_files_to_disk()
+    file_cache.write_changed_files_to_disk()

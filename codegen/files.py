@@ -4,11 +4,18 @@ import os
 lib_dir = os.path.abspath(os.path.join(__file__, "..", "..", "wgpu"))
 
 
-class FileSystem:
-    """An API for an in-memory file system, to allow performing the
-    codegen in-memory, providing checks on what is actually changed,
-    enabling dry runs for tests, and make it easier to write back files
-    with the correct line endings.
+def read_file(*fname):
+    """Read a file from disk using the relative filename. Line endings are normalized."""
+    filename = os.path.join(lib_dir, *fname)
+    with open(filename, "rb") as f:
+        return f.read().decode().replace("\r\n", "\n").replace("\r", "\n")
+
+
+class FileCache:
+    """An in-memory file cache, to allow performing the codegen
+    in-memory, providing checks on what is actually changed, enabling
+    dry runs for tests, and make it easier to write back files with the
+    correct line endings.
     """
 
     _filenames_to_change = [
@@ -26,10 +33,10 @@ class FileSystem:
         self._files_written = set()
 
     def reset(self):
-        """Make a fresh file system. Populating the files with a copy from disk."""
+        """Reset the cache, populating the files with a copy from disk."""
         self._file_contents.clear()
         for fname in self.filenames_to_change:
-            self.write(fname, self.read_external(fname))
+            self.write(fname, read_file(fname))
         self._files_written.clear()
 
     @property
@@ -53,12 +60,6 @@ class FileSystem:
         assert fname in self.filenames_to_change
         return self._file_contents[fname]
 
-    def read_external(self, fname):
-        """Read an external file using the relative filename."""
-        filename = os.path.join(lib_dir, fname)
-        with open(filename, "rb") as f:
-            return f.read().decode().replace("\r\n", "\n").replace("\r", "\n")
-
     def write_changed_files_to_disk(self):
         """Write the virtual files to disk, using appropriate newlines."""
         # Get reference line ending chars
@@ -73,7 +74,7 @@ class FileSystem:
                 f.write(text.replace("\n", line_endings).encode())
 
 
-file_system = FileSystem()
+file_cache = FileCache()
 
 
 def get_line_endings(text):

@@ -16,7 +16,7 @@ focuses on the API, here we focus on the C library usage.
 from codegen.utils import print, blacken, Patcher
 from codegen.hparser import get_h_parser
 from codegen.idlparser import get_idl_parser
-from codegen.files import file_system
+from codegen.files import file_cache
 
 
 mappings_preamble = '''
@@ -141,7 +141,7 @@ def write_mappings():
 
     # Wrap up
     code = blacken("\n".join(pylines))  # just in case; code is already black
-    file_system.write("backends/rs_mappings.py", code)
+    file_cache.write("backends/rs_mappings.py", code)
     print(
         f"Wrote {len(enummap)} enum mappings and {len(cstructfield2enum)} struct-field mappings to rs_mappings.py"
     )

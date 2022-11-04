@@ -2,7 +2,7 @@ import io
 
 from .utils import print, PrintToFile
 from . import apiwriter, apipatcher, rspatcher, idlparser, hparser
-from .files import file_system
+from .files import file_cache
 
 
 def main():
@@ -15,13 +15,13 @@ def main():
         prepare()
         update_api()
         update_rs()
-        file_system.write("resources/codegen_report.md", log.getvalue())
+        file_cache.write("resources/codegen_report.md", log.getvalue())
 
 
 def prepare():
     """Force parsing (and caching) the IDL and C header."""
     print("## Preparing")
-    file_system.reset()
+    file_cache.reset()
     idlparser.get_idl_parser(allow_cache=False)
     hparser.get_h_parser(allow_cache=False)
 
@@ -37,17 +37,17 @@ def update_api():
     apiwriter.write_structs()
 
     # Patch base API: IDL -> API
-    code1 = file_system.read("base.py")
+    code1 = file_cache.read("base.py")
     print("### Patching API for base.py")
     code2 = apipatcher.patch_base_api(code1)
-    file_system.write("base.py", code2)
+    file_cache.write("base.py", code2)
 
     # Patch backend APIs: base.py -> API
     for fname in ["backends/rs.py"]:
-        code1 = file_system.read(fname)
+        code1 = file_cache.read(fname)
         print(f"### Patching API for {fname}")
         code2 = apipatcher.patch_backend_api(code1)
-        file_system.write(fname, code2)
+        file_cache.write(fname, code2)
 
 
 def update_rs():
@@ -60,6 +60,6 @@ def update_rs():
     rspatcher.write_mappings()
 
     # Patch rs.py
-    code1 = file_system.read("backends/rs.py")
+    code1 = file_cache.read("backends/rs.py")
     code2 = rspatcher.patch_rs_backend(code1)
-    file_system.write("backends/rs.py", code2)
+    file_cache.write("backends/rs.py", code2)
