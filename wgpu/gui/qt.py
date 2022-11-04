@@ -340,6 +340,14 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     # Methods that we add from wgpu (snake_case)
 
+    @property
+    def draw_frame(self):
+        return self._subwidget.draw_frame
+
+    @draw_frame.setter
+    def draw_frame(self, f):
+        self._subwidget.draw_frame = f
+
     def get_display_id(self):
         return self._subwidget.get_display_id()
 
