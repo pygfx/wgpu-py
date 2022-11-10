@@ -9,9 +9,6 @@ import tempfile
 import black
 
 
-lib_dir = os.path.abspath(os.path.join(__file__, "..", "..", "wgpu"))
-
-
 def to_snake_case(name):
     """Convert a name from camelCase to snake_case. Names that already are
     snake_case remain the same.
@@ -60,8 +57,7 @@ class PrintToFile:
     """Context manager to print to file."""
 
     def __init__(self, f):
-        if isinstance(f, str):
-            f = open(f, "wt", encoding="utf-8", newline="\n")
+        assert hasattr(f, "write")
         self.f = f
 
     def __enter__(self):

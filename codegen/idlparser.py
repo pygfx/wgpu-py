@@ -7,9 +7,8 @@ It would be good to occasionally check the coverage of this module to
 identify and remove code paths that are no longer used.
 """
 
-import os
-
-from codegen.utils import print, lib_dir
+from codegen.utils import print
+from codegen.files import read_file
 
 
 _parser = None
@@ -24,8 +23,7 @@ def get_idl_parser(*, allow_cache=True):
         return _parser
 
     # Get source
-    with open(os.path.join(lib_dir, "resources", "webgpu.idl"), "rb") as f:
-        source = f.read().decode()
+    source = read_file("resources", "webgpu.idl")
 
     # Create parser
     idl = IdlParser(source)

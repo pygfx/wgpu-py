@@ -3,10 +3,9 @@ The logic to generate/patch the base API from the WebGPU
 spec (IDL), and the backend implementations from the base API.
 """
 
-import os
-
-from codegen.utils import print, lib_dir, blacken, to_snake_case, to_camel_case, Patcher
+from codegen.utils import print, blacken, to_snake_case, to_camel_case, Patcher
 from codegen.idlparser import get_idl_parser
+from codegen.files import file_cache
 
 
 def patch_base_api(code):
@@ -37,9 +36,7 @@ def patch_backend_api(code):
     """
 
     # Obtain the base API definition
-    filename = os.path.join(lib_dir, "base.py")
-    with open(filename, "rb") as f:
-        base_api_code = f.read().decode()
+    base_api_code = file_cache.read("base.py")
 
     # Patch!
     for patcher in [

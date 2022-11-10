@@ -13,11 +13,10 @@ Note that the apipatcher will also patch rs.py, but where that codegen
 focuses on the API, here we focus on the C library usage.
 """
 
-import os
-
-from codegen.utils import print, lib_dir, blacken, Patcher
+from codegen.utils import print, blacken, Patcher
 from codegen.hparser import get_h_parser
 from codegen.idlparser import get_idl_parser
+from codegen.files import file_cache
 
 
 mappings_preamble = '''
@@ -142,8 +141,7 @@ def write_mappings():
 
     # Wrap up
     code = blacken("\n".join(pylines))  # just in case; code is already black
-    with open(os.path.join(lib_dir, "backends", "rs_mappings.py"), "wb") as f:
-        f.write(code.encode())
+    file_cache.write("backends/rs_mappings.py", code)
     print(
         f"Wrote {len(enummap)} enum mappings and {len(cstructfield2enum)} struct-field mappings to rs_mappings.py"
     )
