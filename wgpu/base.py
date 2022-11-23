@@ -1640,7 +1640,7 @@ class GPUQueue(GPUObjectBase):
     """
     A queue can be used to submit command buffers to.
 
-    You can obtain a queue object via the :attr:`GPUDevice.default_queue` property.
+    You can obtain a queue object via the :attr:`GPUDevice.queue` property.
     """
 
     # IDL: undefined submit(sequence<GPUCommandBuffer> commandBuffers);
