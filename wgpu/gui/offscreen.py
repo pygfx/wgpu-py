@@ -15,6 +15,7 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
         super().__init__(*args, **kwargs)
         self._logical_size = width, height
         self._pixel_ratio = pixel_ratio
+        self._closed = False
 
     def get_pixel_ratio(self):
         return self._pixel_ratio
@@ -31,10 +32,10 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
         self._logical_size = width, height
 
     def close(self):
-        pass
+        self._closed = True
 
     def is_closed(self):
-        return False
+        return self._closed
 
     def _request_draw(self):
         call_later(0, self.draw)
