@@ -85,3 +85,8 @@ def run():
     # calls to request_draw() in the animate function.
     loop = asyncio.get_event_loop_policy().get_event_loop()
     loop.run_until_complete(mainloop_iter())
+
+    # cancel any newly scheduled tasks
+    for t in asyncio.all_tasks(loop=loop):
+        t.cancel()
+    assert len(asyncio.all_tasks(loop=loop)) == 0
