@@ -5,7 +5,7 @@ try:
     import numpy as np
     import wgpu.backends.rs
     from wgpu.gui.auto import WgpuCanvas, run
-except ImportError:
+except (ImportError, RuntimeError):
     pass
 
 vertex_code = """
