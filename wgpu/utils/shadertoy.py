@@ -3,11 +3,6 @@ from wgpu.gui.auto import WgpuCanvas, run
 import time
 import numpy as np
 
-try:
-    import wgpu.backends.rs
-except ImportError:
-    pass
-
 vertex_code = """
 
 struct Varyings {
@@ -128,6 +123,8 @@ class Shadertoy:
     # todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
 
     def __init__(self, shader_code, resolution=(800, 450)) -> None:
+        import wgpu.backends.rs  # noqa
+
         self._uniform_data = np.zeros((), dtype=uniform_dtype)
 
         self.shader_code = shader_code
