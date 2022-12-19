@@ -1,7 +1,6 @@
 import wgpu
 import time
 import numpy as np
-import wgpu.backends.rs
 from wgpu.gui.auto import WgpuCanvas, run
 
 vertex_code = """
@@ -128,21 +127,25 @@ class Shadertoy:
 
         self._uniform_data = np.zeros((), dtype=uniform_dtype)
 
-        self.shader_code = shader_code
-        self.resolution = resolution
+        self._shader_code = shader_code
+        self._uniform_data["resolution"] = resolution
 
         self._prepare_render()
         self._bind_events()
 
     @property
     def resolution(self):
+        """The resolution of the shadertoy as a tuple (width, height) in pixels."""
         return tuple(self._uniform_data["resolution"])
 
-    @resolution.setter
-    def resolution(self, value):
-        self._uniform_data["resolution"] = value
+    @property
+    def shader_code(self):
+        """The shader code to use."""
+        return self._shader_code
 
     def _prepare_render(self):
+        import wgpu.backends.rs  # noqa
+
         self._canvas = WgpuCanvas(title="Shadertoy", size=self.resolution, max_fps=60)
 
         adapter = wgpu.request_adapter(
@@ -236,7 +239,7 @@ class Shadertoy:
         self._canvas.add_event_handler(on_mouse_move, "pointer_move", "pointer_down")
 
     def _update(self):
-        now = time.time()
+        now = time.perf_counter()
         if not hasattr(self, "_last_time"):
             self._last_time = now
 
@@ -248,8 +251,8 @@ class Shadertoy:
         if not hasattr(self, "_frame"):
             self._frame = 0
 
-        self._frame += 1
         self._uniform_data["frame"] = self._frame
+        self._frame += 1
 
     def _draw_frame(self):
         # Update uniform buffer
