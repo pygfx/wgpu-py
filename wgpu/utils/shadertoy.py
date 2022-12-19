@@ -1,12 +1,8 @@
 import wgpu
 import time
-
-try:
-    import numpy as np
-    import wgpu.backends.rs
-    from wgpu.gui.auto import WgpuCanvas, run
-except (ImportError, RuntimeError):
-    pass
+import numpy as np
+import wgpu.backends.rs
+from wgpu.gui.auto import WgpuCanvas, run
 
 vertex_code = """
 
@@ -74,9 +70,7 @@ fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
     let uv = vec2<f32>(in.uv.x, 1.0 - in.uv.y);
     let frag_coord = uv * i_resolution;
 
-    var fragColor = shader_main(frag_coord);
-
-    return vec4<f32>(fragColor.rgb, 1.0);
+    return shader_main(frag_coord);
 }
 
  """
@@ -102,6 +96,9 @@ uniform_dtype = [
 class Shadertoy:
 
     """
+    The Shadertoy class provides a "screen pixel shader programming interface" similar to `shadertoy <https://www.shadertoy.com/>`_,
+    Helps you research and quickly build or test shaders using WGSL via WGPU.
+
     Parameters:
         shader_code (str): The shader code to use.
         resolution (tuple): The resolution of the shadertoy.
