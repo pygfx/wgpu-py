@@ -1,8 +1,12 @@
 import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
 import time
-import wgpu.backends.rs
 import numpy as np
+
+try:
+    import wgpu.backends.rs
+except ImportError:
+    pass
 
 vertex_code = """
 
