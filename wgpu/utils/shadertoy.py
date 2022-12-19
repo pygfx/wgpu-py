@@ -98,35 +98,35 @@ uniform_dtype = [
 class Shadertoy:
 
     """
-    @param shader_code: The shader code to use.
+    Parameters:
+        shader_code (str): The shader code to use.
+        resolution (tuple): The resolution of the shadertoy.
 
-    The code must contain a entry point function:
+    The shader code must contain a entry point function:
 
-    `fn shader_main(frag_coord: vec2<f32>) -> vec4<f32>{}`
+    ``fn shader_main(frag_coord: vec2<f32>) -> vec4<f32>{}``
 
-    It has a parameter `frag_coord` which is the current pixel coordinate (in range 0..resolution, origin is upper-left),
-    and it must return a vec4 color, which is the color of the pixel at that coordinate.
+    It has a parameter ``frag_coord`` which is the current pixel coordinate (in range 0..resolution, origin is bottom-left),
+    and it must return a vec4<f32> color, which is the color of the pixel at that coordinate.
 
     some built-in variables are available in the shader:
 
-    `i_time`: the global time in seconds
-    `i_time_delta`: the time since last frame in seconds
-    `i_frame`: the frame number
-    `i_resolution`: the resolution of the shadertoy
-    `i_mouse`: the mouse position in pixels
+    * ``i_time``: the global time in seconds
+    * ``i_time_delta``: the time since last frame in seconds
+    * ``i_frame``: the frame number
+    * ``i_resolution``: the resolution of the shadertoy
+    * ``i_mouse``: the mouse position in pixels
 
-    todo: add more built-in variables
-
-    @param resolution: The resolution of the shadertoy.
-
-    todo: support input textures
-    todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
     """
 
-    def __init__(self, main_code, resolution=(800, 450)) -> None:
+    # todo: add more built-in variables
+    # todo: support input textures
+    # todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
+
+    def __init__(self, shader_code, resolution=(800, 450)) -> None:
         self._uniform_data = np.zeros((), dtype=uniform_dtype)
 
-        self.main_code = main_code
+        self.shader_code = shader_code
         self.resolution = resolution
 
         self._prepare_render()
@@ -155,7 +155,7 @@ class Shadertoy:
             device=self._device, format=wgpu.TextureFormat.bgra8unorm
         )
 
-        shader_code = vertex_code + builtin_variables + self.main_code + fragment_code
+        shader_code = vertex_code + builtin_variables + self.shader_code + fragment_code
         shader_program = self._device.create_shader_module(code=shader_code)
 
         self._uniform_buffer = self._device.create_buffer(
