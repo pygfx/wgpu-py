@@ -318,7 +318,7 @@ def parse_wgpu_shader_error(message):
             )
         else:
             err_msg.append(
-                pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num}--{len(lines)}"
+                pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num+1}--{len(lines)}"
             )
         err_msg.append(pad_str(_color_string(36, "│")))
         err_code = []
