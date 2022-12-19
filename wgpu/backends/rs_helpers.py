@@ -261,6 +261,8 @@ def parse_wgpu_shader_error(message):
                 end = int(match2.group(3))
                 label = match2.group(4)
                 note = match2.group(5)
+            else:
+                return message
 
         elif error_type == "Validation":
             match2 = __inner_validation_error_tmpl.match(inner_error)
@@ -272,6 +274,8 @@ def parse_wgpu_shader_error(message):
                 error_match = __inner_validation_error_info.search(error)
                 label = error_match.group(1) if error_match else error
                 note = ""
+            else:
+                return message
         else:
             return "\n".join(err_msg)
 
@@ -280,22 +284,60 @@ def parse_wgpu_shader_error(message):
         lines = s.splitlines(True)
         line_num = len(lines)
         line = lines[-1]
-        line_pos = start - (next_n - len(line))
+        line_pos = start - next_n
+
+        error_lines = []
+
+        while line_pos < 0:
+
+            line = lines[line_num - 1]
+            line_length = len(line)
+
+            line_pos += line_length
+
+            start_pos = line_pos
+            if start_pos < 0:
+                start_pos = 0
+            end_pos = line_length - (next_n - end)
+            if end_pos > line_length:
+                end_pos = line_length
+
+            error_lines.insert(0, (line_num, line, start_pos, end_pos))
+
+            next_n -= line_length
+            line_num -= 1
 
         def pad_str(s):
-            pad = len(str(line_num))
+            pad = len(str(len(lines)))
             return f"{' '*pad} {s}"
 
         err_msg.append("\n")
-        err_msg.append(
-            pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num}:{line_pos}"
-        )
+        if len(error_lines) == 1:
+            err_msg.append(
+                pad_str(_color_string(36, "┌─")) + f" wgsl:{len(lines)}:{line_pos}"
+            )
+        else:
+            err_msg.append(
+                pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num}--{len(lines)}"
+            )
         err_msg.append(pad_str(_color_string(36, "│")))
-        err_msg.append(_color_string(36, f"{line_num} │") + f" {line}")
-        err_msg.append(
-            pad_str(_color_string(36, "│"))
-            + _color_string(33, f" {' '*line_pos + '^'*(end-start)} {label}")
-        )
+        err_code = []
+        for line_num, line, _, _ in error_lines:
+            err_code.append(_color_string(36, f"{line_num} │") + f" {line}")
+
+        err_msg.append("".join(err_code))
+
+        if len(error_lines) == 1:
+            err_msg.append(
+                pad_str(_color_string(36, "│"))
+                + _color_string(
+                    33, f" {' '*error_lines[0][2] + '^'*(end-start)} {label}"
+                )
+            )
+        else:
+            err_msg.append(
+                pad_str(_color_string(36, "│")) + _color_string(33, f" ^^^{label}")
+            )
         err_msg.append(pad_str(_color_string(36, "│")))
         err_msg.append(pad_str(_color_string(36, f"= note: {note}")))
         err_msg.append("\n\n")
