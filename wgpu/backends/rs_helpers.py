@@ -278,8 +278,10 @@ def parse_wgpu_shader_error(message):
                 return message
         else:
             return "\n".join(err_msg)
-
-        next_n = source.index("\n", end)
+        try:
+            next_n = source.index("\n", end)
+        except ValueError:
+            next_n = len(source)
         s = source[:next_n]
         lines = s.splitlines(True)
         line_num = len(lines)
@@ -307,9 +309,13 @@ def parse_wgpu_shader_error(message):
             next_n -= line_length
             line_num -= 1
 
-        def pad_str(s):
+        def pad_str(s, line_num=None):
             pad = len(str(len(lines)))
-            return f"{' '*pad} {s}"
+            if line_num is not None:
+                pad -= len(str(line_num))
+                return f"{' '*pad}{line_num} {s}"
+            else:
+                return f"{' '*pad} {s}"
 
         err_msg.append("\n")
         if len(error_lines) == 1:
@@ -323,7 +329,7 @@ def parse_wgpu_shader_error(message):
         err_msg.append(pad_str(_color_string(36, "│")))
         err_code = []
         for line_num, line, _, _ in error_lines:
-            err_code.append(_color_string(36, f"{line_num} │") + f" {line}")
+            err_code.append(_color_string(36, pad_str("│", line_num)) + f" {line}")
 
         err_msg.append("".join(err_code))
 

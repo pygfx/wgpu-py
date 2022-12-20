@@ -751,7 +751,12 @@ Parsing error: unknown scalar type: 'f3'
 """.strip()  # noqa
     )
 
-    # test4: Validation error, mat4x4 * vec3
+
+def test_validate_shader_error(caplog):
+
+    device = wgpu.utils.get_default_device()
+
+    # test1: Validation error, mat4x4 * vec3
     error_source = """
     struct VertexOutput {
         @location(0) texcoord : vec2<f32>,
@@ -771,15 +776,15 @@ Parsing error: unknown scalar type: 'f3'
 
     # skip error info
     assert (
-        caplog.records[3].msg
+        caplog.records[0].msg
         == """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, width: 4 }"""
     )
     assert (
-        caplog.records[4].msg
+        caplog.records[1].msg
         == """Right: Load { pointer: [6] } of type Vector { size: Tri, kind: Float, width: 4 }"""
     )
 
-    shader_error = caplog.records[5].msg
+    shader_error = caplog.records[2].msg
 
     assert (
         shader_error.strip()
@@ -792,6 +797,57 @@ Validation error: Function(Expression { handle: [8], error: InvalidBinaryOperand
    │
 11 │         out.position = matrix * out.position;
    │                       ^^^^^^^^^^^^^^^^^^^^^^ InvalidBinaryOperandTypes(Multiply, [5], [7])
+   │
+   = note:
+""".strip()  # noqa
+    )
+
+    # test2: Validation error, multiple line error, return type mismatch
+    error_source = """
+struct Varyings {
+    @builtin(position) position : vec4<f32>,
+    @location(0) uv : vec2<f32>,
+};
+
+fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
+    if (in.uv.x > 0.5) {
+        return vec3<f32>(1.0, 0.0, 1.0);
+    } else {
+        return vec3<f32>(0.0, 1.0, 1.0);
+    }
+}
+
+"""  # noqa
+    with raises(RuntimeError):
+        device.create_shader_module(code=error_source)
+
+    # skip error info
+    assert (
+        caplog.records[3].msg
+        == """Returning Some(Vector { size: Tri, kind: Float, width: 4 }) where Some(Vector { size: Quad, kind: Float, width: 4 }) is expected"""
+    )
+
+    shader_error = caplog.records[4].msg
+
+    assert (
+        shader_error.strip()
+        == """
+Shader error: label:  Some("")
+Validation error: InvalidReturnType(Some([9]))
+
+
+   ┌─ wgsl:5--13
+   │
+ 5 │ };
+ 6 │ 
+ 7 │ fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
+ 8 │     if (in.uv.x > 0.5) {
+ 9 │         return vec3<f32>(1.0, 0.0, 1.0);
+10 │     } else {
+11 │         return vec3<f32>(0.0, 1.0, 1.0);
+12 │     }
+13 │ }
+   │ ^^^InvalidReturnType(Some([9]))
    │
    = note:
 """.strip()  # noqa
