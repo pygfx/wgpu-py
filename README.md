@@ -67,12 +67,20 @@ On Windows 10+, things should just work. On older Windows versions you may need
 to install the Vulkan drivers. You may want to force "Vulkan" while "D3D12" is
 less mature.
 
+On MacOS you need at least 10.13 (High Sierra) to have Vulkan support.
+
 On Linux, it's advisable to install the proprietary drivers of your GPU (if you
 have a dedicated GPU). You may need to `apt install mesa-vulkan-drivers`.
 Wayland support is currently broken (we could use a hand to fix this).
 
-On MacOS you need at least 10.13 (High Sierra) to have Vulkan support.
-
+**Note that on Linux, binary wheels are only available for manylinux_2_24**. That
+means you can only install the binaries with **pip >= 20.3**, and need to use one
+of the following distributions: ALT Linux 10+, RHEL 9+, Debian 11+, Fedora 34+,
+Mageia 8+, Photon OS 3.0 with updates, Ubuntu 21.04+. See
+[here](https://github.com/pypa/manylinux#manylinux) for more details on the
+manylinux standard. Older platforms are not supported because the 
+[wgpu-native](https://github.com/gfx-rs/wgpu-native) library wrapped by wgpu-py 
+does not build on them.
 
 ## Usage
 
