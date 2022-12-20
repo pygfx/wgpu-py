@@ -50,9 +50,9 @@ pip install wgpu
 
 The wheels include the prebuilt binaries of [wgpu-native](https://github.com/gfx-rs/wgpu-native).
 
-Note that on Linux you need to use at least **pip >= 20.3**, and one of the following
-distributions, otherwise the binaries will not be available: ALT Linux 10+, RHEL 9+,
-Debian 11+, Fedora 34+, Mageia 8+, Photon OS 3.0 with updates, Ubuntu 21.04+.
+Note that on Linux you need to use at least **pip >= 20.3**, and a recent 
+distribution, otherwise the binaries will not be available. See "platform
+requirements" for details.
 
 If you need/want to build wgpu-native yourself, you need to set the environment variable
 `WGPU_LIB_PATH` to let wgpu-py know where the DLL is located.
