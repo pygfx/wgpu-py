@@ -48,8 +48,14 @@ and the other [examples](https://github.com/pygfx/wgpu-py/blob/main/examples/).
 pip install wgpu
 ```
 
-The wheels include the prebuilt binaries. If you want to use
-a custom build instead, you can set the environment variable `WGPU_LIB_PATH`.
+The wheels include the prebuilt binaries.
+
+Note that on Linux you need to use at least **pip >= 20.3**, and one of the following
+distributions, otherwise the binaries will not be available: ALT Linux 10+, RHEL 9+,
+Debian 11+, Fedora 34+, Mageia 8+, Photon OS 3.0 with updates, Ubuntu 21.04+.
+
+If you want to use a custom build instead, you can set the environment
+variable `WGPU_LIB_PATH`.
 
 You may also want to install a GUI backend: 
 ```
