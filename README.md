@@ -48,7 +48,7 @@ and the other [examples](https://github.com/pygfx/wgpu-py/blob/main/examples/).
 pip install wgpu
 ```
 
-The wheels include the prebuilt binaries.
+The wheels include the prebuilt binaries of [wgpu-native](https://github.com/gfx-rs/wgpu-native).
 
 Note that on Linux you need to use at least **pip >= 20.3**, and one of the following
 distributions, otherwise the binaries will not be available: ALT Linux 10+, RHEL 9+,
