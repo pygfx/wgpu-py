@@ -16,6 +16,8 @@ import sys
 ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, ROOT_DIR)
 
+os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
+
 import wgpu  # noqa: E402
 import wgpu.gui  # noqa: E402
 
