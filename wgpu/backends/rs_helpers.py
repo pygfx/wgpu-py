@@ -285,10 +285,10 @@ class WgslErrorParser:
                         err_msg += self._extract_line(source, start, end, label, note)
                     else:
                         err_msg += [color_string(33, inner_error)]
-        else:
-            return None
 
-        return "\n".join(err_msg)
+                return "\n".join(err_msg)
+
+        return None  # Does not look like a shader error
 
     def _extract_line(self, source, start, end, label, note):
 
