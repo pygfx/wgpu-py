@@ -210,7 +210,7 @@ def _terminal_supports_colors():
 __terminal_supports_colors = _terminal_supports_colors()
 
 
-def _color_string(color, string):
+def color_string(color, string):
     """color: ANSI color code. 33 is yellow, 36 is cyan, etc."""
 
     if not __terminal_supports_colors:
@@ -218,83 +218,97 @@ def _color_string(color, string):
     return f"\033[{color}m{string}\033[0m"
 
 
-__shader_error_tmpl = re.compile(
-    r'(Parsing|Validation)\(ShaderError { source: "(.*)", label:(.*), inner: (ParseError|WithSpan) (.*) }\)',
-    re.M | re.S,
-)
-__inner_parsing_error_tmpl = re.compile(
-    r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
-    re.M | re.S,
-)
-__inner_validation_error_tmpl = re.compile(
-    r'{ inner: (.*) { (.*), name: "(.*)", error: (.*) }, spans: \[\(Span { start: (\d+), end: (\d+) }, (.*)\)\] }',
-    re.M | re.S,
-)  # TODO: simple error message
+class WgslErrorParser:
 
-__inner_validation_error_info = re.compile(
-    r", error: (.*) [}|,]",
-    re.M | re.S,
-)  # TODO: simple error message
+    shader_error_tmpl = re.compile(
+        r'(Parsing|Validation)\(ShaderError { source: "(.*)", label:(.*), inner: (ParseError|WithSpan) (.*) }\)',
+        re.M | re.S,
+    )
 
+    inner_parsing_error_tmpl = re.compile(
+        r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
+        re.M | re.S,
+    )
 
-def parse_wgpu_shader_error(message):
-    """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
+    inner_validation_error_tmpl = re.compile(
+        r'{ inner: (.*) { (.*), name: "(.*)", error: (.*) }, spans: \[\(Span { start: (\d+), end: (\d+) }, (.*)\)\] }',
+        re.M | re.S,
+    )  # TODO: simple error message
 
-    err_msg = ["\n"]
+    inner_validation_error_info = re.compile(
+        r", error: (.*) [}|,]",
+        re.M | re.S,
+    )  # TODO: simple error message
 
-    match = __shader_error_tmpl.match(message)
+    def parse(self, message):
+        """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
 
-    if match:
-        error_type = match.group(1)
-        source = match.group(2)
-        source = source.replace("\\t", " ")
-        label = match.group(3)
-        # inner_error_type = match.group(4)
-        inner_error = match.group(5)
-        err_msg.append(_color_string(33, f"Shader error: label: {label}"))
+        err_msg = ["\n"]
 
-        if error_type == "Parsing":
-            match2 = __inner_parsing_error_tmpl.match(inner_error)
-            if match2:
-                err_msg.append(_color_string(33, f"Parsing error: {match2.group(1)}"))
-                start = int(match2.group(2))
-                end = int(match2.group(3))
-                label = match2.group(4)
-                note = match2.group(5)
-            else:
-                return message
+        match = self.shader_error_tmpl.match(message)
 
-        elif error_type == "Validation":
-            match2 = __inner_validation_error_tmpl.match(inner_error)
-            if match2:
-                error = match2.group(4)
-                err_msg.append(_color_string(33, f"Validation error: {error}"))
-                start = int(match2.group(5))
-                end = int(match2.group(6))
-                error_match = __inner_validation_error_info.search(error)
-                label = error_match.group(1) if error_match else error
-                note = ""
-            else:
-                return message
+        if match:
+            error_type = match.group(1)
+            source = match.group(2)
+            source = source.replace("\\t", " ")
+            label = match.group(3)
+            # inner_error_type = match.group(4)
+            inner_error = match.group(5)
+            err_msg.append(color_string(33, f"Shader error: label: {label}"))
+
+            if error_type and inner_error:
+
+                if error_type == "Parsing":
+                    match2 = self.inner_parsing_error_tmpl.match(inner_error)
+                    if match2:
+                        err_msg.append(
+                            color_string(33, f"Parsing error: {match2.group(1)}")
+                        )
+                        start = int(match2.group(2))
+                        end = int(match2.group(3))
+                        label = match2.group(4)
+                        note = match2.group(5)
+                        err_msg += self._extract_line(source, start, end, label, note)
+                    else:
+                        err_msg += [color_string(33, inner_error)]
+
+                elif error_type == "Validation":
+                    match2 = self.inner_validation_error_tmpl.match(inner_error)
+                    if match2:
+                        error = match2.group(4)
+                        err_msg.append(color_string(33, f"Validation error: {error}"))
+                        start = int(match2.group(5))
+                        end = int(match2.group(6))
+                        error_match = self.inner_validation_error_info.search(error)
+                        label = error_match.group(1) if error_match else error
+                        note = ""
+                        err_msg += self._extract_line(source, start, end, label, note)
+                    else:
+                        err_msg += [color_string(33, inner_error)]
         else:
-            return "\n".join(err_msg)
+            return None
+
+        return "\n".join(err_msg)
+
+    def _extract_line(self, source, start, end, label, note):
+
+        # Find next newline after the end pos
         try:
             next_n = source.index("\n", end)
         except ValueError:
             next_n = len(source)
-        s = source[:next_n]
-        lines = s.splitlines(True)
+
+        # Truncate and convert to lines
+        lines = source[:next_n].splitlines(True)
         line_num = len(lines)
-        line = lines[-1]
-        line_pos = start - next_n
 
+        # Collect the lines relevant to this error
         error_lines = []
-
+        line_pos = start - next_n
         while line_pos < 0:
 
             line = lines[line_num - 1]
             line_length = len(line)
-
             line_pos += line_length
 
             start_pos = line_pos
@@ -313,46 +327,45 @@ def parse_wgpu_shader_error(message):
             pad = len(str(len(lines)))
             if line_num is not None:
                 pad -= len(str(line_num))
-                return f"{' '*pad}{line_num} {s}"
+                return f"{' '*pad}{line_num} {s}".rstrip()
             else:
-                return f"{' '*pad} {s}"
+                return f"{' '*pad} {s}".rstrip()
 
-        err_msg.append("\n")
+        err_msg = [""]
+
+        # Show header
         if len(error_lines) == 1:
-            err_msg.append(
-                pad_str(_color_string(36, "┌─")) + f" wgsl:{len(lines)}:{line_pos}"
-            )
+            prefix = pad_str(color_string(36, "┌─"))
+            err_msg.append(prefix + f" wgsl:{len(lines)}:{line_pos}")
         else:
-            err_msg.append(
-                pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num+1}--{len(lines)}"
-            )
-        err_msg.append(pad_str(_color_string(36, "│")))
-        err_code = []
+            prefix = pad_str(color_string(36, "┌─"))
+            err_msg.append(prefix + f" wgsl:{line_num+1}--{len(lines)}")
+
+        # Add lines
+        err_msg.append(pad_str(color_string(36, "│")))
         for line_num, line, _, _ in error_lines:
-            err_code.append(_color_string(36, pad_str("│", line_num)) + f" {line}")
+            prefix = color_string(36, pad_str("│", line_num))
+            err_msg.append(prefix + f" {line}".rstrip())
 
-        err_msg.append("".join(err_code))
-
+        # Show annotation
         if len(error_lines) == 1:
-            err_msg.append(
-                pad_str(_color_string(36, "│"))
-                + _color_string(
-                    33, f" {' '*error_lines[0][2] + '^'*(end-start)} {label}"
-                )
-            )
+            prefix = pad_str(color_string(36, "│"))
+            annotation = f" {' '*error_lines[0][2] + '^'*(end-start)} {label}"
+            err_msg.append(prefix + color_string(33, annotation))
         else:
-            err_msg.append(
-                pad_str(_color_string(36, "│")) + _color_string(33, f" ^^^{label}")
-            )
-        err_msg.append(pad_str(_color_string(36, "│")))
-        err_msg.append(pad_str(_color_string(36, f"= note: {note}")))
-        err_msg.append("\n\n")
+            prefix = pad_str(color_string(36, "│"))
+            annotation = color_string(33, f" ^^^{label}")
+            err_msg.append(prefix + annotation)
 
-        return "\n".join(err_msg)
+        err_msg.append(pad_str(color_string(36, "│")))
+        err_msg.append(pad_str(color_string(36, f"= note: {note}".rstrip())))
+        err_msg.append("\n")
 
-    else:
-        return None
+        return err_msg
 
+
+_wgsl_error_parser = WgslErrorParser()
+parse_wgsl_error = _wgsl_error_parser.parse
 
 # The functions below are copied from codegen/utils.py
 
