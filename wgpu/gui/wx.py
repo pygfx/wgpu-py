@@ -5,7 +5,7 @@ can be used as a standalone window or in a larger GUI.
 
 import ctypes
 
-from .base import WgpuCanvasBase
+from .base import WgpuCanvasBase, weakbind
 
 import wx
 
@@ -120,7 +120,7 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         self.SetTitle(title or "wx wgpu canvas")
 
         self._subwidget = WxWgpuWindow(parent=self, max_fps=max_fps)
-        self._subwidget.add_event_handler(self.handle_event, "*")
+        self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
 
         self.Show()
