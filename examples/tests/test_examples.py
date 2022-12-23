@@ -12,7 +12,8 @@ import imageio.v2 as imageio
 import numpy as np
 import pytest
 
-from tests.testutils import (
+
+from testutils import (
     can_use_wgpu_lib,
     is_lavapipe,
     find_examples,
