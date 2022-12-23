@@ -189,7 +189,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def _request_draw(self):
         if not self._request_draw_timer.isActive():
-            self._request_draw_timer.start(self._get_draw_wait_time() * 1000)
+            self._request_draw_timer.start(int(self._get_draw_wait_time() * 1000))
 
     def close(self):
         super().close()
