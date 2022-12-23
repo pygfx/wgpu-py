@@ -5,6 +5,7 @@ import re
 
 from .rs_ffi import ffi, lib
 
+
 if sys.platform.startswith("darwin"):
     from rubicon.objc.api import ObjCInstance, ObjCClass
 
@@ -218,154 +219,151 @@ def color_string(color, string):
     return f"\033[{color}m{string}\033[0m"
 
 
-class WgslErrorParser:
+_wgsl_error_tmpl = re.compile(
+    r'(Parsing|Validation)\(ShaderError { source: "(.*)", label:(.*), inner: (ParseError|WithSpan) (.*) }\)',
+    re.M | re.S,
+)
 
-    shader_error_tmpl = re.compile(
-        r'(Parsing|Validation)\(ShaderError { source: "(.*)", label:(.*), inner: (ParseError|WithSpan) (.*) }\)',
-        re.M | re.S,
-    )
+_wgsl_inner_parsing_error_tmpl = re.compile(
+    r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
+    re.M | re.S,
+)
 
-    inner_parsing_error_tmpl = re.compile(
-        r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
-        re.M | re.S,
-    )
+_wgsl_inner_validation_error_tmpl = re.compile(
+    r'{ inner: (.*) { (.*), name: "(.*)", error: (.*) }, spans: \[\(Span { start: (\d+), end: (\d+) }, (.*)\)\] }',
+    re.M | re.S,
+)  # TODO: simple error message
 
-    inner_validation_error_tmpl = re.compile(
-        r'{ inner: (.*) { (.*), name: "(.*)", error: (.*) }, spans: \[\(Span { start: (\d+), end: (\d+) }, (.*)\)\] }',
-        re.M | re.S,
-    )  # TODO: simple error message
+_wgsl_inner_validation_error_info_tmpl = re.compile(
+    r", error: (.*) [}|,]",
+    re.M | re.S,
+)  # TODO: simple error message
 
-    inner_validation_error_info = re.compile(
-        r", error: (.*) [}|,]",
-        re.M | re.S,
-    )  # TODO: simple error message
 
-    def parse(self, message):
-        """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
+def parse_wgsl_error(message):
+    """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
 
-        err_msg = ["\n"]
+    err_msg = ["\n"]
 
-        match = self.shader_error_tmpl.match(message)
+    match = _wgsl_error_tmpl.match(message)
 
-        if match:
-            error_type = match.group(1)
-            source = match.group(2)
-            source = source.replace("\\t", " ")
-            label = match.group(3)
-            # inner_error_type = match.group(4)
-            inner_error = match.group(5)
-            err_msg.append(color_string(33, f"Shader error: label: {label}"))
+    if match:
+        error_type = match.group(1)
+        source = match.group(2)
+        source = source.replace("\\t", " ")
+        label = match.group(3)
+        # inner_error_type = match.group(4)
+        inner_error = match.group(5)
+        err_msg.append(color_string(33, f"Shader error: label: {label}"))
 
-            if error_type and inner_error:
+        if error_type and inner_error:
 
-                if error_type == "Parsing":
-                    match2 = self.inner_parsing_error_tmpl.match(inner_error)
-                    if match2:
-                        err_msg.append(
-                            color_string(33, f"Parsing error: {match2.group(1)}")
-                        )
-                        start = int(match2.group(2))
-                        end = int(match2.group(3))
-                        label = match2.group(4)
-                        note = match2.group(5)
-                        err_msg += self._extract_line(source, start, end, label, note)
-                    else:
-                        err_msg += [color_string(33, inner_error)]
+            if error_type == "Parsing":
+                match2 = _wgsl_inner_parsing_error_tmpl.match(inner_error)
+                if match2:
+                    err_msg.append(
+                        color_string(33, f"Parsing error: {match2.group(1)}")
+                    )
+                    start = int(match2.group(2))
+                    end = int(match2.group(3))
+                    label = match2.group(4)
+                    note = match2.group(5)
+                    err_msg += _wgsl_parse_extract_line(source, start, end, label, note)
+                else:
+                    err_msg += [color_string(33, inner_error)]
 
-                elif error_type == "Validation":
-                    match2 = self.inner_validation_error_tmpl.match(inner_error)
-                    if match2:
-                        error = match2.group(4)
-                        err_msg.append(color_string(33, f"Validation error: {error}"))
-                        start = int(match2.group(5))
-                        end = int(match2.group(6))
-                        error_match = self.inner_validation_error_info.search(error)
-                        label = error_match.group(1) if error_match else error
-                        note = ""
-                        err_msg += self._extract_line(source, start, end, label, note)
-                    else:
-                        err_msg += [color_string(33, inner_error)]
+            elif error_type == "Validation":
+                match2 = _wgsl_inner_validation_error_tmpl.match(inner_error)
+                if match2:
+                    error = match2.group(4)
+                    err_msg.append(color_string(33, f"Validation error: {error}"))
+                    start = int(match2.group(5))
+                    end = int(match2.group(6))
+                    error_match = _wgsl_inner_validation_error_info_tmpl.search(error)
+                    label = error_match.group(1) if error_match else error
+                    note = ""
+                    err_msg += _wgsl_parse_extract_line(source, start, end, label, note)
+                else:
+                    err_msg += [color_string(33, inner_error)]
 
-                return "\n".join(err_msg)
+            return "\n".join(err_msg)
 
-        return None  # Does not look like a shader error
+    return None  # Does not look like a shader error
 
-    def _extract_line(self, source, start, end, label, note):
 
-        # Find next newline after the end pos
-        try:
-            next_n = source.index("\n", end)
-        except ValueError:
-            next_n = len(source)
+def _wgsl_parse_extract_line(source, start, end, label, note):
 
-        # Truncate and convert to lines
-        lines = source[:next_n].splitlines(True)
-        line_num = len(lines)
+    # Find next newline after the end pos
+    try:
+        next_n = source.index("\n", end)
+    except ValueError:
+        next_n = len(source)
 
-        # Collect the lines relevant to this error
-        error_lines = []
-        line_pos = start - next_n
-        while line_pos < 0:
+    # Truncate and convert to lines
+    lines = source[:next_n].splitlines(True)
+    line_num = len(lines)
 
-            line = lines[line_num - 1]
-            line_length = len(line)
-            line_pos += line_length
+    # Collect the lines relevant to this error
+    error_lines = []
+    line_pos = start - next_n
+    while line_pos < 0:
 
-            start_pos = line_pos
-            if start_pos < 0:
-                start_pos = 0
-            end_pos = line_length - (next_n - end)
-            if end_pos > line_length:
-                end_pos = line_length
+        line = lines[line_num - 1]
+        line_length = len(line)
+        line_pos += line_length
 
-            error_lines.insert(0, (line_num, line, start_pos, end_pos))
+        start_pos = line_pos
+        if start_pos < 0:
+            start_pos = 0
+        end_pos = line_length - (next_n - end)
+        if end_pos > line_length:
+            end_pos = line_length
 
-            next_n -= line_length
-            line_num -= 1
+        error_lines.insert(0, (line_num, line, start_pos, end_pos))
 
-        def pad_str(s, line_num=None):
-            pad = len(str(len(lines)))
-            if line_num is not None:
-                pad -= len(str(line_num))
-                return f"{' '*pad}{line_num} {s}".rstrip()
-            else:
-                return f"{' '*pad} {s}".rstrip()
+        next_n -= line_length
+        line_num -= 1
 
-        err_msg = [""]
-
-        # Show header
-        if len(error_lines) == 1:
-            prefix = pad_str(color_string(36, "┌─"))
-            err_msg.append(prefix + f" wgsl:{len(lines)}:{line_pos}")
+    def pad_str(s, line_num=None):
+        pad = len(str(len(lines)))
+        if line_num is not None:
+            pad -= len(str(line_num))
+            return f"{' '*pad}{line_num} {s}".rstrip()
         else:
-            prefix = pad_str(color_string(36, "┌─"))
-            err_msg.append(prefix + f" wgsl:{line_num+1}--{len(lines)}")
+            return f"{' '*pad} {s}".rstrip()
 
-        # Add lines
-        err_msg.append(pad_str(color_string(36, "│")))
-        for line_num, line, _, _ in error_lines:
-            prefix = color_string(36, pad_str("│", line_num))
-            err_msg.append(prefix + f" {line}".rstrip())
+    err_msg = [""]
 
-        # Show annotation
-        if len(error_lines) == 1:
-            prefix = pad_str(color_string(36, "│"))
-            annotation = f" {' '*error_lines[0][2] + '^'*(end-start)} {label}"
-            err_msg.append(prefix + color_string(33, annotation))
-        else:
-            prefix = pad_str(color_string(36, "│"))
-            annotation = color_string(33, f" ^^^{label}")
-            err_msg.append(prefix + annotation)
+    # Show header
+    if len(error_lines) == 1:
+        prefix = pad_str(color_string(36, "┌─"))
+        err_msg.append(prefix + f" wgsl:{len(lines)}:{line_pos}")
+    else:
+        prefix = pad_str(color_string(36, "┌─"))
+        err_msg.append(prefix + f" wgsl:{line_num+1}--{len(lines)}")
 
-        err_msg.append(pad_str(color_string(36, "│")))
-        err_msg.append(pad_str(color_string(36, f"= note: {note}".rstrip())))
-        err_msg.append("\n")
+    # Add lines
+    err_msg.append(pad_str(color_string(36, "│")))
+    for line_num, line, _, _ in error_lines:
+        prefix = color_string(36, pad_str("│", line_num))
+        err_msg.append(prefix + f" {line}".rstrip())
 
-        return err_msg
+    # Show annotation
+    if len(error_lines) == 1:
+        prefix = pad_str(color_string(36, "│"))
+        annotation = f" {' '*error_lines[0][2] + '^'*(end-start)} {label}"
+        err_msg.append(prefix + color_string(33, annotation))
+    else:
+        prefix = pad_str(color_string(36, "│"))
+        annotation = color_string(33, f" ^^^{label}")
+        err_msg.append(prefix + annotation)
 
+    err_msg.append(pad_str(color_string(36, "│")))
+    err_msg.append(pad_str(color_string(36, f"= note: {note}".rstrip())))
+    err_msg.append("\n")
 
-_wgsl_error_parser = WgslErrorParser()
-parse_wgsl_error = _wgsl_error_parser.parse
+    return err_msg
+
 
 # The functions below are copied from codegen/utils.py
 
