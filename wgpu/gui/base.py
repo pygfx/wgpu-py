@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import weakref
 import logging
 from contextlib import contextmanager
 import ctypes.util
@@ -39,6 +40,20 @@ def log_exception(kind):
             msg = kind + ": " + msg.split("\n")[0].strip()
             msg = msg if len(msg) <= 70 else msg[:69] + "…"
             logger.error(msg + f" ({count})")
+
+
+def weakbind(method):
+    """Wrap a method so that the instance is held in a weakref."""
+    ref = weakref.ref(method.__self__)
+    class_func = method.__func__
+    del method
+
+    def proxy(*args, **kwargs):
+        self = ref()
+        if self is not None:
+            return class_func(self, *args, **kwargs)
+
+    return proxy
 
 
 class WgpuCanvasInterface:
@@ -123,6 +138,9 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._vsync = bool(vsync)
         self._err_hashes = {}
 
+    def __del__(self):
+        self.close()
+
     def draw_frame(self):
         """The function that gets called at each draw. You can implement
         this method in a subclass, or set it via a call to request_draw().
@@ -178,7 +196,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     def close(self):
         """Close the window."""
-        raise NotImplementedError()
+        pass
 
     def is_closed(self):
         """Get whether the window is closed."""
