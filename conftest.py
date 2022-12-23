@@ -1,6 +1,14 @@
 """Global configuration for pytest"""
+
+import os
+import sys
+
 import numpy as np
 import pytest
+
+
+# Enable importing testutils from all test scripts
+sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "tests")))
 
 
 def pytest_addoption(parser):

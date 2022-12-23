@@ -25,9 +25,7 @@ def setup_module():
 
 
 def teardown_module():
-    import glfw
-
-    glfw.terminate()
+    pass  # Do not glfw.terminate() because other tests may still need glfw
 
 
 def test_is_autogui():

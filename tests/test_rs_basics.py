@@ -656,202 +656,235 @@ def test_write_texture2():
     assert iters_equal(data0, data2)
 
 
-def test_parse_shader_error(caplog):
+dedent = lambda s: s.replace("\n        ", "\n").strip()  # noqa
 
-    device = wgpu.utils.get_default_device()
 
+def test_parse_shader_error1(caplog):
     # test1: invalid attribute access
-    error_source = """
-    struct VertexOutput {
-        @location(0) texcoord : vec2<f32>,
-        @builtin(position) position: vec4<f32>,
-    };
-
-    @stage(vertex)
-    fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
-        var out: VertexOutput;
-        out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
-        return out;
-    }
-    """  # noqa
-
-    with raises(RuntimeError):
-        device.create_shader_module(code=error_source)
-
-    shader_error = caplog.records[0].msg
-
-    assert (
-        shader_error.strip()
-        == """
-Shader error: label:  Some("")
-Parsing error: invalid field accessor `invalid_attr`
-
-
-   ┌─ wgsl:10:12
-   │
-10 │         out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
-   │             ^^^^^^^^^^^^ invalid accessor
-   │
-   = note:
-""".strip()  # noqa
-    )
-
-    # test2: grammar error, expected ',', not ';'
-    error_source = """struct VertexOutput {
-        @location(0) texcoord : vec2<f32>;
-        @builtin(position) position: vec4<f32>,
-    };
-    """  # noqa
-    with raises(RuntimeError):
-        device.create_shader_module(code=error_source)
-
-    shader_error = caplog.records[1].msg
-
-    assert (
-        shader_error.strip()
-        == """
-Shader error: label:  Some("")
-Parsing error: expected ',', found ';'
-
-
-  ┌─ wgsl:2:41
-  │
-2 │         @location(0) texcoord : vec2<f32>;
-  │                                          ^ expected ','
-  │
-  = note: 
-""".strip()  # noqa
-    )
-
-    # test3: grammar error, contains '\t' and (tab),  unknown scalar type: 'f3'
-    error_source = """
-    struct VertexOutput {
-    \t@location(0) texcoord : vec2<f32>,
-    	@builtin(position) position: vec4<f3>,
-    };
-    """  # noqa
-    with raises(RuntimeError):
-        device.create_shader_module(code=error_source)
-
-    shader_error = caplog.records[2].msg
-
-    assert (
-        shader_error.strip()
-        == """
-Shader error: label:  Some("")
-Parsing error: unknown scalar type: 'f3'
-
-
-  ┌─ wgsl:4:39
-  │
-4 │      @builtin(position) position: vec4<f3>,
-  │                                        ^^ unknown scalar type
-  │
-  = note: "Valid scalar types are f16, f32, f64, i8, i16, i32, i64, u8, u16, u32, u64, bool"
-""".strip()  # noqa
-    )
-
-
-def test_validate_shader_error(caplog):
-
     device = wgpu.utils.get_default_device()
 
+    code = """
+        struct VertexOutput {
+            @location(0) texcoord : vec2<f32>,
+            @builtin(position) position: vec4<f32>,
+        };
+
+        @stage(vertex)
+        fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
+            var out: VertexOutput;
+            out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
+            return out;
+        }
+    """
+
+    expected = """
+        Shader error: label:  Some("")
+        Parsing error: invalid field accessor `invalid_attr`
+
+          ┌─ wgsl:9:8
+          │
+        9 │     out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
+          │         ^^^^^^^^^^^^ invalid accessor
+          │
+          = note:
+    """
+
+    code = dedent(code)
+    expected = dedent(expected)
+
+    with raises(RuntimeError):
+        device.create_shader_module(code=code)
+
+    error = caplog.records[0].msg.strip()
+    assert error == expected, f"Expected:\n\n{expected}"
+
+
+def test_parse_shader_error2(caplog):
+    # test2: grammar error, expected ',', not ';'
+    device = wgpu.utils.get_default_device()
+
+    code = """
+        struct VertexOutput {
+            @location(0) texcoord : vec2<f32>;
+            @builtin(position) position: vec4<f32>,
+        };
+    """
+
+    expected = """
+        Shader error: label:  Some("")
+        Parsing error: expected ',', found ';'
+
+          ┌─ wgsl:2:37
+          │
+        2 │     @location(0) texcoord : vec2<f32>;
+          │                                      ^ expected ','
+          │
+          = note:
+    """
+
+    code = dedent(code)
+    expected = dedent(expected)
+
+    with raises(RuntimeError):
+        device.create_shader_module(code=code)
+
+    error = caplog.records[0].msg.strip()
+    assert error == expected, f"Expected:\n\n{expected}"
+
+
+def test_parse_shader_error3(caplog):
+    # test3: grammar error, contains '\t' and (tab),  unknown scalar type: 'f3'
+    device = wgpu.utils.get_default_device()
+
+    code = """
+        struct VertexOutput {
+            @location(0) texcoord : vec2<f32>,
+            @builtin(position) position: vec4<f3>,
+        };
+    """
+
+    expected = """
+        Shader error: label:  Some("")
+        Parsing error: unknown scalar type: 'f3'
+
+          ┌─ wgsl:3:38
+          │
+        3 │     @builtin(position) position: vec4<f3>,
+          │                                       ^^ unknown scalar type
+          │
+          = note: "Valid scalar types are f16, f32, f64, i8, i16, i32, i64, u8, u16, u32, u64, bool"
+    """
+
+    code = dedent(code)
+    expected = dedent(expected)
+
+    with raises(RuntimeError):
+        device.create_shader_module(code=code)
+
+    error = caplog.records[0].msg.strip()
+    assert error == expected, f"Expected:\n\n{expected}"
+
+
+def test_parse_shader_error4(caplog):
+    # test4: no line info available - hopefully Naga produces better error messages soon?
+    device = wgpu.utils.get_default_device()
+
+    code = """
+        fn foobar() {
+            let m = mat2x2<f32>(0.0, 0.0, 0.0, 0.);
+            let scales = m[4];
+        }
+    """
+
+    expected = """
+        Shader error: label:  Some("")
+        { message: "Index 4 is out of bounds for expression [7]", labels: [], notes: [] }
+    """
+
+    code = dedent(code)
+    expected = dedent(expected)
+
+    with raises(RuntimeError):
+        device.create_shader_module(code=code)
+
+    error = caplog.records[0].msg.strip()
+    assert error == expected, f"Expected:\n\n{expected}"
+
+
+def test_validate_shader_error1(caplog):
     # test1: Validation error, mat4x4 * vec3
-    error_source = """
-    struct VertexOutput {
-        @location(0) texcoord : vec2<f32>,
-        @builtin(position) position: vec3<f32>,
-    };
+    device = wgpu.utils.get_default_device()
 
-    @stage(vertex)
-    fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
-        var out: VertexOutput;
-        var matrix: mat4x4<f32>;
-        out.position = matrix * out.position;
-        return out;
-    }
-    """  # noqa
+    code = """
+        struct VertexOutput {
+            @location(0) texcoord : vec2<f32>,
+            @builtin(position) position: vec3<f32>,
+        };
+
+        @stage(vertex)
+        fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
+            var out: VertexOutput;
+            var matrix: mat4x4<f32>;
+            out.position = matrix * out.position;
+            return out;
+        }
+    """
+
+    expected1 = """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, width: 4 }"""
+    expected2 = """Right: Load { pointer: [6] } of type Vector { size: Tri, kind: Float, width: 4 }"""
+    expected3 = """
+        Shader error: label:  Some("")
+        Validation error: Function(Expression { handle: [8], error: InvalidBinaryOperandTypes(Multiply, [5], [7]) })
+
+           ┌─ wgsl:10:18
+           │
+        10 │     out.position = matrix * out.position;
+           │                   ^^^^^^^^^^^^^^^^^^^^^^ InvalidBinaryOperandTypes(Multiply, [5], [7])
+           │
+           = note:
+    """
+
+    code = dedent(code)
+    expected3 = dedent(expected3)
+
     with raises(RuntimeError):
-        device.create_shader_module(code=error_source)
+        device.create_shader_module(code=code)
 
     # skip error info
-    assert (
-        caplog.records[0].msg
-        == """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, width: 4 }"""
-    )
-    assert (
-        caplog.records[1].msg
-        == """Right: Load { pointer: [6] } of type Vector { size: Tri, kind: Float, width: 4 }"""
-    )
-
-    shader_error = caplog.records[2].msg
-
-    assert (
-        shader_error.strip()
-        == """
-Shader error: label:  Some("")
-Validation error: Function(Expression { handle: [8], error: InvalidBinaryOperandTypes(Multiply, [5], [7]) })
+    assert caplog.records[0].msg == expected1
+    assert caplog.records[1].msg == expected2
+    assert caplog.records[2].msg.strip() == expected3, f"Expected:\n\n{expected3}"
 
 
-   ┌─ wgsl:11:22
-   │
-11 │         out.position = matrix * out.position;
-   │                       ^^^^^^^^^^^^^^^^^^^^^^ InvalidBinaryOperandTypes(Multiply, [5], [7])
-   │
-   = note:
-""".strip()  # noqa
-    )
-
+def test_validate_shader_error2(caplog):
     # test2: Validation error, multiple line error, return type mismatch
-    error_source = """
-struct Varyings {
-    @builtin(position) position : vec4<f32>,
-    @location(0) uv : vec2<f32>,
-};
+    device = wgpu.utils.get_default_device()
 
-fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
-    if (in.uv.x > 0.5) {
-        return vec3<f32>(1.0, 0.0, 1.0);
-    } else {
-        return vec3<f32>(0.0, 1.0, 1.0);
-    }
-}
+    code = """
+        struct Varyings {
+            @builtin(position) position : vec4<f32>,
+            @location(0) uv : vec2<f32>,
+        };
 
-"""  # noqa
+        fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
+            if (in.uv.x > 0.5) {
+                return vec3<f32>(1.0, 0.0, 1.0);
+            } else {
+                return vec3<f32>(0.0, 1.0, 1.0);
+            }
+        }
+    """
+
+    expected1 = """Returning Some(Vector { size: Tri, kind: Float, width: 4 }) where Some(Vector { size: Quad, kind: Float, width: 4 }) is expected"""
+    expected2 = """
+        Shader error: label:  Some("")
+        Validation error: InvalidReturnType(Some([9]))
+
+           ┌─ wgsl:4--12
+           │
+         4 │ };
+         5 │
+         6 │ fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
+         7 │     if (in.uv.x > 0.5) {
+         8 │         return vec3<f32>(1.0, 0.0, 1.0);
+         9 │     } else {
+        10 │         return vec3<f32>(0.0, 1.0, 1.0);
+        11 │     }
+        12 │ }
+           │ ^^^InvalidReturnType(Some([9]))
+           │
+           = note:
+    """
+
+    code = dedent(code)
+    expected2 = dedent(expected2)
+
     with raises(RuntimeError):
-        device.create_shader_module(code=error_source)
+        device.create_shader_module(code=code)
 
     # skip error info
-    assert (
-        caplog.records[3].msg
-        == """Returning Some(Vector { size: Tri, kind: Float, width: 4 }) where Some(Vector { size: Quad, kind: Float, width: 4 }) is expected"""
-    )
-
-    shader_error = caplog.records[4].msg
-
-    assert (
-        shader_error.strip()
-        == """
-Shader error: label:  Some("")
-Validation error: InvalidReturnType(Some([9]))
-
-
-   ┌─ wgsl:5--13
-   │
- 5 │ };
- 6 │ 
- 7 │ fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
- 8 │     if (in.uv.x > 0.5) {
- 9 │         return vec3<f32>(1.0, 0.0, 1.0);
-10 │     } else {
-11 │         return vec3<f32>(0.0, 1.0, 1.0);
-12 │     }
-13 │ }
-   │ ^^^InvalidReturnType(Some([9]))
-   │
-   = note:
-""".strip()  # noqa
-    )
+    assert caplog.records[0].msg == expected1
+    assert caplog.records[1].msg.strip() == expected2, f"Expected:\n\n{expected2}"
 
 
 if __name__ == "__main__":

@@ -47,7 +47,7 @@ from .rs_helpers import (
     get_surface_id_from_canvas,
     get_memoryview_from_address,
     get_memoryview_and_address,
-    parse_wgpu_shader_error,
+    parse_wgsl_error,
     to_snake_case,
     to_camel_case,
     device_dropper,
@@ -573,7 +573,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             message = ffi.string(c_message).decode(errors="ignore")
             message = message.replace("\\n", "\n")
 
-            shader_error = parse_wgpu_shader_error(message)
+            shader_error = parse_wgsl_error(message)
 
             if shader_error:
                 self._on_error(shader_error)
