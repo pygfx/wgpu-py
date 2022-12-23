@@ -47,9 +47,7 @@ else:
                 msg = str(glfw_err)
                 msg += "\n\n  Could not find either glfw or Qt framework."
                 msg += "\n  Install glfw using e.g. ``pip install -U glfw``,"
-                msg += (
-                    "\n  or install a qt framework using e.g. ``pip install -U pyside6``."
-                )
+                msg += "\n  or install a qt framework using e.g. ``pip install -U pyside6``."
                 if sys.platform.startswith("linux"):
                     msg += "\n  You may also need to run the equivalent of ``apt install libglfw3``."
                 raise ImportError(msg) from None
