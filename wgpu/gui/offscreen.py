@@ -11,9 +11,9 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
     method to perform a draw and get the result.
     """
 
-    def __init__(self, *args, width=640, height=480, pixel_ratio=1, **kwargs):
+    def __init__(self, *args, size=None, pixel_ratio=1, **kwargs):
         super().__init__(*args, **kwargs)
-        self._logical_size = width, height
+        self._logical_size = (float(size[0]), float(size[1])) if size else (640, 480)
         self._pixel_ratio = pixel_ratio
         self._closed = False
 
