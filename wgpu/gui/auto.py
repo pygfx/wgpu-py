@@ -32,21 +32,24 @@ else:
     try:
         from .glfw import WgpuCanvas, run, call_later  # noqa
     except ImportError as glfw_err:
-        for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
-            try:
-                importlib.import_module(libname)
+        qt_backends = ("PySide6", "PyQt6", "PySide2", "PyQt5")
+        for backend in qt_backends:
+            if backend in sys.modules:
                 break
-            except ModuleNotFoundError:
-                pass
         else:
-            msg = str(glfw_err)
-            msg += "\n\n  Could not find either glfw or Qt framework."
-            msg += "\n  Install glfw using e.g. ``pip install -U glfw``,"
-            msg += (
-                "\n  or install a qt framework using e.g. ``pip install -U pyside6``."
-            )
-            if sys.platform.startswith("linux"):
-                msg += "\n  You may also need to run the equivalent of ``apt install libglfw3``."
-            raise ImportError(msg) from None
+            for libname in qt_backends:
+                try:
+                    importlib.import_module(libname)
+                    break
+                except ModuleNotFoundError:
+                    pass
+            else:
+                msg = str(glfw_err)
+                msg += "\n\n  Could not find either glfw or Qt framework."
+                msg += "\n  Install glfw using e.g. ``pip install -U glfw``,"
+                msg += "\n  or install a qt framework using e.g. ``pip install -U pyside6``."
+                if sys.platform.startswith("linux"):
+                    msg += "\n  You may also need to run the equivalent of ``apt install libglfw3``."
+                raise ImportError(msg) from None
 
         from .qt import WgpuCanvas, run, call_later
