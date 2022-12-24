@@ -53,6 +53,7 @@ def weakbind(method):
         if self is not None:
             return class_func(self, *args, **kwargs)
 
+    proxy.__name__ = class_func.__name__
     return proxy
 
 
