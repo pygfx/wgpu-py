@@ -3,6 +3,7 @@ Test the force offscreen auto gui mechanism.
 """
 
 import os
+import weakref
 
 import wgpu.backends.rs  # noqa
 from pytest import fixture, skip
@@ -49,3 +50,15 @@ def test_event_loop():
     run()
 
     assert ran
+
+
+def test_offscreen_canvas_del():
+
+    from wgpu.gui.offscreen import WgpuCanvas
+
+    canvas = WgpuCanvas()
+    ref = weakref.ref(canvas)
+
+    assert ref() is not None
+    del canvas
+    assert ref() is None

@@ -3,11 +3,11 @@ Support for rendering in a Qt widget. Provides a widget subclass that
 can be used as a standalone window or in a larger GUI.
 """
 
+import sys
 import ctypes
 import importlib
-import sys
 
-from .base import WgpuCanvasBase, WgpuAutoGui
+from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
 
 
 # Select GUI toolkit
@@ -192,7 +192,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             self._request_draw_timer.start(int(self._get_draw_wait_time() * 1000))
 
     def close(self):
-        super().close()
+        QtWidgets.QWidget.close(self)
 
     def is_closed(self):
         return not self.isVisible()
@@ -323,7 +323,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setMouseTracking(True)
 
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
-        self._subwidget.add_event_handler(self.handle_event, "*")
+        self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -372,7 +372,8 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         return self._subwidget._request_draw()
 
     def close(self):
-        super().close()
+        self._subwidget.close()
+        QtWidgets.QWidget.close(self)
 
     def is_closed(self):
         return not self.isVisible()
