@@ -99,9 +99,15 @@ KEY_MAP = {
 def enable_hidpi():
     """Enable high-res displays."""
     try:
+        set_dpi_aware = QtCore.__version_info__ < (6, 4)
+    except Exception:
+        set_dpi_aware = True
+    try:
         # See https://github.com/pyzo/pyzo/pull/700 why we seem to need both
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor dpi aware
+        # See https://github.com/pygfx/pygfx/issues/368 for high Qt versions
+        if set_dpi_aware:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor dpi aware
     except Exception:
         pass  # fail on non-windows
     try:
