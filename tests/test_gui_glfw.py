@@ -6,6 +6,7 @@ like the swap chain.
 import os
 import sys
 import time
+import weakref
 import asyncio
 
 import wgpu.backends.rs  # noqa
@@ -61,6 +62,30 @@ def test_glfw_canvas_basics():
         canvas.close()
         glfw.poll_events()
         assert canvas.is_closed()
+
+
+def test_glfw_canvas_del():
+
+    from wgpu.gui.glfw import WgpuCanvas, update_glfw_canvasses
+    import glfw
+
+    loop = asyncio.get_event_loop()
+
+    async def miniloop():
+        for i in range(10):
+            glfw.poll_events()
+            update_glfw_canvasses()
+            await asyncio.sleep(0.01)
+
+    canvas = WgpuCanvas()
+    ref = weakref.ref(canvas)
+
+    assert ref() is not None
+    loop.run_until_complete(miniloop())
+    assert ref() is not None
+    del canvas
+    loop.run_until_complete(miniloop())
+    assert ref() is None
 
 
 shader_source = """

@@ -170,5 +170,40 @@ def test_autogui_mixin():
     assert events == [1, 2, 5]
 
 
+def test_weakbind():
+
+    weakbind = wgpu.gui.base.weakbind
+
+    xx = []
+
+    class Foo:
+        def bar(self):
+            xx.append(1)
+
+    f1 = Foo()
+    f2 = Foo()
+
+    b1 = f1.bar
+    b2 = weakbind(f2.bar)
+
+    assert len(xx) == 0
+    b1()
+    assert len(xx) == 1
+    b2()
+    assert len(xx) == 2
+
+    del f1
+    del f2
+
+    # May be needed (on pypy?) to force a collection
+    # gc.collect()
+
+    assert len(xx) == 2
+    b1()
+    assert len(xx) == 3  # f1 still exists
+    b2()
+    assert len(xx) == 3  # f2 is gone!
+
+
 if __name__ == "__main__":
     run_tests(globals())
