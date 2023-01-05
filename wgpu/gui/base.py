@@ -43,7 +43,7 @@ def log_exception(kind):
 
 
 def weakbind(method):
-    """Wrap a method so that the instance is held in a weakref."""
+    """Replace a bound method with a callable object that stores the `self` using a weakref."""
     ref = weakref.ref(method.__self__)
     class_func = method.__func__
     del method
