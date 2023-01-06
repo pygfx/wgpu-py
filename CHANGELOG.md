@@ -18,6 +18,32 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.8.3] - 06-01-2023
+
+Fixed:
+
+* Prevent Qt warning about setting dpi awareness (#320)
+* Make canvases close when they get deleted (#319)
+* Fix qt canvas in ipython (#315)
+* Make offscreen canvas closable (#309)
+* Fix that the offscreen canvas had it size hardcoded, ignoring the given size (#317)
+* Fixed renaming of `queue` in docs (#308)
+* Fix using `.draw_frame` on qt canvas (#304)
+* Add missing dev dependencies (#295)
+
+Added:
+
+* A shadertoy utility, plus examples (#312)
+
+Changed:
+
+* Improve the error prompt when wgsl code is multi line error (#311, #316)
+* Tests: execute examples in the test process (#310)
+* Package only the release binary (not the debug build) (#299)
+* Codegen: uses in-memory file system during code generation (#303)
+* Improve readme (#290, #302, #314)
+
+
 ### [v0.8.2] - 06-10-2022
 
 Fixed:
