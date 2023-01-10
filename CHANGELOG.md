@@ -18,6 +18,14 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.8.4] - 10-01-2023
+
+Fixed:
+
+* The offscreen canvas's mainloop prevents leaking callbacks better (#322)
+* Prevent error messages when Qt examples/apps are closed (#326)
+
+
 ### [v0.8.3] - 06-01-2023
 
 Fixed:
