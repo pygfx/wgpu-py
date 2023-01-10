@@ -66,7 +66,6 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
 
 
 WgpuCanvas = WgpuManualOffscreenCanvas
-WgpuCanvas = WgpuManualOffscreenCanvas
 queued = []
 
 
