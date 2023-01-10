@@ -66,18 +66,21 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
 
 
 WgpuCanvas = WgpuManualOffscreenCanvas
+WgpuCanvas = WgpuManualOffscreenCanvas
+queued = []
 
 
 def call_later(delay, callback, *args):
     loop = asyncio.get_event_loop_policy().get_event_loop()
-    loop.call_later(delay, callback, *args)
+    handle = loop.call_later(delay, callback, *args)
+    queued.insert(0, handle)
 
 
 async def mainloop_iter():
     pass  # no op
 
 
-def run():
+def run(cancel_new=True):
     """Handle all tasks scheduled with call_later and return."""
     # This runs a stub coroutine. It will also run any pending things
     # on the loop, like the draw-event scheduled with request_draw. But
@@ -86,7 +89,9 @@ def run():
     loop = asyncio.get_event_loop_policy().get_event_loop()
     loop.run_until_complete(mainloop_iter())
 
-    # cancel any newly scheduled tasks
-    for t in asyncio.all_tasks(loop=loop):
-        t.cancel()
-    assert len(asyncio.all_tasks(loop=loop)) == 0
+    if cancel_new:
+        while queued:
+            handle = queued.pop()
+            handle.cancel()
+        for t in asyncio.all_tasks(loop=loop):
+            t.cancel()
