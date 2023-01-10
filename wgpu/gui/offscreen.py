@@ -66,13 +66,16 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
 
 
 WgpuCanvas = WgpuManualOffscreenCanvas
-queued = []
 
 
 def call_later(delay, callback, *args):
     loop = asyncio.get_event_loop_policy().get_event_loop()
-    handle = loop.call_later(delay, callback, *args)
-    queued.insert(0, handle)
+    # for the offscreen canvas, we prevent new frames and callbacks
+    # from being queued while the loop is running. this avoids
+    # callbacks from one visualization leaking into the next.
+    if loop.is_running():
+        return
+    loop.call_later(delay, callback, *args)
 
 
 async def mainloop_iter():
@@ -81,15 +84,11 @@ async def mainloop_iter():
 
 def run():
     """Handle all tasks scheduled with call_later and return."""
-    # This runs a stub coroutine. It will also run any pending things
-    # on the loop, like the draw-event scheduled with request_draw. But
-    # it will not handle any *new* events, like the ones scheduled with
-    # calls to request_draw() in the animate function.
+    # This runs the stub coroutine mainloop_iter.
+    # Additionally, asyncio will run all pending callbacks
+    # scheduled with call_later.
     loop = asyncio.get_event_loop_policy().get_event_loop()
     loop.run_until_complete(mainloop_iter())
 
-    while queued:
-        handle = queued.pop()
-        handle.cancel()
     for t in asyncio.all_tasks(loop=loop):
         t.cancel()
