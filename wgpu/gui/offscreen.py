@@ -79,7 +79,7 @@ async def mainloop_iter():
     pass  # no op
 
 
-def run(cancel_new=True):
+def run():
     """Handle all tasks scheduled with call_later and return."""
     # This runs a stub coroutine. It will also run any pending things
     # on the loop, like the draw-event scheduled with request_draw. But
@@ -88,9 +88,8 @@ def run(cancel_new=True):
     loop = asyncio.get_event_loop_policy().get_event_loop()
     loop.run_until_complete(mainloop_iter())
 
-    if cancel_new:
-        while queued:
-            handle = queued.pop()
-            handle.cancel()
-        for t in asyncio.all_tasks(loop=loop):
-            t.cancel()
+    while queued:
+        handle = queued.pop()
+        handle.cancel()
+    for t in asyncio.all_tasks(loop=loop):
+        t.cancel()
