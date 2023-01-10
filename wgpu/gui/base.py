@@ -140,7 +140,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._err_hashes = {}
 
     def __del__(self):
-        self.close()
+        try:
+            self.close()
+        except Exception:
+            pass
 
     def draw_frame(self):
         """The function that gets called at each draw. You can implement
