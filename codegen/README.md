@@ -9,7 +9,7 @@ The purpose of this helper package is to:
 * To validate that our API matches the WebGPU spec, and know where it differs.
 * To validate that our calls into wgpu-native are correct.
 
-We try to hit a balance between automatic code generation and proving
+We try to hit a balance between automatic code generation and providing
 hints to help with manual updating. It should *not* be necessarry to check
 the diffs of `webgpu.idl` or `wgpu.h`; any relevant differences should
 result in changes (of code or annotations) in the respective `.py`
@@ -55,7 +55,7 @@ Next, the Python base API (`base.py`) is updated:
 
 The update process to follow:
 
-* Download the latest `idlparser.py`.
+* Download the latest `webgpu.idl`.
 * Run `python codegen` to apply the automatic patches to the code.
 * Now go through all FIXME comments that were added, and apply any necessary
   changes. Remove the FIXME comment if no further action is needed. Note that all
@@ -115,6 +115,12 @@ The update process to follow:
 
 ## Further tips
 
-* It's probably easier to update relatively often, so that each increment is small.
-* Sometimes certain features or changes are present in WebGPU, but not in wgpu-native. This may result in some manual mappings etc. which make the code less elegant. These hacks are generally temporary though.
-* It's generally recommended to update `webgpu.idl` and `wgpu.h` separately. Though it could also be advantageous to combine them, to avoid the hacky stuff mentioned in the previous point.
+* It's probably easier to update relatively often, so that each
+  increment is small.
+* Sometimes certain features or changes are present in WebGPU, but not
+  in wgpu-native. This may result in some manual mappings etc. which
+  make the code less elegant. These hacks are generally temporary
+  though.
+* It's generally recommended to update `webgpu.idl` and `wgpu.h`
+  separately. Though it could also be advantageous to combine them, to
+  avoid the hacky stuff mentioned in the previous point.
