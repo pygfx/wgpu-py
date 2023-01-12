@@ -175,7 +175,7 @@ def test_compute_in_is_out():
     expected_out = [i * 2 for i in in1]
     buf = (c_int32 * 100)(*in1)
 
-    out = compute_with_buffers({0: buf}, {0: 100*c_int32}, compute_shader)
+    out = compute_with_buffers({0: buf}, {0: 100 * c_int32}, compute_shader)
     assert isinstance(out, dict) and len(out) == 1
     assert isinstance(out[0], ctypes.Array)
     assert out[0] is not buf  # a copy was made
