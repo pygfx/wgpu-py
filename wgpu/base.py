@@ -16,7 +16,7 @@ Developer notes and tips:
 
 import weakref
 import logging
-from typing import List, Dict
+from typing import List, Dict, Union
 
 from ._coreutils import ApiDiff
 from . import flags, enums, structs

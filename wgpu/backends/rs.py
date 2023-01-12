@@ -35,7 +35,7 @@ import ctypes
 import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
-from typing import List, Dict
+from typing import List, Dict, Union
 
 from .. import base, flags, enums, structs
 from .. import _register_backend
