@@ -316,7 +316,7 @@ class GPU(base.GPU):
         # features = feature_flag_to_feature_names(c_features_flag)
         features = ()
 
-        return GPUAdapter("WGPU", adapter_id, features, limits, properties)
+        return GPUAdapter(adapter_id, features, limits, properties)
 
     async def request_adapter_async(self, *, canvas, power_preference=None):
         """Async version of ``request_adapter()``.
@@ -569,6 +569,9 @@ class GPUAdapter(base.GPUAdapter):
     def request_adapter_info(self, unmask_hints=[]):
         # Not yet in wgpu-native, but we do have wgpuAdapterGetProperties
         raise NotImplementedError("Use .properties for now.")
+
+    async def request_adapter_info_async(self, unmask_hints=[]):
+        return self.request_adapter_info(unmask_hints)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
@@ -2314,11 +2317,15 @@ class GPUDeviceLostInfo(base.GPUDeviceLostInfo):
     pass
 
 
-class GPUOutOfMemoryError(base.GPUOutOfMemoryError, Exception):
+class GPUError(base.GPUError, Exception):
     pass
 
 
-class GPUValidationError(base.GPUValidationError, Exception):
+class GPUOutOfMemoryError(base.GPUOutOfMemoryError, GPUError):
+    pass
+
+
+class GPUValidationError(base.GPUValidationError, GPUError):
     pass
 
 
@@ -2348,16 +2355,12 @@ class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):
     pass
 
 
-class GPUError(base.GPUError, Exception):
-    pass
-
-
 class GPUPipelineError(base.GPUPipelineError, Exception):
     def __init__(self, message, options):
         super().__init__(message, options)
 
 
-class GPUInternalError(base.GPUInternalError, Exception):
+class GPUInternalError(base.GPUInternalError, GPUError):
     def __init__(self, message):
         super().__init__(message)
 

@@ -121,6 +121,7 @@ class GPU:
         )  # no-cover
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
+    @apidiff.change("Disabled because we put it on the canvas context.")
     def get_preferred_canvas_format(self):
         """Not implemented in wgpu-py; use ``canvas.get_preferred_format()`` instead.
         The WebGPU spec defines this function, but in wgpu there are different
@@ -208,8 +209,7 @@ class GPUCanvasContext:
 
 
 class GPUAdapterInfo:
-    """An object that provides information about an adapter.
-    """
+    """An object that provides information about an adapter."""
 
     def __init__(self, info):
         self._info
@@ -247,19 +247,12 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
-    def __init__(self, name, internal, features, limits, properties=None):
-        self._name = name
+    def __init__(self, internal, features, limits, properties=None):
         self._features = tuple(sorted(str(x) for x in features))
         self._internal = internal
         self._limits = DEFAULT_ADAPTER_LIMITS.copy()
         self._limits.update(limits)
         self._properties = properties or {}
-
-    @apidiff.add("useful for desktop")
-    @property
-    def name(self):
-        """A human-readable name identifying the adapter."""
-        return self._name
 
     # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
@@ -324,11 +317,12 @@ class GPUAdapter:
 
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo(optional sequence<DOMString> unmaskHints = []);
     def request_adapter_info(self, unmask_hints=[]):
-        """Get information about this adapter. Returns a ``GPUAdapterInfo``. """
+        """Get information about this adapter. Returns a ``GPUAdapterInfo``."""
         raise NotImplementedError()
 
+    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo(optional sequence<DOMString> unmaskHints = []);
     async def request_adapter_info_async(self, unmask_hints=[]):
-        """Async get information about this adapter. Returns a ``GPUAdapterInfo``. """
+        """Async get information about this adapter. Returns a ``GPUAdapterInfo``."""
         raise NotImplementedError()
 
 
@@ -494,6 +488,7 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
+    # IDL: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
     def create_sampler(
         self,
         *,
@@ -1023,28 +1018,28 @@ class GPUTexture(GPUObjectBase):
         super().__init__(label, internal, device)
         self._tex_info = tex_info
 
-    @apidiff.add("Too useful to not-have")
-    @property
-    def size(self):
-        """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
-        return self._tex_info["size"]
+    # @apidiff.add("Too useful to not-have")
+    # @property
+    # def size(self):
+    #     """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
+    #     return self._tex_info["size"]
 
     # IDL: readonly attribute GPUIntegerCoordinate width;
     @property
     def width(self):
-        """ The texture's width. Also see ``.size``."""
+        """The texture's width. Also see ``.size``."""
         return self._tex_info["size"][0]
 
     # IDL: readonly attribute GPUIntegerCoordinate height;
     @property
     def height(self):
-        """ The texture's height. Also see ``.size``."""
+        """The texture's height. Also see ``.size``."""
         return self._tex_info["size"][1]
 
     # IDL: readonly attribute GPUIntegerCoordinate depthOrArrayLayers;
     @property
     def depth_or_array_layers(self):
-        """ The texture's depth or number of layers. Also see ``.size``."""
+        """The texture's depth or number of layers. Also see ``.size``."""
         return self._tex_info["size"][2]
 
     # IDL: readonly attribute GPUIntegerCoordinate mipLevelCount;
@@ -1835,9 +1830,11 @@ class GPUDeviceLostInfo:
 
 class GPUError(Exception):
     """A generic GPU error."""
+
     def __init__(self, message):
         super().__init__(message)
 
+    # IDL: readonly attribute DOMString message;
     @property
     def message(self):
         return self.args[0]
@@ -1845,6 +1842,7 @@ class GPUError(Exception):
 
 class GPUOutOfMemoryError(GPUError):
     """An error raised when the GPU is out of memory."""
+
     # IDL: constructor(DOMString message);
     def __init__(self, message):
         super().__init__(message or "GPU is out of memory.")
@@ -1858,8 +1856,9 @@ class GPUValidationError(GPUError):
         super().__init__(message)
 
 
-class GPUPipelineError(GPUError):
+class GPUPipelineError(Exception):
     """An error representing a pipeline creation failure."""
+
     # IDL: constructor(DOMString message, GPUPipelineErrorInit options);
     def __init__(self, message, options):
         super().__init__(message)
@@ -1876,6 +1875,7 @@ class GPUInternalError(GPUError):
     """An operation failed for a system or implementation-specific
     reason even when all validation requirements have been satisfied.
     """
+
     # IDL: constructor(DOMString message);
     def __init__(self, message):
         super().__init__(message)
