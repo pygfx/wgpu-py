@@ -273,9 +273,10 @@ class IdlParser:
                 while not line.startswith("};"):
                     line = self.read_line()
                     lines.append(line)
-                classname = lines[0].split("{")[0].split(":")[0].split()[-1]
+                classname_raw, _, base_raw = lines[0].split("{")[0].partition(":")
+                classname = classname_raw.split()[-1]
                 # Collect base classes
-                based_on = []
+                based_on = list(base_raw.split())
                 while self.peek_line().startswith(classname + " includes "):
                     line = self.read_line()
                     based_on.append(line.split()[-1].rstrip(";"))
