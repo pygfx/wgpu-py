@@ -14,9 +14,10 @@
 * Diffs for GPUAdapter: add properties
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide pop_error_scope, hide push_error_scope
 * Diffs for GPUBuffer: add map_read, add map_write, hide get_mapped_range, hide map_async, hide unmap
+* Diffs for GPUTexture: add size
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 39 classes, 109 methods, 44 properties
+* Validated 39 classes, 109 methods, 45 properties
 ### Patching API for backends/rs.py
 * Diffs for GPUAdapter: add request_device_tracing
 * Validated 39 classes, 96 methods, 0 properties

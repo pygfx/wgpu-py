@@ -203,7 +203,7 @@ class GPUCanvasContext:
         raise NotImplementedError()
 
     @apidiff.add("Better place to define the preferred format")
-    def get_preferred_format(self):
+    def get_preferred_format(self, adapter):
         """Get the preferred swap chain format."""
         return "bgra8unorm-srgb"  # seems to be a good default
 
@@ -1018,11 +1018,11 @@ class GPUTexture(GPUObjectBase):
         super().__init__(label, internal, device)
         self._tex_info = tex_info
 
-    # @apidiff.add("Too useful to not-have")
-    # @property
-    # def size(self):
-    #     """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
-    #     return self._tex_info["size"]
+    @apidiff.add("Too useful to not-have")
+    @property
+    def size(self):
+        """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
+        return self._tex_info["size"]
 
     # IDL: readonly attribute GPUIntegerCoordinate width;
     @property
@@ -1124,7 +1124,7 @@ class GPUTextureView(GPUObjectBase):
         self._texture = texture
         self._size = size
 
-    @apidiff.add("Too useful to not-have")
+    @apidiff.add("Need to know size e.g. for texture view provided by canvas.")
     @property
     def size(self):
         """The texture size (as a 3-tuple)."""
@@ -1837,6 +1837,7 @@ class GPUError(Exception):
     # IDL: readonly attribute DOMString message;
     @property
     def message(self):
+        """The error message."""
         return self.args[0]
 
 
@@ -1945,11 +1946,13 @@ class GPUQuerySet(GPUObjectBase):
     # IDL: readonly attribute GPUQueryType type;
     @property
     def type(self):
+        """The type of the queries managed by this queryset."""
         raise NotImplementedError()
 
     # IDL: readonly attribute GPUSize32 count;
     @property
     def count(self):
+        """The type of the queries managed by this queryset."""
         raise NotImplementedError()
 
 
