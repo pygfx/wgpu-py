@@ -4,7 +4,7 @@
 
 # flake8: noqa
 
-# There are 231 enum mappings
+# There are 228 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
@@ -51,7 +51,6 @@ enummap = {
     "ErrorFilter.out-of-memory": 1,
     "ErrorFilter.validation": 0,
     "FeatureName.depth-clip-control": 1,
-    "FeatureName.depth24unorm-stencil8": 2,
     "FeatureName.depth32float-stencil8": 3,
     "FeatureName.indirect-first-instance": 9,
     "FeatureName.texture-compression-astc": 8,
@@ -70,7 +69,6 @@ enummap = {
     "MipmapFilterMode.nearest": 0,
     "PowerPreference.high-performance": 2,
     "PowerPreference.low-power": 1,
-    "PredefinedColorSpace.srgb": 1,
     "PrimitiveTopology.line-list": 1,
     "PrimitiveTopology.line-strip": 2,
     "PrimitiveTopology.point-list": 0,
@@ -147,7 +145,6 @@ enummap = {
     "TextureFormat.depth16unorm": 38,
     "TextureFormat.depth24plus": 39,
     "TextureFormat.depth24plus-stencil8": 40,
-    "TextureFormat.depth24unorm-stencil8": 41,
     "TextureFormat.depth32float": 42,
     "TextureFormat.depth32float-stencil8": 43,
     "TextureFormat.eac-r11snorm": 65,

@@ -411,6 +411,10 @@ class GPUObjectBase(base.GPUObjectBase):
     pass
 
 
+class GPUAdapterInfo(base.GPUAdapterInfo):
+    pass
+
+
 class GPUAdapter(base.GPUAdapter):
     def request_device(
         self,
@@ -562,6 +566,10 @@ class GPUAdapter(base.GPUAdapter):
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpuAdapterDrop(internal)
 
+    def request_adapter_info(self, unmask_hints=[]):
+        # Not yet in wgpu-native, but we do have wgpuAdapterGetProperties
+        raise NotImplementedError("Use .properties for now.")
+
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
     def __init__(self, label, internal, adapter, features, limits, queue):
@@ -660,7 +668,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        size: "structs.Extent3D",
+        size: "Union[List[int], structs.Extent3D]",
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: "enums.TextureDimension" = "2d",
@@ -994,7 +1002,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout" = None,
+        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         compute: "structs.ProgrammableStage",
     ):
         check_struct("ProgrammableStage", compute)
@@ -1026,7 +1034,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout" = None,
+        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         compute: "structs.ProgrammableStage",
     ):
         return self.create_compute_pipeline(label=label, layout=layout, compute=compute)
@@ -1035,7 +1043,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout" = None,
+        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         vertex: "structs.VertexState",
         primitive: "structs.PrimitiveState" = {},
         depth_stencil: "structs.DepthStencilState" = None,
@@ -1229,7 +1237,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout" = None,
+        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         vertex: "structs.VertexState",
         primitive: "structs.PrimitiveState" = {},
         depth_stencil: "structs.DepthStencilState" = None,
@@ -1680,6 +1688,7 @@ class GPUCommandEncoder(
         depth_stencil_attachment: "structs.RenderPassDepthStencilAttachment" = None,
         occlusion_query_set: "GPUQuerySet" = None,
         timestamp_writes: "List[structs.RenderPassTimestampWrite]" = [],
+        max_draw_count: int = 50000000,
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.
         for val in timestamp_writes:
@@ -2331,12 +2340,26 @@ class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
             lib.wgpuQuerySetDrop(internal)
 
 
+class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):
+    pass
+
+
 class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):
     pass
 
 
-class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):
+class GPUError(base.GPUError, Exception):
     pass
+
+
+class GPUPipelineError(base.GPUPipelineError, Exception):
+    def __init__(self, message, options):
+        super().__init__(message, options)
+
+
+class GPUInternalError(base.GPUInternalError, Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 
 # %%

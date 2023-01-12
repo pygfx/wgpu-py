@@ -25,12 +25,7 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 33 enums
-
-PredefinedColorSpace = Enum(
-    "PredefinedColorSpace",
-    srgb="srgb",
-)  #:
+# There are 35 enums
 
 PowerPreference = Enum(
     "PowerPreference",
@@ -41,7 +36,6 @@ PowerPreference = Enum(
 FeatureName = Enum(
     "FeatureName",
     depth_clip_control="depth-clip-control",
-    depth24unorm_stencil8="depth24unorm-stencil8",
     depth32float_stencil8="depth32float-stencil8",
     texture_compression_bc="texture-compression-bc",
     texture_compression_etc2="texture-compression-etc2",
@@ -49,6 +43,14 @@ FeatureName = Enum(
     timestamp_query="timestamp-query",
     indirect_first_instance="indirect-first-instance",
     shader_f16="shader-f16",
+    rg11b10ufloat_renderable="rg11b10ufloat-renderable",
+)  #:
+
+BufferMapState = Enum(
+    "BufferMapState",
+    unmapped="unmapped",
+    pending="pending",
+    mapped="mapped",
 )  #:
 
 TextureDimension = Enum(
@@ -118,7 +120,6 @@ TextureFormat = Enum(
     depth24plus="depth24plus",
     depth24plus_stencil8="depth24plus-stencil8",
     depth32float="depth32float",
-    depth24unorm_stencil8="depth24unorm-stencil8",
     depth32float_stencil8="depth32float-stencil8",
     bc1_rgba_unorm="bc1-rgba-unorm",
     bc1_rgba_unorm_srgb="bc1-rgba-unorm-srgb",
@@ -238,6 +239,17 @@ CompilationMessageType = Enum(
     error="error",
     warning="warning",
     info="info",
+)  #:
+
+PipelineErrorReason = Enum(
+    "PipelineErrorReason",
+    validation="validation",
+    internal="internal",
+)  #:
+
+AutoLayoutMode = Enum(
+    "AutoLayoutMode",
+    auto="auto",
 )  #:
 
 PrimitiveTopology = Enum(
@@ -376,8 +388,8 @@ QueryType = Enum(
     timestamp="timestamp",
 )  #:
 
-CanvasCompositingAlphaMode = Enum(
-    "CanvasCompositingAlphaMode",
+CanvasAlphaMode = Enum(
+    "CanvasAlphaMode",
     opaque="opaque",
     premultiplied="premultiplied",
 )  #:
@@ -389,6 +401,7 @@ DeviceLostReason = Enum(
 
 ErrorFilter = Enum(
     "ErrorFilter",
-    out_of_memory="out-of-memory",
     validation="validation",
+    out_of_memory="out-of-memory",
+    internal="internal",
 )  #:
