@@ -216,6 +216,7 @@ class IdlParser:
         elif " or " in name:
             name = name.strip("()")
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
+            names = sorted(set(names))
             return f"'Union[{', '.join(names)}]'"
 
         # Triage
@@ -227,6 +228,8 @@ class IdlParser:
             return "object"  # anything, we ignore this stuff anyway
         elif name in ["OffscreenCanvas"]:
             return "object"
+        elif name in ["PredefinedColorSpace"]:
+            return "str"
         else:
             assert name.startswith("GPU")
             name = name[3:]
