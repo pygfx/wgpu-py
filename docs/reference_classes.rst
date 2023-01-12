@@ -13,6 +13,9 @@ Adapter and device
 
 .. autofunction:: request_adapter_async
 
+.. autoclass:: GPUAdapterInfo
+    :members:
+
 .. autoclass:: GPUAdapter
     :members:
 
@@ -118,10 +121,19 @@ Other
 .. autoclass:: GPUDeviceLostInfo
     :members:
 
+.. autoclass:: GPUError
+    :members:
+
 .. autoclass:: GPUOutOfMemoryError
     :members:
 
 .. autoclass:: GPUValidationError
+    :members:
+
+.. autoclass:: GPUPipelineError
+    :members:
+
+.. autoclass:: GPUInternalError
     :members:
 
 .. autoclass:: GPUCompilationInfo

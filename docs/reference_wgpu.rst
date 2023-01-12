@@ -73,6 +73,7 @@ Alphabetic list of GPU classes
 ------------------------------
 
 * :class:`GPU`
+* :class:`GPUAdapterInfo`
 * :class:`GPUAdapter`
 * :class:`GPUBindGroup`
 * :class:`GPUBindGroupLayout`
@@ -89,10 +90,13 @@ Alphabetic list of GPU classes
 * :class:`GPUDebugCommandsMixin`
 * :class:`GPUDevice`
 * :class:`GPUDeviceLostInfo`
+* :class:`GPUError`
 * :class:`GPUExternalTexture`
+* :class:`GPUInternalError`
 * :class:`GPUObjectBase`
 * :class:`GPUOutOfMemoryError`
 * :class:`GPUPipelineBase`
+* :class:`GPUPipelineError`
 * :class:`GPUPipelineLayout`
 * :class:`GPUQuerySet`
 * :class:`GPUQueue`
@@ -123,6 +127,7 @@ features, limits and properties. To actually start using that harware for comput
 to control your hardware (or software).
 The device is the central object; most other GPU objects are created from it.
 Also see the convenience function :func:`wgpu.utils.get_default_device`.
+Information on the adapter can be obtained using TODO in the form of a :class:`GPUAdapterInfo`.
 
 A device is controlled with a specific backend API. By default one is selected automatically.
 This can be overridden by setting the
@@ -207,8 +212,11 @@ Errors are caught and logged using the ``wgpu`` logger.
 
 Todo: document the role of these classes:
 :class:`GPUUncapturedErrorEvent`
+:class:`GPUError`
 :class:`GPUValidationError`
 :class:`GPUOutOfMemoryError`
+:class:`GPUInternalError`
+:class:`GPUPipelineError`
 :class:`GPUDeviceLostInfo`
 
 TODO
