@@ -154,6 +154,34 @@ def test_compute_1_3():
     assert iters_equal(out[2], range(100))  # because this is the index
 
 
+def test_compute_in_is_out():
+
+    compute_shader = """
+
+        @group(0)
+        @binding(0)
+        var<storage,read_write> data0: array<i32>;
+
+        @stage(compute)
+        @workgroup_size(1)
+        fn main(@builtin(global_invocation_id) index: vec3<u32>) {
+            let i = i32(index.x);
+            data0[i] = data0[i] * 2;
+        }
+    """
+
+    # Create an array of 100 random int32
+    in1 = [int(random.uniform(0, 100)) for i in range(100)]
+    expected_out = [i * 2 for i in in1]
+    buf = (c_int32 * 100)(*in1)
+
+    out = compute_with_buffers({0: buf}, {0: 100*c_int32}, compute_shader)
+    assert isinstance(out, dict) and len(out) == 1
+    assert isinstance(out[0], ctypes.Array)
+    assert out[0] is not buf  # a copy was made
+    assert iters_equal(out[0], expected_out)
+
+
 def test_compute_indirect():
 
     compute_shader = """
