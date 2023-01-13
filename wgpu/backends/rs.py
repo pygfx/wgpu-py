@@ -1304,6 +1304,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             status = status_
 
         # Map it
+        self._map_state = enums.BufferMapState.pending
         # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapCallback callback, void * userdata)
         lib.wgpuBufferMapAsync(
             self._internal, lib.WGPUMapMode_Read, 0, size, callback, ffi.NULL
@@ -1317,6 +1318,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         if status != 0:  # no-cover
             raise RuntimeError(f"Could not read buffer data ({status}).")
+        self._map_state = enums.BufferMapState.mapped
 
         # Copy data
         # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
@@ -1343,6 +1345,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             status = status_
 
         # Map it
+        self._map_state = enums.BufferMapState.pending
         # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapCallback callback, void * userdata)
         lib.wgpuBufferMapAsync(
             self._internal, lib.WGPUMapMode_Write, 0, size, callback, ffi.NULL
@@ -1356,6 +1359,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         if status != 0:  # no-cover
             raise RuntimeError(f"Could not read buffer data ({status}).")
+        self._map_state = enums.BufferMapState.mapped
 
         # Copy data
         # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
@@ -1369,6 +1373,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
     def _unmap(self):
         # H: void f(WGPUBuffer buffer)
         lib.wgpuBufferUnmap(self._internal)
+        self._map_state = enums.BufferMapState.unmapped
 
     def destroy(self):
         self._destroy()  # no-cover

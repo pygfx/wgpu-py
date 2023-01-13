@@ -925,6 +925,7 @@ class GPUBuffer(GPUObjectBase):
         super().__init__(label, internal, device)
         self._size = size
         self._usage = usage
+        self._map_state = enums.BufferMapState.unmapped
 
     # IDL: readonly attribute GPUSize64 size;
     @property
@@ -945,7 +946,7 @@ class GPUBuffer(GPUObjectBase):
     @property
     def map_state(self):
         """The mapping state of the buffer, see ``wgpu.BufferMapState``."""
-        raise NotImplementedError()
+        return self._map_state
 
     # WebGPU specifies an API to sync data with the buffer via mapping.
     # The idea is to (async) request mapped data, read from / write to
