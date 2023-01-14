@@ -76,13 +76,12 @@ def test_base_wgpu_api():
     assert "select a backend" in str(error.value).lower()
 
     # Fake a device and an adapter
-    adapter = wgpu.base.GPUAdapter("adapter07", None, [], {})
+    adapter = wgpu.base.GPUAdapter(None, [], {})
     queue = wgpu.GPUQueue("", None, None)
     device = wgpu.base.GPUDevice("device08", -1, adapter, [42, 43], {}, queue)
 
     assert queue._device is device
 
-    assert adapter.name == "adapter07"
     assert isinstance(adapter.features, tuple)
     assert adapter.features == ()
     assert isinstance(adapter.limits, dict)

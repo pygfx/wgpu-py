@@ -18,6 +18,18 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.9.0]
+
+Changed:
+
+* Aligned API with the latest webgpu.idl.
+
+Added:
+
+* New IDL: texture has new props `weight`, `height`, `depth_or_array_layers`.
+* New IDL: Buffer has new prop `map_state`.
+
+
 ### [v0.8.4] - 10-01-2023
 
 Fixed:

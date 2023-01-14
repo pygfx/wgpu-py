@@ -23,7 +23,7 @@ class Struct:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 58 structs
+# There are 59 structs
 
 RequestAdapterOptions = Struct(
     "RequestAdapterOptions",
@@ -50,7 +50,7 @@ BufferDescriptor = Struct(
 TextureDescriptor = Struct(
     "TextureDescriptor",
     label="str",
-    size="structs.Extent3D",
+    size="Union[List[int], structs.Extent3D]",
     mip_level_count="int",
     sample_count="int",
     dimension="enums.TextureDimension",
@@ -75,7 +75,7 @@ ExternalTextureDescriptor = Struct(
     "ExternalTextureDescriptor",
     label="str",
     source="object",
-    color_space="enums.PredefinedColorSpace",
+    color_space="str",
 )  #:
 
 SamplerDescriptor = Struct(
@@ -150,7 +150,7 @@ BindGroupDescriptor = Struct(
 BindGroupEntry = Struct(
     "BindGroupEntry",
     binding="int",
-    resource="Union[GPUSampler, GPUTextureView, structs.BufferBinding, GPUExternalTexture]",
+    resource="Union[GPUExternalTexture, GPUSampler, GPUTextureView, structs.BufferBinding]",
 )  #:
 
 BufferBinding = Struct(
@@ -166,17 +166,22 @@ PipelineLayoutDescriptor = Struct(
     bind_group_layouts="List[GPUBindGroupLayout]",
 )  #:
 
-ShaderModuleCompilationHint = Struct(
-    "ShaderModuleCompilationHint",
-    layout="GPUPipelineLayout",
-)  #:
-
 ShaderModuleDescriptor = Struct(
     "ShaderModuleDescriptor",
     label="str",
     code="str",
     source_map="dict",
     hints="Dict[str, structs.ShaderModuleCompilationHint]",
+)  #:
+
+ShaderModuleCompilationHint = Struct(
+    "ShaderModuleCompilationHint",
+    layout="Union[GPUPipelineLayout, enums.AutoLayoutMode]",
+)  #:
+
+PipelineErrorInit = Struct(
+    "PipelineErrorInit",
+    reason="enums.PipelineErrorReason",
 )  #:
 
 ProgrammableStage = Struct(
@@ -189,14 +194,14 @@ ProgrammableStage = Struct(
 ComputePipelineDescriptor = Struct(
     "ComputePipelineDescriptor",
     label="str",
-    layout="GPUPipelineLayout",
+    layout="Union[GPUPipelineLayout, enums.AutoLayoutMode]",
     compute="structs.ProgrammableStage",
 )  #:
 
 RenderPipelineDescriptor = Struct(
     "RenderPipelineDescriptor",
     label="str",
-    layout="GPUPipelineLayout",
+    layout="Union[GPUPipelineLayout, enums.AutoLayoutMode]",
     vertex="structs.VertexState",
     primitive="structs.PrimitiveState",
     depth_stencil="structs.DepthStencilState",
@@ -292,16 +297,6 @@ VertexAttribute = Struct(
     shader_location="int",
 )  #:
 
-CommandBufferDescriptor = Struct(
-    "CommandBufferDescriptor",
-    label="str",
-)  #:
-
-CommandEncoderDescriptor = Struct(
-    "CommandEncoderDescriptor",
-    label="str",
-)  #:
-
 ImageDataLayout = Struct(
     "ImageDataLayout",
     offset="int",
@@ -327,9 +322,19 @@ ImageCopyTexture = Struct(
 
 ImageCopyExternalImage = Struct(
     "ImageCopyExternalImage",
-    source="Union[memoryview, object, object]",
+    source="Union[memoryview, object]",
     origin="Union[List[int], structs.Origin2D]",
     flip_y="bool",
+)  #:
+
+CommandBufferDescriptor = Struct(
+    "CommandBufferDescriptor",
+    label="str",
+)  #:
+
+CommandEncoderDescriptor = Struct(
+    "CommandEncoderDescriptor",
+    label="str",
 )  #:
 
 ComputePassTimestampWrite = Struct(
@@ -359,6 +364,7 @@ RenderPassDescriptor = Struct(
     depth_stencil_attachment="structs.RenderPassDepthStencilAttachment",
     occlusion_query_set="GPUQuerySet",
     timestamp_writes="List[structs.RenderPassTimestampWrite]",
+    max_draw_count="int",
 )  #:
 
 RenderPassColorAttachment = Struct(
@@ -424,14 +430,13 @@ CanvasConfiguration = Struct(
     format="enums.TextureFormat",
     usage="flags.TextureUsage",
     view_formats="List[enums.TextureFormat]",
-    color_space="enums.PredefinedColorSpace",
-    compositing_alpha_mode="enums.CanvasCompositingAlphaMode",
-    size="structs.Extent3D",
+    color_space="str",
+    alpha_mode="enums.CanvasAlphaMode",
 )  #:
 
 UncapturedErrorEventInit = Struct(
     "UncapturedErrorEventInit",
-    error="Union[GPUOutOfMemoryError, GPUValidationError]",
+    error="GPUError",
 )  #:
 
 Color = Struct(

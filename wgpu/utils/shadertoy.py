@@ -1,7 +1,10 @@
-import wgpu
 import time
+
 import numpy as np
+
+import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
+
 
 vertex_code = """
 
@@ -93,7 +96,6 @@ uniform_dtype = [
 
 
 class Shadertoy:
-
     """
     The Shadertoy class provides a "screen pixel shader programming interface" similar to `shadertoy <https://www.shadertoy.com/>`_,
     Helps you research and quickly build or test shaders using WGSL via WGPU.

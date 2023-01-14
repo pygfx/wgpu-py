@@ -35,7 +35,7 @@ import ctypes
 import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
-from typing import List, Dict
+from typing import List, Dict, Union
 
 from .. import base, flags, enums, structs
 from .. import _register_backend
@@ -316,7 +316,7 @@ class GPU(base.GPU):
         # features = feature_flag_to_feature_names(c_features_flag)
         features = ()
 
-        return GPUAdapter("WGPU", adapter_id, features, limits, properties)
+        return GPUAdapter(adapter_id, features, limits, properties)
 
     async def request_adapter_async(self, *, canvas, power_preference=None):
         """Async version of ``request_adapter()``.
@@ -408,6 +408,10 @@ class GPUCanvasContext(base.GPUCanvasContext):
 
 
 class GPUObjectBase(base.GPUObjectBase):
+    pass
+
+
+class GPUAdapterInfo(base.GPUAdapterInfo):
     pass
 
 
@@ -562,6 +566,13 @@ class GPUAdapter(base.GPUAdapter):
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpuAdapterDrop(internal)
 
+    def request_adapter_info(self, unmask_hints=[]):
+        # Not yet in wgpu-native, but we do have wgpuAdapterGetProperties
+        raise NotImplementedError("Use .properties for now.")
+
+    async def request_adapter_info_async(self, unmask_hints=[]):
+        return self.request_adapter_info(unmask_hints)
+
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
     def __init__(self, label, internal, adapter, features, limits, queue):
@@ -660,7 +671,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        size: "structs.Extent3D",
+        size: "Union[List[int], structs.Extent3D]",
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: "enums.TextureDimension" = "2d",
@@ -994,7 +1005,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout" = None,
+        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         compute: "structs.ProgrammableStage",
     ):
         check_struct("ProgrammableStage", compute)
@@ -1026,7 +1037,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout" = None,
+        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         compute: "structs.ProgrammableStage",
     ):
         return self.create_compute_pipeline(label=label, layout=layout, compute=compute)
@@ -1035,7 +1046,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout" = None,
+        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         vertex: "structs.VertexState",
         primitive: "structs.PrimitiveState" = {},
         depth_stencil: "structs.DepthStencilState" = None,
@@ -1229,7 +1240,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         self,
         *,
         label="",
-        layout: "GPUPipelineLayout" = None,
+        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         vertex: "structs.VertexState",
         primitive: "structs.PrimitiveState" = {},
         depth_stencil: "structs.DepthStencilState" = None,
@@ -1293,6 +1304,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             status = status_
 
         # Map it
+        self._map_state = enums.BufferMapState.pending
         # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapCallback callback, void * userdata)
         lib.wgpuBufferMapAsync(
             self._internal, lib.WGPUMapMode_Read, 0, size, callback, ffi.NULL
@@ -1306,6 +1318,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         if status != 0:  # no-cover
             raise RuntimeError(f"Could not read buffer data ({status}).")
+        self._map_state = enums.BufferMapState.mapped
 
         # Copy data
         # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
@@ -1332,6 +1345,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             status = status_
 
         # Map it
+        self._map_state = enums.BufferMapState.pending
         # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapCallback callback, void * userdata)
         lib.wgpuBufferMapAsync(
             self._internal, lib.WGPUMapMode_Write, 0, size, callback, ffi.NULL
@@ -1345,6 +1359,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         if status != 0:  # no-cover
             raise RuntimeError(f"Could not read buffer data ({status}).")
+        self._map_state = enums.BufferMapState.mapped
 
         # Copy data
         # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
@@ -1358,6 +1373,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
     def _unmap(self):
         # H: void f(WGPUBuffer buffer)
         lib.wgpuBufferUnmap(self._internal)
+        self._map_state = enums.BufferMapState.unmapped
 
     def destroy(self):
         self._destroy()  # no-cover
@@ -1680,6 +1696,7 @@ class GPUCommandEncoder(
         depth_stencil_attachment: "structs.RenderPassDepthStencilAttachment" = None,
         occlusion_query_set: "GPUQuerySet" = None,
         timestamp_writes: "List[structs.RenderPassTimestampWrite]" = [],
+        max_draw_count: int = 50000000,
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.
         for val in timestamp_writes:
@@ -2305,11 +2322,15 @@ class GPUDeviceLostInfo(base.GPUDeviceLostInfo):
     pass
 
 
-class GPUOutOfMemoryError(base.GPUOutOfMemoryError, Exception):
+class GPUError(base.GPUError, Exception):
     pass
 
 
-class GPUValidationError(base.GPUValidationError, Exception):
+class GPUOutOfMemoryError(base.GPUOutOfMemoryError, GPUError):
+    pass
+
+
+class GPUValidationError(base.GPUValidationError, GPUError):
     pass
 
 
@@ -2331,12 +2352,22 @@ class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
             lib.wgpuQuerySetDrop(internal)
 
 
+class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):
+    pass
+
+
 class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):
     pass
 
 
-class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):
-    pass
+class GPUPipelineError(base.GPUPipelineError, Exception):
+    def __init__(self, message, options):
+        super().__init__(message, options)
+
+
+class GPUInternalError(base.GPUInternalError, GPUError):
+    def __init__(self, message):
+        super().__init__(message)
 
 
 # %%
