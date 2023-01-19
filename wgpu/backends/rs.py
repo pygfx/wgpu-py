@@ -58,8 +58,8 @@ logger = logging.getLogger("wgpu")  # noqa
 apidiff = ApiDiff()
 
 # The wgpu-native version that we target/expect
-__version__ = "0.12.0.1"
-__commit_sha__ = "0ff888a666e6e787af9bc9c9afc35a5055547b5a"
+__version__ = "0.14.2.2"
+__commit_sha__ = "9ec714a39cdb85062d0078906bb2e626c38668b3"
 version_info = tuple(map(int, __version__.split(".")))
 check_expected_version(version_info)  # produces a warning on mismatch
 
