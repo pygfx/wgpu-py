@@ -746,6 +746,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
         # H: WGPUBuffer f(WGPUDevice device, WGPUBufferDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateBuffer(self._internal, struct)
+        # Note that there is lib.wgpuBufferGetSize and lib.wgpuBufferGetUsage,
+        # but we already know these, so they are kindof useless?
         # Return wrapped buffer
         return GPUBuffer(label, id, self, size, usage)
 
@@ -794,6 +796,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         # H: WGPUTexture f(WGPUDevice device, WGPUTextureDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateTexture(self._internal, struct)
 
+        # Note that there are methods (e.g. lib.wgpuTextureGetHeight) to get
+        # the below props, but we know them now, so why bother?
         tex_info = {
             "size": size,
             "mip_level_count": mip_level_count,
