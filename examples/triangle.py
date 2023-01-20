@@ -30,7 +30,7 @@ struct VertexOutput {
     @builtin(position) pos: vec4<f32>,
 };
 
-@stage(vertex)
+@vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     var positions = array<vec2<f32>, 3>(
         vec2<f32>(0.0, -0.5),
@@ -49,7 +49,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     return out;
 }
 
-@stage(fragment)
+@fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let physical_color = pow(in.color.rgb, vec3<f32>(2.2));  // gamma correct
     return vec4<f32>(physical_color, in.color.a);
