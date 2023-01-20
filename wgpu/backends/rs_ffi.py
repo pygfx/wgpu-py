@@ -107,7 +107,8 @@ def check_expected_version(version_info):
 @ffi.callback("void(WGPULogLevel, char *, void *)")
 def _logger_callback(level, c_msg, userdata):
     """Called when Rust emits a log message."""
-    msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
+    # Make a copy of the msg. Rust reclaims the memory when this returns
+    msg = ffi.string(c_msg).decode(errors="ignore")
     m = {
         lib.WGPULogLevel_Error: logger.error,
         lib.WGPULogLevel_Warn: logger.warning,

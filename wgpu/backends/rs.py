@@ -70,9 +70,17 @@ check_expected_version(version_info)  # produces a warning on mismatch
 WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF
 WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFF
 
+NATIVE_FEATURES = (
+    "multi_draw_indirect",
+    "push_constants",
+    "texture_adapter_specific_format_features",
+    "multi_draw_indirect",
+    "multi_draw_indirect_count",
+    "vertex_writable_storage",
+)
+
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
-
 
 # Some enum keys need a shortcut
 _cstructfield2enum_alt = {
@@ -273,7 +281,7 @@ class GPU(base.GPU):
         # todo: when wgpu gets an event loop -> while run wgpu event loop or something
         assert adapter_id is not None
 
-        # ----- Get adapter properties
+        # ----- Get adapter info
 
         # H: nextInChain: WGPUChainedStructOut *, vendorID: int, vendorName: char *, architecture: char *, deviceID: int, name: char *, driverDescription: char *, adapterType: WGPUAdapterType, backendType: WGPUBackendType
         c_properties = new_struct_p(
@@ -292,26 +300,29 @@ class GPU(base.GPU):
         # H: void f(WGPUAdapter adapter, WGPUAdapterProperties * properties)
         lib.wgpuAdapterGetProperties(adapter_id, c_properties)
 
-        properties = {
-            "vendorID": c_properties.vendorID,
-            "deviceID": c_properties.deviceID,
-            "driverDescription": "",
-            "adapterType": enum_int2str["AdapterType"].get(
-                c_properties.adapterType, "unknown"
-            ),
-            "backendType": enum_int2str["BackendType"].get(
-                c_properties.backendType, "unknown"
-            ),
-        }
-        for key in ("name", "vendorName", "architecture"):
+        def to_py_str(key):
             char_p = getattr(c_properties, key)
             if char_p:
-                properties[key] = ffi.string(char_p).decode(errors="ignore")
-        properties = {k: properties[k] for k in sorted(properties)}
+                return ffi.string(char_p).decode(errors="ignore")
+            return ""
+
+        adapter_info = {
+            "vendor": to_py_str("vendorName"),
+            "architecture": to_py_str("architecture"),
+            "device": to_py_str("name"),
+            "description": to_py_str("driverDescription"),
+            "adapter_type": enum_int2str["AdapterType"].get(
+                c_properties.adapterType, "unknown"
+            ),
+            "backend_type": enum_int2str["BackendType"].get(
+                c_properties.backendType, "unknown"
+            ),
+            # "vendor_id": c_properties.vendorID,
+            # "device_id": c_properties.deviceID,
+        }
 
         # ----- Get adapter limits
 
-        # Get limits
         # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
         c_supported_limits = new_struct_p(
             "WGPUSupportedLimits *",
@@ -321,17 +332,28 @@ class GPU(base.GPU):
         c_limits = c_supported_limits.limits
         # H: bool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
         lib.wgpuAdapterGetLimits(adapter_id, c_supported_limits)
-        limits = {to_snake_case(key): getattr(c_limits, key) for key in dir(c_limits)}
-        limits = {key: val for key, val in limits.items() if val}  # filter zeros
+        limits = {to_snake_case(k): getattr(c_limits, k) for k in sorted(dir(c_limits))}
 
-        # Features are (temporarily? not supported)
-        # c_features_flag = xx.wgpu_adapter_features(adapter_id)  # noqa
-        # features = feature_flag_to_feature_names(c_features_flag)
-        features = ()
+        # ----- Get adapter features
+
+        # WebGPU features
+        features = set()
+        for f in sorted(enums.FeatureName):
+            i = enummap[f"FeatureName.{f}"]
+            # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
+            if lib.wgpuAdapterHasFeature(adapter_id, i):
+                features.add(f)
+
+        # Native features
+        for f in NATIVE_FEATURES:
+            i = getattr(lib, f"WGPUNativeFeature_{f.upper()}")
+            # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
+            if lib.wgpuAdapterHasFeature(adapter_id, i):
+                features.add(f)
 
         # ----- Done
 
-        return GPUAdapter(adapter_id, features, limits, properties)
+        return GPUAdapter(adapter_id, features, limits, adapter_info)
 
     async def request_adapter_async(self, *, canvas, power_preference=None):
         """Async version of ``request_adapter()``.
@@ -477,6 +499,18 @@ class GPUAdapter(base.GPUAdapter):
 
         # ---- Handle features
 
+        assert isinstance(required_features, (tuple, list, set))
+
+        c_features = set()
+        for f in required_features:
+            if not isinstance(f, int):
+                i1 = enummap.get(f"FeatureName.{f}", None)
+                i2 = getattr(lib, f"WGPUNativeFeature_{f.upper()}", None)
+                i = i2 if i1 is None else i1
+                if i is None:
+                    raise KeyError(f"Unknown feature: '{f}'")
+                c_features.add(i)
+
         # Vanilla WGPU does not support interpolating samplers for float32 textures,
         # which is sad for scientific data in particular. We can enable it
         # (on the hardware were wgpu-py likely runs) using the feature:
@@ -485,7 +519,9 @@ class GPUAdapter(base.GPUAdapter):
         builtin_features = [
             lib.WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
         ]
-        required_features = list(required_features) + builtin_features
+        c_features.update(builtin_features)
+
+        c_features = sorted(c_features)  # makes it a list
 
         # ----- Set limits
 
@@ -496,19 +532,21 @@ class GPUAdapter(base.GPUAdapter):
             # not used: limits
         )
         c_limits = c_required_limits.limits
+
         # Set all limits to the adapter default
         # This is important, because zero does NOT mean default, and a limit of zero
         # for a specific limit may break a lot of applications.
         for key, val in self.limits.items():
             setattr(c_limits, to_camel_case(key), val)
+
         # Overload with any set limits
         required_limits = required_limits or {}
         for key, val in required_limits.items():
             setattr(c_limits, to_camel_case(key), val)
 
-        # ---- Set queue
+        # ---- Set queue descriptor
 
-        # Note that the struct QueueDescriptor is currently empty :)
+        # Note that the default_queue arg is a descriptor (dict for QueueDescriptor), but is currently empty :)
         # H: nextInChain: WGPUChainedStruct *, label: char *
         queue_struct = new_struct(
             "WGPUQueueDescriptor",
@@ -537,8 +575,8 @@ class GPUAdapter(base.GPUAdapter):
             "WGPUDeviceDescriptor *",
             label=to_c_label(label),
             nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
-            requiredFeaturesCount=len(required_features),
-            requiredFeatures=ffi.new("WGPUFeatureName []", required_features),
+            requiredFeaturesCount=len(c_features),
+            requiredFeatures=ffi.new("WGPUFeatureName []", c_features),
             requiredLimits=c_required_limits,
             defaultQueue=queue_struct,
         )
@@ -558,9 +596,8 @@ class GPUAdapter(base.GPUAdapter):
 
         assert device_id is not None
 
-        # ----- Get limits
+        # ----- Get device limits
 
-        # Get the actual limits reported by the device
         # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
         c_supported_limits = new_struct_p(
             "WGPUSupportedLimits *",
@@ -570,15 +607,24 @@ class GPUAdapter(base.GPUAdapter):
         c_limits = c_supported_limits.limits
         # H: bool f(WGPUDevice device, WGPUSupportedLimits * limits)
         lib.wgpuDeviceGetLimits(device_id, c_supported_limits)
-        limits = {to_snake_case(key): getattr(c_limits, key) for key in dir(c_limits)}
-        limits = {key: val for key, val in limits.items() if val}  # filter zeros
+        limits = {to_snake_case(k): getattr(c_limits, k) for k in dir(c_limits)}
 
-        # ----- Get features
+        # ----- Get device features
 
-        # Get actual features reported by the device
-        # c_features_flag = xx.wgpu_device_features(device_id)
-        # features = feature_flag_to_feature_names(c_features_flag)
-        features = ()
+        # WebGPU features
+        features = set()
+        for f in sorted(enums.FeatureName):
+            i = enummap[f"FeatureName.{f}"]
+            # H: bool f(WGPUDevice device, WGPUFeatureName feature)
+            if lib.wgpuDeviceHasFeature(device_id, i):
+                features.add(f)
+
+        # Native features
+        for f in NATIVE_FEATURES:
+            i = getattr(lib, f"WGPUNativeFeature_{f.upper()}")
+            # H: bool f(WGPUDevice device, WGPUFeatureName feature)
+            if lib.wgpuDeviceHasFeature(device_id, i):
+                features.add(f)
 
         # ---- Get queue
 
@@ -608,13 +654,6 @@ class GPUAdapter(base.GPUAdapter):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             internal  # doesnotexist.wgpuAdapterDrop(internal)
-
-    def request_adapter_info(self, unmask_hints=[]):
-        # Not yet in wgpu-native, but we do have wgpuAdapterGetProperties
-        raise NotImplementedError("Use .properties for now.")
-
-    async def request_adapter_info_async(self, unmask_hints=[]):
-        return self.request_adapter_info(unmask_hints)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):

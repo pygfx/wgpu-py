@@ -70,27 +70,6 @@ logger = logging.getLogger("wgpu")
 apidiff = ApiDiff()
 
 
-DEFAULT_ADAPTER_LIMITS = {
-    "max_texture_dimension1d": 8192,
-    "max_texture_dimension2d": 8192,
-    "max_texture_dimension3d": 2048,
-    "max_texture_array_layers": 2048,
-    "max_bind_groups": 4,
-    "max_dynamic_uniform_buffers_per_pipeline_layout": 8,
-    "max_dynamic_storage_buffers_per_pipeline_layout": 4,
-    "max_sampled_textures_per_shader_stage": 16,
-    "max_samplers_per_shader_stage": 16,
-    "max_storage_buffers_per_shader_stage": 4,
-    "max_storage_textures_per_shader_stage": 4,
-    "max_uniform_buffers_per_shader_stage": 12,
-    "max_uniform_buffer_binding_size": 16384,
-    "max_storage_buffer_binding_size": 134217728,
-    "max_vertex_buffers": 8,
-    "max_vertex_attributes": 16,
-    "max_vertex_buffer_array_stride": 2048,
-}
-
-
 class GPU:
     """Class that represents the root namespace of the API."""
 
@@ -247,30 +226,28 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
-    def __init__(self, internal, features, limits, properties=None):
-        self._features = tuple(sorted(str(x) for x in features))
+    def __init__(self, internal, features, limits, adapter_info):
         self._internal = internal
-        self._limits = DEFAULT_ADAPTER_LIMITS.copy()
-        self._limits.update(limits)
-        self._properties = properties or {}
+
+        assert isinstance(features, set)
+        assert isinstance(limits, dict)
+        assert isinstance(adapter_info, dict)
+
+        self._features = features
+        self._limits = limits
+        self._adapter_info = adapter_info
 
     # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
     def features(self):
-        """A tuple of supported feature names."""
+        """A set of feature names supported by the adapter."""
         return self._features
 
     # IDL: [SameObject] readonly attribute GPUSupportedLimits limits;
     @property
     def limits(self):
-        """A dict with the adapter limits."""
+        """A dict with limits for the adapter."""
         return self._limits
-
-    @apidiff.add("useful for desktop")
-    @property
-    def properties(self):
-        """A dict with the adapter properties (info on device, backend, etc.)"""
-        return self._properties
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     def request_device(
@@ -313,17 +290,17 @@ class GPUAdapter:
     @property
     def is_fallback_adapter(self):
         """Whether this adapter runs on software (rather than dedicated hardware)."""
-        return self._properties.get("adapterType", "").lower() in ("software", "cpu")
+        return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo(optional sequence<DOMString> unmaskHints = []);
     def request_adapter_info(self, unmask_hints=[]):
-        """Get information about this adapter. Returns a ``GPUAdapterInfo``."""
-        raise NotImplementedError()
+        """Get a dict with information about this adapter, such as the vendor and devicen name."""
+        return self._adapter_info
 
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo(optional sequence<DOMString> unmaskHints = []);
     async def request_adapter_info_async(self, unmask_hints=[]):
-        """Async get information about this adapter. Returns a ``GPUAdapterInfo``."""
-        raise NotImplementedError()
+        """Async get information about this adapter."""
+        return self._adapter_info
 
 
 class GPUObjectBase:
@@ -370,26 +347,27 @@ class GPUDevice(GPUObjectBase):
 
     def __init__(self, label, internal, adapter, features, limits, queue):
         super().__init__(label, internal, None)
+
         assert isinstance(adapter, GPUAdapter)
+        assert isinstance(features, set)
+        assert isinstance(limits, dict)
+
         self._adapter = adapter
-        self._features = tuple(sorted(str(x) for x in features))
-        self._limits = DEFAULT_ADAPTER_LIMITS.copy()
-        self._limits.update(limits)
+        self._features = features
+        self._limits = limits
         self._queue = queue
         queue._device = self  # because it could not be set earlier
 
     # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
     def features(self):
-        """A tuple of strings representing the features (i.e. extensions) with
-        which this device was created.
-        """
+        """A set of feature names supported by this device."""
         return self._features
 
     # IDL: [SameObject] readonly attribute GPUSupportedLimits limits;
     @property
     def limits(self):
-        """A dict exposing the limits with which this device was created."""
+        """A dict with limits for this device."""
         return self._limits
 
     # IDL: [SameObject] readonly attribute GPUQueue queue;
