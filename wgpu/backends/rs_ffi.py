@@ -104,8 +104,8 @@ def check_expected_version(version_info):
         )
 
 
-@ffi.callback("void(WGPULogLevel, char *)")
-def _logger_callback(level, c_msg):
+@ffi.callback("void(WGPULogLevel, char *, void *)")
+def _logger_callback(level, c_msg, userdata):
     """Called when Rust emits a log message."""
     msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
     m = {
@@ -135,7 +135,7 @@ def _logger_set_level_callback(level):
         lib.wgpuSetLogLevel(lib.WGPULogLevel_Off)
 
 
-# Connect Rust logging with Python logging
-lib.wgpuSetLogCallback(_logger_callback)
+# Connect Rust logging with Python logging (userdata set to null)
+lib.wgpuSetLogCallback(_logger_callback, ffi.NULL)
 logger_set_level_callbacks.append(_logger_set_level_callback)
 _logger_set_level_callback(logger.level)

@@ -109,7 +109,7 @@ class GPU:
         """
         # todo: include forceFallbackAdapter arg when this is also correctly applied in wgpu-native (currently its not)
         raise RuntimeError(
-            "Select a backend (by importing wgpu.rs) before requesting an adapter!"
+            "Select a backend (by importing wgpu.backends.rs) before requesting an adapter!"
         )
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});

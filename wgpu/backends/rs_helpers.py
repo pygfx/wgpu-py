@@ -58,6 +58,19 @@ def get_memoryview_from_address(address, nbytes, format="B"):
     return memoryview(c_array).cast(format, shape=(nbytes,))
 
 
+_the_instance = None
+
+
+def get_wgpu_instance():
+    """Get the global wgpu instance."""
+    global _the_instance
+    if _the_instance is None:
+        # H: nextInChain: WGPUChainedStruct *
+        struct = ffi.new("WGPUInstanceDescriptor *")
+        _the_instance = lib.wgpuCreateInstance(struct)
+    return _the_instance
+
+
 def get_surface_id_from_canvas(canvas):
     """Get an id representing the surface to render to. The way to
     obtain this id differs per platform and GUI toolkit.
@@ -150,8 +163,7 @@ def get_surface_id_from_canvas(canvas):
     surface_descriptor.label = ffi.NULL
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
-    instance_id = ffi.NULL
-    return lib.wgpuInstanceCreateSurface(instance_id, surface_descriptor)
+    return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
 
 
 # The function below are copied from "https://github.com/django/django/blob/main/django/core/management/color.py"
