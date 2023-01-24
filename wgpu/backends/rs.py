@@ -1925,7 +1925,7 @@ class GPUCommandEncoder(
             texture=destination["texture"]._internal,
             mipLevel=int(destination.get("mip_level", 0)),
             origin=c_origin,
-            aspect=0,  # all, stencilonly, depthonly, force32
+            aspect=enums.TextureAspect.all,
             # not used: nextInChain
         )
 
@@ -2314,8 +2314,8 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
             texture=destination["texture"]._internal,
             mipLevel=destination.get("mip_level", 0),
             origin=c_origin,
+            aspect=enums.TextureAspect.all,
             # not used: nextInChain
-            # not used: aspect
         )
 
         # H: nextInChain: WGPUChainedStruct *, offset: int, bytesPerRow: int, rowsPerImage: int

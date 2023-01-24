@@ -8,7 +8,6 @@ import numpy as np
 from pytest import skip
 from testutils import run_tests, get_default_device
 from testutils import can_use_wgpu_lib, is_ci
-from renderutils import render_to_texture, render_to_screen  # noqa
 
 
 if not can_use_wgpu_lib:
@@ -346,7 +345,6 @@ def test_compute_tex_3d_rgba8uint():
 
 
 def test_compute_tex_3d_rgba16sint():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_3d<i32>;
@@ -540,16 +538,25 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     )
     assert compute_pipeline.get_bind_group_layout(0) is bind_group_layout
     command_encoder = device.create_command_encoder()
-    command_encoder.copy_buffer_to_texture(
-        {
-            "buffer": buffer,
-            "offset": 0,
-            "bytes_per_row": bpp * nx,
-            "rows_per_image": ny,
-        },
-        {"texture": texture1, "mip_level": 0, "origin": (0, 0, 0)},
-        (nx, ny, nz),
-    )
+
+    if False:  # Upload via alt route (that does not have 256 alignment constraint)
+        device.queue.write_texture(
+            {"texture": texture1},
+            data1,
+            {"bytes_per_row": bpp * nx, "rows_per_image": ny},
+            (nx, ny, nz),
+        )
+    else:
+        command_encoder.copy_buffer_to_texture(
+            {
+                "buffer": buffer,
+                "offset": 0,
+                "bytes_per_row": bpp * nx,
+                "rows_per_image": ny,
+            },
+            {"texture": texture1, "mip_level": 0, "origin": (0, 0, 0)},
+            (nx, ny, nz),
+        )
     compute_pass = command_encoder.begin_compute_pass()
     compute_pass.push_debug_group("foo")
     compute_pass.insert_debug_marker("setting pipeline")
