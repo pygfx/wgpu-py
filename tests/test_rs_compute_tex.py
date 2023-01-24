@@ -28,7 +28,7 @@ def test_compute_tex_1d_rgba8uint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_1d<rgba8uint,write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i: i32 = i32(index.x);
             let color1 = vec4<i32>(textureLoad(r_tex1, i, 0));
@@ -63,7 +63,7 @@ def test_compute_tex_1d_rgba16sint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_1d<rgba16sint,write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i: i32 = i32(index.x);
             let color1 : vec4<i32> = textureLoad(r_tex1, i, 0);
@@ -98,7 +98,7 @@ def test_compute_tex_1d_r32sint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_1d<r32sint, write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i: i32 = i32(index.x);
             let color1 : vec4<i32> = textureLoad(r_tex1, i, 0);
@@ -133,7 +133,7 @@ def test_compute_tex_1d_r32float():
         @group(0) @binding(1)
         var r_tex2: texture_storage_1d<r32float,write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i: i32 = i32(index.x);
             let color1 : vec4<f32> = textureLoad(r_tex1, i, 0);
@@ -171,7 +171,7 @@ def test_compute_tex_2d_rgba8uint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_2d<rgba8uint,write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = vec2<i32>(index.xy);
             let color1 = vec4<i32>(textureLoad(r_tex1, i, 0));
@@ -207,7 +207,7 @@ def test_compute_tex_2d_rgba16sint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_2d<rgba16sint, write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = vec2<i32>(index.xy);
             let color1: vec4<i32> = textureLoad(r_tex1, i, 0);
@@ -242,7 +242,7 @@ def test_compute_tex_2d_r32sint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_2d<r32sint, write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = vec2<i32>(index.xy);
             let color1: vec4<i32> = textureLoad(r_tex1, i, 0);
@@ -278,7 +278,7 @@ def test_compute_tex_2d_r32float():
         @group(0) @binding(1)
         var r_tex2: texture_storage_2d<r32float, write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = vec2<i32>(index.xy);
             let color1: vec4<f32> = textureLoad(r_tex1, i, 0);
@@ -317,7 +317,7 @@ def test_compute_tex_3d_rgba8uint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_3d<rgba8uint,write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = vec3<i32>(index);
             let color1 = vec4<i32>(textureLoad(r_tex1, i, 0));
@@ -354,7 +354,7 @@ def test_compute_tex_3d_rgba16sint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_3d<rgba16sint,write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = vec3<i32>(index);
             let color1: vec4<i32> = textureLoad(r_tex1, i, 0);
@@ -391,7 +391,7 @@ def test_compute_tex_3d_r32sint():
         @group(0) @binding(1)
         var r_tex2: texture_storage_3d<r32sint,write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = vec3<i32>(index);
             let color1: vec4<i32> = textureLoad(r_tex1, i, 0);
@@ -428,7 +428,7 @@ def test_compute_tex_3d_r32float():
         @group(0) @binding(1)
         var r_tex2: texture_storage_3d<r32float,write>;
 
-        @stage(compute) @workgroup_size(1)
+        @compute @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = vec3<i32>(index);
             let color1: vec4<f32> = textureLoad(r_tex1, i, 0);

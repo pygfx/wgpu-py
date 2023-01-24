@@ -33,6 +33,11 @@ class LogCaptureHandler(logging.StreamHandler):
         self.records = []
         self.stream = StringIO()
 
+    @property
+    def text(self):
+        f = logging.Formatter()
+        return "\n".join(f.format(r) for r in self.records)
+
 
 def run_tests(scope):
     """Run all test functions in the given scope."""

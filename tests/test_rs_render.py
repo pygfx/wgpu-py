@@ -19,7 +19,7 @@ elif is_ci and sys.platform == "win32":
 
 
 default_vertex_shader = """
-@stage(vertex)
+@vertex
 fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4<f32> {
     var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
         vec3<f32>(-0.5, -0.5, 0.1),
@@ -45,7 +45,7 @@ def test_render_orange_square():
     # With 0.5 some drivers would produce 127 and others 128.
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -83,7 +83,7 @@ def test_render_orange_square_indexed():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -130,7 +130,7 @@ def test_render_orange_square_indirect():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -172,7 +172,7 @@ def test_render_orange_square_indexed_indirect():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -227,12 +227,12 @@ def test_render_orange_square_vbo():
     device = get_default_device()
 
     shader_source = """
-        @stage(vertex)
+        @vertex
         fn vs_main(@location(0) pos : vec2<f32>) -> @builtin(position) vec4<f32> {
             return vec4<f32>(pos, 0.0, 1.0);
         }
 
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -286,7 +286,7 @@ def test_render_orange_square_color_attachment1():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -331,7 +331,7 @@ def test_render_orange_square_color_attachment2():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -376,7 +376,7 @@ def test_render_orange_square_viewport():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -414,7 +414,7 @@ def test_render_orange_square_scissor():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -454,7 +454,7 @@ def test_render_orange_square_depth():
     device = get_default_device()
 
     shader_source = """
-        @stage(vertex)
+        @vertex
         fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4<f32> {
             var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
                 vec3<f32>(-0.5, -0.5, 0.0),
@@ -466,7 +466,7 @@ def test_render_orange_square_depth():
             return vec4<f32>(p, 1.0);
         }
 
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -558,7 +558,7 @@ def test_render_orange_dots():
             //@builtin(pointSize) point_size: f32,
         };
 
-        @stage(vertex)
+        @vertex
         fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
             var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
                 vec3<f32>(-0.5, -0.5, 0.0),
@@ -572,7 +572,7 @@ def test_render_orange_dots():
             return out;
         }
 
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }

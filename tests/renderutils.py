@@ -17,10 +17,15 @@ def upload_to_texture(device, texture, data, nx, ny, nz):
     # Create a buffer to get the data into the GPU
     buffer = device.create_buffer_with_data(data=data, usage=wgpu.BufferUsage.COPY_SRC)
 
-    # Copy to texture (rows_per_image must only be nonzero for 3D textures)
+    # Copy to texture
     command_encoder = device.create_command_encoder()
     command_encoder.copy_buffer_to_texture(
-        {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
+        {
+            "buffer": buffer,
+            "offset": 0,
+            "bytes_per_row": bpp * nx,
+            "rows_per_image": ny,
+        },
         {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
         (nx, ny, nz),
     )
@@ -38,7 +43,12 @@ def download_from_texture(device, texture, data_type, nx, ny, nz):
     command_encoder = device.create_command_encoder()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
-        {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
+        {
+            "buffer": buffer,
+            "offset": 0,
+            "bytes_per_row": bpp * nx,
+            "rows_per_image": ny,
+        },
         (nx, ny, nz),
     )
     device.queue.submit([command_encoder.finish()])
@@ -178,7 +188,12 @@ def render_to_texture(
     render_pass.end()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
-        {"buffer": buffer, "offset": 0, "bytes_per_row": bpp * nx, "rows_per_image": 0},
+        {
+            "buffer": buffer,
+            "offset": 0,
+            "bytes_per_row": bpp * nx,
+            "rows_per_image": ny,
+        },
         (nx, ny, 1),
     )
     device.queue.submit([command_encoder.finish()])

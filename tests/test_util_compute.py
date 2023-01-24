@@ -20,7 +20,7 @@ simple_compute_shader = """
     @binding(0)
     var<storage,read_write> data2: array<i32>;
 
-    @stage(compute)
+    @compute
     @workgroup_size(1)
     fn main(@builtin(global_invocation_id) index: vec3<u32>) {
         let i: u32 = index.x;
@@ -132,7 +132,7 @@ def test_compute_1_3():
         @binding(2)
         var<storage,read_write> data2: array<i32>;
 
-        @stage(compute)
+        @compute
         @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = i32(index.x);
@@ -162,7 +162,7 @@ def test_compute_in_is_out():
         @binding(0)
         var<storage,read_write> data0: array<i32>;
 
-        @stage(compute)
+        @compute
         @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = i32(index.x);
@@ -193,7 +193,7 @@ def test_compute_indirect():
         @binding(1)
         var<storage,read_write> data2: array<i32>;
 
-        @stage(compute)
+        @compute
         @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = i32(index.x);
@@ -300,7 +300,7 @@ def test_compute_fails():
         @binding(1)
         var<storage,read_write> data2: array<i32>;
 
-        @stage(compute)
+        @compute
         @workgroup_size(1)
         fn main(@builtin(global_invocation_id) index: vec3<u32>) {
             let i = i32(index.x);
