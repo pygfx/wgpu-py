@@ -440,6 +440,7 @@ class GPUCanvasContext(base.GPUCanvasContext):
 
         # Destroy old one
         if self._internal is not None:
+            # H: void f(WGPUSwapChain swapChain)
             lib.wgpuSwapChainDrop(self._internal)
 
         # H: WGPUSwapChain f(WGPUDevice device, WGPUSurface surface, WGPUSwapChainDescriptor const * descriptor)
@@ -450,9 +451,11 @@ class GPUCanvasContext(base.GPUCanvasContext):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
+            # H: void f(WGPUSwapChain swapChain)
             lib.wgpuSwapChainDrop(internal)
         if self._surface_id is not None and lib is not None:
             self._surface_id, surface_id = None, self._surface_id
+            # H: void f(WGPUSurface surface)
             lib.wgpuSurfaceDrop(surface_id)
 
 
@@ -758,7 +761,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
         # H: WGPUBuffer f(WGPUDevice device, WGPUBufferDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateBuffer(self._internal, struct)
-        # Note that there is lib.wgpuBufferGetSize and lib.wgpuBufferGetUsage,
+        # Note that there is wgpuBufferGetSize and wgpuBufferGetUsage,
         # but we already know these, so they are kindof useless?
         # Return wrapped buffer
         return GPUBuffer(label, id, self, size, usage)
@@ -808,7 +811,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         # H: WGPUTexture f(WGPUDevice device, WGPUTextureDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateTexture(self._internal, struct)
 
-        # Note that there are methods (e.g. lib.wgpuTextureGetHeight) to get
+        # Note that there are methods (e.g. wgpuTextureGetHeight) to get
         # the below props, but we know them now, so why bother?
         tex_info = {
             "size": size,
@@ -2230,6 +2233,7 @@ class GPURenderBundleEncoder(
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
+            # H: void f(WGPURenderBundleEncoder renderBundleEncoder)
             lib.wgpuRenderBundleEncoderDrop(internal)
 
 
