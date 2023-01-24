@@ -51,7 +51,7 @@ from .rs_helpers import (
     parse_wgsl_error,
     to_snake_case,
     to_camel_case,
-    device_dropper,
+    delayed_dropper,
 )
 
 
@@ -438,10 +438,22 @@ class GPUCanvasContext(base.GPUCanvasContext):
         if self._surface_id is None:
             self._surface_id = get_surface_id_from_canvas(canvas)
 
+        # Destroy old one
+        if self._internal is not None:
+            lib.wgpuSwapChainDrop(self._internal)
+
         # H: WGPUSwapChain f(WGPUDevice device, WGPUSurface surface, WGPUSwapChainDescriptor const * descriptor)
         self._internal = lib.wgpuDeviceCreateSwapChain(
             self._device._internal, self._surface_id, struct
         )
+
+    def _destroy(self):
+        if self._internal is not None and lib is not None:
+            self._internal, internal = None, self._internal
+            lib.wgpuSwapChainDrop(internal)
+        if self._surface_id is not None and lib is not None:
+            self._surface_id, surface_id = None, self._surface_id
+            lib.wgpuSurfaceDrop(surface_id)
 
 
 class GPUObjectBase(base.GPUObjectBase):
@@ -494,8 +506,8 @@ class GPUAdapter(base.GPUAdapter):
         self, label, required_features, required_limits, default_queue, trace_path
     ):
 
-        # This is a good moment to drop destroyed devices
-        device_dropper.drop_all_pending()
+        # This is a good moment to drop destroyed objects
+        delayed_dropper.drop_all_pending()
 
         # ---- Handle features
 
@@ -653,7 +665,7 @@ class GPUAdapter(base.GPUAdapter):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpuAdapterDrop(internal)
+            delayed_dropper.drop_soon("wgpuAdapterDrop", internal)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
@@ -1346,6 +1358,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
 
     def create_command_encoder(self, *, label=""):
+
         # H: nextInChain: WGPUChainedStruct *, label: char *
         struct = new_struct_p(
             "WGPUCommandEncoderDescriptor *",
@@ -1375,7 +1388,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            device_dropper.drop_soon(internal)
+            delayed_dropper.drop_soon("wgpuDeviceDrop", internal)
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
@@ -2138,7 +2151,7 @@ class GPUComputePassEncoder(
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # doesnotexist.wgpuComputePassDrop(internal)
+            internal  # wgpuComputePassEncoderDrop segfaults, also when delayed
 
 
 class GPURenderPassEncoder(
@@ -2197,6 +2210,11 @@ class GPURenderPassEncoder(
     def end_occlusion_query(self):
         raise NotImplementedError()
 
+    def _destroy(self):
+        if self._internal is not None and lib is not None:
+            self._internal, internal = None, self._internal
+            internal  # wgpuRenderPassEncoderDrop segfaults, also when delayed
+
 
 class GPURenderBundleEncoder(
     base.GPURenderBundleEncoder,
@@ -2208,6 +2226,11 @@ class GPURenderBundleEncoder(
 ):
     def finish(self, *, label=""):
         raise NotImplementedError()
+
+    def _destroy(self):
+        if self._internal is not None and lib is not None:
+            self._internal, internal = None, self._internal
+            lib.wgpuRenderBundleEncoderDrop(internal)
 
 
 class GPUQueue(base.GPUQueue, GPUObjectBase):

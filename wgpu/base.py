@@ -186,6 +186,12 @@ class GPUCanvasContext:
         """Get the preferred swap chain format."""
         return "bgra8unorm-srgb"  # seems to be a good default
 
+    def __del__(self):
+        self._destroy()
+
+    def _destroy(self):
+        pass
+
 
 class GPUAdapterInfo:
     """An object that provides information about an adapter."""
