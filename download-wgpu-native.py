@@ -110,11 +110,11 @@ def main(version, os_string, arch, upstream):
         headerfile2 = "wgpu.h"
         binaryfile = None
         if os_string == "linux":
-            binaryfile = "libwgpu.so"
+            binaryfile = "libwgpu_native.so"
         elif os_string == "macos":
-            binaryfile = "libwgpu.dylib"
+            binaryfile = "libwgpu_native.dylib"
         elif os_string == "windows":
-            binaryfile = "libwgpu.dll"
+            binaryfile = "wgpu_native.dll"
         else:
             raise RuntimeError(f"Platform '{os_string}' not supported")
         root, ext = os.path.splitext(binaryfile)

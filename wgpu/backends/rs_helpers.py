@@ -5,6 +5,7 @@ import re
 
 from .rs_ffi import ffi, lib
 
+
 if sys.platform.startswith("darwin"):
     from rubicon.objc.api import ObjCInstance, ObjCClass
 
@@ -55,6 +56,21 @@ def get_memoryview_from_address(address, nbytes, format="B"):
     # operations, so we always cast it.
     c_array = (ctypes.c_uint8 * nbytes).from_address(address)
     return memoryview(c_array).cast(format, shape=(nbytes,))
+
+
+_the_instance = None
+
+
+def get_wgpu_instance():
+    """Get the global wgpu instance."""
+    # Note, we could also use wgpuInstanceDrop,
+    # but we keep a global instance, so we don't have to.
+    global _the_instance
+    if _the_instance is None:
+        # H: nextInChain: WGPUChainedStruct *
+        struct = ffi.new("WGPUInstanceDescriptor *")
+        _the_instance = lib.wgpuCreateInstance(struct)
+    return _the_instance
 
 
 def get_surface_id_from_canvas(canvas):
@@ -149,8 +165,7 @@ def get_surface_id_from_canvas(canvas):
     surface_descriptor.label = ffi.NULL
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
-    instance_id = ffi.NULL
-    return lib.wgpuInstanceCreateSurface(instance_id, surface_descriptor)
+    return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
 
 
 # The function below are copied from "https://github.com/django/django/blob/main/django/core/management/color.py"
@@ -210,7 +225,7 @@ def _terminal_supports_colors():
 __terminal_supports_colors = _terminal_supports_colors()
 
 
-def _color_string(color, string):
+def color_string(color, string):
     """color: ANSI color code. 33 is yellow, 36 is cyan, etc."""
 
     if not __terminal_supports_colors:
@@ -218,31 +233,33 @@ def _color_string(color, string):
     return f"\033[{color}m{string}\033[0m"
 
 
-__shader_error_tmpl = re.compile(
+_wgsl_error_tmpl = re.compile(
     r'(Parsing|Validation)\(ShaderError { source: "(.*)", label:(.*), inner: (ParseError|WithSpan) (.*) }\)',
     re.M | re.S,
 )
-__inner_parsing_error_tmpl = re.compile(
+
+_wgsl_inner_parsing_error_tmpl = re.compile(
     r'{ message: "(.*)", labels: \[\((\d+)\.\.(\d+), "(.*)"\)\], notes: \[(.*)\] }',
     re.M | re.S,
 )
-__inner_validation_error_tmpl = re.compile(
+
+_wgsl_inner_validation_error_tmpl = re.compile(
     r'{ inner: (.*) { (.*), name: "(.*)", error: (.*) }, spans: \[\(Span { start: (\d+), end: (\d+) }, (.*)\)\] }',
     re.M | re.S,
 )  # TODO: simple error message
 
-__inner_validation_error_info = re.compile(
+_wgsl_inner_validation_error_info_tmpl = re.compile(
     r", error: (.*) [}|,]",
     re.M | re.S,
 )  # TODO: simple error message
 
 
-def parse_wgpu_shader_error(message):
+def parse_wgsl_error(message):
     """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
 
     err_msg = ["\n"]
 
-    match = __shader_error_tmpl.match(message)
+    match = _wgsl_error_tmpl.match(message)
 
     if match:
         error_type = match.group(1)
@@ -251,59 +268,115 @@ def parse_wgpu_shader_error(message):
         label = match.group(3)
         # inner_error_type = match.group(4)
         inner_error = match.group(5)
-        err_msg.append(_color_string(33, f"Shader error: label: {label}"))
+        err_msg.append(color_string(33, f"Shader error: label: {label}"))
 
-        if error_type == "Parsing":
-            match2 = __inner_parsing_error_tmpl.match(inner_error)
-            if match2:
-                err_msg.append(_color_string(33, f"Parsing error: {match2.group(1)}"))
-                start = int(match2.group(2))
-                end = int(match2.group(3))
-                label = match2.group(4)
-                note = match2.group(5)
+        if error_type and inner_error:
 
-        elif error_type == "Validation":
-            match2 = __inner_validation_error_tmpl.match(inner_error)
-            if match2:
-                error = match2.group(4)
-                err_msg.append(_color_string(33, f"Validation error: {error}"))
-                start = int(match2.group(5))
-                end = int(match2.group(6))
-                error_match = __inner_validation_error_info.search(error)
-                label = error_match.group(1) if error_match else error
-                note = ""
-        else:
+            if error_type == "Parsing":
+                match2 = _wgsl_inner_parsing_error_tmpl.match(inner_error)
+                if match2:
+                    err_msg.append(
+                        color_string(33, f"Parsing error: {match2.group(1)}")
+                    )
+                    start = int(match2.group(2))
+                    end = int(match2.group(3))
+                    label = match2.group(4)
+                    note = match2.group(5)
+                    err_msg += _wgsl_parse_extract_line(source, start, end, label, note)
+                else:
+                    err_msg += [color_string(33, inner_error)]
+
+            elif error_type == "Validation":
+                match2 = _wgsl_inner_validation_error_tmpl.match(inner_error)
+                if match2:
+                    error = match2.group(4)
+                    err_msg.append(color_string(33, f"Validation error: {error}"))
+                    start = int(match2.group(5))
+                    end = int(match2.group(6))
+                    error_match = _wgsl_inner_validation_error_info_tmpl.search(error)
+                    label = error_match.group(1) if error_match else error
+                    note = ""
+                    err_msg += _wgsl_parse_extract_line(source, start, end, label, note)
+                else:
+                    err_msg += [color_string(33, inner_error)]
+
             return "\n".join(err_msg)
 
+    return None  # Does not look like a shader error
+
+
+def _wgsl_parse_extract_line(source, start, end, label, note):
+
+    # Find next newline after the end pos
+    try:
         next_n = source.index("\n", end)
-        s = source[:next_n]
-        lines = s.splitlines(True)
-        line_num = len(lines)
-        line = lines[-1]
-        line_pos = start - (next_n - len(line))
+    except ValueError:
+        next_n = len(source)
 
-        def pad_str(s):
-            pad = len(str(line_num))
-            return f"{' '*pad} {s}"
+    # Truncate and convert to lines
+    lines = source[:next_n].splitlines(True)
+    line_num = len(lines)
 
-        err_msg.append("\n")
-        err_msg.append(
-            pad_str(_color_string(36, "┌─")) + f" wgsl:{line_num}:{line_pos}"
-        )
-        err_msg.append(pad_str(_color_string(36, "│")))
-        err_msg.append(_color_string(36, f"{line_num} │") + f" {line}")
-        err_msg.append(
-            pad_str(_color_string(36, "│"))
-            + _color_string(33, f" {' '*line_pos + '^'*(end-start)} {label}")
-        )
-        err_msg.append(pad_str(_color_string(36, "│")))
-        err_msg.append(pad_str(_color_string(36, f"= note: {note}")))
-        err_msg.append("\n\n")
+    # Collect the lines relevant to this error
+    error_lines = []
+    line_pos = start - next_n
+    while line_pos < 0:
 
-        return "\n".join(err_msg)
+        line = lines[line_num - 1]
+        line_length = len(line)
+        line_pos += line_length
 
+        start_pos = line_pos
+        if start_pos < 0:
+            start_pos = 0
+        end_pos = line_length - (next_n - end)
+        if end_pos > line_length:
+            end_pos = line_length
+
+        error_lines.insert(0, (line_num, line, start_pos, end_pos))
+
+        next_n -= line_length
+        line_num -= 1
+
+    def pad_str(s, line_num=None):
+        pad = len(str(len(lines)))
+        if line_num is not None:
+            pad -= len(str(line_num))
+            return f"{' '*pad}{line_num} {s}".rstrip()
+        else:
+            return f"{' '*pad} {s}".rstrip()
+
+    err_msg = [""]
+
+    # Show header
+    if len(error_lines) == 1:
+        prefix = pad_str(color_string(36, "┌─"))
+        err_msg.append(prefix + f" wgsl:{len(lines)}:{line_pos}")
     else:
-        return None
+        prefix = pad_str(color_string(36, "┌─"))
+        err_msg.append(prefix + f" wgsl:{line_num+1}--{len(lines)}")
+
+    # Add lines
+    err_msg.append(pad_str(color_string(36, "│")))
+    for line_num, line, _, _ in error_lines:
+        prefix = color_string(36, pad_str("│", line_num))
+        err_msg.append(prefix + f" {line}".rstrip())
+
+    # Show annotation
+    if len(error_lines) == 1:
+        prefix = pad_str(color_string(36, "│"))
+        annotation = f" {' '*error_lines[0][2] + '^'*(end-start)} {label}"
+        err_msg.append(prefix + color_string(33, annotation))
+    else:
+        prefix = pad_str(color_string(36, "│"))
+        annotation = color_string(33, f" ^^^{label}")
+        err_msg.append(prefix + annotation)
+
+    err_msg.append(pad_str(color_string(36, "│")))
+    err_msg.append(pad_str(color_string(36, f"= note: {note}".rstrip())))
+    err_msg.append("\n")
+
+    return err_msg
 
 
 # The functions below are copied from codegen/utils.py
@@ -341,8 +414,8 @@ def to_camel_case(name):
     return name2
 
 
-class DeviceDropper:
-    """Helps drop devices at a good time."""
+class DelayedDropper:
+    """Helps drop objects at a later time."""
 
     # I found that when wgpuDeviceDrop() was called in Device._destroy,
     # the tests would hang. I found that the drop call was done around
@@ -350,18 +423,18 @@ class DeviceDropper:
     # or shader module). For some reason, the delay in destruction (by
     # Python's CG) causes a deadlock or something. We seem to be able
     # to fix this by doing the actual dropping later - e.g. when the
-    # user creates a new device.
+    # user creates a new device. Seems to be the same for the adapter.
     def __init__(self):
-        self._devices_to_drop = []
+        self._things_to_drop = []
 
-    def drop_soon(self, internal):
-        self._devices_to_drop.append(internal)
+    def drop_soon(self, fun, i):
+        self._things_to_drop.append((fun, i))
 
     def drop_all_pending(self):
-        while self._devices_to_drop:
-            internal = self._devices_to_drop.pop(0)
-            # H: void f(WGPUDevice device)
-            lib.wgpuDeviceDrop(internal)
+        while self._things_to_drop:
+            fun, i = self._things_to_drop.pop(0)
+            drop_fun = getattr(lib, fun)
+            drop_fun(i)
 
 
-device_dropper = DeviceDropper()
+delayed_dropper = DelayedDropper()

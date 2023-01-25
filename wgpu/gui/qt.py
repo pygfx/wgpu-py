@@ -3,11 +3,11 @@ Support for rendering in a Qt widget. Provides a widget subclass that
 can be used as a standalone window or in a larger GUI.
 """
 
+import sys
 import ctypes
 import importlib
-import sys
 
-from .base import WgpuCanvasBase, WgpuAutoGui
+from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
 
 
 # Select GUI toolkit
@@ -99,9 +99,15 @@ KEY_MAP = {
 def enable_hidpi():
     """Enable high-res displays."""
     try:
+        set_dpi_aware = QtCore.__version_info__ < (6, 4)
+    except Exception:
+        set_dpi_aware = True
+    try:
         # See https://github.com/pyzo/pyzo/pull/700 why we seem to need both
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor dpi aware
+        # See https://github.com/pygfx/pygfx/issues/368 for high Qt versions
+        if set_dpi_aware:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor dpi aware
     except Exception:
         pass  # fail on non-windows
     try:
@@ -189,10 +195,10 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def _request_draw(self):
         if not self._request_draw_timer.isActive():
-            self._request_draw_timer.start(self._get_draw_wait_time() * 1000)
+            self._request_draw_timer.start(int(self._get_draw_wait_time() * 1000))
 
     def close(self):
-        super().close()
+        QtWidgets.QWidget.close(self)
 
     def is_closed(self):
         return not self.isVisible()
@@ -323,7 +329,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setMouseTracking(True)
 
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
-        self._subwidget.add_event_handler(self.handle_event, "*")
+        self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -372,7 +378,8 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         return self._subwidget._request_draw()
 
     def close(self):
-        super().close()
+        self._subwidget.close()
+        QtWidgets.QWidget.close(self)
 
     def is_closed(self):
         return not self.isVisible()

@@ -76,21 +76,20 @@ def test_base_wgpu_api():
     assert "select a backend" in str(error.value).lower()
 
     # Fake a device and an adapter
-    adapter = wgpu.base.GPUAdapter("adapter07", None, [], {})
+    adapter = wgpu.base.GPUAdapter(None, set(), {}, {})
     queue = wgpu.GPUQueue("", None, None)
-    device = wgpu.base.GPUDevice("device08", -1, adapter, [42, 43], {}, queue)
+    device = wgpu.base.GPUDevice("device08", -1, adapter, {42, 43}, {}, queue)
 
     assert queue._device is device
 
-    assert adapter.name == "adapter07"
-    assert isinstance(adapter.features, tuple)
-    assert adapter.features == ()
+    assert isinstance(adapter.features, set)
+    assert adapter.features == set()
     assert isinstance(adapter.limits, dict)
-    assert set(device.limits.keys()) == set(wgpu.base.DEFAULT_ADAPTER_LIMITS.keys())
+    assert set(device.limits.keys()) == set()
 
     assert isinstance(device, wgpu.base.GPUObjectBase)
     assert device.label == "device08"
-    assert device.features == ("42", "43")
+    assert device.features == {42, 43}
     assert hex(id(device)) in repr(device)
     assert device.label in repr(device)
 

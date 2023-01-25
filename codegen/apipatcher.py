@@ -282,13 +282,19 @@ class IdlPatcherMixin:
     def get_class_def(self, classname):
         cls = self.idl.classes[classname]
         # Make sure that GPUObjectBase comes last, for MRO
+        ignore = "Event", "EventTarget", "DOMException"
         bases = sorted(cls.bases or [], key=lambda n: n.count("GPUObjectBase"))
+        bases = [b for b in bases if b not in ignore]
         # Cover some special cases
-        bases = f"({', '.join(bases)})" if bases else ""
         if not bases and classname.lower().endswith("error"):
-            bases = "(Exception)"
             if "memory" in classname:
                 bases = "(MemoryError)"
+            else:
+                bases = "(Exception)"
+        elif not bases:
+            bases = ""
+        else:
+            bases = f"({', '.join(bases)})"
         return f"class {classname}{bases}:"
 
     def get_method_def(self, classname, methodname):

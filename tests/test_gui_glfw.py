@@ -6,6 +6,7 @@ like the swap chain.
 import os
 import sys
 import time
+import weakref
 import asyncio
 
 import wgpu.backends.rs  # noqa
@@ -25,9 +26,7 @@ def setup_module():
 
 
 def teardown_module():
-    import glfw
-
-    glfw.terminate()
+    pass  # Do not glfw.terminate() because other tests may still need glfw
 
 
 def test_is_autogui():
@@ -65,15 +64,39 @@ def test_glfw_canvas_basics():
         assert canvas.is_closed()
 
 
+def test_glfw_canvas_del():
+
+    from wgpu.gui.glfw import WgpuCanvas, update_glfw_canvasses
+    import glfw
+
+    loop = asyncio.get_event_loop()
+
+    async def miniloop():
+        for i in range(10):
+            glfw.poll_events()
+            update_glfw_canvasses()
+            await asyncio.sleep(0.01)
+
+    canvas = WgpuCanvas()
+    ref = weakref.ref(canvas)
+
+    assert ref() is not None
+    loop.run_until_complete(miniloop())
+    assert ref() is not None
+    del canvas
+    loop.run_until_complete(miniloop())
+    assert ref() is None
+
+
 shader_source = """
-@stage(vertex)
+@vertex
 fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4<f32> {
     var positions: array<vec2<f32>, 3> = array<vec2<f32>, 3>(vec2<f32>(0.0, -0.5), vec2<f32>(0.5, 0.5), vec2<f32>(-0.5, 0.7));
     let p: vec2<f32> = positions[vertex_index];
     return vec4<f32>(p, 0.0, 1.0);
 }
 
-@stage(fragment)
+@fragment
 fn fs_main() -> @location(0) vec4<f32> {
     return vec4<f32>(1.0, 0.5, 0.0, 1.0);
 }

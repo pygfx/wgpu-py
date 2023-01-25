@@ -11,10 +11,11 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
     method to perform a draw and get the result.
     """
 
-    def __init__(self, *args, width=640, height=480, pixel_ratio=1, **kwargs):
+    def __init__(self, *args, size=None, pixel_ratio=1, **kwargs):
         super().__init__(*args, **kwargs)
-        self._logical_size = width, height
+        self._logical_size = (float(size[0]), float(size[1])) if size else (640, 480)
         self._pixel_ratio = pixel_ratio
+        self._closed = False
 
     def get_pixel_ratio(self):
         return self._pixel_ratio
@@ -31,10 +32,10 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
         self._logical_size = width, height
 
     def close(self):
-        pass
+        self._closed = True
 
     def is_closed(self):
-        return False
+        return self._closed
 
     def _request_draw(self):
         call_later(0, self.draw)
@@ -69,6 +70,11 @@ WgpuCanvas = WgpuManualOffscreenCanvas
 
 def call_later(delay, callback, *args):
     loop = asyncio.get_event_loop_policy().get_event_loop()
+    # for the offscreen canvas, we prevent new frames and callbacks
+    # from being queued while the loop is running. this avoids
+    # callbacks from one visualization leaking into the next.
+    if loop.is_running():
+        return
     loop.call_later(delay, callback, *args)
 
 
@@ -78,9 +84,11 @@ async def mainloop_iter():
 
 def run():
     """Handle all tasks scheduled with call_later and return."""
-    # This runs a stub coroutine. It will also run any pending things
-    # on the loop, like the draw-event scheduled with request_draw. But
-    # it will not handle any *new* events, like the ones scheduled with
-    # calls to request_draw() in the animate function.
+    # This runs the stub coroutine mainloop_iter.
+    # Additionally, asyncio will run all pending callbacks
+    # scheduled with call_later.
     loop = asyncio.get_event_loop_policy().get_event_loop()
     loop.run_until_complete(mainloop_iter())
+
+    for t in asyncio.all_tasks(loop=loop):
+        t.cancel()
