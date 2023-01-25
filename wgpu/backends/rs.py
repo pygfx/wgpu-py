@@ -872,14 +872,19 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             if entry.get("buffer"):
                 info = entry["buffer"]
                 check_struct("BufferBindingLayout", info)
+                min_binding_size = info.get("min_binding_size", None)
+                if min_binding_size is None:
+                    min_binding_size = WGPU_LIMIT_U64_UNDEFINED
+                elif min_binding_size == 0:
+                    raise ValueError(
+                        "min_binding_size should not be 0, use a proper value or None for default."
+                    )
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUBufferBindingType, hasDynamicOffset: bool, minBindingSize: int
                 buffer = new_struct(
                     "WGPUBufferBindingLayout",
                     type=info["type"],
                     hasDynamicOffset=info.get("has_dynamic_offset", False),
-                    minBindingSize=info.get(
-                        "min_binding_size", WGPU_LIMIT_U64_UNDEFINED
-                    ),
+                    minBindingSize=min_binding_size,
                     # not used: nextInChain
                 )
             elif entry.get("sampler"):
@@ -1228,7 +1233,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 passOp=stencil_front.get("pass_op", "keep"),
             )
             stencil_back = depth_stencil.get("stencil_back", {})
-            check_struct("StencilFaceState", stencil_front)
+            check_struct("StencilFaceState", stencil_back)
             # H: compare: WGPUCompareFunction, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
             c_stencil_back = new_struct(
                 "WGPUStencilFaceState",
