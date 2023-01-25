@@ -162,6 +162,10 @@ struct VertexOutput {
     @location(0) texcoord: vec2<f32>,
     @builtin(position) pos: vec4<f32>,
 };
+struct FragmentOutput {
+    @location(0) color : vec4<f32>,
+};
+
 
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
@@ -179,10 +183,12 @@ var r_tex: texture_2d<f32>;
 var r_sampler: sampler;
 
 @fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+fn fs_main(in: VertexOutput) -> FragmentOutput {
     let value = textureSample(r_tex, r_sampler, in.texcoord).r;
     let physical_color = vec3<f32>(pow(value, 2.2));  // gamma correct
-    return vec4<f32>(physical_color.rgb, 1.0);
+    var out: FragmentOutput;
+    out.color = vec4<f32>(physical_color.rgb, 1.0);
+    return out;
 }
 """
 
