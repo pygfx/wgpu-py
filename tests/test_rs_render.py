@@ -448,8 +448,22 @@ def test_render_orange_square_scissor():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_depth():
-    """Render an orange square, but disable half of it using a depth test."""
+def test_render_orange_square_depth16unorm():
+    """Render an orange square, but disable half of it using a depth test using 16 bits."""
+    _render_orange_square_depth(wgpu.TextureFormat.depth16unorm)
+
+
+def test_render_orange_square_depth24plus_stencil8():
+    """Render an orange square, but disable half of it using a depth test using 24 bits."""
+    _render_orange_square_depth(wgpu.TextureFormat.depth24plus_stencil8)
+
+
+def test_render_orange_square_depth32float():
+    """Render an orange square, but disable half of it using a depth test using 32 bits."""
+    _render_orange_square_depth(wgpu.TextureFormat.depth32float)
+
+
+def _render_orange_square_depth(depth_stencil_tex_format):
 
     device = get_default_device()
 
@@ -484,26 +498,26 @@ def test_render_orange_square_depth():
         size=(64, 64, 1),  # when rendering to texture
         # size=(640, 480, 1),  # when rendering to screen
         dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.depth24plus_stencil8,
+        format=depth_stencil_tex_format,
         usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
     )
 
     depth_stencil_state = dict(
-        format=wgpu.TextureFormat.depth24plus_stencil8,
+        format=depth_stencil_tex_format,
         depth_write_enabled=True,
         depth_compare=wgpu.CompareFunction.less_equal,
-        stencil_front={
-            "compare": wgpu.CompareFunction.equal,
-            "fail_op": wgpu.StencilOperation.keep,
-            "depth_fail_op": wgpu.StencilOperation.keep,
-            "pass_op": wgpu.StencilOperation.keep,
-        },
-        stencil_back={
-            "compare": wgpu.CompareFunction.equal,
-            "fail_op": wgpu.StencilOperation.keep,
-            "depth_fail_op": wgpu.StencilOperation.keep,
-            "pass_op": wgpu.StencilOperation.keep,
-        },
+        # stencil_front={
+        #     "compare": wgpu.CompareFunction.equal,
+        #     "fail_op": wgpu.StencilOperation.keep,
+        #     "depth_fail_op": wgpu.StencilOperation.keep,
+        #     "pass_op": wgpu.StencilOperation.keep,
+        # },
+        # stencil_back={
+        #     "compare": wgpu.CompareFunction.equal,
+        #     "fail_op": wgpu.StencilOperation.keep,
+        #     "depth_fail_op": wgpu.StencilOperation.keep,
+        #     "pass_op": wgpu.StencilOperation.keep,
+        # },
         stencil_read_mask=0,
         stencil_write_mask=0,
         depth_bias=0,
