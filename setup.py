@@ -20,11 +20,11 @@ class bdist_wheel(_bdist_wheel):  # noqa: N801
 
 resources_globs = ["*.h", "*.idl"]
 if platform.system() == "Linux":
-    resources_globs.append("libwgpu_native-release.so")
+    resources_globs.append("*-release.so")
 elif platform.system() == "Darwin":
-    resources_globs.append("libwgpu_native-release.dylib")
+    resources_globs.append("*-release.dylib")
 elif platform.system() == "Windows":
-    resources_globs.append("wgpu_native-release.dll")
+    resources_globs.append("*-release.dll")
 else:
     pass  # don't include binaries; user will have to arrange for the lib
 
