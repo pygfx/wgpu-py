@@ -180,7 +180,7 @@ fn getPixel( coord: vec2<f32>, time: f32 ) -> vec3<f32> {
     return mix(
         getSkyColor(dir),
         getSeaColor(p,n,light,dir,dist),
-        pow(smoothStep(0.0,-0.02,dir.y),0.2)
+        pow(smoothstep(0.0,-0.02,dir.y),0.2)
     );
 }
 

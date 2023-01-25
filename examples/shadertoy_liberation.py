@@ -18,13 +18,13 @@ fn rot(a: f32) -> mat2x2<f32> {
     return mat2x2<f32>(c, s, -s, c);
 }
 
-fn mod( x : f32, y : f32 ) -> f32 {
+fn mod1( x : f32, y : f32 ) -> f32 {
     return x - y * floor( x / y );
 }
 
 fn de(pos: vec3<f32>) -> f32 {
-    var t = mod(i_time, 17.0);
-    var a = smoothStep(13.0, 15.0, t) * 8.0 - smoothStep(4.0, 0.0, t) * 4.0;
+    var t = mod1(i_time, 17.0);
+    var a = smoothstep(13.0, 15.0, t) * 8.0 - smoothstep(4.0, 0.0, t) * 4.0;
     var f = sin(i_time * 5.0 + sin(i_time * 20.0) * 0.2);
 
     var pos = pos;
@@ -93,12 +93,12 @@ fn normal(p: vec3<f32>) -> vec3<f32> {
     return normalize( vec3<f32>( de(p + d.yxx), de(p + d.xyx), de(p + d.xxy) ) - de(p) );
 }
 
-fn march(from: vec3<f32>, dir: vec3<f32>, frag_coord: vec2<f32>) -> vec3<f32> {
+fn march(fro: vec3<f32>, dir: vec3<f32>, frag_coord: vec2<f32>) -> vec3<f32> {
     var d = 0.0;
     var td = 0.0;
     var maxdist = 30.0;
 
-    var p = from;
+    var p = fro;
     var col = vec3<f32>(0.0);
     var dir = dir;
 
@@ -128,10 +128,10 @@ fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
     var uv = frag_coord / i_resolution - 0.5;
     uv.x *= i_resolution.x / i_resolution.y;
 
-    var from = vec3<f32>(0.0, 0.0, -10.0);
+    var fro = vec3<f32>(0.0, 0.0, -10.0);
     var dir = normalize(vec3<f32>(uv, 1.0));
 
-    var col = march(from, dir, frag_coord);
+    var col = march(fro, dir, frag_coord);
 
     return vec4<f32>(col, 1.0);
 }

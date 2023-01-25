@@ -24,7 +24,7 @@ fn rot(a: f32) -> mat2x2<f32> {
     return mat2x2<f32>(c, s, -s, c);
 }
 
-fn mod( x : f32, y : f32 ) -> f32 {
+fn mod1( x : f32, y : f32 ) -> f32 {
     return x - y * floor( x / y );
 }
 
@@ -34,7 +34,7 @@ fn mod_2( v: vec2<f32>, y : f32 ) -> vec2<f32> {
 
 fn path(t: f32) -> vec3<f32> {
     var p = vec3<f32>(sin(t*.1)*10., cos(t*.05)*10., t);
-    p.x += smoothStep(.0,.5,abs(.5-fract(t*.02)))*10.;
+    p.x += smoothstep(.0,.5,abs(.5-fract(t*.02)))*10.;
     return p;
 }
 
@@ -81,7 +81,7 @@ fn de(p: vec3<f32>) -> f32 {
 
     let s = sign(p.y);
     p.y = -abs(p.y) - 3.0;
-    p.z = mod(p.z, 20.0) - 10.0;
+    p.z = mod1(p.z, 20.0) - 10.0;
 
     for (var i = 0; i < 5; i+=1) {
         p = abs(p) - 1.0;
@@ -105,7 +105,7 @@ fn de(p: vec3<f32>) -> f32 {
     return d*0.7;
 }
 
-fn march(from: vec3<f32>, dir: vec3<f32>, frag_coord: vec2<f32>) -> vec3<f32> {
+fn march(fro: vec3<f32>, dir: vec3<f32>, frag_coord: vec2<f32>) -> vec3<f32> {
     var p = vec3<f32>(0.);
     var n = vec3<f32>(0.);
     var g = vec3<f32>(0.);
@@ -114,7 +114,7 @@ fn march(from: vec3<f32>, dir: vec3<f32>, frag_coord: vec2<f32>) -> vec3<f32> {
     var td = 0.0;
 
     for (var i = 0; i < 80; i+=1) {
-        p = from + td*dir;
+        p = fro + td*dir;
         d = de(p) * (1.0- hash( frag_coord.xy + vec2<f32>(t) )*0.3);
         if (d < det && boxhit < 0.5) {
             break;
@@ -139,11 +139,11 @@ fn lookat(dir: vec3<f32>, up: vec3<f32>) -> mat3x3<f32> {
 fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
     let uv = (frag_coord-i_resolution.xy*.5)/i_resolution.y;
     t=i_time*7.0;
-    let from=path(t);
+    let fro=path(t);
     adv=path(t+6.+sin(t*.1)*3.);
     let dir=normalize(vec3<f32>(uv, 0.7));
-    let dir=lookat(adv-from, vec3<f32>(0.0, 1.0, 0.0)) * dir;
-    let col=march(from, dir, frag_coord);
+    let dir=lookat(adv-fro, vec3<f32>(0.0, 1.0, 0.0)) * dir;
+    let col=march(fro, dir, frag_coord);
     return vec4<f32>(col,1.0);
 }
 

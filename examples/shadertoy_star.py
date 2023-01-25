@@ -19,7 +19,7 @@ let darkmatter = 0.300;
 let distfading = 0.730;
 let saturation = 0.850;
 
-fn mod( p1 : vec3<f32>, p2 : vec3<f32> ) -> vec3<f32> {
+fn mod3( p1 : vec3<f32>, p2 : vec3<f32> ) -> vec3<f32> {
     let mx = p1.x - p2.x * floor( p1.x / p2.x );
     let my = p1.y - p2.y * floor( p1.y / p2.y );
     let mz = p1.z - p2.z * floor( p1.z / p2.z );
@@ -47,16 +47,16 @@ fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
     dir.x = dir_xy.x;
     dir.y = dir_xy.y;
 
-    var from = vec3<f32>(1.0, 0.5, 0.5);
-    from += vec3<f32>(time * 2.0, time, -2.0);
+    var fro = vec3<f32>(1.0, 0.5, 0.5);
+    fro += vec3<f32>(time * 2.0, time, -2.0);
 
-    let from_xz = from.xz * rot1;
-    from.x = from_xz.x;
-    from.z = from_xz.y;
+    let fro_xz = fro.xz * rot1;
+    fro.x = fro_xz.x;
+    fro.z = fro_xz.y;
 
-    let from_xy = from.xy * rot2;
-    from.x = from_xy.x;
-    from.y = from_xy.y;
+    let fro_xy = fro.xy * rot2;
+    fro.x = fro_xy.x;
+    fro.y = fro_xy.y;
 
     //volumetric rendering
 
@@ -65,8 +65,8 @@ fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
     var v = vec3<f32>(0.0);
 
     for (var r: i32 = 0; r < volsteps; r = r + 1) {
-        var p = from + s * dir * 0.5;
-        p = abs(vec3<f32>(tile) - mod(p, vec3<f32>(tile * 2.0))); // tiling fold
+        var p = fro + s * dir * 0.5;
+        p = abs(vec3<f32>(tile) - mod3(p, vec3<f32>(tile * 2.0))); // tiling fold
         var pa = 0.0;
         var a = 0.0;
         for (var i : i32 = 0; i < iterations; i = i + 1) {

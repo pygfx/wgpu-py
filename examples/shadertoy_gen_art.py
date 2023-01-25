@@ -16,7 +16,7 @@ fn rotate2d(_angle : f32) -> mat2x2<f32> {
     return mat2x2<f32>(cos(_angle),-sin(_angle),sin(_angle),cos(_angle));
 }
 
-fn mod( v: vec2<f32>, y : f32 ) -> vec2<f32> {
+fn mod2( v: vec2<f32>, y : f32 ) -> vec2<f32> {
     return vec2<f32>(v.x - y * floor( v.x / y ), v.y - y * floor( v.y / y ));
 }
 
@@ -26,10 +26,10 @@ fn sdPolygon(angle : f32, distance : f32) -> f32 {
 }
 
 fn getColorComponent( st: vec2<f32>, modScale : f32, blur : f32 ) -> f32 {
-    let modSt = mod(st, 1. / modScale) * modScale * 2. - 1.;
+    let modSt = mod2(st, 1. / modScale) * modScale * 2. - 1.;
     let dist = length(modSt);
     let angle = atan2(modSt.x, modSt.y) + sin(i_time * .08) * 9.0;
-    let shapeMap = smoothStep(SHAPE_SIZE + blur, SHAPE_SIZE - blur, sin(dist * 3.0) * .5 + .5);
+    let shapeMap = smoothstep(SHAPE_SIZE + blur, SHAPE_SIZE - blur, sin(dist * 3.0) * .5 + .5);
     return shapeMap;
 }
 
@@ -75,7 +75,7 @@ fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
     let origDist = length(origSt);
     let colorGrading = mix(topGrading, bottomGrading, origDist - .5);
     var fragColor = vec4<f32>(pow(color.rgb, colorGrading), 1.);
-    // fragColor *= smoothStep(2.1, .7, origDist);
+    // fragColor *= smoothstep(2.1, .7, origDist);
     return fragColor;
 }
 

@@ -58,6 +58,21 @@ def get_memoryview_from_address(address, nbytes, format="B"):
     return memoryview(c_array).cast(format, shape=(nbytes,))
 
 
+_the_instance = None
+
+
+def get_wgpu_instance():
+    """Get the global wgpu instance."""
+    # Note, we could also use wgpuInstanceDrop,
+    # but we keep a global instance, so we don't have to.
+    global _the_instance
+    if _the_instance is None:
+        # H: nextInChain: WGPUChainedStruct *
+        struct = ffi.new("WGPUInstanceDescriptor *")
+        _the_instance = lib.wgpuCreateInstance(struct)
+    return _the_instance
+
+
 def get_surface_id_from_canvas(canvas):
     """Get an id representing the surface to render to. The way to
     obtain this id differs per platform and GUI toolkit.
@@ -150,8 +165,7 @@ def get_surface_id_from_canvas(canvas):
     surface_descriptor.label = ffi.NULL
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
-    instance_id = ffi.NULL
-    return lib.wgpuInstanceCreateSurface(instance_id, surface_descriptor)
+    return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
 
 
 # The function below are copied from "https://github.com/django/django/blob/main/django/core/management/color.py"
@@ -400,8 +414,8 @@ def to_camel_case(name):
     return name2
 
 
-class DeviceDropper:
-    """Helps drop devices at a good time."""
+class DelayedDropper:
+    """Helps drop objects at a later time."""
 
     # I found that when wgpuDeviceDrop() was called in Device._destroy,
     # the tests would hang. I found that the drop call was done around
@@ -409,18 +423,18 @@ class DeviceDropper:
     # or shader module). For some reason, the delay in destruction (by
     # Python's CG) causes a deadlock or something. We seem to be able
     # to fix this by doing the actual dropping later - e.g. when the
-    # user creates a new device.
+    # user creates a new device. Seems to be the same for the adapter.
     def __init__(self):
-        self._devices_to_drop = []
+        self._things_to_drop = []
 
-    def drop_soon(self, internal):
-        self._devices_to_drop.append(internal)
+    def drop_soon(self, fun, i):
+        self._things_to_drop.append((fun, i))
 
     def drop_all_pending(self):
-        while self._devices_to_drop:
-            internal = self._devices_to_drop.pop(0)
-            # H: void f(WGPUDevice device)
-            lib.wgpuDeviceDrop(internal)
+        while self._things_to_drop:
+            fun, i = self._things_to_drop.pop(0)
+            drop_fun = getattr(lib, fun)
+            drop_fun(i)
 
 
-device_dropper = DeviceDropper()
+delayed_dropper = DelayedDropper()

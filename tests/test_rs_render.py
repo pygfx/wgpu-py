@@ -19,7 +19,7 @@ elif is_ci and sys.platform == "win32":
 
 
 default_vertex_shader = """
-@stage(vertex)
+@vertex
 fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4<f32> {
     var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
         vec3<f32>(-0.5, -0.5, 0.1),
@@ -45,7 +45,7 @@ def test_render_orange_square():
     # With 0.5 some drivers would produce 127 and others 128.
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -83,7 +83,7 @@ def test_render_orange_square_indexed():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -130,7 +130,7 @@ def test_render_orange_square_indirect():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -172,7 +172,7 @@ def test_render_orange_square_indexed_indirect():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -227,12 +227,12 @@ def test_render_orange_square_vbo():
     device = get_default_device()
 
     shader_source = """
-        @stage(vertex)
+        @vertex
         fn vs_main(@location(0) pos : vec2<f32>) -> @builtin(position) vec4<f32> {
             return vec4<f32>(pos, 0.0, 1.0);
         }
 
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -286,7 +286,7 @@ def test_render_orange_square_color_attachment1():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -331,7 +331,7 @@ def test_render_orange_square_color_attachment2():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -376,7 +376,7 @@ def test_render_orange_square_viewport():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -414,7 +414,7 @@ def test_render_orange_square_scissor():
     device = get_default_device()
 
     fragment_shader = """
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -448,13 +448,27 @@ def test_render_orange_square_scissor():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_depth():
-    """Render an orange square, but disable half of it using a depth test."""
+def test_render_orange_square_depth16unorm():
+    """Render an orange square, but disable half of it using a depth test using 16 bits."""
+    _render_orange_square_depth(wgpu.TextureFormat.depth16unorm)
+
+
+def test_render_orange_square_depth24plus_stencil8():
+    """Render an orange square, but disable half of it using a depth test using 24 bits."""
+    _render_orange_square_depth(wgpu.TextureFormat.depth24plus_stencil8)
+
+
+def test_render_orange_square_depth32float():
+    """Render an orange square, but disable half of it using a depth test using 32 bits."""
+    _render_orange_square_depth(wgpu.TextureFormat.depth32float)
+
+
+def _render_orange_square_depth(depth_stencil_tex_format):
 
     device = get_default_device()
 
     shader_source = """
-        @stage(vertex)
+        @vertex
         fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4<f32> {
             var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
                 vec3<f32>(-0.5, -0.5, 0.0),
@@ -466,7 +480,7 @@ def test_render_orange_square_depth():
             return vec4<f32>(p, 1.0);
         }
 
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }
@@ -484,26 +498,26 @@ def test_render_orange_square_depth():
         size=(64, 64, 1),  # when rendering to texture
         # size=(640, 480, 1),  # when rendering to screen
         dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.depth24plus_stencil8,
+        format=depth_stencil_tex_format,
         usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
     )
 
     depth_stencil_state = dict(
-        format=wgpu.TextureFormat.depth24plus_stencil8,
+        format=depth_stencil_tex_format,
         depth_write_enabled=True,
         depth_compare=wgpu.CompareFunction.less_equal,
-        stencil_front={
-            "compare": wgpu.CompareFunction.equal,
-            "fail_op": wgpu.StencilOperation.keep,
-            "depth_fail_op": wgpu.StencilOperation.keep,
-            "pass_op": wgpu.StencilOperation.keep,
-        },
-        stencil_back={
-            "compare": wgpu.CompareFunction.equal,
-            "fail_op": wgpu.StencilOperation.keep,
-            "depth_fail_op": wgpu.StencilOperation.keep,
-            "pass_op": wgpu.StencilOperation.keep,
-        },
+        # stencil_front={
+        #     "compare": wgpu.CompareFunction.equal,
+        #     "fail_op": wgpu.StencilOperation.keep,
+        #     "depth_fail_op": wgpu.StencilOperation.keep,
+        #     "pass_op": wgpu.StencilOperation.keep,
+        # },
+        # stencil_back={
+        #     "compare": wgpu.CompareFunction.equal,
+        #     "fail_op": wgpu.StencilOperation.keep,
+        #     "depth_fail_op": wgpu.StencilOperation.keep,
+        #     "pass_op": wgpu.StencilOperation.keep,
+        # },
         stencil_read_mask=0,
         stencil_write_mask=0,
         depth_bias=0,
@@ -558,7 +572,7 @@ def test_render_orange_dots():
             //@builtin(pointSize) point_size: f32,
         };
 
-        @stage(vertex)
+        @vertex
         fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
             var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
                 vec3<f32>(-0.5, -0.5, 0.0),
@@ -572,7 +586,7 @@ def test_render_orange_dots():
             return out;
         }
 
-        @stage(fragment)
+        @fragment
         fn fs_main() -> @location(0) vec4<f32> {
             return vec4<f32>(1.0, 0.499, 0.0, 1.0);
         }

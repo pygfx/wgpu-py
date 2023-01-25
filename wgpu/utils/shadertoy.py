@@ -13,7 +13,7 @@ struct Varyings {
     @location(0) uv : vec2<f32>,
 };
 
-@stage(vertex)
+@vertex
 fn vs_main(@builtin(vertex_index) index: u32) -> Varyings {
     var out: Varyings;
     if (index == u32(0)) {
@@ -58,7 +58,7 @@ struct ShadertoyInput {
 var<uniform> input: ShadertoyInput;
 
 
-@stage(fragment)
+@fragment
 fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
 
     i_time = input.time;

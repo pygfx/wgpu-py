@@ -86,11 +86,29 @@ class HParser:
             name = name1[4:]
             self.enums[name] = enum = {}
             for f in code[i2 + 1 : i3].strip().strip(";").split(","):
-                parts = remove_c_comments(f).strip().split()
-                key, val = parts[0], parts[-1]
+                f = remove_c_comments(f).strip()
+                if not f:
+                    continue  # happens when last item has a comma
+                key, _, val = f.partition("=")
+                # Handle key
+                key = key.strip()
                 assert key.startswith("WGPU") and "_" in key
-                key = key.split("_")[1]
-                enum[key] = int(val, 16) if val.startswith("0x") else int(val)
+                key = key.split("_", 1)[1]
+                # Turn value into an int
+                val = val.strip()
+                if val.startswith("0x"):
+                    enum[key] = int(val, 16)
+                elif "<<" in val:
+                    val1, _, val2 = val.partition("<<")
+                    enum[key] = int(val1) << int(val2)
+                elif "|" in val:  # field is an OR of the earlier fields :/
+                    keys = [k.strip().split("_", 1)[1] for k in val.split("|")]
+                    val = 0
+                    for k in keys:
+                        val |= enum[k]
+                    enum[key] = val
+                else:
+                    enum[key] = int(val)
 
         # Turn some enums into flags
         for line in code.splitlines():
@@ -119,7 +137,10 @@ class HParser:
             name = code[i3 + 1 : i4].strip()
             self.structs[name] = struct = {}
             for f in code[i2 + 1 : i3].strip().strip(";").split(";"):
-                parts = remove_c_comments(f).strip().split()
+                f = remove_c_comments(f).strip()
+                if not f:
+                    continue  # probably last item ended with a comma
+                parts = f.strip().split()
                 typename = " ".join(parts[:-1])
                 typename = typename.replace("const ", "")
                 key = parts[-1].strip("*")

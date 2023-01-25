@@ -83,7 +83,7 @@ compute_shader_wgsl = """
 @binding(0)
 var<storage,read_write> out1: array<i32>;
 
-@stage(compute)
+@compute
 @workgroup_size(1)
 fn main(@builtin(global_invocation_id) index: vec3<u32>) {
     let i: u32 = index.x;
@@ -669,7 +669,7 @@ def test_parse_shader_error1(caplog):
             @builtin(position) position: vec4<f32>,
         };
 
-        @stage(vertex)
+        @vertex
         fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
             var out: VertexOutput;
             out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
@@ -801,11 +801,11 @@ def test_validate_shader_error1(caplog):
             @builtin(position) position: vec3<f32>,
         };
 
-        @stage(vertex)
+        @vertex
         fn vs_main(@builtin(vertex_index) vertex_index : u32) -> VertexOutput {
             var out: VertexOutput;
-            var matrix: mat4x4<f32>;
-            out.position = matrix * out.position;
+            var matrics: mat4x4<f32>;
+            out.position = matrics * out.position;
             return out;
         }
     """
@@ -816,10 +816,10 @@ def test_validate_shader_error1(caplog):
         Shader error: label:  Some("")
         Validation error: Function(Expression { handle: [8], error: InvalidBinaryOperandTypes(Multiply, [5], [7]) })
 
-           ┌─ wgsl:10:18
+           ┌─ wgsl:10:19
            │
-        10 │     out.position = matrix * out.position;
-           │                   ^^^^^^^^^^^^^^^^^^^^^^ InvalidBinaryOperandTypes(Multiply, [5], [7])
+        10 │     out.position = matrics * out.position;
+           │                    ^^^^^^^^^^^^^^^^^^^^^^ InvalidBinaryOperandTypes(Multiply, [5], [7])
            │
            = note:
     """
@@ -846,6 +846,7 @@ def test_validate_shader_error2(caplog):
             @location(0) uv : vec2<f32>,
         };
 
+        @vertex
         fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
             if (in.uv.x > 0.5) {
                 return vec3<f32>(1.0, 0.0, 1.0);
@@ -858,22 +859,14 @@ def test_validate_shader_error2(caplog):
     expected1 = """Returning Some(Vector { size: Tri, kind: Float, width: 4 }) where Some(Vector { size: Quad, kind: Float, width: 4 }) is expected"""
     expected2 = """
         Shader error: label:  Some("")
-        Validation error: InvalidReturnType(Some([9]))
+        Validation error: Function(InvalidReturnType(Some([9])))
 
-           ┌─ wgsl:4--12
-           │
-         4 │ };
-         5 │
-         6 │ fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
-         7 │     if (in.uv.x > 0.5) {
-         8 │         return vec3<f32>(1.0, 0.0, 1.0);
-         9 │     } else {
-        10 │         return vec3<f32>(0.0, 1.0, 1.0);
-        11 │     }
-        12 │ }
-           │ ^^^InvalidReturnType(Some([9]))
-           │
-           = note:
+          ┌─ wgsl:9:15
+          │
+        9 │         return vec3<f32>(1.0, 0.0, 1.0);
+          │                ^^^^^^^^^^^^^^^^^^^^^^^^ Function(InvalidReturnType(Some([9])))
+          │
+          = note:
     """
 
     code = dedent(code)

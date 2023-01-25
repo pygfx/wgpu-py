@@ -58,11 +58,11 @@ def get_wgpu_lib_path():
 
     # Get lib filename for supported platforms
     if sys.platform.startswith("win"):  # no-cover
-        lib_filename = f"libwgpu-{build}.dll"
+        lib_filename = f"wgpu_native-{build}.dll"
     elif sys.platform.startswith("darwin"):  # no-cover
-        lib_filename = f"libwgpu-{build}.dylib"
+        lib_filename = f"libwgpu_native-{build}.dylib"
     elif sys.platform.startswith("linux"):  # no-cover
-        lib_filename = f"libwgpu-{build}.so"
+        lib_filename = f"libwgpu_native-{build}.so"
     else:  # no-cover
         raise RuntimeError(
             f"No WGPU library shipped for platform {sys.platform}. Set WGPU_LIB_PATH instead."
@@ -104,10 +104,11 @@ def check_expected_version(version_info):
         )
 
 
-@ffi.callback("void(WGPULogLevel, char *)")
-def _logger_callback(level, c_msg):
+@ffi.callback("void(WGPULogLevel, char *, void *)")
+def _logger_callback(level, c_msg, userdata):
     """Called when Rust emits a log message."""
-    msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
+    # Make a copy of the msg. Rust reclaims the memory when this returns
+    msg = ffi.string(c_msg).decode(errors="ignore")
     m = {
         lib.WGPULogLevel_Error: logger.error,
         lib.WGPULogLevel_Warn: logger.warning,
@@ -135,7 +136,7 @@ def _logger_set_level_callback(level):
         lib.wgpuSetLogLevel(lib.WGPULogLevel_Off)
 
 
-# Connect Rust logging with Python logging
-lib.wgpuSetLogCallback(_logger_callback)
+# Connect Rust logging with Python logging (userdata set to null)
+lib.wgpuSetLogCallback(_logger_callback, ffi.NULL)
 logger_set_level_callbacks.append(_logger_set_level_callback)
 _logger_set_level_callback(logger.level)
