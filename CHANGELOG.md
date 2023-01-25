@@ -18,9 +18,7 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-
-### [v0.9.0]
-
+### [v0.9.0] - 25-01-2023
 
 In this release the API is aligned with the latest webgpu.idl, and
 we updated to the latest release of wgpu-native (v0.14.2.3).
