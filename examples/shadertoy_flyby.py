@@ -85,7 +85,7 @@ fn de(p: vec3<f32>) -> f32 {
 
     pos = p;
 
-    tub = -length(p.xy) + 0.45 + sin(p.z*10.0) * 0.1 * smoothStep(0.4,0.5,abs(0.5-fract(p.z*0.05))*2.0);
+    tub = -length(p.xy) + 0.45 + sin(p.z*10.0) * 0.1 * smoothstep(0.4,0.5,abs(0.5-fract(p.z*0.05))*2.0);
     var co = coso(pp);
     co=min(co, coso(pp + 0.7) );
     co=min(co, coso(pp - 0.7) );
@@ -98,26 +98,26 @@ fn de(p: vec3<f32>) -> f32 {
 }
 
 
-fn march(from: vec3<f32>, dir: vec3<f32>) -> vec3<f32> {
+fn march(fro: vec3<f32>, dir: vec3<f32>) -> vec3<f32> {
     var dir = dir;
     var uv: vec2<f32> = vec2<f32>( atan2( dir.x , dir.y ) + i_time * 0.5, length(dir.xy) + sin(i_time * 0.2));
     var col: vec3<f32> = fractal(uv);
     var d: f32 = 0.0;
     var td: f32 = 0.0;
     var g: f32 = 0.0;
-    var ref: f32 = 0.0;
+    var reff: f32 = 0.0;
     var ltd: f32 = 0.0;
     var li: f32 = 0.0;
-    var p: vec3<f32> = from;
+    var p: vec3<f32> = fro;
     for(var i: i32 = 0; i < 200; i += 1) {
         p += dir * d;
         d = de(p);
-        if (d < det && ref == 0.0 && hit == 1.0) {
+        if (d < det && reff == 0.0 && hit == 1.0) {
             var e: vec2<f32> = vec2<f32>(0.0, 0.1);
             var n: vec3<f32> = normalize(vec3<f32>(de(p + e.yxx), de(p + e.xyx), de(p + e.xxy)) - de(p));
             p -= dir * d * 2.0;
             dir = reflect(dir, n);
-            ref = 1.0;
+            reff = 1.0;
             td = 0.0;
             ltd = td;
             continue;
@@ -131,7 +131,7 @@ fn march(from: vec3<f32>, dir: vec3<f32>) -> vec3<f32> {
     }
     g = max(g, li * 0.15);
     var f: f32 = 1.0 - td / 3.0;
-    if (ref == 1.0) {
+    if (reff == 1.0) {
         f = 1.0 - ltd / 3.0;
     }
     if (d < 0.01) {
@@ -153,11 +153,11 @@ fn march(from: vec3<f32>, dir: vec3<f32>) -> vec3<f32> {
     glo = vec3<f32>(glo_rb.x, glo.y, glo_rb.y);
     col += glo;
     col *= vec3<f32>(0.8, 0.7, 0.7);
-    col = mix(col, vec3<f32>(1.0), ref * 0.3);
+    col = mix(col, vec3<f32>(1.0), reff * 0.3);
     return col;
 }
 
-fn mod( x : f32, y : f32 ) -> f32 {
+fn mod1( x : f32, y : f32 ) -> f32 {
     return x - y * floor( x / y );
 }
 
@@ -168,17 +168,17 @@ fn shader_main(frag_coord : vec2<f32>) -> vec4<f32> {
 
     var t = i_time;
 
-    var from = path(t);
-    if (mod(t, 10.0) > 5.0) {
-        from = path(floor(t / 4.0 + 0.5) * 4.0);
+    var fro = path(t);
+    if (mod1(t, 10.0) > 5.0) {
+        fro = path(floor(t / 4.0 + 0.5) * 4.0);
     }
     sphpos = path(t + 0.5);
-    from.x += 0.2;
-    var fw = normalize(path(t + 0.5) - from);
+    fro.x += 0.2;
+    var fw = normalize(path(t + 0.5) - fro);
     var dir = normalize(vec3<f32>(uv, 0.5));
     dir = lookat(fw, vec3<f32>(fw.x * 2.0, 1.0, 0.0)) * dir;
     dir = vec3<f32>(dir.x+sin(t) * 0.3, dir.y, dir.z+sin(t) * 0.3);
-    var col = march(from, dir);
+    var col = march(fro, dir);
     col = mix(vec3<f32>(0.5) * length(col), col, 0.8);
     return vec4<f32>(col, 1.0);
 }

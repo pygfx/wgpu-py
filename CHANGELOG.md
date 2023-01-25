@@ -27,11 +27,11 @@ we updated to the latest release of wgpu-native (v0.14.2.3).
 
 Changed:
 
-* WGSL's `@stage(compute)` must now be `@compute`. Same for `vertex`  and `fragment`.
 * To use the default `min_binding_size` in `create_bind_group_layout`, it should be `None` instead of zero.
-* WGSL extended its list of reserved words, including e.g. `matrix` and `ref`.
 * If the depth-stencil texture has not room for stencil data, the `stencil_read_mask` and `stencil_write_mask` fields in the `DepthStencilState` struct passed to `create_render_pipeline()` must be set to 0.
-
+* In WGSL, `@stage(compute)` must now be `@compute`. Same for `vertex`  and `fragment`.
+* In WGSL, the list of reserved words has been extended, including e.g. `mod`, `matrix` and `ref`.
+* In WGSL, `smoothStep` is now `smoothstep`.
 
 Added:
 
