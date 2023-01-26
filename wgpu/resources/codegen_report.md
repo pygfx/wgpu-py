@@ -26,6 +26,6 @@
 * Enum AutoLayoutMode missing in wgpu.h
 * Enum CanvasAlphaMode missing in wgpu.h
 * Wrote 231 enum mappings and 49 struct-field mappings to rs_mappings.py
-* Validated 88 C function calls
-* Not using 94 C functions
+* Validated 89 C function calls
+* Not using 93 C functions
 * Validated 70 C structs
