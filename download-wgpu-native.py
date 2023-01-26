@@ -88,14 +88,16 @@ def get_arch():
         archflags = os.environ["ARCHFLAGS"]
         return "arm64" if "arm64" in archflags else "x86_64"
 
-    if not is_64_bit:
-        return "i686"
-    elif machine.startswith(("arm", "aarch64")):
-        # Includes Raspberry Pi, MacOS M1, ...
+    if machine == "armv7l":
+        # Raspberry pi
+        return "armv7"
+    elif is_64_bit and machine.startswith(("arm", "aarch64")):
+        # Includes MacOS M1, arm linux, ...
         return "arm64"
-    else:
-        # Assume its x86 then
+    elif is_64_bit:
         return "x86_64"
+    else:
+        return "i686"
 
 
 def main(version, os_string, arch, upstream):
