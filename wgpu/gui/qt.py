@@ -3,25 +3,30 @@ Support for rendering in a Qt widget. Provides a widget subclass that
 can be used as a standalone window or in a larger GUI.
 """
 
+import sys
 import ctypes
 import importlib
-import sys
 
-from .base import WgpuCanvasBase, WgpuAutoGui
+from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
 
 
 # Select GUI toolkit
 for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
     if libname in sys.modules:
-        QtCore = importlib.import_module(libname + ".QtCore")
-        widgets_modname = "QtGui" if QtCore.qVersion()[0] == "4" else "QtWidgets"
-        QtWidgets = importlib.import_module(libname + "." + widgets_modname)
+        QtCore = importlib.import_module(".QtCore", libname)
+        QtWidgets = importlib.import_module(".QtWidgets", libname)
         try:
             WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
+            KeyboardModifiers = QtCore.Qt.KeyboardModifier
+            FocusPolicy = QtCore.Qt.FocusPolicy
+            Keys = QtCore.Qt.Key
         except AttributeError:
             WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
             PreciseTimer = QtCore.Qt.PreciseTimer
+            KeyboardModifiers = QtCore.Qt
+            FocusPolicy = QtCore.Qt
+            Keys = QtCore.Qt
         break
 else:
     raise ImportError(
@@ -41,49 +46,47 @@ BUTTON_MAP = {
 }
 
 MODIFIERS_MAP = {
-    QtCore.Qt.ShiftModifier: "Shift",
-    QtCore.Qt.ControlModifier: "Control",
-    QtCore.Qt.AltModifier: "Alt",
-    QtCore.Qt.MetaModifier: "Meta",
+    KeyboardModifiers.ShiftModifier: "Shift",
+    KeyboardModifiers.ControlModifier: "Control",
+    KeyboardModifiers.AltModifier: "Alt",
+    KeyboardModifiers.MetaModifier: "Meta",
 }
 
 KEY_MAP = {
-    int(QtCore.Qt.Key_Down): "ArrowDown",
-    int(QtCore.Qt.Key_Up): "ArrowUp",
-    int(QtCore.Qt.Key_Left): "ArrowLeft",
-    int(QtCore.Qt.Key_Right): "ArrowRight",
-    int(QtCore.Qt.Key_Backspace): "Backspace",
-    int(QtCore.Qt.Key_CapsLock): "CapsLock",
-    int(QtCore.Qt.Key_Delete): "Delete",
-    int(QtCore.Qt.Key_End): "End",
-    int(QtCore.Qt.Key_Enter): "Enter",
-    int(QtCore.Qt.Key_Escape): "Escape",
-    int(QtCore.Qt.Key_F1): "F1",
-    int(QtCore.Qt.Key_F2): "F2",
-    int(QtCore.Qt.Key_F3): "F3",
-    int(QtCore.Qt.Key_F4): "F4",
-    int(QtCore.Qt.Key_F5): "F5",
-    int(QtCore.Qt.Key_F6): "F6",
-    int(QtCore.Qt.Key_F7): "F7",
-    int(QtCore.Qt.Key_F8): "F8",
-    int(QtCore.Qt.Key_F9): "F9",
-    int(QtCore.Qt.Key_F10): "F10",
-    int(QtCore.Qt.Key_F11): "F11",
-    int(QtCore.Qt.Key_F12): "F12",
-    int(QtCore.Qt.Key_Home): "Home",
-    int(QtCore.Qt.Key_Insert): "Insert",
-    int(QtCore.Qt.Key_Alt): "Alt",
-    int(QtCore.Qt.Key_Control): "Control",
-    int(QtCore.Qt.Key_Shift): "Shift",
-    int(
-        QtCore.Qt.Key_Meta
-    ): "Meta",  # meta maps to control in QT on macOS, and vice-versa
-    int(QtCore.Qt.Key_NumLock): "NumLock",
-    int(QtCore.Qt.Key_PageDown): "PageDown",
-    int(QtCore.Qt.Key_PageUp): "Pageup",
-    int(QtCore.Qt.Key_Pause): "Pause",
-    int(QtCore.Qt.Key_ScrollLock): "ScrollLock",
-    int(QtCore.Qt.Key_Tab): "Tab",
+    int(Keys.Key_Down): "ArrowDown",
+    int(Keys.Key_Up): "ArrowUp",
+    int(Keys.Key_Left): "ArrowLeft",
+    int(Keys.Key_Right): "ArrowRight",
+    int(Keys.Key_Backspace): "Backspace",
+    int(Keys.Key_CapsLock): "CapsLock",
+    int(Keys.Key_Delete): "Delete",
+    int(Keys.Key_End): "End",
+    int(Keys.Key_Enter): "Enter",
+    int(Keys.Key_Escape): "Escape",
+    int(Keys.Key_F1): "F1",
+    int(Keys.Key_F2): "F2",
+    int(Keys.Key_F3): "F3",
+    int(Keys.Key_F4): "F4",
+    int(Keys.Key_F5): "F5",
+    int(Keys.Key_F6): "F6",
+    int(Keys.Key_F7): "F7",
+    int(Keys.Key_F8): "F8",
+    int(Keys.Key_F9): "F9",
+    int(Keys.Key_F10): "F10",
+    int(Keys.Key_F11): "F11",
+    int(Keys.Key_F12): "F12",
+    int(Keys.Key_Home): "Home",
+    int(Keys.Key_Insert): "Insert",
+    int(Keys.Key_Alt): "Alt",
+    int(Keys.Key_Control): "Control",
+    int(Keys.Key_Shift): "Shift",
+    int(Keys.Key_Meta): "Meta",  # meta maps to control in QT on macOS, and vice-versa
+    int(Keys.Key_NumLock): "NumLock",
+    int(Keys.Key_PageDown): "PageDown",
+    int(Keys.Key_PageUp): "Pageup",
+    int(Keys.Key_Pause): "Pause",
+    int(Keys.Key_ScrollLock): "ScrollLock",
+    int(Keys.Key_Tab): "Tab",
 }
 
 
@@ -96,9 +99,15 @@ KEY_MAP = {
 def enable_hidpi():
     """Enable high-res displays."""
     try:
+        set_dpi_aware = QtCore.__version_info__ < (6, 4)
+    except Exception:
+        set_dpi_aware = True
+    try:
         # See https://github.com/pyzo/pyzo/pull/700 why we seem to need both
-        ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
-        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor dpi aware
+        # See https://github.com/pygfx/pygfx/issues/368 for high Qt versions
+        if set_dpi_aware:
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor dpi aware
     except Exception:
         pass  # fail on non-windows
     try:
@@ -124,6 +133,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setAttribute(WA_PaintOnScreen, True)
         self.setAutoFillBackground(False)
         self.setMouseTracking(True)
+        self.setFocusPolicy(FocusPolicy.StrongFocus)
 
         # A timer for limiting fps
         self._request_draw_timer = QtCore.QTimer()
@@ -185,10 +195,10 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def _request_draw(self):
         if not self._request_draw_timer.isActive():
-            self._request_draw_timer.start(self._get_draw_wait_time() * 1000)
+            self._request_draw_timer.start(int(self._get_draw_wait_time() * 1000))
 
     def close(self):
-        super().close()
+        QtWidgets.QWidget.close(self)
 
     def is_closed(self):
         return not self.isVisible()
@@ -207,7 +217,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "key": KEY_MAP.get(event.key(), event.text()),
             "modifiers": modifiers,
         }
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
@@ -232,8 +242,8 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
         ev = {
             "event_type": event_type,
-            "x": event.x(),
-            "y": event.y(),
+            "x": event.pos().x(),
+            "y": event.pos().y(),
             "button": button,
             "buttons": buttons,
             "modifiers": modifiers,
@@ -251,7 +261,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             accum_keys = {}
             self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
         else:
-            self.handle_event(ev)
+            self._handle_event_and_flush(ev)
 
     def mousePressEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_down", event)
@@ -293,10 +303,10 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "height": float(event.size().height()),
             "pixel_ratio": self.get_pixel_ratio(),
         }
-        self.handle_event(ev)
+        self._handle_event_and_flush(ev)
 
     def closeEvent(self, event):  # noqa: N802
-        self.handle_event({"event_type": "close"})
+        self._handle_event_and_flush({"event_type": "close"})
 
 
 class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
@@ -319,6 +329,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setMouseTracking(True)
 
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
+        self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -334,6 +345,14 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self._subwidget.update()
 
     # Methods that we add from wgpu (snake_case)
+
+    @property
+    def draw_frame(self):
+        return self._subwidget.draw_frame
+
+    @draw_frame.setter
+    def draw_frame(self, f):
+        self._subwidget.draw_frame = f
 
     def get_display_id(self):
         return self._subwidget.get_display_id()
@@ -359,7 +378,8 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         return self._subwidget._request_draw()
 
     def close(self):
-        super().close()
+        self._subwidget.close()
+        QtWidgets.QWidget.close(self)
 
     def is_closed(self):
         return not self.isVisible()
@@ -371,12 +391,6 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def request_draw(self, *args, **kwargs):
         return self._subwidget.request_draw(*args, **kwargs)
-
-    def add_event_handler(self, *args, **kwargs):
-        return self._subwidget.add_event_handler(*args, **kwargs)
-
-    def remove_event_handler(self, *args, **kwargs):
-        return self._subwidget.remove_event_handler(*args, **kwargs)
 
 
 # Make available under a name that is the same for all gui backends
@@ -395,4 +409,4 @@ def run():
 
 
 def call_later(delay, callback, *args):
-    QtCore.QTimer.singleShot(delay * 1000, lambda: callback(*args))
+    QtCore.QTimer.singleShot(int(delay * 1000), lambda: callback(*args))

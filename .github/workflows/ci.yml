@@ -96,7 +96,7 @@ jobs:
           pip install -e .
     - name: Test on repo
       run: |
-          pytest -v -k 'not test_examples' tests
+          pytest -v tests
     - name: Test codegen
       run: |
           pytest -v codegen
@@ -132,7 +132,7 @@ jobs:
           pip install -e .
     - name: Test examples
       run: |
-          pytest -v -k 'test_examples' tests
+          pytest -v examples
 
   # The release builds are done for the platforms that we want to build wheels for.
   # We build wheels, test them, and then upload the wheel as an artifact.

@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import weakref
 import logging
 from contextlib import contextmanager
 import ctypes.util
@@ -39,6 +40,21 @@ def log_exception(kind):
             msg = kind + ": " + msg.split("\n")[0].strip()
             msg = msg if len(msg) <= 70 else msg[:69] + "…"
             logger.error(msg + f" ({count})")
+
+
+def weakbind(method):
+    """Replace a bound method with a callable object that stores the `self` using a weakref."""
+    ref = weakref.ref(method.__self__)
+    class_func = method.__func__
+    del method
+
+    def proxy(*args, **kwargs):
+        self = ref()
+        if self is not None:
+            return class_func(self, *args, **kwargs)
+
+    proxy.__name__ = class_func.__name__
+    return proxy
 
 
 class WgpuCanvasInterface:
@@ -110,13 +126,24 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     It is convenient - but not required - to use this class (or any of its
     subclasses) to use wgpu-py.
+
+    This class applies draw rate limiting, which can be set with the
+    ``max_fps`` attribute (default 30). For benchmarks you may also want
+    to set ``vsync`` to False.
     """
 
-    def __init__(self, *args, max_fps=30, **kwargs):
+    def __init__(self, *args, max_fps=30, vsync=True, **kwargs):
         super().__init__(*args, **kwargs)
         self._last_draw_time = 0
         self._max_fps = float(max_fps)
+        self._vsync = bool(vsync)
         self._err_hashes = {}
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
 
     def draw_frame(self):
         """The function that gets called at each draw. You can implement
@@ -173,7 +200,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     def close(self):
         """Close the window."""
-        raise NotImplementedError()
+        pass
 
     def is_closed(self):
         """Get whether the window is closed."""
@@ -211,26 +238,43 @@ class WgpuAutoGui:
         pending event, the old event is dispatched now. The `accum_keys` keys of
         the current and new event are added together (e.g. to accumulate wheel delta).
 
-        This method is called in the following cases:
+        The (accumulated) event is handled in the following cases:
         * When the timer runs out.
         * When a non-rate-limited event is dispatched.
         * When a rate-limited event of the same type is scheduled
           that has different match_keys (e.g. modifiers changes).
+
+        Subclasses that use this method must use ``_handle_event_and_flush()``
+        where they would otherwise call ``handle_event()``, to preserve event order.
         """
         event_type = ev["event_type"]
         # We may need to emit the old event. Otherwise, we need to update the new one.
         old = self._pending_events.get(event_type, None)
         if old:
             if any(ev[key] != old[key] for key in match_keys):
-                self._dispatch_event(old)
+                self.handle_event(old)
             else:
                 for key in accum_keys:
                     ev[key] = old[key] + ev[key]
         # Make sure that we have scheduled a moment to handle events
         if not self._pending_events:
-            call_later_func(self._get_event_wait_time(), self._dispatch_pending_events)
+            call_later_func(self._get_event_wait_time(), self._handle_pending_events)
         # Store the event object
         self._pending_events[event_type] = ev
+
+    def _handle_event_and_flush(self, event):
+        """Call handle_event after flushing any pending (rate-limited) events."""
+        self._handle_pending_events()
+        self.handle_event(event)
+
+    def _handle_pending_events(self):
+        """Handle any pending rate-limited events."""
+        if self._pending_events:
+            events = self._pending_events.values()
+            self._last_event_time = time.perf_counter()
+            self._pending_events = {}
+            for ev in events:
+                self.handle_event(ev)
 
     def handle_event(self, event):
         """Handle an incoming event.
@@ -239,24 +283,15 @@ class WgpuAutoGui:
         resize, mouse/touch interaction, key events, and more. An event
         is a dict with at least the key event_type. For details, see
         https://jupyter-rfb.readthedocs.io/en/latest/events.html
+
+        The default implementation dispatches the event to the
+        registered event handlers.
         """
-        # On any not-rate-limited event, we dispatch any pending events.
-        # This is to make sure that the original order of events is preserved.
-        self._dispatch_pending_events()
-        self._dispatch_event(event)
-
-    def _dispatch_pending_events(self):
-        """Handle any pending rate-limited events."""
-        events = self._pending_events.values()
-        self._last_event_time = time.perf_counter()
-        self._pending_events = {}
-        for ev in events:
-            self._dispatch_event(ev)
-
-    def _dispatch_event(self, event):
-        """Dispatch event to the event handlers."""
+        # Collect callbacks
         event_type = event.get("event_type")
-        for callback in self._event_handlers[event_type].copy():
+        callbacks = self._event_handlers[event_type] | self._event_handlers["*"]
+        # Dispatch
+        for callback in callbacks:
             with log_exception(f"Error during handling {event['event_type']} event"):
                 callback(event)
 
@@ -289,10 +324,23 @@ class WgpuAutoGui:
             @canvas.add_event_handler("pointer_up", "pointer_down")
             def my_handler(event):
                 print(event)
+
+        Catch 'm all:
+
+        .. code-block:: py
+
+            canvas.add_event_handler(my_handler, "*")
+
         """
         decorating = not callable(args[0])
         callback = None if decorating else args[0]
         types = args if decorating else args[1:]
+
+        if not types:
+            raise TypeError("No event types are given to add_event_handler.")
+        for type in types:
+            if not isinstance(type, str):
+                raise TypeError(f"Event types must be str, but got {type}")
 
         def decorator(_callback):
             for type in types:

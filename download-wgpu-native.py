@@ -88,14 +88,16 @@ def get_arch():
         archflags = os.environ["ARCHFLAGS"]
         return "arm64" if "arm64" in archflags else "x86_64"
 
-    if not is_64_bit:
-        return "i686"
-    elif machine.startswith(("arm", "aarch64")):
-        # Includes Raspberry Pi, MacOS M1, ...
+    if machine == "armv7l":
+        # Raspberry pi
+        return "armv7"
+    elif is_64_bit and machine.startswith(("arm", "aarch64")):
+        # Includes MacOS M1, arm linux, ...
         return "arm64"
-    else:
-        # Assume its x86 then
+    elif is_64_bit:
         return "x86_64"
+    else:
+        return "i686"
 
 
 def main(version, os_string, arch, upstream):
@@ -110,11 +112,11 @@ def main(version, os_string, arch, upstream):
         headerfile2 = "wgpu.h"
         binaryfile = None
         if os_string == "linux":
-            binaryfile = "libwgpu.so"
+            binaryfile = "libwgpu_native.so"
         elif os_string == "macos":
-            binaryfile = "libwgpu.dylib"
+            binaryfile = "libwgpu_native.dylib"
         elif os_string == "windows":
-            binaryfile = "libwgpu.dll"
+            binaryfile = "wgpu_native.dll"
         else:
             raise RuntimeError(f"Platform '{os_string}' not supported")
         root, ext = os.path.splitext(binaryfile)

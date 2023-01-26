@@ -58,11 +58,11 @@ def get_wgpu_lib_path():
 
     # Get lib filename for supported platforms
     if sys.platform.startswith("win"):  # no-cover
-        lib_filename = f"libwgpu-{build}.dll"
+        lib_filename = f"wgpu_native-{build}.dll"
     elif sys.platform.startswith("darwin"):  # no-cover
-        lib_filename = f"libwgpu-{build}.dylib"
+        lib_filename = f"libwgpu_native-{build}.dylib"
     elif sys.platform.startswith("linux"):  # no-cover
-        lib_filename = f"libwgpu-{build}.so"
+        lib_filename = f"libwgpu_native-{build}.so"
     else:  # no-cover
         raise RuntimeError(
             f"No WGPU library shipped for platform {sys.platform}. Set WGPU_LIB_PATH instead."
@@ -71,9 +71,24 @@ def get_wgpu_lib_path():
     # Note that this can be a false positive, e.g. ARM linux.
     embedded_path = get_resource_filename(lib_filename)
     if not os.path.isfile(embedded_path):  # no-cover
-        raise RuntimeError(f"Could not find WGPU library in {embedded_path}")
+        raise RuntimeError(
+            f"Could not find WGPU library in {embedded_path}. {_maybe_get_hint_on_download_script()}"
+        )
     else:
         return embedded_path
+
+
+def _maybe_get_hint_on_download_script():
+
+    root_dir = os.path.join(get_resource_filename(""), "..", "..")
+    filename = os.path.abspath(os.path.join(root_dir, "download-wgpu-native.py"))
+    uses_repo = os.path.isfile(filename)
+
+    uses_custom_lib = os.getenv("WGPU_LIB_PATH", "").strip()
+
+    if uses_repo and not uses_custom_lib:
+        return "You may need to run download-wgpu-native.py (in the root of the repo)."
+    return ""
 
 
 # Configure cffi and load the dynamic library
@@ -100,14 +115,15 @@ def check_expected_version(version_info):
     # Compare
     if version_info_lib != version_info:  # no-cover
         logger.warning(
-            f"Expected wgpu-native version {version_info} but got {version_info_lib}"
+            f"Expected wgpu-native version {version_info} but got {version_info_lib}. {_maybe_get_hint_on_download_script()}"
         )
 
 
-@ffi.callback("void(WGPULogLevel, char *)")
-def _logger_callback(level, c_msg):
+@ffi.callback("void(WGPULogLevel, char *, void *)")
+def _logger_callback(level, c_msg, userdata):
     """Called when Rust emits a log message."""
-    msg = ffi.string(c_msg).decode(errors="ignore")  # make a copy
+    # Make a copy of the msg. Rust reclaims the memory when this returns
+    msg = ffi.string(c_msg).decode(errors="ignore")
     m = {
         lib.WGPULogLevel_Error: logger.error,
         lib.WGPULogLevel_Warn: logger.warning,
@@ -135,7 +151,7 @@ def _logger_set_level_callback(level):
         lib.wgpuSetLogLevel(lib.WGPULogLevel_Off)
 
 
-# Connect Rust logging with Python logging
-lib.wgpuSetLogCallback(_logger_callback)
+# Connect Rust logging with Python logging (userdata set to null)
+lib.wgpuSetLogCallback(_logger_callback, ffi.NULL)
 logger_set_level_callbacks.append(_logger_set_level_callback)
 _logger_set_level_callback(logger.level)

@@ -7,9 +7,8 @@ It would be good to occasionally check the coverage of this module to
 identify and remove code paths that are no longer used.
 """
 
-import os
-
-from codegen.utils import print, lib_dir
+from codegen.utils import print
+from codegen.files import read_file
 
 
 _parser = None
@@ -24,8 +23,7 @@ def get_idl_parser(*, allow_cache=True):
         return _parser
 
     # Get source
-    with open(os.path.join(lib_dir, "resources", "webgpu.idl"), "rb") as f:
-        source = f.read().decode()
+    source = read_file("resources", "webgpu.idl")
 
     # Create parser
     idl = IdlParser(source)
@@ -218,6 +216,7 @@ class IdlParser:
         elif " or " in name:
             name = name.strip("()")
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
+            names = sorted(set(names))
             return f"'Union[{', '.join(names)}]'"
 
         # Triage
@@ -229,6 +228,8 @@ class IdlParser:
             return "object"  # anything, we ignore this stuff anyway
         elif name in ["OffscreenCanvas"]:
             return "object"
+        elif name in ["PredefinedColorSpace"]:
+            return "str"
         else:
             assert name.startswith("GPU")
             name = name[3:]
@@ -272,9 +273,10 @@ class IdlParser:
                 while not line.startswith("};"):
                     line = self.read_line()
                     lines.append(line)
-                classname = lines[0].split("{")[0].split(":")[0].split()[-1]
+                classname_raw, _, base_raw = lines[0].split("{")[0].partition(":")
+                classname = classname_raw.split()[-1]
                 # Collect base classes
-                based_on = []
+                based_on = list(base_raw.split())
                 while self.peek_line().startswith(classname + " includes "):
                     line = self.read_line()
                     based_on.append(line.split()[-1].rstrip(";"))

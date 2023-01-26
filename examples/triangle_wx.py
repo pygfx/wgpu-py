@@ -1,6 +1,7 @@
 """
 Import the viz from triangle.py and run it in a wxPython window.
 """
+# run_example = false
 
 import wx
 from wgpu.gui.wx import WgpuCanvas

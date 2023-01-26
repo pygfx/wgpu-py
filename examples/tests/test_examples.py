@@ -4,13 +4,14 @@ Test that the examples run without error.
 
 import os
 import importlib
-from unittest.mock import patch
-import subprocess
+import runpy
 import sys
+from unittest.mock import patch
 
 import imageio.v2 as imageio
 import numpy as np
 import pytest
+
 
 from testutils import (
     can_use_wgpu_lib,
@@ -27,52 +28,20 @@ if not can_use_wgpu_lib:
 
 
 # run all tests unless they opt-out
-examples_to_run = find_examples(negative_query="# run_example = false")
+examples_to_run = find_examples(
+    negative_query="# run_example = false", return_stems=True
+)
 
 # only test output of examples that opt-in
 examples_to_test = find_examples(query="# test_example = true", return_stems=True)
 
 
-@pytest.mark.parametrize("module", examples_to_run, ids=lambda module: module.stem)
-def test_examples_run(module, pytestconfig):
+@pytest.mark.parametrize("module", examples_to_run)
+def test_examples_run(module, force_offscreen):
     """Run every example marked to see if they can run without error."""
-    env = os.environ.copy()
-    env["WGPU_FORCE_OFFSCREEN"] = "true"
-
-    try:
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(module.relative_to(ROOT)),
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            universal_newlines=True,
-            cwd=ROOT,
-            timeout=5,
-            env=env,
-        )
-    except subprocess.TimeoutExpired:
-        pytest.fail(
-            "opt-out by adding `# run_example = false` to the module docstring,"
-            "or use WgpuAutoGui to support WGPU_FORCE_OFFSCREEN"
-        )
-
-    zero_exit = result.returncode == 0
-
-    if not zero_exit:
-        # in some cases it's pretty hard to support an example to run on CI
-        # we skip them on CI, but still allow them to run locally
-        # would be nice to implement support later of course
-        if (
-            "This application failed to start because no Qt platform plugin could be initialized."
-            in result.stdout
-        ):
-            pytest.skip("Qt examples are currently not supported on headless")
-        if "ModuleNotFoundError: No module named 'wx'" in result.stdout:
-            pytest.skip("wx library is not available")
-
-    assert zero_exit, f"failed to run:\n{result.stdout}"
+    # use runpy so the module is not actually imported (and can be gc'd)
+    # but also to be able to run the code in the __main__ block
+    runpy.run_module(f"examples.{module}", run_name="__main__")
 
 
 @pytest.fixture
@@ -95,11 +64,22 @@ def mock_time():
 
 
 @pytest.mark.parametrize("module", examples_to_test)
-def test_examples_screenshots(module, pytestconfig, force_offscreen, mock_time):
+def test_examples_screenshots(
+    module, pytestconfig, force_offscreen, mock_time, request
+):
     """Run every example marked for testing."""
 
-    # render
-    example = importlib.import_module(f"examples.{module}")
+    # import the example module
+    module_name = f"examples.{module}"
+    example = importlib.import_module(module_name)
+
+    # ensure it is unloaded after the test
+    def unload_module():
+        del sys.modules[module_name]
+
+    request.addfinalizer(unload_module)
+
+    # render a frame
     img = example.canvas.draw()
 
     # check if _something_ was rendered

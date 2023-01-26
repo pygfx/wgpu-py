@@ -7,3 +7,10 @@ The wgpu library provides a few utilities. Note that the functions below need to
 .. autofunction:: wgpu.utils.get_default_device
 
 .. autofunction:: wgpu.utils.compute_with_buffers
+
+
+Shadertoy
+--------------------
+
+.. autoclass:: wgpu.utils.shadertoy.Shadertoy
+    :members:

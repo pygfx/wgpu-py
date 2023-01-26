@@ -18,7 +18,92 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.8.0] - xx-04-2022
+### [v0.9.0] - 25-01-2023
+
+In this release the API is aligned with the latest webgpu.idl, and
+we updated to the latest release of wgpu-native (v0.14.2.3).
+
+Changed:
+
+* To use the default `min_binding_size` in `create_bind_group_layout`, it should be `None` instead of zero.
+* If the depth-stencil texture has not room for stencil data, the `stencil_read_mask` and `stencil_write_mask` fields in the `DepthStencilState` struct passed to `create_render_pipeline()` must be set to 0.
+* In WGSL, `@stage(compute)` must now be `@compute`. Same for `vertex`  and `fragment`.
+* In WGSL, the list of reserved words has been extended, including e.g. `mod`, `matrix` and `ref`.
+* In WGSL, `smoothStep` is now `smoothstep`.
+
+Added:
+
+* New IDL: texture has new props `weight`, `height`, `depth_or_array_layers`.
+* New IDL: Buffer has new prop `map_state`.
+
+
+### [v0.8.4] - 10-01-2023
+
+Fixed:
+
+* The offscreen canvas's mainloop prevents leaking callbacks better (#322)
+* Prevent error messages when Qt examples/apps are closed (#326)
+
+
+### [v0.8.3] - 06-01-2023
+
+Fixed:
+
+* Prevent Qt warning about setting dpi awareness (#320)
+* Make canvases close when they get deleted (#319)
+* Fix qt canvas in ipython (#315)
+* Make offscreen canvas closable (#309)
+* Fix that the offscreen canvas had it size hardcoded, ignoring the given size (#317)
+* Fixed renaming of `queue` in docs (#308)
+* Fix using `.draw_frame` on qt canvas (#304)
+* Add missing dev dependencies (#295)
+
+Added:
+
+* A shadertoy utility, plus examples (#312)
+
+Changed:
+
+* Improve the error prompt when wgsl code is multi line error (#311, #316)
+* Tests: execute examples in the test process (#310)
+* Package only the release binary (not the debug build) (#299)
+* Codegen: uses in-memory file system during code generation (#303)
+* Improve readme (#290, #302, #314)
+
+
+### [v0.8.2] - 06-10-2022
+
+Fixed:
+
+* Fixed imports for PyQt6.
+* Keyboard events work again for Qt 6.3.
+* Fixed that overloading ``handle_event()`` did not work for a canvas based on a Qt or wx main widget/window.
+
+Added:
+
+* Can now add a wildcard ("*") to ``add_event_handler`` to handle all events.
+* Shader error messages show more context, making shader debugging much easier.
+* VSync can now be turned off to raise the frame rate when needed. Note that FPS measurements are still a poor performance benchmark!
+
+Changed:
+
+* GLFW canvas does not draw when minimized anymore.
+* The offscreen and Jupyter canvas now use the srgb format for consistency with normal canvases.
+* The examples have been adjusted for srgb colors.
+
+
+### [v0.8.1] - 29-04-2022
+
+Fixed:
+
+* Fixed regression that `canvas.handle_event()` could no longer be overloaded to handle move and wheel events.
+
+Changed:
+
+* Added a note in the docs to explain that the version of the examples must match the runtime version.
+
+
+### [v0.8.0] - 20-04-2022
 
 Changed:
 
@@ -29,7 +114,7 @@ Changed:
 
 To update, you need to adjust to the following API changes:
 
-* The encoder's `end_pass()` are renamed to `pass()`.
+* The encoder's `end_pass()` are renamed to `end()`.
 * The compute encoder's `dispatch()` is renamed `dispatch_workgroups`, and `dispatch_indirect` to `dispatch_workgroups_indirect`.
 * The `load_value` is replaced with `clear_value` and `load_op`.
 * Same for `depth_load_value` and `stencil_load_value`.

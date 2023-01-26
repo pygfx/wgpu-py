@@ -16,18 +16,33 @@ import sys
 ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, ROOT_DIR)
 
+os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
+
 import wgpu  # noqa: E402
 import wgpu.gui  # noqa: E402
 
 
 # -- Tweak wgpu's docs -------------------------------------------------------
 
-# Ensure that our API docs are complete
-with open(os.path.join(ROOT_DIR, "docs", "reference_wgpu.rst"), "rb") as f:
-    wgpu_api_docs_text = f.read().decode()
+# Ensure that all classes are in the docs
+with open(os.path.join(ROOT_DIR, "docs", "reference_classes.rst"), "rb") as f:
+    classes_text = f.read().decode()
 for cls_name in wgpu.base.__all__:
-    expected_line = f".. autoclass:: wgpu.{cls_name}"
-    assert expected_line in wgpu_api_docs_text, f"Missing docs for {cls_name}"
+    expected = f".. autoclass:: {cls_name}"
+    assert (
+        expected in classes_text
+    ), f"Missing doc entry {cls_name} in reference_classes.rst"
+
+# Ensure that all classes are references in the alphabetic list, and referenced at least one other time
+with open(os.path.join(ROOT_DIR, "docs", "reference_wgpu.rst"), "rb") as f:
+    wgpu_text = f.read().decode()
+for cls_name in wgpu.base.__all__:
+    expected1 = f":class:`{cls_name}`"
+    expected2 = f"* :class:`{cls_name}`"
+    assert expected2 in wgpu_text, f"Missing doc entry {cls_name} in reference_wgpu.rst"
+    assert (
+        wgpu_text.count(expected1) >= 2
+    ), f"Need at least one reference to {cls_name} in reference_wgpu.rst"
 
 # Make flags and enum appear better in docs
 wgpu.enums._use_sphinx_repr = True

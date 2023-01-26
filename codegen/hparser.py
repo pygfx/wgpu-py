@@ -1,20 +1,18 @@
-import os
-
 from cffi import FFI
 
-from codegen.utils import print, lib_dir, remove_c_comments
+from codegen.utils import print, remove_c_comments
+from codegen.files import read_file
 
 
 _parser = None
 
 
-def _get_wgpu_header(*filenames):
+def _get_wgpu_header():
     """Func written so we can use this in both rs_ffi.py and codegen/hparser.py"""
     # Read files
     lines1 = []
-    for filename in filenames:
-        with open(filename) as f:
-            lines1.extend(f.readlines())
+    lines1.extend(read_file("resources", "webgpu.h").splitlines())
+    lines1.extend(read_file("resources", "wgpu.h").splitlines())
     # Deal with pre-processor commands, because cffi cannot handle them.
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
@@ -25,7 +23,7 @@ def _get_wgpu_header(*filenames):
             continue
         line = line.replace("WGPU_EXPORT ", "")
         lines2.append(line)
-    return "".join(lines2)
+    return "\n".join(lines2)
 
 
 def get_h_parser(*, allow_cache=True):
@@ -36,10 +34,7 @@ def get_h_parser(*, allow_cache=True):
     if _parser and allow_cache:
         return _parser
 
-    source = _get_wgpu_header(
-        os.path.join(lib_dir, "resources", "webgpu.h"),
-        os.path.join(lib_dir, "resources", "wgpu.h"),
-    )
+    source = _get_wgpu_header()
 
     # Create parser
     hp = HParser(source)
@@ -91,11 +86,29 @@ class HParser:
             name = name1[4:]
             self.enums[name] = enum = {}
             for f in code[i2 + 1 : i3].strip().strip(";").split(","):
-                parts = remove_c_comments(f).strip().split()
-                key, val = parts[0], parts[-1]
+                f = remove_c_comments(f).strip()
+                if not f:
+                    continue  # happens when last item has a comma
+                key, _, val = f.partition("=")
+                # Handle key
+                key = key.strip()
                 assert key.startswith("WGPU") and "_" in key
-                key = key.split("_")[1]
-                enum[key] = int(val, 16) if val.startswith("0x") else int(val)
+                key = key.split("_", 1)[1]
+                # Turn value into an int
+                val = val.strip()
+                if val.startswith("0x"):
+                    enum[key] = int(val, 16)
+                elif "<<" in val:
+                    val1, _, val2 = val.partition("<<")
+                    enum[key] = int(val1) << int(val2)
+                elif "|" in val:  # field is an OR of the earlier fields :/
+                    keys = [k.strip().split("_", 1)[1] for k in val.split("|")]
+                    val = 0
+                    for k in keys:
+                        val |= enum[k]
+                    enum[key] = val
+                else:
+                    enum[key] = int(val)
 
         # Turn some enums into flags
         for line in code.splitlines():
@@ -124,7 +137,10 @@ class HParser:
             name = code[i3 + 1 : i4].strip()
             self.structs[name] = struct = {}
             for f in code[i2 + 1 : i3].strip().strip(";").split(";"):
-                parts = remove_c_comments(f).strip().split()
+                f = remove_c_comments(f).strip()
+                if not f:
+                    continue  # probably last item ended with a comma
+                parts = f.strip().split()
                 typename = " ".join(parts[:-1])
                 typename = typename.replace("const ", "")
                 key = parts[-1].strip("*")
