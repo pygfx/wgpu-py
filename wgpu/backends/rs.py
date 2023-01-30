@@ -1077,6 +1077,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 defines = []
                 if c_stage == flags.ShaderStage.VERTEX:
                     defines.append(
+                        # H: name: char *, value: char *
                         new_struct(
                             "WGPUShaderDefine",
                             name=ffi.new("char []", "gl_VertexID".encode()),
@@ -1084,7 +1085,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                         )
                     )
                 c_defines = ffi.new("WGPUShaderDefine []", defines)
-                # H: chain: WGPUChainedStruct, code: char *
+                # H: chain: WGPUChainedStruct, stage: WGPUShaderStage, code: char *, defineCount: int, defines: WGPUShaderDefine*/WGPUShaderDefine *
                 source_struct = new_struct_p(
                     "WGPUShaderModuleGLSLDescriptor *",
                     code=ffi.new("char []", code.encode()),
