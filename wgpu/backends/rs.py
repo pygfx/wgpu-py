@@ -1058,25 +1058,56 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             for val in hints.values():
                 check_struct("ShaderModuleCompilationHint", val)
         if isinstance(code, str):
-            # WGSL
-            # H: chain: WGPUChainedStruct, code: char *
-            source_struct = new_struct_p(
-                "WGPUShaderModuleWGSLDescriptor *",
-                code=ffi.new("char []", code.encode()),
-                # not used: chain
+            looks_like_wgsl = any(
+                x in code for x in ("@compute", "@vertex", "@fragment")
             )
-            source_struct[0].chain.next = ffi.NULL
-            source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleWGSLDescriptor
-        else:
-            # Must be Spirv then
-            if isinstance(code, bytes):
-                data = code
-            elif hasattr(code, "to_bytes"):
-                data = code.to_bytes()
-            elif hasattr(code, "to_spirv"):
-                data = code.to_spirv()
+            looks_like_glsl = code.lstrip().startswith("#version ")
+            if looks_like_glsl and not looks_like_wgsl:
+                # === GLSL
+                if "comp" in label.lower():
+                    c_stage = flags.ShaderStage.COMPUTE
+                elif "vert" in label.lower():
+                    c_stage = flags.ShaderStage.VERTEX
+                elif "frag" in label.lower():
+                    c_stage = flags.ShaderStage.FRAGMENT
+                else:
+                    raise ValueError(
+                        "GLSL shader needs to use the label to specify compute/vertex/fragment stage."
+                    )
+                defines = []
+                if c_stage == flags.ShaderStage.VERTEX:
+                    defines.append(
+                        new_struct(
+                            "WGPUShaderDefine",
+                            name=ffi.new("char []", "gl_VertexID".encode()),
+                            value=ffi.new("char []", "gl_VertexIndex".encode()),
+                        )
+                    )
+                c_defines = ffi.new("WGPUShaderDefine []", defines)
+                # H: chain: WGPUChainedStruct, code: char *
+                source_struct = new_struct_p(
+                    "WGPUShaderModuleGLSLDescriptor *",
+                    code=ffi.new("char []", code.encode()),
+                    stage=c_stage,
+                    defineCount=len(defines),
+                    defines=c_defines,
+                    # not used: chain
+                )
+                source_struct[0].chain.next = ffi.NULL
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleGLSLDescriptor
             else:
-                raise TypeError("Shader code must be str for WGSL, or bytes for SpirV.")
+                # === WGSL
+                # H: chain: WGPUChainedStruct, code: char *
+                source_struct = new_struct_p(
+                    "WGPUShaderModuleWGSLDescriptor *",
+                    code=ffi.new("char []", code.encode()),
+                    # not used: chain
+                )
+                source_struct[0].chain.next = ffi.NULL
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleWGSLDescriptor
+        elif isinstance(code, bytes):
+            # === Spirv
+            data = code
             # Validate
             magic_nr = b"\x03\x02#\x07"  # 0x7230203
             if data[:4] != magic_nr:
@@ -1093,6 +1124,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             )
             source_struct[0].chain.next = ffi.NULL
             source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleSPIRVDescriptor
+        else:
+            raise TypeError(
+                "Shader code must be str for WGSL or GLSL, or bytes for SpirV."
+            )
 
         # Note, we could give hints here that specify entrypoint and pipelinelayout before compiling
         # H: nextInChain: WGPUChainedStruct *, label: char *, hintCount: int, hints: WGPUShaderModuleCompilationHint *
