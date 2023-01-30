@@ -641,6 +641,9 @@ class GPUDevice(GPUObjectBase):
     ):
         """Create a :class:`GPUShaderModule` object from shader source.
 
+        The primary shader language is WGSL, though SpirV is also supported,
+        as well as GLSL (experimental).
+
         Arguments:
             label (str): A human readable label. Optional.
             code (str | bytes): The shader code, as WGSL, GLSL or SpirV.
