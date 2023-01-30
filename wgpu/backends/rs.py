@@ -423,7 +423,8 @@ class GPU(base.GPU):
 
         report = self._generate_report()
 
-        print("WGPU report")
+        print(f"{self.__class__.__module__}.WGPU report:")
+        print()
         print_line("", "Occupied", "Vacant", "Error", "el-size")
         print()
         print_storage_report("surfaces", report["surfaces"])

@@ -111,9 +111,7 @@ class GPU:
     @apidiff.add("Usefull")
     def print_report(self):
         """Print a report about the interals if the backend."""
-        raise RuntimeError(
-            "Select a backend (by importing wgpu.backends.rs) before requesting an adapter!"
-        )
+        print(f"{self.__class__.__module__}.GPU: No report available.")
 
 
 class GPUCanvasContext:
