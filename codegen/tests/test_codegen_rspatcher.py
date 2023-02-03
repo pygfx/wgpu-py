@@ -9,7 +9,6 @@ def dedent(code):
 
 
 def test_patch_functions():
-
     code1 = """
     lib.wgpuAdapterRequestDevice(1, 2, 3)
     lib.wgpuFooBar(1, 2, 3)
@@ -28,7 +27,6 @@ def test_patch_functions():
 
 
 def test_patch_structs():
-
     # Check simple struct
     code1 = """
     struct = new_struct_p(

@@ -167,7 +167,6 @@ class HParser:
             self.functions[name] = line
 
     def _parse_from_cffi(self):
-
         self.ffi = ffi = FFI()
         ffi.cdef(self.source)
 
