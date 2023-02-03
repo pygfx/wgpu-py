@@ -405,6 +405,9 @@ class GPUCanvasContext(base.GPUCanvasContext):
             return
         self._surface_size = psize
 
+        if self._surface_id is None:
+            self._surface_id = get_surface_id_from_canvas(canvas)
+
         # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
 
         # Set the present mode to determine vsync behavior.
@@ -421,7 +424,24 @@ class GPUCanvasContext(base.GPUCanvasContext):
         # Also see:
         # * https://github.com/gfx-rs/wgpu/blob/e54a36ee/wgpu-types/src/lib.rs#L2663-L2678
         # * https://github.com/pygfx/wgpu-py/issues/256
+
         present_mode = 2 if getattr(canvas, "_vsync", True) else 0
+
+        if self._device:
+            # Get present mode
+            adapter_id = self._device.adapter._internal
+            c_count = ffi.new("size_t *")
+            c_modes = lib.wgpuSurfaceGetSupportedPresentModes(self._surface_id, adapter_id, c_count)
+            try:
+                count = c_count[0]
+                supported_modes = [1 * c_modes[i] for i in range(count)]
+            finally:
+                t = ffi.typeof(c_modes)
+                lib.wgpuFree(c_modes, count * ffi.sizeof(t), ffi.alignof(t))
+
+            # Use a supported one if our preference is not supported
+            if supported_modes and present_mode not in supported_modes:
+                present_mode = supported_modes[0]
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
         struct = new_struct_p(
@@ -435,9 +455,6 @@ class GPUCanvasContext(base.GPUCanvasContext):
             # not used: label
         )
 
-        if self._surface_id is None:
-            self._surface_id = get_surface_id_from_canvas(canvas)
-
         # Destroy old one
         if self._internal is not None:
             # H: void f(WGPUSwapChain swapChain)
@@ -447,6 +464,40 @@ class GPUCanvasContext(base.GPUCanvasContext):
         self._internal = lib.wgpuDeviceCreateSwapChain(
             self._device._internal, self._surface_id, struct
         )
+
+    def get_preferred_format(self, adapter):
+        if self._surface_id is None:
+            canvas = self._get_canvas()
+            self._surface_id = get_surface_id_from_canvas(canvas)
+
+        # The C-call
+        c_count = ffi.new("size_t *")
+        c_formats = lib.wgpuSurfaceGetSupportedFormats(self._surface_id, adapter._internal, c_count)
+
+        # Convert to string formats
+        try:
+            count = c_count[0]
+            supported_format_ints = [c_formats[i] for i in range(count)]
+            formats = []
+            for key in list(enums.TextureFormat):
+                i = enummap[f"TextureFormat.{key}"]
+                if i in supported_format_ints:
+                    formats.append(key)
+        finally:
+            t = ffi.typeof(c_formats)
+            lib.wgpuFree(c_formats, count * ffi.sizeof(t), ffi.alignof(t))
+
+        # Select one
+        default = "bgra8unorm-srgb"  # seems to be a good default
+        preferred = [f for f in formats if "srgb" in f]
+        if default in formats:
+            return default
+        elif preferred:
+            return preferred[0]
+        elif formats:
+            return formats[0]
+        else:
+            return default
 
     def _destroy(self):
         if self._internal is not None and lib is not None:
