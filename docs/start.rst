@@ -10,19 +10,18 @@ Installation
     pip install wgpu
 
 
-Dependencies
-------------
+Python 3.7 or higher is required. Pypy is supported. Only depends on ``cffi`` (installed automatically by pip).
 
-Python dependencies:
 
-* Python 3.7 or higher is required. Pypy is supported.
-* Only depends on ``cffi`` (installed automatically by pip).
+The wgpu-native library
+-----------------------
 
-The wgpu-native library:
+The wheels include the prebuilt binaries of `wgpu-native <https://github.com/gfx-rs/wgpu-native>`_.
 
-* The wheels include the prebuilt binaries of `wgpu-native <https://github.com/gfx-rs/wgpu-native>`_.
-* On Linux you need at least **pip >= 20.3**, and a recent Linux distribution, otherwise the binaries will not be available. See *platform requirements* for details.
-* If you need/want to `build wgpu-native yourself <https://github.com/gfx-rs/wgpu-native/wiki/Getting-Started>`_, you need to set the environment variable ``WGPU_LIB_PATH`` to let wgpu-py know where the DLL is located.
+On Linux you need at least **pip >= 20.3**, and a recent Linux distribution, otherwise the binaries will not be available. See *platform requirements* for details.
+
+If you need/want, you can also `build wgpu-native yourself <https://github.com/gfx-rs/wgpu-native/wiki/Getting-Started>`_.
+You will then need to set the environment variable ``WGPU_LIB_PATH`` to let wgpu-py know where the DLL is located.
 
 
 GUI libraries
@@ -34,7 +33,7 @@ Most users will want to render something to screen. To this end we recommend:
 
     pip install glfw
 
-wgpu-py supports:
+Multiple GUI backends are supported though:
 
 * `glfw <https://github.com/FlorianRhiem/pyGLFW>`_: a lightweight GUI for the desktop
 * `jupyter_rfb <https://jupyter-rfb.readthedocs.io/en/latest/>`_: only needed if you plan on using wgpu in Jupyter
@@ -50,19 +49,16 @@ is selected automatically, but can be overridden by setting the
 ``WGPU_BACKEND_TYPE`` environment variable to "Vulkan", "Metal", "D3D12",
 "D3D11", or "OpenGL".
 
-Windows
-=======
+**Windows**
 
 On Windows 10+, things should just work. On older Windows versions you
 may need to install the Vulkan drivers.
 
-MacOS
-=====
+**MacOS**
 
 On MacOS you need at least 10.13 (High Sierra) to have Metal/Vulkan support.
 
-Linux
-=====
+**Linux**
 
 On Linux, it's advisable to install the proprietary drivers of your GPU
 (if you have a dedicated GPU). You may need to ``apt install
