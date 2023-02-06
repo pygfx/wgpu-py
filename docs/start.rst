@@ -13,19 +13,70 @@ Installation
 Dependencies
 ------------
 
+Python dependencies:
+
 * Python 3.7 or higher is required. Pypy is supported.
-* The required ``wgpu-native`` library is distributed as part of the ``wgpu-py`` package.
-* The only other dependency is ``cffi`` (installed automatically by pip).
+* Only depends on ``cffi`` (installed automatically by pip).
+
+The wgpu-native library:
+
+* The wheels include the prebuilt binaries of `wgpu-native <https://github.com/gfx-rs/wgpu-native>`_.
+* On Linux you need at least **pip >= 20.3**, and a recent Linux distribution, otherwise the binaries will not be available. See *platform requirements* for details.
+* If you need/want to `build wgpu-native yourself <https://github.com/gfx-rs/wgpu-native/wiki/Getting-Started>`_, you need to set the environment variable ``WGPU_LIB_PATH`` to let wgpu-py know where the DLL is located.
 
 
-System requirements
--------------------
+GUI libraries
+-------------
 
-The system must be new enough to support Metal or Vulkan:
+Most users will want to render something to screen. To this end we recommend:
 
-* Windows: fine on Windows 10, probably older Windows versions too when DX12 can be used.
-* MacOS: version 10.13 High Sierra or higher.
-* Linux: Vulkan must be available.
+.. code-block:: bash
+
+    pip install glfw
+
+wgpu-py supports:
+
+* `glfw <https://github.com/FlorianRhiem/pyGLFW>`_: a lightweight GUI for the desktop
+* `jupyter_rfb <https://jupyter-rfb.readthedocs.io/en/latest/>`_: only needed if you plan on using wgpu in Jupyter
+* qt (PySide6, PyQt6, PySide2, PyQt5)
+* wx
+
+
+Platform requirements
+---------------------
+
+Under the hood, wgpu runs on Vulkan, Metal, or DX12. The wgpu-backend
+is selected automatically, but can be overridden by setting the
+``WGPU_BACKEND_TYPE`` environment variable to "Vulkan", "Metal", "D3D12",
+"D3D11", or "OpenGL".
+
+Windows
+=======
+
+On Windows 10+, things should just work. On older Windows versions you
+may need to install the Vulkan drivers.
+
+MacOS
+=====
+
+On MacOS you need at least 10.13 (High Sierra) to have Metal/Vulkan support.
+
+Linux
+=====
+
+On Linux, it's advisable to install the proprietary drivers of your GPU
+(if you have a dedicated GPU). You may need to ``apt install
+mesa-vulkan-drivers``. Wayland support is currently broken (we could use
+a hand to fix this).
+
+Binary wheels for Linux are only available for **manylinux_2_24**.
+This means that the installation requires ``pip >= 20.3``, and you need
+a recent Linux distribution, listed `here <https://github.com/pypa/manylinux#manylinux>`_.
+
+If you wish to work with an older distribution, you will have to build
+wgpu-native yourself, see "dependencies" above. Note that wgpu-native
+still needs Vulkan support and may not compile / work on older
+distributions.
 
 
 About this API
@@ -42,7 +93,5 @@ What's new in this version?
 ---------------------------
 
 Since the API changes with each release, and we do not yet make things
-backwards compatible. You may want to check the changelog when you
-upgrade to a newer version of wgpu:
-
-https://github.com/pygfx/wgpu-py/blob/main/CHANGELOG.md
+backwards compatible. You may want to check the `CHANGELOG.md <https://github.com/pygfx/wgpu-py/blob/main/CHANGELOG.md>`_
+when you upgrade to a newer version of wgpu.
