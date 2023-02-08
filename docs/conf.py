@@ -22,27 +22,19 @@ import wgpu  # noqa: E402
 import wgpu.gui  # noqa: E402
 
 
-# -- Tweak wgpu's docs -------------------------------------------------------
+# -- Tests -------------------------------------------------------------------
 
-# Ensure that all classes are in the docs
-with open(os.path.join(ROOT_DIR, "docs", "reference_classes.rst"), "rb") as f:
-    classes_text = f.read().decode()
-for cls_name in wgpu.base.__all__:
-    expected = f".. autoclass:: {cls_name}"
-    assert (
-        expected in classes_text
-    ), f"Missing doc entry {cls_name} in reference_classes.rst"
-
-# Ensure that all classes are references in the alphabetic list, and referenced at least one other time
-with open(os.path.join(ROOT_DIR, "docs", "reference_wgpu.rst"), "rb") as f:
+# Ensure that all classes are references in the alphabetic list,
+# and referenced at least one other time as part of the explanatory text.
+with open(os.path.join(ROOT_DIR, "docs", "wgpu.rst"), "rb") as f:
     wgpu_text = f.read().decode()
+    wgpu_lines = [line.strip() for line in wgpu_text.splitlines()]
 for cls_name in wgpu.base.__all__:
-    expected1 = f":class:`{cls_name}`"
-    expected2 = f"* :class:`{cls_name}`"
-    assert expected2 in wgpu_text, f"Missing doc entry {cls_name} in reference_wgpu.rst"
-    assert (
-        wgpu_text.count(expected1) >= 2
-    ), f"Need at least one reference to {cls_name} in reference_wgpu.rst"
+    assert f"~{cls_name}" in wgpu_lines, f"Class {cls_name} not listed in class list in wgpu.rst"
+    assert f":class:`{cls_name}`" in wgpu_text, f"Class {cls_name} not referenced in the text in wgpu.rst"
+
+
+# -- Hacks to tweak docstrings -----------------------------------------------
 
 # Make flags and enum appear better in docs
 wgpu.enums._use_sphinx_repr = True
@@ -52,14 +44,8 @@ wgpu.flags._use_sphinx_repr = True
 for cls_name, cls in wgpu.base.__dict__.items():
     if cls_name not in wgpu.base.__all__:
         continue
-
-    # Change class docstring to include a link to the base class,
-    # and the class' signature is not shown
-    base_info = ""
-    base_classes = [f":class:`.{c.__name__}`" for c in cls.mro()[1:-1]]
-    if base_classes:
-        base_info = f"    *Subclass of* {', '.join(base_classes)}\n\n"
-    cls.__doc__ = cls.__name__ + "()\n\n" + base_info + "    " + cls.__doc__.lstrip()
+    # Change class docstring to hide signature
+    cls.__doc__ = cls.__name__ + "()\n\n" + cls.__doc__.lstrip()
     # Change docstring of methods that dont have positional arguments
     for method in cls.__dict__.values():
         if not (callable(method) and hasattr(method, "__code__")):
@@ -72,7 +58,7 @@ for cls_name, cls in wgpu.base.__dict__.items():
 # -- Project information -----------------------------------------------------
 
 project = "wgpu-py"
-copyright = "2020-2022, Almar Klein, Korijn van Golen"
+copyright = "2020-2023, Almar Klein, Korijn van Golen"
 author = "Almar Klein, Korijn van Golen"
 release = wgpu.__version__
 
@@ -85,6 +71,7 @@ release = wgpu.__version__
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx.ext.autosummary",
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -1,5 +1,5 @@
-WGPU API
-========
+WGPU
+====
 
 .. currentmodule:: wgpu
 
@@ -72,45 +72,50 @@ from the base API. For the ``rs`` backend check ``print(wgpu.backends.rs.apidiff
 Alphabetic list of GPU classes
 ------------------------------
 
-* :class:`GPU`
-* :class:`GPUAdapterInfo`
-* :class:`GPUAdapter`
-* :class:`GPUBindGroup`
-* :class:`GPUBindGroupLayout`
-* :class:`GPUBindingCommandsMixin`
-* :class:`GPUBuffer`
-* :class:`GPUCanvasContext`
-* :class:`GPUCommandBuffer`
-* :class:`GPUCommandEncoder`
-* :class:`GPUCommandsMixin`
-* :class:`GPUCompilationInfo`
-* :class:`GPUCompilationMessage`
-* :class:`GPUComputePassEncoder`
-* :class:`GPUComputePipeline`
-* :class:`GPUDebugCommandsMixin`
-* :class:`GPUDevice`
-* :class:`GPUDeviceLostInfo`
-* :class:`GPUError`
-* :class:`GPUExternalTexture`
-* :class:`GPUInternalError`
-* :class:`GPUObjectBase`
-* :class:`GPUOutOfMemoryError`
-* :class:`GPUPipelineBase`
-* :class:`GPUPipelineError`
-* :class:`GPUPipelineLayout`
-* :class:`GPUQuerySet`
-* :class:`GPUQueue`
-* :class:`GPURenderBundle`
-* :class:`GPURenderBundleEncoder`
-* :class:`GPURenderCommandsMixin`
-* :class:`GPURenderPassEncoder`
-* :class:`GPURenderPipeline`
-* :class:`GPUSampler`
-* :class:`GPUShaderModule`
-* :class:`GPUTexture`
-* :class:`GPUTextureView`
-* :class:`GPUUncapturedErrorEvent`
-* :class:`GPUValidationError`
+.. autosummary::
+    :nosignatures:
+    :toctree: generated
+    :template: wgpu_class_layout.rst
+
+    ~GPU
+    ~GPUAdapterInfo
+    ~GPUAdapter
+    ~GPUBindGroup
+    ~GPUBindGroupLayout
+    ~GPUBindingCommandsMixin
+    ~GPUBuffer
+    ~GPUCanvasContext
+    ~GPUCommandBuffer
+    ~GPUCommandEncoder
+    ~GPUCommandsMixin
+    ~GPUCompilationInfo
+    ~GPUCompilationMessage
+    ~GPUComputePassEncoder
+    ~GPUComputePipeline
+    ~GPUDebugCommandsMixin
+    ~GPUDevice
+    ~GPUDeviceLostInfo
+    ~GPUError
+    ~GPUExternalTexture
+    ~GPUInternalError
+    ~GPUObjectBase
+    ~GPUOutOfMemoryError
+    ~GPUPipelineBase
+    ~GPUPipelineError
+    ~GPUPipelineLayout
+    ~GPUQuerySet
+    ~GPUQueue
+    ~GPURenderBundle
+    ~GPURenderBundleEncoder
+    ~GPURenderCommandsMixin
+    ~GPURenderPassEncoder
+    ~GPURenderPipeline
+    ~GPUSampler
+    ~GPUShaderModule
+    ~GPUTexture
+    ~GPUTextureView
+    ~GPUUncapturedErrorEvent
+    ~GPUValidationError
 
 
 Overview
