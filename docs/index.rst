@@ -10,7 +10,6 @@ Welcome to the wgpu-py docs!
    start
    guide
    wgpu
-   reference
 
 
 Indices and tables

@@ -18,6 +18,10 @@ class Enum:
             [getattr(self, key) for key in dir(self) if not key.startswith("_")]
         )
 
+    @property
+    def __doc__(self):
+        return ", ".join(f"'{x}'" for x in self)
+
     def __repr__(self):
         options = ", ".join(f"'{x}'" for x in self)
         if _use_sphinx_repr:  # no-cover

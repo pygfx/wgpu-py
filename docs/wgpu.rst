@@ -26,7 +26,7 @@ must be referenced by name. Some argument values must be a dict, these
 can be thought of as "nested" arguments.
 
 Many arguments (and dict fields) must be a
-:doc:`flags <reference_flags>` or :doc:`enums <reference_enums>`.
+:doc:`flag <wgpu_flags>` or :doc:`enum <wgpu_enums>`.
 Flags are integer bitmasks that can be *orred* together. Enum values are
 strings in this API.
 
@@ -69,8 +69,18 @@ Each backend may also implement minor differences (usually additions)
 from the base API. For the ``rs`` backend check ``print(wgpu.backends.rs.apidiff.__doc__)``.
 
 
-Alphabetic list of GPU classes
-------------------------------
+List of flags and enums
+-----------------------
+
+.. toctree::
+    :maxdepth: 2
+
+    wgpu_flags
+    wgpu_enums
+
+
+List of GPU classes
+-------------------
 
 .. autosummary::
     :nosignatures:
