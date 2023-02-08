@@ -7,8 +7,9 @@ from .base import WgpuAutoGui
 
 
 class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
-    """An offscreen canvas intended for manual use. Call the ``.draw()``
-    method to perform a draw and get the result.
+    """An offscreen canvas intended for manual use.
+
+    Call the ``.draw()`` method to perform a draw and get the result.
     """
 
     def __init__(self, *args, size=None, pixel_ratio=1, **kwargs):

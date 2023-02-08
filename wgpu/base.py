@@ -71,7 +71,11 @@ apidiff = ApiDiff()
 
 
 class GPU:
-    """Class that represents the root namespace of the API."""
+    """The entrypoint to the wgpu API.
+
+    The starting point of your wgpu-adventure is always to obtain an adapter.
+    The methods of this class are loaded into the `wgpu` namespace.
+    """
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
@@ -110,7 +114,12 @@ class GPU:
 
 
 class GPUCanvasContext:
-    """A context object associated with a canvas, to present what has been drawn."""
+    """Represents a context to configure a canvas.
+
+    Is also used to obtain the texture to render to.
+
+    Can be obtained via :func:`gui.WgpuCanvasInterface.get_context`.
+    """
 
     def __init__(self, canvas):
         self._canvas_ref = weakref.ref(canvas)
@@ -194,7 +203,7 @@ class GPUCanvasContext:
 
 
 class GPUAdapterInfo:
-    """An object that provides information about an adapter."""
+    """Represents information about an adapter."""
 
     def __init__(self, info):
         self._info
@@ -225,10 +234,16 @@ class GPUAdapterInfo:
 
 
 class GPUAdapter:
-    """
+    """Represents an abstract wgpu implementation.
+
     An adapter represents both an instance of a hardware accelerator
     (e.g. GPU or CPU) and an implementation of WGPU on top of that
-    accelerator. If an adapter becomes unavailable, it becomes invalid.
+    accelerator.
+
+    The adapter is used to request a device object. The adapter object
+    enumerates its capabilities (features) and limits.
+
+    If an adapter becomes unavailable, it becomes invalid.
     Once invalid, it never becomes valid again.
     """
 
@@ -310,8 +325,10 @@ class GPUAdapter:
 
 
 class GPUObjectBase:
-    """The base class for all GPU objects (the device and all objects
-    belonging to a device).
+    """The base class for all GPU objects.
+
+    A GPU object is an object that can be thought of having a representation on
+    the GPU; the device and all objects belonging to a device.
     """
 
     def __init__(self, label, internal, device):
@@ -340,7 +357,8 @@ class GPUObjectBase:
 
 
 class GPUDevice(GPUObjectBase):
-    """
+    """The top-level interface through which GPU objects are created.
+
     A device is the logical instantiation of an adapter, through which
     internal objects are created. It can be shared across threads.
     A device is the exclusive owner of all internal objects created
@@ -889,9 +907,9 @@ class GPUDevice(GPUObjectBase):
 
 
 class GPUBuffer(GPUObjectBase):
-    """
-    A GPUBuffer represents a block of memory that can be used in GPU
-    operations. Data is stored in linear layout, meaning that each byte
+    """Represents a block of memory that can be used in GPU operations.
+
+    Data is stored in linear layout, meaning that each byte
     of the allocation can be addressed by its offset from the start of
     the buffer, subject to alignment restrictions depending on the
     operation.
@@ -990,10 +1008,11 @@ class GPUBuffer(GPUObjectBase):
 
 
 class GPUTexture(GPUObjectBase):
-    """
-    A texture represents a 1D, 2D or 3D color image object. It also can have mipmaps
-    (different levels of varying detail), and arrays. The texture represents
-    the "raw" data. A :class:`GPUTextureView` is used to define how the texture data
+    """Represents a 1D, 2D or 3D color image object.
+
+    A texture also can have mipmaps (different levels of varying
+    detail), and arrays. The texture represents the "raw" data. A
+    :class:`GPUTextureView` is used to define how the texture data
     should be interpreted.
 
     Create a texture using :func:`GPUDevice.create_texture`.
@@ -1098,8 +1117,7 @@ class GPUTexture(GPUObjectBase):
 
 
 class GPUTextureView(GPUObjectBase):
-    """
-    A texture view represents a way to represent a :class:`GPUTexture`.
+    """Represents a way to represent a :class:`GPUTexture`.
 
     Create a texture view using :func:`GPUTexture.create_view`.
     """
@@ -1123,9 +1141,9 @@ class GPUTextureView(GPUObjectBase):
 
 
 class GPUSampler(GPUObjectBase):
-    """
-    A sampler specifies how a texture (view) must be sampled by the shader,
-    in terms of subsampling, sampling between mip levels, and sampling out
+    """Defines how a texture (view) must be sampled by the shader.
+
+    It defines the subsampling, sampling between mip levels, and sampling out
     of the image boundaries.
 
     Create a sampler using :func:`GPUDevice.create_sampler`.
@@ -1133,10 +1151,9 @@ class GPUSampler(GPUObjectBase):
 
 
 class GPUBindGroupLayout(GPUObjectBase):
-    """
-    A bind group layout defines the interface between a set of
-    resources bound in a :class:`GPUBindGroup` and their accessibility in shader
-    stages.
+    """Defines the interface between a set of resources bound in a :class:`GPUBindGroup`.
+
+    It also defines their accessibility in shader stages.
 
     Create a bind group layout using :func:`GPUDevice.create_bind_group_layout`.
     """
@@ -1147,9 +1164,10 @@ class GPUBindGroupLayout(GPUObjectBase):
 
 
 class GPUBindGroup(GPUObjectBase):
-    """
-    A bind group represents a group of bindings, the shader slot,
-    and a resource (sampler, texture-view, buffer).
+    """Represents a group of resource bindings (buffer, sampler, texture-view).
+
+    It holds the shader slot and a reference to the resource (sampler,
+    texture-view, buffer).
 
     Create a bind group using :func:`GPUDevice.create_bind_group`.
     """
@@ -1160,9 +1178,7 @@ class GPUBindGroup(GPUObjectBase):
 
 
 class GPUPipelineLayout(GPUObjectBase):
-    """
-    A pipeline layout describes the layout of a pipeline, as a list
-    of :class:`GPUBindGroupLayout` objects.
+    """Describes the layout of a pipeline, as a list of :class:`GPUBindGroupLayout` objects.
 
     Create a pipeline layout using :func:`GPUDevice.create_pipeline_layout`.
     """
@@ -1173,8 +1189,7 @@ class GPUPipelineLayout(GPUObjectBase):
 
 
 class GPUShaderModule(GPUObjectBase):
-    """
-    A shader module represents a programmable shader.
+    """Represents a programmable shader.
 
     Create a shader module using :func:`GPUDevice.create_shader_module`.
     """
@@ -1204,33 +1219,33 @@ class GPUPipelineBase:
 
 
 class GPUComputePipeline(GPUPipelineBase, GPUObjectBase):
-    """
-    A compute pipeline represents a single pipeline for computations (no rendering).
+    """Represents a single pipeline for computations (no rendering).
 
     Create a compute pipeline using :func:`GPUDevice.create_compute_pipeline`.
     """
 
 
 class GPURenderPipeline(GPUPipelineBase, GPUObjectBase):
-    """
-    A render pipeline represents a single pipeline to draw something
-    using a vertex and a fragment shader. The render target can come
-    from a window on the screen or from an in-memory texture (off-screen
-    rendering).
+    """Represents a single pipeline to draw something.
+
+    The rendering typically involves a vertex and fragment stage, though
+    the latter is optional.
+    The render target can come from a window on the screen or from an
+    in-memory texture (off-screen rendering).
 
     Create a render pipeline using :func:`GPUDevice.create_render_pipeline`.
     """
 
 
 class GPUCommandBuffer(GPUObjectBase):
-    """
-    A command buffer stores a series of commands, generated by a
-    :class:`GPUCommandEncoder`, to be submitted to a :class:`GPUQueue`.
+    """Stores a series of commands generated by a :class:`GPUCommandEncoder`.
 
-    Create a command buffer using :func:`GPUCommandEncoder.finish`.
+    The buffered commands can subsequently be submitted to a :class:`GPUQueue`.
 
     Command buffers are single use, you must only submit them once and
     submitting them destroys them. Use render bundles to re-use commands.
+
+    Create a command buffer using :func:`GPUCommandEncoder.finish`.
     """
 
 
@@ -1379,9 +1394,9 @@ class GPURenderCommandsMixin:
 
 
 class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
-    """
-    A command encoder is used to record a series of commands. When done,
-    call :func:`finish` to obtain a GPUCommandBuffer object.
+    """Object to record a series of commands.
+
+    When done, call :func:`finish` to obtain a :class:`GPUCommandBuffer` object.
 
     Create a command encoder using :func:`GPUDevice.create_command_encoder`.
     """
@@ -1531,8 +1546,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 class GPUComputePassEncoder(
     GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPUObjectBase
 ):
-    """
-    A compute-pass encoder records commands related to a compute pass.
+    """Object to records commands for a compute pass.
 
     Create a compute pass encoder using :func:`GPUCommandEncoder.begin_compute_pass`.
     """
@@ -1582,8 +1596,7 @@ class GPURenderPassEncoder(
     GPURenderCommandsMixin,
     GPUObjectBase,
 ):
-    """
-    A render-pass encoder records commands related to a render pass.
+    """Object to records commands for a render pass.
 
     Create a render pass encoder using :func:`GPUCommandEncoder.begin_render_pass`.
     """
@@ -1660,7 +1673,7 @@ class GPURenderPassEncoder(
 
 class GPURenderBundle(GPUObjectBase):
     """
-    TODO: not yet available in wgpu-native
+    TODO: not yet wrapped.
     """
 
 
@@ -1672,7 +1685,7 @@ class GPURenderBundleEncoder(
     GPUObjectBase,
 ):
     """
-    TODO: not yet available in wgpu-native
+    TODO: not yet wrapped
     """
 
     # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
@@ -1686,8 +1699,7 @@ class GPURenderBundleEncoder(
 
 
 class GPUQueue(GPUObjectBase):
-    """
-    A queue can be used to submit command buffers to.
+    """Object to submit command buffers to.
 
     You can obtain a queue object via the :attr:`GPUDevice.queue` property.
     """
@@ -1843,7 +1855,7 @@ class GPUValidationError(GPUError):
 
 
 class GPUPipelineError(Exception):
-    """An error representing a pipeline creation failure."""
+    """An error raised when a pipeline could not be created."""
 
     # IDL: constructor(DOMString message, GPUPipelineErrorInit options);
     def __init__(self, message, options):
@@ -1858,7 +1870,9 @@ class GPUPipelineError(Exception):
 
 
 class GPUInternalError(GPUError):
-    """An operation failed for a system or implementation-specific
+    """An error raised for implementation-specific reasons.
+
+    An operation failed for a system or implementation-specific
     reason even when all validation requirements have been satisfied.
     """
 

@@ -45,7 +45,7 @@ for cls_name, cls in wgpu.base.__dict__.items():
     if cls_name not in wgpu.base.__all__:
         continue
     # Change class docstring to hide signature
-    cls.__doc__ = cls.__name__ + "()\n\n" + cls.__doc__.lstrip()
+    cls.__doc__ = cls.__name__ + "()\n\n    " + cls.__doc__.lstrip()
     # Change docstring of methods that dont have positional arguments
     for method in cls.__dict__.values():
         if not (callable(method) and hasattr(method, "__code__")):

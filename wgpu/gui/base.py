@@ -58,11 +58,11 @@ def weakbind(method):
 
 
 class WgpuCanvasInterface:
-    """This is the interface that a canvas object must implement in order
-    to be a valid canvas that wgpu can work with.
-    """
+    """The interface that an object must implement to be a valid canvas.
 
-    # NOTE: This is an interface - it should not be necessary to actually subclass
+    Any object that implements these methods, is a canvas that wgpu can work with.
+    The object does not necessarily have to derive from this class.
+    """
 
     def __init__(self, *args, **kwargs):
         # The args/kwargs are there because we may be mixed with e.g. a Qt widget
@@ -120,14 +120,14 @@ class WgpuCanvasInterface:
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
-    """An abstract class extending :class:`WgpuCanvasInterface`,
-    that provides a base canvas for various GUI toolkits, so
-    that basic canvas functionality is available via a common API.
+    """An canvas class that provides a basis for various GUI toolkits.
 
-    It is convenient - but not required - to use this class (or any of its
-    subclasses) to use wgpu-py.
+    This class implements common functionality, so that subclases do not have
+    to repeat it, and it's available via the same API. It is convenient
+    - but not required - to use this class (or any of its subclasses)
+    to use wgpu-py.
 
-    This class applies draw rate limiting, which can be set with the
+    This class implements draw rate limiting, which can be set with the
     ``max_fps`` attribute (default 30). For benchmarks you may also want
     to set ``vsync`` to False.
     """
@@ -216,7 +216,11 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
 
 class WgpuAutoGui:
-    """Mixin class for canvases implementing autogui."""
+    """Mixin class for canvases implementing autogui.
+
+    AutoGui canvases provide an API for handling events and registering event
+    handlers.
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
