@@ -36,9 +36,10 @@ for cls_name in wgpu.base.__all__:
 
 # -- Hacks to tweak docstrings -----------------------------------------------
 
-# Make flags and enum appear better in docs
+# Make flags and enums appear better in docs
 wgpu.enums._use_sphinx_repr = True
 wgpu.flags._use_sphinx_repr = True
+wgpu.structs._use_sphinx_repr = True
 
 # Also tweak docstrings of classes and their methods
 for cls_name, cls in wgpu.base.__dict__.items():

@@ -69,65 +69,6 @@ Each backend may also implement minor differences (usually additions)
 from the base API. For the ``rs`` backend check ``print(wgpu.backends.rs.apidiff.__doc__)``.
 
 
-List of flags and enums
------------------------
-
-.. toctree::
-    :maxdepth: 2
-
-    wgpu_flags
-    wgpu_enums
-
-
-List of GPU classes
--------------------
-
-.. autosummary::
-    :nosignatures:
-    :toctree: generated
-    :template: wgpu_class_layout.rst
-
-    ~GPU
-    ~GPUAdapterInfo
-    ~GPUAdapter
-    ~GPUBindGroup
-    ~GPUBindGroupLayout
-    ~GPUBindingCommandsMixin
-    ~GPUBuffer
-    ~GPUCanvasContext
-    ~GPUCommandBuffer
-    ~GPUCommandEncoder
-    ~GPUCommandsMixin
-    ~GPUCompilationInfo
-    ~GPUCompilationMessage
-    ~GPUComputePassEncoder
-    ~GPUComputePipeline
-    ~GPUDebugCommandsMixin
-    ~GPUDevice
-    ~GPUDeviceLostInfo
-    ~GPUError
-    ~GPUExternalTexture
-    ~GPUInternalError
-    ~GPUObjectBase
-    ~GPUOutOfMemoryError
-    ~GPUPipelineBase
-    ~GPUPipelineError
-    ~GPUPipelineLayout
-    ~GPUQuerySet
-    ~GPUQueue
-    ~GPURenderBundle
-    ~GPURenderBundleEncoder
-    ~GPURenderCommandsMixin
-    ~GPURenderPassEncoder
-    ~GPURenderPipeline
-    ~GPUSampler
-    ~GPUShaderModule
-    ~GPUTexture
-    ~GPUTextureView
-    ~GPUUncapturedErrorEvent
-    ~GPUValidationError
-
-
 Overview
 --------
 
@@ -241,3 +182,63 @@ These classes are not supported and/or documented yet.
 :class:`GPUCompilationMessage`
 :class:`GPUCompilationInfo`
 :class:`GPUQuerySet`
+
+
+List of flags, enums, and structs
+---------------------------------
+
+.. toctree::
+    :maxdepth: 2
+
+    wgpu_flags
+    wgpu_enums
+    wgpu_structs
+
+
+List of GPU classes
+-------------------
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated
+    :template: wgpu_class_layout.rst
+
+    ~GPU
+    ~GPUAdapterInfo
+    ~GPUAdapter
+    ~GPUBindGroup
+    ~GPUBindGroupLayout
+    ~GPUBindingCommandsMixin
+    ~GPUBuffer
+    ~GPUCanvasContext
+    ~GPUCommandBuffer
+    ~GPUCommandEncoder
+    ~GPUCommandsMixin
+    ~GPUCompilationInfo
+    ~GPUCompilationMessage
+    ~GPUComputePassEncoder
+    ~GPUComputePipeline
+    ~GPUDebugCommandsMixin
+    ~GPUDevice
+    ~GPUDeviceLostInfo
+    ~GPUError
+    ~GPUExternalTexture
+    ~GPUInternalError
+    ~GPUObjectBase
+    ~GPUOutOfMemoryError
+    ~GPUPipelineBase
+    ~GPUPipelineError
+    ~GPUPipelineLayout
+    ~GPUQuerySet
+    ~GPUQueue
+    ~GPURenderBundle
+    ~GPURenderBundleEncoder
+    ~GPURenderCommandsMixin
+    ~GPURenderPassEncoder
+    ~GPURenderPipeline
+    ~GPUSampler
+    ~GPUShaderModule
+    ~GPUTexture
+    ~GPUTextureView
+    ~GPUUncapturedErrorEvent
+    ~GPUValidationError
