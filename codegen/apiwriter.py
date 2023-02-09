@@ -2,9 +2,35 @@
 Writes the parts of the API that are simple: flags, enums, structs.
 """
 
+import re
+
 from codegen.utils import print, blacken, to_snake_case
 from codegen.idlparser import get_idl_parser
 from codegen.files import file_cache
+
+
+ref_pattern = re.compile(r"\W((GPU|flags\.|enums\.|structs\.)\w+?)\W", re.MULTILINE)
+
+def resolve_crossrefs(text):
+    # Similar code as in docs/conf.py
+    text += " "
+    i2 = 0
+    while True:
+        m = ref_pattern.search(text, i2)
+        if not m:
+            break
+        i1, i2 = m.start(1), m.end(1)
+        prefix = m.group(2)
+        ref_indicator = ":obj:" if prefix.lower() == prefix else ":class:"
+        name = m.group(1)
+        if name.startswith("structs."):
+            link = name.split(".")[1]
+        else:
+            link = "wgpu." + name
+        insertion = f"{ref_indicator}`{name} <{link}>`"
+        text = text[:i1] + insertion + text[i2:]
+        i2 += len(insertion) - len(name)
+    return text.rstrip()
 
 
 flags_preamble = '''
@@ -152,7 +178,7 @@ def write_structs():
         # Object-docstring as a comment
         for field in d.values():
             tp = idl.resolve_type(field.typename).strip("'")
-            pylines.append(f"#: * {field.name} - {tp}")
+            pylines.append(resolve_crossrefs(f"#: * {field.name} - {tp}"))
         # Generate Code
         pylines.append(f'{name} = Struct(\n    "{name}",')
         for field in d.values():
