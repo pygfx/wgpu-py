@@ -150,11 +150,11 @@ class GPUCanvasContext:
 
         Arguments:
             device (WgpuDevice): The GPU device object.
-            format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
+            format (enums.TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
                 Default uses the preferred_format.
-            usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
+            usage (flags.TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
             color_space (PredefinedColorSpace): Default "srgb".
-            alpha_mode (CanvasCompositingAlphaMode): Default opaque.
+            alpha_mode (enums.CanvasAlphaMode): Default opaque.
         """
         self.unconfigure()
         self._device = device
@@ -285,7 +285,7 @@ class GPUAdapter:
             label (str): A human readable label. Optional.
             required_features (list of str): the features (extensions) that you need. Default [].
             required_limits (dict): the various limits that you need. Default {}.
-            default_queue (dict, optional): Descriptor for the default queue.
+            default_queue (structs.QueueDescriptor): Descriptor for the default queue. Optional.
         """
         raise NotImplementedError()
 
@@ -437,7 +437,7 @@ class GPUDevice(GPUObjectBase):
         Arguments:
             label (str): A human readable label. Optional.
             size (int): The size of the buffer in bytes.
-            usage (BufferUsageFlags): The ways in which this buffer will be used.
+            usage (flags.BufferUsage): The ways in which this buffer will be used.
             mapped_at_creation (bool): Must be False, use create_buffer_with_data() instead.
         """
         raise NotImplementedError()
@@ -450,7 +450,7 @@ class GPUDevice(GPUObjectBase):
             label (str): A human readable label. Optional.
             data: Any object supporting the Python buffer protocol (this
                 includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
-            usage (BufferUsageFlags): The ways in which this buffer will be used.
+            usage (flags.BufferUsage): The ways in which this buffer will be used.
 
         Also see `GPUQueue.write_buffer()` and `GPUQueue.read_buffer()`.
         """
@@ -473,13 +473,12 @@ class GPUDevice(GPUObjectBase):
 
         Arguments:
             label (str): A human readable label. Optional.
-            size (tuple or dict): The texture size as a 3-tuple or a
-                dict (width, height, depth_or_array_layers).
+            size (tuple or dict): The texture size as a 3-tuple or a `structs.Extent3D`.
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
-            dimension (TextureDimension): The dimensionality of the texture. Default 2d.
+            dimension (enums.TextureDimension): The dimensionality of the texture. Default 2d.
             format (TextureFormat): What channels it stores and how.
-            usage (TextureUsageFlags): The ways in which the texture will be used.
+            usage (flags.TextureUsage): The ways in which the texture will be used.
             view_formats (optional): A list of formats that views are allowed to have
               in addition to the texture's own view. Using these formats may have
               a performance penalty.
@@ -510,18 +509,18 @@ class GPUDevice(GPUObjectBase):
 
         Arguments:
             label (str): A human readable label. Optional.
-            address_mode_u (AddressMode): What happens when sampling beyond the x edge.
+            address_mode_u (enums.AddressMode): What happens when sampling beyond the x edge.
                 Default "clamp-to-edge".
-            address_mode_v (AddressMode): What happens when sampling beyond the y edge.
+            address_mode_v (enums.AddressMode): What happens when sampling beyond the y edge.
                 Default "clamp-to-edge".
-            address_mode_w (AddressMode): What happens when sampling beyond the z edge.
+            address_mode_w (enums.AddressMode): What happens when sampling beyond the z edge.
                 Default "clamp-to-edge".
-            mag_filter (FilterMode): Interpolation when zoomed in. Default 'nearest'.
-            min_filter (FilterMode): Interpolation when zoomed out. Default 'nearest'.
-            mipmap_filter: (MipmapFilterMode): Interpolation between mip levels. Default 'nearest'.
+            mag_filter (enums.FilterMode): Interpolation when zoomed in. Default 'nearest'.
+            min_filter (enums.FilterMode): Interpolation when zoomed out. Default 'nearest'.
+            mipmap_filter: (enums.MipmapFilterMode): Interpolation between mip levels. Default 'nearest'.
             lod_min_clamp (float): The minimum level of detail. Default 0.
             lod_max_clamp (float): The maxium level of detail. Default 32.
-            compare (CompareFunction): The sample compare operation for depth textures.
+            compare (enums.CompareFunction): The sample compare operation for depth textures.
                 Only specify this for depth textures. Default None.
             max_anisotropy (int): The maximum anisotropy value clamp used by the sample,
                 betweet 1 and 16, default 1.
@@ -539,13 +538,15 @@ class GPUDevice(GPUObjectBase):
 
         Arguments:
             label (str): A human readable label. Optional.
-            entries (list of dict): A list of layout entry dicts.
+            entries (list): A list of `structs.BindGroupLayoutEntry` dicts.
+                Each contains either a `structs.BufferBindingLayout`,
+                `structs.SamplerBindingLayout`, `structs.TextureBindingLayout`,
+                or `structs.StorageTextureBindingLayout`.
 
-        Example entry dict:
+        Example with `structs.BufferBindingLayout`:
 
         .. code-block:: py
 
-            # Buffer
             {
                 "binding": 0,
                 "visibility": wgpu.ShaderStage.COMPUTE,
@@ -555,36 +556,8 @@ class GPUDevice(GPUObjectBase):
                     "min_binding_size": 0  # optional
                 }
             },
-            # Sampler
-            {
-                "binding": 1,
-                "visibility": wgpu.ShaderStage.COMPUTE,
-                "sampler": {
-                    "type": wgpu.SamplerBindingType.filtering,
-                }
-            },
-            # Sampled texture
-            {
-                "binding": 2,
-                "visibility": wgpu.ShaderStage.FRAGMENT,
-                "texture": {
-                    "sample_type": wgpu.TextureSampleType.float,  # optional
-                    "view_dimension": wgpu.TextureViewDimension.d2,  # optional
-                    "multisampled": False,  # optional
-                }
-            },
-            # Storage texture
-            {
-                "binding": 3,
-                "visibility": wgpu.ShaderStage.FRAGMENT,
-                "storage_texture": {
-                    "access": wgpu.StorageTextureAccess.read_only,
-                    "format": wgpu.TextureFormat.r32float,
-                    "view_dimension": wgpu.TextureViewDimension.d2,
-                }
-            },
 
-        About ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
+        Note on ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
         readonly-storage-buffer bindings, it indicates whether the binding has a
         dynamic offset. One offset must be passed to `pass.set_bind_group()`
         for each dynamic binding in increasing order of binding number.
@@ -606,7 +579,8 @@ class GPUDevice(GPUObjectBase):
             label (str): A human readable label. Optional.
             layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
-            entries (list of dict): A list of dicts, see below.
+            entries (list): A list of `structs.BindGroupEntry` dicts. The ``resource`` field
+                is either `GPUSampler`, `GPUTextureView` or `structs.BufferBinding`.
 
         Example entry dicts:
 
@@ -679,7 +653,7 @@ class GPUDevice(GPUObjectBase):
         Arguments:
             label (str): A human readable label. Optional.
             layout (GPUPipelineLayout): object created with `create_pipeline_layout()`.
-            compute (dict): E.g. ``{"module": shader_module, entry_point="main"}``.
+            compute (structs.ProgrammableStage): Binds shader module and entrypoint.
         """
         raise NotImplementedError()
 
@@ -710,20 +684,22 @@ class GPUDevice(GPUObjectBase):
 
         Arguments:
             label (str): A human readable label. Optional.
-            layout (GPUPipelineLayout): A layout created with `create_pipeline_layout()`.
-            vertex (VertexState): Describes the vertex shader entry point of the pipeline and its input buffer layouts.
-            primitive (PrimitiveState): Describes the the primitive-related properties
+            layout (GPUPipelineLayout): The layout for the new pipeline.
+            vertex (structs.VertexState): Describes the vertex shader entry point of the
+                pipeline and its input buffer layouts.
+            primitive (structs.PrimitiveState): Describes the the primitive-related properties
                 of the pipeline. If `strip_index_format` is present (which means the
                 primitive topology is a strip), and the drawCall is indexed, the
                 vertex index list is split into sub-lists using the maximum value of this
                 index format as a separator. Example: a list with values
                 `[1, 2, 65535, 4, 5, 6]` of type "uint16" will be split in sub-lists
                 `[1, 2]` and `[4, 5, 6]`.
-            depth_stencil (DepthStencilState): Describes the optional depth-stencil properties, including the testing, operations, and bias. Optional.
-            multisample (MultisampleState): Describes the multi-sampling properties of the pipeline.
-            fragment (FragmentState): Describes the fragment shader
+            depth_stencil (structs.DepthStencilState): Describes the optional depth-stencil
+                properties, including the testing, operations, and bias. Optional.
+            multisample (structs.MultisampleState): Describes the multi-sampling properties of the pipeline.
+            fragment (structs.FragmentState): Describes the fragment shader
                 entry point of the pipeline and its output colors. If it’s
-                None, the No Color Output mode is enabled: the pipeline
+                None, the No-Color-Output mode is enabled: the pipeline
                 does not produce any color attachment outputs. It still
                 performs rasterization and produces depth values based on
                 the vertex position output. The depth testing and stencil
@@ -732,7 +708,7 @@ class GPUDevice(GPUObjectBase):
         In the example dicts below, the values that are marked as optional,
         the shown value is the default.
 
-        Example vertex (VertexState) dict:
+        Example vertex (structs.VertexState) dict:
 
         .. code-block:: py
 
@@ -756,7 +732,7 @@ class GPUDevice(GPUObjectBase):
                 ]
             }
 
-        Example primitive (GPUPrimitiveState) dict:
+        Example primitive (structs.PrimitiveState) dict:
 
         .. code-block:: py
 
@@ -767,7 +743,7 @@ class GPUDevice(GPUObjectBase):
                 "cull_mode": wgpu.CullMode.none,  # optional
             }
 
-        Example depth_stencil (GPUDepthStencilState) dict:
+        Example depth_stencil (structs.DepthStencilState) dict:
 
         .. code-block:: py
 
@@ -794,7 +770,7 @@ class GPUDevice(GPUObjectBase):
                 "depth_bias_clamp": 0.0,  # optional
             }
 
-        Example multisample (MultisampleState) dict:
+        Example multisample (structs.MultisampleState) dict:
 
         .. code-block:: py
 
@@ -804,7 +780,7 @@ class GPUDevice(GPUObjectBase):
                 "alpha_to_coverage_enabled": False  # optional
             }
 
-        Example fragment (FragmentState) dict. The `blend` parameter can be None
+        Example fragment (structs.FragmentState) dict. The `blend` parameter can be None
         to disable blending (not all texture formats support blending).
 
         .. code-block:: py
@@ -1095,9 +1071,9 @@ class GPUTexture(GPUObjectBase):
 
         Arguments:
             label (str): A human readable label. Optional.
-            format (TextureFormat): What channels it stores and how.
-            dimension (TextureViewDimension): The dimensionality of the texture view.
-            aspect (TextureAspect): Whether this view is used for depth, stencil, or all.
+            format (enums.TextureFormat): What channels it stores and how.
+            dimension (enums.TextureViewDimension): The dimensionality of the texture view.
+            aspect (enums.TextureAspect): Whether this view is used for depth, stencil, or all.
                 Default all.
             base_mip_level (int): The starting mip level. Default 0.
             mip_level_count (int): The number of mip levels. Default None.
@@ -1432,33 +1408,10 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 
         Arguments:
             label (str): A human readable label. Optional.
-            color_attachments (list of dict): List of color attachment dicts. See below.
-            depth_stencil_attachment (dict): A depth stencil attachment dict. See below. Default None.
-            occlusion_query_set: Default None. TODO NOT IMPLEMENTED in wgpu-native.
+            color_attachments (list): List of `structs.RenderPassColorAttachment` dicts.
+            depth_stencil_attachment (structs.RenderPassDepthStencilAttachment): Describes the depth stencil attachment. Default None.
+            occlusion_query_set (GPUQuerySet): Default None. TODO NOT IMPLEMENTED in wgpu-native.
             timestamp_writes: unused
-
-        Example color attachment:
-
-        .. code-block:: py
-
-            {
-                "view": texture_view,
-                "resolve_target": None,  # optional
-                "load_value": (0, 0, 0, 0),  # LoadOp.load or a color
-                "store_op": wgpu.StoreOp.store,  # optional
-            }
-
-        Example depth stencil attachment:
-
-        .. code-block:: py
-
-            {
-                "view": texture_view,
-                "depth_load_value": 0.0,
-                "depth_store_op": wgpu.StoreOp.store,
-                "stencil_load_value": wgpu.LoadOp.load,
-                "stencil_store_op": wgpu.StoreOp.store,
-            }
         """
         raise NotImplementedError()
 

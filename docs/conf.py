@@ -42,19 +42,41 @@ wgpu.enums._use_sphinx_repr = True
 wgpu.flags._use_sphinx_repr = True
 wgpu.structs._use_sphinx_repr = True
 
+# Build regular expressuins to resolve crossrefs
+func_ref_pattern = re.compile(r"\ (`\w+?\(\)`)", re.MULTILINE)
+ob_ref_pattern = re.compile(r"\ (`(GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?`)", re.MULTILINE)
+argtype_ref_pattern = re.compile(r"\(((GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?)\)", re.MULTILINE)
 
-func_ref_pattern = re.compile("\ (`\w+\(\)`)", re.MULTILINE)
 
 def resolve_crossrefs(text):
-    # Turn mentions of classes and methods into a cross ref (link)
-    # The :obj: ref seems to work for any kind of object
-    text = (text or "").lstrip()
-    for start in ("GPU", "Wgpu", "gui.Wgpu"):
-        text = text.replace(f" `{start}", f" :obj:`{start}")
-    # Also make mentions of local methods a crossref
-    while m := func_ref_pattern.search(text):
-        i = m.start(1)
-        text = text[:i] + ":func:" + text[i:]
+    if not text:
+        return text
+
+    # Turn references to functions into a crossref.
+    # E.g. `Foo.bar()`
+    i2 = 0
+    while m := func_ref_pattern.search(text, i2):
+        i1, i2 = m.start(1), m.end(1)
+        ref_indicator = ":func:"
+        text = text[:i1] + ref_indicator + text[i1:]
+
+    # Turn references to objects (classes, flags, enums, and structs) into a crossref.
+    # E.g. `GPUDevice` or `flags.BufferUsage`
+    i2 = 0
+    while m := ob_ref_pattern.search(text, i2):
+        i1, i2 = m.start(1), m.end(1)
+        prefix = m.group(2)  # e.g. GPU or flags.
+        ref_indicator = ":obj:" if prefix.lower() == prefix else ":class:"
+        text = text[:i1] + ref_indicator + text[i1:]
+
+    # Turn function arg types into a crossref.
+    # E.g. (GPUDevice) or (flags.BufferUsage)
+    i2 = 0
+    while m := argtype_ref_pattern.search(text):
+        i1, i2 = m.start(1), m.end(1)
+        ref_indicator = ":obj:"
+        text = text[:i1] + ref_indicator + "`" + text[i1:i2] + "`" + text[i2:]
+
     return text
 
 
@@ -110,8 +132,9 @@ master_doc = "index"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-# html_theme = "sphinx_rtd_theme"
+
+if not (os.getenv("READTHEDOCS") or os.getenv("CI")):
+    html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
