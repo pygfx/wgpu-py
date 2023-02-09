@@ -195,8 +195,8 @@ def check_struct(struct_name, d):
 @_register_backend
 class GPU(base.GPU):
     def request_adapter(self, *, canvas, power_preference=None):
-        """Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
-        implementation, from which one can request a :class:`GPUDevice`.
+        """Create a `GPUAdapter`, the object that represents an abstract wgpu
+        implementation, from which one can request a `GPUDevice`.
 
         This is the implementation based on the Rust wgpu-native library.
 

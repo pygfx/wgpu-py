@@ -120,7 +120,7 @@ class WgpuCanvasInterface:
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
-    """An canvas class that provides a basis for various GUI toolkits.
+    """A canvas class that provides a basis for various GUI toolkits.
 
     This class implements common functionality, so that subclases do not have
     to repeat it, and it's available via the same API. It is convenient
