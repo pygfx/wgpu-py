@@ -11,6 +11,8 @@ Welcome to the wgpu-py docs!
    guide
    wgpu
    gui
+   utils
+
 
 
 Indices and tables

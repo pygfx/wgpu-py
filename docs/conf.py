@@ -13,6 +13,7 @@
 import re
 import os
 import sys
+import shutil
 
 ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, ROOT_DIR)
@@ -42,7 +43,7 @@ wgpu.enums._use_sphinx_repr = True
 wgpu.flags._use_sphinx_repr = True
 wgpu.structs._use_sphinx_repr = True
 
-# Build regular expressuins to resolve crossrefs
+# Build regular expressions to resolve crossrefs
 func_ref_pattern = re.compile(r"\ (`\w+?\(\)`)", re.MULTILINE)
 ob_ref_pattern = re.compile(r"\ (`(GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?`)", re.MULTILINE)
 argtype_ref_pattern = re.compile(r"\(((GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?)\)", re.MULTILINE)
@@ -79,7 +80,7 @@ def resolve_crossrefs(text):
     return text
 
 
-# Also tweak docstrings of classes and their methods
+# Tweak docstrings of classes and their methods
 for module, hide_class_signature in [(wgpu.base, True), (wgpu.gui, False)]:
     for cls_name in module.__all__:
         cls = getattr(module, cls_name)
@@ -119,6 +120,9 @@ extensions = [
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+
+# Just let autosummary produce a new version each time
+shutil.rmtree(os.path.join(os.path.dirname(__file__), "generated"), True)
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
