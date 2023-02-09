@@ -89,7 +89,10 @@ def run():
     # Additionally, asyncio will run all pending callbacks
     # scheduled with call_later.
     loop = asyncio.get_event_loop_policy().get_event_loop()
-    loop.run_until_complete(mainloop_iter())
+    if not loop.is_running():
+        loop.run_until_complete(mainloop_iter())
+    else:
+        return  # Probably an interactive session
 
     for t in asyncio.all_tasks(loop=loop):
         t.cancel()

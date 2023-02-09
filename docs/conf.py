@@ -49,8 +49,7 @@ argtype_ref_pattern = re.compile(r"\(((GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\
 
 
 def resolve_crossrefs(text):
-    if not text:
-        return text
+    text = (text or "").lstrip()
 
     # Turn references to functions into a crossref.
     # E.g. `Foo.bar()`
@@ -81,21 +80,22 @@ def resolve_crossrefs(text):
 
 
 # Also tweak docstrings of classes and their methods
-for cls_name, cls in wgpu.base.__dict__.items():
-    if cls_name not in wgpu.base.__all__:
-        continue
-    # Change class docstring to hide signature
-    docs = resolve_crossrefs(cls.__doc__)
-    cls.__doc__ = cls.__name__ + "()\n\n    " + docs
-    # Change docstring of methods that dont have positional arguments
-    for method in cls.__dict__.values():
-        if not (callable(method) and hasattr(method, "__code__")):
-            continue
-        docs = resolve_crossrefs(method.__doc__)
-        if method.__code__.co_argcount == 1 and method.__code__.co_kwonlyargcount > 0:
-            sig = method.__name__ + "(**parameters)"
-            docs = sig + "\n\n        " + docs
-        method.__doc__ = docs
+for module, hide_class_signature in [(wgpu.base, True), (wgpu.gui, False)]:
+    for cls_name in module.__all__:
+        cls = getattr(module, cls_name)
+        # Class docstring
+        docs = resolve_crossrefs(cls.__doc__)
+        if hide_class_signature:
+            docs = cls.__name__ + "()\n\n    " + docs
+        cls.__doc__ = docs or None
+        # Docstring of methods
+        for method in cls.__dict__.values():
+            if callable(method) and hasattr(method, "__code__"):
+                docs = resolve_crossrefs(method.__doc__)
+                if method.__code__.co_argcount == 1 and method.__code__.co_kwonlyargcount > 0:
+                    sig = method.__name__ + "(**parameters)"
+                    docs = sig + "\n\n        " + docs
+                method.__doc__ = docs or None
 
 
 # -- Project information -----------------------------------------------------

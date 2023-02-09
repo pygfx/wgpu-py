@@ -58,10 +58,12 @@ def weakbind(method):
 
 
 class WgpuCanvasInterface:
-    """The interface that an object must implement to be a valid canvas.
+    """The minimal interface to be a valid canvas.
 
-    Any object that implements these methods, is a canvas that wgpu can work with.
-    The object does not necessarily have to derive from this class.
+    Any object that implements these methods is a canvas that wgpu can work with.
+    The object does not even have to derive from this class.
+
+    In most cases it's more convenient to subclass `gui.WgpuCanvasBase`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -120,16 +122,15 @@ class WgpuCanvasInterface:
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
-    """A canvas class that provides a basis for various GUI toolkits.
+    """A canvas class that provides a basis for all GUI toolkits.
 
-    This class implements common functionality, so that subclases do not have
-    to repeat it, and it's available via the same API. It is convenient
-    - but not required - to use this class (or any of its subclasses)
-    to use wgpu-py.
+    This class implements common functionality, to realize a common API
+    and avoid code duplication. It is convenient (but not strictly necessary)
+    for canvas classes to inherit from this class (all builtin canvases do).
 
-    This class implements draw rate limiting, which can be set with the
-    ``max_fps`` attribute (default 30). For benchmarks you may also want
-    to set ``vsync`` to False.
+    Amongst other things, this class implements draw rate limiting,
+    which can be set with the ``max_fps`` attribute (default 30). For
+    benchmarks you may also want to set ``vsync`` to False.
     """
 
     def __init__(self, *args, max_fps=30, vsync=True, **kwargs):
