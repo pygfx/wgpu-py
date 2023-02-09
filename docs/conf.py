@@ -10,6 +10,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import re
 import os
 import sys
 
@@ -41,19 +42,38 @@ wgpu.enums._use_sphinx_repr = True
 wgpu.flags._use_sphinx_repr = True
 wgpu.structs._use_sphinx_repr = True
 
+
+func_ref_pattern = re.compile("\ (`\w+\(\)`)", re.MULTILINE)
+
+def resolve_crossrefs(text):
+    # Turn mentions of classes and methods into a cross ref (link)
+    # The :obj: ref seems to work for any kind of object
+    text = (text or "").lstrip()
+    for start in ("GPU", "Wgpu", "gui.Wgpu"):
+        text = text.replace(f" `{start}", f" :obj:`{start}")
+    # Also make mentions of local methods a crossref
+    while m := func_ref_pattern.search(text):
+        i = m.start(1)
+        text = text[:i] + ":func:" + text[i:]
+    return text
+
+
 # Also tweak docstrings of classes and their methods
 for cls_name, cls in wgpu.base.__dict__.items():
     if cls_name not in wgpu.base.__all__:
         continue
     # Change class docstring to hide signature
-    cls.__doc__ = cls.__name__ + "()\n\n    " + cls.__doc__.lstrip()
+    docs = resolve_crossrefs(cls.__doc__)
+    cls.__doc__ = cls.__name__ + "()\n\n    " + docs
     # Change docstring of methods that dont have positional arguments
     for method in cls.__dict__.values():
         if not (callable(method) and hasattr(method, "__code__")):
             continue
+        docs = resolve_crossrefs(method.__doc__)
         if method.__code__.co_argcount == 1 and method.__code__.co_kwonlyargcount > 0:
             sig = method.__name__ + "(**parameters)"
-            method.__doc__ = sig + "\n\n        " + method.__doc__.lstrip()
+            docs = sig + "\n\n        " + docs
+        method.__doc__ = docs
 
 
 # -- Project information -----------------------------------------------------
