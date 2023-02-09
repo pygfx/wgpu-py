@@ -55,7 +55,10 @@ def resolve_crossrefs(text):
     # Turn references to functions into a crossref.
     # E.g. `Foo.bar()`
     i2 = 0
-    while m := func_ref_pattern.search(text, i2):
+    while True:
+        m = func_ref_pattern.search(text, i2)
+        if not m:
+            break
         i1, i2 = m.start(1), m.end(1)
         ref_indicator = ":func:"
         text = text[:i1] + ref_indicator + text[i1:]
@@ -63,7 +66,10 @@ def resolve_crossrefs(text):
     # Turn references to objects (classes, flags, enums, and structs) into a crossref.
     # E.g. `GPUDevice` or `flags.BufferUsage`
     i2 = 0
-    while m := ob_ref_pattern.search(text, i2):
+    while True:
+        m = ob_ref_pattern.search(text, i2)
+        if not m:
+            break
         i1, i2 = m.start(1), m.end(1)
         prefix = m.group(2)  # e.g. GPU or flags.
         ref_indicator = ":obj:" if prefix.lower() == prefix else ":class:"
@@ -72,7 +78,10 @@ def resolve_crossrefs(text):
     # Turn function arg types into a crossref.
     # E.g. (GPUDevice) or (flags.BufferUsage)
     i2 = 0
-    while m := argtype_ref_pattern.search(text):
+    while True:
+        m = argtype_ref_pattern.search(text)
+        if not m:
+            break
         i1, i2 = m.start(1), m.end(1)
         ref_indicator = ":obj:"
         text = text[:i1] + ref_indicator + "`" + text[i1:i2] + "`" + text[i2:]
