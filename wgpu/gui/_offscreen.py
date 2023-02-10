@@ -10,8 +10,8 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
     to the `present()` method.
     """
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     def get_window_id(self):
         """This canvas does not correspond to an on-screen window."""
