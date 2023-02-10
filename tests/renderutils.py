@@ -10,7 +10,6 @@ import wgpu.backends.rs  # noqa
 
 
 def upload_to_texture(device, texture, data, nx, ny, nz):
-
     nbytes = ctypes.sizeof(data)
     bpp = nbytes // (nx * ny * nz)
 
@@ -74,7 +73,6 @@ def render_to_texture(
     depth_stencil_attachment=None,
     renderpass_callback=lambda *args: None,
 ):
-
     # https://github.com/gfx-rs/wgpu-rs/blob/master/examples/capture/main.rs
 
     vbos = vbos or []

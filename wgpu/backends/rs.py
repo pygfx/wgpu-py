@@ -585,7 +585,6 @@ class GPUAdapter(base.GPUAdapter):
     def _request_device(
         self, label, required_features, required_limits, default_queue, trace_path
     ):
-
         # This is a good moment to drop destroyed objects
         delayed_dropper.drop_all_pending()
 
@@ -805,7 +804,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return self._create_buffer(label, size, usage, False)
 
     def create_buffer_with_data(self, *, label="", data, usage: "flags.BufferUsage"):
-
         # Get a memoryview of the data
         m, src_address = get_memoryview_and_address(data)
         m = m.cast("B", shape=(m.nbytes,))
@@ -825,7 +823,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return buffer
 
     def _create_buffer(self, label, size, usage, mapped_at_creation):
-
         # Create a buffer object
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUBufferUsageFlags/int, size: int, mappedAtCreation: bool
         struct = new_struct_p(
@@ -1039,7 +1036,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         layout: "GPUBindGroupLayout",
         entries: "List[structs.BindGroupEntry]",
     ):
-
         c_entries_list = []
         for entry in entries:
             check_struct("BindGroupEntry", entry)
@@ -1106,7 +1102,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def create_pipeline_layout(
         self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
     ):
-
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
 
         c_layout_array = ffi.new("WGPUBindGroupLayout []", bind_group_layouts_ids)
@@ -1443,7 +1438,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
 
     def create_command_encoder(self, *, label=""):
-
         # H: nextInChain: WGPUChainedStruct *, label: char *
         struct = new_struct_p(
             "WGPUCommandEncoderDescriptor *",
@@ -2119,7 +2113,6 @@ class GPUCommandEncoder(
         )
 
     def copy_texture_to_texture(self, source, destination, copy_size):
-
         if isinstance(source["texture"], GPUTextureView):
             raise ValueError("copy source texture must be a texture, not a view")
         if isinstance(destination["texture"], GPUTextureView):
@@ -2342,7 +2335,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
             cb._internal = None
 
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
-
         # We support anything that memoryview supports, i.e. anything
         # that implements the buffer protocol, including, bytes,
         # bytearray, ctypes arrays, numpy arrays, etc.
@@ -2371,7 +2363,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         )
 
     def read_buffer(self, buffer, buffer_offset=0, size=None):
-
         # Note that write_buffer probably does a very similar thing
         # using a temporaty buffer. But write_buffer is official API
         # so it's a single call, while here we must create the temporary
@@ -2403,7 +2394,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         return data
 
     def write_texture(self, destination, data, data_layout, size):
-
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
 
@@ -2461,7 +2451,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         )
 
     def read_texture(self, source, data_layout, size):
-
         # Note that the bytes_per_row restriction does not apply for
         # this function; we have to deal with it.
 

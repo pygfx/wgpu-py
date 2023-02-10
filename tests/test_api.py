@@ -45,7 +45,6 @@ def test_logging():
 
 
 def test_enums_and_flags_and_structs():
-
     # Enums are str
     assert isinstance(wgpu.BufferBindingType.storage, str)
 
@@ -69,7 +68,6 @@ def test_enums_and_flags_and_structs():
 
 
 def test_base_wgpu_api():
-
     gpu = wgpu.base.GPU()
     with raises(RuntimeError) as error:
         gpu.request_adapter(canvas=None, power_preference="high-performance")
@@ -95,7 +93,6 @@ def test_base_wgpu_api():
 
 
 def test_that_we_know_how_our_api_differs():
-
     doc = wgpu.base.apidiff.__doc__
     assert isinstance(doc, str)
     assert "GPUBuffer.get_mapped_range" in doc
@@ -103,7 +100,6 @@ def test_that_we_know_how_our_api_differs():
 
 
 def test_that_all_docstrings_are_there():
-
     exclude = ["Union", "List", "Dict"]
 
     for cls in wgpu.base.__dict__.values():
@@ -128,7 +124,6 @@ def get_output_from_subprocess(code):
 
 
 def test_do_not_import_utils_subpackage():
-
     # OK: use something from root package
     code = "import wgpu; print(wgpu.__version__)"
     out = get_output_from_subprocess(code)

@@ -112,7 +112,6 @@ class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvas):
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_offscreen_canvas():
-
     canvas = MyOffscreenCanvas()
     device = wgpu.utils.get_default_device()
     present_context = canvas.get_context()
@@ -171,7 +170,6 @@ def test_autogui_mixin():
 
 
 def test_weakbind():
-
     weakbind = wgpu.gui.base.weakbind
 
     xx = []
