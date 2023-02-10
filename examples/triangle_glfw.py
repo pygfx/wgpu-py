@@ -1,5 +1,7 @@
 """
 Import the viz from triangle.py and run it using glfw (which uses asyncio for the event loop).
+
+# run_example = false
 """
 
 import sys
