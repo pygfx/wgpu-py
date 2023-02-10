@@ -32,8 +32,12 @@ with open(os.path.join(ROOT_DIR, "docs", "wgpu.rst"), "rb") as f:
     wgpu_text = f.read().decode()
     wgpu_lines = [line.strip() for line in wgpu_text.splitlines()]
 for cls_name in wgpu.base.__all__:
-    assert f"~{cls_name}" in wgpu_lines, f"Class {cls_name} not listed in class list in wgpu.rst"
-    assert f":class:`{cls_name}`" in wgpu_text, f"Class {cls_name} not referenced in the text in wgpu.rst"
+    assert (
+        f"~{cls_name}" in wgpu_lines
+    ), f"Class {cls_name} not listed in class list in wgpu.rst"
+    assert (
+        f":class:`{cls_name}`" in wgpu_text
+    ), f"Class {cls_name} not referenced in the text in wgpu.rst"
 
 
 # -- Hacks to tweak docstrings -----------------------------------------------
@@ -45,8 +49,12 @@ wgpu.structs._use_sphinx_repr = True
 
 # Build regular expressions to resolve crossrefs
 func_ref_pattern = re.compile(r"\ (`\w+?\(\)`)", re.MULTILINE)
-ob_ref_pattern = re.compile(r"\ (`(GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?`)", re.MULTILINE)
-argtype_ref_pattern = re.compile(r"\(((GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?)\)", re.MULTILINE)
+ob_ref_pattern = re.compile(
+    r"\ (`(GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?`)", re.MULTILINE
+)
+argtype_ref_pattern = re.compile(
+    r"\(((GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?)\)", re.MULTILINE
+)
 
 
 def resolve_crossrefs(text):
@@ -102,7 +110,10 @@ for module, hide_class_signature in [(wgpu.base, True), (wgpu.gui, False)]:
         for method in cls.__dict__.values():
             if callable(method) and hasattr(method, "__code__"):
                 docs = resolve_crossrefs(method.__doc__)
-                if method.__code__.co_argcount == 1 and method.__code__.co_kwonlyargcount > 0:
+                if (
+                    method.__code__.co_argcount == 1
+                    and method.__code__.co_kwonlyargcount > 0
+                ):
                     sig = method.__name__ + "(**parameters)"
                     docs = sig + "\n\n        " + docs
                 method.__doc__ = docs or None

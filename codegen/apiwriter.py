@@ -11,6 +11,7 @@ from codegen.files import file_cache
 
 ref_pattern = re.compile(r"\W((GPU|flags\.|enums\.|structs\.)\w+?)\W", re.MULTILINE)
 
+
 def resolve_crossrefs(text):
     # Similar code as in docs/conf.py
     text += " "
@@ -180,7 +181,9 @@ def write_structs():
         for field in d.values():
             tp = idl.resolve_type(field.typename).strip("'")
             if field.default is not None:
-                pylines.append(resolve_crossrefs(f"#: * {field.name} :: {tp} = {field.default}"))
+                pylines.append(
+                    resolve_crossrefs(f"#: * {field.name} :: {tp} = {field.default}")
+                )
             else:
                 pylines.append(resolve_crossrefs(f"#: * {field.name} :: {tp}"))
         # Generate Code

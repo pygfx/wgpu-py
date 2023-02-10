@@ -65,7 +65,6 @@ def test_glfw_canvas_basics():
 
 
 def test_glfw_canvas_del():
-
     from wgpu.gui.glfw import WgpuCanvas, update_glfw_canvasses
     import glfw
 
