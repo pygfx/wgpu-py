@@ -271,7 +271,6 @@ def parse_wgsl_error(message):
         err_msg.append(color_string(33, f"Shader error: label: {label}"))
 
         if error_type and inner_error:
-
             if error_type == "Parsing":
                 match2 = _wgsl_inner_parsing_error_tmpl.match(inner_error)
                 if match2:
@@ -306,7 +305,6 @@ def parse_wgsl_error(message):
 
 
 def _wgsl_parse_extract_line(source, start, end, label, note):
-
     # Find next newline after the end pos
     try:
         next_n = source.index("\n", end)
@@ -321,7 +319,6 @@ def _wgsl_parse_extract_line(source, start, end, label, note):
     error_lines = []
     line_pos = start - next_n
     while line_pos < 0:
-
         line = lines[line_num - 1]
         line_length = len(line)
         line_pos += line_length

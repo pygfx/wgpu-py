@@ -19,7 +19,6 @@ elif is_ci and sys.platform == "win32":
 
 
 def test_compute_tex_1d_rgba8uint():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_1d<u32>;
@@ -54,7 +53,6 @@ def test_compute_tex_1d_rgba8uint():
 
 
 def test_compute_tex_1d_rgba16sint():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_1d<i32>;
@@ -89,7 +87,6 @@ def test_compute_tex_1d_rgba16sint():
 
 
 def test_compute_tex_1d_r32sint():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_1d<i32>;
@@ -124,7 +121,6 @@ def test_compute_tex_1d_r32sint():
 
 
 def test_compute_tex_1d_r32float():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_1d<f32>;
@@ -162,7 +158,6 @@ def test_compute_tex_1d_r32float():
 
 
 def test_compute_tex_2d_rgba8uint():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_2d<u32>;
@@ -198,7 +193,6 @@ def test_compute_tex_2d_rgba8uint():
 
 
 def test_compute_tex_2d_rgba16sint():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_2d<i32>;
@@ -269,7 +263,6 @@ def test_compute_tex_2d_r32sint():
 
 
 def test_compute_tex_2d_r32float():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1:texture_2d<f32>;
@@ -308,7 +301,6 @@ def test_compute_tex_2d_r32float():
 
 
 def test_compute_tex_3d_rgba8uint():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_3d<u32>;
@@ -381,7 +373,6 @@ def test_compute_tex_3d_rgba16sint():
 
 
 def test_compute_tex_3d_r32sint():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_3d<i32>;
@@ -418,7 +409,6 @@ def test_compute_tex_3d_r32sint():
 
 
 def test_compute_tex_3d_r32float():
-
     compute_shader = """
         @group(0) @binding(0)
         var r_tex1: texture_3d<f32>;

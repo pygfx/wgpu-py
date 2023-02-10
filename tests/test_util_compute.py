@@ -106,7 +106,6 @@ def test_compute_0_1_int():
     is_ci and sys.platform == "win32", reason="Cannot use SpirV shader on dx12"
 )
 def test_compute_0_1_spirv():
-
     compute_shader = simple_compute_shader_spirv
     assert isinstance(compute_shader, bytes)
 
@@ -117,7 +116,6 @@ def test_compute_0_1_spirv():
 
 
 def test_compute_1_3():
-
     compute_shader = """
 
         @group(0)
@@ -155,7 +153,6 @@ def test_compute_1_3():
 
 
 def test_compute_in_is_out():
-
     compute_shader = """
 
         @group(0)
@@ -183,7 +180,6 @@ def test_compute_in_is_out():
 
 
 def test_compute_indirect():
-
     compute_shader = """
         @group(0)
         @binding(0)

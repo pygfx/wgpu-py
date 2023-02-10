@@ -17,7 +17,6 @@ diffs_dir = screenshots_dir / "diffs"
 
 
 class LogCaptureHandler(logging.StreamHandler):
-
     _ANSI_ESCAPE_SEQ = re.compile(r"\x1b\[[\d;]+m")
 
     def __init__(self):

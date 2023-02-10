@@ -19,7 +19,6 @@ def force_offscreen():
 
 
 def test_shadertoy():
-
     # Import here, because it imports the wgou.gui.auto
     from wgpu.utils.shadertoy import Shadertoy  # noqa
 

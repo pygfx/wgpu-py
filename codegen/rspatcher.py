@@ -173,7 +173,6 @@ def patch_rs_backend(code):
 
 
 class CommentRemover(Patcher):
-
     triggers = "# FIXME: unknown C", "# FIXME: invalid C", "# H:"
 
     def apply(self, code):
@@ -231,7 +230,6 @@ class StructPatcher(Patcher):
         brace_depth = 0
 
         for line, i in self.iter_lines():
-
             if "new_struct_p(" in line or "new_struct(" in line:
                 if line.lstrip().startswith("def "):
                     continue  # Implementation
