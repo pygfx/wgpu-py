@@ -431,6 +431,7 @@ class GPUCanvasContext(base.GPUCanvasContext):
             # Get present mode
             adapter_id = self._device.adapter._internal
             c_count = ffi.new("size_t *")
+            # H: WGPUPresentMode const * f(WGPUSurface surface, WGPUAdapter adapter, size_t * count)
             c_modes = lib.wgpuSurfaceGetSupportedPresentModes(
                 self._surface_id, adapter_id, c_count
             )
@@ -439,6 +440,7 @@ class GPUCanvasContext(base.GPUCanvasContext):
                 supported_modes = [1 * c_modes[i] for i in range(count)]
             finally:
                 t = ffi.typeof(c_modes)
+                # H: void f(void* ptr, size_t size, size_t align)
                 lib.wgpuFree(c_modes, count * ffi.sizeof(t), ffi.alignof(t))
 
             # Use a supported one if our preference is not supported
@@ -474,6 +476,7 @@ class GPUCanvasContext(base.GPUCanvasContext):
 
         # The C-call
         c_count = ffi.new("size_t *")
+        # H: WGPUTextureFormat const * f(WGPUSurface surface, WGPUAdapter adapter, size_t * count)
         c_formats = lib.wgpuSurfaceGetSupportedFormats(
             self._surface_id, adapter._internal, c_count
         )
@@ -489,6 +492,7 @@ class GPUCanvasContext(base.GPUCanvasContext):
                     formats.append(key)
         finally:
             t = ffi.typeof(c_formats)
+            # H: void f(void* ptr, size_t size, size_t align)
             lib.wgpuFree(c_formats, count * ffi.sizeof(t), ffi.alignof(t))
 
         # Select one
