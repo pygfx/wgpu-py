@@ -31,7 +31,6 @@ def test_get_wgpu_version():
 
 
 def test_override_wgpu_lib_path():
-
     # Current version
     try:
         old_path = wgpu.backends.rs_ffi.get_wgpu_lib_path()
@@ -60,7 +59,6 @@ def test_override_wgpu_lib_path():
 
 
 def test_tuple_from_tuple_or_dict():
-
     func = wgpu.backends.rs._tuple_from_tuple_or_dict
 
     assert func([1, 2, 3], ("x", "y", "z")) == (1, 2, 3)
@@ -151,7 +149,6 @@ def test_rs_tracer():
     is_ci and sys.platform == "win32", reason="Cannot use SpirV shader on dx12"
 )
 def test_shader_module_creation_spirv():
-
     device = wgpu.utils.get_default_device()
 
     code1 = compute_shader_spirv
@@ -435,7 +432,6 @@ def test_do_a_copy_roundtrip():
 
 
 def test_get_memoryview_and_address():
-
     get_memoryview_and_address = wgpu.backends.rs_helpers.get_memoryview_and_address
 
     data = b"bytes are readonly, but we can map it. Don't abuse this :)"

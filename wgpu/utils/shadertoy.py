@@ -126,7 +126,6 @@ class Shadertoy:
     # todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
 
     def __init__(self, shader_code, resolution=(800, 450)) -> None:
-
         self._uniform_data = np.zeros((), dtype=uniform_dtype)
 
         self._shader_code = shader_code
@@ -294,7 +293,6 @@ class Shadertoy:
 
 
 if __name__ == "__main__":
-
     shader = Shadertoy(
         """
     fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {

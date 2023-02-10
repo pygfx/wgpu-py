@@ -34,7 +34,6 @@ def test_to_camel_case():
 
 
 def test_remove_c_comments():
-
     code1 = """
     x1 hello// comment
     // comment
@@ -141,7 +140,6 @@ def test_blacken_comments():
 
 
 def test_patcher():
-
     code = """
     class Foo1:
         def bar1(self):

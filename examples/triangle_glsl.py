@@ -64,7 +64,6 @@ async def main_async(canvas):
 
 
 def _main(canvas, device):
-
     vert_shader = device.create_shader_module(label="triangle_vert", code=vertex_shader)
     frag_shader = device.create_shader_module(
         label="triangle_frag", code=fragment_shader
@@ -141,7 +140,6 @@ def _main(canvas, device):
 
 
 if __name__ == "__main__":
-
     import wgpu.backends.rs  # noqa: F401, Select Rust backend
     from wgpu.gui.auto import WgpuCanvas, run
 

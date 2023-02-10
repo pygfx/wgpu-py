@@ -79,7 +79,6 @@ def get_wgpu_lib_path():
 
 
 def _maybe_get_hint_on_download_script():
-
     root_dir = os.path.join(get_resource_filename(""), "..", "..")
     filename = os.path.abspath(os.path.join(root_dir, "download-wgpu-native.py"))
     uses_repo = os.path.isfile(filename)
