@@ -464,7 +464,6 @@ def test_render_orange_square_depth32float():
 
 
 def _render_orange_square_depth(depth_stencil_tex_format):
-
     device = get_default_device()
 
     shader_source = """
