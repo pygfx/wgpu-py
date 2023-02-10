@@ -28,4 +28,4 @@
 * Wrote 231 enum mappings and 49 struct-field mappings to rs_mappings.py
 * Validated 93 C function calls
 * Not using 90 C functions
-* Validated 70 C structs
+* Validated 72 C structs
