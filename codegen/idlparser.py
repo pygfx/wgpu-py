@@ -73,7 +73,6 @@ class IdlParser:
     """
 
     def __init__(self, source):
-
         self.source = self._pre_process(source)
         self._length = len(self.source)
         self._pos = 0
@@ -107,7 +106,6 @@ class IdlParser:
         return ""
 
     def parse(self, verbose=True):
-
         self._interfaces = {}
         self.classes = {}
         self.structs = {}
@@ -245,9 +243,7 @@ class IdlParser:
                 raise RuntimeError("Encountered unknown IDL type: ", name)
 
     def _parse(self):
-
         while not self.end_reached():
-
             line = self.read_line()
 
             if not line.strip():

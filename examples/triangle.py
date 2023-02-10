@@ -79,7 +79,6 @@ async def main_async(canvas):
 
 
 def _main(canvas, device):
-
     shader = device.create_shader_module(code=shader_source)
 
     # No bind group and layout, we should not create empty ones.
@@ -153,7 +152,6 @@ def _main(canvas, device):
 
 
 if __name__ == "__main__":
-
     import wgpu.backends.rs  # noqa: F401, Select Rust backend
     from wgpu.gui.auto import WgpuCanvas, run
 
