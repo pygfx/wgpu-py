@@ -19,13 +19,13 @@
 * Validated 39 classes, 111 methods, 44 properties
 ### Patching API for backends/rs.py
 * Diffs for GPUAdapter: add request_device_tracing
-* Validated 39 classes, 97 methods, 0 properties
+* Validated 39 classes, 98 methods, 0 properties
 ## Validating rs.py
 * Enum BufferMapState missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
 * Enum AutoLayoutMode missing in wgpu.h
 * Enum CanvasAlphaMode missing in wgpu.h
 * Wrote 231 enum mappings and 49 struct-field mappings to rs_mappings.py
-* Validated 89 C function calls
-* Not using 93 C functions
+* Validated 93 C function calls
+* Not using 90 C functions
 * Validated 72 C structs
