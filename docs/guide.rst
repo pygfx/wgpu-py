@@ -170,7 +170,7 @@ will be using to write GPU code for the browser. And for desktop and mobile as w
 As the WebGPU spec is being developed, a reference implementation is
 also build. It's written in Rust and powers the WebGPU implementation in Firefox.
 This reference implementation, called `wgpu <https://github.com/gfx-rs/wgpu>`_,
-also exposes a C-api (via `wgpu-native <https://github.com/gfx-rs/wgpu-native>`_),
+also exposes a C-api (via `wgpu native <https://github.com/gfx-rs/wgpu-native>`_),
 so that it can be wrapped in Python. And this is precisely what wgpu-py does.
 
 So in short, wgpu-py is a Python wrapper of wgpu, which is an desktop
