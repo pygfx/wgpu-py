@@ -1,7 +1,151 @@
 Guide
 =====
 
-Not a lot here yet. More will come over time.
+
+This library (``wgpu``) presents a Pythonic API for the `WebGPU spec
+<https://gpuweb.github.io/gpuweb/>`_. It is an API to control graphics
+hardware. Like OpenGL but modern. Or like Vulkan but higher level.
+GPU programming is a craft that requires knowledge of how GPU's work.
+
+
+Getting started
+---------------
+
+Selecting the backend
++++++++++++++++++++++
+
+To use ``wgpu``, you must select a backend. Eventually
+there may be multiple backends, but at the moment
+there is only one backend, which is based on the Rust libary
+`wgpu-native <https://github.com/gfx-rs/wgpu>`_. You select
+the backend by importing it:
+
+
+.. code-block:: py
+
+    import wgpu.backends.rs
+
+
+Creating a canvas
++++++++++++++++++
+
+If you want to render to the screen, you need a canvas. Multiple
+GUI toolkits are supported, see the :doc:`gui`. In general, it's easiest to let ``wgpu`` select a GUI automatically:
+
+.. code-block:: py
+
+    from wgpu.gui.auto import WgpuCanvas, run
+
+    canvas = WgpuCanvas(title="a wgpu example")
+
+
+Next, we can setup the render context, which we will need later on.
+
+.. code-block:: py
+
+    present_context = canvas.get_context()
+    render_texture_format = present_context.get_preferred_format(device.adapter)
+    present_context.configure(device=device, format=render_texture_format)
+
+
+Obtaining a device
+++++++++++++++++++
+
+The next step is to obtain an adapter, which represents an abstract render device.
+You can pass it the ``canvas`` that you just created, or pass ``None`` for the canvas
+if you have none (e.g. for compute or offscreen rendering). From the adapter,
+you can obtain a device. This will be the root object from which most GPU objects
+will be created.
+
+.. code-block:: py
+
+    adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
+    device = adapter.request_device()
+
+
+Creating buffers, textures shaders, etc.
+++++++++++++++++++++++++++++++++++++++++
+
+Using the device, you can create buffers, textures, write shader code, and put
+these together into pipeline objects. How to do this depends a lot on what you
+want to achieve, and is therefore out of scope for this guide. Have a look at the examples
+or some of the tutorials that we link to below.
+
+Setting up a draw function
+++++++++++++++++++++++++++
+
+Let's now define a function that will actually draw the stuff we put together in
+the previous step.
+
+.. code-block:: py
+
+    def draw_frame():
+
+        # We'll record commands that we do on a render pass object
+        command_encoder = device.create_command_encoder()
+        current_texture_view = present_context.get_current_texture()
+        render_pass = command_encoder.begin_render_pass(
+            color_attachments=[
+                {
+                    "view": current_texture_view,
+                    "resolve_target": None,
+                    "clear_value": (1, 1, 1, 1),
+                    "load_op": wgpu.LoadOp.clear,
+                    "store_op": wgpu.StoreOp.store,
+                }
+            ],
+        )
+
+        # Perform commands, something like ...
+        render_pass.set_pipeline(...)
+        render_pass.set_index_buffer(...)
+        render_pass.set_vertex_buffer(...)
+        render_pass.set_bind_group(...)
+        render_pass.draw_indexed(...)
+
+        # When done, submit the commands to the device queue.
+        render_pass.end()
+        device.queue.submit([command_encoder.finish()])
+
+        # If you want to draw continuously, request a new draw right now
+        canvas.request_draw()
+
+
+Starting the event loop
++++++++++++++++++++++++
+
+
+We can now pass the above render function to the canvas. The canvas will then
+call the function whenever it (re)draws the window. And finally, we call ``run()`` to enter the mainloop.
+
+.. code-block:: py
+
+    canvas.request_draw(draw_frame)
+    run()
+
+
+Offscreen
++++++++++
+
+If you render offscreen, or only do compute, you do not need a canvas. You also won't need a GUI toolkit, draw function or enter the event loop.
+Instead, you will obtain a command encoder and submit it's records to the queue directly.
+
+
+Examples and external resources
+-------------------------------
+
+Examples that show wgpu-py in action:
+
+* https://github.com/pygfx/wgpu-py/tree/main/examples
+
+.. note:: The examples in the main branch of the repository may not match the pip installable version.  Be sure to refer to the examples from the git tag that matches the version of wgpu you have installed.
+
+
+External resources:
+
+* https://webgpu.rocks/
+* https://sotrh.github.io/learn-wgpu/
+* https://rust-tutorials.github.io/learn-wgpu/
 
 
 A brief history of WebGPU
@@ -14,15 +158,14 @@ But over time OpenGL has grown into an inconsistent and complex API ...
     --- Dzmitry Malyshau at `Fosdem 2020 <https://fosdem.org/2020/schedule/event/rust_webgpu/>`_
 
 In recent years, modern API's have emerged that solve many of OpenGL's
-problems. You may have heard of them: Vulkan, Metal, and DX12. These
+problems. You may have heard of Vulkan, Metal, and DX12. These
 API's are much closer to the hardware, which makes the drivers more
 consistent and reliable. Unfortunately, the huge amount of "knobs to
 turn" also makes them quite hard to work with for developers.
 
-Therefore, people are working on a higher level API, that wraps Vulkan/Metal/DX12,
-using the same concepts, but is much easier to work with. This is the
-`WebGPU specification <https://gpuweb.github.io/gpuweb/>`_. This is what future devs
-will be using to write GPU code for the browser. And for desktop and mobile.
+Therefore, higher level API are needed, which use the same concepts, but are much easier to work with.
+The most notable one is the `WebGPU specification <https://gpuweb.github.io/gpuweb/>`_. This is what future devs
+will be using to write GPU code for the browser. And for desktop and mobile as well.
 
 As the WebGPU spec is being developed, a reference implementation is
 also build. It's written in Rust and powers the WebGPU implementation in Firefox.
@@ -35,29 +178,21 @@ implementation of WebGPU, an API that wraps  Vulkan, Metal and DX12,
 which talk to the GPU hardware.
 
 
-Getting started with WebGPU
----------------------------
-
-For now, we'll direct you to some related tutorials:
-
-* https://sotrh.github.io/learn-wgpu/
-* https://rust-tutorials.github.io/learn-wgpu/
-
 
 Coordinate system
 -----------------
 
-The Y-axis is up in normalized device coordinate (NDC): point(-1.0, -1.0)
+In wgpu, the Y-axis is up in normalized device coordinate (NDC): point(-1.0, -1.0)
 in NDC is located at the bottom-left corner of NDC. In addition, x and
 y in NDC should be between -1.0 and 1.0 inclusive, while z in NDC should
 be between 0.0 and 1.0 inclusive. Vertices out of this range in NDC
 will not introduce any errors, but they will be clipped.
 
 
-Communicating array data
-------------------------
+Array data
+----------
 
-The wgpu-py library makes no assumptions about how you store your data.
+The wgpu library makes no assumptions about how you store your data.
 In places where you provide data to the API, it can consume any data
 that supports the buffer protocol, which includes ``bytes``,
 ``bytearray``, ``memoryview``, ctypes arrays, and numpy arrays.
@@ -118,19 +253,9 @@ Also see wgpu-core's section on debugging:
 https://github.com/gfx-rs/wgpu/wiki/Debugging-wgpu-Applications
 
 
-Freezing apps with wgpu
------------------------
+Freezing apps
+-------------
 
-Wgpu implements a hook for PyInstaller to help simplify the freezing process
+In wgpu a PyInstaller-hook is provided to help simplify the freezing process
 (it e.g. ensures that the wgpu-native DLL is included). This hook requires
 PyInstaller version 4+.
-
-
-Examples
---------
-
-Some examples with wgpu-py can be found here:
-
-* https://github.com/pygfx/wgpu-py/tree/main/examples
-
-Note: The examples in the main branch of the repository may not match the pip installable version.  Be sure to refer to the examples from the git tag that matches the version of wgpu you have installed.
