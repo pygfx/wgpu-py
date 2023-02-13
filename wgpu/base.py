@@ -108,6 +108,11 @@ class GPU:
         """
         raise RuntimeError("Use canvas.get_preferred_format() instead.")
 
+    @apidiff.add("Usefull")
+    def print_report(self):
+        """Print a report about the interals if the backend."""
+        print(f"{self.__class__.__module__}.GPU: No report available.")
+
 
 class GPUCanvasContext:
     """A context object associated with a canvas, to present what has been drawn."""
