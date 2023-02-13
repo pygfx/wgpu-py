@@ -632,10 +632,14 @@ class GPUDevice(GPUObjectBase):
     ):
         """Create a `GPUShaderModule` object from shader source.
 
+        The primary shader language is WGSL, though SpirV is also supported,
+        as well as GLSL (experimental).
+
         Arguments:
             label (str): A human readable label. Optional.
-            code (str | bytes): The shader code, as WGSL text or binary SpirV
-                (or an object implementing ``to_spirv()`` or ``to_bytes()``).
+            code (str | bytes): The shader code, as WGSL, GLSL or SpirV.
+                For GLSL code, the label must be given and contain the word
+                'comp', 'vert' or 'frag'. For SpirV the code must be bytes.
             hints: unused.
         """
         raise NotImplementedError()

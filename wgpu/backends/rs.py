@@ -405,6 +405,9 @@ class GPUCanvasContext(base.GPUCanvasContext):
             return
         self._surface_size = psize
 
+        if self._surface_id is None:
+            self._surface_id = get_surface_id_from_canvas(canvas)
+
         # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
 
         # Set the present mode to determine vsync behavior.
@@ -421,7 +424,28 @@ class GPUCanvasContext(base.GPUCanvasContext):
         # Also see:
         # * https://github.com/gfx-rs/wgpu/blob/e54a36ee/wgpu-types/src/lib.rs#L2663-L2678
         # * https://github.com/pygfx/wgpu-py/issues/256
+
         present_mode = 2 if getattr(canvas, "_vsync", True) else 0
+
+        if self._device:
+            # Get present mode
+            adapter_id = self._device.adapter._internal
+            c_count = ffi.new("size_t *")
+            # H: WGPUPresentMode const * f(WGPUSurface surface, WGPUAdapter adapter, size_t * count)
+            c_modes = lib.wgpuSurfaceGetSupportedPresentModes(
+                self._surface_id, adapter_id, c_count
+            )
+            try:
+                count = c_count[0]
+                supported_modes = [1 * c_modes[i] for i in range(count)]
+            finally:
+                t = ffi.typeof(c_modes)
+                # H: void f(void* ptr, size_t size, size_t align)
+                lib.wgpuFree(c_modes, count * ffi.sizeof(t), ffi.alignof(t))
+
+            # Use a supported one if our preference is not supported
+            if supported_modes and present_mode not in supported_modes:
+                present_mode = supported_modes[0]
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
         struct = new_struct_p(
@@ -435,9 +459,6 @@ class GPUCanvasContext(base.GPUCanvasContext):
             # not used: label
         )
 
-        if self._surface_id is None:
-            self._surface_id = get_surface_id_from_canvas(canvas)
-
         # Destroy old one
         if self._internal is not None:
             # H: void f(WGPUSwapChain swapChain)
@@ -447,6 +468,44 @@ class GPUCanvasContext(base.GPUCanvasContext):
         self._internal = lib.wgpuDeviceCreateSwapChain(
             self._device._internal, self._surface_id, struct
         )
+
+    def get_preferred_format(self, adapter):
+        if self._surface_id is None:
+            canvas = self._get_canvas()
+            self._surface_id = get_surface_id_from_canvas(canvas)
+
+        # The C-call
+        c_count = ffi.new("size_t *")
+        # H: WGPUTextureFormat const * f(WGPUSurface surface, WGPUAdapter adapter, size_t * count)
+        c_formats = lib.wgpuSurfaceGetSupportedFormats(
+            self._surface_id, adapter._internal, c_count
+        )
+
+        # Convert to string formats
+        try:
+            count = c_count[0]
+            supported_format_ints = [c_formats[i] for i in range(count)]
+            formats = []
+            for key in list(enums.TextureFormat):
+                i = enummap[f"TextureFormat.{key}"]
+                if i in supported_format_ints:
+                    formats.append(key)
+        finally:
+            t = ffi.typeof(c_formats)
+            # H: void f(void* ptr, size_t size, size_t align)
+            lib.wgpuFree(c_formats, count * ffi.sizeof(t), ffi.alignof(t))
+
+        # Select one
+        default = "bgra8unorm-srgb"  # seems to be a good default
+        preferred = [f for f in formats if "srgb" in f]
+        if default in formats:
+            return default
+        elif preferred:
+            return preferred[0]
+        elif formats:
+            return formats[0]
+        else:
+            return default
 
     def _destroy(self):
         if self._internal is not None and lib is not None:
@@ -1053,25 +1112,57 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             for val in hints.values():
                 check_struct("ShaderModuleCompilationHint", val)
         if isinstance(code, str):
-            # WGSL
-            # H: chain: WGPUChainedStruct, code: char *
-            source_struct = new_struct_p(
-                "WGPUShaderModuleWGSLDescriptor *",
-                code=ffi.new("char []", code.encode()),
-                # not used: chain
+            looks_like_wgsl = any(
+                x in code for x in ("@compute", "@vertex", "@fragment")
             )
-            source_struct[0].chain.next = ffi.NULL
-            source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleWGSLDescriptor
-        else:
-            # Must be Spirv then
-            if isinstance(code, bytes):
-                data = code
-            elif hasattr(code, "to_bytes"):
-                data = code.to_bytes()
-            elif hasattr(code, "to_spirv"):
-                data = code.to_spirv()
+            looks_like_glsl = code.lstrip().startswith("#version ")
+            if looks_like_glsl and not looks_like_wgsl:
+                # === GLSL
+                if "comp" in label.lower():
+                    c_stage = flags.ShaderStage.COMPUTE
+                elif "vert" in label.lower():
+                    c_stage = flags.ShaderStage.VERTEX
+                elif "frag" in label.lower():
+                    c_stage = flags.ShaderStage.FRAGMENT
+                else:
+                    raise ValueError(
+                        "GLSL shader needs to use the label to specify compute/vertex/fragment stage."
+                    )
+                defines = []
+                if c_stage == flags.ShaderStage.VERTEX:
+                    defines.append(
+                        # H: name: char *, value: char *
+                        new_struct(
+                            "WGPUShaderDefine",
+                            name=ffi.new("char []", "gl_VertexID".encode()),
+                            value=ffi.new("char []", "gl_VertexIndex".encode()),
+                        )
+                    )
+                c_defines = ffi.new("WGPUShaderDefine []", defines)
+                # H: chain: WGPUChainedStruct, stage: WGPUShaderStage, code: char *, defineCount: int, defines: WGPUShaderDefine*/WGPUShaderDefine *
+                source_struct = new_struct_p(
+                    "WGPUShaderModuleGLSLDescriptor *",
+                    code=ffi.new("char []", code.encode()),
+                    stage=c_stage,
+                    defineCount=len(defines),
+                    defines=c_defines,
+                    # not used: chain
+                )
+                source_struct[0].chain.next = ffi.NULL
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleGLSLDescriptor
             else:
-                raise TypeError("Shader code must be str for WGSL, or bytes for SpirV.")
+                # === WGSL
+                # H: chain: WGPUChainedStruct, code: char *
+                source_struct = new_struct_p(
+                    "WGPUShaderModuleWGSLDescriptor *",
+                    code=ffi.new("char []", code.encode()),
+                    # not used: chain
+                )
+                source_struct[0].chain.next = ffi.NULL
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleWGSLDescriptor
+        elif isinstance(code, bytes):
+            # === Spirv
+            data = code
             # Validate
             magic_nr = b"\x03\x02#\x07"  # 0x7230203
             if data[:4] != magic_nr:
@@ -1088,6 +1179,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             )
             source_struct[0].chain.next = ffi.NULL
             source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleSPIRVDescriptor
+        else:
+            raise TypeError(
+                "Shader code must be str for WGSL or GLSL, or bytes for SpirV."
+            )
 
         # Note, we could give hints here that specify entrypoint and pipelinelayout before compiling
         # H: nextInChain: WGPUChainedStruct *, label: char *, hintCount: int, hints: WGPUShaderModuleCompilationHint *

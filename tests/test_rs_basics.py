@@ -153,16 +153,10 @@ def test_shader_module_creation_spirv():
 
     code1 = compute_shader_spirv
     assert isinstance(code1, bytes)
-    code2 = type("CodeObject", (object,), {"to_bytes": lambda: code1})
-    code3 = type("CodeObject", (object,), {"to_spirv": lambda: code1})
     code4 = type("CodeObject", (object,), {})
 
     m1 = device.create_shader_module(code=code1)
-    m2 = device.create_shader_module(code=code2)
-    m3 = device.create_shader_module(code=code3)
-
-    for m in (m1, m2, m3):
-        assert m.compilation_info() == []
+    assert m1.compilation_info() == []
 
     with raises(TypeError):
         device.create_shader_module(code=code4)
