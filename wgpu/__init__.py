@@ -33,6 +33,10 @@ def _register_backend(cls):
     globals()["GPU"] = GPU
     globals()["request_adapter"] = gpu.request_adapter
     globals()["request_adapter_async"] = gpu.request_adapter_async
+    if hasattr(gpu, "print_report"):
+        globals()["print_report"] = gpu.print_report
+    else:
+        globals()["print_report"] = _base_GPU.print_report
 
 
 _base_GPU = GPU  # noqa: F405, N816
