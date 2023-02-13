@@ -29,7 +29,7 @@ and the other [examples](https://github.com/pygfx/wgpu-py/blob/main/examples/).
 
 ## Status
 
-> **Note** 
+> **Note**
 >
 > The wgpu-API has not settled yet, use with care!
 
@@ -44,48 +44,19 @@ and the other [examples](https://github.com/pygfx/wgpu-py/blob/main/examples/).
 
 ## Installation
 
+
 ```
-pip install wgpu
-```
-
-The wheels include the prebuilt binaries of [wgpu-native](https://github.com/gfx-rs/wgpu-native).
-
-Note that on Linux you need to use at least **pip >= 20.3**, and a recent 
-distribution, otherwise the binaries will not be available. See "platform
-requirements" for details.
-
-If you need/want to build wgpu-native yourself, you need to set the environment variable
-`WGPU_LIB_PATH` to let wgpu-py know where the DLL is located.
-
-You may also want to install a GUI backend: 
-```
-pip install glfw  # a lightweight backend for the desktop
-pip install jupyter_rfb  # only if you plan on using wgpu in Jupyter
+pip install wgpu glfw
 ```
 
-## Platform requirements
+Linux users should make sure that **pip >= 20.3**. That should do the
+trick on most systems. See [getting started](https://wgpu-py.readthedocs.io/en/stable/start.html)
+for details.
 
-Under the hood, `wgpu` runs on Vulkan, Metal, or DX12. The wgpu-backend is
-selected automatically, but can be overridden by setting the `WGPU_BACKEND_TYPE`
-environment variable to "Vulkan", "Metal", "D3D12", "D3D11", or "OpenGL".
-
-On Windows 10+, things should just work. On older Windows versions you may need
-to install the Vulkan drivers. You may want to force "Vulkan" while "D3D12" is
-less mature.
-
-On MacOS you need at least 10.13 (High Sierra) to have Vulkan support.
-
-On Linux, it's advisable to install the proprietary drivers of your GPU (if you
-have a dedicated GPU). You may need to `apt install mesa-vulkan-drivers`.
-Wayland support is currently broken (we could use a hand to fix this).
-
-**Note that on Linux, binary wheels are only available for manylinux_2_24**. That
-means you can only install the binaries with **pip >= 20.3**, and need to use a recent distribution, listed [here](https://github.com/pypa/manylinux#manylinux). If you wish to work with an older distribution, you will have to build the [wgpu-native](https://github.com/gfx-rs/wgpu-native) library yourself, and point wgpu-py to the
-resulting binary using the `WGPU_LIB_PATH` environment variable.
 
 ## Usage
 
-Also see the [online documentation](https://wgpu-py.readthedocs.io).
+Also see the [online documentation](https://wgpu-py.readthedocs.io) and the [examples](https://github.com/pygfx/wgpu-py/tree/main/examples).
 
 The full API is accessable via the main namespace:
 ```py
