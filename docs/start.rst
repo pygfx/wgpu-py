@@ -78,3 +78,21 @@ If you wish to work with an older distribution, you will have to build
 wgpu-native yourself, see "dependencies" above. Note that wgpu-native
 still needs Vulkan support and may not compile / work on older
 distributions.
+
+Installing LavaPipe on Linux
+++++++++++++++++++++++++++++
+
+To run wgpu on systems that do not have a GPU (e.g. CI) you need a software renderer.
+On Windows this (probably) just works (via DX12). On Linux you can use LavaPipe:
+
+.. code-block:: bash
+
+        sudo apt update -y -qq
+        sudo apt install --no-install-recommends -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
+
+The distribution's version of Lavapipe may be a bit outdated. To get a more recent version, you can use this PPA:
+
+.. code-block:: bash
+
+        sudo apt update -y -qq
+        sudo add-apt-repository ppa:oibaf/graphics-drivers -y
