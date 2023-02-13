@@ -3,16 +3,15 @@ from ..gui.base import WgpuCanvasBase
 
 
 class WgpuOffscreenCanvas(WgpuCanvasBase):
-    """Base class for off-screen canvases, providing a custom presentation
-    context that renders to a tetxure instead of a surface/screen.
-    The resulting texture view is passed to the ``present()`` method.
+    """Base class for off-screen canvases.
+
+    It provides a custom presentation context that renders to a tetxure
+    instead of a surface/screen. The resulting texture view is passed
+    to the `present()` method.
     """
 
     def __init__(self, *args, **kwargs):
-        # we don't pass on constructor arguments; code may
-        # be assuming we are relying on e.g. qt or wx or jupyter
-        # but in the offscreen case we are definitely not
-        super().__init__()
+        super().__init__(*args, **kwargs)
 
     def get_window_id(self):
         """This canvas does not correspond to an on-screen window."""

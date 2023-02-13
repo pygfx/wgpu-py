@@ -1,17 +1,19 @@
-WGPU API
-========
+WGPU
+====
 
 .. currentmodule:: wgpu
 
-This document describes the wgpu API. It is basically a Pythonic version of the
+
+This document describes the wgpu API, which essentially is a Pythonic version of the
 `WebGPU API <https://gpuweb.github.io/gpuweb/>`_. It exposes an API
 for performing operations, such as rendering and computation, on a
 Graphics Processing Unit.
 
-*The WebGPU API is still being developed and occasionally there are backwards
-incompatible changes. Since we mostly follow the WebGPU API, there may be
-backwards incompatible changes to wgpu-py too. This will be so until
-the WebGPU API settles as a standard.*
+.. note::
+    The WebGPU API is still being developed and occasionally there are backwards
+    incompatible changes. Since we mostly follow the WebGPU API, there may be
+    backwards incompatible changes to wgpu-py too. This will be so until
+    the WebGPU API settles as a standard.
 
 
 How to read this API
@@ -22,35 +24,11 @@ discern them from flags and enums. These classes are never instantiated
 directly; new objects are returned by certain methods.
 
 Most methods in this API have no positional arguments; each argument
-must be referenced by name. Some argument values must be a dict, these
-can be thought of as "nested" arguments.
-
-Many arguments (and dict fields) must be a
-:doc:`flags <reference_flags>` or :doc:`enums <reference_enums>`.
+must be referenced by name. Some argument values must be a :doc:`dict <wgpu_structs>`, these
+can be thought of as "nested" arguments. Many arguments (and dict fields) must be a
+:doc:`flag <wgpu_flags>` or :doc:`enum <wgpu_enums>`.
 Flags are integer bitmasks that can be *orred* together. Enum values are
-strings in this API.
-
-Some arguments have a default value. Most do not.
-
-
-Selecting the backend
----------------------
-
-Before you can use this API, you have to select a backend. Eventually
-there may be multiple backends, but at the moment
-there is only one backend, which is based on the Rust libary
-`wgpu-native <https://github.com/gfx-rs/wgpu>`_. You select
-the backend by importing it:
-
-
-.. code-block:: py
-
-    import wgpu.backends.rs
-
-
-The ``wgpu-py`` package comes with the ``wgpu-native`` library. If you want
-to use your own version of that library instead, set the ``WGPU_LIB_PATH``
-environment variable.
+strings in this API. Some arguments have a default value. Most do not.
 
 
 Differences from WebGPU
@@ -69,52 +47,10 @@ Each backend may also implement minor differences (usually additions)
 from the base API. For the ``rs`` backend check ``print(wgpu.backends.rs.apidiff.__doc__)``.
 
 
-Alphabetic list of GPU classes
-------------------------------
-
-* :class:`GPU`
-* :class:`GPUAdapterInfo`
-* :class:`GPUAdapter`
-* :class:`GPUBindGroup`
-* :class:`GPUBindGroupLayout`
-* :class:`GPUBindingCommandsMixin`
-* :class:`GPUBuffer`
-* :class:`GPUCanvasContext`
-* :class:`GPUCommandBuffer`
-* :class:`GPUCommandEncoder`
-* :class:`GPUCommandsMixin`
-* :class:`GPUCompilationInfo`
-* :class:`GPUCompilationMessage`
-* :class:`GPUComputePassEncoder`
-* :class:`GPUComputePipeline`
-* :class:`GPUDebugCommandsMixin`
-* :class:`GPUDevice`
-* :class:`GPUDeviceLostInfo`
-* :class:`GPUError`
-* :class:`GPUExternalTexture`
-* :class:`GPUInternalError`
-* :class:`GPUObjectBase`
-* :class:`GPUOutOfMemoryError`
-* :class:`GPUPipelineBase`
-* :class:`GPUPipelineError`
-* :class:`GPUPipelineLayout`
-* :class:`GPUQuerySet`
-* :class:`GPUQueue`
-* :class:`GPURenderBundle`
-* :class:`GPURenderBundleEncoder`
-* :class:`GPURenderCommandsMixin`
-* :class:`GPURenderPassEncoder`
-* :class:`GPURenderPipeline`
-* :class:`GPUSampler`
-* :class:`GPUShaderModule`
-* :class:`GPUTexture`
-* :class:`GPUTextureView`
-* :class:`GPUUncapturedErrorEvent`
-* :class:`GPUValidationError`
-
-
 Overview
 --------
+
+This overview attempts to describe how all classes fit together. Scroll down for a list of all flags, enums, structs, and GPU classes.
 
 
 Adapter, device and canvas
@@ -226,3 +162,63 @@ These classes are not supported and/or documented yet.
 :class:`GPUCompilationMessage`
 :class:`GPUCompilationInfo`
 :class:`GPUQuerySet`
+
+
+List of flags, enums, and structs
+---------------------------------
+
+.. toctree::
+    :maxdepth: 2
+
+    wgpu_flags
+    wgpu_enums
+    wgpu_structs
+
+
+List of GPU classes
+-------------------
+
+.. autosummary::
+    :nosignatures:
+    :toctree: generated
+    :template: wgpu_class_layout.rst
+
+    ~GPU
+    ~GPUAdapterInfo
+    ~GPUAdapter
+    ~GPUBindGroup
+    ~GPUBindGroupLayout
+    ~GPUBindingCommandsMixin
+    ~GPUBuffer
+    ~GPUCanvasContext
+    ~GPUCommandBuffer
+    ~GPUCommandEncoder
+    ~GPUCommandsMixin
+    ~GPUCompilationInfo
+    ~GPUCompilationMessage
+    ~GPUComputePassEncoder
+    ~GPUComputePipeline
+    ~GPUDebugCommandsMixin
+    ~GPUDevice
+    ~GPUDeviceLostInfo
+    ~GPUError
+    ~GPUExternalTexture
+    ~GPUInternalError
+    ~GPUObjectBase
+    ~GPUOutOfMemoryError
+    ~GPUPipelineBase
+    ~GPUPipelineError
+    ~GPUPipelineLayout
+    ~GPUQuerySet
+    ~GPUQueue
+    ~GPURenderBundle
+    ~GPURenderBundleEncoder
+    ~GPURenderCommandsMixin
+    ~GPURenderPassEncoder
+    ~GPURenderPipeline
+    ~GPUSampler
+    ~GPUShaderModule
+    ~GPUTexture
+    ~GPUTextureView
+    ~GPUUncapturedErrorEvent
+    ~GPUValidationError

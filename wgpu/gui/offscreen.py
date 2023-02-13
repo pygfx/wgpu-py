@@ -7,14 +7,16 @@ from .base import WgpuAutoGui
 
 
 class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
-    """An offscreen canvas intended for manual use. Call the ``.draw()``
-    method to perform a draw and get the result.
+    """An offscreen canvas intended for manual use.
+
+    Call the ``.draw()`` method to perform a draw and get the result.
     """
 
-    def __init__(self, *args, size=None, pixel_ratio=1, **kwargs):
+    def __init__(self, *args, size=None, pixel_ratio=1, title=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._logical_size = (float(size[0]), float(size[1])) if size else (640, 480)
         self._pixel_ratio = pixel_ratio
+        self._title = title
         self._closed = False
 
     def get_pixel_ratio(self):
@@ -88,7 +90,10 @@ def run():
     # Additionally, asyncio will run all pending callbacks
     # scheduled with call_later.
     loop = asyncio.get_event_loop_policy().get_event_loop()
-    loop.run_until_complete(mainloop_iter())
+    if not loop.is_running():
+        loop.run_until_complete(mainloop_iter())
+    else:
+        return  # Probably an interactive session
 
     for t in asyncio.all_tasks(loop=loop):
         t.cancel()

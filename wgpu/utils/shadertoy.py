@@ -96,9 +96,9 @@ uniform_dtype = [
 
 
 class Shadertoy:
-    """
-    The Shadertoy class provides a "screen pixel shader programming interface" similar to `shadertoy <https://www.shadertoy.com/>`_,
-    Helps you research and quickly build or test shaders using WGSL via WGPU.
+    """Provides a "screen pixel shader programming interface" similar to `shadertoy <https://www.shadertoy.com/>`_.
+
+    It helps you research and quickly build or test shaders using WGSL via WGPU.
 
     Parameters:
         shader_code (str): The shader code to use.

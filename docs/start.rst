@@ -1,44 +1,46 @@
----------------
-Getting started
----------------
-
 Installation
-------------
+============
+
+.. note:: Since the API changes with each release,you may want to check the `CHANGELOG.md <https://github.com/pygfx/wgpu-py/blob/main/CHANGELOG.md>`_ when you upgrade to a newer version of wgpu.
+
+Install with pip
+----------------
+
+You can install ``wgpu-py`` via pip.
+Python 3.7 or higher is required. Pypy is supported. Only depends on ``cffi`` (installed automatically by pip).
 
 .. code-block:: bash
 
     pip install wgpu
 
 
-Python 3.7 or higher is required. Pypy is supported. Only depends on ``cffi`` (installed automatically by pip).
+Since most users will want to render something to screen, we recommend installing GLGW as well:
 
+.. code-block:: bash
 
-The wgpu-native library
------------------------
-
-The wheels include the prebuilt binaries of `wgpu-native <https://github.com/gfx-rs/wgpu-native>`_.
-
-On Linux you need at least **pip >= 20.3**, and a recent Linux distribution, otherwise the binaries will not be available. See *platform requirements* for details.
-
-If you need/want, you can also `build wgpu-native yourself <https://github.com/gfx-rs/wgpu-native/wiki/Getting-Started>`_.
-You will then need to set the environment variable ``WGPU_LIB_PATH`` to let wgpu-py know where the DLL is located.
+    pip install wgpu glfw
 
 
 GUI libraries
 -------------
 
-Most users will want to render something to screen. To this end we recommend:
-
-.. code-block:: bash
-
-    pip install glfw
-
-Multiple GUI backends are supported though:
+Multiple GUI backends are supported, see :doc:`the GUI API <gui>` for details:
 
 * `glfw <https://github.com/FlorianRhiem/pyGLFW>`_: a lightweight GUI for the desktop
 * `jupyter_rfb <https://jupyter-rfb.readthedocs.io/en/latest/>`_: only needed if you plan on using wgpu in Jupyter
 * qt (PySide6, PyQt6, PySide2, PyQt5)
 * wx
+
+
+The wgpu-native library
+-----------------------
+
+The wheels that pip installs include the prebuilt binaries of `wgpu-native <https://github.com/gfx-rs/wgpu-native>`_, so on most systems everything Just Works.
+
+On Linux you need at least **pip >= 20.3**, and a recent Linux distribution, otherwise the binaries will not be available. See below for details.
+
+If you need/want, you can also `build wgpu-native yourself <https://github.com/gfx-rs/wgpu-native/wiki/Getting-Started>`_.
+You will then need to set the environment variable ``WGPU_LIB_PATH`` to let wgpu-py know where the DLL is located.
 
 
 Platform requirements
@@ -49,16 +51,19 @@ is selected automatically, but can be overridden by setting the
 ``WGPU_BACKEND_TYPE`` environment variable to "Vulkan", "Metal", "D3D12",
 "D3D11", or "OpenGL".
 
-**Windows**
+Windows
++++++++
 
 On Windows 10+, things should just work. On older Windows versions you
 may need to install the Vulkan drivers.
 
-**MacOS**
+MacOS
++++++
 
 On MacOS you need at least 10.13 (High Sierra) to have Metal/Vulkan support.
 
-**Linux**
+Linux
++++++
 
 On Linux, it's advisable to install the proprietary drivers of your GPU
 (if you have a dedicated GPU). You may need to ``apt install
@@ -74,20 +79,25 @@ wgpu-native yourself, see "dependencies" above. Note that wgpu-native
 still needs Vulkan support and may not compile / work on older
 distributions.
 
+Installing LavaPipe on Linux
+++++++++++++++++++++++++++++
 
-About this API
---------------
+To run wgpu on systems that do not have a GPU (e.g. CI) you need a software renderer.
+On Windows this (probably) just works via DX12. On Linux you can use LavaPipe:
 
-This library presents a Pythonic API for the `WebGPU spec
-<https://gpuweb.github.io/gpuweb/>`_. It is an API to control graphics
-hardware. Like OpenGL but modern, or like Vulkan but higher level.
-GPU programming is a craft that requires knowledge of how GPU's work.
-See the guide for more info and links to resources.
+.. code-block:: bash
 
+        sudo apt update -y -qq
+        sudo apt install --no-install-recommends -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
 
-What's new in this version?
----------------------------
+The distribution's version of Lavapipe may be a bit outdated. To get a more recent version, you can use this PPA:
 
-Since the API changes with each release, and we do not yet make things
-backwards compatible. You may want to check the `CHANGELOG.md <https://github.com/pygfx/wgpu-py/blob/main/CHANGELOG.md>`_
-when you upgrade to a newer version of wgpu.
+.. code-block:: bash
+
+        sudo add-apt-repository ppa:oibaf/graphics-drivers -y
+
+.. note::
+
+    The precise visual output may differ between differen implementations of Vulkan/Metal/DX12.
+    Therefore you should probably avoid per-pixel comparisons when multiple different systems are
+    involved. In wgpu-py and pygfx we have solved this by generating all reference images on CI (with Lavapipe).
