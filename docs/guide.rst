@@ -17,7 +17,7 @@ Selecting the backend
 To use ``wgpu``, you must select a backend. Eventually
 there may be multiple backends, but at the moment
 there is only one backend, which is based on the Rust libary
-`wgpu-native <https://github.com/gfx-rs/wgpu>`_. You select
+`wgpu-native <https://github.com/gfx-rs/wgpu>`__. You select
 the backend by importing it:
 
 
@@ -169,8 +169,8 @@ will be using to write GPU code for the browser. And for desktop and mobile as w
 
 As the WebGPU spec is being developed, a reference implementation is
 also build. It's written in Rust and powers the WebGPU implementation in Firefox.
-This reference implementation, called `wgpu <https://github.com/gfx-rs/wgpu>`_,
-also exposes a C-api (via `wgpu native <https://github.com/gfx-rs/wgpu-native>`_),
+This reference implementation, called `wgpu <https://github.com/gfx-rs/wgpu>`__,
+also exposes a C-api (via `wgpu-native <https://github.com/gfx-rs/wgpu-native>`__),
 so that it can be wrapped in Python. And this is precisely what wgpu-py does.
 
 So in short, wgpu-py is a Python wrapper of wgpu, which is an desktop
