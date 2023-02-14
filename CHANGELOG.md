@@ -18,6 +18,19 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.9.1] - 13-02-2023
+
+Changed:
+
+* Improved documentation.
+
+Added:
+
+* Added `print_report()` to get a report on the internals of wgpu.
+* Added `command_encoder.clear_buffer()`
+* Added support for GLSL.
+
+
 ### [v0.9.0] - 25-01-2023
 
 In this release the API is aligned with the latest webgpu.idl, and
