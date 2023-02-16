@@ -551,26 +551,27 @@ class GPUCanvasContext(base.GPUCanvasContext):
             canvas = self._get_canvas()
             self._surface_id = get_surface_id_from_canvas(canvas)
 
-        # The C-call
-        c_count = ffi.new("size_t *")
-        # H: WGPUTextureFormat const * f(WGPUSurface surface, WGPUAdapter adapter, size_t * count)
-        c_formats = lib.wgpuSurfaceGetSupportedFormats(
-            self._surface_id, adapter._internal, c_count
-        )
+        # # The C-call
+        # c_count = ffi.new("size_t *")
+        # c_formats = libxx.wgpuSurfaceGetSupportedFormats(
+        #     self._surface_id, adapter._internal, c_count
+        # )
+        #
+        # # Convert to string formats
+        # try:
+        #     count = c_count[0]
+        #     supported_format_ints = [c_formats[i] for i in range(count)]
+        #     formats = []
+        #     for key in list(enums.TextureFormat):
+        #         i = enummap[f"TextureFormat.{key}"]
+        #         if i in supported_format_ints:
+        #             formats.append(key)
+        # finally:
+        #     t = ffi.typeof(c_formats)
+        #     libxx.wgpuFree(c_formats, count * ffi.sizeof(t), ffi.alignof(t))
 
-        # Convert to string formats
-        try:
-            count = c_count[0]
-            supported_format_ints = [c_formats[i] for i in range(count)]
-            formats = []
-            for key in list(enums.TextureFormat):
-                i = enummap[f"TextureFormat.{key}"]
-                if i in supported_format_ints:
-                    formats.append(key)
-        finally:
-            t = ffi.typeof(c_formats)
-            # H: void f(void* ptr, size_t size, size_t align)
-            lib.wgpuFree(c_formats, count * ffi.sizeof(t), ffi.alignof(t))
+        # There appears to be a bug in wgpuSurfaceGetSupportedFormats, see #341 - disabled it for now.
+        formats = []
 
         # Select one
         default = "bgra8unorm-srgb"  # seems to be a good default
