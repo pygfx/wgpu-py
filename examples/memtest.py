@@ -22,6 +22,6 @@ if __name__ == "__main__":
         device = adapter.request_device()
         device.destroy()
         del device
-        wgpu.backends.rs.device_dropper.drop_all_pending()
+        wgpu.backends.rs.delayed_dropper.drop_all_pending()
         gc.collect()
         print_mem_usage(i + 1)
