@@ -32,6 +32,7 @@ runtime_deps = ["cffi>=1.15.0rc2", "rubicon-objc>=0.4.1; sys_platform == 'darwin
 extra_deps = {
     "jupyter": ["jupyter_rfb>=0.3.1"],
     "glfw": ["glfw>=1.9"],
+    "docs": ["sphinx"],
 }
 
 setup(
