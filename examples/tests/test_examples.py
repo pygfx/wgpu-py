@@ -80,7 +80,7 @@ def test_examples_screenshots(
     request.addfinalizer(unload_module)
 
     # render a frame
-    img = example.canvas.draw()
+    img = np.asarray(example.canvas.draw())
 
     # check if _something_ was rendered
     assert img is not None and img.size > 0

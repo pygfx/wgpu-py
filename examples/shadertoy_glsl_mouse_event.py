@@ -24,7 +24,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = fragCoord / iResolution.x;
     vec2 cen = 0.5*iResolution.xy/iResolution.x;
     vec4 m = iMouse / iResolution.x;
-   
+
    vec3 col = vec3(0.0);
 
    if( m.z>0.0 ) // button is down

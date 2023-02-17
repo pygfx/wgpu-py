@@ -1,6 +1,5 @@
 import time
-
-import numpy as np
+import ctypes
 
 import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
@@ -159,14 +158,53 @@ binding_layout = [
     }
 ]
 
-uniform_dtype = [
-    ("mouse", "float32", (4)),
-    ("resolution", "float32", (3)),
-    ("time", "float32"),
-    ("time_delta", "float32"),
-    ("frame", "uint32"),
-    ("__padding", "uint32", (2)),  # padding to 48 bytes
-]
+
+class UniformArray:
+    """Convenience class to create a uniform array.
+    Maybe we can make it a public util at some point.
+    """
+
+    def __init__(self, *args):
+        # Analyse incoming fields
+        fields = []
+        byte_offet = 0
+        for name, format, n in args:
+            assert format in ("f", "i", "I")
+            field = name, format, byte_offet, byte_offet + n * 4
+            fields.append(field)
+            byte_offet += n * 4
+        # Get padding
+        nbytes = byte_offet
+        while nbytes % 16:
+            nbytes += 1
+        # Construct memoryview object and a view for each field
+        self._mem = memoryview((ctypes.c_uint8 * nbytes)()).cast("B")
+        self._views = {}
+        for name, format, i1, i2 in fields:
+            self._views[name] = self._mem[i1:i2].cast(format)
+
+    @property
+    def mem(self):
+        return self._mem
+
+    @property
+    def nbytes(self):
+        return self._mem.nbytes
+
+    def __getitem__(self, key):
+        v = self._views[key].tolist()
+        return v[0] if len(v) == 1 else v
+
+    def __setitem__(self, key, val):
+        m = self._views[key]
+        n = m.shape[0]
+        if n == 1:
+            assert isinstance(val, (float, int))
+            m[0] = val
+        else:
+            assert isinstance(val, (tuple, list))
+            for i in range(n):
+                m[i] = val[i]
 
 
 class Shadertoy:
@@ -203,7 +241,13 @@ class Shadertoy:
     # todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
 
     def __init__(self, shader_code, resolution=(800, 450)) -> None:
-        self._uniform_data = np.zeros((), dtype=uniform_dtype)
+        self._uniform_data = UniformArray(
+            ("mouse", "f", 4),
+            ("resolution", "f", 3),
+            ("time", "f", 1),
+            ("time_delta", "f", 1),
+            ("frame", "I", 1),
+        )
 
         self._shader_code = shader_code
         self._uniform_data["resolution"] = resolution + (1,)
@@ -339,8 +383,9 @@ class Shadertoy:
 
         def on_mouse_move(event):
             if event["button"] == 1 or 1 in event["buttons"]:
-                xy = event["x"], self.resolution[1] - event["y"]
-                self._uniform_data["mouse"][:2] = xy
+                _, _, x2, y2 = self._uniform_data["mouse"]
+                x1, y1 = event["x"], self.resolution[1] - event["y"]
+                self._uniform_data["mouse"] = x1, y1, x2, y2
 
         def on_mouse_down(event):
             if event["button"] == 1 or 1 in event["buttons"]:
@@ -349,7 +394,8 @@ class Shadertoy:
 
         def on_mouse_up(event):
             if event["button"] == 1 or 1 in event["buttons"]:
-                self._uniform_data["mouse"][2] = -abs(self._uniform_data["mouse"][2])
+                x1, y1, x2, y2 = self._uniform_data["mouse"]
+                self._uniform_data["mouse"] = x1, y1, abs(x2), y2
 
         self._canvas.add_event_handler(on_resize, "resize")
         self._canvas.add_event_handler(on_mouse_move, "pointer_move")
@@ -376,7 +422,11 @@ class Shadertoy:
         # Update uniform buffer
         self._update()
         self._device.queue.write_buffer(
-            self._uniform_buffer, 0, self._uniform_data, 0, self._uniform_data.nbytes
+            self._uniform_buffer,
+            0,
+            self._uniform_data.mem,
+            0,
+            self._uniform_data.nbytes,
         )
 
         command_encoder = self._device.create_command_encoder()
