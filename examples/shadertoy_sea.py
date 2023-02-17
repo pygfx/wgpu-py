@@ -162,7 +162,7 @@ fn heightMapTracing( ori : vec3<f32>, dir : vec3<f32> ) -> vec3<f32> {
 }
 
 fn getPixel( coord: vec2<f32>, time: f32 ) -> vec3<f32> {
-    var uv = coord / i_resolution;
+    var uv = coord / i_resolution.xy;
     uv = uv * 2.0 - 1.0;
     uv.x *= i_resolution.x / i_resolution.y;
 
