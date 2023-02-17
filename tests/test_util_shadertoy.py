@@ -19,7 +19,7 @@ def force_offscreen():
 
 
 def test_shadertoy_wgsl():
-    # Import here, because it imports the wgou.gui.auto
+    # Import here, because it imports the wgpu.gui.auto
     from wgpu.utils.shadertoy import Shadertoy  # noqa
 
     shader_code = """
@@ -44,7 +44,7 @@ def test_shadertoy_wgsl():
 
 
 def test_shadertoy_glsl():
-    # Import here, because it imports the wgou.gui.auto
+    # Import here, because it imports the wgpu.gui.auto
     from wgpu.utils.shadertoy import Shadertoy  # noqa
 
     shader_code = """
