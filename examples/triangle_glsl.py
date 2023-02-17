@@ -1,17 +1,5 @@
 """
-Example use of the wgpu API to draw a triangle. This example is set up
-so it can be run on canvases provided by any backend. Running this file
-as a script will use the auto-backend (using either glfw or jupyter).
-
-
-Similar example in other languages / API's:
-
-* Rust wgpu:
-  https://github.com/gfx-rs/wgpu-rs/blob/master/examples/hello-triangle/main.rs
-* C wgpu:
-  https://github.com/gfx-rs/wgpu/blob/master/examples/triangle/main.c
-* Python Vulkan:
-  https://github.com/realitix/vulkan/blob/master/example/contribs/example_glfw.py
+The triangle example, using GLSL shaders.
 
 """
 
@@ -21,38 +9,35 @@ import wgpu
 # %% Shaders
 
 
-shader_source = """
-struct VertexInput {
-    @builtin(vertex_index) vertex_index : u32,
-};
-struct VertexOutput {
-    @location(0) color : vec4<f32>,
-    @builtin(position) pos: vec4<f32>,
-};
-
-@vertex
-fn vs_main(in: VertexInput) -> VertexOutput {
-    var positions = array<vec2<f32>, 3>(
-        vec2<f32>(0.0, -0.5),
-        vec2<f32>(0.5, 0.5),
-        vec2<f32>(-0.5, 0.75),
+vertex_shader = """
+#version 450 core
+layout(location = 0) out vec4 color;
+void main()
+{
+    vec2 positions[3] = vec2[3](
+        vec2(0.0, -0.5),
+        vec2(0.5, 0.5),
+        vec2(-0.5, 0.75)
     );
-    var colors = array<vec3<f32>, 3>(  // srgb colors
-        vec3<f32>(1.0, 1.0, 0.0),
-        vec3<f32>(1.0, 0.0, 1.0),
-        vec3<f32>(0.0, 1.0, 1.0),
+    vec3 colors[3] = vec3[3](  // srgb colors
+        vec3(1.0, 1.0, 0.0),
+        vec3(1.0, 0.0, 1.0),
+        vec3(0.0, 1.0, 1.0)
     );
-    let index = i32(in.vertex_index);
-    var out: VertexOutput;
-    out.pos = vec4<f32>(positions[index], 0.0, 1.0);
-    out.color = vec4<f32>(colors[index], 1.0);
-    return out;
+    int index = int(gl_VertexID);
+    gl_Position = vec4(positions[index], 0.0, 1.0);
+    color = vec4(colors[index], 1.0);
 }
+"""
 
-@fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let physical_color = pow(in.color.rgb, vec3<f32>(2.2));  // gamma correct
-    return vec4<f32>(physical_color, in.color.a);
+fragment_shader = """
+#version 450 core
+out vec4 FragColor;
+layout(location = 0) in vec4 color;
+void main()
+{
+    vec3 physical_color = pow(color.rgb, vec3(2.2));  // gamma correct
+    FragColor = vec4(physical_color, color.a);
 }
 """
 
@@ -79,7 +64,10 @@ async def main_async(canvas):
 
 
 def _main(canvas, device):
-    shader = device.create_shader_module(code=shader_source)
+    vert_shader = device.create_shader_module(label="triangle_vert", code=vertex_shader)
+    frag_shader = device.create_shader_module(
+        label="triangle_frag", code=fragment_shader
+    )
 
     # No bind group and layout, we should not create empty ones.
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
@@ -91,8 +79,8 @@ def _main(canvas, device):
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
         vertex={
-            "module": shader,
-            "entry_point": "vs_main",
+            "module": vert_shader,
+            "entry_point": "main",
             "buffers": [],
         },
         primitive={
@@ -103,8 +91,8 @@ def _main(canvas, device):
         depth_stencil=None,
         multisample=None,
         fragment={
-            "module": shader,
-            "entry_point": "fs_main",
+            "module": frag_shader,
+            "entry_point": "main",
             "targets": [
                 {
                     "format": render_texture_format,

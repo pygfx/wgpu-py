@@ -31,8 +31,8 @@ fn render(p: vec2<f32>) -> vec3<f32> {
 }
 
 fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
-    let uv = (frag_coord - i_resolution / 2.0) / i_resolution.y;
-    let d=vec2<f32>(0.0,0.5)/i_resolution;
+    let uv = (frag_coord - i_resolution.xy / 2.0) / i_resolution.y;
+    let d=vec2<f32>(0.0,0.5)/i_resolution.xy;
     let col = render(uv)+render(uv+d.xy)+render(uv-d.xy)+render(uv+d.yx)+render(uv-d.yx);
     return vec4<f32>(col/5.0, 1.0);
 }

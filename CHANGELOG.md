@@ -18,6 +18,30 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.9.2] - 17-02-2023
+
+Fixed:
+
+* Fixed that `get_preferred_format()` could crash (in `wgpuSurfaceGetSupportedFormats`) due to an upstream bug in wgpu-native (#342)
+
+Added:
+
+* The shadertoy util now supports GLSL, so code from the shadertoy website can be direcly copied and run with wgpu (#343)
+
+
+### [v0.9.1] - 13-02-2023
+
+Changed:
+
+* Improved documentation.
+
+Added:
+
+* Added `print_report()` to get a report on the internals of wgpu.
+* Added `command_encoder.clear_buffer()`
+* Added support for GLSL.
+
+
 ### [v0.9.0] - 25-01-2023
 
 In this release the API is aligned with the latest webgpu.idl, and

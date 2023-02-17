@@ -317,7 +317,6 @@ render_pipeline = device.create_render_pipeline(
 
 
 def draw_frame():
-
     # Update uniform transform
     a1 = -0.3
     a2 = time.time()

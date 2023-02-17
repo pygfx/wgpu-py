@@ -9,7 +9,10 @@ Welcome to the wgpu-py docs!
 
    start
    guide
-   reference
+   wgpu
+   gui
+   utils
+
 
 
 Indices and tables

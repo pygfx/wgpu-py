@@ -71,20 +71,24 @@ apidiff = ApiDiff()
 
 
 class GPU:
-    """Class that represents the root namespace of the API."""
+    """The entrypoint to the wgpu API.
+
+    The starting point of your wgpu-adventure is always to obtain an adapter.
+    The methods of this class are loaded into the ``wgpu`` namespace.
+    """
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
     def request_adapter(self, *, canvas, power_preference=None):
-        """Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
-        implementation, from which one can request a :class:`GPUDevice`.
+        """Create a `GPUAdapter`, the object that represents an abstract wgpu
+        implementation, from which one can request a `GPUDevice`.
 
         Arguments:
             canvas (WgpuCanvasInterface): The canvas that the adapter should
                 be able to render to (to create a swap chain for, to be precise).
                 Can be None if you're not rendering to screen (or if you're
                 confident that the returned adapter will work just fine).
-            powerPreference(PowerPreference): "high-performance" or "low-power"
+            powerPreference (PowerPreference): "high-performance" or "low-power"
         """
         # todo: include forceFallbackAdapter arg when this is also correctly applied in wgpu-native (currently its not)
         raise RuntimeError(
@@ -94,7 +98,7 @@ class GPU:
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
     async def request_adapter_async(self, *, canvas, power_preference=None):
-        """Async version of ``request_adapter()``."""
+        """Async version of `request_adapter()`."""
         raise RuntimeError(
             "Select a backend (by importing wgpu.rs) before requesting an adapter!"
         )  # no-cover
@@ -102,15 +106,25 @@ class GPU:
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context.")
     def get_preferred_canvas_format(self):
-        """Not implemented in wgpu-py; use ``canvas.get_preferred_format()`` instead.
+        """Not implemented in wgpu-py; use `GPUCanvasContext.get_preferred_format()` instead.
         The WebGPU spec defines this function, but in wgpu there are different
         kinds of canvases which may each prefer/support a different format.
         """
         raise RuntimeError("Use canvas.get_preferred_format() instead.")
 
+    @apidiff.add("Usefull")
+    def print_report(self):
+        """Print a report about the interals if the backend."""
+        print(f"{self.__class__.__module__}.GPU: No report available.")
+
 
 class GPUCanvasContext:
-    """A context object associated with a canvas, to present what has been drawn."""
+    """Represents a context to configure a canvas.
+
+    Is also used to obtain the texture to render to.
+
+    Can be obtained via `gui.WgpuCanvasInterface.get_context()`.
+    """
 
     def __init__(self, canvas):
         self._canvas_ref = weakref.ref(canvas)
@@ -141,11 +155,11 @@ class GPUCanvasContext:
 
         Arguments:
             device (WgpuDevice): The GPU device object.
-            format (TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
+            format (enums.TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
                 Default uses the preferred_format.
-            usage (TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
+            usage (flags.TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
             color_space (PredefinedColorSpace): Default "srgb".
-            alpha_mode (CanvasCompositingAlphaMode): Default opaque.
+            alpha_mode (enums.CanvasAlphaMode): Default opaque.
         """
         self.unconfigure()
         self._device = device
@@ -166,17 +180,17 @@ class GPUCanvasContext:
 
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
-        """Get the ``GPUTexture`` that will be composited to the canvas
+        """Get the `GPUTexture` that will be composited to the canvas
         by the context next.
 
-        NOTE: for the time being, this could return a ``GPUTextureView`` instead.
+        NOTE: for the time being, this could return a `GPUTextureView` instead.
         """
         raise NotImplementedError()
 
     @apidiff.add("Present method is exposed")
     def present(self):
         """Present what has been drawn to the current texture, by compositing it
-        to the canvas. Note that a canvas based on ``WgpuCanvasBase`` will call this
+        to the canvas. Note that a canvas based on `gui.WgpuCanvasBase` will call this
         method automatically at the end of each draw event.
         """
         raise NotImplementedError()
@@ -194,7 +208,7 @@ class GPUCanvasContext:
 
 
 class GPUAdapterInfo:
-    """An object that provides information about an adapter."""
+    """Represents information about an adapter."""
 
     def __init__(self, info):
         self._info
@@ -225,10 +239,16 @@ class GPUAdapterInfo:
 
 
 class GPUAdapter:
-    """
+    """Represents an abstract wgpu implementation.
+
     An adapter represents both an instance of a hardware accelerator
     (e.g. GPU or CPU) and an implementation of WGPU on top of that
-    accelerator. If an adapter becomes unavailable, it becomes invalid.
+    accelerator.
+
+    The adapter is used to request a device object. The adapter object
+    enumerates its capabilities (features) and limits.
+
+    If an adapter becomes unavailable, it becomes invalid.
     Once invalid, it never becomes valid again.
     """
 
@@ -264,13 +284,13 @@ class GPUAdapter:
         required_limits: "Dict[str, int]" = {},
         default_queue: "structs.QueueDescriptor" = {},
     ):
-        """Request a :class:`GPUDevice` from the adapter.
+        """Request a `GPUDevice` from the adapter.
 
         Arguments:
             label (str): A human readable label. Optional.
             required_features (list of str): the features (extensions) that you need. Default [].
             required_limits (dict): the various limits that you need. Default {}.
-            default_queue (dict, optional): Descriptor for the default queue.
+            default_queue (structs.QueueDescriptor): Descriptor for the default queue. Optional.
         """
         raise NotImplementedError()
 
@@ -283,7 +303,7 @@ class GPUAdapter:
         required_limits: "Dict[str, int]" = {},
         default_queue: "structs.QueueDescriptor" = {},
     ):
-        """Async version of ``request_device()``."""
+        """Async version of `request_device()`."""
         raise NotImplementedError()
 
     def _destroy(self):
@@ -310,8 +330,10 @@ class GPUAdapter:
 
 
 class GPUObjectBase:
-    """The base class for all GPU objects (the device and all objects
-    belonging to a device).
+    """The base class for all GPU objects.
+
+    A GPU object is an object that can be thought of having a representation on
+    the GPU; the device and all objects belonging to a device.
     """
 
     def __init__(self, label, internal, device):
@@ -340,15 +362,16 @@ class GPUObjectBase:
 
 
 class GPUDevice(GPUObjectBase):
-    """
+    """The top-level interface through which GPU objects are created.
+
     A device is the logical instantiation of an adapter, through which
     internal objects are created. It can be shared across threads.
     A device is the exclusive owner of all internal objects created
     from it: when the device is lost, all objects created from it become
     invalid.
 
-    Create a device using :func:`GPUAdapter.request_device` or
-    :func:`GPUAdapter.request_device_async`.
+    Create a device using `GPUAdapter.request_device()` or
+    `GPUAdapter.request_device_async()`.
     """
 
     def __init__(self, label, internal, adapter, features, limits, queue):
@@ -379,7 +402,7 @@ class GPUDevice(GPUObjectBase):
     # IDL: [SameObject] readonly attribute GPUQueue queue;
     @property
     def queue(self):
-        """The default :class:`GPUQueue` for this device."""
+        """The default `GPUQueue` for this device."""
         return self._queue
 
     @apidiff.add("Too useful to not-have")
@@ -414,27 +437,27 @@ class GPUDevice(GPUObjectBase):
         usage: "flags.BufferUsage",
         mapped_at_creation: bool = False,
     ):
-        """Create a :class:`GPUBuffer` object.
+        """Create a `GPUBuffer` object.
 
         Arguments:
             label (str): A human readable label. Optional.
             size (int): The size of the buffer in bytes.
-            usage (BufferUsageFlags): The ways in which this buffer will be used.
+            usage (flags.BufferUsage): The ways in which this buffer will be used.
             mapped_at_creation (bool): Must be False, use create_buffer_with_data() instead.
         """
         raise NotImplementedError()
 
     @apidiff.add("replaces WebGPU's mapping API")
     def create_buffer_with_data(self, *, label="", data, usage: "flags.BufferUsage"):
-        """Create a :class:`GPUBuffer` object initialized with the given data.
+        """Create a `GPUBuffer` object initialized with the given data.
 
         Arguments:
             label (str): A human readable label. Optional.
             data: Any object supporting the Python buffer protocol (this
                 includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
-            usage (BufferUsageFlags): The ways in which this buffer will be used.
+            usage (flags.BufferUsage): The ways in which this buffer will be used.
 
-        Also see ``GPUQueue.write_buffer()`` and ``GPUQueue.read_buffer()``.
+        Also see `GPUQueue.write_buffer()` and `GPUQueue.read_buffer()`.
         """
         raise NotImplementedError()
 
@@ -451,17 +474,16 @@ class GPUDevice(GPUObjectBase):
         usage: "flags.TextureUsage",
         view_formats: "List[enums.TextureFormat]" = [],
     ):
-        """Create a :class:`GPUTexture` object.
+        """Create a `GPUTexture` object.
 
         Arguments:
             label (str): A human readable label. Optional.
-            size (tuple or dict): The texture size as a 3-tuple or a
-                dict (width, height, depth_or_array_layers).
+            size (tuple or dict): The texture size as a 3-tuple or a `structs.Extent3D`.
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
-            dimension (TextureDimension): The dimensionality of the texture. Default 2d.
+            dimension (enums.TextureDimension): The dimensionality of the texture. Default 2d.
             format (TextureFormat): What channels it stores and how.
-            usage (TextureUsageFlags): The ways in which the texture will be used.
+            usage (flags.TextureUsage): The ways in which the texture will be used.
             view_formats (optional): A list of formats that views are allowed to have
               in addition to the texture's own view. Using these formats may have
               a performance penalty.
@@ -488,22 +510,22 @@ class GPUDevice(GPUObjectBase):
         compare: "enums.CompareFunction" = None,
         max_anisotropy: int = 1,
     ):
-        """Create a :class:`GPUSampler` object. Samplers specify how a texture is sampled.
+        """Create a `GPUSampler` object. Samplers specify how a texture is sampled.
 
         Arguments:
             label (str): A human readable label. Optional.
-            address_mode_u (AddressMode): What happens when sampling beyond the x edge.
+            address_mode_u (enums.AddressMode): What happens when sampling beyond the x edge.
                 Default "clamp-to-edge".
-            address_mode_v (AddressMode): What happens when sampling beyond the y edge.
+            address_mode_v (enums.AddressMode): What happens when sampling beyond the y edge.
                 Default "clamp-to-edge".
-            address_mode_w (AddressMode): What happens when sampling beyond the z edge.
+            address_mode_w (enums.AddressMode): What happens when sampling beyond the z edge.
                 Default "clamp-to-edge".
-            mag_filter (FilterMode): Interpolation when zoomed in. Default 'nearest'.
-            min_filter (FilterMode): Interpolation when zoomed out. Default 'nearest'.
-            mipmap_filter: (MipmapFilterMode): Interpolation between mip levels. Default 'nearest'.
+            mag_filter (enums.FilterMode): Interpolation when zoomed in. Default 'nearest'.
+            min_filter (enums.FilterMode): Interpolation when zoomed out. Default 'nearest'.
+            mipmap_filter: (enums.MipmapFilterMode): Interpolation between mip levels. Default 'nearest'.
             lod_min_clamp (float): The minimum level of detail. Default 0.
             lod_max_clamp (float): The maxium level of detail. Default 32.
-            compare (CompareFunction): The sample compare operation for depth textures.
+            compare (enums.CompareFunction): The sample compare operation for depth textures.
                 Only specify this for depth textures. Default None.
             max_anisotropy (int): The maximum anisotropy value clamp used by the sample,
                 betweet 1 and 16, default 1.
@@ -514,20 +536,22 @@ class GPUDevice(GPUObjectBase):
     def create_bind_group_layout(
         self, *, label="", entries: "List[structs.BindGroupLayoutEntry]"
     ):
-        """Create a :class:`GPUBindGroupLayout` object. One or more
-        such objects are passed to :func:`create_pipeline_layout` to
+        """Create a `GPUBindGroupLayout` object. One or more
+        such objects are passed to `create_pipeline_layout()` to
         specify the (abstract) pipeline layout for resources. See the
         docs on bind groups for details.
 
         Arguments:
             label (str): A human readable label. Optional.
-            entries (list of dict): A list of layout entry dicts.
+            entries (list): A list of `structs.BindGroupLayoutEntry` dicts.
+                Each contains either a `structs.BufferBindingLayout`,
+                `structs.SamplerBindingLayout`, `structs.TextureBindingLayout`,
+                or `structs.StorageTextureBindingLayout`.
 
-        Example entry dict:
+        Example with `structs.BufferBindingLayout`:
 
         .. code-block:: py
 
-            # Buffer
             {
                 "binding": 0,
                 "visibility": wgpu.ShaderStage.COMPUTE,
@@ -537,39 +561,11 @@ class GPUDevice(GPUObjectBase):
                     "min_binding_size": 0  # optional
                 }
             },
-            # Sampler
-            {
-                "binding": 1,
-                "visibility": wgpu.ShaderStage.COMPUTE,
-                "sampler": {
-                    "type": wgpu.SamplerBindingType.filtering,
-                }
-            },
-            # Sampled texture
-            {
-                "binding": 2,
-                "visibility": wgpu.ShaderStage.FRAGMENT,
-                "texture": {
-                    "sample_type": wgpu.TextureSampleType.float,  # optional
-                    "view_dimension": wgpu.TextureViewDimension.d2,  # optional
-                    "multisampled": False,  # optional
-                }
-            },
-            # Storage texture
-            {
-                "binding": 3,
-                "visibility": wgpu.ShaderStage.FRAGMENT,
-                "storage_texture": {
-                    "access": wgpu.StorageTextureAccess.read_only,
-                    "format": wgpu.TextureFormat.r32float,
-                    "view_dimension": wgpu.TextureViewDimension.d2,
-                }
-            },
 
-        About ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
+        Note on ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
         readonly-storage-buffer bindings, it indicates whether the binding has a
-        dynamic offset. One offset must be passed to ``set_bind_group`` for each
-        dynamic binding in increasing order of binding number.
+        dynamic offset. One offset must be passed to `pass.set_bind_group()`
+        for each dynamic binding in increasing order of binding number.
         """
         raise NotImplementedError()
 
@@ -581,15 +577,15 @@ class GPUDevice(GPUObjectBase):
         layout: "GPUBindGroupLayout",
         entries: "List[structs.BindGroupEntry]",
     ):
-        """Create a :class:`GPUBindGroup` object, which can be used in
-        :func:`pass.set_bind_group() <GPUProgrammablePassEncoder.set_bind_group>`
-        to attach a group of resources.
+        """Create a `GPUBindGroup` object, which can be used in
+        `pass.set_bind_group()` to attach a group of resources.
 
         Arguments:
             label (str): A human readable label. Optional.
             layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
-            entries (list of dict): A list of dicts, see below.
+            entries (list): A list of `structs.BindGroupEntry` dicts. The ``resource`` field
+                is either `GPUSampler`, `GPUTextureView` or `structs.BufferBinding`.
 
         Example entry dicts:
 
@@ -621,12 +617,12 @@ class GPUDevice(GPUObjectBase):
     def create_pipeline_layout(
         self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
     ):
-        """Create a :class:`GPUPipelineLayout` object, which can be
-        used in :func:`create_render_pipeline` or :func:`create_compute_pipeline`.
+        """Create a `GPUPipelineLayout` object, which can be
+        used in `create_render_pipeline()` or `create_compute_pipeline()`.
 
         Arguments:
             label (str): A human readable label. Optional.
-            bind_group_layouts (list): A list of :class:`GPUBindGroupLayout` objects.
+            bind_group_layouts (list): A list of `GPUBindGroupLayout` objects.
         """
         raise NotImplementedError()
 
@@ -639,12 +635,16 @@ class GPUDevice(GPUObjectBase):
         source_map: dict = None,
         hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None,
     ):
-        """Create a :class:`GPUShaderModule` object from shader source.
+        """Create a `GPUShaderModule` object from shader source.
+
+        The primary shader language is WGSL, though SpirV is also supported,
+        as well as GLSL (experimental).
 
         Arguments:
             label (str): A human readable label. Optional.
-            code (str | bytes): The shader code, as WGSL text or binary SpirV
-                (or an object implementing ``to_spirv()`` or ``to_bytes()``).
+            code (str | bytes): The shader code, as WGSL, GLSL or SpirV.
+                For GLSL code, the label must be given and contain the word
+                'comp', 'vert' or 'frag'. For SpirV the code must be bytes.
             hints: unused.
         """
         raise NotImplementedError()
@@ -657,12 +657,12 @@ class GPUDevice(GPUObjectBase):
         layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         compute: "structs.ProgrammableStage",
     ):
-        """Create a :class:`GPUComputePipeline` object.
+        """Create a `GPUComputePipeline` object.
 
         Arguments:
             label (str): A human readable label. Optional.
-            layout (GPUPipelineLayout): object created with ``create_pipeline_layout()``.
-            compute (dict): E.g. ``{"module": shader_module, entry_point="main"}``.
+            layout (GPUPipelineLayout): object created with `create_pipeline_layout()`.
+            compute (structs.ProgrammableStage): Binds shader module and entrypoint.
         """
         raise NotImplementedError()
 
@@ -689,24 +689,26 @@ class GPUDevice(GPUObjectBase):
         multisample: "structs.MultisampleState" = {},
         fragment: "structs.FragmentState" = None,
     ):
-        """Create a :class:`GPURenderPipeline` object.
+        """Create a `GPURenderPipeline` object.
 
         Arguments:
             label (str): A human readable label. Optional.
-            layout (GPUPipelineLayout): A layout created with ``create_pipeline_layout()``.
-            vertex (VertexState): Describes the vertex shader entry point of the pipeline and its input buffer layouts.
-            primitive (PrimitiveState): Describes the the primitive-related properties
+            layout (GPUPipelineLayout): The layout for the new pipeline.
+            vertex (structs.VertexState): Describes the vertex shader entry point of the
+                pipeline and its input buffer layouts.
+            primitive (structs.PrimitiveState): Describes the the primitive-related properties
                 of the pipeline. If `strip_index_format` is present (which means the
                 primitive topology is a strip), and the drawCall is indexed, the
                 vertex index list is split into sub-lists using the maximum value of this
                 index format as a separator. Example: a list with values
                 `[1, 2, 65535, 4, 5, 6]` of type "uint16" will be split in sub-lists
                 `[1, 2]` and `[4, 5, 6]`.
-            depth_stencil (DepthStencilState): Describes the optional depth-stencil properties, including the testing, operations, and bias. Optional.
-            multisample (MultisampleState): Describes the multi-sampling properties of the pipeline.
-            fragment (FragmentState): Describes the fragment shader
+            depth_stencil (structs.DepthStencilState): Describes the optional depth-stencil
+                properties, including the testing, operations, and bias. Optional.
+            multisample (structs.MultisampleState): Describes the multi-sampling properties of the pipeline.
+            fragment (structs.FragmentState): Describes the fragment shader
                 entry point of the pipeline and its output colors. If it’s
-                None, the No Color Output mode is enabled: the pipeline
+                None, the No-Color-Output mode is enabled: the pipeline
                 does not produce any color attachment outputs. It still
                 performs rasterization and produces depth values based on
                 the vertex position output. The depth testing and stencil
@@ -715,7 +717,7 @@ class GPUDevice(GPUObjectBase):
         In the example dicts below, the values that are marked as optional,
         the shown value is the default.
 
-        Example vertex (VertexState) dict:
+        Example vertex (structs.VertexState) dict:
 
         .. code-block:: py
 
@@ -739,7 +741,7 @@ class GPUDevice(GPUObjectBase):
                 ]
             }
 
-        Example primitive (GPUPrimitiveState) dict:
+        Example primitive (structs.PrimitiveState) dict:
 
         .. code-block:: py
 
@@ -750,7 +752,7 @@ class GPUDevice(GPUObjectBase):
                 "cull_mode": wgpu.CullMode.none,  # optional
             }
 
-        Example depth_stencil (GPUDepthStencilState) dict:
+        Example depth_stencil (structs.DepthStencilState) dict:
 
         .. code-block:: py
 
@@ -777,7 +779,7 @@ class GPUDevice(GPUObjectBase):
                 "depth_bias_clamp": 0.0,  # optional
             }
 
-        Example multisample (MultisampleState) dict:
+        Example multisample (structs.MultisampleState) dict:
 
         .. code-block:: py
 
@@ -787,7 +789,7 @@ class GPUDevice(GPUObjectBase):
                 "alpha_to_coverage_enabled": False  # optional
             }
 
-        Example fragment (FragmentState) dict. The `blend` parameter can be None
+        Example fragment (structs.FragmentState) dict. The `blend` parameter can be None
         to disable blending (not all texture formats support blending).
 
         .. code-block:: py
@@ -836,7 +838,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
     def create_command_encoder(self, *, label=""):
-        """Create a :class:`GPUCommandEncoder` object. A command
+        """Create a `GPUCommandEncoder` object. A command
         encoder is used to record commands, which can then be submitted
         at once to the GPU.
 
@@ -856,7 +858,7 @@ class GPUDevice(GPUObjectBase):
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
     ):
-        """Create a :class:`GPURenderBundle` object.
+        """Create a `GPURenderBundle` object.
 
         TODO: not yet available in wgpu-native
         """
@@ -864,7 +866,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
     def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
-        """Create a :class:`GPUQuerySet` object."""
+        """Create a `GPUQuerySet` object."""
         raise NotImplementedError()
 
     # IDL: undefined pushErrorScope(GPUErrorFilter filter);
@@ -889,15 +891,15 @@ class GPUDevice(GPUObjectBase):
 
 
 class GPUBuffer(GPUObjectBase):
-    """
-    A GPUBuffer represents a block of memory that can be used in GPU
-    operations. Data is stored in linear layout, meaning that each byte
+    """Represents a block of memory that can be used in GPU operations.
+
+    Data is stored in linear layout, meaning that each byte
     of the allocation can be addressed by its offset from the start of
     the buffer, subject to alignment restrictions depending on the
     operation.
 
-    Create a buffer using :func:`GPUDevice.create_buffer`,
-    :func:`GPUDevice.create_buffer_mapped` or :func:`GPUDevice.create_buffer_mapped_async`.
+    Create a buffer using `GPUDevice.create_buffer()`,
+    `GPUDevice.create_buffer_mapped()` or `GPUDevice.create_buffer_mapped_async()`.
 
     One can sync data in a buffer by mapping it (or by creating a mapped
     buffer) and then setting/getting the values in the mapped memoryview.
@@ -929,7 +931,7 @@ class GPUBuffer(GPUObjectBase):
     # IDL: readonly attribute GPUBufferMapState mapState;
     @property
     def map_state(self):
-        """The mapping state of the buffer, see ``wgpu.BufferMapState``."""
+        """The mapping state of the buffer, see `BufferMapState`."""
         return self._map_state
 
     # WebGPU specifies an API to sync data with the buffer via mapping.
@@ -960,7 +962,7 @@ class GPUBuffer(GPUObjectBase):
         """Map the buffer and read the data from it, then unmap.
         Return a memoryview object. Requires the buffer usage to include MAP_READ.
 
-        See `queue.read_buffer()` for a simpler alternative.
+        See `GPUQueue.read_buffer()` for a simpler alternative.
         """
         raise NotImplementedError()
 
@@ -969,7 +971,7 @@ class GPUBuffer(GPUObjectBase):
         """Map the buffer and write the data to it, then unmap.
         Return a memoryview object. Requires the buffer usage to include MAP_WRITE.
 
-        See `queue.write_buffer()` for a simpler alternative.
+        See `WGPUQueue.write_buffer()` for a simpler alternative.
         """
         raise NotImplementedError()
 
@@ -990,13 +992,14 @@ class GPUBuffer(GPUObjectBase):
 
 
 class GPUTexture(GPUObjectBase):
-    """
-    A texture represents a 1D, 2D or 3D color image object. It also can have mipmaps
-    (different levels of varying detail), and arrays. The texture represents
-    the "raw" data. A :class:`GPUTextureView` is used to define how the texture data
+    """Represents a 1D, 2D or 3D color image object.
+
+    A texture also can have mipmaps (different levels of varying
+    detail), and arrays. The texture represents the "raw" data. A
+    `GPUTextureView` is used to define how the texture data
     should be interpreted.
 
-    Create a texture using :func:`GPUDevice.create_texture`.
+    Create a texture using `GPUDevice.create_texture()`.
     """
 
     def __init__(self, label, internal, device, tex_info):
@@ -1070,16 +1073,16 @@ class GPUTexture(GPUObjectBase):
         base_array_layer: int = 0,
         array_layer_count: int = None,
     ):
-        """Create a :class:`GPUTextureView` object.
+        """Create a `GPUTextureView` object.
 
         If no aguments are given, a default view is given, with the
         same format and dimension as the texture.
 
         Arguments:
             label (str): A human readable label. Optional.
-            format (TextureFormat): What channels it stores and how.
-            dimension (TextureViewDimension): The dimensionality of the texture view.
-            aspect (TextureAspect): Whether this view is used for depth, stencil, or all.
+            format (enums.TextureFormat): What channels it stores and how.
+            dimension (enums.TextureViewDimension): The dimensionality of the texture view.
+            aspect (enums.TextureAspect): Whether this view is used for depth, stencil, or all.
                 Default all.
             base_mip_level (int): The starting mip level. Default 0.
             mip_level_count (int): The number of mip levels. Default None.
@@ -1098,10 +1101,9 @@ class GPUTexture(GPUObjectBase):
 
 
 class GPUTextureView(GPUObjectBase):
-    """
-    A texture view represents a way to represent a :class:`GPUTexture`.
+    """Represents a way to represent a `GPUTexture`.
 
-    Create a texture view using :func:`GPUTexture.create_view`.
+    Create a texture view using `GPUTexture.create_view()`.
     """
 
     def __init__(self, label, internal, device, texture, size):
@@ -1123,22 +1125,21 @@ class GPUTextureView(GPUObjectBase):
 
 
 class GPUSampler(GPUObjectBase):
-    """
-    A sampler specifies how a texture (view) must be sampled by the shader,
-    in terms of subsampling, sampling between mip levels, and sampling out
+    """Defines how a texture (view) must be sampled by the shader.
+
+    It defines the subsampling, sampling between mip levels, and sampling out
     of the image boundaries.
 
-    Create a sampler using :func:`GPUDevice.create_sampler`.
+    Create a sampler using `GPUDevice.create_sampler()`.
     """
 
 
 class GPUBindGroupLayout(GPUObjectBase):
-    """
-    A bind group layout defines the interface between a set of
-    resources bound in a :class:`GPUBindGroup` and their accessibility in shader
-    stages.
+    """Defines the interface between a set of resources bound in a `GPUBindGroup`.
 
-    Create a bind group layout using :func:`GPUDevice.create_bind_group_layout`.
+    It also defines their accessibility in shader stages.
+
+    Create a bind group layout using `GPUDevice.create_bind_group_layout()`.
     """
 
     def __init__(self, label, internal, device, bindings):
@@ -1147,11 +1148,12 @@ class GPUBindGroupLayout(GPUObjectBase):
 
 
 class GPUBindGroup(GPUObjectBase):
-    """
-    A bind group represents a group of bindings, the shader slot,
-    and a resource (sampler, texture-view, buffer).
+    """Represents a group of resource bindings (buffer, sampler, texture-view).
 
-    Create a bind group using :func:`GPUDevice.create_bind_group`.
+    It holds the shader slot and a reference to the resource (sampler,
+    texture-view, buffer).
+
+    Create a bind group using `GPUDevice.create_bind_group()`.
     """
 
     def __init__(self, label, internal, device, bindings):
@@ -1160,11 +1162,9 @@ class GPUBindGroup(GPUObjectBase):
 
 
 class GPUPipelineLayout(GPUObjectBase):
-    """
-    A pipeline layout describes the layout of a pipeline, as a list
-    of :class:`GPUBindGroupLayout` objects.
+    """Describes the layout of a pipeline, as a list of `GPUBindGroupLayout` objects.
 
-    Create a pipeline layout using :func:`GPUDevice.create_pipeline_layout`.
+    Create a pipeline layout using `GPUDevice.create_pipeline_layout()`.
     """
 
     def __init__(self, label, internal, device, layouts):
@@ -1173,10 +1173,9 @@ class GPUPipelineLayout(GPUObjectBase):
 
 
 class GPUShaderModule(GPUObjectBase):
-    """
-    A shader module represents a programmable shader.
+    """Represents a programmable shader.
 
-    Create a shader module using :func:`GPUDevice.create_shader_module`.
+    Create a shader module using `GPUDevice.create_shader_module()`.
     """
 
     # IDL: Promise<GPUCompilationInfo> compilationInfo();
@@ -1204,33 +1203,33 @@ class GPUPipelineBase:
 
 
 class GPUComputePipeline(GPUPipelineBase, GPUObjectBase):
-    """
-    A compute pipeline represents a single pipeline for computations (no rendering).
+    """Represents a single pipeline for computations (no rendering).
 
-    Create a compute pipeline using :func:`GPUDevice.create_compute_pipeline`.
+    Create a compute pipeline using `GPUDevice.create_compute_pipeline()`.
     """
 
 
 class GPURenderPipeline(GPUPipelineBase, GPUObjectBase):
-    """
-    A render pipeline represents a single pipeline to draw something
-    using a vertex and a fragment shader. The render target can come
-    from a window on the screen or from an in-memory texture (off-screen
-    rendering).
+    """Represents a single pipeline to draw something.
 
-    Create a render pipeline using :func:`GPUDevice.create_render_pipeline`.
+    The rendering typically involves a vertex and fragment stage, though
+    the latter is optional.
+    The render target can come from a window on the screen or from an
+    in-memory texture (off-screen rendering).
+
+    Create a render pipeline using `GPUDevice.create_render_pipeline()`.
     """
 
 
 class GPUCommandBuffer(GPUObjectBase):
-    """
-    A command buffer stores a series of commands, generated by a
-    :class:`GPUCommandEncoder`, to be submitted to a :class:`GPUQueue`.
+    """Stores a series of commands generated by a `GPUCommandEncoder`.
 
-    Create a command buffer using :func:`GPUCommandEncoder.finish`.
+    The buffered commands can subsequently be submitted to a `GPUQueue`.
 
     Command buffers are single use, you must only submit them once and
     submitting them destroys them. Use render bundles to re-use commands.
+
+    Create a command buffer using `GPUCommandEncoder.finish()`.
     """
 
 
@@ -1304,7 +1303,7 @@ class GPURenderCommandsMixin:
             buffer (GPUBuffer): The buffer that contains the indices.
             index_format (GPUIndexFormat): The format of the index data
                 contained in buffer. If `strip_index_format` is given in the
-                call to `create_render_pipeline()`, it must match.
+                call to `GPUDevice.create_render_pipeline()`, it must match.
             offset (int): The byte offset in the buffer. Default 0.
             size (int): The number of bytes to use. If zero, the remaining size
                 (after offset) of the buffer is used. Default 0.
@@ -1338,7 +1337,7 @@ class GPURenderCommandsMixin:
 
     # IDL: undefined drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indirect(self, indirect_buffer, indirect_offset):
-        """Like ``draw()``, but the function arguments are in a buffer.
+        """Like `draw()`, but the function arguments are in a buffer.
 
         Arguments:
             indirect_buffer (GPUBuffer): The buffer that contains the arguments.
@@ -1369,7 +1368,7 @@ class GPURenderCommandsMixin:
     # IDL: undefined drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
         """
-        Like ``draw_indexed()``, but the function arguments are in a buffer.
+        Like `draw_indexed()`, but the function arguments are in a buffer.
 
         Arguments:
             indirect_buffer (GPUBuffer): The buffer that contains the arguments.
@@ -1379,11 +1378,11 @@ class GPURenderCommandsMixin:
 
 
 class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
-    """
-    A command encoder is used to record a series of commands. When done,
-    call :func:`finish` to obtain a GPUCommandBuffer object.
+    """Object to record a series of commands.
 
-    Create a command encoder using :func:`GPUDevice.create_command_encoder`.
+    When done, call `finish()` to obtain a `GPUCommandBuffer` object.
+
+    Create a command encoder using `GPUDevice.create_command_encoder()`.
     """
 
     # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
@@ -1394,7 +1393,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         timestamp_writes: "List[structs.ComputePassTimestampWrite]" = [],
     ):
         """Record the beginning of a compute pass. Returns a
-        :class:`GPUComputePassEncoder` object.
+        `GPUComputePassEncoder` object.
 
         Arguments:
             label (str): A human readable label. Optional.
@@ -1414,37 +1413,14 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         max_draw_count: int = 50000000,
     ):
         """Record the beginning of a render pass. Returns a
-        :class:`GPURenderPassEncoder` object.
+        `GPURenderPassEncoder` object.
 
         Arguments:
             label (str): A human readable label. Optional.
-            color_attachments (list of dict): List of color attachment dicts. See below.
-            depth_stencil_attachment (dict): A depth stencil attachment dict. See below. Default None.
-            occlusion_query_set: Default None. TODO NOT IMPLEMENTED in wgpu-native.
+            color_attachments (list): List of `structs.RenderPassColorAttachment` dicts.
+            depth_stencil_attachment (structs.RenderPassDepthStencilAttachment): Describes the depth stencil attachment. Default None.
+            occlusion_query_set (GPUQuerySet): Default None. TODO NOT IMPLEMENTED in wgpu-native.
             timestamp_writes: unused
-
-        Example color attachment:
-
-        .. code-block:: py
-
-            {
-                "view": texture_view,
-                "resolve_target": None,  # optional
-                "load_value": (0, 0, 0, 0),  # LoadOp.load or a color
-                "store_op": wgpu.StoreOp.store,  # optional
-            }
-
-        Example depth stencil attachment:
-
-        .. code-block:: py
-
-            {
-                "view": texture_view,
-                "depth_load_value": 0.0,
-                "depth_store_op": wgpu.StoreOp.store,
-                "stencil_load_value": wgpu.LoadOp.load,
-                "stencil_store_op": wgpu.StoreOp.store,
-            }
         """
         raise NotImplementedError()
 
@@ -1507,8 +1483,8 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 
     # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {});
     def finish(self, *, label=""):
-        """Finish recording. Returns a :class:`GPUCommandBuffer` to
-        submit to a :class:`GPUQueue`.
+        """Finish recording. Returns a `GPUCommandBuffer` to
+        submit to a `GPUQueue`.
 
         Arguments:
             label (str): A human readable label. Optional.
@@ -1531,10 +1507,9 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 class GPUComputePassEncoder(
     GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPUObjectBase
 ):
-    """
-    A compute-pass encoder records commands related to a compute pass.
+    """Object to records commands for a compute pass.
 
-    Create a compute pass encoder using :func:`GPUCommandEncoder.begin_compute_pass`.
+    Create a compute pass encoder using `GPUCommandEncoder.begin_compute_pass()`.
     """
 
     # IDL: undefined setPipeline(GPUComputePipeline pipeline);
@@ -1561,7 +1536,7 @@ class GPUComputePassEncoder(
 
     # IDL: undefined dispatchWorkgroupsIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def dispatch_workgroups_indirect(self, indirect_buffer, indirect_offset):
-        """Like ``dispatch_workgroups()``, but the function arguments are in a buffer.
+        """Like `dispatch_workgroups()`, but the function arguments are in a buffer.
 
         Arguments:
             indirect_buffer (GPUBuffer): The buffer that contains the arguments.
@@ -1582,10 +1557,9 @@ class GPURenderPassEncoder(
     GPURenderCommandsMixin,
     GPUObjectBase,
 ):
-    """
-    A render-pass encoder records commands related to a render pass.
+    """Object to records commands for a render pass.
 
-    Create a render pass encoder using :func:`GPUCommandEncoder.begin_render_pass`.
+    Create a render pass encoder using `GPUCommandEncoder.begin_render_pass`.
     """
 
     # IDL: undefined setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
@@ -1660,7 +1634,7 @@ class GPURenderPassEncoder(
 
 class GPURenderBundle(GPUObjectBase):
     """
-    TODO: not yet available in wgpu-native
+    TODO: not yet wrapped.
     """
 
 
@@ -1672,12 +1646,12 @@ class GPURenderBundleEncoder(
     GPUObjectBase,
 ):
     """
-    TODO: not yet available in wgpu-native
+    TODO: not yet wrapped
     """
 
     # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
     def finish(self, *, label=""):
-        """Finish recording and return a :class:`GPURenderBundle`.
+        """Finish recording and return a `GPURenderBundle`.
 
         Arguments:
             label (str): A human readable label. Optional.
@@ -1686,18 +1660,17 @@ class GPURenderBundleEncoder(
 
 
 class GPUQueue(GPUObjectBase):
-    """
-    A queue can be used to submit command buffers to.
+    """Object to submit command buffers to.
 
     You can obtain a queue object via the :attr:`GPUDevice.queue` property.
     """
 
     # IDL: undefined submit(sequence<GPUCommandBuffer> commandBuffers);
     def submit(self, command_buffers):
-        """Submit a :class:`GPUCommandBuffer` to the queue.
+        """Submit a `GPUCommandBuffer` to the queue.
 
         Arguments:
-            command_buffers (list): The :class:`GPUCommandBuffer` objects to add.
+            command_buffers (list): The `GPUCommandBuffer` objects to add.
         """
         raise NotImplementedError()
 
@@ -1709,7 +1682,7 @@ class GPUQueue(GPUObjectBase):
         affect the buffer contents.
 
         Arguments:
-            buffer: The :class:`GPUBuffer` object to write to.
+            buffer: The `GPUBuffer` object to write to.
             buffer_offset (int): The offset in the buffer to start writing at.
             data: The data to write. Must be contiguous.
             data_offset: The byte offset in the data. Default 0.
@@ -1718,7 +1691,7 @@ class GPUQueue(GPUObjectBase):
         This maps the data to a temporary buffer and then copies that buffer
         to the given buffer. The given buffer's usage must include COPY_DST.
 
-        Also see ``GPUDevice.create_buffer_with_data()`` and ``GPUBuffer.map_write()``.
+        Also see `GPUDevice.create_buffer_with_data()` and `GPUBuffer.map_write()`.
 
         """
         raise NotImplementedError()
@@ -1728,7 +1701,7 @@ class GPUQueue(GPUObjectBase):
         """Takes the data contents of the buffer and return them as a memoryview.
 
         Arguments:
-            buffer: The :class:`GPUBuffer` object to read from.
+            buffer: The `GPUBuffer` object to read from.
             buffer_offset (int): The offset in the buffer to start reading from.
             size: The number of bytes to read. Default all minus offset.
 
@@ -1736,7 +1709,7 @@ class GPUQueue(GPUObjectBase):
         and then maps that buffer to read the data. The given buffer's
         usage must include COPY_SRC.
 
-        Also see ``GPUBuffer.map_read()``.
+        Also see `GPUBuffer.map_read()`.
         """
         raise NotImplementedError()
 
@@ -1755,7 +1728,7 @@ class GPUQueue(GPUObjectBase):
                 "bytes_per_row" (an int), "rows_per_image" (an int, default 0).
             size: A 3-tuple of ints specifying the size to write.
 
-        Unlike ``GPUCommandEncoder.copyBufferToTexture()``, there is
+        Unlike `GPUCommandEncoder.copyBufferToTexture()`, there is
         no alignment requirement on `bytes_per_row`.
         """
         raise NotImplementedError()
@@ -1771,7 +1744,7 @@ class GPUQueue(GPUObjectBase):
                 "bytes_per_row" (an int), "rows_per_image" (an int, default 0).
             size: A 3-tuple of ints specifying the size to write.
 
-        Unlike ``GPUCommandEncoder.copyBufferToTexture()``, there is
+        Unlike `GPUCommandEncoder.copyBufferToTexture()`, there is
         no alignment requirement on `bytes_per_row`, although in the
         current implementation there will be a performance penalty if
         ``bytes_per_row`` is not a multiple of 256 (because we'll be
@@ -1843,7 +1816,7 @@ class GPUValidationError(GPUError):
 
 
 class GPUPipelineError(Exception):
-    """An error representing a pipeline creation failure."""
+    """An error raised when a pipeline could not be created."""
 
     # IDL: constructor(DOMString message, GPUPipelineErrorInit options);
     def __init__(self, message, options):
@@ -1858,7 +1831,9 @@ class GPUPipelineError(Exception):
 
 
 class GPUInternalError(GPUError):
-    """An operation failed for a system or implementation-specific
+    """An error raised for implementation-specific reasons.
+
+    An operation failed for a system or implementation-specific
     reason even when all validation requirements have been satisfied.
     """
 
@@ -1916,7 +1891,7 @@ class GPUCompilationInfo:
     # IDL: readonly attribute FrozenArray<GPUCompilationMessage> messages;
     @property
     def messages(self):
-        """A list of ``GPUCompilationMessage`` objects."""
+        """A list of `GPUCompilationMessage` objects."""
         raise NotImplementedError()
 
 

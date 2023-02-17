@@ -10,8 +10,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
+import re
 import os
 import sys
+import shutil
 
 ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, ROOT_DIR)
@@ -22,57 +24,105 @@ import wgpu  # noqa: E402
 import wgpu.gui  # noqa: E402
 
 
-# -- Tweak wgpu's docs -------------------------------------------------------
+# -- Tests -------------------------------------------------------------------
 
-# Ensure that all classes are in the docs
-with open(os.path.join(ROOT_DIR, "docs", "reference_classes.rst"), "rb") as f:
-    classes_text = f.read().decode()
-for cls_name in wgpu.base.__all__:
-    expected = f".. autoclass:: {cls_name}"
-    assert (
-        expected in classes_text
-    ), f"Missing doc entry {cls_name} in reference_classes.rst"
-
-# Ensure that all classes are references in the alphabetic list, and referenced at least one other time
-with open(os.path.join(ROOT_DIR, "docs", "reference_wgpu.rst"), "rb") as f:
+# Ensure that all classes are references in the alphabetic list,
+# and referenced at least one other time as part of the explanatory text.
+with open(os.path.join(ROOT_DIR, "docs", "wgpu.rst"), "rb") as f:
     wgpu_text = f.read().decode()
+    wgpu_lines = [line.strip() for line in wgpu_text.splitlines()]
 for cls_name in wgpu.base.__all__:
-    expected1 = f":class:`{cls_name}`"
-    expected2 = f"* :class:`{cls_name}`"
-    assert expected2 in wgpu_text, f"Missing doc entry {cls_name} in reference_wgpu.rst"
     assert (
-        wgpu_text.count(expected1) >= 2
-    ), f"Need at least one reference to {cls_name} in reference_wgpu.rst"
+        f"~{cls_name}" in wgpu_lines
+    ), f"Class {cls_name} not listed in class list in wgpu.rst"
+    assert (
+        f":class:`{cls_name}`" in wgpu_text
+    ), f"Class {cls_name} not referenced in the text in wgpu.rst"
 
-# Make flags and enum appear better in docs
+
+# -- Hacks to tweak docstrings -----------------------------------------------
+
+# Make flags and enums appear better in docs
 wgpu.enums._use_sphinx_repr = True
 wgpu.flags._use_sphinx_repr = True
+wgpu.structs._use_sphinx_repr = True
 
-# Also tweak docstrings of classes and their methods
-for cls_name, cls in wgpu.base.__dict__.items():
-    if cls_name not in wgpu.base.__all__:
-        continue
+# Build regular expressions to resolve crossrefs
+func_ref_pattern = re.compile(r"\ (`\w+?\(\)`)", re.MULTILINE)
+ob_ref_pattern = re.compile(
+    r"\ (`(GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?`)", re.MULTILINE
+)
+argtype_ref_pattern = re.compile(
+    r"\(((GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?)\)", re.MULTILINE
+)
 
-    # Change class docstring to include a link to the base class,
-    # and the class' signature is not shown
-    base_info = ""
-    base_classes = [f":class:`.{c.__name__}`" for c in cls.mro()[1:-1]]
-    if base_classes:
-        base_info = f"    *Subclass of* {', '.join(base_classes)}\n\n"
-    cls.__doc__ = cls.__name__ + "()\n\n" + base_info + "    " + cls.__doc__.lstrip()
-    # Change docstring of methods that dont have positional arguments
-    for method in cls.__dict__.values():
-        if not (callable(method) and hasattr(method, "__code__")):
-            continue
-        if method.__code__.co_argcount == 1 and method.__code__.co_kwonlyargcount > 0:
-            sig = method.__name__ + "(**parameters)"
-            method.__doc__ = sig + "\n\n        " + method.__doc__.lstrip()
+
+def resolve_crossrefs(text):
+    text = (text or "").lstrip()
+
+    # Turn references to functions into a crossref.
+    # E.g. `Foo.bar()`
+    i2 = 0
+    while True:
+        m = func_ref_pattern.search(text, i2)
+        if not m:
+            break
+        i1, i2 = m.start(1), m.end(1)
+        ref_indicator = ":func:"
+        text = text[:i1] + ref_indicator + text[i1:]
+
+    # Turn references to objects (classes, flags, enums, and structs) into a crossref.
+    # E.g. `GPUDevice` or `flags.BufferUsage`
+    i2 = 0
+    while True:
+        m = ob_ref_pattern.search(text, i2)
+        if not m:
+            break
+        i1, i2 = m.start(1), m.end(1)
+        prefix = m.group(2)  # e.g. GPU or flags.
+        ref_indicator = ":obj:" if prefix.lower() == prefix else ":class:"
+        text = text[:i1] + ref_indicator + text[i1:]
+
+    # Turn function arg types into a crossref.
+    # E.g. (GPUDevice) or (flags.BufferUsage)
+    i2 = 0
+    while True:
+        m = argtype_ref_pattern.search(text)
+        if not m:
+            break
+        i1, i2 = m.start(1), m.end(1)
+        ref_indicator = ":obj:"
+        text = text[:i1] + ref_indicator + "`" + text[i1:i2] + "`" + text[i2:]
+
+    return text
+
+
+# Tweak docstrings of classes and their methods
+for module, hide_class_signature in [(wgpu.base, True), (wgpu.gui, False)]:
+    for cls_name in module.__all__:
+        cls = getattr(module, cls_name)
+        # Class docstring
+        docs = resolve_crossrefs(cls.__doc__)
+        if hide_class_signature:
+            docs = cls.__name__ + "()\n\n    " + docs
+        cls.__doc__ = docs or None
+        # Docstring of methods
+        for method in cls.__dict__.values():
+            if callable(method) and hasattr(method, "__code__"):
+                docs = resolve_crossrefs(method.__doc__)
+                if (
+                    method.__code__.co_argcount == 1
+                    and method.__code__.co_kwonlyargcount > 0
+                ):
+                    sig = method.__name__ + "(**parameters)"
+                    docs = sig + "\n\n        " + docs
+                method.__doc__ = docs or None
 
 
 # -- Project information -----------------------------------------------------
 
 project = "wgpu-py"
-copyright = "2020-2022, Almar Klein, Korijn van Golen"
+copyright = "2020-2023, Almar Klein, Korijn van Golen"
 author = "Almar Klein, Korijn van Golen"
 release = wgpu.__version__
 
@@ -85,10 +135,14 @@ release = wgpu.__version__
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinx.ext.autosummary",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
+
+# Just let autosummary produce a new version each time
+shutil.rmtree(os.path.join(os.path.dirname(__file__), "generated"), True)
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -102,8 +156,9 @@ master_doc = "index"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-# html_theme = "sphinx_rtd_theme"
+
+if not (os.getenv("READTHEDOCS") or os.getenv("CI")):
+    html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

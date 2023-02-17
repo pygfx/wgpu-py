@@ -308,7 +308,6 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
     # User events
 
     def _on_mouse_button(self, window, but, action, mods):
-
         # Map button being changed, which we use to update self._pointer_buttons.
         button_map = {
             glfw.MOUSE_BUTTON_1: 1,  # == MOUSE_BUTTON_LEFT
@@ -434,7 +433,6 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
 
     def _on_key(self, window, key, scancode, action, mods):
-
         modifier = KEY_MAP_MOD.get(key, None)
 
         if action == glfw.PRESS:

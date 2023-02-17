@@ -195,8 +195,8 @@ def check_struct(struct_name, d):
 @_register_backend
 class GPU(base.GPU):
     def request_adapter(self, *, canvas, power_preference=None):
-        """Get a :class:`GPUAdapter`, the object that represents an abstract wgpu
-        implementation, from which one can request a :class:`GPUDevice`.
+        """Create a `GPUAdapter`, the object that represents an abstract wgpu
+        implementation, from which one can request a `GPUDevice`.
 
         This is the implementation based on the Rust wgpu-native library.
 
@@ -363,6 +363,83 @@ class GPU(base.GPU):
             canvas=canvas, power_preference=power_preference
         )  # no-cover
 
+    def _generate_report(self):
+        """Get a dictionary with info about the internal status of WGPU.
+        The structure of the dict is not defined, for the moment. Use print_report().
+        """
+
+        # H: surfaces: WGPUStorageReport, backendType: WGPUBackendType, vulkan: WGPUHubReport, metal: WGPUHubReport, dx12: WGPUHubReport, dx11: WGPUHubReport, gl: WGPUHubReport
+        struct = new_struct_p(
+            "WGPUGlobalReport *",
+            # not used: surfaces
+            # not used: backendType
+            # not used: vulkan
+            # not used: metal
+            # not used: dx12
+            # not used: dx11
+            # not used: gl
+        )
+
+        # H: void f(WGPUInstance instance, WGPUGlobalReport* report)
+        lib.wgpuGenerateReport(get_wgpu_instance(), struct)
+
+        report = {}
+
+        report["surfaces"] = {
+            "occupied": struct.surfaces.numOccupied,
+            "vacant": struct.surfaces.numVacant,
+            "error": struct.surfaces.numError,
+            "element_size": struct.surfaces.elementSize,
+        }
+        report["backend_type"] = struct.backendType  # note: could make this a set
+        for backend in ("vulkan", "metal", "dx12", "dx11", "gl"):
+            c_hub_report = getattr(struct, backend)
+            report[backend] = {}
+            for key in dir(c_hub_report):
+                c_storage_report = getattr(c_hub_report, key)
+                storage_report = {
+                    "occupied": c_storage_report.numOccupied,
+                    "vacant": c_storage_report.numVacant,
+                    "error": c_storage_report.numError,
+                    "element_size": c_storage_report.elementSize,
+                }
+                # if any(x!=0 for x in storage_report.values()):
+                report[backend][key] = storage_report
+
+        return report
+
+    def print_report(self):
+        def print_line(topic, occupied, vacant, error, el_size):
+            print(
+                topic.rjust(20),
+                str(occupied).rjust(8),
+                str(vacant).rjust(8),
+                str(error).rjust(8),
+                str(el_size).rjust(8),
+            )
+
+        def print_storage_report(topic, d):
+            print_line(topic, d["occupied"], d["vacant"], d["error"], d["element_size"])
+
+        report = self._generate_report()
+
+        print(f"{self.__class__.__module__}.WGPU report:")
+        print()
+        print_line("", "Occupied", "Vacant", "Error", "el-size")
+        print()
+        print_storage_report("surfaces", report["surfaces"])
+        for backend in ("vulkan", "metal", "dx12", "dx11", "gl"):
+            backend_has_stuff = False
+            for hub_report in report[backend].values():
+                report_has_stuff = any(x != 0 for x in hub_report.values())
+                backend_has_stuff |= report_has_stuff
+            if backend_has_stuff:
+                print_line(f"--- {backend} ---", "", "", "", "")
+                for key, val in report[backend].items():
+                    print_storage_report(key, val)
+            else:
+                print_line(f"--- {backend} ---", "", "", "", "")
+
 
 class GPUCanvasContext(base.GPUCanvasContext):
     def __init__(self, canvas):
@@ -405,6 +482,9 @@ class GPUCanvasContext(base.GPUCanvasContext):
             return
         self._surface_size = psize
 
+        if self._surface_id is None:
+            self._surface_id = get_surface_id_from_canvas(canvas)
+
         # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
 
         # Set the present mode to determine vsync behavior.
@@ -421,7 +501,28 @@ class GPUCanvasContext(base.GPUCanvasContext):
         # Also see:
         # * https://github.com/gfx-rs/wgpu/blob/e54a36ee/wgpu-types/src/lib.rs#L2663-L2678
         # * https://github.com/pygfx/wgpu-py/issues/256
+
         present_mode = 2 if getattr(canvas, "_vsync", True) else 0
+
+        if self._device:
+            # Get present mode
+            adapter_id = self._device.adapter._internal
+            c_count = ffi.new("size_t *")
+            # H: WGPUPresentMode const * f(WGPUSurface surface, WGPUAdapter adapter, size_t * count)
+            c_modes = lib.wgpuSurfaceGetSupportedPresentModes(
+                self._surface_id, adapter_id, c_count
+            )
+            try:
+                count = c_count[0]
+                supported_modes = [1 * c_modes[i] for i in range(count)]
+            finally:
+                t = ffi.typeof(c_modes)
+                # H: void f(void* ptr, size_t size, size_t align)
+                lib.wgpuFree(c_modes, count * ffi.sizeof(t), ffi.alignof(t))
+
+            # Use a supported one if our preference is not supported
+            if supported_modes and present_mode not in supported_modes:
+                present_mode = supported_modes[0]
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
         struct = new_struct_p(
@@ -435,9 +536,6 @@ class GPUCanvasContext(base.GPUCanvasContext):
             # not used: label
         )
 
-        if self._surface_id is None:
-            self._surface_id = get_surface_id_from_canvas(canvas)
-
         # Destroy old one
         if self._internal is not None:
             # H: void f(WGPUSwapChain swapChain)
@@ -447,6 +545,45 @@ class GPUCanvasContext(base.GPUCanvasContext):
         self._internal = lib.wgpuDeviceCreateSwapChain(
             self._device._internal, self._surface_id, struct
         )
+
+    def get_preferred_format(self, adapter):
+        if self._surface_id is None:
+            canvas = self._get_canvas()
+            self._surface_id = get_surface_id_from_canvas(canvas)
+
+        # # The C-call
+        # c_count = ffi.new("size_t *")
+        # c_formats = libxx.wgpuSurfaceGetSupportedFormats(
+        #     self._surface_id, adapter._internal, c_count
+        # )
+        #
+        # # Convert to string formats
+        # try:
+        #     count = c_count[0]
+        #     supported_format_ints = [c_formats[i] for i in range(count)]
+        #     formats = []
+        #     for key in list(enums.TextureFormat):
+        #         i = enummap[f"TextureFormat.{key}"]
+        #         if i in supported_format_ints:
+        #             formats.append(key)
+        # finally:
+        #     t = ffi.typeof(c_formats)
+        #     libxx.wgpuFree(c_formats, count * ffi.sizeof(t), ffi.alignof(t))
+
+        # There appears to be a bug in wgpuSurfaceGetSupportedFormats, see #341 - disabled it for now.
+        formats = []
+
+        # Select one
+        default = "bgra8unorm-srgb"  # seems to be a good default
+        preferred = [f for f in formats if "srgb" in f]
+        if default in formats:
+            return default
+        elif preferred:
+            return preferred[0]
+        elif formats:
+            return formats[0]
+        else:
+            return default
 
     def _destroy(self):
         if self._internal is not None and lib is not None:
@@ -508,7 +645,6 @@ class GPUAdapter(base.GPUAdapter):
     def _request_device(
         self, label, required_features, required_limits, default_queue, trace_path
     ):
-
         # This is a good moment to drop destroyed objects
         delayed_dropper.drop_all_pending()
 
@@ -728,7 +864,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return self._create_buffer(label, size, usage, False)
 
     def create_buffer_with_data(self, *, label="", data, usage: "flags.BufferUsage"):
-
         # Get a memoryview of the data
         m, src_address = get_memoryview_and_address(data)
         m = m.cast("B", shape=(m.nbytes,))
@@ -748,7 +883,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         return buffer
 
     def _create_buffer(self, label, size, usage, mapped_at_creation):
-
         # Create a buffer object
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUBufferUsageFlags/int, size: int, mappedAtCreation: bool
         struct = new_struct_p(
@@ -962,7 +1096,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         layout: "GPUBindGroupLayout",
         entries: "List[structs.BindGroupEntry]",
     ):
-
         c_entries_list = []
         for entry in entries:
             check_struct("BindGroupEntry", entry)
@@ -1029,7 +1162,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def create_pipeline_layout(
         self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
     ):
-
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
 
         c_layout_array = ffi.new("WGPUBindGroupLayout []", bind_group_layouts_ids)
@@ -1058,25 +1190,57 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             for val in hints.values():
                 check_struct("ShaderModuleCompilationHint", val)
         if isinstance(code, str):
-            # WGSL
-            # H: chain: WGPUChainedStruct, code: char *
-            source_struct = new_struct_p(
-                "WGPUShaderModuleWGSLDescriptor *",
-                code=ffi.new("char []", code.encode()),
-                # not used: chain
+            looks_like_wgsl = any(
+                x in code for x in ("@compute", "@vertex", "@fragment")
             )
-            source_struct[0].chain.next = ffi.NULL
-            source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleWGSLDescriptor
-        else:
-            # Must be Spirv then
-            if isinstance(code, bytes):
-                data = code
-            elif hasattr(code, "to_bytes"):
-                data = code.to_bytes()
-            elif hasattr(code, "to_spirv"):
-                data = code.to_spirv()
+            looks_like_glsl = code.lstrip().startswith("#version ")
+            if looks_like_glsl and not looks_like_wgsl:
+                # === GLSL
+                if "comp" in label.lower():
+                    c_stage = flags.ShaderStage.COMPUTE
+                elif "vert" in label.lower():
+                    c_stage = flags.ShaderStage.VERTEX
+                elif "frag" in label.lower():
+                    c_stage = flags.ShaderStage.FRAGMENT
+                else:
+                    raise ValueError(
+                        "GLSL shader needs to use the label to specify compute/vertex/fragment stage."
+                    )
+                defines = []
+                if c_stage == flags.ShaderStage.VERTEX:
+                    defines.append(
+                        # H: name: char *, value: char *
+                        new_struct(
+                            "WGPUShaderDefine",
+                            name=ffi.new("char []", "gl_VertexID".encode()),
+                            value=ffi.new("char []", "gl_VertexIndex".encode()),
+                        )
+                    )
+                c_defines = ffi.new("WGPUShaderDefine []", defines)
+                # H: chain: WGPUChainedStruct, stage: WGPUShaderStage, code: char *, defineCount: int, defines: WGPUShaderDefine*/WGPUShaderDefine *
+                source_struct = new_struct_p(
+                    "WGPUShaderModuleGLSLDescriptor *",
+                    code=ffi.new("char []", code.encode()),
+                    stage=c_stage,
+                    defineCount=len(defines),
+                    defines=c_defines,
+                    # not used: chain
+                )
+                source_struct[0].chain.next = ffi.NULL
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleGLSLDescriptor
             else:
-                raise TypeError("Shader code must be str for WGSL, or bytes for SpirV.")
+                # === WGSL
+                # H: chain: WGPUChainedStruct, code: char *
+                source_struct = new_struct_p(
+                    "WGPUShaderModuleWGSLDescriptor *",
+                    code=ffi.new("char []", code.encode()),
+                    # not used: chain
+                )
+                source_struct[0].chain.next = ffi.NULL
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleWGSLDescriptor
+        elif isinstance(code, bytes):
+            # === Spirv
+            data = code
             # Validate
             magic_nr = b"\x03\x02#\x07"  # 0x7230203
             if data[:4] != magic_nr:
@@ -1093,6 +1257,10 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             )
             source_struct[0].chain.next = ffi.NULL
             source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleSPIRVDescriptor
+        else:
+            raise TypeError(
+                "Shader code must be str for WGSL or GLSL, or bytes for SpirV."
+            )
 
         # Note, we could give hints here that specify entrypoint and pipelinelayout before compiling
         # H: nextInChain: WGPUChainedStruct *, label: char *, hintCount: int, hints: WGPUShaderModuleCompilationHint *
@@ -1366,7 +1534,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
 
     def create_command_encoder(self, *, label=""):
-
         # H: nextInChain: WGPUChainedStruct *, label: char *
         struct = new_struct_p(
             "WGPUCommandEncoderDescriptor *",
@@ -2042,7 +2209,6 @@ class GPUCommandEncoder(
         )
 
     def copy_texture_to_texture(self, source, destination, copy_size):
-
         if isinstance(source["texture"], GPUTextureView):
             raise ValueError("copy source texture must be a texture, not a view")
         if isinstance(destination["texture"], GPUTextureView):
@@ -2265,7 +2431,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
             cb._internal = None
 
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
-
         # We support anything that memoryview supports, i.e. anything
         # that implements the buffer protocol, including, bytes,
         # bytearray, ctypes arrays, numpy arrays, etc.
@@ -2294,7 +2459,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         )
 
     def read_buffer(self, buffer, buffer_offset=0, size=None):
-
         # Note that write_buffer probably does a very similar thing
         # using a temporaty buffer. But write_buffer is official API
         # so it's a single call, while here we must create the temporary
@@ -2326,7 +2490,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         return data
 
     def write_texture(self, destination, data, data_layout, size):
-
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
 
@@ -2384,7 +2547,6 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         )
 
     def read_texture(self, source, data_layout, size):
-
         # Note that the bytes_per_row restriction does not apply for
         # this function; we have to deal with it.
 

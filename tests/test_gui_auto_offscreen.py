@@ -53,7 +53,6 @@ def test_event_loop():
 
 
 def test_offscreen_canvas_del():
-
     from wgpu.gui.offscreen import WgpuCanvas
 
     canvas = WgpuCanvas()
