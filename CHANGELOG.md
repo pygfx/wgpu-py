@@ -18,6 +18,17 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.9.2] - 17-02-2023
+
+Fixed:
+
+* Fixed that `get_preferred_format()` could crash (in `wgpuSurfaceGetSupportedFormats`) due to an upstream bug in wgpu-native (#342)
+
+Added:
+
+* The shadertoy util now supports GLSL, so code from the shadertoy website can be direcly copied and run with wgpu (#343)
+
+
 ### [v0.9.1] - 13-02-2023
 
 Changed:
