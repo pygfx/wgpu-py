@@ -162,7 +162,7 @@ fn mod1( x : f32, y : f32 ) -> f32 {
 }
 
 fn shader_main(frag_coord : vec2<f32>) -> vec4<f32> {
-    var uv = frag_coord / i_resolution;
+    var uv = frag_coord / i_resolution.xy;
     uv = uv - 0.5;
     uv /= vec2<f32>(i_resolution.y / i_resolution.x, 1.0);
 

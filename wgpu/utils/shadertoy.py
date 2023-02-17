@@ -6,7 +6,77 @@ import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
 
 
-vertex_code = """
+vertex_code_glsl = """
+#version 450 core
+
+layout(location = 0) out vec2 uv;
+
+void main(void){
+    int index = int(gl_VertexID);
+    if (index == 0) {
+        gl_Position = vec4(-1.0, -1.0, 0.0, 1.0);
+        uv = vec2(0.0, 1.0);
+    } else if (index == 1) {
+        gl_Position = vec4(3.0, -1.0, 0.0, 1.0);
+        uv = vec2(2.0, 1.0);
+    } else {
+        gl_Position = vec4(-1.0, 3.0, 0.0, 1.0);
+        uv = vec2(0.0, -1.0);
+    }
+}
+"""
+
+builtin_variables_glsl = """
+#version 450 core
+
+vec3 i_resolution;
+vec4 i_mouse;
+float i_time;
+float i_time_delta;
+int i_frame;
+
+// Shadertoy compatibility, see we can use the same code copied from shadertoy website
+
+#define iTime i_time
+#define iResolution i_resolution
+#define iTimeDelta i_time_delta
+#define iMouse i_mouse
+#define iFrame i_frame
+
+#define mainImage shader_main
+"""
+
+fragment_code_glsl = """
+layout(location = 0) in vec2 uv;
+
+struct ShadertoyInput {
+    vec4 mouse;
+    vec3 resolution;
+    float time;
+    float time_delta;
+    int frame;
+};
+
+layout(binding = 0) uniform ShadertoyInput input;
+out vec4 FragColor;
+void main(){
+
+    i_time = input.time;
+    i_resolution = input.resolution;
+    i_time_delta = input.time_delta;
+    i_mouse = input.mouse;
+    i_frame = input.frame;
+
+
+    vec2 uv = vec2(uv.x, 1.0 - uv.y);
+    vec2 frag_coord = uv * i_resolution.xy;
+
+    shader_main(FragColor, frag_coord);
+
+}
+
+"""
+vertex_code_wgsl = """
 
 struct Varyings {
     @builtin(position) position : vec4<f32>,
@@ -14,7 +84,7 @@ struct Varyings {
 };
 
 @vertex
-fn vs_main(@builtin(vertex_index) index: u32) -> Varyings {
+fn main(@builtin(vertex_index) index: u32) -> Varyings {
     var out: Varyings;
     if (index == u32(0)) {
         out.position = vec4<f32>(-1.0, -1.0, 0.0, 1.0);
@@ -31,12 +101,12 @@ fn vs_main(@builtin(vertex_index) index: u32) -> Varyings {
 }
 """
 
-builtin_variables = """
+builtin_variables_wgsl = """
 
-var<private> i_time: f32;
-var<private> i_resolution: vec2<f32>;
+var<private> i_resolution: vec3<f32>;
+var<private> i_mouse: vec4<f32>;
 var<private> i_time_delta: f32;
-var<private> i_mouse: vec2<f32>;
+var<private> i_time: f32;
 var<private> i_frame: u32;
 
 // TODO: more global variables
@@ -44,14 +114,19 @@ var<private> i_frame: u32;
 
 """
 
-fragment_code = """
+fragment_code_wgsl = """
 
 struct ShadertoyInput {
-    resolution: vec2<f32>,
-    mouse: vec2<f32>,
+    mouse: vec4<f32>,
+    resolution: vec3<f32>,
     time: f32,
     time_delta: f32,
     frame: u32,
+};
+
+struct Varyings {
+    @builtin(position) position : vec4<f32>,
+    @location(0) uv : vec2<f32>,
 };
 
 @group(0) @binding(0)
@@ -59,23 +134,22 @@ var<uniform> input: ShadertoyInput;
 
 
 @fragment
-fn fs_main(in: Varyings) -> @location(0) vec4<f32> {
+fn main(in: Varyings) -> @location(0) vec4<f32> {
 
     i_time = input.time;
     i_resolution = input.resolution;
     i_time_delta = input.time_delta;
     i_mouse = input.mouse;
-    i_mouse.y = i_resolution.y - i_mouse.y;
     i_frame = input.frame;
 
 
     let uv = vec2<f32>(in.uv.x, 1.0 - in.uv.y);
-    let frag_coord = uv * i_resolution;
+    let frag_coord = uv * i_resolution.xy;
 
     return shader_main(frag_coord);
 }
 
- """
+"""
 
 binding_layout = [
     {
@@ -86,19 +160,19 @@ binding_layout = [
 ]
 
 uniform_dtype = [
-    ("resolution", "float32", (2)),
-    ("mouse", "float32", (2)),
+    ("mouse", "float32", (4)),
+    ("resolution", "float32", (3)),
     ("time", "float32"),
     ("time_delta", "float32"),
     ("frame", "uint32"),
-    ("__padding", "uint8", (4)),  # padding to 32 bytes
+    ("__padding", "uint32", (2)),  # padding to 48 bytes
 ]
 
 
 class Shadertoy:
     """Provides a "screen pixel shader programming interface" similar to `shadertoy <https://www.shadertoy.com/>`_.
 
-    It helps you research and quickly build or test shaders using WGSL via WGPU.
+    It helps you research and quickly build or test shaders using `WGSL` or `GLSL` via WGPU.
 
     Parameters:
         shader_code (str): The shader code to use.
@@ -106,10 +180,11 @@ class Shadertoy:
 
     The shader code must contain a entry point function:
 
-    ``fn shader_main(frag_coord: vec2<f32>) -> vec4<f32>{}``
+    WGSL: ``fn shader_main(frag_coord: vec2<f32>) -> vec4<f32>{}``
+    GLSL: ``void shader_main(out vec4 frag_color, in vec2 frag_coord){}``
 
     It has a parameter ``frag_coord`` which is the current pixel coordinate (in range 0..resolution, origin is bottom-left),
-    and it must return a vec4<f32> color, which is the color of the pixel at that coordinate.
+    and it must return a vec4<f32> color (for GLSL, it's the ``out vec4 frag_color`` parameter), which is the color of the pixel at that coordinate.
 
     some built-in variables are available in the shader:
 
@@ -119,6 +194,8 @@ class Shadertoy:
     * ``i_resolution``: the resolution of the shadertoy
     * ``i_mouse``: the mouse position in pixels
 
+    For GLSL, you can also use the aliases ``iTime``, ``iTimeDelta``, ``iFrame``, ``iResolution``, and ``iMouse`` of these built-in variables,
+    the entry point function also has an alias ``mainImage``, so you can use the shader code copied from shadertoy website without making any changes.
     """
 
     # todo: add more built-in variables
@@ -129,7 +206,7 @@ class Shadertoy:
         self._uniform_data = np.zeros((), dtype=uniform_dtype)
 
         self._shader_code = shader_code
-        self._uniform_data["resolution"] = resolution
+        self._uniform_data["resolution"] = resolution + (1,)
 
         self._prepare_render()
         self._bind_events()
@@ -137,12 +214,25 @@ class Shadertoy:
     @property
     def resolution(self):
         """The resolution of the shadertoy as a tuple (width, height) in pixels."""
-        return tuple(self._uniform_data["resolution"])
+        return tuple(self._uniform_data["resolution"])[:2]
 
     @property
     def shader_code(self):
         """The shader code to use."""
         return self._shader_code
+
+    @property
+    def shader_type(self):
+        """The shader type, automatically detected from the shader code, can be "wgsl" or "glsl"."""
+        if "fn shader_main" in self.shader_code:
+            return "wgsl"
+        elif (
+            "void shader_main" in self.shader_code
+            or "void mainImage" in self.shader_code
+        ):
+            return "glsl"
+        else:
+            raise ValueError("Invalid shader code.")
 
     def _prepare_render(self):
         import wgpu.backends.rs  # noqa
@@ -161,8 +251,24 @@ class Shadertoy:
             device=self._device, format=wgpu.TextureFormat.bgra8unorm
         )
 
-        shader_code = vertex_code + builtin_variables + self.shader_code + fragment_code
-        shader_program = self._device.create_shader_module(code=shader_code)
+        shader_type = self.shader_type
+        if shader_type == "glsl":
+            vertex_shader_code = vertex_code_glsl
+            frag_shader_code = (
+                builtin_variables_glsl + self.shader_code + fragment_code_glsl
+            )
+        elif shader_type == "wgsl":
+            vertex_shader_code = vertex_code_wgsl
+            frag_shader_code = (
+                builtin_variables_wgsl + self.shader_code + fragment_code_wgsl
+            )
+
+        vertex_shader_program = self._device.create_shader_module(
+            label="triangle_vert", code=vertex_shader_code
+        )
+        frag_shader_program = self._device.create_shader_module(
+            label="triangle_frag", code=frag_shader_code
+        )
 
         self._uniform_buffer = self._device.create_buffer(
             size=self._uniform_data.nbytes,
@@ -192,8 +298,8 @@ class Shadertoy:
                 bind_group_layouts=[bind_group_layout]
             ),
             vertex={
-                "module": shader_program,
-                "entry_point": "vs_main",
+                "module": vertex_shader_program,
+                "entry_point": "main",
                 "buffers": [],
             },
             primitive={
@@ -204,8 +310,8 @@ class Shadertoy:
             depth_stencil=None,
             multisample=None,
             fragment={
-                "module": shader_program,
-                "entry_point": "fs_main",
+                "module": frag_shader_program,
+                "entry_point": "main",
                 "targets": [
                     {
                         "format": wgpu.TextureFormat.bgra8unorm,
@@ -229,15 +335,26 @@ class Shadertoy:
     def _bind_events(self):
         def on_resize(event):
             w, h = event["width"], event["height"]
-            self._uniform_data["resolution"] = (w, h)
+            self._uniform_data["resolution"] = (w, h, 1)
 
         def on_mouse_move(event):
-            xy = event["x"], event["y"]
             if event["button"] == 1 or 1 in event["buttons"]:
-                self._uniform_data["mouse"] = xy
+                xy = event["x"], self.resolution[1] - event["y"]
+                self._uniform_data["mouse"][:2] = xy
+
+        def on_mouse_down(event):
+            if event["button"] == 1 or 1 in event["buttons"]:
+                x, y = event["x"], self.resolution[1] - event["y"]
+                self._uniform_data["mouse"] = (x, y, x, -y)
+
+        def on_mouse_up(event):
+            if event["button"] == 1 or 1 in event["buttons"]:
+                self._uniform_data["mouse"][2] = -abs(self._uniform_data["mouse"][2])
 
         self._canvas.add_event_handler(on_resize, "resize")
-        self._canvas.add_event_handler(on_mouse_move, "pointer_move", "pointer_down")
+        self._canvas.add_event_handler(on_mouse_move, "pointer_move")
+        self._canvas.add_event_handler(on_mouse_down, "pointer_down")
+        self._canvas.add_event_handler(on_mouse_up, "pointer_up")
 
     def _update(self):
         now = time.perf_counter()
@@ -296,9 +413,9 @@ if __name__ == "__main__":
     shader = Shadertoy(
         """
     fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
-        let uv = frag_coord / i_resolution;
+        let uv = frag_coord / i_resolution.xy;
 
-        if ( length(frag_coord - i_mouse) < 20.0 ) {
+        if ( length(frag_coord - i_mouse.xy) < 20.0 ) {
             return vec4<f32>(0.0, 0.0, 0.0, 1.0);
         }else{
             return vec4<f32>( 0.5 + 0.5 * sin(i_time * vec3<f32>(uv, 1.0) ), 1.0);

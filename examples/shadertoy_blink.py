@@ -26,7 +26,7 @@ fn render(p: vec2<f32>) -> vec3<f32> {
 
 fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
 
-    let uv = (frag_coord-i_resolution*0.5)/i_resolution.y;
+    let uv = (frag_coord-i_resolution.xy*0.5)/i_resolution.y;
 
     let col = render(uv);
 
