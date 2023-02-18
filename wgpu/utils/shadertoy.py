@@ -161,6 +161,7 @@ binding_layout = [
 
 class UniformArray:
     """Convenience class to create a uniform array.
+
     Maybe we can make it a public util at some point.
     """
 
