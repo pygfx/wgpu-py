@@ -1,4 +1,4 @@
-GUI API
+gui API
 =======
 
 .. currentmodule:: wgpu.gui
