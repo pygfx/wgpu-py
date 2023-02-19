@@ -1,7 +1,5 @@
 import asyncio
 
-import numpy as np
-
 from ._offscreen import WgpuOffscreenCanvas
 from .base import WgpuAutoGui
 
@@ -60,10 +58,16 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
             },
             size,
         )
-        return np.frombuffer(data, np.uint8).reshape(size[1], size[0], 4)
+
+        # Return as memory object to avoid numpy dependency
+        # Equivalent: np.frombuffer(data, np.uint8).reshape(size[1], size[0], 4)
+        return data.cast("B", (size[1], size[0], 4))
 
     def draw(self):
-        """Perform a draw and return the numpy array as a result."""
+        """Perform a draw and return the resulting array as an NxMx4 memoryview object.
+        This object can be converted to a numpy array (without copying data)
+        using ``np.asarray(arr)``.
+        """
         return self._draw_frame_and_present()
 
 

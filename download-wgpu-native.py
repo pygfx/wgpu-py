@@ -1,11 +1,12 @@
-import argparse
 import os
 import re
-import requests
 import sys
+import argparse
 import tempfile
 import platform
 from zipfile import ZipFile
+
+import requests
 
 
 # The directory containing non-python resources that are included in packaging
