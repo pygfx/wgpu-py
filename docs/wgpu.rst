@@ -1,5 +1,5 @@
-WGPU
-====
+wgpu API
+========
 
 .. currentmodule:: wgpu
 
