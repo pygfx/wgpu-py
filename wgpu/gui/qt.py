@@ -141,8 +141,6 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self._request_draw_timer.setSingleShot(True)
         self._request_draw_timer.timeout.connect(self.update)
 
-        self.get_window_id()
-
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
         return None
