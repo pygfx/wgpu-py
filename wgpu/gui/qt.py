@@ -141,11 +141,6 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self._request_draw_timer.setSingleShot(True)
         self._request_draw_timer.timeout.connect(self.update)
 
-        # Get the window id one time. For some reason this is needed
-        # to "activate" the canvas. Otherwise the viz is not shown if
-        # one does not provide canvas to request_adapter().
-        self.get_window_id()
-
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
         return None
@@ -330,6 +325,12 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
         self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
+
+        # Get the window id one time. For some reason this is needed
+        # to "activate" the canvas. Otherwise the viz is not shown if
+        # one does not provide canvas to request_adapter().
+        # (AK: Cannot reproduce this now, what qtlib/os/versions was this on?)
+        self._subwidget.get_window_id()
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
