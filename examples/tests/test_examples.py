@@ -15,6 +15,7 @@ import pytest
 
 from testutils import (
     can_use_wgpu_lib,
+    wgpu_backend,
     is_lavapipe,
     find_examples,
     ROOT,
@@ -61,6 +62,12 @@ def mock_time():
     with patch("time.time") as time_mock:
         time_mock.return_value = 1.23456
         yield
+
+
+def test_that_we_are_on_lavapipe():
+    print(wgpu_backend)
+    if os.getenv("EXPECT_LAVAPIPE"):
+        assert is_lavapipe
 
 
 @pytest.mark.parametrize("module", examples_to_test)
