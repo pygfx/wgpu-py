@@ -122,6 +122,8 @@ jobs:
           python download-wgpu-native.py
           pip install -e .
     - name: Test examples
+      env:
+        EXPECT_LAVAPIPE: true
       run: |
           pytest -v examples
 
