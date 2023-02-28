@@ -18,6 +18,22 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.9.4] - 23-02-2023
+
+Fixed:
+
+* Fixed issue related to winid (native widgets) on embedded Qt widgets on Windows (#348).
+* Fixed our example screenshot tests.
+
+
+### [v0.9.3] - 20-02-2023
+
+Changed:
+
+* The offscreen `WgpuCanvas.draw()` method now returns a `memoryview` instead of a numpy array.
+* The shadertoy util changed internally from using numpy to using a memoryview.
+
+
 ### [v0.9.2] - 17-02-2023
 
 Fixed:

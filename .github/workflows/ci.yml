@@ -13,14 +13,14 @@ on:
 jobs:
 
   lint-build:
-    name: Linting
+    name: Test Linting
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.9
     - name: Install dev dependencies
@@ -31,15 +31,62 @@ jobs:
       run: |
           flake8 .
 
-  docs-build:
-    name: Docs
+  test-codegen-build:
+    name: Test Codegen
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install -U pytest numpy black cffi
+    - name: Test codegen
+      run: |
+          pytest -v codegen
+
+  test-minimal-import-build:
+    name: Test Imports
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install requests
+          python download-wgpu-native.py
+          pip uninstall -q -y requests
+          pip install -e .
+    - name: Test imports
+      env:
+        WGPU_FORCE_OFFSCREEN: true
+      run: |
+          python -c "print('wgpu'); import wgpu; print(wgpu)"
+          python -c "print('wgpu.backends.rs'); import wgpu.backends.rs"
+          python -c "print('wgpu.gui.offscreen'); import wgpu.gui.offscreen"
+          python -c "print('wgpu.utils'); import wgpu.utils"
+          python -c "print('wgpu.utils.shadertoy'); import wgpu.utils.shadertoy"
+
+  docs-build:
+    name: Test Docs
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: 3.9
     - name: Install dev dependencies
@@ -50,6 +97,56 @@ jobs:
       run: |
           cd docs
           make html SPHINXOPTS="-W --keep-going"
+
+  test-examples-build:
+    name: Test Examples
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install llvmpipe and lavapipe for offscreen canvas
+      run: |
+        sudo apt-get update -y -qq
+        sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
+    - name: Install dev dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install -U -r dev-requirements.txt
+          python download-wgpu-native.py
+          pip install -e .
+    - name: Test examples
+      env:
+        EXPECT_LAVAPIPE: true
+      run: |
+          pytest -v examples
+
+  test-pyinstaller-build:
+    name: Test PyInstaller
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Install dependencies
+      run: |
+          python -m pip install --upgrade pip
+          pip install -U requests numpy pytest
+          python download-wgpu-native.py
+          pip install -e .
+          pip install psutil pyinstaller>=4.9
+    - name: Test PyInstaller
+      run: |
+          pyinstaller --version
+          pytest -v wgpu/__pyinstaller
 
   test-builds:
     name: ${{ matrix.name }}
@@ -67,26 +164,26 @@ jobs:
           - name: Test Linux py39
             os: ubuntu-latest
             pyversion: '3.9'
-            PYINSTALLER: 1
           - name: Test Linux py310
             os: ubuntu-latest
             pyversion: '3.10'
+          - name: Test Linux py311
+            os: ubuntu-latest
+            pyversion: '3.11'
           # Pypy3 fails on installing a 3d party dependency
           #- name: Test Linux pypy3
           #  os: ubuntu-latest
           #  pyversion: 'pypy3'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.pyversion }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.pyversion }}
     - name: Install llvmpipe and lavapipe for offscreen canvas
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update -y -qq
-        sudo add-apt-repository ppa:oibaf/graphics-drivers -y
-        sudo apt-get update
         sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
     - name: Install dev dependencies
       run: |
@@ -97,42 +194,6 @@ jobs:
     - name: Test on repo
       run: |
           pytest -v tests
-    - name: Test codegen
-      run: |
-          pytest -v codegen
-    - name: Test PyInstaller
-      if: matrix.PYINSTALLER == 1
-      run: |
-          pip install psutil pyinstaller>=4.9
-          pyinstaller --version
-          pytest -v wgpu/__pyinstaller
-
-  test-examples-build:
-    name: Test Examples
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-    steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v2
-      with:
-        python-version: '3.9'
-    - name: Install llvmpipe and lavapipe for offscreen canvas
-      run: |
-        sudo apt-get update -y -qq
-        sudo add-apt-repository ppa:oibaf/graphics-drivers -y
-        sudo apt-get update
-        sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
-    - name: Install dev dependencies
-      run: |
-          python -m pip install --upgrade pip
-          pip install -U -r dev-requirements.txt
-          python download-wgpu-native.py
-          pip install -e .
-    - name: Test examples
-      run: |
-          pytest -v examples
 
   # The release builds are done for the platforms that we want to build wheels for.
   # We build wheels, test them, and then upload the wheel as an artifact.
@@ -144,36 +205,36 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.9'
-      - name: Install dev dependencies
-        run: |
-            python -m pip install --upgrade pip wheel setuptools twine
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.1.3
-        with:
-          output-dir: dist
-      - name: Twine check
-        run: |
-            twine check dist/*
-      - name: Upload distributions
-        uses: actions/upload-artifact@v2
-        with:
-          path: dist
-          name: dist
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install dev dependencies
+      run: |
+          python -m pip install --upgrade pip wheel setuptools twine
+    - name: Build wheels
+      uses: pypa/cibuildwheel@v2.1.3
+      with:
+        output-dir: dist
+    - name: Twine check
+      run: |
+          twine check dist/*
+    - name: Upload distributions
+      uses: actions/upload-artifact@v2
+      with:
+        path: dist
+        name: dist
 
   sdist-build:
-    name: Build sdist on ubuntu-latest
+    name: Build sdist
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.9'
     - name: Install dev dependencies
@@ -203,14 +264,14 @@ jobs:
         name: dist
 
   publish:
-    name: Publish release to Github and Pypi
+    name: Publish to Github and Pypi
     runs-on: ubuntu-latest
     needs: [test-builds, release-builds, sdist-build]
     if: success() && startsWith(github.ref, 'refs/tags/v')
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up Python 3.9
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.9'
     - name: Download assets

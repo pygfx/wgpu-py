@@ -15,6 +15,7 @@ import pytest
 
 from testutils import (
     can_use_wgpu_lib,
+    wgpu_backend,
     is_lavapipe,
     find_examples,
     ROOT,
@@ -63,6 +64,12 @@ def mock_time():
         yield
 
 
+def test_that_we_are_on_lavapipe():
+    print(wgpu_backend)
+    if os.getenv("EXPECT_LAVAPIPE"):
+        assert is_lavapipe
+
+
 @pytest.mark.parametrize("module", examples_to_test)
 def test_examples_screenshots(
     module, pytestconfig, force_offscreen, mock_time, request
@@ -80,7 +87,7 @@ def test_examples_screenshots(
     request.addfinalizer(unload_module)
 
     # render a frame
-    img = example.canvas.draw()
+    img = np.asarray(example.canvas.draw())
 
     # check if _something_ was rendered
     assert img is not None and img.size > 0
