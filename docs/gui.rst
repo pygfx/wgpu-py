@@ -40,7 +40,7 @@ either the GLFW, Qt, or Jupyter backend, depending on the environment.
 
 To implement interaction, the ``canvas`` has a :func:`WgpuAutoGui.handle_event()` method
 that can be overloaded. Alternatively you can use it's :func:`WgpuAutoGui.add_event_handler()`
-method. See the `event spec <https://jupyter-rfb.readthedocs.io/en/latest/events.html>`_
+method. See the `event spec <https://jupyter-rfb.readthedocs.io/en/stable/events.html>`_
 for details about the event objects.
 
 
@@ -158,7 +158,7 @@ Support for Jupyter lab and notebook
 
 WGPU can be used in Jupyter lab and the Jupyter notebook. This canvas
 is based on `jupyter_rfb <https://github.com/vispy/jupyter_rfb>`_, an ipywidget
-subclass implementing a remote frame-buffer. There are also some `wgpu examples <https://jupyter-rfb.readthedocs.io/en/latest/examples/>`_.
+subclass implementing a remote frame-buffer. There are also some `wgpu examples <https://jupyter-rfb.readthedocs.io/en/stable/examples/>`_.
 
 .. code-block:: py
 
