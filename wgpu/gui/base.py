@@ -287,7 +287,7 @@ class WgpuAutoGui:
         Subclasses can overload this method. Events include widget
         resize, mouse/touch interaction, key events, and more. An event
         is a dict with at least the key event_type. For details, see
-        https://jupyter-rfb.readthedocs.io/en/latest/events.html
+        https://jupyter-rfb.readthedocs.io/en/stable/events.html
 
         The default implementation dispatches the event to the
         registered event handlers.
@@ -309,7 +309,7 @@ class WgpuAutoGui:
             *types (list of strings): A list of event types.
 
         For the available events, see
-        https://jupyter-rfb.readthedocs.io/en/latest/events.html
+        https://jupyter-rfb.readthedocs.io/en/stable/events.html
 
         Can also be used as a decorator.
 

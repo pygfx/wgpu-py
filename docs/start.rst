@@ -27,7 +27,7 @@ GUI libraries
 Multiple GUI backends are supported, see :doc:`the GUI API <gui>` for details:
 
 * `glfw <https://github.com/FlorianRhiem/pyGLFW>`_: a lightweight GUI for the desktop
-* `jupyter_rfb <https://jupyter-rfb.readthedocs.io/en/latest/>`_: only needed if you plan on using wgpu in Jupyter
+* `jupyter_rfb <https://jupyter-rfb.readthedocs.io>`_: only needed if you plan on using wgpu in Jupyter
 * qt (PySide6, PyQt6, PySide2, PyQt5)
 * wx
 

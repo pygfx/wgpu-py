@@ -255,7 +255,7 @@ Added:
 * Official support for Windows 3.10.
 * The `max_fps` argument can be provided to a canvas.
 * The glfw gui backend supports user events in the same manner as the jupyter gui backend,
-  using the [jupyter_rfb event specification](https://jupyter-rfb.readthedocs.io/en/latest/events.html).
+  using the [jupyter_rfb event specification](https://jupyter-rfb.readthedocs.io/en/stable/events.html).
 * Introduce the `auto` gui backend, which selects either glfw or jupyter.
 
 Fixed:
