@@ -34,6 +34,16 @@ else:
     )
 
 
+# Get version
+if libname.startswith("PySide"):
+    qt_version_info = QtCore.__version_info__
+else:
+    try:
+        qt_version_info = tuple(int(i) for i in QtCore.QT_VERSION_STR.split(".")[:3])
+    except Exception:  # Failsafe
+        qt_version_info = (0, 0, 0)
+
+
 BUTTON_MAP = {
     QtCore.Qt.MouseButton.LeftButton: 1,  # == MOUSE_BUTTON_LEFT
     QtCore.Qt.MouseButton.RightButton: 2,  # == MOUSE_BUTTON_RIGHT
@@ -98,18 +108,15 @@ KEY_MAP = {
 
 def enable_hidpi():
     """Enable high-res displays."""
-    try:
-        set_dpi_aware = QtCore.__version_info__ < (6, 4)
-    except Exception:
-        set_dpi_aware = True
-    try:
-        # See https://github.com/pyzo/pyzo/pull/700 why we seem to need both
-        # See https://github.com/pygfx/pygfx/issues/368 for high Qt versions
-        if set_dpi_aware:
+    set_dpi_aware = qt_version_info < (6, 4)  # Pyside
+    if set_dpi_aware:
+        try:
+            # See https://github.com/pyzo/pyzo/pull/700 why we seem to need both
+            # See https://github.com/pygfx/pygfx/issues/368 for high Qt versions
             ctypes.windll.shcore.SetProcessDpiAwareness(1)  # global dpi aware
             ctypes.windll.shcore.SetProcessDpiAwareness(2)  # per-monitor dpi aware
-    except Exception:
-        pass  # fail on non-windows
+        except Exception:
+            pass  # fail on non-windows
     try:
         QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     except Exception:
