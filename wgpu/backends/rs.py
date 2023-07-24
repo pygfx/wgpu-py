@@ -662,16 +662,6 @@ class GPUAdapter(base.GPUAdapter):
                     raise KeyError(f"Unknown feature: '{f}'")
                 c_features.add(i)
 
-        # Vanilla WGPU does not support interpolating samplers for float32 textures,
-        # which is sad for scientific data in particular. We can enable it
-        # (on the hardware were wgpu-py likely runs) using the feature:
-        # WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
-
-        builtin_features = [
-            lib.WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
-        ]
-        c_features.update(builtin_features)
-
         c_features = sorted(c_features)  # makes it a list
 
         # ----- Set limits
