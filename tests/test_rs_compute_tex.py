@@ -484,7 +484,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     buffer = device.create_buffer_with_data(data=data1, usage=buffer_usage)
     assert buffer.usage == buffer_usage
 
-    texture_sample_type = "float"
+    texture_sample_type = "unfilterable-float"
     if "uint" in texture_format:
         texture_sample_type = "uint"
     elif "sint" in texture_format:
