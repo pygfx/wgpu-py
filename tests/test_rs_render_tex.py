@@ -479,22 +479,26 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
 
     sampler = device.create_sampler(mag_filter="nearest", min_filter="nearest")
 
-    # Determine texture component type from the format
-    if texture_format.endswith(("norm", "float")):
-        texture_sample_type = wgpu.TextureSampleType.float
-    elif "uint" in texture_format:
-        texture_sample_type = wgpu.TextureSampleType.uint
-    else:
-        texture_sample_type = wgpu.TextureSampleType.sint
-
-    # Determine sampler type.
+    # Default sampler type.
     # Note that integer texture types cannot even use a sampler.
     sampler_type = wgpu.SamplerBindingType.filtering
-    # On Vanilla wgpu, float32 textures cannot use a filtering
-    # (interpolating) texture, but we request a feature so that we can.
-    # if "32float" in texture_format:
-    #     sampler_type = wgpu.SamplerBindingType.non_filtering
-    #     texture_sample_type = wgpu.TextureSampleType.unfilterable_float
+
+    # Determine texture component type from the format
+    if texture_format.endswith("norm"):
+        # We can use a filtering sampler
+        texture_sample_type = wgpu.TextureSampleType.float
+    elif texture_format.endswith("float"):
+        # On Vanilla wgpu, float32 textures cannot use a filtering
+        # (interpolating) texture, (need to enable a feature for that).
+        # Without it, we need to use a non-filterin sampler.
+        texture_sample_type = wgpu.TextureSampleType.unfilterable_float
+        sampler_type = wgpu.SamplerBindingType.non_filtering
+    elif "uint" in texture_format:
+        # Cannot even use a sampler (use textureLoad instwad of textureSample)
+        texture_sample_type = wgpu.TextureSampleType.uint
+    else:
+        # Dito
+        texture_sample_type = wgpu.TextureSampleType.sint
 
     # Bindings and layout
     bindings = [
