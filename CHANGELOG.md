@@ -18,6 +18,19 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.9.5] - 02-10-2023
+
+Fixed:
+
+* Fixed setting the dpi awareness in the Qt backend, by correctly looking up the Qt version.
+
+Changed:
+
+* Links to readthedocs now point to *stable* instead of *latest*, so that people
+  reading the docs see these that reflect the latest release.
+* Don't enable any features by default (previously WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES was enabled).
+
+
 ### [v0.9.4] - 23-02-2023
 
 Fixed:
