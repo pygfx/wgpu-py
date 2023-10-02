@@ -14,6 +14,8 @@ import re
 import os
 import sys
 import shutil
+import collections
+
 
 ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, ROOT_DIR)
@@ -23,6 +25,9 @@ os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
 import wgpu  # noqa: E402
 import wgpu.gui  # noqa: E402
 
+
+# Hack to get napoleon sphynx ext working
+collections.Callable = collections.abc.Callable
 
 # -- Tests -------------------------------------------------------------------
 
