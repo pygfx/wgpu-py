@@ -269,6 +269,8 @@ class IdlParser:
             elif line.startswith(("namespace ", "interface ", "partial interface ")):
                 # A class or a set of flags
                 # Collect lines that define this interface
+                while "{" not in line:
+                    line = line.rstrip() + " " + self.read_line().lstrip()
                 lines = [line]
                 while not line.startswith("};"):
                     line = self.read_line()
@@ -396,7 +398,12 @@ class IdlParser:
         """
 
         # Drop some toplevel names
-        for name in ["NavigatorGPU", "GPUSupportedLimits", "GPUSupportedFeatures"]:
+        for name in [
+            "NavigatorGPU",
+            "GPUSupportedLimits",
+            "GPUSupportedFeatures",
+            "WGSLLanguageFeatures",
+        ]:
             self._interfaces.pop(name, None)
 
         # Divide flags and actual class definitions

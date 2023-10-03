@@ -101,7 +101,7 @@ helps here, by parsing the corresponding `wgpu.h` and:
 
 * Detect and report missing flags and enum fields.
 * Generate mappings for enum field names to ints.
-* Validate and annotate struct creations.
+* Validate and annotate struct creations (missing struct fields are filled in).
 * Validate and annotate function calls into the lib.
 
 The update process to follow:
