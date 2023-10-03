@@ -70,6 +70,14 @@ check_expected_version(version_info)  # produces a warning on mismatch
 WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF
 WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFF
 
+
+# Features in WebGPU that don't map to wgpu-native yet
+KNOWN_MISSING_FEATURES = [
+    "bgra8unorm-storage",
+    "float32-filterable",
+]
+
+# Features that wgpu-native supports that are not part of WebGPU
 NATIVE_FEATURES = (
     "multi_draw_indirect",
     "push_constants",
@@ -339,7 +347,11 @@ class GPU(base.GPU):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
-            i = enummap[f"FeatureName.{f}"]
+            key = f"FeatureName.{f}"
+            if key not in enummap:
+                assert f in KNOWN_MISSING_FEATURES
+                continue
+            i = enummap[key]
             # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
             if lib.wgpuAdapterHasFeature(adapter_id, i):
                 features.add(f)
@@ -755,7 +767,11 @@ class GPUAdapter(base.GPUAdapter):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
-            i = enummap[f"FeatureName.{f}"]
+            key = f"FeatureName.{f}"
+            if key not in enummap:
+                assert f in KNOWN_MISSING_FEATURES
+                continue
+            i = enummap[key]
             # H: bool f(WGPUDevice device, WGPUFeatureName feature)
             if lib.wgpuDeviceHasFeature(device_id, i):
                 features.add(f)

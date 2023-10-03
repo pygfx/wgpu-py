@@ -156,7 +156,7 @@ def test_shader_module_creation_spirv():
     code4 = type("CodeObject", (object,), {})
 
     m1 = device.create_shader_module(code=code1)
-    assert m1.compilation_info() == []
+    assert m1.get_compilation_info() == []
 
     with raises(TypeError):
         device.create_shader_module(code=code4)
