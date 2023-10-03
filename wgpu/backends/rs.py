@@ -1,11 +1,11 @@
 """
 WGPU backend implementation based on wgpu-native
 
-The wgpu-native project (https://github.com/gfx-rs/wgpu) is a Rust
-library based on gfx-hal, which wraps Metal, Vulkan, DX12 and more in
-the future. It compiles to a dynamic library exposing a C-API,
-accompanied by a C header file. We wrap this using cffi, which uses the
-header file to do most type conversions for us.
+The wgpu-native project (https://github.com/gfx-rs/wgpu-native) is a Rust
+library based on wgou-core, which wraps Metal, Vulkan, DX12, and more.
+It compiles to a dynamic library exposing a C-API, accompanied by a C
+header file. We wrap this using cffi, which uses the header file to do
+most type conversions for us.
 
 Developer notes and tips:
 
@@ -15,7 +15,7 @@ Developer notes and tips:
   this can be automated, and this would indeed be possible for 80-90%
   of the methods. However, the API's do not always line up, and there's
   async stuff to take into account too. Therefore we do it manually.
-  In the end, I think that this will make the code easier to maintain.
+  In the end, I think that this makes the code easier to maintain.
 * Use new_struct() and new_struct_p() to create a C structure with
   minimal boilerplate. It also converts string enum values to their
   corresponding integers.
@@ -1749,8 +1749,8 @@ class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
 
 
 class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
-    def compilation_info(self):
-        return super().compilation_info()
+    def get_compilation_info(self):
+        return super().get_compilation_info()
 
     def _destroy(self):
         if self._internal is not None and lib is not None:
@@ -1935,13 +1935,10 @@ class GPUCommandEncoder(
     base.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase
 ):
     def begin_compute_pass(
-        self,
-        *,
-        label="",
-        timestamp_writes: "List[structs.ComputePassTimestampWrite]" = [],
+        self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
     ):
-        for val in timestamp_writes:
-            check_struct("ComputePassTimestampWrite", val)
+        if timestamp_writes is not None:
+            check_struct("ComputePassTimestampWrites", timestamp_writes)
         # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWriteCount: int, timestampWrites: WGPUComputePassTimestampWrite *
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
@@ -1961,12 +1958,12 @@ class GPUCommandEncoder(
         color_attachments: "List[structs.RenderPassColorAttachment]",
         depth_stencil_attachment: "structs.RenderPassDepthStencilAttachment" = None,
         occlusion_query_set: "GPUQuerySet" = None,
-        timestamp_writes: "List[structs.RenderPassTimestampWrite]" = [],
+        timestamp_writes: "structs.RenderPassTimestampWrites" = None,
         max_draw_count: int = 50000000,
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.
-        for val in timestamp_writes:
-            check_struct("RenderPassTimestampWrite", val)
+        if timestamp_writes is not None:
+            check_struct("RenderPassTimestampWrites", timestamp_writes)
 
         c_color_attachments_list = []
         for color_attachment in color_attachments:
@@ -2647,7 +2644,7 @@ class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):
 
 
 class GPUPipelineError(base.GPUPipelineError, Exception):
-    def __init__(self, message, options):
+    def __init__(self, message="", options=None):
         super().__init__(message, options)
 
 

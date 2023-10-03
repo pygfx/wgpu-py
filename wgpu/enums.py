@@ -26,7 +26,7 @@ class Enum:
         return f"<{self.__class__.__name__} {self._name}: {options}>"
 
 
-# There are 35 enums
+# There are 33 enums
 
 #: * "low_power"
 #: * "high_performance"
@@ -45,6 +45,8 @@ PowerPreference = Enum(
 #: * "indirect_first_instance"
 #: * "shader_f16"
 #: * "rg11b10ufloat_renderable"
+#: * "bgra8unorm_storage"
+#: * "float32_filterable"
 FeatureName = Enum(
     "FeatureName",
     depth_clip_control="depth-clip-control",
@@ -56,6 +58,8 @@ FeatureName = Enum(
     indirect_first_instance="indirect-first-instance",
     shader_f16="shader-f16",
     rg11b10ufloat_renderable="rg11b10ufloat-renderable",
+    bgra8unorm_storage="bgra8unorm-storage",
+    float32_filterable="float32-filterable",
 )
 
 #: * "unmapped"
@@ -129,6 +133,7 @@ TextureAspect = Enum(
 #: * "bgra8unorm"
 #: * "bgra8unorm_srgb"
 #: * "rgb9e5ufloat"
+#: * "rgb10a2uint"
 #: * "rgb10a2unorm"
 #: * "rg11b10ufloat"
 #: * "rg32uint"
@@ -225,6 +230,7 @@ TextureFormat = Enum(
     bgra8unorm="bgra8unorm",
     bgra8unorm_srgb="bgra8unorm-srgb",
     rgb9e5ufloat="rgb9e5ufloat",
+    rgb10a2uint="rgb10a2uint",
     rgb10a2unorm="rgb10a2unorm",
     rg11b10ufloat="rg11b10ufloat",
     rg32uint="rg32uint",
@@ -540,6 +546,7 @@ IndexFormat = Enum(
 #: * "sint32x2"
 #: * "sint32x3"
 #: * "sint32x4"
+#: * "unorm10_10_10_2"
 VertexFormat = Enum(
     "VertexFormat",
     uint8x2="uint8x2",
@@ -572,6 +579,7 @@ VertexFormat = Enum(
     sint32x2="sint32x2",
     sint32x3="sint32x3",
     sint32x4="sint32x4",
+    unorm10_10_10_2="unorm10-10-10-2",
 )
 
 #: * "vertex"
@@ -580,22 +588,6 @@ VertexStepMode = Enum(
     "VertexStepMode",
     vertex="vertex",
     instance="instance",
-)
-
-#: * "beginning"
-#: * "end"
-ComputePassTimestampLocation = Enum(
-    "ComputePassTimestampLocation",
-    beginning="beginning",
-    end="end",
-)
-
-#: * "beginning"
-#: * "end"
-RenderPassTimestampLocation = Enum(
-    "RenderPassTimestampLocation",
-    beginning="beginning",
-    end="end",
 )
 
 #: * "load"
@@ -630,9 +622,11 @@ CanvasAlphaMode = Enum(
     premultiplied="premultiplied",
 )
 
+#: * "unknown"
 #: * "destroyed"
 DeviceLostReason = Enum(
     "DeviceLostReason",
+    unknown="unknown",
     destroyed="destroyed",
 )
 
