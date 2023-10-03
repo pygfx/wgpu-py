@@ -166,6 +166,7 @@ def test_register_backend_fails():
             wgpu._register_backend(GPU)
 
         GPU.request_adapter_async = lambda self: None
+        GPU.wgsl_language_features = set()
         wgpu._register_backend(GPU)
 
         assert wgpu.GPU is GPU
