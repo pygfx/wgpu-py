@@ -58,6 +58,7 @@ The update process to follow:
 
 * Download the latest `webgpu.idl` (see link above) and place in the resources folder.
 * Run `python codegen` to apply the automatic patches to the code.
+* It may be necessary to tweak the `idlparser.py` to adjust it to new formatting.
 * Check the diff of `flags.py`, `enums.py`, `structs.py` for any changes that might need manual work.
 * Go through all FIXME comments that were added in `base.py`:
     * Apply any necessary changes.
