@@ -1,3 +1,7 @@
+"""
+Simple utilities to handle files, including a mini virtual file system.
+"""
+
 import os
 
 
