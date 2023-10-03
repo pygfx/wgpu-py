@@ -120,8 +120,10 @@ class GPU:
     # IDL: [SameObject] readonly attribute WGSLLanguageFeatures wgslLanguageFeatures;
     @property
     def wgsl_language_features(self):
-        """A set of strings representing the WGSL languags extensions supported by all adapters."""
-        raise NotImplementedError()
+        """A set of strings representing the WGSL language extensions supported by all adapters.
+        Returns an empty set for now."""
+        # Looks like at the time of writing there are no definitions for extensions yet
+        return set()
 
 
 class GPUCanvasContext:
