@@ -10,11 +10,12 @@ The purpose of this helper package is to:
 * To validate that our calls into wgpu-native are correct.
 
 We try to hit a balance between automatic code generation and providing
-hints to help with manual updating. It should *not* be necessarry to check
-the diffs of `webgpu.idl` or `wgpu.h`; any relevant differences should
+hints to help with manual updating. It should *not* be necessarry to
+check the diffs of `webgpu.idl` or `wgpu.h`. Instead, by running the
+codegen, any relevant differences (in webgpu.idl and wgpu.h) should
 result in changes (of code or annotations) in the respective `.py`
-files. That said, during development it can be helpful to use the
-WebGPU spec and the header file as a reference.
+files. That said, during development it can be helpful to use the WebGPU
+spec and the header file as a reference.
 
 This package is *not* part of the wgpu-lib - it is a tool to help
 maintain it. It has its own tests, which try to cover the utils well,
@@ -39,7 +40,7 @@ tests, because we are the only users. If it breaks, we fix it.
   flag/enum mismatches between IDL and wgpu.h.
 
 
-## Updating the base API
+## Updating the base API (`base.py`)
 
 The WebGPU API is specified by `webgpu.idl` (in the resources directory).
 We parse this file with a custom parser (`idlparser.py`) to obtain a description
@@ -55,37 +56,42 @@ Next, the Python base API (`base.py`) is updated:
 
 The update process to follow:
 
-* Download the latest `webgpu.idl`.
+* Download the latest `webgpu.idl` (see link above) and place in the resources folder.
 * Run `python codegen` to apply the automatic patches to the code.
-* Now go through all FIXME comments that were added, and apply any necessary
-  changes. Remove the FIXME comment if no further action is needed. Note that all
-  new classes/methods/properties (instead those marked as hidden) need a docstring.
-* Also check the diff of `flags.py`, `enums.py`, `structs.py` for any changes that might need manual work.
-* Run `python wgpu.codegen` again to validate that all is well.
+* It may be necessary to tweak the `idlparser.py` to adjust it to new formatting.
+* Check the diff of `flags.py`, `enums.py`, `structs.py` for any changes that might need manual work.
+* Go through all FIXME comments that were added in `base.py`:
+    * Apply any necessary changes.
+    * Remove the FIXME comment if no further action is needed, or turn into a TODO for later.
+    * Note that all new classes/methods/properties (instead those marked as hidden) need a docstring.
+* Run `python codegen` again to validate that all is well. Repeat the step above if necessary.
 * Make a summary of the API changes to put in the release notes.
 * Update downstream code, like our own tests and examples, but also e.g. pygfx.
 
-In some cases we may want to deviate from the WebGPU API, because well ... Python
-is not JavaScript. To tell the patcher logic how we deviate from the WebGPU spec:
+In some cases we may want to deviate from the WebGPU API, because well ...
+Python is not JavaScript. There is a simple system in place to mark any
+such differences, that also makes sure that these changes are listed
+in the docs. To mark how the py API deviates from the WebGPU spec:
 
 * Decorate a method with `@apidiff.hide` to mark it as not supported by our API.
 * Decorate a method with `@apidiff.add` to mark it as intended even though it does not
   match the WebGPU spec.
 * Decorate a method with `@apidiff.change` to mark that our method has a different signature.
 
+While `base.py` defines the API (and corresponding docstrings), the implementation
+of the majority of methods occurs in the backends.
+
 
 ## Updating the API of the backend implementations
 
 The backend implementations of the API (e.g. `rs.py`) are also patched.
-In this case the source is the base API (instead of the IDL).
+The backends are almost a copy of `base.py`: all methods in `base.py`
+that `raise NotImplementedError()` must be implemented.
+ The API of the backends should not
+deviate from the base API - only additions are allowed (and should be
+used sparingly).
 
-The update process is similar to the generation of the base API, except
-that methods are only added if they `raise NotImplementedError()` in
-the base implementation. Another difference is that this API should not
-deviate from the base API - only additions are allowed (which should
-be used sparingly).
-
-You'd typically update the backends while you're updating `base.py`.
+You'll typically need to update the backends while you're updating `base.py`.
 
 
 ## Updating the Rust backend (`rs.py`)
@@ -93,10 +99,9 @@ You'd typically update the backends while you're updating `base.py`.
 The `rs.py` backend calls into a C library (wgpu-native). The codegen
 helps here, by parsing the corresponding `wgpu.h` and:
 
-* Detect and report missing flags and flag fields.
-* Detect and report missing enums and enum fields.
+* Detect and report missing flags and enum fields.
 * Generate mappings for enum field names to ints.
-* Validate and annotate struct creations.
+* Validate and annotate struct creations (missing struct fields are filled in).
 * Validate and annotate function calls into the lib.
 
 The update process to follow:
@@ -107,10 +112,10 @@ The update process to follow:
 * Diff `rs.py` to see what structs and functions have changed. Lines
   marked with a FIXME comment should be fixed. Others may or may not.
   Use `wgpu.h` as a reference to check available functions and structs.
-* Run `python wgpu.codegen` again to validate that all is well.
+* Run `python codegen` again to validate that all is well.
 * Make sure that the tests run and provide full coverage.
 * This process typically does not introduce changes to the API, but certain
-  features that were previously not supported could be after an update.
+  features that were previously not supported could now be withing reach.
 
 
 ## Further tips

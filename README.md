@@ -112,12 +112,12 @@ This code is distributed under the 2-clause BSD license.
 * Use `pip wheel --no-deps .` to build a wheel.
 
 
-### Changing the upstream wgpu-native version
+### Updating to a later version of WebGPU or wgpu-native
 
-* Use the optional arguments to `python download-wgpu-native.py --help` to
-  download a different version of the upstream wgpu-native binaries.
-* The file `wgpu/resources/wgpu_native-version` will be updated by the script to
-  track which version we depend upon.
+To update to upstream changes, we use a combination of automatic code
+generation and manual updating. See [the codegen utility](codegen/README.md)
+for more information.
+
 
 ## Testing
 

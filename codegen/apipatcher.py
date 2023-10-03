@@ -313,11 +313,18 @@ class IdlPatcherMixin:
         # Get arg names and types
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
         args = [arg.strip() for arg in args if arg.strip()]
-        defaults = [arg.partition("=")[2].strip() for arg in args]
-        defaults = [
-            default or (arg.startswith("optional ") and "None")
-            for default, arg in zip(defaults, args)
-        ]
+        raw_defaults = [arg.partition("=")[2].strip() for arg in args]
+        place_holder_default = False
+        defaults = []
+        for default, arg in zip(raw_defaults, args):
+            if default:
+                place_holder_default = "None"  # any next args must have a default
+            elif arg.startswith("optional "):
+                default = "None"
+            else:
+                default = place_holder_default
+            defaults.append(default)
+
         argnames = [arg.split("=")[0].split()[-1] for arg in args]
         argnames = [to_snake_case(argname) for argname in argnames]
         argnames = [(f"{n}={v}" if v else n) for n, v in zip(argnames, defaults)]

@@ -17,6 +17,15 @@ Possible sections in each release:
 * Fixed: for any bug fixes.
 * Security: in case of vulnerabilities.
 
+### [v0.10.1] - tdb
+
+In this release the API is aligned with the latest webgpu.idl.
+
+Added:
+
+* New `wgpu.wgsl_language_features` property, which for now always returns an empty set.
+* The `GPUShaderModule.compilation_info` property (and its async version) are replaced with a `get_compilation_info()` method.
+
 
 ### [v0.9.5] - 02-10-2023
 

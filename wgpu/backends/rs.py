@@ -1,11 +1,11 @@
 """
 WGPU backend implementation based on wgpu-native
 
-The wgpu-native project (https://github.com/gfx-rs/wgpu) is a Rust
-library based on gfx-hal, which wraps Metal, Vulkan, DX12 and more in
-the future. It compiles to a dynamic library exposing a C-API,
-accompanied by a C header file. We wrap this using cffi, which uses the
-header file to do most type conversions for us.
+The wgpu-native project (https://github.com/gfx-rs/wgpu-native) is a Rust
+library based on wgou-core, which wraps Metal, Vulkan, DX12, and more.
+It compiles to a dynamic library exposing a C-API, accompanied by a C
+header file. We wrap this using cffi, which uses the header file to do
+most type conversions for us.
 
 Developer notes and tips:
 
@@ -15,7 +15,7 @@ Developer notes and tips:
   this can be automated, and this would indeed be possible for 80-90%
   of the methods. However, the API's do not always line up, and there's
   async stuff to take into account too. Therefore we do it manually.
-  In the end, I think that this will make the code easier to maintain.
+  In the end, I think that this makes the code easier to maintain.
 * Use new_struct() and new_struct_p() to create a C structure with
   minimal boilerplate. It also converts string enum values to their
   corresponding integers.
@@ -70,6 +70,14 @@ check_expected_version(version_info)  # produces a warning on mismatch
 WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF
 WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFF
 
+
+# Features in WebGPU that don't map to wgpu-native yet
+KNOWN_MISSING_FEATURES = [
+    "bgra8unorm-storage",
+    "float32-filterable",
+]
+
+# Features that wgpu-native supports that are not part of WebGPU
 NATIVE_FEATURES = (
     "multi_draw_indirect",
     "push_constants",
@@ -279,7 +287,8 @@ class GPU(base.GPU):
 
         # For now, Rust will call the callback immediately
         # todo: when wgpu gets an event loop -> while run wgpu event loop or something
-        assert adapter_id is not None
+        if adapter_id is None:  # pragma: no cover
+            raise RuntimeError("Could not obtain new adapter id.")
 
         # ----- Get adapter info
 
@@ -339,7 +348,12 @@ class GPU(base.GPU):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
-            i = enummap[f"FeatureName.{f}"]
+            key = f"FeatureName.{f}"
+            if key not in enummap:
+                if f not in KNOWN_MISSING_FEATURES:  # pragma: no cover
+                    raise RuntimeError(f"Unexpected feature {f}")
+                continue
+            i = enummap[key]
             # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
             if lib.wgpuAdapterHasFeature(adapter_id, i):
                 features.add(f)
@@ -450,7 +464,7 @@ class GPUCanvasContext(base.GPUCanvasContext):
         self._current_texture = None
 
     def get_current_texture(self):
-        if self._device is None:
+        if self._device is None:  # pragma: no cover
             raise RuntimeError(
                 "Preset context must be configured before get_current_texture()."
             )
@@ -658,7 +672,7 @@ class GPUAdapter(base.GPUAdapter):
                 i1 = enummap.get(f"FeatureName.{f}", None)
                 i2 = getattr(lib, f"WGPUNativeFeature_{f.upper()}", None)
                 i = i2 if i1 is None else i1
-                if i is None:
+                if i is None:  # pragma: no cover
                     raise KeyError(f"Unknown feature: '{f}'")
                 c_features.add(i)
 
@@ -735,7 +749,8 @@ class GPUAdapter(base.GPUAdapter):
         # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor /* nullable */, WGPURequestDeviceCallback callback, void * userdata)
         lib.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
 
-        assert device_id is not None
+        if device_id is None:  # pragma: no cover
+            raise RuntimeError("Could not obtain new device id.")
 
         # ----- Get device limits
 
@@ -755,7 +770,12 @@ class GPUAdapter(base.GPUAdapter):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
-            i = enummap[f"FeatureName.{f}"]
+            key = f"FeatureName.{f}"
+            if key not in enummap:
+                if f not in KNOWN_MISSING_FEATURES:  # pragma: no cover
+                    raise RuntimeError(f"Unexpected feature {f}")
+                continue
+            i = enummap[key]
             # H: bool f(WGPUDevice device, WGPUFeatureName feature)
             if lib.wgpuDeviceHasFeature(device_id, i):
                 features.add(f)
@@ -1377,9 +1397,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
         c_depth_stencil_state = ffi.NULL
         if depth_stencil:
-            assert (
-                depth_stencil.get("format", None) is not None
-            ), "depth_stencil needs format"
+            if depth_stencil.get("format", None) is None:
+                raise ValueError("depth_stencil needs format")
             stencil_front = depth_stencil.get("stencil_front", {})
             check_struct("StencilFaceState", stencil_front)
             # H: compare: WGPUCompareFunction, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
@@ -1600,7 +1619,10 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         size = self.size
 
         data = memoryview(data).cast("B")
-        assert data.nbytes == self.size
+        if data.nbytes != self.size:  # pragma: no cover
+            raise ValueError(
+                "Data passed to map_write() does not have the correct size."
+            )
 
         # Prepare
         status = 99
@@ -1749,8 +1771,8 @@ class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
 
 
 class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
-    def compilation_info(self):
-        return super().compilation_info()
+    def get_compilation_info(self):
+        return super().get_compilation_info()
 
     def _destroy(self):
         if self._internal is not None and lib is not None:
@@ -1935,13 +1957,10 @@ class GPUCommandEncoder(
     base.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase
 ):
     def begin_compute_pass(
-        self,
-        *,
-        label="",
-        timestamp_writes: "List[structs.ComputePassTimestampWrite]" = [],
+        self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
     ):
-        for val in timestamp_writes:
-            check_struct("ComputePassTimestampWrite", val)
+        if timestamp_writes is not None:
+            check_struct("ComputePassTimestampWrites", timestamp_writes)
         # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWriteCount: int, timestampWrites: WGPUComputePassTimestampWrite *
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
@@ -1961,17 +1980,18 @@ class GPUCommandEncoder(
         color_attachments: "List[structs.RenderPassColorAttachment]",
         depth_stencil_attachment: "structs.RenderPassDepthStencilAttachment" = None,
         occlusion_query_set: "GPUQuerySet" = None,
-        timestamp_writes: "List[structs.RenderPassTimestampWrite]" = [],
+        timestamp_writes: "structs.RenderPassTimestampWrites" = None,
         max_draw_count: int = 50000000,
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.
-        for val in timestamp_writes:
-            check_struct("RenderPassTimestampWrite", val)
+        if timestamp_writes is not None:
+            check_struct("RenderPassTimestampWrites", timestamp_writes)
 
         c_color_attachments_list = []
         for color_attachment in color_attachments:
             check_struct("RenderPassColorAttachment", color_attachment)
-            assert isinstance(color_attachment["view"], GPUTextureView)
+            if not isinstance(color_attachment["view"], GPUTextureView):
+                raise TypeError("Color attachement view must be a GPUTextureView.")
             texture_view_id = color_attachment["view"]._internal
             c_resolve_target = (
                 ffi.NULL
@@ -2045,13 +2065,17 @@ class GPUCommandEncoder(
 
     def clear_buffer(self, buffer, offset=0, size=None):
         offset = int(offset)
-        assert offset % 4 == 0, "offset must be a multiple of 4"
-        if size is None:
+        if offset % 4 != 0:  # pragma: no cover
+            raise ValueError("offset must be a multiple of 4")
+        if size is None:  # pragma: no cover
             size = buffer.size - offset
         size = int(size)
-        assert size > 0, "clear_buffer size must be > 0"
-        assert size % 4 == 0, "size must be a multiple of 4"
-        assert offset + size <= buffer.size, "buffer size out of range"
+        if size <= 0:  # pragma: no cover
+            raise ValueError("clear_buffer size must be > 0")
+        if size % 4 != 0:  # pragma: no cover
+            raise ValueError("size must be a multiple of 4")
+        if offset + size > buffer.size:  # pragma: no cover
+            raise ValueError("buffer size out of range")
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUBuffer buffer, uint64_t offset, uint64_t size)
         lib.wgpuCommandEncoderClearBuffer(
             self._internal, buffer._internal, int(offset), size
@@ -2060,12 +2084,17 @@ class GPUCommandEncoder(
     def copy_buffer_to_buffer(
         self, source, source_offset, destination, destination_offset, size
     ):
-        assert source_offset % 4 == 0, "source_offsetmust be a multiple of 4"
-        assert destination_offset % 4 == 0, "destination_offset must be a multiple of 4"
-        assert size % 4 == 0, "size must be a multiple of 4"
+        if source_offset % 4 != 0:  # pragma: no cover
+            raise ValueError("source_offset must be a multiple of 4")
+        if destination_offset % 4 != 0:  # pragma: no cover
+            raise ValueError("destination_offset must be a multiple of 4")
+        if size % 4 != 0:  # pragma: no cover
+            raise ValueError("size must be a multiple of 4")
 
-        assert isinstance(source, GPUBuffer)
-        assert isinstance(destination, GPUBuffer)
+        if not isinstance(source, GPUBuffer):  # pragma: no cover
+            raise TypeError("copy_buffer_to_buffer() source must be a GPUBuffer.")
+        if not isinstance(destination, GPUBuffer):  # pragma: no cover
+            raise TypeError("copy_buffer_to_buffer() destination must be a GPUBuffer.")
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUBuffer source, uint64_t sourceOffset, WGPUBuffer destination, uint64_t destinationOffset, uint64_t size)
         lib.wgpuCommandEncoderCopyBufferToBuffer(
             self._internal,
@@ -2435,10 +2464,14 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         else:
             data_length = int(size)
 
-        assert 0 <= buffer_offset < buffer.size
-        assert 0 <= data_offset < nbytes
-        assert 0 <= data_length <= (nbytes - data_offset)
-        assert data_length <= buffer.size - buffer_offset
+        if not (0 <= buffer_offset < buffer.size):  # pragma: no cover
+            raise ValueError("Invalid buffer_offset")
+        if not (0 <= data_offset < nbytes):  # pragma: no cover
+            raise ValueError("Invalid data_offset")
+        if not (0 <= data_length <= (nbytes - data_offset)):  # pragma: no cover
+            raise ValueError("Invalid data_length")
+        if not (data_length <= buffer.size - buffer_offset):  # pragma: no cover
+            raise ValueError("Invalid data_length")
 
         # Make the call. Note that this call copies the data - it's ok
         # if we lose our reference to the data once we leave this function.
@@ -2458,8 +2491,10 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
             data_length = buffer.size - buffer_offset
         else:
             data_length = int(size)
-        assert 0 <= buffer_offset < buffer.size
-        assert data_length <= buffer.size - buffer_offset
+        if not (0 <= buffer_offset < buffer.size):  # pragma: no cover
+            raise ValueError("Invalid buffer_offset")
+        if not (data_length <= buffer.size - buffer_offset):  # pragma: no cover
+            raise ValueError("Invalid data_length")
 
         device = buffer._device
 
@@ -2647,7 +2682,7 @@ class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):
 
 
 class GPUPipelineError(base.GPUPipelineError, Exception):
-    def __init__(self, message, options):
+    def __init__(self, message="", options=None):
         super().__init__(message, options)
 
 

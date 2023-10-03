@@ -34,7 +34,7 @@ RequestAdapterOptions = Struct(
     force_fallback_adapter="bool",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * requiredFeatures :: List[:obj:`enums.FeatureName <wgpu.enums.FeatureName>`] = []
 #: * requiredLimits :: Dict[str, int] = {}
 #: * defaultQueue :: :obj:`structs.QueueDescriptor <QueueDescriptor>` = {}
@@ -46,7 +46,7 @@ DeviceDescriptor = Struct(
     default_queue="structs.QueueDescriptor",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * size :: int
 #: * usage :: :obj:`flags.BufferUsage <wgpu.flags.BufferUsage>`
 #: * mappedAtCreation :: bool = false
@@ -58,7 +58,7 @@ BufferDescriptor = Struct(
     mapped_at_creation="bool",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * size :: Union[List[int], :obj:`structs.Extent3D <Extent3D>`]
 #: * mipLevelCount :: int = 1
 #: * sampleCount :: int = 1
@@ -78,7 +78,7 @@ TextureDescriptor = Struct(
     view_formats="List[enums.TextureFormat]",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * format :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` = None
 #: * dimension :: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>` = None
 #: * aspect :: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` = "all"
@@ -98,17 +98,17 @@ TextureViewDescriptor = Struct(
     array_layer_count="int",
 )
 
-#: * label :: str = None
-#: * source :: object
+#: * label :: str = ""
+#: * source :: Union[memoryview, object]
 #: * colorSpace :: str = "srgb"
 ExternalTextureDescriptor = Struct(
     "ExternalTextureDescriptor",
     label="str",
-    source="object",
+    source="Union[memoryview, object]",
     color_space="str",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * addressModeU :: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` = "clamp-to-edge"
 #: * addressModeV :: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` = "clamp-to-edge"
 #: * addressModeW :: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` = "clamp-to-edge"
@@ -134,7 +134,7 @@ SamplerDescriptor = Struct(
     max_anisotropy="int",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * entries :: List[:obj:`structs.BindGroupLayoutEntry <BindGroupLayoutEntry>`]
 BindGroupLayoutDescriptor = Struct(
     "BindGroupLayoutDescriptor",
@@ -200,7 +200,7 @@ ExternalTextureBindingLayout = Struct(
     "ExternalTextureBindingLayout",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * layout :: :class:`GPUBindGroupLayout <wgpu.GPUBindGroupLayout>`
 #: * entries :: List[:obj:`structs.BindGroupEntry <BindGroupEntry>`]
 BindGroupDescriptor = Struct(
@@ -228,7 +228,7 @@ BufferBinding = Struct(
     size="int",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * bindGroupLayouts :: List[:class:`GPUBindGroupLayout <wgpu.GPUBindGroupLayout>`]
 PipelineLayoutDescriptor = Struct(
     "PipelineLayoutDescriptor",
@@ -236,7 +236,7 @@ PipelineLayoutDescriptor = Struct(
     bind_group_layouts="List[GPUBindGroupLayout]",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * code :: str
 #: * sourceMap :: dict = None
 #: * hints :: Dict[str, :obj:`structs.ShaderModuleCompilationHint <ShaderModuleCompilationHint>`] = None
@@ -270,7 +270,7 @@ ProgrammableStage = Struct(
     constants="Dict[str, float]",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * layout :: Union[:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>`, :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>`]
 #: * compute :: :obj:`structs.ProgrammableStage <ProgrammableStage>`
 ComputePipelineDescriptor = Struct(
@@ -280,7 +280,7 @@ ComputePipelineDescriptor = Struct(
     compute="structs.ProgrammableStage",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * layout :: Union[:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>`, :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>`]
 #: * vertex :: :obj:`structs.VertexState <VertexState>`
 #: * primitive :: :obj:`structs.PrimitiveState <PrimitiveState>` = {}
@@ -363,8 +363,8 @@ BlendComponent = Struct(
 )
 
 #: * format :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
-#: * depthWriteEnabled :: bool = false
-#: * depthCompare :: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>` = "always"
+#: * depthWriteEnabled :: bool
+#: * depthCompare :: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>`
 #: * stencilFront :: :obj:`structs.StencilFaceState <StencilFaceState>` = {}
 #: * stencilBack :: :obj:`structs.StencilFaceState <StencilFaceState>` = {}
 #: * stencilReadMask :: int = 0xFFFFFFFF
@@ -474,51 +474,51 @@ ImageCopyExternalImage = Struct(
     flip_y="bool",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 CommandBufferDescriptor = Struct(
     "CommandBufferDescriptor",
     label="str",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 CommandEncoderDescriptor = Struct(
     "CommandEncoderDescriptor",
     label="str",
 )
 
 #: * querySet :: :class:`GPUQuerySet <wgpu.GPUQuerySet>`
-#: * queryIndex :: int
-#: * location :: :obj:`enums.ComputePassTimestampLocation <wgpu.enums.ComputePassTimestampLocation>`
-ComputePassTimestampWrite = Struct(
-    "ComputePassTimestampWrite",
+#: * beginningOfPassWriteIndex :: int = None
+#: * endOfPassWriteIndex :: int = None
+ComputePassTimestampWrites = Struct(
+    "ComputePassTimestampWrites",
     query_set="GPUQuerySet",
-    query_index="int",
-    location="enums.ComputePassTimestampLocation",
+    beginning_of_pass_write_index="int",
+    end_of_pass_write_index="int",
 )
 
-#: * label :: str = None
-#: * timestampWrites :: List[:obj:`structs.ComputePassTimestampWrite <ComputePassTimestampWrite>`] = []
+#: * label :: str = ""
+#: * timestampWrites :: :obj:`structs.ComputePassTimestampWrites <ComputePassTimestampWrites>` = None
 ComputePassDescriptor = Struct(
     "ComputePassDescriptor",
     label="str",
-    timestamp_writes="List[structs.ComputePassTimestampWrite]",
+    timestamp_writes="structs.ComputePassTimestampWrites",
 )
 
 #: * querySet :: :class:`GPUQuerySet <wgpu.GPUQuerySet>`
-#: * queryIndex :: int
-#: * location :: :obj:`enums.RenderPassTimestampLocation <wgpu.enums.RenderPassTimestampLocation>`
-RenderPassTimestampWrite = Struct(
-    "RenderPassTimestampWrite",
+#: * beginningOfPassWriteIndex :: int = None
+#: * endOfPassWriteIndex :: int = None
+RenderPassTimestampWrites = Struct(
+    "RenderPassTimestampWrites",
     query_set="GPUQuerySet",
-    query_index="int",
-    location="enums.RenderPassTimestampLocation",
+    beginning_of_pass_write_index="int",
+    end_of_pass_write_index="int",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * colorAttachments :: List[:obj:`structs.RenderPassColorAttachment <RenderPassColorAttachment>`]
 #: * depthStencilAttachment :: :obj:`structs.RenderPassDepthStencilAttachment <RenderPassDepthStencilAttachment>` = None
 #: * occlusionQuerySet :: :class:`GPUQuerySet <wgpu.GPUQuerySet>` = None
-#: * timestampWrites :: List[:obj:`structs.RenderPassTimestampWrite <RenderPassTimestampWrite>`] = []
+#: * timestampWrites :: :obj:`structs.RenderPassTimestampWrites <RenderPassTimestampWrites>` = None
 #: * maxDrawCount :: int = 50000000
 RenderPassDescriptor = Struct(
     "RenderPassDescriptor",
@@ -526,7 +526,7 @@ RenderPassDescriptor = Struct(
     color_attachments="List[structs.RenderPassColorAttachment]",
     depth_stencil_attachment="structs.RenderPassDepthStencilAttachment",
     occlusion_query_set="GPUQuerySet",
-    timestamp_writes="List[structs.RenderPassTimestampWrite]",
+    timestamp_writes="structs.RenderPassTimestampWrites",
     max_draw_count="int",
 )
 
@@ -545,7 +545,7 @@ RenderPassColorAttachment = Struct(
 )
 
 #: * view :: :class:`GPUTextureView <wgpu.GPUTextureView>`
-#: * depthClearValue :: float = 0
+#: * depthClearValue :: float = None
 #: * depthLoadOp :: :obj:`enums.LoadOp <wgpu.enums.LoadOp>` = None
 #: * depthStoreOp :: :obj:`enums.StoreOp <wgpu.enums.StoreOp>` = None
 #: * depthReadOnly :: bool = false
@@ -566,7 +566,7 @@ RenderPassDepthStencilAttachment = Struct(
     stencil_read_only="bool",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * colorFormats :: List[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
 #: * depthStencilFormat :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` = None
 #: * sampleCount :: int = 1
@@ -578,13 +578,13 @@ RenderPassLayout = Struct(
     sample_count="int",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 RenderBundleDescriptor = Struct(
     "RenderBundleDescriptor",
     label="str",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * colorFormats :: List[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
 #: * depthStencilFormat :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` = None
 #: * sampleCount :: int = 1
@@ -600,13 +600,13 @@ RenderBundleEncoderDescriptor = Struct(
     stencil_read_only="bool",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 QueueDescriptor = Struct(
     "QueueDescriptor",
     label="str",
 )
 
-#: * label :: str = None
+#: * label :: str = ""
 #: * type :: :obj:`enums.QueryType <wgpu.enums.QueryType>`
 #: * count :: int
 QuerySetDescriptor = Struct(

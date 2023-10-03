@@ -198,6 +198,8 @@ class IdlParser:
             "boolean": "bool",
             "object": "dict",
             "ImageBitmap": "memoryview",
+            "ImageData": "memoryview",
+            "VideoFrame": "memoryview",
             "GPUPipelineConstantValue": "float",
         }
         name = pythonmap.get(name, name)
@@ -255,6 +257,8 @@ class IdlParser:
                     value = value.split("]")[-1]
                 # Parse
                 if value.startswith("("):  # Union type
+                    while ")" not in value:
+                        value = value.rstrip() + " " + self.read_line().lstrip()
                     assert value.count("(") == 1 and value.count(")") == 1
                     value = value.split("(")[1]
                     val, _, key = value.partition(")")
@@ -265,6 +269,8 @@ class IdlParser:
             elif line.startswith(("namespace ", "interface ", "partial interface ")):
                 # A class or a set of flags
                 # Collect lines that define this interface
+                while "{" not in line:
+                    line = line.rstrip() + " " + self.read_line().lstrip()
                 lines = [line]
                 while not line.startswith("};"):
                     line = self.read_line()
@@ -344,6 +350,8 @@ class IdlParser:
                     d[key] = val
                 self.enums[name] = d
             elif line.startswith("dictionary "):
+                while "{" not in line:
+                    line = line.rstrip() + self.read_line()
                 assert line.count("{") == 1 and line.count("}") == 0
                 lines = [line]
                 while not line.startswith("};"):
@@ -390,7 +398,12 @@ class IdlParser:
         """
 
         # Drop some toplevel names
-        for name in ["NavigatorGPU", "GPUSupportedLimits", "GPUSupportedFeatures"]:
+        for name in [
+            "NavigatorGPU",
+            "GPUSupportedLimits",
+            "GPUSupportedFeatures",
+            "WGSLLanguageFeatures",
+        ]:
             self._interfaces.pop(name, None)
 
         # Divide flags and actual class definitions

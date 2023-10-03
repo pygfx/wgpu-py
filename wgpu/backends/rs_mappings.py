@@ -4,7 +4,7 @@
 
 # flake8: noqa
 
-# There are 231 enum mappings
+# There are 227 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
@@ -42,8 +42,6 @@ enummap = {
     "CompilationMessageType.error": 0,
     "CompilationMessageType.info": 2,
     "CompilationMessageType.warning": 1,
-    "ComputePassTimestampLocation.beginning": 0,
-    "ComputePassTimestampLocation.end": 1,
     "CullMode.back": 2,
     "CullMode.front": 1,
     "CullMode.none": 0,
@@ -79,8 +77,6 @@ enummap = {
     "PrimitiveTopology.triangle-strip": 4,
     "QueryType.occlusion": 0,
     "QueryType.timestamp": 2,
-    "RenderPassTimestampLocation.beginning": 0,
-    "RenderPassTimestampLocation.end": 1,
     "SamplerBindingType.comparison": 3,
     "SamplerBindingType.filtering": 1,
     "SamplerBindingType.non-filtering": 2,
@@ -240,7 +236,7 @@ enummap = {
     "VertexStepMode.vertex": 0,
 }
 
-# There are 49 struct-field enum mappings
+# There are 47 struct-field enum mappings
 
 cstructfield2enum = {
     "BlendComponent.dstFactor": "BlendFactor",
@@ -249,7 +245,6 @@ cstructfield2enum = {
     "BufferBindingLayout.type": "BufferBindingType",
     "ColorTargetState.format": "TextureFormat",
     "CompilationMessage.type": "CompilationMessageType",
-    "ComputePassTimestampWrite.location": "ComputePassTimestampLocation",
     "DepthStencilState.depthCompare": "CompareFunction",
     "DepthStencilState.format": "TextureFormat",
     "ImageCopyTexture.aspect": "TextureAspect",
@@ -265,7 +260,6 @@ cstructfield2enum = {
     "RenderPassDepthStencilAttachment.depthStoreOp": "StoreOp",
     "RenderPassDepthStencilAttachment.stencilLoadOp": "LoadOp",
     "RenderPassDepthStencilAttachment.stencilStoreOp": "StoreOp",
-    "RenderPassTimestampWrite.location": "RenderPassTimestampLocation",
     "RequestAdapterOptions.powerPreference": "PowerPreference",
     "SamplerBindingLayout.type": "SamplerBindingType",
     "SamplerDescriptor.addressModeU": "AddressMode",
