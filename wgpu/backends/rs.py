@@ -628,7 +628,9 @@ class GPUAdapter(base.GPUAdapter):
 
         c_features = set()
         for f in required_features:
-            if not isinstance(f, int):
+            if not isinstance(f, str):
+                if "_" in f:
+                    f = "".join(x.title() for x in f)
                 i1 = enummap.get(f"FeatureName.{f}", None)
                 i2 = getattr(lib, f"WGPUNativeFeature_{f.upper()}", None)
                 i = i2 if i1 is None else i1
