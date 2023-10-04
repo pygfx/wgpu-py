@@ -48,7 +48,6 @@ from .rs_helpers import (
     get_surface_id_from_canvas,
     get_memoryview_from_address,
     get_memoryview_and_address,
-    parse_wgsl_error,
     to_snake_case,
     to_camel_case,
     delayed_dropper,
@@ -690,7 +689,6 @@ class GPUAdapter(base.GPUAdapter):
         def device_lost_callback(c_reason, c_message, userdata):
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
-            message = message.replace("\\n", "\n")
             self._on_error(f"The WGPU device was lost ({reason}):\n{message}")
 
         # Keep the ref alive
@@ -782,6 +780,10 @@ class GPUAdapter(base.GPUAdapter):
             label, required_features, required_limits, default_queue, ""
         )  # no-cover
 
+    def _on_error(self, message):
+        """Log the error message (for errors produced by wgpu)."""
+        logger.error(message)
+
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
@@ -796,14 +798,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         def uncaptured_error_callback(c_type, c_message, userdata):
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
-            message = message.replace("\\n", "\n")
-
-            shader_error = parse_wgsl_error(message)
-
-            if shader_error:
-                self._on_error(shader_error)
-            else:
-                self._on_error(f"Uncaught WGPU error ({error_type}):\n{message}")
+            message = "\n".join(line.rstrip() for line in message.splitlines())
+            self.adapter._on_error(f"Uncaptured WGPU error: " + message)
 
         # Keep the ref alive
         self._uncaptured_error_callback = uncaptured_error_callback
@@ -812,10 +808,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         lib.wgpuDeviceSetUncapturedErrorCallback(
             self._internal, uncaptured_error_callback, ffi.NULL
         )
-
-    def _on_error(self, message):
-        """Log the error message (for errors produced by wgpu)."""
-        logger.error(message)
 
     def create_buffer(
         self,
