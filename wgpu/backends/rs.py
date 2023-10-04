@@ -801,7 +801,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
             message = "\n".join(line.rstrip() for line in message.splitlines())
-            self.adapter._on_error(f"Uncaptured WGPU error: " + message)
+            error_type  # not used because its already in the message
+            self.adapter._on_error(f"Uncaptured WGPU error: {message}")
 
         # Keep the ref alive
         self._uncaptured_error_callback = uncaptured_error_callback
