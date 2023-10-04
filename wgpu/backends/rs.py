@@ -2305,7 +2305,7 @@ class GPUComputePassEncoder(
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # wgpuComputePassEncoderDrop segfaults, also when delayed
+            lib.wgpuComputePassEncoderRelease(internal)
 
 
 class GPURenderPassEncoder(
@@ -2367,7 +2367,7 @@ class GPURenderPassEncoder(
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            internal  # wgpuRenderPassEncoderDrop segfaults, also when delayed
+            lib.wgpuRenderPassEncoderRelease(internal)
 
 
 class GPURenderBundleEncoder(
