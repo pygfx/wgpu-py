@@ -2307,7 +2307,7 @@ class GPUComputePassEncoder(
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            lib.wgpuComputePassEncoderRelease(internal)
+            internal  # panics: lib.wgpuComputePassEncoderRelease(internal)
 
 
 class GPURenderPassEncoder(
@@ -2369,7 +2369,7 @@ class GPURenderPassEncoder(
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            lib.wgpuRenderPassEncoderRelease(internal)
+            internal  # panics: lib.wgpuRenderPassEncoderRelease(internal)
 
 
 class GPURenderBundleEncoder(
