@@ -619,7 +619,7 @@ class GPUAdapter(base.GPUAdapter):
     def _request_device(
         self, label, required_features, required_limits, default_queue, trace_path
     ):
-        # This is a good moment to drop destroyed objects
+        # This is a good moment to release destroyed objects
         delayed_dropper.drop_all_pending()
 
         # ---- Handle features
@@ -787,7 +787,7 @@ class GPUAdapter(base.GPUAdapter):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            delayed_dropper.drop_soon("wgpuAdapterDrop", internal)
+            delayed_dropper.drop_soon("wgpuAdapterRelease", internal)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
@@ -972,11 +972,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 check_struct("BufferBindingLayout", info)
                 min_binding_size = info.get("min_binding_size", None)
                 if min_binding_size is None:
-                    min_binding_size = lib.WGPU_LIMIT_U64_UNDEFINED
-                elif min_binding_size == 0:
-                    raise ValueError(
-                        "min_binding_size should not be 0, use a proper value or None for default."
-                    )
+                    min_binding_size = 0  # lib.WGPU_LIMIT_U64_UNDEFINED
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUBufferBindingType, hasDynamicOffset: bool, minBindingSize: int
                 buffer = new_struct(
                     "WGPUBufferBindingLayout",
@@ -1526,7 +1522,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            delayed_dropper.drop_soon("wgpuDeviceDrop", internal)
+            delayed_dropper.drop_soon("wgpuDeviceRelease", internal)
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
@@ -1758,7 +1754,7 @@ class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
     def _destroy(self):
         # Since command buffers get destroyed when you submit them, we
-        # must only drop them if they've not been submitted, or we get
+        # must only release them if they've not been submitted, or we get
         # 'Cannot remove a vacant resource'. Got this info from the
         # wgpu chat. Also see
         # https://docs.rs/wgpu-core/latest/src/wgpu_core/device/mod.rs.html#4180-4194
@@ -2252,7 +2248,7 @@ class GPUCommandEncoder(
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = lib.wgpuCommandEncoderFinish(self._internal, struct)
         # WGPU destroys the command encoder when it's finished. So we set
-        # _internal to None to avoid dropping a nonexistent object.
+        # _internal to None to avoid releasing a nonexistent object.
         self._internal = None
         return GPUCommandBuffer(label, id, self)
 
@@ -2399,7 +2395,7 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         # H: void f(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands)
         lib.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
         # WGPU destroys the resource when submitting. We follow this
-        # to avoid dropping a nonexistent object.
+        # to avoid releasing a nonexistent object.
         for cb in command_buffers:
             cb._internal = None
 
