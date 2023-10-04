@@ -17,11 +17,21 @@ def _get_wgpu_header():
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
     for line in lines1:
-        if line.startswith("#"):
+        if line.startswith("#define ") and len(line.split()) > 2 and "0x" in line:
+            line = line.replace("(", "").replace(")", "")
+        elif line.startswith("#"):
             continue
         elif 'extern "C"' in line:
             continue
-        line = line.replace("WGPU_EXPORT ", "")
+        for define_to_drop in [
+            "WGPU_EXPORT ",
+            "WGPU_NULLABLE ",
+            " WGPU_OBJECT_ATTRIBUTE",
+            " WGPU_ENUM_ATTRIBUTE",
+            " WGPU_FUNCTION_ATTRIBUTE",
+            " WGPU_STRUCTURE_ATTRIBUTE",
+        ]:
+            line = line.replace(define_to_drop, "")
         lines2.append(line)
     return "\n".join(lines2)
 
@@ -68,7 +78,7 @@ class HParser:
         code = self.source
 
         # Collect enums and flags. This is easy.
-        # Note that flags are defines as enums and then defined as flags later.
+        # Note that flags are first defined as enums and then redefined as flags later.
         i1 = i2 = i3 = i4 = 0
         while True:
             # Find enum
@@ -113,7 +123,9 @@ class HParser:
         # Turn some enums into flags
         for line in code.splitlines():
             if line.startswith("typedef WGPUFlags "):
-                name = line.strip().strip(";").split()[-1]
+                parts = line.strip().strip(";").split()
+                assert len(parts) == 3
+                name = parts[-1]
                 if name.endswith("Flags"):
                     assert name.startswith("WGPU")
                     name = name[4:-5]

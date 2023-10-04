@@ -33,13 +33,23 @@ def _get_wgpu_header(*filenames):
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
     for line in lines1:
-        if line.startswith("#"):
+        if line.startswith("#define ") and len(line.split()) > 2 and "0x" in line:
+            line = line.replace("(", "").replace(")", "")
+        elif line.startswith("#"):
             continue
         elif 'extern "C"' in line:
             continue
-        line = line.replace("WGPU_EXPORT ", "")
+        for define_to_drop in [
+            "WGPU_EXPORT ",
+            "WGPU_NULLABLE ",
+            " WGPU_OBJECT_ATTRIBUTE",
+            " WGPU_ENUM_ATTRIBUTE",
+            " WGPU_FUNCTION_ATTRIBUTE",
+            " WGPU_STRUCTURE_ATTRIBUTE",
+        ]:
+            line = line.replace(define_to_drop, "")
         lines2.append(line)
-    return "".join(lines2)
+    return "\n".join(lines2)
 
 
 def get_wgpu_lib_path():
