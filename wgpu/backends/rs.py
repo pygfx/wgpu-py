@@ -255,21 +255,14 @@ class GPU(base.GPU):
 
         # ----- Request adapter
 
-        # H: chain: WGPUChainedStruct, backend: WGPUBackendType
-        extras = new_struct_p(
-            "WGPUAdapterExtras *",
-            backend=backend,
-            # not used: chain
-        )
-        extras.chain.sType = lib.WGPUSType_AdapterExtras
-
-        # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface, powerPreference: WGPUPowerPreference, forceFallbackAdapter: bool
+        # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface, powerPreference: WGPUPowerPreference, backendType: WGPUBackendType, forceFallbackAdapter: bool
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
             compatibleSurface=surface_id,
-            nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
             powerPreference=power_preference or "high-performance",
             forceFallbackAdapter=False,
+            backendType=backend,
+            # not used: nextInChain
         )
 
         adapter_id = None
@@ -282,7 +275,7 @@ class GPU(base.GPU):
             nonlocal adapter_id
             adapter_id = result
 
-        # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options /* nullable */, WGPURequestAdapterCallback callback, void * userdata)
+        # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata)
         lib.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback, ffi.NULL)
 
         # For now, Rust will call the callback immediately
@@ -394,7 +387,7 @@ class GPU(base.GPU):
             # not used: gl
         )
 
-        # H: void f(WGPUInstance instance, WGPUGlobalReport* report)
+        # H: void f(WGPUInstance instance, WGPUGlobalReport * report)
         lib.wgpuGenerateReport(get_wgpu_instance(), struct)
 
         report = {}
@@ -516,27 +509,9 @@ class GPUCanvasContext(base.GPUCanvasContext):
         # * https://github.com/gfx-rs/wgpu/blob/e54a36ee/wgpu-types/src/lib.rs#L2663-L2678
         # * https://github.com/pygfx/wgpu-py/issues/256
 
-        present_mode = 2 if getattr(canvas, "_vsync", True) else 0
-
-        if self._device:
-            # Get present mode
-            adapter_id = self._device.adapter._internal
-            c_count = ffi.new("size_t *")
-            # H: WGPUPresentMode const * f(WGPUSurface surface, WGPUAdapter adapter, size_t * count)
-            c_modes = lib.wgpuSurfaceGetSupportedPresentModes(
-                self._surface_id, adapter_id, c_count
-            )
-            try:
-                count = c_count[0]
-                supported_modes = [1 * c_modes[i] for i in range(count)]
-            finally:
-                t = ffi.typeof(c_modes)
-                # H: void f(void* ptr, size_t size, size_t align)
-                lib.wgpuFree(c_modes, count * ffi.sizeof(t), ffi.alignof(t))
-
-            # Use a supported one if our preference is not supported
-            if supported_modes and present_mode not in supported_modes:
-                present_mode = supported_modes[0]
+        pm_fifo = lib.WGPUPresentMode_Fifo
+        pm_immediate = lib.WGPUPresentMode_Immediate
+        present_mode = pm_fifo if getattr(canvas, "_vsync", True) else pm_immediate
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
         struct = new_struct_p(
@@ -553,7 +528,7 @@ class GPUCanvasContext(base.GPUCanvasContext):
         # Destroy old one
         if self._internal is not None:
             # H: void f(WGPUSwapChain swapChain)
-            lib.wgpuSwapChainDrop(self._internal)
+            lib.wgpuSwapChainRelease(self._internal)
 
         # H: WGPUSwapChain f(WGPUDevice device, WGPUSurface surface, WGPUSwapChainDescriptor const * descriptor)
         self._internal = lib.wgpuDeviceCreateSwapChain(
@@ -603,11 +578,11 @@ class GPUCanvasContext(base.GPUCanvasContext):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUSwapChain swapChain)
-            lib.wgpuSwapChainDrop(internal)
+            lib.wgpuSwapChainRelease(internal)
         if self._surface_id is not None and lib is not None:
             self._surface_id, surface_id = None, self._surface_id
             # H: void f(WGPUSurface surface)
-            lib.wgpuSurfaceDrop(surface_id)
+            lib.wgpuSurfaceRelease(surface_id)
 
 
 class GPUObjectBase(base.GPUObjectBase):
@@ -715,7 +690,7 @@ class GPUAdapter(base.GPUAdapter):
         if trace_path:  # no-cover
             c_trace_path = ffi.new("char []", trace_path.encode())
 
-        # H: chain: WGPUChainedStruct, tracePath: char*
+        # H: chain: WGPUChainedStruct, tracePath: char *
         extras = new_struct_p(
             "WGPUDeviceExtras *",
             tracePath=c_trace_path,
@@ -723,9 +698,21 @@ class GPUAdapter(base.GPUAdapter):
         )
         extras.chain.sType = lib.WGPUSType_DeviceExtras
 
+        # ----- Device lost
+
+        @ffi.callback("void(WGPUDeviceLostReason, char *, void *)")
+        def device_lost_callback(c_reason, c_message, userdata):
+            reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
+            message = ffi.string(c_message).decode(errors="ignore")
+            message = message.replace("\\n", "\n")
+            self._on_error(f"The WGPU device was lost ({reason}):\n{message}")
+
+        # Keep the ref alive
+        self._device_lost_callback = device_lost_callback
+
         # ----- Request device
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor
+        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
             label=to_c_label(label),
@@ -734,6 +721,8 @@ class GPUAdapter(base.GPUAdapter):
             requiredFeatures=ffi.new("WGPUFeatureName []", c_features),
             requiredLimits=c_required_limits,
             defaultQueue=queue_struct,
+            deviceLostCallback=device_lost_callback,
+            # not used: deviceLostUserdata
         )
 
         device_id = None
@@ -746,7 +735,7 @@ class GPUAdapter(base.GPUAdapter):
             nonlocal device_id
             device_id = result
 
-        # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor /* nullable */, WGPURequestDeviceCallback callback, void * userdata)
+        # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallback callback, void * userdata)
         lib.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
 
         if device_id is None:  # pragma: no cover
@@ -834,24 +823,12 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             else:
                 self._on_error(f"Uncaught WGPU error ({error_type}):\n{message}")
 
-        @ffi.callback("void(WGPUDeviceLostReason, char *, void *)")
-        def device_lost_callback(c_reason, c_message, userdata):
-            reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
-            message = ffi.string(c_message).decode(errors="ignore")
-            message = message.replace("\\n", "\n")
-            self._on_error(f"The WGPU device was lost ({reason}):\n{message}")
-
-        # Keep the refs alive
+        # Keep the ref alive
         self._uncaptured_error_callback = uncaptured_error_callback
-        self._device_lost_callback = device_lost_callback
 
         # H: void f(WGPUDevice device, WGPUErrorCallback callback, void * userdata)
         lib.wgpuDeviceSetUncapturedErrorCallback(
             self._internal, uncaptured_error_callback, ffi.NULL
-        )
-        # H: void f(WGPUDevice device, WGPUDeviceLostCallback callback, void * userdata)
-        lib.wgpuDeviceSetDeviceLostCallback(
-            self._internal, device_lost_callback, ffi.NULL
         )
 
     def _on_error(self, message):
@@ -999,7 +976,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             # not used: nextInChain
         )
 
-        # H: WGPUSampler f(WGPUDevice device, WGPUSamplerDescriptor const * descriptor /* nullable */)
+        # H: WGPUSampler f(WGPUDevice device, WGPUSamplerDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateSampler(self._internal, struct)
         return GPUSampler(label, id, self)
 
@@ -1227,7 +1204,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                         )
                     )
                 c_defines = ffi.new("WGPUShaderDefine []", defines)
-                # H: chain: WGPUChainedStruct, stage: WGPUShaderStage, code: char *, defineCount: int, defines: WGPUShaderDefine*/WGPUShaderDefine *
+                # H: chain: WGPUChainedStruct, stage: WGPUShaderStage, code: char *, defineCount: int, defines: WGPUShaderDefine *
                 source_struct = new_struct_p(
                     "WGPUShaderModuleGLSLDescriptor *",
                     code=ffi.new("char []", code.encode()),
@@ -1550,7 +1527,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             # not used: nextInChain
         )
 
-        # H: WGPUCommandEncoder f(WGPUDevice device, WGPUCommandEncoderDescriptor const * descriptor /* nullable */)
+        # H: WGPUCommandEncoder f(WGPUDevice device, WGPUCommandEncoderDescriptor const * descriptor)
         id = lib.wgpuDeviceCreateCommandEncoder(self._internal, struct)
         return GPUCommandEncoder(label, id, self)
 
@@ -1670,7 +1647,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBuffer buffer)
-            lib.wgpuBufferDrop(internal)
+            lib.wgpuBufferRelease(internal)
 
 
 class GPUTexture(base.GPUTexture, GPUObjectBase):
@@ -1716,7 +1693,7 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
             arrayLayerCount=array_layer_count,
             # not used: nextInChain
         )
-        # H: WGPUTextureView f(WGPUTexture texture, WGPUTextureViewDescriptor const * descriptor /* nullable */)
+        # H: WGPUTextureView f(WGPUTexture texture, WGPUTextureViewDescriptor const * descriptor)
         id = lib.wgpuTextureCreateView(self._internal, struct)
         return GPUTextureView(label, id, self._device, self, self.size)
 
@@ -1727,7 +1704,7 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUTexture texture)
-            lib.wgpuTextureDrop(internal)
+            lib.wgpuTextureRelease(internal)
 
 
 class GPUTextureView(base.GPUTextureView, GPUObjectBase):
@@ -1735,7 +1712,7 @@ class GPUTextureView(base.GPUTextureView, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUTextureView textureView)
-            lib.wgpuTextureViewDrop(internal)
+            lib.wgpuTextureViewRelease(internal)
 
 
 class GPUSampler(base.GPUSampler, GPUObjectBase):
@@ -1743,7 +1720,7 @@ class GPUSampler(base.GPUSampler, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUSampler sampler)
-            lib.wgpuSamplerDrop(internal)
+            lib.wgpuSamplerRelease(internal)
 
 
 class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
@@ -1751,7 +1728,7 @@ class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBindGroupLayout bindGroupLayout)
-            lib.wgpuBindGroupLayoutDrop(internal)
+            lib.wgpuBindGroupLayoutRelease(internal)
 
 
 class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
@@ -1759,7 +1736,7 @@ class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBindGroup bindGroup)
-            lib.wgpuBindGroupDrop(internal)
+            lib.wgpuBindGroupRelease(internal)
 
 
 class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
@@ -1767,7 +1744,7 @@ class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUPipelineLayout pipelineLayout)
-            lib.wgpuPipelineLayoutDrop(internal)
+            lib.wgpuPipelineLayoutRelease(internal)
 
 
 class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
@@ -1778,7 +1755,7 @@ class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUShaderModule shaderModule)
-            lib.wgpuShaderModuleDrop(internal)
+            lib.wgpuShaderModuleRelease(internal)
 
 
 class GPUPipelineBase(base.GPUPipelineBase):
@@ -1790,7 +1767,7 @@ class GPUComputePipeline(base.GPUComputePipeline, GPUPipelineBase, GPUObjectBase
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUComputePipeline computePipeline)
-            lib.wgpuComputePipelineDrop(internal)
+            lib.wgpuComputePipelineRelease(internal)
 
 
 class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
@@ -1798,7 +1775,7 @@ class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderPipeline renderPipeline)
-            lib.wgpuRenderPipelineDrop(internal)
+            lib.wgpuRenderPipelineRelease(internal)
 
 
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
@@ -1812,7 +1789,7 @@ class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandBuffer commandBuffer)
-            lib.wgpuCommandBufferDrop(internal)
+            lib.wgpuCommandBufferRelease(internal)
 
 
 class GPUCommandsMixin(base.GPUCommandsMixin):
@@ -1832,12 +1809,12 @@ class GPUBindingCommandsMixin(base.GPUBindingCommandsMixin):
         c_offsets = ffi.new("uint32_t []", offsets)
         bind_group_id = bind_group._internal
         if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, uint32_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
+            # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
             lib.wgpuComputePassEncoderSetBindGroup(
                 self._internal, index, bind_group_id, len(offsets), c_offsets
             )
         else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, uint32_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
+            # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
             lib.wgpuRenderPassEncoderSetBindGroup(
                 self._internal,
                 index,
@@ -1969,7 +1946,7 @@ class GPUCommandEncoder(
             # not used: timestampWriteCount
             # not used: timestampWrites
         )
-        # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor /* nullable */)
+        # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
         raw_pass = lib.wgpuCommandEncoderBeginComputePass(self._internal, struct)
         return GPUComputePassEncoder(label, raw_pass, self)
 
@@ -2295,7 +2272,7 @@ class GPUCommandEncoder(
             label=to_c_label(label),
             # not used: nextInChain
         )
-        # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor /* nullable */)
+        # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = lib.wgpuCommandEncoderFinish(self._internal, struct)
         # WGPU destroys the command encoder when it's finished. So we set
         # _internal to None to avoid dropping a nonexistent object.
@@ -2316,7 +2293,7 @@ class GPUCommandEncoder(
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandEncoder commandEncoder)
-            lib.wgpuCommandEncoderDrop(internal)
+            lib.wgpuCommandEncoderRelease(internal)
 
 
 class GPUComputePassEncoder(
@@ -2435,14 +2412,14 @@ class GPURenderBundleEncoder(
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderBundleEncoder renderBundleEncoder)
-            lib.wgpuRenderBundleEncoderDrop(internal)
+            lib.wgpuRenderBundleEncoderRelease(internal)
 
 
 class GPUQueue(base.GPUQueue, GPUObjectBase):
     def submit(self, command_buffers):
         command_buffer_ids = [cb._internal for cb in command_buffers]
         c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
-        # H: void f(WGPUQueue queue, uint32_t commandCount, WGPUCommandBuffer const * commands)
+        # H: void f(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands)
         lib.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
         # WGPU destroys the resource when submitting. We follow this
         # to avoid dropping a nonexistent object.
@@ -2636,7 +2613,7 @@ class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderBundle renderBundle)
-            lib.wgpuRenderBundleDrop(internal)
+            lib.wgpuRenderBundleRelease(internal)
 
 
 class GPUDeviceLostInfo(base.GPUDeviceLostInfo):
@@ -2670,7 +2647,7 @@ class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUQuerySet querySet)
-            lib.wgpuQuerySetDrop(internal)
+            lib.wgpuQuerySetRelease(internal)
 
 
 class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):

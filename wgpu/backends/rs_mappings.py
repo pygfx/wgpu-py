@@ -4,7 +4,7 @@
 
 # flake8: noqa
 
-# There are 227 enum mappings
+# There are 232 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
@@ -31,6 +31,9 @@ enummap = {
     "BufferBindingType.read-only-storage": 3,
     "BufferBindingType.storage": 2,
     "BufferBindingType.uniform": 1,
+    "BufferMapState.mapped": 2,
+    "BufferMapState.pending": 1,
+    "BufferMapState.unmapped": 0,
     "CompareFunction.always": 8,
     "CompareFunction.equal": 6,
     "CompareFunction.greater": 4,
@@ -49,8 +52,10 @@ enummap = {
     "ErrorFilter.internal": 2,
     "ErrorFilter.out-of-memory": 1,
     "ErrorFilter.validation": 0,
+    "FeatureName.bgra8unorm-storage": 11,
     "FeatureName.depth-clip-control": 1,
     "FeatureName.depth32float-stencil8": 2,
+    "FeatureName.float32-filterable": 12,
     "FeatureName.indirect-first-instance": 8,
     "FeatureName.rg11b10ufloat-renderable": 10,
     "FeatureName.shader-f16": 9,
@@ -290,26 +295,28 @@ cstructfield2enum = {
 
 enum_str2int = {
     "BackendType": {
-        "Null": 0,
-        "WebGPU": 1,
-        "D3D11": 2,
-        "D3D12": 3,
-        "Metal": 4,
-        "Vulkan": 5,
-        "OpenGL": 6,
-        "OpenGLES": 7,
+        "Undefined": 0,
+        "Null": 1,
+        "WebGPU": 2,
+        "D3D11": 3,
+        "D3D12": 4,
+        "Metal": 5,
+        "Vulkan": 6,
+        "OpenGL": 7,
+        "OpenGLES": 8,
     }
 }
 enum_int2str = {
     "BackendType": {
-        0: "Null",
-        1: "WebGPU",
-        2: "D3D11",
-        3: "D3D12",
-        4: "Metal",
-        5: "Vulkan",
-        6: "OpenGL",
-        7: "OpenGLES",
+        0: "Undefined",
+        1: "Null",
+        2: "WebGPU",
+        3: "D3D11",
+        4: "D3D12",
+        5: "Metal",
+        6: "Vulkan",
+        7: "OpenGL",
+        8: "OpenGLES",
     },
     "AdapterType": {
         0: "DiscreteGPU",
