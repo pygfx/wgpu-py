@@ -4,20 +4,20 @@ shader_code = """
 
 // migrated from: https://www.shadertoy.com/view/XlfGRj, By Kali
 
-let iterations = 17;
-let formuparam = 0.53;
+const iterations = 17;
+const formuparam = 0.53;
 
-let volsteps = 20;
-let stepsize = 0.1;
+const volsteps = 20;
+const stepsize = 0.1;
 
-let zoom = 0.800;
-let tile = 0.850;
-let speed = 0.010;
+const zoom = 0.800;
+const tile = 0.850;
+const speed = 0.010;
 
-let brightness = 0.0015;
-let darkmatter = 0.300;
-let distfading = 0.730;
-let saturation = 0.850;
+const brightness = 0.0015;
+const darkmatter = 0.300;
+const distfading = 0.730;
+const saturation = 0.850;
 
 fn mod3( p1 : vec3<f32>, p2 : vec3<f32> ) -> vec3<f32> {
     let mx = p1.x - p2.x * floor( p1.x / p2.x );

@@ -22,12 +22,12 @@ fn mod1( x : f32, y : f32 ) -> f32 {
     return x - y * floor( x / y );
 }
 
-fn de(pos: vec3<f32>) -> f32 {
+fn de(pos_: vec3<f32>) -> f32 {
     var t = mod1(i_time, 17.0);
     var a = smoothstep(13.0, 15.0, t) * 8.0 - smoothstep(4.0, 0.0, t) * 4.0;
     var f = sin(i_time * 5.0 + sin(i_time * 20.0) * 0.2);
 
-    var pos = pos;
+    var pos = pos_;
 
     let pxz = pos.xz * rot(i_time + 0.5);
     pos.x = pxz.x;
@@ -93,14 +93,14 @@ fn normal(p: vec3<f32>) -> vec3<f32> {
     return normalize( vec3<f32>( de(p + d.yxx), de(p + d.xyx), de(p + d.xxy) ) - de(p) );
 }
 
-fn march(fro: vec3<f32>, dir: vec3<f32>, frag_coord: vec2<f32>) -> vec3<f32> {
+fn march(fro: vec3<f32>, dir_: vec3<f32>, frag_coord: vec2<f32>) -> vec3<f32> {
     var d = 0.0;
     var td = 0.0;
     var maxdist = 30.0;
 
     var p = fro;
     var col = vec3<f32>(0.0);
-    var dir = dir;
+    var dir = dir_;
 
     for (var i = 0; i < 100; i+=1) {
         var d2 = de(p) * (1.0 - hash12(frag_coord.xy + i_time) * 0.2);

@@ -4,13 +4,13 @@ shader_code = """
 
 // migrated from: https://www.shadertoy.com/view/mds3DX
 
-let SHAPE_SIZE : f32 = .618;
-let CHROMATIC_ABBERATION : f32 = .01;
-let ITERATIONS : f32 = 10.;
-let INITIAL_LUMA : f32= .5;
+const SHAPE_SIZE : f32 = .618;
+const CHROMATIC_ABBERATION : f32 = .01;
+const ITERATIONS : f32 = 10.;
+const INITIAL_LUMA : f32= .5;
 
-let PI : f32 = 3.14159265359;
-let TWO_PI : f32 = 6.28318530718;
+const PI : f32 = 3.14159265359;
+const TWO_PI : f32 = 6.28318530718;
 
 fn rotate2d(_angle : f32) -> mat2x2<f32> {
     return mat2x2<f32>(cos(_angle),-sin(_angle),sin(_angle),cos(_angle));

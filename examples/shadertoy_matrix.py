@@ -4,7 +4,7 @@ shader_code = """
 
 // migrated from https://www.shadertoy.com/view/NlsXDH, By Kali
 
-let det = 0.001;
+const det = 0.001;
 
 var<private> t: f32;
 var<private> boxhit: f32;
@@ -38,8 +38,8 @@ fn path(t: f32) -> vec3<f32> {
     return p;
 }
 
-fn fractal(p: vec2<f32>) -> f32 {
-    var p = abs( 5.0 - mod_2( p*0.2, 10.0 ) ) - 5.0;
+fn fractal(p_: vec2<f32>) -> f32 {
+    var p = abs( 5.0 - mod_2( p_*0.2, 10.0 ) ) - 5.0;
     var ot = 1000.;
     for (var i = 0; i < 7; i+=1) {
         p = abs(p) / clamp(p.x*p.y, 0.25, 2.0) - 1.0;
@@ -56,7 +56,8 @@ fn box(p: vec3<f32>, l: vec3<f32>) -> f32 {
     return length(max(vec3<f32>(0.),c))+min(0.,max(c.x,max(c.y,c.z)));
 }
 
-fn de(p: vec3<f32>) -> f32 {
+fn de(p_: vec3<f32>) -> f32 {
+    var p = p_;
     boxhit = 0.0;
     var p2 = p-adv;
 
@@ -74,7 +75,6 @@ fn de(p: vec3<f32>) -> f32 {
 
     let b = box(p2, vec3<f32>(1.0));
 
-    var p = p;
     let p_xy = p.xy - path(p.z).xy;
     p.x = p_xy.x;
     p.y = p_xy.y;
@@ -130,8 +130,8 @@ fn march(fro: vec3<f32>, dir: vec3<f32>, frag_coord: vec2<f32>) -> vec3<f32> {
     return g;
 }
 
-fn lookat(dir: vec3<f32>, up: vec3<f32>) -> mat3x3<f32> {
-    let dir = normalize(dir);
+fn lookat(dir_: vec3<f32>, up: vec3<f32>) -> mat3x3<f32> {
+    let dir = normalize(dir_);
     let rt = normalize(cross(dir, normalize(up)));
     return mat3x3<f32>(rt, cross(rt, dir), dir);
 }
@@ -141,8 +141,8 @@ fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
     t=i_time*7.0;
     let fro=path(t);
     adv=path(t+6.+sin(t*.1)*3.);
-    let dir=normalize(vec3<f32>(uv, 0.7));
-    let dir=lookat(adv-fro, vec3<f32>(0.0, 1.0, 0.0)) * dir;
+    var dir=normalize(vec3<f32>(uv, 0.7));
+    dir=lookat(adv-fro, vec3<f32>(0.0, 1.0, 0.0)) * dir;
     let col=march(fro, dir, frag_coord);
     return vec4<f32>(col,1.0);
 }

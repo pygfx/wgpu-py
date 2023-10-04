@@ -2,9 +2,9 @@ from wgpu.utils.shadertoy import Shadertoy
 
 shader_code = """
 
-fn render(p: vec2<f32>) -> vec3<f32> {
+fn render(p_: vec2<f32>) -> vec3<f32> {
     let s = sin(i_time) * sin(i_time) * sin(i_time) + 0.5;
-    var p = p;
+    var p = p_;
     var d = length(p * 0.8) - pow(2.0 * abs(0.5 - fract(atan2(p.y, p.x) / 3.1416 * 2.5 + i_time * 0.3)), 2.5) * 0.1;
 
     var col = vec3<f32>(0.0);

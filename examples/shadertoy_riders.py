@@ -10,8 +10,8 @@ fn rot(a: f32) -> mat2x2<f32> {
     return mat2x2<f32>(c, s, -s, c);
 }
 
-fn render(p: vec2<f32>) -> vec3<f32> {
-    var p = p;
+fn render(p_: vec2<f32>) -> vec3<f32> {
+    var p = p_;
     p*=rot(i_time*.1)*(.0002+.7*pow(smoothstep(0.0,0.5,abs(0.5-fract(i_time*.01))),3.));
     p.y-=.2266;
     p.x+=.2082;
