@@ -67,9 +67,6 @@ check_expected_version(version_info)  # produces a warning on mismatch
 
 # %% Helper functions and objects
 
-WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF
-WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFF
-
 
 # Features that wgpu-native supports that are not part of WebGPU
 NATIVE_FEATURES = (
@@ -900,6 +897,9 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 "create_texture(.. view_formats is not yet supported."
             )
 
+        if not mip_level_count:
+            mip_level_count = 1  # or lib.WGPU_MIP_LEVEL_COUNT_UNDEFINED ?
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, dimension: WGPUTextureDimension, size: WGPUExtent3D, format: WGPUTextureFormat, mipLevelCount: int, sampleCount: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *
         struct = new_struct_p(
             "WGPUTextureDescriptor *",
@@ -980,7 +980,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 check_struct("BufferBindingLayout", info)
                 min_binding_size = info.get("min_binding_size", None)
                 if min_binding_size is None:
-                    min_binding_size = WGPU_LIMIT_U64_UNDEFINED
+                    min_binding_size = lib.WGPU_LIMIT_U64_UNDEFINED
                 elif min_binding_size == 0:
                     raise ValueError(
                         "min_binding_size should not be 0, use a proper value or None for default."
@@ -1659,7 +1659,7 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
             mip_level_count = self._tex_info["mip_level_count"] - base_mip_level
         if not array_layer_count:
             if dimension in ("1d", "2d", "3d"):
-                array_layer_count = 1
+                array_layer_count = 1  # or WGPU_ARRAY_LAYER_COUNT_UNDEFINED ?
             elif dimension == "cube":
                 array_layer_count = 6
             elif dimension in ("2d-array", "cube-array"):
@@ -2557,7 +2557,7 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         destination = {
             "buffer": tmp_buffer,
             "offset": 0,
-            "bytes_per_row": full_stride,
+            "bytes_per_row": full_stride,  # or WGPU_COPY_STRIDE_UNDEFINED ?
             "rows_per_image": data_layout.get("rows_per_image", size[1]),
         }
 
