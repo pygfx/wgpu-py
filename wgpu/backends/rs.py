@@ -71,20 +71,13 @@ WGPU_LIMIT_U32_UNDEFINED = 0xFFFFFFFF
 WGPU_LIMIT_U64_UNDEFINED = 0xFFFFFFFFFFFFFFFF
 
 
-# Features in WebGPU that don't map to wgpu-native yet
-KNOWN_MISSING_FEATURES = [
-    "bgra8unorm-storage",
-    "float32-filterable",
-]
-
 # Features that wgpu-native supports that are not part of WebGPU
 NATIVE_FEATURES = (
-    "multi_draw_indirect",
-    "push_constants",
-    "texture_adapter_specific_format_features",
-    "multi_draw_indirect",
-    "multi_draw_indirect_count",
-    "vertex_writable_storage",
+    "PushConstants",
+    "TextureAdapterSpecificFormatFeatures",
+    "MultiDrawIndirect",
+    "MultiDrawIndirectCount",
+    "VertexWritableStorage",
 )
 
 # Object to be able to bind the lifetime of objects to other objects
@@ -238,7 +231,7 @@ class GPU(base.GPU):
         # See https://github.com/gfx-rs/wgpu/issues/1416
         # todo: for the moment we default to forcing Vulkan on Windows
         force_backend = os.getenv("WGPU_BACKEND_TYPE", None)
-        backend = enum_str2int["BackendType"]["Null"]
+        backend = enum_str2int["BackendType"]["Undefined"]
         if force_backend is None:  # Allow OUR defaults
             if sys.platform.startswith("win"):
                 backend = enum_str2int["BackendType"]["Vulkan"]
@@ -342,10 +335,6 @@ class GPU(base.GPU):
         features = set()
         for f in sorted(enums.FeatureName):
             key = f"FeatureName.{f}"
-            if key not in enummap:
-                if f not in KNOWN_MISSING_FEATURES:  # pragma: no cover
-                    raise RuntimeError(f"Unexpected feature {f}")
-                continue
             i = enummap[key]
             # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
             if lib.wgpuAdapterHasFeature(adapter_id, i):
@@ -353,7 +342,7 @@ class GPU(base.GPU):
 
         # Native features
         for f in NATIVE_FEATURES:
-            i = getattr(lib, f"WGPUNativeFeature_{f.upper()}")
+            i = getattr(lib, f"WGPUNativeFeature_{f}")
             # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
             if lib.wgpuAdapterHasFeature(adapter_id, i):
                 features.add(f)
@@ -760,10 +749,6 @@ class GPUAdapter(base.GPUAdapter):
         features = set()
         for f in sorted(enums.FeatureName):
             key = f"FeatureName.{f}"
-            if key not in enummap:
-                if f not in KNOWN_MISSING_FEATURES:  # pragma: no cover
-                    raise RuntimeError(f"Unexpected feature {f}")
-                continue
             i = enummap[key]
             # H: bool f(WGPUDevice device, WGPUFeatureName feature)
             if lib.wgpuDeviceHasFeature(device_id, i):
@@ -771,7 +756,7 @@ class GPUAdapter(base.GPUAdapter):
 
         # Native features
         for f in NATIVE_FEATURES:
-            i = getattr(lib, f"WGPUNativeFeature_{f.upper()}")
+            i = getattr(lib, f"WGPUNativeFeature_{f}")
             # H: bool f(WGPUDevice device, WGPUFeatureName feature)
             if lib.wgpuDeviceHasFeature(device_id, i):
                 features.add(f)
