@@ -216,7 +216,7 @@ jobs:
     - name: Build wheels
       uses: pypa/cibuildwheel@v2.16.2
       env:
-          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux2014_x86_64
+          CIBW_MANYLINUX_X86_64_IMAGE: quay.io/pypa/manylinux_2_28_x86_64
       with:
         output-dir: dist
     - name: Twine check
