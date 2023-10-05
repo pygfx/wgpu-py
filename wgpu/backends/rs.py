@@ -784,7 +784,22 @@ class GPUAdapter(base.GPUAdapter):
 
     def _on_error(self, message):
         """Log the error message (for errors produced by wgpu)."""
-        logger.error(message)
+        self._error_message_counts = getattr(self, "_error_message_counts", {})
+
+        # Get count for this message. Use a hash that does not use the
+        # digits in the message, because of id's getting renewed on
+        # each draw.
+        h = hash("".join(c for c in message if not c.isdigit()))
+        count = self._error_message_counts.get(h, 0) + 1
+        self._error_message_counts[h] = count
+
+        # Decide what to do
+        if count == 1:
+            logger.error(message)
+        elif count < 10:
+            logger.error(message.splitlines()[0] + f" ({count})")
+        elif count == 10:
+            logger.error(message.splitlines()[0] + " (hiding from now)")
 
     def _destroy(self):
         if self._internal is not None and lib is not None:
