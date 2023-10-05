@@ -63,7 +63,7 @@ _the_instance = None
 
 def get_wgpu_instance():
     """Get the global wgpu instance."""
-    # Note, we could also use wgpuInstanceDrop,
+    # Note, we could also use wgpuInstanceRelease,
     # but we keep a global instance, so we don't have to.
     global _the_instance
     if _the_instance is None:
@@ -289,27 +289,27 @@ def to_camel_case(name):
     return name2
 
 
-class DelayedDropper:
-    """Helps drop objects at a later time."""
+class DelayedReleaser:
+    """Helps release objects at a later time."""
 
-    # I found that when wgpuDeviceDrop() was called in Device._destroy,
-    # the tests would hang. I found that the drop call was done around
+    # I found that when wgpuDeviceRelease() was called in Device._destroy,
+    # the tests would hang. I found that the release call was done around
     # the time when another device was used (e.g. to create a buffer
     # or shader module). For some reason, the delay in destruction (by
     # Python's CG) causes a deadlock or something. We seem to be able
-    # to fix this by doing the actual dropping later - e.g. when the
+    # to fix this by doing the actual release later - e.g. when the
     # user creates a new device. Seems to be the same for the adapter.
     def __init__(self):
-        self._things_to_drop = []
+        self._things_to_release = []
 
-    def drop_soon(self, fun, i):
-        self._things_to_drop.append((fun, i))
+    def release_soon(self, fun, i):
+        self._things_to_release.append((fun, i))
 
-    def drop_all_pending(self):
-        while self._things_to_drop:
-            fun, i = self._things_to_drop.pop(0)
-            drop_fun = getattr(lib, fun)
-            drop_fun(i)
+    def release_all_pending(self):
+        while self._things_to_release:
+            fun, i = self._things_to_release.pop(0)
+            release_func = getattr(lib, fun)
+            release_func(i)
 
 
-delayed_dropper = DelayedDropper()
+delayed_releaser = DelayedReleaser()

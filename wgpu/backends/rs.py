@@ -50,7 +50,7 @@ from .rs_helpers import (
     get_memoryview_and_address,
     to_snake_case,
     to_camel_case,
-    delayed_dropper,
+    delayed_releaser,
 )
 
 
@@ -620,7 +620,7 @@ class GPUAdapter(base.GPUAdapter):
         self, label, required_features, required_limits, default_queue, trace_path
     ):
         # This is a good moment to release destroyed objects
-        delayed_dropper.drop_all_pending()
+        delayed_releaser.release_all_pending()
 
         # ---- Handle features
 
@@ -789,7 +789,7 @@ class GPUAdapter(base.GPUAdapter):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            delayed_dropper.drop_soon("wgpuAdapterRelease", internal)
+            delayed_releaser.release_soon("wgpuAdapterRelease", internal)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
@@ -1525,7 +1525,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            delayed_dropper.drop_soon("wgpuDeviceRelease", internal)
+            delayed_releaser.release_soon("wgpuDeviceRelease", internal)
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
