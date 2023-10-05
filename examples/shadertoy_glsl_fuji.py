@@ -1,7 +1,5 @@
 from wgpu.utils.shadertoy import Shadertoy
 
-# run_example = false
-
 shader_code = """
 
 // https://www.shadertoy.com/view/Wt33Wf

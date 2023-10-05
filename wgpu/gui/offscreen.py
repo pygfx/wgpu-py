@@ -76,11 +76,6 @@ WgpuCanvas = WgpuManualOffscreenCanvas
 
 def call_later(delay, callback, *args):
     loop = asyncio.get_event_loop_policy().get_event_loop()
-    # for the offscreen canvas, we prevent new frames and callbacks
-    # from being queued while the loop is running. this avoids
-    # callbacks from one visualization leaking into the next.
-    if loop.is_running():
-        return
     loop.call_later(delay, callback, *args)
 
 
@@ -90,14 +85,15 @@ async def mainloop_iter():
 
 def run():
     """Handle all tasks scheduled with call_later and return."""
-    # This runs the stub coroutine mainloop_iter.
-    # Additionally, asyncio will run all pending callbacks
-    # scheduled with call_later.
     loop = asyncio.get_event_loop_policy().get_event_loop()
-    if not loop.is_running():
-        loop.run_until_complete(mainloop_iter())
-    else:
-        return  # Probably an interactive session
 
+    # If the loop is already running, this is likely an interactive session or something
+    if loop.is_running():
+        return
+
+    # Run stub mainloop, so that all currently pending tasks are handled
+    loop.run_until_complete(mainloop_iter())
+
+    # Cancel all remaining tasks (those that are scheduled later)
     for t in asyncio.all_tasks(loop=loop):
         t.cancel()
