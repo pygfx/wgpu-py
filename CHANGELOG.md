@@ -33,6 +33,7 @@ Changed:
 * In WGSL: toplevel constantas must be defined using `const`, using `let` will now fail.
 * In WGSL: it is no longer possible to re-declrare an existing variable name.
 * Error messages may look a bit different, since wgpu-native now produces nice messages replacing our custom ones.
+* Errors produced by a call into a wgpu-native function now produce a Python exception (no more async logging of errors).
 
 
 ### [v0.9.5] - 02-10-2023
