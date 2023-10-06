@@ -1,9 +1,26 @@
 import os
+import re
 import sys
 import ctypes
-import re
+import types
 
 from .rs_ffi import ffi, lib
+from ..base import (
+    GPUError,
+    GPUOutOfMemoryError,
+    GPUValidationError,
+    GPUPipelineError,
+    GPUInternalError,
+)
+
+
+ERROR_TYPES = {
+    "": GPUError,
+    "OutOfMemory": GPUOutOfMemoryError,
+    "Validation": GPUValidationError,
+    "Pipeline": GPUPipelineError,
+    "Internal": GPUInternalError,
+}
 
 
 if sys.platform.startswith("darwin"):
@@ -312,4 +329,97 @@ class DelayedReleaser:
             release_func(i)
 
 
-delayed_releaser = DelayedReleaser()
+class ErrorHandler:
+    """Object that logs errors, with the option to collect incoming
+    errors elsewhere.
+    """
+
+    def __init__(self, logger):
+        self._logger = logger
+        self._proxy_stack = []
+        self._error_message_counts = {}
+
+    def capture(self, func):
+        """Send incoming error messages to the given func instead of logging them."""
+        self._proxy_stack.append(func)
+
+    def release(self, func):
+        """Release the given func."""
+        f = self._proxy_stack.pop(-1)
+        if f is not func:
+            self._proxy_stack.clear()
+            self._logger.warning("ErrorHandler capture/release out of sync")
+
+    def handle_error(self, error_type: str, message: str):
+        """Handle an error message."""
+        if self._proxy_stack:
+            self._proxy_stack[-1](error_type, message)
+        else:
+            self.log_error(message)
+
+    def log_error(self, message):
+        """Hanle an error message by logging it, bypassing any capturing."""
+        # Get count for this message. Use a hash that does not use the
+        # digits in the message, because of id's getting renewed on
+        # each draw.
+        h = hash("".join(c for c in message if not c.isdigit()))
+        count = self._error_message_counts.get(h, 0) + 1
+        self._error_message_counts[h] = count
+
+        # Decide what to do
+        if count == 1:
+            self._logger.error(message)
+        elif count < 10:
+            self._logger.error(message.splitlines()[0] + f" ({count})")
+        elif count == 10:
+            self._logger.error(message.splitlines()[0] + " (hiding from now)")
+
+
+class SafeLibCalls:
+    """Object that copies all library functions, but wrapped in such
+    a way that errors occuring in that call are raised as exceptions.
+    """
+
+    def __init__(self, lib, error_handler):
+        self._error_handler = error_handler
+        self._error_message = None
+        self._make_function_copies(lib)
+
+    def _make_function_copies(self, lib):
+        for name in dir(lib):
+            if name.startswith("wgpu"):
+                ob = getattr(lib, name)
+                if callable(ob):
+                    setattr(self, name, self._make_proxy_func(name, ob))
+
+    def _handle_error(self, error_type, message):
+        # If we already had an error, we log the earlier one now
+        if self._error_message:
+            self._error_handler.log_error(self._error_message[1])
+        # Store new error
+        self._error_message = (error_type, message)
+
+    def _make_proxy_func(self, name, ob):
+        def proxy_func(*args):
+            # Make the call, with error capturing on
+            handle_error = self._handle_error
+            self._error_handler.capture(handle_error)
+            try:
+                result = ob(*args)
+            finally:
+                self._error_handler.release(handle_error)
+
+            # Handle the error.
+            if self._error_message:
+                error_type, message = self._error_message
+                self._error_message = None
+                cls = ERROR_TYPES.get(error_type, GPUError)
+                wgpu_error = cls(message)
+                # The line below will be the bottom line in the traceback,
+                # so better make it informative! As far as I know there is
+                # no way to exclude this frame from the traceback.
+                raise wgpu_error  # the frame above is more interesting ↑↑
+            return result
+
+        proxy_func.__name__ = name
+        return proxy_func

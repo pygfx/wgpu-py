@@ -19,7 +19,7 @@
 * Validated 39 classes, 111 methods, 44 properties
 ### Patching API for backends/rs.py
 * Diffs for GPUAdapter: add request_device_tracing
-* Validated 39 classes, 100 methods, 0 properties
+* Validated 39 classes, 99 methods, 0 properties
 ## Validating rs.py
 * Enum field TextureFormat.rgb10a2uint missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
