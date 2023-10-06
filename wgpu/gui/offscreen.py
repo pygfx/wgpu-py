@@ -76,6 +76,11 @@ WgpuCanvas = WgpuManualOffscreenCanvas
 
 def call_later(delay, callback, *args):
     loop = asyncio.get_event_loop_policy().get_event_loop()
+    # for the offscreen canvas, we prevent new frames and callbacks
+    # from being queued while the loop is running. this avoids
+    # callbacks from one visualization leaking into the next.
+    if loop.is_running():
+        return
     loop.call_later(delay, callback, *args)
 
 
