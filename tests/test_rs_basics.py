@@ -711,7 +711,7 @@ def test_parse_shader_error1(caplog):
     """
 
     expected = """
-        Uncaptured WGPU error: Validation Error
+        Validation Error
 
         Caused by:
             In wgpuDeviceCreateShaderModule
@@ -728,9 +728,10 @@ def test_parse_shader_error1(caplog):
 
     code = dedent(code)
     expected = dedent(expected)
-    device.create_shader_module(code=code)
+    with raises(wgpu.GPUError) as err:
+        device.create_shader_module(code=code)
 
-    error = caplog.records[0].msg.strip()
+    error = err.value.message
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -746,7 +747,7 @@ def test_parse_shader_error2(caplog):
     """
 
     expected = """
-        Uncaptured WGPU error: Validation Error
+        Validation Error
 
         Caused by:
             In wgpuDeviceCreateShaderModule
@@ -763,9 +764,10 @@ def test_parse_shader_error2(caplog):
 
     code = dedent(code)
     expected = dedent(expected)
-    device.create_shader_module(code=code)
+    with raises(wgpu.GPUError) as err:
+        device.create_shader_module(code=code)
 
-    error = caplog.records[0].msg.strip()
+    error = err.value.message
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -781,7 +783,7 @@ def test_parse_shader_error3(caplog):
     """
 
     expected = """
-        Uncaptured WGPU error: Validation Error
+        Validation Error
 
         Caused by:
             In wgpuDeviceCreateShaderModule
@@ -800,9 +802,10 @@ def test_parse_shader_error3(caplog):
 
     code = dedent(code)
     expected = dedent(expected)
-    device.create_shader_module(code=code)
+    with raises(wgpu.GPUError) as err:
+        device.create_shader_module(code=code)
 
-    error = caplog.records[0].msg.strip()
+    error = err.value.message
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -818,7 +821,7 @@ def test_parse_shader_error4(caplog):
     """
 
     expected = """
-        Uncaptured WGPU error: Validation Error
+        Validation Error
 
         Caused by:
             In wgpuDeviceCreateShaderModule
@@ -841,9 +844,10 @@ def test_parse_shader_error4(caplog):
 
     code = dedent(code)
     expected = dedent(expected)
-    device.create_shader_module(code=code)
+    with raises(wgpu.GPUError) as err:
+        device.create_shader_module(code=code)
 
-    error = caplog.records[0].msg.strip()
+    error = err.value.message
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -869,7 +873,7 @@ def test_validate_shader_error1(caplog):
     expected1 = """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, width: 4 }"""
     expected2 = """Right: Load { pointer: [6] } of type Vector { size: Tri, kind: Float, width: 4 }"""
     expected3 = """
-        Uncaptured WGPU error: Validation Error
+        Validation Error
 
         Caused by:
             In wgpuDeviceCreateShaderModule
@@ -888,12 +892,13 @@ def test_validate_shader_error1(caplog):
 
     code = dedent(code)
     expected3 = dedent(expected3)
-    device.create_shader_module(code=code)
+    with raises(wgpu.GPUError) as err:
+        device.create_shader_module(code=code)
 
     # skip error info
     assert caplog.records[0].msg == expected1
     assert caplog.records[1].msg == expected2
-    assert caplog.records[2].msg.strip() == expected3, f"Expected:\n\n{expected3}"
+    assert err.value.message.strip() == expected3, f"Expected:\n\n{expected3}"
 
 
 def test_validate_shader_error2(caplog):
@@ -918,7 +923,7 @@ def test_validate_shader_error2(caplog):
 
     expected1 = """Returning Some(Vector { size: Tri, kind: Float, width: 4 }) where Some(Vector { size: Quad, kind: Float, width: 4 }) is expected"""
     expected2 = """
-        Uncaptured WGPU error: Validation Error
+        Validation Error
 
         Caused by:
             In wgpuDeviceCreateShaderModule
@@ -936,11 +941,12 @@ def test_validate_shader_error2(caplog):
 
     code = dedent(code)
     expected2 = dedent(expected2)
-    device.create_shader_module(code=code)
+    with raises(wgpu.GPUError) as err:
+        device.create_shader_module(code=code)
 
     # skip error info
     assert caplog.records[0].msg == expected1
-    assert caplog.records[1].msg.strip() == expected2, f"Expected:\n\n{expected2}"
+    assert err.value.message.strip() == expected2, f"Expected:\n\n{expected2}"
 
 
 if __name__ == "__main__":

@@ -10,8 +10,8 @@ def dedent(code):
 
 def test_patch_functions():
     code1 = """
-    lib.wgpuAdapterRequestDevice(1, 2, 3)
-    lib.wgpuFooBar(1, 2, 3)
+    libf.wgpuAdapterRequestDevice(1, 2, 3)
+    libf.wgpuFooBar(1, 2, 3)
     """
 
     code2 = patch_rs_backend(dedent(code1))
