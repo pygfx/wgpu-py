@@ -635,15 +635,17 @@ class GPUAdapter(base.GPUAdapter):
 
         c_features = set()
         for f in required_features:
-            if not isinstance(f, str):
+            if isinstance(f, str):
                 if "_" in f:
-                    f = "".join(x.title() for x in f)
+                    f = "".join(x.title() for x in f.split("_"))
                 i1 = enummap.get(f"FeatureName.{f}", None)
-                i2 = getattr(lib, f"WGPUNativeFeature_{f.upper()}", None)
+                i2 = getattr(lib, f"WGPUNativeFeature_{f}", None)
                 i = i2 if i1 is None else i1
                 if i is None:  # pragma: no cover
                     raise KeyError(f"Unknown feature: '{f}'")
                 c_features.add(i)
+            else:
+                raise TypeError("Features must be given as str.")
 
         c_features = sorted(c_features)  # makes it a list
 

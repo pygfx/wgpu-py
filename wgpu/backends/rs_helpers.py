@@ -2,7 +2,6 @@ import os
 import re
 import sys
 import ctypes
-import types
 
 from .rs_ffi import ffi, lib
 from ..base import (
