@@ -29,9 +29,9 @@ Added:
 
 Changed:
 
-* The binary wheels are now based on manylinux 2.29, and the 32bit Linux wheels are no longer build.
-* In WGSL: toplevel constantas must be defined using `const`, using `let` will now fail.
-* In WGSL: it is no longer possible to re-declrare an existing variable name.
+* The binary wheels are now based on manylinux 2.28, and the 32bit Linux wheels are no longer built.
+* In WGSL: toplevel constants must be defined using `const`, using `let` will now fail.
+* In WGSL: it is no longer possible to re-declare an existing variable name.
 * Error messages may look a bit different, since wgpu-native now produces nice messages replacing our custom ones.
 * Errors produced by a call into a wgpu-native function now produce a Python exception (no more async logging of errors).
 
