@@ -3,18 +3,6 @@
 
 #include "webgpu.h"
 
-// must be used to free the strings & slices returned by the library,
-// for other wgpu objects use appropriate drop functions.
-//
-// first parameter `type` has to be type of derefrenced value
-// for example ->
-//
-//      size_t count;
-//      const WGPUTextureFormat* formats = wgpuSurfaceGetSupportedFormats(surface, adapter, &count);
-//      WGPU_FREE(WGPUTextureFormat, formats, count); // notice `WGPUTextureFormat` instead of `WGPUTextureFormat *`
-//
-#define WGPU_FREE(type, ptr, len) wgpuFree((void *)ptr, len * sizeof(type), _Alignof(type))
-
 typedef enum WGPUNativeSType {
     // Start at 6 to prevent collisions with webgpu STypes
     WGPUSType_DeviceExtras = 0x60000001,
@@ -24,15 +12,17 @@ typedef enum WGPUNativeSType {
     WGPUSType_ShaderModuleGLSLDescriptor = 0x60000005,
     WGPUSType_SupportedLimitsExtras = 0x60000003,
     WGPUSType_InstanceExtras = 0x60000006,
+    WGPUSType_SwapChainDescriptorExtras = 0x60000007,
     WGPUNativeSType_Force32 = 0x7FFFFFFF
 } WGPUNativeSType;
 
 typedef enum WGPUNativeFeature {
-    WGPUNativeFeature_PUSH_CONSTANTS = 0x60000001,
-    WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES = 0x60000002,
-    WGPUNativeFeature_MULTI_DRAW_INDIRECT = 0x60000003,
-    WGPUNativeFeature_MULTI_DRAW_INDIRECT_COUNT = 0x60000004,
-    WGPUNativeFeature_VERTEX_WRITABLE_STORAGE = 0x60000005,
+    WGPUNativeFeature_PushConstants = 0x60000001,
+    WGPUNativeFeature_TextureAdapterSpecificFormatFeatures = 0x60000002,
+    WGPUNativeFeature_MultiDrawIndirect = 0x60000003,
+    WGPUNativeFeature_MultiDrawIndirectCount = 0x60000004,
+    WGPUNativeFeature_VertexWritableStorage = 0x60000005,
+    WGPUNativeFeature_Force32 = 0x7FFFFFFF
 } WGPUNativeFeature;
 
 typedef enum WGPULogLevel {
@@ -61,19 +51,33 @@ typedef enum WGPUInstanceBackend {
 } WGPUInstanceBackend;
 typedef WGPUFlags WGPUInstanceBackendFlags;
 
+typedef enum WGPUDx12Compiler {
+    WGPUDx12Compiler_Undefined = 0x00000000,
+    WGPUDx12Compiler_Fxc = 0x00000001,
+    WGPUDx12Compiler_Dxc = 0x00000002,
+    WGPUDx12Compiler_Force32 = 0x7FFFFFFF
+} WGPUDx12Compiler;
+
+typedef enum WGPUCompositeAlphaMode {
+    WGPUCompositeAlphaMode_Auto = 0x00000000,
+    WGPUCompositeAlphaMode_Opaque = 0x00000001,
+    WGPUCompositeAlphaMode_PreMultiplied = 0x00000002,
+    WGPUCompositeAlphaMode_PostMultiplied = 0x00000003,
+    WGPUCompositeAlphaMode_Inherit = 0x00000004,
+    WGPUCompositeAlphaMode_Force32 = 0x7FFFFFFF
+} WGPUCompositeAlphaMode;
+
 typedef struct WGPUInstanceExtras {
     WGPUChainedStruct chain;
     WGPUInstanceBackendFlags backends;
+    WGPUDx12Compiler dx12ShaderCompiler;
+    const char * dxilPath;
+    const char * dxcPath;
 } WGPUInstanceExtras;
-
-typedef struct WGPUAdapterExtras {
-    WGPUChainedStruct chain;
-    WGPUBackendType backend;
-} WGPUAdapterExtras;
 
 typedef struct WGPUDeviceExtras {
     WGPUChainedStruct chain;
-    const char* tracePath;
+    const char * tracePath;
 } WGPUDeviceExtras;
 
 typedef struct WGPURequiredLimitsExtras {
@@ -115,7 +119,7 @@ typedef struct WGPUShaderModuleGLSLDescriptor {
     WGPUShaderStage stage;
     char const * code;
     uint32_t defineCount;
-    WGPUShaderDefine* defines;
+    WGPUShaderDefine * defines;
 } WGPUShaderModuleGLSLDescriptor;
 
 typedef struct WGPUStorageReport {
@@ -153,15 +157,37 @@ typedef struct WGPUGlobalReport {
     WGPUHubReport gl;
 } WGPUGlobalReport;
 
+typedef struct WGPUSurfaceCapabilities {
+    size_t formatCount;
+    WGPUTextureFormat * formats;
+    size_t presentModeCount;
+    WGPUPresentMode * presentModes;
+    size_t alphaModeCount;
+    WGPUCompositeAlphaMode * alphaModes;
+} WGPUSurfaceCapabilities;
+
+typedef struct WGPUSwapChainDescriptorExtras {
+    WGPUChainedStruct chain;
+    WGPUCompositeAlphaMode alphaMode;
+    size_t viewFormatCount;
+    WGPUTextureFormat const * viewFormats;
+} WGPUSwapChainDescriptorExtras;
+
+typedef struct WGPUInstanceEnumerateAdapterOptions {
+    WGPUChainedStruct const * nextInChain;
+    WGPUInstanceBackendFlags backends;
+} WGPUInstanceEnumerateAdapterOptions;
+
 typedef void (*WGPULogCallback)(WGPULogLevel level, char const * message, void * userdata);
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void wgpuGenerateReport(WGPUInstance instance, WGPUGlobalReport* report);
+void wgpuGenerateReport(WGPUInstance instance, WGPUGlobalReport * report);
+size_t wgpuInstanceEnumerateAdapters(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters);
 
-WGPUSubmissionIndex wgpuQueueSubmitForIndex(WGPUQueue queue, uint32_t commandCount, WGPUCommandBuffer const * commands);
+WGPUSubmissionIndex wgpuQueueSubmitForIndex(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands);
 
 // Returns true if the queue is empty, or false if there are more queue submissions still in flight.
 bool wgpuDevicePoll(WGPUDevice device, bool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex);
@@ -172,13 +198,7 @@ void wgpuSetLogLevel(WGPULogLevel level);
 
 uint32_t wgpuGetVersion(void);
 
-// Returns slice of supported texture formats
-// caller owns the formats slice and must WGPU_FREE() it
-WGPUTextureFormat const * wgpuSurfaceGetSupportedFormats(WGPUSurface surface, WGPUAdapter adapter, size_t * count);
-
-// Returns slice of supported present modes
-// caller owns the present modes slice and must WGPU_FREE() it
-WGPUPresentMode const * wgpuSurfaceGetSupportedPresentModes(WGPUSurface surface, WGPUAdapter adapter, size_t * count);
+void wgpuSurfaceGetCapabilities(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities);
 
 void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void* const data);
 
@@ -187,33 +207,6 @@ void wgpuRenderPassEncoderMultiDrawIndexedIndirect(WGPURenderPassEncoder encoder
 
 void wgpuRenderPassEncoderMultiDrawIndirectCount(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, WGPUBuffer count_buffer, uint64_t count_buffer_offset, uint32_t max_count);
 void wgpuRenderPassEncoderMultiDrawIndexedIndirectCount(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, WGPUBuffer count_buffer, uint64_t count_buffer_offset, uint32_t max_count);
-
-void wgpuInstanceDrop(WGPUInstance instance);
-void wgpuAdapterDrop(WGPUAdapter adapter);
-void wgpuBindGroupDrop(WGPUBindGroup bindGroup);
-void wgpuBindGroupLayoutDrop(WGPUBindGroupLayout bindGroupLayout);
-void wgpuBufferDrop(WGPUBuffer buffer);
-void wgpuCommandBufferDrop(WGPUCommandBuffer commandBuffer);
-void wgpuCommandEncoderDrop(WGPUCommandEncoder commandEncoder);
-void wgpuRenderPassEncoderDrop(WGPURenderPassEncoder renderPassEncoder);
-void wgpuComputePassEncoderDrop(WGPUComputePassEncoder computePassEncoder);
-void wgpuRenderBundleEncoderDrop(WGPURenderBundleEncoder renderBundleEncoder);
-void wgpuComputePipelineDrop(WGPUComputePipeline computePipeline);
-void wgpuDeviceDrop(WGPUDevice device);
-void wgpuPipelineLayoutDrop(WGPUPipelineLayout pipelineLayout);
-void wgpuQuerySetDrop(WGPUQuerySet querySet);
-void wgpuRenderBundleDrop(WGPURenderBundle renderBundle);
-void wgpuRenderPipelineDrop(WGPURenderPipeline renderPipeline);
-void wgpuSamplerDrop(WGPUSampler sampler);
-void wgpuShaderModuleDrop(WGPUShaderModule shaderModule);
-void wgpuSurfaceDrop(WGPUSurface surface);
-void wgpuSwapChainDrop(WGPUSwapChain swapChain);
-void wgpuTextureDrop(WGPUTexture texture);
-void wgpuTextureViewDrop(WGPUTextureView textureView);
-
-// must be used to free the strings & slices returned by the library,
-// for other wgpu objects use appropriate drop functions.
-void wgpuFree(void* ptr, size_t size, size_t align);
 
 #ifdef __cplusplus
 } // extern "C"

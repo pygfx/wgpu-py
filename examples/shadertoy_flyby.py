@@ -28,8 +28,8 @@ fn rot(a: f32) -> mat2x2<f32> {
     return mat2x2<f32>(c, s, -s, c);
 }
 
-fn fractal(p: vec2<f32>) -> vec3<f32> {
-    var p = fract(p*0.1);
+fn fractal(p_: vec2<f32>) -> vec3<f32> {
+    var p = fract(p_*0.1);
     var m = 1000.0;
     for (var i = 0; i < 7; i = i + 1) {
         p = ( abs(p) / clamp( abs(p.x*p.y), 0.25, 2.0 ) ) - 1.2;
@@ -39,8 +39,8 @@ fn fractal(p: vec2<f32>) -> vec3<f32> {
     return m*vec3<f32>(abs(p.x),m,abs(p.y));
 }
 
-fn coso(pp: vec3<f32>) -> f32 {
-    var pp = pp;
+fn coso(pp_: vec3<f32>) -> f32 {
+    var pp = pp_;
     pp*=.7;
 
     pp = vec3<f32>( pp.xy * rot(pp.z*2.0), pp.z);
@@ -63,11 +63,11 @@ fn coso(pp: vec3<f32>) -> f32 {
     return d;
 }
 
-fn de(p: vec3<f32>) -> f32 {
+fn de(p_: vec3<f32>) -> f32 {
     hit=0.;
     br=1000.;
-    let pp = p - sphpos;
-    var p = p;
+    let pp = p_ - sphpos;
+    var p = p_;
     let pxy = p.xy - path(p.z).xy;
     p.x = pxy.x;
     p.y = pxy.y;
@@ -98,8 +98,8 @@ fn de(p: vec3<f32>) -> f32 {
 }
 
 
-fn march(fro: vec3<f32>, dir: vec3<f32>) -> vec3<f32> {
-    var dir = dir;
+fn march(fro: vec3<f32>, dir_: vec3<f32>) -> vec3<f32> {
+    var dir = dir_;
     var uv: vec2<f32> = vec2<f32>( atan2( dir.x , dir.y ) + i_time * 0.5, length(dir.xy) + sin(i_time * 0.2));
     var col: vec3<f32> = fractal(uv);
     var d: f32 = 0.0;

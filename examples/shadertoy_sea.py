@@ -4,21 +4,21 @@ shader_code = """
 
 // migrated from https://www.shadertoy.com/view/Ms2SD1, "Seascape" by Alexander Alekseev aka TDM - 2014
 
-let NUM_STEPS = 8;
-let PI = 3.141592;
-let EPSILON = 0.001;
+const NUM_STEPS = 8;
+const PI = 3.141592;
+const EPSILON = 0.001;
 
-let ITER_GEOMETRY = 3;
-let ITER_FRAGMENT = 5;
+const ITER_GEOMETRY = 3;
+const ITER_FRAGMENT = 5;
 
-let SEA_HEIGHT = 0.6;
-let SEA_CHOPPY = 4.0;
-let SEA_SPEED = 0.8;
-let SEA_FREQ = 0.16;
-let SEA_BASE = vec3<f32>(0.0,0.09,0.18);
-let SEA_WATER_COLOR = vec3<f32>(0.48, 0.54, 0.36);
+const SEA_HEIGHT = 0.6;
+const SEA_CHOPPY = 4.0;
+const SEA_SPEED = 0.8;
+const SEA_FREQ = 0.16;
+const SEA_BASE = vec3<f32>(0.0,0.09,0.18);
+const SEA_WATER_COLOR = vec3<f32>(0.48, 0.54, 0.36);
 
-// let octave_m = mat2x2<f32>(1.6, 1.2, -1.2, 1.6);
+// const octave_m = mat2x2<f32>(1.6, 1.2, -1.2, 1.6);
 
 fn hash( p : vec2<f32> ) -> f32 {
    // let h = dot(p,vec2<f32>(127.1,311.7)); // percession issue?
@@ -60,15 +60,15 @@ fn specular( n : vec3<f32>, l : vec3<f32>, e : vec3<f32>, s : f32 ) -> f32 {
 }
 
 // sky
-fn getSkyColor( e : vec3<f32> ) -> vec3<f32> {
-    var e = e;
+fn getSkyColor( e_ : vec3<f32> ) -> vec3<f32> {
+    var e = e_;
     e.y = (max(e.y,0.0) * 0.8 + 0.2) * 0.8;
     return vec3<f32>(pow(1.0-e.y, 2.0), 1.0-e.y, 0.6+(1.0-e.y)*0.4) * 1.1;
 }
 
 // sea
-fn sea_octave( uv : vec2<f32>, choppy : f32 ) -> f32 {
-    let uv = uv + noise(uv);
+fn sea_octave( uv_ : vec2<f32>, choppy : f32 ) -> f32 {
+    let uv = uv_ + noise(uv_);
     var wv = 1.0-abs(sin(uv));
     let swv = abs(cos(uv));
     wv = mix(wv,swv,wv);
@@ -197,7 +197,7 @@ fn shader_main(frag_coord: vec2<f32>) -> vec4<f32> {
     }
     color = color / 9.0;
 
-    let color = getPixel(frag_coord, time);
+    color = getPixel(frag_coord, time);
 
     // post
     return vec4<f32>(pow(color, vec3<f32>(0.65)), 1.0);

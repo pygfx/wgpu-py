@@ -16,8 +16,8 @@ fn rot(a: f32) -> mat2x2<f32> {
     return mat2x2<f32>(c, s, -s, c);
 }
 
-fn fractal(p: vec2<f32>) -> vec3<f32> {
-    var p = vec2<f32>(p.x/p.y,1./p.y);
+fn fractal(p_: vec2<f32>) -> vec3<f32> {
+    var p = vec2<f32>(p_.x/p_.y,1./p_.y);
     p.y+=i_time*sign(p.y);
     p.x+=sin(i_time*.1)*sign(p.y)*4.;
     p.y=fract(p.y*.05);

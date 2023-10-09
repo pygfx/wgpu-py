@@ -711,24 +711,27 @@ def test_parse_shader_error1(caplog):
     """
 
     expected = """
-        Shader error: label:  Some("")
-        Parsing error: invalid field accessor `invalid_attr`
+        Validation Error
 
-          ┌─ wgsl:9:8
+        Caused by:
+            In wgpuDeviceCreateShaderModule
+
+        Shader '' parsing error: invalid field accessor `invalid_attr`
+          ┌─ wgsl:9:9
           │
         9 │     out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
           │         ^^^^^^^^^^^^ invalid accessor
-          │
-          = note:
+
+
+            invalid field accessor `invalid_attr`
     """
 
     code = dedent(code)
     expected = dedent(expected)
-
-    with raises(RuntimeError):
+    with raises(wgpu.GPUError) as err:
         device.create_shader_module(code=code)
 
-    error = caplog.records[0].msg.strip()
+    error = err.value.message
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -744,24 +747,27 @@ def test_parse_shader_error2(caplog):
     """
 
     expected = """
-        Shader error: label:  Some("")
-        Parsing error: expected ',', found ';'
+        Validation Error
 
-          ┌─ wgsl:2:37
+        Caused by:
+            In wgpuDeviceCreateShaderModule
+
+        Shader '' parsing error: expected ',', found ';'
+          ┌─ wgsl:2:38
           │
         2 │     @location(0) texcoord : vec2<f32>;
           │                                      ^ expected ','
-          │
-          = note:
+
+
+            expected ',', found ';'
     """
 
     code = dedent(code)
     expected = dedent(expected)
-
-    with raises(RuntimeError):
+    with raises(wgpu.GPUError) as err:
         device.create_shader_module(code=code)
 
-    error = caplog.records[0].msg.strip()
+    error = err.value.message
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -777,24 +783,29 @@ def test_parse_shader_error3(caplog):
     """
 
     expected = """
-        Shader error: label:  Some("")
-        Parsing error: unknown scalar type: 'f3'
+        Validation Error
 
-          ┌─ wgsl:3:38
+        Caused by:
+            In wgpuDeviceCreateShaderModule
+
+        Shader '' parsing error: unknown scalar type: 'f3'
+          ┌─ wgsl:3:39
           │
         3 │     @builtin(position) position: vec4<f3>,
           │                                       ^^ unknown scalar type
           │
-          = note: "Valid scalar types are f16, f32, f64, i8, i16, i32, i64, u8, u16, u32, u64, bool"
+          = note: Valid scalar types are f32, f64, i32, u32, bool
+
+
+            unknown scalar type: 'f3'
     """
 
     code = dedent(code)
     expected = dedent(expected)
-
-    with raises(RuntimeError):
+    with raises(wgpu.GPUError) as err:
         device.create_shader_module(code=code)
 
-    error = caplog.records[0].msg.strip()
+    error = err.value.message
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -810,17 +821,33 @@ def test_parse_shader_error4(caplog):
     """
 
     expected = """
-        Shader error: label:  Some("")
-        { message: "Index 4 is out of bounds for expression [7]", labels: [], notes: [] }
+        Validation Error
+
+        Caused by:
+            In wgpuDeviceCreateShaderModule
+
+        Shader validation error:
+          ┌─ :1:1
+          │
+        1 │ ╭ fn foobar() {
+        2 │ │     let m = mat2x2<f32>(0.0, 0.0, 0.0, 0.);
+        3 │ │     let scales = m[4];
+          │ │                  ^^^^ naga::Expression [9]
+          │ ╰──────────────────────^ naga::Function [1]
+
+
+            Function [1] 'foobar' is invalid
+            Expression [9] is invalid
+            Type resolution failed
+            Index 4 is out of bounds for expression [7]
     """
 
     code = dedent(code)
     expected = dedent(expected)
-
-    with raises(RuntimeError):
+    with raises(wgpu.GPUError) as err:
         device.create_shader_module(code=code)
 
-    error = caplog.records[0].msg.strip()
+    error = err.value.message
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -846,27 +873,32 @@ def test_validate_shader_error1(caplog):
     expected1 = """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, width: 4 }"""
     expected2 = """Right: Load { pointer: [6] } of type Vector { size: Tri, kind: Float, width: 4 }"""
     expected3 = """
-        Shader error: label:  Some("")
-        Validation error: Function(Expression { handle: [8], error: InvalidBinaryOperandTypes(Multiply, [5], [7]) })
+        Validation Error
 
-           ┌─ wgsl:10:19
+        Caused by:
+            In wgpuDeviceCreateShaderModule
+
+        Shader validation error:
+           ┌─ :10:20
            │
         10 │     out.position = matrics * out.position;
-           │                    ^^^^^^^^^^^^^^^^^^^^^^ InvalidBinaryOperandTypes(Multiply, [5], [7])
-           │
-           = note:
+           │                    ^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [8]
+
+
+            Entry point vs_main at Vertex is invalid
+            Expression [8] is invalid
+            Operation Multiply can't work with [5] and [7]
     """
 
     code = dedent(code)
     expected3 = dedent(expected3)
-
-    with raises(RuntimeError):
+    with raises(wgpu.GPUError) as err:
         device.create_shader_module(code=code)
 
     # skip error info
     assert caplog.records[0].msg == expected1
     assert caplog.records[1].msg == expected2
-    assert caplog.records[2].msg.strip() == expected3, f"Expected:\n\n{expected3}"
+    assert err.value.message.strip() == expected3, f"Expected:\n\n{expected3}"
 
 
 def test_validate_shader_error2(caplog):
@@ -891,26 +923,30 @@ def test_validate_shader_error2(caplog):
 
     expected1 = """Returning Some(Vector { size: Tri, kind: Float, width: 4 }) where Some(Vector { size: Quad, kind: Float, width: 4 }) is expected"""
     expected2 = """
-        Shader error: label:  Some("")
-        Validation error: Function(InvalidReturnType(Some([9])))
+        Validation Error
 
-          ┌─ wgsl:9:15
+        Caused by:
+            In wgpuDeviceCreateShaderModule
+
+        Shader validation error:
+          ┌─ :9:16
           │
         9 │         return vec3<f32>(1.0, 0.0, 1.0);
-          │                ^^^^^^^^^^^^^^^^^^^^^^^^ Function(InvalidReturnType(Some([9])))
-          │
-          = note:
+          │                ^^^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [9]
+
+
+            Entry point fs_main at Vertex is invalid
+            The `return` value Some([9]) does not match the function return value
     """
 
     code = dedent(code)
     expected2 = dedent(expected2)
-
-    with raises(RuntimeError):
+    with raises(wgpu.GPUError) as err:
         device.create_shader_module(code=code)
 
     # skip error info
     assert caplog.records[0].msg == expected1
-    assert caplog.records[1].msg.strip() == expected2, f"Expected:\n\n{expected2}"
+    assert err.value.message.strip() == expected2, f"Expected:\n\n{expected2}"
 
 
 if __name__ == "__main__":

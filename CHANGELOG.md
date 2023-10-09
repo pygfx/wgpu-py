@@ -25,6 +25,15 @@ Added:
 
 * New `wgpu.wgsl_language_features` property, which for now always returns an empty set.
 * The `GPUShaderModule.compilation_info` property (and its async version) are replaced with a `get_compilation_info()` method.
+* The WebGPU features "bgra8unorm-storage" and "float32-filterable" are now available.
+
+Changed:
+
+* The binary wheels are now based on manylinux 2.28, and the 32bit Linux wheels are no longer built.
+* In WGSL: toplevel constants must be defined using `const`, using `let` will now fail.
+* In WGSL: it is no longer possible to re-declare an existing variable name.
+* Error messages may look a bit different, since wgpu-native now produces nice messages replacing our custom ones.
+* Errors produced by a call into a wgpu-native function now produce a Python exception (no more async logging of errors).
 
 
 ### [v0.9.5] - 02-10-2023

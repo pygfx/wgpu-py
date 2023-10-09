@@ -1,9 +1,25 @@
 import os
+import re
 import sys
 import ctypes
-import re
 
 from .rs_ffi import ffi, lib
+from ..base import (
+    GPUError,
+    GPUOutOfMemoryError,
+    GPUValidationError,
+    GPUPipelineError,
+    GPUInternalError,
+)
+
+
+ERROR_TYPES = {
+    "": GPUError,
+    "OutOfMemory": GPUOutOfMemoryError,
+    "Validation": GPUValidationError,
+    "Pipeline": GPUPipelineError,
+    "Internal": GPUInternalError,
+}
 
 
 if sys.platform.startswith("darwin"):
@@ -63,7 +79,7 @@ _the_instance = None
 
 def get_wgpu_instance():
     """Get the global wgpu instance."""
-    # Note, we could also use wgpuInstanceDrop,
+    # Note, we could also use wgpuInstanceRelease,
     # but we keep a global instance, so we don't have to.
     global _the_instance
     if _the_instance is None:
@@ -254,128 +270,6 @@ _wgsl_inner_validation_error_info_tmpl = re.compile(
 )  # TODO: simple error message
 
 
-def parse_wgsl_error(message):
-    """Parse a WGPU shader error message, give an easy-to-understand error prompt."""
-
-    err_msg = ["\n"]
-
-    match = _wgsl_error_tmpl.match(message)
-
-    if match:
-        error_type = match.group(1)
-        source = match.group(2)
-        source = source.replace("\\t", " ")
-        label = match.group(3)
-        # inner_error_type = match.group(4)
-        inner_error = match.group(5)
-        err_msg.append(color_string(33, f"Shader error: label: {label}"))
-
-        if error_type and inner_error:
-            if error_type == "Parsing":
-                match2 = _wgsl_inner_parsing_error_tmpl.match(inner_error)
-                if match2:
-                    err_msg.append(
-                        color_string(33, f"Parsing error: {match2.group(1)}")
-                    )
-                    start = int(match2.group(2))
-                    end = int(match2.group(3))
-                    label = match2.group(4)
-                    note = match2.group(5)
-                    err_msg += _wgsl_parse_extract_line(source, start, end, label, note)
-                else:
-                    err_msg += [color_string(33, inner_error)]
-
-            elif error_type == "Validation":
-                match2 = _wgsl_inner_validation_error_tmpl.match(inner_error)
-                if match2:
-                    error = match2.group(4)
-                    err_msg.append(color_string(33, f"Validation error: {error}"))
-                    start = int(match2.group(5))
-                    end = int(match2.group(6))
-                    error_match = _wgsl_inner_validation_error_info_tmpl.search(error)
-                    label = error_match.group(1) if error_match else error
-                    note = ""
-                    err_msg += _wgsl_parse_extract_line(source, start, end, label, note)
-                else:
-                    err_msg += [color_string(33, inner_error)]
-
-            return "\n".join(err_msg)
-
-    return None  # Does not look like a shader error
-
-
-def _wgsl_parse_extract_line(source, start, end, label, note):
-    # Find next newline after the end pos
-    try:
-        next_n = source.index("\n", end)
-    except ValueError:
-        next_n = len(source)
-
-    # Truncate and convert to lines
-    lines = source[:next_n].splitlines(True)
-    line_num = len(lines)
-
-    # Collect the lines relevant to this error
-    error_lines = []
-    line_pos = start - next_n
-    while line_pos < 0:
-        line = lines[line_num - 1]
-        line_length = len(line)
-        line_pos += line_length
-
-        start_pos = line_pos
-        if start_pos < 0:
-            start_pos = 0
-        end_pos = line_length - (next_n - end)
-        if end_pos > line_length:
-            end_pos = line_length
-
-        error_lines.insert(0, (line_num, line, start_pos, end_pos))
-
-        next_n -= line_length
-        line_num -= 1
-
-    def pad_str(s, line_num=None):
-        pad = len(str(len(lines)))
-        if line_num is not None:
-            pad -= len(str(line_num))
-            return f"{' '*pad}{line_num} {s}".rstrip()
-        else:
-            return f"{' '*pad} {s}".rstrip()
-
-    err_msg = [""]
-
-    # Show header
-    if len(error_lines) == 1:
-        prefix = pad_str(color_string(36, "┌─"))
-        err_msg.append(prefix + f" wgsl:{len(lines)}:{line_pos}")
-    else:
-        prefix = pad_str(color_string(36, "┌─"))
-        err_msg.append(prefix + f" wgsl:{line_num+1}--{len(lines)}")
-
-    # Add lines
-    err_msg.append(pad_str(color_string(36, "│")))
-    for line_num, line, _, _ in error_lines:
-        prefix = color_string(36, pad_str("│", line_num))
-        err_msg.append(prefix + f" {line}".rstrip())
-
-    # Show annotation
-    if len(error_lines) == 1:
-        prefix = pad_str(color_string(36, "│"))
-        annotation = f" {' '*error_lines[0][2] + '^'*(end-start)} {label}"
-        err_msg.append(prefix + color_string(33, annotation))
-    else:
-        prefix = pad_str(color_string(36, "│"))
-        annotation = color_string(33, f" ^^^{label}")
-        err_msg.append(prefix + annotation)
-
-    err_msg.append(pad_str(color_string(36, "│")))
-    err_msg.append(pad_str(color_string(36, f"= note: {note}".rstrip())))
-    err_msg.append("\n")
-
-    return err_msg
-
-
 # The functions below are copied from codegen/utils.py
 
 
@@ -411,27 +305,120 @@ def to_camel_case(name):
     return name2
 
 
-class DelayedDropper:
-    """Helps drop objects at a later time."""
+class DelayedReleaser:
+    """Helps release objects at a later time."""
 
-    # I found that when wgpuDeviceDrop() was called in Device._destroy,
-    # the tests would hang. I found that the drop call was done around
+    # I found that when wgpuDeviceRelease() was called in Device._destroy,
+    # the tests would hang. I found that the release call was done around
     # the time when another device was used (e.g. to create a buffer
     # or shader module). For some reason, the delay in destruction (by
     # Python's CG) causes a deadlock or something. We seem to be able
-    # to fix this by doing the actual dropping later - e.g. when the
+    # to fix this by doing the actual release later - e.g. when the
     # user creates a new device. Seems to be the same for the adapter.
     def __init__(self):
-        self._things_to_drop = []
+        self._things_to_release = []
 
-    def drop_soon(self, fun, i):
-        self._things_to_drop.append((fun, i))
+    def release_soon(self, fun, i):
+        self._things_to_release.append((fun, i))
 
-    def drop_all_pending(self):
-        while self._things_to_drop:
-            fun, i = self._things_to_drop.pop(0)
-            drop_fun = getattr(lib, fun)
-            drop_fun(i)
+    def release_all_pending(self):
+        while self._things_to_release:
+            fun, i = self._things_to_release.pop(0)
+            release_func = getattr(lib, fun)
+            release_func(i)
 
 
-delayed_dropper = DelayedDropper()
+class ErrorHandler:
+    """Object that logs errors, with the option to collect incoming
+    errors elsewhere.
+    """
+
+    def __init__(self, logger):
+        self._logger = logger
+        self._proxy_stack = []
+        self._error_message_counts = {}
+
+    def capture(self, func):
+        """Send incoming error messages to the given func instead of logging them."""
+        self._proxy_stack.append(func)
+
+    def release(self, func):
+        """Release the given func."""
+        f = self._proxy_stack.pop(-1)
+        if f is not func:
+            self._proxy_stack.clear()
+            self._logger.warning("ErrorHandler capture/release out of sync")
+
+    def handle_error(self, error_type: str, message: str):
+        """Handle an error message."""
+        if self._proxy_stack:
+            self._proxy_stack[-1](error_type, message)
+        else:
+            self.log_error(message)
+
+    def log_error(self, message):
+        """Hanle an error message by logging it, bypassing any capturing."""
+        # Get count for this message. Use a hash that does not use the
+        # digits in the message, because of id's getting renewed on
+        # each draw.
+        h = hash("".join(c for c in message if not c.isdigit()))
+        count = self._error_message_counts.get(h, 0) + 1
+        self._error_message_counts[h] = count
+
+        # Decide what to do
+        if count == 1:
+            self._logger.error(message)
+        elif count < 10:
+            self._logger.error(message.splitlines()[0] + f" ({count})")
+        elif count == 10:
+            self._logger.error(message.splitlines()[0] + " (hiding from now)")
+
+
+class SafeLibCalls:
+    """Object that copies all library functions, but wrapped in such
+    a way that errors occuring in that call are raised as exceptions.
+    """
+
+    def __init__(self, lib, error_handler):
+        self._error_handler = error_handler
+        self._error_message = None
+        self._make_function_copies(lib)
+
+    def _make_function_copies(self, lib):
+        for name in dir(lib):
+            if name.startswith("wgpu"):
+                ob = getattr(lib, name)
+                if callable(ob):
+                    setattr(self, name, self._make_proxy_func(name, ob))
+
+    def _handle_error(self, error_type, message):
+        # If we already had an error, we log the earlier one now
+        if self._error_message:
+            self._error_handler.log_error(self._error_message[1])
+        # Store new error
+        self._error_message = (error_type, message)
+
+    def _make_proxy_func(self, name, ob):
+        def proxy_func(*args):
+            # Make the call, with error capturing on
+            handle_error = self._handle_error
+            self._error_handler.capture(handle_error)
+            try:
+                result = ob(*args)
+            finally:
+                self._error_handler.release(handle_error)
+
+            # Handle the error.
+            if self._error_message:
+                error_type, message = self._error_message
+                self._error_message = None
+                cls = ERROR_TYPES.get(error_type, GPUError)
+                wgpu_error = cls(message)
+                # The line below will be the bottom line in the traceback,
+                # so better make it informative! As far as I know there is
+                # no way to exclude this frame from the traceback.
+                raise wgpu_error  # the frame above is more interesting ↑↑
+            return result
+
+        proxy_func.__name__ = name
+        return proxy_func

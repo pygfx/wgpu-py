@@ -190,11 +190,15 @@ class FunctionPatcher(Patcher):
         detected = set()
 
         for line, i in self.iter_lines():
-            if "lib.wgpu" in line:
-                start = line.index("lib.wgpu") + 4
+            if "lib.wgpu" in line or "libf.wgpu" in line:
+                start = line.index(".wgpu") + 1
                 end = line.index("(", start)
                 name = line[start:end]
                 indent = " " * (len(line) - len(line.lstrip()))
+                if "lib.wgpu" in line:
+                    self.insert_line(
+                        i, f"{indent}# FIXME: wgpu func calls must be done from libf"
+                    )
                 if name not in hp.functions:
                     msg = f"unknown C function {name}"
                     self.insert_line(i, f"{indent}# FIXME: {msg}")

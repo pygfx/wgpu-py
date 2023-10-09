@@ -25,6 +25,7 @@ void main(void){
 }
 """
 
+
 builtin_variables_glsl = """
 #version 450 core
 
@@ -44,6 +45,7 @@ int i_frame;
 
 #define mainImage shader_main
 """
+
 
 fragment_code_glsl = """
 layout(location = 0) in vec2 uv;
@@ -75,6 +77,8 @@ void main(){
 }
 
 """
+
+
 vertex_code_wgsl = """
 
 struct Varyings {
@@ -100,6 +104,7 @@ fn main(@builtin(vertex_index) index: u32) -> Varyings {
 }
 """
 
+
 builtin_variables_wgsl = """
 
 var<private> i_resolution: vec3<f32>;
@@ -112,6 +117,7 @@ var<private> i_frame: u32;
 // var<private> i_frag_coord: vec2<f32>;
 
 """
+
 
 fragment_code_wgsl = """
 
