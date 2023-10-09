@@ -17,9 +17,10 @@ Possible sections in each release:
 * Fixed: for any bug fixes.
 * Security: in case of vulnerabilities.
 
-### [v0.10.1] - tdb
+### [v0.10.0] - 09-10-2023
 
-In this release the API is aligned with the latest webgpu.idl.
+In this release the API is aligned with the latest webgpu.idl, and
+we updated to wgpu-native (v0.17.0.2).
 
 Added:
 
