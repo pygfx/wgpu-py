@@ -2,6 +2,7 @@
 Core utilities that are loaded into the root namespace or used internally.
 """
 
+import re
 import logging
 from pkg_resources import resource_filename
 
@@ -27,6 +28,16 @@ logger = logging.getLogger("wgpu")
 logging.setLoggerClass(_original_logger_cls)
 assert isinstance(logger, WGPULogger)
 logger.setLevel(logging.WARNING)
+
+
+_re_wgpu_ob = re.compile(r"`<[a-z|A-Z]+-\([0-9]+, [0-9]+, [a-z|A-Z]+\)>`")
+
+
+def error_message_hash(message):
+    # Remove wgpu object representations, because they contain id's that may change at each draw.
+    # E.g. `<CommandBuffer- (12, 4, Metal)>`
+    message = _re_wgpu_ob.sub("WGPU_OBJECT", message)
+    return hash(message)
 
 
 class ApiDiff:

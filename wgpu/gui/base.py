@@ -7,6 +7,7 @@ from contextlib import contextmanager
 import ctypes.util
 from collections import defaultdict
 
+from .._coreutils import error_message_hash
 
 logger = logging.getLogger("wgpu")
 
@@ -28,7 +29,7 @@ def log_exception(kind):
         sys.last_type, sys.last_value, sys.last_traceback = exc_info
         # Show traceback, or a one-line summary
         msg = str(err)
-        msgh = hash(msg)
+        msgh = error_message_hash(msg)
         if msgh not in err_hashes:
             # Provide the exception, so the default logger prints a stacktrace.
             # IDE's can get the exception from the root logger for PM debugging.
@@ -138,7 +139,6 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._last_draw_time = 0
         self._max_fps = float(max_fps)
         self._vsync = bool(vsync)
-        self._err_hashes = {}
 
     def __del__(self):
         try:
