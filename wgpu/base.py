@@ -3,15 +3,9 @@ The classes representing the wgpu API. This module defines the classes,
 properties, methods and documentation. The majority of methods are
 implemented in backend modules.
 
-Developer notes and tips:
-
-* We follow the IDL spec, with the exception that where in JS the input args
-  are provided via a dict, we use kwargs directly.
-* Nevertheless, some input args have subdicts (and sub-sub-dicts).
-* For methods that are async in IDL, we also provide sync methods.
-* The Async method names have an "_async" suffix.
-* We will try hard not to depend on asyncio specifically.
-
+This module is maintained using a combination of manual code and
+automatically inserted code. Read the codegen/readme.md for more
+information.
 """
 
 import weakref
