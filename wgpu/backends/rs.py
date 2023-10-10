@@ -1,31 +1,17 @@
 """
-WGPU backend implementation based on wgpu-native
+WGPU backend implementation based on wgpu-native.
 
 The wgpu-native project (https://github.com/gfx-rs/wgpu-native) is a Rust
-library based on wgou-core, which wraps Metal, Vulkan, DX12, and more.
+library based on wgpu-core, which wraps Metal, Vulkan, DX12, and more.
 It compiles to a dynamic library exposing a C-API, accompanied by a C
 header file. We wrap this using cffi, which uses the header file to do
 most type conversions for us.
 
-Developer notes and tips:
+This module is maintained using a combination of manual code and
+automatically inserted code. In short, the codegen utility inserts
+new methods and checks plus annotates all structs and C api calls.
 
-* The purpose of this module is to tie our Pythonic API, which closely
-  resembles the WebGPU spec, to the C API of wgpu-native.
-* Most of it is converting dicts to ffi structs. You may think that
-  this can be automated, and this would indeed be possible for 80-90%
-  of the methods. However, the API's do not always line up, and there's
-  async stuff to take into account too. Therefore we do it manually.
-  In the end, I think that this makes the code easier to maintain.
-* Use new_struct() and new_struct_p() to create a C structure with
-  minimal boilerplate. It also converts string enum values to their
-  corresponding integers.
-* The codegen will validate and annotate all struct creations and
-  function calls. So you could instantiate it without any fields and
-  then run the codegen to fill it in.
-* You may also need wgpu.h as a reference.
-* To update to the latest wgpu.h, run codegen to validate all structs
-  and function calls. Then check the diffs where changes are needed.
-  See the codegen's readme for details.
+Read the codegen/readme.md for more information.
 """
 
 

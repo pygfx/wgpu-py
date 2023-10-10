@@ -1,3 +1,6 @@
+"""Utilities used in rs.py.
+"""
+
 import os
 import re
 import sys
