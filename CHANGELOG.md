@@ -17,6 +17,14 @@ Possible sections in each release:
 * Fixed: for any bug fixes.
 * Security: in case of vulnerabilities.
 
+
+### [v0.11.0] - 11-10-2023
+
+Changed:
+
+* Update to wgpu-native 0.17.2.1. No changes are needed in downstream code.
+
+
 ### [v0.10.0] - 09-10-2023
 
 In this release the API is aligned with the latest webgpu.idl, and
