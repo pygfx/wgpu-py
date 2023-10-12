@@ -84,8 +84,10 @@ def get_wgpu_lib_path():
     # Note that this can be a false positive, e.g. ARM linux.
     embedded_path = get_resource_filename(lib_filename)
     if not os.path.isfile(embedded_path):  # no-cover
+        download_hint = _maybe_get_hint_on_download_script()
+        pip_hint = _maybe_get_pip_hint()
         raise RuntimeError(
-            f"Could not find WGPU library in {embedded_path}. {_maybe_get_hint_on_download_script()}"
+            f"Could not find WGPU library in {embedded_path}. {download_hint} {pip_hint}"
         )
     else:
         return embedded_path
@@ -100,6 +102,29 @@ def _maybe_get_hint_on_download_script():
 
     if uses_repo and not uses_custom_lib:
         return "You may need to run download-wgpu-native.py (in the root of the repo)."
+    return ""
+
+
+def _maybe_get_pip_hint():
+    if not sys.platform.startswith("linux"):
+        return ""
+
+    # Get pip version
+    pip_version = ()
+    try:
+        import pip  # noqa
+
+        parts = []
+        for x in pip.__version__.split("."):
+            if not x.isnumeric():
+                break
+            parts.append(int(x))
+        pip_version = tuple(parts)
+    except Exception:
+        pass
+
+    if pip_version < (20, 3):
+        return "If you install wgpu with pip, pip needs to be at least version 20.3 or the wgpu-native binary may not be included."
     return ""
 
 
