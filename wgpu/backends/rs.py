@@ -823,16 +823,17 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             mappedAtCreation=mapped_at_creation,
             # not used: nextInChain
         )
+        map_state = (
+            enums.BufferMapState.mapped
+            if mapped_at_creation
+            else enums.BufferMapState.unmapped
+        )
         # H: WGPUBuffer f(WGPUDevice device, WGPUBufferDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateBuffer(self._internal, struct)
         # Note that there is wgpuBufferGetSize and wgpuBufferGetUsage,
         # but we already know these, so they are kindof useless?
         # Return wrapped buffer
-        b = GPUBuffer(label, id, self, size, usage)
-
-        if mapped_at_creation:
-            b._map_state = enums.BufferMapState.mapped
-        return b
+        return GPUBuffer(label, id, self, size, usage, map_state)
 
     def create_texture(
         self,
@@ -1514,15 +1515,16 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             raise ValueError("Mapped offset must not be smaller than zero.")
         if size < 1:
             raise ValueError("Mapped size must be larger than zero.")
-        if offset + size >= self.size:
+        if offset + size > self.size:
             raise ValueError("Mapped range must not extend beyond total buffer size.")
+        return offset, size
 
     def map(self, mode, offset=0, size=None):
         # Check mode
         mode = mode.upper() if isinstance(mode, str) else mode
-        if mode in (enums.MapMode.READ, "READ"):
+        if mode in (flags.MapMode.READ, "READ"):
             map_mode = lib.WGPUMapMode_Read
-        elif mode in (enums.MapMode.WRITE, "WRITE"):
+        elif mode in (flags.MapMode.WRITE, "WRITE"):
             map_mode = lib.WGPUMapMode_Write
 
         # Check offset and size
@@ -1531,6 +1533,8 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         # Can we even map?
         if self._map_state != enums.BufferMapState.unmapped:
             raise RuntimeError("Can only map a buffer if its currently unmapped.")
+
+        status = 999
 
         @ffi.callback("void(WGPUBufferMapAsyncStatus, void*)")
         def callback(status_, user_data_p):
@@ -1605,7 +1609,6 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             # Return view on the actually mapped data
             self._mapped_memoryviews.append(src_m)
             return src_m
-            # todo: cast to B?
 
     def write_mapped(self, data, offset=0, size=None):
         # Can we even write?
@@ -2489,7 +2492,8 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        data = tmp_buffer.map_read()
+        tmp_buffer.map(flags.MapMode.READ)
+        data = tmp_buffer.read_mapped()
         tmp_buffer.destroy()
 
         return data
@@ -2586,7 +2590,8 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        data = tmp_buffer.map_read()
+        tmp_buffer.map(flags.MapMode.READ)
+        data = tmp_buffer.read_mapped()
         tmp_buffer.destroy()
 
         # Fix data strides if necessary

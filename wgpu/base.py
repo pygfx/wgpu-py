@@ -930,11 +930,11 @@ class GPUBuffer(GPUObjectBase):
     copy data between buffers and textures.
     """
 
-    def __init__(self, label, internal, device, size, usage):
+    def __init__(self, label, internal, device, size, usage, map_state):
         super().__init__(label, internal, device)
         self._size = size
         self._usage = usage
-        self._map_state = enums.BufferMapState.unmapped
+        self._map_state = map_state
 
     # IDL: readonly attribute GPUSize64Out size;
     @property

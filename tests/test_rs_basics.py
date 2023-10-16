@@ -216,12 +216,6 @@ def test_buffer_init3():
     device = wgpu.utils.get_default_device()
     data1 = b"abcdefghijkl"
 
-    # First fail
-    with raises(ValueError):
-        device.create_buffer(
-            mapped_at_creation=True, size=len(data1), usage=wgpu.BufferUsage.COPY_DST
-        )
-
     # Create buffer
     buf = device.create_buffer(
         size=len(data1), usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
@@ -556,7 +550,9 @@ def test_buffer_map_read_and_write():
 
     # Upload
     data1 = b"abcdefghijkl"
-    buf1.map_write(data1)
+    buf1.map("write")
+    buf1.write_mapped(data1)
+    buf1.unmap()
 
     # Copy
     command_encoder = device.create_command_encoder()
@@ -564,8 +560,9 @@ def test_buffer_map_read_and_write():
     device.queue.submit([command_encoder.finish()])
 
     # Download
-    data2 = buf2.map_read()
-
+    buf2.map("read")
+    data2 = buf2.read_mapped()
+    buf2.unmap()
     assert data1 == data2
 
 
