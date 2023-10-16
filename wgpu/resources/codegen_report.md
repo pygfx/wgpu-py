@@ -12,14 +12,14 @@
 * Diffs for GPU: add print_report, change get_preferred_canvas_format, change request_adapter, change request_adapter_async
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide pop_error_scope, hide push_error_scope
-* Diffs for GPUBuffer: add map_read, add map_write, hide get_mapped_range, hide map_async, hide unmap
+* Diffs for GPUBuffer: add map_read, add map_write, add read_mapped, add write_mapped, hide get_mapped_range
 * Diffs for GPUTexture: add size
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 39 classes, 111 methods, 44 properties
+* Validated 39 classes, 114 methods, 44 properties
 ### Patching API for backends/rs.py
 * Diffs for GPUAdapter: add request_device_tracing
-* Validated 39 classes, 99 methods, 0 properties
+* Validated 39 classes, 101 methods, 0 properties
 ## Validating rs.py
 * Enum field TextureFormat.rgb10a2uint missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
@@ -28,6 +28,6 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum field DeviceLostReason.unknown missing in wgpu.h
 * Wrote 232 enum mappings and 47 struct-field mappings to rs_mappings.py
-* Validated 91 C function calls
-* Not using 115 C functions
+* Validated 86 C function calls
+* Not using 116 C functions
 * Validated 72 C structs
