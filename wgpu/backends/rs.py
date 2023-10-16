@@ -1565,12 +1565,17 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         libf.wgpuBufferUnmap(self._internal)
         self._map_state = enums.BufferMapState.unmapped
         self._mapped_range = 0, 0
-        mapped_memoryviews = self._mapped_memoryviews
-        self._mapped_memoryviews = []
+        self._release_memoryviews()
+
+    def _release_memoryviews(self):
         # Release the mapped memoryview objects. These objects
         # themselves become unusable, but any views on them do not.
-        for m in mapped_memoryviews:
-            m.release()
+        for m in self._mapped_memoryviews:
+            try:
+                m.release()
+            except Exception:
+                pass
+        self._mapped_memoryviews = []
 
     def read_mapped(self, offset=0, size=None, *, copy=True):
         # Can we even read?
@@ -1639,6 +1644,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         self._destroy()  # no-cover
 
     def _destroy(self):
+        self._release_memoryviews()
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBuffer buffer)
