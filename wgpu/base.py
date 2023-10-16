@@ -469,6 +469,12 @@ class GPUDevice(GPUObjectBase):
         # buffer mapping. Now that we do have buffer mapping it is not
         # strictly necessary, but it's still quite useful and feels
         # more Pythonic than having to write the boilerplate code below.
+
+        # Create a view of known type
+        data = memoryview(data).cast("B")
+        size = data.nbytes
+
+        # Create the buffer and write data
         buf = self.create_buffer(
             label=label, size=size, usage=usage, mapped_at_creation=True
         )
@@ -995,7 +1001,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def read_mapped(self, offset=0, size=None):
+    def read_mapped(self, offset=0, size=None, *, copy=True):
         """Read mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1008,6 +1014,14 @@ class GPUBuffer(GPUObjectBase):
                 as large as the offset specified in ``map()``.
             size (int): the size to read. Default until the end. The resuling range
                 must fit into the range specified in ``map()``.
+            copy (boool): whether a copy of the data is given. Default True.
+                If False, the returned memoryview represents the mapped data
+                directly, and is released when the buffer is unmapped.
+                WARNING: views of the returned data (e.g. memoryview objects or
+                numpy arrays) can still be used after the base memory is released,
+                which can result in corrupted data and segfaults. Therefore, when
+                setting copy to False, make *very* sure the memory is not accessed
+                after the buffer is unmapped.
 
         Also see `GPUBuffer.write_mapped, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """

@@ -1499,6 +1499,14 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._mapped_range = 0, 0
+        self._mapped_memoryviews = []
+        if self._map_state == enums.BufferMapState.mapped:
+            self._mapped_range = 0, self.size
+
     def _check_range(self, offset, size):
         offset = 0 if offset is None else int(offset)
         size = (self.size - offset) if size is None else int(size)
@@ -1544,6 +1552,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             raise RuntimeError(f"Could not map buffer ({status}).")
         self._map_state = enums.BufferMapState.mapped
         self._mapped_range = offset, offset + size
+        self._mapped_memoryviews = []
 
     async def map_async(self, mode, offset=0, size=None):
         return self.map()  # for now
@@ -1555,9 +1564,15 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         # H: void f(WGPUBuffer buffer)
         libf.wgpuBufferUnmap(self._internal)
         self._map_state = enums.BufferMapState.unmapped
-        self._mapped_range = None
+        self._mapped_range = 0, 0
+        mapped_memoryviews = self._mapped_memoryviews
+        self._mapped_memoryviews = []
+        # Release the mapped memoryview objects. These objects
+        # themselves become unusable, but any views on them do not.
+        for m in mapped_memoryviews:
+            m.release()
 
-    def read_mapped(self, offset=0, size=None):
+    def read_mapped(self, offset=0, size=None, *, copy=True):
         # Can we even read?
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only read from a buffer if its mapped.")
@@ -1575,12 +1590,17 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         src_address = int(ffi.cast("intptr_t", src_ptr))
         src_m = get_memoryview_from_address(src_address, size)
 
-        # Copy the data. The memoryview created above becomes invalid when the buffer
-        # is unmapped, so we don't want to pass that memory to the user.
-        data = memoryview((ctypes.c_uint8 * size)()).cast("B")
-        data[:] = src_m
-
-        return data
+        if copy:
+            # Copy the data. The memoryview created above becomes invalid when the buffer
+            # is unmapped, so we don't want to pass that memory to the user.
+            data = memoryview((ctypes.c_uint8 * size)()).cast("B")
+            data[:] = src_m
+            return data
+        else:
+            # Return view on the actually mapped data
+            self._mapped_memoryviews.append(src_m)
+            return src_m
+            # todo: cast to B?
 
     def write_mapped(self, data, offset=0, size=None):
         # Can we even write?
