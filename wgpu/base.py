@@ -445,13 +445,16 @@ class GPUDevice(GPUObjectBase):
             label (str): A human readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (flags.BufferUsage): The ways in which this buffer will be used.
-            mapped_at_creation (bool): Must be False, use create_buffer_with_data() instead.
+            mapped_at_creation (bool): Whether the buffer is initially mapped.
         """
         raise NotImplementedError()
 
-    @apidiff.add("replaces WebGPU's mapping API")
+    @apidiff.add("Convenience function")
     def create_buffer_with_data(self, *, label="", data, usage: "flags.BufferUsage"):
         """Create a `GPUBuffer` object initialized with the given data.
+
+        This is a convenience function that creates a mapped buffer,
+        writes the given data to it, and then unmaps the buffer.
 
         Arguments:
             label (str): A human readable label. Optional.
@@ -459,9 +462,25 @@ class GPUDevice(GPUObjectBase):
                 includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
             usage (flags.BufferUsage): The ways in which this buffer will be used.
 
-        Also see `GPUQueue.write_buffer()` and `GPUQueue.read_buffer()`.
+        Also see `GPUBuffer.write_mapped()` and `GPUQueue.write_buffer()`.
         """
-        raise NotImplementedError()
+        # This function was originally created to support the workflow
+        # of initializing a buffer with data when we did not support
+        # buffer mapping. Now that we do have buffer mapping it is not
+        # strictly necessary, but it's still quite useful and feels
+        # more Pythonic than having to write the boilerplate code below.
+
+        # Create a view of known type
+        data = memoryview(data).cast("B")
+        size = data.nbytes
+
+        # Create the buffer and write data
+        buf = self.create_buffer(
+            label=label, size=size, usage=usage, mapped_at_creation=True
+        )
+        buf.write_mapped(data)
+        buf.unmap()
+        return buf
 
     # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor);
     def create_texture(
@@ -904,20 +923,18 @@ class GPUBuffer(GPUObjectBase):
     the buffer, subject to alignment restrictions depending on the
     operation.
 
-    Create a buffer using `GPUDevice.create_buffer()`,
-    `GPUDevice.create_buffer_mapped()` or `GPUDevice.create_buffer_mapped_async()`.
+    Create a buffer using `GPUDevice.create_buffer()`.
 
-    One can sync data in a buffer by mapping it (or by creating a mapped
-    buffer) and then setting/getting the values in the mapped memoryview.
+    One can sync data in a buffer by mapping it and then getting and setting data.
     Alternatively, one can tell the GPU (via the command encoder) to
     copy data between buffers and textures.
     """
 
-    def __init__(self, label, internal, device, size, usage):
+    def __init__(self, label, internal, device, size, usage, map_state):
         super().__init__(label, internal, device)
         self._size = size
         self._usage = usage
-        self._map_state = enums.BufferMapState.unmapped
+        self._map_state = map_state
 
     # IDL: readonly attribute GPUSize64Out size;
     @property
@@ -948,36 +965,89 @@ class GPUBuffer(GPUObjectBase):
     # This means that the mapped memory is reclaimed (i.e. invalid)
     # when unmap is called, and that whatever object we expose the
     # memory with to the user, must be set to a state where it can no
-    # longer be used. I currently can't think of a good way to do this.
+    # longer be used. There does not seem to be a good way to do this.
     #
-    # So instead, we can use mapping internally to allow reading and
-    # writing but not expose it via the public API. The only
-    # disadvantage (AFAIK) is that there could be use-cases where a
-    # memory copy could be avoided when using mapping.
+    # In our Python API we do make use of the same map/unmap mechanism,
+    # but reading and writing data goes via method calls instead of via
+    # an array-like object that exposes the shared memory.
 
-    # IDL: undefined destroy();
-    def destroy(self):
-        """An application that no longer requires a buffer can choose
-        to destroy it. Note that this is automatically called when the
-        Python object is cleaned up by the garbadge collector.
+    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    def map(self, mode, offset=0, size=None):
+        """Maps the given range of the GPUBuffer.
+
+        When this call returns, the buffer content is ready to be
+        accessed with ``read_mapped`` or ``write_mapped``. Don't forget
+        to ``unmap()`` when done.
+
+        Arguments:
+            mode (enum): The mapping mode, either mapmode.READ or mapmode.WRITE.
+            offset (str): the buffer offset in bytes. Default 0.
+            size (int): the size to read. Default until the end.
         """
         raise NotImplementedError()
 
-    @apidiff.add("Alternative to mapping API")
-    def map_read(self):
-        """Map the buffer and read the data from it, then unmap.
-        Return a memoryview object. Requires the buffer usage to include MAP_READ.
+    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    async def map_async(self, mode, offset=0, size=None):
+        """Alternative version of map()."""
+        raise NotImplementedError()
 
-        See `GPUQueue.read_buffer()` for a simpler alternative.
+    # IDL: undefined unmap();
+    def unmap(self):
+        """Unmaps the buffer.
+
+        Unmaps the mapped range of the GPUBuffer and makes it’s contents
+        available for use by the GPU again.
         """
         raise NotImplementedError()
 
-    @apidiff.add("Alternative to mapping API")
-    def map_write(self, data):
-        """Map the buffer and write the data to it, then unmap.
-        Return a memoryview object. Requires the buffer usage to include MAP_WRITE.
+    @apidiff.add("Replacement for get_mapped_range")
+    def read_mapped(self, buffer_offset=None, size=None, *, copy=True):
+        """Read mapped buffer data.
 
-        See `WGPUQueue.write_buffer()` for a simpler alternative.
+        This method must only be called when the buffer is in a mapped state.
+        This is the Python alternative to WebGPU's ``getMappedRange``.
+        Returns a memoryview that is a copy of the mapped data (it won't
+        become invalid when the buffer is ummapped).
+
+        Arguments:
+            buffer_offset (int): the buffer offset in bytes. Must be at
+                least as large as the offset specified in ``map()``. The default
+                is the offset of the mapped range.
+            size (int): the size to read. The resuling range must fit into the range
+                specified in ``map()``. The default is as large as the mapped range allows.
+            copy (boool): whether a copy of the data is given. Default True.
+                If False, the returned memoryview represents the mapped data
+                directly, and is released when the buffer is unmapped.
+                WARNING: views of the returned data (e.g. memoryview objects or
+                numpy arrays) can still be used after the base memory is released,
+                which can result in corrupted data and segfaults. Therefore, when
+                setting copy to False, make *very* sure the memory is not accessed
+                after the buffer is unmapped.
+
+        Also see `GPUBuffer.write_mapped()`, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
+        """
+        raise NotImplementedError()
+
+    @apidiff.add("Replacement for get_mapped_range")
+    def write_mapped(self, data, buffer_offset=None, size=None):
+        """Read mapped buffer data.
+
+        This method must only be called when the buffer is in a mapped state.
+        This is the Python alternative to WebGPU's ``getMappedRange``.
+        Since the data can also be a view into a larger array, this method
+        allows updating the buffer with minimal data copying.
+
+        Arguments:
+            data (buffer-like): The data to write to the buffer, in the form of
+                e.g. a bytes object, memoryview, or numpy array.
+            buffer_offset (int): the buffer offset in bytes. Must be at least
+                as large as the offset specified in ``map()``. The default
+                is the offset of the mapped range.
+            size (int): the size to read. The default is the size of
+                the data, so this argument can typically be ignored. The
+                resuling range must fit into the range specified in ``map()``.
+
+        Also see `GPUBuffer.read_mapped, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """
         raise NotImplementedError()
 
@@ -986,14 +1056,26 @@ class GPUBuffer(GPUObjectBase):
     def get_mapped_range(self, offset=0, size=None):
         raise NotImplementedError("The Python API differs from WebGPU here")
 
-    # IDL: undefined unmap();
-    @apidiff.hide
-    def unmap(self):
-        raise NotImplementedError("The Python API differs from WebGPU here")
+    @apidiff.add("Deprecated but still here to raise a warning")
+    def map_read(self, offset=None, size=None, iter=None):
+        """Deprecated."""
+        raise DeprecationWarning(
+            "map_read() is deprecated, use map() and read_mapped() instead."
+        )
 
-    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    @apidiff.hide
-    async def map_async(self, mode, offset=0, size=None):
+    @apidiff.add("Deprecated but still here to raise a warning")
+    def map_write(self, data):
+        """Deprecated."""
+        raise DeprecationWarning(
+            "map_read() is deprecated, use map() and write_mapped() instead."
+        )
+
+    # IDL: undefined destroy();
+    def destroy(self):
+        """An application that no longer requires a buffer can choose
+        to destroy it. Note that this is automatically called when the
+        Python object is cleaned up by the garbadge collector.
+        """
         raise NotImplementedError()
 
 
@@ -1117,7 +1199,7 @@ class GPUTextureView(GPUObjectBase):
         self._texture = texture
         self._size = size
 
-    @apidiff.add("Need to know size e.g. for texture view provided by canvas.")
+    @apidiff.add("Need to know size e.g. for texture view provided by canvas")
     @property
     def size(self):
         """The texture size (as a 3-tuple)."""
@@ -1689,12 +1771,12 @@ class GPUQueue(GPUObjectBase):
         This maps the data to a temporary buffer and then copies that buffer
         to the given buffer. The given buffer's usage must include COPY_DST.
 
-        Also see `GPUDevice.create_buffer_with_data()` and `GPUBuffer.map_write()`.
+        Also see `GPUBuffer.map()`.
 
         """
         raise NotImplementedError()
 
-    @apidiff.add("replaces WebGPU's mapping API")
+    @apidiff.add("For symmetry with queue.write_buffer")
     def read_buffer(self, buffer, buffer_offset=0, size=None):
         """Takes the data contents of the buffer and return them as a memoryview.
 
@@ -1707,7 +1789,7 @@ class GPUQueue(GPUObjectBase):
         and then maps that buffer to read the data. The given buffer's
         usage must include COPY_SRC.
 
-        Also see `GPUBuffer.map_read()`.
+        Also see `GPUBuffer.map()`.
         """
         raise NotImplementedError()
 

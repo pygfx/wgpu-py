@@ -303,6 +303,8 @@ class IdlPatcherMixin:
         name_idl = self.name2idl(methodname)
         if methodname.endswith("_async") and name_idl not in functions:
             name_idl = self.name2idl(methodname.replace("_async", ""))
+        elif name_idl not in functions and name_idl + "Async" in functions:
+            name_idl += "Async"
         idl_line = functions[name_idl]
 
         # Construct preamble
@@ -369,6 +371,8 @@ class IdlPatcherMixin:
         name_idl = self.name2idl(methodname)
         if "_async" in methodname and name_idl not in functions:
             name_idl = self.name2idl(methodname.replace("_async", ""))
+        elif name_idl not in functions and name_idl + "Async" in functions:
+            name_idl += "Async"
         return name_idl if name_idl in functions else None
 
     def get_class_names(self):
