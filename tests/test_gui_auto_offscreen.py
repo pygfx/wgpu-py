@@ -35,9 +35,9 @@ def test_canvas_class():
 
 
 def test_event_loop():
-    """Check that the event loop handles queued tasks and then returns.
-    TODO: This test may hang indefinitely in the failure case, can we
-    prevent that?"""
+    """Check that the event loop handles queued tasks and then returns."""
+    # Note: if this test fails, it may run forever, so it's a good idea to have a timeout on the CI job or something
+
     from wgpu.gui.auto import run, call_later
 
     ran = False
