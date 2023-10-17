@@ -10,9 +10,6 @@ from testutils import run_tests, can_use_wgpu_lib, iters_equal
 from pytest import mark, raises
 
 
-is_win = sys.platform.startswith("win")
-
-
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_buffer_init1():
     # Initializing a buffer with data
