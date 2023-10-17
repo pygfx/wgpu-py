@@ -14,6 +14,7 @@ jobs:
 
   lint-build:
     name: Test Linting
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -33,6 +34,7 @@ jobs:
 
   test-codegen-build:
     name: Test Codegen
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -52,6 +54,7 @@ jobs:
 
   test-minimal-import-build:
     name: Test Imports
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -80,6 +83,7 @@ jobs:
 
   docs-build:
     name: Test Docs
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -100,6 +104,7 @@ jobs:
 
   test-examples-build:
     name: Test Examples
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -127,6 +132,7 @@ jobs:
 
   test-pyinstaller-build:
     name: Test PyInstaller
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -150,6 +156,7 @@ jobs:
 
   test-builds:
     name: ${{ matrix.name }}
+    timeout-minutes: 5
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -199,6 +206,7 @@ jobs:
   # We build wheels, test them, and then upload the wheel as an artifact.
   release-builds:
     name: Build wheels on ${{ matrix.os }}
+    timeout-minutes: 10
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -232,6 +240,7 @@ jobs:
 
   sdist-build:
     name: Build sdist
+    timeout-minutes: 5
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
