@@ -1649,7 +1649,9 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             return data
         else:
             # Return view on the actually mapped data
-            data = src_m.toreadonly()
+            data = src_m
+            if hasattr(data, "toreadonly"):  # Py 3.8+
+                data = data.toreadonly()
             self._mapped_memoryviews.append(data)
             return data
 
