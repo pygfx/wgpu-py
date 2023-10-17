@@ -1536,7 +1536,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             raise ValueError("Mapped range must not extend beyond total buffer size.")
         return offset, size
 
-    def map(self, mode, offset=None, size=None):
+    def map(self, mode, offset=0, size=None):
         sync_on_read = True
 
         # Check mode

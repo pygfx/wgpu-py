@@ -972,7 +972,7 @@ class GPUBuffer(GPUObjectBase):
     # an array-like object that exposes the shared memory.
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def map(self, mode, offset=None, size=None):
+    def map(self, mode, offset=0, size=None):
         """Maps the given range of the GPUBuffer.
 
         When this call returns, the buffer content is ready to be
