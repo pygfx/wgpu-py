@@ -25,6 +25,33 @@ Changed:
 * Update to wgpu-native 0.17.2.1. No changes are needed in downstream code.
 
 
+### [v0.11.0] - t.b.d.
+
+We have revised the buffer mapping API, making it more similar to the
+WebGPU spec, and providing more flexible and performant ways to set
+buffer data.
+
+Added:
+
+* The `GPUBuffer` has new methods `map()`, `map_async()`, `unmap()`. These have been
+  part of the WebGPU spec for a long time, but we had an alternative API, until now.
+* The `GPUBuffer` has new methods `read_mapped()` and `write_mapped()`. These are not
+  present in the WebGPU spec; they are the Pythonic alternative to `getMappedRange()`.
+
+Changed:
+
+* Can create a buffer that is initially mapped: `device.create_buffer(..., mapped_at_creation=True)` is enabled again.
+
+Removed:
+
+* The `GPUBuffer` methods `map_read()`and `map_write()` are deprecated, in favor of `map()`, `unmap()`, `read_mapped()` and `write_mapped()`.
+
+For the record, these are not changed:
+
+* The convenient `device.create_buffer_with_data()` (not part of the WebGPU spec) is also available.
+* The `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()` methods are unchanged.
+
+
 ### [v0.10.0] - 09-10-2023
 
 In this release the API is aligned with the latest webgpu.idl, and
