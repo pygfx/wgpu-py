@@ -308,6 +308,187 @@ def test_buffer_init3():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_consequitive_writes1():
+    # The inefficient way
+
+    device = wgpu.utils.get_default_device()
+
+    # Create buffer
+    buf = device.create_buffer(
+        size=32, usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC
+    )
+
+    # Write in parts
+    for i in range(4):
+        buf.map("write")
+        buf.write_mapped(f"{i+1}".encode() * 8, i * 8)
+        buf.unmap()
+
+    # Download from buffer to CPU
+    data = device.queue.read_buffer(buf)
+    assert data == b"11111111222222223333333344444444"
+
+    # Also in parts
+    for i in range(4):
+        data = device.queue.read_buffer(buf, i * 8, size=8)
+        assert data == f"{i+1}".encode() * 8
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_consequitive_writes2():
+    # The efficient way
+
+    device = wgpu.utils.get_default_device()
+
+    # Create buffer
+    buf = device.create_buffer(
+        size=32, usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC
+    )
+
+    # Write in parts
+    buf.map("write")
+    for i in range(4):
+        buf.write_mapped(f"{i+1}".encode() * 8, i * 8)
+    buf.unmap()
+
+    # Download from buffer to CPU
+    data = device.queue.read_buffer(buf)
+    assert data == b"11111111222222223333333344444444"
+
+    # Also in parts
+    for i in range(4):
+        data = device.queue.read_buffer(buf, i * 8, size=8)
+        assert data == f"{i+1}".encode() * 8
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_consequitive_reads():
+    device = wgpu.utils.get_default_device()
+
+    # Create buffer
+    buf = device.create_buffer(
+        size=32, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST
+    )
+
+    # Write using the queue. Do in parts, to touch those offsets too
+    for i in range(4):
+        device.queue.write_buffer(buf, i * 8, f"{i+1}".encode() * 8)
+
+    # Read in parts, the inefficient way
+    for i in range(4):
+        buf.map("read")
+        data = buf.read_mapped(i * 8, 8)
+        assert data == f"{i+1}".encode() * 8
+        buf.unmap()
+
+    # Read in parts, the efficient way
+    buf.map("read")
+    for i in range(4):
+        data = buf.read_mapped(i * 8, 8)
+        assert data == f"{i+1}".encode() * 8
+    buf.unmap()
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_buffer_mapping_fails():
+    device = wgpu.utils.get_default_device()
+    data = b"12345678"
+
+    # Create buffer
+    buf = device.create_buffer(
+        size=32, usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC
+    )
+
+    with raises(RuntimeError):
+        buf.write_mapped(data)  # Not mapped
+    with raises(RuntimeError):
+        buf.read_mapped()  # Not mapped
+
+    with raises(ValueError):
+        buf.map("boo")  # Invalid map mode
+
+    buf.map("write", 0, 28)
+
+    with raises(RuntimeError):
+        buf.map("write")  # Cannot map twice
+
+    with raises(RuntimeError):
+        buf.map("read")  # Cannot map twice
+
+    with raises(RuntimeError):
+        buf.read_mapped()  # Not mapped in read mode
+
+    # Ok
+    buf.write_mapped(data)
+    buf.write_mapped(data, 0)
+    buf.write_mapped(data, 8)
+    buf.write_mapped(data, 16)
+
+    # Fail
+    with raises(ValueError):
+        buf.write_mapped(data, -1)  # not neg
+    with raises(ValueError):
+        buf.write_mapped(data, -8)  # not neg
+    with raises(ValueError):
+        buf.write_mapped(data, 6)  # not multilpe of eight
+
+    # Ok
+    buf.write_mapped(b"1" * 4)
+    buf.write_mapped(b"1" * 8)
+    buf.write_mapped(b"1" * 28)
+    buf.write_mapped(b"1" * 12, 0)
+    buf.write_mapped(b"1" * 12, 8)
+
+    with raises(ValueError):
+        buf.write_mapped(b"")  # not empty
+    with raises(ValueError):
+        buf.write_mapped(b"1" * 64)  # too large for buffer
+    with raises(ValueError):
+        buf.write_mapped(b"1" * 32)  # too large for mapped range
+    with raises(ValueError):
+        buf.write_mapped(b"1" * 3)  # not multiple of 4
+    with raises(ValueError):
+        buf.write_mapped(b"1" * 6)  # not multiple of 4
+    with raises(ValueError):
+        buf.write_mapped(b"1" * 9)  # not multiple of 4
+
+    # Can unmap multiple times though!
+    buf.unmap()
+
+    with raises(RuntimeError):
+        buf.unmap()  # Cannot unmap when not mapped
+
+    # Create buffer in read mode ...
+
+    buf = device.create_buffer(
+        size=32, usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST
+    )
+
+    with raises(RuntimeError):
+        buf.write_mapped(data)  # not mapped
+
+    buf.map("read", 8, 20)
+
+    with raises(RuntimeError):
+        buf.map("read")  # Cannot map twice
+
+    with raises(RuntimeError):
+        buf.map("write")  # Cannot map twice
+
+    with raises(RuntimeError):
+        buf.write_mapped(data)  # not mapped in write mode\
+
+    # Ok
+    assert len(buf.read_mapped()) == 20
+
+    # Fail
+    with raises(ValueError):
+        buf.read_mapped(64)  # read beyond buffer size
+    with raises(ValueError):
+        buf.read_mapped(32)  # read beyond mapped range
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_clear_buffer():
     data0 = b"111111112222222233333333"
     data1 = b"111111110000000000003333"
@@ -580,7 +761,7 @@ def test_write_buffer2():
     device.queue.write_buffer(buf4, 0, data1)
 
     # We swipe the data. You could also think that we passed something into
-    # write_buffer without holding a referene to it. Anyway, write_buffer
+    # write_buffer without holding a reference to it. Anyway, write_buffer
     # seems to copy the data at the moment it is called.
     for i in range(len(data1)):
         data1[i] = 1

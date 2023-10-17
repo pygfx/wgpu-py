@@ -972,7 +972,7 @@ class GPUBuffer(GPUObjectBase):
     # an array-like object that exposes the shared memory.
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def map(self, mode, offset=0, size=None):
+    def map(self, mode, offset=None, size=None):
         """Maps the given range of the GPUBuffer.
 
         When this call returns, the buffer content is ready to be
@@ -1001,7 +1001,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def read_mapped(self, buffer_offset=0, size=None, *, copy=True):
+    def read_mapped(self, buffer_offset=None, size=None, *, copy=True):
         """Read mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1010,10 +1010,11 @@ class GPUBuffer(GPUObjectBase):
         become invalid when the buffer is ummapped).
 
         Arguments:
-            buffer_offset (int): the buffer offset in bytes. Default 0. Must be at
-                least as large as the offset specified in ``map()``.
-            size (int): the size to read. Default until the end. The resuling range
-                must fit into the range specified in ``map()``.
+            buffer_offset (int): the buffer offset in bytes. Must be at
+                least as large as the offset specified in ``map()``. The default
+                is the offset of the mapped range.
+            size (int): the size to read. The resuling range must fit into the range
+                specified in ``map()``. The default is as large as the mapped range allows.
             copy (boool): whether a copy of the data is given. Default True.
                 If False, the returned memoryview represents the mapped data
                 directly, and is released when the buffer is unmapped.
@@ -1028,7 +1029,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def write_mapped(self, data, buffer_offset=0, size=None):
+    def write_mapped(self, data, buffer_offset=None, size=None):
         """Read mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1039,10 +1040,12 @@ class GPUBuffer(GPUObjectBase):
         Arguments:
             data (buffer-like): The data to write to the buffer, in the form of
                 e.g. a bytes object, memoryview, or numpy array.
-            buffer_offset (int): the buffer offset in bytes. Default 0. Must be at least
-                as large as the offset specified in ``map()``.
-            size (int): the size to read. Default until the end. The resuling range
-                must fit into the range specified in ``map()``.
+            buffer_offset (int): the buffer offset in bytes. Must be at least
+                as large as the offset specified in ``map()``. The default
+                is the offset of the mapped range.
+            size (int): the size to read. The default is the size of
+                the data, so this argument can typically be ignored. The
+                resuling range must fit into the range specified in ``map()``.
 
         Also see `GPUBuffer.read_mapped, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """

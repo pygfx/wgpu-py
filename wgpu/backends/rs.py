@@ -1505,21 +1505,38 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         self._mapped_status = 0, 0, 0
         self._mapped_memoryviews = []
+        # If mapped at creation, set to write mode (no point in reading zeros)
         if self._map_state == enums.BufferMapState.mapped:
-            self._mapped_status = 0, self.size, 0
+            self._mapped_status = 0, self.size, flags.MapMode.WRITE
 
     def _check_range(self, offset, size):
-        offset = 0 if offset is None else int(offset)
-        size = (self.size - offset) if size is None else int(size)
+        # Apply defaults
+        if offset is None:
+            offset = 0
+            if self._mapped_status[2] != 0:
+                offset = self._mapped_status[0]
+        else:
+            offset = int(offset)
+        if size is None:
+            size = self.size - offset
+            if self._mapped_status[2] != 0:
+                size = self._mapped_status[1] - offset
+        else:
+            size = int(size)
+        # Checks
         if offset < 0:
             raise ValueError("Mapped offset must not be smaller than zero.")
+        if offset % 8:
+            raise ValueError("Mapped offset must be a multiple of 8.")
         if size < 1:
             raise ValueError("Mapped size must be larger than zero.")
+        if size % 4:
+            raise ValueError("Mapped offset must be a multiple of 4.")
         if offset + size > self.size:
             raise ValueError("Mapped range must not extend beyond total buffer size.")
         return offset, size
 
-    def map(self, mode, offset=0, size=None):
+    def map(self, mode, offset=None, size=None):
         sync_on_read = True
 
         # Check mode
@@ -1602,10 +1619,14 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
                 pass
         self._mapped_memoryviews = []
 
-    def read_mapped(self, buffer_offset=0, size=None, *, copy=True):
+    def read_mapped(self, buffer_offset=None, size=None, *, copy=True):
         # Can we even read?
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only read from a buffer if its mapped.")
+        elif not (self._mapped_status[2] & flags.MapMode.READ):
+            raise RuntimeError(
+                "Can only read from a buffer if its mapped in read mode."
+            )
 
         # Check offset and size
         offset, size = self._check_range(buffer_offset, size)
@@ -1616,7 +1637,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         # Get mapped memoryview.
         # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
-        src_ptr = libf.wgpuBufferGetMappedRange(self._internal, 0, size)
+        src_ptr = libf.wgpuBufferGetMappedRange(self._internal, offset, size)
         src_address = int(ffi.cast("intptr_t", src_ptr))
         src_m = get_memoryview_from_address(src_address, size)
 
@@ -1631,10 +1652,14 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             self._mapped_memoryviews.append(src_m)
             return src_m
 
-    def write_mapped(self, data, buffer_offset=0, size=None):
+    def write_mapped(self, data, buffer_offset=None, size=None):
         # Can we even write?
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only write to a buffer if its mapped.")
+        elif not (self._mapped_status[2] & flags.MapMode.WRITE):
+            raise RuntimeError(
+                "Can only write from a buffer if its mapped in write mode."
+            )
 
         # Cast data to a memoryview. This also works for e.g. numpy arrays,
         # and the resulting memoryview will be a view on the data.
@@ -1657,7 +1682,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         # Get mapped memoryview
         # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
-        src_ptr = libf.wgpuBufferGetMappedRange(self._internal, 0, size)
+        src_ptr = libf.wgpuBufferGetMappedRange(self._internal, offset, size)
         src_address = int(ffi.cast("intptr_t", src_ptr))
         src_m = get_memoryview_from_address(src_address, size)
 
