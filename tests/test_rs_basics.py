@@ -476,16 +476,72 @@ def test_buffer_mapping_fails():
         buf.map("write")  # Cannot map twice
 
     with raises(RuntimeError):
-        buf.write_mapped(data)  # not mapped in write mode\
+        buf.write_mapped(data)  # not mapped in write mode
 
     # Ok
     assert len(buf.read_mapped()) == 20
 
     # Fail
     with raises(ValueError):
-        buf.read_mapped(64)  # read beyond buffer size
+        buf.read_mapped(0, 64)  # read beyond buffer size
     with raises(ValueError):
-        buf.read_mapped(32)  # read beyond mapped range
+        buf.read_mapped(0, 32)  # read beyond mapped range
+
+    buf.unmap()
+
+    with raises(RuntimeError):
+        buf.unmap()  # Cannot unmap when not mapped
+
+
+def test_buffer_read_no_copy():
+    device = wgpu.utils.get_default_device()
+    data1 = b"12345678" * 2
+
+    buf = device.create_buffer(
+        size=len(data1), usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST
+    )
+
+    # Write data to it
+    device.queue.write_buffer(buf, 0, data1)
+
+    # Download from buffer to CPU
+    buf.map("read")
+    data2 = buf.read_mapped(copy=False)
+    data3 = buf.read_mapped(0, 8, copy=False)
+    data4 = buf.read_mapped(8, 8, copy=False)
+
+    assert data2 == data1
+    assert data3 == data1[:8]
+    assert data4 == data1[8:]
+
+    # Can access the arrays
+    _ = data2[0], data3[0], data4[0]
+
+    # But cannot write to memory intended for reading
+    with raises(TypeError):
+        data2[0] = 1
+    with raises(TypeError):
+        data3[0] = 1
+    with raises(TypeError):
+        data4[0] = 1
+
+    buf.unmap()
+
+    # The memoryview is invalidated when the buffer unmapped.
+    # Note that this unfortunately does *not* hold for views on these arrays.
+    with raises(ValueError):
+        data2[0]
+    with raises(ValueError):
+        data3[0]
+    with raises(ValueError):
+        data4[0]
+
+    with raises(ValueError):
+        data2[0] = 1  # cannot write to memory intended for reading
+    with raises(ValueError):
+        data3[0] = 1
+    with raises(ValueError):
+        data4[0] = 1
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")

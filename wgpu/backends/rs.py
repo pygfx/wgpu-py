@@ -1615,7 +1615,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         for m in self._mapped_memoryviews:
             try:
                 m.release()
-            except Exception:
+            except Exception:  # no-cover
                 pass
         self._mapped_memoryviews = []
 
@@ -1649,8 +1649,9 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             return data
         else:
             # Return view on the actually mapped data
-            self._mapped_memoryviews.append(src_m)
-            return src_m
+            data = src_m.toreadonly()
+            self._mapped_memoryviews.append(data)
+            return data
 
     def write_mapped(self, data, buffer_offset=None, size=None):
         # Can we even write?
@@ -1675,7 +1676,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             )
 
         # Check data size and given size. If the latter was given, it should match!
-        if data.nbytes != size:  # pragma: no cover
+        if data.nbytes != size:  # no-cover
             raise ValueError(
                 "Data passed to GPUBuffer.write_mapped() does not match the given size."
             )
