@@ -518,12 +518,13 @@ def test_buffer_read_no_copy():
     _ = data2[0], data3[0], data4[0]
 
     # But cannot write to memory intended for reading
-    with raises(TypeError):
-        data2[0] = 1
-    with raises(TypeError):
-        data3[0] = 1
-    with raises(TypeError):
-        data4[0] = 1
+    if sys.version_info >= (3, 8):  # no memoryview.toreadonly on 3.7 and below
+        with raises(TypeError):
+            data2[0] = 1
+        with raises(TypeError):
+            data3[0] = 1
+        with raises(TypeError):
+            data4[0] = 1
 
     buf.unmap()
 
@@ -537,7 +538,7 @@ def test_buffer_read_no_copy():
         data4[0]
 
     with raises(ValueError):
-        data2[0] = 1  # cannot write to memory intended for reading
+        data2[0] = 1
     with raises(ValueError):
         data3[0] = 1
     with raises(ValueError):
