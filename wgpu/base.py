@@ -1001,7 +1001,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def read_mapped(self, offset=0, size=None, *, copy=True):
+    def read_mapped(self, buffer_offset=0, size=None, *, copy=True):
         """Read mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1010,8 +1010,8 @@ class GPUBuffer(GPUObjectBase):
         become invalid when the buffer is ummapped).
 
         Arguments:
-            offset (str): the buffer offset in bytes. Default 0. Must be at least
-                as large as the offset specified in ``map()``.
+            buffer_offset (int): the buffer offset in bytes. Default 0. Must be at
+                least as large as the offset specified in ``map()``.
             size (int): the size to read. Default until the end. The resuling range
                 must fit into the range specified in ``map()``.
             copy (boool): whether a copy of the data is given. Default True.
@@ -1023,12 +1023,12 @@ class GPUBuffer(GPUObjectBase):
                 setting copy to False, make *very* sure the memory is not accessed
                 after the buffer is unmapped.
 
-        Also see `GPUBuffer.write_mapped, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
+        Also see `GPUBuffer.write_mapped()`, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def write_mapped(self, data, offset=0, size=None):
+    def write_mapped(self, data, buffer_offset=0, size=None):
         """Read mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1039,7 +1039,7 @@ class GPUBuffer(GPUObjectBase):
         Arguments:
             data (buffer-like): The data to write to the buffer, in the form of
                 e.g. a bytes object, memoryview, or numpy array.
-            offset (str): the buffer offset in bytes. Default 0. Must be at least
+            buffer_offset (int): the buffer offset in bytes. Default 0. Must be at least
                 as large as the offset specified in ``map()``.
             size (int): the size to read. Default until the end. The resuling range
                 must fit into the range specified in ``map()``.

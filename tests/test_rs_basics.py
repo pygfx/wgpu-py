@@ -14,6 +14,9 @@ from testutils import run_tests, can_use_wgpu_lib, is_ci, iters_equal
 from pytest import mark, raises
 
 
+is_win = sys.platform.startswith("win")
+
+
 def test_get_wgpu_version():
     version = wgpu.backends.rs.__version__
     commit_sha = wgpu.backends.rs.__commit_sha__
@@ -145,9 +148,7 @@ def test_rs_tracer():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-@mark.skipif(
-    is_ci and sys.platform == "win32", reason="Cannot use SpirV shader on dx12"
-)
+@mark.skipif(is_ci and is_win, reason="Cannot use SpirV shader on dx12")
 def test_shader_module_creation_spirv():
     device = wgpu.utils.get_default_device()
 
@@ -181,40 +182,77 @@ def test_buffer_init1():
     device = wgpu.utils.get_default_device()
     data1 = b"abcdefghijkl"
 
-    # Create buffer
+    # Create buffer. COPY_SRC is needed to read the buffer via the queue.
     buf = device.create_buffer_with_data(data=data1, usage=wgpu.BufferUsage.COPY_SRC)
 
     # Download from buffer to CPU
     data2 = device.queue.read_buffer(buf)
     assert data1 == data2
 
+    # ---  also read via mapped data
 
-# @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-# def test_buffer_init2():
-#     # Initializing a buffer as mapped, to directly set the data
-#
-#     device = wgpu.utils.get_default_device()
-#     data1 = b"abcdefghijkl"
-#
-#     # Create buffer
-#     buf, data2 = device.create_buffer_mapped(
-#         size=len(data1), usage=wgpu.BufferUsage.MAP_READ
-#     )
-#     data2[:] = data1
-#     buf.unmap()
-#
-#     # Download from buffer to CPU
-#     data3 = buf.map(wgpu.MapMode.READ).tobytes()
-#     buf.unmap()
-#     assert data1 == data3
+    # Create buffer. MAP_READ is needed to read the buffer via the queue.
+    buf = device.create_buffer_with_data(data=data1, usage=wgpu.BufferUsage.MAP_READ)
+
+    wgpu.backends.rs.libf.wgpuDevicePoll(
+        buf._device._internal, True, wgpu.backends.rs.ffi.NULL
+    )
+
+    # Download from buffer to CPU
+    buf.map(wgpu.MapMode.READ)
+    wgpu.backends.rs.libf.wgpuDevicePoll(
+        buf._device._internal, True, wgpu.backends.rs.ffi.NULL
+    )
+
+    data2 = buf.read_mapped()
+    buf.unmap()
+    print(data2.tobytes())
+    assert data1 == data2
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_buffer_init2():
+    # Initializing a buffer as mapped, to directly set the data
+
+    device = wgpu.utils.get_default_device()
+    data1 = b"abcdefghijkl"
+
+    # Create buffer.
+    buf = device.create_buffer(
+        size=len(data1), usage=wgpu.BufferUsage.COPY_SRC, mapped_at_creation=True
+    )
+    buf.write_mapped(data1)
+    buf.unmap()
+
+    # Download from buffer to CPU
+    data2 = device.queue.read_buffer(buf)
+    assert data1 == data2
+
+    # --- also read via mapped data
+
+    # Create buffer.
+    buf = device.create_buffer(
+        size=len(data1), usage=wgpu.BufferUsage.MAP_READ, mapped_at_creation=True
+    )
+    buf.write_mapped(data1)
+    buf.unmap()
+
+    # Download from buffer to CPU
+    buf.map("read")
+    data2 = buf.read_mapped()
+    buf.unmap()
+    print(data2.tobytes())
+    assert data1 == data2
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_buffer_init3():
-    # Initializing an empty buffer, then writing to it
+    # Initializing an empty buffer, then writing to it, then reading back
 
     device = wgpu.utils.get_default_device()
     data1 = b"abcdefghijkl"
+
+    # Option 1: write via queue (i.e. temp buffer), read via queue
 
     # Create buffer
     buf = device.create_buffer(
@@ -225,8 +263,48 @@ def test_buffer_init3():
     device.queue.write_buffer(buf, 0, data1)
 
     # Download from buffer to CPU
-    data3 = device.queue.read_buffer(buf)
-    assert data1 == data3
+    data2 = device.queue.read_buffer(buf)
+    assert data1 == data2
+
+    # Option 2: Write via mapped data, read via queue
+
+    # Create buffer
+    buf = device.create_buffer(
+        size=len(data1), usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC
+    )
+
+    # Write data to it
+    buf.map("write")
+    buf.write_mapped(data1)
+    buf.unmap()
+
+    # Download from buffer to CPU
+    data2 = device.queue.read_buffer(buf)
+    assert data1 == data2
+
+    # Option 3: Write via queue, read via mapped data
+
+    buf = device.create_buffer(
+        size=len(data1), usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST
+    )
+
+    # Write data to it
+    device.queue.write_buffer(buf, 0, data1)
+
+    # Download from buffer to CPU
+    buf.map("read")
+    data2 = buf.read_mapped()
+    buf.unmap()
+    assert data1 == data2
+
+    # Option 4: Write via mapped data, read via mapped data
+
+    # Not actually an option
+    with raises(wgpu.GPUValidationError):
+        buf = device.create_buffer(
+            size=len(data1),
+            usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.MAP_WRITE,
+        )
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
