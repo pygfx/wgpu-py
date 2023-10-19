@@ -248,14 +248,17 @@ class GPU(base.GPU):
         )
 
         adapter_id = None
+        error_msg = None
 
         @ffi.callback("void(WGPURequestAdapterStatus, WGPUAdapter, char *, void *)")
         def callback(status, result, message, userdata):
             if status != 0:
+                nonlocal error_msg
                 msg = "-" if message == ffi.NULL else ffi.string(message).decode()
-                raise RuntimeError(f"Request adapter failed ({status}): {msg}")
-            nonlocal adapter_id
-            adapter_id = result
+                error_msg = f"Request adapter failed ({status}): {msg}"
+            else:
+                nonlocal adapter_id
+                adapter_id = result
 
         # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata)
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback, ffi.NULL)
@@ -263,7 +266,8 @@ class GPU(base.GPU):
         # For now, Rust will call the callback immediately
         # todo: when wgpu gets an event loop -> while run wgpu event loop or something
         if adapter_id is None:  # pragma: no cover
-            raise RuntimeError("Could not obtain new adapter id.")
+            error_msg = error_msg or "Could not obtain new adapter id."
+            raise RuntimeError(error_msg)
 
         # ----- Get adapter info
 
@@ -707,20 +711,24 @@ class GPUAdapter(base.GPUAdapter):
         )
 
         device_id = None
+        error_msg = None
 
         @ffi.callback("void(WGPURequestDeviceStatus, WGPUDevice, char *, void *)")
         def callback(status, result, message, userdata):
             if status != 0:
+                nonlocal error_msg
                 msg = "-" if message == ffi.NULL else ffi.string(message).decode()
-                raise RuntimeError(f"Request device failed ({status}): {msg}")
-            nonlocal device_id
-            device_id = result
+                error_msg = f"Request device failed ({status}): {msg}"
+            else:
+                nonlocal device_id
+                device_id = result
 
         # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallback callback, void * userdata)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
 
         if device_id is None:  # pragma: no cover
-            raise RuntimeError("Could not obtain new device id.")
+            error_msg = error_msg or "Could not obtain new device id."
+            raise RuntimeError(error_msg)
 
         # ----- Get device limits
 
