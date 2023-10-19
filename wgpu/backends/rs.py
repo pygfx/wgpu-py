@@ -219,6 +219,12 @@ class GPU(base.GPU):
         # the NVidia control panel settings.
         # See https://github.com/gfx-rs/wgpu/issues/1416
         # todo: for the moment we default to forcing Vulkan on Windows
+        # -> AK (19-10-2023): Tried using D3D12. An advantage is that it works
+        #    on a clean Windows install where Nvidia drivers have not been
+        #    upgraded yet. It runs some/most examples, but fails the 3D
+        #    tests in test_rs_compute_tex.py, produces an error for the
+        #    Naga-generated DX shader code on the volume rendering example,
+        #    and buffer mapping seems iffy too.
         force_backend = os.getenv("WGPU_BACKEND_TYPE", None)
         backend = enum_str2int["BackendType"]["Undefined"]
         if force_backend is None:  # Allow OUR defaults
