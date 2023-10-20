@@ -183,7 +183,9 @@ libf = SafeLibCalls(lib, error_handler)
 
 @_register_backend
 class GPU(base.GPU):
-    def request_adapter(self, *, canvas, power_preference=None):
+    def request_adapter(
+        self, *, canvas, power_preference=None, force_fallback_adapter=False
+    ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 
@@ -194,7 +196,9 @@ class GPU(base.GPU):
                 render to (to create a swap chain for, to be precise). Can be None
                 if you're not rendering to screen (or if you're confident that the
                 returned adapter will work just fine).
-            powerPreference(PowerPreference): "high-performance" or "low-power"
+            power_preference(PowerPreference): "high-performance" or "low-power".
+            force_fallback_adapter (bool): whether to use a (probably CPU-based)
+                fallback adapter.
         """
 
         # ----- Surface ID
@@ -232,7 +236,7 @@ class GPU(base.GPU):
             "WGPURequestAdapterOptions *",
             compatibleSurface=surface_id,
             powerPreference=power_preference or "high-performance",
-            forceFallbackAdapter=False,
+            forceFallbackAdapter=bool(force_fallback_adapter),
             backendType=backend,
             # not used: nextInChain
         )
@@ -334,12 +338,16 @@ class GPU(base.GPU):
 
         return GPUAdapter(adapter_id, features, limits, adapter_info)
 
-    async def request_adapter_async(self, *, canvas, power_preference=None):
+    async def request_adapter_async(
+        self, *, canvas, power_preference=None, force_fallback_adapter=False
+    ):
         """Async version of ``request_adapter()``.
         This function uses the Rust WGPU library.
         """
         return self.request_adapter(
-            canvas=canvas, power_preference=power_preference
+            canvas=canvas,
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
         )  # no-cover
 
     def _generate_report(self):
