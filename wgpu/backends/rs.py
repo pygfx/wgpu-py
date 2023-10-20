@@ -212,32 +212,10 @@ class GPU(base.GPU):
         # ----- Select backend
 
         # Try to read the WGPU_BACKEND_TYPE environment variable to see
-        # if a backend should be forced. When you run into trouble with
-        # the automatic selection of wgpu, you can use this variable
-        # to force a specific backend. For instance, on Windows you
-        # might want to force Vulkan, to avoid DX12 which seems to ignore
-        # the NVidia control panel settings.
-        # See https://github.com/gfx-rs/wgpu/issues/1416
-        # todo: for the moment we default to forcing Vulkan on Windows
-        # -> AK (19-10-2023): Tried using D3D12.
-        #    With a clean Windows install (no Nvidia drivers installed yet):
-        #       Vulkan crashes when it tries to display a window.
-        #       Did not test D3D12.
-        #    With Nvidia drivers uninstalled:
-        #       Vulkan reports "no available adapter".
-        #       D3d12 kinda works. It runs some/most examples, but fails the 3D
-        #       tests in test_rs_compute_tex.py, produces an error for the
-        #       Naga-generated DX shader code on the volume rendering example,
-        #       and buffer mapping (e.g. in pygfx picking) seems iffy too.
-        #    With NVidia drivers:
-        #       Both Vulkan and D3D12 work as expected, passing all tests
-        #       (unit and examples) in wgpu-py and pygfx.
+        # if a backend should be forced.
         force_backend = os.getenv("WGPU_BACKEND_TYPE", None)
         backend = enum_str2int["BackendType"]["Undefined"]
-        if force_backend is None:  # Allow OUR defaults
-            if sys.platform.startswith("win"):
-                backend = enum_str2int["BackendType"]["Vulkan"]
-        elif force_backend:
+        if force_backend:
             try:
                 backend = enum_str2int["BackendType"][force_backend]
             except KeyError:
