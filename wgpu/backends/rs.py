@@ -16,7 +16,6 @@ Read the codegen/readme.md for more information.
 
 
 import os
-import sys
 import ctypes
 import logging
 import ctypes.util
