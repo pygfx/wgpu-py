@@ -16,7 +16,6 @@ Read the codegen/readme.md for more information.
 
 
 import os
-import sys
 import ctypes
 import logging
 import ctypes.util
@@ -184,7 +183,9 @@ libf = SafeLibCalls(lib, error_handler)
 
 @_register_backend
 class GPU(base.GPU):
-    def request_adapter(self, *, canvas, power_preference=None):
+    def request_adapter(
+        self, *, canvas, power_preference=None, force_fallback_adapter=False
+    ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 
@@ -195,7 +196,9 @@ class GPU(base.GPU):
                 render to (to create a swap chain for, to be precise). Can be None
                 if you're not rendering to screen (or if you're confident that the
                 returned adapter will work just fine).
-            powerPreference(PowerPreference): "high-performance" or "low-power"
+            power_preference(PowerPreference): "high-performance" or "low-power".
+            force_fallback_adapter (bool): whether to use a (probably CPU-based)
+                fallback adapter.
         """
 
         # ----- Surface ID
@@ -212,19 +215,10 @@ class GPU(base.GPU):
         # ----- Select backend
 
         # Try to read the WGPU_BACKEND_TYPE environment variable to see
-        # if a backend should be forced. When you run into trouble with
-        # the automatic selection of wgpu, you can use this variable
-        # to force a specific backend. For instance, on Windows you
-        # might want to force Vulkan, to avoid DX12 which seems to ignore
-        # the NVidia control panel settings.
-        # See https://github.com/gfx-rs/wgpu/issues/1416
-        # todo: for the moment we default to forcing Vulkan on Windows
+        # if a backend should be forced.
         force_backend = os.getenv("WGPU_BACKEND_TYPE", None)
         backend = enum_str2int["BackendType"]["Undefined"]
-        if force_backend is None:  # Allow OUR defaults
-            if sys.platform.startswith("win"):
-                backend = enum_str2int["BackendType"]["Vulkan"]
-        elif force_backend:
+        if force_backend:
             try:
                 backend = enum_str2int["BackendType"][force_backend]
             except KeyError:
@@ -242,20 +236,23 @@ class GPU(base.GPU):
             "WGPURequestAdapterOptions *",
             compatibleSurface=surface_id,
             powerPreference=power_preference or "high-performance",
-            forceFallbackAdapter=False,
+            forceFallbackAdapter=bool(force_fallback_adapter),
             backendType=backend,
             # not used: nextInChain
         )
 
         adapter_id = None
+        error_msg = None
 
         @ffi.callback("void(WGPURequestAdapterStatus, WGPUAdapter, char *, void *)")
         def callback(status, result, message, userdata):
             if status != 0:
+                nonlocal error_msg
                 msg = "-" if message == ffi.NULL else ffi.string(message).decode()
-                raise RuntimeError(f"Request adapter failed ({status}): {msg}")
-            nonlocal adapter_id
-            adapter_id = result
+                error_msg = f"Request adapter failed ({status}): {msg}"
+            else:
+                nonlocal adapter_id
+                adapter_id = result
 
         # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata)
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback, ffi.NULL)
@@ -263,7 +260,8 @@ class GPU(base.GPU):
         # For now, Rust will call the callback immediately
         # todo: when wgpu gets an event loop -> while run wgpu event loop or something
         if adapter_id is None:  # pragma: no cover
-            raise RuntimeError("Could not obtain new adapter id.")
+            error_msg = error_msg or "Could not obtain new adapter id."
+            raise RuntimeError(error_msg)
 
         # ----- Get adapter info
 
@@ -340,12 +338,16 @@ class GPU(base.GPU):
 
         return GPUAdapter(adapter_id, features, limits, adapter_info)
 
-    async def request_adapter_async(self, *, canvas, power_preference=None):
+    async def request_adapter_async(
+        self, *, canvas, power_preference=None, force_fallback_adapter=False
+    ):
         """Async version of ``request_adapter()``.
         This function uses the Rust WGPU library.
         """
         return self.request_adapter(
-            canvas=canvas, power_preference=power_preference
+            canvas=canvas,
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
         )  # no-cover
 
     def _generate_report(self):
@@ -707,20 +709,24 @@ class GPUAdapter(base.GPUAdapter):
         )
 
         device_id = None
+        error_msg = None
 
         @ffi.callback("void(WGPURequestDeviceStatus, WGPUDevice, char *, void *)")
         def callback(status, result, message, userdata):
             if status != 0:
+                nonlocal error_msg
                 msg = "-" if message == ffi.NULL else ffi.string(message).decode()
-                raise RuntimeError(f"Request device failed ({status}): {msg}")
-            nonlocal device_id
-            device_id = result
+                error_msg = f"Request device failed ({status}): {msg}"
+            else:
+                nonlocal device_id
+                device_id = result
 
         # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallback callback, void * userdata)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
 
         if device_id is None:  # pragma: no cover
-            raise RuntimeError("Could not obtain new device id.")
+            error_msg = error_msg or "Could not obtain new device id."
+            raise RuntimeError(error_msg)
 
         # ----- Get device limits
 

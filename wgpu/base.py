@@ -73,7 +73,9 @@ class GPU:
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
-    def request_adapter(self, *, canvas, power_preference=None):
+    def request_adapter(
+        self, *, canvas, power_preference=None, force_fallback_adapter=False
+    ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 
@@ -82,16 +84,19 @@ class GPU:
                 be able to render to (to create a swap chain for, to be precise).
                 Can be None if you're not rendering to screen (or if you're
                 confident that the returned adapter will work just fine).
-            powerPreference (PowerPreference): "high-performance" or "low-power"
+            power_preference (PowerPreference): "high-performance" or "low-power".
+            force_fallback_adapter (bool): whether to use a (probably CPU-based)
+                fallback adapter.
         """
-        # todo: include forceFallbackAdapter arg when this is also correctly applied in wgpu-native (currently its not)
         raise RuntimeError(
             "Select a backend (by importing wgpu.backends.rs) before requesting an adapter!"
         )
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
-    async def request_adapter_async(self, *, canvas, power_preference=None):
+    async def request_adapter_async(
+        self, *, canvas, power_preference=None, force_fallback_adapter=False
+    ):
         """Async version of `request_adapter()`."""
         raise RuntimeError(
             "Select a backend (by importing wgpu.rs) before requesting an adapter!"
