@@ -1857,7 +1857,7 @@ class GPUQueue(GPUObjectBase):
 class GPUDeviceLostInfo:
     """An object that contains information about the device being lost."""
 
-    # Not used at the momen, see device.lost prop
+    # Not used at the moment, see device.lost prop
 
     def __init__(self, reason, message):
         self._reason = reason
