@@ -28,8 +28,7 @@ Most methods in this API have no positional arguments; each argument
 must be referenced by name. Some argument values must be a :doc:`dict <wgpu_structs>`, these
 can be thought of as "nested" arguments. Many arguments (and dict fields) must be a
 :doc:`flag <wgpu_flags>` or :doc:`enum <wgpu_enums>`.
-Flags are integer bitmasks that can be *orred* together. Enum values are
-strings in this API. Some arguments have a default value. Most do not.
+Some arguments have a default value. Most do not.
 
 
 Differences from WebGPU
@@ -165,6 +164,10 @@ These classes are not supported and/or documented yet.
 
 List of flags, enums, and structs
 ---------------------------------
+
+Enum values are strings, so instead of ``wgpu.TextureFormat.rgba8unorm`` one can also use "rgba8unorm".
+Flags are integer bitmasks, but can also be passed as strings, so instead of
+``wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST``, one can also use "MAP_READ|COPY_DIST".
 
 .. toctree::
     :maxdepth: 2
