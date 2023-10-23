@@ -14,7 +14,7 @@ Python 3.7 or higher is required. Pypy is supported. Only depends on ``cffi`` (i
     pip install wgpu
 
 
-Since most users will want to render something to screen, we recommend installing GLGW as well:
+Since most users will want to render something to screen, we recommend installing GLFW as well:
 
 .. code-block:: bash
 
@@ -54,8 +54,8 @@ is selected automatically, but can be overridden by setting the
 Windows
 +++++++
 
-On Windows 10+, things should just work. On older Windows versions you
-may need to install the Vulkan drivers.
+On Windows 10+, things should just work. If your machine has a dedicated GPU,
+you may want to update to the latest (Nvidia or AMD) drivers.
 
 MacOS
 +++++

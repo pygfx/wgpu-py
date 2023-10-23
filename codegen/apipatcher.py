@@ -286,15 +286,13 @@ class IdlPatcherMixin:
         bases = sorted(cls.bases or [], key=lambda n: n.count("GPUObjectBase"))
         bases = [b for b in bases if b not in ignore]
         # Cover some special cases
-        if not bases and classname.lower().endswith("error"):
-            if "memory" in classname:
-                bases = "(MemoryError)"
-            else:
-                bases = "(Exception)"
-        elif not bases:
-            bases = ""
-        else:
-            bases = f"({', '.join(bases)})"
+        if classname.lower().endswith("error"):
+            if "memory" in classname.lower():
+                bases.append("MemoryError")
+            elif not bases:
+                bases.append("Exception")
+
+        bases = "" if not bases else f"({', '.join(bases)})"
         return f"class {classname}{bases}:"
 
     def get_method_def(self, classname, methodname):
@@ -437,10 +435,15 @@ class BackendApiPatcher(AbstractApiPatcher):
 
     def get_class_def(self, classname):
         line, _ = self.classes[classname]
-        if "):" in line:
-            return line.replace("(", f"(base.{classname}, ")
-        else:
+
+        if "):" not in line:
             return line.replace(":", f"(base.{classname}):")
+        else:
+            i = line.find("(")
+            bases = line[i:].strip("():").replace(",", " ").split()
+            bases = [b for b in bases if b.startswith("GPU")]
+            bases.insert(0, f"base.{classname}")
+            return line[:i] + "(" + ", ".join(bases) + "):"
 
     def get_method_def(self, classname, methodname):
         _, methods = self.classes[classname]

@@ -13,7 +13,8 @@ Graphics Processing Unit.
     The WebGPU API is still being developed and occasionally there are backwards
     incompatible changes. Since we mostly follow the WebGPU API, there may be
     backwards incompatible changes to wgpu-py too. This will be so until
-    the WebGPU API settles as a standard.
+    the WebGPU API settles as a standard. In the mean time, keep an eye on the
+    `CHANGELOG.md <https://github.com/pygfx/wgpu-py/blob/main/CHANGELOG.md>`_.
 
 
 How to read this API
@@ -21,7 +22,7 @@ How to read this API
 
 The classes in this API all have a name staring with "GPU", this helps
 discern them from flags and enums. These classes are never instantiated
-directly; new objects are returned by certain methods.
+directly; new objects are returned by special methods (mostly from the device).
 
 Most methods in this API have no positional arguments; each argument
 must be referenced by name. Some argument values must be a :doc:`dict <wgpu_structs>`, these
@@ -44,7 +45,7 @@ here accept the fields in that struct as keyword arguments.
 
 
 Each backend may also implement minor differences (usually additions)
-from the base API. For the ``rs`` backend check ``print(wgpu.backends.rs.apidiff.__doc__)``.
+from the base API. The ``rs`` backend only adds ``GPUAdapter.request_device_tracing()``.
 
 
 Overview
@@ -88,8 +89,6 @@ for it, that can be attached to a shader.
 
 To let a shader sample from a texture, you also need a :class:`GPUSampler` that
 defines the filtering and sampling behavior beyond the edges.
-
-WebGPU also defines the :class:`GPUExternalTexture`, but this is not (yet?) used in wgpu-py.
 
 Bind groups
 +++++++++++
@@ -144,16 +143,16 @@ implememted in wgpu-py.
 Error handling
 ++++++++++++++
 
-Errors are caught and logged using the ``wgpu`` logger.
+Errors in wgpu-native are raised as Python errors where possible. Uncaught errors
+and warnings are logged using the ``wgpu`` logger.
 
-Todo: document the role of these classes:
-:class:`GPUUncapturedErrorEvent`
-:class:`GPUError`
-:class:`GPUValidationError`
-:class:`GPUOutOfMemoryError`
-:class:`GPUInternalError`
-:class:`GPUPipelineError`
-:class:`GPUDeviceLostInfo`
+There are specific exceptions that can be raised:
+* :class:`GPUError` is the generic (base) error class.
+* :class:`GPUValidationError` is for wgpu validation errors. Shader errors also fall into this category.
+* :class:`GPUOutOfMemoryError` is a wgpu `MemoryError`.
+* :class:`GPUInternalError` when wgpu reaches a internal error state.
+* :class:`GPUPipelineError` for errors related to the pipeline.
+* :class:`GPUDeviceLostInfo` when the device is lost.
 
 TODO
 ++++
@@ -202,7 +201,6 @@ List of GPU classes
     ~GPUDevice
     ~GPUDeviceLostInfo
     ~GPUError
-    ~GPUExternalTexture
     ~GPUInternalError
     ~GPUObjectBase
     ~GPUOutOfMemoryError
@@ -220,5 +218,4 @@ List of GPU classes
     ~GPUShaderModule
     ~GPUTexture
     ~GPUTextureView
-    ~GPUUncapturedErrorEvent
     ~GPUValidationError

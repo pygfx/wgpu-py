@@ -201,6 +201,7 @@ class IdlParser:
             "ImageData": "memoryview",
             "VideoFrame": "memoryview",
             "GPUPipelineConstantValue": "float",
+            "GPUExternalTexture": "object",
         }
         name = pythonmap.get(name, name)
 
@@ -403,6 +404,8 @@ class IdlParser:
             "GPUSupportedLimits",
             "GPUSupportedFeatures",
             "WGSLLanguageFeatures",
+            "GPUUncapturedErrorEvent",
+            "GPUExternalTexture",
         ]:
             self._interfaces.pop(name, None)
 

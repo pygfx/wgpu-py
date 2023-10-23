@@ -25,7 +25,6 @@ __all__ = [
     "GPUBuffer",
     "GPUTexture",
     "GPUTextureView",
-    "GPUExternalTexture",
     "GPUSampler",
     "GPUBindGroupLayout",
     "GPUBindGroup",
@@ -55,7 +54,6 @@ __all__ = [
     "GPUValidationError",
     "GPUOutOfMemoryError",
     "GPUInternalError",
-    "GPUUncapturedErrorEvent",
 ]
 
 logger = logging.getLogger("wgpu")
@@ -103,7 +101,7 @@ class GPU:
         )  # no-cover
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
-    @apidiff.change("Disabled because we put it on the canvas context.")
+    @apidiff.change("Disabled because we put it on the canvas context")
     def get_preferred_canvas_format(self):
         """Not implemented in wgpu-py; use `GPUCanvasContext.get_preferred_format()` instead.
         The WebGPU spec defines this function, but in wgpu there are different
@@ -419,12 +417,17 @@ class GPUDevice(GPUObjectBase):
         return self._adapter
 
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
+    @apidiff.hide("Not a Pythonic API")
     @property
     def lost(self):
         """Provides information about why the device is lost."""
+        # In JS you can device.lost.then ... to handle lost devices.
+        # We may want to eventually support something similar async-like?
+        # at some point
         raise NotImplementedError()
 
     # IDL: attribute EventHandler onuncapturederror;
+    @apidiff.hide("Specific to browsers")
     @property
     def onuncapturederror(self):
         """Method called when an error is capured?"""
@@ -908,7 +911,7 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor);
-    @apidiff.hide("Specific to browsers.")
+    @apidiff.hide("Specific to browsers")
     def import_external_texture(
         self,
         *,
@@ -1843,7 +1846,7 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: undefined copyExternalImageToTexture( GPUImageCopyExternalImage source, GPUImageCopyTextureTagged destination, GPUExtent3D copySize);
-    @apidiff.hide("Specific to browsers.")
+    @apidiff.hide("Specific to browsers")
     def copy_external_image_to_texture(self, source, destination, copy_size):
         raise NotImplementedError()
 
@@ -1853,6 +1856,8 @@ class GPUQueue(GPUObjectBase):
 
 class GPUDeviceLostInfo:
     """An object that contains information about the device being lost."""
+
+    # Not used at the moment, see device.lost prop
 
     def __init__(self, reason, message):
         self._reason = reason
@@ -1884,7 +1889,7 @@ class GPUError(Exception):
         return self.args[0]
 
 
-class GPUOutOfMemoryError(GPUError):
+class GPUOutOfMemoryError(GPUError, MemoryError):
     """An error raised when the GPU is out of memory."""
 
     # IDL: constructor(DOMString message);
@@ -2001,24 +2006,9 @@ class GPUQuerySet(GPUObjectBase):
         raise NotImplementedError()
 
 
-class GPUExternalTexture(GPUObjectBase):
-    """Ignore this - specific to browsers."""
-
-
-class GPUUncapturedErrorEvent:
-    """TODO"""
-
-    # IDL: [SameObject] readonly attribute GPUError error;
-    @property
-    def error(self):
-        """The error object."""
-        raise NotImplementedError()
-
-    # IDL: constructor( DOMString type, GPUUncapturedErrorEventInit gpuUncapturedErrorEventInitDict );
-    def __init__(self, type, gpu_uncaptured_error_event_init_dict):
-        pass
-
-
 # %%%%% Post processing
+
+# Note that some toplevel classes are already filtered out by the codegen,
+# like GPUExternalTexture and GPUUncapturedErrorEvent, and more.
 
 apidiff.remove_hidden_methods(globals())
