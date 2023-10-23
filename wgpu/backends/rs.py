@@ -2688,11 +2688,32 @@ class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
             libf.wgpuRenderBundleRelease(internal)
 
 
+class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
+    pass
+
+    def destroy(self):
+        if self._internal is not None and lib is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPUQuerySet querySet)
+            libf.wgpuQuerySetRelease(internal)
+
+
+# %% Subclasses that don't need anything else
+
+
+class GPUCompilationMessage(base.GPUCompilationMessage):
+    pass
+
+
+class GPUCompilationInfo(base.GPUCompilationInfo):
+    pass
+
+
 class GPUDeviceLostInfo(base.GPUDeviceLostInfo):
     pass
 
 
-class GPUError(base.GPUError, Exception):
+class GPUError(base.GPUError):
     pass
 
 
@@ -2704,40 +2725,12 @@ class GPUValidationError(base.GPUValidationError, GPUError):
     pass
 
 
-class GPUCompilationMessage(base.GPUCompilationMessage):
+class GPUPipelineError(base.GPUPipelineError):
     pass
-
-
-class GPUCompilationInfo(base.GPUCompilationInfo):
-    pass
-
-
-class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
-    pass
-
-    def destroy(self):
-        if self._internal is not None and lib is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUQuerySet querySet)
-            libf.wgpuQuerySetRelease(internal)
-
-
-class GPUExternalTexture(base.GPUExternalTexture, GPUObjectBase):
-    pass
-
-
-class GPUUncapturedErrorEvent(base.GPUUncapturedErrorEvent):
-    pass
-
-
-class GPUPipelineError(base.GPUPipelineError, Exception):
-    def __init__(self, message="", options=None):
-        super().__init__(message, options)
 
 
 class GPUInternalError(base.GPUInternalError, GPUError):
-    def __init__(self, message):
-        super().__init__(message)
+    pass
 
 
 # %%

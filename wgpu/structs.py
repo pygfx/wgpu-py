@@ -211,11 +211,11 @@ BindGroupDescriptor = Struct(
 )
 
 #: * binding :: int
-#: * resource :: Union[:class:`GPUExternalTexture <wgpu.GPUExternalTexture>`, :class:`GPUSampler <wgpu.GPUSampler>`, :class:`GPUTextureView <wgpu.GPUTextureView>`, :obj:`structs.BufferBinding <BufferBinding>`]
+#: * resource :: Union[:class:`GPUSampler <wgpu.GPUSampler>`, :class:`GPUTextureView <wgpu.GPUTextureView>`, object, :obj:`structs.BufferBinding <BufferBinding>`]
 BindGroupEntry = Struct(
     "BindGroupEntry",
     binding="int",
-    resource="Union[GPUExternalTexture, GPUSampler, GPUTextureView, structs.BufferBinding]",
+    resource="Union[GPUSampler, GPUTextureView, object, structs.BufferBinding]",
 )
 
 #: * buffer :: :class:`GPUBuffer <wgpu.GPUBuffer>`

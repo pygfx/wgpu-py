@@ -16,7 +16,7 @@ Selecting the backend
 
 To use ``wgpu``, you must select a backend. Eventually
 there may be multiple backends, but at the moment
-there is only one backend, which is based on the Rust libary
+there is only one, which is based on the Rust libary
 `wgpu-native <https://github.com/gfx-rs/wgpu>`__. You select
 the backend by importing it:
 
@@ -203,7 +203,7 @@ object. These objects provide a quite versatile view on ndarray data:
 .. code-block:: py
 
     # One could, for instance read the content of a buffer
-    m = buffer.read_data()
+    m = device.queue.read_buffer(buffer)
     # Cast it to float32
     m = m.cast("f")
     # Index it

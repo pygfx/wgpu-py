@@ -1,7 +1,7 @@
 Utils
 =====
 
-The wgpu library provides a few utilities. Note that the functions below need to be explictly imported.
+The wgpu library provides a few utilities. Note that most functions below need to be explictly imported.
 
 
 Get default device
@@ -12,6 +12,10 @@ Get default device
 
 Compute with buffers
 --------------------
+
+.. code-block:: py
+
+    from wgpu.utils.compute import compute_with_buffers
 
 .. autofunction:: wgpu.utils.compute_with_buffers
 
