@@ -431,7 +431,7 @@ class GPU(base.GPU):
 class GPUCanvasContext(base.GPUCanvasContext):
     def __init__(self, canvas):
         super().__init__(canvas)
-        self._surface_size = (-1, -1)
+        self._surface_size = (-1, -1, -1)
         self._surface_id = None
         self._internal = None
         self._current_texture = None
@@ -444,7 +444,14 @@ class GPUCanvasContext(base.GPUCanvasContext):
         if self._current_texture is None:
             self._create_native_swap_chain_if_needed()
             # H: WGPUTextureView f(WGPUSwapChain swapChain)
-            view_id = libf.wgpuSwapChainGetCurrentTextureView(self._internal)
+            try:
+                view_id = libf.wgpuSwapChainGetCurrentTextureView(self._internal)
+            except Exception as err:
+                extra_msg = "\nThis may be caused by dragging the window to a monitor with different dpi. "
+                extra_msg += "Resize window to proceed.\n"
+                err.args = (err.args[0] + extra_msg,) + err.args[1:]
+                raise err from None
+
             size = self._surface_size[0], self._surface_size[1], 1
             self._current_texture = GPUTextureView(
                 "swap_chain", view_id, self._device, None, size
@@ -465,9 +472,11 @@ class GPUCanvasContext(base.GPUCanvasContext):
     def _create_native_swap_chain_if_needed(self):
         canvas = self._get_canvas()
         psize = canvas.get_physical_size()
-        if psize == self._surface_size:
+        ref_size = psize[0], psize[1], canvas.get_pixel_ratio()
+
+        if ref_size == self._surface_size:
             return
-        self._surface_size = psize
+        self._surface_size = ref_size
 
         if self._surface_id is None:
             self._surface_id = get_surface_id_from_canvas(canvas)
