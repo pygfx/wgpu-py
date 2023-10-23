@@ -1,5 +1,5 @@
 """
-Higher level utility functions. This module is not imported by default.
+Higher level utilities. Must be explicitly imported from ``wgpu.utils.xx``.
 """
 
 # The purpose of wgpu-py is to provide a Pythonic wrapper around
@@ -13,5 +13,30 @@ Higher level utility functions. This module is not imported by default.
 # GPU/wgpu semantics), but without using low level details of the wgpu
 # API itself.
 
-from ._device import get_default_device  # noqa: F401
-from ._compute import compute_with_buffers  # noqa: F401
+# The get_default_device() is so small and generally convenient that we import it by default.
+from .device import get_default_device  # noqa: F401
+
+
+class _StubModule:
+    def __init__(self, module):
+        self._module = module
+        self.must_be_explicitly_imported = True
+
+    def __getattr__(self, *args, **kwargs):
+        raise RuntimeError(f"wgpu.utils.{self._module} must be explicitly imported.")
+
+    def __repr__(self):
+        return f"<Stub for wgpu.utils.{self._module} - {self._module} must be explicitly imported>"
+
+
+# Create stubs
+
+
+def compute_with_buffers(*args, **kwargs):
+    raise DeprecationWarning(
+        "wgpu.utils.compute_with_buffers() must now be imported from wgpu.utils.compute"
+    )
+
+
+compute = _StubModule("compute")
+shadertoy = _StubModule("shadertoy")

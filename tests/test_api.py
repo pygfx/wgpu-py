@@ -123,24 +123,30 @@ def get_output_from_subprocess(code):
     return p.stdout.decode(errors="ignore")
 
 
-def test_do_not_import_utils_subpackage():
+def test_do_not_import_utils_submodules():
     # OK: use something from root package
     code = "import wgpu; print(wgpu.__version__)"
     out = get_output_from_subprocess(code)
     assert "Error" not in out
     assert wgpu.__version__ in out
 
-    # OK: use something from utils if we import it first
-    code = "import wgpu.utils; print(wgpu.utils.compute_with_buffers)"
+    # OK: wgpu.utils itself is always there
+    code = "import wgpu; print(wgpu.utils)"
     out = get_output_from_subprocess(code)
     assert "Error" not in out
-    assert "function compute_with_buffers" in out
+    assert "module 'wgpu.utils' from " in out
 
-    # FAIL: use something from utils if we only import wgpu
-    code = "import wgpu; print(wgpu.utils.compute_with_buffers)"
+    # OK: wgpu.utils itself is always there
+    code = "import wgpu; print(wgpu.utils.get_default_device)"
+    out = get_output_from_subprocess(code)
+    assert "Error" not in out
+    assert "function get_default_device" in out
+
+    # FAIL: use something from utils that's not imported
+    code = "import wgpu; print(wgpu.utils.compute.compute_with_buffers)"
     out = get_output_from_subprocess(code)
     assert "Error" in out
-    assert "has no attribute" in out and "utils" in out
+    assert "must be explicitly imported" in out and "utils" in out
 
     # Also, no numpy
     code = "import sys, wgpu.utils; print('numpy' in sys.modules)"
