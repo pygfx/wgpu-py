@@ -828,9 +828,9 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
     def _create_buffer(self, label, size, usage, mapped_at_creation):
         # Create a buffer object
-        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUBufferUsageFlags/int, size: int, mappedAtCreation: bool
         if isinstance(usage, str):
             usage = str_flag_to_int(flags.BufferUsage, usage)
+        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUBufferUsageFlags/int, size: int, mappedAtCreation: bool
         struct = new_struct_p(
             "WGPUBufferDescriptor *",
             label=to_c_label(label),
