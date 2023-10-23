@@ -443,8 +443,8 @@ class GPUCanvasContext(base.GPUCanvasContext):
             )
         if self._current_texture is None:
             self._create_native_swap_chain_if_needed()
-            # H: WGPUTextureView f(WGPUSwapChain swapChain)
             try:
+                # H: WGPUTextureView f(WGPUSwapChain swapChain)
                 view_id = libf.wgpuSwapChainGetCurrentTextureView(self._internal)
             except Exception as err:
                 extra_msg = "\nThis may be caused by dragging the window to a monitor with different dpi. "
