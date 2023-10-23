@@ -1817,7 +1817,36 @@ class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
 
 class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
     def get_compilation_info(self):
-        return super().get_compilation_info()
+        # Here's a little setup to implement this method. Unfortunately,
+        # this is not yet implemented in wgpu-native. Another problem
+        # is that if there is an error in the shader source, we raise
+        # an exception, so the user never gets a GPUShaderModule object
+        # that can be used to call this method :/ So perhaps we should
+        # do this stuff in device.create_shader_module() and attach it
+        # to the exception that we raise?
+
+        # info = None
+        #
+        # @ffi.callback("void(WGPUCompilationInfoRequestStatus, WGPUCompilationInfo*, void*)")
+        # def callback(status_, info_, userdata):
+        #     if status_ == 0:
+        #         nonlocal info
+        #         info = info_
+        #     else:
+        #         pass
+        #
+        # H: void f(WGPUShaderModule shaderModule, WGPUCompilationInfoCallback callback, void * userdata)
+        # libf.wgpuShaderModuleGetCompilationInfo(self._internal, callback, ffi.NULL)
+        #
+        # H: bool f(WGPUDevice device, bool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
+        # libf.wgpuDevicePoll(self._device._internal, True, ffi.NULL)
+        #
+        # if info is None:
+        #     raise RuntimeError("Could not obtain shader compilation info.")
+        #
+        #  ... and then turn these WGPUCompilationInfoRequestStatus objects into Python objects ...
+
+        return []
 
     def _destroy(self):
         if self._internal is not None and lib is not None:

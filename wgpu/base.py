@@ -1277,7 +1277,9 @@ class GPUShaderModule(GPUObjectBase):
     # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
     def get_compilation_info(self):
         """Get shader compilation info. Always returns empty list at the moment."""
-        return []
+        # How can this return shader errors if one cannot create a
+        # shader module when the shader source has errors?
+        raise NotImplementedError()
 
 
 class GPUPipelineBase:
