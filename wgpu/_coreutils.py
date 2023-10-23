@@ -40,6 +40,25 @@ def error_message_hash(message):
     return hash(message)
 
 
+def str_flag_to_int(flag, s):
+    """Allow using strings for flags, i.e. 'READ' instead of wgpu.MapMode.READ."""
+    parts = [p.strip() for p in s.split("|")]
+    parts = [p for p in parts if p]
+    invalid_parts = [p for p in parts if p.startswith("_")]
+    if not parts or invalid_parts:
+        raise ValueError(f"Invalid flag value: {s}")
+
+    value = 0
+    for p in parts:
+        try:
+            v = flag.__dict__[p.upper()]
+            value += v
+        except KeyError:
+            raise ValueError(f"Invalid flag value for {flag}: '{p}'")
+
+    return value
+
+
 class ApiDiff:
     """Helper class to define differences in the API by annotating
     methods. This way, these difference are made explicit, plus they're
