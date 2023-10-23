@@ -44,8 +44,13 @@ _flag_cache = {}  # str -> int
 
 
 def str_flag_to_int(flag, s):
-    """Allow using strings for flags, i.e. 'READ' instead of wgpu.MapMode.READ."""
-    value = _flag_cache.get(s, None)
+    """Allow using strings for flags, i.e. 'READ' instead of wgpu.MapMode.READ.
+    No worries about repeated overhead, because the resuls are cached.
+    """
+    cache_key = (
+        f"{flag._name}.{s}"  # using private attribute, lets call this a friend func
+    )
+    value = _flag_cache.get(cache_key, None)
 
     if value is None:
         parts = [p.strip() for p in s.split("|")]
@@ -61,7 +66,7 @@ def str_flag_to_int(flag, s):
                 value += v
             except KeyError:
                 raise ValueError(f"Invalid flag value for {flag}: '{p}'")
-        _flag_cache[s] = value
+        _flag_cache[cache_key] = value
 
     return value
 

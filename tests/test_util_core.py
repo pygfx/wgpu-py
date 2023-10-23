@@ -40,7 +40,7 @@ def test_str_flag_to_int():
         assert flag == flags[0]
 
     for v in versions:
-        assert v in _flag_cache
+        assert f"BufferUsage.{v}" in _flag_cache
 
 
 if __name__ == "__main__":
