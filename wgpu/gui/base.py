@@ -237,7 +237,9 @@ class WgpuAutoGui:
         target_time = self._last_event_time + 1.0 / rate
         return max(0, target_time - now)
 
-    def _handle_event_rate_limited(self, ev, call_later_func, match_keys, accum_keys):
+    def _handle_event_rate_limited(
+        self, event, call_later_func, match_keys, accum_keys
+    ):
         """Alternative `to handle_event()` for events that must be rate-limted.
         If any of the `match_keys` keys of the new event differ from the currently
         pending event, the old event is dispatched now. The `accum_keys` keys of
@@ -252,23 +254,25 @@ class WgpuAutoGui:
         Subclasses that use this method must use ``_handle_event_and_flush()``
         where they would otherwise call ``handle_event()``, to preserve event order.
         """
-        event_type = ev["event_type"]
+        event_type = event["event_type"]
+        event.setdefault("time_stamp", time.perf_counter())
         # We may need to emit the old event. Otherwise, we need to update the new one.
         old = self._pending_events.get(event_type, None)
         if old:
-            if any(ev[key] != old[key] for key in match_keys):
+            if any(event[key] != old[key] for key in match_keys):
                 self.handle_event(old)
             else:
                 for key in accum_keys:
-                    ev[key] = old[key] + ev[key]
+                    event[key] = old[key] + event[key]
         # Make sure that we have scheduled a moment to handle events
         if not self._pending_events:
             call_later_func(self._get_event_wait_time(), self._handle_pending_events)
         # Store the event object
-        self._pending_events[event_type] = ev
+        self._pending_events[event_type] = event
 
     def _handle_event_and_flush(self, event):
         """Call handle_event after flushing any pending (rate-limited) events."""
+        event.setdefault("time_stamp", time.perf_counter())
         self._handle_pending_events()
         self.handle_event(event)
 
