@@ -75,6 +75,7 @@ def _auto_load_backend():
                 continue
             try:
                 module = _load_backend(gui_backends[libname])
+                break
             except Exception as err:
                 errors.append(err)
 
