@@ -66,7 +66,8 @@ class GPUCanvasContextOffline(base.GPUCanvasContext):
 
     def get_current_texture(self):
         self._create_new_texture_if_needed()
-        # todo: we return a view here, to align with the rs implementation, even though its wrong.
+        # Technically a texture view, even though WebGPU says it must be a texture.
+        # Anyway, this API will change in a next version anyway.
         return self._texture_view
 
     def present(self):
