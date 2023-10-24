@@ -253,8 +253,8 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         if touches:
             ev.update(
                 {
-                    "ntouches": 0,  # TODO
-                    "touches": {},  # TODO
+                    "ntouches": 0,
+                    "touches": {},  # TODO: Qt touch events
                 }
             )
 
@@ -285,6 +285,11 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             for mod in MODIFIERS_MAP.keys()
             if mod & event.modifiers()
         ]
+        buttons = [
+            BUTTON_MAP[button]
+            for button in BUTTON_MAP.keys()
+            if button & event.buttons()
+        ]
 
         ev = {
             "event_type": "wheel",
@@ -292,6 +297,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "dy": -event.angleDelta().y(),
             "x": event.position().x(),
             "y": event.position().y(),
+            "buttons": buttons,
             "modifiers": modifiers,
         }
         match_keys = {"modifiers"}

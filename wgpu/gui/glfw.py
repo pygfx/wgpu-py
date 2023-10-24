@@ -152,8 +152,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         glfw.set_window_iconify_callback(self._window, weakbind(self._on_iconify))
 
         # User input
-        self._key_modifiers = set()
-        self._pointer_buttons = set()
+        self._key_modifiers = []
+        self._pointer_buttons = []
         self._pointer_pos = 0, 0
         self._double_click_state = {"clicks": 0}
         glfw.set_mouse_button_callback(self._window, weakbind(self._on_mouse_button))
@@ -323,10 +323,14 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
         if action == glfw.PRESS:
             event_type = "pointer_down"
-            self._pointer_buttons.add(button)
+            buttons = set(self._pointer_buttons)
+            buttons.add(button)
+            self._pointer_buttons = list(sorted(buttons))
         elif action == glfw.RELEASE:
             event_type = "pointer_up"
-            self._pointer_buttons.discard(button)
+            buttons = set(self._pointer_buttons)
+            buttons.discard(button)
+            self._pointer_buttons = list(sorted(buttons))
         else:
             return
 
@@ -426,6 +430,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "dy": -100.0 * dy,
             "x": self._pointer_pos[0],
             "y": self._pointer_pos[1],
+            "buttons": list(self._pointer_buttons),
             "modifiers": list(self._key_modifiers),
         }
         match_keys = {"modifiers"}
@@ -438,11 +443,15 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         if action == glfw.PRESS:
             event_type = "key_down"
             if modifier:
-                self._key_modifiers.add(modifier)
+                modifiers = set(self._key_modifiers)
+                modifiers.add(modifier)
+                self._key_modifiers = list(sorted(modifiers))
         elif action == glfw.RELEASE:
             event_type = "key_up"
             if modifier:
-                self._key_modifiers.discard(modifier)
+                modifiers = set(self._key_modifiers)
+                modifiers.discard(modifier)
+                self._key_modifiers = list(sorted(modifiers))
         else:  # glfw.REPEAT
             return
 
