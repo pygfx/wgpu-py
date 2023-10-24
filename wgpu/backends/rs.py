@@ -2565,10 +2565,18 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
             raise ValueError("copy destination texture must be a texture, not a view")
 
         m, address = get_memoryview_and_address(data)
-        # todo: could we not derive the size from the shape of m?
 
         c_data = ffi.cast("uint8_t *", address)
         data_length = m.nbytes
+
+        # We could allow size=None in this method, and derive the size from the data.
+        # Or compare size with the data size if it is given. However, the data
+        # could be a bit raw, being 1D and/or the shape expressed in bytes, so
+        # this gets a bit muddy. Also methods like copy_buffer_to_texture have the
+        # same size arg, so let's just leave it like this.
+        #
+        # data_size = list(reversed(m.shape)) + [1, 1, 1]
+        # data_size = data_size[:3]
 
         size = _tuple_from_tuple_or_dict(
             size, ("width", "height", "depth_or_array_layers")
