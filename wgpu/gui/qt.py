@@ -253,8 +253,8 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         if touches:
             ev.update(
                 {
-                    "ntouches": 0,  # TODO
-                    "touches": {},  # TODO
+                    "ntouches": 0,
+                    "touches": {},  # TODO: Qt touch events
                 }
             )
 
