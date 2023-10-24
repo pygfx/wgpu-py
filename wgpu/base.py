@@ -988,7 +988,8 @@ class GPUBuffer(GPUObjectBase):
         to ``unmap()`` when done.
 
         Arguments:
-            mode (enum): The mapping mode, either mapmode.READ or mapmode.WRITE.
+            mode (enum): The mapping mode, either wgpu.MapMode.READ or
+                wgpu.MapMode.WRITE, can also be a string.
             offset (str): the buffer offset in bytes. Default 0.
             size (int): the size to read. Default until the end.
         """

@@ -90,9 +90,7 @@ def test_buffer_init3():
     # Option 1: write via queue (i.e. temp buffer), read via queue
 
     # Create buffer
-    buf = device.create_buffer(
-        size=len(data1), usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
-    )
+    buf = device.create_buffer(size=len(data1), usage="COPY_DST|COPY_SRC")
 
     # Write data to it
     device.queue.write_buffer(buf, 0, data1)
@@ -104,9 +102,7 @@ def test_buffer_init3():
     # Option 2: Write via mapped data, read via queue
 
     # Create buffer
-    buf = device.create_buffer(
-        size=len(data1), usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC
-    )
+    buf = device.create_buffer(size=len(data1), usage="MAP_WRITE | COPY_SRC")
 
     # Write data to it
     buf.map("write")
@@ -119,9 +115,7 @@ def test_buffer_init3():
 
     # Option 3: Write via queue, read via mapped data
 
-    buf = device.create_buffer(
-        size=len(data1), usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST
-    )
+    buf = device.create_buffer(size=len(data1), usage=" MAP_READ | COPY_DST ")
 
     # Write data to it
     device.queue.write_buffer(buf, 0, data1)
@@ -136,10 +130,7 @@ def test_buffer_init3():
 
     # Not actually an option
     with raises(wgpu.GPUValidationError):
-        buf = device.create_buffer(
-            size=len(data1),
-            usage=wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.MAP_WRITE,
-        )
+        buf = device.create_buffer(size=len(data1), usage="MAP_READ |MAP_WRITE")
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")

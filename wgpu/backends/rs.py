@@ -24,7 +24,7 @@ from typing import List, Dict, Union
 
 from .. import base, flags, enums, structs
 from .. import _register_backend
-from .._coreutils import ApiDiff
+from .._coreutils import ApiDiff, str_flag_to_int
 
 from .rs_ffi import ffi, lib, check_expected_version
 from .rs_mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
@@ -431,7 +431,7 @@ class GPU(base.GPU):
 class GPUCanvasContext(base.GPUCanvasContext):
     def __init__(self, canvas):
         super().__init__(canvas)
-        self._surface_size = (-1, -1, -1)
+        self._surface_size = (-1, -1)
         self._surface_id = None
         self._internal = None
         self._current_texture = None
@@ -472,11 +472,10 @@ class GPUCanvasContext(base.GPUCanvasContext):
     def _create_native_swap_chain_if_needed(self):
         canvas = self._get_canvas()
         psize = canvas.get_physical_size()
-        ref_size = psize[0], psize[1], canvas.get_pixel_ratio()
 
-        if ref_size == self._surface_size:
+        if psize == self._surface_size:
             return
-        self._surface_size = ref_size
+        self._surface_size = psize
 
         if self._surface_id is None:
             self._surface_id = get_surface_id_from_canvas(canvas)
@@ -829,12 +828,14 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
     def _create_buffer(self, label, size, usage, mapped_at_creation):
         # Create a buffer object
+        if isinstance(usage, str):
+            usage = str_flag_to_int(flags.BufferUsage, usage)
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUBufferUsageFlags/int, size: int, mappedAtCreation: bool
         struct = new_struct_p(
             "WGPUBufferDescriptor *",
             label=to_c_label(label),
             size=size,
-            usage=usage,
+            usage=int(usage),
             mappedAtCreation=mapped_at_creation,
             # not used: nextInChain
         )
@@ -862,6 +863,9 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         usage: "flags.TextureUsage",
         view_formats: "List[enums.TextureFormat]" = [],
     ):
+        if isinstance(usage, str):
+            usage = str_flag_to_int(flags.TextureUsage, usage)
+        usage = int(usage)
         size = _tuple_from_tuple_or_dict(
             size, ("width", "height", "depth_or_array_layers")
         )
@@ -1007,11 +1011,14 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 )
                 # Unreachable - fool the codegen
                 check_struct("ExternalTextureBindingLayout", info)
+            visibility = entry["visibility"]
+            if isinstance(visibility, str):
+                visibility = str_flag_to_int(flags.ShaderStage, visibility)
             # H: nextInChain: WGPUChainedStruct *, binding: int, visibility: WGPUShaderStageFlags/int, buffer: WGPUBufferBindingLayout, sampler: WGPUSamplerBindingLayout, texture: WGPUTextureBindingLayout, storageTexture: WGPUStorageTextureBindingLayout
             c_entry = new_struct(
                 "WGPUBindGroupLayoutEntry",
                 binding=int(entry["binding"]),
-                visibility=int(entry["visibility"]),
+                visibility=int(visibility),
                 buffer=buffer,
                 sampler=sampler,
                 texture=texture,
@@ -1556,23 +1563,11 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
 
         # Check mode
         if isinstance(mode, str):
-            if mode.upper() == "READ_NOSYNC":  # for internal use
-                mode = flags.MapMode.READ
+            if mode == "READ_NOSYNC":  # for internal use
                 sync_on_read = False
-            elif mode.upper() == "READ":
-                mode = flags.MapMode.READ
-            elif mode.upper() == "WRITE":
-                mode = flags.MapMode.WRITE
-            else:
-                raise ValueError("Map mode must be READ or WRITE")
-        if isinstance(mode, int):
-            map_mode = 0
-            if mode & flags.MapMode.READ:
-                map_mode |= lib.WGPUMapMode_Read
-            if mode & flags.MapMode.WRITE:
-                map_mode |= lib.WGPUMapMode_Write
-        else:  # pragma: no cover
-            raise TypeError("Map mode should be flag (int) or str.")
+                mode = "READ"
+            mode = str_flag_to_int(flags.MapMode, mode)
+        map_mode = int(mode)
 
         # Check offset and size
         offset, size = self._check_range(offset, size)
@@ -2599,10 +2594,18 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
             raise ValueError("copy destination texture must be a texture, not a view")
 
         m, address = get_memoryview_and_address(data)
-        # todo: could we not derive the size from the shape of m?
 
         c_data = ffi.cast("uint8_t *", address)
         data_length = m.nbytes
+
+        # We could allow size=None in this method, and derive the size from the data.
+        # Or compare size with the data size if it is given. However, the data
+        # could be a bit raw, being 1D and/or the shape expressed in bytes, so
+        # this gets a bit muddy. Also methods like copy_buffer_to_texture have the
+        # same size arg, so let's just leave it like this.
+        #
+        # data_size = list(reversed(m.shape)) + [1, 1, 1]
+        # data_size = data_size[:3]
 
         size = _tuple_from_tuple_or_dict(
             size, ("width", "height", "depth_or_array_layers")

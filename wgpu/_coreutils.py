@@ -40,6 +40,37 @@ def error_message_hash(message):
     return hash(message)
 
 
+_flag_cache = {}  # str -> int
+
+
+def str_flag_to_int(flag, s):
+    """Allow using strings for flags, i.e. 'READ' instead of wgpu.MapMode.READ.
+    No worries about repeated overhead, because the resuls are cached.
+    """
+    cache_key = (
+        f"{flag._name}.{s}"  # using private attribute, lets call this a friend func
+    )
+    value = _flag_cache.get(cache_key, None)
+
+    if value is None:
+        parts = [p.strip() for p in s.split("|")]
+        parts = [p for p in parts if p]
+        invalid_parts = [p for p in parts if p.startswith("_")]
+        if not parts or invalid_parts:
+            raise ValueError(f"Invalid flag value: {s}")
+
+        value = 0
+        for p in parts:
+            try:
+                v = flag.__dict__[p.upper()]
+                value += v
+            except KeyError:
+                raise ValueError(f"Invalid flag value for {flag}: '{p}'")
+        _flag_cache[cache_key] = value
+
+    return value
+
+
 class ApiDiff:
     """Helper class to define differences in the API by annotating
     methods. This way, these difference are made explicit, plus they're
