@@ -305,17 +305,19 @@ class WgpuAutoGui:
                 callback(event)
 
     def add_event_handler(self, *args):
-        """Register an event handler.
+        """Register an event handler to receive events.
 
         Arguments:
-            callback (callable): The event handler. Must accept a
-                single event argument.
+            callback (callable): The event handler. Must accept a single event argument.
             *types (list of strings): A list of event types.
 
         For the available events, see
-        https://jupyter-rfb.readthedocs.io/en/stable/events.html
+        https://jupyter-rfb.readthedocs.io/en/stable/events.html.
 
-        Can also be used as a decorator.
+        The callback is stored, so it can be a lambda or closure. This also
+        means that if a method is given, a reference to the object is held,
+        which may cause circular references or prevent the Python GC from
+        destroying that object.
 
         Example:
 
@@ -326,7 +328,7 @@ class WgpuAutoGui:
 
             canvas.add_event_handler(my_handler, "pointer_up", "pointer_down")
 
-        Decorator usage example:
+        Can also be used as a decorator:
 
         .. code-block:: py
 
