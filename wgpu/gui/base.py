@@ -301,7 +301,7 @@ class WgpuAutoGui:
                 callback(event)
 
     def add_event_handler(self, *args):
-        """Register an event handler to receice events.
+        """Register an event handler to receive events.
 
         Arguments:
             callback (callable): The event handler. Must accept a single event argument.
