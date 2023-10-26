@@ -12,7 +12,7 @@ import weakref
 import logging
 from typing import List, Dict, Union
 
-from ._coreutils import ApiDiff
+from ._coreutils import ObjectTracker, ApiDiff
 from . import flags, enums, structs
 
 
@@ -60,6 +60,9 @@ logger = logging.getLogger("wgpu")
 
 
 apidiff = ApiDiff()
+
+
+object_tracker = ObjectTracker()
 
 
 class GPU:
@@ -132,6 +135,7 @@ class GPUCanvasContext:
     """
 
     def __init__(self, canvas):
+        object_tracker.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
 
     def _get_canvas(self):
@@ -206,6 +210,7 @@ class GPUCanvasContext:
         return "bgra8unorm-srgb"  # seems to be a good default
 
     def __del__(self):
+        object_tracker.increase(self.__class__.__name__)
         self._destroy()
 
     def _destroy(self):
@@ -258,6 +263,7 @@ class GPUAdapter:
     """
 
     def __init__(self, internal, features, limits, adapter_info):
+        object_tracker.increase(self.__class__.__name__)
         self._internal = internal
 
         assert isinstance(features, set)
@@ -315,6 +321,7 @@ class GPUAdapter:
         pass
 
     def __del__(self):
+        object_tracker.increase(self.__class__.__name__)
         self._destroy()
 
     # IDL: readonly attribute boolean isFallbackAdapter;
@@ -342,6 +349,7 @@ class GPUObjectBase:
     """
 
     def __init__(self, label, internal, device):
+        object_tracker.increase(self.__class__.__name__)
         self._label = label
         self._internal = internal  # The native/raw/real GPU object
         self._device = device
@@ -361,6 +369,7 @@ class GPUObjectBase:
         pass
 
     def __del__(self):
+        object_tracker.decrease(self.__class__.__name__)
         self._destroy()
 
     # Public destroy() methods are implemented on classes as the WebGPU spec specifies.
