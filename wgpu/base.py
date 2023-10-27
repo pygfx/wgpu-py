@@ -62,6 +62,10 @@ logger = logging.getLogger("wgpu")
 apidiff = ApiDiff()
 
 
+# Create object tracker. Note that store a ref for this object on all
+# classes that refer to it. This is because on a sys exit, the module
+# attribytes are None-ified, and their destructros would therefore fail
+# and produce warnings.
 object_tracker = ObjectTracker()
 
 
@@ -134,8 +138,10 @@ class GPUCanvasContext:
     Can be obtained via `gui.WgpuCanvasInterface.get_context()`.
     """
 
+    _ot = object_tracker
+
     def __init__(self, canvas):
-        object_tracker.increase(self.__class__.__name__)
+        self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
 
     def _get_canvas(self):
@@ -210,7 +216,7 @@ class GPUCanvasContext:
         return "bgra8unorm-srgb"  # seems to be a good default
 
     def __del__(self):
-        object_tracker.decrease(self.__class__.__name__)
+        self._ot.decrease(self.__class__.__name__)
         self._destroy()
 
     def _destroy(self):
@@ -262,8 +268,10 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
+    _ot = object_tracker
+
     def __init__(self, internal, features, limits, adapter_info):
-        object_tracker.increase(self.__class__.__name__)
+        self._ot.increase(self.__class__.__name__)
         self._internal = internal
 
         assert isinstance(features, set)
@@ -321,7 +329,7 @@ class GPUAdapter:
         pass
 
     def __del__(self):
-        object_tracker.decrease(self.__class__.__name__)
+        self._ot.decrease(self.__class__.__name__)
         self._destroy()
 
     # IDL: readonly attribute boolean isFallbackAdapter;
@@ -348,8 +356,10 @@ class GPUObjectBase:
     the GPU; the device and all objects belonging to a device.
     """
 
+    _ot = object_tracker
+
     def __init__(self, label, internal, device):
-        object_tracker.increase(self.__class__.__name__)
+        self._ot.increase(self.__class__.__name__)
         self._label = label
         self._internal = internal  # The native/raw/real GPU object
         self._device = device
@@ -369,7 +379,7 @@ class GPUObjectBase:
         pass
 
     def __del__(self):
-        object_tracker.decrease(self.__class__.__name__)
+        self._ot.decrease(self.__class__.__name__)
         self._destroy()
 
     # Public destroy() methods are implemented on classes as the WebGPU spec specifies.
