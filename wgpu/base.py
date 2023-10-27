@@ -210,7 +210,7 @@ class GPUCanvasContext:
         return "bgra8unorm-srgb"  # seems to be a good default
 
     def __del__(self):
-        object_tracker.increase(self.__class__.__name__)
+        object_tracker.decrease(self.__class__.__name__)
         self._destroy()
 
     def _destroy(self):
@@ -321,7 +321,7 @@ class GPUAdapter:
         pass
 
     def __del__(self):
-        object_tracker.increase(self.__class__.__name__)
+        object_tracker.decrease(self.__class__.__name__)
         self._destroy()
 
     # IDL: readonly attribute boolean isFallbackAdapter;
