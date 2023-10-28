@@ -1,5 +1,7 @@
 import time
 import ctypes
+import numpy as np
+from PIL import Image
 
 import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
@@ -259,7 +261,7 @@ class Shadertoy:
 
         self._shader_code = shader_code
         self._uniform_data["resolution"] = resolution + (1,)
-        
+
         self._offscreen = offscreen
 
         self._prepare_render()
@@ -473,6 +475,28 @@ class Shadertoy:
             run_offscreen()
         else:
             run()
+
+    def snapshot(self, time_float: float = 0.0, mouse_pos: tuple = (0, 0, 0, 0)):
+        """
+        Returns a PIL Image of the specified time. (Only available when ``offscreen=True``)
+
+        Parameters:
+            time_float (float): Defaults to 0.0, The time to snapshot. It essentially sets ``i_time`` to a specific number.
+            mouse_pos (tuple): Defaults to (0,0,0,0), The mouse position in pixels in the snapshot. It essentially sets ``i_mouse`` to a 4-tuple.
+        Returns:
+            Image (PIL.Image): snapshot with transparancy removed.
+        """
+        if not self._offscreen:
+            raise NotImplementedError("Snapshot is only available in offscreen mode.")
+        
+        if hasattr(self, "_last_time"):  
+            self.__delattr__("_last_time")  
+        self._uniform_data["time"] = time_float
+        self._uniform_data["mouse"] = mouse_pos 
+        self._canvas.request_draw(self._draw_frame)
+        frame = np.asarray(self._canvas.draw())
+        img = Image.fromarray(frame).convert("RGB") 
+        return img
 
 
 if __name__ == "__main__":
