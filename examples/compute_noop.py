@@ -51,9 +51,9 @@ assert result == list(range(20))
 # import numpy as np
 #
 # numpy_data = np.frombuffer(data, np.int32)
-# out = compute_with_buffers({0: numpy_data}, {1: numpy_data.nbytes}, compute_shader, n=n)
+# out = compute_with_buffers({0: numpy_data}, {1: numpy_data.nbytes}, shader_source, n=n)
 # result = np.frombuffer(out[1], dtype=np.int32)
-# print(result)
+# print(result.tolist())
 
 
 # %% The long version using the wgpu API
