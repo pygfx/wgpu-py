@@ -2845,7 +2845,7 @@ class NativeBackendDiagnostics(BackendDiagnostics):
                 name_map[name] = name[0].upper() + name[1:-1]
 
         # Make sure all names are accounted for
-        for name in names:
+        for name in names + root_names:
             report_name = name_map[name]
             if report_name not in report:
                 report[report_name] = {"#py": 0}
@@ -2897,7 +2897,7 @@ class NativeBackendDiagnostics(BackendDiagnostics):
             # Store in report
             report_name = name_map[name]
             report[report_name]["#rs"] = total_count
-            report[report_name]["mem"] = subtotal_mem
+            report[report_name]["mem"] = total_mem
             report[report_name]["impl"] = implementations
 
         # Return sorted

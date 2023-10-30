@@ -21,7 +21,7 @@ class Diagnostics:
                     text += ob.get_report()
         return text
 
-    def print_report(self):
+    def print_report(self):  # no-cover
         """Print the full diagnostics report."""
         print(self.get_report())
 
@@ -54,7 +54,7 @@ class BackendDiagnostics:
         text += dict_to_text(self.get_report_dict(), self.get_report_header())
         return text
 
-    def print_report(self):
+    def print_report(self):  # no-cover
         """Print the diagnostics report for this backend."""
         print(self.get_report())
 
@@ -127,7 +127,7 @@ def dict_to_table(d, header, header_offest=0):
                         row.append("")
                 else:
                     row += subrows[0]
-                    extrarows = [[""] * (i - 1) + subrow for subrow in subrows[1:]]
+                    extrarows = [[""] * i + subrow for subrow in subrows[1:]]
                     rows.extend(extrarows)
                 break  # header items are consumed by the sub
             else:
