@@ -130,7 +130,7 @@ def dict_to_table(d, header, header_offest=0):
                     extrarows = [[""] * i + subrow for subrow in subrows[1:]]
                     rows.extend(extrarows)
                 break  # header items are consumed by the sub
-            else:
+            else:  # no-cover
                 raise TypeError(f"Unexpected table value: {val}")
 
     return rows

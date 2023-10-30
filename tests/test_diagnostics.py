@@ -132,23 +132,26 @@ def test_diagnostics_main():
 
 
 def test_dict_to_text_simple():
-    d = {"foo": {"a": 1, "b": 2, "c": 3}, "bar": {"a": 4, "b": 5, "c": 6}}
+    d = {
+        "foo": {"a": 1, "b": 2, "c": 3.1000000},
+        "bar": {"a": 4, "b": 5, "c": 6.123456789123},
+    }
 
     reference = """
-        title  a  b  c
+        title  a  b        c
 
-          foo  1  2  3
-          bar  4  5  6
+          foo  1  2      3.1
+          bar  4  5  6.12346
     """
     assert dict_to_text(d, ["title", "a", "b", "c"]) == dedent(reference[1:], 8)
 
     reference = """
-        title  c  a
+        title  b  a
 
-          foo  3  1
-          bar  6  4
+          foo  2  1
+          bar  5  4
     """
-    assert dict_to_text(d, ["title", "c", "a"]) == dedent(reference[1:], 8)
+    assert dict_to_text(d, ["title", "b", "a"]) == dedent(reference[1:], 8)
 
 
 def test_dict_to_text_justification():
