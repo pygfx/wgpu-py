@@ -12,7 +12,8 @@ import weakref
 import logging
 from typing import List, Dict, Union
 
-from ._coreutils import ObjectTracker, ApiDiff
+from ._coreutils import ApiDiff
+from ._diagnostics import BackendDiagnostics
 from . import flags, enums, structs
 
 
@@ -66,7 +67,7 @@ apidiff = ApiDiff()
 # classes that refer to it. This is because on a sys exit, the module
 # attribytes are None-ified, and their destructros would therefore fail
 # and produce warnings.
-object_tracker = ObjectTracker()
+diagnostics = BackendDiagnostics("base")
 
 
 class GPU:
@@ -138,10 +139,10 @@ class GPUCanvasContext:
     Can be obtained via `gui.WgpuCanvasInterface.get_context()`.
     """
 
-    _ot = object_tracker
+    _ot = diagnostics.tracker
 
     def __init__(self, canvas):
-        self._ot.increase(self.__class__.__name__)
+        self._ot.increase(self.__class__)
         self._canvas_ref = weakref.ref(canvas)
 
     def _get_canvas(self):
@@ -216,7 +217,7 @@ class GPUCanvasContext:
         return "bgra8unorm-srgb"  # seems to be a good default
 
     def __del__(self):
-        self._ot.decrease(self.__class__.__name__)
+        self._ot.decrease(self.__class__)
         self._destroy()
 
     def _destroy(self):
@@ -268,10 +269,10 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
-    _ot = object_tracker
+    _ot = diagnostics.tracker
 
     def __init__(self, internal, features, limits, adapter_info):
-        self._ot.increase(self.__class__.__name__)
+        self._ot.increase(self.__class__)
         self._internal = internal
 
         assert isinstance(features, set)
@@ -329,7 +330,7 @@ class GPUAdapter:
         pass
 
     def __del__(self):
-        self._ot.decrease(self.__class__.__name__)
+        self._ot.decrease(self.__class__)
         self._destroy()
 
     # IDL: readonly attribute boolean isFallbackAdapter;
@@ -356,10 +357,10 @@ class GPUObjectBase:
     the GPU; the device and all objects belonging to a device.
     """
 
-    _ot = object_tracker
+    _ot = diagnostics.tracker
 
     def __init__(self, label, internal, device):
-        self._ot.increase(self.__class__.__name__)
+        self._ot.increase(self.__class__)
         self._label = label
         self._internal = internal  # The native/raw/real GPU object
         self._device = device
@@ -379,7 +380,7 @@ class GPUObjectBase:
         pass
 
     def __del__(self):
-        self._ot.decrease(self.__class__.__name__)
+        self._ot.decrease(self.__class__)
         self._destroy()
 
     # Public destroy() methods are implemented on classes as the WebGPU spec specifies.

@@ -71,18 +71,6 @@ def str_flag_to_int(flag, s):
     return value
 
 
-class ObjectTracker:
-    def __init__(self):
-        self._counts = {}
-
-    def increase(self, name):
-        # todo: order?
-        self._counts[name] = self._counts.get(name, 0) + 1
-
-    def decrease(self, name):
-        self._counts[name] -= 1
-
-
 class ApiDiff:
     """Helper class to define differences in the API by annotating
     methods. This way, these difference are made explicit, plus they're

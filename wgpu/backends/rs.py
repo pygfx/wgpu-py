@@ -25,6 +25,7 @@ from typing import List, Dict, Union
 from .. import base, flags, enums, structs
 from .. import _register_backend
 from .._coreutils import ApiDiff, str_flag_to_int
+from .._diagnostics import BackendDiagnostics
 
 from .rs_ffi import ffi, lib, check_expected_version
 from .rs_mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
@@ -2768,8 +2769,146 @@ class GPUInternalError(base.GPUInternalError, GPUError):
 # %%
 
 
+def generate_report():
+    """Get a report similar to the one produced by wgpuGenerateReport(),
+    but in the form of a Python dict.
+    """
+
+    # H: surfaces: WGPUStorageReport, backendType: WGPUBackendType, vulkan: WGPUHubReport, metal: WGPUHubReport, dx12: WGPUHubReport, dx11: WGPUHubReport, gl: WGPUHubReport
+    struct = new_struct_p(
+        "WGPUGlobalReport *",
+        # not used: surfaces
+        # not used: backendType
+        # not used: vulkan
+        # not used: metal
+        # not used: dx12
+        # not used: dx11
+        # not used: gl
+    )
+
+    # H: void f(WGPUInstance instance, WGPUGlobalReport * report)
+    libf.wgpuGenerateReport(get_wgpu_instance(), struct)
+
+    report = {}
+
+    report["surfaces"] = {
+        "occupied": struct.surfaces.numOccupied,
+        "vacant": struct.surfaces.numVacant,
+        "error": struct.surfaces.numError,
+        "element_size": struct.surfaces.elementSize,
+    }
+
+    for backend in ("vulkan", "metal", "dx12", "dx11", "gl"):
+        c_hub_report = getattr(struct, backend)
+        report[backend] = {}
+        for key in dir(c_hub_report):
+            c_storage_report = getattr(c_hub_report, key)
+            storage_report = {
+                "occupied": c_storage_report.numOccupied,
+                "vacant": c_storage_report.numVacant,
+                "error": c_storage_report.numError,
+                "element_size": c_storage_report.elementSize,
+            }
+            # if any(x!=0 for x in storage_report.values()):
+            report[backend][key] = storage_report
+
+    return report
+
+
+class NativeBackendDiagnostics(BackendDiagnostics):
+    def get_report_header(self):
+        return super().get_report_header() + (
+            "#rs",
+            "mem",
+            "impl",
+            "o",
+            "v",
+            "e",
+            "el_size",
+        )
+
+    def get_report_dict(self):
+        report = super().get_report_dict()
+        native_report = generate_report()
+
+        # Names in the root of the report (backend-less)
+        root_names = ["surfaces"]
+
+        # Get per-backend names and a list of backends
+        names = list(native_report["vulkan"].keys())
+        backends = [name for name in native_report.keys() if name not in root_names]
+
+        # Get a mapping from native names to wgpu-py names
+        name_map = {"surfaces": "CanvasContext"}
+        for name in names:
+            if name not in name_map:
+                name_map[name] = name[0].upper() + name[1:-1]
+
+        # Make sure all names are accounted for
+        for name in names:
+            report_name = name_map[name]
+            if report_name not in report:
+                report[report_name] = {"#py": 0}
+
+        # Establish what backends are active
+        active_backends = []
+        for backend in backends:
+            total = 0
+            for name in names:
+                d = native_report[backend][name]
+                total += d["occupied"] + d["vacant"] + d["error"]
+            if total > 0:
+                active_backends.append(backend)
+
+        # Process names in the root
+        for name in root_names:
+            d = native_report[name]
+            subtotal_count = d["occupied"] + d["vacant"] + d["error"]
+            impl = {
+                "o": d["occupied"],
+                "v": d["vacant"],
+                "e": d["error"],
+                "el_size": d["element_size"],
+            }
+            # Store in report
+            report_name = name_map[name]
+            report[report_name]["#rs"] = subtotal_count
+            report[report_name]["mem"] = subtotal_count * d["element_size"]
+            report[report_name]["impl"] = {"-": impl}
+
+        # Iterate over backends
+        for name in names:
+            total_count = 0
+            total_mem = 0
+            implementations = {}
+            for backend in active_backends:
+                d = native_report[backend][name]
+                subtotal_count = d["occupied"] + d["vacant"] + d["error"]
+                subtotal_mem = subtotal_count * d["element_size"]
+                impl = {
+                    "o": d["occupied"],
+                    "v": d["vacant"],
+                    "e": d["error"],
+                    "el_size": d["element_size"],
+                }
+                total_count += subtotal_count
+                total_mem += subtotal_mem
+                implementations[backend] = impl
+            # Store in report
+            report_name = name_map[name]
+            report[report_name]["#rs"] = total_count
+            report[report_name]["mem"] = subtotal_mem
+            report[report_name]["impl"] = implementations
+
+        # Return sorted
+        return {key: report[key] for key in sorted(report.keys())}
+
+
+diagnostics = NativeBackendDiagnostics("rs")
+
+
 def _copy_docstrings():
-    base_classes = GPUObjectBase, GPUCanvasContext
+    base_classes = GPUObjectBase, GPUCanvasContext, GPUAdapter
     for ob in globals().values():
         if not (isinstance(ob, type) and issubclass(ob, base_classes)):
             continue
@@ -2777,6 +2916,7 @@ def _copy_docstrings():
             continue  # no-cover
         base_cls = ob.mro()[1]
         ob.__doc__ = base_cls.__doc__
+        ob._ot = diagnostics.tracker
         for name, attr in ob.__dict__.items():
             if name.startswith("_") or not hasattr(attr, "__doc__"):
                 continue  # no-cover

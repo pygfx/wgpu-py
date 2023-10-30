@@ -3,6 +3,7 @@ The wgpu library is a Python implementation of WebGPU.
 """
 
 from ._coreutils import logger  # noqa: F401,F403
+from ._diagnostics import diagnostics  # noqa: F401,F403
 from .flags import *  # noqa: F401,F403
 from .enums import *  # noqa: F401,F403
 from .base import *  # noqa: F401,F403
