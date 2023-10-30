@@ -1,7 +1,5 @@
 import time
 import ctypes
-import numpy as np
-from PIL import Image
 import tempfile
 import subprocess
 
@@ -489,7 +487,8 @@ class Shadertoy:
             time_float (float): Defaults to 0.0, The time to snapshot. It essentially sets ``i_time`` to a specific number.
             mouse_pos (tuple): Defaults to (0,0,0,0), The mouse position in pixels in the snapshot. It essentially sets ``i_mouse`` to a 4-tuple.
         Returns:
-            Image (PIL.Image): snapshot with transparancy removed.
+            frame (memoryview): snapshot with transparancy. This object can be converted to a numpy array (without copying data)
+        using ``np.asarray(arr)``
         """
         if not self._offscreen:
             raise NotImplementedError("Snapshot is only available in offscreen mode.")
@@ -499,9 +498,8 @@ class Shadertoy:
         self._uniform_data["time"] = time_float
         self._uniform_data["mouse"] = mouse_pos 
         self._canvas.request_draw(self._draw_frame)
-        frame = np.asarray(self._canvas.draw())
-        img = Image.fromarray(frame).convert("RGB") 
-        return img
+        frame = self._canvas.draw()
+        return frame
 
     def _validate_shadercode(self, frag_shader_code):
         """ Check if there are any errors in the shadercode with naga to avoid a panic that crashes the python process
