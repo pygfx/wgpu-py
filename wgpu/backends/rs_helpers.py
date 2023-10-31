@@ -6,6 +6,7 @@ import sys
 import ctypes
 
 from .rs_ffi import ffi, lib
+from .._diagnostics import Diagnostics
 from ..base import (
     GPUError,
     GPUOutOfMemoryError,
@@ -338,3 +339,132 @@ class SafeLibCalls:
 
         proxy_func.__name__ = name
         return proxy_func
+
+
+def generate_report():
+    """Get a report similar to the one produced by wgpuGenerateReport(),
+    but in the form of a Python dict.
+    """
+
+    # H: surfaces: WGPUStorageReport, backendType: WGPUBackendType, vulkan: WGPUHubReport, metal: WGPUHubReport, dx12: WGPUHubReport, dx11: WGPUHubReport, gl: WGPUHubReport
+    struct = ffi.new("WGPUGlobalReport *")
+
+    # H: void f(WGPUInstance instance, WGPUGlobalReport * report)
+    lib.wgpuGenerateReport(get_wgpu_instance(), struct)
+
+    report = {}
+
+    report["surfaces"] = {
+        "occupied": struct.surfaces.numOccupied,
+        "vacant": struct.surfaces.numVacant,
+        "error": struct.surfaces.numError,
+        "element_size": struct.surfaces.elementSize,
+    }
+
+    for backend in ("vulkan", "metal", "dx12", "dx11", "gl"):
+        c_hub_report = getattr(struct, backend)
+        report[backend] = {}
+        for key in dir(c_hub_report):
+            c_storage_report = getattr(c_hub_report, key)
+            storage_report = {
+                "occupied": c_storage_report.numOccupied,
+                "vacant": c_storage_report.numVacant,
+                "error": c_storage_report.numError,
+                "element_size": c_storage_report.elementSize,
+            }
+            # if any(x!=0 for x in storage_report.values()):
+            report[backend][key] = storage_report
+
+    return report
+
+
+class NativeDiagnostics(Diagnostics):
+    def get_subscript(self):
+        text = ""
+        text += "    * The o, v, e are occupied, vacant and error, respecitively.\n"
+        text += "    * Reported memory does not include buffer/texture data.\n"
+        return text
+
+    def get_dict(self):
+        result = {}
+        native_report = generate_report()
+
+        # Names in the root of the report (backend-less)
+        root_names = ["surfaces"]
+
+        # Get per-backend names and a list of backends
+        names = list(native_report["vulkan"].keys())
+        backends = [name for name in native_report.keys() if name not in root_names]
+
+        # Get a mapping from native names to wgpu-py names
+        name_map = {"surfaces": "CanvasContext"}
+        for name in names:
+            if name not in name_map:
+                name_map[name] = name[0].upper() + name[1:-1]
+
+        # Initialize the result dict (sorted)
+        for name in sorted(names + root_names):
+            report_name = name_map[name]
+            result[report_name] = {"count": 0, "mem": 0}
+
+        # Establish what backends are active
+        active_backends = []
+        for backend in backends:
+            total = 0
+            for name in names:
+                d = native_report[backend][name]
+                total += d["occupied"] + d["vacant"] + d["error"]
+            if total > 0:
+                active_backends.append(backend)
+
+        # Process names in the root
+        for name in root_names:
+            d = native_report[name]
+            subtotal_count = d["occupied"] + d["vacant"] + d["error"]
+            impl = {
+                "o": d["occupied"],
+                "v": d["vacant"],
+                "e": d["error"],
+                "el_size": d["element_size"],
+            }
+            # Store in report
+            report_name = name_map[name]
+            result[report_name]["count"] = subtotal_count
+            result[report_name]["mem"] = subtotal_count * d["element_size"]
+            result[report_name]["impl"] = {"-": impl}
+
+        # Iterate over backends
+        for name in names:
+            total_count = 0
+            total_mem = 0
+            implementations = {}
+            for backend in active_backends:
+                d = native_report[backend][name]
+                subtotal_count = d["occupied"] + d["vacant"] + d["error"]
+                subtotal_mem = subtotal_count * d["element_size"]
+                impl = {
+                    "o": d["occupied"],
+                    "v": d["vacant"],
+                    "e": d["error"],
+                    "el_size": d["element_size"],
+                }
+                total_count += subtotal_count
+                total_mem += subtotal_mem
+                implementations[backend] = impl
+            # Store in report
+            report_name = name_map[name]
+            result[report_name]["count"] = total_count
+            result[report_name]["mem"] = total_mem
+            result[report_name]["impl"] = implementations
+
+        # Add totals
+        totals = {}
+        for key in ("count", "mem"):
+            totals[key] = sum(v.get(key, 0) for v in result.values())
+        result[""] = {}
+        result["total"] = totals
+
+        return result
+
+
+diagnostics = NativeDiagnostics("rs_counts")

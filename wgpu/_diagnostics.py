@@ -1,87 +1,153 @@
-class Diagnostics:
-    """Base object to access wgpu diagnostics."""
+"""
+Logic related to providing diagnostic info on wgpu.
+"""
+
+
+class DiagnosticsRoot:
+    """Root object to access wgpu diagnostics."""
 
     def __init__(self):
-        # Init variables for the backends. As the BackendDiagnostics are created,
-        # these are overwritten.
-        self.base = None
-        self.rs = None
+        self._diagnostics_instances = {}
+
+    def __repr__(self):
+        topics = ", ".join(self._diagnostics_instances.keys())
+        return f"<DiagnosticsRoot with topics: {topics}>"
+
+    def _register_diagnostics(self, name, ob):
+        self._diagnostics_instances[name] = ob
+        setattr(self, name, ob)
+
+    def get_dict(self):
+        """Get a dict that represents the full diagnostics info.
+
+        The keys are the diagnostic topics, and the values are dicts
+        of dicts. See e.g. ``wgpu.diagnostics.counts.get_dict()`` for
+        a topic-specific dict.
+        """
+        result = {}
+        for name, ob in self._diagnostics_instances.items():
+            result[name] = ob.get_dict()
+        return result
 
     def get_report(self):
         """Get the full textual diagnostic report.
 
-        See e.g. ``wgpu.diagnostics.rs.get_report_dict()`` for a report that
-        can be processed programmatically.
+        See ``get_dict()`` for a report that can be processed programmatically.
         """
         text = ""
-        for key, ob in self.__dict__.items():
-            if not key.startswith("_") and isinstance(ob, BackendDiagnostics):
-                d = ob.get_report_dict()
-                if d:
-                    text += ob.get_report()
+        for name, ob in self._diagnostics_instances.items():
+            text += ob.get_report()
         return text
 
-    def print_report(self):  # no-cover
+    def print_report(self):
         """Print the full diagnostics report."""
-        print(self.get_report())
+        print(self.get_report(), end="")
 
 
-class BackendDiagnostics:
-    """Object to manage diagnostics for a specific wgpu backend."""
+class Diagnostics:
+    """Object that represents diagnostics on a specific topic."""
 
     def __init__(self, name):
-        setattr(diagnostics, name, self)
+        diagnostics._register_diagnostics(name, self)
         self.name = name
         self.object_counts = {}
-        self.tracker = ObjectTracker(self.object_counts)
 
-    def get_report_header(self):
-        """Get the header for the report. These match the keys in the report dict."""
-        return ("", "#py")
+    def __repr__(self):
+        return f"<Diagnostics for '{self.name}'>"
 
-    def get_report_dict(self):
-        """Get the diagnostics report for this backend, in the form of a Python dict."""
-        # The default just shows the Python counts
-        report = {}
-        for name in sorted(self.object_counts.keys()):
-            count = self.object_counts[name]
-            report[name] = {"#py": count}
-        return report
+    def get_dict(self):
+        """Get the diagnostics for this topic, in the form of a Python dict.
+
+        Subclasses must implement this method.
+        """
+        raise NotImplementedError()
+
+    def get_subscript(self):
+        """Get informative text that helps interpret the report.
+
+        Subclasses can implement this method. The text will show below the table
+        in the report.
+        """
+        return ""  # Optional
 
     def get_report(self):
-        """Get the textual diagnostics report for this backend."""
-        text = f"\nDiagnostics for wgpu - {self.name} backend:\n\n"
-        text += dict_to_text(self.get_report_dict(), self.get_report_header())
+        """Get the textual diagnostics report for this topic."""
+        text = f"\n██ {self.name}\n\n"
+        text += dict_to_text(self.get_dict())
+        subscript = self.get_subscript()
+        if subscript:
+            text += "\n" + subscript.rstrip() + "\n"
         return text
 
-    def print_report(self):  # no-cover
-        """Print the diagnostics report for this backend."""
-        print(self.get_report())
+    def print_report(self):
+        """Print the diagnostics report for this topic."""
+        print(self.get_report(), end="")
 
 
 class ObjectTracker:
     """Little object to help track object counts."""
 
-    def __init__(self, counts):
-        self._counts = counts
+    def __init__(self):
+        self.counts = {}
+        self.amounts = {}
 
-    def increase(self, cls):
-        name = cls.__name__[3:]
-        self._counts[name] = self._counts.get(name, 0) + 1
+    def increase(self, name, amount=0):
+        """Bump the counter."""
+        self.counts[name] = self.counts.get(name, 0) + 1
+        if amount:
+            self.amounts[name] = self.amounts.get(name, 0) + amount
 
-    def decrease(self, cls):
-        name = cls.__name__[3:]
-        self._counts[name] -= 1
+    def decrease(self, name, amount=0):
+        """Bump the counter back."""
+        self.counts[name] -= 1
+        if amount:
+            self.amounts[name] -= amount
 
 
-def dict_to_text(d, header):
+def derive_header(dct):
+    """Derive a table-header from the given dict."""
+    if not isinstance(dct, dict):  # no-cover
+        raise TypeError(f"Not a dict: {dct}")
+
+    header = []
+
+    sub_dicts = []
+
+    for key, val in dct.items():
+        if not isinstance(val, dict):  # no-cover
+            raise TypeError(f"Element not a dict: {val}")
+        for k, v in val.items():
+            if k not in header:
+                header.append(k)
+            if isinstance(v, dict):
+                sub_dicts.append(v)
+
+    for d in sub_dicts:
+        sub_header = derive_header(d)
+        for k in sub_header:
+            if k not in header:
+                header.append(k)
+
+    # Add header item for first column, i.e. the key / row title
+    header.insert(0, "")
+
+    return header
+
+
+def dict_to_text(d, header=None):
     """Convert a dict data structure to a textual table representation."""
+
+    if not d:
+        return "No data\n"
+
+    if not header:
+        header = derive_header(d)
 
     # Get a table
     rows = dict_to_table(d, header)
     ncols = len(header)
 
-    # Establish max lengths
+    # Establish max lengths (the assertions guard assumptions about dict_to_table)
     max_lens = [len(key) for key in header]
     for row in rows:
         assert len(row) == ncols, "dict_to_table failed"
@@ -97,9 +163,9 @@ def dict_to_text(d, header):
     # Join, with header
     first_line = "  ".join(header[i].rjust(max_lens[i]) for i in range(ncols))
     lines = [first_line, ""] + ["  ".join(row) for row in rows]
-    lines.append("")  # end with empty line
 
-    return "\n".join(line.rstrip() for line in lines)
+    text = "\n".join(line.rstrip() for line in lines)
+    return text.rstrip() + "\n"
 
 
 def dict_to_table(d, header, header_offest=0):
@@ -116,10 +182,12 @@ def dict_to_table(d, header, header_offest=0):
         for i in range(header_offest + 1, len(header)):
             key = header[i]
             val = values.get(key, "")
-            if isinstance(val, float):
+            if isinstance(val, str):
+                row.append(val)
+            elif isinstance(val, int):
+                row.append(int_repr(val))
+            elif isinstance(val, float):
                 row.append(f"{val:.6g}")
-            elif isinstance(val, (int, str)):
-                row.append(str(val))
             elif isinstance(val, dict):
                 subrows = dict_to_table(val, header, i)
                 if len(subrows) == 0:
@@ -134,6 +202,32 @@ def dict_to_table(d, header, header_offest=0):
                 raise TypeError(f"Unexpected table value: {val}")
 
     return rows
+
+
+def int_repr(val):
+    """Represent an integer using K and M suffixes."""
+    prefix = "-" if val < 0 else ""
+    val = abs(val)
+    if val >= 1_000_000_000:  # >= 1G
+        s = str(val / 1_000_000_000)
+        suffix = "G"
+    elif val >= 1_000_000:  # >= 1M
+        s = str(val / 1_000_000)
+        suffix = "M"
+    elif val >= 1_000:  # >= 1K
+        s = str(val / 1_000)
+        suffix = "K"
+    else:
+        s = str(val)
+        suffix = ""
+    if "." in s:
+        s1, _, s2 = s.partition(".")
+        n_decimals = max(0, 3 - len(s1))
+        s = s1
+        if n_decimals:
+            s2 += "000"
+            s = s1 + "." + s2[:n_decimals]
+    return prefix + s + suffix
 
 
 texture_format_to_bpp = {
@@ -165,7 +259,7 @@ texture_format_to_bpp = {
     "bgra8unorm": 32,
     "bgra8unorm-srgb": 32,
     # special fits
-    "rgb9e5ufloat": 32, # 3*9 + 5
+    "rgb9e5ufloat": 32,  # 3*9 + 5
     "rgb10a2uint": 32,  # 3*10 + 2
     "rgb10a2unorm": 32,  # 3*10 + 2
     "rg11b10ufloat": 32,  # 2*11 + 10
@@ -191,9 +285,9 @@ texture_format_to_bpp = {
     # Also see https://wgpu.rs/doc/wgpu/enum.TextureFormat.html
     "bc1-rgba-unorm": 4,  # 4x4 blocks, 8 bytes per block
     "bc1-rgba-unorm-srgb": 4,
-    "bc2-rgba-unorm": 8,   # 4x4 blocks, 16 bytes per block
+    "bc2-rgba-unorm": 8,  # 4x4 blocks, 16 bytes per block
     "bc2-rgba-unorm-srgb": 8,
-    "bc3-rgba-unorm": 8,  #4x4 blocks, 16 bytes per block
+    "bc3-rgba-unorm": 8,  # 4x4 blocks, 16 bytes per block
     "bc3-rgba-unorm-srgb": 8,
     "bc4-r-unorm": 4,
     "bc4-r-snorm": 4,
@@ -213,7 +307,7 @@ texture_format_to_bpp = {
     "eac-r11snorm": 4,
     "eac-rg11unorm": 8,
     "eac-rg11snorm": 8,
-    # astc always uses 16 bytes (128 bits) per block.
+    # astc always uses 16 bytes (128 bits) per block
     "astc-4x4-unorm": 8.0,
     "astc-4x4-unorm-srgb": 8.0,
     "astc-5x4-unorm": 6.4,
@@ -245,5 +339,5 @@ texture_format_to_bpp = {
 }
 
 
-# Root object
-diagnostics = Diagnostics()
+# Global diagnostics object
+diagnostics = DiagnosticsRoot()

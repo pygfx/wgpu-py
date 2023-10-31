@@ -6,26 +6,22 @@ This tests the diagnostics logic itself. It does not do a tests that *uses* the 
 import wgpu
 from wgpu import _diagnostics
 from wgpu._diagnostics import (
+    DiagnosticsRoot,
     Diagnostics,
-    BackendDiagnostics,
     ObjectTracker,
     dict_to_text,
+    int_repr,
 )
 
 from testutils import run_tests, can_use_wgpu_lib
 from pytest import mark
 
 
-class CustomBackendDiagnostics(BackendDiagnostics):
-    def get_report_dict(self):
-        pass
-
-
 def dedent(text, n):
     return "\n".join(line[n:] for line in text.split("\n"))
 
 
-class Customdiagnostics(Diagnostics):
+class CustomDiagnosticsRoot(DiagnosticsRoot):
     def __enter__(self):
         _diagnostics.diagnostics = self
         return self
@@ -34,101 +30,135 @@ class Customdiagnostics(Diagnostics):
         _diagnostics.diagnostics = wgpu.diagnostics
 
 
+class CustomDiagnostics(Diagnostics):
+    def __init__(self, name):
+        super().__init__(name)
+        self.tracker = ObjectTracker()
+
+    def get_dict(self):
+        return {k: {"count": v} for k, v in self.tracker.counts.items()}
+
+
 def test_diagnostics_meta():
     # Test that our custom class does what we expet it to do
-    assert isinstance(wgpu.diagnostics, Diagnostics)
+    assert isinstance(wgpu.diagnostics, DiagnosticsRoot)
     assert wgpu.diagnostics is _diagnostics.diagnostics
 
-    with Customdiagnostics() as custom:
+    with CustomDiagnosticsRoot() as custom:
         assert custom is _diagnostics.diagnostics
 
     assert wgpu.diagnostics is _diagnostics.diagnostics
 
 
 def test_diagnostics_main():
-    class GPUFooBar:
-        pass
+    with CustomDiagnosticsRoot() as custom:
+        d1 = CustomDiagnostics("foo")
+        d2 = CustomDiagnostics("bar")
 
-    with Customdiagnostics() as custom:
-        d1 = BackendDiagnostics("foo")
-        d2 = BackendDiagnostics("bar")
+        assert "foo" in repr(custom)
+        assert "bar" in repr(custom)
+        assert "spam" not in repr(custom)
 
-        # If nothing to report, reports are empty
-        assert custom.get_report() == ""
+        assert "foo" in repr(d1)
+        assert "bar" in repr(d2)
 
-        d1.tracker.increase(GPUFooBar)
+        # Showing report for one topic
+
+        d1.tracker.increase("FooBar")
 
         reference1 = """
-            Diagnostics for wgpu - foo backend:
+            ██ foo
 
-                    #py
+                    count
 
-            FooBar    1
+            FooBar      1
+
+            ██ bar
+
+            No data
         """
 
-        # Showing report for one backend
         assert custom.get_report() == dedent(reference1, 12)
 
-        d1.tracker.increase(GPUFooBar)
-        d2.tracker.increase(GPUFooBar)
+        # Showing report for both topics
+
+        d1.tracker.increase("FooBar")
+        d2.tracker.increase("XYZ")
 
         reference2 = """
-            Diagnostics for wgpu - foo backend:
+            ██ foo
 
-                    #py
+                    count
 
-            FooBar    2
+            FooBar      2
 
-            Diagnostics for wgpu - bar backend:
+            ██ bar
 
-                    #py
+                 count
 
-            FooBar    1
+            XYZ      1
         """
 
-        # Showing report for another backend
         assert custom.get_report() == dedent(reference2, 12)
 
-        d3 = BackendDiagnostics("spam")
-        d3.tracker.increase(GPUFooBar)
-        d3.tracker.increase(GPUFooBar)
-        d3.tracker.increase(GPUFooBar)
+        # Showing report also for newly added topic
+
+        d3 = CustomDiagnostics("spam")
+        assert "spam" in repr(custom)
+
+        d3.tracker.increase("FooBar")
+        d3.tracker.increase("FooBar")
+        d3.tracker.increase("XYZ")
 
         reference3 = """
-            Diagnostics for wgpu - foo backend:
+            ██ foo
 
-                    #py
+                    count
 
-            FooBar    2
+            FooBar      2
 
-            Diagnostics for wgpu - bar backend:
+            ██ bar
 
-                    #py
+                 count
 
-            FooBar    1
+            XYZ      1
 
-            Diagnostics for wgpu - spam backend:
+            ██ spam
 
-                    #py
+                    count
 
-            FooBar    3
+            FooBar      2
+               XYZ      1
         """
 
-        # Showing report also for newly added backend
         assert custom.get_report() == dedent(reference3, 12)
 
         # Can also show one
 
         reference4 = """
-            Diagnostics for wgpu - spam backend:
+            ██ spam
 
-                    #py
+                    count
 
-            FooBar    3
+            FooBar      2
+               XYZ      1
         """
 
         # Showing report also for newly added backend
         assert d3.get_report() == dedent(reference4, 12)
+
+        # The root dict is a dict that maps topics to the per-topic dicts.
+        # So it's a dict of dicts of dicts.
+        big_dict = custom.get_dict()
+        assert isinstance(big_dict, dict)
+        for key, val in big_dict.items():
+            assert isinstance(val, dict)
+            for k, v in val.items():
+                assert isinstance(v, dict)
+
+        # These should not fail
+        d3.print_report()
+        custom.print_report()
 
 
 def test_dict_to_text_simple():
@@ -210,42 +240,63 @@ def test_dict_to_text_subs():
 
 
 def test_object_tracker():
-    class GPUFooBar:
-        pass
+    tracker = ObjectTracker()
+    counts = tracker.counts
 
-    class GPUSpamEggs:
-        pass
-
-    counts = {}
-    tracker = ObjectTracker(counts)
-
-    tracker.increase(GPUFooBar)
-    tracker.increase(GPUFooBar)
-    tracker.increase(GPUFooBar)
-    tracker.increase(GPUSpamEggs)
-    tracker.increase(GPUSpamEggs)
-    tracker.increase(GPUSpamEggs)
+    tracker.increase("FooBar")
+    tracker.increase("FooBar")
+    tracker.increase("FooBar")
+    tracker.increase("SpamEggs")
+    tracker.increase("SpamEggs")
+    tracker.increase("SpamEggs")
 
     assert counts == {"FooBar": 3, "SpamEggs": 3}
 
-    tracker.decrease(GPUFooBar)
-    tracker.decrease(GPUFooBar)
-    tracker.decrease(GPUFooBar)
-    tracker.decrease(GPUSpamEggs)
-    tracker.decrease(GPUSpamEggs)
+    tracker.decrease("FooBar")
+    tracker.decrease("FooBar")
+    tracker.decrease("FooBar")
+    tracker.decrease("SpamEggs")
+    tracker.decrease("SpamEggs")
 
     assert counts == {"FooBar": 0, "SpamEggs": 1}
 
-    tracker.increase(GPUFooBar)
-    tracker.increase(GPUSpamEggs)
+    tracker.increase("FooBar")
+    tracker.increase("SpamEggs")
 
     assert counts == {"FooBar": 1, "SpamEggs": 2}
 
-    tracker.decrease(GPUFooBar)
-    tracker.decrease(GPUSpamEggs)
-    tracker.decrease(GPUSpamEggs)
+    tracker.decrease("FooBar")
+    tracker.decrease("SpamEggs")
+    tracker.decrease("SpamEggs")
 
     assert counts == {"FooBar": 0, "SpamEggs": 0}
+
+
+def test_int_repr():
+    assert int_repr(0) == "0"
+    assert int_repr(7) == "7"
+    assert int_repr(912) == "912"
+
+    assert int_repr(1_000) == "1.00K"
+    assert int_repr(1_234) == "1.23K"
+    assert int_repr(12_345) == "12.3K"
+    assert int_repr(123_456) == "123K"
+
+    assert int_repr(1_000_000) == "1.00M"
+    assert int_repr(1_234_000) == "1.23M"
+    assert int_repr(12_345_000) == "12.3M"
+    assert int_repr(123_456_000) == "123M"
+
+    assert int_repr(1_000_000_000) == "1.00G"
+    assert int_repr(1_234_000_000) == "1.23G"
+    assert int_repr(12_345_000_000) == "12.3G"
+    assert int_repr(123_456_000_000) == "123G"
+
+    assert int_repr(-7) == "-7"
+    assert int_repr(-912) == "-912"
+    assert int_repr(-1000) == "-1.00K"
+    assert int_repr(-12_345) == "-12.3K"
+    assert int_repr(-123_456_000) == "-123M"
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -262,7 +313,6 @@ def test_diagnostics_with_backends():
 
 
 def test_texture_format_map_is_complete():
-
     # When texture formats are added, removed, or changed, we must update our
     # map. This test makes sure we don't forget.
 
