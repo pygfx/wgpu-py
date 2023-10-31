@@ -261,5 +261,21 @@ def test_diagnostics_with_backends():
     assert "ShaderModule" in text
 
 
+def test_texture_format_map_is_complete():
+
+    # When texture formats are added, removed, or changed, we must update our
+    # map. This test makes sure we don't forget.
+
+    map_keys = set(_diagnostics.texture_format_to_bpp.keys())
+    enum_keys = set(wgpu.TextureFormat)
+
+    too_much = map_keys - enum_keys
+    missing = enum_keys - map_keys
+
+    assert not too_much
+    assert not missing
+    assert map_keys == enum_keys  # for good measure
+
+
 if __name__ == "__main__":
     run_tests(globals())
