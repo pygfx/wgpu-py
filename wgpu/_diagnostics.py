@@ -8,7 +8,12 @@ import platform
 
 
 class DiagnosticsRoot:
-    """Root object to access wgpu diagnostics."""
+    """Root object to access wgpu diagnostics (i.e. ``wgpu.diagnostics``).
+
+    Per-topic diagnostics can be accessed as attributes on this object.
+    These include ``system``, ``native_info``, ``versions``,
+    ``object_counts``, and more.
+    """
 
     def __init__(self):
         self._diagnostics_instances = {}
@@ -34,22 +39,24 @@ class DiagnosticsRoot:
         return result
 
     def get_report(self):
-        """Get the full textual diagnostic report.
-
-        See ``get_dict()`` for a report that can be processed programmatically.
-        """
+        """Get the full textual diagnostic report (as a str)."""
         text = ""
         for name, ob in self._diagnostics_instances.items():
             text += ob.get_report()
         return text
 
     def print_report(self):
-        """Print the full diagnostics report."""
+        """Convenience method to print the full diagnostics report."""
         print(self.get_report(), end="")
 
 
 class Diagnostics:
-    """Object that represents diagnostics on a specific topic."""
+    """Object that represents diagnostics on a specific topic.
+
+    This is a base class that must be subclassed to provide diagnostics
+    on a certain topic. Instantiating the class registers it with the
+    root diagnostics object.
+    """
 
     def __init__(self, name):
         diagnostics._register_diagnostics(name, self)
@@ -63,12 +70,13 @@ class Diagnostics:
         """Get the diagnostics for this topic, in the form of a Python dict.
 
         Subclasses must implement this method. The dict can be a simple
-        map of keys to values (str, int, float).
+        map of keys to values (str, int, float)::
 
             foo: 1
             bar: 2
 
-        If the values are dicts, the data has a table-like layout, with the keys representing the table header.
+        If the values are dicts, the data has a table-like layout, with
+        the keys representing the table header::
 
                       count  mem
 
@@ -76,7 +84,7 @@ class Diagnostics:
              Buffer:      4  704
 
         Subdicts are also supported, which results in multi-row entries.
-        In the report, the keys of the subdicts have colons behind them.
+        In the report, the keys of the subdicts have colons behind them::
 
                       count  mem  backend  o  v  e  el_size
 
