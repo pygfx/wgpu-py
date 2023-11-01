@@ -144,11 +144,6 @@ class GPU:
         """
         raise RuntimeError("Use canvas.get_preferred_format() instead.")
 
-    @apidiff.add("Usefull")
-    def print_report(self):
-        """Print a report about the interals of the backend."""
-        print(f"{self.__class__.__module__}.GPU: No report available.")
-
     # IDL: [SameObject] readonly attribute WGSLLanguageFeatures wgslLanguageFeatures;
     @property
     def wgsl_language_features(self):
