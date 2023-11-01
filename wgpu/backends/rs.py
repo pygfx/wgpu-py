@@ -717,7 +717,8 @@ class GPUAdapter(base.GPUAdapter):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            delayed_releaser.release_soon("wgpuAdapterRelease", internal)
+            libf.wgpuAdapterRelease(internal)
+            # delayed_releaser.release_soon("wgpuAdapterRelease", internal)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
@@ -1446,7 +1447,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            delayed_releaser.release_soon("wgpuDeviceRelease", internal)
+            libf.wgpuDeviceRelease(internal)
+            # delayed_releaser.release_soon("wgpuDeviceRelease", internal)
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
@@ -1637,6 +1639,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         self._release_memoryviews()
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
+            libf.wgpuDevicePoll(self._device._internal, True, ffi.NULL)
             # H: void f(WGPUBuffer buffer)
             libf.wgpuBufferRelease(internal)
 
