@@ -431,7 +431,7 @@ class NativeDiagnostics(Diagnostics):
             report_name = name_map[name]
             result[report_name]["count"] = subtotal_count
             result[report_name]["mem"] = subtotal_count * d["element_size"]
-            result[report_name]["impl"] = {"-": impl}
+            result[report_name]["backend"] = {"": impl}
 
         # Iterate over backends
         for name in names:
@@ -455,7 +455,7 @@ class NativeDiagnostics(Diagnostics):
             report_name = name_map[name]
             result[report_name]["count"] = total_count
             result[report_name]["mem"] = total_mem
-            result[report_name]["impl"] = implementations
+            result[report_name]["backend"] = implementations
 
         # Add totals
         totals = {}

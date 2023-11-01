@@ -2,6 +2,10 @@
 Logic related to providing diagnostic info on wgpu.
 """
 
+import os
+import sys
+import platform
+
 
 class DiagnosticsRoot:
     """Root object to access wgpu diagnostics."""
@@ -58,7 +62,29 @@ class Diagnostics:
     def get_dict(self):
         """Get the diagnostics for this topic, in the form of a Python dict.
 
-        Subclasses must implement this method.
+        Subclasses must implement this method. The dict can be a simple
+        map of keys to values (str, int, float).
+
+            foo: 1
+            bar: 2
+
+        If the values are dicts, the data has a table-like layout, with the keys representing the table header.
+
+                      count  mem
+
+            Adapter:      1  264
+             Buffer:      4  704
+
+        Subdicts are also supported, which results in multi-row entries.
+        In the report, the keys of the subdicts have colons behind them.
+
+                      count  mem  backend  o  v  e  el_size
+
+            Adapter:      1  264  vulkan:  1  0  0      264
+                                   d3d12:  1  0  0      220
+             Buffer:      4  704  vulkan:  4  0  0      176
+                                   d3d12:  0  0  0      154
+
         """
         raise NotImplementedError()
 
@@ -72,7 +98,7 @@ class Diagnostics:
 
     def get_report(self):
         """Get the textual diagnostics report for this topic."""
-        text = f"\n██ {self.name}\n\n"
+        text = f"\n██ {self.name}:\n\n"
         text += dict_to_text(self.get_dict())
         subscript = self.get_subscript()
         if subscript:
@@ -106,12 +132,12 @@ class ObjectTracker:
 
 def derive_header(dct):
     """Derive a table-header from the given dict."""
+
     if not isinstance(dct, dict):  # no-cover
         raise TypeError(f"Not a dict: {dct}")
 
     header = []
-
-    sub_dicts = []
+    sub_dicts = {}
 
     for key, val in dct.items():
         if not isinstance(val, dict):  # no-cover
@@ -120,11 +146,14 @@ def derive_header(dct):
             if k not in header:
                 header.append(k)
             if isinstance(v, dict):
-                sub_dicts.append(v)
+                sub_dicts[k] = v
 
-    for d in sub_dicts:
+    for k, d in sub_dicts.items():
+        while k in header:
+            header.remove(k)
+        header.append(k)
         sub_header = derive_header(d)
-        for k in sub_header:
+        for k in sub_header[1:]:
             if k not in header:
                 header.append(k)
 
@@ -140,30 +169,68 @@ def dict_to_text(d, header=None):
     if not d:
         return "No data\n"
 
+    # Copy the dict, with simple key-value dicts being transformed into table-like dicts.
+    # That wat the code in derive_header() and dict_to_table() can assume the table-like
+    # data structure, keeping it simpler.
+    d2 = {}
+    for key, val in d.items():
+        if not isinstance(val, dict):
+            val = {"": val}
+        d2[key] = val
+    d = d2
+
     if not header:
         header = derive_header(d)
 
-    # Get a table
+    # We have a table-like-layout if any of the values in the header is non-empty
+    table_layout = any(header)
+
+    # Get the table
     rows = dict_to_table(d, header)
     ncols = len(header)
 
-    # Establish max lengths (the assertions guard assumptions about dict_to_table)
-    max_lens = [len(key) for key in header]
+    # Sanity check (guard assumptions about dict_to_table)
     for row in rows:
         assert len(row) == ncols, "dict_to_table failed"
         for i in range(ncols):
             assert isinstance(row[i], str), "dict_to_table failed"
-            max_lens[i] = max(max_lens[i], len(row[i]))
 
-    # Justify
+    # Insert heading
+    if table_layout:
+        rows.insert(0, header.copy())
+        rows.insert(1, [""] * ncols)
+
+    # Determine what colons have values with a colon at the end
+    column_has_colon = [False for _ in range(ncols)]
     for row in rows:
         for i in range(ncols):
-            row[i] = row[i].rjust(max_lens[i])
+            column_has_colon[i] |= row[i].endswith(":")
 
-    # Join, with header
-    first_line = "  ".join(header[i].rjust(max_lens[i]) for i in range(ncols))
-    lines = [first_line, ""] + ["  ".join(row) for row in rows]
+    # Align the values that don't have a colon at the end
+    for row in rows:
+        for i in range(ncols):
+            word = row[i]
+            if column_has_colon[i] and not word.endswith(":"):
+                row[i] = word + " "
 
+    # Establish max lengths
+    max_lens = [0 for _ in range(ncols)]
+    for row in rows:
+        for i in range(ncols):
+            max_lens[i] = max(max_lens[i], len(row[i]))
+
+    # Justify first column (always rjust)
+    for row in rows:
+        row[0] = row[0].rjust(max_lens[0])
+
+    # For the table layour we also rjust the other columns
+    if table_layout:
+        for row in rows:
+            for i in range(1, ncols):
+                row[i] = row[i].rjust(max_lens[i])
+
+    # Join into a consistent text
+    lines = ["  ".join(row) for row in rows]
     text = "\n".join(line.rstrip() for line in lines)
     return text.rstrip() + "\n"
 
@@ -177,12 +244,14 @@ def dict_to_table(d, header, header_offest=0):
     rows = []
 
     for row_title, values in d.items():
-        row = [row_title]
+        row = [row_title + ":" if row_title else ""]
         rows.append(row)
         for i in range(header_offest + 1, len(header)):
             key = header[i]
-            val = values.get(key, "")
-            if isinstance(val, str):
+            val = values.get(key, None)
+            if val is None:
+                row.append("")
+            elif isinstance(val, str):
                 row.append(val)
             elif isinstance(val, int):
                 row.append(int_repr(val))
@@ -191,8 +260,7 @@ def dict_to_table(d, header, header_offest=0):
             elif isinstance(val, dict):
                 subrows = dict_to_table(val, header, i)
                 if len(subrows) == 0:
-                    while len(row) < ncols:
-                        row.append("")
+                    row += [""] * (ncols - i)
                 else:
                     row += subrows[0]
                     extrarows = [[""] * i + subrow for subrow in subrows[1:]]
@@ -339,5 +407,64 @@ texture_format_to_bpp = {
 }
 
 
-# Global diagnostics object
+# %% global diagnostics object, and builtin diagnostics
+
 diagnostics = DiagnosticsRoot()
+
+
+class SysDiagnostics(Diagnostics):
+    def get_dict(self):
+        return {
+            "platform": platform.platform(),
+            # "platform_version": platform.version(),  # can be quite long
+            "python_implementation": platform.python_implementation(),
+            "python": platform.python_version(),
+        }
+
+
+class NativeDiagnostics(Diagnostics):
+    def get_dict(self):
+        # Get rs modules, or skip
+        try:
+            wgpu = sys.modules["wgpu"]
+            rs = wgpu.backends.rs
+            rs_ffi = wgpu.backends.rs_ffi
+        except (KeyError, AttributeError):
+            return {}
+
+        # Process lib path
+        lib_path = rs_ffi.lib_path
+        wgpu_path = os.path.dirname(wgpu.__file__)
+        if lib_path.startswith(wgpu_path):
+            lib_path = "." + os.path.sep + lib_path[len(wgpu_path) :].lstrip("/\\")
+
+        return {
+            "expected_version": rs.__version__,
+            "lib_version": ".".join(str(i) for i in rs_ffi.get_lib_version()),
+            "lib_path": lib_path,
+        }
+
+
+class VersionDiagnostics(Diagnostics):
+    def get_dict(self):
+        core_libs = ["wgpu", "cffi"]
+        qt_libs = ["PySide6", "PyQt6", "PySide2", "PyQt5"]
+        gui_libs = qt_libs + ["glfw", "jupyter_rfb", "wx"]
+        extra_libs = ["numpy", "pygfx", "pylinalg", "fastplotlib"]
+
+        info = {}
+
+        for libname in core_libs + gui_libs + extra_libs:
+            try:
+                ver = sys.modules[libname].__version__
+            except (KeyError, AttributeError):
+                pass
+            else:
+                info[libname] = str(ver)
+
+        return info
+
+
+SysDiagnostics("system")
+NativeDiagnostics("native_info")
+VersionDiagnostics("versions")

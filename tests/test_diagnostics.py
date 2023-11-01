@@ -67,13 +67,13 @@ def test_diagnostics_main():
         d1.tracker.increase("FooBar")
 
         reference1 = """
-            ██ foo
+            ██ foo:
 
-                    count
+                     count
 
-            FooBar      1
+            FooBar:      1
 
-            ██ bar
+            ██ bar:
 
             No data
         """
@@ -86,17 +86,17 @@ def test_diagnostics_main():
         d2.tracker.increase("XYZ")
 
         reference2 = """
-            ██ foo
+            ██ foo:
 
-                    count
+                     count
 
-            FooBar      2
+            FooBar:      2
 
-            ██ bar
+            ██ bar:
 
-                 count
+                  count
 
-            XYZ      1
+            XYZ:      1
         """
 
         assert custom.get_report() == dedent(reference2, 12)
@@ -111,24 +111,24 @@ def test_diagnostics_main():
         d3.tracker.increase("XYZ")
 
         reference3 = """
-            ██ foo
+            ██ foo:
 
-                    count
+                     count
 
-            FooBar      2
+            FooBar:      2
 
-            ██ bar
+            ██ bar:
 
-                 count
+                  count
 
-            XYZ      1
+            XYZ:      1
 
-            ██ spam
+            ██ spam:
 
-                    count
+                     count
 
-            FooBar      2
-               XYZ      1
+            FooBar:      2
+               XYZ:      1
         """
 
         assert custom.get_report() == dedent(reference3, 12)
@@ -136,12 +136,12 @@ def test_diagnostics_main():
         # Can also show one
 
         reference4 = """
-            ██ spam
+            ██ spam:
 
-                    count
+                     count
 
-            FooBar      2
-               XYZ      1
+            FooBar:      2
+               XYZ:      1
         """
 
         # Showing report also for newly added backend
@@ -162,46 +162,63 @@ def test_diagnostics_main():
 
 
 def test_dict_to_text_simple():
+    # Note the left justification
+
+    d = {"foo": 123456, "bar": "hi", "spam": 4.12345678}
+
+    reference = """
+         foo:  123K
+         bar:  hi
+        spam:  4.12346
+    """
+    assert dict_to_text(d) == dedent(reference[1:], 8)
+
+
+def test_dict_to_text_table():
+    # Note the right justification
+
     d = {
         "foo": {"a": 1, "b": 2, "c": 3.1000000},
         "bar": {"a": 4, "b": 5, "c": 6.123456789123},
     }
 
     reference = """
-        title  a  b        c
+              a  b        c
 
-          foo  1  2      3.1
-          bar  4  5  6.12346
+        foo:  1  2      3.1
+        bar:  4  5  6.12346
     """
-    assert dict_to_text(d, ["title", "a", "b", "c"]) == dedent(reference[1:], 8)
+    assert dict_to_text(d) == dedent(reference[1:], 8)
 
     reference = """
-        title  b  a
+        title   b  a
 
-          foo  2  1
-          bar  5  4
+          foo:  2  1
+          bar:  5  4
     """
     assert dict_to_text(d, ["title", "b", "a"]) == dedent(reference[1:], 8)
 
 
 def test_dict_to_text_justification():
+    # Strain the justification
+
     d = {
         "foobarspameggs": {"aprettylongtitle": 1, "b": "cyan", "c": 3},
         "yo": {"aprettylongtitle": 4, "b": "blueberrycake", "c": 6},
     }
 
     reference = """
-                 title  aprettylongtitle              b  c
+                 title   aprettylongtitle              b  c
 
-        foobarspameggs                 1           cyan  3
-                    yo                 4  blueberrycake  6
+        foobarspameggs:                 1           cyan  3
+                    yo:                 4  blueberrycake  6
     """
 
     header = ["title", "aprettylongtitle", "b", "c"]
     assert dict_to_text(d, header) == dedent(reference[1:], 8)
 
 
-def test_dict_to_text_subs():
+def test_dict_to_text_subdicts():
     # This covers the option to create sub-rows, covering one case, multiple cases, and zero cases.
 
     d = {
@@ -224,19 +241,53 @@ def test_dict_to_text_subs():
     }
 
     reference = """
-              a  b     c    d    e
+               a  b     c     d    e
 
-         foo  1  2  opt1  101  102
-                    opt2  103  104
-         bar  3  4  opt2  105  106
-        spam  5  6
-        eggs  7  8  opt1  111  112
-                    opt2  113  114
-                    opt3  115  116
+         foo:  1  2  opt1:  101  102
+                     opt2:  103  104
+         bar:  3  4  opt2:  105  106
+        spam:  5  6
+        eggs:  7  8  opt1:  111  112
+                     opt2:  113  114
+                     opt3:  115  116
     """
 
-    header = ["", "a", "b", "c", "d", "e"]
-    assert dict_to_text(d, header) == dedent(reference[1:], 8)
+    assert dict_to_text(d) == dedent(reference[1:], 8)
+
+
+def test_dict_to_text_mix():
+    # This covers the option to create sub-rows, covering one case, multiple cases, and zero cases.
+
+    d = {
+        "foo": {
+            "a": 1,
+            "b": 2,
+            "c": "simple",
+            "z": 42,
+        },
+        "bar": {"b": 4, "c": {"opt2": {"d": 105, "e": 106}}, "a": 3},
+        "spam": {"a": 5, "b": None, "c": {}},
+        "eggs": {
+            "z": 41,
+            "a": 7,
+            "c": {
+                "opt1": {"d": 111, "e": 112},
+                "opt2": {"d": 113, "e": 114},
+            },
+        },
+    }
+
+    reference = """
+               a  b   z       c     d    e
+
+         foo:  1  2  42  simple
+         bar:  3  4        opt2:  105  106
+        spam:  5
+        eggs:  7     41    opt1:  111  112
+                           opt2:  113  114
+    """
+
+    assert dict_to_text(d) == dedent(reference[1:], 8)
 
 
 def test_object_tracker():

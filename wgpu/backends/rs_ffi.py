@@ -134,10 +134,11 @@ def _maybe_get_pip_hint():
 ffi = FFI()
 ffi.cdef(get_wgpu_header())
 ffi.set_source("wgpu.h", None)
-lib = ffi.dlopen(get_wgpu_lib_path())
+lib_path = get_wgpu_lib_path()  # store path on this module so it can be checked
+lib = ffi.dlopen(lib_path)
 
 
-def check_expected_version(version_info):
+def get_lib_version():
     # Get lib version
     version_int = lib.wgpuGetVersion()
     if version_int < 65536:  # no-cover - old version encoding with 3 ints
@@ -149,6 +150,11 @@ def check_expected_version(version_info):
     # When the 0.7.0 tag was made, the version was not bumped.
     if version_info_lib == (0, 6, 0, 0):
         version_info_lib = (0, 7, 0)
+    return version_info_lib
+
+
+def check_expected_version(version_info):
+    version_info_lib = get_lib_version()
     # Compare
     if version_info_lib != version_info:  # no-cover
         logger.warning(
