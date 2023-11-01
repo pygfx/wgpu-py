@@ -350,83 +350,6 @@ class GPU(base.GPU):
             force_fallback_adapter=force_fallback_adapter,
         )  # no-cover
 
-    def _generate_report(self):
-        """Get a dictionary with info about the internal status of WGPU.
-        The structure of the dict is not defined, for the moment. Use print_report().
-        """
-
-        # H: surfaces: WGPUStorageReport, backendType: WGPUBackendType, vulkan: WGPUHubReport, metal: WGPUHubReport, dx12: WGPUHubReport, dx11: WGPUHubReport, gl: WGPUHubReport
-        struct = new_struct_p(
-            "WGPUGlobalReport *",
-            # not used: surfaces
-            # not used: backendType
-            # not used: vulkan
-            # not used: metal
-            # not used: dx12
-            # not used: dx11
-            # not used: gl
-        )
-
-        # H: void f(WGPUInstance instance, WGPUGlobalReport * report)
-        libf.wgpuGenerateReport(get_wgpu_instance(), struct)
-
-        report = {}
-
-        report["surfaces"] = {
-            "occupied": struct.surfaces.numOccupied,
-            "vacant": struct.surfaces.numVacant,
-            "error": struct.surfaces.numError,
-            "element_size": struct.surfaces.elementSize,
-        }
-        report["backend_type"] = struct.backendType  # note: could make this a set
-        for backend in ("vulkan", "metal", "dx12", "dx11", "gl"):
-            c_hub_report = getattr(struct, backend)
-            report[backend] = {}
-            for key in dir(c_hub_report):
-                c_storage_report = getattr(c_hub_report, key)
-                storage_report = {
-                    "occupied": c_storage_report.numOccupied,
-                    "vacant": c_storage_report.numVacant,
-                    "error": c_storage_report.numError,
-                    "element_size": c_storage_report.elementSize,
-                }
-                # if any(x!=0 for x in storage_report.values()):
-                report[backend][key] = storage_report
-
-        return report
-
-    def print_report(self):
-        def print_line(topic, occupied, vacant, error, el_size):
-            print(
-                topic.rjust(20),
-                str(occupied).rjust(8),
-                str(vacant).rjust(8),
-                str(error).rjust(8),
-                str(el_size).rjust(8),
-            )
-
-        def print_storage_report(topic, d):
-            print_line(topic, d["occupied"], d["vacant"], d["error"], d["element_size"])
-
-        report = self._generate_report()
-
-        print(f"{self.__class__.__module__}.WGPU report:")
-        print()
-        print_line("", "Occupied", "Vacant", "Error", "el-size")
-        print()
-        print_storage_report("surfaces", report["surfaces"])
-        for backend in ("vulkan", "metal", "dx12", "dx11", "gl"):
-            backend_has_stuff = False
-            for hub_report in report[backend].values():
-                report_has_stuff = any(x != 0 for x in hub_report.values())
-                backend_has_stuff |= report_has_stuff
-            if backend_has_stuff:
-                print_line(f"--- {backend} ---", "", "", "", "")
-                for key, val in report[backend].items():
-                    print_storage_report(key, val)
-            else:
-                print_line(f"--- {backend} ---", "", "", "", "")
-
 
 class GPUCanvasContext(base.GPUCanvasContext):
     def __init__(self, canvas):
@@ -884,6 +807,11 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
 
         if not mip_level_count:
             mip_level_count = 1  # or lib.WGPU_MIP_LEVEL_COUNT_UNDEFINED ?
+        mip_level_count = int(mip_level_count)
+
+        if not sample_count:
+            sample_count = 1
+        sample_count = int(sample_count)
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, dimension: WGPUTextureDimension, size: WGPUExtent3D, format: WGPUTextureFormat, mipLevelCount: int, sampleCount: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *
         struct = new_struct_p(
@@ -2769,7 +2697,7 @@ class GPUInternalError(base.GPUInternalError, GPUError):
 
 
 def _copy_docstrings():
-    base_classes = GPUObjectBase, GPUCanvasContext
+    base_classes = GPUObjectBase, GPUCanvasContext, GPUAdapter
     for ob in globals().values():
         if not (isinstance(ob, type) and issubclass(ob, base_classes)):
             continue
