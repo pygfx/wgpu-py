@@ -244,7 +244,7 @@ def dict_to_text(d, header=None):
 
 
 def dict_to_table(d, header, header_offest=0):
-    """Convert a dict data structure to a table (a list if lists of strings).
+    """Convert a dict data structure to a table (a list of lists of strings).
     The keys form the first entry of the row. Values that are dicts recurse.
     """
 
@@ -306,6 +306,10 @@ def int_repr(val):
     return prefix + s + suffix
 
 
+# Map that we need to calculate texture resource consumption.
+# We need to keep this up-to-date as formats change, we have a unit test for this.
+# Also see https://wgpu.rs/doc/wgpu/enum.TextureFormat.html
+
 texture_format_to_bpp = {
     # 8 bit
     "r8unorm": 8,
@@ -358,7 +362,6 @@ texture_format_to_bpp = {
     "depth32float": 32,
     "depth32float-stencil8": 40,
     # Compressed
-    # Also see https://wgpu.rs/doc/wgpu/enum.TextureFormat.html
     "bc1-rgba-unorm": 4,  # 4x4 blocks, 8 bytes per block
     "bc1-rgba-unorm-srgb": 4,
     "bc2-rgba-unorm": 8,  # 4x4 blocks, 16 bytes per block
@@ -417,10 +420,14 @@ texture_format_to_bpp = {
 
 # %% global diagnostics object, and builtin diagnostics
 
+
+# The global root object
 diagnostics = DiagnosticsRoot()
 
 
-class SysDiagnostics(Diagnostics):
+class SystemDiagnostics(Diagnostics):
+    """Provides basic system info."""
+
     def get_dict(self):
         return {
             "platform": platform.platform(),
@@ -431,6 +438,8 @@ class SysDiagnostics(Diagnostics):
 
 
 class NativeDiagnostics(Diagnostics):
+    """Provides metadata about the wgpu-native backend."""
+
     def get_dict(self):
         # Get rs modules, or skip
         try:
@@ -454,6 +463,8 @@ class NativeDiagnostics(Diagnostics):
 
 
 class VersionDiagnostics(Diagnostics):
+    """Provides version numbers from relevant libraries."""
+
     def get_dict(self):
         core_libs = ["wgpu", "cffi"]
         qt_libs = ["PySide6", "PyQt6", "PySide2", "PyQt5"]
@@ -474,7 +485,7 @@ class VersionDiagnostics(Diagnostics):
 
 
 class ObjectCountDiagnostics(Diagnostics):
-    # For use in base.py
+    """Provides object counts and resource consumption, used in base.py."""
 
     def __init__(self, name):
         super().__init__(name)
@@ -503,7 +514,7 @@ class ObjectCountDiagnostics(Diagnostics):
         return result
 
 
-SysDiagnostics("system")
+SystemDiagnostics("system")
 NativeDiagnostics("native_info")
 VersionDiagnostics("versions")
 ObjectCountDiagnostics("object_counts")
