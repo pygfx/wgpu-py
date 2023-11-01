@@ -230,8 +230,8 @@ def dict_to_text(d, header=None):
                 row[i] = row[i].rjust(max_lens[i])
 
     # Join into a consistent text
-    lines = ["  ".join(row) for row in rows]
-    text = "\n".join(line.rstrip() for line in lines)
+    lines = ["  ".join(row).rstrip() for row in rows]
+    text = "\n".join(lines)
     return text.rstrip() + "\n"
 
 
