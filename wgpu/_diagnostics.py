@@ -473,6 +473,37 @@ class VersionDiagnostics(Diagnostics):
         return info
 
 
+class ObjectCountDiagnostics(Diagnostics):
+    # For use in base.py
+
+    def __init__(self, name):
+        super().__init__(name)
+        self.tracker = ObjectTracker()
+
+    def get_dict(self):
+        """Get diagnostics as a dict."""
+        object_counts = self.tracker.counts
+        resource_mem = self.tracker.amounts
+
+        # Collect counts
+        result = {}
+        for name in sorted(object_counts.keys()):
+            d = {"count": object_counts[name]}
+            if name in resource_mem:
+                d["resource_mem"] = resource_mem[name]
+            result[name[3:]] = d  # drop the 'GPU' from the name
+
+        # Add totals
+        totals = {}
+        for key in ("count", "resource_mem"):
+            totals[key] = sum(v.get(key, 0) for v in result.values())
+        result[""] = {}
+        result["total"] = totals
+
+        return result
+
+
 SysDiagnostics("system")
 NativeDiagnostics("native_info")
 VersionDiagnostics("versions")
+ObjectCountDiagnostics("object_counts")

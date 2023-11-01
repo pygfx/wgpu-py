@@ -13,7 +13,7 @@ import logging
 from typing import List, Dict, Union
 
 from ._coreutils import ApiDiff
-from ._diagnostics import Diagnostics, ObjectTracker, texture_format_to_bpp
+from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
 
@@ -63,38 +63,11 @@ logger = logging.getLogger("wgpu")
 apidiff = ApiDiff()
 
 
-class CountDiagnostics(Diagnostics):
-    """Base diagnostics that counts objects and resource usage."""
-
-    def get_dict(self):
-        """Get diagnostics as a dict."""
-        object_counts = object_tracker.counts
-        resource_mem = object_tracker.amounts
-
-        # Collect counts
-        result = {}
-        for name in sorted(object_counts.keys()):
-            d = {"count": object_counts[name]}
-            if name in resource_mem:
-                d["resource_mem"] = resource_mem[name]
-            result[name[3:]] = d  # drop the 'GPU' from the name
-
-        # Add totals
-        totals = {}
-        for key in ("count", "resource_mem"):
-            totals[key] = sum(v.get(key, 0) for v in result.values())
-        result[""] = {}
-        result["total"] = totals
-
-        return result
-
-
-# Create diagnostics and object tracker. Note that we store a ref of
+# Obtain the object tracker. Note that we store a ref of
 # the latter on all classes that refer to it. Otherwise, on a sys exit,
 # the module attributes are None-ified, and the destructors would
 # therefore fail and produce warnings.
-diagnostics = CountDiagnostics("object_counts")
-object_tracker = ObjectTracker()
+object_tracker = diagnostics.object_counts.tracker
 
 
 class GPU:
@@ -2084,7 +2057,7 @@ def _seed_object_counts():
     for key, val in globals().items():
         if key.startswith("GPU") and not key.endswith(("Base", "Mixin")):
             if hasattr(val, "_ot"):
-                diagnostics.object_counts[key[3:]] = 0
+                object_tracker.counts[key] = 0
 
 
 _seed_object_counts()
