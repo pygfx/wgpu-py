@@ -252,6 +252,8 @@ def dict_to_table(d, header, header_offest=0):
     rows = []
 
     for row_title, values in d.items():
+        if row_title == "total" and row_title == list(d.keys())[-1]:
+            rows.append([""] * ncols)
         row = [row_title + ":" if row_title else ""]
         rows.append(row)
         for i in range(header_offest + 1, len(header)):
@@ -446,7 +448,7 @@ class NativeDiagnostics(Diagnostics):
             wgpu = sys.modules["wgpu"]
             rs = wgpu.backends.rs
             rs_ffi = wgpu.backends.rs_ffi
-        except (KeyError, AttributeError):
+        except (KeyError, AttributeError):  # no-cover
             return {}
 
         # Process lib path
@@ -508,7 +510,6 @@ class ObjectCountDiagnostics(Diagnostics):
         totals = {}
         for key in ("count", "resource_mem"):
             totals[key] = sum(v.get(key, 0) for v in result.values())
-        result[""] = {}
         result["total"] = totals
 
         return result

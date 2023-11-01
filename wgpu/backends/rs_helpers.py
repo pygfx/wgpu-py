@@ -461,7 +461,6 @@ class NativeDiagnostics(Diagnostics):
         totals = {}
         for key in ("count", "mem"):
             totals[key] = sum(v.get(key, 0) for v in result.values())
-        result[""] = {}
         result["total"] = totals
 
         return result
