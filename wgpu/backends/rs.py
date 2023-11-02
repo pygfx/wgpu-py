@@ -718,6 +718,7 @@ class GPUAdapter(base.GPUAdapter):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
+            # H: void f(WGPUAdapter adapter)
             libf.wgpuAdapterRelease(internal)
             # delayed_releaser.release_soon("wgpuAdapterRelease", internal)
 
@@ -740,6 +741,12 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         libf.wgpuDeviceSetUncapturedErrorCallback(
             self._internal, uncaptured_error_callback, ffi.NULL
         )
+
+    def _poll(self):
+        # Internal function
+        if self._internal:
+            # H: bool f(WGPUDevice device, bool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
+            libf.wgpuDevicePoll(self._internal, True, ffi.NULL)
 
     def create_buffer(
         self,
@@ -1448,6 +1455,8 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
+            self._poll()
+            # H: void f(WGPUDevice device)
             libf.wgpuDeviceRelease(internal)
             # delayed_releaser.release_soon("wgpuDeviceRelease", internal)
 
@@ -1529,8 +1538,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         )
 
         # Let it do some cycles
-        # H: bool f(WGPUDevice device, bool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
-        libf.wgpuDevicePoll(self._device._internal, True, ffi.NULL)
+        self._device._poll()
 
         if status != 0:  # no-cover
             raise RuntimeError(f"Could not map buffer ({status}).")
@@ -1640,9 +1648,9 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
         self._release_memoryviews()
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
-            libf.wgpuDevicePoll(self._device._internal, True, ffi.NULL)
             # H: void f(WGPUBuffer buffer)
             libf.wgpuBufferRelease(internal)
+            self._device._poll()
 
 
 class GPUTexture(base.GPUTexture, GPUObjectBase):
@@ -1700,6 +1708,7 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUTexture texture)
             libf.wgpuTextureRelease(internal)
+            self._device._poll()
 
 
 class GPUTextureView(base.GPUTextureView, GPUObjectBase):
@@ -1708,6 +1717,7 @@ class GPUTextureView(base.GPUTextureView, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUTextureView textureView)
             libf.wgpuTextureViewRelease(internal)
+            self._device._poll()
 
 
 class GPUSampler(base.GPUSampler, GPUObjectBase):
@@ -1716,6 +1726,7 @@ class GPUSampler(base.GPUSampler, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUSampler sampler)
             libf.wgpuSamplerRelease(internal)
+            self._device._poll()
 
 
 class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
@@ -1765,8 +1776,7 @@ class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
         # H: void f(WGPUShaderModule shaderModule, WGPUCompilationInfoCallback callback, void * userdata)
         # libf.wgpuShaderModuleGetCompilationInfo(self._internal, callback, ffi.NULL)
         #
-        # H: bool f(WGPUDevice device, bool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
-        # libf.wgpuDevicePoll(self._device._internal, True, ffi.NULL)
+        # self._device._poll()
         #
         # if info is None:
         #     raise RuntimeError("Could not obtain shader compilation info.")
