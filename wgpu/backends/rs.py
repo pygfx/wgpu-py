@@ -354,6 +354,7 @@ class GPU(base.GPU):
 class GPUCanvasContext(base.GPUCanvasContext):
     def __init__(self, canvas):
         super().__init__(canvas)
+        self._device = None
         self._surface_size = (-1, -1)
         self._surface_id = None
         self._internal = None

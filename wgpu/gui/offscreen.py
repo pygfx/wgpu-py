@@ -41,7 +41,7 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
         call_later(0, self.draw)
 
     def present(self, texture_view):
-        # This gets called at the end of a draw pass via GPUCanvasContextOffline
+        # This gets called at the end of a draw pass via _offscreen.GPUCanvasContext
         device = texture_view._device
         size = texture_view.size
         bytes_per_pixel = 4
