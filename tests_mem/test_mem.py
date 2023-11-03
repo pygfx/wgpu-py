@@ -207,9 +207,6 @@ def test_release_canvas_context_1(n):
 
     from wgpu.gui.offscreen import WgpuCanvas
 
-    if hasattr(wgpu.gui.offscreen, "asyncio"):
-        pytest.skip("#404 is not yet merged")  # todo: remove this
-
     yield {
         "expected_counts_after_create": {
             "CanvasContext": (n, 0),
