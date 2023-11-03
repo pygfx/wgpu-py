@@ -1,4 +1,4 @@
-import asyncio
+import time
 
 from ._offscreen import WgpuOffscreenCanvas
 from .base import WgpuAutoGui
@@ -38,10 +38,11 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
         return self._closed
 
     def _request_draw(self):
-        call_later(0, self.draw)
+        # Deliberately a no-op, because people use .draw() instead.
+        pass
 
     def present(self, texture_view):
-        # This gets called at the end of a draw pass via GPUCanvasContextOffline
+        # This gets called at the end of a draw pass via _offscreen.GPUCanvasContext
         device = texture_view._device
         size = texture_view.size
         bytes_per_pixel = 4
@@ -74,31 +75,33 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
 WgpuCanvas = WgpuManualOffscreenCanvas
 
 
+# If we consider the use-cases for using this offscreen canvas:
+#
+# * Using wgpu.gui.auto in test-mode: in this case run() should not hang,
+#   and call_later should not cause lingering refs.
+# * Using the offscreen canvas directly, in a script: in this case you
+#   do not have/want an event system.
+# * Using the offscreen canvas in an evented app. In that case you already
+#   have an app with a specific event-loop (it might be PySide6 or
+#   something else entirely).
+#
+# In summary, we provide a call_later() and run() that behave pretty
+# well for the first case.
+
+_pending_calls = []
+
+
 def call_later(delay, callback, *args):
-    loop = asyncio.get_event_loop_policy().get_event_loop()
-    # for the offscreen canvas, we prevent new frames and callbacks
-    # from being queued while the loop is running. this avoids
-    # callbacks from one visualization leaking into the next.
-    if loop.is_running():
-        return
-    loop.call_later(delay, callback, *args)
-
-
-async def mainloop_iter():
-    pass  # no op
+    # Note that this module never calls call_later() itself; request_draw() is a no-op.
+    etime = time.time() + delay
+    _pending_calls.append((etime, callback, args))
 
 
 def run():
-    """Handle all tasks scheduled with call_later and return."""
-    loop = asyncio.get_event_loop_policy().get_event_loop()
+    # Process pending calls
+    for etime, callback, args in _pending_calls.copy():
+        if time.time() >= etime:
+            callback(*args)
 
-    # If the loop is already running, this is likely an interactive session or something
-    if loop.is_running():
-        return
-
-    # Run stub mainloop, so that all currently pending tasks are handled
-    loop.run_until_complete(mainloop_iter())
-
-    # Cancel all remaining tasks (those that are scheduled later)
-    for t in asyncio.all_tasks(loop=loop):
-        t.cancel()
+    # Clear any leftover scheduled calls, to avoid lingering refs.
+    _pending_calls.clear()
