@@ -2366,7 +2366,7 @@ class GPUComputePassEncoder(
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUComputePassEncoder computePassEncoder)
-            internal  # panics: libf.wgpuComputePassEncoderRelease(internal)
+            libf.wgpuComputePassEncoderRelease(internal)
 
 
 class GPURenderPassEncoder(
@@ -2429,7 +2429,7 @@ class GPURenderPassEncoder(
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderPassEncoder renderPassEncoder)
-            internal  # panics: libf.wgpuRenderPassEncoderRelease(internal)
+            libf.wgpuRenderPassEncoderRelease(internal)
 
 
 class GPURenderBundleEncoder(
