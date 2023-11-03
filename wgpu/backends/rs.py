@@ -2662,6 +2662,7 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
+            # H: void f(WGPUQueue queue)
             libf.wgpuQueueRelease(internal)
 
 
