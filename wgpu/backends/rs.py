@@ -1751,6 +1751,7 @@ class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUPipelineLayout pipelineLayout)
             libf.wgpuPipelineLayoutRelease(internal)
+            self._device._poll()
 
 
 class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
@@ -1802,6 +1803,7 @@ class GPUComputePipeline(base.GPUComputePipeline, GPUPipelineBase, GPUObjectBase
             self._internal, internal = None, self._internal
             # H: void f(WGPUComputePipeline computePipeline)
             libf.wgpuComputePipelineRelease(internal)
+            self._device._poll()
 
 
 class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):

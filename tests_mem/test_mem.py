@@ -184,7 +184,7 @@ async def stub_event_loop():
 def xfail_test_meta_all_objects_covered():
     """Test that we have a test_release test function for each known object."""
 
-    ref_obnames = set(key.lower() for key in get_counts().keys())
+    ref_obnames = set(key for key in get_counts().keys())
     func_obnames = set(ob_name_from_test_func(func) for func in RELEASE_TEST_FUNCS)
 
     missing = ref_obnames - func_obnames
@@ -329,6 +329,9 @@ def test_release_canvas_context_1(n):
 
     from wgpu.gui.offscreen import WgpuCanvas
 
+    if hasattr(wgpu.gui.offscreen, "asyncio"):
+        pytest.skip("#404 is not yet merged")  # todo: remove this
+
     yield {
         "expected_counts_after_create": {
             "CanvasContext": (n, 0),
@@ -359,7 +362,7 @@ def test_release_canvas_context_2(n):
     if not can_use_glfw:
         pytest.skip("Need glfw for this test")
 
-    from wgpu.gui.glfw import WgpuCanvas, glfw  # noqa
+    from wgpu.gui.glfw import WgpuCanvas  # noqa
 
     yield {}
 
@@ -368,9 +371,9 @@ def test_release_canvas_context_2(n):
         c.request_draw(make_draw_func_for_canvas(c))
         loop.run_until_complete(stub_event_loop())
         yield c.get_context()
-        del c
 
     # Need some shakes to get all canvas refs gone
+    del c
     loop.run_until_complete(stub_event_loop())
     gc.collect()
     loop.run_until_complete(stub_event_loop())
@@ -387,7 +390,7 @@ def test_release_canvas_context_3(n):
     if not can_use_pyside6:
         pytest.skip("Need pyside6 for this test")
 
-    import PySide6
+    import PySide6  # noqa
     from wgpu.gui.qt import WgpuCanvas  # noqa
 
     app = PySide6.QtWidgets.QApplication.instance()
@@ -401,9 +404,9 @@ def test_release_canvas_context_3(n):
         c.request_draw(make_draw_func_for_canvas(c))
         app.processEvents()
         yield c.get_context()
-        del c
 
     # Need some shakes to get all canvas refs gone
+    del c
     gc.collect()
     app.processEvents()
 
@@ -427,60 +430,188 @@ def test_release_command_buffer(n):
 def test_release_command_encoder(n):
     # Note: a CommandEncoder does not exist in wgpu-core, but we do
     # observe its internal CommandBuffer.
-
     yield {
         "expected_counts_after_create": {
             "CommandEncoder": (n, 0),
             "CommandBuffer": (0, n),
         },
     }
+
     for i in range(n):
         yield DEVICE.create_command_encoder()
 
 
-# @create_and_release
-# def test_release_compute_pass_encoder(n):
-#     pass
+@create_and_release
+def test_release_compute_pass_encoder(n):
+    # Note: ComputePassEncoder does not really exist in wgpu-core
+    # -> Check gpu.diagnostics.rs_counts.print_report(), nothing there that ends with "Encoder".
+    command_encoder = DEVICE.create_command_encoder()
+
+    yield {
+        "expected_counts_after_create": {
+            "ComputePassEncoder": (n, 0),
+        },
+    }
+
+    for i in range(n):
+        yield command_encoder.begin_compute_pass()
 
 
-# @create_and_release
-# def test_release_compute_pipeline(n):
-#     pass
+@create_and_release
+def test_release_compute_pipeline(n):
+    code = """
+        @compute
+        @workgroup_size(1)
+        fn main(@builtin(global_invocation_id) index: vec3<u32>) {
+            let i: u32 = index.x;
+        }
+    """
+    shader = DEVICE.create_shader_module(code=code)
+
+    binding_layouts = []
+    pipeline_layout = DEVICE.create_pipeline_layout(bind_group_layouts=binding_layouts)
+
+    yield {}
+
+    for i in range(n):
+        yield DEVICE.create_compute_pipeline(
+            layout=pipeline_layout,
+            compute={"module": shader, "entry_point": "main"},
+        )
 
 
-# @create_and_release
-# def test_release_pipeline_layout(n):
-#     pass
+@create_and_release
+def test_release_pipeline_layout(n):
+    yield {}
+    for i in range(n):
+        yield DEVICE.create_pipeline_layout(bind_group_layouts=[])
 
 
-# @create_and_release
-# def test_release_query_set(n):
-#     pass
+@create_and_release
+def test_release_query_set(n):
+    # todo: implement this when we do support them
+    pytest.skip("Query set not implemented")
 
 
-# @create_and_release
-# def test_release_queue(n):
-#     pass
+@create_and_release
+def xfail_test_release_queue(n):
+    yield {}
+    adapter = DEVICE.adapter
+    for i in range(n):
+        d = adapter.request_device()
+        q = d.queue
+        d.destroy()
+        d._queue = None
+        yield q
 
 
-# @create_and_release
-# def test_release_render_bundle(n):
-#     pass
+@create_and_release
+def test_release_render_bundle(n):
+    # todo: implement this when we do support them
+    pytest.skip("Render bundle not implemented")
 
 
-# @create_and_release
-# def test_release_render_bundle_encoder(n):
-#     pass
+@create_and_release
+def test_release_render_bundle_encoder(n):
+    pytest.skip("Render bundle not implemented")
 
 
-# @create_and_release
-# def test_release_render_pass_encoder(n):
-#     pass
+@create_and_release
+def test_release_render_pass_encoder(n):
+    # Note: RenderPassEncoder does not really exist in wgpu-core
+    # -> Check gpu.diagnostics.rs_counts.print_report(), nothing there that ends with "Encoder".
+    command_encoder = DEVICE.create_command_encoder()
+
+    yield {
+        "expected_counts_after_create": {
+            "RenderPassEncoder": (n, 0),
+        },
+    }
+
+    for i in range(n):
+        yield command_encoder.begin_render_pass(color_attachments=[])
 
 
-# @create_and_release
-# def test_release_render_pipeline(n):
-#     pass
+@create_and_release
+def test_release_render_pipeline(n):
+    code = """
+        struct VertexInput {
+            @builtin(vertex_index) vertex_index : u32,
+        };
+        struct VertexOutput {
+            @location(0) color : vec4<f32>,
+            @builtin(position) pos: vec4<f32>,
+        };
+
+        @vertex
+        fn vs_main(in: VertexInput) -> VertexOutput {
+            var positions = array<vec2<f32>, 3>(
+                vec2<f32>(0.0, -0.5),
+                vec2<f32>(0.5, 0.5),
+                vec2<f32>(-0.5, 0.75),
+            );
+            var colors = array<vec3<f32>, 3>(  // srgb colors
+                vec3<f32>(1.0, 1.0, 0.0),
+                vec3<f32>(1.0, 0.0, 1.0),
+                vec3<f32>(0.0, 1.0, 1.0),
+            );
+            let index = i32(in.vertex_index);
+            var out: VertexOutput;
+            out.pos = vec4<f32>(positions[index], 0.0, 1.0);
+            out.color = vec4<f32>(colors[index], 1.0);
+            return out;
+        }
+
+        @fragment
+        fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+            let physical_color = pow(in.color.rgb, vec3<f32>(2.2));  // gamma correct
+            return vec4<f32>(physical_color, in.color.a);
+        }
+    """
+    shader = DEVICE.create_shader_module(code=code)
+
+    binding_layouts = []
+    pipeline_layout = DEVICE.create_pipeline_layout(bind_group_layouts=binding_layouts)
+
+    yield {}
+
+    for i in range(n):
+        yield DEVICE.create_render_pipeline(
+            layout=pipeline_layout,
+            vertex={
+                "module": shader,
+                "entry_point": "vs_main",
+                "buffers": [],
+            },
+            primitive={
+                "topology": wgpu.PrimitiveTopology.triangle_list,
+                "front_face": wgpu.FrontFace.ccw,
+                "cull_mode": wgpu.CullMode.none,
+            },
+            depth_stencil=None,
+            multisample=None,
+            fragment={
+                "module": shader,
+                "entry_point": "fs_main",
+                "targets": [
+                    {
+                        "format": "bgra8unorm-srgb",
+                        "blend": {
+                            "color": (
+                                wgpu.BlendFactor.one,
+                                wgpu.BlendFactor.zero,
+                                wgpu.BlendOperation.add,
+                            ),
+                            "alpha": (
+                                wgpu.BlendFactor.one,
+                                wgpu.BlendFactor.zero,
+                                wgpu.BlendOperation.add,
+                            ),
+                        },
+                    },
+                ],
+            },
+        )
 
 
 @create_and_release
@@ -541,9 +672,11 @@ RELEASE_TEST_FUNCS = [
 
 if __name__ == "__main__":
     for func in ALL_TEST_FUNCS:
+        if "context" in func.__name__:
+            continue
         print(func.__name__ + " ...")
         try:
             func()
         except pytest.skip.Exception:
-            pass
+            print("  skipped")
     print("done")
