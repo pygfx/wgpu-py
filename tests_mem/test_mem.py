@@ -1,10 +1,10 @@
 import gc
+import asyncio
 
 import wgpu.backends.rs
-import wgpu.gui.offscreen
 
 import pytest
-from testutils import can_use_glfw, can_use_wgpu_lib
+from testutils import can_use_glfw, can_use_wgpu_lib, can_use_pyside6
 
 
 if not can_use_wgpu_lib:
@@ -74,6 +74,35 @@ def ob_name_from_test_func(func):
     return "".join(word.capitalize() for word in words)
 
 
+def make_draw_func_for_canvas(canvas):
+    """Create a draw function for the given canvas,
+    so that we can really present something to a canvas being tested.
+    """
+    ctx = canvas.get_context()
+    ctx.configure(device=DEVICE, format="bgra8unorm-srgb")
+
+    def draw():
+        ctx = canvas.get_context()
+        command_encoder = DEVICE.create_command_encoder()
+        current_texture_view = ctx.get_current_texture()
+        render_pass = command_encoder.begin_render_pass(
+            color_attachments=[
+                {
+                    "view": current_texture_view,
+                    "resolve_target": None,
+                    "clear_value": (1, 1, 1, 1),
+                    "load_op": wgpu.LoadOp.clear,
+                    "store_op": wgpu.StoreOp.store,
+                }
+            ],
+        )
+        render_pass.end()
+        DEVICE.queue.submit([command_encoder.finish()])
+        ctx.present()
+
+    return draw
+
+
 def create_and_release(create_objects_func):
     """Decorator."""
 
@@ -83,12 +112,13 @@ def create_and_release(create_objects_func):
         n = 32
 
         generator = create_objects_func(n)
+        ob_name = ob_name_from_test_func(create_objects_func)
 
         # ----- Collect options
 
         options = {
-            "expected_native_high_count": n,
-            "allowed_native_low_count": 0,
+            "expected_counts_after_create": {ob_name: (32, 32)},
+            "expected_counts_after_release": {},
         }
 
         func_options = next(generator)
@@ -112,7 +142,6 @@ def create_and_release(create_objects_func):
         assert all(isinstance(objects[i], cls) for i in range(len(objects)))
 
         # Test that class matches function name (should prevent a group of copy-paste errors)
-        ob_name = ob_name_from_test_func(create_objects_func)
         assert ob_name == cls.__name__[3:]
 
         # Measure peak object counts
@@ -121,9 +150,8 @@ def create_and_release(create_objects_func):
         print("  more after create:", more2)
 
         # Make sure the actual object has increased
-        expected_high_count = n, options["expected_native_high_count"]
-        assert ob_name in more2
-        assert more2[ob_name] == expected_high_count
+        assert more2  # not empty
+        assert more2 == options["expected_counts_after_create"]
 
         # It's ok if other objects are created too ...
 
@@ -138,22 +166,15 @@ def create_and_release(create_objects_func):
         more3 = get_excess_counts(counts1, counts3)
         print("  more after release:", more3)
 
-        # If no excess objects, all is well!
-        if not more3:
-            return
-
-        # Otherwise, look deeper
-        expected_low_count = 0, options["allowed_native_low_count"]
-        more3.setdefault(ob_name, (0, 0))
-        assert more3[ob_name] == expected_low_count
-
-        # Nothing left other than that?
-        more4 = more3.copy()
-        more4.pop(ob_name)
-        assert not more4
+        # Check!
+        assert more3 == options["expected_counts_after_release"]
 
     core_test_func.__name__ = create_objects_func.__name__
     return core_test_func
+
+
+async def stub_event_loop():
+    pass
 
 
 # %% Meta tests
@@ -234,8 +255,6 @@ def xfail_test_release_device(n):
 
 @create_and_release
 def test_release_bind_group(n):
-    yield {}
-
     buffer1 = DEVICE.create_buffer(size=128, usage=wgpu.BufferUsage.STORAGE)
 
     binding_layouts = [
@@ -257,6 +276,8 @@ def test_release_bind_group(n):
 
     bind_group_layout = DEVICE.create_bind_group_layout(entries=binding_layouts)
 
+    yield {}
+
     for i in range(n):
         yield DEVICE.create_bind_group(layout=bind_group_layout, entries=bindings)
 
@@ -271,7 +292,10 @@ def test_release_bind_group_layout(n):
 
     # todo: do we want similar behavior for *our* BindGroupLayout object?
 
-    yield {"expected_native_high_count": 1, "allowed_native_low_count": 1}
+    yield {
+        "expected_counts_after_create": {"BindGroupLayout": (n, 1)},
+        "expected_counts_after_release": {"BindGroupLayout": (0, 1)},
+    }
 
     binding_layouts = [
         {
@@ -299,25 +323,39 @@ def test_release_buffer(n):
 def test_release_canvas_context_1(n):
     # Test with offscreen canvases. A context is created, but not a wgpu-native surface.
 
-    yield {"expected_native_high_count": 0}
+    # Note: the offscreen canvas keeps the render-texture-view alive, since it
+    # is used to e.g. download the resulting image. That's why we also see
+    # Textures and TextureViews in the counts.
+
+    from wgpu.gui.offscreen import WgpuCanvas
+
+    yield {
+        "expected_counts_after_create": {
+            "CanvasContext": (n, 0),
+            "Texture": (n, n),
+            "TextureView": (n, n),
+        },
+    }
 
     for i in range(n):
-        c = wgpu.gui.offscreen.WgpuCanvas()
-        ctx = c.get_context()
-        ctx.configure(device=DEVICE, format="bgra8unorm-srgb")
-        ctx.get_current_texture()  # forces creating a surface
-        yield ctx
+        c = WgpuCanvas()
+        c.request_draw(make_draw_func_for_canvas(c))
+        c.draw()
+        yield c.get_context()
 
 
 @create_and_release
-def xfail_test_release_canvas_context_2(n):
+def test_release_canvas_context_2(n):
     # Test with GLFW canvases.
 
-    # XFAIL: The CanvasContext objects (both the Py side and the native surface) are not properly released,
-    # but they are when I check right afterwards, maybe it needs an event loop iter or glfw poll?
+    # Note: in a draw, the textureview is obtained (thus creating a
+    # Texture and a TextureView, but these are released in present(),
+    # so we don't see them in the counts.
 
-    # todo: revisit this with the new upcoming APIs?
+    loop = asyncio.get_event_loop_policy().get_event_loop()
 
+    if loop.is_running():
+        pytest.skip("Cannot run this test when asyncio loop is running")
     if not can_use_glfw:
         pytest.skip("Need glfw for this test")
 
@@ -327,20 +365,77 @@ def xfail_test_release_canvas_context_2(n):
 
     for i in range(n):
         c = WgpuCanvas()
-        ctx = c.get_context()
-        ctx.configure(device=DEVICE, format="bgra8unorm-srgb")
-        ctx.get_current_texture()  # forces creating a surface
-        yield ctx
+        c.request_draw(make_draw_func_for_canvas(c))
+        loop.run_until_complete(stub_event_loop())
+        yield c.get_context()
+        del c
+
+    # Need some shakes to get all canvas refs gone
+    loop.run_until_complete(stub_event_loop())
+    gc.collect()
+    loop.run_until_complete(stub_event_loop())
 
 
-# @create_and_release
-# def test_release_command_buffer(n):
-#     pass
+@create_and_release
+def test_release_canvas_context_3(n):
+    # Test with PySide canvases.
+
+    # Note: in a draw, the textureview is obtained (thus creating a
+    # Texture and a TextureView, but these are released in present(),
+    # so we don't see them in the counts.
+
+    if not can_use_pyside6:
+        pytest.skip("Need pyside6 for this test")
+
+    import PySide6
+    from wgpu.gui.qt import WgpuCanvas  # noqa
+
+    app = PySide6.QtWidgets.QApplication.instance()
+    if app is None:
+        app = PySide6.QtWidgets.QApplication([""])
+
+    yield {}
+
+    for i in range(n):
+        c = WgpuCanvas()
+        c.request_draw(make_draw_func_for_canvas(c))
+        app.processEvents()
+        yield c.get_context()
+        del c
+
+    # Need some shakes to get all canvas refs gone
+    gc.collect()
+    app.processEvents()
 
 
-# @create_and_release
-# def test_release_command_encoder(n):
-#     pass
+@create_and_release
+def test_release_command_buffer(n):
+    # Note: a command encoder can only be used once (it gets destroyed on finish())
+    yield {
+        "expected_counts_after_create": {
+            "CommandEncoder": (n, 0),
+            "CommandBuffer": (n, n),
+        },
+    }
+
+    for i in range(n):
+        command_encoder = DEVICE.create_command_encoder()
+        yield command_encoder.finish()
+
+
+@create_and_release
+def test_release_command_encoder(n):
+    # Note: a CommandEncoder does not exist in wgpu-core, but we do
+    # observe its internal CommandBuffer.
+
+    yield {
+        "expected_counts_after_create": {
+            "CommandEncoder": (n, 0),
+            "CommandBuffer": (0, n),
+        },
+    }
+    for i in range(n):
+        yield DEVICE.create_command_encoder()
 
 
 # @create_and_release
@@ -395,9 +490,19 @@ def test_release_sampler(n):
         yield DEVICE.create_sampler()
 
 
-# @create_and_release
-# def test_release_shader_module(n):
-#     pass
+@create_and_release
+def test_release_shader_module(n):
+    yield {}
+
+    code = """
+        @fragment
+        fn fs_main() -> @location(0) vec4<f32> {
+           return vec4<f32>(1.0, 0.0, 0.0, 1.0);
+        }
+    """
+
+    for i in range(n):
+        yield DEVICE.create_shader_module(code=code)
 
 
 @create_and_release
@@ -413,10 +518,10 @@ def test_release_texture(n):
 
 @create_and_release
 def test_release_texture_view(n):
-    yield {}
     texture = DEVICE.create_texture(
         size=(16, 16, 16), usage=wgpu.TextureUsage.TEXTURE_BINDING, format="rgba8unorm"
     )
+    yield {}
     for i in range(n):
         yield texture.create_view()
 
@@ -437,5 +542,8 @@ RELEASE_TEST_FUNCS = [
 if __name__ == "__main__":
     for func in ALL_TEST_FUNCS:
         print(func.__name__ + " ...")
-        func()
+        try:
+            func()
+        except pytest.skip.Exception:
+            pass
     print("done")

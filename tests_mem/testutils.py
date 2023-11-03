@@ -34,6 +34,17 @@ def _determine_can_use_glfw():
         return True
 
 
+def _determine_can_use_pyside6():
+    code = "import PySide6.QtGui"
+    try:
+        subprocess.check_output([sys.executable, "-c", code])
+    except Exception:
+        return False
+    else:
+        return True
+
+
 can_use_wgpu_lib = _determine_can_use_wgpu_lib()
 can_use_glfw = _determine_can_use_glfw()
+can_use_pyside6 = _determine_can_use_pyside6()
 is_ci = bool(os.getenv("CI", None))

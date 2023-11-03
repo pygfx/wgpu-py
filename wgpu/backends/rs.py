@@ -1819,7 +1819,7 @@ class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
         # 'Cannot remove a vacant resource'. Got this info from the
         # wgpu chat. Also see
         # https://docs.rs/wgpu-core/latest/src/wgpu_core/device/mod.rs.html#4180-4194
-        # That's why _internal is set to None in submit()
+        # --> That's why _internal is set to None in Queue.submit()
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandBuffer commandBuffer)
@@ -2322,7 +2322,7 @@ class GPUCommandEncoder(
         raise NotImplementedError()
 
     def _destroy(self):
-        # Note that the natove object gets destroyed on finish.
+        # Note that the native object gets destroyed on finish.
         # Also see GPUCommandBuffer._destroy()
         if self._internal is not None and lib is not None:
             self._internal, internal = None, self._internal
