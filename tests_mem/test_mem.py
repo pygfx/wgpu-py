@@ -180,8 +180,7 @@ async def stub_event_loop():
 # %% Meta tests
 
 
-# todo: enable this when done
-def xfail_test_meta_all_objects_covered():
+def test_meta_all_objects_covered():
     """Test that we have a test_release test function for each known object."""
 
     ref_obnames = set(key for key in get_counts().keys())
@@ -244,13 +243,19 @@ def test_release_adapter(n):
 
 
 @create_and_release
-def xfail_test_release_device(n):
-    # XFAIL: Device object seem not to be cleaned up at wgpu-native
+def test_release_device(n):
+    pytest.skip("XFAIL")
+    # todo: XFAIL: Device object seem not to be cleaned up at wgpu-native.
 
-    yield {}
+    yield {
+        "expected_counts_after_create": {"Device": (n, n), "Queue": (n, 0)},
+    }
     adapter = DEVICE.adapter
     for i in range(n):
-        yield adapter.request_device()
+        d = adapter.request_device()
+        # d.queue._destroy()
+        # d._queue = None
+        yield d
 
 
 @create_and_release
@@ -494,14 +499,15 @@ def test_release_query_set(n):
 
 
 @create_and_release
-def xfail_test_release_queue(n):
+def test_release_queue(n):
+    pytest.skip("XFAIL")
+    # todo: XFAIL: the device and queue are kinda one, and the former won't release at wgpu-native.
     yield {}
     adapter = DEVICE.adapter
     for i in range(n):
         d = adapter.request_device()
         q = d.queue
-        d.destroy()
-        d._queue = None
+        d._queue = None  # detach
         yield q
 
 
@@ -672,8 +678,6 @@ RELEASE_TEST_FUNCS = [
 
 if __name__ == "__main__":
     for func in ALL_TEST_FUNCS:
-        if "context" in func.__name__:
-            continue
         print(func.__name__ + " ...")
         try:
             func()
