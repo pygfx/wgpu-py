@@ -1657,6 +1657,13 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             # H: void f(WGPUBuffer buffer)
             libf.wgpuBufferRelease(internal)
             self._device._poll()
+            # Note: from the memtests it looks like we need to poll the device
+            # after releasing an object for some objects (buffer, texture,
+            # texture view, sampler, pipeline layout, compute pipeline, and
+            # render pipeline). But not others. Would be nice to at some point
+            # have more clarity on this. In the mean time, we now poll the
+            # device quite a bit, so leaks by not polling the device after
+            # releasing something are highly unlikely.
 
 
 class GPUTexture(base.GPUTexture, GPUObjectBase):
@@ -1818,6 +1825,7 @@ class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderPipeline renderPipeline)
             libf.wgpuRenderPipelineRelease(internal)
+            self._device._poll()
 
 
 class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
