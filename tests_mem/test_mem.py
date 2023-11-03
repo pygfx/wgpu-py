@@ -120,6 +120,9 @@ def test_release_device(n):
     pytest.skip("XFAIL")
     # todo: XFAIL: Device object seem not to be cleaned up at wgpu-native.
 
+    # Note: the WebGPU spec says:
+    # [request_device()] is a one-time action: if a device is returned successfully, the adapter becomes invalid.
+
     yield {
         "expected_counts_after_create": {"Device": (n, n), "Queue": (n, 0)},
     }
