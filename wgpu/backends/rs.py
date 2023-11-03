@@ -971,9 +971,17 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             # not used: nextInChain
         )
 
+        # Note: wgpu-core re-uses BindGroupLayouts with the same (or similar
+        # enough) descriptor. You would think that this means that the id is
+        # the same when you call wgpuDeviceCreateBindGroupLayout with the same
+        # input, but it's not. So we cannot let wgpu-native/core decide when
+        # to re-use a BindGroupLayout. I don't feel confident checking here
+        # whether a BindGroupLayout can be re-used, so we simply don't. Higher
+        # level code can sometimes make this decision because it knows the app
+        # logic.
+
         # H: WGPUBindGroupLayout f(WGPUDevice device, WGPUBindGroupLayoutDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateBindGroupLayout(self._internal, struct)
-
         return GPUBindGroupLayout(label, id, self, entries)
 
     def create_bind_group(
