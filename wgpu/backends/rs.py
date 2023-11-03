@@ -1456,6 +1456,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUDevice device)
             libf.wgpuDeviceRelease(internal)
+            # wgpuDeviceDestroy(internal) is also an option
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
