@@ -35,7 +35,6 @@ from .rs_helpers import (
     get_memoryview_and_address,
     to_snake_case,
     to_camel_case,
-    DelayedReleaser,
     ErrorHandler,
     SafeLibCalls,
 )
@@ -173,7 +172,6 @@ def check_struct(struct_name, d):
         raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
 
 
-delayed_releaser = DelayedReleaser()
 error_handler = ErrorHandler(logger)
 libf = SafeLibCalls(lib, error_handler)
 
@@ -546,9 +544,6 @@ class GPUAdapter(base.GPUAdapter):
     def _request_device(
         self, label, required_features, required_limits, default_queue, trace_path
     ):
-        # This is a good moment to release destroyed objects
-        delayed_releaser.release_all_pending()
-
         # ---- Handle features
 
         assert isinstance(required_features, (tuple, list, set))
@@ -720,7 +715,6 @@ class GPUAdapter(base.GPUAdapter):
             self._internal, internal = None, self._internal
             # H: void f(WGPUAdapter adapter)
             libf.wgpuAdapterRelease(internal)
-            # delayed_releaser.release_soon("wgpuAdapterRelease", internal)
 
 
 class GPUDevice(base.GPUDevice, GPUObjectBase):
@@ -1462,7 +1456,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUDevice device)
             libf.wgpuDeviceRelease(internal)
-            # delayed_releaser.release_soon("wgpuDeviceRelease", internal)
 
 
 class GPUBuffer(base.GPUBuffer, GPUObjectBase):
