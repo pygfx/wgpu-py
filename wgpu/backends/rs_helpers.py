@@ -403,8 +403,7 @@ class NativeDiagnostics(Diagnostics):
                 name_map[name] = name[0].upper() + name[1:-1]
 
         # Initialize the result dict (sorted)
-        for name in sorted(names + root_names):
-            report_name = name_map[name]
+        for report_name in sorted(name_map[name] for name in names + root_names):
             result[report_name] = {"count": 0, "mem": 0}
 
         # Establish what backends are active
