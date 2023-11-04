@@ -23,7 +23,7 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         # the backend (e.g. rs), but here we use our own context.
         assert kind == "gpupresent"
         if self._canvas_context is None:
-            self._canvas_context = GPUCanvasContextOffline(self)
+            self._canvas_context = GPUCanvasContext(self)
         return self._canvas_context
 
     def present(self, texture_view):
@@ -43,7 +43,7 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         return "rgba8unorm-srgb"
 
 
-class GPUCanvasContextOffline(base.GPUCanvasContext):
+class GPUCanvasContext(base.GPUCanvasContext):
     """Helper class for canvases that render to a texture."""
 
     def __init__(self, canvas):

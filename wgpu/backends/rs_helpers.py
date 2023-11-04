@@ -222,29 +222,6 @@ def to_camel_case(name):
     return name2
 
 
-class DelayedReleaser:
-    """Helps release objects at a later time."""
-
-    # I found that when wgpuDeviceRelease() was called in Device._destroy,
-    # the tests would hang. I found that the release call was done around
-    # the time when another device was used (e.g. to create a buffer
-    # or shader module). For some reason, the delay in destruction (by
-    # Python's CG) causes a deadlock or something. We seem to be able
-    # to fix this by doing the actual release later - e.g. when the
-    # user creates a new device. Seems to be the same for the adapter.
-    def __init__(self):
-        self._things_to_release = []
-
-    def release_soon(self, fun, i):
-        self._things_to_release.append((fun, i))
-
-    def release_all_pending(self):
-        while self._things_to_release:
-            fun, i = self._things_to_release.pop(0)
-            release_func = getattr(lib, fun)
-            release_func(i)
-
-
 class ErrorHandler:
     """Object that logs errors, with the option to collect incoming
     errors elsewhere.
@@ -403,8 +380,7 @@ class NativeDiagnostics(Diagnostics):
                 name_map[name] = name[0].upper() + name[1:-1]
 
         # Initialize the result dict (sorted)
-        for name in sorted(names + root_names):
-            report_name = name_map[name]
+        for report_name in sorted(name_map[name] for name in names + root_names):
             result[report_name] = {"count": 0, "mem": 0}
 
         # Establish what backends are active

@@ -198,9 +198,12 @@ jobs:
           pip install -U -r dev-requirements.txt
           python download-wgpu-native.py
           pip install -e .
-    - name: Test on repo
+    - name: Unit tests
       run: |
           pytest -v tests
+    - name: Memory tests
+      run: |
+          pytest -v tests_mem
 
   # The release builds are done for the platforms that we want to build wheels for.
   # We build wheels, test them, and then upload the wheel as an artifact.
