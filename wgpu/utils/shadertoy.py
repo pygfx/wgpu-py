@@ -513,20 +513,28 @@ class Shadertoy:
             # wgsl shaders are validated correct already
             return
             
-        with tempfile.NamedTemporaryFile(suffix=".frag", mode="w", encoding="utf-8") as f, tempfile.NamedTemporaryFile(suffix=".spv", mode="w+b") as f2:
+        with tempfile.NamedTemporaryFile(suffix=".frag", mode="w", encoding="utf-8") as f, \
+            tempfile.NamedTemporaryFile(suffix=".spv", mode="w+b") as f2, \
+            tempfile.NamedTemporaryFile(suffix=".wgsl", mode="w+b") as f3:
             f.write(frag_shader_code)
             f.flush()
             f2.flush()
+            f3.flush()
             # first try validation with naga (this catches syntax errors for example)
             try:
-                subprocess.run(["naga", f.name], check=True, capture_output=True, timeout=2)
+                subprocess.run(["naga", f.name], check=True, capture_output=True, timeout=3)
             except subprocess.SubprocessError as e:
                 raise GPUValidationError(e.stderr.decode("utf-8"))
             # translate to spir-v to check if wgpu will panic otherwise.
             try:
-                subprocess.run(["naga", f.name, f2.name], check=True, capture_output=True, timeout=2)
+                subprocess.run(["naga", f.name, f2.name], check=True, capture_output=True, timeout=3)
             except subprocess.SubprocessError as e:
-                raise ValueError("Shadercode invalid (could be wgpu)")
+                raise ValueError("SPIR-V translation failed")
+            # translate to wgsl and see if a "fall-through switch case block" is returned???
+            try:
+                rcode = subprocess.run(["naga", f.name, f3.name], check=True, capture_output=True, timeout=3)
+            except subprocess.SubprocessError as e:
+                raise ValueError("WGSL translation failed")
 
 if __name__ == "__main__":
     shader = Shadertoy(
