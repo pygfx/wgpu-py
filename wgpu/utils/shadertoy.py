@@ -292,9 +292,13 @@ class Shadertoy:
         import wgpu.backends.rs  # noqa
 
         if self._offscreen:
-            self._canvas = OffscreenCanvas(title = "Shadertoy", size = self.resolution, max_fps = 60)
+            self._canvas = OffscreenCanvas(
+                title="Shadertoy", size=self.resolution, max_fps=60
+            )
         else:
-            self._canvas = WgpuCanvas(title="Shadertoy", size=self.resolution, max_fps=60)
+            self._canvas = WgpuCanvas(
+                title="Shadertoy", size=self.resolution, max_fps=60
+            )
 
         adapter = wgpu.request_adapter(
             canvas=self._canvas, power_preference="high-performance"
@@ -487,11 +491,11 @@ class Shadertoy:
         """
         if not self._offscreen:
             raise NotImplementedError("Snapshot is only available in offscreen mode.")
-        
-        if hasattr(self, "_last_time"):  
-            self.__delattr__("_last_time")  
+
+        if hasattr(self, "_last_time"):
+            self.__delattr__("_last_time")
         self._uniform_data["time"] = time_float
-        self._uniform_data["mouse"] = mouse_pos 
+        self._uniform_data["mouse"] = mouse_pos
         self._canvas.request_draw(self._draw_frame)
         frame = self._canvas.draw()
         return frame
