@@ -13,6 +13,7 @@ import logging
 from typing import List, Dict, Union
 
 from ._coreutils import ApiDiff
+from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
 
@@ -62,6 +63,13 @@ logger = logging.getLogger("wgpu")
 apidiff = ApiDiff()
 
 
+# Obtain the object tracker. Note that we store a ref of
+# the latter on all classes that refer to it. Otherwise, on a sys exit,
+# the module attributes are None-ified, and the destructors would
+# therefore fail and produce warnings.
+object_tracker = diagnostics.object_counts.tracker
+
+
 class GPU:
     """The entrypoint to the wgpu API.
 
@@ -109,11 +117,6 @@ class GPU:
         """
         raise RuntimeError("Use canvas.get_preferred_format() instead.")
 
-    @apidiff.add("Usefull")
-    def print_report(self):
-        """Print a report about the interals of the backend."""
-        print(f"{self.__class__.__module__}.GPU: No report available.")
-
     # IDL: [SameObject] readonly attribute WGSLLanguageFeatures wgslLanguageFeatures;
     @property
     def wgsl_language_features(self):
@@ -131,7 +134,10 @@ class GPUCanvasContext:
     Can be obtained via `gui.WgpuCanvasInterface.get_context()`.
     """
 
+    _ot = object_tracker
+
     def __init__(self, canvas):
+        self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
 
     def _get_canvas(self):
@@ -206,6 +212,7 @@ class GPUCanvasContext:
         return "bgra8unorm-srgb"  # seems to be a good default
 
     def __del__(self):
+        self._ot.decrease(self.__class__.__name__)
         self._destroy()
 
     def _destroy(self):
@@ -257,7 +264,10 @@ class GPUAdapter:
     Once invalid, it never becomes valid again.
     """
 
+    _ot = object_tracker
+
     def __init__(self, internal, features, limits, adapter_info):
+        self._ot.increase(self.__class__.__name__)
         self._internal = internal
 
         assert isinstance(features, set)
@@ -315,6 +325,7 @@ class GPUAdapter:
         pass
 
     def __del__(self):
+        self._ot.decrease(self.__class__.__name__)
         self._destroy()
 
     # IDL: readonly attribute boolean isFallbackAdapter;
@@ -341,7 +352,11 @@ class GPUObjectBase:
     the GPU; the device and all objects belonging to a device.
     """
 
+    _ot = object_tracker
+    _nbytes = 0
+
     def __init__(self, label, internal, device):
+        self._ot.increase(self.__class__.__name__, self._nbytes)
         self._label = label
         self._internal = internal  # The native/raw/real GPU object
         self._device = device
@@ -361,6 +376,7 @@ class GPUObjectBase:
         pass
 
     def __del__(self):
+        self._ot.decrease(self.__class__.__name__, self._nbytes)
         self._destroy()
 
     # Public destroy() methods are implemented on classes as the WebGPU spec specifies.
@@ -939,6 +955,7 @@ class GPUBuffer(GPUObjectBase):
     """
 
     def __init__(self, label, internal, device, size, usage, map_state):
+        self._nbytes = size
         super().__init__(label, internal, device)
         self._size = size
         self._usage = usage
@@ -1100,8 +1117,27 @@ class GPUTexture(GPUObjectBase):
     """
 
     def __init__(self, label, internal, device, tex_info):
+        self._nbytes = self._estimate_nbytes(tex_info)
         super().__init__(label, internal, device)
         self._tex_info = tex_info
+
+    def _estimate_nbytes(self, tex_info):
+        format = tex_info["format"]
+        size = tex_info["size"]
+        sample_count = tex_info["sample_count"] or 1
+        mip_level_count = tex_info["mip_level_count"] or 1
+
+        bpp = texture_format_to_bpp.get(format, 0)
+        npixels = size[0] * size[1] * size[2]
+        nbytes_at_mip_level = sample_count * npixels * bpp / 8
+
+        nbytes = 0
+        for i in range(mip_level_count):
+            nbytes += nbytes_at_mip_level
+            nbytes_at_mip_level /= 2
+
+        # Return rounded to nearest integer
+        return int(nbytes + 0.5)
 
     @apidiff.add("Too useful to not-have")
     @property
@@ -2015,3 +2051,13 @@ class GPUQuerySet(GPUObjectBase):
 # like GPUExternalTexture and GPUUncapturedErrorEvent, and more.
 
 apidiff.remove_hidden_methods(globals())
+
+
+def _seed_object_counts():
+    for key, val in globals().items():
+        if key.startswith("GPU") and not key.endswith(("Base", "Mixin")):
+            if hasattr(val, "_ot"):
+                object_tracker.counts[key] = 0
+
+
+_seed_object_counts()

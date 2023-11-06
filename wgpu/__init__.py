@@ -3,6 +3,7 @@ The wgpu library is a Python implementation of WebGPU.
 """
 
 from ._coreutils import logger  # noqa: F401,F403
+from ._diagnostics import diagnostics  # noqa: F401,F403
 from .flags import *  # noqa: F401,F403
 from .enums import *  # noqa: F401,F403
 from .base import *  # noqa: F401,F403
@@ -36,10 +37,6 @@ def _register_backend(cls):
     globals()["request_adapter"] = gpu.request_adapter
     globals()["request_adapter_async"] = gpu.request_adapter_async
     globals()["wgsl_language_features"] = gpu.wgsl_language_features
-    if hasattr(gpu, "print_report"):
-        globals()["print_report"] = gpu.print_report
-    else:
-        globals()["print_report"] = _base_GPU.print_report
 
 
 _base_GPU = GPU  # noqa: F405, N816
