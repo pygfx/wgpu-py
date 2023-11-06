@@ -222,7 +222,7 @@ class Shadertoy:
     Parameters:
         shader_code (str): The shader code to use.
         resolution (tuple): The resolution of the shadertoy.
-        offscreen (bool): (Optional) Whether to render offscreen. Default is False.
+        offscreen (bool): Whether to render offscreen. Default is False.
 
     The shader code must contain a entry point function:
 
@@ -480,11 +480,11 @@ class Shadertoy:
 
     def snapshot(self, time_float: float = 0.0, mouse_pos: tuple = (0, 0, 0, 0)):
         """
-        Returns a PIL Image of the specified time. (Only available when ``offscreen=True``)
+        Returns an image of the specified time. (Only available when ``offscreen=True``)
 
         Parameters:
-            time_float (float): Defaults to 0.0, The time to snapshot. It essentially sets ``i_time`` to a specific number.
-            mouse_pos (tuple): Defaults to (0,0,0,0), The mouse position in pixels in the snapshot. It essentially sets ``i_mouse`` to a 4-tuple.
+            time_float (float): The time to snapshot. It essentially sets ``i_time`` to a specific number. (Default is 0.0)
+            mouse_pos (tuple): The mouse position in pixels in the snapshot. It essentially sets ``i_mouse`` to a 4-tuple. (Default is (0,0,0,0))
         Returns:
             frame (memoryview): snapshot with transparancy. This object can be converted to a numpy array (without copying data)
         using ``np.asarray(arr)``
