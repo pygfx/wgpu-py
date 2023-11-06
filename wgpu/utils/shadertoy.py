@@ -3,7 +3,7 @@ import ctypes
 
 import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
-
+from wgpu.gui.offscreen import WgpuCanvas as OffscreenCanvas, run as run_offscreen
 
 vertex_code_glsl = """
 #version 450 core
@@ -222,6 +222,7 @@ class Shadertoy:
     Parameters:
         shader_code (str): The shader code to use.
         resolution (tuple): The resolution of the shadertoy.
+        offscreen (bool): Whether to render offscreen. Default is False.
 
     The shader code must contain a entry point function:
 
@@ -247,7 +248,7 @@ class Shadertoy:
     # todo: support input textures
     # todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
 
-    def __init__(self, shader_code, resolution=(800, 450)) -> None:
+    def __init__(self, shader_code, resolution=(800, 450), offscreen=False) -> None:
         self._uniform_data = UniformArray(
             ("mouse", "f", 4),
             ("resolution", "f", 3),
@@ -258,6 +259,8 @@ class Shadertoy:
 
         self._shader_code = shader_code
         self._uniform_data["resolution"] = resolution + (1,)
+
+        self._offscreen = offscreen
 
         self._prepare_render()
         self._bind_events()
@@ -288,7 +291,14 @@ class Shadertoy:
     def _prepare_render(self):
         import wgpu.backends.rs  # noqa
 
-        self._canvas = WgpuCanvas(title="Shadertoy", size=self.resolution, max_fps=60)
+        if self._offscreen:
+            self._canvas = OffscreenCanvas(
+                title="Shadertoy", size=self.resolution, max_fps=60
+            )
+        else:
+            self._canvas = WgpuCanvas(
+                title="Shadertoy", size=self.resolution, max_fps=60
+            )
 
         adapter = wgpu.request_adapter(
             canvas=self._canvas, power_preference="high-performance"
@@ -463,7 +473,32 @@ class Shadertoy:
 
     def show(self):
         self._canvas.request_draw(self._draw_frame)
-        run()
+        if self._offscreen:
+            run_offscreen()
+        else:
+            run()
+
+    def snapshot(self, time_float: float = 0.0, mouse_pos: tuple = (0, 0, 0, 0)):
+        """
+        Returns an image of the specified time. (Only available when ``offscreen=True``)
+
+        Parameters:
+            time_float (float): The time to snapshot. It essentially sets ``i_time`` to a specific number. (Default is 0.0)
+            mouse_pos (tuple): The mouse position in pixels in the snapshot. It essentially sets ``i_mouse`` to a 4-tuple. (Default is (0,0,0,0))
+        Returns:
+            frame (memoryview): snapshot with transparancy. This object can be converted to a numpy array (without copying data)
+        using ``np.asarray(arr)``
+        """
+        if not self._offscreen:
+            raise NotImplementedError("Snapshot is only available in offscreen mode.")
+
+        if hasattr(self, "_last_time"):
+            self.__delattr__("_last_time")
+        self._uniform_data["time"] = time_float
+        self._uniform_data["mouse"] = mouse_pos
+        self._canvas.request_draw(self._draw_frame)
+        frame = self._canvas.draw()
+        return frame
 
 
 if __name__ == "__main__":
