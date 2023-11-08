@@ -37,6 +37,7 @@ def _register_backend(cls):
     globals()["request_adapter"] = gpu.request_adapter
     globals()["request_adapter_async"] = gpu.request_adapter_async
     globals()["wgsl_language_features"] = gpu.wgsl_language_features
+    return cls
 
 
 _base_GPU = GPU  # noqa: F405, N816

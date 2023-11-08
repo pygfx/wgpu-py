@@ -7,7 +7,7 @@ import time
 
 import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
-import wgpu.backends.rs  # noqa: F401, Select Rust backend
+import wgpu  # noqa: F401
 import numpy as np
 
 

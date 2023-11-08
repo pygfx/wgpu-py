@@ -94,9 +94,10 @@ class GPU:
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
         """
-        raise RuntimeError(
-            "Select a backend (by importing wgpu.backends.rs) before requesting an adapter!"
-        )
+        # If this method gets called, no backend has been loaded yet, let's do that now!
+        from .backends import auto  # noqa
+        gpu = auto.GPU()
+        return gpu.request_adapter(canvas=canvas, power_preference=power_preference, force_fallback_adapter=force_fallback_adapter)
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
@@ -104,9 +105,7 @@ class GPU:
         self, *, canvas, power_preference=None, force_fallback_adapter=False
     ):
         """Async version of `request_adapter()`."""
-        raise RuntimeError(
-            "Select a backend (by importing wgpu.rs) before requesting an adapter!"
-        )  # no-cover
+        return self.request_adapter(canvas=canvas, power_preference=power_preference, force_fallback_adapter=force_fallback_adapter)
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
