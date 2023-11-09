@@ -5,6 +5,7 @@ Test creation of Qt canvas windows.
 import gc
 
 import pytest
+import testutils
 from testutils import create_and_release, can_use_pyside6, can_use_wgpu_lib
 from test_gui_offscreen import make_draw_func_for_canvas
 
@@ -38,11 +39,16 @@ def test_release_canvas_context(n):
         app.processEvents()
         yield c.get_context()
 
-    # Need some shakes to get all canvas refs gone
+    # Need some shakes to get all canvas refs gone.
+    # Note that the canvas objects are really deleted,
+    # otherwise the CanvasContext objects would not be freed.
     del c
     gc.collect()
     app.processEvents()
 
 
 if __name__ == "__main__":
+    # Set to true and run as script to do a memory stress test
+    testutils.TEST_MEM_USAGE = False
+
     test_release_canvas_context()

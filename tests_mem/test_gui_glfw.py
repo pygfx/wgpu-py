@@ -6,8 +6,10 @@ import gc
 import asyncio
 
 import pytest
+import testutils
 from testutils import create_and_release, can_use_glfw, can_use_wgpu_lib
 from test_gui_offscreen import make_draw_func_for_canvas
+
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need wgpu lib", allow_module_level=True)
@@ -41,7 +43,9 @@ def test_release_canvas_context(n):
         loop.run_until_complete(stub_event_loop())
         yield c.get_context()
 
-    # Need some shakes to get all canvas refs gone
+    # Need some shakes to get all canvas refs gone.
+    # Note that the canvas objects are really deleted,
+    # otherwise the CanvasContext objects would not be freed.
     del c
     loop.run_until_complete(stub_event_loop())
     gc.collect()
@@ -49,4 +53,7 @@ def test_release_canvas_context(n):
 
 
 if __name__ == "__main__":
+    # Set to true and run as script to do a memory stress test
+    testutils.TEST_MEM_USAGE = False
+
     test_release_canvas_context()
