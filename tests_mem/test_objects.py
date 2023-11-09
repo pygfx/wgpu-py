@@ -1,111 +1,18 @@
-import gc
-import asyncio
-
-import wgpu.backends.rs
+"""
+Test all the wgpu objects.
+"""
 
 import pytest
-from testutils import can_use_glfw, can_use_wgpu_lib, can_use_pyside6
-from testutils import create_and_release, get_counts, ob_name_from_test_func
+from testutils import can_use_wgpu_lib, create_and_release
+
 
 if not can_use_wgpu_lib:
-    pytest.skip(
-        "Skipping tests that need a window or the wgpu lib", allow_module_level=True
-    )
+    pytest.skip("Skipping tests that need wgpu lib", allow_module_level=True)
 
 
-# Create the default device beforehand
+import wgpu.backends.rs  # noqa
+
 DEVICE = wgpu.utils.get_default_device()
-
-
-async def stub_event_loop():
-    pass
-
-
-def make_draw_func_for_canvas(canvas):
-    """Create a draw function for the given canvas,
-    so that we can really present something to a canvas being tested.
-    """
-    ctx = canvas.get_context()
-    ctx.configure(device=DEVICE, format="bgra8unorm-srgb")
-
-    def draw():
-        ctx = canvas.get_context()
-        command_encoder = DEVICE.create_command_encoder()
-        current_texture_view = ctx.get_current_texture()
-        render_pass = command_encoder.begin_render_pass(
-            color_attachments=[
-                {
-                    "view": current_texture_view,
-                    "resolve_target": None,
-                    "clear_value": (1, 1, 1, 1),
-                    "load_op": wgpu.LoadOp.clear,
-                    "store_op": wgpu.StoreOp.store,
-                }
-            ],
-        )
-        render_pass.end()
-        DEVICE.queue.submit([command_encoder.finish()])
-        ctx.present()
-
-    return draw
-
-
-# %% Meta tests
-
-
-def test_meta_all_objects_covered():
-    """Test that we have a test_release test function for each known object."""
-
-    ref_obnames = set(key for key in get_counts().keys())
-    func_obnames = set(ob_name_from_test_func(func) for func in RELEASE_TEST_FUNCS)
-
-    missing = ref_obnames - func_obnames
-    extra = func_obnames - ref_obnames
-    assert not missing
-    assert not extra
-
-
-def test_meta_all_functions_solid():
-    """Test that all funcs starting with "test_release_" are decorated appropriately."""
-    for func in RELEASE_TEST_FUNCS:
-        is_decorated = func.__code__.co_name == "core_test_func"
-        assert is_decorated, func.__name__ + " not decorated"
-
-
-def test_meta_buffers_1():
-    """Making sure that the test indeed fails, when holding onto the objects."""
-
-    lock = []
-
-    @create_and_release
-    def test_release_buffer(n):
-        yield {}
-        for i in range(n):
-            b = DEVICE.create_buffer(size=128, usage=wgpu.BufferUsage.COPY_DST)
-            lock.append(b)
-            yield b
-
-    with pytest.raises(AssertionError):
-        test_release_buffer()
-
-
-def test_meta_buffers_2():
-    """Making sure that the test indeed fails, by disabling the release call."""
-
-    ori = wgpu.backends.rs.GPUBuffer._destroy
-    wgpu.backends.rs.GPUBuffer._destroy = lambda self: None
-
-    try:
-        with pytest.raises(AssertionError):
-            test_release_buffer()
-
-    finally:
-        wgpu.backends.rs.GPUBuffer._destroy = ori
-
-
-# %% The actual tests
-
-# These tests need to do one thing: generate n objects of the correct type.
 
 
 @create_and_release
@@ -163,6 +70,9 @@ def test_release_bind_group(n):
         yield DEVICE.create_bind_group(layout=bind_group_layout, entries=bindings)
 
 
+_bind_group_layout_binding = 10
+
+
 @create_and_release
 def test_release_bind_group_layout(n):
     # Note: when we use the same binding layout descriptor, wgpu-native
@@ -171,7 +81,8 @@ def test_release_bind_group_layout(n):
     # are only so many possible combinations, and its just 152 bytes
     # (on Metal) per object.
 
-    # todo: do we want similar behavior for *our* BindGroupLayout object?
+    global _bind_group_layout_binding
+    _bind_group_layout_binding += 1
 
     yield {
         "expected_counts_after_create": {"BindGroupLayout": (n, 1)},
@@ -180,7 +91,7 @@ def test_release_bind_group_layout(n):
 
     binding_layouts = [
         {
-            "binding": 0,
+            "binding": _bind_group_layout_binding,
             "visibility": wgpu.ShaderStage.COMPUTE,
             "buffer": {
                 "type": wgpu.BufferBindingType.read_only_storage,
@@ -198,95 +109,6 @@ def test_release_buffer(n):
     yield {}
     for i in range(n):
         yield DEVICE.create_buffer(size=128, usage=wgpu.BufferUsage.COPY_DST)
-
-
-@create_and_release
-def test_release_canvas_context_1(n):
-    # Test with offscreen canvases. A context is created, but not a wgpu-native surface.
-
-    # Note: the offscreen canvas keeps the render-texture-view alive, since it
-    # is used to e.g. download the resulting image. That's why we also see
-    # Textures and TextureViews in the counts.
-
-    from wgpu.gui.offscreen import WgpuCanvas
-
-    yield {
-        "expected_counts_after_create": {
-            "CanvasContext": (n, 0),
-            "Texture": (n, n),
-            "TextureView": (n, n),
-        },
-    }
-
-    for i in range(n):
-        c = WgpuCanvas()
-        c.request_draw(make_draw_func_for_canvas(c))
-        c.draw()
-        yield c.get_context()
-
-
-@create_and_release
-def test_release_canvas_context_2(n):
-    # Test with GLFW canvases.
-
-    # Note: in a draw, the textureview is obtained (thus creating a
-    # Texture and a TextureView, but these are released in present(),
-    # so we don't see them in the counts.
-
-    loop = asyncio.get_event_loop_policy().get_event_loop()
-
-    if loop.is_running():
-        pytest.skip("Cannot run this test when asyncio loop is running")
-    if not can_use_glfw:
-        pytest.skip("Need glfw for this test")
-
-    from wgpu.gui.glfw import WgpuCanvas  # noqa
-
-    yield {}
-
-    for i in range(n):
-        c = WgpuCanvas()
-        c.request_draw(make_draw_func_for_canvas(c))
-        loop.run_until_complete(stub_event_loop())
-        yield c.get_context()
-
-    # Need some shakes to get all canvas refs gone
-    del c
-    loop.run_until_complete(stub_event_loop())
-    gc.collect()
-    loop.run_until_complete(stub_event_loop())
-
-
-@create_and_release
-def test_release_canvas_context_3(n):
-    # Test with PySide canvases.
-
-    # Note: in a draw, the textureview is obtained (thus creating a
-    # Texture and a TextureView, but these are released in present(),
-    # so we don't see them in the counts.
-
-    if not can_use_pyside6:
-        pytest.skip("Need pyside6 for this test")
-
-    import PySide6  # noqa
-    from wgpu.gui.qt import WgpuCanvas  # noqa
-
-    app = PySide6.QtWidgets.QApplication.instance()
-    if app is None:
-        app = PySide6.QtWidgets.QApplication([""])
-
-    yield {}
-
-    for i in range(n):
-        c = WgpuCanvas()
-        c.request_draw(make_draw_func_for_canvas(c))
-        app.processEvents()
-        yield c.get_context()
-
-    # Need some shakes to get all canvas refs gone
-    del c
-    gc.collect()
-    app.processEvents()
 
 
 @create_and_release
@@ -539,18 +361,14 @@ def test_release_texture_view(n):
 # %% The end
 
 
-ALL_TEST_FUNCS = [
+TEST_FUNCS = [
     ob
     for name, ob in list(globals().items())
     if name.startswith("test_") and callable(ob)
 ]
-RELEASE_TEST_FUNCS = [
-    func for func in ALL_TEST_FUNCS if func.__name__.startswith("test_release_")
-]
-
 
 if __name__ == "__main__":
-    for func in ALL_TEST_FUNCS:
+    for func in TEST_FUNCS:
         print(func.__name__ + " ...")
         try:
             func()
