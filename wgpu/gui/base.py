@@ -141,8 +141,15 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._vsync = bool(vsync)
 
     def __del__(self):
+        # On delete, we call the custom close method.
         try:
             self.close()
+        except Exception:
+            pass
+        # Since this is sometimes used in a multiple inheritance, the
+        # superclass may (or may not) have a __del__ method.
+        try:
+            super().__del__()
         except Exception:
             pass
 

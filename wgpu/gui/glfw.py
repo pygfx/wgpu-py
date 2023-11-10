@@ -185,7 +185,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
     def _on_close(self, *args):
         all_glfw_canvases.discard(self)
-        glfw.hide_window(self._window)
+        glfw.destroy_window(self._window)  # not just glfw.hide_window
         self._handle_event_and_flush({"event_type": "close"})
 
     def _on_window_dirty(self, *args):
