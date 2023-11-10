@@ -7,7 +7,7 @@ import weakref
 import asyncio
 
 import pytest
-import testutils
+import testutils  # noqa
 from testutils import create_and_release, can_use_glfw, can_use_wgpu_lib
 from test_gui_offscreen import make_draw_func_for_canvas
 
@@ -58,7 +58,6 @@ def test_release_canvas_context(n):
 
 
 if __name__ == "__main__":
-    # Set to true and run as script to do a memory stress test
-    testutils.TEST_MEM_USAGE = False
+    # testutils.TEST_ITERS = 40  # Uncomment for a mem-usage test run
 
     test_release_canvas_context()

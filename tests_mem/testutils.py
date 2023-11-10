@@ -58,7 +58,7 @@ can_use_glfw = _determine_can_use_glfw()
 can_use_pyside6 = _determine_can_use_pyside6()
 is_ci = bool(os.getenv("CI", None))
 
-TEST_MEM_USAGE = False
+TEST_ITERS = None
 
 
 def get_memory_usage():
@@ -137,17 +137,16 @@ def create_and_release(create_objects_func):
     def core_test_func():
         """The core function that does the testing."""
 
-        if TEST_MEM_USAGE:
-            n_objects_list = [8 for i in range(40)]
+        if TEST_ITERS:
+            n_objects_list = [8 for i in range(TEST_ITERS)]
         else:
             n_objects_list = [32, 17]
 
+        # Init mem usage measurements
         clear_mem()
-        mem0 = get_memory_usage()
-        mem3 = mem0
-        mems = []  # (diff after create, diff after release, diff with mem0)
+        mem3 = get_memory_usage()
 
-        for n_objects in n_objects_list:
+        for iter, n_objects in enumerate(n_objects_list):
             generator = create_objects_func(n_objects)
             ob_name = ob_name_from_test_func(create_objects_func)
 
@@ -164,7 +163,6 @@ def create_and_release(create_objects_func):
 
             # Measure baseline object counts
             clear_mem()
-            mem1 = mem3  # initial mem is end-mem of last iter
             counts1 = get_counts()
 
             # ----- Create
@@ -184,10 +182,9 @@ def create_and_release(create_objects_func):
             assert ob_name == cls.__name__[3:]
 
             # Measure peak object counts
-            mem2 = get_memory_usage()
             counts2 = get_counts()
             more2 = get_excess_counts(counts1, counts2)
-            if not TEST_MEM_USAGE:
+            if not TEST_ITERS:
                 print("  more after create:", more2)
 
             # Make sure the actual object has increased
@@ -203,28 +200,20 @@ def create_and_release(create_objects_func):
             clear_mem()
 
             # Measure after-release object counts
-            mem3 = get_memory_usage()
             counts3 = get_counts()
             more3 = get_excess_counts(counts1, counts3)
-            if not TEST_MEM_USAGE:
+            if not TEST_ITERS:
                 print("  more after release:", more3)
 
             # Check!
             assert more3 == options["expected_counts_after_release"]
 
-            mems.append((mem2 - mem1, mem3 - mem1, mem3 - mem0))
-
-        if TEST_MEM_USAGE:
-            # For each iter, print the mem compared to last step
-            i, cols = 0, 10
-            while i < len(mems):
-                row = mems[i : i + cols]
-                i += cols
-                print(" ".join((int_repr(x[1]) + "B").rjust(7) for x in row))
-
-            # If the latter half contains nonzero, mark it as suspicious
-            if any(m[1] for m in mems[len(mems) // 2 :]):
-                print(">> SUSPICIOUS!")
+            # Print mem usage info
+            if TEST_ITERS:
+                mem1 = mem3  # initial mem is end-mem of last iter
+                mem3 = get_memory_usage()
+                mem_info = (int_repr(mem3 - mem1) + "B").rjust(7)
+                print(mem_info, end=(" " if (iter + 1) % 10 else "\n"))
 
     core_test_func.__name__ = create_objects_func.__name__
     return core_test_func

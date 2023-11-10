@@ -3,7 +3,7 @@ Test all the wgpu objects.
 """
 
 import pytest
-import testutils
+import testutils  # noqa
 from testutils import can_use_wgpu_lib, create_and_release
 
 
@@ -369,8 +369,7 @@ TEST_FUNCS = [
 ]
 
 if __name__ == "__main__":
-    # Set to true and run as script to do a memory stress test
-    testutils.TEST_MEM_USAGE = False
+    # testutils.TEST_ITERS = 40  # Uncomment for a mem-usage test run
 
     for func in TEST_FUNCS:
         print(func.__name__ + " ...")
