@@ -3,6 +3,7 @@ Test creation of GLFW canvas windows.
 """
 
 import gc
+import weakref
 import asyncio
 
 import pytest
@@ -37,19 +38,23 @@ def test_release_canvas_context(n):
 
     yield {}
 
+    canvases = weakref.WeakSet()
+
     for i in range(n):
         c = WgpuCanvas()
+        canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         loop.run_until_complete(stub_event_loop())
         yield c.get_context()
 
     # Need some shakes to get all canvas refs gone.
-    # Note that the canvas objects are really deleted,
-    # otherwise the CanvasContext objects would not be freed.
     del c
     loop.run_until_complete(stub_event_loop())
     gc.collect()
     loop.run_until_complete(stub_event_loop())
+
+    # Check that the canvas objects are really deleted
+    assert not canvases
 
 
 if __name__ == "__main__":
