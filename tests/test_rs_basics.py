@@ -152,9 +152,9 @@ def test_rs_enumerate_adapters():
     adapters = wgpu.GPU.enumerate_adapters()
     assert len(adapters) > 0
 
-    # Check that we can get a device from each
+    # Check that we can get a device from each adapter
     for adapter in adapters:
-        device = adapter.request_device()
+        _ = adapter.request_device()
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
