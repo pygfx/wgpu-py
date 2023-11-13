@@ -9,11 +9,12 @@ binaries = []
 datas += collect_data_files("wgpu", subdir="resources")
 binaries += collect_dynamic_libs("wgpu")
 
-# Include the modules that we want to include (PyInstall will trace imports)
+# Include the modules that we want to include (PyInstall will trace
+# imports). Note that the __init__.py in resources, utils, backends,
+# and gui subpackages are imported by default.
 hiddenimports += ["wgpu.backends.auto", "wgpu.backends.rs"]
 hiddenimports += ["wgpu.gui.auto"]
 
-# Note that the resources, utils, backends, and gui subpackages are imported by default.
 
 # We have multiple subpackages for which the modules are not imported
 # by default. We make sure that PyInstaller adds them anyway. Strictly
