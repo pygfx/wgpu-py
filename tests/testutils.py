@@ -72,11 +72,7 @@ def _determine_can_use_wgpu_lib():
     # the process' exit code is not zero, so we test more pragmatically.
     code = "import wgpu.utils; wgpu.utils.get_default_device(); print('ok')"
     result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            code,
-        ],
+        [sys.executable, "-c", code],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,

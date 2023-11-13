@@ -4,8 +4,8 @@ import subprocess
 
 import wgpu
 
-from pytest import raises
-from testutils import run_tests
+from pytest import raises, mark
+from testutils import run_tests, can_use_wgpu_lib
 
 
 def test_basic_api():
@@ -15,10 +15,11 @@ def test_basic_api():
     assert isinstance(wgpu.version_info, tuple)
     assert wgpu.request_adapter
     assert wgpu.request_adapter_async
-    assert (
-        wgpu.base.GPU.request_adapter.__code__.co_varnames
-        == wgpu.base.GPU.request_adapter_async.__code__.co_varnames
-    )
+
+    code1 = wgpu.base.GPU.request_adapter.__code__
+    code2 = wgpu.base.GPU.request_adapter_async.__code__
+    nargs1 = code1.co_argcount + code1.co_kwonlyargcount
+    assert code1.co_varnames[:nargs1] == code2.co_varnames
 
 
 def test_logging():
@@ -68,10 +69,10 @@ def test_enums_and_flags_and_structs():
 
 
 def test_base_wgpu_api():
-    gpu = wgpu.base.GPU()
-    with raises(RuntimeError) as error:
-        gpu.request_adapter(canvas=None, power_preference="high-performance")
-    assert "select a backend" in str(error.value).lower()
+    # gpu = wgpu.base.GPU()
+    # with raises(RuntimeError) as error:
+    #     gpu.request_adapter(canvas=None, power_preference="high-performance")
+    # assert "select a backend" in str(error.value).lower()
 
     # Fake a device and an adapter
     adapter = wgpu.base.GPUAdapter(None, set(), {}, {})
@@ -90,6 +91,20 @@ def test_base_wgpu_api():
     assert device.features == {42, 43}
     assert hex(id(device)) in repr(device)
     assert device.label in repr(device)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_backend_is_selected_automatically():
+    # Test this in a subprocess to have a clean wgpu with no backend imported yet
+    code = "import wgpu; print(wgpu.request_adapter(canvas=None))"
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True,
+    )
+    assert "GPUAdapter object at" in result.stdout
+    assert "traceback" not in result.stderr.lower()
 
 
 def test_that_we_know_how_our_api_differs():
