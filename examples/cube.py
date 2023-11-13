@@ -5,9 +5,8 @@ This example renders a simple textured rotating cube.
 
 import time
 
-import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
-import wgpu  # noqa: F401
+import wgpu
 import numpy as np
 
 
