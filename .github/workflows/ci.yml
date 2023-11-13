@@ -148,7 +148,7 @@ jobs:
           pip install -U requests numpy pytest
           python download-wgpu-native.py
           pip install -e .
-          pip install psutil pyinstaller>=4.9
+          pip install psutil glfw pyinstaller>=4.9
     - name: Test PyInstaller
       run: |
           pyinstaller --version
