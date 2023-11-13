@@ -22,6 +22,19 @@ def test_basic_api():
     assert code1.co_varnames[:nargs1] == code2.co_varnames
 
 
+def test_api_subpackages_are_there():
+    code = "import wgpu; x = [wgpu.resources, wgpu.utils, wgpu.backends, wgpu.gui]; print('ok')"
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+    )
+    out = result.stdout.rstrip()
+    assert out.endswith("ok")
+    assert "traceback" not in out.lower()
+
+
 def test_logging():
     level = [-1]
 
@@ -100,11 +113,12 @@ def test_backend_is_selected_automatically():
     result = subprocess.run(
         [sys.executable, "-c", code],
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         universal_newlines=True,
     )
-    assert "GPUAdapter object at" in result.stdout
-    assert "traceback" not in result.stderr.lower()
+    out = result.stdout.rstrip()
+    assert "GPUAdapter object at" in out
+    assert "traceback" not in out.lower()
 
 
 def test_that_we_know_how_our_api_differs():

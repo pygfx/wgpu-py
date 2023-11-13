@@ -9,6 +9,8 @@ from .enums import *  # noqa: F401,F403
 from .base import *  # noqa: F401,F403
 from .gui import WgpuCanvasInterface  # noqa: F401,F403
 from . import utils  # noqa: F401,F403
+from . import backends  # noqa: F401,F403
+from . import resources  # noqa: F401,F403
 
 
 __version__ = "0.11.0"

@@ -7,11 +7,11 @@ import importlib
 # The test part
 if "is_test" in sys.argv:
     included_modules = [
-        "wgpu.backends.auto"
+        "wgpu.backends.auto",
         "wgpu.backends.rs",
-        "wgpu.gui",
-        "wgpu.gui.offscreen",
+        "wgpu.gui.auto",
         "wgpu.gui.glfw",
+        "wgpu.utils.compute",
     ]
     excluded_modules = [
         "PySide6",
