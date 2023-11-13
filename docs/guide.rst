@@ -23,7 +23,10 @@ the backend by importing it:
 
 .. code-block:: py
 
-    import wgpu.backends.rs
+    import wgpu.backends.wgpu_natve
+
+
+TODO: not strictly needed!
 
 
 Creating a canvas

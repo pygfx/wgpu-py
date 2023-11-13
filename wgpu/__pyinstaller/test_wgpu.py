@@ -8,8 +8,7 @@ import importlib
 if "is_test" in sys.argv:
     included_modules = [
         "wgpu.backends.auto",
-        "wgpu.backends.rs",
-        "wgpu.gui.auto",
+        "wgpu.backends.wgpu_native",
         "wgpu.gui.glfw",
         "wgpu.utils.compute",
     ]

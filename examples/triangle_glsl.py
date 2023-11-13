@@ -140,7 +140,6 @@ def _main(canvas, device):
 
 
 if __name__ == "__main__":
-    import wgpu.backends.rs  # noqa: F401, Select Rust backend
     from wgpu.gui.auto import WgpuCanvas, run
 
     canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle")

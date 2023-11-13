@@ -1,8 +1,7 @@
 import gc
 import asyncio
 
-import wgpu.backends.rs
-
+import wgpu
 import pytest
 from testutils import can_use_glfw, can_use_wgpu_lib, can_use_pyside6
 from testutils import create_and_release, get_counts, ob_name_from_test_func
@@ -92,15 +91,15 @@ def test_meta_buffers_1():
 def test_meta_buffers_2():
     """Making sure that the test indeed fails, by disabling the release call."""
 
-    ori = wgpu.backends.rs.GPUBuffer._destroy
-    wgpu.backends.rs.GPUBuffer._destroy = lambda self: None
+    ori = wgpu.backends.wgpu_native.GPUBuffer._destroy
+    wgpu.backends.wgpu_native.GPUBuffer._destroy = lambda self: None
 
     try:
         with pytest.raises(AssertionError):
             test_release_buffer()
 
     finally:
-        wgpu.backends.rs.GPUBuffer._destroy = ori
+        wgpu.backends.wgpu_native.GPUBuffer._destroy = ori
 
 
 # %% The actual tests
@@ -322,7 +321,7 @@ def test_release_command_encoder(n):
 @create_and_release
 def test_release_compute_pass_encoder(n):
     # Note: ComputePassEncoder does not really exist in wgpu-core
-    # -> Check gpu.diagnostics.rs_counts.print_report(), nothing there that ends with "Encoder".
+    # -> Check gpu.diagnostics.wgpu_native_counts.print_report(), nothing there that ends with "Encoder".
     command_encoder = DEVICE.create_command_encoder()
 
     yield {
@@ -398,7 +397,7 @@ def test_release_render_bundle_encoder(n):
 @create_and_release
 def test_release_render_pass_encoder(n):
     # Note: RenderPassEncoder does not really exist in wgpu-core
-    # -> Check gpu.diagnostics.rs_counts.print_report(), nothing there that ends with "Encoder".
+    # -> Check gpu.diagnostics.wgpu_native_counts.print_report(), nothing there that ends with "Encoder".
     command_encoder = DEVICE.create_command_encoder()
 
     yield {

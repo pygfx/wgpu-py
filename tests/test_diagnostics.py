@@ -354,7 +354,7 @@ def test_int_repr():
 def test_diagnostics_with_backends():
     # Just make sure that it runs without errors
 
-    import wgpu.backends.rs
+    import wgpu.backends.wgpu_native
 
     text = wgpu.diagnostics.get_report()
 

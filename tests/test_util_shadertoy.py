@@ -1,6 +1,5 @@
 import os
 
-import wgpu.backends.rs  # noqa
 from pytest import fixture, skip
 from testutils import can_use_wgpu_lib
 

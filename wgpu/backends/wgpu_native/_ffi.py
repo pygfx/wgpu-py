@@ -144,7 +144,7 @@ def get_lib_version_info():
 
 
 # Configure cffi and load the dynamic library
-# NOTE: `import wgpu.backends.rs` is used in pyinstaller tests to verify
+# NOTE: `import wgpu.backends.wgpu_native` is used in pyinstaller tests to verify
 # that we can load the DLL after freezing
 ffi = FFI()
 ffi.cdef(get_wgpu_header())

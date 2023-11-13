@@ -192,28 +192,30 @@ def test_register_backend_fails():
         wgpu.GPU = wgpu.base.GPU
 
         with raises(RuntimeError):
-            wgpu._register_backend("foo")
+            wgpu.backends._register_backend("foo")
         with raises(RuntimeError):
-            wgpu._register_backend(GPU)
+            wgpu.backends._register_backend(GPU)
 
         GPU.request_adapter = lambda self: None
         with raises(RuntimeError):
-            wgpu._register_backend(GPU)
+            wgpu.backends._register_backend(GPU)
 
         GPU.request_adapter_async = lambda self: None
         GPU.wgsl_language_features = set()
-        wgpu._register_backend(GPU)
+        wgpu.backends._register_backend(GPU)
 
         assert wgpu.GPU is GPU
         assert wgpu.request_adapter.__func__ is GPU.request_adapter
         assert wgpu.request_adapter_async.__func__ is GPU.request_adapter_async
 
         with raises(RuntimeError):
-            wgpu._register_backend(GPU)  # Cannot register twice once wgpu.GPU is set
+            wgpu.backends._register_backend(
+                GPU
+            )  # Cannot register twice once wgpu.GPU is set
 
     finally:
         wgpu.GPU = wgpu.base.GPU
-        wgpu._register_backend(ori_GPU)
+        wgpu.backends._register_backend(ori_GPU)
 
 
 if __name__ == "__main__":

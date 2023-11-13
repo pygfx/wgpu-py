@@ -11,8 +11,8 @@ class DiagnosticsRoot:
     """Root object to access wgpu diagnostics (i.e. ``wgpu.diagnostics``).
 
     Per-topic diagnostics can be accessed as attributes on this object.
-    These include ``system``, ``native_info``, ``versions``,
-    ``object_counts``, and more.
+    These include ``system``, ``wgpu_native_info``, ``versions``,
+    ``object_counts``, ``wgpu_natrive_counts``.
     """
 
     def __init__(self):
@@ -515,6 +515,6 @@ class ObjectCountDiagnostics(Diagnostics):
 
 
 SystemDiagnostics("system")
-WgpuNativeInfoDiagnostics("native_info")
+WgpuNativeInfoDiagnostics("wgpu_native_info")
 VersionDiagnostics("versions")
 ObjectCountDiagnostics("object_counts")

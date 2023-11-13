@@ -4,9 +4,8 @@ import base64
 from ctypes import c_int32, c_ubyte
 import sys
 
-import wgpu.backends.rs  # noqa
+import wgpu
 from wgpu.utils.compute import compute_with_buffers
-
 from pytest import skip, mark, raises
 from testutils import run_tests, can_use_wgpu_lib, is_ci, iters_equal
 

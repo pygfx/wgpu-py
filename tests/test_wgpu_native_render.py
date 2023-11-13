@@ -6,7 +6,7 @@ import ctypes
 import numpy as np
 import sys
 
-import wgpu.backends.rs  # noqa
+import wgpu
 from pytest import skip
 from testutils import run_tests, can_use_wgpu_lib, is_ci, get_default_device
 from renderutils import render_to_texture, render_to_screen  # noqa

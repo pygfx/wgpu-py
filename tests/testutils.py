@@ -6,7 +6,6 @@ import subprocess
 from io import StringIO
 from pathlib import Path
 
-import wgpu.backends.rs  # noqa
 from wgpu.utils import get_default_device  # noqa
 
 

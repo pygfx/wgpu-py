@@ -11,7 +11,7 @@ binaries += collect_dynamic_libs("wgpu")
 
 # Always include the wgpu-native backend. Since an import is not needed to
 # load this (default) backend, PyInstaller does not see it by itself.
-hiddenimports += ["wgpu.backends.auto", "wgpu.backends.rs"]
+hiddenimports += ["wgpu.backends.auto", "wgpu.backends.wgpu_native"]
 
 # For the GUI backends, there always is an import. The auto backend is
 # problematic because PyInstaller cannot follow it to a specific
