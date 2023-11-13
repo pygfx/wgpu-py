@@ -83,7 +83,6 @@ def test_base_wgpu_api():
     assert isinstance(adapter.features, set)
     assert adapter.features == set()
     assert isinstance(adapter.limits, dict)
-    assert isinstance(adapter.adapter_info, dict)
     assert set(device.limits.keys()) == set()
 
     assert isinstance(device, wgpu.base.GPUObjectBase)

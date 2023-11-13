@@ -176,6 +176,20 @@ error_handler = ErrorHandler(logger)
 libf = SafeLibCalls(lib, error_handler)
 
 
+def enumerate_adapters():
+    """Return a list of all available adapters."""
+    # The first call is to get the number of adapters, and
+    # the second call is to get the actual adapters
+
+    # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
+    adapter_count = libf.wgpuInstanceEnumerateAdapters(
+        get_wgpu_instance(), ffi.NULL, ffi.NULL
+    )
+    adapters = ffi.new("WGPUAdapter[]", adapter_count)
+    libf.wgpuInstanceEnumerateAdapters(get_wgpu_instance(), ffi.NULL, adapters)
+    return [GPUAdapter(adapter) for adapter in adapters]
+
+
 # %% The API
 
 
@@ -274,19 +288,6 @@ class GPU(base.GPU):
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
         )  # no-cover
-
-    @staticmethod
-    def enumerate_adapters() -> List["GPUAdapter"]:
-        """Return a list of all available adapters."""
-        # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters);
-        # The first call is to get the number of adapters
-        adapter_count = libf.wgpuInstanceEnumerateAdapters(
-            get_wgpu_instance(), ffi.NULL, ffi.NULL
-        )
-        # The second call is to get the actual adapters
-        adapters = ffi.new("WGPUAdapter[]", adapter_count)
-        libf.wgpuInstanceEnumerateAdapters(get_wgpu_instance(), ffi.NULL, adapters)
-        return [GPUAdapter(adapter) for adapter in adapters]
 
 
 class GPUCanvasContext(base.GPUCanvasContext):

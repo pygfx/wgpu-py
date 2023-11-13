@@ -278,14 +278,6 @@ class GPUAdapter:
         self._limits = limits
         self._adapter_info = adapter_info
 
-    def __repr__(self):
-        return (
-            f"<{self.__class__.__name__} at 0x{hex(id(self))}>\n"
-            f"  features: {self.features}\n"
-            f"  limits: {self.limits}\n"
-            f"  adapter_info: {self.adapter_info}"
-        )
-
     # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
     def features(self):
@@ -297,12 +289,6 @@ class GPUAdapter:
     def limits(self):
         """A dict with limits for the adapter."""
         return self._limits
-
-    # IDL: [SameObject] readonly attribute GPUAdapterInfo adapter_info;
-    @property
-    def adapter_info(self):
-        """A dict with information about the adapter, such as the vendor and device name."""
-        return self._adapter_info
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
     def request_device(

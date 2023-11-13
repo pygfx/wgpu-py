@@ -149,7 +149,7 @@ def test_rs_tracer():
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_rs_enumerate_adapters():
     # Get all available adapters
-    adapters = wgpu.GPU.enumerate_adapters()
+    adapters = wgpu.backends.rs.enumerate_adapters()
     assert len(adapters) > 0
 
     # Check that we can get a device from each adapter
