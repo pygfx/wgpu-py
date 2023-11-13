@@ -5,9 +5,9 @@ import os
 import sys
 import ctypes
 
-from .rs_ffi import ffi, lib
-from .._diagnostics import Diagnostics
-from ..base import (
+from ._ffi import ffi, lib
+from ..._diagnostics import Diagnostics
+from ...base import (
     GPUError,
     GPUOutOfMemoryError,
     GPUValidationError,

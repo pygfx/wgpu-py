@@ -439,27 +439,26 @@ class SystemDiagnostics(Diagnostics):
         }
 
 
-class NativeDiagnostics(Diagnostics):
+class WgpuNativeInfoDiagnostics(Diagnostics):
     """Provides metadata about the wgpu-native backend."""
 
     def get_dict(self):
-        # Get rs modules, or skip
+        # Get modules, or skip
         try:
             wgpu = sys.modules["wgpu"]
-            rs = wgpu.backends.rs
-            rs_ffi = wgpu.backends.rs_ffi
+            wgpu_native = wgpu.backends.wgpu_native
         except (KeyError, AttributeError):  # no-cover
             return {}
 
         # Process lib path
-        lib_path = rs_ffi.lib_path
+        lib_path = wgpu_native.lib_path
         wgpu_path = os.path.dirname(wgpu.__file__)
         if lib_path.startswith(wgpu_path):
             lib_path = "." + os.path.sep + lib_path[len(wgpu_path) :].lstrip("/\\")
 
         return {
-            "expected_version": rs.__version__,
-            "lib_version": ".".join(str(i) for i in rs_ffi.get_lib_version()),
+            "expected_version": wgpu_native.__version__,
+            "lib_version": ".".join(str(i) for i in wgpu_native.lib_version_info),
             "lib_path": lib_path,
         }
 
@@ -516,6 +515,6 @@ class ObjectCountDiagnostics(Diagnostics):
 
 
 SystemDiagnostics("system")
-NativeDiagnostics("native_info")
+WgpuNativeInfoDiagnostics("native_info")
 VersionDiagnostics("versions")
 ObjectCountDiagnostics("object_counts")

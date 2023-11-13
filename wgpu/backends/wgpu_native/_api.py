@@ -22,13 +22,13 @@ import ctypes.util
 from weakref import WeakKeyDictionary
 from typing import List, Dict, Union
 
-from .. import base, flags, enums, structs
+from ... import base, flags, enums, structs
+from ..._coreutils import ApiDiff, str_flag_to_int
 from .. import _register_backend
-from .._coreutils import ApiDiff, str_flag_to_int
 
-from .rs_ffi import ffi, lib, check_expected_version
-from .rs_mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
-from .rs_helpers import (
+from ._ffi import ffi, lib
+from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
+from ._helpers import (
     get_wgpu_instance,
     get_surface_id_from_canvas,
     get_memoryview_from_address,
@@ -43,11 +43,9 @@ from .rs_helpers import (
 logger = logging.getLogger("wgpu")  # noqa
 apidiff = ApiDiff()
 
-# The wgpu-native version that we target/expect
-__version__ = "0.17.2.1"
-__commit_sha__ = "44d18911dc598104a9d611f8b6128e2620a5f145"
-version_info = tuple(map(int, __version__.split(".")))
-check_expected_version(version_info)  # produces a warning on mismatch
+
+# The API is prettu well defined
+__all__ = base.__all__.copy()
 
 
 # %% Helper functions and objects
