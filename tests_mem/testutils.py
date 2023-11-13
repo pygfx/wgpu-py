@@ -1,9 +1,15 @@
 import gc
 import os
 import sys
+import time
 import subprocess
 
+import psutil
 import wgpu
+from wgpu._diagnostics import int_repr
+
+
+p = psutil.Process()
 
 
 def _determine_can_use_wgpu_lib():
@@ -51,6 +57,24 @@ can_use_wgpu_lib = _determine_can_use_wgpu_lib()
 can_use_glfw = _determine_can_use_glfw()
 can_use_pyside6 = _determine_can_use_pyside6()
 is_ci = bool(os.getenv("CI", None))
+
+TEST_ITERS = None
+
+
+def get_memory_usage():
+    """Get how much memory the process consumes right now."""
+    # vms: total virtual memory. Seems not suitable, because it gets less but bigger differences.
+    # rss: the part of the virtual memory that is not in swap, i.e. consumers ram.
+    # uss: memory that would become available when the process is killed (excludes shared).
+    # return p.memory_info().rss
+    return p.memory_full_info().uss
+
+
+def clear_mem():
+    time.sleep(0.001)
+    gc.collect()
+    time.sleep(0.001)
+    gc.collect()
 
 
 def get_counts():
@@ -113,65 +137,83 @@ def create_and_release(create_objects_func):
     def core_test_func():
         """The core function that does the testing."""
 
-        n = 32
+        if TEST_ITERS:
+            n_objects_list = [8 for i in range(TEST_ITERS)]
+        else:
+            n_objects_list = [32, 17]
 
-        generator = create_objects_func(n)
-        ob_name = ob_name_from_test_func(create_objects_func)
+        # Init mem usage measurements
+        clear_mem()
+        mem3 = get_memory_usage()
 
-        # ----- Collect options
+        for iter, n_objects in enumerate(n_objects_list):
+            generator = create_objects_func(n_objects)
+            ob_name = ob_name_from_test_func(create_objects_func)
 
-        options = {
-            "expected_counts_after_create": {ob_name: (32, 32)},
-            "expected_counts_after_release": {},
-        }
+            # ----- Collect options
 
-        func_options = next(generator)
-        assert isinstance(func_options, dict), "First yield must be an options dict"
-        options.update(func_options)
+            options = {
+                "expected_counts_after_create": {ob_name: (n_objects, n_objects)},
+                "expected_counts_after_release": {},
+            }
 
-        # Measure baseline object counts
-        counts1 = get_counts()
+            func_options = next(generator)
+            assert isinstance(func_options, dict), "First yield must be an options dict"
+            options.update(func_options)
 
-        # ----- Create
+            # Measure baseline object counts
+            clear_mem()
+            counts1 = get_counts()
 
-        # Create objects
-        objects = list(generator)
+            # ----- Create
 
-        # Test the count
-        assert len(objects) == n
+            # Create objects
+            objects = list(generator)
 
-        # Test that all objects are of the same class.
-        # (this for-loop is a bit weird, but its to avoid leaking refs to objects)
-        cls = objects[0].__class__
-        assert all(isinstance(objects[i], cls) for i in range(len(objects)))
+            # Test the count
+            assert len(objects) == n_objects
 
-        # Test that class matches function name (should prevent a group of copy-paste errors)
-        assert ob_name == cls.__name__[3:]
+            # Test that all objects are of the same class.
+            # (this for-loop is a bit weird, but its to avoid leaking refs to objects)
+            cls = objects[0].__class__
+            assert all(isinstance(objects[i], cls) for i in range(len(objects)))
 
-        # Measure peak object counts
-        counts2 = get_counts()
-        more2 = get_excess_counts(counts1, counts2)
-        print("  more after create:", more2)
+            # Test that class matches function name (should prevent a group of copy-paste errors)
+            assert ob_name == cls.__name__[3:]
 
-        # Make sure the actual object has increased
-        assert more2  # not empty
-        assert more2 == options["expected_counts_after_create"]
+            # Measure peak object counts
+            counts2 = get_counts()
+            more2 = get_excess_counts(counts1, counts2)
+            if not TEST_ITERS:
+                print("  more after create:", more2)
 
-        # It's ok if other objects are created too ...
+            # Make sure the actual object has increased
+            assert more2  # not empty
+            assert more2 == options["expected_counts_after_create"]
 
-        # ----- Release
+            # It's ok if other objects are created too ...
 
-        # Delete objects
-        del objects
-        gc.collect()
+            # ----- Release
 
-        # Measure after-release object counts
-        counts3 = get_counts()
-        more3 = get_excess_counts(counts1, counts3)
-        print("  more after release:", more3)
+            # Delete objects
+            del objects
+            clear_mem()
 
-        # Check!
-        assert more3 == options["expected_counts_after_release"]
+            # Measure after-release object counts
+            counts3 = get_counts()
+            more3 = get_excess_counts(counts1, counts3)
+            if not TEST_ITERS:
+                print("  more after release:", more3)
+
+            # Check!
+            assert more3 == options["expected_counts_after_release"]
+
+            # Print mem usage info
+            if TEST_ITERS:
+                mem1 = mem3  # initial mem is end-mem of last iter
+                mem3 = get_memory_usage()
+                mem_info = (int_repr(mem3 - mem1) + "B").rjust(7)
+                print(mem_info, end=(" " if (iter + 1) % 10 else "\n"))
 
     core_test_func.__name__ = create_objects_func.__name__
     return core_test_func
