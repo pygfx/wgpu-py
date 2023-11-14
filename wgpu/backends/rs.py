@@ -176,6 +176,79 @@ error_handler = ErrorHandler(logger)
 libf = SafeLibCalls(lib, error_handler)
 
 
+def _create_adapter(adapter_id):
+    # H: nextInChain: WGPUChainedStructOut *, vendorID: int, vendorName: char *, architecture: char *, deviceID: int, name: char *, driverDescription: char *, adapterType: WGPUAdapterType, backendType: WGPUBackendType
+    c_properties = new_struct_p(
+        "WGPUAdapterProperties *",
+        # not used: nextInChain
+        # not used: deviceID
+        # not used: vendorID
+        # not used: name
+        # not used: driverDescription
+        # not used: adapterType
+        # not used: backendType
+        # not used: vendorName
+        # not used: architecture
+    )
+
+    # H: void f(WGPUAdapter adapter, WGPUAdapterProperties * properties)
+    libf.wgpuAdapterGetProperties(adapter_id, c_properties)
+
+    def to_py_str(key):
+        char_p = getattr(c_properties, key)
+        if char_p:
+            return ffi.string(char_p).decode(errors="ignore")
+        return ""
+
+    adapter_info = {
+        "vendor": to_py_str("vendorName"),
+        "architecture": to_py_str("architecture"),
+        "device": to_py_str("name"),
+        "description": to_py_str("driverDescription"),
+        "adapter_type": enum_int2str["AdapterType"].get(
+            c_properties.adapterType, "unknown"
+        ),
+        "backend_type": enum_int2str["BackendType"].get(
+            c_properties.backendType, "unknown"
+        ),
+        # "vendor_id": c_properties.vendorID,
+        # "device_id": c_properties.deviceID,
+    }
+
+    # ----- Get adapter limits
+
+    # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
+    c_supported_limits = new_struct_p(
+        "WGPUSupportedLimits *",
+        # not used: nextInChain
+        # not used: limits
+    )
+    c_limits = c_supported_limits.limits
+    # H: bool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
+    libf.wgpuAdapterGetLimits(adapter_id, c_supported_limits)
+    limits = {to_snake_case(k): getattr(c_limits, k) for k in sorted(dir(c_limits))}
+
+    # ----- Get adapter features
+
+    # WebGPU features
+    features = set()
+    for f in sorted(enums.FeatureName):
+        key = f"FeatureName.{f}"
+        i = enummap[key]
+        # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
+        if libf.wgpuAdapterHasFeature(adapter_id, i):
+            features.add(f)
+
+    # Native features
+    for f in NATIVE_FEATURES:
+        i = getattr(lib, f"WGPUNativeFeature_{f}")
+        # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
+        if libf.wgpuAdapterHasFeature(adapter_id, i):
+            features.add(f)
+
+    return GPUAdapter(adapter_id, features, limits, adapter_info)
+
+
 def enumerate_adapters():
     """Return a list of all available adapters."""
     # The first call is to get the number of adapters, and
@@ -188,8 +261,9 @@ def enumerate_adapters():
         get_wgpu_instance(), ffi.NULL, ffi.NULL
     )
     adapters = ffi.new("WGPUAdapter[]", adapter_count)
+    # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
     libf.wgpuInstanceEnumerateAdapters(get_wgpu_instance(), ffi.NULL, adapters)
-    return [GPUAdapter(adapter) for adapter in adapters]
+    return [_create_adapter(adapter) for adapter in adapters]
 
 
 # %% The API
@@ -277,7 +351,7 @@ class GPU(base.GPU):
             error_msg = error_msg or "Could not obtain new adapter id."
             raise RuntimeError(error_msg)
 
-        return GPUAdapter(adapter_id)
+        return _create_adapter(adapter_id)
 
     async def request_adapter_async(
         self, *, canvas, power_preference=None, force_fallback_adapter=False
@@ -447,77 +521,6 @@ class GPUAdapterInfo(base.GPUAdapterInfo):
 
 
 class GPUAdapter(base.GPUAdapter):
-    def __init__(self, adapter_id):
-        c_properties = new_struct_p(
-            "WGPUAdapterProperties *",
-            # not used: nextInChain
-            # not used: deviceID
-            # not used: vendorID
-            # not used: name
-            # not used: driverDescription
-            # not used: adapterType
-            # not used: backendType
-            # not used: vendorName
-            # not used: architecture
-        )
-
-        # H: void f(WGPUAdapter adapter, WGPUAdapterProperties * properties)
-        libf.wgpuAdapterGetProperties(adapter_id, c_properties)
-
-        def to_py_str(key):
-            char_p = getattr(c_properties, key)
-            if char_p:
-                return ffi.string(char_p).decode(errors="ignore")
-            return ""
-
-        adapter_info = {
-            "vendor": to_py_str("vendorName"),
-            "architecture": to_py_str("architecture"),
-            "device": to_py_str("name"),
-            "description": to_py_str("driverDescription"),
-            "adapter_type": enum_int2str["AdapterType"].get(
-                c_properties.adapterType, "unknown"
-            ),
-            "backend_type": enum_int2str["BackendType"].get(
-                c_properties.backendType, "unknown"
-            ),
-            # "vendor_id": c_properties.vendorID,
-            # "device_id": c_properties.deviceID,
-        }
-
-        # ----- Get adapter limits
-
-        # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
-        c_supported_limits = new_struct_p(
-            "WGPUSupportedLimits *",
-            # not used: nextInChain
-            # not used: limits
-        )
-        c_limits = c_supported_limits.limits
-        # H: bool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
-        libf.wgpuAdapterGetLimits(adapter_id, c_supported_limits)
-        limits = {to_snake_case(k): getattr(c_limits, k) for k in sorted(dir(c_limits))}
-
-        # ----- Get adapter features
-
-        # WebGPU features
-        features = set()
-        for f in sorted(enums.FeatureName):
-            key = f"FeatureName.{f}"
-            i = enummap[key]
-            # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
-            if libf.wgpuAdapterHasFeature(adapter_id, i):
-                features.add(f)
-
-        # Native features
-        for f in NATIVE_FEATURES:
-            i = getattr(lib, f"WGPUNativeFeature_{f}")
-            # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
-            if libf.wgpuAdapterHasFeature(adapter_id, i):
-                features.add(f)
-
-        super().__init__(adapter_id, features, limits, adapter_info)
-
     def request_device(
         self,
         *,
