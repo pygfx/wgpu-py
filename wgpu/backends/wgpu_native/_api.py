@@ -46,6 +46,7 @@ apidiff = ApiDiff()
 
 # The API is prettu well defined
 __all__ = base.__all__.copy()
+__all__.append("enumerate_adapters")
 
 
 # %% Helper functions and objects
@@ -177,6 +178,26 @@ libf = SafeLibCalls(lib, error_handler)
 # %% The API
 
 
+def enumerate_adapters():
+    """Return a list of all available adapters."""
+    # The first call is to get the number of adapters, and the second
+    # call is to get the actual adapters. Note that the second arg (now
+    # NULL) can be a `WGPUInstanceEnumerateAdapterOptions` to filter
+    # by backend.
+
+    # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
+    adapter_count = libf.wgpuInstanceEnumerateAdapters(
+        get_wgpu_instance(), ffi.NULL, ffi.NULL
+    )
+
+    adapters = ffi.new("WGPUAdapter[]", adapter_count)
+    # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
+    libf.wgpuInstanceEnumerateAdapters(get_wgpu_instance(), ffi.NULL, adapters)
+
+    gpu = GPU()
+    return [gpu._create_adapter(adapter) for adapter in adapters]
+
+
 @_register_backend
 class GPU(base.GPU):
     def request_adapter(
@@ -259,6 +280,9 @@ class GPU(base.GPU):
             error_msg = error_msg or "Could not obtain new adapter id."
             raise RuntimeError(error_msg)
 
+        return self._create_adapter(adapter_id)
+
+    def _create_adapter(self, adapter_id):
         # ----- Get adapter info
 
         # H: nextInChain: WGPUChainedStructOut *, vendorID: int, vendorName: char *, architecture: char *, deviceID: int, name: char *, driverDescription: char *, adapterType: WGPUAdapterType, backendType: WGPUBackendType

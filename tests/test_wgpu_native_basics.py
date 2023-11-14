@@ -147,6 +147,18 @@ def test_wgpu_native_tracer():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_wgpu_native_enumerate_adapters():
+    # Get all available adapters
+    adapters = wgpu.backends.wgpu_native.enumerate_adapters()
+    assert len(adapters) > 0
+
+    # Check that we can get a device from each adapter
+    for adapter in adapters:
+        d = adapter.request_device()
+        assert isinstance(d, wgpu.backends.wgpu_native.GPUDevice)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 @mark.skipif(is_ci and is_win, reason="Cannot use SpirV shader on dx12")
 def test_shader_module_creation_spirv():
     device = wgpu.utils.get_default_device()
