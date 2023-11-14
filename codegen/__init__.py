@@ -59,7 +59,7 @@ def update_wgpu_native():
     wgpu_native_patcher.compare_flags()
     wgpu_native_patcher.write_mappings()
 
-    # Patch rs.py
+    # Patch wgpu_native api
     code1 = file_cache.read("backends/wgpu_native/_api.py")
     code2 = wgpu_native_patcher.patch_wgpu_native_backend(code1)
     file_cache.write("backends/wgpu_native/_api.py", code2)

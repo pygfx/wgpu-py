@@ -1,6 +1,6 @@
 # Termporaty alias for backwards compatibility.
 
-from .wgpu_native import GPU  # noqa
+from .wgpu_native import gpu  # noqa
 
 _deprecation_msg = """
 WARNING: wgpu.backends.rs is deprecated. Instead you can use:

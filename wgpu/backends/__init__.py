@@ -7,31 +7,31 @@ import sys
 from ..base import GPU as _base_GPU  # noqa
 
 
-def _register_backend(cls):
-    """Backends call this to activate themselves."""
-    GPU = cls  # noqa: N806
-    if not (
-        hasattr(GPU, "request_adapter")
-        and callable(GPU.request_adapter)
-        and hasattr(GPU, "request_adapter_async")
-        and callable(GPU.request_adapter_async)
-    ):
-        raise RuntimeError(
-            "The registered WGPU backend object must have methods "
-            + "'request_adapter' and 'request_adapter_async'"
-        )
+def _register_backend(gpu):
+    """Backends call this to activate themselves.
+    It replaces ``wgpu.gpu`` with the ``gpu`` object from the backend.
+    """
 
-    # Set gpu object and reset request_adapter-functions
     root_namespace = sys.modules["wgpu"].__dict__
+    needed_attributes = (
+        "request_adapter",
+        "request_adapter_async",
+        "wgsl_language_features",
+    )
 
-    if root_namespace["GPU"] is not _base_GPU:
+    # Check
+    for attr in needed_attributes:
+        if not (hasattr(gpu, attr)):
+            raise RuntimeError(
+                "The registered WGPU backend object must have attributes "
+                + ", ".join(f"'{a}'" for a in needed_attributes)
+                + f". The '{attr}' is missing."
+            )
+
+    # Only allow registering a backend once
+    if not isinstance(root_namespace["gpu"], _base_GPU):
         raise RuntimeError("WGPU backend can only be set once.")
-    gpu = GPU()
-    root_namespace["GPU"] = GPU
-    root_namespace["request_adapter"] = gpu.request_adapter
-    root_namespace["request_adapter_async"] = gpu.request_adapter_async
-    root_namespace["wgsl_language_features"] = gpu.wgsl_language_features
-    return cls
 
-
-_register_backend(_base_GPU)
+    # Apply
+    root_namespace["gpu"] = gpu
+    return gpu

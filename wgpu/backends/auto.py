@@ -8,7 +8,7 @@ def _load_backend(backend_name):
     else:  # no-cover
         raise ImportError("Unknown wgpu backend: '{backend_name}'")
 
-    globals()["GPU"] = module.GPU
+    return module.gpu
 
 
-_load_backend("wgpu_native")  # we make the import dynamic from the start
+gpu = _load_backend("wgpu_native")  # we make the import dynamic from the start

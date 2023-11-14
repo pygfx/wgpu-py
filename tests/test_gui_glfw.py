@@ -194,7 +194,7 @@ def test_glfw_canvas_render_custom_canvas():
 
         def get_context(self):
             if self._present_context is None:
-                backend_module = sys.modules["wgpu"].GPU.__module__
+                backend_module = sys.modules["wgpu"].gpu.__module__
                 PC = sys.modules[backend_module].GPUCanvasContext  # noqa N806
                 self._present_context = PC(self)
             return self._present_context

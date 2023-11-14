@@ -23,8 +23,7 @@ from weakref import WeakKeyDictionary
 from typing import List, Dict, Union
 
 from ... import base, flags, enums, structs
-from ..._coreutils import ApiDiff, str_flag_to_int
-from .. import _register_backend
+from ..._coreutils import str_flag_to_int
 
 from ._ffi import ffi, lib
 from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
@@ -41,12 +40,10 @@ from ._helpers import (
 
 
 logger = logging.getLogger("wgpu")  # noqa
-apidiff = ApiDiff()
 
 
 # The API is prettu well defined
 __all__ = base.__all__.copy()
-__all__.append("enumerate_adapters")
 
 
 # %% Helper functions and objects
@@ -178,27 +175,6 @@ libf = SafeLibCalls(lib, error_handler)
 # %% The API
 
 
-def enumerate_adapters():
-    """Return a list of all available adapters."""
-    # The first call is to get the number of adapters, and the second
-    # call is to get the actual adapters. Note that the second arg (now
-    # NULL) can be a `WGPUInstanceEnumerateAdapterOptions` to filter
-    # by backend.
-
-    # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
-    adapter_count = libf.wgpuInstanceEnumerateAdapters(
-        get_wgpu_instance(), ffi.NULL, ffi.NULL
-    )
-
-    adapters = ffi.new("WGPUAdapter[]", adapter_count)
-    # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
-    libf.wgpuInstanceEnumerateAdapters(get_wgpu_instance(), ffi.NULL, adapters)
-
-    gpu = GPU()
-    return [gpu._create_adapter(adapter) for adapter in adapters]
-
-
-@_register_backend
 class GPU(base.GPU):
     def request_adapter(
         self, *, canvas, power_preference=None, force_fallback_adapter=False
@@ -371,6 +347,10 @@ class GPU(base.GPU):
         )  # no-cover
 
 
+# Instantiate API entrypoint
+gpu = GPU()
+
+
 class GPUCanvasContext(base.GPUCanvasContext):
     def __init__(self, canvas):
         super().__init__(canvas)
@@ -538,29 +518,6 @@ class GPUAdapter(base.GPUAdapter):
             check_struct("QueueDescriptor", default_queue)
         return self._request_device(
             label, required_features, required_limits, default_queue, ""
-        )
-
-    @apidiff.add("a sweet bonus feature from wgpu-native")
-    def request_device_tracing(
-        self,
-        trace_path,
-        *,
-        label="",
-        required_features: "list(enums.FeatureName)" = [],
-        required_limits: "Dict[str, int]" = {},
-        default_queue: "structs.QueueDescriptor" = {},
-    ):
-        """Write a trace of all commands to a file so it can be reproduced
-        elsewhere. The trace is cross-platform!
-        """
-        if default_queue:
-            check_struct("QueueDescriptor", default_queue)
-        if not os.path.isdir(trace_path):
-            os.makedirs(trace_path, exist_ok=True)
-        elif os.listdir(trace_path):
-            logger.warning(f"Trace directory not empty: {trace_path}")
-        return self._request_device(
-            label, required_features, required_limits, default_queue, trace_path
         )
 
     def _request_device(

@@ -13,8 +13,15 @@ def test_basic_api():
 
     assert isinstance(wgpu.__version__, str)
     assert isinstance(wgpu.version_info, tuple)
+    assert isinstance(wgpu.gpu, wgpu.GPU)
+
+    # Entrypoint funcs
+    assert wgpu.gpu.request_adapter
+    assert wgpu.gpu.request_adapter_async
+
+    # Convenience functions
     assert wgpu.request_adapter
-    assert wgpu.request_adapter_async
+    # assert wgpu.request_adapter_async
 
     code1 = wgpu.base.GPU.request_adapter.__code__
     code2 = wgpu.base.GPU.request_adapter_async.__code__
@@ -187,35 +194,34 @@ def test_register_backend_fails():
     class GPU:
         pass
 
-    ori_GPU = wgpu.GPU  # noqa: N806
+    fake_gpu = GPU()
+
+    ori_gpu = wgpu.gpu  # noqa: N806
     try:
-        wgpu.GPU = wgpu.base.GPU
+        wgpu.gpu = wgpu.base.GPU()
 
         with raises(RuntimeError):
             wgpu.backends._register_backend("foo")
         with raises(RuntimeError):
-            wgpu.backends._register_backend(GPU)
+            wgpu.backends._register_backend(fake_gpu)
 
-        GPU.request_adapter = lambda self: None
+        fake_gpu.request_adapter = lambda: None
         with raises(RuntimeError):
-            wgpu.backends._register_backend(GPU)
+            wgpu.backends._register_backend(fake_gpu)
 
-        GPU.request_adapter_async = lambda self: None
-        GPU.wgsl_language_features = set()
-        wgpu.backends._register_backend(GPU)
+        fake_gpu.request_adapter_async = lambda: None
+        fake_gpu.wgsl_language_features = set()
+        wgpu.backends._register_backend(fake_gpu)
 
-        assert wgpu.GPU is GPU
-        assert wgpu.request_adapter.__func__ is GPU.request_adapter
-        assert wgpu.request_adapter_async.__func__ is GPU.request_adapter_async
+        assert wgpu.gpu is fake_gpu
 
+        # Cannot register twice once wgpu.GPU is set
         with raises(RuntimeError):
-            wgpu.backends._register_backend(
-                GPU
-            )  # Cannot register twice once wgpu.GPU is set
+            wgpu.backends._register_backend(fake_gpu)
 
     finally:
-        wgpu.GPU = wgpu.base.GPU
-        wgpu.backends._register_backend(ori_GPU)
+        wgpu.gpu = ori_gpu
+        wgpu.backends._register_backend(ori_gpu)
 
 
 if __name__ == "__main__":

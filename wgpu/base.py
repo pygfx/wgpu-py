@@ -18,6 +18,7 @@ from . import flags, enums, structs
 
 
 __all__ = [
+    "gpu",
     "GPUObjectBase",
     "GPUAdapterInfo",
     "GPU",
@@ -95,9 +96,8 @@ class GPU:
                 fallback adapter.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends import auto  # noqa
+        from .backends.auto import gpu  # noqa
 
-        gpu = auto.GPU()
         return gpu.request_adapter(
             canvas=canvas,
             power_preference=power_preference,
@@ -132,6 +132,10 @@ class GPU:
         Returns an empty set for now."""
         # Looks like at the time of writing there are no definitions for extensions yet
         return set()
+
+
+# Instantiate API entrypoint
+gpu = GPU()
 
 
 class GPUCanvasContext:

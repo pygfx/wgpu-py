@@ -115,7 +115,7 @@ class WgpuCanvasInterface:
         assert kind == "gpupresent"
         if self._canvas_context is None:
             # Get the active wgpu backend module
-            backend_module = sys.modules["wgpu"].GPU.__module__
+            backend_module = sys.modules["wgpu"].gpu.__module__
             # Instantiate the context
             PC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
             self._canvas_context = PC(self)

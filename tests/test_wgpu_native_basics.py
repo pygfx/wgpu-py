@@ -135,7 +135,7 @@ def test_wgpu_native_tracer():
     assert not os.path.isdir(tempdir)
 
     # Works!
-    adapter.request_device_tracing(tempdir)
+    wgpu.backends.wgpu_native.request_device_tracing(adapter, tempdir)
     assert os.path.isdir(tempdir)
 
     # Make dir not empty
@@ -143,7 +143,7 @@ def test_wgpu_native_tracer():
         pass
 
     # Still works, but produces warning
-    adapter.request_device_tracing(tempdir)
+    wgpu.backends.wgpu_native.request_device_tracing(adapter, tempdir)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
