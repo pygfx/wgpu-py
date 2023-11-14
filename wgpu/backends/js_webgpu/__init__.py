@@ -1,23 +1,31 @@
 """
-Stub WGPU backend implementation based on JS WebGPU API.
+WGPU backend implementation based on the JS WebGPU API.
 
 Since the exposed Python API is the same as the JS API, except that
 descriptors are arguments, this API can probably be fully automatically
 generated.
 """
 
+# NOTE: this is just a stub for now!!
+
 from .. import _register_backend
 
-from pscript.stubs import window
+
+class GPU:
+    def request_adapter(self, **parameters):
+        raise NotImplementedError("Cannot use sync API functions in JS.")
+
+    async def request_adapter_async(self, **parameters):
+        gpu = window.navigator.gpu  # noqa
+        return await gpu.request_adapter(**parameters)
+
+    def get_preferred_canvas_format(self):
+        raise NotImplementedError()
+
+    @property
+    def wgsl_language_features(self):
+        return set()
 
 
-def request_adapter(**parameters):
-    raise NotImplementedError("Cannot use sync API functions in JS.")
-
-
-async def request_adapter_async(**parameters):
-    return await window.navigator.gpu.request_adapter(**parameters)
-
-
-# Mark as the backend at import time
-_register_backend(request_adapter, request_adapter_async)
+gpu = GPU()
+_register_backend(gpu)

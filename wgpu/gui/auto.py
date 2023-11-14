@@ -42,6 +42,8 @@ def _load_backend(backend_name):
 
 
 def _auto_load_backend():
+    """Decide on the gui backend automatically."""
+
     # Backends to auto load, ordered by preference. Maps libname -> backend_name
     gui_backends = {
         "glfw": "glfw",

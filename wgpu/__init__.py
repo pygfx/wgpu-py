@@ -23,6 +23,7 @@ gpu = gpu  # noqa: F405
 
 # Not sure yet whether we want below convenience functions or not.
 
+
 def request_adapter(*args, **kwargs):
     """Convenience alias for ``gpu.request_adapter()``."""
     return gpu.request_adapter(*args, **kwargs)
