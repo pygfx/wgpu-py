@@ -303,7 +303,7 @@ class Shadertoy:
         adapter = wgpu.request_adapter(
             canvas=self._canvas, power_preference="high-performance"
         )
-        self._device = adapter.request_device()
+        self._device = wgpu.utils.device.get_default_device()
 
         self._present_context = self._canvas.get_context()
 
