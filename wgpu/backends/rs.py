@@ -179,7 +179,9 @@ libf = SafeLibCalls(lib, error_handler)
 def enumerate_adapters():
     """Return a list of all available adapters."""
     # The first call is to get the number of adapters, and
-    # the second call is to get the actual adapters
+    # the second call is to get the actual adapters.
+    # Note that the second arg (now NULL) can be a
+    # `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
 
     # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
     adapter_count = libf.wgpuInstanceEnumerateAdapters(
