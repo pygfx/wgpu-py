@@ -1,11 +1,9 @@
-# %%
 """
 Example compute shader that does ... nothing but copy a value from one
 buffer into another.
 """
 
 import wgpu
-import wgpu.backends.rs  # Select backend
 from wgpu.utils.compute import compute_with_buffers  # Convenience function
 
 
@@ -64,10 +62,11 @@ assert result == list(range(20))
 device = wgpu.utils.get_default_device()
 
 # Or, you can select GPU by requesting all available adapters
-# adapters = wgpu.backends.rs.enumerate_adapters()
+# adapters = wgpu.backends.wgpu_native.enumerate_adapters()
 # adapter = None
 # for adap in adapters:
 #     adapter_info = adap.request_adapter_info()
+#     print(adapter_info)
 #     if "NVIDIA" in adapter_info["device"]:
 #         adapter = adap
 #         break

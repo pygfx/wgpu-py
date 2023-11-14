@@ -1,5 +1,4 @@
 import wgpu.utils
-import wgpu.backends.rs
 
 from testutils import run_tests
 from pytest import raises

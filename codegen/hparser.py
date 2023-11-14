@@ -8,7 +8,7 @@ _parser = None
 
 
 def _get_wgpu_header():
-    """Func written so we can use this in both rs_ffi.py and codegen/hparser.py"""
+    """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py"""
     # Read files
     lines1 = []
     lines1.extend(read_file("resources", "webgpu.h").splitlines())

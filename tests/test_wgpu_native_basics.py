@@ -6,7 +6,7 @@ import sys
 import tempfile
 
 import wgpu.utils
-import wgpu.backends.rs
+import wgpu.backends.wgpu_native
 import numpy as np
 
 from testutils import run_tests, can_use_wgpu_lib, is_ci
@@ -17,9 +17,9 @@ is_win = sys.platform.startswith("win")
 
 
 def test_get_wgpu_version():
-    version = wgpu.backends.rs.__version__
-    commit_sha = wgpu.backends.rs.__commit_sha__
-    version_info = wgpu.backends.rs.version_info
+    version = wgpu.backends.wgpu_native.__version__
+    commit_sha = wgpu.backends.wgpu_native.__commit_sha__
+    version_info = wgpu.backends.wgpu_native.version_info
 
     assert isinstance(version, str)
     assert len(version) > 1
@@ -35,7 +35,7 @@ def test_get_wgpu_version():
 def test_override_wgpu_lib_path():
     # Current version
     try:
-        old_path = wgpu.backends.rs_ffi.get_wgpu_lib_path()
+        old_path = wgpu.backends.wgpu_native.lib_path
     except RuntimeError:
         old_path = None
 
@@ -44,7 +44,7 @@ def test_override_wgpu_lib_path():
     os.environ["WGPU_LIB_PATH"] = "foo/bar"
 
     # Check
-    assert wgpu.backends.rs_ffi.get_wgpu_lib_path() == "foo/bar"
+    assert wgpu.backends.wgpu_native._ffi.get_wgpu_lib_path() == "foo/bar"
 
     # Change it back
     if old_env_var is None:
@@ -54,14 +54,14 @@ def test_override_wgpu_lib_path():
 
     # Still the same as before?
     try:
-        path = wgpu.backends.rs_ffi.get_wgpu_lib_path()
+        path = wgpu.backends.wgpu_native._ffi.get_wgpu_lib_path()
     except RuntimeError:
         path = None
     assert path == old_path
 
 
 def test_tuple_from_tuple_or_dict():
-    func = wgpu.backends.rs._tuple_from_tuple_or_dict
+    func = wgpu.backends.wgpu_native._api._tuple_from_tuple_or_dict
 
     assert func([1, 2, 3], ("x", "y", "z")) == (1, 2, 3)
     assert func({"y": 2, "z": 3, "x": 1}, ("x", "y", "z")) == (1, 2, 3)
@@ -126,7 +126,7 @@ def test_logging():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_rs_tracer():
+def test_wgpu_native_tracer():
     tempdir = os.path.join(tempfile.gettempdir(), "wgpu-tracer-test")
     adapter = wgpu.utils.get_default_device().adapter
 
@@ -135,7 +135,7 @@ def test_rs_tracer():
     assert not os.path.isdir(tempdir)
 
     # Works!
-    adapter.request_device_tracing(tempdir)
+    wgpu.backends.wgpu_native.request_device_tracing(adapter, tempdir)
     assert os.path.isdir(tempdir)
 
     # Make dir not empty
@@ -143,18 +143,19 @@ def test_rs_tracer():
         pass
 
     # Still works, but produces warning
-    adapter.request_device_tracing(tempdir)
+    wgpu.backends.wgpu_native.request_device_tracing(adapter, tempdir)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_rs_enumerate_adapters():
+def test_wgpu_native_enumerate_adapters():
     # Get all available adapters
-    adapters = wgpu.backends.rs.enumerate_adapters()
+    adapters = wgpu.backends.wgpu_native.enumerate_adapters()
     assert len(adapters) > 0
 
     # Check that we can get a device from each adapter
     for adapter in adapters:
-        _ = adapter.request_device()
+        d = adapter.request_device()
+        assert isinstance(d, wgpu.backends.wgpu_native.GPUDevice)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -179,14 +180,16 @@ def test_shader_module_creation_spirv():
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_adapter_destroy():
-    adapter = wgpu.request_adapter(canvas=None, power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter(canvas=None, power_preference="high-performance")
     assert adapter._internal is not None
     adapter.__del__()
     assert adapter._internal is None
 
 
 def test_get_memoryview_and_address():
-    get_memoryview_and_address = wgpu.backends.rs_helpers.get_memoryview_and_address
+    get_memoryview_and_address = (
+        wgpu.backends.wgpu_native._helpers.get_memoryview_and_address
+    )
 
     data = b"bytes are readonly, but we can map it. Don't abuse this :)"
     m, address = get_memoryview_and_address(data)

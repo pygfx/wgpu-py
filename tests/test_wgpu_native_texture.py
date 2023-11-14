@@ -2,7 +2,6 @@ import random
 import ctypes
 
 import wgpu.utils
-import wgpu.backends.rs
 import numpy as np
 
 from testutils import run_tests, can_use_wgpu_lib, iters_equal

@@ -5,9 +5,8 @@ This example renders a simple textured rotating cube.
 
 import time
 
-import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
-import wgpu.backends.rs  # noqa: F401, Select Rust backend
+import wgpu
 import numpy as np
 
 
@@ -17,7 +16,7 @@ import numpy as np
 canvas = WgpuCanvas(title="wgpu cube")
 
 # Create a wgpu device
-adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
+adapter = wgpu.gpu.request_adapter(canvas=canvas, power_preference="high-performance")
 device = adapter.request_device()
 
 # Prepare present context

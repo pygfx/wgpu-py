@@ -5,9 +5,9 @@ import os
 import sys
 import ctypes
 
-from .rs_ffi import ffi, lib
-from .._diagnostics import Diagnostics
-from ..base import (
+from ._ffi import ffi, lib
+from ..._diagnostics import Diagnostics
+from ...base import (
     GPUError,
     GPUOutOfMemoryError,
     GPUValidationError,
@@ -355,7 +355,7 @@ def generate_report():
     return report
 
 
-class NativeDiagnostics(Diagnostics):
+class WgpuNativeCountsDiagnostics(Diagnostics):
     def get_subscript(self):
         text = ""
         text += "    * The o, v, e are occupied, vacant and error, respecitively.\n"
@@ -442,4 +442,4 @@ class NativeDiagnostics(Diagnostics):
         return result
 
 
-diagnostics = NativeDiagnostics("rs_counts")
+diagnostics = WgpuNativeCountsDiagnostics("wgpu_native_counts")

@@ -5,7 +5,7 @@ import os
 import sys
 import logging
 
-from .._coreutils import get_resource_filename, logger_set_level_callbacks
+from ..._coreutils import get_resource_filename, logger_set_level_callbacks
 
 from cffi import FFI, __version_info__ as cffi_version_info
 
@@ -26,7 +26,7 @@ def get_wgpu_header():
 
 
 def _get_wgpu_header(*filenames):
-    """Func written so we can use this in both rs_ffi.py and codegen/hparser.py"""
+    """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py"""
     # Read files
     lines1 = []
     for filename in filenames:
@@ -128,37 +128,38 @@ def _maybe_get_pip_hint():
     return ""
 
 
+def get_lib_version_info():
+    # Get lib version
+    version_int = lib.wgpuGetVersion()
+    if version_int < 65536:  # no-cover - old version encoding with 3 ints
+        lib_version_info = tuple((version_int >> bits) & 0xFF for bits in (16, 8, 0))
+    else:
+        lib_version_info = tuple(
+            (version_int >> bits) & 0xFF for bits in (24, 16, 8, 0)
+        )
+    # When the 0.7.0 tag was made, the version was not bumped.
+    if lib_version_info == (0, 6, 0, 0):
+        lib_version_info = (0, 7, 0)
+    return lib_version_info
+
+
 # Configure cffi and load the dynamic library
-# NOTE: `import wgpu.backends.rs` is used in pyinstaller tests to verify
+# NOTE: `import wgpu.backends.wgpu_native` is used in pyinstaller tests to verify
 # that we can load the DLL after freezing
 ffi = FFI()
 ffi.cdef(get_wgpu_header())
 ffi.set_source("wgpu.h", None)
 lib_path = get_wgpu_lib_path()  # store path on this module so it can be checked
 lib = ffi.dlopen(lib_path)
+lib_version_info = get_lib_version_info()
 
 
-def get_lib_version():
-    # Get lib version
-    version_int = lib.wgpuGetVersion()
-    if version_int < 65536:  # no-cover - old version encoding with 3 ints
-        version_info_lib = tuple((version_int >> bits) & 0xFF for bits in (16, 8, 0))
-    else:
-        version_info_lib = tuple(
-            (version_int >> bits) & 0xFF for bits in (24, 16, 8, 0)
-        )
-    # When the 0.7.0 tag was made, the version was not bumped.
-    if version_info_lib == (0, 6, 0, 0):
-        version_info_lib = (0, 7, 0)
-    return version_info_lib
-
-
-def check_expected_version(version_info):
-    version_info_lib = get_lib_version()
+def _check_expected_version(version_info):
+    lib_version_info = get_lib_version_info()
     # Compare
-    if version_info_lib != version_info:  # no-cover
+    if lib_version_info != version_info:  # no-cover
         logger.warning(
-            f"Expected wgpu-native version {version_info} but got {version_info_lib}. {_maybe_get_hint_on_download_script()}"
+            f"Expected wgpu-native version {version_info} but got {lib_version_info}. {_maybe_get_hint_on_download_script()}"
         )
 
 

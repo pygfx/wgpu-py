@@ -18,6 +18,23 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.12.0] - tbd
+
+Changed:
+
+* The `wgpu.request_adapter()` is moved to `wgpu.gpu.request_adapter()`. Same for the async version.
+  This puts all API entrypoint stuff on the `wgpu.gpu` object, which also better reflects the WebGPU api.
+* The `rs` backend is renamed to `wgpu_native`.
+* It is no longer necessary to explicitly import the backend.
+* The `GPUDevice.request_device_tracing()` method is now a function in the `wgpu_native` backend.
+
+Added:
+
+* Convenience `auto` backend.
+* Stub `js_webgpu` backend.
+* New function `enumerate_adapters()` in the `wgpu_native` backend.
+
+
 ### [v0.11.0] - 11-10-2023
 
 Changed:

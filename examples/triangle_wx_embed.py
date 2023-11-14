@@ -5,7 +5,6 @@ An example demonstrating a wx app with a wgpu viz inside.
 
 import wx
 from wgpu.gui.wx import WgpuWidget
-import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 from examples.triangle import main
 

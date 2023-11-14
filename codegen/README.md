@@ -43,8 +43,8 @@ but the parsers and generators are less important to fully cover by tests, becau
   * Make changes to `base.py`.
   * Generate `flags.py`, `enums.py`, and `structs.py`.
 *  Help update the wgpu-native backend:
-  * Make changes to `backends/rs.py`.
-  * Generate `backends/rs_mappings.py`.
+  * Make changes to `backends/wgpu_native/_api.py`.
+  * Generate `backends/wgpu_native/_mappings.py`.
 * Write `resources/codegen_report.md`  providing a summary of the codegen process.
 
 
@@ -69,7 +69,7 @@ In some cases we may want to deviate from the WebGPU API, because well ... Pytho
 Other changes include:
 
 * Where in JS the input args are provided via a dict, we use kwargs directly. Nevertheless, some input args have subdicts (and sub-sub-dicts)
-*  For methods that are async in IDL, we also provide sync methods. The Async method names have an "_async" suffix. 
+*  For methods that are async in IDL, we also provide sync methods. The Async method names have an "_async" suffix.
 
 ### Codegen summary
 
@@ -125,7 +125,7 @@ The majority of work in `rs.py` is the conversion of  Python dicts to C structs,
 
 ### Codegen summary
 
-* Generate `backends/rs_mappings.py`.
+* Generate `backends/wgpu_native/_mappings.py`.
   * Generate mappings for enum field names to ints.
   * Detect and report missing flags and enum fields.
 
@@ -148,6 +148,6 @@ The majority of work in `rs.py` is the conversion of  Python dicts to C structs,
 * Run `python codegen` again to validate that all is well. Repeat the steps above if necessary.
 * Make sure that the tests run and provide full coverage.
 * Make sure that the examples all work.
-* Update downstream code, like our own tests and examples, but also e.g. pygfx. 
+* Update downstream code, like our own tests and examples, but also e.g. pygfx.
 
 * Make a summary of the API changes to put in the release notes.
