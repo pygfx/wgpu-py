@@ -515,6 +515,6 @@ class ObjectCountDiagnostics(Diagnostics):
 
 
 SystemDiagnostics("system")
-WgpuNativeInfoDiagnostics("wgpu_native_info")
 VersionDiagnostics("versions")
+WgpuNativeInfoDiagnostics("wgpu_native_info")
 ObjectCountDiagnostics("object_counts")

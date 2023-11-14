@@ -89,11 +89,6 @@ def test_enums_and_flags_and_structs():
 
 
 def test_base_wgpu_api():
-    # gpu = wgpu.base.GPU()
-    # with raises(RuntimeError) as error:
-    #     gpu.request_adapter(canvas=None, power_preference="high-performance")
-    # assert "select a backend" in str(error.value).lower()
-
     # Fake a device and an adapter
     adapter = wgpu.base.GPUAdapter(None, set(), {}, {})
     queue = wgpu.GPUQueue("", None, None)

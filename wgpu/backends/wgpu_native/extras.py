@@ -4,6 +4,12 @@ from ._api import ffi, libf, structs, enums, Dict, logger
 from ._helpers import get_wgpu_instance
 
 
+# NOTE: these functions represent backend-specific extra API.
+# NOTE: changes to this module must be reflected in docs/backends.rst.
+# We don't use Sphinx automodule because this way the doc build do not
+# need to be able to load wgpu-native.
+
+
 def enumerate_adapters():
     """Return a list of all available adapters."""
     # The first call is to get the number of adapters, and the second

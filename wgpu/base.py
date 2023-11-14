@@ -73,8 +73,10 @@ object_tracker = diagnostics.object_counts.tracker
 class GPU:
     """The entrypoint to the wgpu API.
 
-    The starting point of your wgpu-adventure is always to obtain an adapter.
-    The methods of this class are loaded into the ``wgpu`` namespace.
+    The starting point of your wgpu-adventure is always to obtain an
+    adapter. This is the equivalent to browser's ``navigator.gpu``.
+    When a backend is loaded, the ``wgpu.gpu`` object is replaced with
+    a backend-specific implementation.
     """
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
