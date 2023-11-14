@@ -22,12 +22,11 @@ sys.path.insert(0, ROOT_DIR)
 os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
 
 import wgpu  # noqa: E402
-import wgpu.gui  # noqa: E402
 
 
 # -- Tests -------------------------------------------------------------------
 
-# Ensure that all classes are references in the alphabetic list,
+# Ensure that all classes are referenced in the alphabetic list,
 # and referenced at least one other time as part of the explanatory text.
 with open(os.path.join(ROOT_DIR, "docs", "wgpu.rst"), "rb") as f:
     wgpu_text = f.read().decode()
@@ -35,10 +34,10 @@ with open(os.path.join(ROOT_DIR, "docs", "wgpu.rst"), "rb") as f:
 for cls_name in wgpu.base.__all__:
     assert (
         f"~{cls_name}" in wgpu_lines
-    ), f"Class {cls_name} not listed in class list in wgpu.rst"
+    ), f"Class '{cls_name}' not listed in class list in wgpu.rst"
     assert (
         f":class:`{cls_name}`" in wgpu_text
-    ), f"Class {cls_name} not referenced in the text in wgpu.rst"
+    ), f"Class '{cls_name}' not referenced in the text in wgpu.rst"
 
 
 # -- Hacks to tweak docstrings -----------------------------------------------

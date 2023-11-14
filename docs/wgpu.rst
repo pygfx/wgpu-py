@@ -43,8 +43,8 @@ here accept the fields in that struct as keyword arguments.
     :annotation: Differences of base API:
 
 
-Each backend may also implement minor differences (usually additions)
-from the base API. The ``rs`` backend only adds ``GPUAdapter.request_device_tracing()``.
+Each backend may implement extra functionality on top of the base API.
+This is listed in :doc:`backends <backends>`.
 
 
 Overview
@@ -56,7 +56,7 @@ This overview attempts to describe how all classes fit together. Scroll down for
 Adapter, device and canvas
 ++++++++++++++++++++++++++
 
-The :class:`GPU` represents the root namespace that contains the entrypoint to request an adapter.
+The :class:`GPU` class represents the API root/entrypoint. An instance is available at ``wgpu.gpu``. This instance is loaded from one the :doc:`backends <backends>`.
 
 The :class:`GPUAdapter` represents a hardware or software device, with specific
 features, limits and properties. To actually start using that harware for computations or rendering, a :class:`GPUDevice` object must be requisted from the adapter. This is a logical unit

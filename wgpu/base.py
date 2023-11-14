@@ -18,7 +18,6 @@ from . import flags, enums, structs
 
 
 __all__ = [
-    "gpu",
     "GPUObjectBase",
     "GPUAdapterInfo",
     "GPU",

@@ -19,7 +19,6 @@ def patch_base_api(code):
     if found_all:
         part2 = part2.split("]", 1)[-1]
         line = "\n__all__ = ["
-        line += '"gpu", '
         line += ", ".join(f'"{name}"' for name in idl.classes.keys())
         line += "]"
         code = part1 + line + part2

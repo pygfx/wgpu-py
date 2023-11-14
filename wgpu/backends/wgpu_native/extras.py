@@ -1,6 +1,6 @@
 import os
 
-from ._api import gpu, ffi, libf, structs, enums, Dict, logger
+from ._api import ffi, libf, structs, enums, Dict, logger
 from ._helpers import get_wgpu_instance
 
 
@@ -17,6 +17,8 @@ def enumerate_adapters():
 
     adapters = ffi.new("WGPUAdapter[]", adapter_count)
     libf.wgpuInstanceEnumerateAdapters(get_wgpu_instance(), ffi.NULL, adapters)
+
+    from . import gpu  # noqa
 
     return [gpu._create_adapter(adapter) for adapter in adapters]
 

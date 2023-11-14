@@ -35,7 +35,7 @@ and the other [examples](https://github.com/pygfx/wgpu-py/blob/main/examples/).
 
 * Coverage of the WebGPU spec is complete enough to build e.g.
   [pygfx](https://github.com/pygfx/pygfx).
-* Test coverage of the API is 100%.
+* Test coverage of the API is close to 100%.
 * Support for Windows, Linux, and MacOS (Intel and M1).
 * Until WebGPU settles as a standard, its specification may change, and with
   that our API will probably too. Check the [changelog](CHANGELOG.md) when you
@@ -61,12 +61,6 @@ Also see the [online documentation](https://wgpu-py.readthedocs.io) and the [exa
 The full API is accessable via the main namespace:
 ```py
 import wgpu
-```
-
-But to use it, you need to select a backend first. You do this by importing it.
-There is currently only one backend:
-```py
-import wgpu.backends.rs
 ```
 
 To render to the screen you can use a variety of GUI toolkits:

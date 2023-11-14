@@ -11,24 +11,6 @@ GPU programming is a craft that requires knowledge of how GPU's work.
 Getting started
 ---------------
 
-Selecting the backend
-+++++++++++++++++++++
-
-To use ``wgpu``, you must select a backend. Eventually
-there may be multiple backends, but at the moment
-there is only one, which is based on the Rust libary
-`wgpu-native <https://github.com/gfx-rs/wgpu>`__. You select
-the backend by importing it:
-
-
-.. code-block:: py
-
-    import wgpu.backends.wgpu_natve
-
-
-TODO: not strictly needed!
-
-
 Creating a canvas
 +++++++++++++++++
 
@@ -57,13 +39,15 @@ Obtaining a device
 The next step is to obtain an adapter, which represents an abstract render device.
 You can pass it the ``canvas`` that you just created, or pass ``None`` for the canvas
 if you have none (e.g. for compute or offscreen rendering). From the adapter,
-you can obtain a device. This will be the root object from which most GPU objects
-will be created.
+you can obtain a device.
 
 .. code-block:: py
 
-    adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter(canvas=canvas, power_preference="high-performance")
     device = adapter.request_device()
+
+The ``wgpu.gpu`` object is the API entrypoint (:class:`wgpu.GPU`). It contains just a handful of functions,
+including ``request_adapter()``. The device is used to create most other GPU objects.
 
 
 Creating buffers, textures shaders, etc.

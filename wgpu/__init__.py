@@ -18,7 +18,7 @@ version_info = tuple(map(int, __version__.split(".")))
 
 
 # The API entrypoint from base.py - gets replaced when a backend loads.
-gpu = gpu  # noqa: F405
+gpu = GPU()  # noqa: F405
 
 
 # Not sure yet whether we want below convenience functions or not.
