@@ -10,8 +10,10 @@ def get_default_device():
     global _default_device
 
     if _default_device is None:
-        import wgpu.backends.rs  # noqa
+        import wgpu.backends.auto  # noqa
 
-        adapter = wgpu.request_adapter(canvas=None, power_preference="high-performance")
+        adapter = wgpu.gpu.request_adapter(
+            canvas=None, power_preference="high-performance"
+        )
         _default_device = adapter.request_device()
     return _default_device

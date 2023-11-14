@@ -8,7 +8,6 @@ import sys
 from pathlib import Path
 
 from wgpu.gui.glfw import WgpuCanvas, run
-import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 sys.path.insert(0, str(Path(__file__).parent))
 

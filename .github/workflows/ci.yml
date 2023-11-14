@@ -76,7 +76,7 @@ jobs:
         WGPU_FORCE_OFFSCREEN: true
       run: |
           python -c "print('wgpu'); import wgpu; print(wgpu)"
-          python -c "print('wgpu.backends.rs'); import wgpu.backends.rs"
+          python -c "print('wgpu.backends.wgpu_native'); import wgpu.backends.wgpu_native"
           python -c "print('wgpu.gui.offscreen'); import wgpu.gui.offscreen"
           python -c "print('wgpu.utils'); import wgpu.utils"
           python -c "print('wgpu.utils.shadertoy'); import wgpu.utils.shadertoy"
@@ -148,7 +148,7 @@ jobs:
           pip install -U requests numpy pytest
           python download-wgpu-native.py
           pip install -e .
-          pip install psutil pyinstaller>=4.9
+          pip install psutil glfw pyinstaller>=4.9
     - name: Test PyInstaller
       run: |
           pyinstaller --version

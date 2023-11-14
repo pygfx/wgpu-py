@@ -3,7 +3,6 @@ import ctypes
 import sys
 
 import wgpu.utils
-import wgpu.backends.rs
 import numpy as np
 
 from testutils import run_tests, can_use_wgpu_lib, iters_equal
@@ -29,14 +28,14 @@ def test_buffer_init1():
     # Create buffer. MAP_READ is needed to read the buffer via the queue.
     buf = device.create_buffer_with_data(data=data1, usage=wgpu.BufferUsage.MAP_READ)
 
-    wgpu.backends.rs.libf.wgpuDevicePoll(
-        buf._device._internal, True, wgpu.backends.rs.ffi.NULL
+    wgpu.backends.wgpu_native._api.libf.wgpuDevicePoll(
+        buf._device._internal, True, wgpu.backends.wgpu_native.ffi.NULL
     )
 
     # Download from buffer to CPU
     buf.map(wgpu.MapMode.READ)
-    wgpu.backends.rs.libf.wgpuDevicePoll(
-        buf._device._internal, True, wgpu.backends.rs.ffi.NULL
+    wgpu.backends.wgpu_native._api.libf.wgpuDevicePoll(
+        buf._device._internal, True, wgpu.backends.wgpu_native.ffi.NULL
     )
 
     data2 = buf.read_mapped()

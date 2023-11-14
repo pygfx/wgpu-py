@@ -15,7 +15,6 @@ import sys
 import time
 import subprocess
 
-import wgpu.backends.rs  # noqa: F401, Select Rust backend
 from wgpu.gui import WgpuCanvasBase
 
 # Import the (async) function that we must call to run the visualization

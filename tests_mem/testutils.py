@@ -82,7 +82,7 @@ def get_counts():
     the counts in py and wgpu-native.
     """
     counts_py = wgpu.diagnostics.object_counts.get_dict()
-    counts_native = wgpu.diagnostics.rs_counts.get_dict()
+    counts_native = wgpu.diagnostics.wgpu_native_counts.get_dict()
 
     all_keys = set(counts_py) | set(counts_native)
 

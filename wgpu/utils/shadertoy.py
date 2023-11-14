@@ -289,7 +289,7 @@ class Shadertoy:
             raise ValueError("Invalid shader code.")
 
     def _prepare_render(self):
-        import wgpu.backends.rs  # noqa
+        import wgpu.backends.auto  # noqa
 
         if self._offscreen:
             self._canvas = OffscreenCanvas(

@@ -12,7 +12,7 @@ import requests
 # The directory containing non-python resources that are included in packaging
 RESOURCE_DIR = os.path.join("wgpu", "resources")
 # The version installed through this script is tracked in the backend module
-VERSION_FILE = os.path.join("wgpu", "backends", "rs.py")
+VERSION_FILE = os.path.join("wgpu", "backends", "wgpu_native", "__init__.py")
 
 # Whether to ensure we export \n instead of \r\n
 FORCE_SIMPLE_NEWLINES = False

@@ -27,8 +27,8 @@ class FileCache:
         "flags.py",
         "enums.py",
         "structs.py",
-        "backends/rs.py",
-        "backends/rs_mappings.py",
+        "backends/wgpu_native/_api.py",
+        "backends/wgpu_native/_mappings.py",
         "resources/codegen_report.md",
     ]
 

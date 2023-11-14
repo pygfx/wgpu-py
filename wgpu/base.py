@@ -73,8 +73,10 @@ object_tracker = diagnostics.object_counts.tracker
 class GPU:
     """The entrypoint to the wgpu API.
 
-    The starting point of your wgpu-adventure is always to obtain an adapter.
-    The methods of this class are loaded into the ``wgpu`` namespace.
+    The starting point of your wgpu-adventure is always to obtain an
+    adapter. This is the equivalent to browser's ``navigator.gpu``.
+    When a backend is loaded, the ``wgpu.gpu`` object is replaced with
+    a backend-specific implementation.
     """
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
@@ -94,8 +96,13 @@ class GPU:
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
         """
-        raise RuntimeError(
-            "Select a backend (by importing wgpu.backends.rs) before requesting an adapter!"
+        # If this method gets called, no backend has been loaded yet, let's do that now!
+        from .backends.auto import gpu  # noqa
+
+        return gpu.request_adapter(
+            canvas=canvas,
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
         )
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
@@ -104,9 +111,11 @@ class GPU:
         self, *, canvas, power_preference=None, force_fallback_adapter=False
     ):
         """Async version of `request_adapter()`."""
-        raise RuntimeError(
-            "Select a backend (by importing wgpu.rs) before requesting an adapter!"
-        )  # no-cover
+        return self.request_adapter(
+            canvas=canvas,
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
+        )
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
@@ -124,6 +133,10 @@ class GPU:
         Returns an empty set for now."""
         # Looks like at the time of writing there are no definitions for extensions yet
         return set()
+
+
+# Instantiate API entrypoint
+gpu = GPU()
 
 
 class GPUCanvasContext:

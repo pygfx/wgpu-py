@@ -16,7 +16,6 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
 
 
 from wgpu.gui.qt import WgpuCanvas  # WgpuCanvas is a QWidget subclass
-import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 from triangle import main  # The function to call to run the visualization
 

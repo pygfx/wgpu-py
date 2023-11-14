@@ -1,7 +1,7 @@
 import io
 
 from .utils import print, PrintToFile
-from . import apiwriter, apipatcher, rspatcher, idlparser, hparser
+from . import apiwriter, apipatcher, wgpu_native_patcher, idlparser, hparser
 from .files import file_cache
 
 
@@ -14,7 +14,7 @@ def main():
         print("# Code generatation report")
         prepare()
         update_api()
-        update_rs()
+        update_wgpu_native()
         file_cache.write("resources/codegen_report.md", log.getvalue())
 
 
@@ -43,23 +43,23 @@ def update_api():
     file_cache.write("base.py", code2)
 
     # Patch backend APIs: base.py -> API
-    for fname in ["backends/rs.py"]:
+    for fname in ["backends/wgpu_native/_api.py"]:
         code1 = file_cache.read(fname)
         print(f"### Patching API for {fname}")
         code2 = apipatcher.patch_backend_api(code1)
         file_cache.write(fname, code2)
 
 
-def update_rs():
-    """Update and check the rs backend."""
+def update_wgpu_native():
+    """Update and check the wgpu-native backend."""
 
-    print("## Validating rs.py")
+    print("## Validating backends/wgpu_native/_api.py")
 
     # Write the simple stuff
-    rspatcher.compare_flags()
-    rspatcher.write_mappings()
+    wgpu_native_patcher.compare_flags()
+    wgpu_native_patcher.write_mappings()
 
-    # Patch rs.py
-    code1 = file_cache.read("backends/rs.py")
-    code2 = rspatcher.patch_rs_backend(code1)
-    file_cache.write("backends/rs.py", code2)
+    # Patch wgpu_native api
+    code1 = file_cache.read("backends/wgpu_native/_api.py")
+    code2 = wgpu_native_patcher.patch_wgpu_native_backend(code1)
+    file_cache.write("backends/wgpu_native/_api.py", code2)

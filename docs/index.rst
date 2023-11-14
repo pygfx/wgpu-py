@@ -4,14 +4,15 @@ Welcome to the wgpu-py docs!
 .. automodule:: wgpu
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
 
-   start
-   guide
-   wgpu
-   gui
-   utils
+    start
+    guide
+    wgpu
+    backends
+    gui
+    utils
 
 
 

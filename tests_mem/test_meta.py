@@ -61,8 +61,8 @@ def test_meta_buffers_1():
 def test_meta_buffers_2():
     """Making sure that the test indeed fails, by disabling the release call."""
 
-    ori = wgpu.backends.rs.GPUBuffer._destroy
-    wgpu.backends.rs.GPUBuffer._destroy = lambda self: None
+    ori = wgpu.backends.wgpu_native.GPUBuffer._destroy
+    wgpu.backends.wgpu_native.GPUBuffer._destroy = lambda self: None
 
     from test_objects import test_release_buffer  # noqa
 
@@ -71,7 +71,7 @@ def test_meta_buffers_2():
             test_release_buffer()
 
     finally:
-        wgpu.backends.rs.GPUBuffer._destroy = ori
+        wgpu.backends.wgpu_native.GPUBuffer._destroy = ori
 
 
 if __name__ == "__main__":

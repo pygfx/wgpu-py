@@ -11,7 +11,7 @@ if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need wgpu lib", allow_module_level=True)
 
 
-import wgpu.backends.rs  # noqa
+import wgpu
 
 DEVICE = wgpu.utils.get_default_device()
 
@@ -20,7 +20,7 @@ DEVICE = wgpu.utils.get_default_device()
 def test_release_adapter(n):
     yield {}
     for i in range(n):
-        yield wgpu.request_adapter(canvas=None, power_preference="high-performance")
+        yield wgpu.gpu.request_adapter(canvas=None, power_preference="high-performance")
 
 
 @create_and_release
@@ -145,7 +145,7 @@ def test_release_command_encoder(n):
 @create_and_release
 def test_release_compute_pass_encoder(n):
     # Note: ComputePassEncoder does not really exist in wgpu-core
-    # -> Check gpu.diagnostics.rs_counts.print_report(), nothing there that ends with "Encoder".
+    # -> Check gpu.diagnostics.wgpu_native_counts.print_report(), nothing there that ends with "Encoder".
     command_encoder = DEVICE.create_command_encoder()
 
     yield {
@@ -221,7 +221,7 @@ def test_release_render_bundle_encoder(n):
 @create_and_release
 def test_release_render_pass_encoder(n):
     # Note: RenderPassEncoder does not really exist in wgpu-core
-    # -> Check gpu.diagnostics.rs_counts.print_report(), nothing there that ends with "Encoder".
+    # -> Check gpu.diagnostics.wgpu_native_counts.print_report(), nothing there that ends with "Encoder".
     command_encoder = DEVICE.create_command_encoder()
 
     yield {

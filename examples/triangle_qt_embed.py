@@ -16,7 +16,6 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
 
 
 from wgpu.gui.qt import WgpuWidget
-import wgpu.backends.rs  # noqa: F401, Select Rust backend
 
 from triangle import main
 
