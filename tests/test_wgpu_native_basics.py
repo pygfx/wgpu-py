@@ -180,7 +180,7 @@ def test_shader_module_creation_spirv():
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_adapter_destroy():
-    adapter = wgpu.request_adapter(canvas=None, power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter(canvas=None, power_preference="high-performance")
     assert adapter._internal is not None
     adapter.__del__()
     assert adapter._internal is None

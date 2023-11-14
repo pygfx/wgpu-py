@@ -21,14 +21,9 @@ version_info = tuple(map(int, __version__.split(".")))
 gpu = GPU()  # noqa: F405
 
 
-# Not sure yet whether we want below convenience functions or not.
-
-
+# Temporary stub to help transitioning
 def request_adapter(*args, **kwargs):
-    """Convenience alias for ``gpu.request_adapter()``."""
-    return gpu.request_adapter(*args, **kwargs)
-
-
-def request_adapter_async(*args, **kwargs):
-    """Convenience alias for ``gpu.request_adapter_async()``."""
-    return gpu.request_adapter_async(*args, **kwargs)
+    """Deprecated!"""
+    raise DeprecationWarning(
+        "wgpu.request_adapter() is deprecated! Use wgpu.gpu.request_adapter() instead."
+    )

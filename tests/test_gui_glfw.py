@@ -113,7 +113,9 @@ def test_glfw_canvas_render():
     canvas = WgpuCanvas(max_fps=9999)
 
     # wgpu.utils.get_default_device()
-    adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter(
+        canvas=canvas, power_preference="high-performance"
+    )
     device = adapter.request_device()
     draw_frame1 = _get_draw_function(device, canvas)
 
@@ -201,7 +203,9 @@ def test_glfw_canvas_render_custom_canvas():
 
     canvas = CustomCanvas()
 
-    adapter = wgpu.request_adapter(canvas=canvas, power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter(
+        canvas=canvas, power_preference="high-performance"
+    )
     device = adapter.request_device()
     draw_frame = _get_draw_function(device, canvas)
 

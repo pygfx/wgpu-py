@@ -20,7 +20,7 @@ DEVICE = wgpu.utils.get_default_device()
 def test_release_adapter(n):
     yield {}
     for i in range(n):
-        yield wgpu.request_adapter(canvas=None, power_preference="high-performance")
+        yield wgpu.gpu.request_adapter(canvas=None, power_preference="high-performance")
 
 
 @create_and_release

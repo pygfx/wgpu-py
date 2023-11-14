@@ -19,10 +19,6 @@ def test_basic_api():
     assert wgpu.gpu.request_adapter
     assert wgpu.gpu.request_adapter_async
 
-    # Convenience functions
-    assert wgpu.request_adapter
-    # assert wgpu.request_adapter_async
-
     code1 = wgpu.base.GPU.request_adapter.__code__
     code2 = wgpu.base.GPU.request_adapter_async.__code__
     nargs1 = code1.co_argcount + code1.co_kwonlyargcount
@@ -111,7 +107,7 @@ def test_base_wgpu_api():
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_backend_is_selected_automatically():
     # Test this in a subprocess to have a clean wgpu with no backend imported yet
-    code = "import wgpu; print(wgpu.request_adapter(canvas=None))"
+    code = "import wgpu; print(wgpu.gpu.request_adapter(canvas=None))"
     result = subprocess.run(
         [sys.executable, "-c", code],
         stdout=subprocess.PIPE,
