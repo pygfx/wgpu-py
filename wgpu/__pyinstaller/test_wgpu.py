@@ -10,7 +10,6 @@ if "is_test" in sys.argv:
         "wgpu.backends.auto",
         "wgpu.backends.wgpu_native",
         "wgpu.gui.glfw",
-        "wgpu.utils.compute",
     ]
     excluded_modules = [
         "PySide6",
