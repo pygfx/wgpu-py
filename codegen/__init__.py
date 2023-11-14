@@ -43,7 +43,7 @@ def update_api():
     file_cache.write("base.py", code2)
 
     # Patch backend APIs: base.py -> API
-    for fname in ["backends/wgpu_native._api.py"]:
+    for fname in ["backends/wgpu_native/_api.py"]:
         code1 = file_cache.read(fname)
         print(f"### Patching API for {fname}")
         code2 = apipatcher.patch_backend_api(code1)
@@ -53,7 +53,7 @@ def update_api():
 def update_wgpu_native():
     """Update and check the wgpu-native backend."""
 
-    print("## Validating wgpu_native/_api.py")
+    print("## Validating backends/wgpu_native/_api.py")
 
     # Write the simple stuff
     wgpu_native_patcher.compare_flags()
