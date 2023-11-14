@@ -1,3 +1,4 @@
+# %%
 """
 Example compute shader that does ... nothing but copy a value from one
 buffer into another.
@@ -58,8 +59,22 @@ assert result == list(range(20))
 
 # %% The long version using the wgpu API
 
+# %% Create device
 # Create device and shader object
 device = wgpu.utils.get_default_device()
+
+# Or, you can select GPU by requesting all available adapters
+# adapters = wgpu.backends.rs.enumerate_adapters()
+# adapter = None
+# for adap in adapters:
+#     adapter_info = adap.request_adapter_info()
+#     if "NVIDIA" in adapter_info["device"]:
+#         adapter = adap
+#         break
+# assert adapter is not None
+# device = adapter.request_device()
+
+# %%
 cshader = device.create_shader_module(code=shader_source)
 
 # Create buffer objects, input buffer is mapped.
