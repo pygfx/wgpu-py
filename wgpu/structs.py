@@ -239,18 +239,20 @@ PipelineLayoutDescriptor = Struct(
 #: * label :: str = ""
 #: * code :: str
 #: * sourceMap :: dict = None
-#: * hints :: Dict[str, :obj:`structs.ShaderModuleCompilationHint <ShaderModuleCompilationHint>`] = None
+#: * compilationHints :: List[:obj:`structs.ShaderModuleCompilationHint <ShaderModuleCompilationHint>`] = []
 ShaderModuleDescriptor = Struct(
     "ShaderModuleDescriptor",
     label="str",
     code="str",
     source_map="dict",
-    hints="Dict[str, structs.ShaderModuleCompilationHint]",
+    compilation_hints="List[structs.ShaderModuleCompilationHint]",
 )
 
+#: * entryPoint :: str
 #: * layout :: Union[:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>`, :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>`] = None
 ShaderModuleCompilationHint = Struct(
     "ShaderModuleCompilationHint",
+    entry_point="str",
     layout="Union[GPUPipelineLayout, enums.AutoLayoutMode]",
 )
 
@@ -363,8 +365,8 @@ BlendComponent = Struct(
 )
 
 #: * format :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
-#: * depthWriteEnabled :: bool
-#: * depthCompare :: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>`
+#: * depthWriteEnabled :: bool = None
+#: * depthCompare :: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>` = None
 #: * stencilFront :: :obj:`structs.StencilFaceState <StencilFaceState>` = {}
 #: * stencilBack :: :obj:`structs.StencilFaceState <StencilFaceState>` = {}
 #: * stencilReadMask :: int = 0xFFFFFFFF
@@ -531,6 +533,7 @@ RenderPassDescriptor = Struct(
 )
 
 #: * view :: :class:`GPUTextureView <wgpu.GPUTextureView>`
+#: * depthSlice :: int = None
 #: * resolveTarget :: :class:`GPUTextureView <wgpu.GPUTextureView>` = None
 #: * clearValue :: Union[List[float], :obj:`structs.Color <Color>`] = None
 #: * loadOp :: :obj:`enums.LoadOp <wgpu.enums.LoadOp>`
@@ -538,6 +541,7 @@ RenderPassDescriptor = Struct(
 RenderPassColorAttachment = Struct(
     "RenderPassColorAttachment",
     view="GPUTextureView",
+    depth_slice="int",
     resolve_target="GPUTextureView",
     clear_value="Union[List[float], structs.Color]",
     load_op="enums.LoadOp",

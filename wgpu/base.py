@@ -345,13 +345,15 @@ class GPUAdapter:
         """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
-    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo(optional sequence<DOMString> unmaskHints = []);
-    def request_adapter_info(self, unmask_hints=[]):
+    # FIXME: was request_adapter_info(self, unmask_hints=[]):
+    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
+    def request_adapter_info(self):
         """Get a dict with information about this adapter, such as the vendor and devicen name."""
         return self._adapter_info
 
-    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo(optional sequence<DOMString> unmaskHints = []);
-    async def request_adapter_info_async(self, unmask_hints=[]):
+    # FIXME: was request_adapter_info_async(self, unmask_hints=[]):
+    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
+    async def request_adapter_info_async(self):
         """Async get information about this adapter."""
         return self._adapter_info
 
@@ -682,6 +684,7 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
+    # FIXME: was create_shader_module(self, *, label="", code: str, source_map: dict = None, hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None):
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
     def create_shader_module(
         self,
@@ -689,7 +692,7 @@ class GPUDevice(GPUObjectBase):
         label="",
         code: str,
         source_map: dict = None,
-        hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None,
+        compilation_hints: "List[structs.ShaderModuleCompilationHint]" = [],
     ):
         """Create a `GPUShaderModule` object from shader source.
 
@@ -1629,7 +1632,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
+    # FIXME: unknown api: method GPUCommandEncoder.write_timestamp
     def write_timestamp(self, query_set, query_index):
         """TODO"""
         raise NotImplementedError()

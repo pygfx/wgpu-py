@@ -383,9 +383,13 @@ TextureSampleType = Enum(
 )
 
 #: * "write_only"
+#: * "read_only"
+#: * "read_write"
 StorageTextureAccess = Enum(
     "StorageTextureAccess",
     write_only="write-only",
+    read_only="read-only",
+    read_write="read-write",
 )
 
 #: * "error"

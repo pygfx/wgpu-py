@@ -1050,13 +1050,14 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreatePipelineLayout(self._internal, struct)
         return GPUPipelineLayout(label, id, self, bind_group_layouts)
 
+    # FIXME: was create_shader_module(self, *, label="", code: str, source_map: dict = None, hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None):
     def create_shader_module(
         self,
         *,
         label="",
         code: str,
         source_map: dict = None,
-        hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None,
+        compilation_hints: "List[structs.ShaderModuleCompilationHint]" = [],
     ):
         if hints:
             for val in hints.values():
