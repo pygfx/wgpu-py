@@ -1056,11 +1056,11 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         label="",
         code: str,
         source_map: dict = None,
-        hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None,
+        compilation_hints: "List[structs.ShaderModuleCompilationHint]" = [],
     ):
-        if hints:
-            for val in hints.values():
-                check_struct("ShaderModuleCompilationHint", val)
+        if compilation_hints:
+            for hint in compilation_hints.values():
+                check_struct("ShaderModuleCompilationHint", hint)
         if isinstance(code, str):
             looks_like_wgsl = any(
                 x in code for x in ("@compute", "@vertex", "@fragment")
@@ -2305,9 +2305,6 @@ class GPUCommandEncoder(
         # _internal to None to avoid releasing a nonexistent object.
         self._internal = None
         return GPUCommandBuffer(label, id, self)
-
-    def write_timestamp(self, query_set, query_index):
-        raise NotImplementedError()
 
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset

@@ -345,13 +345,13 @@ class GPUAdapter:
         """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
-    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo(optional sequence<DOMString> unmaskHints = []);
-    def request_adapter_info(self, unmask_hints=[]):
+    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
+    def request_adapter_info(self):
         """Get a dict with information about this adapter, such as the vendor and devicen name."""
         return self._adapter_info
 
-    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo(optional sequence<DOMString> unmaskHints = []);
-    async def request_adapter_info_async(self, unmask_hints=[]):
+    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
+    async def request_adapter_info_async(self):
         """Async get information about this adapter."""
         return self._adapter_info
 
@@ -689,7 +689,7 @@ class GPUDevice(GPUObjectBase):
         label="",
         code: str,
         source_map: dict = None,
-        hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None,
+        compilation_hints: "List[structs.ShaderModuleCompilationHint]" = [],
     ):
         """Create a `GPUShaderModule` object from shader source.
 
@@ -701,7 +701,7 @@ class GPUDevice(GPUObjectBase):
             code (str | bytes): The shader code, as WGSL, GLSL or SpirV.
                 For GLSL code, the label must be given and contain the word
                 'comp', 'vert' or 'frag'. For SpirV the code must be bytes.
-            hints: unused.
+            compilation_hints: currently unused.
         """
         raise NotImplementedError()
 
@@ -1627,11 +1627,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         Arguments:
             label (str): A human readable label. Optional.
         """
-        raise NotImplementedError()
-
-    # IDL: undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
-    def write_timestamp(self, query_set, query_index):
-        """TODO"""
         raise NotImplementedError()
 
     # IDL: undefined resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
