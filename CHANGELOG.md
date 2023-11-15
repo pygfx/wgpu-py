@@ -1,12 +1,11 @@
 # Changelog / release notes
 
-WGPU and WebGPU are still changing fast, and with that we do to. We dont
+WebGPU and wgpu-native are still changing fast, and with that we do to. We do
 not yet attempt to make things backwards compatible. Instead we try to
 be precise about tracking changes to the public API.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
 
 Possible sections in each release:
 
@@ -34,8 +33,8 @@ A summary to help you update your code:
 import wgpu
 
 
-# X wgpu.request_adapter(...)
-wgpu.gpu.request_adapter(...)
+# X wgpu.request_adapter(canvas=None, power_preference="high-performance")
+wgpu.gpu.request_adapter(power_preference="high-performance")
 
 # X buffer.map_read()
 buffer.map("READ")
@@ -52,7 +51,7 @@ buffer.unmap()
 
 Added:
 
-* The `wgpu.gpu` object, which represents the API entrypoint.
+* The `wgpu.gpu` object, which represents the API entrypoint. This makes the API more clear and more similar to the WebGPU API.
 * A convenience `auto` backend, and a stub `js_webgpu` backend.
 * New function `enumerate_adapters()` in the `wgpu_native` backend.
 * Warning about pip when wgpu-native binary is missing on Linux
@@ -68,8 +67,8 @@ Added:
 Changed:
 
 * Can create a buffer that is initially mapped: `device.create_buffer(..., mapped_at_creation=True)` is enabled again.
-* The `wgpu.request_adapter()` is moved to `wgpu.gpu.request_adapter()`. Same for the async version.
-  This puts all API entrypoint stuff on the `wgpu.gpu` object, which better reflects the WebGPU api.
+* The `wgpu.request_adapter()` function is moved to `wgpu.gpu.request_adapter()`. Same for the async version.
+* The `canvas` argument of the `request_adapter()` function is now optional.
 * The `rs` backend is renamed to `wgpu_native`.
 * It is no longer necessary to explicitly import the backend.
 * The `GPUDevice.request_device_tracing()` method is now a function in the `wgpu_native` backend.
