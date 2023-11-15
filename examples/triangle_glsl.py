@@ -47,18 +47,14 @@ void main()
 
 def main(canvas, power_preference="high-performance", limits=None):
     """Regular function to setup a viz on the given canvas."""
-    # Note: passing the canvas here can (oddly enough) prevent the
-    # adapter from being found. Seen with wx/Linux.
-    adapter = wgpu.gpu.request_adapter(canvas=None, power_preference=power_preference)
+    adapter = wgpu.gpu.request_adapter(power_preference=power_preference)
     device = adapter.request_device(required_limits=limits)
     return _main(canvas, device)
 
 
 async def main_async(canvas):
     """Async function to setup a viz on the given canvas."""
-    adapter = await wgpu.gpu.request_adapter_async(
-        canvas=canvas, power_preference="high-performance"
-    )
+    adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async(required_limits={})
     return _main(canvas, device)
 

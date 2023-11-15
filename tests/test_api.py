@@ -107,7 +107,7 @@ def test_base_wgpu_api():
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_backend_is_selected_automatically():
     # Test this in a subprocess to have a clean wgpu with no backend imported yet
-    code = "import wgpu; print(wgpu.gpu.request_adapter(canvas=None))"
+    code = "import wgpu; print(wgpu.gpu.request_adapter())"
     result = subprocess.run(
         [sys.executable, "-c", code],
         stdout=subprocess.PIPE,
