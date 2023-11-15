@@ -1050,7 +1050,6 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreatePipelineLayout(self._internal, struct)
         return GPUPipelineLayout(label, id, self, bind_group_layouts)
 
-    # FIXME: was create_shader_module(self, *, label="", code: str, source_map: dict = None, hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None):
     def create_shader_module(
         self,
         *,
@@ -1059,9 +1058,9 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         source_map: dict = None,
         compilation_hints: "List[structs.ShaderModuleCompilationHint]" = [],
     ):
-        if hints:
-            for val in hints.values():
-                check_struct("ShaderModuleCompilationHint", val)
+        if compilation_hints:
+            for hint in compilation_hints.values():
+                check_struct("ShaderModuleCompilationHint", hint)
         if isinstance(code, str):
             looks_like_wgsl = any(
                 x in code for x in ("@compute", "@vertex", "@fragment")
@@ -2306,9 +2305,6 @@ class GPUCommandEncoder(
         # _internal to None to avoid releasing a nonexistent object.
         self._internal = None
         return GPUCommandBuffer(label, id, self)
-
-    def write_timestamp(self, query_set, query_index):
-        raise NotImplementedError()
 
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset

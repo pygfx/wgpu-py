@@ -345,13 +345,11 @@ class GPUAdapter:
         """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
-    # FIXME: was request_adapter_info(self, unmask_hints=[]):
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
     def request_adapter_info(self):
         """Get a dict with information about this adapter, such as the vendor and devicen name."""
         return self._adapter_info
 
-    # FIXME: was request_adapter_info_async(self, unmask_hints=[]):
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
     async def request_adapter_info_async(self):
         """Async get information about this adapter."""
@@ -684,7 +682,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # FIXME: was create_shader_module(self, *, label="", code: str, source_map: dict = None, hints: "Dict[str, structs.ShaderModuleCompilationHint]" = None):
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
     def create_shader_module(
         self,
@@ -704,7 +701,7 @@ class GPUDevice(GPUObjectBase):
             code (str | bytes): The shader code, as WGSL, GLSL or SpirV.
                 For GLSL code, the label must be given and contain the word
                 'comp', 'vert' or 'frag'. For SpirV the code must be bytes.
-            hints: unused.
+            compilation_hints: currently unused.
         """
         raise NotImplementedError()
 
@@ -1630,11 +1627,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         Arguments:
             label (str): A human readable label. Optional.
         """
-        raise NotImplementedError()
-
-    # FIXME: unknown api: method GPUCommandEncoder.write_timestamp
-    def write_timestamp(self, query_set, query_index):
-        """TODO"""
         raise NotImplementedError()
 
     # IDL: undefined resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
