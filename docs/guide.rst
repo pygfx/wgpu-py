@@ -43,7 +43,7 @@ you can obtain a device.
 
 .. code-block:: py
 
-    adapter = wgpu.gpu.request_adapter(canvas=canvas, power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
     device = adapter.request_device()
 
 The ``wgpu.gpu`` object is the API entrypoint (:class:`wgpu.GPU`). It contains just a handful of functions,
