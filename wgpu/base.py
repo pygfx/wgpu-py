@@ -82,39 +82,37 @@ class GPU:
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
     def request_adapter(
-        self, *, canvas, power_preference=None, force_fallback_adapter=False
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 
         Arguments:
-            canvas (WgpuCanvasInterface): The canvas that the adapter should
-                be able to render to (to create a swap chain for, to be precise).
-                Can be None if you're not rendering to screen (or if you're
-                confident that the returned adapter will work just fine).
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
+            canvas (WgpuCanvasInterface): The canvas that the adapter should
+                be able to render to. This can typically be left to None.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu  # noqa
 
         return gpu.request_adapter(
-            canvas=canvas,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
         )
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include a canvas object")
     async def request_adapter_async(
-        self, *, canvas, power_preference=None, force_fallback_adapter=False
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Async version of `request_adapter()`."""
         return self.request_adapter(
-            canvas=canvas,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
         )
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();

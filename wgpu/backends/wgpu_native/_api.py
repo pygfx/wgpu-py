@@ -177,21 +177,19 @@ libf = SafeLibCalls(lib, error_handler)
 
 class GPU(base.GPU):
     def request_adapter(
-        self, *, canvas, power_preference=None, force_fallback_adapter=False
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 
-        This is the implementation based on the Rust wgpu-native library.
+        This is the implementation based on wgpu-native.
 
         Arguments:
-            canvas (WgpuCanvas): The canvas that the adapter should be able to
-                render to (to create a swap chain for, to be precise). Can be None
-                if you're not rendering to screen (or if you're confident that the
-                returned adapter will work just fine).
-            power_preference(PowerPreference): "high-performance" or "low-power".
+            power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
+            canvas (WgpuCanvasInterface): The canvas that the adapter should
+                be able to render to. This can typically be left to None.
         """
 
         # ----- Surface ID
@@ -335,15 +333,15 @@ class GPU(base.GPU):
         return GPUAdapter(adapter_id, features, limits, adapter_info)
 
     async def request_adapter_async(
-        self, *, canvas, power_preference=None, force_fallback_adapter=False
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Async version of ``request_adapter()``.
-        This function uses the Rust WGPU library.
+        This is the implementation based on wgpu-native.
         """
         return self.request_adapter(
-            canvas=canvas,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
         )  # no-cover
 
 
