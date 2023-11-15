@@ -28,9 +28,9 @@ elif platform.system() == "Windows":
 else:
     pass  # don't include binaries; user will have to arrange for the lib
 
-runtime_deps = ["cffi>=1.15.0rc2", "rubicon-objc>=0.4.1; sys_platform == 'darwin'"]
+runtime_deps = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'"]
 extra_deps = {
-    "jupyter": ["jupyter_rfb>=0.3.1"],
+    "jupyter": ["jupyter_rfb>=0.4.2"],
     "glfw": ["glfw>=1.9"],
     "docs": ["sphinx>7.2", "sphinx_rtd_theme"],
 }

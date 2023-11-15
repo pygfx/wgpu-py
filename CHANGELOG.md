@@ -18,21 +18,80 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.12.0] - tbd
+### [v0.12.0] - 15-11-2023
 
-Changed:
+This is a big release that contains many improvements, but also multiple API changes.
 
-* The `wgpu.request_adapter()` is moved to `wgpu.gpu.request_adapter()`. Same for the async version.
-  This puts all API entrypoint stuff on the `wgpu.gpu` object, which also better reflects the WebGPU api.
-* The `rs` backend is renamed to `wgpu_native`.
-* It is no longer necessary to explicitly import the backend.
-* The `GPUDevice.request_device_tracing()` method is now a function in the `wgpu_native` backend.
+Most backward incompatible changes are due to two things: the backend
+system has been refactored, making it simpler and future-proof. And we
+have revised the buffer mapping API, making it more similar to the
+WebGPU spec, and providing more flexible and performant ways to set
+buffer data.
+
+A summary to help you update your code:
+```py
+# X import wgpu.backends.rs
+import wgpu
+
+
+# X wgpu.request_adapter(...)
+wgpu.gpu.request_adapter(...)
+
+# X buffer.map_read()
+buffer.map("READ")
+buffer.read_mapped(...)
+buffer.read_mapped(...)
+buffer.unmap()
+
+# X buffer.map_write()
+buffer.map("WRITE")
+buffer.write_mapped(data1, ...)
+buffer.write_mapped(data2, ...)
+buffer.unmap()
+```
 
 Added:
 
-* Convenience `auto` backend.
-* Stub `js_webgpu` backend.
+* The `wgpu.gpu` object, which represents the API entrypoint.
+* A convenience `auto` backend, and a stub `js_webgpu` backend.
 * New function `enumerate_adapters()` in the `wgpu_native` backend.
+* Warning about pip when wgpu-native binary is missing on Linux
+* The `GPUBuffer` has new methods `map()`, `map_async()`, `unmap()`. These have been
+  part of the WebGPU spec for a long time, but we had an alternative API, until now.
+* The `GPUBuffer` has new methods `read_mapped()` and `write_mapped()`. These are not
+  present in the WebGPU spec; they are the Pythonic alternative to `getMappedRange()`.
+* Flags can now be passed as strings, and can even be combined using "MAP_READ|COPY_DIST".
+* GUI events have an extra "timestamp" field, and wheel events an additional "buttons" field.
+* A diagnostics subsystem that amongst other things counts GPU objects. Try e.g. `wgpu.diagnostics.print_report()`.
+* Several improvements to the shadertoy util: offscreen support and a snapshot method.
+
+Changed:
+
+* Can create a buffer that is initially mapped: `device.create_buffer(..., mapped_at_creation=True)` is enabled again.
+* The `wgpu.request_adapter()` is moved to `wgpu.gpu.request_adapter()`. Same for the async version.
+  This puts all API entrypoint stuff on the `wgpu.gpu` object, which better reflects the WebGPU api.
+* The `rs` backend is renamed to `wgpu_native`.
+* It is no longer necessary to explicitly import the backend.
+* The `GPUDevice.request_device_tracing()` method is now a function in the `wgpu_native` backend.
+* We no longer force using Vulkan on Windows. For now wgpu-native still prefers Vulkan over D3D12.
+* The `wgpu.utils` subpackage is imported by default, but most submodules are not. This means that `compute_with_buffers` must be explicitly imported from `wgpu.utils.compute`.
+
+Deprecated:
+
+* `wgpu.request_adapter()` and its async version. Use `wgpu.gpu.request_adapter()` instead.
+* The `GPUBuffer` methods `map_read()`and `map_write()` are deprecated, in favor of `map()`, `unmap()`, `read_mapped()` and `write_mapped()`.
+
+To be clear, these are not changed:
+
+* The convenient `device.create_buffer_with_data()` (not part of the WebGPU spec) is still available.
+* The `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()` methods are unchanged.
+
+Fixed:
+
+* The shaderutil now re-uses the default device, avoiding memoryleaks when running multiple consecutively.
+* The GUI backend selection takes into account whether a backend module is already imported.
+* The offscreen GUI backend no longer uses asyncio (it does not need an event loop).
+* Prevent a few classes of memoryleaks. Mind that creating many `GPUDevice` objects still leaks.
 
 
 ### [v0.11.0] - 11-10-2023
@@ -40,33 +99,6 @@ Added:
 Changed:
 
 * Update to wgpu-native 0.17.2.1. No changes are needed in downstream code.
-
-
-### [v0.11.0] - t.b.d.
-
-We have revised the buffer mapping API, making it more similar to the
-WebGPU spec, and providing more flexible and performant ways to set
-buffer data.
-
-Added:
-
-* The `GPUBuffer` has new methods `map()`, `map_async()`, `unmap()`. These have been
-  part of the WebGPU spec for a long time, but we had an alternative API, until now.
-* The `GPUBuffer` has new methods `read_mapped()` and `write_mapped()`. These are not
-  present in the WebGPU spec; they are the Pythonic alternative to `getMappedRange()`.
-
-Changed:
-
-* Can create a buffer that is initially mapped: `device.create_buffer(..., mapped_at_creation=True)` is enabled again.
-
-Removed:
-
-* The `GPUBuffer` methods `map_read()`and `map_write()` are deprecated, in favor of `map()`, `unmap()`, `read_mapped()` and `write_mapped()`.
-
-For the record, these are not changed:
-
-* The convenient `device.create_buffer_with_data()` (not part of the WebGPU spec) is also available.
-* The `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()` methods are unchanged.
 
 
 ### [v0.10.0] - 09-10-2023
