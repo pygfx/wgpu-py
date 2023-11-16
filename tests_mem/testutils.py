@@ -57,6 +57,7 @@ can_use_wgpu_lib = _determine_can_use_wgpu_lib()
 can_use_glfw = _determine_can_use_glfw()
 can_use_pyside6 = _determine_can_use_pyside6()
 is_ci = bool(os.getenv("CI", None))
+is_pypy = "__pypy__" in sys.builtin_module_names
 
 TEST_ITERS = None
 
@@ -75,7 +76,8 @@ def clear_mem():
     gc.collect()
     time.sleep(0.001)
     gc.collect()
-
+    if is_pypy:
+        gc.collect()
 
 def get_counts():
     """Get a dict that maps object names to a 2-tuple represening

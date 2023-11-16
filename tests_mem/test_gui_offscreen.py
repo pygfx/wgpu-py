@@ -8,7 +8,7 @@ import weakref
 import wgpu
 import pytest
 import testutils  # noqa
-from testutils import can_use_wgpu_lib, create_and_release
+from testutils import can_use_wgpu_lib, create_and_release, is_pypy
 
 
 if not can_use_wgpu_lib:
@@ -75,7 +75,8 @@ def test_release_canvas_context(n):
 
     del c
     gc.collect()
-    gc.collect() #?
+    if is_pypy:
+        gc.collect() # Need a bit more on pypy :)
 
     # Check that the canvas objects are really deleted
     assert not canvases
