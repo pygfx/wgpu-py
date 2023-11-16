@@ -2,10 +2,13 @@
 Test creation of offscreen canvas windows.
 """
 
+import gc
+import weakref
+
 import wgpu
 import pytest
 import testutils  # noqa
-from testutils import can_use_wgpu_lib, create_and_release
+from testutils import can_use_wgpu_lib, create_and_release, is_pypy
 
 
 if not can_use_wgpu_lib:
@@ -62,11 +65,21 @@ def test_release_canvas_context(n):
         },
     }
 
+    canvases = weakref.WeakSet()
     for i in range(n):
         c = WgpuCanvas()
+        canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         c.draw()
         yield c.get_context()
+
+    del c
+    gc.collect()
+    if is_pypy:
+        gc.collect()  # Need a bit more on pypy :)
+
+    # Check that the canvas objects are really deleted
+    assert not canvases
 
 
 TEST_FUNCS = [test_release_canvas_context]

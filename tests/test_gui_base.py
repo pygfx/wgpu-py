@@ -2,9 +2,11 @@
 Test the canvas basics.
 """
 
+import gc
+
 import numpy as np
 import wgpu.gui  # noqa
-from testutils import run_tests, can_use_wgpu_lib
+from testutils import run_tests, can_use_wgpu_lib, is_pypy
 from pytest import mark
 
 
@@ -193,8 +195,8 @@ def test_weakbind():
     del f1
     del f2
 
-    # May be needed (on pypy?) to force a collection
-    # gc.collect()
+    if is_pypy:
+        gc.collect()
 
     assert len(xx) == 2
     b1()
