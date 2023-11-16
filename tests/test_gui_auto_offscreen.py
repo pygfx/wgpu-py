@@ -3,11 +3,12 @@ Test the force offscreen auto gui mechanism.
 """
 
 import os
+import gc
 import weakref
 
 import wgpu
 from pytest import fixture, skip
-from testutils import can_use_wgpu_lib
+from testutils import can_use_wgpu_lib, is_pypy
 
 
 if not can_use_wgpu_lib:
@@ -60,4 +61,6 @@ def test_offscreen_canvas_del():
 
     assert ref() is not None
     del canvas
+    if is_pypy:
+        gc.collect()
     assert ref() is None
