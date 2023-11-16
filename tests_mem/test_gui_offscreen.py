@@ -75,6 +75,7 @@ def test_release_canvas_context(n):
 
     del c
     gc.collect()
+    gc.collect() #?
 
     # Check that the canvas objects are really deleted
     assert not canvases
