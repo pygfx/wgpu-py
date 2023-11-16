@@ -79,6 +79,7 @@ def clear_mem():
     if is_pypy:
         gc.collect()
 
+
 def get_counts():
     """Get a dict that maps object names to a 2-tuple represening
     the counts in py and wgpu-native.
