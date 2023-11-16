@@ -42,7 +42,7 @@ setup(
         exclude=["codegen", "codegen.*", "tests", "tests.*", "examples", "examples.*"]
     ),
     package_data={f"{NAME}.resources": resources_globs},
-    python_requires=">=3.7.0",
+    python_requires=">=3.8.0",
     install_requires=runtime_deps,
     extras_require=extra_deps,
     license="BSD 2-Clause",
