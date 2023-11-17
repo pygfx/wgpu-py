@@ -3,13 +3,26 @@ Core utilities that are loaded into the root namespace or used internally.
 """
 
 import re
+import sys
+import atexit
 import logging
-from pkg_resources import resource_filename
+import importlib.resources
+from contextlib import ExitStack
+
+
+_resource_files = ExitStack()
+atexit.register(_resource_files.close)
 
 
 def get_resource_filename(name):
     """Get the filename to a wgpu resource."""
-    return resource_filename("wgpu.resources", name)
+    if sys.version_info < (3, 9):
+        context = importlib.resources.path("wgpu.resources", name)
+    else:
+        ref = importlib.resources.files("wgpu.resources") / name
+        context = importlib.resources.as_file(ref)
+    path = _resource_files.enter_context(context)
+    return str(path)
 
 
 class WGPULogger(logging.getLoggerClass()):
