@@ -133,6 +133,6 @@ def find_examples(query=None, negative_query=None, return_stems=False):
 can_use_wgpu_lib = _determine_can_use_wgpu_lib()
 can_use_glfw = _determine_can_use_glfw()
 is_ci = bool(os.getenv("CI", None))
-is_pypy = "__pypy__" in sys.builtin_module_names
+is_pypy = sys.implementation.name == "pypy"
 wgpu_backend = get_wgpu_backend()
 is_lavapipe = wgpu_backend.lower() == "cpu vulkan"

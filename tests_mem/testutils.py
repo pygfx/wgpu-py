@@ -57,7 +57,7 @@ can_use_wgpu_lib = _determine_can_use_wgpu_lib()
 can_use_glfw = _determine_can_use_glfw()
 can_use_pyside6 = _determine_can_use_pyside6()
 is_ci = bool(os.getenv("CI", None))
-is_pypy = "__pypy__" in sys.builtin_module_names
+is_pypy = sys.implementation.name == "pypy"
 
 TEST_ITERS = None
 
