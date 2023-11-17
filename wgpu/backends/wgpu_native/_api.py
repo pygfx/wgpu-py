@@ -1167,11 +1167,16 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             # not used: constants
         )
 
+        if isinstance(layout, GPUPipelineLayout):
+            layout_id = layout._internal
+        elif isinstance(layout, str) and layout == enums.AutoLayoutMode.auto:
+            layout_id = ffi.NULL
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
         struct = new_struct_p(
             "WGPUComputePipelineDescriptor *",
             label=to_c_label(label),
-            layout=layout._internal,
+            layout=layout_id,
             compute=c_compute_stage,
             # not used: nextInChain
             # not used: compute
