@@ -246,3 +246,9 @@ Freezing apps
 In wgpu a PyInstaller-hook is provided to help simplify the freezing process
 (it e.g. ensures that the wgpu-native DLL is included). This hook requires
 PyInstaller version 4+.
+
+Our hook also includes ``glfw`` when it is available, so code using ``wgpu.gui.auto``
+should Just Work.
+
+Note that PyInstaller needs ``wgpu`` to be installed in `site-packages` for
+the hook to work (i.e. it seems not to work with a ``pip -e .`` dev install).
