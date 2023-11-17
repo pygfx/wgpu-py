@@ -10,6 +10,8 @@ import importlib.resources
 from contextlib import ExitStack
 
 
+# Our resources are most probably always on the file system. But in
+# case they don't we have a nice exit handler to remove temporary files.
 _resource_files = ExitStack()
 atexit.register(_resource_files.close)
 
