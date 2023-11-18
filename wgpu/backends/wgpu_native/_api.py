@@ -1168,22 +1168,34 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
         )
 
         if isinstance(layout, GPUPipelineLayout):
-            layout_id = layout._internal
-        elif isinstance(layout, str) and layout == enums.AutoLayoutMode.auto:
-            layout_id = ffi.NULL
+            # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
+            struct = new_struct_p(
+                "WGPUComputePipelineDescriptor *",
+                label=to_c_label(label),
+                layout=layout._internal,
+                compute=c_compute_stage,
+                # not used: nextInChain
+            )
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
-        struct = new_struct_p(
-            "WGPUComputePipelineDescriptor *",
-            label=to_c_label(label),
-            layout=layout_id,
-            compute=c_compute_stage,
-            # not used: nextInChain
-            # not used: compute
-        )
+            # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
+            id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
+        elif layout == enums.AutoLayoutMode.auto:
+            # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
+            struct = new_struct_p(
+                "WGPUComputePipelineDescriptor *",
+                label=to_c_label(label),
+                layout=ffi.NULL,
+                compute=c_compute_stage,
+                # not used: nextInChain
+            )
+            # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
+            id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
 
-        # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
-        id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
+            # Get a layout from the pipeline
+            # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
+            layout_id = libf.wgpuComputePipelineGetBindGroupLayout(id, 0)
+            bind_group_layout = GPUBindGroupLayout("", layout_id, self._device, [])
+            layout = self.create_pipeline_layout(bind_group_layouts=[bind_group_layout])
         return GPUComputePipeline(label, id, self, layout)
 
     async def create_compute_pipeline_async(
