@@ -1192,10 +1192,15 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
 
             # Get a layout from the pipeline
-            # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
-            layout_id = libf.wgpuComputePipelineGetBindGroupLayout(id, 0)
-            bind_group_layout = GPUBindGroupLayout("", layout_id, self._device, [])
-            layout = self.create_pipeline_layout(bind_group_layouts=[bind_group_layout])
+            # Note: not sure how we can know max_group_index, so we assume there is only bind group zero.
+            max_group_index = 0
+            bind_group_layouts = []
+            for index in range(max_group_index + 1):
+                # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
+                layout_id = libf.wgpuComputePipelineGetBindGroupLayout(id, 0)
+                bind_group_layout = GPUBindGroupLayout("", layout_id, self._device, [])
+                bind_group_layouts.append(bind_group_layout)
+            layout = self.create_pipeline_layout(bind_group_layouts=bind_group_layouts)
         return GPUComputePipeline(label, id, self, layout)
 
     async def create_compute_pipeline_async(
