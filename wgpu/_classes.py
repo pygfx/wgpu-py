@@ -2060,10 +2060,29 @@ apidiff.remove_hidden_methods(globals())
 
 
 def _seed_object_counts():
-    for key, val in globals().items():
-        if key.startswith("GPU") and not key.endswith(("Base", "Mixin")):
-            if hasattr(val, "_ot"):
-                object_tracker.counts[key] = 0
+    m = globals()
+    for class_name in __all__:
+        cls = m[class_name]
+        if not class_name.endswith(("Base", "Mixin")):
+            if hasattr(cls, "_ot"):
+                object_tracker.counts[class_name] = 0
+
+
+def generic_repr(self):
+    module_name = "wgpu"
+    if "backends." in self.__module__:
+        backend_name = self.__module__.split("backends")[-1].split(".")[1]
+        module_name = f"wgpu.backends.{backend_name}"
+    return f"<{module_name}.{self.__class__.__name__} at {hex(id(self))}>"
+
+
+def _set_repr_methods():
+    m = globals()
+    for class_name in __all__:
+        cls = m[class_name]
+        if len(cls.mro()) == 2:  # class itself and object
+            cls.__repr__ = generic_repr
 
 
 _seed_object_counts()
+_set_repr_methods()
