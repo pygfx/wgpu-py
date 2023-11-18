@@ -180,6 +180,8 @@ Flags are integer bitmasks, but can also be passed as strings, so instead of
 List of GPU classes
 -------------------
 
+.. automodule:: wgpu.classes
+
 .. autosummary::
     :nosignatures:
     :toctree: generated
