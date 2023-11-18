@@ -1,6 +1,9 @@
 """
+These enums are defined in ``wgpu.enums``, but are also available from the root wgpu namespace.
+
 Enums are choices; exactly one field must be selected.
-These enums are also available in the root wgpu namespace.
+Enum values are strings, so instead of ``wgpu.TextureFormat.rgba8unorm``,
+one can also write ``"rgba8unorm"``.
 """
 
 _use_sphinx_repr = False

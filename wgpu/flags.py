@@ -1,6 +1,10 @@
 """
+These flags are defined in ``wgpu.flags``, but are also available from the root wgpu namespace.
+
 Flags are bitmasks; zero or multiple fields can be set at the same time.
-These flags are also available in the root wgpu namespace.
+Flags are integer bitmasks, but can also be passed as strings, so instead of
+``wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST``,
+one can also write ``"MAP_READ|COPY_DIST"``.
 """
 
 _use_sphinx_repr = False

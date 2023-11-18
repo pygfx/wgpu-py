@@ -1,4 +1,6 @@
 """
+These structs are defined in ``wgpu.structs``.
+
 The sructs in wgpu-py are represented as Python dictionaries.
 Fields that have default values (as indicated below) may be omitted.
 """
