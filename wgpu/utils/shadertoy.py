@@ -34,6 +34,7 @@ vec4 i_mouse;
 float i_time;
 float i_time_delta;
 int i_frame;
+vec4 i_date;
 
 // Shadertoy compatibility, see we can use the same code copied from shadertoy website
 
@@ -42,6 +43,7 @@ int i_frame;
 #define iTimeDelta i_time_delta
 #define iMouse i_mouse
 #define iFrame i_frame
+#define iDate i_date
 
 #define mainImage shader_main
 """
@@ -56,6 +58,7 @@ struct ShadertoyInput {
     float time;
     float time_delta;
     int frame;
+    vec4 date;
 };
 
 layout(binding = 0) uniform ShadertoyInput input;
@@ -67,7 +70,7 @@ void main(){
     i_time_delta = input.time_delta;
     i_mouse = input.mouse;
     i_frame = input.frame;
-
+    i_date = input.date;
 
     vec2 uv = vec2(uv.x, 1.0 - uv.y);
     vec2 frag_coord = uv * i_resolution.xy;
@@ -239,8 +242,9 @@ class Shadertoy:
     * ``i_frame``: the frame number
     * ``i_resolution``: the resolution of the shadertoy
     * ``i_mouse``: the mouse position in pixels
+    * ``i_date``: the current date and time as a vec4 (year, month, day, seconds)
 
-    For GLSL, you can also use the aliases ``iTime``, ``iTimeDelta``, ``iFrame``, ``iResolution``, and ``iMouse`` of these built-in variables,
+    For GLSL, you can also use the aliases ``iTime``, ``iTimeDelta``, ``iFrame``, ``iResolution``, ``iMouse`` and ``iDate`` of these built-in variables,
     the entry point function also has an alias ``mainImage``, so you can use the shader code copied from shadertoy website without making any changes.
     """
 
@@ -255,6 +259,7 @@ class Shadertoy:
             ("time", "f", 1),
             ("time_delta", "f", 1),
             ("frame", "I", 1),
+            ("date", "f", 4),
         )
 
         self._shader_code = shader_code
@@ -428,9 +433,21 @@ class Shadertoy:
 
         if not hasattr(self, "_frame"):
             self._frame = 0
+        
+        time_struct = time.localtime()
+        self._uniform_data["date"] = (
+            float(time_struct.tm_year),
+            float(time_struct.tm_mon - 1),
+            float(time_struct.tm_mday),
+            time_struct.tm_hour * 3600
+            + time_struct.tm_min * 60
+            + time_struct.tm_sec
+            + now % 1,
+        )
 
         self._uniform_data["frame"] = self._frame
         self._frame += 1
+
 
     def _draw_frame(self):
         # Update uniform buffer
