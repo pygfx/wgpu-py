@@ -1192,7 +1192,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
 
             # Get a layout from the pipeline
-            # Note: not sure how we can know max_group_index, so we assume there is only bind group zero.
+            # TODO: not sure how we can know max_group_index, so we assume there is only bind group zero.
             max_group_index = 0
             bind_group_layouts = []
             for index in range(max_group_index + 1):
