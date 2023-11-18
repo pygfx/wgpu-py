@@ -182,6 +182,8 @@ List of GPU classes
 
 .. automodule:: wgpu.classes
 
+.. currentmodule:: wgpu
+
 .. autosummary::
     :nosignatures:
     :toctree: generated
