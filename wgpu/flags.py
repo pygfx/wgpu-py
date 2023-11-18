@@ -20,11 +20,20 @@ class Flags:
     def __repr__(self):
         if _use_sphinx_repr:  # no-cover
             return ""
-        options = ", ".join(self)
-        return f"<{self.__class__.__name__} {self._name}: {options}>"
+        values = ", ".join(self)
+        return f"<wgpu.{self._name} flags with values: {values}>"
 
 
 # There are 5 flags
+
+__all__ = [
+    "BufferUsage",
+    "MapMode",
+    "TextureUsage",
+    "ShaderStage",
+    "ColorWrite",
+]
+
 
 #: * "MAP_READ" (1)
 #: * "MAP_WRITE" (2)

@@ -57,8 +57,8 @@ class Flags:
     def __repr__(self):
         if _use_sphinx_repr:  # no-cover
             return ""
-        options = ", ".join(self)
-        return f"<{self.__class__.__name__} {self._name}: {options}>"
+        values = ", ".join(self)
+        return f"<wgpu.{self._name} flags with values: {values}>"
 
 '''.lstrip()
 
@@ -69,6 +69,12 @@ def write_flags():
     # Preamble
     pylines = [flags_preamble]
     pylines.append(f"# There are {n} flags\n")
+    # List'm
+    pylines.append("__all__ = [")
+    for name in idl.flags.keys():
+        pylines.append(f'    "{name}",')
+    pylines.append("]\n\n")
+    # The flags definitions
     for name, d in idl.flags.items():
         # Object-docstring as a comment
         for key, val in d.items():
@@ -110,7 +116,7 @@ class Enum:
         if _use_sphinx_repr:  # no-cover
             return ""
         options = ", ".join(f"'{x}'" for x in self)
-        return f"<{self.__class__.__name__} {self._name}: {options}>"
+        return f"<wgpu.{self._name} enum with options: {options}>"
 
 '''.lstrip()
 
@@ -121,6 +127,11 @@ def write_enums():
     # Preamble
     pylines = [enums_preamble]
     pylines.append(f"# There are {n} enums\n")
+    # List'm
+    pylines.append("__all__ = [")
+    for name in idl.enums.keys():
+        pylines.append(f'    "{name}",')
+    pylines.append("]\n\n")
     for name, d in idl.enums.items():
         # Object-docstring as a comment
         for key, val in d.items():
@@ -162,7 +173,7 @@ class Struct:
         if _use_sphinx_repr:  # no-cover
             return ""
         options = ", ".join(f"'{x}'" for x in self)
-        return f"<{self.__class__.__name__} {self._name}: {options}>"
+        return f"<wgpu.{self._name} struct with fields: {options}>"
 
 '''.lstrip()
 
@@ -174,6 +185,12 @@ def write_structs():
     # Preamble
     pylines = [structs_preamble]
     pylines.append(f"# There are {n} structs\n")
+    # List'm
+    pylines.append("__all__ = [")
+    for name in idl.structs.keys():
+        if name not in ignore:
+            pylines.append(f'    "{name}",')
+    pylines.append("]\n\n")
     for name, d in idl.structs.items():
         if name in ignore:
             continue

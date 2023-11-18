@@ -23,10 +23,47 @@ class Enum:
         if _use_sphinx_repr:  # no-cover
             return ""
         options = ", ".join(f"'{x}'" for x in self)
-        return f"<{self.__class__.__name__} {self._name}: {options}>"
+        return f"<wgpu.{self._name} enum with options: {options}>"
 
 
 # There are 33 enums
+
+__all__ = [
+    "PowerPreference",
+    "FeatureName",
+    "BufferMapState",
+    "TextureDimension",
+    "TextureViewDimension",
+    "TextureAspect",
+    "TextureFormat",
+    "AddressMode",
+    "FilterMode",
+    "MipmapFilterMode",
+    "CompareFunction",
+    "BufferBindingType",
+    "SamplerBindingType",
+    "TextureSampleType",
+    "StorageTextureAccess",
+    "CompilationMessageType",
+    "PipelineErrorReason",
+    "AutoLayoutMode",
+    "PrimitiveTopology",
+    "FrontFace",
+    "CullMode",
+    "BlendFactor",
+    "BlendOperation",
+    "StencilOperation",
+    "IndexFormat",
+    "VertexFormat",
+    "VertexStepMode",
+    "LoadOp",
+    "StoreOp",
+    "QueryType",
+    "CanvasAlphaMode",
+    "DeviceLostReason",
+    "ErrorFilter",
+]
+
 
 #: * "low_power"
 #: * "high_performance"

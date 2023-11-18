@@ -21,10 +21,72 @@ class Struct:
         if _use_sphinx_repr:  # no-cover
             return ""
         options = ", ".join(f"'{x}'" for x in self)
-        return f"<{self.__class__.__name__} {self._name}: {options}>"
+        return f"<wgpu.{self._name} struct with fields: {options}>"
 
 
 # There are 59 structs
+
+__all__ = [
+    "RequestAdapterOptions",
+    "DeviceDescriptor",
+    "BufferDescriptor",
+    "TextureDescriptor",
+    "TextureViewDescriptor",
+    "ExternalTextureDescriptor",
+    "SamplerDescriptor",
+    "BindGroupLayoutDescriptor",
+    "BindGroupLayoutEntry",
+    "BufferBindingLayout",
+    "SamplerBindingLayout",
+    "TextureBindingLayout",
+    "StorageTextureBindingLayout",
+    "ExternalTextureBindingLayout",
+    "BindGroupDescriptor",
+    "BindGroupEntry",
+    "BufferBinding",
+    "PipelineLayoutDescriptor",
+    "ShaderModuleDescriptor",
+    "ShaderModuleCompilationHint",
+    "PipelineErrorInit",
+    "ProgrammableStage",
+    "ComputePipelineDescriptor",
+    "RenderPipelineDescriptor",
+    "PrimitiveState",
+    "MultisampleState",
+    "FragmentState",
+    "ColorTargetState",
+    "BlendState",
+    "BlendComponent",
+    "DepthStencilState",
+    "StencilFaceState",
+    "VertexState",
+    "VertexBufferLayout",
+    "VertexAttribute",
+    "ImageDataLayout",
+    "ImageCopyBuffer",
+    "ImageCopyTexture",
+    "ImageCopyExternalImage",
+    "CommandBufferDescriptor",
+    "CommandEncoderDescriptor",
+    "ComputePassTimestampWrites",
+    "ComputePassDescriptor",
+    "RenderPassTimestampWrites",
+    "RenderPassDescriptor",
+    "RenderPassColorAttachment",
+    "RenderPassDepthStencilAttachment",
+    "RenderPassLayout",
+    "RenderBundleDescriptor",
+    "RenderBundleEncoderDescriptor",
+    "QueueDescriptor",
+    "QuerySetDescriptor",
+    "CanvasConfiguration",
+    "UncapturedErrorEventInit",
+    "Color",
+    "Origin2D",
+    "Origin3D",
+    "Extent3D",
+]
+
 
 #: * powerPreference :: :obj:`enums.PowerPreference <wgpu.enums.PowerPreference>` = None
 #: * forceFallbackAdapter :: bool = false
