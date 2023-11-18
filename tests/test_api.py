@@ -24,6 +24,10 @@ def test_basic_api():
     nargs1 = code1.co_argcount + code1.co_kwonlyargcount
     assert code1.co_varnames[:nargs1] == code2.co_varnames
 
+    assert repr(wgpu.classes.GPU()).startswith(
+        "<wgpu.GPU "
+    )  # does not include _classes
+
 
 def test_api_subpackages_are_there():
     code = "import wgpu; x = [wgpu.resources, wgpu.utils, wgpu.backends, wgpu.gui]; print('ok')"
@@ -127,8 +131,8 @@ def test_that_we_know_how_our_api_differs():
 
 
 def test_that_all_docstrings_are_there():
-    for cls in wgpu.classes.__dict__.values():
-        if cls.__name__.startswith("_"):
+    for name, cls in wgpu.classes.__dict__.items():
+        if name.startswith("_"):
             continue
         assert isinstance(cls, type)
         assert cls.__doc__, f"No docstring on {cls.__name__}"

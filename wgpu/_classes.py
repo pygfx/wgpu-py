@@ -373,9 +373,6 @@ class GPUObjectBase:
         self._device = device
         logger.info(f"Creating {self.__class__.__name__} {label}")
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__} '{self.label}' at 0x{hex(id(self))}>"
-
     # IDL: attribute USVString label;
     @property
     def label(self):
@@ -2069,11 +2066,19 @@ def _seed_object_counts():
 
 
 def generic_repr(self):
-    module_name = "wgpu"
-    if "backends." in self.__module__:
-        backend_name = self.__module__.split("backends")[-1].split(".")[1]
-        module_name = f"wgpu.backends.{backend_name}"
-    return f"<{module_name}.{self.__class__.__name__} at {hex(id(self))}>"
+    try:
+        module_name = "wgpu"
+        if "backends." in self.__module__:
+            backend_name = self.__module__.split("backends")[-1].split(".")[1]
+            module_name = f"wgpu.backends.{backend_name}"
+        object_str = "object"
+        if isinstance(self, GPUObjectBase):
+            object_str = f"object '{self.label}'"
+        return (
+            f"<{module_name}.{self.__class__.__name__} {object_str} at {hex(id(self))}>"
+        )
+    except Exception:  # easy fallback
+        return object.__repr__(self)
 
 
 def _set_repr_methods():
