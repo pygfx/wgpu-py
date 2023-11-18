@@ -1,4 +1,4 @@
-from .. import base, flags
+from .. import classes, flags
 from ..gui.base import WgpuCanvasBase
 
 
@@ -43,7 +43,7 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         return "rgba8unorm-srgb"
 
 
-class GPUCanvasContext(base.GPUCanvasContext):
+class GPUCanvasContext(classes.GPUCanvasContext):
     """Helper class for canvases that render to a texture."""
 
     def __init__(self, canvas):

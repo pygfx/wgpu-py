@@ -8,7 +8,7 @@
 * Wrote 5 flags to flags.py
 * Wrote 33 enums to enums.py
 * Wrote 59 structs to structs.py
-### Patching API for base.py
+### Patching API for _classes.py
 * Diffs for GPU: change get_preferred_canvas_format, change request_adapter, change request_adapter_async
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost, hide onuncapturederror, hide pop_error_scope, hide push_error_scope

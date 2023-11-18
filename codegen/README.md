@@ -40,7 +40,7 @@ but the parsers and generators are less important to fully cover by tests, becau
 ## What the codegen does in general
 
 * Help update the front API.
-  * Make changes to `base.py`.
+  * Make changes to `_classes.py`.
   * Generate `flags.py`, `enums.py`, and `structs.py`.
 *  Help update the wgpu-native backend:
   * Make changes to `backends/wgpu_native/_api.py`.
@@ -55,7 +55,7 @@ but the parsers and generators are less important to fully cover by tests, becau
 
 The WebGPU API is specified by `webgpu.idl` (in the resources directory). We parse this file with a custom parser (`idlparser.py`) to obtain a description of the interfaces, enums, and flags.
 
-Note that while `base.py` defines the API (and corresponding docstrings), the implementation of the majority of methods occurs in the backends, so most methods simply `raise NotimplementedError()`.
+Note that while `wgpu/_classes.py` defines the API (and corresponding docstrings), the implementation of the majority of methods occurs in the backends, so most methods simply `raise NotimplementedError()`.
 
 ### Changes with respect to JS
 
@@ -75,7 +75,7 @@ Other changes include:
 
 * Generate `flags.py`, `enums.py`, and `structs.py`.
 
-* Make changes to `base.py`.
+* Make changes to `_classes.py`.
 
   * Add missing classes, methods and properties, along with a FIXME comment..
 
@@ -91,7 +91,7 @@ Other changes include:
 * Run `python codegen` to apply the automatic patches to the code.
 * It may be necessary to tweak the `idlparser.py` to adjust to new formatting.
 * Check the diff of `flags.py`, `enums.py`, `structs.py` for any changes that might need manual work.
-* Go through all FIXME comments that were added in `base.py`:
+* Go through all FIXME comments that were added in `_classes.py`:
     * Apply any necessary changes.
     * Remove the FIXME comment if no further action is needed, or turn into a TODO for later.
     * Note that all new classes/methods/properties (instead those marked as hidden) need a docstring.
@@ -103,15 +103,15 @@ Other changes include:
 
 
 
-## Updating the Rust backend (`rs.py`)
+## Updating the wgpu-native backend
 
 ### Introduction
 
-The backends are almost a copy of `base.py`: all methods in `base.py` that `raise NotImplementedError()` must be implemented.
+The backends are almost a copy of `_classes.py`: all methods in `_classes.py` that `raise NotImplementedError()` must be implemented.
 
-The `rs.py` backend calls into a dynamic library, which interface is specified by  `webgpu.h` and `wgpu.h` (in the resources directory). We parse these files with a custom parser (`hparser.py`) to obtain a description of the interfaces, enums, flags, and structs.
+The wgpu-native backend calls into a dynamic library, which interface is specified by  `webgpu.h` and `wgpu.h` (in the resources directory). We parse these files with a custom parser (`hparser.py`) to obtain a description of the interfaces, enums, flags, and structs.
 
-The majority of work in `rs.py` is the conversion of  Python dicts to C structs, and then using them to call into the dynamic library. The codegen helps by validating the structs and API calls.
+The majority of work in the wgpu-native backend is the conversion of  Python dicts to C structs, and then using them to call into the dynamic library. The codegen helps by validating the structs and API calls.
 
 ### Tips
 
@@ -129,7 +129,7 @@ The majority of work in `rs.py` is the conversion of  Python dicts to C structs,
   * Generate mappings for enum field names to ints.
   * Detect and report missing flags and enum fields.
 
-* Make changes to `backends/rs.py`.
+* Make changes to `wgpu_native/_api.py`.
   * Validate and annotate function calls into the lib.
   * Validate and annotate struct creations (missing struct fields are filled in).
   * Ensure that each incoming struct is checked to catch invalid input.
@@ -140,8 +140,8 @@ The majority of work in `rs.py` is the conversion of  Python dicts to C structs,
 * Run `python codegen` to apply the automatic patches to the code.
 * It may be necessary to tweak the `hparser.py` to adjust to new formatting.
 * Diff the report for new differences to take into account.
-* Diff `rs.py` to get an idea of what structs and functions have changed.
-* Go through all FIXME comments that were added in `rs.py`:
+* Diff `wgpu_native/_api.py` to get an idea of what structs and functions have changed.
+* Go through all FIXME comments that were added in `_api.py`:
   *  Apply any necessary changes.
   * Remove the FIXME comment if no further action is needed, or turn into a TODO for later.
 

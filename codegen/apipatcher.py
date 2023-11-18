@@ -36,7 +36,7 @@ def patch_backend_api(code):
     """
 
     # Obtain the base API definition
-    base_api_code = file_cache.read("base.py")
+    base_api_code = file_cache.read("_classes.py")
 
     # Patch!
     for patcher in [
@@ -386,7 +386,7 @@ class IdlPatcherMixin:
 
 
 class BaseApiPatcher(IdlPatcherMixin, AbstractApiPatcher):
-    """A patcher to patch the base API (in base.py), using IDL as input."""
+    """A patcher to patch the base API (in _classes.py), using IDL as input."""
 
 
 class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
@@ -409,7 +409,7 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
 
 
 class BackendApiPatcher(AbstractApiPatcher):
-    """A patcher to patch a backend API (e.g. rs.py), using the base API as input."""
+    """A patcher to patch a backend API, using the base API as input."""
 
     def __init__(self, base_api_code):
         super().__init__()
@@ -437,12 +437,12 @@ class BackendApiPatcher(AbstractApiPatcher):
         line, _ = self.classes[classname]
 
         if "):" not in line:
-            return line.replace(":", f"(base.{classname}):")
+            return line.replace(":", f"(classes.{classname}):")
         else:
             i = line.find("(")
             bases = line[i:].strip("():").replace(",", " ").split()
             bases = [b for b in bases if b.startswith("GPU")]
-            bases.insert(0, f"base.{classname}")
+            bases.insert(0, f"classes.{classname}")
             return line[:i] + "(" + ", ".join(bases) + "):"
 
     def get_method_def(self, classname, methodname):

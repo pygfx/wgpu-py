@@ -1,4 +1,4 @@
-"""Utilities used in rs.py.
+"""Utilities used in the wgpu-native backend.
 """
 
 import os
@@ -7,7 +7,7 @@ import ctypes
 
 from ._ffi import ffi, lib
 from ..._diagnostics import Diagnostics
-from ...base import (
+from ...classes import (
     GPUError,
     GPUOutOfMemoryError,
     GPUValidationError,

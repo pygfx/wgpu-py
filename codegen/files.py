@@ -23,7 +23,7 @@ class FileCache:
     """
 
     _filenames_to_change = [
-        "base.py",
+        "_classes.py",
         "flags.py",
         "enums.py",
         "structs.py",

@@ -486,7 +486,7 @@ class VersionDiagnostics(Diagnostics):
 
 
 class ObjectCountDiagnostics(Diagnostics):
-    """Provides object counts and resource consumption, used in base.py."""
+    """Provides object counts and resource consumption, used in _classes.py."""
 
     def __init__(self, name):
         super().__init__(name)
