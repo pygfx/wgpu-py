@@ -1202,7 +1202,9 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
                 bind_group_layouts.append(bind_group_layout)
             layout = self.create_pipeline_layout(bind_group_layouts=bind_group_layouts)
         else:
-            raise TypeError("create_compute_pipeline() 'layout' arg must be a GPUPipelineLayout or 'auto'")
+            raise TypeError(
+                "create_compute_pipeline() 'layout' arg must be a GPUPipelineLayout or 'auto'"
+            )
         return GPUComputePipeline(label, id, self, layout)
 
     async def create_compute_pipeline_async(
