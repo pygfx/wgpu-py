@@ -165,10 +165,6 @@ These classes are not supported and/or documented yet.
 List of flags, enums, and structs
 ---------------------------------
 
-Enum values are strings, so instead of ``wgpu.TextureFormat.rgba8unorm`` one can also use "rgba8unorm".
-Flags are integer bitmasks, but can also be passed as strings, so instead of
-``wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST``, one can also use "MAP_READ|COPY_DIST".
-
 .. toctree::
     :maxdepth: 2
 
