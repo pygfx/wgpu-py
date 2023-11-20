@@ -31,7 +31,7 @@ import wgpu  # noqa: E402
 with open(os.path.join(ROOT_DIR, "docs", "wgpu.rst"), "rb") as f:
     wgpu_text = f.read().decode()
     wgpu_lines = [line.strip() for line in wgpu_text.splitlines()]
-for cls_name in wgpu.base.__all__:
+for cls_name in wgpu.classes.__all__:
     assert (
         f"~{cls_name}" in wgpu_lines
     ), f"Class '{cls_name}' not listed in class list in wgpu.rst"
@@ -98,7 +98,7 @@ def resolve_crossrefs(text):
 
 
 # Tweak docstrings of classes and their methods
-for module, hide_class_signature in [(wgpu.base, True), (wgpu.gui, False)]:
+for module, hide_class_signature in [(wgpu.classes, True), (wgpu.gui, False)]:
     for cls_name in module.__all__:
         cls = getattr(module, cls_name)
         # Class docstring

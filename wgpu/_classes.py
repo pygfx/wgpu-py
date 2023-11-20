@@ -373,9 +373,6 @@ class GPUObjectBase:
         self._device = device
         logger.info(f"Creating {self.__class__.__name__} {label}")
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__} '{self.label}' at 0x{hex(id(self))}>"
-
     # IDL: attribute USVString label;
     @property
     def label(self):
@@ -2060,10 +2057,37 @@ apidiff.remove_hidden_methods(globals())
 
 
 def _seed_object_counts():
-    for key, val in globals().items():
-        if key.startswith("GPU") and not key.endswith(("Base", "Mixin")):
-            if hasattr(val, "_ot"):
-                object_tracker.counts[key] = 0
+    m = globals()
+    for class_name in __all__:
+        cls = m[class_name]
+        if not class_name.endswith(("Base", "Mixin")):
+            if hasattr(cls, "_ot"):
+                object_tracker.counts[class_name] = 0
+
+
+def generic_repr(self):
+    try:
+        module_name = "wgpu"
+        if "backends." in self.__module__:
+            backend_name = self.__module__.split("backends")[-1].split(".")[1]
+            module_name = f"wgpu.backends.{backend_name}"
+        object_str = "object"
+        if isinstance(self, GPUObjectBase):
+            object_str = f"object '{self.label}'"
+        return (
+            f"<{module_name}.{self.__class__.__name__} {object_str} at {hex(id(self))}>"
+        )
+    except Exception:  # easy fallback
+        return object.__repr__(self)
+
+
+def _set_repr_methods():
+    m = globals()
+    for class_name in __all__:
+        cls = m[class_name]
+        if len(cls.mro()) == 2:  # class itself and object
+            cls.__repr__ = generic_repr
 
 
 _seed_object_counts()
+_set_repr_methods()

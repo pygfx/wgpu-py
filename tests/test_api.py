@@ -19,10 +19,14 @@ def test_basic_api():
     assert wgpu.gpu.request_adapter
     assert wgpu.gpu.request_adapter_async
 
-    code1 = wgpu.base.GPU.request_adapter.__code__
-    code2 = wgpu.base.GPU.request_adapter_async.__code__
+    code1 = wgpu.GPU.request_adapter.__code__
+    code2 = wgpu.GPU.request_adapter_async.__code__
     nargs1 = code1.co_argcount + code1.co_kwonlyargcount
     assert code1.co_varnames[:nargs1] == code2.co_varnames
+
+    assert repr(wgpu.classes.GPU()).startswith(
+        "<wgpu.GPU "
+    )  # does not include _classes
 
 
 def test_api_subpackages_are_there():
@@ -86,9 +90,9 @@ def test_enums_and_flags_and_structs():
 
 def test_base_wgpu_api():
     # Fake a device and an adapter
-    adapter = wgpu.base.GPUAdapter(None, set(), {}, {})
+    adapter = wgpu.GPUAdapter(None, set(), {}, {})
     queue = wgpu.GPUQueue("", None, None)
-    device = wgpu.base.GPUDevice("device08", -1, adapter, {42, 43}, {}, queue)
+    device = wgpu.GPUDevice("device08", -1, adapter, {42, 43}, {}, queue)
 
     assert queue._device is device
 
@@ -97,7 +101,7 @@ def test_base_wgpu_api():
     assert isinstance(adapter.limits, dict)
     assert set(device.limits.keys()) == set()
 
-    assert isinstance(device, wgpu.base.GPUObjectBase)
+    assert isinstance(device, wgpu.GPUObjectBase)
     assert device.label == "device08"
     assert device.features == {42, 43}
     assert hex(id(device)) in repr(device)
@@ -120,20 +124,17 @@ def test_backend_is_selected_automatically():
 
 
 def test_that_we_know_how_our_api_differs():
-    doc = wgpu.base.apidiff.__doc__
+    doc = wgpu._classes.apidiff.__doc__
     assert isinstance(doc, str)
     assert "GPUBuffer.get_mapped_range" in doc
     assert "GPUDevice.create_buffer_with_data" in doc
 
 
 def test_that_all_docstrings_are_there():
-    exclude = ["Union", "List", "Dict"]
-
-    for cls in wgpu.base.__dict__.values():
-        if not isinstance(cls, type):
+    for name, cls in wgpu.classes.__dict__.items():
+        if name.startswith("_"):
             continue
-        if cls.__name__.startswith("_") or cls.__name__ in exclude:
-            continue
+        assert isinstance(cls, type)
         assert cls.__doc__, f"No docstring on {cls.__name__}"
         for name, attr in cls.__dict__.items():
             if not (callable(attr) or isinstance(attr, property)):
@@ -189,7 +190,7 @@ def test_register_backend_fails():
 
     ori_gpu = wgpu.gpu  # noqa: N806
     try:
-        wgpu.gpu = wgpu.base.GPU()
+        wgpu.gpu = wgpu.classes.GPU()
 
         with raises(RuntimeError):
             wgpu.backends._register_backend("foo")

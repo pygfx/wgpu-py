@@ -16,6 +16,8 @@ def test_buffer_init1():
     device = wgpu.utils.get_default_device()
     data1 = b"abcdefghijkl"
 
+    assert repr(device).startswith("<wgpu.backends.wgpu_native.GPUDevice ")
+
     # Create buffer. COPY_SRC is needed to read the buffer via the queue.
     buf = device.create_buffer_with_data(data=data1, usage=wgpu.BufferUsage.COPY_SRC)
 
