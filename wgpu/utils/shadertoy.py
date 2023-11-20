@@ -115,6 +115,7 @@ var<private> i_mouse: vec4<f32>;
 var<private> i_time_delta: f32;
 var<private> i_time: f32;
 var<private> i_frame: u32;
+var<private> i_date: vec4<f32>;
 
 // TODO: more global variables
 // var<private> i_frag_coord: vec2<f32>;
@@ -130,6 +131,7 @@ struct ShadertoyInput {
     time: f32,
     time_delta: f32,
     frame: u32,
+    date: vec4<f32>,
 };
 
 struct Varyings {
@@ -149,6 +151,7 @@ fn main(in: Varyings) -> @location(0) vec4<f32> {
     i_time_delta = input.time_delta;
     i_mouse = input.mouse;
     i_frame = input.frame;
+    i_date = input.date;
 
 
     let uv = vec2<f32>(in.uv.x, 1.0 - in.uv.y);
@@ -444,7 +447,7 @@ class Shadertoy:
             + time_struct.tm_sec
             + now % 1,
         )
-
+        
         self._uniform_data["frame"] = self._frame
         self._frame += 1
 
