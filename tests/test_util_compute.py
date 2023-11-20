@@ -433,12 +433,7 @@ def test_compute_default_layout2():
     bind_group_layout0 = compute_pipeline.get_bind_group_layout(0)
     bind_group0 = device.create_bind_group(layout=bind_group_layout0, entries=bindings0)
 
-    # For now we don't support this yet, because we cannot know (?) how many
-    # bind groups there are. At least we fail with an exception ...
-    with raises(IndexError):
-        bind_group_layout1 = compute_pipeline.get_bind_group_layout(1)
-    return  # noqa
-
+    bind_group_layout1 = compute_pipeline.get_bind_group_layout(1)
     bind_group1 = device.create_bind_group(layout=bind_group_layout1, entries=bindings1)
 
     # Run the pipeline

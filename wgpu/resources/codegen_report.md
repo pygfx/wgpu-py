@@ -18,7 +18,7 @@
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
 * Validated 37 classes, 111 methods, 43 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 100 methods, 0 properties
+* Validated 37 classes, 101 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field TextureFormat.rgb10a2uint missing in wgpu.h
 * Enum field StorageTextureAccess.read-only missing in wgpu.h
