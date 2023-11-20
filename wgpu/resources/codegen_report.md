@@ -8,7 +8,7 @@
 * Wrote 5 flags to flags.py
 * Wrote 33 enums to enums.py
 * Wrote 59 structs to structs.py
-### Patching API for base.py
+### Patching API for _classes.py
 * Diffs for GPU: change get_preferred_canvas_format, change request_adapter, change request_adapter_async
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost, hide onuncapturederror, hide pop_error_scope, hide push_error_scope
@@ -16,7 +16,7 @@
 * Diffs for GPUTexture: add size
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 112 methods, 43 properties
+* Validated 37 classes, 111 methods, 43 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 100 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py

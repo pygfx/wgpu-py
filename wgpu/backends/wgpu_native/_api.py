@@ -22,7 +22,7 @@ import ctypes.util
 from weakref import WeakKeyDictionary
 from typing import List, Dict, Union
 
-from ... import base, flags, enums, structs
+from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int
 
 from ._ffi import ffi, lib
@@ -43,7 +43,7 @@ logger = logging.getLogger("wgpu")  # noqa
 
 
 # The API is prettu well defined
-__all__ = base.__all__.copy()
+__all__ = classes.__all__.copy()
 
 
 # %% Helper functions and objects
@@ -175,7 +175,7 @@ libf = SafeLibCalls(lib, error_handler)
 # %% The API
 
 
-class GPU(base.GPU):
+class GPU(classes.GPU):
     def request_adapter(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
@@ -349,7 +349,7 @@ class GPU(base.GPU):
 gpu = GPU()
 
 
-class GPUCanvasContext(base.GPUCanvasContext):
+class GPUCanvasContext(classes.GPUCanvasContext):
     def __init__(self, canvas):
         super().__init__(canvas)
         self._device = None
@@ -495,15 +495,15 @@ class GPUCanvasContext(base.GPUCanvasContext):
             libf.wgpuSurfaceRelease(surface_id)
 
 
-class GPUObjectBase(base.GPUObjectBase):
+class GPUObjectBase(classes.GPUObjectBase):
     pass
 
 
-class GPUAdapterInfo(base.GPUAdapterInfo):
+class GPUAdapterInfo(classes.GPUAdapterInfo):
     pass
 
 
-class GPUAdapter(base.GPUAdapter):
+class GPUAdapter(classes.GPUAdapter):
     def request_device(
         self,
         *,
@@ -694,7 +694,7 @@ class GPUAdapter(base.GPUAdapter):
             libf.wgpuAdapterRelease(internal)
 
 
-class GPUDevice(base.GPUDevice, GPUObjectBase):
+class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def __init__(self, label, internal, adapter, features, limits, queue):
         super().__init__(label, internal, adapter, features, limits, queue)
 
@@ -1470,7 +1470,7 @@ class GPUDevice(base.GPUDevice, GPUObjectBase):
             # wgpuDeviceDestroy(internal) is also an option
 
 
-class GPUBuffer(base.GPUBuffer, GPUObjectBase):
+class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
     def __init__(self, label, internal, device, size, usage, map_state):
         super().__init__(label, internal, device, size, usage, map_state)
 
@@ -1669,7 +1669,7 @@ class GPUBuffer(base.GPUBuffer, GPUObjectBase):
             # releasing something are highly unlikely.
 
 
-class GPUTexture(base.GPUTexture, GPUObjectBase):
+class GPUTexture(classes.GPUTexture, GPUObjectBase):
     def create_view(
         self,
         *,
@@ -1727,7 +1727,7 @@ class GPUTexture(base.GPUTexture, GPUObjectBase):
             self._device._poll()
 
 
-class GPUTextureView(base.GPUTextureView, GPUObjectBase):
+class GPUTextureView(classes.GPUTextureView, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1736,7 +1736,7 @@ class GPUTextureView(base.GPUTextureView, GPUObjectBase):
             self._device._poll()
 
 
-class GPUSampler(base.GPUSampler, GPUObjectBase):
+class GPUSampler(classes.GPUSampler, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1745,7 +1745,7 @@ class GPUSampler(base.GPUSampler, GPUObjectBase):
             self._device._poll()
 
 
-class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
+class GPUBindGroupLayout(classes.GPUBindGroupLayout, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1753,7 +1753,7 @@ class GPUBindGroupLayout(base.GPUBindGroupLayout, GPUObjectBase):
             libf.wgpuBindGroupLayoutRelease(internal)
 
 
-class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
+class GPUBindGroup(classes.GPUBindGroup, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1761,7 +1761,7 @@ class GPUBindGroup(base.GPUBindGroup, GPUObjectBase):
             libf.wgpuBindGroupRelease(internal)
 
 
-class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
+class GPUPipelineLayout(classes.GPUPipelineLayout, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1770,7 +1770,7 @@ class GPUPipelineLayout(base.GPUPipelineLayout, GPUObjectBase):
             self._device._poll()
 
 
-class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
+class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
     def get_compilation_info(self):
         # Here's a little setup to implement this method. Unfortunately,
         # this is not yet implemented in wgpu-native. Another problem
@@ -1809,11 +1809,11 @@ class GPUShaderModule(base.GPUShaderModule, GPUObjectBase):
             libf.wgpuShaderModuleRelease(internal)
 
 
-class GPUPipelineBase(base.GPUPipelineBase):
+class GPUPipelineBase(classes.GPUPipelineBase):
     pass
 
 
-class GPUComputePipeline(base.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
+class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1822,7 +1822,7 @@ class GPUComputePipeline(base.GPUComputePipeline, GPUPipelineBase, GPUObjectBase
             self._device._poll()
 
 
-class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
+class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1831,7 +1831,7 @@ class GPURenderPipeline(base.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
             self._device._poll()
 
 
-class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
+class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
     def _destroy(self):
         # Since command buffers get destroyed when you submit them, we
         # must only release them if they've not been submitted, or we get
@@ -1845,11 +1845,11 @@ class GPUCommandBuffer(base.GPUCommandBuffer, GPUObjectBase):
             libf.wgpuCommandBufferRelease(internal)
 
 
-class GPUCommandsMixin(base.GPUCommandsMixin):
+class GPUCommandsMixin(classes.GPUCommandsMixin):
     pass
 
 
-class GPUBindingCommandsMixin(base.GPUBindingCommandsMixin):
+class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
     def set_bind_group(
         self,
         index,
@@ -1877,7 +1877,7 @@ class GPUBindingCommandsMixin(base.GPUBindingCommandsMixin):
             )
 
 
-class GPUDebugCommandsMixin(base.GPUDebugCommandsMixin):
+class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     def push_debug_group(self, group_label):
         c_group_label = ffi.new("char []", group_label.encode())
         color = 0
@@ -1921,7 +1921,7 @@ class GPUDebugCommandsMixin(base.GPUDebugCommandsMixin):
             )
 
 
-class GPURenderCommandsMixin(base.GPURenderCommandsMixin):
+class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
         # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
@@ -1984,7 +1984,7 @@ class GPURenderCommandsMixin(base.GPURenderCommandsMixin):
 
 
 class GPUCommandEncoder(
-    base.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase
+    classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase
 ):
     def begin_compute_pass(
         self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
@@ -2347,7 +2347,7 @@ class GPUCommandEncoder(
 
 
 class GPUComputePassEncoder(
-    base.GPUComputePassEncoder,
+    classes.GPUComputePassEncoder,
     GPUCommandsMixin,
     GPUDebugCommandsMixin,
     GPUBindingCommandsMixin,
@@ -2387,7 +2387,7 @@ class GPUComputePassEncoder(
 
 
 class GPURenderPassEncoder(
-    base.GPURenderPassEncoder,
+    classes.GPURenderPassEncoder,
     GPUCommandsMixin,
     GPUDebugCommandsMixin,
     GPUBindingCommandsMixin,
@@ -2450,7 +2450,7 @@ class GPURenderPassEncoder(
 
 
 class GPURenderBundleEncoder(
-    base.GPURenderBundleEncoder,
+    classes.GPURenderBundleEncoder,
     GPUCommandsMixin,
     GPUDebugCommandsMixin,
     GPUBindingCommandsMixin,
@@ -2467,7 +2467,7 @@ class GPURenderBundleEncoder(
             libf.wgpuRenderBundleEncoderRelease(internal)
 
 
-class GPUQueue(base.GPUQueue, GPUObjectBase):
+class GPUQueue(classes.GPUQueue, GPUObjectBase):
     def submit(self, command_buffers):
         command_buffer_ids = [cb._internal for cb in command_buffers]
         c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
@@ -2676,7 +2676,7 @@ class GPUQueue(base.GPUQueue, GPUObjectBase):
             libf.wgpuQueueRelease(internal)
 
 
-class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
+class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -2684,7 +2684,7 @@ class GPURenderBundle(base.GPURenderBundle, GPUObjectBase):
             libf.wgpuRenderBundleRelease(internal)
 
 
-class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
+class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
     pass
 
     def destroy(self):
@@ -2697,35 +2697,35 @@ class GPUQuerySet(base.GPUQuerySet, GPUObjectBase):
 # %% Subclasses that don't need anything else
 
 
-class GPUCompilationMessage(base.GPUCompilationMessage):
+class GPUCompilationMessage(classes.GPUCompilationMessage):
     pass
 
 
-class GPUCompilationInfo(base.GPUCompilationInfo):
+class GPUCompilationInfo(classes.GPUCompilationInfo):
     pass
 
 
-class GPUDeviceLostInfo(base.GPUDeviceLostInfo):
+class GPUDeviceLostInfo(classes.GPUDeviceLostInfo):
     pass
 
 
-class GPUError(base.GPUError):
+class GPUError(classes.GPUError):
     pass
 
 
-class GPUOutOfMemoryError(base.GPUOutOfMemoryError, GPUError):
+class GPUOutOfMemoryError(classes.GPUOutOfMemoryError, GPUError):
     pass
 
 
-class GPUValidationError(base.GPUValidationError, GPUError):
+class GPUValidationError(classes.GPUValidationError, GPUError):
     pass
 
 
-class GPUPipelineError(base.GPUPipelineError):
+class GPUPipelineError(classes.GPUPipelineError):
     pass
 
 
-class GPUInternalError(base.GPUInternalError, GPUError):
+class GPUInternalError(classes.GPUInternalError, GPUError):
     pass
 
 

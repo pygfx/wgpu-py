@@ -39,7 +39,7 @@ For example, methods that in WebGPU accept a descriptor/struct/dict,
 here accept the fields in that struct as keyword arguments.
 
 
-.. autodata:: wgpu.base.apidiff
+.. autodata:: wgpu._classes.apidiff
     :annotation: Differences of base API:
 
 
@@ -175,6 +175,10 @@ List of flags, enums, and structs
 
 List of GPU classes
 -------------------
+
+.. automodule:: wgpu.classes
+
+.. currentmodule:: wgpu
 
 .. autosummary::
     :nosignatures:
