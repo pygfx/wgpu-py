@@ -1168,31 +1168,24 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         )
 
         if isinstance(layout, GPUPipelineLayout):
-            # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
-            struct = new_struct_p(
-                "WGPUComputePipelineDescriptor *",
-                label=to_c_label(label),
-                layout=layout._internal,
-                compute=c_compute_stage,
-                # not used: nextInChain
-            )
-            # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
-            id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
+            layout_id = layout._internal
         elif layout == enums.AutoLayoutMode.auto:
-            # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
-            struct = new_struct_p(
-                "WGPUComputePipelineDescriptor *",
-                label=to_c_label(label),
-                layout=ffi.NULL,
-                compute=c_compute_stage,
-                # not used: nextInChain
-            )
-            # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
-            id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
+            layout_id = ffi.NULL
         else:
             raise TypeError(
                 "create_compute_pipeline() 'layout' arg must be a GPUPipelineLayout or 'auto'"
             )
+
+        # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
+        struct = new_struct_p(
+            "WGPUComputePipelineDescriptor *",
+            label=to_c_label(label),
+            layout=layout_id,
+            compute=c_compute_stage,
+            # not used: nextInChain
+        )
+        # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
+        id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
         return GPUComputePipeline(label, id, self)
 
     async def create_compute_pipeline_async(
