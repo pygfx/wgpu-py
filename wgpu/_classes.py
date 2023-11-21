@@ -201,10 +201,8 @@ class GPUCanvasContext:
 
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
-        """Get the `GPUTexture` that will be composited to the canvas
-        by the context next.
-
-        NOTE: for the time being, this could return a `GPUTextureView` instead.
+        """Get the `GPUTexture` that will be composited to the canvas next.
+        This method should be called exactly once during each draw event.
         """
         raise NotImplementedError()
 

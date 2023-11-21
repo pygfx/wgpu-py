@@ -137,6 +137,7 @@ def write_mappings():
         "ErrorType",
         "DeviceLostReason",
         "TextureFormat",
+        "TextureDimension",
         "PresentMode",
         "CompositeAlphaMode",
     ]:

@@ -350,12 +350,19 @@ gpu = GPU()
 
 
 class GPUCanvasContext(classes.GPUCanvasContext):
+    # The way this works, is that the context must first be configured.
+    # Then a texture can be obtained, which can be written to, and then it
+    # can be presented. The lifetime of the texture is between
+    # get_current_texture() and present(). We keep track of the texture so
+    # we can give meaningful errors/warnings on invalid use, rather than
+    # the more cryptic Rust panics.
+
     def __init__(self, canvas):
         super().__init__(canvas)
         self._device = None  # set in configure()
         self._surface_id = None
         self._config = None
-        self._psize = None
+        self._texture = None
 
     def _get_surface_id(self):
         if self._surface_id is None:
@@ -469,6 +476,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         present_mode = (present_modes or capable_present_modes)[0]
         c_present_mode = getattr(lib, f"WGPUPresentMode_{present_mode.capitalize()}")
 
+        # Prepare config object
+
         # H: nextInChain: WGPUChainedStruct *, device: WGPUDevice, format: WGPUTextureFormat, usage: WGPUTextureUsageFlags/int, viewFormatCount: int, viewFormats: WGPUTextureFormat *, alphaMode: WGPUCompositeAlphaMode, width: int, height: int, presentMode: WGPUPresentMode
         config = new_struct_p(
             "WGPUSurfaceConfiguration *",
@@ -483,14 +492,22 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             presentMode=c_present_mode,
             # not used: nextInChain
         )
+
+        # Configure
         self._configure(config)
 
     def _configure(self, config):
+        # If a texture is still active, better destroy it first
+        self._destroy_texture()
+        # Set the size
         width, height = self._get_canvas().get_physical_size()
         config.width = width
         config.height = height
         if width <= 0 or height <= 0:
+            # todo: test this case, is this right thing to do? Ideally we should simply not draw
             raise RuntimeError("Cannot configure canvas to size ({width}, {height}).")
+        # Configure, and store the config if we did not error out
+        # H: void f(WGPUSurface surface, WGPUSurfaceConfiguration const * config)
         libf.wgpuSurfaceConfigure(self._get_surface_id(), config)
         self._config = config
 
@@ -501,19 +518,40 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             self._configure(config)
 
     def unconfigure(self):
+        self._destroy_texture()
         self._config = None
         # H: void f(WGPUSurface surface)
         libf.wgpuSurfaceUnconfigure(self._get_surface_id())
 
+    def _destroy_texture(self):
+        if self._texture:
+            self._texture.destroy()
+            self._texture = None
+
     def get_current_texture(self):
-        # If the canvas has changed since the last configure, we need to re-configure
+        # If the canvas has changed since the last configure, we need to re-configure it
         if not self._config:
             raise RuntimeError(
-                "Canvas context must be configured before a surface texture can be obtained."
+                "Canvas context must be configured before calling get_current_texture()."
             )
         self._maybe_reconfigure()
 
-        # Try to obtain a texture
+        # When the texture is active right now, we could either:
+        # * return the existing texture
+        # * warn about it, and create a new one
+        # * raise an error
+        # Right now we do the warning, so things still (kinda) keep working
+        if self._texture:
+            self._destroy_texture()
+            logger.warning(
+                "get_current_texture() is called multiple times before pesent()."
+            )
+
+        # Try to obtain a texture.
+        # `If it fails, depending on status, we reconfure and try again.
+
+        # todo: Look into drag-between-monitors issue again
+
         # H: texture: WGPUTexture, suboptimal: WGPUBool/int, status: WGPUSurfaceGetCurrentTextureStatus
         surface_texture = new_struct_p(
             "WGPUSurfaceTexture *",
@@ -522,15 +560,17 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # not used: status
         )
 
-        for iter in range(3):
+        for attempt in [1, 2]:
+            # H: void f(WGPUSurface surface, WGPUSurfaceTexture * surfaceTexture)
             libf.wgpuSurfaceGetCurrentTexture(self._get_surface_id(), surface_texture)
             status = surface_texture.status
             texture_id = surface_texture.texture
             if status == lib.WGPUSurfaceGetCurrentTextureStatus_Success:
                 break  # success
             if texture_id:
+                # H: void f(WGPUTexture texture)
                 libf.wgpuTextureRelease(texture_id)
-            if status in [
+            if attempt == 1 and status in [
                 lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
@@ -539,12 +579,11 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 # Configure and try again
                 logger.warning("Re-configuring canvas context.")
                 self._configure(self._config)
-                continue
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
                 # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
-                # catchall
-                raise RuntimeError(f"Cannot get surface texture ({status})")
+                # Or if this is the second attempt.
+                raise RuntimeError(f"Cannot get surface texture ({status}).")
 
         # I don't expect this to happen, but lets check just in case.
         if not texture_id:
@@ -552,11 +591,25 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         # Things look good, but texture may still be suboptimal, whatever that means
         if surface_texture.suboptimal:
-            # todo: rate-limit this warning
             logger.warning("The surface texture is suboptimal.")
 
+        return self._create_python_texture(texture_id)
+        # todo: this is now a texture, not a view!
+
+    def _create_python_texture(self, texture_id):
         # Create the Python wrapper
 
+        # We can derive texture props from the config and common sense:
+        # width = self._config.width
+        # height = self._config.height
+        # depth = 1
+        # mip_level_count = 1
+        # sample_count = 1
+        # dimension = enums.TextureDimension.d2
+        # format = enum_int2str["TextureFormat"][self._config.format]
+        # usage = self._config.usage
+
+        # But we can also read them from the texture
         # H: uint32_t f(WGPUTexture texture)
         width = libf.wgpuTextureGetWidth(texture_id)
         # H: uint32_t f(WGPUTexture texture)
@@ -564,46 +617,47 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # H: uint32_t f(WGPUTexture texture)
         depth = libf.wgpuTextureGetDepthOrArrayLayers(texture_id)
         # H: uint32_t f(WGPUTexture texture)
-        sample_count = 1  # libf.wgpuTextureGetSampleCount(texture_id)
+        mip_level_count = libf.wgpuTextureGetMipLevelCount(texture_id)
+        # H: uint32_t f(WGPUTexture texture)
+        sample_count = libf.wgpuTextureGetSampleCount(texture_id)
+        # H: WGPUTextureDimension f(WGPUTexture texture)
+        c_dim = libf.wgpuTextureGetDimension(texture_id)  # -> to string
+        dimension = enum_int2str["TextureDimension"][c_dim]
+        # H: WGPUTextureFormat f(WGPUTexture texture)
+        c_format = libf.wgpuTextureGetFormat(texture_id)
+        format = enum_int2str["TextureFormat"][c_format]
         # H: WGPUTextureUsageFlags f(WGPUTexture texture)
         usage = libf.wgpuTextureGetUsage(texture_id)
-        # H: WGPUTextureFormat f(WGPUTexture texture)
-        format = libf.wgpuTextureGetFormat(texture_id)
-        # H: WGPUTextureDimension f(WGPUTexture texture)
-        dim = (
-            enums.TextureDimension.d2
-        )  # libf.wgpuTextureGetDimension(texture_id)  # -> to string
 
         label = ""
         # Cannot yet set label, because it's not implemented in wgpu-native
         # label = "surface-texture"
+        # H: void f(WGPUTexture texture, char const * label)
         # libf.wgpuTextureSetLabel(texture_id, to_c_label(label))
 
         tex_info = {
             "size": (width, height, depth),
-            # H: uint32_t f(WGPUTexture texture)
-            "mip_level_count": 1,  # libf.wgpuTextureGetMipLevelCount(texture_id)
+            "mip_level_count": mip_level_count,
             "sample_count": sample_count,
-            "dimension": dim,
+            "dimension": dimension,
             "format": format,
             "usage": usage,
         }
-        self._tex = GPUTexture(label, texture_id, self._device, tex_info)
-        return self._tex
-        # todo: this is now a texture, not a vierw!
 
-        # todo: include these errors somehow?
-        # raise RuntimeError(
-        #     "Preset context must be configured before get_current_texture()."
-        # )
-        # extra_msg = "\nThis may be caused by dragging the window to a monitor with different dpi. "
-        # extra_msg += "Resize window to proceed.\n"
-        # err.args = (err.args[0] + extra_msg,) + err.args[1:]
-        # raise err from None
+        self._texture = GPUTexture(label, texture_id, self._device, tex_info)
+        return self._texture
 
     def present(self):
-        # H: void f(WGPUSurface surface)
-        libf.wgpuSurfacePresent(self._get_surface_id())
+        if not self._texture:
+            msg = "present() is called without a preceeding call to "
+            msg += "get_current_texture(). Note that present() is usually "
+            msg += "called automatically after the draw function returns."
+            raise RuntimeError(msg)
+        else:
+            # Present the texture, then destroy it
+            # H: void f(WGPUSurface surface)
+            libf.wgpuSurfacePresent(self._get_surface_id())
+            self._destroy_texture()
 
     def get_preferred_format(self, adapter):
         # H: WGPUTextureFormat f(WGPUSurface surface, WGPUAdapter adapter)

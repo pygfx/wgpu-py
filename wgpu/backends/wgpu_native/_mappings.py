@@ -433,6 +433,11 @@ enum_int2str = {
         93: "astc-12x12-unorm",
         94: "astc-12x12-unorm-srgb",
     },
+    "TextureDimension": {
+        0: "1d",
+        1: "2d",
+        2: "3d",
+    },
     "PresentMode": {
         0: "Fifo",
         1: "FifoRelaxed",
