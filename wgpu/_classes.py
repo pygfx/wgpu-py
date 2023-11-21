@@ -2064,10 +2064,13 @@ def _seed_object_counts():
 
 def generic_repr(self):
     try:
-        module_name = "wgpu"
-        if "backends." in self.__module__:
-            backend_name = self.__module__.split("backends")[-1].split(".")[1]
-            module_name = f"wgpu.backends.{backend_name}"
+        module_name = self.__module__
+        if module_name.startswith("wgpu"):
+            if module_name == "wgpu._classes":
+                module_name = "wgpu"
+            elif "backends." in module_name:
+                backend_name = self.__module__.split("backends")[-1].split(".")[1]
+                module_name = f"wgpu.backends.{backend_name}"
         object_str = "object"
         if isinstance(self, GPUObjectBase):
             object_str = f"object '{self.label}'"
