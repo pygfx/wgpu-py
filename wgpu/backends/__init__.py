@@ -4,7 +4,7 @@ The backend implementations of the wgpu API.
 
 import sys
 
-from ..base import GPU as _base_GPU  # noqa
+from ..classes import GPU as _base_GPU  # noqa
 
 
 def _register_backend(gpu):

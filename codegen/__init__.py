@@ -37,12 +37,12 @@ def update_api():
     apiwriter.write_structs()
 
     # Patch base API: IDL -> API
-    code1 = file_cache.read("base.py")
-    print("### Patching API for base.py")
+    code1 = file_cache.read("_classes.py")
+    print("### Patching API for _classes.py")
     code2 = apipatcher.patch_base_api(code1)
-    file_cache.write("base.py", code2)
+    file_cache.write("_classes.py", code2)
 
-    # Patch backend APIs: base.py -> API
+    # Patch backend APIs: _classes.py -> API
     for fname in ["backends/wgpu_native/_api.py"]:
         code1 = file_cache.read(fname)
         print(f"### Patching API for {fname}")
