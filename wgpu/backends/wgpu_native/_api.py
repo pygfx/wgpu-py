@@ -200,8 +200,8 @@ class GPU(classes.GPU):
         surface_id = ffi.NULL
         if canvas is not None:
             window_id = canvas.get_window_id()
-            if window_id is not None:  # e.g. could be an off-screen canvas
-                surface_id = canvas.context._get_surface_id()
+            if window_id:  # e.g. could be an off-screen canvas
+                surface_id = canvas.get_context()._get_surface_id()
 
         # ----- Select backend
 
@@ -396,7 +396,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # Lookup alpha mode, needs explicit conversion because enum names mismatch
         c_alpha_mode = getattr(lib, f"WGPUCompositeAlphaMode_{alpha_mode.capitalize()}")
         # The format is used as-is
-        format
+        if format is None:
+            format = self.get_preferred_format(device.adapter)
         # The color_space is not used for now
         color_space
 
@@ -2167,12 +2168,16 @@ class GPUCommandEncoder(
         if timestamp_writes is not None:
             check_struct("RenderPassTimestampWrites", timestamp_writes)
 
+        objects_to_keep_alive = {}
+
         c_color_attachments_list = []
         for color_attachment in color_attachments:
             check_struct("RenderPassColorAttachment", color_attachment)
-            if not isinstance(color_attachment["view"], GPUTextureView):
+            texture_view = color_attachment["view"]
+            if not isinstance(texture_view, GPUTextureView):
                 raise TypeError("Color attachement view must be a GPUTextureView.")
-            texture_view_id = color_attachment["view"]._internal
+            texture_view_id = texture_view._internal
+            objects_to_keep_alive[texture_view_id] = texture_view
             c_resolve_target = (
                 ffi.NULL
                 if color_attachment.get("resolve_target", None) is None
@@ -2241,7 +2246,9 @@ class GPUCommandEncoder(
 
         # H: WGPURenderPassEncoder f(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor)
         raw_pass = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
-        return GPURenderPassEncoder(label, raw_pass, self)
+        encoder = GPURenderPassEncoder(label, raw_pass, self)
+        encoder._objects_to_keep_alive = objects_to_keep_alive
+        return encoder
 
     def clear_buffer(self, buffer, offset=0, size=None):
         offset = int(offset)

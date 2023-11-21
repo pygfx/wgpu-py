@@ -277,7 +277,7 @@ def render_to_screen(
     present_context.configure(device=device, format=None)
 
     def draw_frame():
-        current_texture_view = present_context.get_current_texture()
+        current_texture_view = present_context.get_current_texture().create_view()
         command_encoder = device.create_command_encoder()
 
         ca = color_attachment or {

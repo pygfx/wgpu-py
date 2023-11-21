@@ -122,7 +122,7 @@ def _main(canvas, device):
     )
 
     def draw_frame():
-        current_texture_view = present_context.get_current_texture()
+        current_texture_view = present_context.get_current_texture().create_view()
         command_encoder = device.create_command_encoder()
 
         render_pass = command_encoder.begin_render_pass(

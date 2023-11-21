@@ -92,13 +92,13 @@ class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvas):
         # Note: this would normaly schedule a call in a later event loop iteration
         self._draw_frame_and_present()
 
-    def present(self, texture_view):
-        device = texture_view._device
-        size = texture_view.size
+    def present(self, texture):
+        device = texture._device
+        size = texture.size
         bytes_per_pixel = 4
         data = device.queue.read_texture(
             {
-                "texture": texture_view.texture,
+                "texture": texture,
                 "mip_level": 0,
                 "origin": (0, 0, 0),
             },
@@ -121,7 +121,7 @@ def test_offscreen_canvas():
 
     @canvas.request_draw
     def draw_frame():
-        current_texture_view = present_context.get_current_texture()
+        current_texture_view = present_context.get_current_texture().create_view()
         command_encoder = device.create_command_encoder()
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
