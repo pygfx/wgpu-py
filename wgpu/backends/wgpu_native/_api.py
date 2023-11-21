@@ -454,24 +454,23 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             )
 
         # Select the present mode to determine vsync behavior.
+        # * https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html
+        # * https://github.com/pygfx/wgpu-py/issues/256
         #
-        # 0 Immediate: no waiting, with risk of tearing.
-        # 1 Mailbox: submit without delay, but present on vsync. Not always available.
-        # 2 Fifo: Wait for vsync.
+        # Fifo: Wait for vsync, with a queue of ± 3 frames.
+        # FifoRelaxed: Like fifo but less lag and more tearing? aka adaptive vsync.
+        # Mailbox: submit without queue, but present on vsync. Not always available.
+        # Immediate: no queue, no waiting, with risk of tearing, vsync off.
         #
-        # In general 2 gives the best result, but sometimes people want to
+        # In general Fifo gives the best result, but sometimes people want to
         # benchmark something and get the highest FPS possible. Note
         # that we've observed rate limiting regardless of setting this
-        # to 0, depending on OS or being on battery power.
-        #
-        # Also see:
-        # * https://github.com/gfx-rs/wgpu/blob/e54a36ee/wgpu-types/src/lib.rs#L2663-L2678
-        # * https://github.com/pygfx/wgpu-py/issues/256
+        # to Immediate, depending on OS or being on battery power.
 
         if getattr(canvas, "_vsync", True):
-            present_mode_pref = ["fifo", "immediate"]
+            present_mode_pref = ["fifo", "mailbox"]
         else:
-            present_mode_pref = ["immediate", "fifo"]
+            present_mode_pref = ["immediate", "mailbox", "fifo"]
         present_modes = [p for p in present_mode_pref if p in capable_present_modes]
         present_mode = (present_modes or capable_present_modes)[0]
         c_present_mode = getattr(lib, f"WGPUPresentMode_{present_mode.capitalize()}")
