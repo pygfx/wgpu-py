@@ -671,6 +671,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             self._surface_id, surface_id = None, self._surface_id
             # H: void f(WGPUSurface surface)
             libf.wgpuSurfaceRelease(surface_id)
+        self._destroy_texture()
 
 
 class GPUObjectBase(classes.GPUObjectBase):

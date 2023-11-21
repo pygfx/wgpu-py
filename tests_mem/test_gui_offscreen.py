@@ -28,7 +28,7 @@ def make_draw_func_for_canvas(canvas):
     def draw():
         ctx = canvas.get_context()
         command_encoder = DEVICE.create_command_encoder()
-        current_texture_view = ctx.get_current_texture()
+        current_texture_view = ctx.get_current_texture().create_view()
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
                 {
@@ -42,7 +42,6 @@ def make_draw_func_for_canvas(canvas):
         )
         render_pass.end()
         DEVICE.queue.submit([command_encoder.finish()])
-        ctx.present()
 
     return draw
 
@@ -51,17 +50,16 @@ def make_draw_func_for_canvas(canvas):
 def test_release_canvas_context(n):
     # Test with offscreen canvases. A context is created, but not a wgpu-native surface.
 
-    # Note: the offscreen canvas keeps the render-texture-view alive, since it
-    # is used to e.g. download the resulting image. That's why we also see
-    # Textures and TextureViews in the counts.
+    # Note: the offscreen canvas keeps the render-texture alive, since it
+    # is used to e.g. download the resulting image, and who knows how the
+    # user want to use the result. The context does drop its ref to the
+    # textures, which is why we don't see textures in the measurements.
 
     from wgpu.gui.offscreen import WgpuCanvas
 
     yield {
         "expected_counts_after_create": {
             "CanvasContext": (n, 0),
-            "Texture": (n, n),
-            "TextureView": (n, n),
         },
     }
 

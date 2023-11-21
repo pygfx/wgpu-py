@@ -27,11 +27,11 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         return self._canvas_context
 
     def present(self, texture):
-        """Method that gets called at the end of each draw event.
-        The rendered image is represented by the texture argument.
-        Subclasses should overload this method and use the texture to
-        process the rendered image. Note that the texture is destroyed
-        soon after this method returns.
+        """Method that gets called at the end of each draw event. The
+        rendered image is represented by the texture argument. Subclasses
+        should overload this method and use the texture to process the
+        rendered image. The texture is not explicitly destroyed, so it can
+        be used e.g. as a texture binding (subject to set TextureUsage).
         """
         pass
 
@@ -49,15 +49,17 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
 class GPUCanvasContext(classes.GPUCanvasContext):
     """Helper class for canvases that render to a texture."""
 
+    # In this context implementation, we keep a ref to the texture, to keep
+    # it alive until at least until present() is called, and to be able to
+    # pass it to the canvas' present() method. Thereafter, the texture
+    # reference is removed. If there are no more references to it, it will
+    # be cleaned up. But if the offscreen canvas uses it for something,
+    # it'll simply stay alive longer.
+
     def __init__(self, canvas):
         super().__init__(canvas)
         self._config = None
         self._texture = None
-
-    def _destroy_texture(self):
-        if self._texture:
-            self._texture.destroy()
-            self._texture = None
 
     def configure(
         self,
@@ -71,7 +73,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     ):
         if format is None:
             format = self.get_preferred_format(device.adapter)
-        self._destroy_texture()
         self._config = {
             "device": device,
             "format": format,
@@ -84,7 +85,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         }
 
     def unconfigure(self):
-        self._destroy_texture()
+        self._texture = None
+        self._config = None
 
     def get_current_texture(self):
         if not self._config:
@@ -95,7 +97,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         width, height = self._get_canvas().get_physical_size()
         width, height = max(width, 1), max(height, 1)
 
-        self._destroy_texture()
         self._texture = self._config["device"].create_texture(
             label="presentation-context",
             size=(width, height, 1),
@@ -111,10 +112,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             msg += "called automatically after the draw function returns."
             raise RuntimeError(msg)
         else:
-            canvas = self._get_canvas()
-            result = canvas.present(self._texture)
-            self._destroy_texture()
-            return result
+            texture = self._texture
+            self._texture = None
+            return self._get_canvas().present(texture)
 
     def get_preferred_format(self, adapter):
         canvas = self._get_canvas()
