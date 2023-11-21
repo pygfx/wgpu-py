@@ -535,6 +535,21 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 "get_current_texture() is called multiple times before pesent()."
             )
 
+        # Reconfigure when the canvas has resized.
+        # On some systems (Windows+Qt) this is not necessary, because
+        # the texture status would be Outdated below, resulting in a
+        # reconfigure. But on others (e.g. glfwf) the texture size does
+        # not have to match the window size, apparently. The downside
+        # for doing this check on the former systems, is that errors
+        # get logged, which would not be there if we did not
+        # pre-emptively reconfigure. These log entries are harmless but
+        # anoying, and I currently don't know how to prevent them
+        # elegantly. See issue #352
+        old_size = (self._config.width, self._config.height)
+        new_size = tuple(self._get_canvas().get_physical_size())
+        if old_size != new_size:
+            self._configure(self._config)
+
         # Try to obtain a texture.
         # `If it fails, depending on status, we reconfure and try again.
 
@@ -551,11 +566,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             libf.wgpuSurfaceGetCurrentTexture(self._get_surface_id(), surface_texture)
             status = surface_texture.status
             texture_id = surface_texture.texture
-            # Check size too
-            old_size = (self._config.width, self._config.height)
-            new_size = tuple(self._get_canvas().get_physical_size())
-            if old_size != new_size:
-                status = "resized"
             if status == lib.WGPUSurfaceGetCurrentTextureStatus_Success:
                 break  # success
             if texture_id:
@@ -566,15 +576,11 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
-                "resized",
             ]:
                 # Configure and try again.
-                # This happens e.g. when the window has resized (status==Outdated),
-                # but also when moving the window from one monitor to another
-                # with different scale-factor. Pre-emptively re-configuring
-                # when the canvas size changes can cause errors being logged
-                # in the latter case (issue #352). So just letting it fail and
-                # then retry seems like the correct approach.
+                # On Window+Qt this happens e.g. when the window has resized
+                # (status==Outdated), but also when moving the window from one
+                # monitor to another with different scale-factor.
                 logger.info(f"Re-configuring canvas context ({status}).")
                 self._configure(self._config)
             else:
