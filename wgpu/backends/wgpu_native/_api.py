@@ -498,8 +498,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         config.width = width
         config.height = height
         if width <= 0 or height <= 0:
-            # todo: test this case, is this right thing to do? Ideally we should simply not draw
-            raise RuntimeError("Cannot configure canvas to size ({width}, {height}).")
+            raise RuntimeError(
+                "Cannot configure canvas that has no pixels ({width}x{height})."
+            )
         # Configure, and store the config if we did not error out
         # H: void f(WGPUSurface surface, WGPUSurfaceConfiguration const * config)
         libf.wgpuSurfaceConfigure(self._get_surface_id(), config)
@@ -550,6 +551,11 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             libf.wgpuSurfaceGetCurrentTexture(self._get_surface_id(), surface_texture)
             status = surface_texture.status
             texture_id = surface_texture.texture
+            # Check size too
+            old_size = (self._config.width, self._config.height)
+            new_size = tuple(self._get_canvas().get_physical_size())
+            if old_size != new_size:
+                status = "resized"
             if status == lib.WGPUSurfaceGetCurrentTextureStatus_Success:
                 break  # success
             if texture_id:
@@ -560,6 +566,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
+                "resized",
             ]:
                 # Configure and try again.
                 # This happens e.g. when the window has resized (status==Outdated),
