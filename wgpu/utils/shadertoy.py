@@ -262,6 +262,8 @@ class Shadertoy:
             ("time", "f", 1),
             ("time_delta", "f", 1),
             ("frame", "I", 1),
+            ("_pad", "I", 1),  # padding TODO: investigate
+            ("_pad2", "I", 1),  # padding
             ("date", "f", 4),
         )
 
