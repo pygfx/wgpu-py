@@ -959,7 +959,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUBindGroupLayout f(WGPUDevice device, WGPUBindGroupLayoutDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateBindGroupLayout(self._internal, struct)
-        return GPUBindGroupLayout(label, id, self)
+        return GPUBindGroupLayout(label, id, self, entries)
 
     def create_bind_group(
         self,
@@ -1029,7 +1029,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUBindGroup f(WGPUDevice device, WGPUBindGroupDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateBindGroup(self._internal, struct)
-        return GPUBindGroup(label, id, self)
+        return GPUBindGroup(label, id, self, entries)
 
     def create_pipeline_layout(
         self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
@@ -1798,7 +1798,7 @@ class GPUPipelineBase(classes.GPUPipelineBase):
         """
         # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
         layout_id = libf.wgpuComputePipelineGetBindGroupLayout(self._internal, index)
-        return GPUBindGroupLayout("", layout_id, self._device)
+        return GPUBindGroupLayout("", layout_id, self._device, [])
 
 
 class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):

@@ -1283,8 +1283,9 @@ class GPUBindGroupLayout(GPUObjectBase):
     Create a bind group layout using `GPUDevice.create_bind_group_layout()`.
     """
 
-    def __init__(self, label, internal, device):
+    def __init__(self, label, internal, device, bindings):
         super().__init__(label, internal, device)
+        self._bindings = tuple(bindings)
 
 
 class GPUBindGroup(GPUObjectBase):
@@ -1296,8 +1297,9 @@ class GPUBindGroup(GPUObjectBase):
     Create a bind group using `GPUDevice.create_bind_group()`.
     """
 
-    def __init__(self, label, internal, device):
+    def __init__(self, label, internal, device, bindings):
         super().__init__(label, internal, device)
+        self._bindings = bindings
 
 
 class GPUPipelineLayout(GPUObjectBase):
