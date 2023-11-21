@@ -367,8 +367,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     def _get_surface_id(self):
         if self._surface_id is None:
             # get_surface_id_from_canvas calls wgpuInstanceCreateSurface
-            canvas = self._get_canvas()
-            self._surface_id = get_surface_id_from_canvas(canvas)
+            self._surface_id = get_surface_id_from_canvas(self._get_canvas())
         return self._surface_id
 
     def configure(
@@ -401,10 +400,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # The color_space is not used for now
         color_space
 
-        # Prepare
-        canvas = self._get_canvas()
-        surface_id = self._get_surface_id()
-
         # Get what's supported
 
         # H: nextInChain: WGPUChainedStructOut *, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
@@ -420,7 +415,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         )
         # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
         libf.wgpuSurfaceGetCapabilities(
-            surface_id, self._device.adapter._internal, capabilities
+            self._get_surface_id(), self._device.adapter._internal, capabilities
         )
 
         capable_formats = []
@@ -467,8 +462,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # benchmark something and get the highest FPS possible. Note
         # that we've observed rate limiting regardless of setting this
         # to Immediate, depending on OS or being on battery power.
-
-        if getattr(canvas, "_vsync", True):
+        if getattr(self._get_canvas(), "_vsync", True):
             present_mode_pref = ["fifo", "mailbox"]
         else:
             present_mode_pref = ["immediate", "mailbox", "fifo"]
@@ -667,11 +661,11 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         return enum_int2str["TextureFormat"][format]
 
     def _destroy(self):
+        self._destroy_texture()
         if self._surface_id is not None and libf is not None:
             self._surface_id, surface_id = None, self._surface_id
             # H: void f(WGPUSurface surface)
             libf.wgpuSurfaceRelease(surface_id)
-        self._destroy_texture()
 
 
 class GPUObjectBase(classes.GPUObjectBase):
