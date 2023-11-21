@@ -29,21 +29,21 @@ void main(void){
 builtin_variables_glsl = """
 #version 450 core
 
-vec3 i_resolution;
 vec4 i_mouse;
+vec4 i_date;
+vec3 i_resolution;
 float i_time;
 float i_time_delta;
 int i_frame;
-vec4 i_date;
 
 // Shadertoy compatibility, see we can use the same code copied from shadertoy website
 
-#define iTime i_time
-#define iResolution i_resolution
-#define iTimeDelta i_time_delta
 #define iMouse i_mouse
-#define iFrame i_frame
 #define iDate i_date
+#define iResolution i_resolution
+#define iTime i_time
+#define iTimeDelta i_time_delta
+#define iFrame i_frame
 
 #define mainImage shader_main
 """
@@ -54,23 +54,23 @@ layout(location = 0) in vec2 uv;
 
 struct ShadertoyInput {
     vec4 mouse;
+    vec4 date;
     vec3 resolution;
     float time;
     float time_delta;
     int frame;
-    vec4 date;
 };
 
 layout(binding = 0) uniform ShadertoyInput input;
 out vec4 FragColor;
 void main(){
 
-    i_time = input.time;
-    i_resolution = input.resolution;
-    i_time_delta = input.time_delta;
     i_mouse = input.mouse;
-    i_frame = input.frame;
     i_date = input.date;
+    i_resolution = input.resolution;
+    i_time = input.time;
+    i_time_delta = input.time_delta;
+    i_frame = input.frame;
 
     vec2 uv = vec2(uv.x, 1.0 - uv.y);
     vec2 frag_coord = uv * i_resolution.xy;
@@ -110,12 +110,12 @@ fn main(@builtin(vertex_index) index: u32) -> Varyings {
 
 builtin_variables_wgsl = """
 
-var<private> i_resolution: vec3<f32>;
 var<private> i_mouse: vec4<f32>;
+var<private> i_date: vec4<f32>;
+var<private> i_resolution: vec3<f32>;
 var<private> i_time_delta: f32;
 var<private> i_time: f32;
 var<private> i_frame: u32;
-var<private> i_date: vec4<f32>;
 
 // TODO: more global variables
 // var<private> i_frag_coord: vec2<f32>;
@@ -127,11 +127,11 @@ fragment_code_wgsl = """
 
 struct ShadertoyInput {
     mouse: vec4<f32>,
+    date: vec4<f32>,
     resolution: vec3<f32>,
     time: f32,
     time_delta: f32,
     frame: u32,
-    date: vec4<f32>,
 };
 
 struct Varyings {
@@ -146,12 +146,12 @@ var<uniform> input: ShadertoyInput;
 @fragment
 fn main(in: Varyings) -> @location(0) vec4<f32> {
 
-    i_time = input.time;
-    i_resolution = input.resolution;
-    i_time_delta = input.time_delta;
     i_mouse = input.mouse;
-    i_frame = input.frame;
     i_date = input.date;
+    i_resolution = input.resolution;
+    i_time = input.time;
+    i_time_delta = input.time_delta;
+    i_frame = input.frame;
 
 
     let uv = vec2<f32>(in.uv.x, 1.0 - in.uv.y);
@@ -175,6 +175,8 @@ class UniformArray:
     """Convenience class to create a uniform array.
 
     Maybe we can make it a public util at some point.
+    Ensure that the order matches structs in the shader code.
+    See https://www.w3.org/TR/WGSL/#alignment-and-size for reference on alignment.
     """
 
     def __init__(self, *args):
@@ -258,13 +260,11 @@ class Shadertoy:
     def __init__(self, shader_code, resolution=(800, 450), offscreen=False) -> None:
         self._uniform_data = UniformArray(
             ("mouse", "f", 4),
+            ("date", "f", 4),
             ("resolution", "f", 3),
             ("time", "f", 1),
             ("time_delta", "f", 1),
             ("frame", "I", 1),
-            ("_pad", "I", 1),  # padding TODO: investigate
-            ("_pad2", "I", 1),  # padding
-            ("date", "f", 4),
         )
 
         self._shader_code = shader_code
