@@ -438,7 +438,7 @@ class Shadertoy:
 
         if not hasattr(self, "_frame"):
             self._frame = 0
-        
+
         time_struct = time.localtime()
         self._uniform_data["date"] = (
             float(time_struct.tm_year),
@@ -449,10 +449,9 @@ class Shadertoy:
             + time_struct.tm_sec
             + now % 1,
         )
-        
+
         self._uniform_data["frame"] = self._frame
         self._frame += 1
-
 
     def _draw_frame(self):
         # Update uniform buffer
