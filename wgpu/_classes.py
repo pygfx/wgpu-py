@@ -174,31 +174,30 @@ class GPUCanvasContext:
     ):
         """Configures the presentation context for the associated canvas.
         Destroys any textures produced with a previous configuration.
+        This clears the drawing buffer to transparent black.
 
         Arguments:
-            device (WgpuDevice): The GPU device object.
-            format (enums.TextureFormat): The texture format, e.g. "bgra8unorm-srgb".
-                Default uses the preferred_format.
+            device (WgpuDevice): The GPU device object to create compatible textures for.
+            format (enums.TextureFormat): The format that textures returned by
+                ``get_current_texture()`` will have. Must be one of the supported context
+                formats. An often used format is "bgra8unorm-srgb".
             usage (flags.TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
-            color_space (PredefinedColorSpace): Default "srgb".
-            alpha_mode (enums.CanvasAlphaMode): Default opaque.
+            view_formats (List[enums.TextureFormat]): The formats that views created
+                from textures returned by ``get_current_texture()`` may use.
+            color_space (PredefinedColorSpace): The color space that values written
+                into textures returned by ``get_current_texture()`` should be displayed with.
+                Default "srgb".
+            alpha_mode (enums.CanvasAlphaMode): Determines the effect that alpha values
+                will have on the content of textures returned by ``get_current_texture()``
+                when read, displayed, or used as an image source. Default "opaque".
         """
-        self.unconfigure()
-        self._device = device
-        self._format = format or self.get_preferred_format(device.adapter)
-        self._usage = usage or flags.TextureUsage.RENDER_ATTACHMENT
-        self._color_space = color_space
-        self._alpha_mode = alpha_mode
+        raise NotImplementedError()
 
     # IDL: undefined unconfigure();
     def unconfigure(self):
         """Removes the presentation context configuration.
         Destroys any textures produced while configured."""
-        self._device = None
-        self._format = None
-        self._usage = None
-        self._color_space = None
-        self._alpha_mode = None
+        raise NotImplementedError()
 
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
@@ -219,7 +218,7 @@ class GPUCanvasContext:
 
     @apidiff.add("Better place to define the preferred format")
     def get_preferred_format(self, adapter):
-        """Get the preferred swap chain format."""
+        """Get the preferred surface texture format."""
         return "bgra8unorm-srgb"  # seems to be a good default
 
     def __del__(self):

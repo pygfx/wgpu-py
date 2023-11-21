@@ -1,6 +1,6 @@
 """
 Test the canvas, and parts of the rendering that involves a canvas,
-like the swap chain.
+like the canvas context and surface texture.
 """
 
 import os

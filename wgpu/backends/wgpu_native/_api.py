@@ -196,12 +196,12 @@ class GPU(classes.GPU):
 
         # Get surface id that the adapter must be compatible with. If we
         # don't pass a valid surface id, there is no guarantee we'll be
-        # able to create a swapchain for it (from this adapter).
+        # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
             window_id = canvas.get_window_id()
             if window_id is not None:  # e.g. could be an off-screen canvas
-                surface_id = get_surface_id_from_canvas(canvas)
+                surface_id = canvas.context._get_surface_id()
 
         # ----- Select backend
 
@@ -222,7 +222,7 @@ class GPU(classes.GPU):
 
         # ----- Request adapter
 
-        # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface, powerPreference: WGPUPowerPreference, backendType: WGPUBackendType, forceFallbackAdapter: bool
+        # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface, powerPreference: WGPUPowerPreference, backendType: WGPUBackendType, forceFallbackAdapter: WGPUBool/int
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
             compatibleSurface=surface_id,
@@ -306,7 +306,7 @@ class GPU(classes.GPU):
             # not used: limits
         )
         c_limits = c_supported_limits.limits
-        # H: bool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
+        # H: WGPUBool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
         libf.wgpuAdapterGetLimits(adapter_id, c_supported_limits)
         limits = {to_snake_case(k): getattr(c_limits, k) for k in sorted(dir(c_limits))}
 
@@ -317,14 +317,14 @@ class GPU(classes.GPU):
         for f in sorted(enums.FeatureName):
             key = f"FeatureName.{f}"
             i = enummap[key]
-            # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
+            # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
             if libf.wgpuAdapterHasFeature(adapter_id, i):
                 features.add(f)
 
         # Native features
         for f in NATIVE_FEATURES:
             i = getattr(lib, f"WGPUNativeFeature_{f}")
-            # H: bool f(WGPUAdapter adapter, WGPUFeatureName feature)
+            # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
             if libf.wgpuAdapterHasFeature(adapter_id, i):
                 features.add(f)
 
@@ -352,59 +352,101 @@ gpu = GPU()
 class GPUCanvasContext(classes.GPUCanvasContext):
     def __init__(self, canvas):
         super().__init__(canvas)
-        self._device = None
-        self._surface_size = (-1, -1)
+        self._device = None  # set in configure()
         self._surface_id = None
-        self._internal = None
-        self._current_texture = None
+        self._config = None
+        self._psize = None
 
-    def get_current_texture(self):
-        if self._device is None:  # pragma: no cover
-            raise RuntimeError(
-                "Preset context must be configured before get_current_texture()."
-            )
-        if self._current_texture is None:
-            self._create_native_swap_chain_if_needed()
-            try:
-                # H: WGPUTextureView f(WGPUSwapChain swapChain)
-                view_id = libf.wgpuSwapChainGetCurrentTextureView(self._internal)
-            except Exception as err:
-                extra_msg = "\nThis may be caused by dragging the window to a monitor with different dpi. "
-                extra_msg += "Resize window to proceed.\n"
-                err.args = (err.args[0] + extra_msg,) + err.args[1:]
-                raise err from None
-
-            size = self._surface_size[0], self._surface_size[1], 1
-            self._current_texture = GPUTextureView(
-                "swap_chain", view_id, self._device, None, size
-            )
-        return self._current_texture
-
-    def present(self):
-        if (
-            self._internal is not None
-            and lib is not None
-            and self._current_texture is not None
-        ):
-            # H: void f(WGPUSwapChain swapChain)
-            libf.wgpuSwapChainPresent(self._internal)
-        # Reset - always ask for a fresh texture (exactly once) on each draw
-        self._current_texture = None
-
-    def _create_native_swap_chain_if_needed(self):
-        canvas = self._get_canvas()
-        psize = canvas.get_physical_size()
-
-        if psize == self._surface_size:
-            return
-        self._surface_size = psize
-
+    def _get_surface_id(self):
         if self._surface_id is None:
+            # get_surface_id_from_canvas calls wgpuInstanceCreateSurface
+            canvas = self._get_canvas()
             self._surface_id = get_surface_id_from_canvas(canvas)
+        return self._surface_id
 
-        # logger.info(str((psize, canvas.get_logical_size(), canvas.get_pixel_ratio())))
+    def configure(
+        self,
+        *,
+        device: "GPUDevice",
+        format: "enums.TextureFormat",
+        usage: "flags.TextureUsage" = 0x10,
+        view_formats: "List[enums.TextureFormat]" = [],
+        color_space: str = "srgb",
+        alpha_mode: "enums.CanvasAlphaMode" = "opaque",
+    ):
+        # Handle inputs
 
-        # Set the present mode to determine vsync behavior.
+        # Store for later
+        self._device = device
+        # Handle usage
+        if isinstance(usage, str):
+            usage = str_flag_to_int(flags.TextureUsage, usage)
+        # View formats
+        c_view_formats = ffi.NULL
+        if view_formats:
+            view_formats_list = [enummap["TextureFormat." + x] for x in view_formats]
+            c_view_formats = ffi.new("WGPUTextureFormat []", view_formats_list)
+        # Lookup alpha mode, needs explicit conversion because enum names mismatch
+        c_alpha_mode = getattr(lib, f"WGPUCompositeAlphaMode_{alpha_mode.capitalize()}")
+        # The format is used as-is
+        format
+        # The color_space is not used for now
+        color_space
+
+        # Prepare
+        canvas = self._get_canvas()
+        surface_id = self._get_surface_id()
+
+        # Get what's supported
+
+        # H: nextInChain: WGPUChainedStructOut *, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
+        capabilities = new_struct_p(
+            "WGPUSurfaceCapabilities *",
+            # not used: formatCount
+            # not used: formats
+            # not used: presentModeCount
+            # not used: presentModes
+            # not used: alphaModeCount
+            # not used: alphaModes
+            # not used: nextInChain
+        )
+        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
+        libf.wgpuSurfaceGetCapabilities(
+            surface_id, self._device.adapter._internal, capabilities
+        )
+
+        capable_formats = []
+        for i in range(capabilities.formatCount):
+            int_val = capabilities.formats[i]
+            capable_formats.append(enum_int2str["TextureFormat"][int_val])
+
+        capable_present_modes = []
+        for i in range(capabilities.presentModeCount):
+            int_val = capabilities.presentModes[i]
+            str_val = enum_int2str["PresentMode"][int_val]
+            capable_present_modes.append(str_val.lower())
+
+        capable_alpha_modes = []
+        for i in range(capabilities.alphaModeCount):
+            int_val = capabilities.alphaModes[i]
+            str_val = enum_int2str["CompositeAlphaMode"][int_val]
+            capable_alpha_modes.append(str_val.lower())
+
+        # H: void f(WGPUSurfaceCapabilities capabilities)
+        libf.wgpuSurfaceCapabilitiesFreeMembers(capabilities[0])
+
+        # Check if input is supported
+
+        if format not in capable_formats:
+            raise ValueError(
+                f"Given format '{format}' is not in supported formats {capable_formats}"
+            )
+        if alpha_mode not in capable_alpha_modes:
+            raise ValueError(
+                f"Given format '{alpha_mode}' is not in supported formats {capable_alpha_modes}"
+            )
+
+        # Select the present mode to determine vsync behavior.
         #
         # 0 Immediate: no waiting, with risk of tearing.
         # 1 Mailbox: submit without delay, but present on vsync. Not always available.
@@ -419,77 +461,159 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # * https://github.com/gfx-rs/wgpu/blob/e54a36ee/wgpu-types/src/lib.rs#L2663-L2678
         # * https://github.com/pygfx/wgpu-py/issues/256
 
-        pm_fifo = lib.WGPUPresentMode_Fifo
-        pm_immediate = lib.WGPUPresentMode_Immediate
-        present_mode = pm_fifo if getattr(canvas, "_vsync", True) else pm_immediate
+        if getattr(canvas, "_vsync", True):
+            present_mode_pref = ["fifo", "immediate"]
+        else:
+            present_mode_pref = ["immediate", "fifo"]
+        present_modes = [p for p in present_mode_pref if p in capable_present_modes]
+        present_mode = (present_modes or capable_present_modes)[0]
+        c_present_mode = getattr(lib, f"WGPUPresentMode_{present_mode.capitalize()}")
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, format: WGPUTextureFormat, width: int, height: int, presentMode: WGPUPresentMode
-        struct = new_struct_p(
-            "WGPUSwapChainDescriptor *",
-            usage=self._usage,
-            format=self._format,
-            width=max(1, psize[0]),
-            height=max(1, psize[1]),
-            presentMode=present_mode,
+        # H: nextInChain: WGPUChainedStruct *, device: WGPUDevice, format: WGPUTextureFormat, usage: WGPUTextureUsageFlags/int, viewFormatCount: int, viewFormats: WGPUTextureFormat *, alphaMode: WGPUCompositeAlphaMode, width: int, height: int, presentMode: WGPUPresentMode
+        config = new_struct_p(
+            "WGPUSurfaceConfiguration *",
+            device=device._internal,
+            format=format,
+            usage=usage,
+            viewFormatCount=len(view_formats),
+            viewFormats=c_view_formats,
+            alphaMode=c_alpha_mode,
+            width=0,
+            height=0,
+            presentMode=c_present_mode,
             # not used: nextInChain
-            # not used: label
+        )
+        self._configure(config)
+
+    def _configure(self, config):
+        width, height = self._get_canvas().get_physical_size()
+        config.width = width
+        config.height = height
+        if width <= 0 or height <= 0:
+            raise RuntimeError("Cannot configure canvas to size ({width}, {height}).")
+        libf.wgpuSurfaceConfigure(self._get_surface_id(), config)
+        self._config = config
+
+    def _maybe_reconfigure(self):
+        config = self._config
+        width, height = self._get_canvas().get_physical_size()
+        if width != config.width or height != config.height:
+            self._configure(config)
+
+    def unconfigure(self):
+        self._config = None
+        # H: void f(WGPUSurface surface)
+        libf.wgpuSurfaceUnconfigure(self._get_surface_id())
+
+    def get_current_texture(self):
+        # If the canvas has changed since the last configure, we need to re-configure
+        if not self._config:
+            raise RuntimeError(
+                "Canvas context must be configured before a surface texture can be obtained."
+            )
+        self._maybe_reconfigure()
+
+        # Try to obtain a texture
+        # H: texture: WGPUTexture, suboptimal: WGPUBool/int, status: WGPUSurfaceGetCurrentTextureStatus
+        surface_texture = new_struct_p(
+            "WGPUSurfaceTexture *",
+            # not used: texture
+            # not used: suboptimal
+            # not used: status
         )
 
-        # Destroy old one
-        if self._internal is not None:
-            # H: void f(WGPUSwapChain swapChain)
-            libf.wgpuSwapChainRelease(self._internal)
+        for iter in range(3):
+            libf.wgpuSurfaceGetCurrentTexture(self._get_surface_id(), surface_texture)
+            status = surface_texture.status
+            texture_id = surface_texture.texture
+            if status == lib.WGPUSurfaceGetCurrentTextureStatus_Success:
+                break  # success
+            if texture_id:
+                libf.wgpuTextureRelease(texture_id)
+            if status in [
+                lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
+                lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
+                lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
+                lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
+            ]:
+                # Configure and try again
+                logger.warning("Re-configuring canvas context.")
+                self._configure(self._config)
+                continue
+            else:
+                # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
+                # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
+                # catchall
+                raise RuntimeError(f"Cannot get surface texture ({status})")
 
-        # H: WGPUSwapChain f(WGPUDevice device, WGPUSurface surface, WGPUSwapChainDescriptor const * descriptor)
-        self._internal = libf.wgpuDeviceCreateSwapChain(
-            self._device._internal, self._surface_id, struct
-        )
+        # I don't expect this to happen, but lets check just in case.
+        if not texture_id:
+            raise RuntimeError("Cannot get surface texture (no texture)")
+
+        # Things look good, but texture may still be suboptimal, whatever that means
+        if surface_texture.suboptimal:
+            # todo: rate-limit this warning
+            logger.warning("The surface texture is suboptimal.")
+
+        # Create the Python wrapper
+
+        # H: uint32_t f(WGPUTexture texture)
+        width = libf.wgpuTextureGetWidth(texture_id)
+        # H: uint32_t f(WGPUTexture texture)
+        height = libf.wgpuTextureGetHeight(texture_id)
+        # H: uint32_t f(WGPUTexture texture)
+        depth = libf.wgpuTextureGetDepthOrArrayLayers(texture_id)
+        # H: uint32_t f(WGPUTexture texture)
+        sample_count = 1  # libf.wgpuTextureGetSampleCount(texture_id)
+        # H: WGPUTextureUsageFlags f(WGPUTexture texture)
+        usage = libf.wgpuTextureGetUsage(texture_id)
+        # H: WGPUTextureFormat f(WGPUTexture texture)
+        format = libf.wgpuTextureGetFormat(texture_id)
+        # H: WGPUTextureDimension f(WGPUTexture texture)
+        dim = (
+            enums.TextureDimension.d2
+        )  # libf.wgpuTextureGetDimension(texture_id)  # -> to string
+
+        label = ""
+        # Cannot yet set label, because it's not implemented in wgpu-native
+        # label = "surface-texture"
+        # libf.wgpuTextureSetLabel(texture_id, to_c_label(label))
+
+        tex_info = {
+            "size": (width, height, depth),
+            # H: uint32_t f(WGPUTexture texture)
+            "mip_level_count": 1,  # libf.wgpuTextureGetMipLevelCount(texture_id)
+            "sample_count": sample_count,
+            "dimension": dim,
+            "format": format,
+            "usage": usage,
+        }
+        self._tex = GPUTexture(label, texture_id, self._device, tex_info)
+        return self._tex
+        # todo: this is now a texture, not a vierw!
+
+        # todo: include these errors somehow?
+        # raise RuntimeError(
+        #     "Preset context must be configured before get_current_texture()."
+        # )
+        # extra_msg = "\nThis may be caused by dragging the window to a monitor with different dpi. "
+        # extra_msg += "Resize window to proceed.\n"
+        # err.args = (err.args[0] + extra_msg,) + err.args[1:]
+        # raise err from None
+
+    def present(self):
+        # H: void f(WGPUSurface surface)
+        libf.wgpuSurfacePresent(self._get_surface_id())
 
     def get_preferred_format(self, adapter):
-        if self._surface_id is None:
-            canvas = self._get_canvas()
-            self._surface_id = get_surface_id_from_canvas(canvas)
-
-        # # The C-call
-        # c_count = ffi.new("size_t *")
-        # c_formats = libxx.wgpuSurfaceGetSupportedFormats(
-        #     self._surface_id, adapter._internal, c_count
-        # )
-        #
-        # # Convert to string formats
-        # try:
-        #     count = c_count[0]
-        #     supported_format_ints = [c_formats[i] for i in range(count)]
-        #     formats = []
-        #     for key in list(enums.TextureFormat):
-        #         i = enummap[f"TextureFormat.{key}"]
-        #         if i in supported_format_ints:
-        #             formats.append(key)
-        # finally:
-        #     t = ffi.typeof(c_formats)
-        #     libxx.wgpuFree(c_formats, count * ffi.sizeof(t), ffi.alignof(t))
-
-        # There appears to be a bug in wgpuSurfaceGetSupportedFormats, see #341 - disabled it for now.
-        formats = []
-
-        # Select one
-        default = "bgra8unorm-srgb"  # seems to be a good default
-        preferred = [f for f in formats if "srgb" in f]
-        if default in formats:
-            return default
-        elif preferred:
-            return preferred[0]
-        elif formats:
-            return formats[0]
-        else:
-            return default
+        # H: WGPUTextureFormat f(WGPUSurface surface, WGPUAdapter adapter)
+        format = libf.wgpuSurfaceGetPreferredFormat(
+            self._get_surface_id(), adapter._internal
+        )
+        return enum_int2str["TextureFormat"][format]
 
     def _destroy(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUSwapChain swapChain)
-            libf.wgpuSwapChainRelease(internal)
-        if self._surface_id is not None and lib is not None:
+        if self._surface_id is not None and libf is not None:
             self._surface_id, surface_id = None, self._surface_id
             # H: void f(WGPUSurface surface)
             libf.wgpuSurfaceRelease(surface_id)
@@ -599,12 +723,12 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Request device
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeaturesCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *
+        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
             label=to_c_label(label),
             nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
-            requiredFeaturesCount=len(c_features),
+            requiredFeatureCount=len(c_features),
             requiredFeatures=ffi.new("WGPUFeatureName []", c_features),
             requiredLimits=c_required_limits,
             defaultQueue=queue_struct,
@@ -641,7 +765,7 @@ class GPUAdapter(classes.GPUAdapter):
             # not used: limits
         )
         c_limits = c_supported_limits.limits
-        # H: bool f(WGPUDevice device, WGPUSupportedLimits * limits)
+        # H: WGPUBool f(WGPUDevice device, WGPUSupportedLimits * limits)
         libf.wgpuDeviceGetLimits(device_id, c_supported_limits)
         limits = {to_snake_case(k): getattr(c_limits, k) for k in dir(c_limits)}
 
@@ -652,14 +776,14 @@ class GPUAdapter(classes.GPUAdapter):
         for f in sorted(enums.FeatureName):
             key = f"FeatureName.{f}"
             i = enummap[key]
-            # H: bool f(WGPUDevice device, WGPUFeatureName feature)
+            # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
             if libf.wgpuDeviceHasFeature(device_id, i):
                 features.add(f)
 
         # Native features
         for f in NATIVE_FEATURES:
             i = getattr(lib, f"WGPUNativeFeature_{f}")
-            # H: bool f(WGPUDevice device, WGPUFeatureName feature)
+            # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
             if libf.wgpuDeviceHasFeature(device_id, i):
                 features.add(f)
 
@@ -716,7 +840,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def _poll(self):
         # Internal function
         if self._internal:
-            # H: bool f(WGPUDevice device, bool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
+            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
             libf.wgpuDevicePoll(self._internal, True, ffi.NULL)
 
     def create_buffer(
@@ -733,7 +857,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # Create a buffer object
         if isinstance(usage, str):
             usage = str_flag_to_int(flags.BufferUsage, usage)
-        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUBufferUsageFlags/int, size: int, mappedAtCreation: bool
+        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUBufferUsageFlags/int, size: int, mappedAtCreation: WGPUBool/int
         struct = new_struct_p(
             "WGPUBufferDescriptor *",
             label=to_c_label(label),
@@ -874,7 +998,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 min_binding_size = info.get("min_binding_size", None)
                 if min_binding_size is None:
                     min_binding_size = 0  # lib.WGPU_LIMIT_U64_UNDEFINED
-                # H: nextInChain: WGPUChainedStruct *, type: WGPUBufferBindingType, hasDynamicOffset: bool, minBindingSize: int
+                # H: nextInChain: WGPUChainedStruct *, type: WGPUBufferBindingType, hasDynamicOffset: WGPUBool/int, minBindingSize: int
                 buffer = new_struct(
                     "WGPUBufferBindingLayout",
                     type=info["type"],
@@ -894,7 +1018,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             elif entry.get("texture"):
                 info = entry["texture"]
                 check_struct("TextureBindingLayout", info)
-                # H: nextInChain: WGPUChainedStruct *, sampleType: WGPUTextureSampleType, viewDimension: WGPUTextureViewDimension, multisampled: bool
+                # H: nextInChain: WGPUChainedStruct *, sampleType: WGPUTextureSampleType, viewDimension: WGPUTextureViewDimension, multisampled: WGPUBool/int
                 texture = new_struct(
                     "WGPUTextureBindingLayout",
                     sampleType=info.get("sample_type", "float"),
@@ -1281,7 +1405,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 depthFailOp=stencil_back.get("depth_fail_op", "keep"),
                 passOp=stencil_back.get("pass_op", "keep"),
             )
-            # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, depthWriteEnabled: bool, depthCompare: WGPUCompareFunction, stencilFront: WGPUStencilFaceState, stencilBack: WGPUStencilFaceState, stencilReadMask: int, stencilWriteMask: int, depthBias: int, depthBiasSlopeScale: float, depthBiasClamp: float
+            # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, depthWriteEnabled: WGPUBool/int, depthCompare: WGPUCompareFunction, stencilFront: WGPUStencilFaceState, stencilBack: WGPUStencilFaceState, stencilReadMask: int, stencilWriteMask: int, depthBias: int, depthBiasSlopeScale: float, depthBiasClamp: float
             c_depth_stencil_state = new_struct_p(
                 "WGPUDepthStencilState *",
                 format=depth_stencil["format"],
@@ -1297,7 +1421,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # not used: nextInChain
             )
 
-        # H: nextInChain: WGPUChainedStruct *, count: int, mask: int, alphaToCoverageEnabled: bool
+        # H: nextInChain: WGPUChainedStruct *, count: int, mask: int, alphaToCoverageEnabled: WGPUBool/int
         c_multisample_state = new_struct(
             "WGPUMultisampleState",
             count=multisample.get("count", 1),
@@ -1965,13 +2089,12 @@ class GPUCommandEncoder(
     ):
         if timestamp_writes is not None:
             check_struct("ComputePassTimestampWrites", timestamp_writes)
-        # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWriteCount: int, timestampWrites: WGPUComputePassTimestampWrite *
+        # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWrites: WGPUComputePassTimestampWrites *
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
             label=to_c_label(label),
-            # not used: nextInChain
-            # not used: timestampWriteCount
             # not used: timestampWrites
+            # not used: nextInChain
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
         raw_pass = libf.wgpuCommandEncoderBeginComputePass(self._internal, struct)
@@ -2014,7 +2137,7 @@ class GPUCommandEncoder(
                 b=clear_value[2],
                 a=clear_value[3],
             )
-            # H: view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
+            # H: nextInChain: WGPUChainedStruct *, view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
             c_attachment = new_struct(
                 "WGPURenderPassColorAttachment",
                 view=texture_view_id,
@@ -2023,6 +2146,7 @@ class GPUCommandEncoder(
                 storeOp=color_attachment["store_op"],
                 clearValue=c_clear_value,
                 # not used: resolveTarget
+                # not used: nextInChain
             )
             c_color_attachments_list.append(c_attachment)
         c_color_attachments_array = ffi.new(
@@ -2034,7 +2158,7 @@ class GPUCommandEncoder(
             check_struct("RenderPassDepthStencilAttachment", depth_stencil_attachment)
             depth_clear_value = depth_stencil_attachment.get("depth_clear_value", 0)
             stencil_clear_value = depth_stencil_attachment.get("stencil_clear_value", 0)
-            # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: bool, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: bool
+            # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: WGPUBool/int, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: WGPUBool/int
             c_depth_stencil_attachment = new_struct_p(
                 "WGPURenderPassDepthStencilAttachment *",
                 view=depth_stencil_attachment["view"]._internal,
@@ -2050,7 +2174,7 @@ class GPUCommandEncoder(
                 ),
             )
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet, timestampWriteCount: int, timestampWrites: WGPURenderPassTimestampWrite *
+        # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet, timestampWrites: WGPURenderPassTimestampWrites *
         struct = new_struct_p(
             "WGPURenderPassDescriptor *",
             label=to_c_label(label),
@@ -2058,9 +2182,8 @@ class GPUCommandEncoder(
             colorAttachmentCount=len(c_color_attachments_list),
             depthStencilAttachment=c_depth_stencil_attachment,
             # not used: occlusionQuerySet
-            # not used: nextInChain
-            # not used: timestampWriteCount
             # not used: timestampWrites
+            # not used: nextInChain
         )
 
         # H: WGPURenderPassEncoder f(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor)
