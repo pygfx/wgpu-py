@@ -505,12 +505,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         libf.wgpuSurfaceConfigure(self._get_surface_id(), config)
         self._config = config
 
-    def _maybe_reconfigure(self):
-        config = self._config
-        width, height = self._get_canvas().get_physical_size()
-        if width != config.width or height != config.height:
-            self._configure(config)
-
     def unconfigure(self):
         self._destroy_texture()
         self._config = None
@@ -528,7 +522,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             raise RuntimeError(
                 "Canvas context must be configured before calling get_current_texture()."
             )
-        self._maybe_reconfigure()
 
         # When the texture is active right now, we could either:
         # * return the existing texture
@@ -543,8 +536,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         # Try to obtain a texture.
         # `If it fails, depending on status, we reconfure and try again.
-
-        # todo: Look into drag-between-monitors issue again
 
         # H: texture: WGPUTexture, suboptimal: WGPUBool/int, status: WGPUSurfaceGetCurrentTextureStatus
         surface_texture = new_struct_p(
@@ -570,8 +561,14 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
             ]:
-                # Configure and try again
-                logger.warning("Re-configuring canvas context.")
+                # Configure and try again.
+                # This happens e.g. when the window has resized (status==Outdated),
+                # but also when moving the window from one monitor to another
+                # with different scale-factor. Pre-emptively re-configuring
+                # when the canvas size changes can cause errors being logged
+                # in the latter case (issue #352). So just letting it fail and
+                # then retry seems like the correct approach.
+                logger.info(f"Re-configuring canvas context ({status}).")
                 self._configure(self._config)
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
@@ -588,7 +585,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             logger.warning("The surface texture is suboptimal.")
 
         return self._create_python_texture(texture_id)
-        # todo: this is now a texture, not a view!
 
     def _create_python_texture(self, texture_id):
         # Create the Python wrapper
