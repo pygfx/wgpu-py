@@ -27,12 +27,21 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         return self._canvas_context
 
     def present(self, texture):
-        """Method that gets called at the end of each draw event. The
-        rendered image is represented by the texture argument. Subclasses
-        should overload this method and use the texture to process the
-        rendered image. The texture is not explicitly destroyed, so it can
-        be used e.g. as a texture binding (subject to set TextureUsage).
+        """Method that gets called at the end of each draw event.
+
+        The rendered image is represented by the texture argument.
+        Subclasses should overload this method and use the texture to
+        process the rendered image. The texture is a new object at each
+        draw, but is not explicitly destroyed, so it can be used e.g.
+        as a texture binding (subject to set TextureUsage).
         """
+        # Notes: Creating a new texture object for each draw is
+        # consistent with how real canvas contexts work, plus it avoids
+        # confusion of re-using the same texture except when the canvas
+        # changes size. For use-cases when you do want to render to the
+        # same texture one does not need the canvas API. E.g. in pygfx
+        # the renderer can also work with a target that is a (fixed
+        # size) texture.
         pass
 
     def get_preferred_format(self):
