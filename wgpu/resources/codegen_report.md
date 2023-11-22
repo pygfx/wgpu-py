@@ -15,12 +15,10 @@
 * Diffs for GPUBuffer: add map_read, add map_write, add read_mapped, add write_mapped, hide get_mapped_range
 * Diffs for GPUTexture: add size
 * Diffs for GPUTextureView: add size, add texture
-* Diffs for GPUComputePipeline: add get_bind_group_layout
-* Diffs for GPURenderPipeline: add get_bind_group_layout
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 113 methods, 43 properties
+* Validated 37 classes, 111 methods, 43 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 103 methods, 0 properties
+* Validated 37 classes, 101 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field TextureFormat.rgb10a2uint missing in wgpu.h
 * Enum field StorageTextureAccess.read-only missing in wgpu.h
@@ -31,6 +29,6 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum field DeviceLostReason.unknown missing in wgpu.h
 * Wrote 232 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 91 C function calls
-* Not using 111 C functions
+* Validated 90 C function calls
+* Not using 112 C functions
 * Validated 71 C structs
