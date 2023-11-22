@@ -1796,8 +1796,14 @@ class GPUPipelineBase(classes.GPUPipelineBase):
 
         Note that current wgpu-native aborts immediately if the index is out of range.
         """
-        # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
-        layout_id = libf.wgpuComputePipelineGetBindGroupLayout(self._internal, index)
+        if isinstance(self, GPUComputePipeline):
+            # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
+            layout_id = libf.wgpuComputePipelineGetBindGroupLayout(
+                self._internal, index
+            )
+        else:
+            # H: WGPUBindGroupLayout f(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
+            layout_id = libf.wgpuRenderPipelineGetBindGroupLayout(self._internal, index)
         return GPUBindGroupLayout("", layout_id, self._device, [])
 
 
