@@ -1345,6 +1345,11 @@ class GPUComputePipeline(GPUPipelineBase, GPUObjectBase):
     Create a compute pipeline using `GPUDevice.create_compute_pipeline()`.
     """
 
+    @apidiff.add("Dispatching to GPUComputePipelinespecific call")
+    def get_bind_group_layout(self, index):
+        """Get the bind group layout at the given index."""
+        raise NotImplementedError()
+
 
 class GPURenderPipeline(GPUPipelineBase, GPUObjectBase):
     """Represents a single pipeline to draw something.
@@ -1356,6 +1361,11 @@ class GPURenderPipeline(GPUPipelineBase, GPUObjectBase):
 
     Create a render pipeline using `GPUDevice.create_render_pipeline()`.
     """
+
+    @apidiff.add("Dispatching to GPURenderPipeline specific call")
+    def get_bind_group_layout(self, index):
+        """Get the bind group layout at the given index."""
+        raise NotImplementedError()
 
 
 class GPUCommandBuffer(GPUObjectBase):

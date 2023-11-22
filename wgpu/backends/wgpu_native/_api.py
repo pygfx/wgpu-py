@@ -1792,6 +1792,12 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
 class GPUPipelineBase(classes.GPUPipelineBase):
     def get_bind_group_layout(self, index):
+        """Get the bind group layout at the given index."""
+        raise NotImplementedError()  # no-cover
+
+
+class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
+    def get_bind_group_layout(self, index):
         """Get the bind group layout at the given index.
 
         Note that current wgpu-native aborts immediately if the index is out of range.
@@ -1800,8 +1806,6 @@ class GPUPipelineBase(classes.GPUPipelineBase):
         layout_id = libf.wgpuComputePipelineGetBindGroupLayout(self._internal, index)
         return GPUBindGroupLayout("", layout_id, self._device, [])
 
-
-class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1811,6 +1815,15 @@ class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectB
 
 
 class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
+    def get_bind_group_layout(self, index):
+        """Get the bind group layout at the given index.
+
+        Note that current wgpu-native aborts immediately if the index is out of range.
+        """
+        # H: WGPUBindGroupLayout f(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
+        layout_id = libf.wgpuRenderPipelineGetBindGroupLayout(self._internal, index)
+        return GPUBindGroupLayout("", layout_id, self._device, [])
+
     def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
