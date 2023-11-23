@@ -64,7 +64,7 @@ class WgpuCanvasInterface:
     Any object that implements these methods is a canvas that wgpu can work with.
     The object does not even have to derive from this class.
 
-    In most cases it's more convenient to subclass `gui.WgpuCanvasBase`.
+    In most cases it's more convenient to subclass :class:`WgpuCanvasBase <wgpu.gui.WgpuCanvasBase>`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -73,15 +73,19 @@ class WgpuCanvasInterface:
         self._canvas_context = None
 
     def get_window_id(self):
-        """Get the native window id. This is used to obtain a surface id,
-        so that wgpu can render to the region of the screen occupied by the canvas.
+        """Get the native window id.
+
+        This is used to obtain a surface id, so that wgpu can render
+        to the region of the screen occupied by the canvas.
         """
         raise NotImplementedError()
 
     def get_display_id(self):
-        """Get the native display id on Linux. This is needed in addition to the
-        window id to obtain a surface id. The default implementation calls into
-        the X11 lib to get the display id.
+        """Get the native display id (Linux only).
+
+        On Linux this is needed in addition to the window id to obtain
+        a surface id. The default implementation calls into the X11 lib
+        to get the display id.
         """
         # Re-use to avoid creating loads of id's
         if getattr(self, "_display_id", None) is not None:
@@ -107,8 +111,14 @@ class WgpuCanvasInterface:
         raise NotImplementedError()
 
     def get_context(self, kind="webgpu"):
-        """Get the GPUCanvasContext object corresponding to this canvas,
-        which can be used to e.g. obtain a texture to render to.
+        """Get the ``GPUCanvasContext`` object corresponding to this canvas.
+
+        The context is used to obtain a texture to render to, and to
+        present that texture to the canvas. This class provides a
+        default implementation to get the appropriate context.
+
+        The ``kind`` argument is a remnant from the WebGPU spec and
+        must always be "webgpu".
         """
         # Note that this function is analog to HtmlCanvas.getContext(), except
         # here the only valid arg is 'webgpu', which is also made the default.
@@ -123,15 +133,20 @@ class WgpuCanvasInterface:
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
-    """A canvas class that provides a basis for all GUI toolkits.
+    """A convenient base canvas class.
 
-    This class implements common functionality, to realize a common API
-    and avoid code duplication. It is convenient (but not strictly necessary)
-    for canvas classes to inherit from this class (all builtin canvases do).
+    This class provides a uniform API and implements common
+    functionality, to increase consistency and reduce code duplication.
+    It is convenient (but not strictly necessary) for canvas classes
+    to inherit from this class (but all builtin canvases do).
 
-    Amongst other things, this class implements draw rate limiting,
-    which can be set with the ``max_fps`` attribute (default 30). For
-    benchmarks you may also want to set ``vsync`` to False.
+    This class provides an API for scheduling draws (``request_draw()``)
+    and implements a mechanism to call the provided draw function
+    (``draw_frame()``) and then present the result to the canvas.
+
+    This class also implements draw rate limiting, which can be set
+    with the ``max_fps`` attribute (default 30). For benchmarks you may
+    also want to set ``vsync`` to False.
     """
 
     def __init__(self, *args, max_fps=30, vsync=True, **kwargs):
@@ -154,23 +169,35 @@ class WgpuCanvasBase(WgpuCanvasInterface):
             pass
 
     def draw_frame(self):
-        """The function that gets called at each draw. You can implement
-        this method in a subclass, or set it via a call to request_draw().
+        """The function that gets called at each draw.
+
+        You can implement this method in a subclass, or set it via a
+        call to request_draw().
         """
         pass
 
     def request_draw(self, draw_function=None):
-        """Request from the main loop to schedule a new draw event,
-        so that the canvas will be updated. If draw_function is not
-        given, the last set drawing function is used.
+        """Schedule a new draw event.
+
+        This function does not perform a draw directly, but schedules
+        a draw event at a suitable moment in time. In the draw event
+        the draw function is called, and the resulting rendered image
+        is presented to screen.
+
+        Arguments:
+            draw_function (callable or None): The function to set as the new draw
+                function. If not given or None, the last set draw function is used.
+
         """
         if draw_function is not None:
             self.draw_frame = draw_function
         self._request_draw()
 
     def _draw_frame_and_present(self):
-        """Draw the frame and present the result. Errors are logged to the
-        "wgpu" logger. Should be called by the subclass at an appropriate time.
+        """Draw the frame and present the result.
+
+        Errors are logged to the "wgpu" logger. Should be called by the
+        subclass at an appropriate time.
         """
         self._last_draw_time = time.perf_counter()
         # Perform the user-defined drawing code. When this errors,
@@ -215,10 +242,12 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         raise NotImplementedError()
 
     def _request_draw(self):
-        """This should invoke a new draw in a later event loop
-        iteration (i.e. the call itself should return directly).
-        Multiple calls should result in a single new draw. Preferably
-        the FPS is limited to avoid draining CPU and power.
+        """GUI-specific implementation for ``request_draw()``.
+
+        * This should invoke a new draw at a later time.
+        * The call itself should return directly.
+        * Multiple calls should result in a single new draw.
+        * Preferably the ``max_fps`` and ``vsync`` are honored.
         """
         raise NotImplementedError()
 
@@ -226,8 +255,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 class WgpuAutoGui:
     """Mixin class for canvases implementing autogui.
 
-    AutoGui canvases provide an API for handling events and registering event
-    handlers.
+    This class provides a common API for handling events and registering
+    event handlers. It adds to :class:`WgpuCanvasBase <wgpu.gui.WgpuCanvasBase>`
+    that interactive examples and applications can be written in a
+    generic way (no-GUI specific code).
     """
 
     def __init__(self, *args, **kwargs):
@@ -237,8 +268,10 @@ class WgpuAutoGui:
         self._event_handlers = defaultdict(set)
 
     def _get_event_wait_time(self):
-        """Calculate the time to wait for the next event dispatching
-        (for rate-limited events)."""
+        """Calculate the time to wait for the next event dispatching.
+
+        Used for rate-limited events.
+        """
         rate = 75  # events per second
         now = time.perf_counter()
         target_time = self._last_event_time + 1.0 / rate
@@ -248,8 +281,9 @@ class WgpuAutoGui:
         self, event, call_later_func, match_keys, accum_keys
     ):
         """Alternative `to handle_event()` for events that must be rate-limted.
-        If any of the `match_keys` keys of the new event differ from the currently
-        pending event, the old event is dispatched now. The `accum_keys` keys of
+
+        If any of the ``match_keys`` keys of the new event differ from the currently
+        pending event, the old event is dispatched now. The ``accum_keys`` keys of
         the current and new event are added together (e.g. to accumulate wheel delta).
 
         The (accumulated) event is handled in the following cases:
@@ -302,6 +336,9 @@ class WgpuAutoGui:
 
         The default implementation dispatches the event to the
         registered event handlers.
+
+        Arguments:
+            event (dict): the event to handle.
         """
         # Collect callbacks
         event_type = event.get("event_type")
