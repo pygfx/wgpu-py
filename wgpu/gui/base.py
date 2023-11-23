@@ -277,7 +277,9 @@ class WgpuAutoGui:
         target_time = self._last_event_time + 1.0 / rate
         return max(0, target_time - now)
 
-    def _handle_event_rate_limited(self, event, call_later_func, match_keys, accum_keys):
+    def _handle_event_rate_limited(
+        self, event, call_later_func, match_keys, accum_keys
+    ):
         """Alternative `to handle_event()` for events that must be rate-limted.
 
         If any of the ``match_keys`` keys of the new event differ from the currently
