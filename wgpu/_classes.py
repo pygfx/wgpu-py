@@ -1327,14 +1327,13 @@ class GPUShaderModule(GPUObjectBase):
 class GPUPipelineBase:
     """A mixin class for render and compute pipelines."""
 
-    def __init__(self, label, internal, device, layout):
+    def __init__(self, label, internal, device):
         super().__init__(label, internal, device)
-        self._layout = layout
 
     # IDL: [NewObject] GPUBindGroupLayout getBindGroupLayout(unsigned long index);
     def get_bind_group_layout(self, index):
         """Get the bind group layout at the given index."""
-        return self._layout._layouts[index]
+        raise NotImplementedError()
 
 
 class GPUComputePipeline(GPUPipelineBase, GPUObjectBase):
