@@ -64,7 +64,7 @@ class WgpuCanvasInterface:
     Any object that implements these methods is a canvas that wgpu can work with.
     The object does not even have to derive from this class.
 
-    In most cases it's more convenient to subclass :class:`WgpuCanvasBase <wgpu.WgpuCanvasBase>`.
+    In most cases it's more convenient to subclass :class:`WgpuCanvasBase <wgpu.gui.WgpuCanvasBase>`.
     """
 
     def __init__(self, *args, **kwargs):
@@ -256,7 +256,7 @@ class WgpuAutoGui:
     """Mixin class for canvases implementing autogui.
 
     This class provides a common API for handling events and registering
-    event handlers. It adds to :class:`WgpuCanvasBase <wgpu.WgpuCanvasBase>`
+    event handlers. It adds to :class:`WgpuCanvasBase <wgpu.gui.WgpuCanvasBase>`
     that interactive examples and applications can be written in a
     generic way (no-GUI specific code).
     """
