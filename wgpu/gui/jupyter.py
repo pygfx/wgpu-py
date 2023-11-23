@@ -7,7 +7,7 @@ from collections import defaultdict
 import weakref
 import asyncio
 
-from ._offscreen import WgpuOffscreenCanvas
+from .offscreen import WgpuOffscreenCanvasBase
 from .base import WgpuAutoGui
 
 import numpy as np
@@ -18,7 +18,7 @@ from IPython.display import display
 pending_jupyter_canvases = []
 
 
-class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvas, RemoteFrameBuffer):
+class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvasBase, RemoteFrameBuffer):
     """An ipywidgets widget providing a wgpu canvas. Needs the jupyter_rfb library."""
 
     def __init__(self, *, size=None, title=None, **kwargs):
@@ -88,10 +88,10 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvas, RemoteFrameBuffer):
             self._request_draw_timer_running = True
             call_later(self._get_draw_wait_time(), RemoteFrameBuffer.request_draw, self)
 
-    # Implementation needed for WgpuOffscreenCanvas
+    # Implementation needed for WgpuOffscreenCanvasBase
 
     def present(self, texture):
-        # This gets called at the end of a draw pass via _offscreen.GPUCanvasContext
+        # This gets called at the end of a draw pass via offscreen.GPUCanvasContext
         device = texture._device
         size = texture.size
         bytes_per_pixel = 4

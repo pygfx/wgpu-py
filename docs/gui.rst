@@ -21,7 +21,7 @@ The Canvas base classes
     ~WgpuCanvasInterface
     ~WgpuCanvasBase
     ~WgpuAutoGui
-    ~WgpuOffscreenCanvas
+    ~WgpuOffscreenCanvasBase
 
 
 For each supported GUI toolkit there is a module that implements a ``WgpuCanvas`` class,

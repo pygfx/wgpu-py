@@ -28,6 +28,7 @@ Changed:
 * `GPUCommandEncoder.begin_render_pass()` binds the lifetime of passed texture views to
   the returned render pass object to prevent premature destruction when no reference to
   a texture view is kept.
+* Renamed ``wgpu.gui.WgpuOffscreenCanvas` to `WgpuOffscreenCanvasBase`.
 
 Fixed:
 
