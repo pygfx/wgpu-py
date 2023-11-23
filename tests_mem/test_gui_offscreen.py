@@ -75,6 +75,7 @@ def test_release_canvas_context(n):
     gc.collect()
     if is_pypy:
         gc.collect()  # Need a bit more on pypy :)
+        gc.collect()
 
     # Check that the canvas objects are really deleted
     assert not canvases

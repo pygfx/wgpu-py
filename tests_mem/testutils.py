@@ -78,7 +78,6 @@ def clear_mem():
     gc.collect()
     if is_pypy:
         gc.collect()
-        gc.collect()
 
 
 def get_counts():
