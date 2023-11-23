@@ -356,7 +356,7 @@ def draw_frame():
         tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
     )
 
-    current_texture_view = present_context.get_current_texture()
+    current_texture_view = present_context.get_current_texture().create_view()
     render_pass = command_encoder.begin_render_pass(
         color_attachments=[
             {

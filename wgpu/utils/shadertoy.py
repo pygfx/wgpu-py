@@ -465,13 +465,12 @@ class Shadertoy:
         )
 
         command_encoder = self._device.create_command_encoder()
-
-        current_texture_view = self._present_context.get_current_texture()
+        current_texture = self._present_context.get_current_texture()
 
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
                 {
-                    "view": current_texture_view,
+                    "view": current_texture.create_view(),
                     "resolve_target": None,
                     "clear_value": (0, 0, 0, 1),
                     "load_op": wgpu.LoadOp.clear,

@@ -106,13 +106,13 @@ class WgpuCanvasInterface:
         """Get the physical size of the canvas in integer pixels."""
         raise NotImplementedError()
 
-    def get_context(self, kind="gpupresent"):
+    def get_context(self, kind="webgpu"):
         """Get the GPUCanvasContext object corresponding to this canvas,
         which can be used to e.g. obtain a texture to render to.
         """
-        # Note that this function is analog to HtmlCanvas.get_context(), except
-        # here the only valid arg is 'gpupresent', which is also made the default.
-        assert kind == "gpupresent"
+        # Note that this function is analog to HtmlCanvas.getContext(), except
+        # here the only valid arg is 'webgpu', which is also made the default.
+        assert kind == "webgpu"
         if self._canvas_context is None:
             # Get the active wgpu backend module
             backend_module = sys.modules["wgpu"].gpu.__module__

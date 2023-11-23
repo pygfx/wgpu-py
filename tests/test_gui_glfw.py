@@ -1,6 +1,6 @@
 """
 Test the canvas, and parts of the rendering that involves a canvas,
-like the swap chain.
+like the canvas context and surface texture.
 """
 
 import os
@@ -269,7 +269,7 @@ def _get_draw_function(device, canvas):
     )
 
     def draw_frame():
-        current_texture_view = present_context.get_current_texture()
+        current_texture_view = present_context.get_current_texture().create_view()
         command_encoder = device.create_command_encoder()
         assert current_texture_view.size
         ca = {

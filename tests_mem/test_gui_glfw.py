@@ -52,9 +52,10 @@ def test_release_canvas_context(n):
     loop.run_until_complete(stub_event_loop())
     gc.collect()
     loop.run_until_complete(stub_event_loop())
+    gc.collect()
 
     # Check that the canvas objects are really deleted
-    assert not canvases
+    assert not canvases, f"Still {len(canvases)} canvases"
 
 
 if __name__ == "__main__":

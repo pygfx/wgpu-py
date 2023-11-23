@@ -17,6 +17,25 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.13.0] - TBD
+
+Changed:
+
+* Update to wgpu-native 0.18.1.1.
+* `CanvasContext.get_current_texture()` now returns a `GPUTexture` instead of a `GPUTextureView`.
+* `OffscreenCanvas.present()` now receives a `GPUTexture` instead of a `GPUTextureView`,
+  and this is a new texture on each draw (no re-use).
+* `GPUCommandEncoder.begin_render_pass()` binds the lifetime of passed texture views to
+  the returned render pass object to prevent premature destruction when no reference to
+  a texture view is kept.
+
+Fixed:
+
+* Dragging a window between windows with different scale factor (with Qt on Windows) no longer
+  puts the window in an invalid state. A warning is still produced though.
+* Fixed that the canonical class name in the `__repr__` of GPU classes was changed in cases where it shouldn't.
+
+
 ### [v0.12.0] - 15-11-2023
 
 This is a big release that contains many improvements, but also multiple API changes.
