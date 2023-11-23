@@ -65,7 +65,9 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvas):
         return data.cast("B", (size[1], size[0], 4))
 
     def draw(self):
-        """Perform a draw and return the resulting array as an NxMx4 memoryview object.
+        """Perform a draw and get the resulting image.
+
+        The image array is returned as an NxMx4 memoryview object.
         This object can be converted to a numpy array (without copying data)
         using ``np.asarray(arr)``.
         """
