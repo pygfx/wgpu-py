@@ -19,8 +19,6 @@ Possible sections in each release:
 
 ### [v0.13.0] - TBD
 
-IN this release we
-
 Changed:
 
 * Update to wgpu-native 0.18.1.1.
