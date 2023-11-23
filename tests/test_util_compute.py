@@ -285,6 +285,176 @@ def test_compute_indirect():
     assert out2[-2:] == [-1, -1]
 
 
+def test_compute_default_layout1():
+    compute_shader = """
+        @group(0)
+        @binding(0)
+        var<storage,read> data1: array<i32>;
+
+        @group(0)
+        @binding(1)
+        var<storage,read_write> data2: array<i32>;
+
+        @compute
+        @workgroup_size(1)
+        fn main(@builtin(global_invocation_id) index: vec3<u32>) {
+            let i = i32(index.x);
+            data2[i] = data1[i] + 1;
+        }
+    """
+
+    # Create an array of 100 random int32
+    n = 100
+    in1 = [int(random.uniform(0, 100)) for i in range(n)]
+    in1 = (c_int32 * n)(*in1)
+
+    # Create device and shader object
+    device = wgpu.utils.get_default_device()
+    cshader = device.create_shader_module(code=compute_shader)
+
+    # Create input buffer and upload data to in
+    buffer1 = device.create_buffer_with_data(data=in1, usage=wgpu.BufferUsage.STORAGE)
+
+    # Create output buffer
+    buffer2 = device.create_buffer(
+        size=ctypes.sizeof(in1),
+        usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC,
+    )
+
+    # Create buffer to hold the dispatch parameters for the indirect call
+    params = (ctypes.c_int32 * 3)(n - 2, 1, 1)  # note the minus 2!
+    buffer3 = device.create_buffer_with_data(
+        data=params,
+        usage=wgpu.BufferUsage.INDIRECT,
+    )
+
+    # Setup bindings info
+    bindings = [
+        {
+            "binding": 0,
+            "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},
+        },
+        {
+            "binding": 1,
+            "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},
+        },
+    ]
+
+    # Create a pipeline using "auto" layout mode
+    compute_pipeline = device.create_compute_pipeline(
+        layout=wgpu.enums.AutoLayoutMode.auto,
+        compute={"module": cshader, "entry_point": "main"},
+    )
+    bind_group_layout = compute_pipeline.get_bind_group_layout(0)
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
+
+    # Run the pipeline
+    command_encoder = device.create_command_encoder()
+    compute_pass = command_encoder.begin_compute_pass()
+    compute_pass.set_pipeline(compute_pipeline)
+    compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 args not used
+    compute_pass.dispatch_workgroups_indirect(buffer3, 0)
+    compute_pass.end()
+    device.queue.submit([command_encoder.finish()])
+
+    # Read result
+    out1 = in1.__class__.from_buffer(device.queue.read_buffer(buffer2))
+    in2 = list(in1)[:]
+    out2 = [i - 1 for i in out1]
+    # The shader was applied to all but the last two elements
+    assert in2[:-2] == out2[:-2]
+    assert out2[-2:] == [-1, -1]
+
+
+def test_compute_default_layout2():
+    # Default layout with multiple bind groups
+
+    compute_shader = """
+        @group(0)
+        @binding(0)
+        var<storage,read> data1: array<i32>;
+
+        @group(1)
+        @binding(0)
+        var<storage,read_write> data2: array<i32>;
+
+        @compute
+        @workgroup_size(1)
+        fn main(@builtin(global_invocation_id) index: vec3<u32>) {
+            let i = i32(index.x);
+            data2[i] = data1[i] + 1;
+        }
+    """
+
+    # Create an array of 100 random int32
+    n = 100
+    in1 = [int(random.uniform(0, 100)) for i in range(n)]
+    in1 = (c_int32 * n)(*in1)
+
+    # Create device and shader object
+    device = wgpu.utils.get_default_device()
+    cshader = device.create_shader_module(code=compute_shader)
+
+    # Create input buffer and upload data to in
+    buffer1 = device.create_buffer_with_data(data=in1, usage=wgpu.BufferUsage.STORAGE)
+
+    # Create output buffer
+    buffer2 = device.create_buffer(
+        size=ctypes.sizeof(in1),
+        usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC,
+    )
+
+    # Create buffer to hold the dispatch parameters for the indirect call
+    params = (ctypes.c_int32 * 3)(n - 2, 1, 1)  # note the minus 2!
+    buffer3 = device.create_buffer_with_data(
+        data=params,
+        usage=wgpu.BufferUsage.INDIRECT,
+    )
+
+    # Setup bindings info
+    bindings0 = [
+        {
+            "binding": 0,
+            "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},
+        },
+    ]
+    bindings1 = [
+        {
+            "binding": 0,
+            "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},
+        },
+    ]
+
+    # Create a pipeline using "auto" layout mode
+    compute_pipeline = device.create_compute_pipeline(
+        layout=wgpu.enums.AutoLayoutMode.auto,
+        compute={"module": cshader, "entry_point": "main"},
+    )
+    bind_group_layout0 = compute_pipeline.get_bind_group_layout(0)
+    bind_group0 = device.create_bind_group(layout=bind_group_layout0, entries=bindings0)
+
+    bind_group_layout1 = compute_pipeline.get_bind_group_layout(1)
+    bind_group1 = device.create_bind_group(layout=bind_group_layout1, entries=bindings1)
+
+    # Run the pipeline
+    command_encoder = device.create_command_encoder()
+    compute_pass = command_encoder.begin_compute_pass()
+    compute_pass.set_pipeline(compute_pipeline)
+    compute_pass.set_bind_group(0, bind_group0, [], 0, 999999)
+    compute_pass.set_bind_group(1, bind_group1, [], 0, 999999)
+    compute_pass.dispatch_workgroups_indirect(buffer3, 0)
+    compute_pass.end()
+    device.queue.submit([command_encoder.finish()])
+
+    # Read result
+    out1 = in1.__class__.from_buffer(device.queue.read_buffer(buffer2))
+    in2 = list(in1)[:]
+    out2 = [i - 1 for i in out1]
+    # The shader was applied to all but the last two elements
+    assert in2[:-2] == out2[:-2]
+    assert out2[-2:] == [-1, -1]
+
+
 def test_compute_fails():
     compute_shader = """
         @group(0)

@@ -1349,19 +1349,26 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # not used: constants
         )
 
+        if isinstance(layout, GPUPipelineLayout):
+            layout_id = layout._internal
+        elif layout == enums.AutoLayoutMode.auto:
+            layout_id = ffi.NULL
+        else:
+            raise TypeError(
+                "create_compute_pipeline() 'layout' arg must be a GPUPipelineLayout or 'auto'"
+            )
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
         struct = new_struct_p(
             "WGPUComputePipelineDescriptor *",
             label=to_c_label(label),
-            layout=layout._internal,
+            layout=layout_id,
             compute=c_compute_stage,
             # not used: nextInChain
-            # not used: compute
         )
-
         # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
-        return GPUComputePipeline(label, id, self, layout)
+        return GPUComputePipeline(label, id, self)
 
     async def create_compute_pipeline_async(
         self,
@@ -1563,7 +1570,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateRenderPipeline(self._internal, struct)
-        return GPURenderPipeline(label, id, self, layout)
+        return GPURenderPipeline(label, id, self)
 
     async def create_render_pipeline_async(
         self,
@@ -1966,7 +1973,20 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
 
 class GPUPipelineBase(classes.GPUPipelineBase):
-    pass
+    def get_bind_group_layout(self, index):
+        """Get the bind group layout at the given index.
+
+        Note that current wgpu-native aborts immediately if the index is out of range.
+        """
+        if isinstance(self, GPUComputePipeline):
+            # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
+            layout_id = libf.wgpuComputePipelineGetBindGroupLayout(
+                self._internal, index
+            )
+        else:
+            # H: WGPUBindGroupLayout f(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
+            layout_id = libf.wgpuRenderPipelineGetBindGroupLayout(self._internal, index)
+        return GPUBindGroupLayout("", layout_id, self._device, [])
 
 
 class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):

@@ -142,6 +142,11 @@ def render_to_texture(
         },
     )
 
+    if bind_group:
+        # if the bind_group is provided, we can at least retrieve
+        # the first bind group layout from the pipeline
+        _ = render_pipeline.get_bind_group_layout(0)
+
     command_encoder = device.create_command_encoder()
 
     color_attachment = color_attachment or {
