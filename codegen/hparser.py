@@ -128,7 +128,9 @@ class HParser:
                 name = parts[-1]
                 if name.endswith("Flags"):
                     assert name.startswith("WGPU")
-                    name = name[4:-5]
+                    name1 = name[4:-1]  # xxFlags -> xxFlag
+                    name2 = name[4:-5]  # xxFlags -> xx
+                    name = name1 if name1 in self.enums else name2
                 self.flags[name] = self.enums.pop(name)
 
         # Collect structs. This is relatively easy, since we only need the C code.

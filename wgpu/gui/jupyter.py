@@ -90,14 +90,14 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvas, RemoteFrameBuffer):
 
     # Implementation needed for WgpuOffscreenCanvas
 
-    def present(self, texture_view):
+    def present(self, texture):
         # This gets called at the end of a draw pass via _offscreen.GPUCanvasContext
-        device = texture_view._device
-        size = texture_view.size
+        device = texture._device
+        size = texture.size
         bytes_per_pixel = 4
         data = device.queue.read_texture(
             {
-                "texture": texture_view.texture,
+                "texture": texture,
                 "mip_level": 0,
                 "origin": (0, 0, 0),
             },

@@ -129,13 +129,31 @@ def write_mappings():
     pylines.append("}")
 
     # Write a few native-only mappings: int => key
+    # If possible, resolve to WebGPU names, otherwise use the native name.
     pylines.append("enum_int2str = {")
-    for name in ["BackendType", "AdapterType", "ErrorType", "DeviceLostReason"]:
+    for name in [
+        "BackendType",
+        "AdapterType",
+        "ErrorType",
+        "DeviceLostReason",
+        "TextureFormat",
+        "TextureDimension",
+        "PresentMode",
+        "CompositeAlphaMode",
+    ]:
+        webgpu_names = {}
+        if name in idl.enums:
+            webgpu_names = {
+                val.replace("-", ""): val for val in idl.enums[name].values()
+            }
+            if "unknown" in webgpu_names:
+                webgpu_names["undefined"] = "unknown"
         pylines.append(f'    "{name}":' + " {")
         for key, val in hp.enums[name].items():
             if key == "Force32":
                 continue
-            pylines.append(f'        {val}: "{key}",')
+            enum_val = webgpu_names.get(key.lower(), key)
+            pylines.append(f'        {val}: "{enum_val}",')
         pylines.append("    },")
     pylines.append("}")
 
