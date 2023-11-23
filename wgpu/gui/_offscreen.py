@@ -38,7 +38,7 @@ class WgpuOffscreenCanvas(WgpuCanvasBase):
         # Notes: Creating a new texture object for each draw is
         # consistent with how real canvas contexts work, plus it avoids
         # confusion of re-using the same texture except when the canvas
-        # changes size. For use-cases when you do want to render to the
+        # changes size. For use-cases where you do want to render to the
         # same texture one does not need the canvas API. E.g. in pygfx
         # the renderer can also work with a target that is a (fixed
         # size) texture.
