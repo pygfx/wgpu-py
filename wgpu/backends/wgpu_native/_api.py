@@ -1974,10 +1974,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
 class GPUPipelineBase(classes.GPUPipelineBase):
     def get_bind_group_layout(self, index):
-        """Get the bind group layout at the given index.
-
-        Note that current wgpu-native aborts immediately if the index is out of range.
-        """
+        """Get the bind group layout at the given index."""
         if isinstance(self, GPUComputePipeline):
             # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
             layout_id = libf.wgpuComputePipelineGetBindGroupLayout(
