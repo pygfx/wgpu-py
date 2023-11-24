@@ -78,7 +78,7 @@ def test_canvas_logging(caplog):
     assert text.count("division by zero") == 4
 
 
-class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvas):
+class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvasBase):
     def __init__(self):
         super().__init__()
         self.textures = []
