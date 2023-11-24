@@ -17,24 +17,33 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.13.0] - TBD
+### [v0.13.0] - 24-11-2023
+
+Added:
+
+* Add `iDate` builtin to Shadertoy utility.
+* Allow "auto" layout args for `create_compute_pipeline()`.
+* Official support for Python 3.12 and pypy.
 
 Changed:
 
-* Update to wgpu-native 0.18.1.1.
+* Update to wgpu-native 0.18.1.2.
 * `CanvasContext.get_current_texture()` now returns a `GPUTexture` instead of a `GPUTextureView`.
-* `OffscreenCanvas.present()` now receives a `GPUTexture` instead of a `GPUTextureView`,
+* `OffscreenCanvasBase.present()` now receives a `GPUTexture` instead of a `GPUTextureView`,
   and this is a new texture on each draw (no re-use).
-* `GPUCommandEncoder.begin_render_pass()` binds the lifetime of passed texture views to
-  the returned render pass object to prevent premature destruction when no reference to
-  a texture view is kept.
 * Renamed ``wgpu.gui.WgpuOffscreenCanvas` to `WgpuOffscreenCanvasBase`.
+* The `wgpu.base` submodule that defined the GPU classes is renamed to be a private
+  module. The new `wgpu.classes` namespace contains all GPU classes (and nothing else).
+* The `__repr__` of the GPU classes shows a shorter canonical class name.
+* Flags and Enums have a more useful `__repr__`.
 
 Fixed:
 
-* Dragging a window between windows with different scale factor (with Qt on Windows) no longer
-  puts the window in an invalid state. A warning is still produced though.
-* Fixed that the canonical class name in the `__repr__` of GPU classes was changed in cases where it shouldn't.
+* Dragging a window between windows with different scale factor (with Qt on Windows)
+  no longer puts the window in an invalid state. A warning is still produced though.
+* `GPUCommandEncoder.begin_render_pass()` binds the lifetime of passed texture views to
+  the returned render pass object to prevent premature destruction when no reference to
+  a texture view is kept.
 
 
 ### [v0.12.0] - 15-11-2023
