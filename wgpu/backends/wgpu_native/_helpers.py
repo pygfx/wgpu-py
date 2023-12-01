@@ -88,10 +88,6 @@ def get_wgpu_instance():
     if _the_instance is None:
         # H: nextInChain: WGPUChainedStruct *
         struct = ffi.new("WGPUInstanceDescriptor *")
-        extras = ffi.new("WGPUInstanceExtras *")
-        extras.flags = lib.WGPUInstanceFlag_Validation  # | lib.WGPUInstanceFlag_Debug
-        extras.chain.sType = lib.WGPUSType_InstanceExtras
-        struct.nextInChain = ffi.cast("WGPUChainedStruct * ", extras)
         _the_instance = lib.wgpuCreateInstance(struct)
     return _the_instance
 
