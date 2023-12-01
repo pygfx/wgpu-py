@@ -573,7 +573,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 libf.wgpuTextureRelease(texture_id)
             if attempt == 1 and status in [
                 lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
-                lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
             ]:

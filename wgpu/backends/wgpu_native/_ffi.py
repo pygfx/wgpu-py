@@ -167,7 +167,11 @@ def _check_expected_version(version_info):
 def _logger_callback(level, c_msg, userdata):
     """Called when Rust emits a log message."""
     # Make a copy of the msg. Rust reclaims the memory when this returns
-    msg = ffi.string(c_msg).decode(errors="ignore")
+    try:
+        msg = ffi.string(c_msg).decode(errors="ignore")
+    except Exception:
+        if sys.is_finalizing():
+            return  # Python is shutting down
     m = {
         lib.WGPULogLevel_Error: logger.error,
         lib.WGPULogLevel_Warn: logger.warning,
