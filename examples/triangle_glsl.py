@@ -116,7 +116,7 @@ def _main(canvas, device):
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
                 {
-                    "view": current_texture_view,
+                    "view": current_texture_view.create_view(),
                     "resolve_target": None,
                     "clear_value": (0, 0, 0, 1),
                     "load_op": wgpu.LoadOp.clear,
