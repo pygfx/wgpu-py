@@ -77,17 +77,13 @@ _bind_group_layout_binding = 10
 @create_and_release
 def test_release_bind_group_layout(n):
     # Note: when we use the same binding layout descriptor, wgpu-native
-    # re-uses the BindGroupLayout object. On the other hand, it also
-    # does not seem to clean them up. Perhaps it just caches them? There
-    # are only so many possible combinations, and its just 152 bytes
-    # (on Metal) per object.
+    # re-uses the BindGroupLayout object.
 
     global _bind_group_layout_binding
     _bind_group_layout_binding += 1
 
     yield {
         "expected_counts_after_create": {"BindGroupLayout": (n, 1)},
-        "expected_counts_after_release": {"BindGroupLayout": (0, 1)},
     }
 
     binding_layouts = [

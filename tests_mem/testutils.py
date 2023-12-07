@@ -74,10 +74,15 @@ def get_memory_usage():
 def clear_mem():
     time.sleep(0.001)
     gc.collect()
+
     time.sleep(0.001)
     gc.collect()
+
     if is_pypy:
         gc.collect()
+
+    device = wgpu.utils.get_default_device()
+    device._poll()
 
 
 def get_counts():
@@ -183,6 +188,9 @@ def create_and_release(create_objects_func):
 
             # Test that class matches function name (should prevent a group of copy-paste errors)
             assert ob_name == cls.__name__[3:]
+
+            # Give wgpu some slack to clean up temporary resources
+            wgpu.utils.get_default_device()._poll()
 
             # Measure peak object counts
             counts2 = get_counts()
