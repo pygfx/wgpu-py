@@ -2002,6 +2002,7 @@ class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
             # H: void f(WGPUCommandBuffer commandBuffer)
             libf.wgpuCommandBufferRelease(internal)
 
+
 class GPUCommandsMixin(classes.GPUCommandsMixin):
     pass
 
@@ -2489,9 +2490,6 @@ class GPUCommandEncoder(
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = libf.wgpuCommandEncoderFinish(self._internal, struct)
-        # WGPU destroys the command encoder when it's finished. So we set
-        # _internal to None to avoid releasing a nonexistent object.
-        # self._internal = None
         return GPUCommandBuffer(label, id, self)
 
     def resolve_query_set(
@@ -2635,10 +2633,6 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
         # H: void f(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands)
         libf.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
-        # WGPU destroys the resource when submitting. We follow this
-        # to avoid releasing a nonexistent object.
-        # for cb in command_buffers:
-        #     cb._internal = None
 
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
         # We support anything that memoryview supports, i.e. anything

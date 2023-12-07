@@ -72,7 +72,6 @@ def get_memory_usage():
 
 
 def clear_mem():
-
     time.sleep(0.001)
     gc.collect()
 
@@ -84,6 +83,7 @@ def clear_mem():
 
     device = wgpu.utils.get_default_device()
     device._poll()
+
 
 def get_counts():
     """Get a dict that maps object names to a 2-tuple represening
