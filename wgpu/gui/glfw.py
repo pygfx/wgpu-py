@@ -142,7 +142,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         # Register callbacks. We may get notified too often, but that's
         # ok, they'll result in a single draw.
         glfw.set_framebuffer_size_callback(self._window, weakbind(self._on_size_change))
-        glfw.set_window_close_callback(self._window, weakbind(self._on_close))
+        glfw.set_window_close_callback(self._window, weakbind(self._check_close))
         glfw.set_window_refresh_callback(self._window, weakbind(self._on_window_dirty))
         glfw.set_window_focus_callback(self._window, weakbind(self._on_window_dirty))
         set_window_content_scale_callback(
@@ -183,10 +183,19 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._determine_size()
         self._request_draw()
 
+    def _check_close(self, *args):
+        # Follow the close flow that glfw intended.
+        # This method can be overloaded and the close-flag can be set to False
+        # using set_window_should_close() if now is not a good time to close.
+        if self._window is not None and glfw.window_should_close(self._window):
+            self._on_close()
+
     def _on_close(self, *args):
         all_glfw_canvases.discard(self)
-        glfw.destroy_window(self._window)  # not just glfw.hide_window
-        self._handle_event_and_flush({"event_type": "close"})
+        if self._window is not None:
+            glfw.destroy_window(self._window)  # not just glfw.hide_window
+            self._window = None
+            self._handle_event_and_flush({"event_type": "close"})
 
     def _on_window_dirty(self, *args):
         self._request_draw()
@@ -202,6 +211,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
 
     def _determine_size(self):
+        if self._window is None:
+            return
         # Because the value of get_window_size is in physical-pixels
         # on some systems and in logical-pixels on other, we use the
         # framebuffer size and pixel ratio to derive the logical size.
@@ -222,6 +233,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._handle_event_and_flush(ev)
 
     def _set_logical_size(self, new_logical_size):
+        if self._window is None:
+            return
         # There is unclarity about the window size in "screen pixels".
         # It appears that on Windows and X11 its the same as the
         # framebuffer size, and on macOS it's logical pixels.
@@ -299,11 +312,12 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             call_later(self._get_draw_wait_time(), self._mark_ready_for_draw)
 
     def close(self):
-        glfw.set_window_should_close(self._window, True)
-        self._on_close()
+        if self._window is not None:
+            glfw.set_window_should_close(self._window, True)
+            self._check_close()
 
     def is_closed(self):
-        return glfw.window_should_close(self._window)
+        return self._window is None
 
     # User events
 
