@@ -28,7 +28,7 @@ Fixed:
 
 Added:
 
-* Support for linux-aarch64 (binary wheels available)! This includes Raspberry Pi's with a 64-bit OS.
+* Support for linux-aarch64 (binary wheels available)! This includes Raspberry Pi's with a 64-bit OS, and adds support for building linux docker images on Apple Silicon devices without having to emulate x86 (no need for `--platform linux/amd64`).
 
 
 ### [v0.13.0] - 24-11-2023
