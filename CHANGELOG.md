@@ -22,7 +22,7 @@ Possible sections in each release:
 Fixed:
 
 * Prevent access violation errors with GLFW on Windows.
-* Prevent a segfault when deleting a `GPUPipelineLayout` (observed in a very specifc use-case on LavaPipe).
+* Prevent a segfault when deleting a `GPUPipelineLayout` (observed in a very specific use-case on LavaPipe).
 * Fix `triangle_glsl.py` example.
 * Fix that when logger is set to debug, errors are produced when Python exits.
 
