@@ -17,6 +17,20 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.13.1] - 08-12-2023
+
+Fixed:
+
+* Prevent access violation errors with GLFW on Windows.
+* Prevent a segfault when deleting a `GPUPipelineLayout` (observed in a very specifc use-case on LavaPipe).
+* Fix `triangle_glsl.py` example.
+* Fix that when logger is set to debug, errors are produced when Python exits.
+
+Added:
+
+* Support for linux-aarch64 (binary wheels available)! This includes Raspberry Pi's with a 64-bit OS.
+
+
 ### [v0.13.0] - 24-11-2023
 
 Added:
