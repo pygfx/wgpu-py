@@ -14,10 +14,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 
 """
-diag = np.eye(8, dtype=np.uint8).reshape((8, 8, 1)).repeat(4, axis=2) * 255
-gradient = np.linspace(0, 255, 32, dtype=np.uint8).reshape((32, 1, 1)).repeat(32, axis=1).repeat(4, axis=2)
+test_pattern = memoryview(
+    bytearray((int(i != k) * 255 for i in range(8) for k in range(8))) * 4
+).cast("B", shape=[8, 8, 4])
+gradient = memoryview(
+    bytearray((i for i in range(0, 255, 8) for _ in range(4))) * 32
+).cast("B", shape=[32, 32, 4])
 
-channel0 = ShadertoyChannel(diag, wrap="repeat")
+channel0 = ShadertoyChannel(test_pattern, wrap="repeat")
 channel1 = ShadertoyChannel(gradient)
 
 shader = Shadertoy(shader_code, resolution=(640, 480), inputs=[channel0, channel1])

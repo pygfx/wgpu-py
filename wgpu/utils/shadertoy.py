@@ -256,7 +256,7 @@ class ShadertoyChannel:
     Parameters:
         data (memoryview): will be converted to memoryview. For example read in your images using ``np.asarray(Image.open("image.png"))``
         kind (str): The kind of channel. Can be one of ("texture"). More will be supported in the future
-        **kwargs: Additional arguments for the sampler. 
+        **kwargs: Additional arguments for the sampler.
     """
 
     # TODO: add cubemap/volume, buffer, webcam, video, audio, keyboard?
