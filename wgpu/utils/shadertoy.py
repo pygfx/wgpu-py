@@ -34,7 +34,21 @@ float i_time;
 float i_time_delta;
 int i_frame;
 
+layout(binding = 1) uniform texture2D i_channel0;
+layout(binding = 2) uniform sampler sampler0;
+layout(binding = 3) uniform texture2D i_channel1;
+layout(binding = 4) uniform sampler sampler1;
+layout(binding = 5) uniform texture2D i_channel2;
+layout(binding = 6) uniform sampler sampler2;
+layout(binding = 7) uniform texture2D i_channel3;
+layout(binding = 8) uniform sampler sampler3;
+
 // Shadertoy compatibility, see we can use the same code copied from shadertoy website
+
+#define iChannel0 sampler2D(i_channel0, sampler0)
+#define iChannel1 sampler2D(i_channel1, sampler1)
+#define iChannel2 sampler2D(i_channel2, sampler2)
+#define iChannel3 sampler2D(i_channel3, sampler3)
 
 #define iMouse i_mouse
 #define iDate i_date
@@ -243,8 +257,9 @@ class ShadertoyChannel:  # maybe wgpu.structs.Struct?
         data (memoryview): will be converted to memoryview. For example read in your images using ``np.asarray(Image.open("image.png"))``
         kind (str): The kind of channel. Can be one of ("texture"). More will be supported in the future
     """
+
     # TODO: add cubemap/volume, buffer, webcam, video, audio, keyboard?
-    
+
     def __init__(self, data=None, kind="texture", **kwargs):
         if kind != "texture":
             raise NotImplementedError("Only texture is supported for now.")
@@ -259,23 +274,26 @@ class ShadertoyChannel:  # maybe wgpu.structs.Struct?
                 .cast("B")
                 .cast("B", shape=[256, 256, 4])
             )
-        self.size = self.data.shape
+        self.size = self.data.shape  # (rows, columns, channels)
 
         # step 2 setup texture data
         self.texture_size = (
             self.data.shape[1],
             self.data.shape[0],
             1,
-        )  # orientation mismatch somehow?
+        )  # orientation mismatch somehow (columns, rows, 1)
 
         self.bytes_per_pixel = (
             self.data.nbytes // self.data.shape[1] // self.data.shape[0]
-        ) #is this ndim+1 ?
+        )
 
-        #TODO add sampler kwargs here (midmap, offset, edges, filtering, ...?)
+        # TODO add sampler kwargs here (midmap, offset, edges, filtering, ...?)
         self.sampler_settings = {}
 
     def __repr__(self):
+        """
+        Convenience method to get a representation of this object for debugging.
+        """
         return repr({k: v for k, v in self.__dict__.items() if k != "data"})
 
 
