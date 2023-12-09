@@ -1,15 +1,11 @@
 from wgpu.utils.shadertoy import Shadertoy, ShadertoyChannel
 
-import numpy as np
-
 shader_code = """
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = fragCoord/iResolution.xy;
-    
     vec4 c0 = texture(iChannel0, 2.0*uv);
     vec4 c1 = texture(iChannel1, 3.0*uv);
-    
     fragColor = mix(c0,c1,abs(sin(i_time)));
 }
 

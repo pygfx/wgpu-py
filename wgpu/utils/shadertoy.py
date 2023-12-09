@@ -83,7 +83,6 @@ void main(){
     i_time = input.time;
     i_time_delta = input.time_delta;
     i_frame = input.frame;
-    
     vec2 uv = vec2(uv.x, 1.0 - uv.y);
     vec2 frag_coord = uv * i_resolution.xy;
 
@@ -181,7 +180,6 @@ fn main(in: Varyings) -> @location(0) vec4<f32> {
     i_time = input.time;
     i_time_delta = input.time_delta;
     i_frame = input.frame;
-    
     let uv = vec2<f32>(in.uv.x, 1.0 - in.uv.y);
     let frag_coord = uv * i_resolution.xy;
 
