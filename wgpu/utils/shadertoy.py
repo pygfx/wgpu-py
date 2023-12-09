@@ -263,13 +263,13 @@ class ShadertoyChannel:  # maybe wgpu.structs.Struct?
 
         # step 2 setup texture data
         self.texture_size = (
-            self.data.shape[0],
             self.data.shape[1],
+            self.data.shape[0],
             1,
         )  # orientation mismatch somehow?
 
         self.bytes_per_pixel = (
-            self.data.nbytes // self.data.shape[0] // self.data.shape[1]
+            self.data.nbytes // self.data.shape[1] // self.data.shape[0]
         ) #is this ndim+1 ?
 
         #TODO add sampler kwargs here (midmap, offset, edges, filtering, ...?)
@@ -457,8 +457,8 @@ class Shadertoy:
                 {
                     "offset": 0,
                     "bytes_per_row": channel_input.bytes_per_pixel
-                    * channel_input.size[0],  # must be multiple of 256?
-                    "rows_per_image": channel_input.size[1],  # same is done internally
+                    * channel_input.size[1],  # must be multiple of 256?
+                    "rows_per_image": channel_input.size[0],  # same is done internally
                 },
                 texture.size,
             )
