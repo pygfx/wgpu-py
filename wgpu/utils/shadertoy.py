@@ -250,12 +250,13 @@ class UniformArray:
                 m[i] = val[i]
 
 
-class ShadertoyChannel:  # maybe wgpu.structs.Struct?
+class ShadertoyChannel:
     """
     Represents a shadertoy channel. It can be a texture.
     Parameters:
         data (memoryview): will be converted to memoryview. For example read in your images using ``np.asarray(Image.open("image.png"))``
         kind (str): The kind of channel. Can be one of ("texture"). More will be supported in the future
+        **kwargs: Additional arguments for the sampler. 
     """
 
     # TODO: add cubemap/volume, buffer, webcam, video, audio, keyboard?
@@ -263,32 +264,29 @@ class ShadertoyChannel:  # maybe wgpu.structs.Struct?
     def __init__(self, data=None, kind="texture", **kwargs):
         if kind != "texture":
             raise NotImplementedError("Only texture is supported for now.")
-
-        # step 1 read file/memoryview/args
         if data is not None:
             self.data = memoryview(data)
         else:
-            # default black texture
             self.data = (
-                memoryview((ctypes.c_uint8 * 256 * 256 * 4)())
+                memoryview((ctypes.c_uint8 * 8 * 8 * 4)())
                 .cast("B")
-                .cast("B", shape=[256, 256, 4])
+                .cast("B", shape=[8, 8, 4])
             )
         self.size = self.data.shape  # (rows, columns, channels)
-
-        # step 2 setup texture data
         self.texture_size = (
             self.data.shape[1],
             self.data.shape[0],
             1,
-        )  # orientation mismatch somehow (columns, rows, 1)
-
+        )  # orientation change (columns, rows, 1)
         self.bytes_per_pixel = (
             self.data.nbytes // self.data.shape[1] // self.data.shape[0]
         )
-
         # TODO add sampler kwargs here (midmap, offset, edges, filtering, ...?)
         self.sampler_settings = {}
+        wrap = kwargs.pop("wrap", "clamp-to-edge")
+        self.sampler_settings["address_mode_u"] = wrap
+        self.sampler_settings["address_mode_v"] = wrap
+        self.sampler_settings["address_mode_w"] = wrap
 
     def __repr__(self):
         """
@@ -329,7 +327,6 @@ class Shadertoy:
     """
 
     # todo: add more built-in variables
-    # todo: support input textures
     # todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
 
     def __init__(
@@ -436,10 +433,9 @@ class Shadertoy:
             },
         ]
 
-        for input_idx, channel_input in enumerate(self.inputs[:1]):
-            texture_binding = 2 * input_idx + 1
+        for input_idx, channel_input in enumerate(self.inputs):
+            texture_binding = (2 * input_idx) + 1
             sampler_binding = 2 * (input_idx + 1)
-            # only when there is inputs?
             binding_layout.extend(
                 [
                     {
