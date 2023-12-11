@@ -189,7 +189,6 @@ fn main(in: Varyings) -> @location(0) vec4<f32> {
 """
 
 
-
 class UniformArray:
     """Convenience class to create a uniform array.
 
@@ -247,7 +246,8 @@ class ShadertoyChannel:
     Parameters:
         data (memoryview): will be converted to memoryview. For example read in your images using ``np.asarray(Image.open("image.png"))``
         kind (str): The kind of channel. Can be one of ("texture"). More will be supported in the future
-        **kwargs: Additional arguments for the sampler.
+        ``wrap`` (str): The wrap mode, can be one of ("clamp-to-edge", "repeat", "clamp"). Default is "clamp-to-edge".
+        **kwargs: Additional arguments for the sampler:
     """
 
     # TODO: add cubemap/volume, buffer, webcam, video, audio, keyboard?
@@ -272,9 +272,10 @@ class ShadertoyChannel:
         self.bytes_per_pixel = (
             self.data.nbytes // self.data.shape[1] // self.data.shape[0]
         )
-        # TODO add sampler kwargs here (midmap, offset, edges, filtering, ...?)
         self.sampler_settings = {}
         wrap = kwargs.pop("wrap", "clamp-to-edge")
+        if wrap.startswith("clamp"):
+            wrap = "clamp-to-edge"
         self.sampler_settings["address_mode_u"] = wrap
         self.sampler_settings["address_mode_v"] = wrap
         self.sampler_settings["address_mode_w"] = wrap
@@ -283,7 +284,16 @@ class ShadertoyChannel:
         """
         Convenience method to get a representation of this object for debugging.
         """
-        return repr({k: v for k, v in self.__dict__.items() if k != "data"})
+        data_repr = {
+            "repr": self.data.__repr__(),
+            "shape": self.data.shape,
+            "strides": self.data.strides,
+            "nbytes": self.data.nbytes,
+            "obj": self.data.obj,
+        }
+        class_repr = {k: v for k, v in self.__dict__.items() if k != "data"}
+        class_repr["data"] = data_repr
+        return repr(class_repr)
 
 
 class Shadertoy:
