@@ -188,13 +188,6 @@ fn main(in: Varyings) -> @location(0) vec4<f32> {
 
 """
 
-binding_layout = [
-    {
-        "binding": 0,
-        "visibility": wgpu.ShaderStage.FRAGMENT,
-        "buffer": {"type": wgpu.BufferBindingType.uniform},
-    },
-]
 
 
 class UniformArray:
@@ -302,6 +295,7 @@ class Shadertoy:
         shader_code (str): The shader code to use.
         resolution (tuple): The resolution of the shadertoy.
         offscreen (bool): Whether to render offscreen. Default is False.
+        inputs (list): A list of :class:`ShadertoyChannel` objects. Supports up to 4 inputs. Defaults to sampling a black texture.
 
     The shader code must contain a entry point function:
 
@@ -428,6 +422,14 @@ class Shadertoy:
                     "offset": 0,
                     "size": self._uniform_data.nbytes,
                 },
+            },
+        ]
+
+        binding_layout = [
+            {
+                "binding": 0,
+                "visibility": wgpu.ShaderStage.FRAGMENT,
+                "buffer": {"type": wgpu.BufferBindingType.uniform},
             },
         ]
 
