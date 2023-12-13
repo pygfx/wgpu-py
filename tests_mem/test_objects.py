@@ -186,8 +186,9 @@ def test_release_pipeline_layout(n):
 
 @create_and_release
 def test_release_query_set(n):
-    # todo: implement this when we do support them
-    pytest.skip("Query set not implemented")
+    yield {}
+    for i in range(n):
+        yield DEVICE.create_query_set(type=wgpu.QueryType.occlusion, count=2)
 
 
 @create_and_release

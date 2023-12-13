@@ -29,6 +29,7 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum field DeviceLostReason.unknown missing in wgpu.h
 * Wrote 232 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 103 C function calls
-* Not using 99 C functions
-* Validated 73 C structs
+* Validated 105 C function calls
+* Not using 97 C functions
+* Notice: made a struct multiline. Rerun codegen to validate the struct.
+* Validated 75 C structs
