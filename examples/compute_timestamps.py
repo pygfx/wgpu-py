@@ -1,6 +1,5 @@
 """
-Example compute shader that adds two arrays and measures the time it took
-for the GPU to perform the calculation using ComputePassTimestampWrites.
+A simple example to profile a compute pass using ComputePassTimestampWrites.
 """
 
 import wgpu
