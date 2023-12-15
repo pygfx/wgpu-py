@@ -1618,11 +1618,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # Note: also enable the coresponing memtest when implementing this!
 
     def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
+        # H: nextInChain: WGPUChainedStruct *, label: char *, type: WGPUQueryType, count: int
         query_set_descriptor = new_struct_p(
             "WGPUQuerySetDescriptor *",
             label=to_c_label(label),
             type=type,
             count=count,
+            # not used: nextInChain
         )
 
         # H: WGPUQuerySet f(WGPUDevice device, WGPUQuerySetDescriptor const * descriptor)
