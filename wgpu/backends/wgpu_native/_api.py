@@ -1618,8 +1618,18 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # Note: also enable the coresponing memtest when implementing this!
 
     def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
-        raise NotImplementedError()
-        # Note: also enable the coresponing memtest when implementing this!
+        # H: nextInChain: WGPUChainedStruct *, label: char *, type: WGPUQueryType, count: int
+        query_set_descriptor = new_struct_p(
+            "WGPUQuerySetDescriptor *",
+            label=to_c_label(label),
+            type=type,
+            count=count,
+            # not used: nextInChain
+        )
+
+        # H: WGPUQuerySet f(WGPUDevice device, WGPUQuerySetDescriptor const * descriptor)
+        query_id = libf.wgpuDeviceCreateQuerySet(self._internal, query_set_descriptor)
+        return GPUQuerySet(label, query_id, self._internal, type, count)
 
     def _destroy(self):
         if self._queue is not None:
@@ -1821,14 +1831,6 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUBuffer buffer)
             libf.wgpuBufferRelease(internal)
-            self._device._poll()
-            # Note: from the memtests it looks like we need to poll the device
-            # after releasing an object for some objects (buffer, texture,
-            # texture view, sampler, pipeline layout, compute pipeline, and
-            # render pipeline). But not others. Would be nice to at some point
-            # have more clarity on this. In the mean time, we now poll the
-            # device quite a bit, so leaks by not polling the device after
-            # releasing something are highly unlikely.
 
 
 class GPUTexture(classes.GPUTexture, GPUObjectBase):
@@ -1886,7 +1888,6 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUTexture texture)
             libf.wgpuTextureRelease(internal)
-            self._device._poll()
 
 
 class GPUTextureView(classes.GPUTextureView, GPUObjectBase):
@@ -1895,7 +1896,6 @@ class GPUTextureView(classes.GPUTextureView, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUTextureView textureView)
             libf.wgpuTextureViewRelease(internal)
-            self._device._poll()
 
 
 class GPUSampler(classes.GPUSampler, GPUObjectBase):
@@ -1904,7 +1904,6 @@ class GPUSampler(classes.GPUSampler, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUSampler sampler)
             libf.wgpuSamplerRelease(internal)
-            self._device._poll()
 
 
 class GPUBindGroupLayout(classes.GPUBindGroupLayout, GPUObjectBase):
@@ -1929,7 +1928,6 @@ class GPUPipelineLayout(classes.GPUPipelineLayout, GPUObjectBase):
             self._internal, internal = None, self._internal
             # H: void f(WGPUPipelineLayout pipelineLayout)
             libf.wgpuPipelineLayoutRelease(internal)
-            self._device._poll()
 
 
 class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
@@ -1991,7 +1989,6 @@ class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectB
             self._internal, internal = None, self._internal
             # H: void f(WGPUComputePipeline computePipeline)
             libf.wgpuComputePipelineRelease(internal)
-            self._device._poll()
 
 
 class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
@@ -2000,7 +1997,6 @@ class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBas
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderPipeline renderPipeline)
             libf.wgpuRenderPipelineRelease(internal)
-            self._device._poll()
 
 
 class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
@@ -2161,13 +2157,23 @@ class GPUCommandEncoder(
     def begin_compute_pass(
         self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
     ):
+        timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
             check_struct("ComputePassTimestampWrites", timestamp_writes)
+            # H: querySet: WGPUQuerySet, beginningOfPassWriteIndex: int, endOfPassWriteIndex: int
+            timestamp_writes_struct = new_struct_p(
+                "WGPUComputePassTimestampWrites *",
+                querySet=timestamp_writes["query_set"]._internal,
+                beginningOfPassWriteIndex=timestamp_writes[
+                    "beginning_of_pass_write_index"
+                ],
+                endOfPassWriteIndex=timestamp_writes["end_of_pass_write_index"],
+            )
         # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWrites: WGPUComputePassTimestampWrites *
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
             label=to_c_label(label),
-            # not used: timestampWrites
+            timestampWrites=timestamp_writes_struct
             # not used: nextInChain
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
@@ -2504,15 +2510,20 @@ class GPUCommandEncoder(
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = libf.wgpuCommandEncoderFinish(self._internal, struct)
-        # WGPU destroys the command encoder when it's finished. So we set
-        # _internal to None to avoid releasing a nonexistent object.
-        self._internal = None
         return GPUCommandBuffer(label, id, self)
 
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
     ):
-        raise NotImplementedError()
+        # H: void f(WGPUCommandEncoder commandEncoder, WGPUQuerySet querySet, uint32_t firstQuery, uint32_t queryCount, WGPUBuffer destination, uint64_t destinationOffset)
+        libf.wgpuCommandEncoderResolveQuerySet(
+            self._internal,
+            query_set._internal,
+            int(first_query),
+            int(query_count),
+            destination._internal,
+            int(destination_offset),
+        )
 
     def _destroy(self):
         # Note that the native object gets destroyed on finish.
@@ -2650,10 +2661,6 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
         # H: void f(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands)
         libf.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
-        # WGPU destroys the resource when submitting. We follow this
-        # to avoid releasing a nonexistent object.
-        for cb in command_buffers:
-            cb._internal = None
 
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
         # We support anything that memoryview supports, i.e. anything
@@ -2862,13 +2869,14 @@ class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):
 
 
 class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
-    pass
-
-    def destroy(self):
+    def _destroy(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUQuerySet querySet)
             libf.wgpuQuerySetRelease(internal)
+
+    def destroy(self):
+        self._destroy()
 
 
 # %% Subclasses that don't need anything else

@@ -2024,23 +2024,31 @@ class GPUCompilationInfo:
 
 
 class GPUQuerySet(GPUObjectBase):
-    """TODO"""
+    """An object to store the results of queries on passes.
 
-    # IDL: undefined destroy();
-    def destroy(self):
-        """Destroy the queryset."""
-        raise NotImplementedError()
+    You can obtain a query set object via :attr:`GPUDevice.create_query_set`.
+    """
+
+    def __init__(self, label, internal, device, type, count):
+        super().__init__(label, internal, device)
+        self._type = type
+        self._count = count
 
     # IDL: readonly attribute GPUQueryType type;
     @property
     def type(self):
         """The type of the queries managed by this queryset."""
-        raise NotImplementedError()
+        return self._type
 
     # IDL: readonly attribute GPUSize32Out count;
     @property
     def count(self):
-        """The type of the queries managed by this queryset."""
+        """The number of the queries managed by this queryset."""
+        return self._count
+
+    # IDL: undefined destroy();
+    def destroy(self):
+        """Destroy this QuerySet."""
         raise NotImplementedError()
 
 

@@ -87,14 +87,14 @@ def get_arch():
     # https://github.com/pypa/cibuildwheel/blob/4307b52ff28b631519d38bfa0dd09d6a9b39a81e/cibuildwheel/macos.py#L277
     if os.environ.get("CIBUILDWHEEL") == "1" and "ARCHFLAGS" in os.environ:
         archflags = os.environ["ARCHFLAGS"]
-        return "arm64" if "arm64" in archflags else "x86_64"
+        return "aarch64" if "arm64" in archflags else "x86_64"
 
     if machine == "armv7l":
         # Raspberry pi
         return "armv7"
     elif is_64_bit and machine.startswith(("arm", "aarch64")):
         # Includes MacOS M1, arm linux, ...
-        return "arm64"
+        return "aarch64"
     elif is_64_bit:
         return "x86_64"
     else:
@@ -102,7 +102,7 @@ def get_arch():
 
 
 def main(version, os_string, arch, upstream):
-    for build in ("release", "debug"):
+    for build in ["release"]:  # ["release", "debug"]
         filename = f"wgpu-{os_string}-{arch}-{build}.zip"
         url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
         tmp = tempfile.gettempdir()
@@ -165,7 +165,7 @@ if __name__ == "__main__":
         "--arch",
         help=f"Architecture to download for (default: {arch_string})",
         default=arch_string,
-        choices=("x86_64", "i686", "arm64"),
+        choices=("x86_64", "i686", "aarch64"),
     )
     upstream = "gfx-rs/wgpu-native"
     parser.add_argument(
