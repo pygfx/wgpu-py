@@ -1,5 +1,6 @@
 import time
 import ctypes
+import collections
 
 import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
@@ -33,6 +34,7 @@ vec3 i_resolution;
 float i_time;
 float i_time_delta;
 int i_frame;
+float i_framerate;
 
 layout(binding = 1) uniform texture2D i_channel0;
 layout(binding = 2) uniform sampler sampler0;
@@ -56,6 +58,7 @@ layout(binding = 8) uniform sampler sampler3;
 #define iTime i_time
 #define iTimeDelta i_time_delta
 #define iFrame i_frame
+#define iFrameRate i_framerate
 
 #define mainImage shader_main
 """
@@ -71,6 +74,7 @@ struct ShadertoyInput {
     float time;
     float time_delta;
     int frame;
+    float framerate;
 };
 
 layout(binding = 0) uniform ShadertoyInput input;
@@ -83,6 +87,7 @@ void main(){
     i_time = input.time;
     i_time_delta = input.time_delta;
     i_frame = input.frame;
+    i_framerate = input.framerate;
     vec2 uv = vec2(uv.x, 1.0 - uv.y);
     vec2 frag_coord = uv * i_resolution.xy;
 
@@ -127,6 +132,7 @@ var<private> i_resolution: vec3<f32>;
 var<private> i_time_delta: f32;
 var<private> i_time: f32;
 var<private> i_frame: u32;
+var<private> i_framerate: f32;
 
 // TODO: more global variables
 // var<private> i_frag_coord: vec2<f32>;
@@ -143,6 +149,7 @@ struct ShadertoyInput {
     time: f32,
     time_delta: f32,
     frame: u32,
+    framerate: f32,
 };
 
 struct Varyings {
@@ -180,6 +187,7 @@ fn main(in: Varyings) -> @location(0) vec4<f32> {
     i_time = input.time;
     i_time_delta = input.time_delta;
     i_frame = input.frame;
+    i_framerate = input.framerate;
     let uv = vec2<f32>(in.uv.x, 1.0 - in.uv.y);
     let frag_coord = uv * i_resolution.xy;
 
@@ -323,12 +331,13 @@ class Shadertoy:
     * ``i_time``: the global time in seconds
     * ``i_time_delta``: the time since last frame in seconds
     * ``i_frame``: the frame number
+    * ``i_framerate``: the number of frames rendered in the last second.
 
-    For GLSL, you can also use the aliases ``iTime``, ``iTimeDelta``, ``iFrame``, ``iResolution``, ``iMouse`` and ``iDate`` of these built-in variables,
+    For GLSL, you can also use the aliases ``iTime``, ``iTimeDelta``, ``iFrame``, ``iResolution``, ``iMouse``, ``iDate`` and ``iFrameRate`` of these built-in variables,
     the entry point function also has an alias ``mainImage``, so you can use the shader code copied from shadertoy website without making any changes.
     """
 
-    # todo: add more built-in variables
+    # todo: add remaining built-in variables (i_channel_time, i_channel_resolution)
     # todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
 
     def __init__(
@@ -341,6 +350,7 @@ class Shadertoy:
             ("time", "f", 1),
             ("time_delta", "f", 1),
             ("frame", "I", 1),
+            ("framerate", "f", 1),
         )
 
         self._shader_code = shader_code
@@ -580,10 +590,18 @@ class Shadertoy:
         if not hasattr(self, "_last_time"):
             self._last_time = now
 
+        if not hasattr(self, "_time_history"):
+            self._time_history = collections.deque(maxlen=256)
+
         time_delta = now - self._last_time
         self._uniform_data["time_delta"] = time_delta
         self._last_time = now
         self._uniform_data["time"] += time_delta
+        self._time_history.append(self._uniform_data["time"])
+
+        self._uniform_data["framerate"] = sum(
+            [1 for t in self._time_history if t > self._uniform_data["time"] - 1]
+        )
 
         if not hasattr(self, "_frame"):
             self._frame = 0
