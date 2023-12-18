@@ -1,5 +1,6 @@
 import time
 import ctypes
+import collections
 
 import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
@@ -590,7 +591,7 @@ class Shadertoy:
             self._last_time = now
 
         if not hasattr(self, "_time_history"):
-            self._time_history = []
+            self._time_history = collections.deque(maxlen=256)
 
         time_delta = now - self._last_time
         self._uniform_data["time_delta"] = time_delta
@@ -598,12 +599,9 @@ class Shadertoy:
         self._uniform_data["time"] += time_delta
         self._time_history.append(self._uniform_data["time"])
 
-        # self._uniform_data["framerate"] = 1 / time_delta #naive implementation, not correct.
         self._uniform_data["framerate"] = sum(
             [1 for t in self._time_history if t > self._uniform_data["time"] - 1]
         )
-        # TODO: avoid memory leak?
-        # self._frametimes = self._frametimes[-self._uniform_data["framerate"]:] # clean this up?
 
         if not hasattr(self, "_frame"):
             self._frame = 0
