@@ -5,8 +5,7 @@ import wgpu
 from wgpu.gui.auto import WgpuCanvas, run
 from wgpu.gui.offscreen import WgpuCanvas as OffscreenCanvas, run as run_offscreen
 
-vertex_code_glsl = """
-#version 450 core
+vertex_code_glsl = """#version 450 core
 
 layout(location = 0) out vec2 uv;
 
@@ -26,8 +25,7 @@ void main(void){
 """
 
 
-builtin_variables_glsl = """
-#version 450 core
+builtin_variables_glsl = """#version 450 core
 
 vec4 i_mouse;
 vec4 i_date;
@@ -36,7 +34,21 @@ float i_time;
 float i_time_delta;
 int i_frame;
 
+layout(binding = 1) uniform texture2D i_channel0;
+layout(binding = 2) uniform sampler sampler0;
+layout(binding = 3) uniform texture2D i_channel1;
+layout(binding = 4) uniform sampler sampler1;
+layout(binding = 5) uniform texture2D i_channel2;
+layout(binding = 6) uniform sampler sampler2;
+layout(binding = 7) uniform texture2D i_channel3;
+layout(binding = 8) uniform sampler sampler3;
+
 // Shadertoy compatibility, see we can use the same code copied from shadertoy website
+
+#define iChannel0 sampler2D(i_channel0, sampler0)
+#define iChannel1 sampler2D(i_channel1, sampler1)
+#define iChannel2 sampler2D(i_channel2, sampler2)
+#define iChannel3 sampler2D(i_channel3, sampler3)
 
 #define iMouse i_mouse
 #define iDate i_date
@@ -71,7 +83,6 @@ void main(){
     i_time = input.time;
     i_time_delta = input.time_delta;
     i_frame = input.frame;
-
     vec2 uv = vec2(uv.x, 1.0 - uv.y);
     vec2 frag_coord = uv * i_resolution.xy;
 
@@ -142,6 +153,23 @@ struct Varyings {
 @group(0) @binding(0)
 var<uniform> input: ShadertoyInput;
 
+@group(0) @binding(1)
+var i_channel0: texture_2d<f32>;
+@group(0) @binding(3)
+var i_channel1: texture_2d<f32>;
+@group(0) @binding(5)
+var i_channel2: texture_2d<f32>;
+@group(0) @binding(7)
+var i_channel3: texture_2d<f32>;
+
+@group(0) @binding(2)
+var sampler0: sampler;
+@group(0) @binding(4)
+var sampler1: sampler;
+@group(0) @binding(6)
+var sampler2: sampler;
+@group(0) @binding(8)
+var sampler3: sampler;
 
 @fragment
 fn main(in: Varyings) -> @location(0) vec4<f32> {
@@ -152,8 +180,6 @@ fn main(in: Varyings) -> @location(0) vec4<f32> {
     i_time = input.time;
     i_time_delta = input.time_delta;
     i_frame = input.frame;
-
-
     let uv = vec2<f32>(in.uv.x, 1.0 - in.uv.y);
     let frag_coord = uv * i_resolution.xy;
 
@@ -161,14 +187,6 @@ fn main(in: Varyings) -> @location(0) vec4<f32> {
 }
 
 """
-
-binding_layout = [
-    {
-        "binding": 0,
-        "visibility": wgpu.ShaderStage.FRAGMENT,
-        "buffer": {"type": wgpu.BufferBindingType.uniform},
-    }
-]
 
 
 class UniformArray:
@@ -222,6 +240,62 @@ class UniformArray:
                 m[i] = val[i]
 
 
+class ShadertoyChannel:
+    """
+    Represents a shadertoy channel. It can be a texture.
+    Parameters:
+        data (array-like): Of shape (width, height, 4), will be converted to memoryview. For example read in your images using ``np.asarray(Image.open("image.png"))``
+        kind (str): The kind of channel. Can be one of ("texture"). More will be supported in the future
+        **kwargs: Additional arguments for the sampler:
+        wrap (str): The wrap mode, can be one of ("clamp-to-edge", "repeat", "clamp"). Default is "clamp-to-edge".
+    """
+
+    # TODO: add cubemap/volume, buffer, webcam, video, audio, keyboard?
+
+    def __init__(self, data=None, kind="texture", **kwargs):
+        if kind != "texture":
+            raise NotImplementedError("Only texture is supported for now.")
+        if data is not None:
+            self.data = memoryview(data)
+        else:
+            self.data = (
+                memoryview((ctypes.c_uint8 * 8 * 8 * 4)())
+                .cast("B")
+                .cast("B", shape=[8, 8, 4])
+            )
+        self.size = self.data.shape  # (rows, columns, channels)
+        self.texture_size = (
+            self.data.shape[1],
+            self.data.shape[0],
+            1,
+        )  # orientation change (columns, rows, 1)
+        self.bytes_per_pixel = (
+            self.data.nbytes // self.data.shape[1] // self.data.shape[0]
+        )
+        self.sampler_settings = {}
+        wrap = kwargs.pop("wrap", "clamp-to-edge")
+        if wrap.startswith("clamp"):
+            wrap = "clamp-to-edge"
+        self.sampler_settings["address_mode_u"] = wrap
+        self.sampler_settings["address_mode_v"] = wrap
+        self.sampler_settings["address_mode_w"] = wrap
+
+    def __repr__(self):
+        """
+        Convenience method to get a representation of this object for debugging.
+        """
+        data_repr = {
+            "repr": self.data.__repr__(),
+            "shape": self.data.shape,
+            "strides": self.data.strides,
+            "nbytes": self.data.nbytes,
+            "obj": self.data.obj,
+        }
+        class_repr = {k: v for k, v in self.__dict__.items() if k != "data"}
+        class_repr["data"] = data_repr
+        return repr(class_repr)
+
+
 class Shadertoy:
     """Provides a "screen pixel shader programming interface" similar to `shadertoy <https://www.shadertoy.com/>`_.
 
@@ -231,6 +305,7 @@ class Shadertoy:
         shader_code (str): The shader code to use.
         resolution (tuple): The resolution of the shadertoy.
         offscreen (bool): Whether to render offscreen. Default is False.
+        inputs (list): A list of :class:`ShadertoyChannel` objects. Supports up to 4 inputs. Defaults to sampling a black texture.
 
     The shader code must contain a entry point function:
 
@@ -242,22 +317,23 @@ class Shadertoy:
 
     some built-in variables are available in the shader:
 
+    * ``i_mouse``: the mouse position in pixels
+    * ``i_date``: the current date and time as a vec4 (year, month, day, seconds)
+    * ``i_resolution``: the resolution of the shadertoy
     * ``i_time``: the global time in seconds
     * ``i_time_delta``: the time since last frame in seconds
     * ``i_frame``: the frame number
-    * ``i_resolution``: the resolution of the shadertoy
-    * ``i_mouse``: the mouse position in pixels
-    * ``i_date``: the current date and time as a vec4 (year, month, day, seconds)
 
     For GLSL, you can also use the aliases ``iTime``, ``iTimeDelta``, ``iFrame``, ``iResolution``, ``iMouse`` and ``iDate`` of these built-in variables,
     the entry point function also has an alias ``mainImage``, so you can use the shader code copied from shadertoy website without making any changes.
     """
 
     # todo: add more built-in variables
-    # todo: support input textures
     # todo: support multiple render passes (`i_channel0`, `i_channel1`, etc.)
 
-    def __init__(self, shader_code, resolution=(800, 450), offscreen=False) -> None:
+    def __init__(
+        self, shader_code, resolution=(800, 450), offscreen=False, inputs=[]
+    ) -> None:
         self._uniform_data = UniformArray(
             ("mouse", "f", 4),
             ("date", "f", 4),
@@ -271,6 +347,11 @@ class Shadertoy:
         self._uniform_data["resolution"] = resolution + (1,)
 
         self._offscreen = offscreen
+
+        if len(inputs) > 4:
+            raise ValueError("Only 4 inputs are supported.")
+        self.inputs = inputs
+        self.inputs.extend([ShadertoyChannel() for _ in range(4 - len(inputs))])
 
         self._prepare_render()
         self._bind_events()
@@ -343,22 +424,90 @@ class Shadertoy:
             usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST,
         )
 
+        bind_groups_layout_entries = [
+            {
+                "binding": 0,
+                "resource": {
+                    "buffer": self._uniform_buffer,
+                    "offset": 0,
+                    "size": self._uniform_data.nbytes,
+                },
+            },
+        ]
+
+        binding_layout = [
+            {
+                "binding": 0,
+                "visibility": wgpu.ShaderStage.FRAGMENT,
+                "buffer": {"type": wgpu.BufferBindingType.uniform},
+            },
+        ]
+
+        for input_idx, channel_input in enumerate(self.inputs):
+            texture_binding = (2 * input_idx) + 1
+            sampler_binding = 2 * (input_idx + 1)
+            binding_layout.extend(
+                [
+                    {
+                        "binding": texture_binding,
+                        "visibility": wgpu.ShaderStage.FRAGMENT,
+                        "texture": {
+                            "sample_type": wgpu.TextureSampleType.float,
+                            "view_dimension": wgpu.TextureViewDimension.d2,
+                        },
+                    },
+                    {
+                        "binding": sampler_binding,
+                        "visibility": wgpu.ShaderStage.FRAGMENT,
+                        "sampler": {"type": wgpu.SamplerBindingType.filtering},
+                    },
+                ]
+            )
+
+            texture = self._device.create_texture(
+                size=channel_input.texture_size,
+                format=wgpu.TextureFormat.rgba8unorm,
+                usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
+            )
+            texture_view = texture.create_view()
+
+            self._device.queue.write_texture(
+                {
+                    "texture": texture,
+                    "origin": (0, 0, 0),
+                    "mip_level": 0,
+                },
+                channel_input.data,
+                {
+                    "offset": 0,
+                    "bytes_per_row": channel_input.bytes_per_pixel
+                    * channel_input.size[1],  # must be multiple of 256?
+                    "rows_per_image": channel_input.size[0],  # same is done internally
+                },
+                texture.size,
+            )
+
+            sampler = self._device.create_sampler(**channel_input.sampler_settings)
+            bind_groups_layout_entries.extend(
+                [
+                    {
+                        "binding": texture_binding,
+                        "resource": texture_view,
+                    },
+                    {
+                        "binding": sampler_binding,
+                        "resource": sampler,
+                    },
+                ]
+            )
+
         bind_group_layout = self._device.create_bind_group_layout(
             entries=binding_layout
         )
 
         self._bind_group = self._device.create_bind_group(
             layout=bind_group_layout,
-            entries=[
-                {
-                    "binding": 0,
-                    "resource": {
-                        "buffer": self._uniform_buffer,
-                        "offset": 0,
-                        "size": self._uniform_data.nbytes,
-                    },
-                },
-            ],
+            entries=bind_groups_layout_entries,
         )
 
         self._render_pipeline = self._device.create_render_pipeline(
@@ -525,7 +674,7 @@ if __name__ == "__main__":
         let uv = frag_coord / i_resolution.xy;
 
         if ( length(frag_coord - i_mouse.xy) < 20.0 ) {
-            return vec4<f32>(0.0, 0.0, 0.0, 1.0);
+            return vec4<f32>(textureSample(i_channel0, sampler0, uv));
         }else{
             return vec4<f32>( 0.5 + 0.5 * sin(i_time * vec3<f32>(uv, 1.0) ), 1.0);
         }
