@@ -244,10 +244,10 @@ class ShadertoyChannel:
     """
     Represents a shadertoy channel. It can be a texture.
     Parameters:
-        data (memoryview): will be converted to memoryview. For example read in your images using ``np.asarray(Image.open("image.png"))``
+        data (array-like): Of shape (width, height, 4), will be converted to memoryview. For example read in your images using ``np.asarray(Image.open("image.png"))``
         kind (str): The kind of channel. Can be one of ("texture"). More will be supported in the future
-        ``wrap`` (str): The wrap mode, can be one of ("clamp-to-edge", "repeat", "clamp"). Default is "clamp-to-edge".
         **kwargs: Additional arguments for the sampler:
+        wrap (str): The wrap mode, can be one of ("clamp-to-edge", "repeat", "clamp"). Default is "clamp-to-edge".
     """
 
     # TODO: add cubemap/volume, buffer, webcam, video, audio, keyboard?
