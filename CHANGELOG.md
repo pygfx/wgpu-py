@@ -17,6 +17,14 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.13.2] - 21-12-2023
+
+Added:
+
+* Implement support for timestamp QuerySet.
+* Add texture input and iFrameRate builtin to Shadertoy util https://github.com/pygfx/wgpu-py/pull/453
+
+
 ### [v0.13.1] - 08-12-2023
 
 Fixed:
