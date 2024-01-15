@@ -58,14 +58,3 @@ Compute with buffers
 
 .. autofunction:: wgpu.utils.compute_with_buffers
 
-
-
-Shadertoy
----------
-
-.. code-block:: py
-
-    from wgpu.utils.shadertoy import Shadertoy
-
-.. autoclass:: wgpu.utils.shadertoy.Shadertoy
-    :members:
