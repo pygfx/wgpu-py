@@ -39,4 +39,3 @@ def compute_with_buffers(*args, **kwargs):
 
 
 compute = _StubModule("compute")
-shadertoy = _StubModule("shadertoy")
