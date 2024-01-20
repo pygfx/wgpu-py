@@ -88,6 +88,13 @@ well with Asyncio or Trio.
 
 This code is distributed under the 2-clause BSD license.
 
+## Projects using `wgpu-py`
+
+* [pygfx](https://github.com/pygfx/pygfx) - A python render engine running on wgpu.
+* [shadertoy](https://github.com/pygfx/shadertoy) - Shadertoy implementation using wgpu-py.
+* [tinygrad](https://github.com/tinygrad/tinygrad) - deep learning framework
+* [fastplotlib](https://github.com/fastplotlib/fastplotlib) - A fast plotting library
+* [xdsl](https://github.com/xdslproject/xdsl) - A Python Compiler Design Toolkit (optional wgpu interpreter)
 
 ## Developers
 
