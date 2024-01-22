@@ -126,12 +126,16 @@ def test_offscreen_canvas():
     present_context.configure(device=device, format=None)
 
     def draw_frame():
-        current_texture_view = present_context.get_current_texture().create_view()
+        # Note: we deliberately obtain the texture, and only create the view
+        # where the dict is constructed below. This covers the case where
+        # begin_render_pass() has to prevent the texture-view-object from being
+        # deleted before its native handle is passed to wgpu-native.
+        current_texture = present_context.get_current_texture()
         command_encoder = device.create_command_encoder()
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
                 {
-                    "view": current_texture_view,
+                    "view": current_texture.create_view(),
                     "resolve_target": None,
                     "clear_value": (0, 1, 0, 1),
                     "load_op": wgpu.LoadOp.clear,

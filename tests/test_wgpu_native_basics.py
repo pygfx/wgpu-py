@@ -87,25 +87,147 @@ var<storage,read_write> out1: array<i32>;
 @workgroup_size(1)
 fn main(@builtin(global_invocation_id) index: vec3<u32>) {
     let i: u32 = index.x;
-    out1[i] = i32(i);
+    out1[i] = 1000 + i32(i);
+}
+"""
+
+compute_shader_glsl = """
+#version 450 core
+
+precision highp float;
+precision highp int;
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(std430, binding=0) buffer BufferBinding { int out1[]; };
+
+void main() {
+    uvec3 index = gl_GlobalInvocationID;
+    uint i = index.x;
+    out1[i] = (1000 + int(i));
+    return;
 }
 """
 
 compute_shader_spirv = base64.decodebytes(
     """
-AwIjBwADAQAAAAAAFgAAAAAAAAARAAIAAQAAAA4AAwAAAAAAAAAAAA8ABgAFAAAAAQAAAG1haW4A
-AAAACAAAABAABgABAAAAEQAAAAEAAAABAAAAAQAAAAUABAABAAAAbWFpbgAAAAAFAAQACAAAAGlu
-ZGV4AAAABQADAAwAAABvdXQABQADAA0AAAAwAAAARwAEAAgAAAALAAAAHAAAAEcABAAJAAAABgAA
-AAQAAABIAAUACgAAAAAAAAAjAAAAAAAAAEcAAwAKAAAAAwAAAEcABAAMAAAAIgAAAAAAAABHAAQA
-DAAAACEAAAAAAAAAEwACAAIAAAAhAAMAAwAAAAIAAAAVAAQABQAAACAAAAABAAAAFwAEAAYAAAAF
-AAAAAwAAACAABAAHAAAAAQAAAAYAAAA7AAQABwAAAAgAAAABAAAAHQADAAkAAAAFAAAAHgADAAoA
-AAAJAAAAIAAEAAsAAAACAAAACgAAADsABAALAAAADAAAAAIAAAArAAQABQAAAA0AAAAAAAAAIAAE
-AA4AAAACAAAABQAAACAABAAQAAAAAQAAAAUAAAAgAAQAEwAAAAEAAAAFAAAANgAFAAIAAAABAAAA
-AAAAAAMAAAD4AAIABAAAAEEABQAQAAAAEQAAAAgAAAANAAAAPQAEAAUAAAASAAAAEQAAAEEABgAO
-AAAADwAAAAwAAAANAAAAEgAAAEEABQATAAAAFAAAAAgAAAANAAAAPQAEAAUAAAAVAAAAFAAAAD4A
-AwAPAAAAFQAAAP0AAQA4AAEA
+AwIjBwAAAQAcAAAAHAAAAAAAAAARAAIAAQAAAAoACwBTUFZfS0hSX3N0b3JhZ2VfYnVmZmVyX3N0
+b3JhZ2VfY2xhc3MAAAAACwAGAAEAAABHTFNMLnN0ZC40NTAAAAAADgADAAAAAAABAAAADwAGAAUA
+AAAQAAAAbWFpbgAAAAANAAAAEAAGABAAAAARAAAAAQAAAAEAAAABAAAABQAEAAkAAABvdXQxAAAA
+AAUABAANAAAAaW5kZXgAAAAFAAQAEAAAAG1haW4AAAAARwAEAAQAAAAGAAAABAAAAEcABAAJAAAA
+IgAAAAAAAABHAAQACQAAACEAAAAAAAAARwADAAoAAAACAAAASAAFAAoAAAAAAAAAIwAAAAAAAABH
+AAQADQAAAAsAAAAcAAAAEwACAAIAAAAVAAQAAwAAACAAAAABAAAAHQADAAQAAAADAAAAFQAEAAYA
+AAAgAAAAAAAAABcABAAFAAAABgAAAAMAAAArAAQAAwAAAAcAAAAAAAAAKwAEAAMAAAAIAAAAAQAA
+AB4AAwAKAAAABAAAACAABAALAAAADAAAAAoAAAA7AAQACwAAAAkAAAAMAAAAIAAEAA4AAAABAAAA
+BQAAADsABAAOAAAADQAAAAEAAAAhAAMAEQAAAAIAAAAgAAQAEgAAAAwAAAAEAAAAKwAEAAYAAAAT
+AAAAAAAAACsABAADAAAAFQAAAOgDAAAgAAQAGAAAAAwAAAADAAAANgAFAAIAAAAQAAAAAAAAABEA
+AAD4AAIADAAAAD0ABAAFAAAADwAAAA0AAABBAAUAEgAAABQAAAAJAAAAEwAAAPkAAgAWAAAA+AAC
+ABYAAABRAAUABgAAABcAAAAPAAAAAAAAAHwABAADAAAAGQAAABcAAACAAAUAAwAAABoAAAAVAAAA
+GQAAAEEABQAYAAAAGwAAABQAAAAXAAAAPgADABsAAAAaAAAA/QABADgAAQA=
 """.encode()
 )
+
+
+def run_compute_shader(device, shader):
+    """Minimal compute setup for the above shaders."""
+    n = 16
+    buffer = device.create_buffer(
+        size=n * 4, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC
+    )
+
+    # Setup layout and bindings
+    binding_layouts = [
+        {
+            "binding": 0,
+            "visibility": wgpu.ShaderStage.COMPUTE,
+            "buffer": {"type": wgpu.BufferBindingType.storage},
+        },
+    ]
+    bindings = [
+        {
+            "binding": 0,
+            "resource": {"buffer": buffer, "offset": 0, "size": buffer.size},
+        },
+    ]
+
+    # Put everything together
+    bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout]
+    )
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
+
+    # Create and run the pipeline
+    compute_pipeline = device.create_compute_pipeline(
+        layout=pipeline_layout,
+        compute={"module": shader, "entry_point": "main"},
+    )
+    command_encoder = device.create_command_encoder()
+    compute_pass = command_encoder.begin_compute_pass()
+    compute_pass.set_pipeline(compute_pipeline)
+    compute_pass.set_bind_group(0, bind_group, [], 0, 999999)
+    compute_pass.dispatch_workgroups(n, 1, 1)  # x y z
+    compute_pass.end()
+    device.queue.submit([command_encoder.finish()])
+
+    # Read result
+    out = device.queue.read_buffer(buffer).cast("i")
+    result = out.tolist()
+    assert result == [1000 + i for i in range(n)]
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_compute_shader_wgsl():
+    device = wgpu.utils.get_default_device()
+
+    code = compute_shader_wgsl
+    assert isinstance(code, str)
+
+    shader = device.create_shader_module(code=code)
+    assert shader.get_compilation_info() == []
+
+    run_compute_shader(device, shader)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_compute_shader_glsl():
+    device = wgpu.utils.get_default_device()
+
+    code = compute_shader_glsl
+    assert isinstance(code, str)
+
+    shader = device.create_shader_module(label="simple comp", code=code)
+    assert shader.get_compilation_info() == []
+
+    run_compute_shader(device, shader)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+@mark.skipif(is_ci and is_win, reason="Cannot use SpirV shader on dx12")
+def test_compute_shader_spirv():
+    device = wgpu.utils.get_default_device()
+
+    code = compute_shader_spirv
+    assert isinstance(code, bytes)
+
+    shader = device.create_shader_module(code=code)
+    assert shader.get_compilation_info() == []
+
+    run_compute_shader(device, shader)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_compute_shader_invalid():
+    device = wgpu.utils.get_default_device()
+
+    code4 = type("CodeObject", (object,), {})
+
+    with raises(TypeError):
+        device.create_shader_module(code=code4)
+    with raises(TypeError):
+        device.create_shader_module(code={"not", "a", "shader"})
+    with raises(ValueError):
+        device.create_shader_module(code=b"bytes but no SpirV magic number")
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -156,26 +278,6 @@ def test_wgpu_native_enumerate_adapters():
     for adapter in adapters:
         d = adapter.request_device()
         assert isinstance(d, wgpu.backends.wgpu_native.GPUDevice)
-
-
-@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-@mark.skipif(is_ci and is_win, reason="Cannot use SpirV shader on dx12")
-def test_shader_module_creation_spirv():
-    device = wgpu.utils.get_default_device()
-
-    code1 = compute_shader_spirv
-    assert isinstance(code1, bytes)
-    code4 = type("CodeObject", (object,), {})
-
-    m1 = device.create_shader_module(code=code1)
-    assert m1.get_compilation_info() == []
-
-    with raises(TypeError):
-        device.create_shader_module(code=code4)
-    with raises(TypeError):
-        device.create_shader_module(code={"not", "a", "shader"})
-    with raises(ValueError):
-        device.create_shader_module(code=b"bytes but no SpirV magic number")
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
