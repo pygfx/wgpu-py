@@ -3,7 +3,7 @@
 * The webgpu.idl defines 37 classes with 76 functions
 * The webgpu.idl defines 5 flags, 33 enums, 59 structs
 * The wgpu.h defines 198 functions
-* The wgpu.h defines 7 flags, 50 enums, 92 structs
+* The wgpu.h defines 7 flags, 50 enums, 93 structs
 ## Updating API
 * Wrote 5 flags to flags.py
 * Wrote 33 enums to enums.py
@@ -20,15 +20,12 @@
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 107 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
-* Enum field TextureFormat.rgb10a2uint missing in wgpu.h
-* Enum field StorageTextureAccess.read-only missing in wgpu.h
-* Enum field StorageTextureAccess.read-write missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
 * Enum AutoLayoutMode missing in wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in wgpu.h
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum field DeviceLostReason.unknown missing in wgpu.h
-* Wrote 232 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
+* Wrote 235 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 105 C function calls
 * Not using 97 C functions
 * Validated 75 C structs
