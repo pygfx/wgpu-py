@@ -14,6 +14,7 @@ typedef enum WGPUNativeSType {
     WGPUSType_BindGroupEntryExtras = 0x00030007,
     WGPUSType_BindGroupLayoutEntryExtras = 0x00030008,
     WGPUSType_QuerySetDescriptorExtras = 0x00030009,
+    WGPUSType_SurfaceConfigurationExtras = 0x0003000A,
     WGPUNativeSType_Force32 = 0x7FFFFFFF
 } WGPUNativeSType;
 
@@ -131,8 +132,8 @@ typedef struct WGPUPushConstantRange {
 
 typedef struct WGPUPipelineLayoutExtras {
     WGPUChainedStruct chain;
-    uint32_t pushConstantRangeCount;
-    WGPUPushConstantRange* pushConstantRanges;
+    size_t pushConstantRangeCount;
+    WGPUPushConstantRange const * pushConstantRanges;
 } WGPUPipelineLayoutExtras;
 
 typedef uint64_t WGPUSubmissionIndex;
@@ -155,38 +156,39 @@ typedef struct WGPUShaderModuleGLSLDescriptor {
     WGPUShaderDefine * defines;
 } WGPUShaderModuleGLSLDescriptor;
 
-typedef struct WGPUStorageReport {
-    size_t numOccupied;
-    size_t numVacant;
-    size_t numError;
-    size_t elementSize;
-} WGPUStorageReport;
+typedef struct WGPURegistryReport {
+   size_t numAllocated;
+   size_t numKeptFromUser;
+   size_t numReleasedFromUser;
+   size_t numError;
+   size_t elementSize;
+} WGPURegistryReport;
 
 typedef struct WGPUHubReport {
-    WGPUStorageReport adapters;
-    WGPUStorageReport devices;
-    WGPUStorageReport pipelineLayouts;
-    WGPUStorageReport shaderModules;
-    WGPUStorageReport bindGroupLayouts;
-    WGPUStorageReport bindGroups;
-    WGPUStorageReport commandBuffers;
-    WGPUStorageReport renderBundles;
-    WGPUStorageReport renderPipelines;
-    WGPUStorageReport computePipelines;
-    WGPUStorageReport querySets;
-    WGPUStorageReport buffers;
-    WGPUStorageReport textures;
-    WGPUStorageReport textureViews;
-    WGPUStorageReport samplers;
+    WGPURegistryReport adapters;
+    WGPURegistryReport devices;
+    WGPURegistryReport queues;
+    WGPURegistryReport pipelineLayouts;
+    WGPURegistryReport shaderModules;
+    WGPURegistryReport bindGroupLayouts;
+    WGPURegistryReport bindGroups;
+    WGPURegistryReport commandBuffers;
+    WGPURegistryReport renderBundles;
+    WGPURegistryReport renderPipelines;
+    WGPURegistryReport computePipelines;
+    WGPURegistryReport querySets;
+    WGPURegistryReport buffers;
+    WGPURegistryReport textures;
+    WGPURegistryReport textureViews;
+    WGPURegistryReport samplers;
 } WGPUHubReport;
 
 typedef struct WGPUGlobalReport {
-    WGPUStorageReport surfaces;
+    WGPURegistryReport surfaces;
     WGPUBackendType backendType;
     WGPUHubReport vulkan;
     WGPUHubReport metal;
     WGPUHubReport dx12;
-    WGPUHubReport dx11;
     WGPUHubReport gl;
 } WGPUGlobalReport;
 
@@ -216,6 +218,11 @@ typedef struct WGPUQuerySetDescriptorExtras {
     size_t pipelineStatisticCount;
 } WGPUQuerySetDescriptorExtras WGPU_STRUCTURE_ATTRIBUTE;
 
+typedef struct WGPUSurfaceConfigurationExtras {
+    WGPUChainedStruct chain;
+    WGPUBool desiredMaximumFrameLatency;
+} WGPUSurfaceConfigurationExtras WGPU_STRUCTURE_ATTRIBUTE;
+
 typedef void (*WGPULogCallback)(WGPULogLevel level, char const * message, void * userdata);
 
 #ifdef __cplusplus
@@ -223,12 +230,12 @@ extern "C" {
 #endif
 
 void wgpuGenerateReport(WGPUInstance instance, WGPUGlobalReport * report);
-size_t wgpuInstanceEnumerateAdapters(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters);
+size_t wgpuInstanceEnumerateAdapters(WGPUInstance instance, WGPU_NULLABLE WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters);
 
 WGPUSubmissionIndex wgpuQueueSubmitForIndex(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands);
 
 // Returns true if the queue is empty, or false if there are more queue submissions still in flight.
-WGPUBool wgpuDevicePoll(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex);
+WGPUBool wgpuDevicePoll(WGPUDevice device, WGPUBool wait, WGPU_NULLABLE WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex);
 
 void wgpuSetLogCallback(WGPULogCallback callback, void * userdata);
 
@@ -236,7 +243,7 @@ void wgpuSetLogLevel(WGPULogLevel level);
 
 uint32_t wgpuGetVersion(void);
 
-void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void* const data);
+void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void const * data);
 
 void wgpuRenderPassEncoderMultiDrawIndirect(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count);
 void wgpuRenderPassEncoderMultiDrawIndexedIndirect(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count);
