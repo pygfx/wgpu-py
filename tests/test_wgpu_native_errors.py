@@ -141,20 +141,10 @@ def test_parse_shader_error4(caplog):
         Caused by:
             In wgpuDeviceCreateShaderModule
 
-        Shader validation error:
-          ┌─ :1:1
-          │
-        1 │ ╭ fn foobar() {
-        2 │ │     let m = mat2x2<f32>(0.0, 0.0, 0.0, 0.);
-        3 │ │     let scales = m[4];
-          │ │                  ^^^^ naga::Expression [9]
-          │ ╰──────────────────────^ naga::Function [1]
+        Shader '' parsing error: Index 4 is out of bounds for expression [11]
 
 
-            Function [1] 'foobar' is invalid
-            Expression [9] is invalid
-            Type resolution failed
-            Index 4 is out of bounds for expression [7]
+    Index 4 is out of bounds for expression [11]
     """
 
     code = dedent(code)
@@ -185,8 +175,8 @@ def test_validate_shader_error1(caplog):
         }
     """
 
-    expected1 = """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, width: 4 }"""
-    expected2 = """Right: Load { pointer: [6] } of type Vector { size: Tri, kind: Float, width: 4 }"""
+    expected1 = """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }"""
+    expected2 = """Right: Load { pointer: [6] } of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }"""
     expected3 = """
         Validation Error
 
@@ -236,7 +226,7 @@ def test_validate_shader_error2(caplog):
         }
     """
 
-    expected1 = """Returning Some(Vector { size: Tri, kind: Float, width: 4 }) where Some(Vector { size: Quad, kind: Float, width: 4 }) is expected"""
+    expected1 = """Returning Some(Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }) where Some(Vector { size: Quad, scalar: Scalar { kind: Float, width: 4 } }) is expected"""
     expected2 = """
         Validation Error
 
