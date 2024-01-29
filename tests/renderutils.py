@@ -2,7 +2,6 @@
 assumptions here.
 """
 
-
 import ctypes
 import numpy as np
 
