@@ -5,16 +5,20 @@ Test creation of Qt canvas windows.
 import gc
 import weakref
 
+import wgpu
 import pytest
 import testutils  # noqa
 from testutils import create_and_release, can_use_pyside6, can_use_wgpu_lib
-from test_gui_offscreen import make_draw_func_for_canvas
+from test_gui import make_draw_func_for_canvas
 
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need wgpu lib", allow_module_level=True)
 if not can_use_pyside6:
     pytest.skip("Need pyside6 for this test", allow_module_level=True)
+
+
+DEVICE = wgpu.utils.get_default_device()
 
 
 @create_and_release
@@ -50,6 +54,10 @@ def test_release_canvas_context(n):
 
     # Check that the canvas objects are really deleted
     assert not canvases
+
+    # Help clear dangling CommandBuffer, see test_gui.py
+    command_encoder = DEVICE.create_command_encoder()
+    command_encoder.finish()
 
 
 if __name__ == "__main__":

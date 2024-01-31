@@ -6,10 +6,11 @@ import gc
 import weakref
 import asyncio
 
+import wgpu
 import pytest
 import testutils  # noqa
 from testutils import create_and_release, can_use_glfw, can_use_wgpu_lib
-from test_gui_offscreen import make_draw_func_for_canvas
+from test_gui import make_draw_func_for_canvas
 
 
 if not can_use_wgpu_lib:
@@ -20,6 +21,9 @@ if not can_use_glfw:
 loop = asyncio.get_event_loop_policy().get_event_loop()
 if loop.is_running():
     pytest.skip("Asyncio loop is running", allow_module_level=True)
+
+
+DEVICE = wgpu.utils.get_default_device()
 
 
 async def stub_event_loop():
@@ -56,6 +60,10 @@ def test_release_canvas_context(n):
 
     # Check that the canvas objects are really deleted
     assert not canvases, f"Still {len(canvases)} canvases"
+
+    # Help clear dangling CommandBuffer, see test_gui.py
+    command_encoder = DEVICE.create_command_encoder()
+    command_encoder.finish()
 
 
 if __name__ == "__main__":

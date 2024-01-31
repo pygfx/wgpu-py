@@ -385,20 +385,26 @@ class WgpuNativeCountsDiagnostics(Diagnostics):
         for report_name in sorted(name_map[name] for name in names + root_names):
             result[report_name] = {"count": 0, "mem": 0}
 
+        # The field names to add together to obtain a representation for
+        # the number of objects "allocated" by wgpu-core. In practice,
+        # wgpu-core can keep objects around for re-use, which is why "allocated"
+        # and released" are not in this equation.
+        fields_to_add = ["kept", "error"]
+
         # Establish what backends are active
         active_backends = []
         for backend in backends:
             total = 0
             for name in names:
                 d = native_report[backend][name]
-                total += d["allocated"] + d["kept"] + d["released"] + d["error"]
+                total += sum(d[k] for k in fields_to_add)
             if total > 0:
                 active_backends.append(backend)
 
         # Process names in the root
         for name in root_names:
             d = native_report[name]
-            subtotal_count = d["allocated"] + d["kept"] + d["released"] + d["error"]
+            subtotal_count = sum(d[k] for k in fields_to_add)
             impl = {
                 "a": d["allocated"],
                 "k": d["kept"],
@@ -419,7 +425,7 @@ class WgpuNativeCountsDiagnostics(Diagnostics):
             implementations = {}
             for backend in active_backends:
                 d = native_report[backend][name]
-                subtotal_count = d["allocated"] + d["kept"] + d["released"] + d["error"]
+                subtotal_count = sum(d[k] for k in fields_to_add)
                 subtotal_mem = subtotal_count * d["element_size"]
                 impl = {
                     "a": d["allocated"],

@@ -9,7 +9,7 @@ import pytest
 from testutils import can_use_wgpu_lib, create_and_release
 from testutils import get_counts, ob_name_from_test_func
 from test_objects import TEST_FUNCS as OBJECT_TEST_FUNCS
-from test_gui_offscreen import TEST_FUNCS as GUI_TEST_FUNCS
+from test_gui import TEST_FUNCS as GUI_TEST_FUNCS
 
 
 ALL_TEST_FUNCS = OBJECT_TEST_FUNCS + GUI_TEST_FUNCS

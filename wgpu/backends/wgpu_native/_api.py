@@ -2000,12 +2000,9 @@ class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBas
 
 class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
     def _destroy(self):
-        # Since command buffers get destroyed when you submit them, we
-        # must only release them if they've not been submitted, or we get
-        # 'Cannot remove a vacant resource'. Got this info from the
-        # wgpu chat. Also see
-        # https://docs.rs/wgpu-core/latest/src/wgpu_core/device/mod.rs.html#4180-4194
-        # --> That's why _internal is set to None in Queue.submit()
+        # Note that command buffers get destroyed when they are submit'ed.
+        # In earlier versions we had to take this into account by setting
+        # _internal to None. That seems not necessary anymore.
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandBuffer commandBuffer)
@@ -2717,8 +2714,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # Copy data to temp buffer
         encoder = device.create_command_encoder()
         encoder.copy_buffer_to_buffer(buffer, buffer_offset, tmp_buffer, 0, data_length)
-        command_buffer = encoder.finish()
-        self.submit([command_buffer])
+        self.submit([encoder.finish()])
 
         # Download from mappable buffer
         tmp_buffer.map("READ_NOSYNC")
@@ -2823,8 +2819,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # Copy data to temp buffer
         encoder = device.create_command_encoder()
         encoder.copy_texture_to_buffer(source, destination, size)
-        command_buffer = encoder.finish()
-        self.submit([command_buffer])
+        self.submit([encoder.finish()])
 
         # Download from mappable buffer
         tmp_buffer.map("READ_NOSYNC")
