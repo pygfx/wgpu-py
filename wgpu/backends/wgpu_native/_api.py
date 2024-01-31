@@ -1701,7 +1701,8 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         if sync_on_read and map_mode & lib.WGPUMapMode_Read:
             if self._mapped_status[2] == 0 and self._usage & flags.BufferUsage.MAP_READ:
                 encoder = self._device.create_command_encoder()
-                self._device.queue.submit([encoder.finish()])
+                command_buffer = encoder.finish()
+                self._device.queue.submit([command_buffer])
 
         status = 999
 
@@ -2714,7 +2715,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # Copy data to temp buffer
         encoder = device.create_command_encoder()
         encoder.copy_buffer_to_buffer(buffer, buffer_offset, tmp_buffer, 0, data_length)
-        self.submit([encoder.finish()])
+        command_buffer = encoder.finish()
+        self.submit([command_buffer])
 
         # Download from mappable buffer
         tmp_buffer.map("READ_NOSYNC")
@@ -2819,7 +2821,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # Copy data to temp buffer
         encoder = device.create_command_encoder()
         encoder.copy_texture_to_buffer(source, destination, size)
-        self.submit([encoder.finish()])
+        command_buffer = encoder.finish()
+        self.submit([command_buffer])
 
         # Download from mappable buffer
         tmp_buffer.map("READ_NOSYNC")
