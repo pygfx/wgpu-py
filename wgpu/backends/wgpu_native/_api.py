@@ -14,7 +14,6 @@ new methods and checks plus annotates all structs and C api calls.
 Read the codegen/readme.md for more information.
 """
 
-
 import os
 import ctypes
 import logging
@@ -2173,7 +2172,7 @@ class GPUCommandEncoder(
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
             label=to_c_label(label),
-            timestampWrites=timestamp_writes_struct
+            timestampWrites=timestamp_writes_struct,
             # not used: nextInChain
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)

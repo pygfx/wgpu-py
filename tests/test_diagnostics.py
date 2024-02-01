@@ -2,7 +2,6 @@
 This tests the diagnostics logic itself. It does not do a tests that *uses* the diagnostics.
 """
 
-
 import wgpu
 from wgpu import _diagnostics
 from wgpu._diagnostics import (
