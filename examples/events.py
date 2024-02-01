@@ -1,6 +1,7 @@
 """
 A simple example to demonstrate events.
 """
+
 from wgpu.gui.auto import WgpuCanvas, run, call_later
 
 

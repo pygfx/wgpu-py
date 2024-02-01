@@ -4,6 +4,7 @@ If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
 
 # run_example = false
 """
+
 import importlib
 
 # For the sake of making this example Just Work, we try multiple QT libs

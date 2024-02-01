@@ -4,6 +4,7 @@ Works with either PySide6, PyQt6, PyQt5 or PySide2.
 
 # run_example = false
 """
+
 import importlib
 
 # For the sake of making this example Just Work, we try multiple QT libs
