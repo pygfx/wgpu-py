@@ -9,7 +9,7 @@ from pytest import mark
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_query_set():
     if is_pypy:
-        gc.collect() # avoid a panic here when using pypy
+        gc.collect()  # avoid a panic here when using pypy
     shader_source = """
     @group(0) @binding(0)
     var<storage,read> data1: array<f32>;
