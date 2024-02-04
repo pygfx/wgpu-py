@@ -360,7 +360,7 @@ def generate_report():
 class WgpuNativeCountsDiagnostics(Diagnostics):
     def get_subscript(self):
         text = ""
-        text += "    * The a, k, r, e are allocated, kept, released, and error, respecitively.\n"
+        text += "    * The a, k, r, e are allocated, kept, released, and error, respectively.\n"
         text += "    * Reported memory does not include buffer/texture data.\n"
         return text
 

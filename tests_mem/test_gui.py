@@ -82,7 +82,7 @@ def test_release_canvas_context(n):
 
     # This is a bit weird, but somehow this tests produces a dangling
     # CommandBuffer for reasons likely related to the internals of
-    # gpu-core. The lines below allocate and release a new
+    # wgpu-core. The lines below allocate and release a new
     # CommandBuffer, which solves the issue :)
     command_encoder = DEVICE.create_command_encoder()
     command_encoder.finish()

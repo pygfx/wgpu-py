@@ -2001,7 +2001,7 @@ class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBas
 
 class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
     def _destroy(self):
-        # Note that command buffers get destroyed when they are submit'ed.
+        # Note that command buffers get destroyed when they are submitted.
         # In earlier versions we had to take this into account by setting
         # _internal to None. That seems not necessary anymore.
         if self._internal is not None and libf is not None:
