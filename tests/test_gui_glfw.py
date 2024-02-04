@@ -8,10 +8,11 @@ import sys
 import time
 import weakref
 import asyncio
+import gc
 
 import wgpu
 from pytest import skip
-from testutils import run_tests, can_use_glfw, can_use_wgpu_lib
+from testutils import run_tests, can_use_glfw, can_use_wgpu_lib, is_pypy
 from renderutils import render_to_texture, render_to_screen  # noqa
 
 
@@ -83,6 +84,8 @@ def test_glfw_canvas_del():
     loop.run_until_complete(miniloop())
     assert ref() is not None
     del canvas
+    if is_pypy:
+        gc.collect()  # force garbage collection for pypy
     loop.run_until_complete(miniloop())
     assert ref() is None
 
