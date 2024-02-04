@@ -49,7 +49,7 @@ Platform requirements
 Under the hood, wgpu runs on Vulkan, Metal, or DX12. The wgpu-backend
 is selected automatically, but can be overridden by setting the
 ``WGPU_BACKEND_TYPE`` environment variable to "Vulkan", "Metal", "D3D12",
-"D3D11", or "OpenGL".
+or "OpenGL".
 
 Windows
 +++++++
