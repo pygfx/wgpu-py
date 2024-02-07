@@ -81,8 +81,9 @@ def clear_mem():
     if is_pypy:
         gc.collect()
 
-    device = wgpu.utils.get_default_device()
-    device._poll()
+    wgpu.utils.get_default_device()._poll()
+
+    gc.collect()
 
 
 def get_counts():
@@ -190,9 +191,7 @@ def create_and_release(create_objects_func):
             assert ob_name == cls.__name__[3:]
 
             # Give wgpu some slack to clean up temporary resources
-            gc.collect()  # removes the additional CommandEncoder and Textures
-            wgpu.utils.get_default_device()._poll()
-            gc.collect()  # removes the additional CommandBuffer
+            clear_mem()
 
             # Measure peak object counts
             counts2 = get_counts()
