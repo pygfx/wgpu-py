@@ -17,6 +17,21 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [unreleased]
+
+Added:
+* The feature "float32-filterable" is now available natively.
+* Add list of projects using wgpu-py to [README](README.md#projects-using-wgpu-py). ([#456](https://github.com/pygfx/wgpu-py/pull/456))
+
+Changed:
+* Updated to wgpu-native 0.19.1.1. ([#458](https://github.com/pygfx/wgpu-py/pull/458))
+
+Removed:
+* Shadertoy util is removed from the wgpu-py. It is now available as a separate package: [wgpu-shadertoy](https://github.com/pygfx/shadertoy). ([#455](https://github.com/pygfx/wgpu-py/pull/455))
+
+Fixed:
+* Devices no longer leak memory.
+
 ### [v0.13.2] - 21-12-2023
 
 Added:
