@@ -25,14 +25,11 @@ def test_release_adapter(n):
 
 @create_and_release
 def test_release_device(n):
-    pytest.skip("XFAIL")
-    # todo: XFAIL: Device object seem not to be cleaned up at wgpu-native.
-
     # Note: the WebGPU spec says:
     # [request_device()] is a one-time action: if a device is returned successfully, the adapter becomes invalid.
 
     yield {
-        "expected_counts_after_create": {"Device": (n, n), "Queue": (n, 0)},
+        "expected_counts_after_create": {"Device": (n, n), "Queue": (n, n)},
     }
     adapter = DEVICE.adapter
     for i in range(n):
@@ -82,9 +79,7 @@ def test_release_bind_group_layout(n):
     global _bind_group_layout_binding
     _bind_group_layout_binding += 1
 
-    yield {
-        "expected_counts_after_create": {"BindGroupLayout": (n, 1)},
-    }
+    yield {}
 
     binding_layouts = [
         {
@@ -193,9 +188,13 @@ def test_release_query_set(n):
 
 @create_and_release
 def test_release_queue(n):
-    pytest.skip("XFAIL")
-    # todo: XFAIL: the device and queue are kinda one, and the former won't release at wgpu-native.
-    yield {}
+    # Note: cannot create a queue directly, so we create devices, which gave queue's attached.
+    yield {
+        "expected_counts_after_create": {
+            "Device": (n, n),
+            "Queue": (n, n),
+        },
+    }
     adapter = DEVICE.adapter
     for i in range(n):
         d = adapter.request_device()

@@ -212,7 +212,7 @@ Debugging
 If the default wgpu-backend causes issues, or if you want to run on a
 different backend for another reason, you can set the
 `WGPU_BACKEND_TYPE` environment variable to "Vulkan", "Metal", "D3D12",
-"D3D11", or "OpenGL".
+or "OpenGL".
 
 The log messages produced (by Rust) in wgpu-native are captured and
 injected into Python's "wgpu" logger. One can set the log level to

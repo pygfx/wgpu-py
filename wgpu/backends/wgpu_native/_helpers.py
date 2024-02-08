@@ -323,7 +323,7 @@ def generate_report():
     but in the form of a Python dict.
     """
 
-    # H: surfaces: WGPUStorageReport, backendType: WGPUBackendType, vulkan: WGPUHubReport, metal: WGPUHubReport, dx12: WGPUHubReport, dx11: WGPUHubReport, gl: WGPUHubReport
+    # H: surfaces: WGPURegistryReport, backendType: WGPUBackendType, vulkan: WGPUHubReport, metal: WGPUHubReport, dx12: WGPUHubReport, gl: WGPUHubReport
     struct = ffi.new("WGPUGlobalReport *")
 
     # H: void f(WGPUInstance instance, WGPUGlobalReport * report)
@@ -332,25 +332,27 @@ def generate_report():
     report = {}
 
     report["surfaces"] = {
-        "occupied": struct.surfaces.numOccupied,
-        "vacant": struct.surfaces.numVacant,
+        "allocated": struct.surfaces.numAllocated,
+        "kept": struct.surfaces.numKeptFromUser,
+        "released": struct.surfaces.numReleasedFromUser,
         "error": struct.surfaces.numError,
         "element_size": struct.surfaces.elementSize,
     }
 
-    for backend in ("vulkan", "metal", "dx12", "dx11", "gl"):
+    for backend in ("vulkan", "metal", "dx12", "gl"):
         c_hub_report = getattr(struct, backend)
         report[backend] = {}
         for key in dir(c_hub_report):
-            c_storage_report = getattr(c_hub_report, key)
-            storage_report = {
-                "occupied": c_storage_report.numOccupied,
-                "vacant": c_storage_report.numVacant,
-                "error": c_storage_report.numError,
-                "element_size": c_storage_report.elementSize,
+            c_registry_report = getattr(c_hub_report, key)
+            registry_report = {
+                "allocated": c_registry_report.numAllocated,
+                "kept": c_registry_report.numKeptFromUser,
+                "released": c_registry_report.numReleasedFromUser,
+                "error": c_registry_report.numError,
+                "element_size": c_registry_report.elementSize,
             }
-            # if any(x!=0 for x in storage_report.values()):
-            report[backend][key] = storage_report
+            # if any(x!=0 for x in registry_report.values()):
+            report[backend][key] = registry_report
 
     return report
 
@@ -358,7 +360,7 @@ def generate_report():
 class WgpuNativeCountsDiagnostics(Diagnostics):
     def get_subscript(self):
         text = ""
-        text += "    * The o, v, e are occupied, vacant and error, respecitively.\n"
+        text += "    * The a, k, r, e are allocated, kept, released, and error, respectively.\n"
         text += "    * Reported memory does not include buffer/texture data.\n"
         return text
 
@@ -383,23 +385,30 @@ class WgpuNativeCountsDiagnostics(Diagnostics):
         for report_name in sorted(name_map[name] for name in names + root_names):
             result[report_name] = {"count": 0, "mem": 0}
 
+        # The field names to add together to obtain a representation for
+        # the number of objects "allocated" by wgpu-core. In practice,
+        # wgpu-core can keep objects around for re-use, which is why "allocated"
+        # and released" are not in this equation.
+        fields_to_add = ["kept", "error"]
+
         # Establish what backends are active
         active_backends = []
         for backend in backends:
             total = 0
             for name in names:
                 d = native_report[backend][name]
-                total += d["occupied"] + d["vacant"] + d["error"]
+                total += sum(d[k] for k in fields_to_add)
             if total > 0:
                 active_backends.append(backend)
 
         # Process names in the root
         for name in root_names:
             d = native_report[name]
-            subtotal_count = d["occupied"] + d["vacant"] + d["error"]
+            subtotal_count = sum(d[k] for k in fields_to_add)
             impl = {
-                "o": d["occupied"],
-                "v": d["vacant"],
+                "a": d["allocated"],
+                "k": d["kept"],
+                "r": d["released"],
                 "e": d["error"],
                 "el_size": d["element_size"],
             }
@@ -416,11 +425,12 @@ class WgpuNativeCountsDiagnostics(Diagnostics):
             implementations = {}
             for backend in active_backends:
                 d = native_report[backend][name]
-                subtotal_count = d["occupied"] + d["vacant"] + d["error"]
+                subtotal_count = sum(d[k] for k in fields_to_add)
                 subtotal_mem = subtotal_count * d["element_size"]
                 impl = {
-                    "o": d["occupied"],
-                    "v": d["vacant"],
+                    "a": d["allocated"],
+                    "k": d["kept"],
+                    "r": d["released"],
                     "e": d["error"],
                     "el_size": d["element_size"],
                 }

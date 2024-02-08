@@ -17,6 +17,21 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [unreleased]
+
+Added:
+* The feature "float32-filterable" is now available natively.
+* Add list of projects using wgpu-py to [README](README.md#projects-using-wgpu-py). ([#456](https://github.com/pygfx/wgpu-py/pull/456))
+
+Changed:
+* Updated to wgpu-native 0.19.1.1. ([#458](https://github.com/pygfx/wgpu-py/pull/458))
+
+Removed:
+* Shadertoy util is removed from the wgpu-py. It is now available as a separate package: [wgpu-shadertoy](https://github.com/pygfx/shadertoy). ([#455](https://github.com/pygfx/wgpu-py/pull/455))
+
+Fixed:
+* Devices no longer leak memory.
+
 ### [v0.13.2] - 21-12-2023
 
 Added:
@@ -208,7 +223,7 @@ Fixed:
 
 Added:
 
-* The shadertoy util now supports GLSL, so code from the shadertoy website can be direcly copied and run with wgpu (#343)
+* The shadertoy util now supports GLSL, so code from the shadertoy website can be directly copied and run with wgpu (#343)
 
 
 ### [v0.9.1] - 13-02-2023
@@ -514,14 +529,14 @@ Changed:
 
 Changed:
 
-* The backend selection is automatic by default. To force a backend, the `WGPU_BACKEND_TYPE` evironment variable can be set to e.g. "Vulkan". It could be good to do this on Windows to prevent selection of DX12 for now.
+* The backend selection is automatic by default. To force a backend, the `WGPU_BACKEND_TYPE` environment variable can be set to e.g. "Vulkan". It could be good to do this on Windows to prevent selection of DX12 for now.
 
 
 ### [v0.5.3] - 04-06-2021
 
 Added:
 
-* `adapter.properties` now has actual values, allowing inspeciton of the selected
+* `adapter.properties` now has actual values, allowing inspection of the selected
     GPU and backend.
 * Added back support for filtering float32 textures by enabling a certain wgpu feature
   by default.
@@ -585,7 +600,7 @@ Changed:
 * `GPUAdapter.request_device()`: the `extensions` and `limit` args are now `non_guaranteed_features` and `non_guaranteed_limits`.
 * `GPUDevice.default_queue`: is now called `queue`.
 * `GPUDevice.create_compute_pipeline()`: the `compute_stage` arg is now called `compute`.
-* `GPUDevice.create_bind_group_layout()` has changed the required structure of the layout enty dicts.
+* `GPUDevice.create_bind_group_layout()` has changed the required structure of the layout entry dicts.
 * `GPUDevice.create_render_pipeline()` has changed *a lot* in terms of shape of input dicts. See new docs.
 * `GPUTexture.create_view()`: args `mip_level_count` and `array_layer_count` are default `None` instead of `0`.
 * `GPUCommandEncoder.begin_render_pass()`: the `color_attachments` and `depth_stencil_attachment` arguments have their `attachment` field renamed to `view`.
@@ -638,7 +653,7 @@ Removed:
 
 Added:
 
-* The canvase now has a `request_draw` method.
+* The canvas now has a `request_draw` method.
 * More and better docs.
 * The canvas can be passed to `request_adapter` so that the created surface
   can be selected on it.

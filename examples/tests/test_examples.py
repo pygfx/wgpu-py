@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 
-from testutils import (
+from tests.testutils import (
     can_use_wgpu_lib,
     wgpu_backend,
     is_lavapipe,
@@ -35,14 +35,6 @@ examples_to_run = find_examples(
 
 # only test output of examples that opt-in
 examples_to_test = find_examples(query="# test_example = true", return_stems=True)
-
-
-@pytest.mark.parametrize("module", examples_to_run)
-def test_examples_run(module, force_offscreen):
-    """Run every example marked to see if they can run without error."""
-    # use runpy so the module is not actually imported (and can be gc'd)
-    # but also to be able to run the code in the __main__ block
-    runpy.run_module(f"examples.{module}", run_name="__main__")
 
 
 @pytest.fixture
@@ -143,6 +135,14 @@ def update_diffs(module, is_similar, img, stored_img):
             imageio.imwrite(path, diff)
         elif path.exists():
             path.unlink()
+
+
+@pytest.mark.parametrize("module", examples_to_run)
+def test_examples_run(module, force_offscreen):
+    """Run every example marked to see if they can run without error."""
+    # use runpy so the module is not actually imported (and can be gc'd)
+    # but also to be able to run the code in the __main__ block
+    runpy.run_module(f"examples.{module}", run_name="__main__")
 
 
 if __name__ == "__main__":

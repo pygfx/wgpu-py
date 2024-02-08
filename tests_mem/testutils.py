@@ -81,8 +81,9 @@ def clear_mem():
     if is_pypy:
         gc.collect()
 
-    device = wgpu.utils.get_default_device()
-    device._poll()
+    wgpu.utils.get_default_device()._poll()
+
+    gc.collect()
 
 
 def get_counts():
@@ -190,7 +191,7 @@ def create_and_release(create_objects_func):
             assert ob_name == cls.__name__[3:]
 
             # Give wgpu some slack to clean up temporary resources
-            wgpu.utils.get_default_device()._poll()
+            clear_mem()
 
             # Measure peak object counts
             counts2 = get_counts()
@@ -200,7 +201,9 @@ def create_and_release(create_objects_func):
 
             # Make sure the actual object has increased
             assert more2  # not empty
-            assert more2 == options["expected_counts_after_create"]
+            assert (
+                more2 == options["expected_counts_after_create"]
+            ), f"Exepected:\n{options['expected_counts_after_create']}\nGot:\n{more2}"
 
             # It's ok if other objects are created too ...
 

@@ -1701,7 +1701,8 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         if sync_on_read and map_mode & lib.WGPUMapMode_Read:
             if self._mapped_status[2] == 0 and self._usage & flags.BufferUsage.MAP_READ:
                 encoder = self._device.create_command_encoder()
-                self._device.queue.submit([encoder.finish()])
+                command_buffer = encoder.finish()
+                self._device.queue.submit([command_buffer])
 
         status = 999
 
@@ -2000,12 +2001,9 @@ class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBas
 
 class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
     def _destroy(self):
-        # Since command buffers get destroyed when you submit them, we
-        # must only release them if they've not been submitted, or we get
-        # 'Cannot remove a vacant resource'. Got this info from the
-        # wgpu chat. Also see
-        # https://docs.rs/wgpu-core/latest/src/wgpu_core/device/mod.rs.html#4180-4194
-        # --> That's why _internal is set to None in Queue.submit()
+        # Note that command buffers get destroyed when they are submitted.
+        # In earlier versions we had to take this into account by setting
+        # _internal to None. That seems not necessary anymore.
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandBuffer commandBuffer)

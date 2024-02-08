@@ -67,7 +67,7 @@ Information on the adapter can be obtained using :func:`wgpu.GPUAdapter.request_
 
 A device is controlled with a specific backend API. By default one is selected automatically.
 This can be overridden by setting the
-`WGPU_BACKEND_TYPE` environment variable to "Vulkan", "Metal", "D3D12", "D3D11", or "OpenGL".
+`WGPU_BACKEND_TYPE` environment variable to "Vulkan", "Metal", "D3D12", or "OpenGL".
 
 The device and all objects created from it inherit from :class:`GPUObjectBase` - they represent something on the GPU.
 
