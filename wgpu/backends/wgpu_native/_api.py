@@ -650,10 +650,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     def present(self):
         if not self._texture:
-            msg = "present() is called without a preceeding call to "
-            msg += "get_current_texture(). Note that present() is usually "
-            msg += "called automatically after the draw function returns."
-            raise RuntimeError(msg)
+            # Log warning but don't raise exception
+            msg = "No texture to present, missing call to get_current_texture()?"
+            logger.warning(msg)
         else:
             # Present the texture, then destroy it
             # H: void f(WGPUSurface surface)

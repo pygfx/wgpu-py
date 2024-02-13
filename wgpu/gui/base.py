@@ -126,9 +126,13 @@ class WgpuCanvasInterface:
         if self._canvas_context is None:
             # Get the active wgpu backend module
             backend_module = sys.modules["wgpu"].gpu.__module__
+            if backend_module == "wgpu._classes":
+                raise RuntimeError(
+                    "A backend must be selected (e.g. with request_adapter()) before canvas.get_context() can be called."
+                )
             # Instantiate the context
-            PC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
-            self._canvas_context = PC(self)
+            CC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
+            self._canvas_context = CC(self)
         return self._canvas_context
 
 

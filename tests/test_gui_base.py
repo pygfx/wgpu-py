@@ -3,6 +3,8 @@ Test the canvas basics.
 """
 
 import gc
+import sys
+import subprocess
 
 import numpy as np
 import wgpu.gui  # noqa
@@ -116,6 +118,39 @@ class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvasBase):
             size,
         )
         self.array = np.frombuffer(data, np.uint8).reshape(size[1], size[0], 4)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_run_bare_canvas():
+    """Test that a bare canvas does not error."""
+
+    # This is (more or less) the equivalent of:
+    #
+    #     from wgpu.gui.auto import WgpuCanvas, run
+    #     canvas = WgpuCanvas()
+    #     run()
+    #
+    # Note: run() calls _draw_frame_and_present() in event loop.
+
+    canvas = MyOffscreenCanvas()
+    canvas._draw_frame_and_present()
+
+
+def test_canvas_context_not_base():
+    """Check that it is prevented that canvas context is instance of base context class."""
+    code = "from wgpu.gui import WgpuCanvasBase; canvas = WgpuCanvasBase(); canvas.get_context()"
+
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+    )
+    out = result.stdout.rstrip()
+
+    assert "RuntimeError" in out
+    assert "backend must be selected" in out.lower()
+    assert "canvas.get_context" in out.lower()
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
