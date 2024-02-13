@@ -650,9 +650,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     def present(self):
         if not self._texture:
-            # Log error but don't raise exception
+            # Log warning but don't raise exception
             msg = "No texture to present, missing call to get_current_texture()?"
-            logger.error(msg)
+            logger.warning(msg)
         else:
             # Present the texture, then destroy it
             # H: void f(WGPUSurface surface)
