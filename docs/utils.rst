@@ -39,7 +39,7 @@ To inspect (for example) the total buffer usage:
     :members:
 
 
-.. autoclass:: wgpu._diagnostics.Diagnostics
+.. autoclass:: wgpu.DiagnosticsBase
     :members:
 
 
