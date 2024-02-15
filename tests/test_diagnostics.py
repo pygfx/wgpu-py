@@ -6,7 +6,7 @@ import wgpu
 from wgpu import _diagnostics
 from wgpu._diagnostics import (
     DiagnosticsRoot,
-    Diagnostics,
+    DiagnosticsBase,
     ObjectTracker,
     dict_to_text,
     int_repr,
@@ -29,7 +29,7 @@ class CustomDiagnosticsRoot(DiagnosticsRoot):
         _diagnostics.diagnostics = wgpu.diagnostics
 
 
-class CustomDiagnostics(Diagnostics):
+class CustomDiagnostics(DiagnosticsBase):
     def __init__(self, name):
         super().__init__(name)
         self.tracker = ObjectTracker()

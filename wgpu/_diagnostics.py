@@ -50,18 +50,21 @@ class DiagnosticsRoot:
         print(self.get_report(), end="")
 
 
-class Diagnostics:
+class DiagnosticsBase:
     """Object that represents diagnostics on a specific topic.
 
-    This is a base class that must be subclassed to provide diagnostics
-    on a certain topic. Instantiating the class registers it with the
-    root diagnostics object.
+    This is a base class that must be subclassed to provide diagnostics on
+    a certain topic. Typically only ``get_dict()`` needs to be implemented.
+    Instantiating the class registers it with the root diagnostics object.
     """
 
     def __init__(self, name):
-        diagnostics._register_diagnostics(name, self)
+        if not (isinstance(name, str) and name.isidentifier()):
+            raise ValueError(
+                "Diagnostics name must be an identifier (i.e. use underscore instead of spaces)."
+            )
         self.name = name
-        self.object_counts = {}
+        diagnostics._register_diagnostics(name, self)
 
     def __repr__(self):
         return f"<Diagnostics for '{self.name}'>"
@@ -263,6 +266,8 @@ def dict_to_table(d, header, header_offest=0):
                 row.append("")
             elif isinstance(val, str):
                 row.append(val)
+            elif isinstance(val, bool):
+                row.append("✓" if val else "-")
             elif isinstance(val, int):
                 row.append(int_repr(val))
             elif isinstance(val, float):
@@ -285,26 +290,25 @@ def dict_to_table(d, header, header_offest=0):
 def int_repr(val):
     """Represent an integer using K and M suffixes."""
     prefix = "-" if val < 0 else ""
+    suffix = ""
     val = abs(val)
-    if val >= 1_000_000_000:  # >= 1G
-        s = str(val / 1_000_000_000)
-        suffix = "G"
-    elif val >= 1_000_000:  # >= 1M
-        s = str(val / 1_000_000)
-        suffix = "M"
-    elif val >= 1_000:  # >= 1K
-        s = str(val / 1_000)
-        suffix = "K"
-    else:
-        s = str(val)
-        suffix = ""
-    if "." in s:
-        s1, _, s2 = s.partition(".")
+    s = str(val)
+    tail = 3 * ((len(s) - 1) // 3)
+    if tail > 0:
+        s1, s2 = s[:-tail], s[-tail:]
         n_decimals = max(0, 3 - len(s1))
         s = s1
         if n_decimals:
             s2 += "000"
             s = s1 + "." + s2[:n_decimals]
+        if tail == 3:
+            suffix = "K"
+        elif tail == 6:
+            suffix = "M"
+        elif tail == 9:
+            suffix = "G"
+        else:
+            suffix = f"E{tail}"
     return prefix + s + suffix
 
 
@@ -427,7 +431,7 @@ texture_format_to_bpp = {
 diagnostics = DiagnosticsRoot()
 
 
-class SystemDiagnostics(Diagnostics):
+class SystemDiagnostics(DiagnosticsBase):
     """Provides basic system info."""
 
     def get_dict(self):
@@ -439,7 +443,7 @@ class SystemDiagnostics(Diagnostics):
         }
 
 
-class WgpuNativeInfoDiagnostics(Diagnostics):
+class WgpuNativeInfoDiagnostics(DiagnosticsBase):
     """Provides metadata about the wgpu-native backend."""
 
     def get_dict(self):
@@ -463,7 +467,7 @@ class WgpuNativeInfoDiagnostics(Diagnostics):
         }
 
 
-class VersionDiagnostics(Diagnostics):
+class VersionDiagnostics(DiagnosticsBase):
     """Provides version numbers from relevant libraries."""
 
     def get_dict(self):
@@ -485,7 +489,7 @@ class VersionDiagnostics(Diagnostics):
         return info
 
 
-class ObjectCountDiagnostics(Diagnostics):
+class ObjectCountDiagnostics(DiagnosticsBase):
     """Provides object counts and resource consumption, used in _classes.py."""
 
     def __init__(self, name):

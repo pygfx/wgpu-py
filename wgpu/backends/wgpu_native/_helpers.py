@@ -6,7 +6,7 @@ import sys
 import ctypes
 
 from ._ffi import ffi, lib
-from ..._diagnostics import Diagnostics
+from ..._diagnostics import DiagnosticsBase
 from ...classes import (
     GPUError,
     GPUOutOfMemoryError,
@@ -357,7 +357,7 @@ def generate_report():
     return report
 
 
-class WgpuNativeCountsDiagnostics(Diagnostics):
+class WgpuNativeCountsDiagnostics(DiagnosticsBase):
     def get_subscript(self):
         text = ""
         text += "    * The a, k, r, e are allocated, kept, released, and error, respectively.\n"
