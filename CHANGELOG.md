@@ -17,7 +17,18 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.14.0]
+### [v0.14.1] - 15-02-2024
+
+Added:
+
+* The `wgpu.DiagnosticsBase` is now a public base class that can be subclassed by downstream libs (like pygfx) to provide diagnostics.
+
+Changed:
+
+* Diagnostics renders bools as `✓` or `-`, and large ints get scientific notation.
+
+
+### [v0.14.0] - 13-02-2024
 
 Added:
 
