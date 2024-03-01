@@ -69,6 +69,8 @@ if sys.platform.startswith("linux") and SYSTEM_IS_WAYLAND:
         os.environ["PYGLFW_LIBRARY_VARIANT"] = "x11"
     # Force Qt to use X11. Qt is more flexible - it ok if e.g. PySide6 is already imported.
     os.environ["QT_QPA_PLATFORM"] = "xcb"
+    # Force wx to use X11, probably.
+    os.environ["GDK_BACKEND"] = "x11"
 
 
 _x11_display = None
