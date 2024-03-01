@@ -3,11 +3,62 @@
 
 import os
 import sys
-import ctypes.util
+import weakref
 import logging
+import ctypes.util
+from contextlib import contextmanager
+
+from .._coreutils import error_message_hash
 
 
 logger = logging.getLogger("wgpu")
+
+
+err_hashes = {}
+
+
+@contextmanager
+def log_exception(kind):
+    """Context manager to log any exceptions, but only log a one-liner
+    for subsequent occurances of the same error to avoid spamming by
+    repeating errors in e.g. a draw function or event callback.
+    """
+    try:
+        yield
+    except Exception as err:
+        # Store exc info for postmortem debugging
+        exc_info = list(sys.exc_info())
+        exc_info[2] = exc_info[2].tb_next  # skip *this* function
+        sys.last_type, sys.last_value, sys.last_traceback = exc_info
+        # Show traceback, or a one-line summary
+        msg = str(err)
+        msgh = error_message_hash(msg)
+        if msgh not in err_hashes:
+            # Provide the exception, so the default logger prints a stacktrace.
+            # IDE's can get the exception from the root logger for PM debugging.
+            err_hashes[msgh] = 1
+            logger.error(kind, exc_info=err)
+        else:
+            # We've seen this message before, return a one-liner instead.
+            err_hashes[msgh] = count = err_hashes[msgh] + 1
+            msg = kind + ": " + msg.split("\n")[0].strip()
+            msg = msg if len(msg) <= 70 else msg[:69] + "…"
+            logger.error(msg + f" ({count})")
+
+
+def weakbind(method):
+    """Replace a bound method with a callable object that stores the `self` using a weakref."""
+    ref = weakref.ref(method.__self__)
+    class_func = method.__func__
+    del method
+
+    def proxy(*args, **kwargs):
+        self = ref()
+        if self is not None:
+            return class_func(self, *args, **kwargs)
+
+    proxy.__name__ = class_func.__name__
+    return proxy
 
 
 SYSTEM_IS_WAYLAND = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()

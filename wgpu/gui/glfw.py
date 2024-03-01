@@ -14,8 +14,8 @@ import asyncio
 
 import glfw
 
-from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
-from ._gui_utils import SYSTEM_IS_WAYLAND, logger
+from .base import WgpuCanvasBase, WgpuAutoGui
+from ._gui_utils import SYSTEM_IS_WAYLAND, weakbind, logger
 
 
 # Make sure that glfw is new enough

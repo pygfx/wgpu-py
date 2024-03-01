@@ -7,8 +7,8 @@ import sys
 import ctypes
 import importlib
 
-from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
-from ._gui_utils import get_alt_x11_display, get_alt_wayland_display
+from .base import WgpuCanvasBase, WgpuAutoGui
+from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
 
 
 is_wayland = False  # We force Qt to use X11 in _gui_utils.py

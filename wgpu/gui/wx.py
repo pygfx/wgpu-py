@@ -6,7 +6,8 @@ can be used as a standalone window or in a larger GUI.
 import sys
 import ctypes
 
-from .base import WgpuCanvasBase, weakbind, get_alt_x11_display, get_alt_wayland_display
+from .base import WgpuCanvasBase
+from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
 
 import wx
 
