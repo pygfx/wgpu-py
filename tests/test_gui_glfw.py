@@ -3,7 +3,6 @@ Test the canvas, and parts of the rendering that involves a canvas,
 like the canvas context and surface texture.
 """
 
-import os
 import sys
 import time
 import weakref

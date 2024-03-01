@@ -7,22 +7,15 @@ On Linux, install the glfw lib using ``sudo apt install libglfw3``,
 or ``sudo apt install libglfw3-wayland`` when using Wayland.
 """
 
-import os
 import sys
 import time
 import weakref
 import asyncio
 
-# os.environ["PYGLFW_LIBRARY_VARIANT"] = "x11"
-# os.environ["XDG_SESSION_TYPE"] = "x11"
-
-# os.environ["PYGLFW_LIBRARY"] = (
-#     "/home/almar/.pyenv/versions/3.12.1/lib/python3.12/site-packages/glfw/x11/libglfw.so"
-# )
-
 import glfw
 
 from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
+from ._gui_utils import SYSTEM_IS_WAYLAND, logger
 
 
 # Make sure that glfw is new enough
@@ -32,19 +25,12 @@ if glfw_version_info < (1, 9):
 
 # Do checks to prevent pitfalls on hybrid Xorg/Wayland systems
 is_wayland = False
-if sys.platform.startswith("linux"):
-    is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-    if is_wayland:
-        # glfw.init_hint(glfw.PLATFORM, glfw.PLATFORM_X11)  # produces invalid platform
-        if not hasattr(glfw, "get_wayland_window"):
-            is_wayland = False
-            # raise RuntimeError(
-            #     "We're on Wayland but Wayland functions not available. "
-            #     + "Did you apt install libglfw3-wayland?"
-            # )
-        # Not needed because WAYLAND_PREFER_LIBDECOR is the default?
-        # if hasattr(glfw, "WAYLAND_LIBDECOR"):
-        #     glfw.init_hint(glfw.WAYLAND_LIBDECOR, glfw.WAYLAND_PREFER_LIBDECOR)
+if sys.platform.startswith("linux") and SYSTEM_IS_WAYLAND:
+    if not hasattr(glfw, "get_x11_window"):
+        # Probably glfw was imported before we wgpu was, so we missed our chance
+        # to set the env var to make glfw use x11.
+        is_wayland = True
+        logger.warning("Using GLFW with Wayland, which is experimental.")
 
 
 # Some glfw functions are not always available

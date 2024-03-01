@@ -3,6 +3,7 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
+import sys
 import ctypes
 
 from .base import WgpuCanvasBase, weakbind, get_alt_x11_display, get_alt_wayland_display

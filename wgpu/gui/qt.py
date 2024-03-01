@@ -7,25 +7,12 @@ import sys
 import ctypes
 import importlib
 
-from .base import (
-    WgpuCanvasBase,
-    WgpuAutoGui,
-    weakbind,
-    get_alt_x11_display,
-    get_alt_wayland_display,
-)
+from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
+from ._gui_utils import get_alt_x11_display, get_alt_wayland_display
 
 
-is_wayland = False
+is_wayland = False  # We force Qt to use X11 in _gui_utils.py
 
-# Make Qt not ignore XDG_SESSION_TYPE
-import os
-
-# is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-# if is_wayland:
-#     os.environ["QT_QPA_PLATFORM"] = "wayland-egl"
-#     os.environ["QT_QPA_PLATFORM"] = "xcb"
-#     os.environ["QT_WAYLAND_FORCE_DPI"] = "=physical"  # don't use fixed 96 dpi
 
 # Select GUI toolkit
 for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):

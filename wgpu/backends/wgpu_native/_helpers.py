@@ -1,7 +1,6 @@
 """Utilities used in the wgpu-native backend.
 """
 
-import os
 import sys
 import ctypes
 
@@ -98,6 +97,7 @@ def get_surface_id_from_canvas(canvas):
     """
 
     surface_info = canvas.get_surface_info()
+    print(surface_info)
 
     # todo: cache the surface id for each canvas?
 
@@ -165,7 +165,7 @@ def get_surface_id_from_canvas(canvas):
             struct.display = ffi.cast("void *", surface_info["display"])
             struct.window = int(surface_info["window"])
             struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
-        elif platform == "wayland"
+        elif platform == "wayland":
             struct = ffi.new("WGPUSurfaceDescriptorFromWaylandSurface *")
             struct.display = ffi.cast("void *", surface_info["display"])
             struct.surface = ffi.cast("void *", surface_info["window"])
