@@ -12,6 +12,7 @@ process. Just a proof of concept, this is far from perfect yet:
 """
 
 import sys
+import json
 import time
 import subprocess
 
@@ -23,14 +24,14 @@ from triangle import main
 
 code = """
 import sys
+import json
 from PySide6 import QtWidgets  # Use either PySide6 or PyQt6
 from wgpu.gui.qt import WgpuCanvas
 
 app = QtWidgets.QApplication([])
 canvas = WgpuCanvas(title="wgpu triangle in Qt subprocess")
 
-print(canvas.get_window_id())
-#print(canvas.get_display_id())
+print(json.dumps(canvas.get_surface_info()))
 print(canvas.get_physical_size())
 sys.stdout.flush()
 
@@ -41,15 +42,15 @@ app.exec_()
 class ProxyCanvas(WgpuCanvasBase):
     def __init__(self):
         super().__init__()
-        self._window_id = int(p.stdout.readline().decode())
+        self._surface_info = json.loads(p.stdout.readline().decode())
         self._psize = tuple(
             int(x) for x in p.stdout.readline().decode().strip().strip("()").split(",")
         )
         print(self._psize)
         time.sleep(0.2)
 
-    def get_window_id(self):
-        return self._window_id
+    def get_surface_info(self):
+        return self._surface_info
 
     def get_physical_size(self):
         return self._psize

@@ -198,8 +198,7 @@ class GPU(classes.GPU):
         # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
-            window_id = canvas.get_window_id()
-            if window_id:  # e.g. could be an off-screen canvas
+            if canvas.get_surface_info():  # e.g. could be an off-screen canvas
                 surface_id = canvas.get_context()._get_surface_id()
 
         # ----- Select backend

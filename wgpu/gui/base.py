@@ -58,6 +58,41 @@ def weakbind(method):
     return proxy
 
 
+_x11_display = None
+
+
+def get_alt_x11_display():
+    """Get (the pointer to) a process-global x11 display instance."""
+    # Ideally we'd get the real display object used by the GUI toolkit.
+    # But this is not always possible. In that case, using an alt display
+    # object can be used.
+    global _x11_display
+    assert sys.platform.startswith("linux")
+    if _x11_display is None:
+        x11 = ctypes.CDLL(ctypes.util.find_library("X11"))
+        x11.XOpenDisplay.restype = ctypes.c_void_p
+        _x11_display = x11.XOpenDisplay(None)
+    return _x11_display
+
+
+_wayland_display = None
+
+
+def get_alt_wayland_display():
+    """Get (the pointer to) a process-global Wayland display instance."""
+    # Ideally we'd get the real display object used by the GUI toolkit.
+    # This creates a global object, similar to what we do for X11.
+    # Unfortunately, this segfaults, so it looks like the real display object
+    # is needed? Leaving this here for reference.
+    global _wayland_display
+    assert sys.platform.startswith("linux")
+    if _wayland_display is None:
+        wl = ctypes.CDLL(ctypes.util.find_library("wayland-client"))
+        wl.wl_display_connect.restype = ctypes.c_void_p
+        _wayland_display = w.wl_display_connect(None)
+    return _wayland_display
+
+
 class WgpuCanvasInterface:
     """The minimal interface to be a valid canvas.
 
@@ -72,39 +107,16 @@ class WgpuCanvasInterface:
         super().__init__(*args, **kwargs)
         self._canvas_context = None
 
-    def get_window_id(self):
-        """Get the native window id.
+    def get_surface_info(self):
+        """Get information about the native window / surface.
 
-        This is used to obtain a surface id, so that wgpu can render
-        to the region of the screen occupied by the canvas.
+        This is used to obtain a surface id, so that wgpu can render to the
+        region of the screen occupied by the canvas. Should return None for
+        offscreen canvases. Otherwise, this should return a dict with a "window"
+        field. On Linux the dict should contain more fields, see the existing
+        implementations for reference.
         """
-        raise NotImplementedError()
-
-    def get_display_id(self):
-        """Get the native display id (Linux only).
-
-        On Linux this is needed in addition to the window id to obtain
-        a surface id. The default implementation calls into the X11 lib
-        to get the display id.
-        """
-        # Re-use to avoid creating loads of id's
-        if getattr(self, "_display_id", None) is not None:
-            return self._display_id
-
-        if sys.platform.startswith("linux"):
-            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-            if is_wayland:
-                raise NotImplementedError(
-                    f"Cannot (yet) get display id on {self.__class__.__name__}."
-                )
-            else:
-                x11 = ctypes.CDLL(ctypes.util.find_library("X11"))
-                x11.XOpenDisplay.restype = ctypes.c_void_p
-                self._display_id = x11.XOpenDisplay(None)
-        else:
-            raise RuntimeError(f"Cannot get display id on {sys.platform}.")
-
-        return self._display_id
+        return None
 
     def get_physical_size(self):
         """Get the physical size of the canvas in integer pixels."""

@@ -94,7 +94,7 @@ class WgpuOffscreenCanvasBase(WgpuCanvasBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def get_window_id(self):
+    def get_surface_info(self):
         """This canvas does not correspond to an on-screen window."""
         return None
 

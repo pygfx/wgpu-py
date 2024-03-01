@@ -67,8 +67,7 @@ Linux
 
 On Linux, it's advisable to install the proprietary drivers of your GPU
 (if you have a dedicated GPU). You may need to ``apt install
-mesa-vulkan-drivers``. Wayland support is currently broken (we could use
-a hand to fix this).
+mesa-vulkan-drivers``. Wgpu-py works with both X and Wayland.
 
 Binary wheels for Linux are only available for **manylinux_2_24**.
 This means that the installation requires ``pip >= 20.3``, and you need
