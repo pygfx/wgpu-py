@@ -96,10 +96,12 @@ def get_surface_id_from_canvas(canvas):
     obtain this id differs per platform and GUI toolkit.
     """
 
-    surface_info = canvas.get_surface_info()
-    print(surface_info)
+    # Use cached
+    surface_id = getattr(canvas, "_wgpu_surface_id", None)
+    if surface_id:
+        return surface_id
 
-    # todo: cache the surface id for each canvas?
+    surface_info = canvas.get_surface_info()
 
     if sys.platform.startswith("win"):  # no-cover
         struct = ffi.new("WGPUSurfaceDescriptorFromWindowsHWND *")
@@ -186,7 +188,11 @@ def get_surface_id_from_canvas(canvas):
     surface_descriptor.label = ffi.NULL
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
-    return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
+    surface_id = lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
+
+    # Cache and return
+    canvas._wgpu_surface_id = surface_id
+    return surface_id
 
 
 # The functions below are copied from codegen/utils.py

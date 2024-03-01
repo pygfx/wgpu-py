@@ -164,6 +164,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                 "window": int(self.winId()),
             }
         elif sys.platform.startswith("linux"):
+            # The trick to use an al display pointer works for X11, but results in a segfault on Wayland ...
             if is_wayland:
                 return {
                     "platform": "wayland",

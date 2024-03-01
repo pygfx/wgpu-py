@@ -10,6 +10,8 @@ from .base import WgpuCanvasBase, weakbind, get_alt_x11_display, get_alt_wayland
 
 import wx
 
+
+# Fot now just assume wx uses X11
 is_wayland = False
 
 
@@ -81,13 +83,13 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
             if is_wayland:
                 return {
                     "platform": "wayland",
-                    "window": int(self.winId()),
+                    "window": int(self.GetHandle()),
                     "display": int(get_alt_wayland_display()),
                 }
             else:
                 return {
                     "platform": "x11",
-                    "window": int(self.winId()),
+                    "window": int(self.GetHandle()),
                     "display": int(get_alt_x11_display()),
                 }
         else:
