@@ -12,8 +12,7 @@ from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
 import wx
 
 
-# Fot now just assume wx uses X11
-is_wayland = False
+is_wayland = False  # We force wx to use X11 in _gui_utils.py
 
 
 def enable_hidpi():
