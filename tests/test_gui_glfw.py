@@ -175,25 +175,25 @@ def test_glfw_canvas_render_custom_canvas():
             if sys.platform.startswith("win"):
                 return {
                     "platform": "windows",
-                    "window": int(glfw.get_win32_window(self._window)),
+                    "window": int(glfw.get_win32_window(self.window)),
                 }
             elif sys.platform.startswith("darwin"):
                 return {
                     "platform": "cocoa",
-                    "window": int(glfw.get_cocoa_window(self._window)),
+                    "window": int(glfw.get_cocoa_window(self.window)),
                 }
             elif sys.platform.startswith("linux"):
-                is_wayland = hasattr("get_wayland_display", glfw)
+                is_wayland = hasattr(glfw, "get_wayland_display")
                 if is_wayland:
                     return {
                         "platform": "wayland",
-                        "window": int(glfw.get_wayland_window(self._window)),
+                        "window": int(glfw.get_wayland_window(self.window)),
                         "display": int(glfw.get_wayland_display()),
                     }
                 else:
                     return {
                         "platform": "x11",
-                        "window": int(glfw.get_x11_window(self._window)),
+                        "window": int(glfw.get_x11_window(self.window)),
                         "display": int(glfw.get_x11_display()),
                     }
             else:
