@@ -328,7 +328,7 @@ PipelineErrorInit = Struct(
 )
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
-#: * entryPoint :: str
+#: * entryPoint :: str = None
 #: * constants :: Dict[str, float] = None
 ProgrammableStage = Struct(
     "ProgrammableStage",
@@ -390,7 +390,7 @@ MultisampleState = Struct(
 )
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
-#: * entryPoint :: str
+#: * entryPoint :: str = None
 #: * constants :: Dict[str, float] = None
 #: * targets :: List[:obj:`structs.ColorTargetState <ColorTargetState>`]
 FragmentState = Struct(
@@ -466,7 +466,7 @@ StencilFaceState = Struct(
 )
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
-#: * entryPoint :: str
+#: * entryPoint :: str = None
 #: * constants :: Dict[str, float] = None
 #: * buffers :: List[:obj:`structs.VertexBufferLayout <VertexBufferLayout>`] = []
 VertexState = Struct(
