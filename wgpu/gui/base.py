@@ -1,61 +1,8 @@
-import os
 import sys
 import time
-import weakref
-import logging
-from contextlib import contextmanager
-import ctypes.util
 from collections import defaultdict
 
-from .._coreutils import error_message_hash
-
-logger = logging.getLogger("wgpu")
-
-err_hashes = {}
-
-
-@contextmanager
-def log_exception(kind):
-    """Context manager to log any exceptions, but only log a one-liner
-    for subsequent occurances of the same error to avoid spamming by
-    repeating errors in e.g. a draw function or event callback.
-    """
-    try:
-        yield
-    except Exception as err:
-        # Store exc info for postmortem debugging
-        exc_info = list(sys.exc_info())
-        exc_info[2] = exc_info[2].tb_next  # skip *this* function
-        sys.last_type, sys.last_value, sys.last_traceback = exc_info
-        # Show traceback, or a one-line summary
-        msg = str(err)
-        msgh = error_message_hash(msg)
-        if msgh not in err_hashes:
-            # Provide the exception, so the default logger prints a stacktrace.
-            # IDE's can get the exception from the root logger for PM debugging.
-            err_hashes[msgh] = 1
-            logger.error(kind, exc_info=err)
-        else:
-            # We've seen this message before, return a one-liner instead.
-            err_hashes[msgh] = count = err_hashes[msgh] + 1
-            msg = kind + ": " + msg.split("\n")[0].strip()
-            msg = msg if len(msg) <= 70 else msg[:69] + "…"
-            logger.error(msg + f" ({count})")
-
-
-def weakbind(method):
-    """Replace a bound method with a callable object that stores the `self` using a weakref."""
-    ref = weakref.ref(method.__self__)
-    class_func = method.__func__
-    del method
-
-    def proxy(*args, **kwargs):
-        self = ref()
-        if self is not None:
-            return class_func(self, *args, **kwargs)
-
-    proxy.__name__ = class_func.__name__
-    return proxy
+from ._gui_utils import log_exception
 
 
 class WgpuCanvasInterface:
@@ -72,39 +19,16 @@ class WgpuCanvasInterface:
         super().__init__(*args, **kwargs)
         self._canvas_context = None
 
-    def get_window_id(self):
-        """Get the native window id.
+    def get_surface_info(self):
+        """Get information about the native window / surface.
 
-        This is used to obtain a surface id, so that wgpu can render
-        to the region of the screen occupied by the canvas.
+        This is used to obtain a surface id, so that wgpu can render to the
+        region of the screen occupied by the canvas. Should return None for
+        offscreen canvases. Otherwise, this should return a dict with a "window"
+        field. On Linux the dict should contain more fields, see the existing
+        implementations for reference.
         """
-        raise NotImplementedError()
-
-    def get_display_id(self):
-        """Get the native display id (Linux only).
-
-        On Linux this is needed in addition to the window id to obtain
-        a surface id. The default implementation calls into the X11 lib
-        to get the display id.
-        """
-        # Re-use to avoid creating loads of id's
-        if getattr(self, "_display_id", None) is not None:
-            return self._display_id
-
-        if sys.platform.startswith("linux"):
-            is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-            if is_wayland:
-                raise NotImplementedError(
-                    f"Cannot (yet) get display id on {self.__class__.__name__}."
-                )
-            else:
-                x11 = ctypes.CDLL(ctypes.util.find_library("X11"))
-                x11.XOpenDisplay.restype = ctypes.c_void_p
-                self._display_id = x11.XOpenDisplay(None)
-        else:
-            raise RuntimeError(f"Cannot get display id on {sys.platform}.")
-
-        return self._display_id
+        return None
 
     def get_physical_size(self):
         """Get the physical size of the canvas in integer pixels."""

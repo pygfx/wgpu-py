@@ -248,7 +248,7 @@ def test_autogui_mixin():
 
 
 def test_weakbind():
-    weakbind = wgpu.gui.base.weakbind
+    weakbind = wgpu.gui._gui_utils.weakbind
 
     xx = []
 

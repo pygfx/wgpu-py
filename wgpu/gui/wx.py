@@ -3,11 +3,16 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
+import sys
 import ctypes
 
-from .base import WgpuCanvasBase, weakbind
+from .base import WgpuCanvasBase
+from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
 
 import wx
+
+
+is_wayland = False  # We force wx to use X11 in _gui_utils.py
 
 
 def enable_hidpi():
@@ -69,8 +74,26 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
 
     # Methods that we add from wgpu
 
-    def get_window_id(self):
-        return int(self.GetHandle())
+    def get_surface_info(self):
+        if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
+            return {
+                "window": int(self.GetHandle()),
+            }
+        elif sys.platform.startswith("linux"):
+            if is_wayland:
+                return {
+                    "platform": "wayland",
+                    "window": int(self.GetHandle()),
+                    "display": int(get_alt_wayland_display()),
+                }
+            else:
+                return {
+                    "platform": "x11",
+                    "window": int(self.GetHandle()),
+                    "display": int(get_alt_x11_display()),
+                }
+        else:
+            raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
 
     def get_pixel_ratio(self):
         # todo: this is not hidpi-ready (at least on win10)
@@ -133,11 +156,8 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
 
     # Methods that we add from wgpu
 
-    def get_display_id(self):
-        return self._subwidget.get_display_id()
-
-    def get_window_id(self):
-        return self._subwidget.get_window_id()
+    def get_surface_info(self):
+        return self._subwidget.get_surface_info()
 
     def get_pixel_ratio(self):
         return self._subwidget.get_pixel_ratio()

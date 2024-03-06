@@ -7,7 +7,11 @@ import sys
 import ctypes
 import importlib
 
-from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
+from .base import WgpuCanvasBase, WgpuAutoGui
+from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
+
+
+is_wayland = False  # We force Qt to use X11 in _gui_utils.py
 
 
 # Select GUI toolkit
@@ -102,12 +106,6 @@ KEY_MAP = {
 }
 
 
-# Make Qt not ignore XDG_SESSION_TYPE
-# is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-# if is_wayland:
-#     os.environ["QT_QPA_PLATFORM"] = "wayland"
-
-
 def enable_hidpi():
     """Enable high-res displays."""
     set_dpi_aware = qt_version_info < (6, 4)  # Pyside
@@ -160,13 +158,27 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     # Methods that we add from wgpu (snake_case)
 
-    def get_display_id(self):
-        # There is qx11info, but it is rarely available.
-        # https://doc.qt.io/qt-5/qx11info.html#display
-        return super().get_display_id()  # uses X11 lib
-
-    def get_window_id(self):
-        return int(self.winId())
+    def get_surface_info(self):
+        if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
+            return {
+                "window": int(self.winId()),
+            }
+        elif sys.platform.startswith("linux"):
+            # The trick to use an al display pointer works for X11, but results in a segfault on Wayland ...
+            if is_wayland:
+                return {
+                    "platform": "wayland",
+                    "window": int(self.winId()),
+                    "display": int(get_alt_wayland_display()),
+                }
+            else:
+                return {
+                    "platform": "x11",
+                    "window": int(self.winId()),
+                    "display": int(get_alt_x11_display()),
+                }
+        else:
+            raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
 
     def get_pixel_ratio(self):
         # Observations:
@@ -185,6 +197,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         lsize = self.width(), self.height()
         lsize = float(lsize[0]), float(lsize[1])
         ratio = self.devicePixelRatioF()
+
         # When the ratio is not integer (qt6), we need to somehow round
         # it. It turns out that we need to round it, but also add a
         # small offset. Tested on Win10 with several different OS
@@ -343,11 +356,10 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self._subwidget = QWgpuWidget(self, max_fps=max_fps)
         self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
 
-        # Get the window id one time. For some reason this is needed
-        # to "activate" the canvas. Otherwise the viz is not shown if
-        # one does not provide canvas to request_adapter().
-        # (AK: Cannot reproduce this now, what qtlib/os/versions was this on?)
-        self._subwidget.get_window_id()
+        # Note: At some point we called `self._subwidget.winId()` here. For some
+        # reason this was needed to "activate" the canvas. Otherwise the viz was
+        # not shown if no canvas was provided to request_adapter(). Removed
+        # later because could not reproduce.
 
         layout = QtWidgets.QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -372,11 +384,8 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def draw_frame(self, f):
         self._subwidget.draw_frame = f
 
-    def get_display_id(self):
-        return self._subwidget.get_display_id()
-
-    def get_window_id(self):
-        return self._subwidget.get_window_id()
+    def get_surface_info(self):
+        return self._subwidget.get_surface_info()
 
     def get_pixel_ratio(self):
         return self._subwidget.get_pixel_ratio()

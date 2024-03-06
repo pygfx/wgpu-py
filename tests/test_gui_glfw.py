@@ -3,7 +3,6 @@ Test the canvas, and parts of the rendering that involves a canvas,
 like the canvas context and surface texture.
 """
 
-import os
 import sys
 import time
 import weakref
@@ -172,22 +171,33 @@ def test_glfw_canvas_render_custom_canvas():
             self.window = glfw.create_window(300, 200, "canvas", None, None)
             self._present_context = None
 
-        def get_window_id(self):
+        def get_surface_info(self):
             if sys.platform.startswith("win"):
-                return int(glfw.get_win32_window(self.window))
+                return {
+                    "platform": "windows",
+                    "window": int(glfw.get_win32_window(self.window)),
+                }
             elif sys.platform.startswith("darwin"):
-                return int(glfw.get_cocoa_window(self.window))
+                return {
+                    "platform": "cocoa",
+                    "window": int(glfw.get_cocoa_window(self.window)),
+                }
             elif sys.platform.startswith("linux"):
-                is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+                is_wayland = hasattr(glfw, "get_wayland_display")
                 if is_wayland:
-                    return int(glfw.get_wayland_window(self.window))
+                    return {
+                        "platform": "wayland",
+                        "window": int(glfw.get_wayland_window(self.window)),
+                        "display": int(glfw.get_wayland_display()),
+                    }
                 else:
-                    return int(glfw.get_x11_window(self.window))
+                    return {
+                        "platform": "x11",
+                        "window": int(glfw.get_x11_window(self.window)),
+                        "display": int(glfw.get_x11_display()),
+                    }
             else:
-                raise RuntimeError(f"Cannot get GLFW window id on {sys.platform}.")
-
-        def get_display_id(self):
-            return wgpu.WgpuCanvasInterface.get_display_id(self)
+                raise RuntimeError(f"Cannot get GLFW surafce info on {sys.platform}.")
 
         def get_physical_size(self):
             psize = glfw.get_framebuffer_size(self.window)

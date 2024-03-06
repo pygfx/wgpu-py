@@ -7,7 +7,6 @@ On Linux, install the glfw lib using ``sudo apt install libglfw3``,
 or ``sudo apt install libglfw3-wayland`` when using Wayland.
 """
 
-import os
 import sys
 import time
 import weakref
@@ -15,7 +14,8 @@ import asyncio
 
 import glfw
 
-from .base import WgpuCanvasBase, WgpuAutoGui, weakbind
+from .base import WgpuCanvasBase, WgpuAutoGui
+from ._gui_utils import SYSTEM_IS_WAYLAND, weakbind, logger
 
 
 # Make sure that glfw is new enough
@@ -25,13 +25,13 @@ if glfw_version_info < (1, 9):
 
 # Do checks to prevent pitfalls on hybrid Xorg/Wayland systems
 is_wayland = False
-if sys.platform.startswith("linux"):
-    is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-    if is_wayland and not hasattr(glfw, "get_wayland_window"):
-        raise RuntimeError(
-            "We're on Wayland but Wayland functions not available. "
-            + "Did you apt install libglfw3-wayland?"
-        )
+if sys.platform.startswith("linux") and SYSTEM_IS_WAYLAND:
+    if not hasattr(glfw, "get_x11_window"):
+        # Probably glfw was imported before we wgpu was, so we missed our chance
+        # to set the env var to make glfw use x11.
+        is_wayland = True
+        logger.warning("Using GLFW with Wayland, which is experimental.")
+
 
 # Some glfw functions are not always available
 set_window_content_scale_callback = lambda *args: None  # noqa: E731
@@ -120,11 +120,6 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         # Set window hints
         glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
         glfw.window_hint(glfw.RESIZABLE, True)
-        # see https://github.com/FlorianRhiem/pyGLFW/issues/42
-        # Alternatively, from pyGLFW 1.10 one can set glfw.ERROR_REPORTING='warn'
-        if sys.platform.startswith("linux"):
-            if is_wayland:
-                glfw.window_hint(glfw.FOCUSED, False)  # prevent Wayland focus error
 
         # Create the window (the initial size may not be in logical pixels)
         self._window = glfw.create_window(int(size[0]), int(size[1]), title, None, None)
@@ -269,27 +264,32 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
     # API
 
-    def get_window_id(self):
+    def get_surface_info(self):
         if sys.platform.startswith("win"):
-            return int(glfw.get_win32_window(self._window))
+            return {
+                "platform": "windows",
+                "window": int(glfw.get_win32_window(self._window)),
+            }
         elif sys.platform.startswith("darwin"):
-            return int(glfw.get_cocoa_window(self._window))
+            return {
+                "platform": "cocoa",
+                "window": int(glfw.get_cocoa_window(self._window)),
+            }
         elif sys.platform.startswith("linux"):
             if is_wayland:
-                return int(glfw.get_wayland_window(self._window))
+                return {
+                    "platform": "wayland",
+                    "window": int(glfw.get_wayland_window(self._window)),
+                    "display": int(glfw.get_wayland_display()),
+                }
             else:
-                return int(glfw.get_x11_window(self._window))
+                return {
+                    "platform": "x11",
+                    "window": int(glfw.get_x11_window(self._window)),
+                    "display": int(glfw.get_x11_display()),
+                }
         else:
-            raise RuntimeError(f"Cannot get GLFW window id on {sys.platform}.")
-
-    def get_display_id(self):
-        if sys.platform.startswith("linux"):
-            if is_wayland:
-                return glfw.get_wayland_display()
-            else:
-                return glfw.get_x11_display()
-        else:
-            raise RuntimeError(f"Cannot get GLFW display id on {sys.platform}.")
+            raise RuntimeError(f"Cannot get GLFW surafce info on {sys.platform}.")
 
     def get_pixel_ratio(self):
         return self._pixel_ratio
