@@ -17,6 +17,22 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.15.0] - 07-03-2024
+
+Changed:
+
+* Updated to wgpu-native 0.19.3.1. Does not incur API changes.
+* Updated to latedt IDL. Does not incur API changes.
+
+Fixed:
+
+* Wayland is finally properly supported, albeit via XWayland.
+
+Added:
+
+* Tests for detecting nan and inf values in shaders.
+
+
 ### [v0.14.1] - 15-02-2024
 
 Added:
