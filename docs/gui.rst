@@ -43,9 +43,8 @@ that can be overloaded. Alternatively you can use it's :func:`WgpuAutoGui.add_ev
 method. See the `event spec <https://jupyter-rfb.readthedocs.io/en/stable/events.html>`_
 for details about the event objects.
 
-
-Also see the `triangle auto example <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_auto.py>`_
-and `cube example <https://github.com/pygfx/wgpu-py/blob/main/examples/cube.py>`_.
+Also see :ref:`interactive_use`. Further, the `triangle auto <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_auto.py>`_
+and `cube <https://github.com/pygfx/wgpu-py/blob/main/examples/cube.py>`_ examples demonstrate the auto gui.
 
 .. code-block:: py
 
@@ -170,3 +169,34 @@ subclass implementing a remote frame-buffer. There are also some `wgpu examples 
     # ... wgpu code
 
     canvas  # Use as cell output
+
+
+.. _interactive_use:
+
+Using wgpu interactively
+------------------------
+
+The wgpu gui's are designed to support interactive use. Firstly, this is
+realized by automatically selecting the appropriate GUI backend. Secondly, the
+``run()`` function (which normally enters the event-loop) does nothing in an
+interactive session.
+
+On ``jupyter notebook`` and ``jupyter lab`` the jupyter backend (i.e.
+``jupyter_rfb``) is normally selected. When you are using `%gui qt`, wgpu will
+honor that and use Qt instead.
+
+On ``jupyter console`` and ``qtconsole``, the kernel is the same as in ``jupyter notebook``
+and ``jupyter lab``, making it (about) impossible to tell that we
+cannot actually use ipywidgets. It will try to use  ``jupyter_rfb``, but cannot
+render anything. It's advised to either use ``%gui qt`` or set the
+``WGPU_GUI_BACKEND`` env var to "glfw". The latter option works well, because
+these kernels *do* have a running asyncio event loop!
+
+On other environments that have a running ``asyncio`` loop, the glfw backend is
+preferred. E.g on ``ptpython --asyncio``.
+
+On IPython (the old-school terminal app) it's advised to use ``%gui qt`` (or
+``--gui qt``). It seems not possible to have a running asyncio loop here.
+
+On IDE's like Spyder or Pyzo, wgpu detects the integrated GUI, running on
+glfw if asyncio is enabled or Qt if a qt app is running.
