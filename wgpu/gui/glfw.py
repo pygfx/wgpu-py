@@ -532,7 +532,11 @@ def ensure_app():
     # but before termination will return GLFW_TRUE immediately."
     glfw.init()
     if glfw._pygfx_mainloop is None:
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
         glfw._pygfx_mainloop = mainloop()
         loop.create_task(glfw._pygfx_mainloop)
 
