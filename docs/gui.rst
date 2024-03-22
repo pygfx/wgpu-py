@@ -34,17 +34,19 @@ canvas classes that you can use.
 The auto GUI backend
 --------------------
 
-The default approach for examples and small applications is to use
-the automatically selected GUI backend. At the moment this selects
-either the GLFW, Qt, or Jupyter backend, depending on the environment.
+Generally the best approach for examples and small applications is to use the
+automatically selected GUI backend. This ensures that the code is portable
+across different machines and environments. Using ``wgpu.gui.auto`` selects a
+suitable backend depending on the environment and more. See
+:ref:`interactive_use` for details.
 
 To implement interaction, the ``canvas`` has a :func:`WgpuAutoGui.handle_event()` method
 that can be overloaded. Alternatively you can use it's :func:`WgpuAutoGui.add_event_handler()`
 method. See the `event spec <https://jupyter-rfb.readthedocs.io/en/stable/events.html>`_
 for details about the event objects.
 
-Also see :ref:`interactive_use`. Further, the `triangle auto <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_auto.py>`_
-and `cube <https://github.com/pygfx/wgpu-py/blob/main/examples/cube.py>`_ examples demonstrate the auto gui.
+Also see the `triangle auto <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_auto.py>`_
+and `cube <https://github.com/pygfx/wgpu-py/blob/main/examples/cube.py>`_ examples that demonstrate the auto gui.
 
 .. code-block:: py
 
@@ -181,16 +183,20 @@ realized by automatically selecting the appropriate GUI backend. Secondly, the
 ``run()`` function (which normally enters the event-loop) does nothing in an
 interactive session.
 
+Many interactive environments have some sort of GUI support, allowing the repl
+to stay active (i.e. you can run new code), while the GUI windows is also alive.
+In wgpu we try to select the GUI that matches the current environment.
+
 On ``jupyter notebook`` and ``jupyter lab`` the jupyter backend (i.e.
-``jupyter_rfb``) is normally selected. When you are using `%gui qt`, wgpu will
+``jupyter_rfb``) is normally selected. When you are using ``%gui qt``, wgpu will
 honor that and use Qt instead.
 
-On ``jupyter console`` and ``qtconsole``, the kernel is the same as in ``jupyter notebook``
-and ``jupyter lab``, making it (about) impossible to tell that we
-cannot actually use ipywidgets. It will try to use  ``jupyter_rfb``, but cannot
-render anything. It's advised to either use ``%gui qt`` or set the
-``WGPU_GUI_BACKEND`` env var to "glfw". The latter option works well, because
-these kernels *do* have a running asyncio event loop!
+On ``jupyter console`` and ``qtconsole``, the kernel is the same as in ``jupyter notebook``,
+making it (about) impossible to tell that we cannot actually use
+ipywidgets. So it will try to use ``jupyter_rfb``, but cannot render anything.
+It's theefore advised to either use ``%gui qt`` or set the ``WGPU_GUI_BACKEND`` env var
+to "glfw". The latter option works well, because these kernels *do* have a
+running asyncio event loop!
 
 On other environments that have a running ``asyncio`` loop, the glfw backend is
 preferred. E.g on ``ptpython --asyncio``.
@@ -200,3 +206,8 @@ On IPython (the old-school terminal app) it's advised to use ``%gui qt`` (or
 
 On IDE's like Spyder or Pyzo, wgpu detects the integrated GUI, running on
 glfw if asyncio is enabled or Qt if a qt app is running.
+
+On an interactive session without GUI support, one must call ``run()`` to make
+the canvases interactive. This enters the main loop, which prevents entering new
+code. Once all canvases are closed, the loop returns. If you make new canvases
+afterwards, you can call ``run()`` again. This is similar to ``plt.show()`` in Matplotlib.
