@@ -20,7 +20,7 @@ is_wayland = False  # We force Qt to use X11 in _gui_utils.py
 
 
 # Select GUI toolkit
-libname, already_has_app = get_imported_qt_lib()
+libname, already_had_app_on_import = get_imported_qt_lib()
 if libname:
     QtCore = importlib.import_module(".QtCore", libname)
     QtWidgets = importlib.import_module(".QtWidgets", libname)
@@ -435,8 +435,8 @@ def get_app():
 
 
 def run():
-    if already_has_app:
-        return
+    if already_had_app_on_import:
+        return  # Likely in an interactive session or larger application that will start the Qt app.
     app = get_app()
     app.exec() if hasattr(app, "exec") else app.exec_()
 

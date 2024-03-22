@@ -61,7 +61,7 @@ def select_backend():
                 errors.append(err)
                 failed_backends.add(backend_name)
             else:
-                logger.warning(f"Selected {backend_name} via {func.__name__}")
+                logger.info(f"Selected {backend_name} via {func.__name__}")
                 return module
 
     # If still nothing found, raise a useful error
@@ -78,7 +78,7 @@ def select_backend():
 def backend_by_env_vars():
     """Get the backend set via one the supported environment variables."""
     # Env var intended for testing, overrules everything else
-    if os.environ.get("WGPU_FORCE_OFFSCREEN") == "true":
+    if os.environ.get("WGPU_FORCE_OFFSCREEN").lower() in ("1", "true", "yes"):
         return "offscreen"
     # Env var to force a backend for general use
     backend_name = os.getenv("WGPU_GUI_BACKEND", "").lower().strip() or None
@@ -101,8 +101,8 @@ def backends_by_jupyter():
         # probably old-school ipython, we follow the normal selection process
         return
 
-    # We're in a Jupyter kernel. This might be a notebook, jupyter lab, or
-    # jupyter console. In the latter case we cannot render ipywidgets.
+    # We're in a Jupyter kernel. This might be a notebook, jupyter lab, jupyter
+    # console, qtconsole, etc. In the latter cases we cannot render ipywidgets.
     # Unfortunately, there does not seem to be a (reasonable) way to detect
     # whether we're in a console or notebook. Technically this kernel could be
     # connected to a client of each. So we assume that ipywidgets can be used.
