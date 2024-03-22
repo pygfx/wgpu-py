@@ -37,17 +37,12 @@ def _load_backend(backend_name):
 def select_backend():
     """Select a backend using a careful multi-stage selection process."""
 
-    # If a backend is forced, we use that, or fail.
-    backend_name = backend_by_env_vars()
-    if backend_name:
-        logger.info(f"WGPU selected {backend_name} gui by force.")
-        return _load_backend(backend_name)
-
-    # Otherwise we try ...
     module = None
     failed_backends = {}  # name -> error
 
     for backend_name, reason in backends_generator():
+        if "force" in reason.lower():
+            return _load_backend(backend_name)
         if backend_name in failed_backends:
             continue
         try:
@@ -83,6 +78,7 @@ def select_backend():
 def backends_generator():
     """Generator that iterates over all sub-generators."""
     for gen in [
+        backends_by_env_vars,
         backends_by_jupyter,
         backends_by_imported_modules,
         backends_by_trying_in_order,
@@ -90,20 +86,21 @@ def backends_generator():
         yield from gen()
 
 
-def backend_by_env_vars():
-    """Get the backend set via one the supported environment variables."""
+def backends_by_env_vars():
+    """Generate backend names set via one the supported environment variables."""
     # Env var intended for testing, overrules everything else
     if os.environ.get("WGPU_FORCE_OFFSCREEN", "").lower() in ("1", "true", "yes"):
-        return "offscreen"
+        yield "offscreen", "WGPU_FORCE_OFFSCREEN is set"
     # Env var to force a backend for general use
     backend_name = os.getenv("WGPU_GUI_BACKEND", "").lower().strip() or None
     if backend_name:
         if backend_name not in WGPU_GUI_BACKEND_NAMES:
-            logger.error(
+            logger.warning(
                 f"Ignoring invalid WGPU_GUI_BACKEND '{backend_name}', must be one of {WGPU_GUI_BACKEND_NAMES}"
             )
             backend_name = None
-    return backend_name
+    if backend_name:
+        yield backend_name, "WGPU_GUI_BACKEND is set"
 
 
 def backends_by_jupyter():
