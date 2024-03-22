@@ -8,32 +8,36 @@ import ctypes
 import importlib
 
 from .base import WgpuCanvasBase, WgpuAutoGui
-from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
+from ._gui_utils import (
+    get_alt_x11_display,
+    get_alt_wayland_display,
+    weakbind,
+    get_imported_qt_lib,
+)
 
 
 is_wayland = False  # We force Qt to use X11 in _gui_utils.py
 
 
 # Select GUI toolkit
-for libname in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
-    if libname in sys.modules:
-        QtCore = importlib.import_module(".QtCore", libname)
-        QtWidgets = importlib.import_module(".QtWidgets", libname)
-        try:
-            WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
-            WA_DeleteOnClose = QtCore.Qt.WidgetAttribute.WA_DeleteOnClose
-            PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
-            KeyboardModifiers = QtCore.Qt.KeyboardModifier
-            FocusPolicy = QtCore.Qt.FocusPolicy
-            Keys = QtCore.Qt.Key
-        except AttributeError:
-            WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
-            WA_DeleteOnClose = QtCore.Qt.WA_DeleteOnClose
-            PreciseTimer = QtCore.Qt.PreciseTimer
-            KeyboardModifiers = QtCore.Qt
-            FocusPolicy = QtCore.Qt
-            Keys = QtCore.Qt
-        break
+libname, already_had_app_on_import = get_imported_qt_lib()
+if libname:
+    QtCore = importlib.import_module(".QtCore", libname)
+    QtWidgets = importlib.import_module(".QtWidgets", libname)
+    try:
+        WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
+        WA_DeleteOnClose = QtCore.Qt.WidgetAttribute.WA_DeleteOnClose
+        PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
+        KeyboardModifiers = QtCore.Qt.KeyboardModifier
+        FocusPolicy = QtCore.Qt.FocusPolicy
+        Keys = QtCore.Qt.Key
+    except AttributeError:
+        WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
+        WA_DeleteOnClose = QtCore.Qt.WA_DeleteOnClose
+        PreciseTimer = QtCore.Qt.PreciseTimer
+        KeyboardModifiers = QtCore.Qt
+        FocusPolicy = QtCore.Qt
+        Keys = QtCore.Qt
 else:
     raise ImportError(
         "Before importing wgpu.gui.qt, import one of PySide6/PySide2/PyQt6/PyQt5 to select a Qt toolkit."
@@ -431,6 +435,8 @@ def get_app():
 
 
 def run():
+    if already_had_app_on_import:
+        return  # Likely in an interactive session or larger application that will start the Qt app.
     app = get_app()
     app.exec() if hasattr(app, "exec") else app.exec_()
 

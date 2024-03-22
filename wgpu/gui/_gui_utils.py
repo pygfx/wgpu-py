@@ -14,6 +14,56 @@ from .._coreutils import error_message_hash
 logger = logging.getLogger("wgpu")
 
 
+# ===== GUI lib support
+
+QT_MODULE_NAMES = ["PySide6", "PyQt6", "PySide2", "PyQt5"]
+
+
+def get_imported_qt_lib():
+    """Get the name of the currently imported qt lib.
+
+    Returns (name, has_application). The name is None when no qt lib is currently imported.
+    """
+
+    # Get all imported qt libs
+    imported_libs = []
+    for libname in QT_MODULE_NAMES:
+        qtlib = sys.modules.get(libname, None)
+        if qtlib is not None:
+            imported_libs.append(libname)
+
+    # Get which of these have an application object
+    imported_libs_with_app = []
+    for libname in imported_libs:
+        QtWidgets = sys.modules.get(libname + ".QtWidgets", None)  # noqa
+        if QtWidgets:
+            app = QtWidgets.QApplication.instance()
+            if app is not None:
+                imported_libs_with_app.append(libname)
+
+    # Return findings
+    if imported_libs_with_app:
+        return imported_libs_with_app[0], True
+    elif imported_libs:
+        return imported_libs[0], False
+    else:
+        return None, False
+
+
+def asyncio_is_running():
+    """Get whether there is currently a running asyncio loop."""
+    asyncio = sys.modules.get("asyncio", None)
+    if asyncio is None:
+        return False
+    try:
+        loop = asyncio.get_running_loop()
+    except Exception:
+        loop = None
+    return loop is not None
+
+
+# ===== Logging and more
+
 err_hashes = {}
 
 
@@ -59,6 +109,9 @@ def weakbind(method):
 
     proxy.__name__ = class_func.__name__
     return proxy
+
+
+# ===== Linux window managers
 
 
 SYSTEM_IS_WAYLAND = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()

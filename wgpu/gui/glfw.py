@@ -9,6 +9,7 @@ or ``sudo apt install libglfw3-wayland`` when using Wayland.
 
 import sys
 import time
+import atexit
 import weakref
 import asyncio
 
@@ -109,7 +110,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
     # See https://www.glfw.org/docs/latest/group__window.html
 
     def __init__(self, *, size=None, title=None, **kwargs):
-        ensure_app()
+        app.init_glfw()
         super().__init__(**kwargs)
 
         # Handle inputs
@@ -131,7 +132,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._is_minimized = False
 
         # Register ourselves
-        all_glfw_canvases.add(self)
+        app.all_glfw_canvases.add(self)
 
         # Register callbacks. We may get notified too often, but that's
         # ok, they'll result in a single draw.
@@ -185,7 +186,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             self._on_close()
 
     def _on_close(self, *args):
-        all_glfw_canvases.discard(self)
+        app.all_glfw_canvases.discard(self)
         if self._window is not None:
             glfw.destroy_window(self._window)  # not just glfw.hide_window
             self._window = None
@@ -495,9 +496,42 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 WgpuCanvas = GlfwWgpuCanvas
 
 
-all_glfw_canvases = weakref.WeakSet()
-glfw._pygfx_mainloop = None
-glfw._pygfx_stop_if_no_more_canvases = False
+class AppState:
+    """Little container for state about the loop and glfw."""
+
+    def __init__(self):
+        self.all_glfw_canvases = weakref.WeakSet()
+        self._loop = None
+        self.stop_if_no_more_canvases = False
+        self._glfw_initialized = False
+
+    def init_glfw(self):
+        glfw.init()  # Safe to call multiple times
+        if not self._glfw_initialized:
+            self._glfw_initialized = True
+            atexit.register(glfw.terminate)
+
+    def get_loop(self):
+        if self._loop is None:
+            self._loop = self._get_loop()
+            self._loop.create_task(keep_glfw_alive())
+        return self._loop
+
+    def _get_loop(self):
+        try:
+            return asyncio.get_running_loop()
+        except Exception:
+            pass
+        try:
+            return asyncio.get_event_loop()
+        except RuntimeError:
+            pass
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
+
+
+app = AppState()
 
 
 def update_glfw_canvasses():
@@ -506,7 +540,7 @@ def update_glfw_canvasses():
     """
     # Note that _draw_frame_and_present already catches errors, it can
     # only raise errors if the logging system fails.
-    canvases = tuple(all_glfw_canvases)
+    canvases = tuple(app.all_glfw_canvases)
     for canvas in canvases:
         if canvas._need_draw and not canvas._is_minimized:
             canvas._need_draw = False
@@ -514,39 +548,34 @@ def update_glfw_canvasses():
     return len(canvases)
 
 
-async def mainloop():
-    loop = asyncio.get_event_loop()
+async def keep_glfw_alive():
+    """Co-routine that lives forever, keeping glfw going.
+
+    Although it stops the event-loop if there are no more canvases (and we're
+    runnning the loop), this task stays active and continues when the loop is
+    restarted.
+    """
+    # TODO: this is not particularly pretty. It'd be better to use normal asyncio to
+    # schedule draws and then also process events. But let's address when we do #355 / #391
     while True:
-        n = update_glfw_canvasses()
-        if glfw._pygfx_stop_if_no_more_canvases and not n:
-            break
         await asyncio.sleep(0.001)
         glfw.poll_events()
-    loop.stop()
-    glfw.terminate()
-
-
-def ensure_app():
-    # It is safe to call init multiple times:
-    # "Additional calls to this function after successful initialization
-    # but before termination will return GLFW_TRUE immediately."
-    glfw.init()
-    if glfw._pygfx_mainloop is None:
-        loop = asyncio.get_event_loop()
-        glfw._pygfx_mainloop = mainloop()
-        loop.create_task(glfw._pygfx_mainloop)
+        n = update_glfw_canvasses()
+        if app.stop_if_no_more_canvases and not n:
+            loop = asyncio.get_running_loop()
+            loop.stop()
 
 
 def call_later(delay, callback, *args):
-    loop = asyncio.get_event_loop()
+    loop = app.get_loop()
     loop.call_later(delay, callback, *args)
 
 
 def run():
-    ensure_app()
-    loop = asyncio.get_event_loop()
-    if not loop.is_running():
-        glfw._pygfx_stop_if_no_more_canvases = True
-        loop.run_forever()
-    else:
-        pass  # Probably an interactive session
+    loop = app.get_loop()
+    if loop.is_running():
+        return  # Interactive mode!
+
+    app.stop_if_no_more_canvases = True
+    loop.run_forever()
+    app.stop_if_no_more_canvases = False
