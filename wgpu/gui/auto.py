@@ -40,45 +40,60 @@ def select_backend():
     # If a backend is forced, we use that, or fail.
     backend_name = backend_by_env_vars()
     if backend_name:
+        logger.info(f"WGPU selected {backend_name} gui by force.")
         return _load_backend(backend_name)
 
     # Otherwise we try ...
     module = None
-    errors = []
-    failed_backends = set()
+    failed_backends = {}  # name -> error
 
-    for func in [
+    for backend_name, reason in backends_generator():
+        if backend_name in failed_backends:
+            continue
+        try:
+            module = _load_backend(backend_name)
+            break
+        except Exception as err:
+            failed_backends[backend_name] = str(err)
+
+    # Always report failed backeds, because we only try them when it looks like we can.
+    if failed_backends:
+        msg = "WGPU could not load some backends:"
+        for key, val in failed_backends.items():
+            msg += f"\n{key}: {val}"
+        logger.warning(msg)
+
+    # Return or raise
+    if module is not None:
+        log = logger.warning if failed_backends else logger.info
+        log(f"WGPU selected {backend_name} gui because {reason}.")
+        return module
+    else:
+        msg = "WGPU Could not load any of the supported GUI backends."
+        if "jupyter" in failed_backends:
+            msg += "\n  You may need to ``pip install -U jupyter_rfb``."
+        else:
+            msg += "\n  Install glfw using e.g. ``pip install -U glfw``,"
+            msg += (
+                "\n  or install a qt framework using e.g. ``pip install -U pyside6``."
+            )
+        raise ImportError(msg) from None
+
+
+def backends_generator():
+    """Generator that iterates over all sub-generators."""
+    for gen in [
         backends_by_jupyter,
         backends_by_imported_modules,
         backends_by_trying_in_order,
     ]:
-        for backend_name in func():
-            if backend_name in failed_backends:
-                continue
-            try:
-                module = _load_backend(backend_name)
-            except Exception as err:
-                errors.append(err)
-                failed_backends.add(backend_name)
-            else:
-                logger.info(f"Selected {backend_name} via {func.__name__}")
-                return module
-
-    # If still nothing found, raise a useful error
-    if not module:
-        msg = "\n".join(str(err) for err in errors)
-        msg += "\n\n  WGPU Could not load any of the GUI backends."
-        msg += "\n  Install glfw using e.g. ``pip install -U glfw``,"
-        msg += "\n  or install a qt framework using e.g. ``pip install -U pyside6``."
-        if sys.platform.startswith("linux"):
-            msg += "\n  You may also need to run the equivalent of ``apt install libglfw3``."
-        raise ImportError(msg) from None
+        yield from gen()
 
 
 def backend_by_env_vars():
     """Get the backend set via one the supported environment variables."""
     # Env var intended for testing, overrules everything else
-    if os.environ.get("WGPU_FORCE_OFFSCREEN").lower() in ("1", "true", "yes"):
+    if os.environ.get("WGPU_FORCE_OFFSCREEN", "").lower() in ("1", "true", "yes"):
         return "offscreen"
     # Env var to force a backend for general use
     backend_name = os.getenv("WGPU_GUI_BACKEND", "").lower().strip() or None
@@ -114,11 +129,11 @@ def backends_by_jupyter():
     if app:
         gui_module_name = app.__class__.__module__.split(".")[0]
         if gui_module_name in QT_MODULE_NAMES:
-            yield "qt"
+            yield "qt", "running on Jupyter with qt gui"
         # elif "wx" in app.__class__.__name__.lower() == "wx":
-        #     yield "wx"
+        #     yield "wx", "running on Hupyter with wx gui"
 
-    yield "jupyter"
+    yield "jupyter", "running on Jupyter"
 
 
 def backends_by_imported_modules():
@@ -131,7 +146,7 @@ def backends_by_imported_modules():
     # If there is a qt app instance, chances are high that the user wants to run in Qt.
     # More so than with asyncio, because asyncio may just be used by the runtime.
     if has_qt_app:
-        yield "qt"
+        yield "qt", "Qt app is running"
 
     # If there is an asyncio loop, we can nicely run glfw, if glfw is available.
     if has_asyncio_loop:
@@ -140,18 +155,18 @@ def backends_by_imported_modules():
         except ModuleNotFoundError:
             pass
         else:
-            yield "glfw"
+            yield "glfw", "asyncio loop is running"
 
     # The rest is just "is the corresponding lib imported?"
 
     if "glfw" in sys.modules:
-        yield "glfw"
+        yield "glfw", "glfw is imported"
 
     if qtlib:
-        yield "qt"
+        yield "qt", "qt is imported"
 
     # if "wx" in sys.modules:
-    #     yield "wx"
+    #     yield "wx", "wx is imported"
 
 
 def backends_by_trying_in_order():
@@ -171,7 +186,7 @@ def backends_by_trying_in_order():
             importlib.import_module(libname)
         except ModuleNotFoundError:
             continue
-        yield backend_name
+        yield backend_name, f"{libname} can be imported"
 
 
 # Load!
