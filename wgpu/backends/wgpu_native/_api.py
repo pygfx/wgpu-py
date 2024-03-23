@@ -652,10 +652,11 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # This can happen when a user somehow forgot to call
             # get_current_texture(). But then what was this person rendering to
             # then? The thing is that this also happens when there is an
-            # exception in the draw function befor the call to
+            # exception in the draw function before the call to
             # get_current_texture(). In this scenario any warning we log here
             # will only add confusion.
-            pass  # ignore :)
+            msg = "Warning in present(): No texture to present, missing call to get_current_texture()?"
+            logger.debug(msg)
         else:
             # Present the texture, then destroy it
             # H: void f(WGPUSurface surface)
