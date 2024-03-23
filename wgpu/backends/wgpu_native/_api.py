@@ -649,9 +649,14 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     def present(self):
         if not self._texture:
-            # Log warning but don't raise exception
-            msg = "No texture to present, missing call to get_current_texture()?"
-            logger.warning(msg)
+            # This can happen when a user somehow forgot to call
+            # get_current_texture(). But then what was this person rendering to
+            # then? The thing is that this also happens when there is an
+            # exception in the draw function before the call to
+            # get_current_texture(). In this scenario our warning may
+            # add confusion, so provide context and make it a debug level warning.
+            msg = "Warning in present(): No texture to present, missing call to get_current_texture()?"
+            logger.debug(msg)
         else:
             # Present the texture, then destroy it
             # H: void f(WGPUSurface surface)
