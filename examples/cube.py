@@ -11,6 +11,9 @@ import wgpu
 import numpy as np
 
 
+print("Available adapters:")
+print("\n".join(wgpu.gpu.enumerate_adapter_info()))
+
 # %% Create canvas and device
 
 # Create a canvas to render to

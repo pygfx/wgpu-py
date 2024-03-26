@@ -176,7 +176,12 @@ libf = SafeLibCalls(lib, error_handler)
 
 class GPU(classes.GPU):
     def request_adapter(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+        self,
+        *,
+        gpu_preference=None,
+        power_preference=None,
+        force_fallback_adapter=False,
+        canvas=None,
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -184,6 +189,13 @@ class GPU(classes.GPU):
         This is the implementation based on wgpu-native.
 
         Arguments:
+            gpu_preference (str): keywords (separated by commas) to select an adapter.
+                Matches on device name, backend type
+                (metal/vulkan/d3d12/opengl) and adpater type
+                (CPU/IntegratedGPU/DiscreteGPU). Case insensitive. Multiple keywords
+                can be given, in order of preference. The best match is selected,
+                but no guarantee is made whether the returned adapter
+                matches the preference. If given, it overrides power_preference.
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
@@ -205,7 +217,7 @@ class GPU(classes.GPU):
 
         # Try to read the WGPU_BACKEND_TYPE environment variable to see
         # if a backend should be forced.
-        force_backend = os.getenv("WGPU_BACKEND_TYPE", None)
+        force_backend = os.getenv("WGPU_BACKEND_TYPE", "").strip()
         backend = enum_str2int["BackendType"]["Undefined"]
         if force_backend:
             try:
@@ -218,7 +230,41 @@ class GPU(classes.GPU):
             else:
                 logger.warning(f"Forcing backend: {force_backend} ({backend})")
 
-        # ----- Request adapter
+        # Get keywords for adapter selection
+        gpu_keywords = [kw.strip() for kw in (gpu_preference or "").split(",")]
+        gpu_keywords = [kw.lower() for kw in gpu_keywords if kw]
+
+        if gpu_keywords:
+
+            # Get all adapters and select best one based on keywords
+            adapters = self._enumerate_adapters()
+            if force_backend:
+                gpu_keywords.insert(0, force_backend.lower())
+            # Score all adapters
+            for adapter in adapters:
+                adapter_info_str = str(adapter.request_adapter_info()).lower()
+                adapter._score = 0
+                for i, keyword in enumerate(gpu_keywords):
+                    if keyword in adapter_info_str:
+                        adapter._score += len(gpu_keywords) - i
+            # Prioritize. For equal scores, the original order is maintained.
+            adapters.sort(key=lambda adapter: -adapter._score)
+            # Pick the first
+            return adapters[0]
+
+        else:
+
+            # Let wgpu-native to select an adapter
+            return self._request_adapter(
+                power_preference=power_preference,
+                force_fallback_adapter=force_fallback_adapter,
+                surface_id=surface_id,
+                backend=backend,
+            )
+
+    def _request_adapter(
+        self, *, power_preference, force_fallback_adapter, surface_id, backend
+    ):
 
         # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface, powerPreference: WGPUPowerPreference, backendType: WGPUBackendType, forceFallbackAdapter: WGPUBool/int
         struct = new_struct_p(
@@ -253,6 +299,46 @@ class GPU(classes.GPU):
             raise RuntimeError(error_msg)
 
         return self._create_adapter(adapter_id)
+
+    async def request_adapter_async(
+        self,
+        *,
+        gpu_preference=None,
+        power_preference=None,
+        force_fallback_adapter=False,
+        canvas=None,
+    ):
+        """Async version of ``request_adapter()``.
+        This is the implementation based on wgpu-native.
+        """
+        return self.request_adapter(
+            gpu_preference=gpu_preference,
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
+        )  # no-cover
+
+    def enumerate_adapter_info(self):
+        adapters = self._enumerate_adapters()
+        lines = []
+        for adapter in adapters:
+            d = adapter.request_adapter_info()
+            lines.append(f"{d['device']} - {d['backend_type']} - ({d['adapter_type']})")
+            # for k in sorted(d):
+            #     lines.append(f"{k}: {d[k]}")
+            # lines.append("")
+        return lines
+
+    def _enumerate_adapters(self):
+        # The first call is to get the number of adapters, and the second
+        # call is to get the actual adapters. Note that the second arg (now
+        # NULL) can be a `WGPUInstanceEnumerateAdapterOptions` to filter
+        # by backend.
+        instance = get_wgpu_instance()
+        count = libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, ffi.NULL)
+        adapters = ffi.new("WGPUAdapter[]", count)
+        libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, adapters)
+        return [self._create_adapter(adapter) for adapter in adapters]
 
     def _create_adapter(self, adapter_id):
         # ----- Get adapter info
@@ -329,18 +415,6 @@ class GPU(classes.GPU):
         # ----- Done
 
         return GPUAdapter(adapter_id, features, limits, adapter_info)
-
-    async def request_adapter_async(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
-    ):
-        """Async version of ``request_adapter()``.
-        This is the implementation based on wgpu-native.
-        """
-        return self.request_adapter(
-            power_preference=power_preference,
-            force_fallback_adapter=force_fallback_adapter,
-            canvas=canvas,
-        )  # no-cover
 
 
 # Instantiate API entrypoint
