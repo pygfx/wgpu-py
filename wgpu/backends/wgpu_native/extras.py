@@ -12,21 +12,9 @@ from ._helpers import get_wgpu_instance
 
 def enumerate_adapters():
     """Return a list of all available adapters."""
-    # The first call is to get the number of adapters, and the second
-    # call is to get the actual adapters. Note that the second arg (now
-    # NULL) can be a `WGPUInstanceEnumerateAdapterOptions` to filter
-    # by backend.
-
-    adapter_count = libf.wgpuInstanceEnumerateAdapters(
-        get_wgpu_instance(), ffi.NULL, ffi.NULL
-    )
-
-    adapters = ffi.new("WGPUAdapter[]", adapter_count)
-    libf.wgpuInstanceEnumerateAdapters(get_wgpu_instance(), ffi.NULL, adapters)
-
     from . import gpu  # noqa
 
-    return [gpu._create_adapter(adapter) for adapter in adapters]
+    return gpu._enumerate_adapters()
 
 
 def request_device_tracing(
