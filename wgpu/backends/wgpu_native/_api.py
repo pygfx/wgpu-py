@@ -280,19 +280,24 @@ class GPU(classes.GPU):
                 return ffi.string(char_p).decode(errors="ignore")
             return ""
 
+        # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo
+        # And add all other info we get from wgpu-native too.
+        # TODO: I'm not sure if device should just be device_id, and description should be name ...
         adapter_info = {
+            # Spec
             "vendor": to_py_str("vendorName"),
             "architecture": to_py_str("architecture"),
             "device": to_py_str("name"),
             "description": to_py_str("driverDescription"),
+            # Extra
+            "vendor_id": c_properties.vendorID,
+            "device_id": c_properties.deviceID,
             "adapter_type": enum_int2str["AdapterType"].get(
                 c_properties.adapterType, "unknown"
             ),
             "backend_type": enum_int2str["BackendType"].get(
                 c_properties.backendType, "unknown"
             ),
-            # "vendor_id": c_properties.vendorID,
-            # "device_id": c_properties.deviceID,
         }
 
         # ----- Get adapter limits
