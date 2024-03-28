@@ -1,7 +1,6 @@
 import os
 
-from ._api import ffi, libf, structs, enums, Dict, logger
-from ._helpers import get_wgpu_instance
+from ._api import structs, enums, Dict, logger
 
 
 # NOTE: these functions represent backend-specific extra API.
@@ -11,10 +10,8 @@ from ._helpers import get_wgpu_instance
 
 
 def enumerate_adapters():
-    """Return a list of all available adapters."""
-    from . import gpu  # noqa
-
-    return gpu._enumerate_adapters()
+    """Deprecated."""
+    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters() instead.")
 
 
 def request_device_tracing(

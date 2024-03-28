@@ -12,7 +12,9 @@ import numpy as np
 
 
 print("Available adapters:")
-print("\n".join(wgpu.gpu.enumerate_adapter_info()))
+for a in wgpu.gpu.enumerate_adapters():
+    print(a.summary)
+
 
 # %% Create canvas and device
 
