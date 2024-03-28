@@ -11,7 +11,7 @@ import wgpu
 import numpy as np
 
 
-print("Available adapters:")
+print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters():
     print(a.summary)
 
