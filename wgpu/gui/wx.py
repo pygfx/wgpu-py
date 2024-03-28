@@ -7,7 +7,7 @@ import sys
 import ctypes
 
 from .base import WgpuCanvasBase
-from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
+from ._gui_utils import get_alt_x11_display, get_alt_wayland_display
 
 import wx
 
