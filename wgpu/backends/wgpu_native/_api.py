@@ -282,7 +282,6 @@ class GPU(classes.GPU):
 
         # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo
         # And add all other info we get from wgpu-native too.
-        # TODO: I'm not sure if device should just be device_id, and description should be name ...
         adapter_info = {
             # Spec
             "vendor": to_py_str("vendorName"),
