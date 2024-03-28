@@ -80,7 +80,7 @@ class GPU:
     """
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
-    @apidiff.change("arguments include a canvas object")
+    @apidiff.change("arguments include canvas")
     def request_adapter(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
@@ -104,7 +104,7 @@ class GPU:
         )
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
-    @apidiff.change("arguments include a canvas object")
+    @apidiff.change("arguments include canvas")
     async def request_adapter_async(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
@@ -114,6 +114,29 @@ class GPU:
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
         )
+
+    @apidiff.add("Method useful for multi-gpu environments")
+    def enumerate_adapters(self):
+        """Get a list of adapter objects available on the current system.
+
+        An adapter can then be selected (e.g. using it's summary), and
+        a device then created from it.
+
+        Note that the same device may be present with different backends (e.g. vulkan/d3d12/opengl).
+        """
+        # Note that backends that cannot enumerate adapters, like WebGL,
+        # can at least request two adapters with different power preference,
+        # and then return both or one (if they represent the same adapter).
+
+        # If this method gets called, no backend has been loaded yet, let's do that now!
+        from .backends.auto import gpu  # noqa
+
+        return gpu.enumerate_adapters()
+
+    @apidiff.add("Method useful on desktop")
+    async def enumerate_adapters_async(self):
+        """Async version of enumerate_adapters."""
+        return self.enumerate_adapters()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
@@ -342,9 +365,17 @@ class GPUAdapter:
         """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
+    @apidiff.add("Useful in multi-gpu environments")
+    @property
+    def summary(self):
+        """A one-line summary of the info of this adapter (name, adapter_type, backend_type)."""
+        d = self._adapter_info
+        return f"{d['device']} ({d['adapter_type']}) via {d['backend_type']}"
+
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
     def request_adapter_info(self):
         """Get a dict with information about this adapter, such as the vendor and devicen name."""
+        # Note: returns a dict rather than an GPUAdapterInfo instance.
         return self._adapter_info
 
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
