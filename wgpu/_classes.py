@@ -368,13 +368,14 @@ class GPUAdapter:
     @apidiff.add("Useful in multi-gpu environments")
     @property
     def summary(self):
-        """A one-line summary of the info of this adapter (name, backend_type, adapter_type)."""
+        """A one-line summary of the info of this adapter (name, adapter_type, backend_type)."""
         d = self._adapter_info
         return f"{d['device']} ({d['adapter_type']}) via {d['backend_type']}"
 
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
     def request_adapter_info(self):
         """Get a dict with information about this adapter, such as the vendor and devicen name."""
+        # Note: returns a dict rather than an GPUAdapterInfo instance.
         return self._adapter_info
 
     # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();

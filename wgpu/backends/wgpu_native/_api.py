@@ -218,6 +218,8 @@ class GPU(classes.GPU):
             else:
                 logger.warning(f"Forcing backend: {force_backend} ({backend})")
 
+        # ----- Request adapter
+
         # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface, powerPreference: WGPUPowerPreference, backendType: WGPUBackendType, forceFallbackAdapter: WGPUBool/int
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
@@ -265,10 +267,12 @@ class GPU(classes.GPU):
         )  # no-cover
 
     def enumerate_adapters(self):
-        # The first call is to get the number of adapters, and the second
-        # call is to get the actual adapters. Note that the second arg (now
-        # NULL) can be a `WGPUInstanceEnumerateAdapterOptions` to filter
-        # by backend.
+        """Get a list of adapter objects available on the current system.
+        This is the implementation based on wgpu-native.
+        """
+        # The first call is to get the number of adapters, and the second call
+        # is to get the actual adapters. Note that the second arg (now NULL) can
+        # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
         instance = get_wgpu_instance()
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         count = libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, ffi.NULL)
