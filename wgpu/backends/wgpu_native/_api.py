@@ -176,11 +176,7 @@ libf = SafeLibCalls(lib, error_handler)
 
 class GPU(classes.GPU):
     def request_adapter(
-        self,
-        *,
-        power_preference=None,
-        force_fallback_adapter=False,
-        canvas=None,
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -257,11 +253,7 @@ class GPU(classes.GPU):
         return self._create_adapter(adapter_id)
 
     async def request_adapter_async(
-        self,
-        *,
-        power_preference=None,
-        force_fallback_adapter=False,
-        canvas=None,
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Async version of ``request_adapter()``.
         This is the implementation based on wgpu-native.
@@ -278,8 +270,10 @@ class GPU(classes.GPU):
         # NULL) can be a `WGPUInstanceEnumerateAdapterOptions` to filter
         # by backend.
         instance = get_wgpu_instance()
+        # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         count = libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, ffi.NULL)
         adapters = ffi.new("WGPUAdapter[]", count)
+        # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, adapters)
         return [self._create_adapter(adapter) for adapter in adapters]
 

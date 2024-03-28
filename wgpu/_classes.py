@@ -82,11 +82,7 @@ class GPU:
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include canvas")
     def request_adapter(
-        self,
-        *,
-        power_preference=None,
-        force_fallback_adapter=False,
-        canvas=None,
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -110,11 +106,7 @@ class GPU:
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include canvas")
     async def request_adapter_async(
-        self,
-        *,
-        power_preference=None,
-        force_fallback_adapter=False,
-        canvas=None,
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Async version of `request_adapter()`."""
         return self.request_adapter(
