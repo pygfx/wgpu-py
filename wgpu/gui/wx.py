@@ -121,7 +121,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         # that drawing only happens when the mouse is down, see #209.
         if not self._request_draw_timer.IsRunning():
             self._request_draw_timer.Start(
-                self._get_draw_wait_time() * 1000, wx.TIMER_ONE_SHOT
+                max(1, int(self._get_draw_wait_time() * 1000)), wx.TIMER_ONE_SHOT
             )
 
     def close(self):
