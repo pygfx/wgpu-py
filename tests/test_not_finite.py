@@ -118,7 +118,6 @@ def test_finite_using_uint():
 
 
 def detect_finites(title, shader, expect_detection_nan, expect_detection_inf):
-
     base_shader = """
 
         @group(0)
@@ -243,7 +242,6 @@ def detect_finites(title, shader, expect_detection_nan, expect_detection_inf):
 
 
 if __name__ == "__main__":
-
     test_finite_using_nequal()
     test_finite_using_min_max()
     test_finite_using_uint()
