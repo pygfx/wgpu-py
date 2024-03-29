@@ -44,15 +44,6 @@ It also works out of the box, because the wgpu-native DLL is shipped with wgpu-p
 
 The wgpu_native backend provides a few extra functionalities:
 
-
-.. py:function:: wgpu.backends.wgpu_native.enumerate_adapters()
-
-    Return a list of all available adapters on this system.
-
-    :return: Adapters
-    :rtype: list
-
-
 .. py:function:: wgpu.backends.wgpu_native.request_device_tracing(adapter, trace_path, *, label="", required_features, required_limits, default_queue)
 
     An alternative to :func:`wgpu.GPUAdapter.request_adapter`, that streams a trace

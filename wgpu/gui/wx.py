@@ -7,7 +7,7 @@ import sys
 import ctypes
 
 from .base import WgpuCanvasBase
-from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
+from ._gui_utils import get_alt_x11_display, get_alt_wayland_display
 
 import wx
 
@@ -121,7 +121,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         # that drawing only happens when the mouse is down, see #209.
         if not self._request_draw_timer.IsRunning():
             self._request_draw_timer.Start(
-                self._get_draw_wait_time() * 1000, wx.TIMER_ONE_SHOT
+                max(1, int(self._get_draw_wait_time() * 1000)), wx.TIMER_ONE_SHOT
             )
 
     def close(self):
@@ -143,7 +143,6 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         self.SetTitle(title or "wx wgpu canvas")
 
         self._subwidget = WxWgpuWindow(parent=self, max_fps=max_fps)
-        self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
 
         self.Show()

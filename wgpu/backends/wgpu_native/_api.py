@@ -205,7 +205,7 @@ class GPU(classes.GPU):
 
         # Try to read the WGPU_BACKEND_TYPE environment variable to see
         # if a backend should be forced.
-        force_backend = os.getenv("WGPU_BACKEND_TYPE", None)
+        force_backend = os.getenv("WGPU_BACKEND_TYPE", "").strip()
         backend = enum_str2int["BackendType"]["Undefined"]
         if force_backend:
             try:
@@ -254,6 +254,33 @@ class GPU(classes.GPU):
 
         return self._create_adapter(adapter_id)
 
+    async def request_adapter_async(
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+    ):
+        """Async version of ``request_adapter()``.
+        This is the implementation based on wgpu-native.
+        """
+        return self.request_adapter(
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
+        )  # no-cover
+
+    def enumerate_adapters(self):
+        """Get a list of adapter objects available on the current system.
+        This is the implementation based on wgpu-native.
+        """
+        # The first call is to get the number of adapters, and the second call
+        # is to get the actual adapters. Note that the second arg (now NULL) can
+        # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
+        instance = get_wgpu_instance()
+        # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
+        count = libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, ffi.NULL)
+        adapters = ffi.new("WGPUAdapter[]", count)
+        # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
+        libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, adapters)
+        return [self._create_adapter(adapter) for adapter in adapters]
+
     def _create_adapter(self, adapter_id):
         # ----- Get adapter info
 
@@ -280,19 +307,23 @@ class GPU(classes.GPU):
                 return ffi.string(char_p).decode(errors="ignore")
             return ""
 
+        # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo
+        # And add all other info we get from wgpu-native too.
         adapter_info = {
+            # Spec
             "vendor": to_py_str("vendorName"),
             "architecture": to_py_str("architecture"),
             "device": to_py_str("name"),
             "description": to_py_str("driverDescription"),
+            # Extra
+            "vendor_id": c_properties.vendorID,
+            "device_id": c_properties.deviceID,
             "adapter_type": enum_int2str["AdapterType"].get(
                 c_properties.adapterType, "unknown"
             ),
             "backend_type": enum_int2str["BackendType"].get(
                 c_properties.backendType, "unknown"
             ),
-            # "vendor_id": c_properties.vendorID,
-            # "device_id": c_properties.deviceID,
         }
 
         # ----- Get adapter limits
@@ -329,18 +360,6 @@ class GPU(classes.GPU):
         # ----- Done
 
         return GPUAdapter(adapter_id, features, limits, adapter_info)
-
-    async def request_adapter_async(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
-    ):
-        """Async version of ``request_adapter()``.
-        This is the implementation based on wgpu-native.
-        """
-        return self.request_adapter(
-            power_preference=power_preference,
-            force_fallback_adapter=force_fallback_adapter,
-            canvas=canvas,
-        )  # no-cover
 
 
 # Instantiate API entrypoint

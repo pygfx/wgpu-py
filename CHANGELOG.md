@@ -17,6 +17,29 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.15.1] - 28-03-2024
+
+Added:
+
+* Users can set the `WGPU_GUI_BACKEND` environment variable to prefer a specific backend.
+* Added `wgpu.gpu.enumerate_adapters()`.
+* Added `adapter.summary` property, to easily get a one-line description of each adapter.
+
+Changed:
+
+* Avoid present-related warning messages when an exception is raised from the draw function.
+* The `adapter.request_adapter_info()` now also contains `vendor_id` and `device_id`.
+
+Fixed:
+
+* For GUI backend selection:
+  * Honor `%gui` in IPython and Jupyter.
+  * Don't enter Qt event loop when Qt is active by the env (e.g. IPython).
+  * Prefer glfw when we detect a running asyncio loop.
+  * Make the glfw backend work in IPython.
+  * The `run()` function can be called multiple times (similar to `plt.plot()`).
+
+
 ### [v0.15.0] - 07-03-2024
 
 Changed:

@@ -269,10 +269,16 @@ def test_wgpu_native_tracer():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_wgpu_native_enumerate_adapters():
+def test_enumerate_adapters():
     # Get all available adapters
-    adapters = wgpu.backends.wgpu_native.enumerate_adapters()
+    adapters = wgpu.gpu.enumerate_adapters()
     assert len(adapters) > 0
+
+    # Check adapter summaries
+    for adapter in adapters:
+        assert isinstance(adapter.summary, str)
+        assert "\n" not in adapter.summary
+        assert len(adapter.summary.strip()) > 10
 
     # Check that we can get a device from each adapter
     for adapter in adapters:
