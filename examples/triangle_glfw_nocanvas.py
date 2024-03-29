@@ -30,12 +30,11 @@ class GlfwCanvas:
         self._window = window
 
     def get_surface_info(self):
-        # get window and display id
-        # includes triage based on OS
+        """get window and display id, includes some triage to deal with OS differences"""
         return get_surface_info(self._window)
 
     def get_physical_size(self):
-        # get framebuffer size in integer pixels
+        """get framebuffer size in integer pixels"""
         return get_physical_size(self._window)
 
 
