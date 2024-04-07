@@ -119,10 +119,22 @@ class GPU:
     def enumerate_adapters(self):
         """Get a list of adapter objects available on the current system.
 
-        An adapter can then be selected (e.g. using it's summary), and
-        a device then created from it.
+        An adapter can then be selected (e.g. using it's summary), and a device
+        then created from it.
 
-        Note that the same device may be present with different backends (e.g. vulkan/d3d12/opengl).
+        The order of the devices is such that Vulkan adapters go first, then
+        Metal, then D3D12, then OpenGL. Within each category, the order as
+        provided by the particular backend is maintained. Note that the same
+        device may be present via multiple backends (e.g. vulkan/opengl).
+
+        We cannot make guarantees about whether the order of the adapters
+        matches the order as reported by e.g. ``nvidia-smi``. We have found that
+        on a Linux multi-gpu cluster, the order does match, but we cannot
+        promise that this is always the case. If you want to make sure, do some
+        testing by allocating big buffers and checking memory usage using
+        ``nvidia-smi``.
+
+        See https://github.com/pygfx/wgpu-py/issues/482 for more details.
         """
         # Note that backends that cannot enumerate adapters, like WebGL,
         # can at least request two adapters with different power preference,
