@@ -74,15 +74,15 @@ async def main_async(canvas):
     return _main(canvas, device)
 
 
-def _main(canvas, device):
+def setup_draw(context, device):
+    """Setup context and device for drawing a triangle and return draw callback"""
     shader = device.create_shader_module(code=shader_source)
 
     # No bind group and layout, we should not create empty ones.
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
-    present_context = canvas.get_context()
-    render_texture_format = present_context.get_preferred_format(device.adapter)
-    present_context.configure(device=device, format=render_texture_format)
+    render_texture_format = context.get_preferred_format(device.adapter)
+    context.configure(device=device, format=render_texture_format)
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,
@@ -122,7 +122,7 @@ def _main(canvas, device):
     )
 
     def draw_frame():
-        current_texture = present_context.get_current_texture()
+        current_texture = context.get_current_texture()
         command_encoder = device.create_command_encoder()
 
         render_pass = command_encoder.begin_render_pass(
@@ -143,6 +143,11 @@ def _main(canvas, device):
         render_pass.end()
         device.queue.submit([command_encoder.finish()])
 
+    return draw_frame
+
+
+def _main(canvas, device):
+    draw_frame = setup_draw(canvas.get_context(), device)
     canvas.request_draw(draw_frame)
     return device
 

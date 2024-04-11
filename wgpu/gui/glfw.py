@@ -104,6 +104,39 @@ KEY_MAP_MOD = {
 }
 
 
+def get_surface_info(window):
+    if sys.platform.startswith("win"):
+        return {
+            "platform": "windows",
+            "window": int(glfw.get_win32_window(window)),
+        }
+    elif sys.platform.startswith("darwin"):
+        return {
+            "platform": "cocoa",
+            "window": int(glfw.get_cocoa_window(window)),
+        }
+    elif sys.platform.startswith("linux"):
+        if is_wayland:
+            return {
+                "platform": "wayland",
+                "window": int(glfw.get_wayland_window(window)),
+                "display": int(glfw.get_wayland_display()),
+            }
+        else:
+            return {
+                "platform": "x11",
+                "window": int(glfw.get_x11_window(window)),
+                "display": int(glfw.get_x11_display()),
+            }
+    else:
+        raise RuntimeError(f"Cannot get GLFW surafce info on {sys.platform}.")
+
+
+def get_physical_size(window):
+    psize = glfw.get_framebuffer_size(window)
+    return int(psize[0]), int(psize[1])
+
+
 class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
     """A glfw window providing a wgpu canvas."""
 
@@ -212,8 +245,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         # on some systems and in logical-pixels on other, we use the
         # framebuffer size and pixel ratio to derive the logical size.
         pixel_ratio = get_window_content_scale(self._window)[0]
-        psize = glfw.get_framebuffer_size(self._window)
-        psize = int(psize[0]), int(psize[1])
+        psize = get_physical_size(self._window)
 
         self._pixel_ratio = pixel_ratio
         self._physical_size = psize
@@ -266,31 +298,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
     # API
 
     def get_surface_info(self):
-        if sys.platform.startswith("win"):
-            return {
-                "platform": "windows",
-                "window": int(glfw.get_win32_window(self._window)),
-            }
-        elif sys.platform.startswith("darwin"):
-            return {
-                "platform": "cocoa",
-                "window": int(glfw.get_cocoa_window(self._window)),
-            }
-        elif sys.platform.startswith("linux"):
-            if is_wayland:
-                return {
-                    "platform": "wayland",
-                    "window": int(glfw.get_wayland_window(self._window)),
-                    "display": int(glfw.get_wayland_display()),
-                }
-            else:
-                return {
-                    "platform": "x11",
-                    "window": int(glfw.get_x11_window(self._window)),
-                    "display": int(glfw.get_x11_display()),
-                }
-        else:
-            raise RuntimeError(f"Cannot get GLFW surafce info on {sys.platform}.")
+        return get_surface_info(self._window)
 
     def get_pixel_ratio(self):
         return self._pixel_ratio
