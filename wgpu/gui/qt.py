@@ -228,11 +228,11 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     # User events to jupyter_rfb events
 
     def _key_event(self, event_type, event):
-        modifiers = [
+        modifiers = tuple(
             MODIFIERS_MAP[mod]
             for mod in MODIFIERS_MAP.keys()
             if mod & event.modifiers()
-        ]
+        )
 
         ev = {
             "event_type": event_type,
@@ -249,18 +249,18 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def _mouse_event(self, event_type, event, touches=True):
         button = BUTTON_MAP.get(event.button(), 0)
-        buttons = [
+        buttons = tuple(
             BUTTON_MAP[button]
             for button in BUTTON_MAP.keys()
             if button & event.buttons()
-        ]
+        )
 
         # For Qt on macOS Control and Meta are switched
-        modifiers = [
+        modifiers = tuple(
             MODIFIERS_MAP[mod]
             for mod in MODIFIERS_MAP.keys()
             if mod & event.modifiers()
-        ]
+        )
 
         ev = {
             "event_type": event_type,
@@ -300,16 +300,16 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def wheelEvent(self, event):  # noqa: N802
         # For Qt on macOS Control and Meta are switched
-        modifiers = [
+        modifiers = tuple(
             MODIFIERS_MAP[mod]
             for mod in MODIFIERS_MAP.keys()
             if mod & event.modifiers()
-        ]
-        buttons = [
+        )
+        buttons = tuple(
             BUTTON_MAP[button]
             for button in BUTTON_MAP.keys()
             if button & event.buttons()
-        ]
+        )
 
         ev = {
             "event_type": "wheel",
