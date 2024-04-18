@@ -180,8 +180,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         glfw.set_window_iconify_callback(self._window, weakbind(self._on_iconify))
 
         # User input
-        self._key_modifiers = []
-        self._pointer_buttons = []
+        self._key_modifiers = ()
+        self._pointer_buttons = ()
         self._pointer_pos = 0, 0
         self._double_click_state = {"clicks": 0}
         glfw.set_mouse_button_callback(self._window, weakbind(self._on_mouse_button))
@@ -347,12 +347,12 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             event_type = "pointer_down"
             buttons = set(self._pointer_buttons)
             buttons.add(button)
-            self._pointer_buttons = list(sorted(buttons))
+            self._pointer_buttons = tuple(sorted(buttons))
         elif action == glfw.RELEASE:
             event_type = "pointer_up"
             buttons = set(self._pointer_buttons)
             buttons.discard(button)
-            self._pointer_buttons = list(sorted(buttons))
+            self._pointer_buttons = tuple(sorted(buttons))
         else:
             return
 
@@ -361,8 +361,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "x": self._pointer_pos[0],
             "y": self._pointer_pos[1],
             "button": button,
-            "buttons": list(self._pointer_buttons),
-            "modifiers": list(self._key_modifiers),
+            "buttons": tuple(self._pointer_buttons),
+            "modifiers": tuple(self._key_modifiers),
             "ntouches": 0,  # glfw dows not have touch support
             "touches": {},
         }
@@ -415,8 +415,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
                 "x": self._pointer_pos[0],
                 "y": self._pointer_pos[1],
                 "button": button,
-                "buttons": list(self._pointer_buttons),
-                "modifiers": list(self._key_modifiers),
+                "buttons": tuple(self._pointer_buttons),
+                "modifiers": tuple(self._key_modifiers),
                 "ntouches": 0,  # glfw dows not have touch support
                 "touches": {},
             }
@@ -434,8 +434,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "x": self._pointer_pos[0],
             "y": self._pointer_pos[1],
             "button": 0,
-            "buttons": list(self._pointer_buttons),
-            "modifiers": list(self._key_modifiers),
+            "buttons": tuple(self._pointer_buttons),
+            "modifiers": tuple(self._key_modifiers),
             "ntouches": 0,  # glfw dows not have touch support
             "touches": {},
         }
@@ -452,8 +452,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "dy": -100.0 * dy,
             "x": self._pointer_pos[0],
             "y": self._pointer_pos[1],
-            "buttons": list(self._pointer_buttons),
-            "modifiers": list(self._key_modifiers),
+            "buttons": tuple(self._pointer_buttons),
+            "modifiers": tuple(self._key_modifiers),
         }
         match_keys = {"modifiers"}
         accum_keys = {"dx", "dy"}
@@ -467,13 +467,13 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             if modifier:
                 modifiers = set(self._key_modifiers)
                 modifiers.add(modifier)
-                self._key_modifiers = list(sorted(modifiers))
+                self._key_modifiers = tuple(sorted(modifiers))
         elif action == glfw.RELEASE:
             event_type = "key_up"
             if modifier:
                 modifiers = set(self._key_modifiers)
                 modifiers.discard(modifier)
-                self._key_modifiers = list(sorted(modifiers))
+                self._key_modifiers = tuple(sorted(modifiers))
         else:  # glfw.REPEAT
             return
 
@@ -495,7 +495,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         ev = {
             "event_type": event_type,
             "key": keyname,
-            "modifiers": list(self._key_modifiers),
+            "modifiers": tuple(self._key_modifiers),
         }
         self._handle_event_and_flush(ev)
 
