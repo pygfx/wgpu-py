@@ -78,8 +78,41 @@ wgpu-native yourself, see "dependencies" above. Note that wgpu-native
 still needs Vulkan support and may not compile / work on older
 distributions.
 
+Cloud Compute
++++++++++++++
+
+GPU Environments
+^^^^^^^^^^^^^^^^
+
+WGPU can work in GPU cloud compute environments on Linux machines with no physical display output. By default, these environments may lack system libraries that are typically found on a standard linux desktop. On Debian & Ubuntu based systems you should be able to get everything you need by installing the following in addition to your vendor-specific (Nvidia/AMD) GPU drivers:
+
+.. code-block:: bash
+
+    sudo apt install xserver-xorg-core mesa-vulkan-drivers libvulkan1
+
+.. note:: If your distro is not Debian/Ubuntu install the corresponding packages for your distribution. 
+
+You can verify whether the `"DiscreteGPU"` adapters are found:
+
+.. code-block:: python
+
+    import wgpu
+    import pprint
+    
+    for a in wgpu.gpu.enumerate_adapters():
+        pprint.pprint(a.request_adapter_info())
+
+If you are using a remote frame buffer via `jupyter-rfb <https://github.com/vispy/jupyter_rfb>`_ we also recommend installing the following for optimal performance:
+
+.. code-block:: bash
+
+    sudo apt install libjpeg-turbo8-dev libturbojpeg0-dev
+    pip install simplejpeg
+
+Your mileage may vary across different cloud service providers, for more info see: https://github.com/pygfx/wgpu-py/issues/493 
+
 Installing LavaPipe on Linux
-++++++++++++++++++++++++++++
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 To run wgpu on systems that do not have a GPU (e.g. CI) you need a software renderer.
 On Windows this (probably) just works via DX12. On Linux you can use LavaPipe:
