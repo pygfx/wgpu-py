@@ -17,6 +17,23 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.15.2] - 10-05-2024
+
+Added:
+
+* New example to demonstrate manual GLFW integration by @Korijn in https://github.com/pygfx/wgpu-py/pull/480
+* More details in docs of enumerate_adapters by @almarklein in https://github.com/pygfx/wgpu-py/pull/489
+* Add GPU cloud compute info to docs by @kushalkolar in https://github.com/pygfx/wgpu-py/pull/495
+
+Changed:
+
+* Make modifiers and buttons tuples for immutability by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/492
+
+Fixed:
+
+* Fix WxWgpuWindow by not calling 'add_event_handler' by @cansik in https://github.com/pygfx/wgpu-py/pull/486
+
+
 ### [v0.15.1] - 28-03-2024
 
 Added:
