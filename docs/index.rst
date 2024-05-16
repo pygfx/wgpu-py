@@ -1,5 +1,5 @@
 Welcome to the wgpu-py docs!
-==============================
+============================
 
 .. automodule:: wgpu
 
