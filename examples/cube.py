@@ -19,7 +19,7 @@ for a in wgpu.gpu.enumerate_adapters():
 # %% Create canvas and device
 
 # Create a canvas to render to
-canvas = WgpuCanvas(title="wgpu cube")
+canvas = WgpuCanvas(title="wgpu cube", size=(640, 480))
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
@@ -175,8 +175,9 @@ struct FragmentOutput {
 @vertex
 fn vs_main(in: VertexInput) -> VertexOutput {
     let ndc: vec4<f32> = r_locals.transform * in.pos;
+    let xy_ratio = 0.75;  // hardcoded for 640x480 canvas size
     var out: VertexOutput;
-    out.pos = vec4<f32>(ndc.x, ndc.y, 0.0, 1.0);
+    out.pos = vec4<f32>(ndc.x * xy_ratio, ndc.y, 0.0, 1.0);
     out.texcoord = in.texcoord;
     return out;
 }
@@ -368,7 +369,7 @@ def draw_frame():
             {
                 "view": current_texture_view,
                 "resolve_target": None,
-                "clear_value": (1, 1, 1, 1),
+                "clear_value": (0, 0, 0, 1),
                 "load_op": wgpu.LoadOp.clear,
                 "store_op": wgpu.StoreOp.store,
             }
