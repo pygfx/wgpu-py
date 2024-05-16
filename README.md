@@ -8,8 +8,8 @@
 A Python implementation of WebGPU - the next generation GPU API. 🚀
 
 <div>
-  <img width=300 src='https://raw.githubusercontent.com/pygfx/wgpu-py/main/examples/screenshots/triangle_auto.png' />
-  <img width=300 src='https://raw.githubusercontent.com/pygfx/wgpu-py/main/examples/screenshots/cube.png' />
+  <img width=320 src='https://raw.githubusercontent.com/pygfx/wgpu-py/main/examples/screenshots/triangle_auto.png' />
+  <img width=320 src='https://raw.githubusercontent.com/pygfx/wgpu-py/main/examples/screenshots/cube.png' />
 </div>
 
 
