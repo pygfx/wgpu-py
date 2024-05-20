@@ -1575,11 +1575,20 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # not used: constants
             )
 
+        if isinstance(layout, GPUPipelineLayout):
+            layout_id = layout._internal
+        elif layout == enums.AutoLayoutMode.auto:
+            layout_id = ffi.NULL
+        else:
+            raise TypeError(
+                "create_render_pipeline() 'layout' arg must be a GPUPipelineLayout or 'auto'"
+            )
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, vertex: WGPUVertexState, primitive: WGPUPrimitiveState, depthStencil: WGPUDepthStencilState *, multisample: WGPUMultisampleState, fragment: WGPUFragmentState *
         struct = new_struct_p(
             "WGPURenderPipelineDescriptor *",
             label=to_c_label(label),
-            layout=layout._internal,
+            layout=layout_id,
             vertex=c_vertex_state,
             primitive=c_primitive_state,
             depthStencil=c_depth_stencil_state,
