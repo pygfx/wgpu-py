@@ -1459,7 +1459,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode
         c_primitive_state = new_struct(
             "WGPUPrimitiveState",
-            topology=primitive["topology"],
+            topology=primitive.get("topology", "triangle-list"),
             stripIndexFormat=primitive.get("strip_index_format", 0),
             frontFace=primitive.get("front_face", "ccw"),
             cullMode=primitive.get("cull_mode", "none"),
