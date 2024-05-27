@@ -314,6 +314,9 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             raise ValueError("Window width and height must not be negative")
         self._set_logical_size((float(width), float(height)))
 
+    def set_title(self, title):
+        glfw.set_window_title(self._window, title)
+
     def _request_draw(self):
         if not self._request_draw_timer_running:
             self._request_draw_timer_running = True
