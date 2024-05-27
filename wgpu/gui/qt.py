@@ -215,6 +215,9 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             raise ValueError("Window width and height must not be negative")
         self.resize(width, height)  # See comment on pixel ratio
 
+    def set_title(self, title):
+        self.setWindowTitle(title)
+
     def _request_draw(self):
         if not self._request_draw_timer.isActive():
             self._request_draw_timer.start(int(self._get_draw_wait_time() * 1000))
@@ -404,6 +407,9 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         if width < 0 or height < 0:
             raise ValueError("Window width and height must not be negative")
         self.resize(width, height)  # See comment on pixel ratio
+
+    def set_title(self, title):
+        self.setWindowTitle(title)
 
     def _request_draw(self):
         return self._subwidget._request_draw()

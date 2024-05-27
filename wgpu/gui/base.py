@@ -161,6 +161,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """Set the window size (in logical pixels)."""
         raise NotImplementedError()
 
+    def set_title(self, title):
+        """Set the window title."""
+        raise NotImplementedError()
+
     def close(self):
         """Close the window."""
         pass

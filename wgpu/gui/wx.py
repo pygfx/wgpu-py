@@ -116,6 +116,9 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
             raise ValueError("Window width and height must not be negative")
         self.SetSize(width, height)
 
+    def set_title(self, title):
+        pass  # only on frames
+
     def _request_draw(self):
         # Despite the FPS limiting the delayed call to refresh solves
         # that drawing only happens when the mouse is down, see #209.
@@ -171,6 +174,9 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         if width < 0 or height < 0:
             raise ValueError("Window width and height must not be negative")
         self.SetSize(width, height)
+
+    def set_title(self, title):
+        self.SetTitle(title)
 
     def _request_draw(self):
         return self._subwidget._request_draw()
