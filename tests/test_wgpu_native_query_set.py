@@ -1,8 +1,7 @@
 import wgpu.utils
 import gc
 
-from testutils import run_tests, can_use_wgpu_lib
-from tests_mem.testutils import is_pypy
+from testutils import run_tests, can_use_wgpu_lib, is_pypy
 from pytest import mark
 
 
@@ -107,12 +106,7 @@ def test_query_set():
     )
 
     query_buf_size = 8 * query_set.count
-    query_usage = (
-        wgpu.BufferUsage.QUERY_RESOLVE
-        | wgpu.BufferUsage.STORAGE
-        | wgpu.BufferUsage.COPY_SRC
-        | wgpu.BufferUsage.COPY_DST
-    )
+    query_usage = wgpu.BufferUsage.QUERY_RESOLVE | wgpu.BufferUsage.COPY_SRC
     query_buf = device.create_buffer(
         size=query_buf_size,
         usage=query_usage,

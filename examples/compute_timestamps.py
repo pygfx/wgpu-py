@@ -127,10 +127,7 @@ as we will use this buffer in a resolve_query_set call later.
 """
 query_buf = device.create_buffer(
     size=8 * query_set.count,
-    usage=wgpu.BufferUsage.QUERY_RESOLVE
-    | wgpu.BufferUsage.STORAGE
-    | wgpu.BufferUsage.COPY_SRC
-    | wgpu.BufferUsage.COPY_DST,
+    usage=wgpu.BufferUsage.QUERY_RESOLVE | wgpu.BufferUsage.COPY_SRC,
 )
 compute_pass.set_pipeline(compute_pipeline)
 compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used

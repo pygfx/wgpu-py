@@ -2185,11 +2185,11 @@ class GPUCommandEncoder(
     def begin_compute_pass(
         self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
     ):
-        timestamp_writes_struct = ffi.NULL
+        c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
             check_struct("ComputePassTimestampWrites", timestamp_writes)
             # H: querySet: WGPUQuerySet, beginningOfPassWriteIndex: int, endOfPassWriteIndex: int
-            timestamp_writes_struct = new_struct_p(
+            c_timestamp_writes_struct = new_struct_p(
                 "WGPUComputePassTimestampWrites *",
                 querySet=timestamp_writes["query_set"]._internal,
                 beginningOfPassWriteIndex=timestamp_writes[
@@ -2201,7 +2201,7 @@ class GPUCommandEncoder(
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
             label=to_c_label(label),
-            timestampWrites=timestamp_writes_struct,
+            timestampWrites=c_timestamp_writes_struct,
             # not used: nextInChain
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
@@ -2219,8 +2219,19 @@ class GPUCommandEncoder(
         max_draw_count: int = 50000000,
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.
+
+        c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
             check_struct("RenderPassTimestampWrites", timestamp_writes)
+            # H: querySet: WGPUQuerySet, beginningOfPassWriteIndex: int, endOfPassWriteIndex: int
+            c_timestamp_writes_struct = new_struct_p(
+                "WGPURenderPassTimestampWrites *",
+                querySet=timestamp_writes["query_set"]._internal,
+                beginningOfPassWriteIndex=timestamp_writes[
+                    "beginning_of_pass_write_index"
+                ],
+                endOfPassWriteIndex=timestamp_writes["end_of_pass_write_index"],
+            )
 
         objects_to_keep_alive = {}
 
@@ -2293,8 +2304,8 @@ class GPUCommandEncoder(
             colorAttachments=c_color_attachments_array,
             colorAttachmentCount=len(c_color_attachments_list),
             depthStencilAttachment=c_depth_stencil_attachment,
+            timestampWrites=c_timestamp_writes_struct,
             # not used: occlusionQuerySet
-            # not used: timestampWrites
             # not used: nextInChain
         )
 
