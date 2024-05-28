@@ -166,6 +166,9 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuOffscreenCanvasBase):
     def set_logical_size(self, width, height):
         self._logical_size = width, height
 
+    def set_title(self, title):
+        pass
+
     def close(self):
         self._closed = True
 

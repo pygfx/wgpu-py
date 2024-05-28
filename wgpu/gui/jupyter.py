@@ -77,6 +77,9 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvasBase, RemoteFrameBuffer)
         self.css_width = f"{width}px"
         self.css_height = f"{height}px"
 
+    def set_title(self, title):
+        pass  # not supported yet
+
     def close(self):
         RemoteFrameBuffer.close(self)
 
