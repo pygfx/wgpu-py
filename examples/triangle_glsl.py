@@ -126,7 +126,7 @@ def _main(canvas, device):
         )
 
         render_pass.set_pipeline(render_pipeline)
-        # render_pass.set_bind_group(0, no_bind_group, [], 0, 1)
+        # render_pass.set_bind_group(0, no_bind_group)
         render_pass.draw(3, 1, 0, 0)
         render_pass.end()
         device.queue.submit([command_encoder.finish()])

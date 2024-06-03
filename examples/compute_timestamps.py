@@ -130,7 +130,7 @@ query_buf = device.create_buffer(
     usage=wgpu.BufferUsage.QUERY_RESOLVE | wgpu.BufferUsage.COPY_SRC,
 )
 compute_pass.set_pipeline(compute_pipeline)
-compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
+compute_pass.set_bind_group(0, bind_group)
 compute_pass.dispatch_workgroups(*global_size)  # x y z
 compute_pass.end()
 

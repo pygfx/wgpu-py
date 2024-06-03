@@ -116,9 +116,7 @@ def test_query_set():
     assert query_buf.usage == query_usage
 
     compute_pass.set_pipeline(compute_pipeline)
-    compute_pass.set_bind_group(
-        0, bind_group, [], 0, 999999
-    )  # last 2 elements not used
+    compute_pass.set_bind_group(0, bind_group)
     compute_pass.dispatch_workgroups(n, 1, 1)  # x y z
     compute_pass.end()
 

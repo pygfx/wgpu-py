@@ -271,7 +271,7 @@ def test_compute_indirect():
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
     compute_pass.set_pipeline(compute_pipeline)
-    compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 args not used
+    compute_pass.set_bind_group(0, bind_group)
     compute_pass.dispatch_workgroups_indirect(buffer3, 0)
     compute_pass.end()
     device.queue.submit([command_encoder.finish()])
@@ -352,7 +352,7 @@ def test_compute_default_layout1():
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
     compute_pass.set_pipeline(compute_pipeline)
-    compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 args not used
+    compute_pass.set_bind_group(0, bind_group)
     compute_pass.dispatch_workgroups_indirect(buffer3, 0)
     compute_pass.end()
     device.queue.submit([command_encoder.finish()])
@@ -440,8 +440,8 @@ def test_compute_default_layout2():
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
     compute_pass.set_pipeline(compute_pipeline)
-    compute_pass.set_bind_group(0, bind_group0, [], 0, 999999)
-    compute_pass.set_bind_group(1, bind_group1, [], 0, 999999)
+    compute_pass.set_bind_group(0, bind_group0)
+    compute_pass.set_bind_group(1, bind_group1)
     compute_pass.dispatch_workgroups_indirect(buffer3, 0)
     compute_pass.end()
     device.queue.submit([command_encoder.finish()])

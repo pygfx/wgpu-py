@@ -1424,9 +1424,9 @@ class GPUBindingCommandsMixin:
         self,
         index,
         bind_group,
-        dynamic_offsets_data,
-        dynamic_offsets_data_start,
-        dynamic_offsets_data_length,
+        dynamic_offsets_data=[],
+        dynamic_offsets_data_start=None,
+        dynamic_offsets_data_length=None,
     ):
         """Associate the given bind group (i.e. group or resources) with the
         given slot/index.
