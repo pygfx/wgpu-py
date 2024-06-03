@@ -2067,6 +2067,10 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
                 and dynamic_offsets_data_start + dynamic_offsets_data_length
                 <= len(dynamic_offsets_data)
             )
+            dynamic_offsets_data = dynamic_offsets_data[
+                dynamic_offsets_data_start : dynamic_offsets_data_start
+                + dynamic_offsets_data_length
+            ]
 
         offsets = list(dynamic_offsets_data)
         c_offsets = ffi.new("uint32_t []", offsets)
