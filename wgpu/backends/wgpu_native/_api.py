@@ -2050,10 +2050,28 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         self,
         index,
         bind_group,
-        dynamic_offsets_data,
-        dynamic_offsets_data_start,
-        dynamic_offsets_data_length,
+        dynamic_offsets_data=[],
+        dynamic_offsets_data_start=None,
+        dynamic_offsets_data_length=None,
     ):
+        if (
+            dynamic_offsets_data_start is not None
+            or dynamic_offsets_data_length is not None
+        ):
+            assert (
+                dynamic_offsets_data_start is not None
+                and dynamic_offsets_data_start >= 0
+            )
+            assert (
+                dynamic_offsets_data_length is not None
+                and dynamic_offsets_data_start + dynamic_offsets_data_length
+                <= len(dynamic_offsets_data)
+            )
+            dynamic_offsets_data = dynamic_offsets_data[
+                dynamic_offsets_data_start : dynamic_offsets_data_start
+                + dynamic_offsets_data_length
+            ]
+
         offsets = list(dynamic_offsets_data)
         c_offsets = ffi.new("uint32_t []", offsets)
         bind_group_id = bind_group._internal
