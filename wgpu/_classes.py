@@ -1420,6 +1420,9 @@ class GPUBindingCommandsMixin:
     """Mixin for classes that defines bindings."""
 
     # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup? bindGroup, Uint32Array dynamicOffsetsData, GPUSize64 dynamicOffsetsDataStart, GPUSize32 dynamicOffsetsDataLength);
+    @apidiff.change(
+        "In the WebGPU specification, this method has two different signatures."
+    )
     def set_bind_group(
         self,
         index,
