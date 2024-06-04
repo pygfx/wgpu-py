@@ -551,9 +551,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
     compute_pass.insert_debug_marker("setting pipeline")
     compute_pass.set_pipeline(compute_pipeline)
     compute_pass.insert_debug_marker("setting bind group")
-    compute_pass.set_bind_group(
-        0, bind_group, [], 0, 999999
-    )  # last 2 elements not used
+    compute_pass.set_bind_group(0, bind_group)
     compute_pass.insert_debug_marker("dispatch!")
     compute_pass.dispatch_workgroups(nx, ny, nz)
     compute_pass.pop_debug_group()

@@ -125,7 +125,7 @@ compute_pipeline = device.create_compute_pipeline(
 command_encoder = device.create_command_encoder()
 compute_pass = command_encoder.begin_compute_pass()
 compute_pass.set_pipeline(compute_pipeline)
-compute_pass.set_bind_group(0, bind_group, [], 0, 999999)  # last 2 elements not used
+compute_pass.set_bind_group(0, bind_group)
 compute_pass.dispatch_workgroups(n, 1, 1)  # x y z
 compute_pass.end()
 device.queue.submit([command_encoder.finish()])

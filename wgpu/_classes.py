@@ -1420,13 +1420,16 @@ class GPUBindingCommandsMixin:
     """Mixin for classes that defines bindings."""
 
     # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup? bindGroup, Uint32Array dynamicOffsetsData, GPUSize64 dynamicOffsetsDataStart, GPUSize32 dynamicOffsetsDataLength);
+    @apidiff.change(
+        "In the WebGPU specification, this method has two different signatures."
+    )
     def set_bind_group(
         self,
         index,
         bind_group,
-        dynamic_offsets_data,
-        dynamic_offsets_data_start,
-        dynamic_offsets_data_length,
+        dynamic_offsets_data=[],
+        dynamic_offsets_data_start=None,
+        dynamic_offsets_data_length=None,
     ):
         """Associate the given bind group (i.e. group or resources) with the
         given slot/index.
@@ -1434,9 +1437,9 @@ class GPUBindingCommandsMixin:
         Arguments:
             index (int): The slot to bind at.
             bind_group (GPUBindGroup): The bind group to bind.
-            dynamic_offsets_data (list of int): A list of offsets (one for each bind group).
-            dynamic_offsets_data_start (int): Not used.
-            dynamic_offsets_data_length (int): Not used.
+            dynamic_offsets_data (list of int): A list of offsets (one for each entry in bind group marked as ``buffer.has_dynamic_offset``). Default ``[]``.
+            dynamic_offsets_data_start (int): Offset in elements into dynamic_offsets_data where the buffer offset data begins. Default None.
+            dynamic_offsets_data_length (int): Number of buffer offsets to read from dynamic_offsets_data. Default None.
         """
         raise NotImplementedError()
 

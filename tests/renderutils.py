@@ -166,9 +166,7 @@ def render_to_texture(
     render_pass.set_pipeline(render_pipeline)
     render_pass.insert_debug_marker("setting bind group")
     if bind_group:
-        render_pass.set_bind_group(
-            0, bind_group, [], 0, 999999
-        )  # last 2 elements not used
+        render_pass.set_bind_group(0, bind_group)
     for slot, vbo in enumerate(vbos):
         render_pass.insert_debug_marker(f"setting vbo {slot}")
         render_pass.set_vertex_buffer(slot, vbo, 0, 0)
@@ -301,9 +299,7 @@ def render_to_screen(
         render_pass.insert_debug_marker("setting pipeline")
         render_pass.set_pipeline(render_pipeline)
         render_pass.insert_debug_marker("setting bind group")
-        render_pass.set_bind_group(
-            0, bind_group, [], 0, 999999
-        )  # last 2 elements not used
+        render_pass.set_bind_group(0, bind_group)
         for slot, vbo in enumerate(vbos):
             render_pass.insert_debug_marker(f"setting vbo {slot}")
             render_pass.set_vertex_buffer(slot, vbo, 0, vbo.size)

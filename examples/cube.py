@@ -380,7 +380,7 @@ def draw_frame():
     render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
     render_pass.set_vertex_buffer(0, vertex_buffer)
     for bind_group_id, bind_group in enumerate(bind_groups):
-        render_pass.set_bind_group(bind_group_id, bind_group, [], 0, 99)
+        render_pass.set_bind_group(bind_group_id, bind_group)
     render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
     render_pass.end()
 
