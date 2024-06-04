@@ -2058,15 +2058,18 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             dynamic_offsets_data_start is not None
             or dynamic_offsets_data_length is not None
         ):
-            assert (
-                dynamic_offsets_data_start is not None
-                and dynamic_offsets_data_start >= 0
-            )
-            assert (
-                dynamic_offsets_data_length is not None
-                and dynamic_offsets_data_start + dynamic_offsets_data_length
-                <= len(dynamic_offsets_data)
-            )
+            if (
+                dynamic_offsets_data_start is None
+                or dynamic_offsets_data_length is None
+            ):
+                raise ValueError(
+                    "Dynamic offsets start and length must be both set or both None."
+                )
+            if dynamic_offsets_data_start < 0 or dynamic_offsets_data_length < 0:
+                raise ValueError(
+                    "Dynamic offsets start and length must be non-negative."
+                )
+
             dynamic_offsets_data = dynamic_offsets_data[
                 dynamic_offsets_data_start : dynamic_offsets_data_start
                 + dynamic_offsets_data_length
