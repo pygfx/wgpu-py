@@ -81,6 +81,7 @@ class ImguiRenderer:
         canvas.add_event_handler(self._on_mouse, "pointer_up", "pointer_down")
         canvas.add_event_handler(self._on_key, "key_up", "key_down")
         canvas.add_event_handler(self._on_wheel, "wheel")
+        canvas.add_event_handler(self._on_char_input, "char")
 
         # glfw.set_char_callback(canvas._window, self.on_char_input)
 
@@ -141,5 +142,5 @@ class ImguiRenderer:
     def _on_wheel(self, event):
         self._beckend.io.add_mouse_wheel_event(event["dx"] / 100, event["dy"] / 100)
 
-    def _on_char_input(self, key):
-        self._beckend.io.add_input_character(key)
+    def _on_char_input(self, event):
+        self._beckend.io.add_input_characters_utf8(event["char_str"])
