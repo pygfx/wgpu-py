@@ -62,8 +62,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 def main(canvas, power_preference="high-performance", limits=None):
     """Regular function to setup a viz on the given canvas."""
-    adapter = wgpu.gpu.request_adapter(power_preference=power_preference)
-    device = adapter.request_device(required_limits=limits)
+    device = wgpu.utils.get_default_device(required_limits=limits)
     return _main(canvas, device)
 
 

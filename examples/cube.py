@@ -22,8 +22,7 @@ for a in wgpu.gpu.enumerate_adapters():
 canvas = WgpuCanvas(title="wgpu cube", size=(640, 480))
 
 # Create a wgpu device
-adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-device = adapter.request_device()
+device = wgpu.utils.get_default_device()
 
 # Prepare present context
 present_context = canvas.get_context()
