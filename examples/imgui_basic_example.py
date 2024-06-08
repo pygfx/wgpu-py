@@ -74,7 +74,6 @@ def update_gui():
 
 
 def draw_frame():
-    update_gui()
     imgui_renderer.render(update_gui())
     canvas.request_draw()
 

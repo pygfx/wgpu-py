@@ -382,26 +382,8 @@ class ImguiWgpuBackend:
         if fb_width <= 0 or fb_height <= 0 or draw_data.cmd_lists_count == 0:
             return
 
-        draw_data.scale_clip_rects(draw_data.framebuffer_scale)
-
         self._set_render_state(draw_data)
         self._update_vertex_buffer(draw_data)
-
-        # self._renderer._blender.ensure_target_size((fb_width, fb_height))
-
-        # command_encoder = self._device.create_command_encoder()
-
-        # render_pass = command_encoder.begin_render_pass(
-        #     color_attachments=[
-        #         {
-        #             "view": self._renderer._blender.color_view,
-        #             "resolve_target": None,
-        #             "clear_value": (0, 0, 0, 0),
-        #             "load_op": wgpu.LoadOp.load,
-        #             "store_op": wgpu.StoreOp.store,
-        #         }
-        #     ],
-        # )
 
         # set render state
         render_pass.set_viewport(0, 0, fb_width, fb_height, 0, 1)
@@ -494,9 +476,6 @@ class ImguiWgpuBackend:
 
             global_vtx_offset += commands.vtx_buffer.size()
             global_idx_offset += commands.idx_buffer.size()
-
-        # render_pass.end()
-        # self._device.queue.submit([command_encoder.finish()])
 
     def _invalidate_device_objects(self):
         self._render_pipeline._destroy()

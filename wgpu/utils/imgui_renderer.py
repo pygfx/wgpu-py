@@ -83,8 +83,6 @@ class ImguiRenderer:
         canvas.add_event_handler(self._on_wheel, "wheel")
         canvas.add_event_handler(self._on_char_input, "char")
 
-        # glfw.set_char_callback(canvas._window, self.on_char_input)
-
     def render(self, draw_data):
         command_encoder = self._beckend._device.create_command_encoder()
         current_texture_view = self._canvas_context.get_current_texture().create_view()
