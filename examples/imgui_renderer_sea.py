@@ -1,3 +1,9 @@
+"""
+An example demonstrating a wgpu app with imgui renderer
+
+# run_example = false
+"""
+
 from wgpu.gui.auto import WgpuCanvas, run
 import wgpu
 import time
@@ -6,7 +12,7 @@ from imgui_bundle import imgui
 from wgpu.utils.imgui_renderer import ImguiRenderer
 
 # Create a canvas to render to
-canvas = WgpuCanvas(title="imgui_sea", size=(800, 450), max_fps=-1, vsync=False)
+canvas = WgpuCanvas(title="imgui_sea", size=(800, 450), max_fps=60)
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter(power_preference="high-performance")

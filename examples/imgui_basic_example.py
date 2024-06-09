@@ -1,3 +1,9 @@
+"""
+An example demonstrating a wgpu app with basic imgui usage and events.
+
+# run_example = false
+"""
+
 import wgpu
 import sys
 from imgui_bundle import imgui, imgui_ctx
@@ -12,15 +18,7 @@ canvas = WgpuCanvas(title="imgui", size=(640, 480))
 adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
 device = adapter.request_device()
 
-
-class AppState:
-    text: str = """Hello, World\nLorem ipsum, etc.\netc."""
-
-
-app_state = AppState()
 app_state = {"text": "Hello, World\nLorem ipsum, etc.\netc."}
-
-
 imgui_renderer = ImguiRenderer(device, canvas)
 
 
