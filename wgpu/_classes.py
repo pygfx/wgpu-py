@@ -256,9 +256,9 @@ class GPUCanvasContext:
 
     def __del__(self):
         self._ot.decrease(self.__class__.__name__)
-        self._destroy()
+        self._release()
 
-    def _destroy(self):
+    def _release(self):
         pass
 
 
@@ -364,12 +364,12 @@ class GPUAdapter:
         """Async version of `request_device()`."""
         raise NotImplementedError()
 
-    def _destroy(self):
+    def _release(self):
         pass
 
     def __del__(self):
         self._ot.decrease(self.__class__.__name__)
-        self._destroy()
+        self._release()
 
     # IDL: readonly attribute boolean isFallbackAdapter;
     @property
@@ -419,13 +419,13 @@ class GPUObjectBase:
         """A human-readable name identifying the GPU object."""
         return self._label
 
-    def _destroy(self):
+    def _release(self):
         """Subclasses can implement this to clean up."""
         pass
 
     def __del__(self):
         self._ot.decrease(self.__class__.__name__, self._nbytes)
-        self._destroy()
+        self._release()
 
     # Public destroy() methods are implemented on classes as the WebGPU spec specifies.
 
@@ -499,8 +499,15 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: undefined destroy();
     def destroy(self):
-        """Destroy this device."""
-        return self._destroy()
+        """Destroy this device.
+
+        This cleans up all its resources and puts it in an unusable state.
+        Note that all objects get cleaned up properly automatically; this
+        is only intended to support explicit destroying.
+
+        NOTE: not yet implemented; for the moment this does nothing.
+        """
+        raise NotImplementedError()
 
     # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     def create_buffer(
@@ -1146,9 +1153,11 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: undefined destroy();
     def destroy(self):
-        """An application that no longer requires a buffer can choose
-        to destroy it. Note that this is automatically called when the
-        Python object is cleaned up by the garbadge collector.
+        """Destroy the buffer.
+
+        Explicitly destroys the buffer, freeing its memory and putting
+        the object in an unusable state. In general its easier (and
+        safer) to just let the garbadhe collector do its thing.
         """
         raise NotImplementedError()
 
@@ -1274,9 +1283,11 @@ class GPUTexture(GPUObjectBase):
 
     # IDL: undefined destroy();
     def destroy(self):
-        """An application that no longer requires a texture can choose
-        to destroy it. Note that this is automatically called when the
-        Python object is cleaned up by the garbadge collector.
+        """Destroy the texture.
+
+        Explicitly destroys the texture, freeing its memory and putting
+        the object in an unusable state. In general its easier (and
+        safer) to just let the garbadhe collector do its thing.
         """
         raise NotImplementedError()
 
@@ -2094,7 +2105,14 @@ class GPUQuerySet(GPUObjectBase):
 
     # IDL: undefined destroy();
     def destroy(self):
-        """Destroy this QuerySet."""
+        """Destroy the QuerySet.
+
+        This cleans up all its resources and puts it in an unusable state.
+        Note that all objects get cleaned up properly automatically; this
+        is only intended to support explicit destroying.
+
+        NOTE: not yet implemented; for the moment this does nothing.
+        """
         raise NotImplementedError()
 
 

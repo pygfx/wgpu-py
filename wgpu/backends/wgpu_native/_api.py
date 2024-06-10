@@ -508,8 +508,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         self._configure(config)
 
     def _configure(self, config):
-        # If a texture is still active, better destroy it first
-        self._destroy_texture()
+        # If a texture is still active, better release it first
+        self._drop_texture()
         # Set the size
         width, height = self._get_canvas().get_physical_size()
         config.width = width
@@ -524,14 +524,14 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         self._config = config
 
     def unconfigure(self):
-        self._destroy_texture()
+        self._drop_texture()
         self._config = None
         # H: void f(WGPUSurface surface)
         libf.wgpuSurfaceUnconfigure(self._get_surface_id())
 
-    def _destroy_texture(self):
+    def _drop_texture(self):
         if self._texture:
-            self._texture.destroy()
+            self._texture._release()  # not destroy, because it may be in use.
             self._texture = None
 
     def get_current_texture(self):
@@ -547,7 +547,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # * raise an error
         # Right now we do the warning, so things still (kinda) keep working
         if self._texture:
-            self._destroy_texture()
+            self._drop_texture()
             logger.warning(
                 "get_current_texture() is called multiple times before pesent()."
             )
@@ -680,7 +680,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # Present the texture, then destroy it
             # H: void f(WGPUSurface surface)
             libf.wgpuSurfacePresent(self._get_surface_id())
-            self._destroy_texture()
+            self._drop_texture()
 
     def get_preferred_format(self, adapter):
         # H: WGPUTextureFormat f(WGPUSurface surface, WGPUAdapter adapter)
@@ -689,8 +689,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         )
         return enum_int2str["TextureFormat"][format]
 
-    def _destroy(self):
-        self._destroy_texture()
+    def _release(self):
+        self._drop_texture()
         if self._surface_id is not None and libf is not None:
             self._surface_id, surface_id = None, self._surface_id
             # H: void f(WGPUSurface surface)
@@ -889,7 +889,7 @@ class GPUAdapter(classes.GPUAdapter):
             label, required_features, required_limits, default_queue, ""
         )  # no-cover
 
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUAdapter adapter)
@@ -1661,15 +1661,21 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         query_id = libf.wgpuDeviceCreateQuerySet(self._internal, query_set_descriptor)
         return GPUQuerySet(label, query_id, self._internal, type, count)
 
-    def _destroy(self):
+    def destroy(self):
+        # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
+        internal = self._internal
+        if internal is not None:
+            # H: void f(WGPUDevice device)
+            libf.wgpuDeviceDestroy(internal)
+
+    def _release(self):
         if self._queue is not None:
-            self._queue._destroy()
+            self._queue._release()
             self._queue = None
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUDevice device)
             libf.wgpuDeviceRelease(internal)
-            # wgpuDeviceDestroy(internal) is also an option
 
 
 class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
@@ -1681,6 +1687,10 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # If mapped at creation, set to write mode (no point in reading zeros)
         if self._map_state == enums.BufferMapState.mapped:
             self._mapped_status = 0, self.size, flags.MapMode.WRITE
+
+    def _get_size(self):
+        # H: WGPUBufferUsageFlags f(WGPUBuffer buffer)
+        return libf.wgpuBufferGetUsage(self._internal)
 
     def _check_range(self, offset, size):
         # Apply defaults
@@ -1854,9 +1864,15 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         src_m[:] = data
 
     def destroy(self):
-        self._destroy()  # no-cover
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed
+        # state. The wgpu-core object still exists. So destroying is quite
+        # different from releasing.
+        internal = self._internal
+        if internal is not None:
+            # H: void f(WGPUBuffer buffer)
+            libf.wgpuBufferDestroy(internal)
 
-    def _destroy(self):
+    def _release(self):
         self._release_memoryviews()
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
@@ -1907,14 +1923,18 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             arrayLayerCount=array_layer_count,
             # not used: nextInChain
         )
+
         # H: WGPUTextureView f(WGPUTexture texture, WGPUTextureViewDescriptor const * descriptor)
         id = libf.wgpuTextureCreateView(self._internal, struct)
         return GPUTextureView(label, id, self._device, self, self.size)
 
     def destroy(self):
-        self._destroy()  # no-cover
+        internal = self._internal
+        if internal is not None:
+            # H: void f(WGPUTexture texture)
+            libf.wgpuTextureDestroy(internal)
 
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUTexture texture)
@@ -1922,7 +1942,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
 
 
 class GPUTextureView(classes.GPUTextureView, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUTextureView textureView)
@@ -1930,7 +1950,7 @@ class GPUTextureView(classes.GPUTextureView, GPUObjectBase):
 
 
 class GPUSampler(classes.GPUSampler, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUSampler sampler)
@@ -1938,7 +1958,7 @@ class GPUSampler(classes.GPUSampler, GPUObjectBase):
 
 
 class GPUBindGroupLayout(classes.GPUBindGroupLayout, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBindGroupLayout bindGroupLayout)
@@ -1946,7 +1966,7 @@ class GPUBindGroupLayout(classes.GPUBindGroupLayout, GPUObjectBase):
 
 
 class GPUBindGroup(classes.GPUBindGroup, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUBindGroup bindGroup)
@@ -1954,7 +1974,7 @@ class GPUBindGroup(classes.GPUBindGroup, GPUObjectBase):
 
 
 class GPUPipelineLayout(classes.GPUPipelineLayout, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUPipelineLayout pipelineLayout)
@@ -1993,7 +2013,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
         return []
 
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUShaderModule shaderModule)
@@ -2015,7 +2035,7 @@ class GPUPipelineBase(classes.GPUPipelineBase):
 
 
 class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUComputePipeline computePipeline)
@@ -2023,7 +2043,7 @@ class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectB
 
 
 class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderPipeline renderPipeline)
@@ -2031,7 +2051,7 @@ class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBas
 
 
 class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         # Note that command buffers get destroyed when they are submitted.
         # In earlier versions we had to take this into account by setting
         # _internal to None. That seems not necessary anymore.
@@ -2585,9 +2605,9 @@ class GPUCommandEncoder(
             int(destination_offset),
         )
 
-    def _destroy(self):
+    def _release(self):
         # Note that the native object gets destroyed on finish.
-        # Also see GPUCommandBuffer._destroy()
+        # Also see GPUCommandBuffer._release()
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUCommandEncoder commandEncoder)
@@ -2627,7 +2647,7 @@ class GPUComputePassEncoder(
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
 
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUComputePassEncoder computePassEncoder)
@@ -2690,7 +2710,7 @@ class GPURenderPassEncoder(
     def end_occlusion_query(self):
         raise NotImplementedError()
 
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderPassEncoder renderPassEncoder)
@@ -2708,7 +2728,7 @@ class GPURenderBundleEncoder(
     def finish(self, *, label=""):
         raise NotImplementedError()
 
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderBundleEncoder renderBundleEncoder)
@@ -2784,6 +2804,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # Download from mappable buffer
         tmp_buffer.map("READ_NOSYNC")
         data = tmp_buffer.read_mapped()
+
+        # Explicit drop.
         tmp_buffer.destroy()
 
         return data
@@ -2890,6 +2912,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # Download from mappable buffer
         tmp_buffer.map("READ_NOSYNC")
         data = tmp_buffer.read_mapped()
+
+        # Explicit drop.
         tmp_buffer.destroy()
 
         # Fix data strides if necessary
@@ -2913,7 +2937,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     def on_submitted_work_done(self):
         raise NotImplementedError()
 
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUQueue queue)
@@ -2921,7 +2945,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
 
 class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):
-    def _destroy(self):
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPURenderBundle renderBundle)
@@ -2929,14 +2953,18 @@ class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):
 
 
 class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
-    def _destroy(self):
+    def destroy(self):
+        # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
+        internal = self._internal
+        if internal is not None:
+            # H: void f(WGPUQuerySet querySet)
+            libf.wgpuQuerySetDestroy(internal)
+
+    def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
             # H: void f(WGPUQuerySet querySet)
             libf.wgpuQuerySetRelease(internal)
-
-    def destroy(self):
-        self._destroy()
 
 
 # %% Subclasses that don't need anything else

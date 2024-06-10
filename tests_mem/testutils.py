@@ -132,8 +132,11 @@ def get_excess_counts(counts1, counts2):
 def ob_name_from_test_func(func):
     """Translate test_release_bind_group() to "BindGroup"."""
     func_name = func.__name__
-    prefix = "test_release_"
-    assert func_name.startswith(prefix)
+    prefixes = "test_release_", "test_destroy"
+    assert func_name.startswith(prefixes)
+    for prefix in prefixes:
+        if func_name.startswith(prefix):
+            break
     words = func_name[len(prefix) :].split("_")
     if words[-1].isnumeric():
         words.pop(-1)
