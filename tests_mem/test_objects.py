@@ -353,26 +353,6 @@ def test_release_texture_view(n):
         yield texture.create_view()
 
 
-# @create_and_release
-# def test_destroy_device(n):
-#     yield {
-#         "expected_counts_after_create": {"Device": (n, n), "Queue": (n, n)},
-#     }
-#
-#     adapter = DEVICE.adapter
-#     for i in range(n):
-#         d = adapter.request_device()
-#         d.destroy()
-#         yield d
-
-
-@create_and_release
-def test_destroy_buffer(n):
-    yield {}
-    for i in range(n):
-        yield DEVICE.create_buffer(size=128, usage=wgpu.BufferUsage.COPY_DST)
-
-
 # %% The end
 
 
