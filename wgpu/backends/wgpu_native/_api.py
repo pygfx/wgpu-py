@@ -915,11 +915,16 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             self._internal, uncaptured_error_callback, ffi.NULL
         )
 
-    def _poll(self):
+    def _wait_for_queue(self):
         # Internal function
+        # Check device_id for freeable resources and completed buffer mappings.
+        # Return queue_empty indicating whether there are more queue submissions still in flight.
         if self._internal:
-            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
-            libf.wgpuDevicePoll(self._internal, True, ffi.NULL)
+            while True
+                # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
+                queue_empty = libf.wgpuDevicePoll(self._internal, False, ffi.NULL)
+                if bool(queue_empty):
+                    break
 
     def create_buffer(
         self,
@@ -1750,7 +1755,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         )
 
         # Let it do some cycles
-        self._device._poll()
+        self._device._wait_for_queue()
 
         if status != 0:  # no-cover
             raise RuntimeError(f"Could not map buffer ({status}).")
@@ -1984,7 +1989,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         # H: void f(WGPUShaderModule shaderModule, WGPUCompilationInfoCallback callback, void * userdata)
         # libf.wgpuShaderModuleGetCompilationInfo(self._internal, callback, ffi.NULL)
         #
-        # self._device._poll()
+        # self._device._wait_for_queue()
         #
         # if info is None:
         #     raise RuntimeError("Could not obtain shader compilation info.")
