@@ -34,8 +34,6 @@ def test_release_device(n):
     adapter = DEVICE.adapter
     for i in range(n):
         d = adapter.request_device()
-        # d.queue._destroy()
-        # d._queue = None
         yield d
 
 
