@@ -1157,7 +1157,7 @@ class GPUBuffer(GPUObjectBase):
 
         Explicitly destroys the buffer, freeing its memory and putting
         the object in an unusable state. In general its easier (and
-        safer) to just let the garbadhe collector do its thing.
+        safer) to just let the garbage collector do its thing.
         """
         raise NotImplementedError()
 
@@ -1287,7 +1287,7 @@ class GPUTexture(GPUObjectBase):
 
         Explicitly destroys the texture, freeing its memory and putting
         the object in an unusable state. In general its easier (and
-        safer) to just let the garbadhe collector do its thing.
+        safer) to just let the garbage collector do its thing.
         """
         raise NotImplementedError()
 
