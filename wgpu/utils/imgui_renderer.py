@@ -83,7 +83,20 @@ class ImguiRenderer:
         canvas.add_event_handler(self._on_wheel, "wheel")
         canvas.add_event_handler(self._on_char_input, "char")
 
+    @property
+    def backend(self):
+        """The backend instance used by this renderer."""
+        return self._beckend
+
     def render(self, draw_data):
+        """
+        render the imgui draw data to the canvas
+
+        Parameters
+        ----------
+        draw_data : imgui.ImDrawData
+            The draw data to render, this is usually obtained by calling ``imgui.get_draw_data()``
+        """
         command_encoder = self._beckend._device.create_command_encoder()
         current_texture_view = self._canvas_context.get_current_texture().create_view()
         render_pass = command_encoder.begin_render_pass(

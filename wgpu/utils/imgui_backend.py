@@ -101,8 +101,6 @@ class ImguiWgpuBackend:
                 "imgui.set_current_context()."
             )
 
-        # self._render_target = render_target
-
         self._uniform_data = np.zeros((), dtype=uniform_dtype)
         self._font_texture = None
         self._font_texture_view = None
@@ -130,7 +128,22 @@ class ImguiWgpuBackend:
 
         self._create_device_objects()
 
-    def _create_fonts_texture(self):
+    def create_fonts_texture(self):
+        """
+        Create the font texture and upload it to the gpu
+
+        Example:
+        ```python
+            font = beckend.io.fonts.add_font_from_file_ttf(...)
+            beckend.create_fonts_texture()
+        ```
+        Then you can use the font in the gui like this:
+        ```python
+            imgui.push_font(font)
+            imgui.text("Hello world")
+            imgui.pop_font()
+        ```
+        """
         font_matrix = self.io.fonts.get_tex_data_as_rgba32()
         width = font_matrix.shape[1]
         height = font_matrix.shape[0]
@@ -184,7 +197,7 @@ class ImguiWgpuBackend:
             label="triangle_frag", code=FRAGMENT_SHADER_SRC
         )
 
-        self._create_fonts_texture()
+        self.create_fonts_texture()
 
         self._uniform_buffer = self._device.create_buffer(
             size=self._uniform_data.nbytes,
@@ -299,7 +312,10 @@ class ImguiWgpuBackend:
         )
 
         self._uniform_data["mvp"] = mvp
-        self._uniform_data["gamma"] = 2.2
+        if self._target_format.endswith("srgb"):
+            self._uniform_data["gamma"] = 2.2
+        else:
+            self._uniform_data["gamma"] = 1.0
 
         self._device.queue.write_buffer(
             self._uniform_buffer, 0, self._uniform_data, 0, self._uniform_data.nbytes
@@ -372,6 +388,16 @@ class ImguiWgpuBackend:
     def render(
         self, draw_data: imgui.ImDrawData, render_pass: wgpu.GPURenderPassEncoder
     ):
+        """
+        Render the imgui draw data with the given render pass.
+
+        Parameters
+        ----------
+        draw_data : imgui.ImDrawData
+            The draw data to render, this is usually obtained by calling ``imgui.get_draw_data()``
+        render_pass : wgpu.GPURenderPassEncoder
+            The render pass to render the imgui draw data with
+        """
         if draw_data is None:
             return
 
@@ -462,9 +488,6 @@ class ImguiWgpuBackend:
                     int(clip_max[0] - clip_min[0]),
                     int(clip_max[1] - clip_min[1]),
                 )
-
-                # x1, y1, x2, y2 = command.clip_rect
-                # render_pass.set_scissor_rect(int(x1), int(y1), int(x2 - x1), int(y2 - y1))
 
                 render_pass.draw_indexed(
                     command.elem_count,
