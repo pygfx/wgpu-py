@@ -344,6 +344,8 @@ class GPU(classes.GPU):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
+            if f in ["clip-distances"]:
+                continue  # not supported by wgpu-native yet
             key = f"FeatureName.{f}"
             i = enummap[key]
             # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
@@ -852,6 +854,8 @@ class GPUAdapter(classes.GPUAdapter):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
+            if f in ["clip-distances"]:
+                continue  # not supported by wgpu-native yet
             key = f"FeatureName.{f}"
             i = enummap[key]
             # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)

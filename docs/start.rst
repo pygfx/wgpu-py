@@ -90,7 +90,7 @@ WGPU can work in GPU cloud compute environments on Linux machines with no physic
 
     sudo apt install xserver-xorg-core mesa-vulkan-drivers libvulkan1
 
-.. note:: If your distro is not Debian/Ubuntu install the corresponding packages for your distribution. 
+.. note:: If your distro is not Debian/Ubuntu install the corresponding packages for your distribution.
 
 You can verify whether the `"DiscreteGPU"` adapters are found:
 
@@ -98,9 +98,9 @@ You can verify whether the `"DiscreteGPU"` adapters are found:
 
     import wgpu
     import pprint
-    
+
     for a in wgpu.gpu.enumerate_adapters():
-        pprint.pprint(a.request_adapter_info())
+        pprint.pprint(a.info)
 
 If you are using a remote frame buffer via `jupyter-rfb <https://github.com/vispy/jupyter_rfb>`_ we also recommend installing the following for optimal performance:
 
@@ -109,7 +109,7 @@ If you are using a remote frame buffer via `jupyter-rfb <https://github.com/visp
     sudo apt install libjpeg-turbo8-dev libturbojpeg0-dev
     pip install simplejpeg
 
-Your mileage may vary across different cloud service providers, for more info see: https://github.com/pygfx/wgpu-py/issues/493 
+Your mileage may vary across different cloud service providers, for more info see: https://github.com/pygfx/wgpu-py/issues/493
 
 Installing LavaPipe on Linux
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -377,23 +377,19 @@ class GPUAdapter:
         """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
+    # IDL: [SameObject] readonly attribute GPUAdapterInfo info;
+    @property
+    def info(self):
+        """A dict with information about this adapter, such as the vendor and devicen name."""
+        # Note: returns a dict rather than an GPUAdapterInfo instance.
+        return self._adapter_info
+
     @apidiff.add("Useful in multi-gpu environments")
     @property
     def summary(self):
         """A one-line summary of the info of this adapter (name, adapter_type, backend_type)."""
         d = self._adapter_info
         return f"{d['device']} ({d['adapter_type']}) via {d['backend_type']}"
-
-    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
-    def request_adapter_info(self):
-        """Get a dict with information about this adapter, such as the vendor and devicen name."""
-        # Note: returns a dict rather than an GPUAdapterInfo instance.
-        return self._adapter_info
-
-    # IDL: Promise<GPUAdapterInfo> requestAdapterInfo();
-    async def request_adapter_info_async(self):
-        """Async get information about this adapter."""
-        return self._adapter_info
 
 
 class GPUObjectBase:
