@@ -17,6 +17,13 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.16.0] - tbd
+
+Changed:
+
+* The `Adapter.request_adapter_info()` method is replaced by the `.info` property.
+
+
 ### [v0.15.3] - 12-06-2024
 
 Added:

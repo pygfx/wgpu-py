@@ -63,7 +63,7 @@ features, limits and properties. To actually start using that harware for comput
 to control your hardware (or software).
 The device is the central object; most other GPU objects are created from it.
 Also see the convenience function :func:`wgpu.utils.get_default_device`.
-Information on the adapter can be obtained using :func:`wgpu.GPUAdapter.request_adapter_info` in the form of a :class:`GPUAdapterInfo`.
+Information on the adapter can be obtained using :attr:`wgpu.GPUAdapter.info` (a dict simular to :class:`GPUAdapterInfo`) or  :attr:`wgpu.GPUAdapter.summary`.
 
 A device is controlled with a specific backend API. By default one is selected automatically.
 This can be overridden by setting the
