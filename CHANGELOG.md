@@ -17,6 +17,27 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.15.3] - 12-06-2024
+
+Added:
+
+* Implement `canvas.set_title()` by @almarklein in https://github.com/pygfx/wgpu-py/pull/508
+* Add experimental support for `get_mapped_range()` by @almarklein in https://github.com/pygfx/wgpu-py/pull/522
+
+Changed:
+
+* Allow `create_render_pipeline()` to use `AutoLayout` by @fyellin in https://github.com/pygfx/wgpu-py/pull/500
+* Support omitting the `topology` field in the `primitive` dict passed to `create_render_pipeline()` by @fyellin in https://github.com/pygfx/wgpu-py/pull/503
+* Support omitting last arguments in `set_bind_group()` by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/511
+* Try to optimize proxy_func by @almarklein in https://github.com/pygfx/wgpu-py/pull/507
+
+Fixed:
+
+* Fix wx examples by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/520
+* Support timestamp queryset for `begin_render_pass()` by @almarklein in https://github.com/pygfx/wgpu-py/pull/505
+* Implement `destroy()` the right way by @almarklein in https://github.com/pygfx/wgpu-py/pull/519
+
+
 ### [v0.15.2] - 10-05-2024
 
 Added:
@@ -62,7 +83,7 @@ Fixed:
 Changed:
 
 * Updated to wgpu-native 0.19.3.1. Does not incur API changes.
-* Updated to latedt IDL. Does not incur API changes.
+* Updated to latest IDL. Does not incur API changes.
 
 Fixed:
 
