@@ -17,7 +17,14 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.16.0] - tbd
+### [v0.16.0] - 13-06-2024
+
+Changed:
+
+* Updated to wgpu-native 0.19.4.1. Does not incur API changes.
+* Updated to latest IDL.
+* Replaced the `adapter.request_adapter_info()` method with the `adapter.info` property.
+
 
 Changed:
 
