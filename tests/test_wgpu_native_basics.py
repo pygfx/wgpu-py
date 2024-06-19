@@ -78,7 +78,15 @@ def test_tuple_from_tuple_or_dict():
     assert func({}, ("width", "height"), (10, 20)) == (10, 20)
 
     # Test that with dictionaries, you can elide values at the beginning, if we have them
-    assert func({"z": 5}, ("x", "y", "z"), (1, 2, 3,)) == (1, 2, 5)
+    assert func(
+        {"z": 5},
+        ("x", "y", "z"),
+        (
+            1,
+            2,
+            3,
+        ),
+    ) == (1, 2, 5)
 
     with raises(TypeError):
         func("not tuple/dict", ("x", "y"))
@@ -105,8 +113,11 @@ def test_tuple_from_extent3d():
     assert func([10, 20, 30]) == (10, 20, 30)
     assert func([10, 20]) == (10, 20, 1)
     assert func([10]) == (10, 1, 1)
-    assert func({"width": 10, "height": 20, "depth_or_array_layers": 30}
-                ) == (10, 20, 30)
+    assert func({"width": 10, "height": 20, "depth_or_array_layers": 30}) == (
+        10,
+        20,
+        30,
+    )
     assert func({"width": 10, "height": 20}) == (10, 20, 1)
     assert func({"width": 10, "depth_or_array_layers": 30}) == (10, 1, 30)
 

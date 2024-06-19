@@ -151,8 +151,11 @@ def _tuple_from_tuple_or_dict(ob, fields, defaults=()):
             raise ValueError("Unexpected key in {}".format(ob))
         try:
             return tuple(
-                (ob.get(key, defaults[index - required])
-                 if index >= required else ob[key])
+                (
+                    ob.get(key, defaults[index - required])
+                    if index >= required
+                    else ob[key]
+                )
                 for index, key in enumerate(fields)
             )
         except KeyError:
@@ -173,7 +176,8 @@ def _tuple_from_extent3d(size):
 def _tuple_from_blend_component(components):
     return _tuple_from_tuple_or_dict(
         # defaults to "add", "one", "zero"
-        components, ("src_factor", "dst_factor", "operation"),
+        components,
+        ("src_factor", "dst_factor", "operation"),
         ("add", "one", "zero"),
     )
 
