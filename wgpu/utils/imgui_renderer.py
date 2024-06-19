@@ -70,11 +70,11 @@ class ImguiRenderer:
 
         imgui.create_context()
 
-        self._beckend = ImguiWgpuBackend(device, render_target_format)
+        self._backend = ImguiWgpuBackend(device, render_target_format)
 
-        self._beckend.io.display_size = canvas.get_logical_size()
+        self._backend.io.display_size = canvas.get_logical_size()
         scale = canvas.get_pixel_ratio()
-        self._beckend.io.display_framebuffer_scale = (scale, scale)
+        self._backend.io.display_framebuffer_scale = (scale, scale)
 
         canvas.add_event_handler(self._on_resize, "resize")
         canvas.add_event_handler(self._on_mouse_move, "pointer_move")
@@ -86,7 +86,7 @@ class ImguiRenderer:
     @property
     def backend(self):
         """The backend instance used by this renderer."""
-        return self._beckend
+        return self._backend
 
     def render(self, draw_data):
         """
@@ -97,7 +97,7 @@ class ImguiRenderer:
         draw_data : imgui.ImDrawData
             The draw data to render, this is usually obtained by calling ``imgui.get_draw_data()``
         """
-        command_encoder = self._beckend._device.create_command_encoder()
+        command_encoder = self._backend._device.create_command_encoder()
         current_texture_view = self._canvas_context.get_current_texture().create_view()
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
@@ -110,20 +110,20 @@ class ImguiRenderer:
                 }
             ],
         )
-        self._beckend.render(draw_data, render_pass)
+        self._backend.render(draw_data, render_pass)
         render_pass.end()
-        self._beckend._device.queue.submit([command_encoder.finish()])
+        self._backend._device.queue.submit([command_encoder.finish()])
 
     def _on_resize(self, event):
-        self._beckend.io.display_size = (event["width"], event["height"])
+        self._backend.io.display_size = (event["width"], event["height"])
 
     def _on_mouse_move(self, event):
-        self._beckend.io.add_mouse_pos_event(event["x"], event["y"])
+        self._backend.io.add_mouse_pos_event(event["x"], event["y"])
 
     def _on_mouse(self, event):
         event_type = event["event_type"]
         down = event_type == "pointer_down"
-        self._beckend.io.add_mouse_button_event(event["button"] - 1, down)
+        self._backend.io.add_mouse_button_event(event["button"] - 1, down)
 
     def _on_key(self, event):
         event_type = event["event_type"]
@@ -144,14 +144,14 @@ class ImguiRenderer:
             except ValueError:
                 return  # Probably a special key that we don't have in our KEY_MAP
 
-        self._beckend.io.add_key_event(key, down)
+        self._backend.io.add_key_event(key, down)
 
         if key_name in self.KEY_MAP_MOD:
             key = self.KEY_MAP_MOD[key_name]
-            self._beckend.io.add_key_event(key, down)
+            self._backend.io.add_key_event(key, down)
 
     def _on_wheel(self, event):
-        self._beckend.io.add_mouse_wheel_event(event["dx"] / 100, event["dy"] / 100)
+        self._backend.io.add_mouse_wheel_event(event["dx"] / 100, event["dy"] / 100)
 
     def _on_char_input(self, event):
-        self._beckend.io.add_input_characters_utf8(event["char_str"])
+        self._backend.io.add_input_characters_utf8(event["char_str"])

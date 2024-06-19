@@ -24,7 +24,7 @@ present_context = canvas.get_context()
 render_texture_format = wgpu.TextureFormat.bgra8unorm
 present_context.configure(device=device, format=render_texture_format)
 
-moudle = device.create_shader_module(
+module = device.create_shader_module(
     code="""
     struct UniformInput {
         resolution: vec2<f32>,
@@ -238,12 +238,12 @@ moudle = device.create_shader_module(
 pipeline = device.create_render_pipeline(
     layout="auto",
     vertex={
-        "module": moudle,
+        "module": module,
         "entry_point": "vs_main",
         "buffers": [],
     },
     fragment={
-        "module": moudle,
+        "module": module,
         "entry_point": "fs_main",
         "targets": [{"format": render_texture_format}],
     },
