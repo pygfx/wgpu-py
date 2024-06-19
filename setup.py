@@ -33,6 +33,7 @@ extra_deps = {
     "jupyter": ["jupyter_rfb>=0.4.2"],
     "glfw": ["glfw>=1.9"],
     "docs": ["sphinx>7.2", "sphinx_rtd_theme"],
+    "imgui": ["imgui-bundle>=1.1.0"],
 }
 
 setup(
