@@ -88,6 +88,7 @@ PowerPreference = Enum(
 #: * "rg11b10ufloat_renderable"
 #: * "bgra8unorm_storage"
 #: * "float32_filterable"
+#: * "clip_distances"
 FeatureName = Enum(
     "FeatureName",
     depth_clip_control="depth-clip-control",
@@ -101,6 +102,7 @@ FeatureName = Enum(
     rg11b10ufloat_renderable="rg11b10ufloat-renderable",
     bgra8unorm_storage="bgra8unorm-storage",
     float32_filterable="float32-filterable",
+    clip_distances="clip-distances",
 )
 
 #: * "unmapped"

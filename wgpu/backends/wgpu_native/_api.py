@@ -344,6 +344,8 @@ class GPU(classes.GPU):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
+            if f in ["clip-distances"]:
+                continue  # not supported by wgpu-native yet
             key = f"FeatureName.{f}"
             i = enummap[key]
             # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
@@ -853,6 +855,8 @@ class GPUAdapter(classes.GPUAdapter):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
+            if f in ["clip-distances"]:
+                continue  # not supported by wgpu-native yet
             key = f"FeatureName.{f}"
             i = enummap[key]
             # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
@@ -1760,7 +1764,8 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._internal, map_mode, offset, size, callback, ffi.NULL
         )
 
-        # Let it do some cycles
+        # Wait for the queue to process all tasks (including the mapping of the buffer).
+        # Also see WebGPU's onSubmittedWorkDone() and C's WGPUQueueWorkDoneCallback.
         self._device._poll()
 
         if status != 0:  # no-cover
@@ -1863,6 +1868,31 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Copy data
         src_m[:] = data
+
+    def _experimental_get_mapped_range(self, buffer_offset=None, size=None):
+        """Undocumented and experimental. This API can change or be
+        removed without notice. Just here so we can benchmark this
+        approach. Returns a mapped memoryview object that can be written
+        to. Note that once the buffer unmaps, this memoryview object
+        becomes unusable, and accessing it may result in a segfault.
+        """
+        # Can we even write?
+        if self._map_state != enums.BufferMapState.mapped:
+            raise RuntimeError("Can only write to a buffer if its mapped.")
+
+        offset, size = self._check_range(buffer_offset, size)
+        if offset < self._mapped_status[0] or (offset + size) > self._mapped_status[1]:
+            raise ValueError(
+                "The range for buffer writing is not contained in the currently mapped range."
+            )
+
+        # Get mapped memoryview
+        # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
+        src_ptr = libf.wgpuBufferGetMappedRange(self._internal, offset, size)
+        src_address = int(ffi.cast("intptr_t", src_ptr))
+        src_m = get_memoryview_from_address(src_address, size)
+
+        return src_m
 
     def destroy(self):
         # NOTE: destroy means that the wgpu-core object gets into a destroyed

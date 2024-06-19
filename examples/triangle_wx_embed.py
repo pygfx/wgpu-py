@@ -7,7 +7,7 @@ An example demonstrating a wx app with a wgpu viz inside.
 import wx
 from wgpu.gui.wx import WgpuWidget
 
-from examples.triangle import main
+from triangle import main
 
 
 class Example(wx.Frame):
