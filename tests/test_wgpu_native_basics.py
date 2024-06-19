@@ -78,15 +78,7 @@ def test_tuple_from_tuple_or_dict():
     assert func({}, ("width", "height"), (10, 20)) == (10, 20)
 
     # Test that with dictionaries, you can elide values at the beginning, if we have them
-    assert func(
-        {"z": 5},
-        ("x", "y", "z"),
-        (
-            1,
-            2,
-            3,
-        ),
-    ) == (1, 2, 5)
+    assert func({"z": 5}, ("x", "y", "z"), (1, 2, 3)) == (1, 2, 5)
 
     with raises(TypeError):
         func("not tuple/dict", ("x", "y"))
