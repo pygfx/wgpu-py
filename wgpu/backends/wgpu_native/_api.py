@@ -114,7 +114,7 @@ def _new_struct_p(ctype, **kwargs):
     return struct_p
 
 
-def _tuple_from_tuple_or_dict(ob, fields):
+def _tuple_from_tuple_or_dict(ob, fields, defaults=()):
     """Given a tuple/list/dict, return a tuple. Also checks tuple size.
 
     >> # E.g.
@@ -122,19 +122,70 @@ def _tuple_from_tuple_or_dict(ob, fields):
     (1, 2)
     >> _tuple_from_tuple_or_dict([1, 2], ("x", "y"))
     (1, 2)
+
+    If defaults are given, it will be the default values.  If the length of defaults is
+    shorter than the length of fields, it gives the default values for the final args.
+    Other arguments are still required.
+
+    >> _tuple_from_tuple_or_dict({"x": 1}, ("x", "y"), (2,))
+    (1, 2)
+    >> _tuple_from_tuple_or_dict([], ("x", "y"), (1, 2))
+    (1, 2)
+
     """
     error_msg = "Expected tuple/key/dict with fields: {}"
+    required = len(fields) - len(defaults)
     if isinstance(ob, (list, tuple)):
-        if len(ob) != len(fields):
+        fields_len = len(fields)
+        ob_len = len(ob)
+        if ob_len == fields_len:
+            # Optimize for this fast case
+            return tuple(ob)
+        elif required <= ob_len < fields_len:
+            defaults_needed = fields_len - ob_len
+            return tuple((*ob, *defaults[-defaults_needed:]))
+        else:
             raise ValueError(error_msg.format(", ".join(fields)))
-        return tuple(ob)
     elif isinstance(ob, dict):
+        if any(key not in fields for key in ob):
+            raise ValueError("Unexpected key in {}".format(ob))
         try:
-            return tuple(ob[key] for key in fields)
+            return tuple(
+                (ob.get(key, defaults[index - required])
+                 if index >= required else ob[key])
+                for index, key in enumerate(fields)
+            )
         except KeyError:
             raise ValueError(error_msg.format(", ".join(fields)))
     else:
         raise TypeError(error_msg.format(", ".join(fields)))
+
+
+def _tuple_from_extent3d(size):
+    return _tuple_from_tuple_or_dict(
+        # required, 1, 1
+        size,
+        ("width", "height", "depth_or_array_layers"),
+        (1, 1),
+    )
+
+
+def _tuple_from_blend_component(components):
+    return _tuple_from_tuple_or_dict(
+        # defaults to "add", "one", "zero"
+        components, ("src_factor", "dst_factor", "operation"),
+        ("add", "one", "zero"),
+    )
+
+
+def _tuple_from_origin3d(destination):
+    fields = destination.get("origin", (0, 0, 0))
+    # Each field individually is 0 if not specified
+    return _tuple_from_tuple_or_dict(fields, "xyz", (0, 0, 0))
+
+
+def _tuple_from_color(rgba):
+    return _tuple_from_tuple_or_dict(rgba, "rgba")
 
 
 _empty_label = ffi.new("char []", b"")
@@ -975,9 +1026,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         if isinstance(usage, str):
             usage = str_flag_to_int(flags.TextureUsage, usage)
         usage = int(usage)
-        size = _tuple_from_tuple_or_dict(
-            size, ("width", "height", "depth_or_array_layers")
-        )
+        size = _tuple_from_extent3d(size)
+
         # H: width: int, height: int, depthOrArrayLayers: int
         c_size = new_struct(
             "WGPUExtent3D",
@@ -1526,10 +1576,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 if not target.get("blend", None):
                     c_blend = ffi.NULL
                 else:
-                    alpha_blend = _tuple_from_tuple_or_dict(
-                        target["blend"]["alpha"],
-                        ("src_factor", "dst_factor", "operation"),
-                    )
+                    alpha_blend = _tuple_from_blend_component(target["blend"]["alpha"])
                     # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
                     c_alpha_blend = new_struct(
                         "WGPUBlendComponent",
@@ -1537,10 +1584,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                         dstFactor=alpha_blend[1],
                         operation=alpha_blend[2],
                     )
-                    color_blend = _tuple_from_tuple_or_dict(
-                        target["blend"]["color"],
-                        ("src_factor", "dst_factor", "operation"),
-                    )
+                    color_blend = _tuple_from_blend_component(target["blend"]["color"])
                     # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
                     c_color_blend = new_struct(
                         "WGPUBlendComponent",
@@ -2322,7 +2366,7 @@ class GPUCommandEncoder(
             clear_value = color_attachment.get("clear_value", (0, 0, 0, 0))
             if isinstance(clear_value, dict):
                 check_struct("Color", clear_value)
-                clear_value = _tuple_from_tuple_or_dict(clear_value, "rgba")
+                clear_value = _tuple_from_color(clear_value)
             # H: r: float, g: float, b: float, a: float
             c_clear_value = new_struct(
                 "WGPUColor",
@@ -2438,9 +2482,7 @@ class GPUCommandEncoder(
         if isinstance(destination["texture"], GPUTextureView):
             raise ValueError("copy destination texture must be a texture, not a view")
 
-        size = _tuple_from_tuple_or_dict(
-            copy_size, ("width", "height", "depth_or_array_layers")
-        )
+        size = _tuple_from_extent3d(copy_size)
 
         c_source = new_struct_p(
             "WGPUImageCopyBuffer *",
@@ -2455,7 +2497,7 @@ class GPUCommandEncoder(
             ),
         )
 
-        ori = _tuple_from_tuple_or_dict(destination.get("origin", (0, 0, 0)), "xyz")
+        ori = _tuple_from_origin3d(destination)
         # H: x: int, y: int, z: int
         c_origin = new_struct(
             "WGPUOrigin3D",
@@ -2499,11 +2541,9 @@ class GPUCommandEncoder(
         if isinstance(source["texture"], GPUTextureView):
             raise ValueError("copy source texture must be a texture, not a view")
 
-        size = _tuple_from_tuple_or_dict(
-            copy_size, ("width", "height", "depth_or_array_layers")
-        )
+        size = _tuple_from_extent3d(copy_size)
 
-        ori = _tuple_from_tuple_or_dict(source.get("origin", (0, 0, 0)), "xyz")
+        ori = _tuple_from_origin3d(source)
         # H: x: int, y: int, z: int
         c_origin = new_struct(
             "WGPUOrigin3D",
@@ -2556,7 +2596,7 @@ class GPUCommandEncoder(
         if isinstance(destination["texture"], GPUTextureView):
             raise ValueError("copy destination texture must be a texture, not a view")
 
-        ori = _tuple_from_tuple_or_dict(source.get("origin", (0, 0, 0)), "xyz")
+        ori = _tuple_from_origin3d(source)
         # H: x: int, y: int, z: int
         c_origin1 = new_struct(
             "WGPUOrigin3D",
@@ -2574,7 +2614,7 @@ class GPUCommandEncoder(
             # not used: aspect
         )
 
-        ori = _tuple_from_tuple_or_dict(destination.get("origin", (0, 0, 0)), "xyz")
+        ori = _tuple_from_origin3d(destination)
         # H: x: int, y: int, z: int
         c_origin2 = new_struct(
             "WGPUOrigin3D",
@@ -2592,9 +2632,7 @@ class GPUCommandEncoder(
             # not used: aspect
         )
 
-        size = _tuple_from_tuple_or_dict(
-            copy_size, ("width", "height", "depth_or_array_layers")
-        )
+        size = _tuple_from_extent3d(copy_size)
         # H: width: int, height: int, depthOrArrayLayers: int
         c_copy_size = new_struct_p(
             "WGPUExtent3D *",
@@ -2711,7 +2749,7 @@ class GPURenderPassEncoder(
         )
 
     def set_blend_constant(self, color):
-        color = _tuple_from_tuple_or_dict(color, "rgba")
+        color = _tuple_from_color(color)
         # H: r: float, g: float, b: float, a: float
         c_color = new_struct_p(
             "WGPUColor *",
@@ -2861,11 +2899,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # data_size = list(reversed(m.shape)) + [1, 1, 1]
         # data_size = data_size[:3]
 
-        size = _tuple_from_tuple_or_dict(
-            size, ("width", "height", "depth_or_array_layers")
-        )
+        size = _tuple_from_extent3d(size)
 
-        ori = _tuple_from_tuple_or_dict(destination.get("origin", (0, 0, 0)), "xyz")
+        ori = _tuple_from_origin3d(destination)
         # H: x: int, y: int, z: int
         c_origin = new_struct(
             "WGPUOrigin3D",
@@ -2917,9 +2953,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         extra_stride = (256 - ori_stride % 256) % 256
         full_stride = ori_stride + extra_stride
 
-        size = _tuple_from_tuple_or_dict(
-            size, ("width", "height", "depth_or_array_layers")
-        )
+        size = _tuple_from_extent3d(size)
 
         # Create temporary buffer
         data_length = full_stride * size[1] * size[2]
