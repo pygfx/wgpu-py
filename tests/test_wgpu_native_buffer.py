@@ -374,45 +374,35 @@ def test_buffer_read_no_copy():
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_clear_buffer():
-    data0 = b"111111112222222233333333"
-    data1 = b"111111110000000000003333"
-    data2 = b"111100000000000000000000"
-    data3 = b"000000000000000000000000"
+    data = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"  # length 52
+    length = len(data)
 
     # Prep
     device = wgpu.utils.get_default_device()
-    buf = device.create_buffer(
-        size=len(data1), usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
-    )
-    device.queue.write_buffer(buf, 0, data0)
+    buf = device.create_buffer(size=length, usage="COPY_DST|COPY_SRC")
 
-    # Download original data
-    res = device.queue.read_buffer(buf)
-    assert res == data0
+    # Helper function that writes "data" to the buffer, clears part of it, and then
+    # returns the resulting value in the buffer.
+    def run_clear_buffer(*args):
+        device.queue.write_buffer(buf, 0, data)
+        command_encoder = device.create_command_encoder()
+        command_encoder.clear_buffer(buf, *args)
+        device.queue.submit([command_encoder.finish()])
+        result = device.queue.read_buffer(buf)
+        return bytes(result)
 
-    # Clear part of the buffer
-    command_encoder = device.create_command_encoder()
-    command_encoder.clear_buffer(buf, 8, 12)
-    device.queue.submit([command_encoder.finish()])
+    assert run_clear_buffer(8, 12) == data[:8] + bytes(12) + data[20:]
+    assert run_clear_buffer(8) == data[:8] + bytes(length - 8)
+    assert run_clear_buffer() == bytes(length)
 
-    res = bytes(device.queue.read_buffer(buf)).replace(b"\x00", b"0")
-    assert res == data1
-
-    # Clear the all from index 4
-    command_encoder = device.create_command_encoder()
-    command_encoder.clear_buffer(buf, 4, None)
-    device.queue.submit([command_encoder.finish()])
-
-    res = bytes(device.queue.read_buffer(buf)).replace(b"\x00", b"0")
-    assert res == data2
-
-    # Clear the whole buffer
-    command_encoder = device.create_command_encoder()
-    command_encoder.clear_buffer(buf, 0)
-    device.queue.submit([command_encoder.finish()])
-
-    res = bytes(device.queue.read_buffer(buf)).replace(b"\x00", b"0")
-    assert res == data3
+    with raises(ValueError):
+        run_clear_buffer(10)  # offset not a multiple of 4
+    with raises(ValueError):
+        run_clear_buffer(-10)  # offset negative
+    with raises(ValueError):
+        run_clear_buffer(12, 30)  # size not a multiple of 4
+    with raises(ValueError):
+        run_clear_buffer(12, length)  # size too large, given offset
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")

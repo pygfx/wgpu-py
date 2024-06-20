@@ -2444,18 +2444,22 @@ class GPUCommandEncoder(
         offset = int(offset)
         if offset % 4 != 0:  # pragma: no cover
             raise ValueError("offset must be a multiple of 4")
-        if size is None:  # pragma: no cover
-            size = buffer.size - offset
-        size = int(size)
-        if size <= 0:  # pragma: no cover
-            raise ValueError("clear_buffer size must be > 0")
-        if size % 4 != 0:  # pragma: no cover
-            raise ValueError("size must be a multiple of 4")
-        if offset + size > buffer.size:  # pragma: no cover
-            raise ValueError("buffer size out of range")
+
+        if size is not None:
+            size = int(size)
+            if size <= 0:  # pragma: no cover
+                raise ValueError("size must be > 0")
+            if size % 4 != 0:  # pragma: no cover
+                raise ValueError("size must be a multiple of 4")
+            if offset + size > buffer.size:  # pragma: no cover
+                raise ValueError("buffer size out of range")
+        else:
+            size = WGPU_WHOLE_SIZE
+            if offset > buffer.size:
+                raise ValueError("offset is too large")
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUBuffer buffer, uint64_t offset, uint64_t size)
         libf.wgpuCommandEncoderClearBuffer(
-            self._internal, buffer._internal, int(offset), size
+            self._internal, buffer._internal, offset, size
         )
 
     def copy_buffer_to_buffer(
