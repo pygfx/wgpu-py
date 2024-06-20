@@ -550,10 +550,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
         if self._texture:
             return self._texture
-            # self._drop_texture()
-            # logger.warning(
-            #     "get_current_texture() is called multiple times before pesent()."
-            # )
 
         # Reconfigure when the canvas has resized.
         # On some systems (Windows+Qt) this is not necessary, because

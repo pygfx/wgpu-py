@@ -506,7 +506,6 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
     def _on_char(self, window, char):
         ev = {
             "event_type": "char",
-            "char": char,
             "char_str": chr(char),
             "modifiers": tuple(self._key_modifiers),
         }

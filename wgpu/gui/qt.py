@@ -247,10 +247,9 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         }
         self._handle_event_and_flush(ev)
 
-    def _char_input_event(self, char, char_str):
+    def _char_input_event(self, char_str):
         ev = {
             "event_type": "char",
-            "char": char,
             "char_str": char_str,
             "modifiers": None,
         }
@@ -258,7 +257,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
-        self._char_input_event(event.key(), event.text())
+        self._char_input_event(event.text())
 
     def keyReleaseEvent(self, event):  # noqa: N802
         self._key_event("key_up", event)
@@ -266,7 +265,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def inputMethodEvent(self, event):  # noqa: N802
         commit_string = event.commitString()
         if commit_string:
-            self._char_input_event(None, commit_string)
+            self._char_input_event(commit_string)
 
     def _mouse_event(self, event_type, event, touches=True):
         button = BUTTON_MAP.get(event.button(), 0)

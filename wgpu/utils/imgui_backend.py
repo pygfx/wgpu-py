@@ -134,8 +134,8 @@ class ImguiWgpuBackend:
 
         Example:
         ```python
-            font = beckend.io.fonts.add_font_from_file_ttf(...)
-            beckend.create_fonts_texture()
+            font = backend.io.fonts.add_font_from_file_ttf(...)
+            backend.create_fonts_texture()
         ```
         Then you can use the font in the gui like this:
         ```python
@@ -149,18 +149,12 @@ class ImguiWgpuBackend:
         height = font_matrix.shape[0]
         pixels = font_matrix.data
 
-        if self._font_texture is not None:
-            self._font_texture.destroy()
-
         self._font_texture = self._device.create_texture(
             label="ImGui font_texture",
             size=(width, height, 1),
             format=wgpu.TextureFormat.rgba8unorm,
             usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
         )
-
-        if self._font_texture_view is not None:
-            self._font_texture_view._destroy()
 
         self._font_texture_view = self._font_texture.create_view()
 
@@ -501,10 +495,10 @@ class ImguiWgpuBackend:
             global_idx_offset += commands.idx_buffer.size()
 
     def _invalidate_device_objects(self):
-        self._render_pipeline._destroy()
-        self._uniform_buffer._destroy()
-        self._font_texture._destroy()
-        self._font_texture_view._destroy()
-        self._font_texture_sampler._destroy()
+        self._render_pipeline = None
+        self._uniform_buffer.destroy()
+        self._font_texture.destroy()
+        self._font_texture_view = None
+        self._font_texture_sampler = None
 
         self.io.fonts.set_tex_id(0)
