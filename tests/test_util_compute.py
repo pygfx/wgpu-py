@@ -332,11 +332,15 @@ def test_compute_default_layout1():
     bindings = [
         {
             "binding": 0,
-            "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},
+            "resource": {
+                "buffer": buffer1,
+            },
         },
         {
             "binding": 1,
-            "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},
+            "resource": {
+                "buffer": buffer2,
+            },
         },
     ]
 
@@ -415,13 +419,17 @@ def test_compute_default_layout2():
     bindings0 = [
         {
             "binding": 0,
-            "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},
+            "resource": {
+                "buffer": buffer1,
+            },
         },
     ]
     bindings1 = [
         {
             "binding": 0,
-            "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},
+            "resource": {
+                "buffer": buffer2,
+            },
         },
     ]
 

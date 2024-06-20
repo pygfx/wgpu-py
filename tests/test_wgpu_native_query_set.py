@@ -84,7 +84,7 @@ def test_query_set():
         compute={"module": cshader, "entry_point": "main"},
     )
 
-    query_count = 2
+    query_count = 4
     query_type = wgpu.QueryType.timestamp
     query_label = "div_by_2"
     query_set = device.create_query_set(
@@ -94,16 +94,6 @@ def test_query_set():
     assert query_set.type == query_type
     assert query_set._device == device._internal
     assert query_set.label == query_label
-
-    command_encoder = device.create_command_encoder()
-
-    compute_pass = command_encoder.begin_compute_pass(
-        timestamp_writes={
-            "query_set": query_set,
-            "beginning_of_pass_write_index": 0,
-            "end_of_pass_write_index": 1,
-        }
-    )
 
     query_buf_size = 8 * query_set.count
     query_usage = wgpu.BufferUsage.QUERY_RESOLVE | wgpu.BufferUsage.COPY_SRC
@@ -115,6 +105,39 @@ def test_query_set():
     assert query_buf.size == query_buf_size
     assert query_buf.usage == query_usage
 
+    command_encoder = device.create_command_encoder()
+
+    compute_pass = command_encoder.begin_compute_pass(
+        timestamp_writes={
+            "query_set": query_set,
+            "beginning_of_pass_write_index": 0,
+            "end_of_pass_write_index": 1,
+        }
+    )
+    compute_pass.set_pipeline(compute_pipeline)
+    compute_pass.set_bind_group(0, bind_group)
+    compute_pass.dispatch_workgroups(n, 1, 1)  # x y z
+    compute_pass.end()
+
+    # Make sure the code works when you only write at the beginning
+    compute_pass = command_encoder.begin_compute_pass(
+        timestamp_writes={
+            "query_set": query_set,
+            "beginning_of_pass_write_index": 2,
+        }
+    )
+    compute_pass.set_pipeline(compute_pipeline)
+    compute_pass.set_bind_group(0, bind_group)
+    compute_pass.dispatch_workgroups(n, 1, 1)  # x y z
+    compute_pass.end()
+
+    # Make sure the code works when you only write at the end.
+    compute_pass = command_encoder.begin_compute_pass(
+        timestamp_writes={
+            "query_set": query_set,
+            "end_of_pass_write_index": 3,
+        }
+    )
     compute_pass.set_pipeline(compute_pipeline)
     compute_pass.set_bind_group(0, bind_group)
     compute_pass.dispatch_workgroups(n, 1, 1)  # x y z
@@ -123,20 +146,21 @@ def test_query_set():
     command_encoder.resolve_query_set(
         query_set=query_set,
         first_query=0,
-        query_count=2,
+        query_count=4,
         destination=query_buf,
         destination_offset=0,
     )
 
     device.queue.submit([command_encoder.finish()])
     timestamps = device.queue.read_buffer(query_buf).cast("Q").tolist()
-    assert len(timestamps) == 2
-    assert timestamps[0] > 0 and timestamps[1] > 0 and timestamps[1] > timestamps[0]
+    assert len(timestamps) == 4
+    assert 0 < timestamps[0] < timestamps[1] < timestamps[2] < timestamps[3]
 
     out = device.queue.read_buffer(buffer2).cast("f")
     result = out.tolist()
 
-    # Perform the same division on the CPU
+    # Perform the same division on the CPU.
+    # We kept on dividing the same numbers repeatedly, so we only divided once.
     result_cpu = [a / 2.0 for a in data1]
 
     # Ensure results are the same
