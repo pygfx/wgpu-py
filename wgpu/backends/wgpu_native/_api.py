@@ -547,7 +547,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # * return the existing texture
         # * warn about it, and create a new one
         # * raise an error
-        # Right now we return the existing texture, so user can retrieve it in different render passes withing the same frame.
+        # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
         if self._texture:
             return self._texture
             # self._drop_texture()
