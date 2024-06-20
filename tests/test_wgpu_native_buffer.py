@@ -91,7 +91,9 @@ def test_buffer_init3():
     # Option 1: write via queue (i.e. temp buffer), read via queue
 
     # Create buffer
-    buf = device.create_buffer(size=len(data1), usage="COPY_DST|COPY_SRC")
+    buf = device.create_buffer(
+        size=len(data1), usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
+    )
 
     # Write data to it
     device.queue.write_buffer(buf, 0, data1)
