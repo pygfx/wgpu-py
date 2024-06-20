@@ -239,14 +239,8 @@ def test_compute_indirect():
         },
     ]
     bindings = [
-        {
-            "binding": 0,
-            "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},
-        },
-        {
-            "binding": 1,
-            "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},
-        },
+        {"binding": 0, "resource": {"buffer": buffer1}},
+        {"binding": 1, "resource": {"buffer": buffer2}},
     ]
 
     # Put everything together
@@ -330,18 +324,8 @@ def test_compute_default_layout1():
 
     # Setup bindings info
     bindings = [
-        {
-            "binding": 0,
-            "resource": {
-                "buffer": buffer1,
-            },
-        },
-        {
-            "binding": 1,
-            "resource": {
-                "buffer": buffer2,
-            },
-        },
+        {"binding": 0, "resource": {"buffer": buffer1}},
+        {"binding": 1, "resource": {"buffer": buffer2}},
     ]
 
     # Create a pipeline using "auto" layout mode

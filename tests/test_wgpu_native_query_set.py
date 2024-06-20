@@ -63,14 +63,8 @@ def test_query_set():
         },
     ]
     bindings = [
-        {
-            "binding": 0,
-            "resource": {"buffer": buffer1, "offset": 0, "size": buffer1.size},
-        },
-        {
-            "binding": 1,
-            "resource": {"buffer": buffer2, "offset": 0, "size": buffer2.size},
-        },
+        {"binding": 0, "resource": {"buffer": buffer1}},
+        {"binding": 1, "resource": {"buffer": buffer2}},
     ]
 
     bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
