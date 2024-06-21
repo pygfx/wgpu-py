@@ -8,7 +8,7 @@ import wgpu
 import sys
 from imgui_bundle import imgui, imgui_ctx
 from wgpu.gui.auto import WgpuCanvas, run
-from wgpu.utils.imgui_renderer import ImguiRenderer
+from wgpu.utils.imgui import ImguiRenderer
 
 
 # Create a canvas to render to

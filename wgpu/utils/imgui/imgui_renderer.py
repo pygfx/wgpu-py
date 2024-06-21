@@ -1,6 +1,6 @@
 from imgui_bundle import imgui
 import wgpu
-from wgpu.utils.imgui_backend import ImguiWgpuBackend
+from .imgui_backend import ImguiWgpuBackend
 
 
 class ImguiRenderer:
