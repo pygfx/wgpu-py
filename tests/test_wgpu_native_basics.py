@@ -63,10 +63,22 @@ def test_override_wgpu_lib_path():
 def test_tuple_from_tuple_or_dict():
     func = wgpu.backends.wgpu_native._api._tuple_from_tuple_or_dict
 
+    # Test all values being required.
     assert func([1, 2, 3], ("x", "y", "z")) == (1, 2, 3)
     assert func({"y": 2, "z": 3, "x": 1}, ("x", "y", "z")) == (1, 2, 3)
     assert func((10, 20), ("width", "height")) == (10, 20)
     assert func({"width": 10, "height": 20}, ("width", "height")) == (10, 20)
+
+    # Test having a default value
+    assert func([1, 2, 3], ("x", "y", "z"), (3,)) == (1, 2, 3)
+    assert func([1, 2], ("x", "y", "z"), (3,)) == (1, 2, 3)
+    assert func({"y": 2, "z": 3, "x": 1}, ("x", "y", "z"), (3,)) == (1, 2, 3)
+    assert func({"y": 2, "x": 1}, ("x", "y", "z"), (3,)) == (1, 2, 3)
+    assert func((), ("width", "height"), (10, 20)) == (10, 20)
+    assert func({}, ("width", "height"), (10, 20)) == (10, 20)
+
+    # Test that with dictionaries, you can elide values at the beginning, if we have them
+    assert func({"z": 5}, ("x", "y", "z"), (1, 2, 3)) == (1, 2, 5)
 
     with raises(TypeError):
         func("not tuple/dict", ("x", "y"))
@@ -76,6 +88,79 @@ def test_tuple_from_tuple_or_dict():
         func([1, 2, 3], ("x", "y"))
     with raises(ValueError):
         assert func({"x": 1}, ("x", "y"))
+    with raises(ValueError):
+        # not enough defaults
+        func([1], ("x", "y", "z"), (2,))
+    with raises(ValueError):
+        # we can elide y, but we can't elide x
+        func({"y": 2}, ("x", "y"), (1,))
+    with raises(ValueError):
+        # Right number of arguments, but wrong keyword
+        assert func({"y": 2, "x": 1, "w": 10}, ("x", "y", "z"))
+
+
+def test_tuple_from_extent3d():
+    func = wgpu.backends.wgpu_native._api._tuple_from_extent3d
+
+    assert func([10, 20, 30]) == (10, 20, 30)
+    assert func([10, 20]) == (10, 20, 1)
+    assert func([10]) == (10, 1, 1)
+    assert func({"width": 10, "height": 20, "depth_or_array_layers": 30}) == (
+        10,
+        20,
+        30,
+    )
+    assert func({"width": 10, "height": 20}) == (10, 20, 1)
+    assert func({"width": 10, "depth_or_array_layers": 30}) == (10, 1, 30)
+
+    with raises(ValueError):
+        func({"height": 20, "depth_or_array_layers": 30})  # width is required
+    with raises(ValueError):
+        func(())
+    with raises(ValueError):
+        # typo in argument
+        func({"width": 10, "height": 20, "depth_or_arrray_layers": 30})
+
+
+def test_tuple_from_blend_components():
+    func = wgpu.backends.wgpu_native._api._tuple_from_blend_component
+
+    assert func(("x", "y", "z")) == ("x", "y", "z")
+    assert func([]) == ("add", "one", "zero")
+    assert func({"operation": "j", "src_factor": 9, "dst_factor": "d"}) == (9, "d", "j")
+    assert func({}) == ("add", "one", "zero")
+
+    with raises(ValueError):
+        func([1, 2, 3, 4, 5])  # too many values
+    with raises(ValueError):
+        func([1, 2, 3, 4, 5])  # too many values
+
+
+def test_tuple_from_origin3d():
+    func = wgpu.backends.wgpu_native._api._tuple_from_origin3d
+
+    assert func({"origin": (1, 2, 3)}) == (1, 2, 3)
+    assert func({"origin": ()}) == (0, 0, 0)
+    assert func({}) == (0, 0, 0)
+    assert func({"origin": {"x": 10, "y": 20, "z": 30}}) == (10, 20, 30)
+    assert func({"origin": {"z": 30}}) == (0, 0, 30)
+
+    with raises(ValueError):
+        func({"origin": {"x": 10, "y": 20, "z": 30, "w": 40}})
+
+
+def test_tuple_from_color():
+    func = wgpu.backends.wgpu_native._api._tuple_from_color
+
+    assert func((0.1, 0.2, 0.3, 0.4)) == (0.1, 0.2, 0.3, 0.4)
+    assert func({"r": 0.1, "g": 0.2, "b": 0.3, "a": 0.4}) == (0.1, 0.2, 0.3, 0.4)
+
+    with raises(ValueError):
+        func((0.1, 0.2, 0.3))
+    with raises(ValueError):
+        func((0.1, 0.2, 0.3, 0.4, 0.5))
+    with raises(ValueError):
+        func({"r": 0.1, "g": 0.2, "b": 0.3, "w": 0.4})
 
 
 compute_shader_wgsl = """
