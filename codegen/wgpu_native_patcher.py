@@ -375,14 +375,19 @@ class ConstantPatcher(Patcher):
         for line, i in self.iter_lines():
             match = re.fullmatch(f"(WGPU_[a-zA-Z0-9_]+)\s*=\s*(.*)", line)
             if match:
-                count += 1
                 var_name = match.group(1)
                 # Put both names into canonical form. They don't have to match exactly.
                 actual_value = match.group(2).replace("_", "").upper()
-                expected_value = hp.constant_definitions[var_name].upper()
-                if actual_value != expected_value:
-                    self.insert_line(
-                        i, f"# FIXME: constant should have value {expected_value},"
-                    )
-                    print(f"ERROR: {var_name} should have value {expected_value}")
+                if var_name in hp.constant_definitions:
+                    expected_value = hp.constant_definitions[var_name].upper()
+                    if actual_value == expected_value:
+                        count += 1
+                    else:
+                        self.insert_line(
+                            i, f"# FIXME: constant should have value {expected_value},"
+                        )
+                        print(f"ERROR: {var_name} should have value {expected_value}")
+                else:
+                    self.insert_line(i, f"# FIXME: constant not found in C headers")
+                    print(f"ERROR: Found an unknown constant {var_name}")
         print(f"Validated {count} constant definitions")

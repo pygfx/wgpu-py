@@ -184,8 +184,8 @@ class HParser:
             self.functions[name] = line
 
         for match in re.finditer(
-            "^#define (WGPU_[A-Z0-9_]+) (0[xX][a-fA-F0-9]+)U?L*$",
-                code, re.MULTILINE):
+            "^#define (WGPU_[A-Z0-9_]+) (0[xX][a-fA-F0-9]+)U?L*$", code, re.MULTILINE
+        ):
             # Find all single lines that look like constant definitions.
             self.constant_definitions[match.group(1)] = match.group(2)
 
