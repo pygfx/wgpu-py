@@ -2,6 +2,13 @@
 ## Preparing
 * The webgpu.idl defines 37 classes with 75 functions
 * The webgpu.idl defines 5 flags, 33 enums, 59 structs
+* WGPU_ARRAY_LAYER_COUNT_UNDEFINED 0xffffffff
+* WGPU_COPY_STRIDE_UNDEFINED 0xffffffff
+* WGPU_LIMIT_U32_UNDEFINED 0xffffffff
+* WGPU_LIMIT_U64_UNDEFINED 0xffffffffffffffff
+* WGPU_MIP_LEVEL_COUNT_UNDEFINED 0xffffffff
+* WGPU_QUERY_SET_INDEX_UNDEFINED 0xffffffff
+* WGPU_WHOLE_SIZE 0xffffffffffffffff
 * The wgpu.h defines 198 functions
 * The wgpu.h defines 7 flags, 50 enums, 93 structs
 ## Updating API
@@ -32,3 +39,4 @@
 * Validated 113 C function calls
 * Not using 91 C functions
 * Validated 76 C structs
+* ERROR: WGPU_WHOLE_SIZE should have value 0XFFFFFFFFFFFFFFFF

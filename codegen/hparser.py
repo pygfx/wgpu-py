@@ -1,3 +1,5 @@
+import re
+
 from cffi import FFI
 
 from codegen.utils import print, remove_c_comments
@@ -64,6 +66,7 @@ class HParser:
         self.enums = {}
         self.structs = {}
         self.functions = {}
+        self.constant_definitions = {}
 
         self._parse_from_h()
         self._parse_from_cffi()
@@ -179,6 +182,12 @@ class HParser:
             line = code[i1 : i3 + 2]
             line = " ".join(line.split())  # effective way to put on one line
             self.functions[name] = line
+
+        for match in re.finditer(
+            "^#define (WGPU_[A-Z0-9_]+) (0[xX][a-fA-F0-9]+)U?L*$",
+                code, re.MULTILINE):
+            # Find all single lines that look like constant definitions.
+            self.constant_definitions[match.group(1)] = match.group(2)
 
     def _parse_from_cffi(self):
         self.ffi = ffi = FFI()

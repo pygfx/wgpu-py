@@ -13,6 +13,8 @@ Note that the apipatcher will also patch wgpu_native/_api.py, but where that cod
 focuses on the API, here we focus on the C library usage.
 """
 
+import re
+
 from codegen.utils import print, blacken, Patcher
 from codegen.hparser import get_h_parser
 from codegen.idlparser import get_idl_parser
@@ -184,7 +186,12 @@ def patch_wgpu_native_backend(code):
 
     """
 
-    for patcher in [CommentRemover(), FunctionPatcher(), StructPatcher()]:
+    for patcher in [
+        CommentRemover(),
+        FunctionPatcher(),
+        StructPatcher(),
+        ConstantPatcher(),
+    ]:
         patcher.apply(code)
         code = patcher.dumps()
     return code
@@ -357,3 +364,25 @@ class StructPatcher(Patcher):
                 more_lines.append(indent + f"    # not used: {key}")
         if more_lines:
             self.insert_line(i2, "\n".join(more_lines))
+
+
+class ConstantPatcher(Patcher):
+    def apply(self, code):
+        self._init(code)
+        hp = get_h_parser()
+        count = 0
+
+        for line, i in self.iter_lines():
+            match = re.fullmatch(f"(WGPU_[a-zA-Z0-9_]+)\s*=\s*(.*)", line)
+            if match:
+                count += 1
+                var_name = match.group(1)
+                # Put both names into canonical form. They don't have to match exactly.
+                actual_value = match.group(2).replace("_", "").upper()
+                expected_value = hp.constant_definitions[var_name].upper()
+                if actual_value != expected_value:
+                    self.insert_line(
+                        i, f"# FIXME: constant should have value {expected_value},"
+                    )
+                    print(f"ERROR: {var_name} should have value {expected_value}")
+        print(f"Validated {count} constant definitions")
