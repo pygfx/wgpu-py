@@ -504,6 +504,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._handle_event_and_flush(ev)
 
     def _on_char(self, window, char):
+        # Undocumented char event to make imgui work, see https://github.com/pygfx/wgpu-py/issues/530
         ev = {
             "event_type": "char",
             "char_str": chr(char),
