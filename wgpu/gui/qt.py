@@ -27,6 +27,7 @@ if libname:
     try:
         WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
         WA_DeleteOnClose = QtCore.Qt.WidgetAttribute.WA_DeleteOnClose
+        PinchGesture = QtCore.Qt.GestureType.PinchGesture
         PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
         KeyboardModifiers = QtCore.Qt.KeyboardModifier
         FocusPolicy = QtCore.Qt.FocusPolicy
@@ -34,6 +35,7 @@ if libname:
     except AttributeError:
         WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
         WA_DeleteOnClose = QtCore.Qt.WA_DeleteOnClose
+        PinchGesture = QtCore.Qt.PinchGesture
         PreciseTimer = QtCore.Qt.PreciseTimer
         KeyboardModifiers = QtCore.Qt
         FocusPolicy = QtCore.Qt
@@ -146,6 +148,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setAutoFillBackground(False)
         self.setMouseTracking(True)
         self.setFocusPolicy(FocusPolicy.StrongFocus)
+        self.grabGesture(PinchGesture)
 
         # A timer for limiting fps
         self._request_draw_timer = QtCore.QTimer()
@@ -244,6 +247,13 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         }
         self._handle_event_and_flush(ev)
 
+    def event(self, event):
+        if isinstance(event, QtWidgets.QGestureEvent):
+            self._handle_gesture_event(event)
+            return True
+        else:
+            return super().event(event)
+
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
 
@@ -326,6 +336,20 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         match_keys = {"modifiers"}
         accum_keys = {"dx", "dy"}
         self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
+
+    def _handle_gesture_event(self, event):
+        for gesture in event.activeGestures():
+            if gesture.gestureType() == PinchGesture:
+                ev = {
+                    "event_type": "pinch",
+                    "scale": gesture.scaleFactor(),
+                    "angle": gesture.lastRotationAngle() - gesture.rotationAngle(),
+                    # "buttons": buttons,  -> event does not have them. Drop or track these?
+                    # "modifiers": modifiers,
+                }
+                match_keys = set()
+                accum_keys = {"scale", "angle"}
+                self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
 
     def resizeEvent(self, event):  # noqa: N802
         ev = {
