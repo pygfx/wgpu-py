@@ -188,6 +188,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         glfw.set_cursor_pos_callback(self._window, weakbind(self._on_cursor_pos))
         glfw.set_scroll_callback(self._window, weakbind(self._on_scroll))
         glfw.set_key_callback(self._window, weakbind(self._on_key))
+        glfw.set_char_callback(self._window, weakbind(self._on_char))
 
         # Initialize the size
         self._pixel_ratio = -1
@@ -498,6 +499,15 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         ev = {
             "event_type": event_type,
             "key": keyname,
+            "modifiers": tuple(self._key_modifiers),
+        }
+        self._handle_event_and_flush(ev)
+
+    def _on_char(self, window, char):
+        # Undocumented char event to make imgui work, see https://github.com/pygfx/wgpu-py/issues/530
+        ev = {
+            "event_type": "char",
+            "char_str": chr(char),
             "modifiers": tuple(self._key_modifiers),
         }
         self._handle_event_and_flush(ev)
