@@ -27,6 +27,7 @@ if libname:
     try:
         WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
         WA_DeleteOnClose = QtCore.Qt.WidgetAttribute.WA_DeleteOnClose
+        WA_InputMethodEnabled = QtCore.Qt.WidgetAttribute.WA_InputMethodEnabled
         PreciseTimer = QtCore.Qt.TimerType.PreciseTimer
         KeyboardModifiers = QtCore.Qt.KeyboardModifier
         FocusPolicy = QtCore.Qt.FocusPolicy
@@ -34,6 +35,7 @@ if libname:
     except AttributeError:
         WA_PaintOnScreen = QtCore.Qt.WA_PaintOnScreen
         WA_DeleteOnClose = QtCore.Qt.WA_DeleteOnClose
+        WA_InputMethodEnabled = QtCore.Qt.WA_InputMethodEnabled
         PreciseTimer = QtCore.Qt.PreciseTimer
         KeyboardModifiers = QtCore.Qt
         FocusPolicy = QtCore.Qt
@@ -143,6 +145,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         # Configure how Qt renders this widget
         self.setAttribute(WA_PaintOnScreen, True)
         self.setAttribute(WA_DeleteOnClose, True)
+        self.setAttribute(WA_InputMethodEnabled, True)
         self.setAutoFillBackground(False)
         self.setMouseTracking(True)
         self.setFocusPolicy(FocusPolicy.StrongFocus)
@@ -244,11 +247,25 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         }
         self._handle_event_and_flush(ev)
 
+    def _char_input_event(self, char_str):
+        ev = {
+            "event_type": "char",
+            "char_str": char_str,
+            "modifiers": None,
+        }
+        self._handle_event_and_flush(ev)
+
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
+        self._char_input_event(event.text())
 
     def keyReleaseEvent(self, event):  # noqa: N802
         self._key_event("key_up", event)
+
+    def inputMethodEvent(self, event):  # noqa: N802
+        commit_string = event.commitString()
+        if commit_string:
+            self._char_input_event(commit_string)
 
     def _mouse_event(self, event_type, event, touches=True):
         button = BUTTON_MAP.get(event.button(), 0)
