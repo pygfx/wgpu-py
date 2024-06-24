@@ -37,9 +37,6 @@ from ._helpers import (
     SafeLibCalls,
 )
 
-WGPU_WHOLE_SIZE = 0xFFFF_FFFF_FFFF_FFFF  # 2**64 - 1
-WGPU_QUERY_SET_INDEX_UNDEFINED = 0xFFFF_FFFF
-
 logger = logging.getLogger("wgpu")  # noqa
 
 
@@ -1266,7 +1263,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     binding=int(entry["binding"]),
                     buffer=resource["buffer"]._internal,
                     offset=resource.get("offset", 0),
-                    size=resource.get("size", WGPU_WHOLE_SIZE),
+                    size=resource.get("size", lib.WGPU_WHOLE_SIZE),
                     sampler=ffi.NULL,
                     textureView=ffi.NULL,
                     # not used: nextInChain
@@ -2246,7 +2243,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 
     def set_index_buffer(self, buffer, index_format, offset=0, size=None):
         if not size:
-            size = WGPU_WHOLE_SIZE
+            size = lib.WGPU_WHOLE_SIZE
         c_index_format = enummap[f"IndexFormat.{index_format}"]
         # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
         libf.wgpuRenderPassEncoderSetIndexBuffer(
@@ -2255,7 +2252,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 
     def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
         if not size:
-            size = WGPU_WHOLE_SIZE
+            size = lib.WGPU_WHOLE_SIZE
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
         libf.wgpuRenderPassEncoderSetVertexBuffer(
             self._internal, int(slot), buffer._internal, int(offset), int(size)
@@ -2314,10 +2311,10 @@ class GPUCommandEncoder(
                 "WGPUComputePassTimestampWrites *",
                 querySet=timestamp_writes["query_set"]._internal,
                 beginningOfPassWriteIndex=timestamp_writes.get(
-                    "beginning_of_pass_write_index", WGPU_QUERY_SET_INDEX_UNDEFINED
+                    "beginning_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED
                 ),
                 endOfPassWriteIndex=timestamp_writes.get(
-                    "end_of_pass_write_index", WGPU_QUERY_SET_INDEX_UNDEFINED
+                    "end_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED
                 ),
             )
         # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWrites: WGPUComputePassTimestampWrites *
@@ -2351,10 +2348,10 @@ class GPUCommandEncoder(
                 "WGPURenderPassTimestampWrites *",
                 querySet=timestamp_writes["query_set"]._internal,
                 beginningOfPassWriteIndex=timestamp_writes.get(
-                    "beginning_of_pass_write_index", WGPU_QUERY_SET_INDEX_UNDEFINED
+                    "beginning_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED
                 ),
                 endOfPassWriteIndex=timestamp_writes.get(
-                    "end_of_pass_write_index", WGPU_QUERY_SET_INDEX_UNDEFINED
+                    "end_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED
                 ),
             )
 
@@ -2454,7 +2451,7 @@ class GPUCommandEncoder(
             if offset + size > buffer.size:  # pragma: no cover
                 raise ValueError("buffer size out of range")
         else:
-            size = WGPU_WHOLE_SIZE
+            size = lib.WGPU_WHOLE_SIZE
             if offset > buffer.size:
                 raise ValueError("offset is too large")
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUBuffer buffer, uint64_t offset, uint64_t size)
