@@ -509,7 +509,7 @@ def _compute_texture(compute_shader, texture_format, texture_dim, texture_size, 
             "binding": 1,
             "visibility": wgpu.ShaderStage.COMPUTE,
             "storage_texture": {
-                "access": wgpu.StorageTextureAccess.write_only,
+                # Eliding "access: write-only" as it is the default.
                 "format": texture_format,
                 "view_dimension": texture_dim,
             },

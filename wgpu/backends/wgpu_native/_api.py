@@ -1133,7 +1133,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUBufferBindingType, hasDynamicOffset: WGPUBool/int, minBindingSize: int
                 buffer = new_struct(
                     "WGPUBufferBindingLayout",
-                    type=info["type"],
+                    type=info.get("type", "uniform"),
                     hasDynamicOffset=info.get("has_dynamic_offset", False),
                     minBindingSize=min_binding_size,
                     # not used: nextInChain
@@ -1164,7 +1164,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # H: nextInChain: WGPUChainedStruct *, access: WGPUStorageTextureAccess, format: WGPUTextureFormat, viewDimension: WGPUTextureViewDimension
                 storage_texture = new_struct(
                     "WGPUStorageTextureBindingLayout",
-                    access=info["access"],
+                    access=info.get("access", "write-only"),
                     viewDimension=info.get("view_dimension", "2d"),
                     format=info["format"],
                     # not used: nextInChain
@@ -1474,7 +1474,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         check_struct("PrimitiveState", primitive)
 
         c_vertex_buffer_layout_list = []
-        for buffer_des in vertex["buffers"]:
+        for buffer_des in vertex.get("buffers", ()):
             c_attributes_list = []
             for attribute in buffer_des["attributes"]:
                 # H: format: WGPUVertexFormat, offset: int, shaderLocation: int
