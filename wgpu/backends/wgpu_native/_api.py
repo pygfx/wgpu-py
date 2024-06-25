@@ -177,7 +177,7 @@ def _tuple_from_blend_component(components):
         # defaults to "add", "one", "zero"
         components,
         ("src_factor", "dst_factor", "operation"),
-        ("add", "one", "zero"),
+        ("one", "zero", "add"),
     )
 
 
