@@ -124,16 +124,8 @@ def render_to_texture(
                 {
                     "format": texture_format,
                     "blend": {
-                        "color": (
-                            wgpu.BlendFactor.one,
-                            wgpu.BlendFactor.zero,
-                            wgpu.BlendOperation.add,
-                        ),
-                        "alpha": (
-                            wgpu.BlendFactor.one,
-                            wgpu.BlendFactor.zero,
-                            wgpu.BlendOperation.add,
-                        ),
+                        "color": {},
+                        "alpha": {},
                     },
                     "write_mask": wgpu.ColorWrite.ALL,
                 },

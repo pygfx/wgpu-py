@@ -172,15 +172,6 @@ def _tuple_from_extent3d(size):
     )
 
 
-def _tuple_from_blend_component(components):
-    return _tuple_from_tuple_or_dict(
-        # defaults to "add", "one", "zero"
-        components,
-        ("src_factor", "dst_factor", "operation"),
-        ("one", "zero", "add"),
-    )
-
-
 def _tuple_from_origin3d(destination):
     fields = destination.get("origin", (0, 0, 0))
     # Each field individually is 0 if not specified
@@ -1133,7 +1124,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUBufferBindingType, hasDynamicOffset: WGPUBool/int, minBindingSize: int
                 buffer = new_struct(
                     "WGPUBufferBindingLayout",
-                    type=info["type"],
+                    type=info.get("type", "uniform"),
                     hasDynamicOffset=info.get("has_dynamic_offset", False),
                     minBindingSize=min_binding_size,
                     # not used: nextInChain
@@ -1164,7 +1155,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # H: nextInChain: WGPUChainedStruct *, access: WGPUStorageTextureAccess, format: WGPUTextureFormat, viewDimension: WGPUTextureViewDimension
                 storage_texture = new_struct(
                     "WGPUStorageTextureBindingLayout",
-                    access=info["access"],
+                    access=info.get("access", "write-only"),
                     viewDimension=info.get("view_dimension", "2d"),
                     format=info["format"],
                     # not used: nextInChain
@@ -1474,7 +1465,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         check_struct("PrimitiveState", primitive)
 
         c_vertex_buffer_layout_list = []
-        for buffer_des in vertex["buffers"]:
+        for buffer_des in vertex.get("buffers", ()):
             c_attributes_list = []
             for attribute in buffer_des["attributes"]:
                 # H: format: WGPUVertexFormat, offset: int, shaderLocation: int
@@ -1576,22 +1567,19 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 if not target.get("blend", None):
                     c_blend = ffi.NULL
                 else:
-                    alpha_blend = _tuple_from_blend_component(target["blend"]["alpha"])
-                    # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
-                    c_alpha_blend = new_struct(
-                        "WGPUBlendComponent",
-                        srcFactor=alpha_blend[0],
-                        dstFactor=alpha_blend[1],
-                        operation=alpha_blend[2],
-                    )
-                    color_blend = _tuple_from_blend_component(target["blend"]["color"])
-                    # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
-                    c_color_blend = new_struct(
-                        "WGPUBlendComponent",
-                        srcFactor=color_blend[0],
-                        dstFactor=color_blend[1],
-                        operation=color_blend[2],
-                    )
+                    c_alpha_blend, c_color_blend = [
+                        # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
+                        new_struct(
+                            "WGPUBlendComponent",
+                            srcFactor=component.get("src_factor", "one"),
+                            dstFactor=component.get("dst_factor", "zero"),
+                            operation=component.get("operation", "add"),
+                        )
+                        for component in (
+                            target["blend"]["alpha"],
+                            target["blend"]["color"],
+                        )
+                    ]
                     # H: color: WGPUBlendComponent, alpha: WGPUBlendComponent
                     c_blend = new_struct_p(
                         "WGPUBlendState *",
