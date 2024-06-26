@@ -1571,11 +1571,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                         # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
                         new_struct(
                             "WGPUBlendComponent",
-                            srcFactor=component.get("src_factor", "one"),
-                            dstFactor=component.get("dst_factor", "zero"),
-                            operation=component.get("operation", "add"),
+                            srcFactor=blend.get("src_factor", "one"),
+                            dstFactor=blend.get("dst_factor", "zero"),
+                            operation=blend.get("operation", "add"),
                         )
-                        for component in (
+                        for blend in (
                             target["blend"]["alpha"],
                             target["blend"]["color"],
                         )

@@ -302,16 +302,8 @@ render_pipeline = device.create_render_pipeline(
             {
                 "format": render_texture_format,
                 "blend": {
-                    "alpha": (
-                        wgpu.BlendFactor.one,
-                        wgpu.BlendFactor.zero,
-                        wgpu.BlendOperation.add,
-                    ),
-                    "color": (
-                        wgpu.BlendFactor.one,
-                        wgpu.BlendFactor.zero,
-                        wgpu.BlendOperation.add,
-                    ),
+                    "alpha": {},
+                    "color": {},
                 },
             }
         ],
