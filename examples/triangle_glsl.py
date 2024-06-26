@@ -77,7 +77,6 @@ def _main(canvas, device):
         vertex={
             "module": vert_shader,
             "entry_point": "main",
-            "buffers": [],
         },
         primitive={
             "topology": wgpu.PrimitiveTopology.triangle_list,

@@ -1124,7 +1124,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             sampler = {}
             texture = {}
             storage_texture = {}
-            if entry.get("buffer"):
+            if "buffer" in entry:  # Note, it might be an empty dictionary
                 info = entry["buffer"]
                 check_struct("BufferBindingLayout", info)
                 min_binding_size = info.get("min_binding_size", None)

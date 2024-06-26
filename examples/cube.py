@@ -222,7 +222,10 @@ bind_groups_layout_entries[0].append(
     {
         "binding": 0,
         "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-        "buffer": {"type": wgpu.BufferBindingType.uniform},
+        "buffer": {
+            # This is the default value, so we are testing that it can be elided.
+            # "type": wgpu.BufferBindingType.uniform
+        },
     }
 )
 
