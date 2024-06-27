@@ -1124,7 +1124,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUBufferBindingType, hasDynamicOffset: WGPUBool/int, minBindingSize: int
                 buffer = new_struct(
                     "WGPUBufferBindingLayout",
-                    type=info.get("type", "uniform"),
+                    type=info["type"],
                     hasDynamicOffset=info.get("has_dynamic_offset", False),
                     minBindingSize=min_binding_size,
                     # not used: nextInChain
