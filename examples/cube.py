@@ -222,10 +222,7 @@ bind_groups_layout_entries[0].append(
     {
         "binding": 0,
         "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-        "buffer": {
-            # This is the default value, so we are testing that it can be elided.
-            # "type": wgpu.BufferBindingType.uniform
-        },
+        "buffer": {},
     }
 )
 
@@ -234,11 +231,7 @@ bind_groups_layout_entries[0].append(
     {
         "binding": 1,
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "texture": {
-            # These are the default values, and we are testing that they can be elided.
-            # "sample_type": wgpu.TextureSampleType.float,
-            # "view_dimension": wgpu.TextureViewDimension.d2,
-        },
+        "texture": {},
     }
 )
 
@@ -247,10 +240,7 @@ bind_groups_layout_entries[0].append(
     {
         "binding": 2,
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "sampler": {
-            # This is the default value, and we are testing that it can be elided.
-            # "type": wgpu.SamplerBindingType.filtering
-        },
+        "sampler": {},
     }
 )
 
