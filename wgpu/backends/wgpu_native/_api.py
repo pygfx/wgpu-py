@@ -172,15 +172,6 @@ def _tuple_from_extent3d(size):
     )
 
 
-def _tuple_from_blend_component(components):
-    return _tuple_from_tuple_or_dict(
-        # defaults to "add", "one", "zero"
-        components,
-        ("src_factor", "dst_factor", "operation"),
-        ("add", "one", "zero"),
-    )
-
-
 def _tuple_from_origin3d(destination):
     fields = destination.get("origin", (0, 0, 0))
     # Each field individually is 0 if not specified
@@ -1576,22 +1567,19 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 if not target.get("blend", None):
                     c_blend = ffi.NULL
                 else:
-                    alpha_blend = _tuple_from_blend_component(target["blend"]["alpha"])
-                    # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
-                    c_alpha_blend = new_struct(
-                        "WGPUBlendComponent",
-                        srcFactor=alpha_blend[0],
-                        dstFactor=alpha_blend[1],
-                        operation=alpha_blend[2],
-                    )
-                    color_blend = _tuple_from_blend_component(target["blend"]["color"])
-                    # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
-                    c_color_blend = new_struct(
-                        "WGPUBlendComponent",
-                        srcFactor=color_blend[0],
-                        dstFactor=color_blend[1],
-                        operation=color_blend[2],
-                    )
+                    c_alpha_blend, c_color_blend = [
+                        # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
+                        new_struct(
+                            "WGPUBlendComponent",
+                            srcFactor=blend.get("src_factor", "one"),
+                            dstFactor=blend.get("dst_factor", "zero"),
+                            operation=blend.get("operation", "add"),
+                        )
+                        for blend in (
+                            target["blend"]["alpha"],
+                            target["blend"]["color"],
+                        )
+                    ]
                     # H: color: WGPUBlendComponent, alpha: WGPUBlendComponent
                     c_blend = new_struct_p(
                         "WGPUBlendState *",

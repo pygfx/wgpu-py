@@ -842,7 +842,7 @@ class GPUDevice(GPUObjectBase):
         .. code-block:: py
 
             {
-                "topology": wgpu.PrimitiveTopology.triangle_list,
+                "topology": wgpu.PrimitiveTopology.triangle_list, # optional
                 "strip_index_format": wgpu.IndexFormat.uint32,  # see note
                 "front_face": wgpu.FrontFace.ccw,  # optional
                 "cull_mode": wgpu.CullMode.none,  # optional
@@ -897,16 +897,16 @@ class GPUDevice(GPUObjectBase):
                     {
                         "format": wgpu.TextureFormat.bgra8unorm_srgb,
                         "blend": {
-                            "color": (
-                                wgpu.BlendFactor.One,
-                                wgpu.BlendFactor.zero,
-                                gpu.BlendOperation.add,
-                            ),
-                            "alpha": (
-                                wgpu.BlendFactor.One,
-                                wgpu.BlendFactor.zero,
-                                wgpu.BlendOperation.add,
-                            ),
+                            "color": {
+                                "src_target": wgpu.BlendFactor.one,  # optional
+                                "dst_target": wgpu.BlendFactor.zero,  # optional
+                                "operation": gpu.BlendOperation.add, # optional
+                            },
+                            "alpha": {
+                                "src_target": wgpu.BlendFactor.one, # optional
+                                "dst_target": wgpu.BlendFactor.zero, # optional
+                                "operation": wgpu.BlendOperation.add, # optional
+                            },
                         }
                         "write_mask": wgpu.ColorWrite.ALL  # optional
                     },

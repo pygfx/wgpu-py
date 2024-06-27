@@ -265,16 +265,8 @@ def _get_draw_function(device, canvas):
                 {
                     "format": render_texture_format,
                     "blend": {
-                        "color": (
-                            wgpu.BlendFactor.one,
-                            wgpu.BlendFactor.zero,
-                            wgpu.BlendOperation.add,
-                        ),
-                        "alpha": (
-                            wgpu.BlendFactor.one,
-                            wgpu.BlendFactor.zero,
-                            wgpu.BlendOperation.add,
-                        ),
+                        "color": {},  # use defaults
+                        "alpha": {},  # use defaults
                     },
                 },
             ],

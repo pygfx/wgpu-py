@@ -271,16 +271,16 @@ class ImguiWgpuBackend:
                     {
                         "format": self._target_format,
                         "blend": {
-                            "color": (
-                                wgpu.BlendFactor.src_alpha,
-                                wgpu.BlendFactor.one_minus_src_alpha,
-                                wgpu.BlendOperation.add,
-                            ),
-                            "alpha": (
-                                wgpu.BlendFactor.one,
-                                wgpu.BlendFactor.one_minus_src_alpha,
-                                wgpu.BlendOperation.add,
-                            ),
+                            "color": {
+                                "src_factor": wgpu.BlendFactor.src_alpha,
+                                "dst_factor": wgpu.BlendFactor.one_minus_src_alpha,
+                                "operation": wgpu.BlendOperation.add,
+                            },
+                            "alpha": {
+                                "src_factor": wgpu.BlendFactor.one,
+                                "dst_factor": wgpu.BlendFactor.one_minus_src_alpha,
+                                "operation": wgpu.BlendOperation.add,
+                            },
                         },
                     },
                 ],

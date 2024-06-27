@@ -292,16 +292,8 @@ def test_release_render_pipeline(n):
                     {
                         "format": "bgra8unorm-srgb",
                         "blend": {
-                            "color": (
-                                wgpu.BlendFactor.one,
-                                wgpu.BlendFactor.zero,
-                                wgpu.BlendOperation.add,
-                            ),
-                            "alpha": (
-                                wgpu.BlendFactor.one,
-                                wgpu.BlendFactor.zero,
-                                wgpu.BlendOperation.add,
-                            ),
+                            "color": {},
+                            "alpha": {},
                         },
                     },
                 ],

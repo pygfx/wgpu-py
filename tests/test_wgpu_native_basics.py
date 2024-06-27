@@ -122,20 +122,6 @@ def test_tuple_from_extent3d():
         func({"width": 10, "height": 20, "depth_or_arrray_layers": 30})
 
 
-def test_tuple_from_blend_components():
-    func = wgpu.backends.wgpu_native._api._tuple_from_blend_component
-
-    assert func(("x", "y", "z")) == ("x", "y", "z")
-    assert func([]) == ("add", "one", "zero")
-    assert func({"operation": "j", "src_factor": 9, "dst_factor": "d"}) == (9, "d", "j")
-    assert func({}) == ("add", "one", "zero")
-
-    with raises(ValueError):
-        func([1, 2, 3, 4, 5])  # too many values
-    with raises(ValueError):
-        func([1, 2, 3, 4, 5])  # too many values
-
-
 def test_tuple_from_origin3d():
     func = wgpu.backends.wgpu_native._api._tuple_from_origin3d
 
