@@ -235,8 +235,9 @@ bind_groups_layout_entries[0].append(
         "binding": 1,
         "visibility": wgpu.ShaderStage.FRAGMENT,
         "texture": {
-            "sample_type": wgpu.TextureSampleType.float,
-            "view_dimension": wgpu.TextureViewDimension.d2,
+            # These are the default values, and we are testing that they can be elided.
+            # "sample_type": wgpu.TextureSampleType.float,
+            # "view_dimension": wgpu.TextureViewDimension.d2,
         },
     }
 )
@@ -246,7 +247,10 @@ bind_groups_layout_entries[0].append(
     {
         "binding": 2,
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "sampler": {"type": wgpu.SamplerBindingType.filtering},
+        "sampler": {
+            # This is the default value, and we are testing that it can be elided.
+            # "type": wgpu.SamplerBindingType.filtering
+        },
     }
 )
 

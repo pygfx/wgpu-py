@@ -1138,16 +1138,16 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     minBindingSize=min_binding_size,
                     # not used: nextInChain
                 )
-            elif entry.get("sampler"):
+            elif "sampler" in entry:  # It may be an empty dictionary
                 info = entry["sampler"]
                 check_struct("SamplerBindingLayout", info)
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUSamplerBindingType
                 sampler = new_struct(
                     "WGPUSamplerBindingLayout",
-                    type=info["type"],
+                    type=info.get("type", "filtering"),
                     # not used: nextInChain
                 )
-            elif entry.get("texture"):
+            elif "texture" in entry:  # It may be an empty dictionary
                 info = entry["texture"]
                 check_struct("TextureBindingLayout", info)
                 # H: nextInChain: WGPUChainedStruct *, sampleType: WGPUTextureSampleType, viewDimension: WGPUTextureViewDimension, multisampled: WGPUBool/int
@@ -1158,7 +1158,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     multisampled=info.get("multisampled", False),
                     # not used: nextInChain
                 )
-            elif entry.get("storage_texture"):
+            elif "storage_texture" in entry:  # format is required, so not empty
                 info = entry["storage_texture"]
                 check_struct("StorageTextureBindingLayout", info)
                 # H: nextInChain: WGPUChainedStruct *, access: WGPUStorageTextureAccess, format: WGPUTextureFormat, viewDimension: WGPUTextureViewDimension
