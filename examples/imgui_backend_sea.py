@@ -240,7 +240,6 @@ pipeline = device.create_render_pipeline(
     vertex={
         "module": module,
         "entry_point": "vs_main",
-        "buffers": [],
     },
     fragment={
         "module": module,

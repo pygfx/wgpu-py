@@ -1115,7 +1115,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             sampler = {}
             texture = {}
             storage_texture = {}
-            if entry.get("buffer"):
+            if "buffer" in entry:  # Note, it might be an empty dictionary
                 info = entry["buffer"]
                 check_struct("BufferBindingLayout", info)
                 min_binding_size = info.get("min_binding_size", None)
@@ -1124,21 +1124,21 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUBufferBindingType, hasDynamicOffset: WGPUBool/int, minBindingSize: int
                 buffer = new_struct(
                     "WGPUBufferBindingLayout",
-                    type=info["type"],
+                    type=info.get("type", "uniform"),
                     hasDynamicOffset=info.get("has_dynamic_offset", False),
                     minBindingSize=min_binding_size,
                     # not used: nextInChain
                 )
-            elif entry.get("sampler"):
+            elif "sampler" in entry:  # It may be an empty dictionary
                 info = entry["sampler"]
                 check_struct("SamplerBindingLayout", info)
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUSamplerBindingType
                 sampler = new_struct(
                     "WGPUSamplerBindingLayout",
-                    type=info["type"],
+                    type=info.get("type", "filtering"),
                     # not used: nextInChain
                 )
-            elif entry.get("texture"):
+            elif "texture" in entry:  # It may be an empty dictionary
                 info = entry["texture"]
                 check_struct("TextureBindingLayout", info)
                 # H: nextInChain: WGPUChainedStruct *, sampleType: WGPUTextureSampleType, viewDimension: WGPUTextureViewDimension, multisampled: WGPUBool/int
@@ -1149,7 +1149,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     multisampled=info.get("multisampled", False),
                     # not used: nextInChain
                 )
-            elif entry.get("storage_texture"):
+            elif "storage_texture" in entry:  # format is required, so not empty
                 info = entry["storage_texture"]
                 check_struct("StorageTextureBindingLayout", info)
                 # H: nextInChain: WGPUChainedStruct *, access: WGPUStorageTextureAccess, format: WGPUTextureFormat, viewDimension: WGPUTextureViewDimension

@@ -277,7 +277,6 @@ def test_release_render_pipeline(n):
             vertex={
                 "module": shader,
                 "entry_point": "vs_main",
-                "buffers": [],
             },
             primitive={
                 "topology": wgpu.PrimitiveTopology.triangle_list,

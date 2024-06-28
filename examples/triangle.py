@@ -89,12 +89,6 @@ def setup_draw(context, device):
         vertex={
             "module": shader,
             "entry_point": "vs_main",
-            "buffers": [],
-        },
-        primitive={
-            "topology": wgpu.PrimitiveTopology.triangle_list,
-            "front_face": wgpu.FrontFace.ccw,
-            "cull_mode": wgpu.CullMode.none,
         },
         depth_stencil=None,
         multisample=None,
