@@ -68,7 +68,8 @@ class ImguiRenderer:
         if self._canvas_context._config is None:
             self._canvas_context.configure(device=device, format=render_target_format)
 
-        imgui.create_context()
+        self._imgui_context = imgui.create_context()
+        imgui.set_current_context(self._imgui_context)
 
         self._backend = ImguiWgpuBackend(device, render_target_format)
 
@@ -82,6 +83,11 @@ class ImguiRenderer:
         canvas.add_event_handler(self._on_key, "key_up", "key_down")
         canvas.add_event_handler(self._on_wheel, "wheel")
         canvas.add_event_handler(self._on_char_input, "char")
+
+    @property
+    def imgui_context(self) -> imgui.internal.Context:
+        """imgui context for this renderer"""
+        return self._imgui_context
 
     @property
     def backend(self):
