@@ -30,8 +30,8 @@ if sys.platform.startswith("darwin"):
 
 
 def get_memoryview_and_address(data):
-    """Get a memoryview for the given data and its memory address.
-    The data object must support the buffer protocol.
+    """Get a memoryview and memory-address for the given data.
+    The data object must support the buffer protocol, and be contiguous.
     """
 
     # To get the address from a memoryview, there are multiple options.
@@ -57,9 +57,11 @@ def get_memoryview_and_address(data):
     m = memoryview(data)
 
     # Test that the data is contiguous.
+    # In most cases we'd want c_contiguous data, but the user may be
+    # playing fancy tricks so we check for general contiguous-ness only.
     # Note that pypy does not have the contiguous attribute, so we assume it is.
     if not getattr(m, "contiguous", True):
-        raise ValueError("The given texture data is not contiguous")
+        raise ValueError("The given data is not contiguous")
 
     # Get the address via ffi. In contrast to ctypes, this also
     # works for readonly data (e.g. bytes)

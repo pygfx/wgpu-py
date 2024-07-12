@@ -1897,7 +1897,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         src_address = int(ffi.cast("intptr_t", src_ptr))
         src_m = get_memoryview_from_address(src_address, size)
 
-        # Copy data
+        # Copy data. If not contiguous, this operation may be slower.
         src_m[:] = data
 
     def _experimental_get_mapped_range(self, buffer_offset=None, size=None):
@@ -2473,7 +2473,7 @@ class GPUCommandEncoder(
         bytes_per_row = int(source["bytes_per_row"])
         if (bytes_per_row % row_alignment) != 0:
             raise ValueError(
-                f"bytes_per_row must ({bytes_per_row}) be a multiple of {row_alignment}"
+                f"bytes_per_row ({bytes_per_row}) must be a multiple of {row_alignment}"
             )
         if isinstance(destination["texture"], GPUTextureView):
             raise ValueError("copy destination texture must be a texture, not a view")
