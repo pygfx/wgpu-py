@@ -34,7 +34,6 @@ def update_gui():
     imgui.begin("window1", None)
     imgui.button("b1")
 
-
     imgui.end()
 
     imgui.end_frame()
