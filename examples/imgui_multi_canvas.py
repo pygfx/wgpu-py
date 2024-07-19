@@ -10,22 +10,24 @@ from wgpu.gui.auto import WgpuCanvas, run
 from wgpu.utils.imgui import ImguiRenderer
 
 # Create a canvas to render to
-canvas = WgpuCanvas(title="imgui", size=(512, 256))
+canvas1 = WgpuCanvas(title="imgui", size=(512, 256))
 canvas2 = WgpuCanvas(title="imgui", size=(512, 256))
 canvas3 = WgpuCanvas(title="imgui", size=(512, 256))
+
+canvases = [canvas1, canvas2, canvas3]
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
 device = adapter.request_device()
 
 # create a imgui renderer for each canvas
-imgui_renderer = ImguiRenderer(device, canvas)
+imgui_renderer1 = ImguiRenderer(device, canvas1)
 imgui_renderer2 = ImguiRenderer(device, canvas2)
 imgui_renderer3 = ImguiRenderer(device, canvas3)
 
 
 # Separate GUIs that are drawn to each canvas
-def update_gui():
+def update_gui1():
     imgui.new_frame()
 
     imgui.set_next_window_size((300, 0), imgui.Cond_.appearing)
@@ -76,23 +78,31 @@ def update_gui3():
     return imgui.get_draw_data()
 
 
-def draw_frame():
-    # set corresponding imgui context before rendering
-    imgui.set_current_context(imgui_renderer.imgui_context)
-    imgui_renderer.render(update_gui())
+# give the gui updater functions to the imgui renderer
+imgui_renderer1.set_gui(update_gui1)
+imgui_renderer2.set_gui(update_gui2)
+imgui_renderer3.set_gui(update_gui3)
 
-    imgui.set_current_context(imgui_renderer2.imgui_context)
-    imgui_renderer2.render(update_gui2())
 
-    imgui.set_current_context(imgui_renderer3.imgui_context)
-    imgui_renderer3.render(update_gui3())
+# draw function for each canvas
+def draw1():
+    imgui_renderer1.render()
+    canvas1.request_draw()
 
-    # done! request draw
-    canvas.request_draw()
+
+def draw2():
+    imgui_renderer2.render()
     canvas2.request_draw()
+
+
+def draw3():
+    imgui_renderer3.render()
     canvas3.request_draw()
 
 
 if __name__ == "__main__":
-    canvas.request_draw(draw_frame)
+    canvas1.request_draw(draw1)
+    canvas2.request_draw(draw2)
+    canvas3.request_draw(draw3)
+
     run()

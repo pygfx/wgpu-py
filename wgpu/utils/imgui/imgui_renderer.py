@@ -84,6 +84,25 @@ class ImguiRenderer:
         canvas.add_event_handler(self._on_wheel, "wheel")
         canvas.add_event_handler(self._on_char_input, "char")
 
+        self._update_gui_function = None
+
+    def set_gui(self, gui_updater: callable):
+        """
+        Set the gui update function that is called on every render cycle to update the GUI
+
+        Parameters
+        ----------
+        gui_updater: callable
+            GUI update function, must return imgui.ImDrawData: the draw data to
+            render, this is usually obtained by calling ``imgui.get_draw_data()``
+
+        Returns
+        -------
+        None
+
+        """
+        self._update_gui_function = gui_updater
+
     @property
     def imgui_context(self) -> imgui.internal.Context:
         """imgui context for this renderer"""
@@ -94,15 +113,19 @@ class ImguiRenderer:
         """The backend instance used by this renderer."""
         return self._backend
 
-    def render(self, draw_data):
+    def render(self):
         """
         render the imgui draw data to the canvas
-
-        Parameters
-        ----------
-        draw_data : imgui.ImDrawData
-            The draw data to render, this is usually obtained by calling ``imgui.get_draw_data()``
         """
+
+        if self._update_gui_function is None:
+            raise AttributeError(
+                "Must set the GUI update function using set_gui() before calling render()"
+            )
+
+        imgui.set_current_context(self.imgui_context)
+        draw_data = self._update_gui_function()
+
         command_encoder = self._backend._device.create_command_encoder()
         current_texture_view = self._canvas_context.get_current_texture().create_view()
         render_pass = command_encoder.begin_render_pass(
