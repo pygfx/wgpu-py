@@ -78,7 +78,7 @@ def update_gui3():
     return imgui.get_draw_data()
 
 
-# give the gui updater functions to the imgui renderer
+# give the corresponding gui updater functions to the imgui renderers
 imgui_renderer1.set_gui(update_gui1)
 imgui_renderer2.set_gui(update_gui2)
 imgui_renderer3.set_gui(update_gui3)
