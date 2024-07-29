@@ -2404,6 +2404,11 @@ class GPUCommandEncoder(
                 ),
             )
 
+        c_occlusion_query_set = ffi.NULL
+        if occlusion_query_set is not None:
+            c_occlusion_query_set = occlusion_query_set._internal
+            objects_to_keep_alive[c_occlusion_query_set] = occlusion_query_set
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet, timestampWrites: WGPURenderPassTimestampWrites *
         struct = new_struct_p(
             "WGPURenderPassDescriptor *",
@@ -2412,7 +2417,7 @@ class GPUCommandEncoder(
             colorAttachmentCount=len(c_color_attachments_list),
             depthStencilAttachment=c_depth_stencil_attachment,
             timestampWrites=c_timestamp_writes_struct,
-            # not used: occlusionQuerySet
+            occlusionQuerySet=c_occlusion_query_set,
             # not used: nextInChain
         )
 
@@ -2769,10 +2774,12 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     def begin_occlusion_query(self, query_index):
-        raise NotImplementedError()
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t queryIndex)
+        libf.wgpuRenderPassEncoderBeginOcclusionQuery(self._internal, int(query_index))
 
     def end_occlusion_query(self):
-        raise NotImplementedError()
+        # H: void f(WGPURenderPassEncoder renderPassEncoder)
+        libf.wgpuRenderPassEncoderEndOcclusionQuery(self._internal)
 
     def _release(self):
         if self._internal is not None and libf is not None:
