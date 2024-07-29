@@ -52,6 +52,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 "Canvas context must be configured before calling get_current_texture()."
             )
 
+        if self._texture:
+            return self._texture
+
         width, height = self._get_canvas().get_physical_size()
         width, height = max(width, 1), max(height, 1)
 
