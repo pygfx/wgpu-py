@@ -375,9 +375,13 @@ def render():
     device.queue.submit([command_encoder.finish()])
 
 
+# set the GUI update function that gets called to return the draw data
+imgui_renderer.set_gui(lambda: gui(app_state))
+
+
 def loop():
     render()
-    imgui_renderer.render(gui(app_state))
+    imgui_renderer.render()
     canvas.request_draw()
 
 
