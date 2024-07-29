@@ -19,9 +19,13 @@ elif is_ci and sys.platform == "win32":
 
 default_shader_source = """
 
+// Draws a square with side 0.1 centered at the indicated location.
+// If reverse, we take the vertices clockwise rather than counterclockwise so that
+// we can test culling.
+
 struct Uniform {
-    offset: vec3f,
-    scale: vec2f,
+    center: vec3f,
+    reverse: u32,  // Actually a bool
 }
 
 @group(0) @binding(0) var<uniform> uniform : Uniform;
@@ -29,13 +33,17 @@ struct Uniform {
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4<f32> {
     var positions = array<vec2f, 4>(
-        vec2f(-0.5, -0.5),
-        vec2f( 0.5, -0.5),
-        vec2f(-0.5,  0.5),
-        vec2f( 0.5,  0.5),
+        vec2f(-0.05, -0.05),
+        vec2f( 0.05, -0.05),
+        vec2f(-0.05,  0.05),
+        vec2f( 0.05,  0.05),
     );
-    let p = positions[vertex_index];
-    return vec4f(p * uniform.scale, 0.0, 1.0) + vec4f(uniform.offset, 0);
+    var p = positions[vertex_index];
+    if bool(uniform.reverse) {
+        // Swapping x and y will cause the coordinates to be cw instead of ccw
+        p = vec2f(p.y, p.x);
+    }
+    return vec4f(p, 0.0, 1.0) + vec4f(uniform.center, 0);
 }
 """
 
@@ -79,16 +87,14 @@ def test_render_occluding_squares():
     bind_groups = []
     expected_result = []
 
-    # Each test draws a square to the screen centered at
-    #    <x_offset, y_offset, z_offset + .5>
-    # and where the sides of the square are length "side".  "Result" indicates
-    # what we expect the result of the occlusion test to be
-    def add_test(result, x_offset=0.0, y_offset=0.0, z=0.5, reverse=False):
+    # Each test draws a square of size 0.1 centered at
+    #    <x_offset, y_offset, z>
+    # with the z corrdinate being "z"
+    # "Result" indicates whether drawing this square generates any non-occluded points.
+    def draw_square(result, x_offset=0.0, y_offset=0.0, z=0.5, reverse=False):
         # See WGSL above for order.  Add padding.
-        x_side = y_side = 0.1
-        if reverse:
-            y_side = -y_side
-        data = np.float32((x_offset, y_offset, z, 0, x_side, y_side, 0, 0))
+        data = np.float32((x_offset, y_offset, z, 0))
+        data.view(dtype=np.uint32)[3] = reverse
         buffer = device.create_buffer_with_data(
             data=data, usage=flags.BufferUsage.UNIFORM
         )
@@ -101,24 +107,24 @@ def test_render_occluding_squares():
 
     # These tests have to be run in the order shown, as some of the squares occlude
     # later squares.
-    # small square in the center of the clipping area
-    add_test(True)
-    # small square in the corner of the clipping area, partially in, partially out
-    add_test(True, x_offset=0.95, y_offset=0.95)
-    # small square completely outside the clipping area.
-    add_test(False, x_offset=2, y_offset=2)
-    # Same as the first depth, but the previous big square completely occludes it
-    add_test(False)
+    draw_square(True)
+    # Draw the same small square again. But because of clipping, nothing is drawn.
+    draw_square(False)
     # Same small square again, but bring it forward a little bit
-    add_test(True, z=0.4)
-    # Same small square, but so far forward that it's outside the clipping box
-    add_test(False, z=-2)
+    draw_square(True, z=0.4)
+    # Same small square, but bring it so far forward it's outside the cip area.
+    draw_square(False, z=-2)
+
+    # small square in the corner of the clipping area, partially in, partially out
+    draw_square(True, x_offset=0.95, y_offset=0.95)
+    # small square completely outside the clipping area.
+    draw_square(False, x_offset=2, y_offset=2)
 
     # Draw a square that should be visible, but it is culled because it is a rear-
     # facing rectangle. And to keep us honest, redraw the example again, but have it
     # face forward.
-    add_test(False, x_offset=0.1, y_offset=0.1, reverse=True)
-    add_test(True, x_offset=1, y_offset=0.1)
+    draw_square(False, x_offset=0.1, y_offset=0.1, reverse=True)
+    draw_square(True, x_offset=0.1, y_offset=0.1)
 
     occlusion_query_set = device.create_query_set(
         type="occlusion", count=len(bind_groups)
@@ -164,7 +170,7 @@ def test_render_occluding_squares():
     array = np.frombuffer(memory_view, dtype=np.uint64)
     # https://www.w3.org/TR/webgpu/#occlusion
     # Any non-zero value indicates that at least one sample passed.
-    actual_result = [x != 0 for x in array]
+    actual_result = [bool(x) for x in array]
     assert actual_result == expected_result
 
 
