@@ -1115,8 +1115,10 @@ class GPUBuffer(GPUObjectBase):
         allows updating the buffer with minimal data copying.
 
         Arguments:
-            data (buffer-like): The data to write to the buffer, in the form of
-                e.g. a bytes object, memoryview, or numpy array.
+            data (buffer-like): The data to write to the buffer.
+                Must be an object that supports the buffer protocol,
+                e.g. bytes, memoryview, numpy array, etc. Does not have to
+                be contiguous, since the data is copied anyway.
             buffer_offset (int): the buffer offset in bytes. Must be at least
                 as large as the offset specified in ``map()``. The default
                 is the offset of the mapped range.
@@ -1855,15 +1857,17 @@ class GPUQueue(GPUObjectBase):
 
     # IDL: undefined writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, AllowSharedBufferSource data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
     def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
-        """Takes the data contents and schedules a write operation of
-        these contents to the buffer. A snapshot of the data is taken;
-        any changes to the data after this function is called do not
-        affect the buffer contents.
+        """Takes the data contents and schedules a write operation to the buffer.
+
+        Changes to the data after this function is called don't affect
+        the buffer contents.
 
         Arguments:
             buffer: The `GPUBuffer` object to write to.
             buffer_offset (int): The offset in the buffer to start writing at.
-            data: The data to write. Must be contiguous.
+            data: The data to write to the buffer. Must be an object that supports
+                the buffer protocol, e.g. bytes, memoryview, numpy array, etc.
+                Must be contiguous.
             data_offset: The byte offset in the data. Default 0.
             size: The number of bytes to write. Default all minus offset.
 
@@ -1902,7 +1906,9 @@ class GPUQueue(GPUObjectBase):
         Arguments:
             destination: A dict with fields: "texture" (a texture object),
                 "origin" (a 3-tuple), "mip_level" (an int, default 0).
-            data: The data to write.
+            data: The data to write to the texture. Must be an object that supports
+                the buffer protocol, e.g. bytes, memoryview, numpy array, etc.
+                Must be contiguous.
             data_layout: A dict with fields: "offset" (an int, default 0),
                 "bytes_per_row" (an int), "rows_per_image" (an int, default 0).
             size: A 3-tuple of ints specifying the size to write.
