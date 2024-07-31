@@ -31,14 +31,6 @@ device = adapter.request_device()
 
 imgui_renderer = ImguiRenderer(device, canvas)
 
-# linear interpolation sampler to nicely display the cmaps
-texture_sampler = device.create_sampler(
-    label="img-sampler",
-    mag_filter=wgpu.FilterMode.linear,
-    min_filter=wgpu.FilterMode.linear,
-    mipmap_filter=wgpu.FilterMode.linear,
-)
-
 
 def create_texture_and_upload(data: np.ndarray) -> int:
     # crates a GPUTexture and uploads it
@@ -126,8 +118,11 @@ def update_gui():
     return imgui.get_draw_data()
 
 
+imgui_renderer.set_gui(update_gui)
+
+
 def draw_frame():
-    imgui_renderer.render(update_gui())
+    imgui_renderer.render()
     canvas.request_draw()
 
 
