@@ -126,8 +126,11 @@ def update_gui():
     return imgui.get_draw_data()
 
 
+imgui_renderer.set_gui(update_gui)
+
+
 def draw_frame():
-    imgui_renderer.render(update_gui())
+    imgui_renderer.render()
     canvas.request_draw()
 
 
