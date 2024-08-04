@@ -389,7 +389,11 @@ class GPU(classes.GPU):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
-            if f in ["clip-distances"]:
+            if f in [
+                "clip-distances",
+                "dual-source-blending",
+                "texture-compression-bc-sliced-3d",
+            ]:
                 continue  # not supported by wgpu-native yet
             key = f"FeatureName.{f}"
             i = enummap[key]
@@ -434,6 +438,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             self._surface_id = get_surface_id_from_canvas(self._get_canvas())
         return self._surface_id
 
+    # FIXME: was configure(self, *, device: "GPUDevice", format: "enums.TextureFormat", usage: "flags.TextureUsage" = 0x10, view_formats: "List[enums.TextureFormat]" = [], color_space: str = "srgb", alpha_mode: "enums.CanvasAlphaMode" = "opaque"):
+    # FIXME: missing check_struct in configure: ['CanvasToneMapping']
     def configure(
         self,
         *,
@@ -442,6 +448,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         usage: "flags.TextureUsage" = 0x10,
         view_formats: "List[enums.TextureFormat]" = [],
         color_space: str = "srgb",
+        tone_mapping: "structs.CanvasToneMapping" = {},
         alpha_mode: "enums.CanvasAlphaMode" = "opaque",
     ):
         # Handle inputs
@@ -896,7 +903,11 @@ class GPUAdapter(classes.GPUAdapter):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
-            if f in ["clip-distances"]:
+            if f in [
+                "clip-distances",
+                "dual-source-blending",
+                "texture-compression-bc-sliced-3d",
+            ]:
                 continue  # not supported by wgpu-native yet
             key = f"FeatureName.{f}"
             i = enummap[key]

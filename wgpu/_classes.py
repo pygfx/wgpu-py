@@ -205,6 +205,7 @@ class GPUCanvasContext:
         usage: "flags.TextureUsage" = 0x10,
         view_formats: "List[enums.TextureFormat]" = [],
         color_space: str = "srgb",
+        tone_mapping: "structs.CanvasToneMapping" = {},
         alpha_mode: "enums.CanvasAlphaMode" = "opaque",
     ):
         """Configures the presentation context for the associated canvas.
@@ -222,6 +223,7 @@ class GPUCanvasContext:
             color_space (PredefinedColorSpace): The color space that values written
                 into textures returned by ``get_current_texture()`` should be displayed with.
                 Default "srgb".
+            #TODO: docstring for tone_mapping
             alpha_mode (enums.CanvasAlphaMode): Determines the effect that alpha values
                 will have on the content of textures returned by ``get_current_texture()``
                 when read, displayed, or used as an image source. Default "opaque".
