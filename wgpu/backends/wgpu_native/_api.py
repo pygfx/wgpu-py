@@ -288,7 +288,7 @@ class GPU(classes.GPU):
                 nonlocal adapter_id
                 adapter_id = result
 
-        # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata)
+        # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPUInstanceRequestAdapterCallback callback, void * userdata)
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback, ffi.NULL)
 
         # For now, Rust will call the callback immediately
@@ -855,7 +855,7 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Request device
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *
+        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *, uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
             label=to_c_label(label),
@@ -866,6 +866,7 @@ class GPUAdapter(classes.GPUAdapter):
             defaultQueue=queue_struct,
             deviceLostCallback=device_lost_callback,
             # not used: deviceLostUserdata
+            # not used: uncapturedErrorCallbackInfo
         )
 
         device_id = None
@@ -881,7 +882,7 @@ class GPUAdapter(classes.GPUAdapter):
                 nonlocal device_id
                 device_id = result
 
-        # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallback callback, void * userdata)
+        # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPUAdapterRequestDeviceCallback callback, void * userdata)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
 
         if device_id is None:  # pragma: no cover
@@ -970,8 +971,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # Keep the ref alive
         self._uncaptured_error_callback = uncaptured_error_callback
 
-        # H: void f(WGPUDevice device, WGPUErrorCallback callback, void * userdata)
-        libf.wgpuDeviceSetUncapturedErrorCallback(
+        # TODO: has been replaced with a struct of callbacks it seems: https://github.com/webgpu-native/webgpu-headers/pull/297 (likely changes other changes to error handling)
+        # FIXME: unknown C function wgpuDeviceUncapturedErrorCallback
+        libf.wgpuDeviceUncapturedErrorCallback(
             self._internal, uncaptured_error_callback, ffi.NULL
         )
 
@@ -1804,7 +1806,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Map it
         self._map_state = enums.BufferMapState.pending
-        # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapCallback callback, void * userdata)
+        # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapAsyncCallback callback, void * userdata)
         libf.wgpuBufferMapAsync(
             self._internal, map_mode, offset, size, callback, ffi.NULL
         )
@@ -2077,7 +2079,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         #     else:
         #         pass
         #
-        # H: void f(WGPUShaderModule shaderModule, WGPUCompilationInfoCallback callback, void * userdata)
+        # H: void f(WGPUShaderModule shaderModule, WGPUShaderModuleGetCompilationInfoCallback callback, void * userdata)
         # libf.wgpuShaderModuleGetCompilationInfo(self._internal, callback, ffi.NULL)
         #
         # self._device._poll()
@@ -2381,7 +2383,7 @@ class GPUCommandEncoder(
                 b=clear_value[2],
                 a=clear_value[3],
             )
-            # H: nextInChain: WGPUChainedStruct *, view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
+            # H: nextInChain: WGPUChainedStruct *, view: WGPUTextureView, depthSlice: int, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
             c_attachment = new_struct(
                 "WGPURenderPassColorAttachment",
                 view=texture_view_id,
@@ -2391,6 +2393,7 @@ class GPUCommandEncoder(
                 clearValue=c_clear_value,
                 # not used: resolveTarget
                 # not used: nextInChain
+                # not used: depthSlice
             )
             c_color_attachments_list.append(c_attachment)
         c_color_attachments_array = ffi.new(

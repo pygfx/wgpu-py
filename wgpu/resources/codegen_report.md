@@ -2,8 +2,8 @@
 ## Preparing
 * The webgpu.idl defines 37 classes with 75 functions
 * The webgpu.idl defines 5 flags, 34 enums, 60 structs
-* The wgpu.h defines 198 functions
-* The wgpu.h defines 7 flags, 50 enums, 93 structs
+* The wgpu.h defines 199 functions
+* The wgpu.h defines 7 flags, 52 enums, 93 structs
 ## Updating API
 * Wrote 5 flags to flags.py
 * Wrote 34 enums to enums.py
@@ -35,8 +35,8 @@
 * Enum field VertexFormat.unorm10-10-10-2 missing in wgpu.h
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum CanvasToneMappingMode missing in wgpu.h
-* Enum field DeviceLostReason.unknown missing in wgpu.h
-* Wrote 235 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 115 C function calls
-* Not using 89 C functions
+* Wrote 236 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
+* ERROR: unknown C function wgpuDeviceUncapturedErrorCallback
+* Validated 114 C function calls
+* Not using 92 C functions
 * Validated 75 C structs
