@@ -382,16 +382,16 @@ class GPUAdapter:
     # IDL: [SameObject] readonly attribute GPUAdapterInfo info;
     @property
     def info(self):
-        """A dict with information about this adapter, such as the vendor and devicen name."""
+        """A dict with information about this adapter, such as the vendor and device name."""
         # Note: returns a dict rather than an GPUAdapterInfo instance.
         return self._adapter_info
 
     @apidiff.add("Useful in multi-gpu environments")
     @property
     def summary(self):
-        """A one-line summary of the info of this adapter (name, adapter_type, backend_type)."""
+        """A one-line summary of the info of this adapter (description, adapter_type, backend_type)."""
         d = self._adapter_info
-        return f"{d['device']} ({d['adapter_type']}) via {d['backend_type']}"
+        return f"{d['description']} ({d['adapter_type']}) via {d['backend_type']}"
 
 
 class GPUObjectBase:

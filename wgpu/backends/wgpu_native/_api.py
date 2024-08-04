@@ -329,22 +329,22 @@ class GPU(classes.GPU):
     def _create_adapter(self, adapter_id):
         # ----- Get adapter info
 
-        # H: nextInChain: WGPUChainedStructOut *, vendorID: int, vendorName: char *, architecture: char *, deviceID: int, name: char *, driverDescription: char *, adapterType: WGPUAdapterType, backendType: WGPUBackendType
+        # H: nextInChain: WGPUChainedStructOut *, vendor: char *, architecture: char *, device: char *, description: char *, backendType: WGPUBackendType, adapterType: WGPUAdapterType, vendorID: int, deviceID: int
         c_properties = new_struct_p(
-            "WGPUAdapterProperties *",
+            "WGPUAdapterInfo *",
             # not used: nextInChain
-            # not used: deviceID
-            # not used: vendorID
-            # not used: name
-            # not used: driverDescription
-            # not used: adapterType
-            # not used: backendType
-            # not used: vendorName
+            # not used: vendor
             # not used: architecture
+            # not used: device
+            # not used: description
+            # not used: backendType
+            # not used: adapterType
+            # not used: vendorID
+            # not used: deviceID
         )
 
-        # H: void f(WGPUAdapter adapter, WGPUAdapterProperties * properties)
-        libf.wgpuAdapterGetProperties(adapter_id, c_properties)
+        # H: void f(WGPUAdapter adapter, WGPUAdapterInfo * info)
+        libf.wgpuAdapterGetInfo(adapter_id, c_properties)
 
         def to_py_str(key):
             char_p = getattr(c_properties, key)
@@ -354,12 +354,13 @@ class GPU(classes.GPU):
 
         # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo
         # And add all other info we get from wgpu-native too.
+        # note: description is human readable. device is a PCI ID.
         adapter_info = {
             # Spec
-            "vendor": to_py_str("vendorName"),
+            "vendor": to_py_str("vendor"),
             "architecture": to_py_str("architecture"),
-            "device": to_py_str("name"),
-            "description": to_py_str("driverDescription"),
+            "device": to_py_str("device"),
+            "description": to_py_str("description"),
             # Extra
             "vendor_id": c_properties.vendorID,
             "device_id": c_properties.deviceID,
