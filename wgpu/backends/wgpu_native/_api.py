@@ -474,7 +474,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         # Get what's supported
 
-        # H: nextInChain: WGPUChainedStructOut *, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
+        # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
         capabilities = new_struct_p(
             "WGPUSurfaceCapabilities *",
             # not used: formatCount
@@ -484,6 +484,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # not used: alphaModeCount
             # not used: alphaModes
             # not used: nextInChain
+            # not used: usages
         )
         # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
         libf.wgpuSurfaceGetCapabilities(
@@ -507,7 +508,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             str_val = enum_int2str["CompositeAlphaMode"][int_val]
             capable_alpha_modes.append(str_val.lower())
 
-        # H: void f(WGPUSurfaceCapabilities capabilities)
+        # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
         libf.wgpuSurfaceCapabilitiesFreeMembers(capabilities[0])
 
         # Check if input is supported
@@ -734,12 +735,13 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             libf.wgpuSurfacePresent(self._get_surface_id())
             self._drop_texture()
 
+    # TODO: replace according to https://github.com/webgpu-native/webgpu-headers/issues/290
     def get_preferred_format(self, adapter):
-        # H: WGPUTextureFormat f(WGPUSurface surface, WGPUAdapter adapter)
-        format = libf.wgpuSurfaceGetPreferredFormat(
+        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
+        capabilities = libf.wgpuSurfaceGetCapabilities(
             self._get_surface_id(), adapter._internal
         )
-        return enum_int2str["TextureFormat"][format]
+        return enum_int2str["TextureFormat"][capabilities.formats[0]]
 
     def _release(self):
         self._drop_texture()
