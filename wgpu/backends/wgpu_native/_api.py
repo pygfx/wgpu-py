@@ -853,6 +853,27 @@ class GPUAdapter(classes.GPUAdapter):
         # Keep the ref alive
         self._device_lost_callback = device_lost_callback
 
+        # ----- Uncaptured error
+
+        # TODO: this is moved from the uncaptuedErrroCallback that was in GPUDevice previously, test if it works once all other changes are fixed.
+        @ffi.callback("void(WGPUErrorType, char *, void *)")
+        def uncaptured_error_callback(c_type, c_message, userdata):
+            error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
+            message = ffi.string(c_message).decode(errors="ignore")
+            message = "\n".join(line.rstrip() for line in message.splitlines())
+            error_handler.handle_error(error_type, message)
+
+        # keep the ref alive
+        self._error_callback = uncaptured_error_callback
+
+        # H: nextInChain: WGPUChainedStruct *, callback: WGPUErrorCallback, userdata: void *
+        uncaptured_error_callback_info = new_struct(
+            "WGPUUncapturedErrorCallbackInfo",
+            callback=uncaptured_error_callback,
+            userdata=ffi.NULL,
+            # not used: nextInChain
+        )
+
         # ----- Request device
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *, uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
@@ -865,8 +886,8 @@ class GPUAdapter(classes.GPUAdapter):
             requiredLimits=c_required_limits,
             defaultQueue=queue_struct,
             deviceLostCallback=device_lost_callback,
+            uncapturedErrorCallbackInfo=uncaptured_error_callback_info,
             # not used: deviceLostUserdata
-            # not used: uncapturedErrorCallbackInfo
         )
 
         device_id = None
@@ -960,22 +981,6 @@ class GPUAdapter(classes.GPUAdapter):
 class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def __init__(self, label, internal, adapter, features, limits, queue):
         super().__init__(label, internal, adapter, features, limits, queue)
-
-        @ffi.callback("void(WGPUErrorType, char *, void *)")
-        def uncaptured_error_callback(c_type, c_message, userdata):
-            error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
-            message = ffi.string(c_message).decode(errors="ignore")
-            message = "\n".join(line.rstrip() for line in message.splitlines())
-            error_handler.handle_error(error_type, message)
-
-        # Keep the ref alive
-        self._uncaptured_error_callback = uncaptured_error_callback
-
-        # TODO: has been replaced with a struct of callbacks it seems: https://github.com/webgpu-native/webgpu-headers/pull/297 (likely changes other changes to error handling)
-        # FIXME: unknown C function wgpuDeviceUncapturedErrorCallback
-        libf.wgpuDeviceUncapturedErrorCallback(
-            self._internal, uncaptured_error_callback, ffi.NULL
-        )
 
     def _poll(self):
         # Internal function
