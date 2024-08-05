@@ -21,7 +21,6 @@
 * Validated 37 classes, 112 methods, 45 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 111 methods, 0 properties
-* ERROR: missing check_struct in configure: ['CanvasToneMapping']
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.texture-compression-bc-sliced-3d missing in wgpu.h
 * Enum field FeatureName.clip-distances missing in wgpu.h
@@ -36,6 +35,6 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum CanvasToneMappingMode missing in wgpu.h
 * Wrote 236 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 114 C function calls
+* Validated 113 C function calls
 * Not using 92 C functions
 * Validated 76 C structs

@@ -440,7 +440,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         return self._surface_id
 
     # FIXME: was configure(self, *, device: "GPUDevice", format: "enums.TextureFormat", usage: "flags.TextureUsage" = 0x10, view_formats: "List[enums.TextureFormat]" = [], color_space: str = "srgb", alpha_mode: "enums.CanvasAlphaMode" = "opaque"):
-    # FIXME: missing check_struct in configure: ['CanvasToneMapping']
     def configure(
         self,
         *,
@@ -466,17 +465,19 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             c_view_formats = ffi.new("WGPUTextureFormat []", view_formats_list)
         # Lookup alpha mode, needs explicit conversion because enum names mismatch
         c_alpha_mode = getattr(lib, f"WGPUCompositeAlphaMode_{alpha_mode.capitalize()}")
-        # The format is used as-is
-        if format is None:
-            format = self.get_preferred_format(device.adapter)
         # The color_space is not used for now
         color_space
+        # TODO: tone mapping ?
+        check_struct("CanvasToneMapping", tone_mapping)
 
         # Get what's supported
+
+        formats = ffi.new("WGPUTextureFormat []", [1, 2])
 
         # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
         capabilities = new_struct_p(
             "WGPUSurfaceCapabilities *",
+            usages=usage,
             # not used: formatCount
             # not used: formats
             # not used: presentModeCount
@@ -484,7 +485,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # not used: alphaModeCount
             # not used: alphaModes
             # not used: nextInChain
-            # not used: usages
         )
         # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
         libf.wgpuSurfaceGetCapabilities(
@@ -507,6 +507,12 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             int_val = capabilities.alphaModes[i]
             str_val = enum_int2str["CompositeAlphaMode"][int_val]
             capable_alpha_modes.append(str_val.lower())
+
+        # The format is used as-is
+        if format is None and capabilities.formatCount > 0:
+            format = enum_int2str["TextureFormat"][capabilities.formats[0]]
+        else:
+            raise RuntimeError("No formats supported by the surface.") # doesn't really make sense, maybe should be higher up.
 
         # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
         libf.wgpuSurfaceCapabilitiesFreeMembers(capabilities[0])
@@ -737,11 +743,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     # TODO: replace according to https://github.com/webgpu-native/webgpu-headers/issues/290
     def get_preferred_format(self, adapter):
-        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
-        capabilities = libf.wgpuSurfaceGetCapabilities(
-            self._get_surface_id(), adapter._internal
-        )
-        return enum_int2str["TextureFormat"][capabilities.formats[0]]
+        if self._config is not None:
+            return enum_int2str["TextureFormat"][self._config.formats[0]]
+        # to keep old code working, returning None as a quick fix.
+        return None
 
     def _release(self):
         self._drop_texture()
