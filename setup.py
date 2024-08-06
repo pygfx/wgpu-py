@@ -2,8 +2,8 @@ import re
 import platform
 
 from setuptools import find_packages, setup
-from wheel.bdist_wheel import get_platform, bdist_wheel as _bdist_wheel
-
+from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
+from sysconfig import get_platform
 
 NAME = "wgpu"
 SUMMARY = "Next generation GPU API for Python"
@@ -14,7 +14,7 @@ with open(f"{NAME}/__init__.py") as fh:
 
 class bdist_wheel(_bdist_wheel):  # noqa: N801
     def finalize_options(self):
-        self.plat_name = get_platform(None)  # force a platform tag
+        self.plat_name = get_platform()  # force a platform tag
         _bdist_wheel.finalize_options(self)
 
 
