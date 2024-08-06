@@ -472,8 +472,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         # Get what's supported
 
-        formats = ffi.new("WGPUTextureFormat []", [1, 2])
-
         # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
         capabilities = new_struct_p(
             "WGPUSurfaceCapabilities *",
@@ -486,6 +484,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # not used: alphaModes
             # not used: nextInChain
         )
+
+        # TODO: Vulkan gives Null pointers of some fields, D3D12 and OpenGL work. (could be Intel specific?)
         # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
         libf.wgpuSurfaceGetCapabilities(
             self._get_surface_id(), self._device.adapter._internal, capabilities
@@ -512,7 +512,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         if format is None and capabilities.formatCount > 0:
             format = enum_int2str["TextureFormat"][capabilities.formats[0]]
         else:
-            raise RuntimeError("No formats supported by the surface.") # doesn't really make sense, maybe should be higher up.
+            raise RuntimeError(
+                "No formats supported by the surface."
+            )  # doesn't really make sense, maybe should be higher up.
 
         # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
         libf.wgpuSurfaceCapabilitiesFreeMembers(capabilities[0])
@@ -744,7 +746,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     # TODO: replace according to https://github.com/webgpu-native/webgpu-headers/issues/290
     def get_preferred_format(self, adapter):
         if self._config is not None:
-            return enum_int2str["TextureFormat"][self._config.formats[0]]
+            return enum_int2str["TextureFormat"][self._config.format]
         # to keep old code working, returning None as a quick fix.
         return None
 
@@ -2686,6 +2688,7 @@ class GPUCommandEncoder(
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = libf.wgpuCommandEncoderFinish(self._internal, struct)
+        # TODO: is the third arg meant to be self or self._device?
         return GPUCommandBuffer(label, id, self)
 
     def resolve_query_set(
