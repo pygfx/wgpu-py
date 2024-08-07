@@ -10,8 +10,14 @@ from wgpu.gui.wx import WgpuCanvas
 from triangle import main  # The function to call to run the visualization
 
 
+class MyCanvas(WgpuCanvas):
+    def handle_event(self, event):
+        if event["event_type"] != "pointer_move":
+            print(event)
+
+
 app = wx.App()
-canvas = WgpuCanvas()
+canvas = MyCanvas()
 
 main(canvas)
 app.MainLoop()
