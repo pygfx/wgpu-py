@@ -3,14 +3,14 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
-import sys
 import ctypes
-
-from .base import WgpuCanvasBase
-from ._gui_utils import get_alt_x11_display, get_alt_wayland_display
+import sys
+from typing import Optional
 
 import wx
 
+from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
+from .base import WgpuCanvasBase, WgpuAutoGui
 
 is_wayland = False  # We force wx to use X11 in _gui_utils.py
 
@@ -39,7 +39,7 @@ class TimerWithCallback(wx.Timer):
             pass  # wrapped C/C++ object of type WxWgpuWindow has been deleted
 
 
-class WxWgpuWindow(WgpuCanvasBase, wx.Window):
+class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
     """A wx Window representing a wgpu canvas that can be embedded in a wx application."""
 
     def __init__(self, *args, **kwargs):
@@ -57,6 +57,9 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         self.Bind(wx.EVT_ERASE_BACKGROUND, lambda x: None)
         self.Bind(wx.EVT_SIZE, self._on_resize)
 
+        self.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
+        self.Bind(wx.EVT_KEY_UP, self._on_key_up)
+
     def on_paint(self, event):
         dc = wx.PaintDC(self)  # needed for wx
         if not self._draw_lock:
@@ -71,6 +74,52 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
     def _on_resize_done(self, *args):
         self._draw_lock = False
         self._request_draw()
+
+    # Methods for input events
+
+    def _on_key_down(self, event: wx.KeyEvent):
+        char_str = self._get_char_from_event(event)
+        if char_str is not None:
+            self._char_input_event(char_str)
+
+    def _on_key_up(self, event: wx.KeyEvent):
+        pass
+
+    @staticmethod
+    def _get_char_from_event(event: wx.KeyEvent) -> Optional[str]:
+        keycode = event.GetKeyCode()
+        modifiers = event.GetModifiers()
+
+        # Check if keycode corresponds to a printable ASCII character
+        if 32 <= keycode <= 126:
+            char = chr(keycode)
+            if not modifiers & wx.MOD_SHIFT:
+                char = char.lower()
+            return char
+
+        # Check for special keys (e.g., Enter, Tab)
+        if keycode == wx.WXK_RETURN:
+            return "\n"
+        if keycode == wx.WXK_TAB:
+            return "\t"
+
+        # Handle non-ASCII characters and others
+        uni_char = event.GetUnicodeKey()
+        if uni_char != wx.WXK_NONE:
+            return chr(uni_char)
+
+        return None
+
+    def _char_input_event(self, char_str: Optional[str]):
+        if char_str is None:
+            return
+
+        ev = {
+            "event_type": "char",
+            "char_str": char_str,
+            "modifiers": None,
+        }
+        self._handle_event_and_flush(ev)
 
     # Methods that we add from wgpu
 
@@ -134,7 +183,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         return not self.IsShown()
 
 
-class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
+class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
     """A toplevel wx Frame providing a wgpu canvas."""
 
     # Most of this is proxying stuff to the inner widget.
@@ -146,6 +195,7 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         self.SetTitle(title or "wx wgpu canvas")
 
         self._subwidget = WxWgpuWindow(parent=self, max_fps=max_fps)
+        self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
 
         self.Show()
