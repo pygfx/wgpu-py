@@ -8,7 +8,6 @@ import sys
 from typing import Optional
 
 import wx
-from wx import MouseEvent
 
 from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
 from .base import WgpuCanvasBase, WgpuAutoGui
@@ -235,7 +234,7 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
         return None
 
-    def _mouse_event(self, event_type: str, event: MouseEvent, touches: bool = True):
+    def _mouse_event(self, event_type: str, event: wx.MouseEvent, touches: bool = True):
         button = BUTTON_MAP.get(event.GetButton(), 0)
         buttons = (button,)  # in wx only one button is pressed per event
 
@@ -300,7 +299,7 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
         self._mouse_event(event_type_name, event)
 
-    def _on_mouse_move(self, event: MouseEvent):
+    def _on_mouse_move(self, event: wx.MouseEvent):
         self._mouse_event("pointer_move", event)
 
     # Methods that we add from wgpu
