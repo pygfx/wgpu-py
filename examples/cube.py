@@ -373,6 +373,8 @@ def draw_frame():
         render_pass.set_bind_group(bind_group_id, bind_group)
     render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
     render_pass.end()
+    # TODO: the renderpass needs to be released now... maybe we should handle that internally on .end()?
+    render_pass._release() 
 
     device.queue.submit([command_encoder.finish()])
 
@@ -383,3 +385,4 @@ canvas.request_draw(draw_frame)
 
 if __name__ == "__main__":
     run()
+""

@@ -2205,6 +2205,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
+    # whole class is likely going to solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label):
         c_group_label = ffi.new("char []", group_label.encode())
         color = 0
@@ -3032,7 +3033,23 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         return data
 
     def on_submitted_work_done(self):
-        raise NotImplementedError()
+        # TODO: cleanup reference (from WGPUBufferMapAsyncCallback, because the signature is similar.)
+        status = 999
+
+        @ffi.callback("void(WGPUQueueWorkDoneStatus, void*)")
+        def callback(status_, user_data_p):
+            nonlocal status
+            status = status_
+
+        # H: void f(WGPUQueue queue, WGPUQueueOnSubmittedWorkDoneCallback callback, void * userdata)
+        libf.wgpuQueueOnSubmittedWorkDone(self._internal, callback, ffi.NULL)
+
+        # Wait for the queue to process all tasks (including the mapping of the buffer).
+        # Also see WebGPU's onSubmittedWorkDone() and C's WGPUQueueWorkDoneCallback.
+        self._device._poll()
+
+        if status != 0:
+            raise RuntimeError(f"Queue work done status: {status}")
 
     def _release(self):
         if self._internal is not None and libf is not None:
