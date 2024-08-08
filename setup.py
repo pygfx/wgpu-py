@@ -2,8 +2,8 @@ import re
 import platform
 
 from setuptools import find_packages, setup
+from setuptools.command.bdist_wheel import get_platform
 from wheel.bdist_wheel import bdist_wheel as _bdist_wheel
-from wheel._bdist_wheel import get_platform
 
 NAME = "wgpu"
 SUMMARY = "Next generation GPU API for Python"
