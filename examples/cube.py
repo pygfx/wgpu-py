@@ -27,9 +27,10 @@ device = adapter.request_device()
 
 # Prepare present context
 present_context = canvas.get_context()
-render_texture_format = present_context.get_preferred_format(device.adapter)
+# render_texture_format = present_context.get_preferred_format(device.adapter)
+render_texture_format = None # triggers the preferred format now?
 present_context.configure(device=device, format=render_texture_format)
-
+render_texture_format = present_context.get_preferred_format(device.adapter) # returns the value after configure.
 
 # %% Generate data
 
@@ -372,6 +373,8 @@ def draw_frame():
         render_pass.set_bind_group(bind_group_id, bind_group)
     render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
     render_pass.end()
+    # TODO: the renderpass needs to be released now... maybe we should handle that internally on .end()?
+    render_pass._release() 
 
     device.queue.submit([command_encoder.finish()])
 
@@ -382,3 +385,4 @@ canvas.request_draw(draw_frame)
 
 if __name__ == "__main__":
     run()
+""

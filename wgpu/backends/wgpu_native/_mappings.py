@@ -4,7 +4,7 @@
 
 # flake8: noqa
 
-# There are 235 enum mappings
+# There are 236 enum mappings
 
 enummap = {
     "AddressMode.clamp-to-edge": 2,
@@ -48,7 +48,8 @@ enummap = {
     "CullMode.back": 2,
     "CullMode.front": 1,
     "CullMode.none": 0,
-    "DeviceLostReason.destroyed": 1,
+    "DeviceLostReason.destroyed": 2,
+    "DeviceLostReason.unknown": 1,
     "ErrorFilter.internal": 2,
     "ErrorFilter.out-of-memory": 1,
     "ErrorFilter.validation": 0,
@@ -336,8 +337,8 @@ enum_int2str = {
         5: "DeviceLost",
     },
     "DeviceLostReason": {
-        0: "unknown",
-        1: "destroyed",
+        1: "unknown",
+        2: "destroyed",
     },
     "TextureFormat": {
         0: "Undefined",
