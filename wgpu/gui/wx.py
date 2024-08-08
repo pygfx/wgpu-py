@@ -8,6 +8,7 @@ import sys
 from typing import Optional
 
 import wx
+from wx import MouseEvent
 
 from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
 from .base import WgpuCanvasBase, WgpuAutoGui
@@ -22,6 +23,29 @@ BUTTON_MAP = {
     wx.MOUSE_BTN_AUX2: 5,
     # wxPython doesn't have exact equivalents for TaskButton, ExtraButton4, and ExtraButton5
 }
+
+MOUSE_EVENT_MAP = {
+    "pointer_down": (wx.wxEVT_LEFT_DOWN,
+                     wx.wxEVT_MIDDLE_DOWN,
+                     wx.wxEVT_RIGHT_DOWN,
+                     wx.wxEVT_AUX1_DOWN,
+                     wx.wxEVT_AUX2_DOWN),
+    "pointer_up": (wx.wxEVT_LEFT_UP,
+                   wx.wxEVT_MIDDLE_UP,
+                   wx.wxEVT_RIGHT_UP,
+                   wx.wxEVT_AUX1_UP,
+                   wx.wxEVT_AUX2_UP),
+    "double_click": (wx.wxEVT_LEFT_DCLICK,
+                     wx.wxEVT_MIDDLE_DCLICK,
+                     wx.wxEVT_RIGHT_DCLICK,
+                     wx.wxEVT_AUX1_DCLICK,
+                     wx.wxEVT_AUX2_DCLICK),
+    "wheel": (wx.wxEVT_MOUSEWHEEL,
+              wx.wxEVT_MAGNIFY)
+}
+
+# reverse the mouse event map (from one-to-many to many-to-one)
+MOUSE_EVENT_MAP_REVERSED = {value: key for key, values in MOUSE_EVENT_MAP.items() for value in values}
 
 MODIFIERS_MAP = {
     wx.MOD_SHIFT: "Shift",
@@ -113,6 +137,10 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
         self.Bind(wx.EVT_KEY_DOWN, self._on_key_down)
         self.Bind(wx.EVT_KEY_UP, self._on_key_up)
 
+        self.Bind(wx.EVT_MOUSE_EVENTS, self._on_mouse_events)
+        self.Bind(wx.EVT_MOTION, self._on_mouse_move)
+        # self.Bind(wx.EVT_MOUSEWHEEL, self._mouse_wheel_event)
+
     def on_paint(self, event):
         dc = wx.PaintDC(self)  # needed for wx
         if not self._draw_lock:
@@ -120,9 +148,19 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
         del dc
         event.Skip()
 
-    def _on_resize(self, *args):
+    def _on_resize(self, event: wx.SizeEvent):
         self._draw_lock = True
         self._resize_timer.Start(100, wx.TIMER_ONE_SHOT)
+
+        # fire resize event
+        size: wx.Size = event.GetSize()
+        ev = {
+            "event_type": "resize",
+            "width": float(size.GetWidth()),
+            "height": float(size.GetHeight()),
+            "pixel_ratio": self.get_pixel_ratio(),
+        }
+        self._handle_event_and_flush(ev)
 
     def _on_resize_done(self, *args):
         self._draw_lock = False
@@ -191,6 +229,75 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
         return None
 
+    def _mouse_event(self, event_type: str, event: MouseEvent, touches: bool = True):
+        button = BUTTON_MAP.get(event.GetButton(), 0)
+        buttons = (button,)  # in wx only one button is pressed per event
+
+        modifiers = tuple(
+            MODIFIERS_MAP[mod]
+            for mod in MODIFIERS_MAP.keys()
+            if mod & event.GetModifiers()
+        )
+
+        ev = {
+            "event_type": event_type,
+            "x": event.GetX(),
+            "y": event.GetY(),
+            "button": button,
+            "buttons": buttons,
+            "modifiers": modifiers,
+        }
+
+        if touches:
+            ev.update(
+                {
+                    "ntouches": 0,
+                    "touches": {},  # TODO: Wx touch events
+                }
+            )
+
+        if event_type == "wheel":
+            delta = event.GetWheelDelta()
+            axis = event.GetWheelAxis()
+            rotation = event.GetWheelRotation()
+
+            dx = 0
+            dy = 0
+
+            if axis == wx.MOUSE_WHEEL_HORIZONTAL:
+                dx = delta * rotation
+            elif axis == wx.MOUSE_WHEEL_VERTICAL:
+                dy = delta * rotation
+
+            ev.update(
+                {
+                    "dx": -dx,
+                    "dy": -dy
+                }
+            )
+
+            match_keys = {"modifiers"}
+            accum_keys = {"dx", "dy"}
+            self._handle_event_rate_limited(ev, self._call_later, match_keys, accum_keys)
+        elif event_type == "pointer_move":
+            match_keys = {"buttons", "modifiers", "ntouches"}
+            accum_keys = {}
+            self._handle_event_rate_limited(ev, self._call_later, match_keys, accum_keys)
+        else:
+            self._handle_event_and_flush(ev)
+
+    def _on_mouse_events(self, event: wx.MouseEvent):
+        event_type = event.GetEventType()
+
+        event_type_name = MOUSE_EVENT_MAP_REVERSED.get(event_type, None)
+        if event_type_name is None:
+            return
+
+        self._mouse_event(event_type_name, event)
+
+    def _on_mouse_move(self, event: MouseEvent):
+        self._mouse_event("pointer_move", event)
+
     # Methods that we add from wgpu
 
     def get_surface_info(self):
@@ -252,6 +359,14 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
     def is_closed(self):
         return not self.IsShown()
 
+    @staticmethod
+    def _call_later(delay, callback, *args):
+        delay_ms = int(delay * 1000)
+        if delay_ms <= 0:
+            callback(*args)
+
+        wx.CallLater(max(delay_ms, 1), callback, *args)
+
 
 class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
     """A toplevel wx Frame providing a wgpu canvas."""
@@ -302,6 +417,7 @@ class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
         return self._subwidget._request_draw()
 
     def close(self):
+        self._handle_event_and_flush({"event_type": "close"})
         super().close()
 
     def is_closed(self):
