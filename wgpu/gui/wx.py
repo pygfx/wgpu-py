@@ -146,7 +146,6 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
         self.Bind(wx.EVT_MOUSE_EVENTS, self._on_mouse_events)
         self.Bind(wx.EVT_MOTION, self._on_mouse_move)
-        # self.Bind(wx.EVT_MOUSEWHEEL, self._mouse_wheel_event)
 
     def on_paint(self, event):
         dc = wx.PaintDC(self)  # needed for wx
