@@ -14,6 +14,59 @@ from .base import WgpuCanvasBase, WgpuAutoGui
 
 is_wayland = False  # We force wx to use X11 in _gui_utils.py
 
+BUTTON_MAP = {
+    wx.MOUSE_BTN_LEFT: 1,
+    wx.MOUSE_BTN_RIGHT: 2,
+    wx.MOUSE_BTN_MIDDLE: 3,
+    wx.MOUSE_BTN_AUX1: 4,
+    wx.MOUSE_BTN_AUX2: 5,
+    # wxPython doesn't have exact equivalents for TaskButton, ExtraButton4, and ExtraButton5
+}
+
+MODIFIERS_MAP = {
+    wx.MOD_SHIFT: "Shift",
+    wx.MOD_CONTROL: "Control",
+    wx.MOD_ALT: "Alt",
+    wx.MOD_META: "Meta",
+}
+
+KEY_MAP = {
+    wx.WXK_DOWN: "ArrowDown",
+    wx.WXK_UP: "ArrowUp",
+    wx.WXK_LEFT: "ArrowLeft",
+    wx.WXK_RIGHT: "ArrowRight",
+    wx.WXK_BACK: "Backspace",
+    wx.WXK_CAPITAL: "CapsLock",
+    wx.WXK_DELETE: "Delete",
+    wx.WXK_END: "End",
+    wx.WXK_RETURN: "Enter",
+    wx.WXK_ESCAPE: "Escape",
+    wx.WXK_F1: "F1",
+    wx.WXK_F2: "F2",
+    wx.WXK_F3: "F3",
+    wx.WXK_F4: "F4",
+    wx.WXK_F5: "F5",
+    wx.WXK_F6: "F6",
+    wx.WXK_F7: "F7",
+    wx.WXK_F8: "F8",
+    wx.WXK_F9: "F9",
+    wx.WXK_F10: "F10",
+    wx.WXK_F11: "F11",
+    wx.WXK_F12: "F12",
+    wx.WXK_HOME: "Home",
+    wx.WXK_INSERT: "Insert",
+    wx.WXK_ALT: "Alt",
+    wx.WXK_CONTROL: "Control",
+    wx.WXK_SHIFT: "Shift",
+    wx.WXK_COMMAND: "Meta",  # wx.WXK_COMMAND is used for Meta (Command key on macOS)
+    wx.WXK_NUMLOCK: "NumLock",
+    wx.WXK_PAGEDOWN: "PageDown",
+    wx.WXK_PAGEUP: "PageUp",
+    wx.WXK_PAUSE: "Pause",
+    wx.WXK_SCROLL: "ScrollLock",
+    wx.WXK_TAB: "Tab",
+}
+
 
 def enable_hidpi():
     """Enable high-res displays."""
@@ -79,11 +132,39 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
     def _on_key_down(self, event: wx.KeyEvent):
         char_str = self._get_char_from_event(event)
+        self._key_event("key_down", event, char_str)
+
         if char_str is not None:
             self._char_input_event(char_str)
 
     def _on_key_up(self, event: wx.KeyEvent):
-        pass
+        char_str = self._get_char_from_event(event)
+        self._key_event("key_up", event, char_str)
+
+    def _key_event(self, event_type: str, event: wx.KeyEvent, char_str: Optional[str]):
+        modifiers = tuple(
+            MODIFIERS_MAP[mod]
+            for mod in MODIFIERS_MAP.keys()
+            if mod & event.GetModifiers()
+        )
+
+        ev = {
+            "event_type": event_type,
+            "key": KEY_MAP.get(event.GetKeyCode(), char_str),
+            "modifiers": modifiers,
+        }
+        self._handle_event_and_flush(ev)
+
+    def _char_input_event(self, char_str: Optional[str]):
+        if char_str is None:
+            return
+
+        ev = {
+            "event_type": "char",
+            "char_str": char_str,
+            "modifiers": None,
+        }
+        self._handle_event_and_flush(ev)
 
     @staticmethod
     def _get_char_from_event(event: wx.KeyEvent) -> Optional[str]:
@@ -109,17 +190,6 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
             return chr(uni_char)
 
         return None
-
-    def _char_input_event(self, char_str: Optional[str]):
-        if char_str is None:
-            return
-
-        ev = {
-            "event_type": "char",
-            "char_str": char_str,
-            "modifiers": None,
-        }
-        self._handle_event_and_flush(ev)
 
     # Methods that we add from wgpu
 
