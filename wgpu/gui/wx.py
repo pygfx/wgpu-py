@@ -25,27 +25,34 @@ BUTTON_MAP = {
 }
 
 MOUSE_EVENT_MAP = {
-    "pointer_down": (wx.wxEVT_LEFT_DOWN,
-                     wx.wxEVT_MIDDLE_DOWN,
-                     wx.wxEVT_RIGHT_DOWN,
-                     wx.wxEVT_AUX1_DOWN,
-                     wx.wxEVT_AUX2_DOWN),
-    "pointer_up": (wx.wxEVT_LEFT_UP,
-                   wx.wxEVT_MIDDLE_UP,
-                   wx.wxEVT_RIGHT_UP,
-                   wx.wxEVT_AUX1_UP,
-                   wx.wxEVT_AUX2_UP),
-    "double_click": (wx.wxEVT_LEFT_DCLICK,
-                     wx.wxEVT_MIDDLE_DCLICK,
-                     wx.wxEVT_RIGHT_DCLICK,
-                     wx.wxEVT_AUX1_DCLICK,
-                     wx.wxEVT_AUX2_DCLICK),
-    "wheel": (wx.wxEVT_MOUSEWHEEL,
-              wx.wxEVT_MAGNIFY)
+    "pointer_down": [
+        wx.wxEVT_LEFT_DOWN,
+        wx.wxEVT_MIDDLE_DOWN,
+        wx.wxEVT_RIGHT_DOWN,
+        wx.wxEVT_AUX1_DOWN,
+        wx.wxEVT_AUX2_DOWN,
+    ],
+    "pointer_up": [
+        wx.wxEVT_LEFT_UP,
+        wx.wxEVT_MIDDLE_UP,
+        wx.wxEVT_RIGHT_UP,
+        wx.wxEVT_AUX1_UP,
+        wx.wxEVT_AUX2_UP,
+    ],
+    "double_click": [
+        wx.wxEVT_LEFT_DCLICK,
+        wx.wxEVT_MIDDLE_DCLICK,
+        wx.wxEVT_RIGHT_DCLICK,
+        wx.wxEVT_AUX1_DCLICK,
+        wx.wxEVT_AUX2_DCLICK,
+    ],
+    "wheel": [wx.wxEVT_MOUSEWHEEL],
 }
 
 # reverse the mouse event map (from one-to-many to many-to-one)
-MOUSE_EVENT_MAP_REVERSED = {value: key for key, values in MOUSE_EVENT_MAP.items() for value in values}
+MOUSE_EVENT_MAP_REVERSED = {
+    value: key for key, values in MOUSE_EVENT_MAP.items() for value in values
+}
 
 MODIFIERS_MAP = {
     wx.MOD_SHIFT: "Shift",
@@ -269,20 +276,19 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
             elif axis == wx.MOUSE_WHEEL_VERTICAL:
                 dy = delta * rotation
 
-            ev.update(
-                {
-                    "dx": -dx,
-                    "dy": -dy
-                }
-            )
+            ev.update({"dx": -dx, "dy": -dy})
 
             match_keys = {"modifiers"}
             accum_keys = {"dx", "dy"}
-            self._handle_event_rate_limited(ev, self._call_later, match_keys, accum_keys)
+            self._handle_event_rate_limited(
+                ev, self._call_later, match_keys, accum_keys
+            )
         elif event_type == "pointer_move":
             match_keys = {"buttons", "modifiers", "ntouches"}
             accum_keys = {}
-            self._handle_event_rate_limited(ev, self._call_later, match_keys, accum_keys)
+            self._handle_event_rate_limited(
+                ev, self._call_later, match_keys, accum_keys
+            )
         else:
             self._handle_event_and_flush(ev)
 
