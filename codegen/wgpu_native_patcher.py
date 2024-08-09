@@ -13,6 +13,9 @@ Note that the apipatcher will also patch wgpu_native/_api.py, but where that cod
 focuses on the API, here we focus on the C library usage.
 """
 
+import re
+from collections import defaultdict
+
 from codegen.utils import print, blacken, Patcher
 from codegen.hparser import get_h_parser
 from codegen.idlparser import get_idl_parser
@@ -206,26 +209,62 @@ class FunctionPatcher(Patcher):
         hp = get_h_parser()
         count = 0
         detected = set()
+        generic_class_var_assignment = defaultdict(list)
+        generic_class_var_use = {}
 
         for line, i in self.iter_lines():
-            if "lib.wgpu" in line or "libf.wgpu" in line:
-                start = line.index(".wgpu") + 1
-                end = line.index("(", start)
-                name = line[start:end]
+            if match := re.search(r"libf?\.(wgpu\w*)\(", line):
+                # standard function call
+                var_name = match.group(1)
                 indent = " " * (len(line) - len(line.lstrip()))
                 if "lib.wgpu" in line:
                     self.insert_line(
                         i, f"{indent}# FIXME: wgpu func calls must be done from libf"
                     )
-                if name not in hp.functions:
-                    msg = f"unknown C function {name}"
+                if var_name not in hp.functions:
+                    msg = f"unknown C function {var_name}"
                     self.insert_line(i, f"{indent}# FIXME: {msg}")
                     print(f"ERROR: {msg}")
                 else:
-                    detected.add(name)
-                    anno = hp.functions[name].replace(name, "f").strip(";")
+                    detected.add(var_name)
+                    anno = hp.functions[var_name].replace(var_name, "f").strip(";")
                     self.insert_line(i, indent + f"# H: " + anno)
                     count += 1
+            elif match := re.search(r"(_\w+_function) = libf?\.(wgpu\w*)", line):
+                # Assignment of libf function to a class variable. We'll point the
+                # annotation at the point of use.
+                var_name, lib_name = match.group(1, 2)
+                if lib_name not in hp.functions:
+                    msg = f"unknown C function {lib_name}"
+                    indent = " " * (len(line) - len(line.lstrip()))
+                    self.insert_line(i, f"{indent}# FIXME: {msg}")
+                    print(f"ERROR: {msg}")
+                else:
+                    generic_class_var_assignment[var_name].append(lib_name)
+            elif match := re.search(r"type\(self\).(_\w+_function)", line):
+                # Calling the class variable. Keep track of where we are, so we can
+                # patch in the appropriate annotations.
+                var_name = match.group(1)
+                generic_class_var_use[var_name] = (line, i)
+
+        for var_name, (line, i) in generic_class_var_use.items():
+            indent = " " * (len(line) - len(line.lstrip()))
+            lib_names = generic_class_var_assignment.pop(var_name, ())
+            if not lib_names:
+                msg = f"There are no assignments to class field {var_name}"
+                self.insert_line(i, f"{indent}# FIXME: {msg}")
+                print(f"ERROR: {msg}")
+            detected.update(lib_names)
+            count += len(lib_names)
+            for lib_name in lib_names:
+                self.insert_line(
+                    i, indent + f"# H: " + hp.functions[lib_name].strip(";")
+                )
+        # At this point, generic_class_var_assignment should be empty.
+        # If it is not, we've done an assignment to a class variable name, but have
+        # never used it.
+        for var_name, lib_names in generic_class_var_assignment.items():
+            print(f"ERROR: {var_name} assigned a value but it is never used")
 
         print(f"Validated {count} C function calls")
 

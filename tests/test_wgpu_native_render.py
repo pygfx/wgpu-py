@@ -6,6 +6,8 @@ import ctypes
 import numpy as np
 import sys
 
+import pytest
+
 import wgpu
 from pytest import skip
 from testutils import run_tests, can_use_wgpu_lib, is_ci, get_default_device
@@ -36,7 +38,8 @@ fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4
 # %% Simple square
 
 
-def test_render_orange_square():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square(use_render_bundle):
     """Render an orange square and check that there is an orange square."""
 
     device = get_default_device()
@@ -59,7 +62,9 @@ def test_render_orange_square():
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args)
-    a = render_to_texture(*render_args, size=(64, 64))
+    a = render_to_texture(
+        *render_args, size=(64, 64), use_render_bundle=use_render_bundle
+    )
 
     # Check that the background is all zero
     bg = a.copy()
@@ -77,7 +82,8 @@ def test_render_orange_square():
 # %% Variations
 
 
-def test_render_orange_square_indexed():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_indexed(use_render_bundle):
     """Render an orange square, using an index buffer."""
 
     device = get_default_device()
@@ -109,6 +115,7 @@ def test_render_orange_square_indexed():
         size=(64, 64),
         topology=wgpu.PrimitiveTopology.triangle_list,
         ibo=ibo,
+        use_render_bundle=use_render_bundle,
     )
 
     # Check that the background is all zero
@@ -124,7 +131,8 @@ def test_render_orange_square_indexed():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_indirect():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_indirect(use_render_bundle):
     """Render an orange square and check that there is an orange square."""
 
     device = get_default_device()
@@ -151,7 +159,12 @@ def test_render_orange_square_indirect():
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, indirect_buffer=indirect_buffer)
-    a = render_to_texture(*render_args, size=(64, 64), indirect_buffer=indirect_buffer)
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        indirect_buffer=indirect_buffer,
+        use_render_bundle=use_render_bundle,
+    )
 
     # Check that the background is all zero
     bg = a.copy()
@@ -166,7 +179,8 @@ def test_render_orange_square_indirect():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_indexed_indirect():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_indexed_indirect(use_render_bundle):
     """Render an orange square, using an index buffer."""
 
     device = get_default_device()
@@ -206,6 +220,7 @@ def test_render_orange_square_indexed_indirect():
         topology=wgpu.PrimitiveTopology.triangle_list,
         ibo=ibo,
         indirect_buffer=indirect_buffer,
+        use_render_bundle=use_render_bundle,
     )
 
     # Check that the background is all zero
@@ -221,7 +236,8 @@ def test_render_orange_square_indexed_indirect():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_vbo():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_vbo(use_render_bundle):
     """Render an orange square, using a VBO."""
 
     device = get_default_device()
@@ -265,7 +281,13 @@ def test_render_orange_square_vbo():
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, vbos=[vbo], vbo_views=[vbo_view])
-    a = render_to_texture(*render_args, size=(64, 64), vbos=[vbo], vbo_views=[vbo_view])
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        vbos=[vbo],
+        vbo_views=[vbo_view],
+        use_render_bundle=use_render_bundle,
+    )
 
     # Check that the background is all zero
     bg = a.copy()
@@ -280,7 +302,8 @@ def test_render_orange_square_vbo():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_color_attachment1():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_color_attachment1(use_render_bundle):
     """Render an orange square on a blue background, testing the load_op."""
 
     device = get_default_device()
@@ -307,7 +330,12 @@ def test_render_orange_square_color_attachment1():
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, color_attachment=ca)
-    a = render_to_texture(*render_args, size=(64, 64), color_attachment=ca)
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        color_attachment=ca,
+        use_render_bundle=use_render_bundle,
+    )
 
     # Check the blue background
     assert np.all(a[:16, :16, 2] == 204)
@@ -323,7 +351,8 @@ def test_render_orange_square_color_attachment1():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_color_attachment2():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_color_attachment2(use_render_bundle):
     """Render an orange square on a blue background, testing the LoadOp.load,
     though in this case the result is the same as the normal square test.
     """
@@ -351,7 +380,12 @@ def test_render_orange_square_color_attachment2():
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, color_attachment=ca)
-    a = render_to_texture(*render_args, size=(64, 64), color_attachment=ca)
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        color_attachment=ca,
+        use_render_bundle=use_render_bundle,
+    )
 
     # Check the background
     bg = a.copy()
@@ -370,7 +404,8 @@ def test_render_orange_square_color_attachment2():
 # %% Viewport and stencil
 
 
-def test_render_orange_square_viewport():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_viewport(use_render_bundle):
     """Render an orange square, in a sub-viewport of the rendered area."""
 
     device = get_default_device()
@@ -393,7 +428,12 @@ def test_render_orange_square_viewport():
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, renderpass_callback=cb)
-    a = render_to_texture(*render_args, size=(64, 64), renderpass_callback=cb)
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        renderpass_callback=cb,
+        use_render_bundle=use_render_bundle,
+    )
 
     # Check that the background is all zero
     bg = a.copy()
@@ -408,7 +448,8 @@ def test_render_orange_square_viewport():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_scissor():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_scissor(use_render_bundle):
     """Render an orange square, but scissor half the screen away."""
 
     device = get_default_device()
@@ -433,7 +474,12 @@ def test_render_orange_square_scissor():
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group
     # render_to_screen(*render_args, renderpass_callback=cb)
-    a = render_to_texture(*render_args, size=(64, 64), renderpass_callback=cb)
+    a = render_to_texture(
+        *render_args,
+        size=(64, 64),
+        renderpass_callback=cb,
+        use_render_bundle=use_render_bundle,
+    )
 
     # Check that the background is all zero
     bg = a.copy()
@@ -448,22 +494,27 @@ def test_render_orange_square_scissor():
     assert np.all(sq[:, :, 3] == 255)  # alpha
 
 
-def test_render_orange_square_depth16unorm():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_depth16unorm(use_render_bundle):
     """Render an orange square, but disable half of it using a depth test using 16 bits."""
-    _render_orange_square_depth(wgpu.TextureFormat.depth16unorm)
+    _render_orange_square_depth(wgpu.TextureFormat.depth16unorm, use_render_bundle)
 
 
-def test_render_orange_square_depth24plus_stencil8():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_depth24plus_stencil8(use_render_bundle):
     """Render an orange square, but disable half of it using a depth test using 24 bits."""
-    _render_orange_square_depth(wgpu.TextureFormat.depth24plus_stencil8)
+    _render_orange_square_depth(
+        wgpu.TextureFormat.depth24plus_stencil8, use_render_bundle
+    )
 
 
-def test_render_orange_square_depth32float():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_square_depth32float(use_render_bundle):
     """Render an orange square, but disable half of it using a depth test using 32 bits."""
-    _render_orange_square_depth(wgpu.TextureFormat.depth32float)
+    _render_orange_square_depth(wgpu.TextureFormat.depth32float, use_render_bundle)
 
 
-def _render_orange_square_depth(depth_stencil_tex_format):
+def _render_orange_square_depth(depth_stencil_tex_format, use_render_bundle):
     device = get_default_device()
 
     shader_source = """
@@ -542,6 +593,7 @@ def _render_orange_square_depth(depth_stencil_tex_format):
         renderpass_callback=cb,
         depth_stencil_state=depth_stencil_state,
         depth_stencil_attachment=depth_stencil_attachment,
+        use_render_bundle=use_render_bundle,
     )
 
     # Check that the background is all zero
@@ -560,7 +612,8 @@ def _render_orange_square_depth(depth_stencil_tex_format):
 # %% Not squares
 
 
-def test_render_orange_dots():
+@pytest.mark.parametrize("use_render_bundle", [True, False])
+def test_render_orange_dots(use_render_bundle):
     """Render four orange dots and check that there are four orange square dots."""
 
     device = get_default_device()
@@ -599,7 +652,9 @@ def test_render_orange_dots():
     render_args = device, shader_source, pipeline_layout, bind_group
     top = wgpu.PrimitiveTopology.point_list
     # render_to_screen(*render_args, topology=top)
-    a = render_to_texture(*render_args, size=(64, 64), topology=top)
+    a = render_to_texture(
+        *render_args, size=(64, 64), topology=top, use_render_bundle=use_render_bundle
+    )
 
     # Check that the background is all zero
     bg = a.copy()

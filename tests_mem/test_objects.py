@@ -202,14 +202,28 @@ def test_release_queue(n):
 
 
 @create_and_release
-def test_release_render_bundle(n):
-    # todo: implement this when we do support them
-    pytest.skip("Render bundle not implemented")
+def test_release_render_bundle_encoder(n):
+    yield {
+        "expected_counts_after_create": {
+            "RenderBundleEncoder": (n, 0),
+        },
+    }
+
+    for i in range(n):
+        yield DEVICE.create_render_bundle_encoder(color_formats=[])
 
 
 @create_and_release
-def test_release_render_bundle_encoder(n):
-    pytest.skip("Render bundle not implemented")
+def test_release_render_bundle(n):
+    yield {
+        "expected_counts_after_create": {
+            "RenderBundleEncoder": (n, 0),
+            "RenderBundle": (n, n),
+        },
+    }
+
+    for i in range(n):
+        yield DEVICE.create_render_bundle_encoder(color_formats=[]).finish()
 
 
 @create_and_release
