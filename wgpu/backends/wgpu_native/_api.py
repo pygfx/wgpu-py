@@ -1680,7 +1680,30 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
     ):
-        raise NotImplementedError()
+
+        c_color_formats, color_formats_count = ffi.NULL, 0
+        if color_formats:
+            color_formats_list = [enummap["TextureFormat." + x] for x in color_formats]
+            c_color_formats = ffi.new("WGPUTextureFormat []", color_formats_list)
+            color_formats_count = len(color_formats_list)
+
+        # H: nextInChain: WGPUChainedStruct *, label: char *, colorFormatCount: int, colorFormats: WGPUTextureFormat *, depthStencilFormat: WGPUTextureFormat, sampleCount: int, depthReadOnly: WGPUBool/int, stencilReadOnly: WGPUBool/int
+        render_bundle_encoder_descriptor = new_struct_p(
+            "WGPURenderBundleEncoderDescriptor *",
+            label=to_c_label(label),
+            colorFormatCount=color_formats_count,
+            colorFormats=c_color_formats,
+            depthStencilFormat=depth_stencil_format or 0,
+            sampleCount=sample_count,
+            depthReadOnly=depth_read_only,
+            stencilReadOnly=stencil_read_only,
+            # not used: nextInChain
+        )
+        # H: WGPURenderBundleEncoder f(WGPUDevice device, WGPURenderBundleEncoderDescriptor const * descriptor)
+        render_bundle_id = libf.wgpuDeviceCreateRenderBundleEncoder(
+            self._internal, render_bundle_encoder_descriptor
+        )
+        return GPURenderBundleEncoder(label, render_bundle_id, self)
         # Note: also enable the coresponing memtest when implementing this!
 
     def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
@@ -2160,101 +2183,83 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         offsets = list(dynamic_offsets_data)
         c_offsets = ffi.new("uint32_t []", offsets)
         bind_group_id = bind_group._internal
-        if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
-            libf.wgpuComputePassEncoderSetBindGroup(
-                self._internal, index, bind_group_id, len(offsets), c_offsets
-            )
-        else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
-            libf.wgpuRenderPassEncoderSetBindGroup(
-                self._internal,
-                index,
-                bind_group_id,
-                len(offsets),
-                c_offsets,
-            )
+
+        # H: void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
+        # H: void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
+        # H: void wgpuRenderBundleEncoderSetBindGroup(WGPURenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
+        function = type(self)._set_bind_group_function
+        function(self._internal, index, bind_group_id, len(offsets), c_offsets)
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     def push_debug_group(self, group_label):
         c_group_label = ffi.new("char []", group_label.encode())
-        color = 0
-        # todo: these functions are temporarily not available in wgpu-native
-        return  # noqa
-        if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder, char const * groupLabel)
-            libf.wgpuComputePassEncoderPushDebugGroup(
-                self._internal, c_group_label, color
-            )
-        else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder, char const * groupLabel)
-            libf.wgpuRenderPassEncoderPushDebugGroup(
-                self._internal, c_group_label, color
-            )
+        # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, char const * groupLabel)
+        # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, char const * groupLabel)
+        # H: void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, char const * groupLabel)
+        # H: void wgpuRenderBundleEncoderPushDebugGroup(WGPURenderBundleEncoder renderBundleEncoder, char const * groupLabel)
+        function = type(self)._push_debug_group_function
+        function(self._internal, c_group_label)
 
     def pop_debug_group(self):
-        # todo: these functions are temporarily not available in wgpu-native
-        return  # noqa
-        if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder)
-            libf.wgpuComputePassEncoderPopDebugGroup(self._internal)
-        else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder)
-            libf.wgpuRenderPassEncoderPopDebugGroup(self._internal)
+        # H: void wgpuCommandEncoderPopDebugGroup(WGPUCommandEncoder commandEncoder)
+        # H: void wgpuComputePassEncoderPopDebugGroup(WGPUComputePassEncoder computePassEncoder)
+        # H: void wgpuRenderPassEncoderPopDebugGroup(WGPURenderPassEncoder renderPassEncoder)
+        # H: void wgpuRenderBundleEncoderPopDebugGroup(WGPURenderBundleEncoder renderBundleEncoder)
+        function = type(self)._pop_debug_group_function  # noqa
+        function(self._internal)
 
     def insert_debug_marker(self, marker_label):
         c_marker_label = ffi.new("char []", marker_label.encode())
-        color = 0
-        # todo: these functions are temporarily not available in wgpu-native
-        return  # noqa
-        if isinstance(self, GPUComputePassEncoder):
-            # H: void f(WGPUComputePassEncoder computePassEncoder, char const * markerLabel)
-            libf.wgpuComputePassEncoderInsertDebugMarker(
-                self._internal, c_marker_label, color
-            )
-        else:
-            # H: void f(WGPURenderPassEncoder renderPassEncoder, char const * markerLabel)
-            libf.wgpuRenderPassEncoderInsertDebugMarker(
-                self._internal, c_marker_label, color
-            )
+        # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, char const * markerLabel)
+        # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, char const * markerLabel)
+        # H: void wgpuRenderPassEncoderInsertDebugMarker(WGPURenderPassEncoder renderPassEncoder, char const * markerLabel)
+        # H: void wgpuRenderBundleEncoderInsertDebugMarker(WGPURenderBundleEncoder renderBundleEncoder, char const * markerLabel)
+        function = type(self)._insert_debug_marker_function
+        function(self._internal, c_marker_label)
 
 
 class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
-        libf.wgpuRenderPassEncoderSetPipeline(self._internal, pipeline_id)
+        # H: void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
+        # H: void wgpuRenderBundleEncoderSetPipeline(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderPipeline pipeline)
+        function = type(self)._set_pipeline_function
+        function(self._internal, pipeline_id)
 
     def set_index_buffer(self, buffer, index_format, offset=0, size=None):
         if not size:
             size = lib.WGPU_WHOLE_SIZE
         c_index_format = enummap[f"IndexFormat.{index_format}"]
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
-        libf.wgpuRenderPassEncoderSetIndexBuffer(
+        # H: void wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
+        # H: void wgpuRenderBundleEncoderSetIndexBuffer(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
+        function = type(self)._set_index_buffer_function
+        function(
             self._internal, buffer._internal, c_index_format, int(offset), int(size)
         )
 
     def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
         if not size:
             size = lib.WGPU_WHOLE_SIZE
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
-        libf.wgpuRenderPassEncoderSetVertexBuffer(
-            self._internal, int(slot), buffer._internal, int(offset), int(size)
-        )
+        # H: void wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
+        # H: void wgpuRenderBundleEncoderSetVertexBuffer(WGPURenderBundleEncoder renderBundleEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
+        function = type(self)._set_vertex_buffer_function
+        function(self._internal, int(slot), buffer._internal, int(offset), int(size))
 
     def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
-        libf.wgpuRenderPassEncoderDraw(
+        # H: void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+        # H: void wgpuRenderBundleEncoderDraw(WGPURenderBundleEncoder renderBundleEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
+        function = type(self)._draw_function  # noqa
+        function(
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
 
     def draw_indirect(self, indirect_buffer, indirect_offset):
         buffer_id = indirect_buffer._internal
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        libf.wgpuRenderPassEncoderDrawIndirect(
-            self._internal, buffer_id, int(indirect_offset)
-        )
+        # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
+        # H: void wgpuRenderBundleEncoderDrawIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
+        function = type(self)._draw_indirect_function  # noqa
+        function(self._internal, buffer_id, int(indirect_offset))
 
     def draw_indexed(
         self,
@@ -2264,8 +2269,10 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         base_vertex=0,
         first_instance=0,
     ):
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
-        libf.wgpuRenderPassEncoderDrawIndexed(
+        # H: void wgpuRenderPassEncoderDrawIndexed(WGPURenderPassEncoder renderPassEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
+        # H: void wgpuRenderBundleEncoderDrawIndexed(WGPURenderBundleEncoder renderBundleEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
+        function = type(self)._draw_indexed_function
+        function(
             self._internal,
             index_count,
             instance_count,
@@ -2276,15 +2283,21 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 
     def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
         buffer_id = indirect_buffer._internal
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        libf.wgpuRenderPassEncoderDrawIndexedIndirect(
-            self._internal, buffer_id, int(indirect_offset)
-        )
+        # H: void wgpuRenderPassEncoderDrawIndexedIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
+        # H: void wgpuRenderBundleEncoderDrawIndexedIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
+        function = type(self)._draw_indexed_indirect_function
+        function(self._internal, buffer_id, int(indirect_offset))
 
 
 class GPUCommandEncoder(
     classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase
 ):
+
+    # GPUDebugCommandsMixin
+    _push_debug_group_function = libf.wgpuCommandEncoderPushDebugGroup
+    _pop_debug_group_function = libf.wgpuCommandEncoderPopDebugGroup
+    _insert_debug_marker_function = libf.wgpuCommandEncoderInsertDebugMarker
+
     def begin_compute_pass(
         self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
     ):
@@ -2692,6 +2705,14 @@ class GPUComputePassEncoder(
 ):
     """ """
 
+    # GPUDebugCommandsMixin
+    _push_debug_group_function = libf.wgpuComputePassEncoderPushDebugGroup
+    _pop_debug_group_function = libf.wgpuComputePassEncoderPopDebugGroup
+    _insert_debug_marker_function = libf.wgpuComputePassEncoderInsertDebugMarker
+
+    # GPUBindingCommandsMixin
+    _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
+
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
         # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)
@@ -2731,6 +2752,23 @@ class GPURenderPassEncoder(
     GPURenderCommandsMixin,
     GPUObjectBase,
 ):
+    # GPUDebugCommandsMixin
+    _push_debug_group_function = libf.wgpuRenderPassEncoderPushDebugGroup
+    _pop_debug_group_function = libf.wgpuRenderPassEncoderPopDebugGroup
+    _insert_debug_marker_function = libf.wgpuRenderPassEncoderInsertDebugMarker
+
+    # GPUBindingCommandsMixin
+    _set_bind_group_function = libf.wgpuRenderPassEncoderSetBindGroup
+
+    # GPURenderCommandsMixin
+    _set_pipeline_function = libf.wgpuRenderPassEncoderSetPipeline
+    _set_index_buffer_function = libf.wgpuRenderPassEncoderSetIndexBuffer
+    _set_vertex_buffer_function = libf.wgpuRenderPassEncoderSetVertexBuffer
+    _draw_function = libf.wgpuRenderPassEncoderDraw
+    _draw_indirect_function = libf.wgpuRenderPassEncoderDrawIndirect
+    _draw_indexed_function = libf.wgpuRenderPassEncoderDrawIndexed
+    _draw_indexed_indirect_function = libf.wgpuRenderPassEncoderDrawIndexedIndirect
+
     def set_viewport(self, x, y, width, height, min_depth, max_depth):
         # H: void f(WGPURenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth)
         libf.wgpuRenderPassEncoderSetViewport(
@@ -2771,7 +2809,12 @@ class GPURenderPassEncoder(
         libf.wgpuRenderPassEncoderEnd(self._internal)
 
     def execute_bundles(self, bundles):
-        raise NotImplementedError()
+        bundle_ids = [bundle._internal for bundle in bundles]
+        c_bundle_info = ffi.new("WGPURenderBundle []", bundle_ids)
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, size_t bundleCount, WGPURenderBundle const * bundles)
+        libf.wgpuRenderPassEncoderExecuteBundles(
+            self._internal, len(bundles), c_bundle_info
+        )
 
     def begin_occlusion_query(self, query_index):
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t queryIndex)
@@ -2796,8 +2839,33 @@ class GPURenderBundleEncoder(
     GPURenderCommandsMixin,
     GPUObjectBase,
 ):
+    # GPUDebugCommandsMixin
+    _push_debug_group_function = libf.wgpuRenderBundleEncoderPushDebugGroup
+    _pop_debug_group_function = libf.wgpuRenderBundleEncoderPopDebugGroup
+    _insert_debug_marker_function = libf.wgpuRenderBundleEncoderInsertDebugMarker
+
+    # GPUBindingCommandsMixin
+    _set_bind_group_function = libf.wgpuRenderBundleEncoderSetBindGroup
+
+    # GPURenderCommandsMixin
+    _set_pipeline_function = libf.wgpuRenderBundleEncoderSetPipeline
+    _set_index_buffer_function = libf.wgpuRenderBundleEncoderSetIndexBuffer
+    _set_vertex_buffer_function = libf.wgpuRenderBundleEncoderSetVertexBuffer
+    _draw_function = libf.wgpuRenderBundleEncoderDraw
+    _draw_indirect_function = libf.wgpuRenderBundleEncoderDrawIndirect
+    _draw_indexed_function = libf.wgpuRenderBundleEncoderDrawIndexed
+    _draw_indexed_indirect_function = libf.wgpuRenderBundleEncoderDrawIndexedIndirect
+
     def finish(self, *, label=""):
-        raise NotImplementedError()
+        # H: nextInChain: WGPUChainedStruct *, label: char *
+        struct = new_struct_p(
+            "WGPURenderBundleDescriptor *",
+            label=to_c_label(label),
+            # not used: nextInChain
+        )
+        # H: WGPURenderBundle f(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderBundleDescriptor const * descriptor)
+        id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
+        return GPURenderBundle(label, id, self)
 
     def _release(self):
         if self._internal is not None and libf is not None:
