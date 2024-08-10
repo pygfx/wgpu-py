@@ -2410,11 +2410,12 @@ class GPUCommandEncoder(
                 loadOp=color_attachment["load_op"],
                 storeOp=color_attachment["store_op"],
                 clearValue=c_clear_value,
+                depthSlice=lib.WGPU_DEPTH_SLICE_UNDEFINED,
                 # not used: resolveTarget
                 # not used: nextInChain
-                # not used: depthSlice
             )
             c_color_attachments_list.append(c_attachment)
+        # TODO something here spews "Depth slice on color attachments is not implemented" - needs to be surpressed as it's not available in wgpu-native.
         c_color_attachments_array = ffi.new(
             "WGPURenderPassColorAttachment []", c_color_attachments_list
         )
