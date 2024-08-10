@@ -2746,6 +2746,8 @@ class GPUComputePassEncoder(
     def end(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
+        # Once a pass encoder is ended, it needs to be released to signal it's no longer in use.
+        self._release()
 
     def _release(self):
         if self._internal is not None and libf is not None:
@@ -2800,6 +2802,8 @@ class GPURenderPassEncoder(
     def end(self):
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
+        # Once a pass encoder is ended, it needs to be released to signal it's no longer in use.
+        self._release()
 
     def execute_bundles(self, bundles):
         raise NotImplementedError()
