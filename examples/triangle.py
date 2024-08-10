@@ -83,7 +83,6 @@ def setup_draw(context, device):
 
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
-    render_texture_format = context.get_preferred_format(device.adapter)
 
     render_pipeline = device.create_render_pipeline(
         layout=pipeline_layout,

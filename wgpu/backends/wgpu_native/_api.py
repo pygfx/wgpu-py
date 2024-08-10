@@ -465,6 +465,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             c_view_formats = ffi.new("WGPUTextureFormat []", view_formats_list)
         # Lookup alpha mode, needs explicit conversion because enum names mismatch
         c_alpha_mode = getattr(lib, f"WGPUCompositeAlphaMode_{alpha_mode.capitalize()}")
+        # The format is used as-is
+        if format is None:
+            format = self.get_preferred_format(device.adapter)
         # The color_space is not used for now
         color_space
         # TODO: tone mapping ?
@@ -472,24 +475,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         # Get what's supported
 
-        # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
-        capabilities = new_struct_p(
-            "WGPUSurfaceCapabilities *",
-            usages=usage,
-            # not used: formatCount
-            # not used: formats
-            # not used: presentModeCount
-            # not used: presentModes
-            # not used: alphaModeCount
-            # not used: alphaModes
-            # not used: nextInChain
-        )
-
-        # TODO: Vulkan gives Null pointers of some fields, D3D12 and OpenGL work. (could be Intel specific?)
-        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
-        libf.wgpuSurfaceGetCapabilities(
-            self._get_surface_id(), self._device.adapter._internal, capabilities
-        )
+        capabilities = self._get_surface_capabilities(adapter=self._device.adapter)
 
         capable_formats = []
         for i in range(capabilities.formatCount):
@@ -507,14 +493,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             int_val = capabilities.alphaModes[i]
             str_val = enum_int2str["CompositeAlphaMode"][int_val]
             capable_alpha_modes.append(str_val.lower())
-
-        # The format is used as-is
-        if format is None and capabilities.formatCount > 0:
-            format = enum_int2str["TextureFormat"][capabilities.formats[0]]
-        else:
-            raise RuntimeError(
-                "No formats supported by the surface."
-            )  # doesn't really make sense, maybe should be higher up.
 
         # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
         libf.wgpuSurfaceCapabilitiesFreeMembers(capabilities[0])
@@ -743,12 +721,40 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             libf.wgpuSurfacePresent(self._get_surface_id())
             self._drop_texture()
 
-    # TODO: replace according to https://github.com/webgpu-native/webgpu-headers/issues/290
     def get_preferred_format(self, adapter):
         if self._config is not None:
+            # this shortcut might not be correct if a different format is specified during .configure()
             return enum_int2str["TextureFormat"][self._config.format]
-        # to keep old code working, returning None as a quick fix.
-        return None
+        else:
+            capabilities = self._get_surface_capabilities(adapter)
+            return enum_int2str["TextureFormat"][capabilities.formats[0]]
+
+    def _get_surface_capabilities(self, adapter):
+        # perhaps only grab the internal if the adapter class is what we expect?
+        # it can also be accessed via self._device.adapter._internal so this might be redundant?
+        if adapter:
+            adapter_id = adapter._internal
+
+        # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
+        capabilities = new_struct_p(
+            "WGPUSurfaceCapabilities *",
+            # not used: nextInChain
+            # not used: usages
+            # not used: formatCount
+            # not used: formats
+            # not used: presentModeCount
+            # not used: presentModes
+            # not used: alphaModeCount
+            # not used: alphaModes
+        )
+
+        # TODO: Vulkan gives Null pointers of some fields, D3D12 and OpenGL work. (could be Intel specific?)
+        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
+        libf.wgpuSurfaceGetCapabilities(
+            self._get_surface_id(), adapter_id, capabilities
+        )
+
+        return capabilities
 
     def _release(self):
         self._drop_texture()
@@ -865,6 +871,7 @@ class GPUAdapter(classes.GPUAdapter):
         # TODO: this is moved from the uncaptuedErrroCallback that was in GPUDevice previously, test if it works once all other changes are fixed.
         @ffi.callback("void(WGPUErrorType, char *, void *)")
         def uncaptured_error_callback(c_type, c_message, userdata):
+            print(f"uncaptured_error_callback called: {c_type}, {c_message}")
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
             message = "\n".join(line.rstrip() for line in message.splitlines())

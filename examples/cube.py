@@ -27,10 +27,8 @@ device = adapter.request_device()
 
 # Prepare present context
 present_context = canvas.get_context()
-# render_texture_format = present_context.get_preferred_format(device.adapter)
-render_texture_format = None # triggers the preferred format now?
+render_texture_format = present_context.get_preferred_format(device.adapter)
 present_context.configure(device=device, format=render_texture_format)
-render_texture_format = present_context.get_preferred_format(device.adapter) # returns the value after configure.
 
 # %% Generate data
 
