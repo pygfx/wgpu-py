@@ -29,7 +29,7 @@ def test_parse_shader_error1(caplog):
         Validation Error
 
         Caused by:
-            In wgpuDeviceCreateShaderModule
+          In wgpuDeviceCreateShaderModule
 
         Shader '' parsing error: invalid field accessor `invalid_attr`
           ┌─ wgsl:9:9
@@ -38,7 +38,7 @@ def test_parse_shader_error1(caplog):
           │         ^^^^^^^^^^^^ invalid accessor
 
 
-            invalid field accessor `invalid_attr`
+              invalid field accessor `invalid_attr`
     """
 
     code = dedent(code)
@@ -65,7 +65,7 @@ def test_parse_shader_error2(caplog):
         Validation Error
 
         Caused by:
-            In wgpuDeviceCreateShaderModule
+          In wgpuDeviceCreateShaderModule
 
         Shader '' parsing error: expected ',', found ';'
           ┌─ wgsl:2:38
@@ -74,7 +74,7 @@ def test_parse_shader_error2(caplog):
           │                                      ^ expected ','
 
 
-            expected ',', found ';'
+              expected ',', found ';'
     """
 
     code = dedent(code)
@@ -101,7 +101,7 @@ def test_parse_shader_error3(caplog):
         Validation Error
 
         Caused by:
-            In wgpuDeviceCreateShaderModule
+          In wgpuDeviceCreateShaderModule
 
         Shader '' parsing error: unknown scalar type: 'f3'
           ┌─ wgsl:3:39
@@ -112,7 +112,7 @@ def test_parse_shader_error3(caplog):
           = note: Valid scalar types are f32, f64, i32, u32, bool
 
 
-            unknown scalar type: 'f3'
+              unknown scalar type: 'f3'
     """
 
     code = dedent(code)
@@ -139,12 +139,12 @@ def test_parse_shader_error4(caplog):
         Validation Error
 
         Caused by:
-            In wgpuDeviceCreateShaderModule
+          In wgpuDeviceCreateShaderModule
 
-        Shader '' parsing error: Index 4 is out of bounds for expression [11]
+        Shader '' parsing error: Index 4 is out of bounds for expression [10]
 
 
-    Index 4 is out of bounds for expression [11]
+      Index 4 is out of bounds for expression [10]
     """
 
     code = dedent(code)
@@ -175,24 +175,24 @@ def test_validate_shader_error1(caplog):
         }
     """
 
-    expected1 = """Left: Load { pointer: [3] } of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }"""
-    expected2 = """Right: Load { pointer: [6] } of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }"""
+    expected1 = """Left: Load { pointer: [2] } of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }"""
+    expected2 = """Right: Load { pointer: [5] } of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }"""
     expected3 = """
         Validation Error
 
         Caused by:
-            In wgpuDeviceCreateShaderModule
+          In wgpuDeviceCreateShaderModule
 
         Shader validation error:
            ┌─ :10:20
            │
         10 │     out.position = matrics * out.position;
-           │                    ^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [8]
+           │                    ^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [7]
 
 
-            Entry point vs_main at Vertex is invalid
-            Expression [8] is invalid
-            Operation Multiply can't work with [5] and [7]
+              Entry point vs_main at Vertex is invalid
+                Expression [7] is invalid
+                  Operation Multiply can't work with [4] and [6]
     """
 
     code = dedent(code)
@@ -231,17 +231,17 @@ def test_validate_shader_error2(caplog):
         Validation Error
 
         Caused by:
-            In wgpuDeviceCreateShaderModule
+          In wgpuDeviceCreateShaderModule
 
         Shader validation error:
           ┌─ :9:16
           │
         9 │         return vec3<f32>(1.0, 0.0, 1.0);
-          │                ^^^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [9]
+          │                ^^^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [8]
 
 
-            Entry point fs_main at Vertex is invalid
-            The `return` value Some([9]) does not match the function return value
+              Entry point fs_main at Vertex is invalid
+                The `return` value Some([8]) does not match the function return value
     """
 
     code = dedent(code)

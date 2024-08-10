@@ -871,7 +871,6 @@ class GPUAdapter(classes.GPUAdapter):
         # TODO: this is moved from the uncaptuedErrroCallback that was in GPUDevice previously, test if it works once all other changes are fixed.
         @ffi.callback("void(WGPUErrorType, char *, void *)")
         def uncaptured_error_callback(c_type, c_message, userdata):
-            print(f"uncaptured_error_callback called: {c_type}, {c_message}")
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
             message = "\n".join(line.rstrip() for line in message.splitlines())
