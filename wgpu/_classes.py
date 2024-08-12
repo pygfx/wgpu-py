@@ -1824,6 +1824,8 @@ class GPURenderPassEncoder(
 
 
 class GPURenderBundle(GPUObjectBase):
+    """A reusable bundle of render commands."""
+
     pass
 
 
@@ -1834,6 +1836,8 @@ class GPURenderBundleEncoder(
     GPURenderCommandsMixin,
     GPUObjectBase,
 ):
+    """Encodes a series of render commands into a reusable render bundle."""
+
     # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
     def finish(self, *, label=""):
         """Finish recording and return a `GPURenderBundle`.
