@@ -6,7 +6,7 @@ This example renders a simple textured rotating cube.
 
 import time
 
-from wgpu.gui.auto import WgpuCanvas, run
+from wgpu.gui.glfw import WgpuCanvas, run
 import wgpu
 import numpy as np
 
@@ -222,7 +222,9 @@ bind_groups_layout_entries[0].append(
     {
         "binding": 0,
         "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-        "buffer": {},
+        "buffer": {
+            "type": wgpu.BufferBindingType.uniform
+        },
     }
 )
 
@@ -231,7 +233,9 @@ bind_groups_layout_entries[0].append(
     {
         "binding": 1,
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "texture": {},
+        "texture": {
+            "multisampled": False
+        },
     }
 )
 
@@ -240,7 +244,9 @@ bind_groups_layout_entries[0].append(
     {
         "binding": 2,
         "visibility": wgpu.ShaderStage.FRAGMENT,
-        "sampler": {},
+        "sampler": {
+            "type": wgpu.SamplerBindingType.filtering
+        },
     }
 )
 
@@ -298,10 +304,7 @@ render_pipeline = device.create_render_pipeline(
         "targets": [
             {
                 "format": render_texture_format,
-                "blend": {
-                    "alpha": {},
-                    "color": {},
-                },
+                "blend": None,
             }
         ],
     },
