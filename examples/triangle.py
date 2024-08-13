@@ -89,6 +89,7 @@ def setup_draw(context, device):
         vertex={
             "module": shader,
             "entry_point": "vs_main",
+            "buffers": []
         },
         depth_stencil=None,
         multisample=None,
@@ -98,10 +99,7 @@ def setup_draw(context, device):
             "targets": [
                 {
                     "format": render_texture_format,
-                    "blend": {
-                        "color": {},
-                        "alpha": {},
-                    },
+                    "blend": None,
                 },
             ],
         },
