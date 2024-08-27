@@ -1151,7 +1151,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 view_dimension = info.get("view_dimension", "2d")
                 if not isinstance(view_dimension, str):
                     raise TypeError(
-                        f"Texture view dimension must be a str, not {dimension.__class__.__name__}"
+                        f"Texture view dimension must be a str, not {view_dimension.__class__.__name__}"
                     )
                 # H: nextInChain: WGPUChainedStruct *, sampleType: WGPUTextureSampleType, viewDimension: WGPUTextureViewDimension, multisampled: WGPUBool/int
                 texture = new_struct(
@@ -1167,7 +1167,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 view_dimension = info.get("view_dimension", "2d")
                 if not isinstance(view_dimension, str):
                     raise TypeError(
-                        f"Texture view dimension must be a str, not {dimension.__class__.__name__}"
+                        f"Texture view dimension must be a str, not {view_dimension.__class__.__name__}"
                     )
                 # H: nextInChain: WGPUChainedStruct *, access: WGPUStorageTextureAccess, format: WGPUTextureFormat, viewDimension: WGPUTextureViewDimension
                 storage_texture = new_struct(
