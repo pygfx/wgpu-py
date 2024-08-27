@@ -1019,6 +1019,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         usage = int(usage)
         size = _tuple_from_extent3d(size)
 
+        # It's easy to accidentally pass 2, when you mean '2d'. Sadly in webgpu.h,
+        # the int value for '2d' is actually 1 :/
+        if not isinstance(dimension, str):
+            raise TypeError(
+                f"Texture dimension must be a str, not {dimension.__class__.__name__}"
+            )
+
         # H: width: int, height: int, depthOrArrayLayers: int
         c_size = new_struct(
             "WGPUExtent3D",
@@ -1141,22 +1148,32 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             elif "texture" in entry:  # It may be an empty dictionary
                 info = entry["texture"]
                 check_struct("TextureBindingLayout", info)
+                view_dimension = info.get("view_dimension", "2d")
+                if not isinstance(view_dimension, str):
+                    raise TypeError(
+                        f"Texture view dimension must be a str, not {view_dimension.__class__.__name__}"
+                    )
                 # H: nextInChain: WGPUChainedStruct *, sampleType: WGPUTextureSampleType, viewDimension: WGPUTextureViewDimension, multisampled: WGPUBool/int
                 texture = new_struct(
                     "WGPUTextureBindingLayout",
                     sampleType=info.get("sample_type", "float"),
-                    viewDimension=info.get("view_dimension", "2d"),
+                    viewDimension=view_dimension,
                     multisampled=info.get("multisampled", False),
                     # not used: nextInChain
                 )
             elif "storage_texture" in entry:  # format is required, so not empty
                 info = entry["storage_texture"]
                 check_struct("StorageTextureBindingLayout", info)
+                view_dimension = info.get("view_dimension", "2d")
+                if not isinstance(view_dimension, str):
+                    raise TypeError(
+                        f"Texture view dimension must be a str, not {view_dimension.__class__.__name__}"
+                    )
                 # H: nextInChain: WGPUChainedStruct *, access: WGPUStorageTextureAccess, format: WGPUTextureFormat, viewDimension: WGPUTextureViewDimension
                 storage_texture = new_struct(
                     "WGPUStorageTextureBindingLayout",
                     access=info.get("access", "write-only"),
-                    viewDimension=info.get("view_dimension", "2d"),
+                    viewDimension=view_dimension,
                     format=info["format"],
                     # not used: nextInChain
                 )
@@ -1960,6 +1977,10 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             format = self._tex_info["format"]
         if not dimension:
             dimension = self._tex_info["dimension"]  # from create_texture
+        elif not isinstance(dimension, str):
+            raise TypeError(
+                f"Texture view dimension must be a str, not {dimension.__class__.__name__}"
+            )
         if not aspect:
             aspect = "all"
         if not mip_level_count:
