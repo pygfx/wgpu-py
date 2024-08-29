@@ -2754,6 +2754,7 @@ class GPUComputePassEncoder(
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
         # Once a pass encoder is ended, it needs to be released to signal it's no longer in use.
+        # might be an unintended workaround: https://github.com/gfx-rs/wgpu-native/issues/412
         self._release()
 
     def _release(self):
