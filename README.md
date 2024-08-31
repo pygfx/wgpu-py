@@ -47,7 +47,7 @@ WebGPU is a JavaScript API with a well-defined
 broader term "wgpu" is used to refer to "desktop" implementations of WebGPU in
 various languages.
 
-OpenGL is old and showing it's cracks. New API's like Vulkan, Metal and DX12
+OpenGL is old and showing its cracks. New API's like Vulkan, Metal and DX12
 provide a modern way to control the GPU, but these are too low-level for general
 use. WebGPU follows the same concepts, but with a simpler (higher level) API.
 With wgpu-py we bring WebGPU to Python.
