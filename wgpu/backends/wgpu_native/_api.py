@@ -859,7 +859,7 @@ class GPUAdapter(classes.GPUAdapter):
 
         @ffi.callback("void(WGPUDeviceLostReason, char *, void *)")
         def device_lost_callback(c_reason, c_message, userdata):
-            reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown") # careful since lowercase "unknown" is an actual reason now! maybe not the best default?
+            reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
             message = "\n".join(line.rstrip() for line in message.splitlines())
             # error_handler.log_error(f"The WGPU device was lost ({reason}):\n{message}") # why only log it, we can now handle this too
