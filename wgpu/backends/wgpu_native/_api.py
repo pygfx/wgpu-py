@@ -863,8 +863,7 @@ class GPUAdapter(classes.GPUAdapter):
             message = ffi.string(c_message).decode(errors="ignore")
             message = "\n".join(line.rstrip() for line in message.splitlines())
             # error_handler.log_error(f"The WGPU device was lost ({reason}):\n{message}") # why only log it, we can now handle this too
-            # TODO: decode actual error type from the start of the message?
-            error_handler.handle_error(error_type=reason, message=message)
+            error_handler.handle_error(error_type=message.lstrip().split(" ")[0], message=message)
 
         # Keep the ref alive
         self._device_lost_callback = device_lost_callback
