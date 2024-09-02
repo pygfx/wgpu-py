@@ -9,9 +9,6 @@ one can also write ``"MAP_READ|COPY_DIST"``.
 
 from ._coreutils import BaseEnum as _BaseEnum
 
-# todo: remove
-_use_sphinx_repr = False
-
 
 class Flags(_BaseEnum):
     """Base flags class for wgpu."""

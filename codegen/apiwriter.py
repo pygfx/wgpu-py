@@ -56,7 +56,7 @@ def write_flags():
         # Generate Code
         pylines.append(f"class {name}(Flags):\n")
         for key, val in d.items():
-            pylines.append(f'    {key} = {val!r}')  # note: can add docs using "#: "
+            pylines.append(f"    {key} = {val!r}")  # note: can add docs using "#: "
         pylines.append("\n")
     # Write
     code = blacken("\n".join(pylines))
@@ -85,7 +85,7 @@ def write_enums():
         # Generate Code
         pylines.append(f"class {name}(Enum):\n")
         for key, val in d.items():
-            pylines.append(f'    {key} = None')  # note: can add docs using "#: "
+            pylines.append(f"    {key} = None")  # note: can add docs using "#: "
         pylines.append("\n")
     # Write
     code = blacken("\n".join(pylines))

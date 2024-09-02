@@ -8,9 +8,6 @@ one can also write ``"rgba8unorm"``.
 
 from ._coreutils import BaseEnum as _BaseEnum
 
-# todo: remove
-_use_sphinx_repr = False
-
 
 class Enum(_BaseEnum):
     """Base enum class for wgpu."""

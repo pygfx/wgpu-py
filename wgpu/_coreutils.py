@@ -117,10 +117,11 @@ class EnumType(type):
 
 
 class BaseEnum(metaclass=EnumType):
-    """ Base class for flags and enums.
+    """Base class for flags and enums.
 
     Looks like Python's builtin Enum class, but is simpler; fields are simply ints or strings.
     """
+
     def __init__(self):
         raise RuntimeError("Connot instantiate an enum.")
 
