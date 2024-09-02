@@ -1,5 +1,5 @@
 """
-The next generation GPU API for Python.
+WebGPU for Python.
 """
 
 from ._coreutils import logger  # noqa: F401,F403
