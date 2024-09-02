@@ -6,7 +6,7 @@ from setuptools.command.bdist_wheel import get_platform
 from setuptools.command.bdist_wheel import bdist_wheel as _bdist_wheel
 
 NAME = "wgpu"
-SUMMARY = "Next generation GPU API for Python"
+SUMMARY = "WebGPU for Python"
 
 with open(f"{NAME}/__init__.py") as fh:
     VERSION = re.search(r"__version__ = \"(.*?)\"", fh.read()).group(1)
