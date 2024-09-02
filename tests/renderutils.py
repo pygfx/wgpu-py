@@ -71,6 +71,7 @@ def render_to_texture(
     depth_stencil_state=None,
     depth_stencil_attachment=None,
     renderpass_callback=lambda *args: None,
+    use_render_bundle=False,
 ):
     # https://github.com/gfx-rs/wgpu-rs/blob/master/examples/capture/main.rs
 
@@ -139,6 +140,7 @@ def render_to_texture(
         _ = render_pipeline.get_bind_group_layout(0)
 
     command_encoder = device.create_command_encoder()
+    command_encoder.push_debug_group("command encoder")
 
     color_attachment = color_attachment or {
         "resolve_target": None,
@@ -147,36 +149,52 @@ def render_to_texture(
         "store_op": wgpu.StoreOp.store,
     }
     color_attachment["view"] = current_texture_view
+    command_encoder.insert_debug_marker("Creating render pass")
     render_pass = command_encoder.begin_render_pass(
         color_attachments=[color_attachment],
         depth_stencil_attachment=depth_stencil_attachment,
         occlusion_query_set=None,
     )
-    render_pass.push_debug_group("foo")
 
-    render_pass.insert_debug_marker("setting pipeline")
-    render_pass.set_pipeline(render_pipeline)
-    render_pass.insert_debug_marker("setting bind group")
-    if bind_group:
-        render_pass.set_bind_group(0, bind_group)
-    for slot, vbo in enumerate(vbos):
-        render_pass.insert_debug_marker(f"setting vbo {slot}")
-        render_pass.set_vertex_buffer(slot, vbo, 0, 0)
+    def encode_render_commands(encoder):
+        encoder.push_debug_group("foo")
+        encoder.insert_debug_marker("setting pipeline")
+        encoder.set_pipeline(render_pipeline)
+        encoder.insert_debug_marker("setting bind group")
+        if bind_group:
+            encoder.set_bind_group(0, bind_group)
+        for slot, vbo in enumerate(vbos):
+            encoder.insert_debug_marker(f"setting vbo {slot}")
+            encoder.set_vertex_buffer(slot, vbo, 0, 0)
+        encoder.insert_debug_marker("draw!")
+        if ibo is None:
+            if indirect_buffer is None:
+                encoder.draw(4, 1, 0, 0)
+            else:
+                encoder.draw_indirect(indirect_buffer, 0)
+        else:
+            encoder.set_index_buffer(ibo, wgpu.IndexFormat.uint32, 0, 0)
+            if indirect_buffer is None:
+                encoder.draw_indexed(6, 1, 0, 0, 0)
+            else:
+                encoder.draw_indexed_indirect(indirect_buffer, 0)
+        encoder.pop_debug_group()
+
+    # The callbacks are usually things that can't be done in a render bundle
     render_pass.insert_debug_marker("invoking callback")
     renderpass_callback(render_pass)
-    render_pass.insert_debug_marker("draw!")
-    if ibo is None:
-        if indirect_buffer is None:
-            render_pass.draw(4, 1, 0, 0)
-        else:
-            render_pass.draw_indirect(indirect_buffer, 0)
+
+    if not use_render_bundle:
+        encode_render_commands(render_pass)
     else:
-        render_pass.set_index_buffer(ibo, wgpu.IndexFormat.uint32, 0, 0)
-        if indirect_buffer is None:
-            render_pass.draw_indexed(6, 1, 0, 0, 0)
-        else:
-            render_pass.draw_indexed_indirect(indirect_buffer, 0)
-    render_pass.pop_debug_group()
+        args = {"color_formats": [wgpu.TextureFormat.rgba8unorm]}
+        if depth_stencil_state:
+            args["depth_stencil_format"] = depth_stencil_state["format"]
+        render_bundle_encoder = device.create_render_bundle_encoder(**args)
+        encode_render_commands(render_bundle_encoder)
+        render_bundle = render_bundle_encoder.finish()
+        render_pass.execute_bundles([render_bundle])
+
     render_pass.end()
     command_encoder.copy_texture_to_buffer(
         {"texture": texture, "mip_level": 0, "origin": (0, 0, 0)},
@@ -188,6 +206,7 @@ def render_to_texture(
         },
         (nx, ny, 1),
     )
+    command_encoder.pop_debug_group()
     device.queue.submit([command_encoder.finish()])
 
     # Read the current data of the output buffer - numpy is much easier to work with
