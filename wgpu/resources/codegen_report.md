@@ -17,11 +17,10 @@
 * Diffs for GPUTexture: add size
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
-* Diffs for GPURenderPassEncoder: add multi_draw_indexed_indirect, add multi_draw_indirect
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 114 methods, 45 properties
+* Validated 37 classes, 112 methods, 45 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 113 methods, 0 properties
+* Validated 37 classes, 111 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.clip-distances missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
@@ -30,6 +29,6 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum field DeviceLostReason.unknown missing in wgpu.h
 * Wrote 235 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 134 C function calls
-* Not using 70 C functions
+* Validated 132 C function calls
+* Not using 72 C functions
 * Validated 77 C structs
