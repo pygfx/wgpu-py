@@ -103,6 +103,8 @@ def get_arch():
 
 def main(version, os_string, arch, upstream):
     for build in ["release"]:  # ["release", "debug"]
+        if os_string == "windows":
+            arch += "-msvc" # -gnu is also available.
         filename = f"wgpu-{os_string}-{arch}-{build}.zip"
         url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
         tmp = tempfile.gettempdir()
