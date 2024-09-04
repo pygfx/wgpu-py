@@ -850,11 +850,12 @@ class GPUAdapter(classes.GPUAdapter):
         def device_lost_callback(c_reason, c_message, userdata):
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
-            message = "\n".join(line.rstrip() for line in message.splitlines())
-            # error_handler.log_error(f"The WGPU device was lost ({reason}):\n{message}") # why only log it, we can now handle this too
-            error_handler.handle_error(
-                error_type=message.lstrip().split(" ")[0], message=message
-            )
+            msg = f"The WGPU device was lost ({reason}):\n{message}"
+            # This is afaik an error that cannot usually be attributed to a specific call,
+            # so we cannot raise it as an error. We log it instead.
+            # WebGPU provides (promise-based) API for user-code to handle the error.
+            # We might want to do something similar, once we have async figured out.
+            error_handler.log_error(msg)
 
         # Keep the ref alive
         self._device_lost_callback = device_lost_callback
