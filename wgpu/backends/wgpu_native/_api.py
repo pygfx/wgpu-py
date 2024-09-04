@@ -2722,8 +2722,7 @@ class GPUCommandEncoder(
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = libf.wgpuCommandEncoderFinish(self._internal, struct)
-        # TODO: is the third arg meant to be self or self._device?
-        return GPUCommandBuffer(label, id, self)
+        return GPUCommandBuffer(label, id, self._device)
 
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
@@ -2921,7 +2920,7 @@ class GPURenderBundleEncoder(
         )
         # H: WGPURenderBundle f(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderBundleDescriptor const * descriptor)
         id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
-        return GPURenderBundle(label, id, self)
+        return GPURenderBundle(label, id, self._device)
 
     def _release(self):
         if self._internal is not None and libf is not None:
