@@ -12,7 +12,6 @@ pyinstaller
 psutil
 
 # Building wheels
-wheel
 setuptools
 twine
 auditwheel; sys_platform == 'linux'
