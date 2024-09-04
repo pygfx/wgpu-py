@@ -133,9 +133,7 @@ def str_flag_to_int(flag, s):
     """Allow using strings for flags, i.e. 'READ' instead of wgpu.MapMode.READ.
     No worries about repeated overhead, because the resuls are cached.
     """
-    cache_key = (
-        f"{flag._name}.{s}"  # using private attribute, lets call this a friend func
-    )
+    cache_key = f"{flag.__name__}.{s}"  # use class name
     value = _flag_cache.get(cache_key, None)
 
     if value is None:

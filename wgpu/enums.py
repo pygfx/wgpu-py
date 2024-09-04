@@ -59,374 +59,374 @@ __all__ = [
 
 class PowerPreference(Enum):
 
-    low_power = None
-    high_performance = None
+    low_power = "low-power"
+    high_performance = "high-performance"
 
 
 class FeatureName(Enum):
 
-    depth_clip_control = None
-    depth32float_stencil8 = None
-    texture_compression_bc = None
-    texture_compression_etc2 = None
-    texture_compression_astc = None
-    timestamp_query = None
-    indirect_first_instance = None
-    shader_f16 = None
-    rg11b10ufloat_renderable = None
-    bgra8unorm_storage = None
-    float32_filterable = None
-    clip_distances = None
+    depth_clip_control = "depth-clip-control"
+    depth32float_stencil8 = "depth32float-stencil8"
+    texture_compression_bc = "texture-compression-bc"
+    texture_compression_etc2 = "texture-compression-etc2"
+    texture_compression_astc = "texture-compression-astc"
+    timestamp_query = "timestamp-query"
+    indirect_first_instance = "indirect-first-instance"
+    shader_f16 = "shader-f16"
+    rg11b10ufloat_renderable = "rg11b10ufloat-renderable"
+    bgra8unorm_storage = "bgra8unorm-storage"
+    float32_filterable = "float32-filterable"
+    clip_distances = "clip-distances"
 
 
 class BufferMapState(Enum):
 
-    unmapped = None
-    pending = None
-    mapped = None
+    unmapped = "unmapped"
+    pending = "pending"
+    mapped = "mapped"
 
 
 class TextureDimension(Enum):
 
-    d1 = None
-    d2 = None
-    d3 = None
+    d1 = "1d"
+    d2 = "2d"
+    d3 = "3d"
 
 
 class TextureViewDimension(Enum):
 
-    d1 = None
-    d2 = None
-    d2_array = None
-    cube = None
-    cube_array = None
-    d3 = None
+    d1 = "1d"
+    d2 = "2d"
+    d2_array = "2d-array"
+    cube = "cube"
+    cube_array = "cube-array"
+    d3 = "3d"
 
 
 class TextureAspect(Enum):
 
-    all = None
-    stencil_only = None
-    depth_only = None
+    all = "all"
+    stencil_only = "stencil-only"
+    depth_only = "depth-only"
 
 
 class TextureFormat(Enum):
 
-    r8unorm = None
-    r8snorm = None
-    r8uint = None
-    r8sint = None
-    r16uint = None
-    r16sint = None
-    r16float = None
-    rg8unorm = None
-    rg8snorm = None
-    rg8uint = None
-    rg8sint = None
-    r32uint = None
-    r32sint = None
-    r32float = None
-    rg16uint = None
-    rg16sint = None
-    rg16float = None
-    rgba8unorm = None
-    rgba8unorm_srgb = None
-    rgba8snorm = None
-    rgba8uint = None
-    rgba8sint = None
-    bgra8unorm = None
-    bgra8unorm_srgb = None
-    rgb9e5ufloat = None
-    rgb10a2uint = None
-    rgb10a2unorm = None
-    rg11b10ufloat = None
-    rg32uint = None
-    rg32sint = None
-    rg32float = None
-    rgba16uint = None
-    rgba16sint = None
-    rgba16float = None
-    rgba32uint = None
-    rgba32sint = None
-    rgba32float = None
-    stencil8 = None
-    depth16unorm = None
-    depth24plus = None
-    depth24plus_stencil8 = None
-    depth32float = None
-    depth32float_stencil8 = None
-    bc1_rgba_unorm = None
-    bc1_rgba_unorm_srgb = None
-    bc2_rgba_unorm = None
-    bc2_rgba_unorm_srgb = None
-    bc3_rgba_unorm = None
-    bc3_rgba_unorm_srgb = None
-    bc4_r_unorm = None
-    bc4_r_snorm = None
-    bc5_rg_unorm = None
-    bc5_rg_snorm = None
-    bc6h_rgb_ufloat = None
-    bc6h_rgb_float = None
-    bc7_rgba_unorm = None
-    bc7_rgba_unorm_srgb = None
-    etc2_rgb8unorm = None
-    etc2_rgb8unorm_srgb = None
-    etc2_rgb8a1unorm = None
-    etc2_rgb8a1unorm_srgb = None
-    etc2_rgba8unorm = None
-    etc2_rgba8unorm_srgb = None
-    eac_r11unorm = None
-    eac_r11snorm = None
-    eac_rg11unorm = None
-    eac_rg11snorm = None
-    astc_4x4_unorm = None
-    astc_4x4_unorm_srgb = None
-    astc_5x4_unorm = None
-    astc_5x4_unorm_srgb = None
-    astc_5x5_unorm = None
-    astc_5x5_unorm_srgb = None
-    astc_6x5_unorm = None
-    astc_6x5_unorm_srgb = None
-    astc_6x6_unorm = None
-    astc_6x6_unorm_srgb = None
-    astc_8x5_unorm = None
-    astc_8x5_unorm_srgb = None
-    astc_8x6_unorm = None
-    astc_8x6_unorm_srgb = None
-    astc_8x8_unorm = None
-    astc_8x8_unorm_srgb = None
-    astc_10x5_unorm = None
-    astc_10x5_unorm_srgb = None
-    astc_10x6_unorm = None
-    astc_10x6_unorm_srgb = None
-    astc_10x8_unorm = None
-    astc_10x8_unorm_srgb = None
-    astc_10x10_unorm = None
-    astc_10x10_unorm_srgb = None
-    astc_12x10_unorm = None
-    astc_12x10_unorm_srgb = None
-    astc_12x12_unorm = None
-    astc_12x12_unorm_srgb = None
+    r8unorm = "r8unorm"
+    r8snorm = "r8snorm"
+    r8uint = "r8uint"
+    r8sint = "r8sint"
+    r16uint = "r16uint"
+    r16sint = "r16sint"
+    r16float = "r16float"
+    rg8unorm = "rg8unorm"
+    rg8snorm = "rg8snorm"
+    rg8uint = "rg8uint"
+    rg8sint = "rg8sint"
+    r32uint = "r32uint"
+    r32sint = "r32sint"
+    r32float = "r32float"
+    rg16uint = "rg16uint"
+    rg16sint = "rg16sint"
+    rg16float = "rg16float"
+    rgba8unorm = "rgba8unorm"
+    rgba8unorm_srgb = "rgba8unorm-srgb"
+    rgba8snorm = "rgba8snorm"
+    rgba8uint = "rgba8uint"
+    rgba8sint = "rgba8sint"
+    bgra8unorm = "bgra8unorm"
+    bgra8unorm_srgb = "bgra8unorm-srgb"
+    rgb9e5ufloat = "rgb9e5ufloat"
+    rgb10a2uint = "rgb10a2uint"
+    rgb10a2unorm = "rgb10a2unorm"
+    rg11b10ufloat = "rg11b10ufloat"
+    rg32uint = "rg32uint"
+    rg32sint = "rg32sint"
+    rg32float = "rg32float"
+    rgba16uint = "rgba16uint"
+    rgba16sint = "rgba16sint"
+    rgba16float = "rgba16float"
+    rgba32uint = "rgba32uint"
+    rgba32sint = "rgba32sint"
+    rgba32float = "rgba32float"
+    stencil8 = "stencil8"
+    depth16unorm = "depth16unorm"
+    depth24plus = "depth24plus"
+    depth24plus_stencil8 = "depth24plus-stencil8"
+    depth32float = "depth32float"
+    depth32float_stencil8 = "depth32float-stencil8"
+    bc1_rgba_unorm = "bc1-rgba-unorm"
+    bc1_rgba_unorm_srgb = "bc1-rgba-unorm-srgb"
+    bc2_rgba_unorm = "bc2-rgba-unorm"
+    bc2_rgba_unorm_srgb = "bc2-rgba-unorm-srgb"
+    bc3_rgba_unorm = "bc3-rgba-unorm"
+    bc3_rgba_unorm_srgb = "bc3-rgba-unorm-srgb"
+    bc4_r_unorm = "bc4-r-unorm"
+    bc4_r_snorm = "bc4-r-snorm"
+    bc5_rg_unorm = "bc5-rg-unorm"
+    bc5_rg_snorm = "bc5-rg-snorm"
+    bc6h_rgb_ufloat = "bc6h-rgb-ufloat"
+    bc6h_rgb_float = "bc6h-rgb-float"
+    bc7_rgba_unorm = "bc7-rgba-unorm"
+    bc7_rgba_unorm_srgb = "bc7-rgba-unorm-srgb"
+    etc2_rgb8unorm = "etc2-rgb8unorm"
+    etc2_rgb8unorm_srgb = "etc2-rgb8unorm-srgb"
+    etc2_rgb8a1unorm = "etc2-rgb8a1unorm"
+    etc2_rgb8a1unorm_srgb = "etc2-rgb8a1unorm-srgb"
+    etc2_rgba8unorm = "etc2-rgba8unorm"
+    etc2_rgba8unorm_srgb = "etc2-rgba8unorm-srgb"
+    eac_r11unorm = "eac-r11unorm"
+    eac_r11snorm = "eac-r11snorm"
+    eac_rg11unorm = "eac-rg11unorm"
+    eac_rg11snorm = "eac-rg11snorm"
+    astc_4x4_unorm = "astc-4x4-unorm"
+    astc_4x4_unorm_srgb = "astc-4x4-unorm-srgb"
+    astc_5x4_unorm = "astc-5x4-unorm"
+    astc_5x4_unorm_srgb = "astc-5x4-unorm-srgb"
+    astc_5x5_unorm = "astc-5x5-unorm"
+    astc_5x5_unorm_srgb = "astc-5x5-unorm-srgb"
+    astc_6x5_unorm = "astc-6x5-unorm"
+    astc_6x5_unorm_srgb = "astc-6x5-unorm-srgb"
+    astc_6x6_unorm = "astc-6x6-unorm"
+    astc_6x6_unorm_srgb = "astc-6x6-unorm-srgb"
+    astc_8x5_unorm = "astc-8x5-unorm"
+    astc_8x5_unorm_srgb = "astc-8x5-unorm-srgb"
+    astc_8x6_unorm = "astc-8x6-unorm"
+    astc_8x6_unorm_srgb = "astc-8x6-unorm-srgb"
+    astc_8x8_unorm = "astc-8x8-unorm"
+    astc_8x8_unorm_srgb = "astc-8x8-unorm-srgb"
+    astc_10x5_unorm = "astc-10x5-unorm"
+    astc_10x5_unorm_srgb = "astc-10x5-unorm-srgb"
+    astc_10x6_unorm = "astc-10x6-unorm"
+    astc_10x6_unorm_srgb = "astc-10x6-unorm-srgb"
+    astc_10x8_unorm = "astc-10x8-unorm"
+    astc_10x8_unorm_srgb = "astc-10x8-unorm-srgb"
+    astc_10x10_unorm = "astc-10x10-unorm"
+    astc_10x10_unorm_srgb = "astc-10x10-unorm-srgb"
+    astc_12x10_unorm = "astc-12x10-unorm"
+    astc_12x10_unorm_srgb = "astc-12x10-unorm-srgb"
+    astc_12x12_unorm = "astc-12x12-unorm"
+    astc_12x12_unorm_srgb = "astc-12x12-unorm-srgb"
 
 
 class AddressMode(Enum):
 
-    clamp_to_edge = None
-    repeat = None
-    mirror_repeat = None
+    clamp_to_edge = "clamp-to-edge"
+    repeat = "repeat"
+    mirror_repeat = "mirror-repeat"
 
 
 class FilterMode(Enum):
 
-    nearest = None
-    linear = None
+    nearest = "nearest"
+    linear = "linear"
 
 
 class MipmapFilterMode(Enum):
 
-    nearest = None
-    linear = None
+    nearest = "nearest"
+    linear = "linear"
 
 
 class CompareFunction(Enum):
 
-    never = None
-    less = None
-    equal = None
-    less_equal = None
-    greater = None
-    not_equal = None
-    greater_equal = None
-    always = None
+    never = "never"
+    less = "less"
+    equal = "equal"
+    less_equal = "less-equal"
+    greater = "greater"
+    not_equal = "not-equal"
+    greater_equal = "greater-equal"
+    always = "always"
 
 
 class BufferBindingType(Enum):
 
-    uniform = None
-    storage = None
-    read_only_storage = None
+    uniform = "uniform"
+    storage = "storage"
+    read_only_storage = "read-only-storage"
 
 
 class SamplerBindingType(Enum):
 
-    filtering = None
-    non_filtering = None
-    comparison = None
+    filtering = "filtering"
+    non_filtering = "non-filtering"
+    comparison = "comparison"
 
 
 class TextureSampleType(Enum):
 
-    float = None
-    unfilterable_float = None
-    depth = None
-    sint = None
-    uint = None
+    float = "float"
+    unfilterable_float = "unfilterable-float"
+    depth = "depth"
+    sint = "sint"
+    uint = "uint"
 
 
 class StorageTextureAccess(Enum):
 
-    write_only = None
-    read_only = None
-    read_write = None
+    write_only = "write-only"
+    read_only = "read-only"
+    read_write = "read-write"
 
 
 class CompilationMessageType(Enum):
 
-    error = None
-    warning = None
-    info = None
+    error = "error"
+    warning = "warning"
+    info = "info"
 
 
 class PipelineErrorReason(Enum):
 
-    validation = None
-    internal = None
+    validation = "validation"
+    internal = "internal"
 
 
 class AutoLayoutMode(Enum):
 
-    auto = None
+    auto = "auto"
 
 
 class PrimitiveTopology(Enum):
 
-    point_list = None
-    line_list = None
-    line_strip = None
-    triangle_list = None
-    triangle_strip = None
+    point_list = "point-list"
+    line_list = "line-list"
+    line_strip = "line-strip"
+    triangle_list = "triangle-list"
+    triangle_strip = "triangle-strip"
 
 
 class FrontFace(Enum):
 
-    ccw = None
-    cw = None
+    ccw = "ccw"
+    cw = "cw"
 
 
 class CullMode(Enum):
 
-    none = None
-    front = None
-    back = None
+    none = "none"
+    front = "front"
+    back = "back"
 
 
 class BlendFactor(Enum):
 
-    zero = None
-    one = None
-    src = None
-    one_minus_src = None
-    src_alpha = None
-    one_minus_src_alpha = None
-    dst = None
-    one_minus_dst = None
-    dst_alpha = None
-    one_minus_dst_alpha = None
-    src_alpha_saturated = None
-    constant = None
-    one_minus_constant = None
+    zero = "zero"
+    one = "one"
+    src = "src"
+    one_minus_src = "one-minus-src"
+    src_alpha = "src-alpha"
+    one_minus_src_alpha = "one-minus-src-alpha"
+    dst = "dst"
+    one_minus_dst = "one-minus-dst"
+    dst_alpha = "dst-alpha"
+    one_minus_dst_alpha = "one-minus-dst-alpha"
+    src_alpha_saturated = "src-alpha-saturated"
+    constant = "constant"
+    one_minus_constant = "one-minus-constant"
 
 
 class BlendOperation(Enum):
 
-    add = None
-    subtract = None
-    reverse_subtract = None
-    min = None
-    max = None
+    add = "add"
+    subtract = "subtract"
+    reverse_subtract = "reverse-subtract"
+    min = "min"
+    max = "max"
 
 
 class StencilOperation(Enum):
 
-    keep = None
-    zero = None
-    replace = None
-    invert = None
-    increment_clamp = None
-    decrement_clamp = None
-    increment_wrap = None
-    decrement_wrap = None
+    keep = "keep"
+    zero = "zero"
+    replace = "replace"
+    invert = "invert"
+    increment_clamp = "increment-clamp"
+    decrement_clamp = "decrement-clamp"
+    increment_wrap = "increment-wrap"
+    decrement_wrap = "decrement-wrap"
 
 
 class IndexFormat(Enum):
 
-    uint16 = None
-    uint32 = None
+    uint16 = "uint16"
+    uint32 = "uint32"
 
 
 class VertexFormat(Enum):
 
-    uint8x2 = None
-    uint8x4 = None
-    sint8x2 = None
-    sint8x4 = None
-    unorm8x2 = None
-    unorm8x4 = None
-    snorm8x2 = None
-    snorm8x4 = None
-    uint16x2 = None
-    uint16x4 = None
-    sint16x2 = None
-    sint16x4 = None
-    unorm16x2 = None
-    unorm16x4 = None
-    snorm16x2 = None
-    snorm16x4 = None
-    float16x2 = None
-    float16x4 = None
-    float32 = None
-    float32x2 = None
-    float32x3 = None
-    float32x4 = None
-    uint32 = None
-    uint32x2 = None
-    uint32x3 = None
-    uint32x4 = None
-    sint32 = None
-    sint32x2 = None
-    sint32x3 = None
-    sint32x4 = None
-    unorm10_10_10_2 = None
+    uint8x2 = "uint8x2"
+    uint8x4 = "uint8x4"
+    sint8x2 = "sint8x2"
+    sint8x4 = "sint8x4"
+    unorm8x2 = "unorm8x2"
+    unorm8x4 = "unorm8x4"
+    snorm8x2 = "snorm8x2"
+    snorm8x4 = "snorm8x4"
+    uint16x2 = "uint16x2"
+    uint16x4 = "uint16x4"
+    sint16x2 = "sint16x2"
+    sint16x4 = "sint16x4"
+    unorm16x2 = "unorm16x2"
+    unorm16x4 = "unorm16x4"
+    snorm16x2 = "snorm16x2"
+    snorm16x4 = "snorm16x4"
+    float16x2 = "float16x2"
+    float16x4 = "float16x4"
+    float32 = "float32"
+    float32x2 = "float32x2"
+    float32x3 = "float32x3"
+    float32x4 = "float32x4"
+    uint32 = "uint32"
+    uint32x2 = "uint32x2"
+    uint32x3 = "uint32x3"
+    uint32x4 = "uint32x4"
+    sint32 = "sint32"
+    sint32x2 = "sint32x2"
+    sint32x3 = "sint32x3"
+    sint32x4 = "sint32x4"
+    unorm10_10_10_2 = "unorm10-10-10-2"
 
 
 class VertexStepMode(Enum):
 
-    vertex = None
-    instance = None
+    vertex = "vertex"
+    instance = "instance"
 
 
 class LoadOp(Enum):
 
-    load = None
-    clear = None
+    load = "load"
+    clear = "clear"
 
 
 class StoreOp(Enum):
 
-    store = None
-    discard = None
+    store = "store"
+    discard = "discard"
 
 
 class QueryType(Enum):
 
-    occlusion = None
-    timestamp = None
+    occlusion = "occlusion"
+    timestamp = "timestamp"
 
 
 class CanvasAlphaMode(Enum):
 
-    opaque = None
-    premultiplied = None
+    opaque = "opaque"
+    premultiplied = "premultiplied"
 
 
 class DeviceLostReason(Enum):
 
-    unknown = None
-    destroyed = None
+    unknown = "unknown"
+    destroyed = "destroyed"
 
 
 class ErrorFilter(Enum):
 
-    validation = None
-    out_of_memory = None
-    internal = None
+    validation = "validation"
+    out_of_memory = "out-of-memory"
+    internal = "internal"
