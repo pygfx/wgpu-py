@@ -90,8 +90,8 @@ class ImguiRenderer:
         """
         Set the gui update function that is called on every render cycle to update the GUI
 
-        Parameters
-        ----------
+        Arguments
+        ---------
         gui_updater: callable
             GUI update function, must return imgui.ImDrawData: the draw data to
             render, this is usually obtained by calling ``imgui.get_draw_data()``

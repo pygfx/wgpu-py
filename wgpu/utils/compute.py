@@ -12,7 +12,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     output arrays. Both input and output arrays are represented on the GPU
     using storage buffer objects.
 
-    Parameters:
+    Arguments:
         input_arrays (dict): A dict mapping int bindings to arrays. The array
             can be anything that supports the buffer protocol, including
             bytes, memoryviews, ctypes arrays and numpy arrays. The
