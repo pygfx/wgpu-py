@@ -1792,8 +1792,11 @@ class GPURenderPassEncoder(
 
     # IDL: undefined executeBundles(sequence<GPURenderBundle> bundles);
     def execute_bundles(self, bundles):
-        """
-        TODO: not yet available in wgpu-native
+        """Executes commands previously recorded into the render bundles
+          as part of this render pass.
+
+        Arguments:
+            bundles (Sequence[GPURenderBundle]): A sequence of Render Bundle objects.
         """
         raise NotImplementedError()
 
@@ -1804,19 +1807,26 @@ class GPURenderPassEncoder(
 
     # IDL: undefined beginOcclusionQuery(GPUSize32 queryIndex);
     def begin_occlusion_query(self, query_index):
-        """TODO"""
+        """Begins an occlusion query.
+
+        Arguments:
+            query_index (int): The index in the GPUQuerySet at which to write the
+                result of the occlusion query. The Query Set is specified as the
+                occlusion_query_set argument in begin_render_pass().
+        """
+
         raise NotImplementedError()
 
     # IDL: undefined endOcclusionQuery();
     def end_occlusion_query(self):
-        """TODO"""
+        """Ends an occlusion query."""
         raise NotImplementedError()
 
 
 class GPURenderBundle(GPUObjectBase):
-    """
-    TODO: not yet wrapped.
-    """
+    """A reusable bundle of render commands."""
+
+    pass
 
 
 class GPURenderBundleEncoder(
@@ -1826,9 +1836,7 @@ class GPURenderBundleEncoder(
     GPURenderCommandsMixin,
     GPUObjectBase,
 ):
-    """
-    TODO: not yet wrapped
-    """
+    """Encodes a series of render commands into a reusable render bundle."""
 
     # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
     def finish(self, *, label=""):
