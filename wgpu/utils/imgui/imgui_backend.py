@@ -385,8 +385,8 @@ class ImguiWgpuBackend:
         """
         Render the imgui draw data with the given render pass.
 
-        Parameters
-        ----------
+        Arguments
+        ---------
         draw_data : imgui.ImDrawData
             The draw data to render, this is usually obtained by calling ``imgui.get_draw_data()``
         render_pass : wgpu.GPURenderPassEncoder

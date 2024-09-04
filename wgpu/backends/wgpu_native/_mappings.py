@@ -308,7 +308,32 @@ enum_str2int = {
         "Vulkan": 6,
         "OpenGL": 7,
         "OpenGLES": 8,
-    }
+    },
+    "NativeFeature": {
+        "push-constants": 196609,
+        "texture-adapter-specific-format-features": 196610,
+        "multi-draw-indirect": 196611,
+        "multi-draw-indirect-count": 196612,
+        "vertex-writable-storage": 196613,
+        "texture-binding-array": 196614,
+        "sampled-texture-and-storage-buffer-array-non-uniform-indexing": 196615,
+        "pipeline-statistics-query": 196616,
+        "storage-resource-binding-array": 196617,
+        "partially-bound-binding-array": 196618,
+        "texture-format16bit-norm": 196619,
+        "texture-compression-astc-hdr": 196620,
+        "mappable-primary-buffers": 196622,
+        "buffer-binding-array": 196623,
+        "uniform-buffer-and-storage-texture-array-non-uniform-indexing": 196624,
+        "vertex-attribute64bit": 196633,
+        "texture-format-nv12": 196634,
+        "ray-tracing-acceleration-structure": 196635,
+        "ray-query": 196636,
+        "shader-f64": 196637,
+        "shader-i16": 196638,
+        "shader-primitive-index": 196639,
+        "shader-early-depth-test": 196640,
+    },
 }
 enum_int2str = {
     "BackendType": {

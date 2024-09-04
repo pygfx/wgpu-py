@@ -47,15 +47,6 @@ __all__ = classes.__all__.copy()
 # %% Helper functions and objects
 
 
-# Features that wgpu-native supports that are not part of WebGPU
-NATIVE_FEATURES = (
-    "PushConstants",
-    "TextureAdapterSpecificFormatFeatures",
-    "MultiDrawIndirect",
-    "MultiDrawIndirectCount",
-    "VertexWritableStorage",
-)
-
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
 
@@ -403,11 +394,10 @@ class GPU(classes.GPU):
                 features.add(f)
 
         # Native features
-        for f in NATIVE_FEATURES:
-            i = getattr(lib, f"WGPUNativeFeature_{f}")
+        for name, i in enum_str2int["NativeFeature"].items():
             # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
             if libf.wgpuAdapterHasFeature(adapter_id, i):
-                features.add(f)
+                features.add(name)
 
         # ----- Done
 
@@ -797,12 +787,11 @@ class GPUAdapter(classes.GPUAdapter):
         c_features = set()
         for f in required_features:
             if isinstance(f, str):
-                if "_" in f:
-                    f = "".join(x.title() for x in f.split("_"))
-                i1 = enummap.get(f"FeatureName.{f}", None)
-                i2 = getattr(lib, f"WGPUNativeFeature_{f}", None)
-                i = i2 if i1 is None else i1
-                if i is None:  # pragma: no cover
+                f = f.replace("_", "-")
+                i = enummap.get(f"FeatureName.{f}", None)
+                if i is None:
+                    i = enum_str2int["NativeFeature"].get(f, None)
+                if i is None:
                     raise KeyError(f"Unknown feature: '{f}'")
                 c_features.add(i)
             else:
@@ -958,11 +947,10 @@ class GPUAdapter(classes.GPUAdapter):
                 features.add(f)
 
         # Native features
-        for f in NATIVE_FEATURES:
-            i = getattr(lib, f"WGPUNativeFeature_{f}")
+        for name, i in enum_str2int["NativeFeature"].items():
             # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
             if libf.wgpuDeviceHasFeature(device_id, i):
-                features.add(f)
+                features.add(name)
 
         # ---- Get queue
 

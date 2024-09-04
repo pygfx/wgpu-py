@@ -16,7 +16,7 @@ focuses on the API, here we focus on the C library usage.
 import re
 from collections import defaultdict
 
-from codegen.utils import print, blacken, Patcher
+from codegen.utils import print, blacken, Patcher, to_snake_case
 from codegen.hparser import get_h_parser
 from codegen.idlparser import get_idl_parser
 from codegen.files import file_cache
@@ -128,7 +128,15 @@ def write_mappings():
             if key == "Force32":
                 continue
             pylines.append(f'        "{key}": {val},')
-        pylines.append("    }")
+        pylines.append("    },")
+    for name in ["NativeFeature"]:
+        pylines.append(f'    "{name}":' + " {")
+        for key, val in hp.enums[name].items():
+            if key == "Force32":
+                continue
+            xkey = to_snake_case(key).replace("_", "-")
+            pylines.append(f'        "{xkey}": {val},')
+        pylines.append("    },")
     pylines.append("}")
 
     # Write a few native-only mappings: int => key
