@@ -381,4 +381,3 @@ canvas.request_draw(draw_frame)
 
 if __name__ == "__main__":
     run()
-""
