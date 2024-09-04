@@ -53,14 +53,11 @@ def write_flags():
     pylines.append("]\n\n")
     # The flags definitions
     for name, d in idl.flags.items():
-        # Object-docstring as a comment
-        for key, val in d.items():
-            pylines.append(f'#: * "{key}" ({val})')
         # Generate Code
-        pylines.append(f'{name} = Flags(\n    "{name}",')
+        pylines.append(f"class {name}(Flags):\n")
         for key, val in d.items():
-            pylines.append(f"    {key}={val!r},")
-        pylines.append(")\n")
+            pylines.append(f"    {key} = {val!r}")  # note: can add docs using "#: "
+        pylines.append("\n")
     # Write
     code = blacken("\n".join(pylines))
     file_cache.write("flags.py", code)
@@ -85,14 +82,11 @@ def write_enums():
         pylines.append(f'    "{name}",')
     pylines.append("]\n\n")
     for name, d in idl.enums.items():
-        # Object-docstring as a comment
-        for key, val in d.items():
-            pylines.append(f'#: * "{key}"')
         # Generate Code
-        pylines.append(f'{name} = Enum(\n    "{name}",')
+        pylines.append(f"class {name}(Enum):\n")
         for key, val in d.items():
-            pylines.append(f'    {key}="{val}",')
-        pylines.append(")\n")
+            pylines.append(f'    {key} = "{val}"')  # note: can add docs using "#: "
+        pylines.append("\n")
     # Write
     code = blacken("\n".join(pylines))
     file_cache.write("enums.py", code)
