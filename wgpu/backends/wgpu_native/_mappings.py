@@ -307,7 +307,19 @@ enum_str2int = {
         "Vulkan": 6,
         "OpenGL": 7,
         "OpenGLES": 8,
-    }
+    },
+    "NativeFeature": {
+        "push-constants": 196609,
+        "texture-adapter-specific-format-features": 196610,
+        "multi-draw-indirect": 196611,
+        "multi-draw-indirect-count": 196612,
+        "vertex-writable-storage": 196613,
+        "texture-binding-array": 196614,
+        "sampled-texture-and-storage-buffer-array-non-uniform-indexing": 196615,
+        "pipeline-statistics-query": 196616,
+        "storage-resource-binding-array": 196617,
+        "partially-bound-binding-array": 196618,
+    },
 }
 enum_int2str = {
     "BackendType": {
