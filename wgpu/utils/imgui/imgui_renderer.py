@@ -126,6 +126,9 @@ class ImguiRenderer:
         imgui.set_current_context(self.imgui_context)
         draw_data = self._update_gui_function()
 
+        pixel_ratio = self._canvas_context.canvas.get_pixel_ratio()
+        self._backend.io.display_framebuffer_scale = (pixel_ratio, pixel_ratio)
+
         command_encoder = self._backend._device.create_command_encoder()
         current_texture_view = self._canvas_context.get_current_texture().create_view()
         render_pass = command_encoder.begin_render_pass(

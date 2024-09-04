@@ -42,9 +42,7 @@ for cls_name in wgpu.classes.__all__:
 
 # -- Hacks to tweak docstrings -----------------------------------------------
 
-# Make flags and enums appear better in docs
-wgpu.enums._use_sphinx_repr = True
-wgpu.flags._use_sphinx_repr = True
+# Make structs appear better in docs
 wgpu.structs._use_sphinx_repr = True
 
 # Build regular expressions to resolve crossrefs
