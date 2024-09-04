@@ -537,6 +537,8 @@ class GPUDevice(GPUObjectBase):
                 includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
             usage (flags.BufferUsage): The ways in which this buffer will be used.
 
+        Alignment: the size (in bytes) of the data must be a multiple of 4.
+
         Also see `GPUBuffer.write_mapped()` and `GPUQueue.write_buffer()`.
         """
         # This function was originally created to support the workflow
@@ -954,9 +956,19 @@ class GPUDevice(GPUObjectBase):
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
     ):
-        """Create a `GPURenderBundle` object.
+        """Create a `GPURenderBundleEncoder` object.
 
-        TODO: not yet available in wgpu-native
+        Render bundles represent a pre-recorded bundle of commands. In cases where the same
+        commands are issued accross multiple views or frames, using a rander bundle can improve
+        performance by removing the overhead of repeating the commands.
+
+        Arguments:
+            label (str): A human readable label. Optional.
+            color_formats (list): A list of the `GPUTextureFormats` of the color attachments for this pass or bundle.
+            depth_stencil_format (GPUTextureFormat): The format of the depth/stencil attachment for this pass or bundle.
+            sample_count (int): The number of samples per pixel in the attachments for this pass or bundle. Default 1.
+            depth_read_only (bool): If true, indicates that the render bundle does not modify the depth component of any depth-stencil attachments. Default False.
+            stencil_read_only (bool): If true, indicates that the render bundle does not modify the stencil component of any depth-stencil attachments. Default False.
         """
         raise NotImplementedError()
 
@@ -1060,6 +1072,8 @@ class GPUBuffer(GPUObjectBase):
                 wgpu.MapMode.WRITE, can also be a string.
             offset (str): the buffer offset in bytes. Default 0.
             size (int): the size to read. Default until the end.
+
+        Alignment: the offset must be a multiple of 8, the size must be a multiple of 4.
         """
         raise NotImplementedError()
 
@@ -1090,9 +1104,9 @@ class GPUBuffer(GPUObjectBase):
             buffer_offset (int): the buffer offset in bytes. Must be at
                 least as large as the offset specified in ``map()``. The default
                 is the offset of the mapped range.
-            size (int): the size to read. The resuling range must fit into the range
+            size (int): the size to read (in bytes). The resuling range must fit into the range
                 specified in ``map()``. The default is as large as the mapped range allows.
-            copy (boool): whether a copy of the data is given. Default True.
+            copy (bool): whether a copy of the data is given. Default True.
                 If False, the returned memoryview represents the mapped data
                 directly, and is released when the buffer is unmapped.
                 WARNING: views of the returned data (e.g. memoryview objects or
@@ -1101,13 +1115,15 @@ class GPUBuffer(GPUObjectBase):
                 setting copy to False, make *very* sure the memory is not accessed
                 after the buffer is unmapped.
 
+        Alignment: the buffer offset must be a multiple of 8, the size must be a multiple of 4.
+
         Also see `GPUBuffer.write_mapped()`, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
     def write_mapped(self, data, buffer_offset=None, size=None):
-        """Read mapped buffer data.
+        """Write mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
         This is the Python alternative to WebGPU's ``getMappedRange``.
@@ -1122,9 +1138,11 @@ class GPUBuffer(GPUObjectBase):
             buffer_offset (int): the buffer offset in bytes. Must be at least
                 as large as the offset specified in ``map()``. The default
                 is the offset of the mapped range.
-            size (int): the size to read. The default is the size of
+            size (int): the size to write (in bytes). The default is the size of
                 the data, so this argument can typically be ignored. The
                 resuling range must fit into the range specified in ``map()``.
+
+        Alignment: the buffer offset must be a multiple of 8, the size must be a multiple of 4.
 
         Also see `GPUBuffer.read_mapped, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """
@@ -1509,6 +1527,8 @@ class GPURenderCommandsMixin:
             offset (int): The byte offset in the buffer. Default 0.
             size (int): The number of bytes to use. If zero, the remaining size
                 (after offset) of the buffer is used. Default 0.
+
+        Alignment: the offset must be a multiple of 4.
         """
         raise NotImplementedError()
 
@@ -1531,6 +1551,8 @@ class GPURenderCommandsMixin:
         Arguments:
             indirect_buffer (GPUBuffer): The buffer that contains the arguments.
             indirect_offset (int): The byte offset at which the arguments are.
+
+        Alignment: the indirect offset must be a multiple of 4.
         """
         raise NotImplementedError()
 
@@ -1551,6 +1573,8 @@ class GPURenderCommandsMixin:
             first_index (int):  The index offset. Default 0.
             base_vertex (int):  A number added to each index in the index buffer. Default 0.
             first_instance (int): The instance offset. Default 0.
+
+        Alignment: the indirect offset must be a multiple of 4.
         """
         raise NotImplementedError()
 
@@ -1605,14 +1629,22 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
             label (str): A human readable label. Optional.
             color_attachments (list): List of `structs.RenderPassColorAttachment` dicts.
             depth_stencil_attachment (structs.RenderPassDepthStencilAttachment): Describes the depth stencil attachment. Default None.
-            occlusion_query_set (GPUQuerySet): Default None. TODO NOT IMPLEMENTED in wgpu-native.
+            occlusion_query_set (GPUQuerySet): Default None.
             timestamp_writes: unused
         """
         raise NotImplementedError()
 
     # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def clear_buffer(self, buffer, offset=0, size=None):
-        """Set (part of) the given buffer to zeros. Both offset and size must be a multiple of 4. If size is None, the whole buffer after offset is cleared."""
+        """Set (part of) the given buffer to zeros.
+
+        Arguments:
+            buffer (GPUBuffer): The buffer to clear.
+            offset (int): The byte offset.
+            size (int, optional): The size to clear in bytes. If None, the effective size is the full size minus the offset.
+
+        Alignment: both offset and size must be a multiple of 4.
+        """
         raise NotImplementedError()
 
     # IDL: undefined copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, GPUSize64 size);
@@ -1623,10 +1655,12 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 
         Arguments:
             source (GPUBuffer): The source buffer.
-            source_offset (int): The byte offset (a multiple of 4).
+            source_offset (int): The byte offset.
             destination (GPUBuffer): The target buffer.
-            destination_offset (int): The byte offset in the destination buffer (a multiple of 4).
-            size (int): The number of bytes to copy (a multiple of 4).
+            destination_offset (int): The byte offset in the destination buffer.
+            size (int): The number of bytes to copy.
+
+        Alignment: the size, source offset, and destination offset must all be a multiple of 4.
         """
         raise NotImplementedError()
 
@@ -1639,7 +1673,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
             destination (GPUTexture): A dict with fields: texture, mip_level, origin.
             copy_size (int): The number of bytes to copy.
 
-        Note that the `bytes_per_row` must be a multiple of 256.
+        Alignment: the ``bytes_per_row`` must be a multiple of 256.
         """
         raise NotImplementedError()
 
@@ -1652,7 +1686,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
             destination (GPUBuffer):  A dict with fields: buffer, offset, bytes_per_row, rows_per_image.
             copy_size (int): The number of bytes to copy.
 
-        Note that the `bytes_per_row` must be a multiple of 256.
+        Alignment: the ``bytes_per_row`` must be a multiple of 256.
         """
         raise NotImplementedError()
 
@@ -1681,7 +1715,18 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
     ):
-        """TODO"""
+        """
+        Resolves query results from a ``GPUQuerySet`` out into a range of a ``GPUBuffer``.
+
+        Arguments:
+            query_set (GPUQuerySet): The source query set.
+            first_query (int): The first query to resolve.
+            query_count (int): The amount of queries to resolve.
+            destination (GPUBuffer): The buffer to write the results to.
+            destination_offset (int): The byte offset in the buffer.
+
+        Alignment: the destination offset must be a multiple of 256.
+        """
         raise NotImplementedError()
 
 
@@ -1876,11 +1921,13 @@ class GPUQueue(GPUObjectBase):
             data: The data to write to the buffer. Must be an object that supports
                 the buffer protocol, e.g. bytes, memoryview, numpy array, etc.
                 Must be contiguous.
-            data_offset: The byte offset in the data. Default 0.
+            data_offset: The offset in the data, in elements. Default 0.
             size: The number of bytes to write. Default all minus offset.
 
         This maps the data to a temporary buffer and then copies that buffer
         to the given buffer. The given buffer's usage must include COPY_DST.
+
+        Alignment: the buffer offset must be a multple of 4, the total size to write must be a multiple of 4 bytes.
 
         Also see `GPUBuffer.map()`.
 
