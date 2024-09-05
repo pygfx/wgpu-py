@@ -197,7 +197,7 @@ class WgpuAutoGui:
         super().__init__(*args, **kwargs)
         self._last_event_time = 0
         self._pending_events = {}
-        self._event_handlers = defaultdict(set)
+        self._event_handlers = defaultdict(list)
 
     def _get_event_wait_time(self):
         """Calculate the time to wait for the next event dispatching.
@@ -274,18 +274,22 @@ class WgpuAutoGui:
         """
         # Collect callbacks
         event_type = event.get("event_type")
-        callbacks = self._event_handlers[event_type] | self._event_handlers["*"]
+        callbacks = self._event_handlers[event_type] + self._event_handlers["*"]
         # Dispatch
         for callback in callbacks:
             with log_exception(f"Error during handling {event['event_type']} event"):
+                if event.get("stop_propagation", False):
+                    del event["stop_propagation"]
+                    break
                 callback(event)
 
-    def add_event_handler(self, *args):
+    def add_event_handler(self, *args, order=0):
         """Register an event handler to receive events.
 
         Arguments:
             callback (callable): The event handler. Must accept a single event argument.
             *types (list of strings): A list of event types.
+            order (int): The order in which the handler is called. Lower numbers are called first. Default is 0.
 
         For the available events, see
         https://jupyter-rfb.readthedocs.io/en/stable/events.html.
@@ -330,8 +334,13 @@ class WgpuAutoGui:
                 raise TypeError(f"Event types must be str, but got {type}")
 
         def decorator(_callback):
+            _callback.__dict__["__event_order"] = order
             for type in types:
-                self._event_handlers[type].add(_callback)
+                self._event_handlers[type].append(_callback)
+                self._event_handlers[type].sort(
+                    key=lambda x: x.__dict__["__event_order"]
+                )
+
             return _callback
 
         if decorating:
