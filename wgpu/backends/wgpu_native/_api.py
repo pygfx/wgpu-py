@@ -857,9 +857,6 @@ class GPUAdapter(classes.GPUAdapter):
             # We might want to do something similar, once we have async figured out.
             error_handler.log_error(msg)
 
-        # Keep the ref alive
-        self._device_lost_callback = device_lost_callback
-
         # ----- Uncaptured error
 
         # TODO: this is moved from the uncaptuedErrroCallback that was in GPUDevice previously, test if it works once all other changes are fixed.
@@ -869,9 +866,6 @@ class GPUAdapter(classes.GPUAdapter):
             message = ffi.string(c_message).decode(errors="ignore")
             message = "\n".join(line.rstrip() for line in message.splitlines())
             error_handler.handle_error(error_type, message)
-
-        # keep the ref alive
-        self._error_callback = uncaptured_error_callback
 
         # H: nextInChain: WGPUChainedStruct *, callback: WGPUErrorCallback, userdata: void *
         uncaptured_error_callback_info = new_struct(
@@ -961,7 +955,13 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Done
 
-        return GPUDevice(label, device_id, self, features, limits, queue)
+        device = GPUDevice(label, device_id, self, features, limits, queue)
+
+        # Bind some things to the lifetime of the device
+        device._uncaptured_error_callback = uncaptured_error_callback
+        device._device_lost_callback = device_lost_callback
+
+        return device
 
     async def request_device_async(
         self,
