@@ -17,7 +17,7 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.17.0] - 05-08-2024
+### [v0.17.1] - 05-08-2024
 
 Added:
 
