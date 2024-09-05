@@ -397,5 +397,48 @@ def test_get_memoryview_and_address():
     assert address > 0
 
 
+def are_features_wgpu_legal(features):
+    """Returns true if the list of features is legal. Determining whether a specific
+    set of features is implemented on a particular device would make the tests fragile,
+    so we only verify that the names are legal feature names."""
+    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+    try:
+        adapter.request_device(required_features=features)
+        return True
+    except RuntimeError as e:
+        assert "Unsupported features were requested" in str(e)
+        return True
+    except KeyError:
+        return False
+
+
+def test_features_are_legal():
+    # A standard feature.  Probably exists
+    assert are_features_wgpu_legal(["shader-f16"])
+    # Two common extension features
+    assert are_features_wgpu_legal(["multi-draw-indirect", "vertex-writable-storage"])
+    # An uncommon extension feature.  Certainly not on a mac.
+    assert are_features_wgpu_legal(["pipeline-statistics-query"])
+    assert are_features_wgpu_legal(
+        ["push-constants", "vertex-writable-storage", "depth-clip-control"]
+    )
+    # We can also use underscore
+    assert are_features_wgpu_legal(["push_constants", "vertex_writable_storage"])
+
+
+def test_features_are_illegal():
+    # not camel Case
+    assert not are_features_wgpu_legal(["pushConstants"])
+    # writable is misspelled
+    assert not are_features_wgpu_legal(
+        ["multi-draw-indirect", "vertex-writeable-storage"]
+    )
+    assert not are_features_wgpu_legal(["my-made-up-feature"])
+
+
+if __name__ == "__main__":
+    run_tests(globals())
+
+
 if __name__ == "__main__":
     run_tests(globals())
