@@ -276,10 +276,9 @@ class WgpuAutoGui:
         event_type = event.get("event_type")
         callbacks = self._event_handlers[event_type] + self._event_handlers["*"]
         # Dispatch
-        for callback in callbacks:
+        for _, callback in callbacks:
             with log_exception(f"Error during handling {event['event_type']} event"):
                 if event.get("stop_propagation", False):
-                    del event["stop_propagation"]
                     break
                 callback(event)
 
@@ -334,13 +333,9 @@ class WgpuAutoGui:
                 raise TypeError(f"Event types must be str, but got {type}")
 
         def decorator(_callback):
-            _callback.__dict__["__event_order"] = order
             for type in types:
-                self._event_handlers[type].append(_callback)
-                self._event_handlers[type].sort(
-                    key=lambda x: x.__dict__["__event_order"]
-                )
-
+                self._event_handlers[type].append((order, _callback))
+                self._event_handlers[type].sort(key=lambda x: x[0])
             return _callback
 
         if decorating:
