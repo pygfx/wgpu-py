@@ -17,6 +17,25 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.17.1] - 05-08-2024
+
+Added:
+
+* Support for occlusion queries.
+* Support for render bundles.
+* Support for IMGUI, via `wgpu.utils.imgui`.
+* Wx is now a fully supported GUI backend.
+* A `BaseEnum` class was added to `wgpu.utils`, so it can be used in downstream libs like pygfx.
+
+Changed:
+
+* The flags and enums are implemented using a new enum class, enabling better static code analysis (i.e. autocompletion in IDE's).
+* Native (desktop) features must now be specified in the same way as normal (WebGPU) features: lowercase and whith hyphens between the words.
+* Bindings can omit offset and size (the full size will be used). This makes our API follow WebGPU better.
+* Support omitting fields from `BindGroupLayoutEntry`, `BufferBindingLayout`, `SamplerBindingLayout`, `StorageTextureBindingLayout`, `VertexState`. See https://github.com/pygfx/wgpu-py/pull/534 for details.
+* In cases where a `view_dimension` is given, it must be provided as a string (e.g. '2d'). Ints are no longer allowed, because e.g. 2 does *not* mean '2d', which can be a source of confusion.
+
+
 ### [v0.16.0] - 13-06-2024
 
 Changed:

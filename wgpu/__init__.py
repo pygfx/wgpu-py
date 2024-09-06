@@ -13,7 +13,7 @@ from . import backends  # noqa: F401,F403
 from . import resources  # noqa: F401,F403
 
 
-__version__ = "0.16.0"
+__version__ = "0.17.1"
 version_info = tuple(map(int, __version__.split(".")))
 
 
