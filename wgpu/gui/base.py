@@ -350,4 +350,6 @@ class WgpuAutoGui:
             *types (list of strings): A list of event types.
         """
         for type in types:
-            self._event_handlers[type].remove(callback)
+            self._event_handlers[type] = [
+                (o, cb) for o, cb in self._event_handlers[type] if cb is not callback
+            ]
