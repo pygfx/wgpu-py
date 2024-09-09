@@ -432,7 +432,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             self._surface_id = get_surface_id_from_canvas(self._get_canvas())
         return self._surface_id
 
-    # FIXME: was configure(self, *, device: "GPUDevice", format: "enums.TextureFormat", usage: "flags.TextureUsage" = 0x10, view_formats: "List[enums.TextureFormat]" = [], color_space: str = "srgb", alpha_mode: "enums.CanvasAlphaMode" = "opaque"):
     def configure(
         self,
         *,
@@ -463,8 +462,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             format = self.get_preferred_format(device.adapter)
         # The color_space is not used for now
         color_space
+        # Same for tone mapping
         check_struct("CanvasToneMapping", tone_mapping)
         tone_mapping_mode = tone_mapping.get("mode", "standard")
+        tone_mapping_mode
 
         # Get what's supported
 
@@ -2438,12 +2439,11 @@ class GPUCommandEncoder(
                 loadOp=color_attachment["load_op"],
                 storeOp=color_attachment["store_op"],
                 clearValue=c_clear_value,
-                depthSlice=lib.WGPU_DEPTH_SLICE_UNDEFINED,
+                depthSlice=lib.WGPU_DEPTH_SLICE_UNDEFINED,  # not implemented yet
                 # not used: resolveTarget
                 # not used: nextInChain
             )
             c_color_attachments_list.append(c_attachment)
-        # TODO something here spews "Depth slice on color attachments is not implemented" - needs to be surpressed as it's not available in wgpu-native.
         c_color_attachments_array = ffi.new(
             "WGPURenderPassColorAttachment []", c_color_attachments_list
         )

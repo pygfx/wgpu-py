@@ -66,6 +66,8 @@ adapters = wgpu.gpu.enumerate_adapters()
 for a in adapters:
     print(a.summary)
 
+    print(a.info)
+
 # You can select specific GPU from the available adapters
 # adapter = None
 # for a in adapters:
