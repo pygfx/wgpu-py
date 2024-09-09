@@ -364,6 +364,7 @@ class GPU(classes.GPU):
         }
 
         # Allow Rust to release its string objects
+        # H: void f(WGPUAdapterInfo adapterInfo)
         libf.wgpuAdapterInfoFreeMembers(c_info[0])
 
         # ----- Get adapter limits
