@@ -168,7 +168,7 @@ def create_and_release(create_objects_func):
             options = {
                 "expected_counts_after_create": {ob_name: (n_objects, n_objects)},
                 "expected_counts_after_release": {},
-                "ignore": ()
+                "ignore": (),
             }
 
             func_options = next(generator)

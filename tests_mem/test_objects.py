@@ -234,11 +234,15 @@ def test_release_render_pass_encoder(n):
 
     command_encoder = DEVICE.create_command_encoder()
     texture_view = DEVICE.create_texture(
-            size=(16, 16, 1),
-            usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
-            format="rgba8unorm",
+        size=(16, 16, 1),
+        usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
+        format="rgba8unorm",
     ).create_view()
-    ca = {"view": texture_view, "load_op": wgpu.LoadOp.load, "store_op": wgpu.StoreOp.store}
+    ca = {
+        "view": texture_view,
+        "load_op": wgpu.LoadOp.load,
+        "store_op": wgpu.StoreOp.store,
+    }
 
     yield {
         "expected_counts_after_create": {
@@ -380,8 +384,6 @@ TEST_FUNCS = [
 if __name__ == "__main__":
     # testutils.TEST_ITERS = 40  # Uncomment for a mem-usage test run
 
-    test_release_render_pass_encoder()
-    1/0
     for func in TEST_FUNCS:
         print(func.__name__ + " ...")
         try:

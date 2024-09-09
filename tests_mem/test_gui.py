@@ -82,7 +82,6 @@ def test_release_canvas_context(n):
     assert not canvases
 
 
-
 TEST_FUNCS = [test_release_canvas_context]
 
 
