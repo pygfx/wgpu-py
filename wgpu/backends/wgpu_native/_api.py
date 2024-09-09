@@ -859,7 +859,8 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Uncaptured error
 
-        # TODO: this is moved from the uncaptuedErrroCallback that was in GPUDevice previously, test if it works once all other changes are fixed.
+        # TODO: For some errors (seen for errors in wgsl, but not for some others) the error gets logged via the logger as well (duplicate). Probably an issue with wgpu-core.
+
         @ffi.callback("void(WGPUErrorType, char *, void *)")
         def uncaptured_error_callback(c_type, c_message, userdata):
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
