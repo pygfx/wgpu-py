@@ -321,7 +321,7 @@ class GPU(classes.GPU):
         # ----- Get adapter info
 
         # H: nextInChain: WGPUChainedStructOut *, vendor: char *, architecture: char *, device: char *, description: char *, backendType: WGPUBackendType, adapterType: WGPUAdapterType, vendorID: int, deviceID: int
-        c_properties = new_struct_p(
+        c_info = new_struct_p(
             "WGPUAdapterInfo *",
             # not used: nextInChain
             # not used: vendor
@@ -335,10 +335,10 @@ class GPU(classes.GPU):
         )
 
         # H: void f(WGPUAdapter adapter, WGPUAdapterInfo * info)
-        libf.wgpuAdapterGetInfo(adapter_id, c_properties)
+        libf.wgpuAdapterGetInfo(adapter_id, c_info)
 
         def to_py_str(key):
-            char_p = getattr(c_properties, key)
+            char_p = getattr(c_info, key)
             if char_p:
                 return ffi.string(char_p).decode(errors="ignore")
             return ""
@@ -353,15 +353,18 @@ class GPU(classes.GPU):
             "device": to_py_str("device"),
             "description": to_py_str("description"),
             # Extra
-            "vendor_id": c_properties.vendorID,
-            "device_id": c_properties.deviceID,
+            "vendor_id": int(c_info.vendorID),
+            "device_id": int(c_info.deviceID),
             "adapter_type": enum_int2str["AdapterType"].get(
-                c_properties.adapterType, "unknown"
+                c_info.adapterType, "unknown"
             ),
             "backend_type": enum_int2str["BackendType"].get(
-                c_properties.backendType, "unknown"
+                c_info.backendType, "unknown"
             ),
         }
+
+        # Allow Rust to release its string objects
+        libf.wgpuAdapterInfoFreeMembers(c_info[0])
 
         # ----- Get adapter limits
 
