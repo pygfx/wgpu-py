@@ -739,7 +739,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 formats.append(enum_int2str["TextureFormat"][int_val])
 
         else:
-            capabilities["formats"] = list(wgpu.TextureFormat)  # all
+            capabilities["formats"] = list(enums.TextureFormat)  # all
             capabilities.insert(0, "bgra8unorm-srgb")  # prefer good default
 
         if c_capabilities.alphaModes:
@@ -749,7 +749,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 str_val = enum_int2str["CompositeAlphaMode"][int_val]
                 alpha_modes.append(str_val.lower())
         else:
-            capabilities["alpha_modes"] = list(wgpu.CanvasAlphaMode)
+            capabilities["alpha_modes"] = list(enums.CanvasAlphaMode)
 
         if c_capabilities.presentModes:
             capabilities["present_modes"] = present_modes = []
@@ -758,8 +758,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 str_val = enum_int2str["PresentMode"][int_val]
                 present_modes.append(str_val.lower())
         else:
-            d = wgpu.backends.wgpu_native._api.enum_int2str["PresentMode"]
-            capabilities["present_modes"] = list(d.values())
+            capabilities["present_modes"] = list(enum_int2str["PresentMode"].values())
 
         # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
         libf.wgpuSurfaceCapabilitiesFreeMembers(c_capabilities[0])
