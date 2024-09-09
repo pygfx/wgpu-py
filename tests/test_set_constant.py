@@ -18,7 +18,7 @@ second number from the fragment stage, so that we can ensure that we are correct
 using stage-separated push constants correctly.
 
 The source code assumes the topology is POINT-LIST, so that each call to vertexMain
-corresponds with one call to fragmentMain. 
+corresponds with one call to fragmentMain.
 """
 COUNT = 10
 
@@ -34,7 +34,7 @@ SHADER_SOURCE = (
         values1: array<u32, COUNT>, // VERTEX constants
         values2: array<u32, COUNT>, // FRAGMENT constants
     }
-    var<push_constant> push_constants: PushConstants;  
+    var<push_constant> push_constants: PushConstants;
 
     struct VertexOutput {
         @location(0) index: u32,
@@ -99,7 +99,6 @@ def run_test(device):
     vertex_call_buffer = device.create_buffer(size=COUNT * 4, usage="STORAGE|COPY_SRC")
 
     bind_group = device.create_bind_group(
-        label=f"Bind Group for Faces",
         layout=pipeline.get_bind_group_layout(0),
         entries=[
             {"binding": 0, "resource": {"buffer": vertex_call_buffer}},

@@ -718,7 +718,7 @@ class GPUDevice(GPUObjectBase):
         *,
         label="",
         bind_group_layouts: "List[GPUBindGroupLayout]",
-        push_constant_layouts: "List[GPUPushConstantRange]" = [],
+        push_constant_layouts: "List[Dict]" = [],
     ):
         """Create a `GPUPipelineLayout` object, which can be
         used in `create_render_pipeline()` or `create_compute_pipeline()`.

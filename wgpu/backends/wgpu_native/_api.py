@@ -811,13 +811,15 @@ class GPUAdapter(classes.GPUAdapter):
         # This is important, because zero does NOT mean default, and a limit of zero
         # for a specific limit may break a lot of applications.
         required_limits = required_limits or {}
-        for key, value in self.limits.items():
-            c_key = to_camel_case(key)
-            new_value = required_limits.get(key, value)
-            if hasattr(c_limits, c_key):
-                setattr(c_limits, c_key, new_value)
-            else:
-                setattr(c_limits_extras, c_key, new_value)
+        for limit in (c_limits, c_limits_extras):
+            for key in dir(limit):
+                snake_key = to_snake_case(key)
+                # Use the value in required_limits if it exists.fl
+                try:
+                    value = required_limits[snake_key]
+                except KeyError:
+                    value = self.limits[snake_key]
+                setattr(limit, key, value)
 
         # ---- Set queue descriptor
 
@@ -1310,7 +1312,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label="",
         bind_group_layouts: "List[GPUBindGroupLayout]",
-        push_constant_layouts: "List[GPUPushConstantRange]" = [],
+        push_constant_layouts: "List[Dict]" = [],
     ):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
 
