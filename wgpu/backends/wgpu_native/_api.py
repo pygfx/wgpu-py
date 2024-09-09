@@ -468,7 +468,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         # Get what's supported
 
-        capabilities = self._get_surface_capabilities(adapter=self._device.adapter)
+        capabilities = self._get_surface_capabilities(self._device.adapter)
 
         capable_formats = []
         for i in range(capabilities.formatCount):
@@ -723,10 +723,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             return enum_int2str["TextureFormat"][capabilities.formats[0]]
 
     def _get_surface_capabilities(self, adapter):
-        # perhaps only grab the internal if the adapter class is what we expect?
-        # it can also be accessed via self._device.adapter._internal so this might be redundant?
-        if adapter:
-            adapter_id = adapter._internal
+        adapter_id = adapter._internal
 
         # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
         capabilities = new_struct_p(
