@@ -104,11 +104,10 @@ def get_counts():
             counts_native.get(key, default)["count"],
         )
     counts.pop("total")
-
     return counts
 
 
-def get_excess_counts(counts1, counts2):
+def get_excess_counts(counts1, counts2, ignore=()):
     """Compare two counts dicts, and return a new dict with the fields
     that have increased counts.
     """
@@ -126,6 +125,8 @@ def get_excess_counts(counts1, counts2):
             more_native = c2 - c1
         if more_py or more_native:
             more[name] = more_py, more_native
+    for key in ignore:
+        more.pop(key, None)
     return more
 
 
@@ -167,6 +168,7 @@ def create_and_release(create_objects_func):
             options = {
                 "expected_counts_after_create": {ob_name: (n_objects, n_objects)},
                 "expected_counts_after_release": {},
+                "ignore": ()
             }
 
             func_options = next(generator)
@@ -198,7 +200,7 @@ def create_and_release(create_objects_func):
 
             # Measure peak object counts
             counts2 = get_counts()
-            more2 = get_excess_counts(counts1, counts2)
+            more2 = get_excess_counts(counts1, counts2, options["ignore"])
             if not TEST_ITERS:
                 print("  more after create:", more2)
 
@@ -206,7 +208,7 @@ def create_and_release(create_objects_func):
             assert more2  # not empty
             assert (
                 more2 == options["expected_counts_after_create"]
-            ), f"Exepected:\n{options['expected_counts_after_create']}\nGot:\n{more2}"
+            ), f"Expected:\n{options['expected_counts_after_create']}\nGot:\n{more2}"
 
             # It's ok if other objects are created too ...
 
@@ -218,7 +220,7 @@ def create_and_release(create_objects_func):
 
             # Measure after-release object counts
             counts3 = get_counts()
-            more3 = get_excess_counts(counts1, counts3)
+            more3 = get_excess_counts(counts1, counts3, options["ignore"])
             if not TEST_ITERS:
                 print("  more after release:", more3)
 

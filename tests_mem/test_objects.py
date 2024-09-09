@@ -106,7 +106,6 @@ def test_release_command_buffer(n):
     # Note: a command encoder can only be used once (it gets destroyed on finish())
     yield {
         "expected_counts_after_create": {
-            "CommandEncoder": (n, 0),
             "CommandBuffer": (n, n),
         },
     }
@@ -144,7 +143,9 @@ def test_release_compute_pass_encoder(n):
     }
 
     for i in range(n):
-        yield command_encoder.begin_compute_pass()
+        pass_encoder = command_encoder.begin_compute_pass()
+        yield pass_encoder
+        pass_encoder.end()
 
 
 @create_and_release
@@ -217,7 +218,6 @@ def test_release_render_bundle_encoder(n):
 def test_release_render_bundle(n):
     yield {
         "expected_counts_after_create": {
-            "RenderBundleEncoder": (n, 0),
             "RenderBundle": (n, n),
         },
     }
@@ -230,7 +230,15 @@ def test_release_render_bundle(n):
 def test_release_render_pass_encoder(n):
     # Note: RenderPassEncoder does not really exist in wgpu-core
     # -> Check gpu.diagnostics.wgpu_native_counts.print_report(), nothing there that ends with "Encoder".
+    # Also, release() is called in end() - not sure if this will be forever.
+
     command_encoder = DEVICE.create_command_encoder()
+    texture_view = DEVICE.create_texture(
+            size=(16, 16, 1),
+            usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
+            format="rgba8unorm",
+    ).create_view()
+    ca = {"view": texture_view, "load_op": wgpu.LoadOp.load, "store_op": wgpu.StoreOp.store}
 
     yield {
         "expected_counts_after_create": {
@@ -239,7 +247,9 @@ def test_release_render_pass_encoder(n):
     }
 
     for i in range(n):
-        yield command_encoder.begin_render_pass(color_attachments=[])
+        pass_encoder = command_encoder.begin_render_pass(color_attachments=[ca])
+        yield pass_encoder
+        pass_encoder.end()
 
 
 @create_and_release
@@ -370,6 +380,8 @@ TEST_FUNCS = [
 if __name__ == "__main__":
     # testutils.TEST_ITERS = 40  # Uncomment for a mem-usage test run
 
+    test_release_render_pass_encoder()
+    1/0
     for func in TEST_FUNCS:
         print(func.__name__ + " ...")
         try:

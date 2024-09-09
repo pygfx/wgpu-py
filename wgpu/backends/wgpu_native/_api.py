@@ -2349,6 +2349,10 @@ class GPUCommandEncoder(
     _pop_debug_group_function = libf.wgpuCommandEncoderPopDebugGroup
     _insert_debug_marker_function = libf.wgpuCommandEncoderInsertDebugMarker
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._pass_encoders = []
+
     def begin_compute_pass(
         self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
     ):
@@ -2374,8 +2378,10 @@ class GPUCommandEncoder(
             # not used: nextInChain
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
-        raw_pass = libf.wgpuCommandEncoderBeginComputePass(self._internal, struct)
-        return GPUComputePassEncoder(label, raw_pass, self)
+        raw_encoder = libf.wgpuCommandEncoderBeginComputePass(self._internal, struct)
+        encoder = GPUComputePassEncoder(label, raw_encoder, self)
+        self._pass_encoders.append(encoder)
+        return encoder
 
     def begin_render_pass(
         self,
@@ -2487,9 +2493,10 @@ class GPUCommandEncoder(
         )
 
         # H: WGPURenderPassEncoder f(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor)
-        raw_pass = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
-        encoder = GPURenderPassEncoder(label, raw_pass, self)
+        raw_encoder = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
+        encoder = GPURenderPassEncoder(label, raw_encoder, self)
         encoder._objects_to_keep_alive = objects_to_keep_alive
+        self._pass_encoders.append(encoder)
         return encoder
 
     def clear_buffer(self, buffer, offset=0, size=None):
@@ -2716,6 +2723,12 @@ class GPUCommandEncoder(
         )
 
     def finish(self, *, label=""):
+        # Check that all pass encoders are ended, to prevent locking
+        for encoder in self._pass_encoders:
+            if not encoder._ended:
+                raise RuntimeError("Pass encoders must be ended before finnish()")
+        self._pass_encoders = []
+
         # H: nextInChain: WGPUChainedStruct *, label: char *
         struct = new_struct_p(
             "WGPUCommandBufferDescriptor *",
@@ -2755,7 +2768,6 @@ class GPUComputePassEncoder(
     GPUBindingCommandsMixin,
     GPUObjectBase,
 ):
-    """ """
 
     # GPUDebugCommandsMixin
     _push_debug_group_function = libf.wgpuComputePassEncoderPushDebugGroup
@@ -2764,6 +2776,8 @@ class GPUComputePassEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
+
+    _ended = False
 
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
@@ -2788,8 +2802,8 @@ class GPUComputePassEncoder(
     def end(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
-        # Once a pass encoder is ended, it needs to be released to signal it's no longer in use.
-        # TODO: this is a workaround for https://github.com/gfx-rs/wgpu-native/issues/412
+        self._ended = True
+        # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
         self._release()
 
     def _release(self):
@@ -2823,6 +2837,8 @@ class GPURenderPassEncoder(
     _draw_indirect_function = libf.wgpuRenderPassEncoderDrawIndirect
     _draw_indexed_function = libf.wgpuRenderPassEncoderDrawIndexed
     _draw_indexed_indirect_function = libf.wgpuRenderPassEncoderDrawIndexedIndirect
+
+    _ended = False
 
     def set_viewport(self, x, y, width, height, min_depth, max_depth):
         # H: void f(WGPURenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth)
@@ -2862,7 +2878,8 @@ class GPURenderPassEncoder(
     def end(self):
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
-        # TODO: this is a workaround for https://github.com/gfx-rs/wgpu-native/issues/412
+        self._ended = True
+        # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
         self._release()
 
     def execute_bundles(self, bundles):
