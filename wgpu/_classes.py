@@ -712,8 +712,13 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
+    @apidiff.change("Need push_constants_layouts")
     def create_pipeline_layout(
-        self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
+        self,
+        *,
+        label="",
+        bind_group_layouts: "List[GPUBindGroupLayout]",
+        push_constant_layouts: "List[GPUPushConstantRange]" = [],
     ):
         """Create a `GPUPipelineLayout` object, which can be
         used in `create_render_pipeline()` or `create_compute_pipeline()`.
@@ -1866,6 +1871,21 @@ class GPURenderPassEncoder(
     def end_occlusion_query(self):
         """Ends an occlusion query."""
         raise NotImplementedError()
+
+    @apidiff.add("Part of Push Constants")
+    def set_push_constants(self, visibility, offset, size_in_bytes, data):
+        """
+        Set push-constant data for subsequent draw calls.
+
+        Writes the first size_in_bytes bytes of data to push-constant storage,
+        starting at the specified offset. These bytes are visible to the pipeline
+        stages indicated by the visibility argument.
+        """
+        raise NotImplementedError()
+
+    """
+    void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void const * data);
+"""
 
 
 class GPURenderBundle(GPUObjectBase):

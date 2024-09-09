@@ -364,16 +364,29 @@ class GPU(classes.GPU):
 
         # ----- Get adapter limits
 
+        # H: chain: WGPUChainedStructOut, limits: WGPUNativeLimits
+        c_supported_limits_extras = new_struct_p(
+            "WGPUSupportedLimitsExtras *",
+            # not used: chain
+            # not used: limits
+        )
+        c_supported_limits_extras.chain.sType = lib.WGPUSType_SupportedLimitsExtras
         # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
         c_supported_limits = new_struct_p(
             "WGPUSupportedLimits *",
-            # not used: nextInChain
+            nextInChain=ffi.cast("WGPUChainedStructOut *", c_supported_limits_extras),
             # not used: limits
         )
         c_limits = c_supported_limits.limits
+        c_limits_extras = c_supported_limits_extras.limits
         # H: WGPUBool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
         libf.wgpuAdapterGetLimits(adapter_id, c_supported_limits)
-        limits = {to_snake_case(k): getattr(c_limits, k) for k in sorted(dir(c_limits))}
+        values = [
+            (to_snake_case(name), getattr(limit, name))
+            for limit in (c_limits, c_limits_extras)
+            for name in dir(limit)
+        ]
+        limits = dict(sorted(values))
 
         # ----- Get adapter features
 
@@ -778,24 +791,33 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Set limits
 
+        # H: chain: WGPUChainedStruct, limits: WGPUNativeLimits
+        c_required_limits_extras = new_struct_p(
+            "WGPURequiredLimitsExtras *",
+            # not used: chain
+            # not used: limits
+        )
+        c_required_limits_extras.chain.sType = lib.WGPUSType_RequiredLimitsExtras
         # H: nextInChain: WGPUChainedStruct *, limits: WGPULimits
         c_required_limits = new_struct_p(
             "WGPURequiredLimits *",
-            # not used: nextInChain
+            nextInChain=ffi.cast("WGPUChainedStruct*", c_required_limits_extras),
             # not used: limits
         )
         c_limits = c_required_limits.limits
+        c_limits_extras = c_required_limits_extras.limits
 
         # Set all limits to the adapter default
         # This is important, because zero does NOT mean default, and a limit of zero
         # for a specific limit may break a lot of applications.
-        for key, val in self.limits.items():
-            setattr(c_limits, to_camel_case(key), val)
-
-        # Overload with any set limits
         required_limits = required_limits or {}
-        for key, val in required_limits.items():
-            setattr(c_limits, to_camel_case(key), val)
+        for key, value in self.limits.items():
+            c_key = to_camel_case(key)
+            new_value = required_limits.get(key, value)
+            if hasattr(c_limits, c_key):
+                setattr(c_limits, c_key, new_value)
+            else:
+                setattr(c_limits_extras, c_key, new_value)
 
         # ---- Set queue descriptor
 
@@ -1284,17 +1306,52 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPUBindGroup(label, id, self, entries)
 
     def create_pipeline_layout(
-        self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
+        self,
+        *,
+        label="",
+        bind_group_layouts: "List[GPUBindGroupLayout]",
+        push_constant_layouts: "List[GPUPushConstantRange]" = [],
     ):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
 
         c_layout_array = ffi.new("WGPUBindGroupLayout []", bind_group_layouts_ids)
+        next_in_chain = ffi.NULL
+        if push_constant_layouts:
+            c_push_constant_layouts = []
+            for layout in push_constant_layouts:
+                visibility = layout["visibility"]
+                if isinstance(visibility, str):
+                    visibility = str_flag_to_int(flags.ShaderStage, visibility)
+
+                # H: stages: WGPUShaderStageFlags/int, start: int, end: int
+                c_push_constant_layout = new_struct(
+                    "WGPUPushConstantRange",
+                    stages=int(visibility),
+                    start=layout["start"],
+                    end=layout["end"],
+                )
+                c_push_constant_layouts.append(c_push_constant_layout)
+
+            c_push_constant_ranges = ffi.new(
+                "WGPUPushConstantRange[]", c_push_constant_layouts
+            )
+            # H: chain: WGPUChainedStruct, pushConstantRangeCount: int, pushConstantRanges: WGPUPushConstantRange *
+            c_pipeline_layout_extras = new_struct_p(
+                "WGPUPipelineLayoutExtras *",
+                pushConstantRangeCount=len(c_push_constant_layouts),
+                pushConstantRanges=c_push_constant_ranges,
+                # not used: chain
+            )
+            c_pipeline_layout_extras.chain.sType = lib.WGPUSType_PipelineLayoutExtras
+            next_in_chain = ffi.cast("WGPUChainedStruct *", c_pipeline_layout_extras)
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, bindGroupLayoutCount: int, bindGroupLayouts: WGPUBindGroupLayout *
         struct = new_struct_p(
             "WGPUPipelineLayoutDescriptor *",
             label=to_c_label(label),
             bindGroupLayouts=c_layout_array,
             bindGroupLayoutCount=len(bind_group_layouts),
+            nextInChain=next_in_chain,
             # not used: nextInChain
         )
 
@@ -2832,6 +2889,27 @@ class GPURenderPassEncoder(
     def end_occlusion_query(self):
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEndOcclusionQuery(self._internal)
+
+    def set_push_constants(self, visibility, offset, size_in_bytes, data):
+        # We support anything that memoryview supports, i.e. anything
+        # that implements the buffer protocol, including, bytes,
+        # bytearray, ctypes arrays, numpy arrays, etc.
+        m, address = get_memoryview_and_address(data)
+
+        # Deal with offset and size
+        offset = int(offset)
+        size = int(size_in_bytes)
+        if isinstance(visibility, str):
+            visibility = str_flag_to_int(flags.ShaderStage, visibility)
+
+        if not (0 <= size_in_bytes <= m.nbytes):
+            raise ValueError("Invalid size_in_bytes")
+
+        c_data = ffi.cast("void *", address)  # do we want to add data_offset?
+        # H: void f(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void const * data)
+        libf.wgpuRenderPassEncoderSetPushConstants(
+            self._internal, int(visibility), offset, size, c_data
+        )
 
     def _release(self):
         if self._internal is not None and libf is not None:

@@ -1,4 +1,4 @@
-# Code generatation report
+# Code generation report
 ## Preparing
 * The webgpu.idl defines 37 classes with 75 functions
 * The webgpu.idl defines 5 flags, 33 enums, 59 structs
@@ -12,15 +12,16 @@
 * Diffs for GPU: add enumerate_adapters, add enumerate_adapters_async, change get_preferred_canvas_format, change request_adapter, change request_adapter_async
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
 * Diffs for GPUAdapter: add summary
-* Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost, hide onuncapturederror, hide pop_error_scope, hide push_error_scope
+* Diffs for GPUDevice: add adapter, add create_buffer_with_data, change create_pipeline_layout, hide import_external_texture, hide lost, hide onuncapturederror, hide pop_error_scope, hide push_error_scope
 * Diffs for GPUBuffer: add map_read, add map_write, add read_mapped, add write_mapped, hide get_mapped_range
 * Diffs for GPUTexture: add size
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
+* Diffs for GPURenderPassEncoder: add set_push_constants
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 112 methods, 45 properties
+* Validated 37 classes, 113 methods, 45 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 111 methods, 0 properties
+* Validated 37 classes, 112 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.clip-distances missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
@@ -29,6 +30,6 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum field DeviceLostReason.unknown missing in wgpu.h
 * Wrote 235 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 132 C function calls
-* Not using 72 C functions
-* Validated 77 C structs
+* Validated 133 C function calls
+* Not using 71 C functions
+* Validated 81 C structs
