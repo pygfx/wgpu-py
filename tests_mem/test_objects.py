@@ -146,6 +146,7 @@ def test_release_compute_pass_encoder(n):
         pass_encoder = command_encoder.begin_compute_pass()
         yield pass_encoder
         pass_encoder.end()
+        del pass_encoder
 
 
 @create_and_release

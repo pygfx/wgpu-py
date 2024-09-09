@@ -722,7 +722,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             return enum_int2str["TextureFormat"][self._config.format]
         else:
             capabilities = self._get_surface_capabilities(adapter)
-            return enum_int2str["TextureFormat"][capabilities.formats[0]]
+            if capabilities.formats:  # not null
+                return enum_int2str["TextureFormat"][capabilities.formats[0]]
+            else:
+                return "bgra8unorm-srgb"  # most common format
 
     def _get_surface_capabilities(self, adapter):
         adapter_id = adapter._internal
@@ -2352,7 +2355,7 @@ class GPUCommandEncoder(
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._pass_encoders = []
+        # self._pass_encoders = []
 
     def begin_compute_pass(
         self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
@@ -2381,7 +2384,7 @@ class GPUCommandEncoder(
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
         raw_encoder = libf.wgpuCommandEncoderBeginComputePass(self._internal, struct)
         encoder = GPUComputePassEncoder(label, raw_encoder, self)
-        self._pass_encoders.append(encoder)
+        # self._pass_encoders.append(encoder)
         return encoder
 
     def begin_render_pass(
@@ -2497,7 +2500,7 @@ class GPUCommandEncoder(
         raw_encoder = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
         encoder = GPURenderPassEncoder(label, raw_encoder, self)
         encoder._objects_to_keep_alive = objects_to_keep_alive
-        self._pass_encoders.append(encoder)
+        # self._pass_encoders.append(encoder)
         return encoder
 
     def clear_buffer(self, buffer, offset=0, size=None):
@@ -2725,10 +2728,10 @@ class GPUCommandEncoder(
 
     def finish(self, *, label=""):
         # Check that all pass encoders are ended, to prevent locking
-        for encoder in self._pass_encoders:
-            if not encoder._ended:
-                raise RuntimeError("Pass encoders must be ended before finnish()")
-        self._pass_encoders = []
+        # for encoder in self._pass_encoders:
+        #     if not encoder._ended:
+        #         raise RuntimeError("Pass encoders must be ended before finnish()")
+        # self._pass_encoders = []
 
         # H: nextInChain: WGPUChainedStruct *, label: char *
         struct = new_struct_p(
