@@ -2789,7 +2789,7 @@ class GPUComputePassEncoder(
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
         # Once a pass encoder is ended, it needs to be released to signal it's no longer in use.
-        # might be an unintended workaround: https://github.com/gfx-rs/wgpu-native/issues/412
+        # TODO: this is a workaround for https://github.com/gfx-rs/wgpu-native/issues/412
         self._release()
 
     def _release(self):
@@ -2862,7 +2862,7 @@ class GPURenderPassEncoder(
     def end(self):
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
-        # Once a pass encoder is ended, it needs to be released to signal it's no longer in use.
+        # TODO: this is a workaround for https://github.com/gfx-rs/wgpu-native/issues/412
         self._release()
 
     def execute_bundles(self, bundles):
@@ -3127,13 +3127,18 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         return data
 
     def on_submitted_work_done(self):
-        # TODO: cleanup reference (from WGPUBufferMapAsyncCallback, because the signature is similar.)
+        # In JS, this returns a Promise that can be awaited to (async) wait
+        # for the work that is currently in the pipeline. We need to figure out
+        # how to expose these async parts.
+        raise NotImplementedError()
+
         status = 999
 
         @ffi.callback("void(WGPUQueueWorkDoneStatus, void*)")
         def callback(status_, user_data_p):
             nonlocal status
             status = status_
+            # -> here we must resolve the promise, or something
 
         # H: void f(WGPUQueue queue, WGPUQueueOnSubmittedWorkDoneCallback callback, void * userdata)
         libf.wgpuQueueOnSubmittedWorkDone(self._internal, callback, ffi.NULL)
