@@ -17,7 +17,7 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.17.1] - 05-08-2024
+### [v0.17.2] - 09-08-2024
 
 Added:
 
@@ -34,6 +34,8 @@ Changed:
 * Bindings can omit offset and size (the full size will be used). This makes our API follow WebGPU better.
 * Support omitting fields from `BindGroupLayoutEntry`, `BufferBindingLayout`, `SamplerBindingLayout`, `StorageTextureBindingLayout`, `VertexState`. See https://github.com/pygfx/wgpu-py/pull/534 for details.
 * In cases where a `view_dimension` is given, it must be provided as a string (e.g. '2d'). Ints are no longer allowed, because e.g. 2 does *not* mean '2d', which can be a source of confusion.
+
+(Due to problems with the CD process, we had to bump the version a few times.)
 
 
 ### [v0.16.0] - 13-06-2024
