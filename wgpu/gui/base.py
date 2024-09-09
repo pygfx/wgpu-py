@@ -197,7 +197,7 @@ class WgpuAutoGui:
         super().__init__(*args, **kwargs)
         self._last_event_time = 0
         self._pending_events = {}
-        self._event_handlers = defaultdict(set)
+        self._event_handlers = defaultdict(list)
 
     def _get_event_wait_time(self):
         """Calculate the time to wait for the next event dispatching.
@@ -274,18 +274,21 @@ class WgpuAutoGui:
         """
         # Collect callbacks
         event_type = event.get("event_type")
-        callbacks = self._event_handlers[event_type] | self._event_handlers["*"]
+        callbacks = self._event_handlers[event_type] + self._event_handlers["*"]
         # Dispatch
-        for callback in callbacks:
+        for _, callback in callbacks:
             with log_exception(f"Error during handling {event['event_type']} event"):
+                if event.get("stop_propagation", False):
+                    break
                 callback(event)
 
-    def add_event_handler(self, *args):
+    def add_event_handler(self, *args, order=0):
         """Register an event handler to receive events.
 
         Arguments:
             callback (callable): The event handler. Must accept a single event argument.
             *types (list of strings): A list of event types.
+            order (int): The order in which the handler is called. Lower numbers are called first. Default is 0.
 
         For the available events, see
         https://jupyter-rfb.readthedocs.io/en/stable/events.html.
@@ -331,7 +334,8 @@ class WgpuAutoGui:
 
         def decorator(_callback):
             for type in types:
-                self._event_handlers[type].add(_callback)
+                self._event_handlers[type].append((order, _callback))
+                self._event_handlers[type].sort(key=lambda x: x[0])
             return _callback
 
         if decorating:
@@ -346,4 +350,6 @@ class WgpuAutoGui:
             *types (list of strings): A list of event types.
         """
         for type in types:
-            self._event_handlers[type].remove(callback)
+            self._event_handlers[type] = [
+                (o, cb) for o, cb in self._event_handlers[type] if cb is not callback
+            ]
