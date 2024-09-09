@@ -463,8 +463,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             format = self.get_preferred_format(device.adapter)
         # The color_space is not used for now
         color_space
-        # TODO: tone mapping ?
         check_struct("CanvasToneMapping", tone_mapping)
+        tone_mapping_mode = tone_mapping.get("mode", "standard")
 
         # Get what's supported
 
