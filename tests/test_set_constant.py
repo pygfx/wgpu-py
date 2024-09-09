@@ -8,6 +8,18 @@ from wgpu import TextureFormat
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
+
+"""
+This code is an amazingly slow way of adding together two 10-element arrays of 32-bit
+integers defined by push constants and store them into an output buffer.
+
+The first number of the addition is purposely pulled using the vertex stage, and the
+second number from the fragment stage, so that we can ensure that we are correctly
+using stage-separated push constants correctly.
+
+The source code assumes the topology is POINT-LIST, so that each call to vertexMain
+corresponds with one call to fragmentMain. 
+"""
 COUNT = 10
 
 SHADER_SOURCE = (
@@ -15,11 +27,12 @@ SHADER_SOURCE = (
     const COUNT = {COUNT}u;
 """
     """
+    // Put the results here
     @group(0) @binding(0) var<storage, read_write> data: array<u32, COUNT>;
 
     struct PushConstants {
-        values1: array<u32, COUNT>,
-        values2: array<u32, COUNT>,
+        values1: array<u32, COUNT>, // VERTEX constants
+        values2: array<u32, COUNT>, // FRAGMENT constants
     }
     var<push_constant> push_constants: PushConstants;  
 
@@ -130,7 +143,7 @@ def get_device():
     return device
 
 
-def test_me():
+def test_push_constants():
     device = get_device()
     run_test(device)
 
