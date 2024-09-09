@@ -721,7 +721,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             return enum_int2str["TextureFormat"][self._config.format]
         else:
             capabilities = self._get_surface_capabilities(adapter)
-            return enum_int2str["TextureFormat"][capabilities.formats[0]]
+            if capabilities.formats:  # not null
+                return enum_int2str["TextureFormat"][capabilities.formats[0]]
+            else:
+                return "bgra8unorm-srgb"  # most common format
 
     def _get_surface_capabilities(self, adapter):
         adapter_id = adapter._internal
