@@ -254,6 +254,7 @@ def test_release_render_pass_encoder(n):
         pass_encoder = command_encoder.begin_render_pass(color_attachments=[ca])
         yield pass_encoder
         pass_encoder.end()
+        del pass_encoder
 
 
 @create_and_release
