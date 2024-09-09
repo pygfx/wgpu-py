@@ -468,41 +468,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         tone_mapping_mode = tone_mapping.get("mode", "standard")
         tone_mapping_mode
 
-        # Get what's supported
-
-        capabilities = self._get_surface_capabilities(self._device.adapter)
-
-        capable_formats = []
-        for i in range(capabilities.formatCount):
-            int_val = capabilities.formats[i]
-            capable_formats.append(enum_int2str["TextureFormat"][int_val])
-
-        capable_present_modes = []
-        for i in range(capabilities.presentModeCount):
-            int_val = capabilities.presentModes[i]
-            str_val = enum_int2str["PresentMode"][int_val]
-            capable_present_modes.append(str_val.lower())
-
-        capable_alpha_modes = []
-        for i in range(capabilities.alphaModeCount):
-            int_val = capabilities.alphaModes[i]
-            str_val = enum_int2str["CompositeAlphaMode"][int_val]
-            capable_alpha_modes.append(str_val.lower())
-
-        # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
-        libf.wgpuSurfaceCapabilitiesFreeMembers(capabilities[0])
-
-        # Check if input is supported
-
-        if format not in capable_formats:
-            raise ValueError(
-                f"Given format '{format}' is not in supported formats {capable_formats}"
-            )
-        if alpha_mode not in capable_alpha_modes:
-            raise ValueError(
-                f"Given format '{alpha_mode}' is not in supported formats {capable_alpha_modes}"
-            )
-
         # Select the present mode to determine vsync behavior.
         # * https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html
         # * https://github.com/pygfx/wgpu-py/issues/256
@@ -520,8 +485,26 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             present_mode_pref = ["fifo", "mailbox"]
         else:
             present_mode_pref = ["immediate", "mailbox", "fifo"]
-        present_modes = [p for p in present_mode_pref if p in capable_present_modes]
-        present_mode = (present_modes or capable_present_modes)[0]
+
+        # Get what's supported
+
+        capabilities = self._get_surface_capabilities(self._device.adapter)
+
+        if format not in capabilities["formats"]:
+            raise ValueError(
+                f"Given format '{format}' is not in supported formats {capabilities['formats']}"
+            )
+
+        if alpha_mode not in capabilities["alpha_modes"]:
+            raise ValueError(
+                f"Given format '{alpha_mode}' is not in supported formats {capabilities['alpha_modes']}"
+            )
+
+        # Select present mode
+        present_modes = [
+            p for p in present_mode_pref if p in capabilities["present_modes"]
+        ]
+        present_mode = (present_modes or capabilities["present_modes"])[0]
         c_present_mode = getattr(lib, f"WGPUPresentMode_{present_mode.capitalize()}")
 
         # Prepare config object
@@ -721,17 +704,13 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # this shortcut might not be correct if a different format is specified during .configure()
             return enum_int2str["TextureFormat"][self._config.format]
         else:
-            capabilities = self._get_surface_capabilities(adapter)
-            if capabilities.formats:  # not null
-                return enum_int2str["TextureFormat"][capabilities.formats[0]]
-            else:
-                return "bgra8unorm-srgb"  # most common format
+            return self._get_surface_capabilities(adapter)["formats"][0]
 
     def _get_surface_capabilities(self, adapter):
         adapter_id = adapter._internal
 
         # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
-        capabilities = new_struct_p(
+        c_capabilities = new_struct_p(
             "WGPUSurfaceCapabilities *",
             # not used: nextInChain
             # not used: usages
@@ -743,11 +722,47 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # not used: alphaModes
         )
 
-        # TODO: Vulkan gives Null pointers of some fields, D3D12 and OpenGL work. (could be Intel specific?)
         # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
         libf.wgpuSurfaceGetCapabilities(
-            self._get_surface_id(), adapter_id, capabilities
+            self._get_surface_id(), adapter_id, c_capabilities
         )
+
+        # Convert to Python.
+        # We've observed null pointers in the result on some systems with Vulkan.
+        # We are optimistic; in such a case we simply assume the device is capable of anything.
+        capabilities = {}
+
+        if c_capabilities.formats:
+            capabilities["formats"] = formats = []
+            for i in range(c_capabilities.formatCount):
+                int_val = c_capabilities.formats[i]
+                formats.append(enum_int2str["TextureFormat"][int_val])
+
+        else:
+            capabilities["formats"] = list(wgpu.TextureFormat)  # all
+            capabilities.insert(0, "bgra8unorm-srgb")  # prefer good default
+
+        if c_capabilities.alphaModes:
+            capabilities["alpha_modes"] = alpha_modes = []
+            for i in range(c_capabilities.alphaModeCount):
+                int_val = c_capabilities.alphaModes[i]
+                str_val = enum_int2str["CompositeAlphaMode"][int_val]
+                alpha_modes.append(str_val.lower())
+        else:
+            capabilities["alpha_modes"] = list(wgpu.CanvasAlphaMode)
+
+        if c_capabilities.presentModes:
+            capabilities["present_modes"] = present_modes = []
+            for i in range(c_capabilities.presentModeCount):
+                int_val = c_capabilities.presentModes[i]
+                str_val = enum_int2str["PresentMode"][int_val]
+                present_modes.append(str_val.lower())
+        else:
+            d = wgpu.backends.wgpu_native._api.enum_int2str["PresentMode"]
+            capabilities["present_modes"] = list(d.values())
+
+        # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
+        libf.wgpuSurfaceCapabilitiesFreeMembers(c_capabilities[0])
 
         return capabilities
 
