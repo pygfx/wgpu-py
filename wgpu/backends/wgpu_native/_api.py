@@ -32,7 +32,6 @@ from ._helpers import (
     get_memoryview_from_address,
     get_memoryview_and_address,
     to_snake_case,
-    to_camel_case,
     ErrorHandler,
     SafeLibCalls,
 )
