@@ -789,7 +789,6 @@ class GPUAdapter(classes.GPUAdapter):
     ):
         # ---- Handle features
         assert isinstance(required_features, (tuple, list, set))
-        assert isinstance(required_limits, Optional[dict])
         c_features = set()
         for f in required_features:
             if isinstance(f, str):
@@ -837,6 +836,7 @@ class GPUAdapter(classes.GPUAdapter):
             raise KeyError(f"Unknown limit name '{name}'")
 
         if required_limits:
+            assert isinstance(required_limits, dict)
             required_limits = {
                 canonicalize_limit_name(key): value
                 for key, value in required_limits.items()
