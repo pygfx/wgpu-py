@@ -19,7 +19,7 @@ import ctypes
 import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Union
 
 from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int
