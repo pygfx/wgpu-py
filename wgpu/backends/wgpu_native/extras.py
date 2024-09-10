@@ -1,7 +1,7 @@
 import os
 
-from ._api import structs, enums, Dict, logger
-
+from ._api import GPUBindGroupLayout, structs, enums, Dict, logger
+from typing import List
 
 # NOTE: these functions represent backend-specific extra API.
 # NOTE: changes to this module must be reflected in docs/backends.rst.
