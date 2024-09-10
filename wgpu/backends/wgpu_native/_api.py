@@ -203,7 +203,7 @@ def check_struct(struct_name, d):
 
 
 def _get_limits(id: int, device: bool = False, adapter: bool = False):
-    """Gets the limits for a device or an adapater"""
+    """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
 
     # H: chain: WGPUChainedStructOut, limits: WGPUNativeLimits
@@ -219,8 +219,6 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         nextInChain=ffi.cast("WGPUChainedStructOut *", c_supported_limits_extras),
         # not used: limits
     )
-    c_limits = c_supported_limits.limits
-    c_limits_extras = c_supported_limits_extras.limits
     if adapter:
         # H: WGPUBool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
         libf.wgpuAdapterGetLimits(id, c_supported_limits)
@@ -228,12 +226,12 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         # H: WGPUBool f(WGPUDevice device, WGPUSupportedLimits * limits)
         libf.wgpuDeviceGetLimits(id, c_supported_limits)
 
-    values = [
-        (to_snake_case(name, "-"), getattr(limit, name))
-        for limit in (c_limits, c_limits_extras)
-        for name in dir(limit)
+    key_value_pairs = [
+        (to_snake_case(name, "-"), getattr(limits, name))
+        for limits in (c_supported_limits.limits, c_supported_limits_extras.limits)
+        for name in dir(limits)
     ]
-    limits = dict(sorted(values))
+    limits = dict(sorted(key_value_pairs))
     return limits
 
 
@@ -243,10 +241,10 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
 
     if adapter:
         # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
-        has_feature = lambda i: libf.wgpuAdapterHasFeature(id, i)  # noqa
+        has_feature = lambda feature: libf.wgpuAdapterHasFeature(id, feature)  # noqa
     else:
         # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
-        has_feature = lambda i: libf.wgpuDeviceHasFeature(id, i)  # noqa
+        has_feature = lambda feature: libf.wgpuDeviceHasFeature(id, feature)  # noqa
 
     features = set()
     # Standard features
@@ -258,8 +256,8 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
             features.add(f)
 
     # Native features
-    for name, i in enum_str2int["NativeFeature"].items():
-        if has_feature(i):
+    for name, feature_id in enum_str2int["NativeFeature"].items():
+        if has_feature(feature_id):
             features.add(name)
     return features
 
