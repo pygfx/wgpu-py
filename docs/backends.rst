@@ -59,6 +59,20 @@ The wgpu_native backend provides a few extra functionalities:
     :return: Device
     :rtype: wgpu.GPUDevice
 
+.. py:function:: wgpu.backends.wgpu_native.set_push_constants(render_pass_encoder, visibility, offset, size_in_bytes, data, data_offset=0)
+
+    This function requires that the underlying GPU implement `push_constants`.
+    These push constants are a buffer of bytes available to the `fragment` and `vertex`
+    shaders. They are similar to a bound buffer, but the buffer is set using this
+    function call.
+
+    :param render_pass_encoder: The render pass encoder to which we are pushing constants.
+    :param visibility: The stages (vertex, fragment, or both) to which these constants are visible
+    :param offset: The offset into the push constants at which the bytes are to be written
+    :param size_in_bytes: The number of bytes to copy from the ata
+    :param data: The data to copy to the buffer
+    :param data_offset: The starting offset in the data at which to begin copying.
+
 
 The js_webgpu backend
 ---------------------

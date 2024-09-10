@@ -4,6 +4,7 @@ import pytest
 import wgpu.utils
 from tests.testutils import can_use_wgpu_lib, run_tests
 from wgpu import TextureFormat
+from wgpu.backends.wgpu_native.extras import create_pipeline_layout, set_push_constants
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
@@ -64,7 +65,12 @@ BIND_GROUP_ENTRIES = [
 ]
 
 
-def run_test(device):
+def setup_pipeline():
+    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+    device = adapter.request_device(
+        required_features=["push-constants"],
+        required_limits={"max-push-constant-size": 128},
+    )
     output_texture = device.create_texture(
         # Actual size is immaterial.  Could just be 1x1
         size=[128, 128],
@@ -73,7 +79,8 @@ def run_test(device):
     )
     shader = device.create_shader_module(code=SHADER_SOURCE)
     bind_group_layout = device.create_bind_group_layout(entries=BIND_GROUP_ENTRIES)
-    render_pipeline_layout = device.create_pipeline_layout(
+    render_pipeline_layout = create_pipeline_layout(
+        device,
         bind_group_layouts=[bind_group_layout],
         push_constant_layouts=[
             {"visibility": "VERTEX", "start": 0, "end": COUNT * 4},
@@ -95,16 +102,6 @@ def run_test(device):
             "topology": "point-list",
         },
     )
-
-    vertex_call_buffer = device.create_buffer(size=COUNT * 4, usage="STORAGE|COPY_SRC")
-
-    bind_group = device.create_bind_group(
-        layout=pipeline.get_bind_group_layout(0),
-        entries=[
-            {"binding": 0, "resource": {"buffer": vertex_call_buffer}},
-        ],
-    )
-
     render_pass_descriptor = {
         "color_attachments": [
             {
@@ -116,35 +113,51 @@ def run_test(device):
         ],
     }
 
-    buffer1 = np.random.randint(0, 1_000_000, COUNT, dtype=np.uint32)
-    buffer2 = np.random.randint(0, 1_000_000, COUNT, dtype=np.uint32)
+    return device, pipeline, render_pass_descriptor
+
+
+def test_normal_push_constants():
+    device, pipeline, render_pass_descriptor = setup_pipeline()
+    vertex_call_buffer = device.create_buffer(size=COUNT * 4, usage="STORAGE|COPY_SRC")
+    bind_group = device.create_bind_group(
+        layout=pipeline.get_bind_group_layout(0),
+        entries=[
+            {"binding": 0, "resource": {"buffer": vertex_call_buffer}},
+        ],
+    )
 
     encoder = device.create_command_encoder()
     this_pass = encoder.begin_render_pass(**render_pass_descriptor)
     this_pass.set_pipeline(pipeline)
     this_pass.set_bind_group(0, bind_group)
-    this_pass.set_push_constants("VERTEX", 0, COUNT * 4, buffer1)
-    this_pass.set_push_constants("FRAGMENT", COUNT * 4, COUNT * 4, buffer2)
+
+    buffer = np.random.randint(0, 1_000_000, size=(2 * COUNT), dtype=np.uint32)
+    set_push_constants(this_pass, "VERTEX", 0, COUNT * 4, buffer)
+    set_push_constants(this_pass, "FRAGMENT", COUNT * 4, COUNT * 4, buffer, COUNT * 4)
     this_pass.draw(COUNT)
     this_pass.end()
     device.queue.submit([encoder.finish()])
     info_view = device.queue.read_buffer(vertex_call_buffer)
-    info = np.frombuffer(info_view, dtype=np.uint32)
-    assert all(buffer1 + buffer2 == info)
+    result = np.frombuffer(info_view, dtype=np.uint32)
+    expected_result = buffer[0:COUNT] + buffer[COUNT:]
+    assert all(result == expected_result)
 
 
-def get_device():
-    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-    device = adapter.request_device(
-        required_features=["push-constants"],
-        required_limits={"max-push-constant-size": 128},
-    )
-    return device
+def test_bad_set_push_constants():
+    device, pipeline, render_pass_descriptor = setup_pipeline()
+    encoder = device.create_command_encoder()
+    this_pass = encoder.begin_render_pass(**render_pass_descriptor)
 
+    def zeros(n):
+        return np.zeros(n, dtype=np.uint32)
 
-def test_push_constants():
-    device = get_device()
-    run_test(device)
+    with pytest.raises(ValueError):
+        # Buffer is to short
+        set_push_constants(this_pass, "VERTEX", 0, COUNT * 4, zeros(COUNT - 1))
+
+    with pytest.raises(ValueError):
+        # Buffer is to short
+        set_push_constants(this_pass, "VERTEX", 0, COUNT * 4, zeros(COUNT + 1), 8)
 
 
 if __name__ == "__main__":

@@ -227,9 +227,9 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         libf.wgpuDeviceGetLimits(id, c_supported_limits)
 
     key_value_pairs = [
-        (to_snake_case(name, "-"), getattr(limits, name))
-        for limits in (c_supported_limits.limits, c_supported_limits_extras.limits)
-        for name in dir(limits)
+        (to_snake_case(name, "-"), getattr(c_limits, name))
+        for c_limits in (c_supported_limits.limits, c_supported_limits_extras.limits)
+        for name in dir(c_limits)
     ]
     limits = dict(sorted(key_value_pairs))
     return limits
@@ -247,12 +247,12 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
         has_feature = lambda feature: libf.wgpuDeviceHasFeature(id, feature)  # noqa
 
     features = set()
+
     # Standard features
     for f in sorted(enums.FeatureName):
         if f in ["clip-distances"]:
             continue  # not supported by wgpu-native yet
-        key = f"FeatureName.{f}"
-        if has_feature(enummap[key]):
+        if has_feature(enummap[f"FeatureName.{f}"]):
             features.add(f)
 
     # Native features
@@ -788,13 +788,13 @@ class GPUAdapter(classes.GPUAdapter):
         self, label, required_features, required_limits, default_queue, trace_path
     ):
         # ---- Handle features
-
         assert isinstance(required_features, (tuple, list, set))
-
+        assert isinstance(required_limits, dict)
         c_features = set()
         for f in required_features:
             if isinstance(f, str):
                 f = f.replace("_", "-")
+                f = to_snake_case(f, "-")
                 i = enummap.get(f"FeatureName.{f}", None)
                 if i is None:
                     i = enum_str2int["NativeFeature"].get(f, None)
@@ -824,19 +824,28 @@ class GPUAdapter(classes.GPUAdapter):
         c_limits = c_required_limits.limits
         c_limits_extras = c_required_limits_extras.limits
 
+        def canonicalize_limit_name(name):
+            if name in self._limits:
+                return name
+            if "_" in name:
+                alt_name = name.replace("_", "-")
+                if alt_name in self._limits:
+                    return alt_name
+            alt_name = to_snake_case(name, "-")
+            if alt_name in self._limits:
+                return alt_name
+            raise KeyError(f"Unknown limit name '{name}'")
+
         if required_limits:
-            # Do some quick error checking
-            unknown_keys = [x for x in required_limits if x not in self._limits]
-            if unknown_keys:
-                raise KeyError(f"Unknown required limits {', '.join(unknown_keys)}")
+            required_limits = {
+                canonicalize_limit_name(key): value
+                for key, value in required_limits.items()
+            }
         else:
             # If required_limits isn't set, set it to self._limits.  This is the same as
             # setting it to {}, but the loop below goes just a little bit faster.
-            required_limits = required_limits or {}
+            required_limits = self._limits
 
-        # Set all limits to the adapter default
-        # This is important, because zero does NOT mean default, and a limit of zero
-        # for a specific limit may break a lot of applications.
         for limit in (c_limits, c_limits_extras):
             for key in dir(limit):
                 snake_key = to_snake_case(key, "-")
@@ -1305,39 +1314,32 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPUBindGroup(label, id, self, entries)
 
     def create_pipeline_layout(
-        self,
-        *,
-        label="",
-        bind_group_layouts: "List[GPUBindGroupLayout]",
-        push_constant_layouts: "List[Dict]" = [],
+        self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
     ):
+        return self._create_pipeline_layout(label, bind_group_layouts, [])
+
+    def _create_pipeline_layout(self, label, bind_group_layouts, push_constant_layouts):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
 
         c_layout_array = ffi.new("WGPUBindGroupLayout []", bind_group_layouts_ids)
         next_in_chain = ffi.NULL
         if push_constant_layouts:
-            c_push_constant_layouts = []
-            for layout in push_constant_layouts:
+            count = len(push_constant_layouts)
+            c_push_constant_ranges = ffi.new("WGPUPushConstantRange[]", count)
+            for layout, c_push_constant_range in zip(
+                push_constant_layouts, c_push_constant_ranges
+            ):
                 visibility = layout["visibility"]
                 if isinstance(visibility, str):
                     visibility = str_flag_to_int(flags.ShaderStage, visibility)
+                c_push_constant_range.stages = visibility
+                c_push_constant_range.start = layout["start"]
+                c_push_constant_range.end = layout["end"]
 
-                # H: stages: WGPUShaderStageFlags/int, start: int, end: int
-                c_push_constant_layout = new_struct(
-                    "WGPUPushConstantRange",
-                    stages=int(visibility),
-                    start=layout["start"],
-                    end=layout["end"],
-                )
-                c_push_constant_layouts.append(c_push_constant_layout)
-
-            c_push_constant_ranges = ffi.new(
-                "WGPUPushConstantRange[]", c_push_constant_layouts
-            )
             # H: chain: WGPUChainedStruct, pushConstantRangeCount: int, pushConstantRanges: WGPUPushConstantRange *
             c_pipeline_layout_extras = new_struct_p(
                 "WGPUPipelineLayoutExtras *",
-                pushConstantRangeCount=len(c_push_constant_layouts),
+                pushConstantRangeCount=count,
                 pushConstantRanges=c_push_constant_ranges,
                 # not used: chain
             )
@@ -1351,7 +1353,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             bindGroupLayouts=c_layout_array,
             bindGroupLayoutCount=len(bind_group_layouts),
             nextInChain=next_in_chain,
-            # not used: nextInChain
         )
 
         # H: WGPUPipelineLayout f(WGPUDevice device, WGPUPipelineLayoutDescriptor const * descriptor)
@@ -2889,7 +2890,10 @@ class GPURenderPassEncoder(
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEndOcclusionQuery(self._internal)
 
-    def set_push_constants(self, visibility, offset, size_in_bytes, data):
+    def _set_push_constants(self, visibility, offset, size_in_bytes, data, data_offset):
+        # Implementation of set_push_constant. The public API is in extras.py since
+        # this is a wgpu extension.
+
         # We support anything that memoryview supports, i.e. anything
         # that implements the buffer protocol, including, bytes,
         # bytearray, ctypes arrays, numpy arrays, etc.
@@ -2897,17 +2901,22 @@ class GPURenderPassEncoder(
 
         # Deal with offset and size
         offset = int(offset)
+        data_offset = int(data_offset)
         size = int(size_in_bytes)
         if isinstance(visibility, str):
             visibility = str_flag_to_int(flags.ShaderStage, visibility)
 
         if not (0 <= size_in_bytes <= m.nbytes):
             raise ValueError("Invalid size_in_bytes")
+        if not (0 <= size_in_bytes <= m.nbytes):
+            raise ValueError("Invalid data_offset")
+        if size_in_bytes + data_offset > m.nbytes:
+            raise ValueError("size_in_bytes + data_offset is too large")
 
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
         # H: void f(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void const * data)
         libf.wgpuRenderPassEncoderSetPushConstants(
-            self._internal, int(visibility), offset, size, c_data
+            self._internal, int(visibility), offset, size, c_data + data_offset
         )
 
     def _release(self):
