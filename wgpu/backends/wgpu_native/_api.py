@@ -19,7 +19,7 @@ import ctypes
 import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
-from typing import List, Dict, Union
+from typing import List, Dict, Optional, Union
 
 from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int
@@ -789,7 +789,7 @@ class GPUAdapter(classes.GPUAdapter):
     ):
         # ---- Handle features
         assert isinstance(required_features, (tuple, list, set))
-        assert isinstance(required_limits, dict)
+        assert isinstance(required_limits, Optional[dict])
         c_features = set()
         for f in required_features:
             if isinstance(f, str):
