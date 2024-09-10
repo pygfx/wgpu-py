@@ -5,8 +5,8 @@ import wgpu.utils
 from tests.testutils import can_use_wgpu_lib, run_tests
 from wgpu import TextureFormat
 
-# if not can_use_wgpu_lib:
-#     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
+if not can_use_wgpu_lib:
+    pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
 """
