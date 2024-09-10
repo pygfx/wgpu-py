@@ -241,13 +241,10 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
     """Gets the features for a device or an adapter"""
     assert device + adapter == 1  # exactly one of them is set
 
-    # Note, these lambdas should be "def"s, but there seems to be a bug in codegen that
-    # generates bad code in that case  We use lambdas, and tell flake8 not to complain.
     if adapter:
         # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
         has_feature = lambda i: libf.wgpuAdapterHasFeature(id, i)  # noqa
     else:
-        # flake8 noqa
         # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
         has_feature = lambda i: libf.wgpuDeviceHasFeature(id, i)  # noqa
 
