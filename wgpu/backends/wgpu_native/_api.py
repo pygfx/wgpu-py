@@ -202,6 +202,71 @@ def check_struct(struct_name, d):
         raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
 
 
+def _get_limits(id: int, device: bool = False, adapter: bool = False):
+    """Gets the limits for a device or an adapater"""
+    assert device + adapter == 1  # exactly one is set
+
+    # H: chain: WGPUChainedStructOut, limits: WGPUNativeLimits
+    c_supported_limits_extras = new_struct_p(
+        "WGPUSupportedLimitsExtras *",
+        # not used: chain
+        # not used: limits
+    )
+    c_supported_limits_extras.chain.sType = lib.WGPUSType_SupportedLimitsExtras
+    # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
+    c_supported_limits = new_struct_p(
+        "WGPUSupportedLimits *",
+        nextInChain=ffi.cast("WGPUChainedStructOut *", c_supported_limits_extras),
+        # not used: limits
+    )
+    c_limits = c_supported_limits.limits
+    c_limits_extras = c_supported_limits_extras.limits
+    if adapter:
+        # H: WGPUBool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
+        libf.wgpuAdapterGetLimits(id, c_supported_limits)
+    else:
+        # H: WGPUBool f(WGPUDevice device, WGPUSupportedLimits * limits)
+        libf.wgpuDeviceGetLimits(id, c_supported_limits)
+
+    values = [
+        (to_snake_case(name, "-"), getattr(limit, name))
+        for limit in (c_limits, c_limits_extras)
+        for name in dir(limit)
+    ]
+    limits = dict(sorted(values))
+    return limits
+
+
+def _get_features(id: int, device: bool = False, adapter: bool = False):
+    """Gets the features for a device or an adapter"""
+    assert device + adapter == 1  # exactly one of them is set
+
+    # Note, these lambdas should be "def"s, but there seems to be a bug in codegen that
+    # generates bad code in that case  We use lambdas, and tell flake8 not to complain.
+    if adapter:
+        # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
+        has_feature = lambda i: libf.wgpuAdapterHasFeature(id, i)  # noqa
+    else:
+        # flake8 noqa
+        # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
+        has_feature = lambda i: libf.wgpuDeviceHasFeature(id, i)  # noqa
+
+    features = set()
+    # Standard features
+    for f in sorted(enums.FeatureName):
+        if f in ["clip-distances"]:
+            continue  # not supported by wgpu-native yet
+        key = f"FeatureName.{f}"
+        if has_feature(enummap[key]):
+            features.add(f)
+
+    # Native features
+    for name, i in enum_str2int["NativeFeature"].items():
+        if has_feature(i):
+            features.add(name)
+    return features
+
+
 error_handler = ErrorHandler(logger)
 libf = SafeLibCalls(lib, error_handler)
 
@@ -361,53 +426,11 @@ class GPU(classes.GPU):
             ),
         }
 
-        # ----- Get adapter limits
-
-        # H: chain: WGPUChainedStructOut, limits: WGPUNativeLimits
-        c_supported_limits_extras = new_struct_p(
-            "WGPUSupportedLimitsExtras *",
-            # not used: chain
-            # not used: limits
-        )
-        c_supported_limits_extras.chain.sType = lib.WGPUSType_SupportedLimitsExtras
-        # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
-        c_supported_limits = new_struct_p(
-            "WGPUSupportedLimits *",
-            nextInChain=ffi.cast("WGPUChainedStructOut *", c_supported_limits_extras),
-            # not used: limits
-        )
-        c_limits = c_supported_limits.limits
-        c_limits_extras = c_supported_limits_extras.limits
-        # H: WGPUBool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
-        libf.wgpuAdapterGetLimits(adapter_id, c_supported_limits)
-        values = [
-            (to_snake_case(name), getattr(limit, name))
-            for limit in (c_limits, c_limits_extras)
-            for name in dir(limit)
-        ]
-        limits = dict(sorted(values))
-
-        # ----- Get adapter features
-
-        # WebGPU features
-        features = set()
-        for f in sorted(enums.FeatureName):
-            if f in ["clip-distances"]:
-                continue  # not supported by wgpu-native yet
-            key = f"FeatureName.{f}"
-            i = enummap[key]
-            # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
-            if libf.wgpuAdapterHasFeature(adapter_id, i):
-                features.add(f)
-
-        # Native features
-        for name, i in enum_str2int["NativeFeature"].items():
-            # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
-            if libf.wgpuAdapterHasFeature(adapter_id, i):
-                features.add(name)
+        # ----- Get adapter limits and features
+        limits = _get_limits(adapter_id, adapter=True)
+        features = _get_features(adapter_id, adapter=True)
 
         # ----- Done
-
         return GPUAdapter(adapter_id, features, limits, adapter_info)
 
 
@@ -806,18 +829,27 @@ class GPUAdapter(classes.GPUAdapter):
         c_limits = c_required_limits.limits
         c_limits_extras = c_required_limits_extras.limits
 
+        if required_limits:
+            # Do some quick error checking
+            unknown_keys = [x for x in required_limits if x not in self._limits]
+            if unknown_keys:
+                raise KeyError(f"Unknown required limits {', '.join(unknown_keys)}")
+        else:
+            # If required_limits isn't set, set it to self._limits.  This is the same as
+            # setting it to {}, but the loop below goes just a little bit faster.
+            required_limits = required_limits or {}
+
         # Set all limits to the adapter default
         # This is important, because zero does NOT mean default, and a limit of zero
         # for a specific limit may break a lot of applications.
-        required_limits = required_limits or {}
         for limit in (c_limits, c_limits_extras):
             for key in dir(limit):
-                snake_key = to_snake_case(key)
-                # Use the value in required_limits if it exists.fl
+                snake_key = to_snake_case(key, "-")
+                # Use the value in required_limits if it exists. Otherwise, the old value
                 try:
                     value = required_limits[snake_key]
                 except KeyError:
-                    value = self.limits[snake_key]
+                    value = self._limits[snake_key]
                 setattr(limit, key, value)
 
         # ---- Set queue descriptor
@@ -890,40 +922,11 @@ class GPUAdapter(classes.GPUAdapter):
             error_msg = error_msg or "Could not obtain new device id."
             raise RuntimeError(error_msg)
 
-        # ----- Get device limits
-
-        # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
-        c_supported_limits = new_struct_p(
-            "WGPUSupportedLimits *",
-            # not used: nextInChain
-            # not used: limits
-        )
-        c_limits = c_supported_limits.limits
-        # H: WGPUBool f(WGPUDevice device, WGPUSupportedLimits * limits)
-        libf.wgpuDeviceGetLimits(device_id, c_supported_limits)
-        limits = {to_snake_case(k): getattr(c_limits, k) for k in dir(c_limits)}
-
-        # ----- Get device features
-
-        # WebGPU features
-        features = set()
-        for f in sorted(enums.FeatureName):
-            if f in ["clip-distances"]:
-                continue  # not supported by wgpu-native yet
-            key = f"FeatureName.{f}"
-            i = enummap[key]
-            # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
-            if libf.wgpuDeviceHasFeature(device_id, i):
-                features.add(f)
-
-        # Native features
-        for name, i in enum_str2int["NativeFeature"].items():
-            # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
-            if libf.wgpuDeviceHasFeature(device_id, i):
-                features.add(name)
+        # ----- Get device limits and features
+        limits = _get_limits(device_id, device=True)
+        features = _get_features(device_id, device=True)
 
         # ---- Get queue
-
         # H: WGPUQueue f(WGPUDevice device)
         queue_id = libf.wgpuDeviceGetQueue(device_id)
         queue = GPUQueue("", queue_id, None)

@@ -5,8 +5,8 @@ import wgpu.utils
 from tests.testutils import can_use_wgpu_lib, run_tests
 from wgpu import TextureFormat
 
-if not can_use_wgpu_lib:
-    pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
+# if not can_use_wgpu_lib:
+#     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
 """
@@ -137,7 +137,7 @@ def get_device():
     adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
     device = adapter.request_device(
         required_features=["push-constants"],
-        required_limits={"max_push_constant_size": 128},
+        required_limits={"max-push-constant-size": 128},
     )
     return device
 
