@@ -745,7 +745,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 formats.append(enum_int2str["TextureFormat"][int_val])
 
         else:
-            capabilities["formats"] = [enums.TextureFormat.bgra8unorm_srgb, enums.TextureFormat.bgra8unorm]
+            capabilities["formats"] = [
+                enums.TextureFormat.bgra8unorm_srgb,
+                enums.TextureFormat.bgra8unorm,
+            ]
 
         if c_capabilities.alphaModes:
             capabilities["alpha_modes"] = alpha_modes = []
@@ -754,7 +757,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 str_val = enum_int2str["CompositeAlphaMode"][int_val]
                 alpha_modes.append(str_val.lower())
         else:
-            capabilities["alpha_modes"] = [wgpu.enums.CanvasAlphaMode.opaque]
+            capabilities["alpha_modes"] = [enums.CanvasAlphaMode.opaque]
 
         if c_capabilities.presentModes:
             capabilities["present_modes"] = present_modes = []
