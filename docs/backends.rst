@@ -59,6 +59,79 @@ The wgpu_native backend provides a few extra functionalities:
     :return: Device
     :rtype: wgpu.GPUDevice
 
+The wgpu_native backend provides support for push constants.
+Since WebGPU does not this feature, documentation on its use is slim.
+A full explanation of push constants and its use in Vulcan can be found
+`here <https://vkguide.dev/docs/chapter-3/push_constants/>`_.
+
+Using push constants is a multi-step process.
+
+Given an adapter, determine if it supports push constants::
+
+    >> "push-constants" in adapter.features
+    True
+
+If push constants are supported, determine the maximum number of bytes that your push
+constants can be::
+
+    >> adapter.limits["max-push-constant-size"]
+    4096
+
+You must tell the adapter to create a device that supports push constants,
+and you must tell it the number of bytes of push constants that you are using::
+
+    device = adapter.request_device(
+        required_features=["push-constants"],
+        required_limits={"max-push-constant-size": 256},
+    )
+
+Create a push constant in your shader code the way you would create a uniform buffer.
+The fields that are only used in the @vertex shader should be separated from the fields
+that are only used in the @fragment shader which should be separated from the fields
+used in both::
+
+    struct PushConstants {
+        // vertex shader
+        transform1: vec4x4f,
+        // fragment shader
+        transform2: vec4x4f,
+        // used in both
+        transform3: vec4x4f,
+    }
+    var<push_constant> push_constants: PushConstants;
+
+When creating the pipeline layout for this shader, use
+``wgpu.backends.wpgu_native.create_pipeline_layout`` instead of
+``device.create_pipelinelayout``.  It takes an additional argument describing
+the layout of the push constants.  For example, in the above example::
+
+    push_constant_layouts=[
+        {"visibility": ShaderState.VERTEX, "start": 0, "end": 64},
+        {"visibility": ShaderStage.FRAGMENT, "start": 64, "end": 128},
+        {"visibility": ShaderState.VERTEX + ShaderStage.FRAGMENT , "start": 128, "end": 192},
+    ],
+
+Finally, you set the value of the push constant by using
+``wgpu.backends.wpgu_native.set_push_constants``::
+
+    set_push_constants(this_pass, ShaderStage.VERTEX, 0, 64, <64 bytes>)
+    set_push_constants(this_pass, ShaderStage.FRAGMENT, 64, 128, <64 bytes>)
+    set_push_constants(this_pass, ShaderStage.VERTEX + ShaderStage.FRAGMENT, 128, 192, <64 bytes>)
+
+Bytes must be set separately for each of the three possible shader stages.
+
+.. py:function:: wgpu.backends.wpgu_native.create_pipeline_layout(device, *, label="", bind_group_layouts, push_constant_layouts=[])
+
+   This method provides the same functionality as :func:`wgpu.GPUDevice.create_pipeline_layout`,
+   but provides an extra `push_constant_layouts` argument.
+   When using push constants, this argument is a list of dictionaries, where each item
+   in the dictionary has three fields: `visibility`, `start`, and `end`.
+
+    :param device: The device on which we are creating the pipeline layout
+    :param label: An optional label
+    :param bind_group_layouts:
+    :param push_constant_layouts: Described above.
+
 .. py:function:: wgpu.backends.wgpu_native.set_push_constants(render_pass_encoder, visibility, offset, size_in_bytes, data, data_offset=0)
 
     This function requires that the underlying GPU implement `push_constants`.
