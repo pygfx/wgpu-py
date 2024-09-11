@@ -293,7 +293,7 @@ class ErrorHandler:
 
 class SafeLibCalls:
     """Object that copies all library functions, but wrapped in such
-    a way that errors occuring in that call are raised as exceptions.
+    a way that errors occurring in that call are raised as exceptions.
     """
 
     def __init__(self, lib, error_handler):

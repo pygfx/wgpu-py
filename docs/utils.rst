@@ -1,7 +1,7 @@
 Utils
 =====
 
-The wgpu library provides a few utilities. Note that most functions below need to be explictly imported.
+The wgpu library provides a few utilities. Note that most functions below need to be explicitly imported.
 
 Logger
 ------

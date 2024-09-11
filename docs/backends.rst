@@ -158,6 +158,6 @@ The js_webgpu backend
 
 
 This backend calls into the JavaScript WebGPU API. For this, the Python code would need
-access to JavaScript - this backend is intended for use-cases like `PScript <https://github.com/flexxui/pscript>`__ `PyScript <https://github.com/pyscript/pyscript>`__, and `RustPyhon <https://github.com/RustPython/RustPython>`__.
+access to JavaScript - this backend is intended for use-cases like `PScript <https://github.com/flexxui/pscript>`__ `PyScript <https://github.com/pyscript/pyscript>`__, and `RustPython <https://github.com/RustPython/RustPython>`__.
 
 This backend is still a stub, see `issue #407 <https://github.com/pygfx/wgpu-py/issues/407>`__ for details.
