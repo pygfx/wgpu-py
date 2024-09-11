@@ -31,7 +31,7 @@ Added:
 Changed:
 
 * The flags and enums are implemented using a new enum class, enabling better static code analysis (i.e. autocompletion in IDE's).
-* Native (desktop) features must now be specified in the same way as normal (WebGPU) features: lowercase and whith hyphens between the words.
+* Native (desktop) features must now be specified in the same way as normal (WebGPU) features: lowercase and with hyphens between the words.
 * Bindings can omit offset and size (the full size will be used). This makes our API follow WebGPU better.
 * Support omitting fields from `BindGroupLayoutEntry`, `BufferBindingLayout`, `SamplerBindingLayout`, `StorageTextureBindingLayout`, `VertexState`. See https://github.com/pygfx/wgpu-py/pull/534 for details.
 * In cases where a `view_dimension` is given, it must be provided as a string (e.g. '2d'). Ints are no longer allowed, because e.g. 2 does *not* mean '2d', which can be a source of confusion.
@@ -689,7 +689,7 @@ recommend using WGSL instead.
 
 Added:
 
-* Added `GPUAdaper.properties` (the amount of information it contains will increase in the future).
+* Added `GPUAdapter.properties` (the amount of information it contains will increase in the future).
 * Added proper support for WGSL.
 
 Changed:

@@ -45,7 +45,7 @@ def test_base_canvas_context():
 
 def test_canvas_logging(caplog):
     """As we attempt to draw, the canvas will error, which are logged.
-    Each first occurance is logged with a traceback. Subsequent same errors
+    Each first occurrence is logged with a traceback. Subsequent same errors
     are much shorter and have a counter.
     """
 
@@ -96,7 +96,7 @@ class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvasBase):
         return self.physical_size
 
     def _request_draw(self):
-        # Note: this would normaly schedule a call in a later event loop iteration
+        # Note: this would normally schedule a call in a later event loop iteration
         self._draw_frame_and_present()
 
     def present(self, texture):

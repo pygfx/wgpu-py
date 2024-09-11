@@ -624,7 +624,7 @@ class GPUDevice(GPUObjectBase):
             min_filter (enums.FilterMode): Interpolation when zoomed out. Default 'nearest'.
             mipmap_filter: (enums.MipmapFilterMode): Interpolation between mip levels. Default 'nearest'.
             lod_min_clamp (float): The minimum level of detail. Default 0.
-            lod_max_clamp (float): The maxium level of detail. Default 32.
+            lod_max_clamp (float): The maximum level of detail. Default 32.
             compare (enums.CompareFunction): The sample compare operation for depth textures.
                 Only specify this for depth textures. Default None.
             max_anisotropy (int): The maximum anisotropy value clamp used by the sample,
@@ -961,7 +961,7 @@ class GPUDevice(GPUObjectBase):
         """Create a `GPURenderBundleEncoder` object.
 
         Render bundles represent a pre-recorded bundle of commands. In cases where the same
-        commands are issued accross multiple views or frames, using a rander bundle can improve
+        commands are issued across multiple views or frames, using a rander bundle can improve
         performance by removing the overhead of repeating the commands.
 
         Arguments:
@@ -1106,7 +1106,7 @@ class GPUBuffer(GPUObjectBase):
             buffer_offset (int): the buffer offset in bytes. Must be at
                 least as large as the offset specified in ``map()``. The default
                 is the offset of the mapped range.
-            size (int): the size to read (in bytes). The resuling range must fit into the range
+            size (int): the size to read (in bytes). The resulting range must fit into the range
                 specified in ``map()``. The default is as large as the mapped range allows.
             copy (bool): whether a copy of the data is given. Default True.
                 If False, the returned memoryview represents the mapped data
@@ -1142,7 +1142,7 @@ class GPUBuffer(GPUObjectBase):
                 is the offset of the mapped range.
             size (int): the size to write (in bytes). The default is the size of
                 the data, so this argument can typically be ignored. The
-                resuling range must fit into the range specified in ``map()``.
+                resulting range must fit into the range specified in ``map()``.
 
         Alignment: the buffer offset must be a multiple of 8, the size must be a multiple of 4.
 
@@ -1283,7 +1283,7 @@ class GPUTexture(GPUObjectBase):
     ):
         """Create a `GPUTextureView` object.
 
-        If no aguments are given, a default view is given, with the
+        If no arguments are given, a default view is given, with the
         same format and dimension as the texture.
 
         Arguments:
@@ -1929,7 +1929,7 @@ class GPUQueue(GPUObjectBase):
         This maps the data to a temporary buffer and then copies that buffer
         to the given buffer. The given buffer's usage must include COPY_DST.
 
-        Alignment: the buffer offset must be a multple of 4, the total size to write must be a multiple of 4 bytes.
+        Alignment: the buffer offset must be a multiple of 4, the total size to write must be a multiple of 4 bytes.
 
         Also see `GPUBuffer.map()`.
 

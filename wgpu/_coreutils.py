@@ -123,7 +123,7 @@ class BaseEnum(metaclass=EnumType):
     """
 
     def __init__(self):
-        raise RuntimeError("Connot instantiate an enum.")
+        raise RuntimeError("Cannot instantiate an enum.")
 
 
 _flag_cache = {}  # str -> int
@@ -131,7 +131,7 @@ _flag_cache = {}  # str -> int
 
 def str_flag_to_int(flag, s):
     """Allow using strings for flags, i.e. 'READ' instead of wgpu.MapMode.READ.
-    No worries about repeated overhead, because the resuls are cached.
+    No worries about repeated overhead, because the results are cached.
     """
     cache_key = f"{flag.__name__}.{s}"  # use class name
     value = _flag_cache.get(cache_key, None)

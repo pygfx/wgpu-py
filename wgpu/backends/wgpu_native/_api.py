@@ -577,7 +577,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # for doing this check on the former systems, is that errors
         # get logged, which would not be there if we did not
         # pre-emptively reconfigure. These log entries are harmless but
-        # anoying, and I currently don't know how to prevent them
+        # annoying, and I currently don't know how to prevent them
         # elegantly. See issue #352
         old_size = (self._config.width, self._config.height)
         new_size = tuple(self._get_canvas().get_physical_size())
@@ -585,7 +585,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             self._configure(self._config)
 
         # Try to obtain a texture.
-        # `If it fails, depending on status, we reconfure and try again.
+        # `If it fails, depending on status, we reconfigure and try again.
 
         # H: texture: WGPUTexture, suboptimal: WGPUBool/int, status: WGPUSurfaceGetCurrentTextureStatus
         surface_texture = new_struct_p(
@@ -2438,7 +2438,7 @@ class GPUCommandEncoder(
             check_struct("RenderPassColorAttachment", color_attachment)
             texture_view = color_attachment["view"]
             if not isinstance(texture_view, GPUTextureView):
-                raise TypeError("Color attachement view must be a GPUTextureView.")
+                raise TypeError("Color attachment view must be a GPUTextureView.")
             texture_view_id = texture_view._internal
             objects_to_keep_alive[texture_view_id] = texture_view
             c_resolve_target = (

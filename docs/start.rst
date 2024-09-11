@@ -130,6 +130,6 @@ The distribution's version of Lavapipe may be a bit outdated. To get a more rece
 
 .. note::
 
-    The precise visual output may differ between differen implementations of Vulkan/Metal/DX12.
+    The precise visual output may differ between different implementations of Vulkan/Metal/DX12.
     Therefore you should probably avoid per-pixel comparisons when multiple different systems are
     involved. In wgpu-py and pygfx we have solved this by generating all reference images on CI (with Lavapipe).

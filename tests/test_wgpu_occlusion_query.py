@@ -89,7 +89,7 @@ def test_render_occluding_squares():
 
     # Each test draws a square of size 0.1 centered at
     #    <x_offset, y_offset, z>
-    # with the z corrdinate being "z"
+    # with the z coordinate being "z"
     # "Result" indicates whether drawing this square generates any non-occluded points.
     def draw_square(result, x_offset=0.0, y_offset=0.0, z=0.5, reverse=False):
         # See WGSL above for order.  Add padding.

@@ -469,7 +469,7 @@ class BackendApiPatcher(AbstractApiPatcher):
 
 
 class StructValidationChecker(Patcher):
-    """Checks that all structs are vaildated in the methods that have incoming structs."""
+    """Checks that all structs are validated in the methods that have incoming structs."""
 
     def apply(self, code):
         self._init(code)
