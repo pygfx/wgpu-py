@@ -70,7 +70,7 @@ err_hashes = {}
 @contextmanager
 def log_exception(kind):
     """Context manager to log any exceptions, but only log a one-liner
-    for subsequent occurances of the same error to avoid spamming by
+    for subsequent occurrences of the same error to avoid spamming by
     repeating errors in e.g. a draw function or event callback.
     """
     try:

@@ -56,7 +56,7 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvasBase, RemoteFrameBuffer)
         self._request_draw_timer_running = False
         # The _draw_frame_and_present() does the drawing and then calls
         # present_context.present(), which calls our present() method.
-        # The resuls is either a numpy array or None, and this matches
+        # The result is either a numpy array or None, and this matches
         # with what this method is expected to return.
         return self._draw_frame_and_present()
 

@@ -490,14 +490,14 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
     elif texture_format.endswith("float"):
         # On Vanilla wgpu, float32 textures cannot use a filtering
         # (interpolating) texture, (need to enable a feature for that).
-        # Without it, we need to use a non-filterin sampler.
+        # Without it, we need to use a non-filtering sampler.
         texture_sample_type = wgpu.TextureSampleType.unfilterable_float
         sampler_type = wgpu.SamplerBindingType.non_filtering
     elif "uint" in texture_format:
         # Cannot even use a sampler (use textureLoad instwad of textureSample)
         texture_sample_type = wgpu.TextureSampleType.uint
     else:
-        # Dito
+        # Ditto
         texture_sample_type = wgpu.TextureSampleType.sint
 
     # Bindings and layout

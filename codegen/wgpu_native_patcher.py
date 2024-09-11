@@ -183,7 +183,7 @@ def patch_wgpu_native_backend(code):
     For functions:
 
     * Verify that the function exists in wgpu.h. If not, add a fixme comment.
-    * Add a comment showing correspinding signature from wgpu.h.
+    * Add a comment showing corresponding signature from wgpu.h.
 
     For structs:
 

@@ -59,11 +59,11 @@ Adapter, device and canvas
 The :class:`GPU` class represents the API root/entrypoint. An instance is available at ``wgpu.gpu``. This instance is loaded from one the :doc:`backends <backends>`.
 
 The :class:`GPUAdapter` represents a hardware or software device, with specific
-features, limits and properties. To actually start using that harware for computations or rendering, a :class:`GPUDevice` object must be requisted from the adapter. This is a logical unit
+features, limits and properties. To actually start using that hardware for computations or rendering, a :class:`GPUDevice` object must be requisted from the adapter. This is a logical unit
 to control your hardware (or software).
 The device is the central object; most other GPU objects are created from it.
 Also see the convenience function :func:`wgpu.utils.get_default_device`.
-Information on the adapter can be obtained using :attr:`wgpu.GPUAdapter.info` (a dict simular to :class:`GPUAdapterInfo`) or  :attr:`wgpu.GPUAdapter.summary`.
+Information on the adapter can be obtained using :attr:`wgpu.GPUAdapter.info` (a dict similar to :class:`GPUAdapterInfo`) or  :attr:`wgpu.GPUAdapter.summary`.
 
 A device is controlled with a specific backend API. By default one is selected automatically.
 This can be overridden by setting the
@@ -137,7 +137,7 @@ except for submitting it to the :class:`GPUQueue`.
 
 The command buffers are one-time use. The :class:`GPURenderBundle` and :class:`GPURenderBundleEncoder` can
 be used to record commands to be used multiple times, but this is not yet
-implememted in wgpu-py.
+implemented in wgpu-py.
 
 Error handling
 ++++++++++++++

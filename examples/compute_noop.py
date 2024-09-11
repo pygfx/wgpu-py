@@ -35,7 +35,7 @@ for i in range(n):
 # %% The short version, using memoryview
 
 # The first arg is the input data, per binding
-# The second arg are the ouput types, per binding
+# The second arg are the output types, per binding
 out = compute_with_buffers({0: data}, {1: (n, "i")}, shader_source, n=n)
 
 # The result is a dict matching the output types

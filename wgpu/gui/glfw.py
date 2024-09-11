@@ -367,7 +367,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "button": button,
             "buttons": tuple(self._pointer_buttons),
             "modifiers": tuple(self._key_modifiers),
-            "ntouches": 0,  # glfw dows not have touch support
+            "ntouches": 0,  # glfw does not have touch support
             "touches": {},
         }
 
@@ -421,7 +421,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
                 "button": button,
                 "buttons": tuple(self._pointer_buttons),
                 "modifiers": tuple(self._key_modifiers),
-                "ntouches": 0,  # glfw dows not have touch support
+                "ntouches": 0,  # glfw does not have touch support
                 "touches": {},
             }
             self._handle_event_and_flush(ev)
@@ -440,7 +440,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "button": 0,
             "buttons": tuple(self._pointer_buttons),
             "modifiers": tuple(self._key_modifiers),
-            "ntouches": 0,  # glfw dows not have touch support
+            "ntouches": 0,  # glfw does not have touch support
             "touches": {},
         }
 
@@ -573,7 +573,7 @@ async def keep_glfw_alive():
     """Co-routine that lives forever, keeping glfw going.
 
     Although it stops the event-loop if there are no more canvases (and we're
-    runnning the loop), this task stays active and continues when the loop is
+    running the loop), this task stays active and continues when the loop is
     restarted.
     """
     # TODO: this is not particularly pretty. It'd be better to use normal asyncio to

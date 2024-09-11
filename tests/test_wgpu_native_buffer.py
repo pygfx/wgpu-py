@@ -259,7 +259,7 @@ def test_buffer_mapping_fails():
     with raises(ValueError):
         buf.write_mapped(data, -8)  # not neg
     with raises(ValueError):
-        buf.write_mapped(data, 6)  # not multilpe of eight
+        buf.write_mapped(data, 6)  # not multiple of eight
 
     # Ok
     buf.write_mapped(b"1" * 4)

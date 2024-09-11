@@ -72,7 +72,7 @@ for details.
 
 Also see the [online documentation](https://wgpu-py.readthedocs.io) and the [examples](https://github.com/pygfx/wgpu-py/tree/main/examples).
 
-The full API is accessable via the main namespace:
+The full API is accessible via the main namespace:
 ```py
 import wgpu
 ```

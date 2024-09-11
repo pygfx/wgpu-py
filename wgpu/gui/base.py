@@ -212,7 +212,7 @@ class WgpuAutoGui:
     def _handle_event_rate_limited(
         self, event, call_later_func, match_keys, accum_keys
     ):
-        """Alternative `to handle_event()` for events that must be rate-limted.
+        """Alternative `to handle_event()` for events that must be rate-limited.
 
         If any of the ``match_keys`` keys of the new event differ from the currently
         pending event, the old event is dispatched now. The ``accum_keys`` keys of
