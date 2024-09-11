@@ -17,7 +17,7 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.17.2] - 09-08-2024
+### [v0.17.3] - 10-09-2024
 
 Added:
 
@@ -26,6 +26,7 @@ Added:
 * Support for IMGUI, via `wgpu.utils.imgui`.
 * Wx is now a fully supported GUI backend.
 * A `BaseEnum` class was added to `wgpu.utils`, so it can be used in downstream libs like pygfx.
+* The `WGPUCanvas.add_event_handler()` method now has an `order` arg.
 
 Changed:
 
