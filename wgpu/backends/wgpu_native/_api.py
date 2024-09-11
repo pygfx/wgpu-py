@@ -728,9 +728,15 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         )
 
         # Convert to Python.
-        # We've observed null pointers in the result on some systems with Vulkan.
-        # We are optimistic; in such a case we simply assume the device is capable of anything.
         capabilities = {}
+
+        # When the surface is found not to be compatible, the fields below may
+        # be null pointers. This probably means that the surface won't work,
+        # and trying to use it will result in an error (or Rust panic). Since
+        # I'm not sure what the best time/place to error would be, we pretend
+        # that everything is fine here, and populate the fields with values
+        # that wgpu-core claims are guaranteed to exist on any (compatible)
+        # surface.
 
         if c_capabilities.formats:
             capabilities["formats"] = formats = []
@@ -739,8 +745,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 formats.append(enum_int2str["TextureFormat"][int_val])
 
         else:
-            capabilities["formats"] = list(enums.TextureFormat)  # all
-            capabilities.insert(0, "bgra8unorm-srgb")  # prefer good default
+            capabilities["formats"] = [enums.TextureFormat.bgra8unorm_srgb, enums.TextureFormat.bgra8unorm]
 
         if c_capabilities.alphaModes:
             capabilities["alpha_modes"] = alpha_modes = []
@@ -749,7 +754,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 str_val = enum_int2str["CompositeAlphaMode"][int_val]
                 alpha_modes.append(str_val.lower())
         else:
-            capabilities["alpha_modes"] = list(enums.CanvasAlphaMode)
+            capabilities["alpha_modes"] = [wgpu.enums.CanvasAlphaMode.opaque]
 
         if c_capabilities.presentModes:
             capabilities["present_modes"] = present_modes = []
@@ -758,7 +763,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 str_val = enum_int2str["PresentMode"][int_val]
                 present_modes.append(str_val.lower())
         else:
-            capabilities["present_modes"] = list(enum_int2str["PresentMode"].values())
+            capabilities["present_modes"] = ["fifo"]
 
         # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
         libf.wgpuSurfaceCapabilitiesFreeMembers(c_capabilities[0])
