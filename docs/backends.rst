@@ -60,49 +60,51 @@ The wgpu_native backend provides a few extra functionalities:
     :rtype: wgpu.GPUDevice
 
 The wgpu_native backend provides support for push constants.
-Since WebGPU does not this feature, documentation on its use is slim.
+Since WebGPU does not this feature, documentation on its use is hard to find.
 A full explanation of push constants and its use in Vulcan can be found
 `here <https://vkguide.dev/docs/chapter-3/push_constants/>`_.
+Using push constants in WGPU closely follows the Vulcan model.
 
-Using push constants is a multi-step process.
-
-Given an adapter, determine if it supports push constants::
+Given an adapter, first determine if it supports push constants::
 
     >> "push-constants" in adapter.features
     True
 
-If push constants are supported, determine the maximum number of bytes that your push
-constants can be::
+If push constants are supported, determine the maximum number of bytes that can
+be allocated for push constants::
 
     >> adapter.limits["max-push-constant-size"]
     4096
 
 You must tell the adapter to create a device that supports push constants,
-and you must tell it the number of bytes of push constants that you are using::
+and you must tell it the number of bytes of push constants that you are using.
+Overestimating is okay::
 
     device = adapter.request_device(
         required_features=["push-constants"],
         required_limits={"max-push-constant-size": 256},
     )
 
-Create a push constant in your shader code the way you would create a uniform buffer.
-The fields that are only used in the @vertex shader should be separated from the fields
-that are only used in the @fragment shader which should be separated from the fields
+Creating a push constant in your shader code is similar to the way you would create
+a uniform buffer.
+The fields that are only used in the ``@vertex`` shader should be separated from the fields
+that are only used in the ``@fragment`` shader which should be separated from the fields
 used in both::
 
     struct PushConstants {
         // vertex shader
-        transform1: vec4x4f,
+        vertex_transform: vec4x4f,
         // fragment shader
-        transform2: vec4x4f,
+        fragment_transform: vec4x4f,
         // used in both
-        transform3: vec4x4f,
+        generic_transform: vec4x4f,
     }
     var<push_constant> push_constants: PushConstants;
 
-When creating the pipeline layout for this shader, use
+To the pipeline layout for this shader, use
 ``wgpu.backends.wpgu_native.create_pipeline_layout`` instead of
-``device.create_pipelinelayout``.  It takes an additional argument describing
+``device.create_pipelinelayout``.  It takes an additional argument,
+``puah_constant_layouts``, describing
 the layout of the push constants.  For example, in the above example::
 
     push_constant_layouts=[
@@ -118,7 +120,7 @@ Finally, you set the value of the push constant by using
     set_push_constants(this_pass, ShaderStage.FRAGMENT, 64, 128, <64 bytes>)
     set_push_constants(this_pass, ShaderStage.VERTEX + ShaderStage.FRAGMENT, 128, 192, <64 bytes>)
 
-Bytes must be set separately for each of the three possible shader stages.
+Bytes must be set separately for each of the three shader stages.
 
 .. py:function:: wgpu.backends.wpgu_native.create_pipeline_layout(device, *, label="", bind_group_layouts, push_constant_layouts=[])
 
