@@ -30,7 +30,6 @@ present_context = canvas.get_context()
 render_texture_format = present_context.get_preferred_format(device.adapter)
 present_context.configure(device=device, format=render_texture_format)
 
-
 # %% Generate data
 
 # pos         texcoord
