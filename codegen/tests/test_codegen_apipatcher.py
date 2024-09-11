@@ -26,6 +26,7 @@ def test_comment_remover():
     code = p.dumps()
 
     assert code.count("#") == 4
+
     assert "IDL" not in code  # IDL is auto-added by the codegen
     assert "unknown" not in code  # these are also auto-added
 
