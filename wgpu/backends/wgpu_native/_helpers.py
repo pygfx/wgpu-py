@@ -107,7 +107,7 @@ def get_surface_id_from_canvas(canvas):
     surface_info = canvas.get_surface_info()
 
     if sys.platform.startswith("win"):  # no-cover
-        GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW
+        GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa
         struct = ffi.new("WGPUSurfaceDescriptorFromWindowsHWND *")
         struct.hinstance = ffi.cast("void *", GetModuleHandle(lib_path))
         struct.hwnd = ffi.cast("void *", int(surface_info["window"]))
