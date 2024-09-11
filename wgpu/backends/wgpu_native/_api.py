@@ -1832,7 +1832,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             self._internal, render_bundle_encoder_descriptor
         )
         return GPURenderBundleEncoder(label, render_bundle_id, self)
-        # Note: also enable the coresponing memtest when implementing this!
 
     def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
         # H: nextInChain: WGPUChainedStruct *, label: char *, type: WGPUQueryType, count: int
@@ -2807,6 +2806,7 @@ class GPUCommandEncoder(
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = libf.wgpuCommandEncoderFinish(self._internal, struct)
+
         return GPUCommandBuffer(label, id, self._device)
 
     def resolve_query_set(

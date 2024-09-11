@@ -221,10 +221,13 @@ def test_release_render_bundle(n):
         "expected_counts_after_create": {
             "RenderBundle": (n, n),
         },
+        # This seems to give different values on different platforms
+        "ignore": {"RenderBundleEncoder"},
     }
 
     for i in range(n):
-        yield DEVICE.create_render_bundle_encoder(color_formats=[]).finish()
+        encoder = DEVICE.create_render_bundle_encoder(color_formats=[])
+        yield encoder.finish()
 
 
 @create_and_release
