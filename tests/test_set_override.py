@@ -52,7 +52,7 @@ SHADER_SOURCE = """
         data[7] = u32(d);
         return vec4f();
     }
-    
+
     @compute @workgroup_size(1)
     fn computeMain() {
         data[0] = u32(a);
@@ -60,7 +60,7 @@ SHADER_SOURCE = """
         data[2] = u32(c);
         data[3] = u32(d);
     }
-    
+
 """
 
 BIND_GROUP_ENTRIES = [

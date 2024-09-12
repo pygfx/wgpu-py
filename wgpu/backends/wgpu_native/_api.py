@@ -180,10 +180,12 @@ def _get_override_constant_entries(constants):
     for key, value in constants.items():
         assert isinstance(key, (str, int))
         assert isinstance(value, (int, float, bool))
+        # H: nextInChain: WGPUChainedStruct *, key: char *, value: float
         c_constant_entry = new_struct(
             "WGPUConstantEntry",
             key=to_c_string(str(key)),
             value=float(value),
+            # not used: nextInChain
         )
         key_value_pairs.append(c_constant_entry)
     c_constants = ffi.new("WGPUConstantEntry[]", key_value_pairs)
