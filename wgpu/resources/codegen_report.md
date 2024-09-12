@@ -1,4 +1,4 @@
-# Code generation report
+# Code generatation report
 ## Preparing
 * The webgpu.idl defines 37 classes with 75 functions
 * The webgpu.idl defines 5 flags, 34 enums, 60 structs

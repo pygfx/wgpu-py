@@ -1763,7 +1763,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateRenderPipeline(self._internal, struct)
-        return GPURenderPipeline(label, id, self)
+        return GPURenderPipeline(label, id, self._device)
 
     async def create_render_pipeline_async(
         self,

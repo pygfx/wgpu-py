@@ -11,7 +11,7 @@ def main():
 
     log = io.StringIO()
     with PrintToFile(log):
-        print("# Code generation report")
+        print("# Code generatation report")
         prepare()
         update_api()
         update_wgpu_native()
