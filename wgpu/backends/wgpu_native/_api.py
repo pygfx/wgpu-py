@@ -3039,7 +3039,7 @@ class GPURenderBundleEncoder(
         )
         # H: WGPURenderBundle f(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderBundleDescriptor const * descriptor)
         id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
-        return GPURenderBundle(label, id, self)
+        return GPURenderBundle(label, id, self._device)
 
     def _release(self):
         if self._internal is not None and libf is not None:

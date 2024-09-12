@@ -221,7 +221,6 @@ def test_release_render_bundle(n):
         "expected_counts_after_create": {
             "RenderBundle": (n, n),
         },
-        "ignore": ("RenderBundleEncoder",),
     }
 
     for i in range(n):
