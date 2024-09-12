@@ -19,7 +19,7 @@ import ctypes
 import logging
 import ctypes.util
 from weakref import WeakKeyDictionary
-from typing import List, Dict, Union
+from typing import List, Dict, Optional, Union
 
 from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int
@@ -173,6 +173,31 @@ def _tuple_from_color(rgba):
     return _tuple_from_tuple_or_dict(rgba, "rgba")
 
 
+def _get_override_constant_entries(constants):
+    if not constants:
+        return 0, ffi.NULL
+    key_value_pairs = []
+    for key, value in constants.items():
+        assert isinstance(key, (str, int))
+        assert isinstance(value, (int, float, bool))
+        c_constant_entry = new_struct(
+            "WGPUConstantEntry",
+            key=to_c_string(str(key)),
+            value=float(value),
+        )
+        key_value_pairs.append(c_constant_entry)
+    c_constants = ffi.new("WGPUConstantEntry[]", key_value_pairs)
+    return len(constants), c_constants
+
+
+def to_c_string(string: str):
+    return ffi.new("char []", string.encode())
+
+
+def to_c_string_or_null(string: Optional[str]):
+    return ffi.NULL if string is None else ffi.new("char []", string.encode())
+
+
 _empty_label = ffi.new("char []", b"")
 
 
@@ -181,7 +206,7 @@ def to_c_label(label):
     if not label:
         return _empty_label
     else:
-        return ffi.new("char []", label.encode())
+        return to_c_string(label)
 
 
 def feature_flag_to_feature_names(flag):
@@ -861,7 +886,7 @@ class GPUAdapter(classes.GPUAdapter):
 
         c_trace_path = ffi.NULL
         if trace_path:  # no-cover
-            c_trace_path = ffi.new("char []", trace_path.encode())
+            c_trace_path = to_c_string(trace_path)
 
         # H: chain: WGPUChainedStruct, tracePath: char *
         extras = new_struct_p(
@@ -1403,15 +1428,15 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                         # H: name: char *, value: char *
                         new_struct(
                             "WGPUShaderDefine",
-                            name=ffi.new("char []", "gl_VertexID".encode()),
-                            value=ffi.new("char []", "gl_VertexIndex".encode()),
+                            name=ffi.new("char []", b"gl_VertexID"),
+                            value=ffi.new("char []", b"gl_VertexIndex"),
                         )
                     )
                 c_defines = ffi.new("WGPUShaderDefine []", defines)
                 # H: chain: WGPUChainedStruct, stage: WGPUShaderStage, code: char *, defineCount: int, defines: WGPUShaderDefine *
                 source_struct = new_struct_p(
                     "WGPUShaderModuleGLSLDescriptor *",
-                    code=ffi.new("char []", code.encode()),
+                    code=to_c_string(code),
                     stage=c_stage,
                     defineCount=len(defines),
                     defines=c_defines,
@@ -1424,7 +1449,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # H: chain: WGPUChainedStruct, code: char *
                 source_struct = new_struct_p(
                     "WGPUShaderModuleWGSLDescriptor *",
-                    code=ffi.new("char []", code.encode()),
+                    code=to_c_string(code),
                     # not used: chain
                 )
                 source_struct[0].chain.next = ffi.NULL
@@ -1476,14 +1501,17 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         compute: "structs.ProgrammableStage",
     ):
         check_struct("ProgrammableStage", compute)
+        constant_count, c_constants = _get_override_constant_entries(
+            compute.get("constants")
+        )
         # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *
         c_compute_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
             module=compute["module"]._internal,
-            entryPoint=ffi.new("char []", compute["entry_point"].encode()),
+            entryPoint=to_c_string_or_null(compute.get("entry_point")),
+            constantCount=constant_count,
+            constants=c_constants,
             # not used: nextInChain
-            # not used: constantCount
-            # not used: constants
         )
 
         if isinstance(layout, GPUPipelineLayout):
@@ -1535,6 +1563,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         check_struct("DepthStencilState", depth_stencil)
         check_struct("MultisampleState", multisample)
         check_struct("PrimitiveState", primitive)
+        if fragment:
+            check_struct("FragmentState", fragment)
 
         c_vertex_buffer_layout_list = []
         for buffer_des in vertex.get("buffers", ()):
@@ -1561,16 +1591,19 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         c_vertex_buffer_descriptors_array = ffi.new(
             "WGPUVertexBufferLayout []", c_vertex_buffer_layout_list
         )
+        constant_count, c_constants = _get_override_constant_entries(
+            vertex.get("constants")
+        )
         # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, bufferCount: int, buffers: WGPUVertexBufferLayout *
         c_vertex_state = new_struct(
             "WGPUVertexState",
             module=vertex["module"]._internal,
-            entryPoint=ffi.new("char []", vertex["entry_point"].encode()),
+            entryPoint=to_c_string_or_null(vertex.get("entry_point")),
             buffers=c_vertex_buffer_descriptors_array,
             bufferCount=len(c_vertex_buffer_layout_list),
+            constantCount=constant_count,
+            constants=c_constants,
             # not used: nextInChain
-            # not used: constantCount
-            # not used: constants
         )
 
         # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode
@@ -1671,16 +1704,19 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 "WGPUColorTargetState []", c_color_targets_list
             )
             check_struct("FragmentState", fragment)
+            constant_count, c_constants = _get_override_constant_entries(
+                vertex.get("constants")
+            )
             # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, targetCount: int, targets: WGPUColorTargetState *
             c_fragment_state = new_struct_p(
                 "WGPUFragmentState *",
                 module=fragment["module"]._internal,
-                entryPoint=ffi.new("char []", fragment["entry_point"].encode()),
+                entryPoint=to_c_string_or_null(fragment.get("entry_point")),
                 targets=c_color_targets_array,
                 targetCount=len(c_color_targets_list),
+                constantCount=constant_count,
+                constants=c_constants,
                 # not used: nextInChain
-                # not used: constantCount
-                # not used: constants
             )
 
         if isinstance(layout, GPUPipelineLayout):
@@ -2270,7 +2306,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     # whole class is likely going to solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label):
-        c_group_label = ffi.new("char []", group_label.encode())
+        c_group_label = to_c_string(group_label)
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, char const * groupLabel)
         # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, char const * groupLabel)
         # H: void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, char const * groupLabel)
@@ -2287,7 +2323,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         function(self._internal)
 
     def insert_debug_marker(self, marker_label):
-        c_marker_label = ffi.new("char []", marker_label.encode())
+        c_marker_label = to_c_string(marker_label)
         # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, char const * markerLabel)
         # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, char const * markerLabel)
         # H: void wgpuRenderPassEncoderInsertDebugMarker(WGPURenderPassEncoder renderPassEncoder, char const * markerLabel)
