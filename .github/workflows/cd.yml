@@ -33,7 +33,7 @@ jobs:
           - platform: windows
             arch: AMD64
             os: windows-latest
-            testable: true
+            testable: false  # pip install dist/*.whl does not work on Windows :/
           - platform: windows
             arch: ARM64
             os: windows-latest
