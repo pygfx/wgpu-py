@@ -75,6 +75,7 @@ jobs:
           twine check dist/*
     - name: Test wheel
       if: matrix.testable
+      shell: bash
       run: |
           rm -rf ./wgpu
           pushd $HOME
