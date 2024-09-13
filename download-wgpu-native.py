@@ -87,11 +87,15 @@ def get_arch():
         # When running in cibuildwheel, we derive the intended arch from
         # an env var (the same one that cibuildwheel uses) that we set in cd.yml.
         cibw_arch = os.getenv("CIBW_ARCHS")  # must be singular
+        if not cibw_arch:
+            raise RuntimeError("CIBW_ARCHS not set")
+        elif "," in cibw_arch:
+            raise RuntimeError("CIBW_ARCHS must have a single arch")
         arch_map = {
             "windows": {
                 "AMD64": "x86_64",
                 "ARM64": "aarch64",
-                "x86": "i868",
+                "x86": "i686",
             },
             "macos": {
                 "arm64": "aarch64",
@@ -100,7 +104,7 @@ def get_arch():
             "linux": {
                 "x86_64": "x86_64",
                 "aarch64": "aarch64",
-                "i868": "i868",
+                "i868": "i686",
             },
         }
         maps_for_os = arch_map[get_os_string()]
