@@ -1,5 +1,7 @@
 # Github Actions script to produce binary wheels.
 #
+# Note that a lot of the cibuildwheel config is in pyproject.toml.
+#
 # We perform one build for each wheel that we generate, i.e. one per architecture.
 # In download_wgpu_native.py, we detect CIBW_PLATFORM and CIBW_ARCHS to determine
 # the required binary from wgpu-native.
@@ -46,7 +48,7 @@ jobs:
             testable: true
           - platform: macos
             arch: x86_64
-            os: macos-13  # latest Intel MacOS
+            os: macos-13  # last Intel MacOS
             cibw_version: '==2.16'  # delocation does not work for later versions
           - platform: linux
             arch: x86_64
