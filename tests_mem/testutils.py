@@ -145,7 +145,37 @@ def ob_name_from_test_func(func):
 
 
 def create_and_release(create_objects_func):
-    """Decorator."""
+    """
+    This wrapper goes around a test that takes a single argument n. That test should
+    be a generator function that yields a descriptor followed
+    n different objects corresponding to the name of the test function.  Hence
+    a test named `test_release_foo_bar` would yield a descriptor followed by
+    n FooBar objects.
+
+    The descriptor is a dictionary with three fields, each optional.
+
+    The keys "expected_counts_after_create" and "expected_counts_after_release" each have
+    as their value a sub-dictionary giving the number of still-alive WGPU objects.
+    The key "expected_counts_after_create" gives the expected state after the
+    n objects have been created and put into a list; "expected_counts_after_release"
+    gives the state after the n objects have been released.
+
+    These sub-dictionaries have as their keys the names of WGPU object types, and
+    their value is a tuple of two integers: the first is the number of Python objects
+    expected to exist and the second is the number of native objects. Any type not in
+    the subdictionary has an implied value of (0, 0).
+
+    The key "ignore" has as its value a collection of object types that we should ignore
+    in this test. We do not have enough information to determine how many are created
+    or deleted.
+
+    If the descriptor doesn't contain an "expected_counts_after_create", then the default
+    is {"FooBar": (n, n)}, where "FooBar" is derived from the name of the test.
+
+    If the descriptor doesn't contain an "expected_counts_after_release", then the
+    default is {}, indicated that creating and removing the objects should completely
+    clean itself up.
+    """
 
     def core_test_func():
         """The core function that does the testing."""

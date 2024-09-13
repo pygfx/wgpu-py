@@ -65,6 +65,13 @@ A full explanation of push constants and its use in Vulkan can be found
 `here <https://vkguide.dev/docs/chapter-3/push_constants/>`_.
 Using push constants in WGPU closely follows the Vulkan model.
 
+The advantage of push constants is that they are typically faster to update than uniform buffers.
+Modifications to push constants are included in the command encoder; updating a uniform
+buffer involves sending a separate command to the GPU.
+
+The disadvantage of push constants and that their size limit is much smaller. The limit
+is guaranteed to be at least 128 bytes, and 256 bytes is typical
+
 Given an adapter, first determine if it supports push constants::
 
     >> "push-constants" in adapter.features
@@ -74,7 +81,7 @@ If push constants are supported, determine the maximum number of bytes that can
 be allocated for push constants::
 
     >> adapter.limits["max-push-constant-size"]
-    4096
+    256
 
 You must tell the adapter to create a device that supports push constants,
 and you must tell it the number of bytes of push constants that you are using.
@@ -120,7 +127,9 @@ Finally, you set the value of the push constant by using
     set_push_constants(this_pass, ShaderStage.FRAGMENT, 64, 128, <64 bytes>)
     set_push_constants(this_pass, ShaderStage.VERTEX + ShaderStage.FRAGMENT, 128, 192, <64 bytes>)
 
-Bytes must be set separately for each of the three shader stages.
+Bytes must be set separately for each of the three shader stages.  If the push constant has
+already been set, on the next use you only need to call ``set_push_constants`` on those
+bytes you wish to change.
 
 .. py:function:: wgpu.backends.wpgu_native.create_pipeline_layout(device, *, label="", bind_group_layouts, push_constant_layouts=[])
 
