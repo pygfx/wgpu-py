@@ -80,7 +80,6 @@ jobs:
           rm -rf ./wgpu
           pushd $HOME
           pip install $GITHUB_WORKSPACE/dist/*.whl
-          popd
           python -c 'import wgpu.backends.wgpu_native; print(wgpu.backends.wgpu_native._ffi.lib_path)'
           # cleanup
           popd
