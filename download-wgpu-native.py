@@ -52,14 +52,17 @@ def download_file(url, filename):
 
 
 def extract_file(zip_filename, member, path):
+    # Read file from archive, find it no matter the folder structure
     z = ZipFile(zip_filename)
-    os.makedirs(path, exist_ok=True)
-    z.extract(member, path=path)
+    flat_map = {os.path.basename(fi.filename): fi.filename for fi in z.filelist}
+    bb = z.read(flat_map[member])
+    # Make newlines consistent with Git rules etc.
     if member.endswith(".h") and FORCE_SIMPLE_NEWLINES:
-        filename = os.path.join(path, member)
-        bb = open(filename, "rb").read()
-        with open(filename, "wb") as f:
-            f.write(bb.replace(b"\r\n", b"\n"))
+        bb = bb.replace(b"\r\n", b"\n")
+    # Write to disk
+    os.makedirs(path, exist_ok=True)
+    with open(os.path.join(path, member), "wb") as f:
+        f.write(bb)
 
 
 def get_os_string():
