@@ -87,7 +87,7 @@ def get_arch():
         # When running in cibuildwheel, we derive the intended arch from
         # an env var (the same one that cibuildwheel uses) that we set in cd.yml.
         cibw_arch = os.getenv("CIBW_ARCHS")  # must be singular
-        map = {
+        arch_map = {
             "windows": {
                 "AMD64": "x86_64",
                 "ARM64": "aarch64",

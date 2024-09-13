@@ -19,11 +19,10 @@ jobs:
   release-builds:
     name: Build wheel for ${{ matrix.platform }} ${{ matrix.arch }}
     timeout-minutes: 10
-    runs-on: ubuntu-latest
+    runs-on: $${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        #cibw_version: [2.20]
         include:
           - platform: windows
             arch: 'AMD64'
@@ -40,7 +39,7 @@ jobs:
           - platform: macos
             arch: 'x86_64'
             os: macos-13
-            #cibw_version: 2.18  # later versions do not work
+            cibw_version: '==2.18'  # later versions do not work
           - platform: linux
             arch: 'x86_64'
             os: ubuntu-latest
@@ -55,7 +54,7 @@ jobs:
         python-version: '3.12'
     - name: Install dev dependencies
       run: |
-          python -m pip install --upgrade pip wheel setuptools twine cibuildwheel==2.20
+          python -m pip install --upgrade pip wheel setuptools twine cibuildwheel${{ matrix.cibw_version}}
     - name: Build wheels
       run: python -m cibuildwheel --output-dir dist
       env:
