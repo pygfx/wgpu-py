@@ -2838,7 +2838,6 @@ class GPUComputePassEncoder(
     GPUBindingCommandsMixin,
     GPUObjectBase,
 ):
-    """ """
 
     # GPUDebugCommandsMixin
     _push_debug_group_function = libf.wgpuComputePassEncoderPushDebugGroup

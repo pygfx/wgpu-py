@@ -61,9 +61,9 @@ The wgpu_native backend provides a few extra functionalities:
 
 The wgpu_native backend provides support for push constants.
 Since WebGPU does not this feature, documentation on its use is hard to find.
-A full explanation of push constants and its use in Vulcan can be found
+A full explanation of push constants and its use in Vulkan can be found
 `here <https://vkguide.dev/docs/chapter-3/push_constants/>`_.
-Using push constants in WGPU closely follows the Vulcan model.
+Using push constants in WGPU closely follows the Vulkan model.
 
 Given an adapter, first determine if it supports push constants::
 
@@ -104,10 +104,10 @@ used in both::
 To the pipeline layout for this shader, use
 ``wgpu.backends.wpgu_native.create_pipeline_layout`` instead of
 ``device.create_pipelinelayout``.  It takes an additional argument,
-``puah_constant_layouts``, describing
+``push_constant_layouts``, describing
 the layout of the push constants.  For example, in the above example::
 
-    push_constant_layouts=[
+    push_constant_layouts = [
         {"visibility": ShaderState.VERTEX, "start": 0, "end": 64},
         {"visibility": ShaderStage.FRAGMENT, "start": 64, "end": 128},
         {"visibility": ShaderState.VERTEX + ShaderStage.FRAGMENT , "start": 128, "end": 192},
