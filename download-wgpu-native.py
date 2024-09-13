@@ -99,7 +99,8 @@ def get_arch():
         # an env var (the same one that cibuildwheel uses) that we set in cd.yml.
         cibw_arch = os.getenv("CIBW_ARCHS")  # must be singular
         if not cibw_arch:
-            cibw_arch = detected_arch  # running under virtualisation (e.g. Docker)
+            # Linux builds run on Docker, so env is not visible
+            cibw_arch = detected_arch
         elif "," in cibw_arch:
             raise RuntimeError("CIBW_ARCHS must have a single arch")
         arch_map = {
