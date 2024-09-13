@@ -80,6 +80,7 @@ jobs:
           rm -rf ./wgpu
           python -m pip install cffi
           python -m pip install --no-index --find-links dist wgpu
+          pushd $HOME
           python -c 'import wgpu.backends.wgpu_native; print(wgpu.backends.wgpu_native._ffi.lib_path)'
           # cleanup
           popd
@@ -115,9 +116,7 @@ jobs:
       shell: bash
       run: |
           rm -rf ./wgpu
-          pushd $HOME
-          pip install $GITHUB_WORKSPACE/dist/*.tar.gz
-          popd
+          python -m pip install --no-index --find-links dist wgpu
           # don't run tests, we just want to know if the sdist can be installed
           pip uninstall -y wgpu
           git reset --hard HEAD
