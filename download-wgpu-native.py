@@ -83,12 +83,23 @@ def get_arch():
     is_64_bit = sys.maxsize > 2**32
     machine = platform.machine()
 
+    if machine == "armv7l":
+        # Raspberry pi
+        detected_arch = "armv7"
+    elif is_64_bit and machine.startswith(("arm", "aarch64")):
+        # Includes MacOS M1, arm linux, ...
+        detected_arch = "aarch64"
+    elif is_64_bit:
+        detected_arch = "x86_64"
+    else:
+        detected_arch = "i686"
+
     if os.environ.get("CIBUILDWHEEL") == "1":
         # When running in cibuildwheel, we derive the intended arch from
         # an env var (the same one that cibuildwheel uses) that we set in cd.yml.
         cibw_arch = os.getenv("CIBW_ARCHS")  # must be singular
         if not cibw_arch:
-            raise RuntimeError("CIBW_ARCHS not set")
+            cibw_arch = detected_arch  # running under virtualisation (e.g. Docker)
         elif "," in cibw_arch:
             raise RuntimeError("CIBW_ARCHS must have a single arch")
         arch_map = {
@@ -109,16 +120,8 @@ def get_arch():
         }
         maps_for_os = arch_map[get_os_string()]
         return maps_for_os[cibw_arch]
-    elif machine == "armv7l":
-        # Raspberry pi
-        return "armv7"
-    elif is_64_bit and machine.startswith(("arm", "aarch64")):
-        # Includes MacOS M1, arm linux, ...
-        return "aarch64"
-    elif is_64_bit:
-        return "x86_64"
-    else:
-        return "i686"
+
+    return detected_arch
 
 
 def main(version, os_string, arch, upstream):

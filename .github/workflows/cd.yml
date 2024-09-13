@@ -44,8 +44,8 @@ jobs:
             os: macos-latest
           - platform: macos
             arch: x86_64
-            os: macos-12
-            #cibw_version: '==2.18'  # later versions do not work
+            os: macos-13  # latest Intel MacOS
+            cibw_version: '==2.16'  # delocation does not work for later versions
           - platform: linux
             arch: x86_64
             os: ubuntu-latest
@@ -59,10 +59,6 @@ jobs:
       uses: docker/setup-qemu-action@v3
       with:
         platforms: arm64
-    # - name: Set up Python
-    #   uses: actions/setup-python@v5
-    #   with:
-    #     python-version: '3.12'
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip wheel setuptools twine cibuildwheel${{ matrix.cibw_version}}
