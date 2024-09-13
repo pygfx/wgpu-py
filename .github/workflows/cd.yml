@@ -76,7 +76,14 @@ jobs:
     - name: Test wheel
       if: matrix.testable
       run: |
-        python -c 'import wgpu.backends.wgpu_native'
+          rm -rf ./wgpu
+          pushd $HOME
+          pip install $GITHUB_WORKSPACE/dist/*.whl
+          python -c 'import wgpu.backends.wgpu_native; print(wgpu.backends.wgpu_native._ffi.lib_path)'
+          # cleanup
+          popd
+          pip uninstall -y wgpu
+          git reset --hard HEAD
     - name: Upload distributions
       uses: actions/upload-artifact@v4
       with:
