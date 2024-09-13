@@ -389,7 +389,7 @@ class GPUAdapter:
     @apidiff.add("Useful in multi-gpu environments")
     @property
     def summary(self):
-        """A one-line summary of the info of this adapter (description, adapter_type, backend_type)."""
+        """A one-line summary of the info of this adapter (device, adapter_type, backend_type)."""
         d = self._adapter_info
         return f"{d['device']} ({d['adapter_type']}) via {d['backend_type']}"
 
