@@ -12,28 +12,41 @@ on:
 jobs:
 
 
-  # The release builds are done for the platforms that we want to build wheels for.
-  # We build wheels, test them, and then upload the wheel as an artifact.
+  # We perform one release build for each wheel that we generate, i.e. one per architecture.
+  # We use CIBW_ARCHS in download_wgpu_native.py to detect what binary is needed.
+  # If https://github.com/pypa/cibuildwheel/issues/944 gets implemented, we can build more wheels per build.
+  # Some builds can be properly tested, some cannot.
   release-builds:
-    name: Build wheels on ${{ matrix.name }}
+    name: Build wheel for ${{ matrix.platform }} ${{ matrix.arch }}
     timeout-minutes: 10
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        cibw_version: [2.20]
         include:
-          - name: windows
+          - platform: windows
+            arch: 'AMD64'
             os: windows-latest
-            archs: 'AMD64,ARM64,x86'
-          - name: macos arm64
+          - platform: windows
+            arch: 'ARM64'
+            os: windows-latest
+          - platform: windows
+            arch: 'x86'
+            os: windows-latest
+          - platform: macos
+            arch: 'arm64'
             os: macos-latest
-            archs: 'aarch64'
-          - name: macos x86
+          - platform: macos
+            arch: 'x86_64'
             os: macos-13
-            archs: 'x86_64'
-          - name: linux
+            #cibw_version: 2.18  # later versions do not work
+          - platform: linux
+            arch: 'x86_64'
             os: ubuntu-latest
-            archs: 'x86_64,aarch64'
+          - platform: linux
+            arch: 'aarch64'
+            os: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
@@ -44,9 +57,10 @@ jobs:
       run: |
           python -m pip install --upgrade pip wheel setuptools twine
     - name: Build wheels
-      uses: pypa/cibuildwheel@v2.20
+      uses: pypa/cibuildwheel@v${{ matrix.cibw_version }}
       env:
-        CIBW_ARCHS: ${{ matrix.archs }}
+        CIBW_PLATFORM: ${{ matrix.platform }}
+        CIBW_ARCHS: ${{ matrix.arch }}
       with:
         output-dir: dist
     - name: Twine check
@@ -56,7 +70,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         path: dist
-        name: ${{ matrix.name }}-build
+        name: ${{ matrix.platform }}-${{ matrix.arch }}-build
 
 
   # # These release builds uses QEMU so that we can build wheels for arm64.
