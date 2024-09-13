@@ -1,3 +1,14 @@
+# Github Actions script to produce binary wheels.
+#
+# We perform one build for each wheel that we generate, i.e. one per architecture.
+# In download_wgpu_native.py, we detect CIBW_PLATFORM and CIBW_ARCHS to determine
+# the required binary from wgpu-native.
+#
+# If https://github.com/pypa/cibuildwheel/issues/944 gets implemented, we can build more wheels per build.
+#
+# Also includes the sdist build that does not include a binary.
+
+
 name: CD
 
 on:
@@ -11,15 +22,10 @@ on:
 
 jobs:
 
-
-  # We perform one release build for each wheel that we generate, i.e. one per architecture.
-  # We use CIBW_ARCHS in download_wgpu_native.py to detect what binary is needed.
-  # If https://github.com/pypa/cibuildwheel/issues/944 gets implemented, we can build more wheels per build.
-  # Some builds can be properly tested, some cannot.
   release-builds:
     name: Build wheel for ${{ matrix.platform }} ${{ matrix.arch }}
     timeout-minutes: 10
-    runs-on: $${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
