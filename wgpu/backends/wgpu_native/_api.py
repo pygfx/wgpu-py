@@ -173,10 +173,11 @@ def _tuple_from_color(rgba):
     return _tuple_from_tuple_or_dict(rgba, "rgba")
 
 
-def _get_override_constant_entries(constants):
+def _get_override_constant_entries(field):
+    constants = field.get("constants")
     if not constants:
-        return 0, ffi.NULL
-    key_value_pairs = []
+        return ffi.NULL, []
+    c_constant_entries = []
     for key, value in constants.items():
         assert isinstance(key, (str, int))
         assert isinstance(value, (int, float, bool))
@@ -187,9 +188,11 @@ def _get_override_constant_entries(constants):
             value=float(value),
             # not used: nextInChain
         )
-        key_value_pairs.append(c_constant_entry)
-    c_constants = ffi.new("WGPUConstantEntry[]", key_value_pairs)
-    return len(constants), c_constants
+        c_constant_entries.append(c_constant_entry)
+    # We need to return and hold onto c_constant_entries in order to prevent the C
+    # strings from being GC'ed.
+    c_constants = ffi.new("WGPUConstantEntry[]", c_constant_entries)
+    return c_constants, c_constant_entries
 
 
 def to_c_string(string: str):
@@ -1503,15 +1506,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         compute: "structs.ProgrammableStage",
     ):
         check_struct("ProgrammableStage", compute)
-        constant_count, c_constants = _get_override_constant_entries(
-            compute.get("constants")
-        )
+        c_constants, c_constant_entries = _get_override_constant_entries(compute)
         # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *
         c_compute_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
             module=compute["module"]._internal,
             entryPoint=to_c_string_or_null(compute.get("entry_point")),
-            constantCount=constant_count,
+            constantCount=len(c_constant_entries),
             constants=c_constants,
             # not used: nextInChain
         )
@@ -1565,8 +1566,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         check_struct("DepthStencilState", depth_stencil)
         check_struct("MultisampleState", multisample)
         check_struct("PrimitiveState", primitive)
-        if fragment:
-            check_struct("FragmentState", fragment)
 
         c_vertex_buffer_layout_list = []
         for buffer_des in vertex.get("buffers", ()):
@@ -1593,9 +1592,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         c_vertex_buffer_descriptors_array = ffi.new(
             "WGPUVertexBufferLayout []", c_vertex_buffer_layout_list
         )
-        constant_count, c_constants = _get_override_constant_entries(
-            vertex.get("constants")
-        )
+        c_vertex_constants, c_vertex_entries = _get_override_constant_entries(vertex)
         # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, bufferCount: int, buffers: WGPUVertexBufferLayout *
         c_vertex_state = new_struct(
             "WGPUVertexState",
@@ -1603,8 +1600,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             entryPoint=to_c_string_or_null(vertex.get("entry_point")),
             buffers=c_vertex_buffer_descriptors_array,
             bufferCount=len(c_vertex_buffer_layout_list),
-            constantCount=constant_count,
-            constants=c_constants,
+            constantCount=len(c_vertex_entries),
+            constants=c_vertex_constants,
             # not used: nextInChain
         )
 
@@ -1706,8 +1703,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 "WGPUColorTargetState []", c_color_targets_list
             )
             check_struct("FragmentState", fragment)
-            constant_count, c_constants = _get_override_constant_entries(
-                vertex.get("constants")
+            c_fragment_constants, c_fragment_entries = _get_override_constant_entries(
+                fragment
             )
             # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, targetCount: int, targets: WGPUColorTargetState *
             c_fragment_state = new_struct_p(
@@ -1716,8 +1713,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 entryPoint=to_c_string_or_null(fragment.get("entry_point")),
                 targets=c_color_targets_array,
                 targetCount=len(c_color_targets_list),
-                constantCount=constant_count,
-                constants=c_constants,
+                constantCount=len(c_fragment_entries),
+                constants=c_fragment_constants,
                 # not used: nextInChain
             )
 
