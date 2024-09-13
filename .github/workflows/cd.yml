@@ -55,7 +55,7 @@ jobs:
         python-version: '3.12'
     - name: Install dev dependencies
       run: |
-          python -m pip install --upgrade pip wheel setuptools twine cibuildwheel=${{ matrix.cibw_version }}
+          python -m pip install --upgrade pip wheel setuptools twine cibuildwheel==${{ matrix.cibw_version }}
     - name: Build wheels
       run: python -m cibuildwheel --output-dir dist
       env:
