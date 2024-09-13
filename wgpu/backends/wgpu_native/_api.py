@@ -408,7 +408,7 @@ class GPU(classes.GPU):
 
         # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo
         # And add all other info we get from wgpu-native too.
-        # note: description is human readable. device is a PCI ID.
+        # note: device is human readable. description is driver-description; usually more cryptic, or empty.
         adapter_info = {
             # Spec
             "vendor": to_py_str("vendor"),
