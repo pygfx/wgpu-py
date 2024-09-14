@@ -96,7 +96,7 @@ Creating a push constant in your shader code is similar to the way you would cre
 a uniform buffer.
 The fields that are only used in the ``@vertex`` shader should be separated from the fields
 that are only used in the ``@fragment`` shader which should be separated from the fields
-used in both::
+used in both shaders::
 
     struct PushConstants {
         // vertex shader
