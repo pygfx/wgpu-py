@@ -35,7 +35,7 @@ jobs:
           - platform: windows
             arch: AMD64
             os: windows-latest
-            testable: false  # pip install dist/*.whl does not work on Windows :/
+            testable: true
           - platform: windows
             arch: ARM64
             os: windows-latest
@@ -80,10 +80,10 @@ jobs:
       shell: bash
       run: |
           rm -rf ./wgpu
+          filename=$(ls dist/*.whl)
+          pip install $filename
           pushd $HOME
-          pip install $GITHUB_WORKSPACE/dist/*.whl
           python -c 'import wgpu.backends.wgpu_native; print(wgpu.backends.wgpu_native._ffi.lib_path)'
-          # cleanup
           popd
           pip uninstall -y wgpu
           git reset --hard HEAD
@@ -117,9 +117,8 @@ jobs:
       shell: bash
       run: |
           rm -rf ./wgpu
-          pushd $HOME
-          pip install $GITHUB_WORKSPACE/dist/*.tar.gz
-          popd
+          filename=$(ls dist/*.tar.gz)
+          pip install $filename
           # don't run tests, we just want to know if the sdist can be installed
           pip uninstall -y wgpu
           git reset --hard HEAD
