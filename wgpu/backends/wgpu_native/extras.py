@@ -40,6 +40,8 @@ def multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
     This is equvalent to
     for i in range(count):
         render_pass_encoder.draw(buffer, offset + i * 16)
+
+    You must enable the featue "multi-draw-indirect" to use this function.
     """
     render_pass_encoder._multi_draw_indirect(buffer, offset, count)
 
@@ -50,5 +52,7 @@ def multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count)
 
     for i in range(count):
         render_pass_encoder.draw_indexed(buffer, offset + i * 20)
+
+    You must enable the featue "multi-draw-indirect" to use this function.
     """
     render_pass_encoder._multi_draw_indexed_indirect(buffer, offset, count)

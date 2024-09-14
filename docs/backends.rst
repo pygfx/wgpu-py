@@ -59,6 +59,32 @@ The wgpu_native backend provides a few extra functionalities:
     :return: Device
     :rtype: wgpu.GPUDevice
 
+There are two functions that allow you to perform multiple draw calls at once.
+Both require that you enable the feature "multi-draw-indirect".
+
+Typically, these calls do not reduce work or increase parallelism on the GPU. Rather
+they reduce drive overhead on the CPU.
+
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
+    This is equvalent to
+    for i in range(count):
+        render_pass_encoder.draw(buffer, offset + i * 16)
+
+    :param render_pass_encoder: The current render pass encoder.
+    :param buffer: The indirect buffer containing the arguments.
+    :param offset: The byte offset in the indirect buffer containing the first argument.
+    :param count: The number of write operations to perform.
+
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
+    This is equvalent to
+    for i in range(count):
+        render_pass_encoder.draw(buffer, offset + i * 20)
+
+    :param render_pass_encoder: The current render pass encoder.
+    :param buffer: The indirect buffer containing the arguments.
+    :param offset: The byte offset in the indirect buffer containing the first argument.
+    :param count: The number of write operations to perform.
+
 
 The js_webgpu backend
 ---------------------

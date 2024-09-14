@@ -56,20 +56,26 @@ BIND_GROUP_ENTRIES = [
 
 
 class Runner:
-    def __init__(self, device):
-        self.device = device
-        self.output_texture = device.create_texture(
+    def __init__(self, use_multidraw_if_available: bool = True):
+        adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+        features = []
+        if use_multidraw_if_available and "multi-draw-indirect" in adapter.features:
+            features.append("multi-draw-indirect")
+        self.device = adapter.request_device(required_features=features)
+        self.output_texture = self.device.create_texture(
             # Actual size is immaterial.  Could just be 1x1
             size=[128, 128],
             format=TextureFormat.rgba8unorm,
             usage="RENDER_ATTACHMENT|COPY_SRC",
         )
-        shader = device.create_shader_module(code=SHADER_SOURCE)
-        bind_group_layout = device.create_bind_group_layout(entries=BIND_GROUP_ENTRIES)
-        render_pipeline_layout = device.create_pipeline_layout(
+        shader = self.device.create_shader_module(code=SHADER_SOURCE)
+        bind_group_layout = self.device.create_bind_group_layout(
+            entries=BIND_GROUP_ENTRIES
+        )
+        render_pipeline_layout = self.device.create_pipeline_layout(
             bind_group_layouts=[bind_group_layout]
         )
-        self.pipeline = device.create_render_pipeline(
+        self.pipeline = self.device.create_render_pipeline(
             layout=render_pipeline_layout,
             vertex={
                 "module": shader,
@@ -85,19 +91,29 @@ class Runner:
             },
         )
 
-        self.vertex_call_buffer = device.create_buffer(
+        self.vertex_call_buffer = self.device.create_buffer(
             size=MAX_INFO * 2 * 4, usage="STORAGE|COPY_SRC"
         )
-        self.counter_buffer = device.create_buffer(
+        self.counter_buffer = self.device.create_buffer(
             size=4, usage="STORAGE|COPY_SRC|COPY_DST"
         )
-        self.bind_group = device.create_bind_group(
+        self.bind_group = self.device.create_bind_group(
             layout=self.pipeline.get_bind_group_layout(0),
             entries=[
                 {"binding": 0, "resource": {"buffer": self.vertex_call_buffer}},
                 {"binding": 1, "resource": {"buffer": self.counter_buffer}},
             ],
         )
+        self.render_pass_descriptor = {
+            "color_attachments": [
+                {
+                    "clear_value": (0, 0, 0, 0),  # only first value matters
+                    "load_op": "clear",
+                    "store_op": "store",
+                    "view": self.output_texture.create_view(),
+                }
+            ],
+        }
 
     def create_render_bundle_encoder(self, draw_function):
         render_bundle_encoder = self.device.create_render_bundle_encoder(
@@ -109,20 +125,9 @@ class Runner:
         return render_bundle_encoder.finish()
 
     def run_function(self, expected_result, draw_function):
-        render_pass_descriptor = {
-            "color_attachments": [
-                {
-                    "clear_value": (0, 0, 0, 0),  # only first value matters
-                    "load_op": "clear",
-                    "store_op": "store",
-                    "view": self.output_texture.create_view(),
-                }
-            ],
-        }
-
         encoder = self.device.create_command_encoder()
         encoder.clear_buffer(self.counter_buffer)
-        this_pass = encoder.begin_render_pass(**render_pass_descriptor)
+        this_pass = encoder.begin_render_pass(**self.render_pass_descriptor)
         this_pass.set_pipeline(self.pipeline)
         this_pass.set_bind_group(0, self.bind_group)
         draw_function(this_pass)
@@ -146,18 +151,8 @@ class Runner:
             self.run_function(expected_result, function)
 
 
-def get_device(features):
-    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-    try:
-        device = adapter.request_device(required_features=features)
-    except RuntimeError:
-        pytest.skip("Features needed for this test are not available")
-    return device
-
-
 def test_draw_no_index():
-    device = get_device(features=["multi-draw-indirect"])
-    runner = Runner(device)
+    runner = Runner()
 
     # vertex_count, index_count, first_vertex, first_index
     draw_args1 = [2, 3, 100, 10]
@@ -165,7 +160,7 @@ def test_draw_no_index():
     expected_result = set(itertools.product((100, 101), (10, 11, 12))) | {(30, 50)}
 
     draw_data_info = np.uint32([0, 0] + draw_args1 + draw_args2)
-    draw_data_buffer = device.create_buffer_with_data(
+    draw_data_buffer = runner.device.create_buffer_with_data(
         data=draw_data_info, usage="INDIRECT"
     )
 
@@ -177,16 +172,23 @@ def test_draw_no_index():
         encoder.draw_indirect(draw_data_buffer, 8)
         encoder.draw_indirect(draw_data_buffer, 8 + 16)
 
-    render_bundle_encoder = runner.create_render_bundle_encoder(draw_direct)
+    def draw_mixed(encoder):
+        encoder.draw(*draw_args1)
+        encoder.draw_indirect(draw_data_buffer, 8 + 16)
 
+    def draw_indirect_multi(encoder):
+        multi_draw_indirect(encoder, draw_data_buffer, offset=8, count=2)
+
+    render_bundle_encoder = runner.create_render_bundle_encoder(draw_mixed)
+
+    has_multi_draw_indirect = "multi-draw-indirect" in runner.device.features
     runner.run_functions(
         expected_result,
         [
             draw_direct,
             draw_indirect,
-            lambda encoder: multi_draw_indirect(
-                encoder, draw_data_buffer, offset=8, count=2
-            ),
+            draw_mixed,
+            *([draw_indirect_multi] if has_multi_draw_indirect else []),
             lambda encoder: encoder.execute_bundles([render_bundle_encoder]),
             lambda encoder: encoder.execute_bundles([render_bundle_encoder]),
         ],
@@ -194,8 +196,7 @@ def test_draw_no_index():
 
 
 def test_draw_indexed():
-    device = get_device(features=["multi-draw-indirect"])
-    runner = Runner(device)
+    runner = Runner()
 
     # index_count, instance_count, first_index, base_vertex, first_intance
     draw_args1 = (4, 2, 1, 100, 1000)
@@ -205,10 +206,14 @@ def test_draw_indexed():
     expected_result.add((219, 2000))
 
     index_buffer_data = np.uint32(index_buffer_data)
-    index_buffer = device.create_buffer_with_data(data=index_buffer_data, usage="INDEX")
+    index_buffer = runner.device.create_buffer_with_data(
+        data=index_buffer_data, usage="INDEX"
+    )
 
     draw_data = np.uint32([0, 0] + list(draw_args1) + list(draw_args2))
-    draw_data_buffer = device.create_buffer_with_data(data=draw_data, usage="INDIRECT")
+    draw_data_buffer = runner.device.create_buffer_with_data(
+        data=draw_data, usage="INDIRECT"
+    )
 
     def draw_direct(encoder):
         encoder.set_index_buffer(index_buffer, "uint32")
@@ -220,18 +225,25 @@ def test_draw_indexed():
         encoder.draw_indexed_indirect(draw_data_buffer, 8)
         encoder.draw_indexed_indirect(draw_data_buffer, 8 + 20)
 
+    def draw_mixed(encoder):
+        encoder.set_index_buffer(index_buffer, "uint32")
+        encoder.draw_indexed(*draw_args1)
+        encoder.draw_indexed_indirect(draw_data_buffer, 8 + 20)
+
     def draw_indirect_multi(encoder):
         encoder.set_index_buffer(index_buffer, "uint32")
         multi_draw_indexed_indirect(encoder, draw_data_buffer, offset=8, count=2)
 
-    render_bundle_encoder = runner.create_render_bundle_encoder(draw_indirect)
+    render_bundle_encoder = runner.create_command_encoder(draw_mixed)
 
+    has_multi_draw_indirect = "multi-draw-indirect" in runner.device.features
     runner.run_functions(
         expected_result,
         [
             draw_direct,
             draw_indirect,
-            draw_indirect_multi,
+            draw_mixed,
+            *([draw_indirect_multi] if has_multi_draw_indirect else []),
             lambda encoder: encoder.execute_bundles([render_bundle_encoder]),
             lambda encoder: encoder.execute_bundles([render_bundle_encoder]),
         ],
