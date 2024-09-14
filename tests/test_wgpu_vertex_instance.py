@@ -234,7 +234,7 @@ def test_draw_indexed():
         encoder.set_index_buffer(index_buffer, "uint32")
         multi_draw_indexed_indirect(encoder, draw_data_buffer, offset=8, count=2)
 
-    render_bundle_encoder = runner.create_command_encoder(draw_mixed)
+    render_bundle_encoder = runner.create_render_bundle_encoder(draw_mixed)
 
     has_multi_draw_indirect = "multi-draw-indirect" in runner.device.features
     runner.run_functions(

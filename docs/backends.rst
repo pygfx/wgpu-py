@@ -63,23 +63,27 @@ There are two functions that allow you to perform multiple draw calls at once.
 Both require that you enable the feature "multi-draw-indirect".
 
 Typically, these calls do not reduce work or increase parallelism on the GPU. Rather
-they reduce drive overhead on the CPU.
+they reduce drive overhead on the CPU.  These two functions are equivalent to::
+
+TODO(fy):  This isn't formatting correctly!!
+
+.. code-block:: python
+
+    def multi_draw_indirect(render_pass_encoder, offset, count)``
+        for i in range(count):
+            render_pass_encoder.draw(buffer, offset + i * 16)
+
+    def multi_draw_indexed_indirect(render_pass_encoder, offset, count)``
+        for i in range(count):
+            render_pass_encoder.draw_indexed(buffer, offset + i * 20)
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
-    This is equvalent to
-    for i in range(count):
-        render_pass_encoder.draw(buffer, offset + i * 16)
-
     :param render_pass_encoder: The current render pass encoder.
     :param buffer: The indirect buffer containing the arguments.
     :param offset: The byte offset in the indirect buffer containing the first argument.
     :param count: The number of write operations to perform.
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
-    This is equvalent to
-    for i in range(count):
-        render_pass_encoder.draw(buffer, offset + i * 20)
-
     :param render_pass_encoder: The current render pass encoder.
     :param buffer: The indirect buffer containing the arguments.
     :param offset: The byte offset in the indirect buffer containing the first argument.
