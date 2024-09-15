@@ -78,12 +78,26 @@ TODO(fy):  This isn't formatting correctly!!
             render_pass_encoder.draw_indexed(buffer, offset + i * 20)
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
+
+     Perform calls to::
+        render_pass_encoder.draw_indirect(buffer, offset)
+        render_pass_encoder.draw_indirect(buffer, offset + 16)
+            ...
+        render_pass_encoder.draw_indirect(buffer, offset + 16 * (count) - 1)
+
     :param render_pass_encoder: The current render pass encoder.
     :param buffer: The indirect buffer containing the arguments.
     :param offset: The byte offset in the indirect buffer containing the first argument.
     :param count: The number of write operations to perform.
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
+
+     Perform calls to::
+        render_pass_encoder.draw_indexed_indirect(buffer, offset)
+        render_pass_encoder.draw_indexed_indirect(buffer, offset + 20)
+            ...
+        render_pass_encoder.draw_indexed_indirect(buffer, offset + 20 * (count) - 1)
+
     :param render_pass_encoder: The current render pass encoder.
     :param buffer: The indirect buffer containing the arguments.
     :param offset: The byte offset in the indirect buffer containing the first argument.
