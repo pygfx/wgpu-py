@@ -63,43 +63,30 @@ There are two functions that allow you to perform multiple draw calls at once.
 Both require that you enable the feature "multi-draw-indirect".
 
 Typically, these calls do not reduce work or increase parallelism on the GPU. Rather
-they reduce driver overhead on the CPU.  These two functions are equivalent to::
-
-.. code-block:: python
-
-    def multi_draw_indirect(render_pass_encoder, offset, count)``
-        for i in range(count):
-            render_pass_encoder.draw(buffer, offset + i * 16)
-
-    def multi_draw_indexed_indirect(render_pass_encoder, offset, count)``
-        for i in range(count):
-            render_pass_encoder.draw_indexed(buffer, offset + i * 20)
+they reduce driver overhead on the CPU.
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
 
-     Perform calls to::
-        render_pass_encoder.draw_indirect(buffer, offset)
-        render_pass_encoder.draw_indirect(buffer, offset + 16)
-            ...
-        render_pass_encoder.draw_indirect(buffer, offset + 16 * (count) - 1)
+     Equivalent to::
+        for i in range(count):
+            render_pass_encoder.draw_indirect(buffer, offset + i * 16)
 
     :param render_pass_encoder: The current render pass encoder.
     :param buffer: The indirect buffer containing the arguments.
     :param offset: The byte offset in the indirect buffer containing the first argument.
-    :param count: The number of write operations to perform.
+    :param count: The number of draw operations to perform.
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
 
-     Perform calls to::
-        render_pass_encoder.draw_indexed_indirect(buffer, offset)
-        render_pass_encoder.draw_indexed_indirect(buffer, offset + 20)
-            ...
-        render_pass_encoder.draw_indexed_indirect(buffer, offset + 20 * (count) - 1)
+     Equivalent to::
+        for i in range(count):
+            render_pass_encoder.draw_indexed_indirect(buffer, offset + i * 2-)
+
 
     :param render_pass_encoder: The current render pass encoder.
     :param buffer: The indirect buffer containing the arguments.
     :param offset: The byte offset in the indirect buffer containing the first argument.
-    :param count: The number of write operations to perform.
+    :param count: The number of draw operations to perform.
 
 
 The js_webgpu backend

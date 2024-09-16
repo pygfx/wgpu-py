@@ -10,11 +10,21 @@ from wgpu.backends.wgpu_native.extras import (
     multi_draw_indirect,
 )
 
+REQUIRED_FEATURES = ["multi-draw-indirect", "indirect-first-instance"]
+
 MAX_INFO = 100
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
+
+def has_required_features():
+    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+    return set(REQUIRED_FEATURES) <= adapter.features
+
+
+if not has_required_features():
+    pytest.skip("Tests don't have all required features", allow_module_level=True)
 
 SHADER_SOURCE = (
     f"""
@@ -56,12 +66,9 @@ BIND_GROUP_ENTRIES = [
 
 
 class Runner:
-    def __init__(self, use_multidraw_if_available: bool = True):
+    def __init__(self):
         adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-        features = []
-        if use_multidraw_if_available and "multi-draw-indirect" in adapter.features:
-            features.append("multi-draw-indirect")
-        self.device = adapter.request_device(required_features=features)
+        self.device = adapter.request_device(required_features=REQUIRED_FEATURES)
         self.output_texture = self.device.create_texture(
             # Actual size is immaterial.  Could just be 1x1
             size=[128, 128],
@@ -114,6 +121,28 @@ class Runner:
                 }
             ],
         }
+        self.draw_args1 = [2, 3, 100, 10]
+        self.draw_args2 = [1, 1, 30, 50]
+        self.expected_result_draw = set(itertools.product((100, 101), (10, 11, 12))) | {
+            (30, 50)
+        }
+        self.draw_data_buffer = self.device.create_buffer_with_data(
+            data=np.uint32([0, 0, *self.draw_args1, *self.draw_args2]), usage="INDIRECT"
+        )
+
+        self.draw_indexed_args1 = (4, 2, 1, 100, 1000)
+        self.draw_indexed_args2 = (1, 1, 7, 200, 2000)
+        self.expected_result_draw_indexed = set(
+            itertools.product((103, 105, 107, 111), (1000, 1001))
+        )
+        self.expected_result_draw_indexed.add((219, 2000))
+        self.index_buffer = self.device.create_buffer_with_data(
+            data=(np.uint32((2, 3, 5, 7, 11, 13, 17, 19))), usage="INDEX"
+        )
+        self.draw_data_buffer_indexed = self.device.create_buffer_with_data(
+            data=np.uint32([0, 0, *self.draw_indexed_args1, *self.draw_indexed_args2]),
+            usage="INDIRECT",
+        )
 
     def create_render_bundle_encoder(self, draw_function):
         render_bundle_encoder = self.device.create_render_bundle_encoder(
@@ -121,6 +150,8 @@ class Runner:
         )
         render_bundle_encoder.set_pipeline(self.pipeline)
         render_bundle_encoder.set_bind_group(0, self.bind_group)
+        render_bundle_encoder.set_index_buffer(self.index_buffer, "uint32")
+
         draw_function(render_bundle_encoder)
         return render_bundle_encoder.finish()
 
@@ -130,6 +161,7 @@ class Runner:
         this_pass = encoder.begin_render_pass(**self.render_pass_descriptor)
         this_pass.set_pipeline(self.pipeline)
         this_pass.set_bind_group(0, self.bind_group)
+        this_pass.set_index_buffer(self.index_buffer, "uint32")
         draw_function(this_pass)
         this_pass.end()
         self.device.queue.submit([encoder.finish()])
@@ -151,103 +183,99 @@ class Runner:
             self.run_function(expected_result, function)
 
 
-def test_draw_no_index():
-    runner = Runner()
+@pytest.fixture(scope="module")
+def runner():
+    return Runner()
 
-    # vertex_count, index_count, first_vertex, first_index
-    draw_args1 = [2, 3, 100, 10]
-    draw_args2 = [1, 1, 30, 50]
-    expected_result = set(itertools.product((100, 101), (10, 11, 12))) | {(30, 50)}
 
-    draw_data_info = np.uint32([0, 0] + draw_args1 + draw_args2)
-    draw_data_buffer = runner.device.create_buffer_with_data(
-        data=draw_data_info, usage="INDIRECT"
-    )
+def test_draw(runner):
+    def draw(encoder):
+        encoder.draw(*runner.draw_args1)
+        encoder.draw(*runner.draw_args2)
 
-    def draw_direct(encoder):
-        encoder.draw(*draw_args1)
-        encoder.draw(*draw_args2)
+    runner.run_function(runner.expected_result_draw, draw)
 
-    def draw_indirect(encoder):
-        encoder.draw_indirect(draw_data_buffer, 8)
-        encoder.draw_indirect(draw_data_buffer, 8 + 16)
 
-    def draw_mixed(encoder):
-        encoder.draw(*draw_args1)
-        encoder.draw_indirect(draw_data_buffer, 8 + 16)
+def test_draw_indirect(runner):
+    def draw(encoder):
+        encoder.draw_indirect(runner.draw_data_buffer, 8)
+        encoder.draw_indirect(runner.draw_data_buffer, 8 + 16)
 
-    def draw_indirect_multi(encoder):
-        multi_draw_indirect(encoder, draw_data_buffer, offset=8, count=2)
+    runner.run_function(runner.expected_result_draw, draw)
 
-    render_bundle_encoder = runner.create_render_bundle_encoder(draw_mixed)
 
-    has_multi_draw_indirect = "multi-draw-indirect" in runner.device.features
-    runner.run_functions(
-        expected_result,
-        [
-            draw_direct,
-            draw_indirect,
-            draw_mixed,
-            *([draw_indirect_multi] if has_multi_draw_indirect else []),
+def test_draw_mixed(runner):
+    def draw(encoder):
+        encoder.draw(*runner.draw_args1)
+        encoder.draw_indirect(runner.draw_data_buffer, 8 + 16)
+
+    runner.run_function(runner.expected_result_draw, draw)
+
+
+def test_multi_draw_indirect(runner):
+    def draw(encoder):
+        multi_draw_indirect(encoder, runner.draw_data_buffer, offset=8, count=2)
+
+    runner.run_function(runner.expected_result_draw, draw)
+
+
+def test_draw_via_encoder(runner):
+    def draw(encoder):
+        encoder.draw(*runner.draw_args1)
+        encoder.draw_indirect(runner.draw_data_buffer, 8 + 16)
+
+    render_bundle_encoder = runner.create_render_bundle_encoder(draw)
+    for _ in range(2):
+        runner.run_function(
+            runner.expected_result_draw,
             lambda encoder: encoder.execute_bundles([render_bundle_encoder]),
+        )
+
+
+def test_draw_indexed(runner):
+    def draw(encoder):
+        encoder.draw_indexed(*runner.draw_indexed_args1)
+        encoder.draw_indexed(*runner.draw_indexed_args2)
+
+    runner.run_function(runner.expected_result_draw_indexed, draw)
+
+
+def test_draw_indexed_indirect(runner):
+    def draw(encoder):
+        encoder.draw_indexed_indirect(runner.draw_data_buffer_indexed, 8)
+        encoder.draw_indexed_indirect(runner.draw_data_buffer_indexed, 8 + 20)
+
+    runner.run_function(runner.expected_result_draw_indexed, draw)
+
+
+def test_draw_indexed_mixed(runner):
+    def draw(encoder):
+        encoder.draw_indexed_indirect(runner.draw_data_buffer_indexed, 8)
+        encoder.draw_indexed(*runner.draw_indexed_args2)
+
+    runner.run_function(runner.expected_result_draw_indexed, draw)
+
+
+def test_multi_draw_indexed_indirect(runner):
+    def draw(encoder):
+        multi_draw_indexed_indirect(
+            encoder, runner.draw_data_buffer_indexed, offset=8, count=2
+        )
+
+    runner.run_function(runner.expected_result_draw_indexed, draw)
+
+
+def test_draw_indexed_via_encoder(runner):
+    def draw(encoder):
+        encoder.draw_indexed_indirect(runner.draw_data_buffer_indexed, 8)
+        encoder.draw_indexed(*runner.draw_indexed_args2)
+
+    render_bundle_encoder = runner.create_render_bundle_encoder(draw)
+    for _ in range(2):
+        runner.run_function(
+            runner.expected_result_draw_indexed,
             lambda encoder: encoder.execute_bundles([render_bundle_encoder]),
-        ],
-    )
-
-
-def test_draw_indexed():
-    runner = Runner()
-
-    # index_count, instance_count, first_index, base_vertex, first_intance
-    draw_args1 = (4, 2, 1, 100, 1000)
-    draw_args2 = (1, 1, 7, 200, 2000)
-    index_buffer_data = (2, 3, 5, 7, 11, 13, 17, 19)
-    expected_result = set(itertools.product((103, 105, 107, 111), (1000, 1001)))
-    expected_result.add((219, 2000))
-
-    index_buffer_data = np.uint32(index_buffer_data)
-    index_buffer = runner.device.create_buffer_with_data(
-        data=index_buffer_data, usage="INDEX"
-    )
-
-    draw_data = np.uint32([0, 0] + list(draw_args1) + list(draw_args2))
-    draw_data_buffer = runner.device.create_buffer_with_data(
-        data=draw_data, usage="INDIRECT"
-    )
-
-    def draw_direct(encoder):
-        encoder.set_index_buffer(index_buffer, "uint32")
-        encoder.draw_indexed(*draw_args1)
-        encoder.draw_indexed(*draw_args2)
-
-    def draw_indirect(encoder):
-        encoder.set_index_buffer(index_buffer, "uint32")
-        encoder.draw_indexed_indirect(draw_data_buffer, 8)
-        encoder.draw_indexed_indirect(draw_data_buffer, 8 + 20)
-
-    def draw_mixed(encoder):
-        encoder.set_index_buffer(index_buffer, "uint32")
-        encoder.draw_indexed(*draw_args1)
-        encoder.draw_indexed_indirect(draw_data_buffer, 8 + 20)
-
-    def draw_indirect_multi(encoder):
-        encoder.set_index_buffer(index_buffer, "uint32")
-        multi_draw_indexed_indirect(encoder, draw_data_buffer, offset=8, count=2)
-
-    render_bundle_encoder = runner.create_render_bundle_encoder(draw_mixed)
-
-    has_multi_draw_indirect = "multi-draw-indirect" in runner.device.features
-    runner.run_functions(
-        expected_result,
-        [
-            draw_direct,
-            draw_indirect,
-            draw_mixed,
-            *([draw_indirect_multi] if has_multi_draw_indirect else []),
-            lambda encoder: encoder.execute_bundles([render_bundle_encoder]),
-            lambda encoder: encoder.execute_bundles([render_bundle_encoder]),
-        ],
-    )
+        )
 
 
 if __name__ == "__main__":
