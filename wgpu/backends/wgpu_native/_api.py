@@ -508,13 +508,13 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     def _configure_screen(
         self,
         *,
-        device: "GPUDevice",
-        format: "enums.TextureFormat",
-        usage: "flags.TextureUsage" = 0x10,
-        view_formats: "List[enums.TextureFormat]" = [],
-        color_space: str = "srgb",
-        tone_mapping: "structs.CanvasToneMapping" = {},
-        alpha_mode: "enums.CanvasAlphaMode" = "opaque",
+        device,
+        format,
+        usage,
+        view_formats,
+        color_space,
+        tone_mapping,
+        alpha_mode,
     ):
 
         capabilities = self._get_capabilities(device.adapter)

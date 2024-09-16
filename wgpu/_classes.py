@@ -341,7 +341,17 @@ class GPUCanvasContext:
         if self._surface_info["method"] == "screen":
             self._configure_screen(**self._config)
 
-    def _configure_screen(self, **kwargs):
+    def _configure_screen(
+        self,
+        *,
+        device,
+        format,
+        usage,
+        view_formats,
+        color_space,
+        tone_mapping,
+        alpha_mode,
+    ):
         raise NotImplementedError()
 
     # IDL: undefined unconfigure();
@@ -354,7 +364,7 @@ class GPUCanvasContext:
         self._config = None
         self._drop_texture()
 
-    def _unconfigure_screen(self, **kwargs):
+    def _unconfigure_screen(self):
         raise NotImplementedError()
 
     # IDL: GPUTexture getCurrentTexture();
