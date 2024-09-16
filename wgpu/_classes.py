@@ -186,13 +186,18 @@ class GPUCanvasContext:
         self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
 
+        # The configuration from the canvas, obtained with canvas.get_surface_info()
+        self._surface_info = canvas.get_surface_info()
+        if self._surface_info.get("method", None) not in ("screen", "image"):
+            raise RuntimeError(
+                "canvas.get_surface_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
+            )
+
+        # Surface capabilities. Stored the first time it is obtained
         self._capabilities = None
 
         # Configuration dict from the user, set via self.configure()
         self._config = None
-
-        # The configuration from the canvas, obtained with canvas.get_surface_info()
-        self._surface_info = canvas.get_surface_info()
 
         # The last used texture
         self._texture = None
@@ -208,6 +213,7 @@ class GPUCanvasContext:
         return self._canvas_ref()
 
     def _get_capabilities(self, adapter):
+        """Get dict of capabilities and cache the result."""
         if self._capabilities is None:
             self._capabilities = {}
             if self._surface_info["method"] == "screen":
@@ -231,6 +237,7 @@ class GPUCanvasContext:
         return self._capabilities
 
     def _get_capabilities_screen(self, adapter):
+        """Get capabilities for a native surface."""
         raise NotImplementedError()
 
     @apidiff.add("Better place to define the preferred format")
@@ -260,13 +267,13 @@ class GPUCanvasContext:
             device (WgpuDevice): The GPU device object to create compatible textures for.
             format (enums.TextureFormat): The format that textures returned by
                 ``get_current_texture()`` will have. Must be one of the supported context
-                formats. An often used format is "bgra8unorm-srgb".
+                formats. Can be ``None`` to use the canvas' preferred format.
             usage (flags.TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
             view_formats (List[enums.TextureFormat]): The formats that views created
                 from textures returned by ``get_current_texture()`` may use.
             color_space (PredefinedColorSpace): The color space that values written
                 into textures returned by ``get_current_texture()`` should be displayed with.
-                Default "srgb".
+                Default "srgb". Not yet supported.
             tone_mapping (enums.CanvasToneMappingMode): Not yet supported.
             alpha_mode (structs.CanvasAlphaMode): Determines the effect that alpha values
                 will have on the content of textures returned by ``get_current_texture()``
@@ -334,6 +341,9 @@ class GPUCanvasContext:
         if self._surface_info["method"] == "screen":
             self._configure_screen(**self._config)
 
+    def _configure_screen(self, **kwargs):
+        raise NotImplementedError()
+
     # IDL: undefined unconfigure();
     def unconfigure(self):
         """Removes the presentation context configuration.
@@ -343,6 +353,9 @@ class GPUCanvasContext:
             self._unconfigure_screen()
         self._config = None
         self._drop_texture()
+
+    def _unconfigure_screen(self, **kwargs):
+        raise NotImplementedError()
 
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
@@ -362,11 +375,11 @@ class GPUCanvasContext:
             if self._surface_info["method"] == "screen":
                 self._texture = self._create_texture_screen()
             else:
-                self._texture = self._create_texture_simple()
+                self._texture = self._create_texture_image()
 
         return self._texture
 
-    def _create_texture_simple(self):
+    def _create_texture_image(self):
 
         canvas = self._get_canvas()
         width, height = canvas.get_physical_size()
@@ -379,7 +392,6 @@ class GPUCanvasContext:
             format=self._config["format"],
             usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
         )
-        # todo: get extra usage from surface info
         return self._texture
 
     def _create_texture_screen(self):
@@ -415,9 +427,6 @@ class GPUCanvasContext:
             self._present_image()
 
         self._drop_texture()
-
-    def _present_screen(self):
-        raise NotImplementedError()
 
     def _present_image(self):
         texture = self._texture
@@ -458,6 +467,9 @@ class GPUCanvasContext:
         data = data.cast("B", (size[1], size[0], nchannels))
 
         self._get_canvas().present_image(data, format=format)
+
+    def _present_screen(self):
+        raise NotImplementedError()
 
     def __del__(self):
         self._ot.decrease(self.__class__.__name__)
