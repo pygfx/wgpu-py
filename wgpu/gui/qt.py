@@ -23,6 +23,7 @@ is_wayland = False  # We force Qt to use X11 in _gui_utils.py
 libname, already_had_app_on_import = get_imported_qt_lib()
 if libname:
     QtCore = importlib.import_module(".QtCore", libname)
+    QtGui = importlib.import_module(".QtGui", libname)
     QtWidgets = importlib.import_module(".QtWidgets", libname)
     try:
         WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
@@ -140,13 +141,15 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
 
     def __init__(self, *args, **kwargs):
+        draw_to_screen = kwargs.pop("draw_to_screen", True)
         super().__init__(*args, **kwargs)
 
-        # Configure how Qt renders this widget
-        self.setAttribute(WA_PaintOnScreen, True)
+        self._raw_surface_id = self._get_surface_id()
+        self._draw_to_screen = bool(self._raw_surface_id) and draw_to_screen
+
+        self.setAutoFillBackground(False)
         self.setAttribute(WA_DeleteOnClose, True)
         self.setAttribute(WA_InputMethodEnabled, True)
-        self.setAutoFillBackground(False)
         self.setMouseTracking(True)
         self.setFocusPolicy(FocusPolicy.StrongFocus)
 
@@ -158,14 +161,17 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
-        return None
+        if self._draw_to_screen:
+            return None
+        else:
+            return super().paintEngine()
 
     def paintEvent(self, event):  # noqa: N802 - this is a Qt method
         self._draw_frame_and_present()
 
     # Methods that we add from wgpu (snake_case)
 
-    def get_surface_info(self):
+    def _get_surface_id(self):
         if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
             return {
                 "window": int(self.winId()),
@@ -184,8 +190,17 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                     "window": int(self.winId()),
                     "display": int(get_alt_x11_display()),
                 }
+
+    def get_surface_info(self):
+        if self._draw_to_screen and self._raw_surface_id:
+            info = {"method": "screen"}
+            info.update(self._raw_surface_id)
         else:
-            raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
+            info = {
+                "method": "image",
+                "formats": ["rgba8unorm-srgb", "rgba8unorm"],
+            }
+        return info
 
     def get_pixel_ratio(self):
         # Observations:
@@ -356,6 +371,27 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def closeEvent(self, event):  # noqa: N802
         self._handle_event_and_flush({"event_type": "close"})
 
+    def present_image(self, image_data, **kwargs):
+        size = image_data.shape[1], image_data.shape[0]
+
+        painter = QtGui.QPainter(self)
+
+        image = QtGui.QImage(
+            image_data,
+            size[0],
+            size[1],
+            size[0] * 4,
+            QtGui.QImage.Format.Format_RGBA8888,
+        )
+
+        rect1 = QtCore.QRect(0, 0, size[0], size[1])
+        rect2 = self.rect()
+        painter.drawImage(rect2, image, rect1)
+
+        painter.setPen(QtGui.QColor("#0000ff"))
+        painter.setFont(QtGui.QFont("Arial", 30))
+        painter.drawText(100, 100, "image")
+
 
 class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     """A toplevel Qt widget providing a wgpu canvas."""
@@ -370,6 +406,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         # application before any widget is created
         get_app()
 
+        draw_to_screen = kwargs.pop("draw_to_screen", False)
         super().__init__(**kwargs)
 
         self.setAttribute(WA_DeleteOnClose, True)
@@ -377,7 +414,9 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setWindowTitle(title or "qt wgpu canvas")
         self.setMouseTracking(True)
 
-        self._subwidget = QWgpuWidget(self, max_fps=max_fps)
+        self._subwidget = QWgpuWidget(
+            self, max_fps=max_fps, draw_to_screen=draw_to_screen
+        )
         self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
 
         # Note: At some point we called `self._subwidget.winId()` here. For some
@@ -445,6 +484,9 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def request_draw(self, *args, **kwargs):
         return self._subwidget.request_draw(*args, **kwargs)
+
+    def present_image(self, image, **kwargs):
+        return self._subwidget.present_image(image, **kwargs)
 
 
 # Make available under a name that is the same for all gui backends

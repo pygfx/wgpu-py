@@ -5,6 +5,18 @@ from collections import defaultdict
 from ._gui_utils import log_exception
 
 
+def create_canvas_context(canvas):
+    backend_module = sys.modules["wgpu"].gpu.__module__
+    if backend_module == "wgpu._classes":
+        raise RuntimeError(
+            "A backend must be selected (e.g. with request_adapter()) before canvas.get_context() can be called."
+        )
+    # Instantiate the context
+    CC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
+    # CC = sys.modules["wgpu"]._classes.GPUCanvasContext
+    return CC(canvas)
+
+
 class WgpuCanvasInterface:
     """The minimal interface to be a valid canvas.
 
@@ -48,16 +60,11 @@ class WgpuCanvasInterface:
         # here the only valid arg is 'webgpu', which is also made the default.
         assert kind == "webgpu"
         if self._canvas_context is None:
-            # Get the active wgpu backend module
-            backend_module = sys.modules["wgpu"].gpu.__module__
-            if backend_module == "wgpu._classes":
-                raise RuntimeError(
-                    "A backend must be selected (e.g. with request_adapter()) before canvas.get_context() can be called."
-                )
-            # Instantiate the context
-            CC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
-            self._canvas_context = CC(self)
+            self._canvas_context = create_canvas_context(self)
         return self._canvas_context
+
+    def present_image(self, image, **kwargs):
+        raise NotImplementedError()
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):

@@ -512,6 +512,11 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         }
         self._handle_event_and_flush(ev)
 
+    def present_image(self, image, **kwargs):
+        raise NotImplementedError()
+        # glfw does not have a way to blit an image.
+        # We could use OpenGL to display it though.
+
 
 # Make available under a name that is the same for all gui backends
 WgpuCanvas = GlfwWgpuCanvas

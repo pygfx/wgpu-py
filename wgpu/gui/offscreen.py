@@ -4,7 +4,7 @@ from .. import classes, flags
 from .base import WgpuCanvasBase, WgpuAutoGui
 
 
-class GPUCanvasContext(classes.GPUCanvasContext):
+class XXXXXGPUCanvasContext(classes.GPUCanvasContext):
     """GPUCanvasContext subclass for rendering to an offscreen texture."""
 
     # In this context implementation, we keep a ref to the texture, to keep
