@@ -63,7 +63,7 @@ There are two functions that allow you to perform multiple draw calls at once.
 Both require that you enable the feature "multi-draw-indirect".
 
 Typically, these calls do not reduce work or increase parallelism on the GPU. Rather
-they reduce drive overhead on the CPU.
+they reduce driver overhead on the CPU.
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
     This is equvalent to
