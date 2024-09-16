@@ -17,6 +17,22 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.18.0] - 16-09-2024
+
+Added:
+
+* Now also building wheels for Windows aarch64.
+
+Changed:
+
+* Updated to latest wgpu-native (v22.1.0.5).
+
+Fixed:
+
+* Various typos in the docs.
+* Fixed the wheels for 32bit Windows.
+
+
 ### [v0.17.3] - 10-09-2024
 
 Added:
