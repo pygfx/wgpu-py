@@ -153,6 +153,9 @@ def create_and_release(create_objects_func):
     n FooBar objects.
 
     The descriptor is a dictionary with three fields, each optional.
+    In a typical situation, there will be `n` FooBar object after the test, and after
+    releasing, there will be zero. However, sometimes there are auxiliary objects,
+    in which case its necessary to provide one or more fields.
 
     The keys "expected_counts_after_create" and "expected_counts_after_release" each have
     as their value a sub-dictionary giving the number of still-alive WGPU objects.
@@ -166,8 +169,8 @@ def create_and_release(create_objects_func):
     the subdictionary has an implied value of (0, 0).
 
     The key "ignore" has as its value a collection of object types that we should ignore
-    in this test. We do not have enough information to determine how many are created
-    or deleted.
+    in this test. Ideally we should not use this, but currently there are a few cases where
+    we cannot reliably predict the number of objects in wgpu-native.
 
     If the descriptor doesn't contain an "expected_counts_after_create", then the default
     is {"FooBar": (n, n)}, where "FooBar" is derived from the name of the test.

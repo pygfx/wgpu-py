@@ -60,7 +60,7 @@ The wgpu_native backend provides a few extra functionalities:
     :rtype: wgpu.GPUDevice
 
 The wgpu_native backend provides support for push constants.
-Since WebGPU does not this feature, documentation on its use is hard to find.
+Since WebGPU does not support this feature, documentation on its use is hard to find.
 A full explanation of push constants and its use in Vulkan can be found
 `here <https://vkguide.dev/docs/chapter-3/push_constants/>`_.
 Using push constants in WGPU closely follows the Vulkan model.
@@ -68,9 +68,8 @@ Using push constants in WGPU closely follows the Vulkan model.
 The advantage of push constants is that they are typically faster to update than uniform buffers.
 Modifications to push constants are included in the command encoder; updating a uniform
 buffer involves sending a separate command to the GPU.
-
-The disadvantage of push constants and that their size limit is much smaller. The limit
-is guaranteed to be at least 128 bytes, and 256 bytes is typical
+The disadvantage of push constants is that their size limit is much smaller. The limit
+is guaranteed to be at least 128 bytes, and 256 bytes is typical.
 
 Given an adapter, first determine if it supports push constants::
 
