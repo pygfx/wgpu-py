@@ -63,9 +63,7 @@ There are two functions that allow you to perform multiple draw calls at once.
 Both require that you enable the feature "multi-draw-indirect".
 
 Typically, these calls do not reduce work or increase parallelism on the GPU. Rather
-they reduce drive overhead on the CPU.  These two functions are equivalent to::
-
-TODO(fy):  This isn't formatting correctly!!
+they reduce driver overhead on the CPU.  These two functions are equivalent to::
 
 .. code-block:: python
 
