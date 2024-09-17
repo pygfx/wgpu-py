@@ -147,6 +147,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self._raw_surface_id = self._get_surface_id()
         self._draw_to_screen = bool(self._raw_surface_id) and draw_to_screen
 
+        self.setAttribute(WA_PaintOnScreen, self._draw_to_screen)
         self.setAutoFillBackground(False)
         self.setAttribute(WA_DeleteOnClose, True)
         self.setAttribute(WA_InputMethodEnabled, True)
