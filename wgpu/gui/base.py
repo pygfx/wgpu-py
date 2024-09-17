@@ -54,7 +54,7 @@ class WgpuCanvasInterface:
 
         The dict can further contain fields ``formats`` and ``alpha_modes`` to
         define the canvas capabilities. By default formats is
-        ``["rgba8unorm_srgb", "rgba8unorm"]``, and alpha_modes is ``["opaque"]``.
+        ``["rgba8unorm-srgb", "rgba8unorm"]``, and alpha_modes is ``["opaque"]``.
         """
         raise NotImplementedError()
 
