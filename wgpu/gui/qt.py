@@ -372,9 +372,16 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self._handle_event_and_flush({"event_type": "close"})
 
     def present_image(self, image_data, **kwargs):
-        size = image_data.shape[1], image_data.shape[0]
+        size = image_data.shape[1], image_data.shape[0]  # width, height
 
         painter = QtGui.QPainter(self)
+
+        # We want to simply blit the image (copy pixels one-to-one on framebuffer).
+        # Maybe Qt does this when the sizes match exactly (like they do here).
+        # Converting to a QPixmap and painting that only makes it slower.
+
+        # Just in case, set render hints that may hurt performance.
+        painter.setRenderHints(painter.RenderHint.Antialiasing | painter.RenderHint.SmoothPixmapTransform, False)
 
         image = QtGui.QImage(
             image_data,
@@ -388,9 +395,10 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         rect2 = self.rect()
         painter.drawImage(rect2, image, rect1)
 
+        # Uncomment for testing purposes
         painter.setPen(QtGui.QColor("#0000ff"))
         painter.setFont(QtGui.QFont("Arial", 30))
-        painter.drawText(100, 100, "image")
+        painter.drawText(100, 100, "This is an image")
 
 
 class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
