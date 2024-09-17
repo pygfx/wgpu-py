@@ -84,11 +84,12 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     also want to set ``vsync`` to False.
     """
 
-    def __init__(self, *args, max_fps=30, vsync=True, **kwargs):
+    def __init__(self, *args, max_fps=30, vsync=True, draw_to_screen=True, **kwargs):
         super().__init__(*args, **kwargs)
         self._last_draw_time = 0
         self._max_fps = float(max_fps)
         self._vsync = bool(vsync)
+        draw_to_screen  # We just catch the arg here in case a backend does implement support it
 
     def __del__(self):
         # On delete, we call the custom close method.

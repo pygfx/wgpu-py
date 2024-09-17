@@ -105,25 +105,30 @@ KEY_MAP_MOD = {
 
 
 def get_surface_info(window):
+
     if sys.platform.startswith("win"):
         return {
+            "method": "screen",
             "platform": "windows",
             "window": int(glfw.get_win32_window(window)),
         }
     elif sys.platform.startswith("darwin"):
         return {
+            "method": "screen",
             "platform": "cocoa",
             "window": int(glfw.get_cocoa_window(window)),
         }
     elif sys.platform.startswith("linux"):
         if is_wayland:
             return {
+                "method": "screen",
                 "platform": "wayland",
                 "window": int(glfw.get_wayland_window(window)),
                 "display": int(glfw.get_wayland_display()),
             }
         else:
             return {
+                "method": "screen",
                 "platform": "x11",
                 "window": int(glfw.get_x11_window(window)),
                 "display": int(glfw.get_x11_display()),
