@@ -11,10 +11,8 @@ def create_canvas_context(canvas):
         raise RuntimeError(
             "A backend must be selected (e.g. with request_adapter()) before canvas.get_context() can be called."
         )
-    # Instantiate the context
-    CC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
-    # CC = sys.modules["wgpu"]._classes.GPUCanvasContext
-    return CC(canvas)
+    CanvasContext = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
+    return CanvasContext(canvas)
 
 
 class WgpuCanvasInterface:
@@ -34,9 +32,9 @@ class WgpuCanvasInterface:
     def get_surface_info(self):
         """Get information about the surface to render to.
 
-        The result is a small dict, by which the context determines how the
-        rendered image is presented to the canvas. There are two possible
-        methods.
+        The result is a small dict, used by the canvas-context to determine how
+        the rendered result should be presented to the canvas. There are two
+        possible methods.
 
         If the ``method`` field is "screen", the context will render directly
         to a surface representing the region on the screen. The dict should
