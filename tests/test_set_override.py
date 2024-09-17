@@ -1,41 +1,36 @@
-import numpy as np
 import pytest
-import numpy.testing as npt
-
 
 import wgpu.utils
 from tests.testutils import can_use_wgpu_lib, run_tests
-from wgpu import GPUValidationError, TextureFormat
+from wgpu import TextureFormat
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
 """
-This code is an amazingly slow way of adding together two 10-element arrays of 32-bit
-integers defined by push constants and store them into an output buffer.
+The vertex shader should be called exactly once, which then calls the fragment shader
+exactly once. Alternatively, we call the compute shader exactly once
 
+This copies the values of the four variables a, b, c, and d as seen by each of the shaders
+and writes it into a buffer.  We can then examine that buffer to see the values of the
+constants.
 
-The source code assumes the topology is POINT-LIST, so that each call to vertexMain
-corresponds with one call to fragmentMain. We draw exactly one point.
+This code is also showing that you no longer need to include the name of a shader when
+it is the only shader of that type.
 """
 
 SHADER_SOURCE = """
     override a: i32 = 1;
     override b: u32 = 2u;
-    override c: f32 = 3.0;
-    override d: bool;   // We must specify this!
-    @id(1) override aa: i32 = 10;
-    @id(2) override bb: u32 = 20u;
-    @id(3) override cc: f32 = 30.0;
-    @id(4) override dd: bool = false;
+    @id(1) override c: f32 = 3.0;
+    @id(2) override d: bool = false;
 
     // Put the results here
     @group(0) @binding(0) var<storage, read_write> data: array<u32>;
 
     struct VertexOutput {
-        @location(0) results1: vec4u,
-        @location(1) results2: vec4u,
+        @location(0) values: vec4u,
         @builtin(position) position: vec4f,
     }
 
@@ -43,33 +38,28 @@ SHADER_SOURCE = """
     fn vertex(@builtin(vertex_index) index: u32) -> VertexOutput {
         var output: VertexOutput;
         output.position = vec4f(0, 0, 0, 1);
-        output.results1 = vec4u(u32(a), u32(b), u32(c), u32(d));
-        output.results2 = vec4u(u32(aa), u32(bb), u32(cc), u32(dd));
+        output.values = vec4u(u32(a), u32(b), u32(c), u32(d));
         return output;
     }
 
     @fragment
     fn fragment(output: VertexOutput) -> @location(0) vec4f {
-        var i: u32;
-        let results1 = vec4u(u32(a), u32(b), u32(c), u32(d));
-        let results2 = vec4u(u32(aa), u32(bb), u32(cc), u32(dd));
-        write_results(results1, results2);
-
-        // write_results(output.results1, output.results2);
+        let values1 = output.values;
+        let values2 = vec4u(u32(a), u32(b), u32(c), u32(d));
+        write_results(values1, values2);
         return vec4f();
     }
 
     @compute @workgroup_size(1)
     fn computeMain() {
-        let results1 = vec4u(u32(a), u32(b), u32(c), u32(d));
-        let results2 = vec4u(u32(aa), u32(bb), u32(cc), u32(dd));
-        write_results(results1, results2);
+        let results = vec4u(u32(a), u32(b), u32(c), u32(d));
+        write_results(results, results);
     }
-    
+
     fn write_results(results1: vec4u, results2: vec4u) {
-        for (var i = 0; i < 4; i++) { 
+        for (var i = 0; i < 4; i++) {
             data[i] = results1[i];
-            data[i+4] = results2[i];
+            data[i + 4] = results2[i];
         }
     }
 """
@@ -79,102 +69,138 @@ BIND_GROUP_ENTRIES = [
 ]
 
 
-def run_override_constant_test(
-    use_render=True,
-    *,
-    compute_constants=None,
-    vertex_constants=None,
-    fragment_constants=None
-):
-    device = wgpu.utils.get_default_device()
-    output_texture = device.create_texture(
-        # Actual size is immaterial.  Could just be 1x1
-        size=[128, 128],
-        format=TextureFormat.rgba8unorm,
-        usage="RENDER_ATTACHMENT|COPY_SRC",
-    )
-    shader = device.create_shader_module(code=SHADER_SOURCE)
-    bind_group_layout = device.create_bind_group_layout(entries=BIND_GROUP_ENTRIES)
-    render_pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout],
-    )
-    if use_render:
-        pipeline = device.create_render_pipeline(
-            layout=render_pipeline_layout,
+class Runner:
+    def __init__(self):
+        self.device = device = wgpu.utils.get_default_device()
+        self.output_texture = device.create_texture(
+            # Actual size is immaterial.  Could just be 1x1
+            size=[128, 128],
+            format=TextureFormat.rgba8unorm,
+            usage="RENDER_ATTACHMENT|COPY_SRC",
+        )
+        self.shader = device.create_shader_module(code=SHADER_SOURCE)
+        bind_group_layout = device.create_bind_group_layout(entries=BIND_GROUP_ENTRIES)
+        self.render_pipeline_layout = device.create_pipeline_layout(
+            bind_group_layouts=[bind_group_layout],
+        )
+
+        self.output_buffer = device.create_buffer(size=8 * 4, usage="STORAGE|COPY_SRC")
+        self.bind_group = device.create_bind_group(
+            layout=bind_group_layout,
+            entries=[
+                {"binding": 0, "resource": {"buffer": self.output_buffer}},
+            ],
+        )
+
+        self.color_attachment = {
+            "clear_value": (0, 0, 0, 0),  # only first value matters
+            "load_op": "clear",
+            "store_op": "store",
+            "view": self.output_texture.create_view(),
+        }
+
+    def create_render_pipeline(self, vertex_constants, fragment_constants):
+        return self.device.create_render_pipeline(
+            layout=self.render_pipeline_layout,
             vertex={
-                "module": shader,
+                "module": self.shader,
                 "constants": vertex_constants,
             },
             fragment={
-                "module": shader,
-                "targets": [{"format": output_texture.format}],
+                "module": self.shader,
+                "targets": [{"format": self.output_texture.format}],
                 "constants": fragment_constants,
             },
             primitive={
                 "topology": "point-list",
             },
         )
-        render_pass_descriptor = {
-            "color_attachments": [
-                {
-                    "clear_value": (0, 0, 0, 0),  # only first value matters
-                    "load_op": "clear",
-                    "store_op": "store",
-                    "view": output_texture.create_view(),
-                }
-            ],
-        }
-    else:
-        pipeline = device.create_compute_pipeline(
-            layout=render_pipeline_layout,
+
+    def create_compute_pipeline(self, constants):
+        return self.device.create_compute_pipeline(
+            layout=self.render_pipeline_layout,
             compute={
-                "module": shader,
-                "constants": compute_constants,
+                "module": self.shader,
+                "constants": constants,
             },
         )
-        render_pass_descriptor = {}
 
-    output_buffer = device.create_buffer(size=8 * 4, usage="STORAGE|COPY_SRC")
-    bind_group = device.create_bind_group(
-        layout=pipeline.get_bind_group_layout(0),
-        entries=[
-            {"binding": 0, "resource": {"buffer": output_buffer}},
-        ],
+    def run_test(
+        self,
+        *,
+        render: bool = False,
+        compute: bool = False,
+        vertex_constants=None,
+        fragment_constants=None,
+        compute_constants=None
+    ):
+        assert render + compute == 1
+        device = self.device
+        encoder = device.create_command_encoder()
+        if render:
+            this_pass = encoder.begin_render_pass(
+                color_attachments=[self.color_attachment]
+            )
+            pipeline = self.create_render_pipeline(vertex_constants, fragment_constants)
+        else:
+            this_pass = encoder.begin_compute_pass()
+            pipeline = self.create_compute_pipeline(compute_constants)
+        this_pass.set_bind_group(0, self.bind_group)
+        this_pass.set_pipeline(pipeline)
+        if render:
+            this_pass.draw(1)
+        else:
+            this_pass.dispatch_workgroups(1)
+        this_pass.end()
+        device.queue.submit([encoder.finish()])
+        result = device.queue.read_buffer(self.output_buffer).cast("I").tolist()
+        if compute:
+            result = result[:4]
+        print(result)
+        return result
+
+
+@pytest.fixture(scope="module")
+def runner():
+    return Runner()
+
+
+def test_no_overridden_constants_render(runner):
+    assert runner.run_test(render=True) == [1, 2, 3, 0, 1, 2, 3, 0]
+
+
+def test_no_constants_compute(runner):
+    runner.run_test(compute=True) == [1, 2, 3, 0]
+
+
+def test_override_vertex_constants(runner):
+    # Note that setting "d" to any non-zero value is setting it to True
+    overrides = {"a": 21, "b": 22, 1: 23, 2: 24}
+    assert [21, 22, 23, 1, 1, 2, 3, 0] == runner.run_test(
+        render=True, vertex_constants=overrides
     )
 
-    encoder = device.create_command_encoder()
-    if use_render:
-        this_pass = encoder.begin_render_pass(**render_pass_descriptor)
-    else:
-        this_pass = encoder.begin_compute_pass()
-    this_pass.set_pipeline(pipeline)
-    this_pass.set_bind_group(0, bind_group)
-    if use_render:
-        this_pass.draw(1)
-    else:
-        this_pass.dispatch_workgroups(1)
-    this_pass.end()
-    device.queue.submit([encoder.finish()])
-    info_view = device.queue.read_buffer(output_buffer)
-    result = np.frombuffer(info_view, dtype=np.uint32)
-    print(result)
-    return list(result)
 
-
-def test_no_constants():
-    with pytest.raises(GPUValidationError):
-        run_override_constant_test(use_render=True)
-
-    with pytest.raises(GPUValidationError):
-        run_override_constant_test(use_render=False)
-
-
-def test_with_minimal_constants():
-    run_override_constant_test(
-        use_render=True, vertex_constants={"d": 1}, fragment_constants={"d": 0}
+def test_override_fragment_constants(runner):
+    # Note that setting "d" to any non-zero value is setting it to True
+    overrides = {"a": 21, "b": 22, 1: 23, 2: -1}
+    assert [1, 2, 3, 0, 21, 22, 23, 1] == runner.run_test(
+        render=True, fragment_constants=overrides
     )
-    run_override_constant_test(use_render=False, compute_constants={"d": 1})
-    pytest.fail("hello")
+
+
+def test_override_compute_constants(runner):
+    # Note that setting "d" to any non-zero value is setting it to True
+    overrides = {"a": 21, "b": 22, 1: 23, 2: 24}
+    assert [21, 22, 23, 1] == runner.run_test(compute=True, compute_constants=overrides)
+
+
+def test_numbered_constants_must_be_overridden_by_number(runner):
+    overrides = {"c": 23, "d": 24}
+    # This does absolutely nothing.  It doesn't even error.
+    assert [1, 2, 3, 0, 1, 2, 3, 0] == runner.run_test(
+        render=True, vertex_constants=overrides, fragment_constants=overrides
+    )
 
 
 if __name__ == "__main__":
