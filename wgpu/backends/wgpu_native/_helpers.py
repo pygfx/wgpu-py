@@ -5,7 +5,7 @@ import sys
 import ctypes
 from queue import deque
 
-from ._ffi import ffi, lib
+from ._ffi import ffi, lib, lib_path
 from ..._diagnostics import DiagnosticsBase
 from ...classes import (
     GPUError,
@@ -107,8 +107,9 @@ def get_surface_id_from_canvas(canvas):
     surface_info = canvas.get_surface_info()
 
     if sys.platform.startswith("win"):  # no-cover
+        GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa
         struct = ffi.new("WGPUSurfaceDescriptorFromWindowsHWND *")
-        struct.hinstance = ffi.NULL
+        struct.hinstance = ffi.cast("void *", GetModuleHandle(lib_path))
         struct.hwnd = ffi.cast("void *", int(surface_info["window"]))
         struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWindowsHWND
 
@@ -290,7 +291,7 @@ class ErrorHandler:
 
 class SafeLibCalls:
     """Object that copies all library functions, but wrapped in such
-    a way that errors occuring in that call are raised as exceptions.
+    a way that errors occurring in that call are raised as exceptions.
     """
 
     def __init__(self, lib, error_handler):

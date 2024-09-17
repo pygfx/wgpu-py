@@ -78,11 +78,13 @@ class ImguiRenderer:
         self._backend.io.display_framebuffer_scale = (scale, scale)
 
         canvas.add_event_handler(self._on_resize, "resize")
-        canvas.add_event_handler(self._on_mouse_move, "pointer_move")
-        canvas.add_event_handler(self._on_mouse, "pointer_up", "pointer_down")
-        canvas.add_event_handler(self._on_key, "key_up", "key_down")
-        canvas.add_event_handler(self._on_wheel, "wheel")
-        canvas.add_event_handler(self._on_char_input, "char")
+        canvas.add_event_handler(self._on_mouse_move, "pointer_move", order=-99)
+        canvas.add_event_handler(
+            self._on_mouse, "pointer_up", "pointer_down", order=-99
+        )
+        canvas.add_event_handler(self._on_key, "key_up", "key_down", order=-99)
+        canvas.add_event_handler(self._on_wheel, "wheel", order=-99)
+        canvas.add_event_handler(self._on_char_input, "char", order=-99)
 
         self._update_gui_function = None
 
@@ -90,8 +92,8 @@ class ImguiRenderer:
         """
         Set the gui update function that is called on every render cycle to update the GUI
 
-        Parameters
-        ----------
+        Arguments
+        ---------
         gui_updater: callable
             GUI update function, must return imgui.ImDrawData: the draw data to
             render, this is usually obtained by calling ``imgui.get_draw_data()``
@@ -152,10 +154,16 @@ class ImguiRenderer:
     def _on_mouse_move(self, event):
         self._backend.io.add_mouse_pos_event(event["x"], event["y"])
 
+        if self._backend.io.want_capture_mouse:
+            event["stop_propagation"] = True
+
     def _on_mouse(self, event):
         event_type = event["event_type"]
         down = event_type == "pointer_down"
         self._backend.io.add_mouse_button_event(event["button"] - 1, down)
+
+        if self._backend.io.want_capture_mouse:
+            event["stop_propagation"] = True
 
     def _on_key(self, event):
         event_type = event["event_type"]
@@ -182,8 +190,17 @@ class ImguiRenderer:
             key = self.KEY_MAP_MOD[key_name]
             self._backend.io.add_key_event(key, down)
 
+        if self._backend.io.want_capture_keyboard:
+            event["stop_propagation"] = True
+
     def _on_wheel(self, event):
         self._backend.io.add_mouse_wheel_event(event["dx"] / 100, event["dy"] / 100)
 
+        if self._backend.io.want_capture_mouse:
+            event["stop_propagation"] = True
+
     def _on_char_input(self, event):
         self._backend.io.add_input_characters_utf8(event["char_str"])
+
+        if self._backend.io.want_text_input:
+            event["stop_propagation"] = True

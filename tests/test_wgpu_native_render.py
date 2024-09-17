@@ -464,7 +464,7 @@ def test_render_orange_square_scissor(use_render_bundle):
 
     def cb(renderpass):
         renderpass.set_scissor_rect(0, 0, 32, 32)
-        # Alse set blend color. Does not change outout, but covers the call.
+        # Else set blend color. Does not change output, but covers the call.
         renderpass.set_blend_constant((0, 0, 0, 1))
 
     # Bindings and layout

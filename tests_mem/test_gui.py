@@ -61,6 +61,7 @@ def test_release_canvas_context(n):
         "expected_counts_after_create": {
             "CanvasContext": (n, 0),
         },
+        "ignore": {"CommandBuffer"},
     }
 
     canvases = weakref.WeakSet()
@@ -79,13 +80,6 @@ def test_release_canvas_context(n):
 
     # Check that the canvas objects are really deleted
     assert not canvases
-
-    # This is a bit weird, but somehow this tests produces a dangling
-    # CommandBuffer for reasons likely related to the internals of
-    # wgpu-core. The lines below allocate and release a new
-    # CommandBuffer, which solves the issue :)
-    command_encoder = DEVICE.create_command_encoder()
-    command_encoder.finish()
 
 
 TEST_FUNCS = [test_release_canvas_context]

@@ -115,7 +115,7 @@ Offscreen
 +++++++++
 
 If you render offscreen, or only do compute, you do not need a canvas. You also won't need a GUI toolkit, draw function or enter the event loop.
-Instead, you will obtain a command encoder and submit it's records to the queue directly.
+Instead, you will obtain a command encoder and submit its records to the queue directly.
 
 
 Examples and external resources

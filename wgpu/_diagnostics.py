@@ -234,7 +234,7 @@ def dict_to_text(d, header=None):
     for row in rows:
         row[0] = row[0].rjust(max_lens[0])
 
-    # For the table layour we also rjust the other columns
+    # For the table layout we also rjust the other columns
     if table_layout:
         for row in rows:
             for i in range(1, ncols):
@@ -246,7 +246,7 @@ def dict_to_text(d, header=None):
     return text.rstrip() + "\n"
 
 
-def dict_to_table(d, header, header_offest=0):
+def dict_to_table(d, header, header_offset=0):
     """Convert a dict data structure to a table (a list of lists of strings).
     The keys form the first entry of the row. Values that are dicts recurse.
     """
@@ -259,7 +259,7 @@ def dict_to_table(d, header, header_offest=0):
             rows.append([""] * ncols)
         row = [row_title + ":" if row_title else ""]
         rows.append(row)
-        for i in range(header_offest + 1, len(header)):
+        for i in range(header_offset + 1, len(header)):
             key = header[i]
             val = values.get(key, None)
             if val is None:

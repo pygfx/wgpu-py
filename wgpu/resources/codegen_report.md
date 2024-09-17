@@ -1,13 +1,13 @@
-# Code generatation report
+# Code generation report
 ## Preparing
 * The webgpu.idl defines 37 classes with 75 functions
-* The webgpu.idl defines 5 flags, 33 enums, 59 structs
-* The wgpu.h defines 198 functions
-* The wgpu.h defines 7 flags, 50 enums, 93 structs
+* The webgpu.idl defines 5 flags, 34 enums, 60 structs
+* The wgpu.h defines 199 functions
+* The wgpu.h defines 7 flags, 52 enums, 93 structs
 ## Updating API
 * Wrote 5 flags to flags.py
-* Wrote 33 enums to enums.py
-* Wrote 59 structs to structs.py
+* Wrote 34 enums to enums.py
+* Wrote 60 structs to structs.py
 ### Patching API for _classes.py
 * Diffs for GPU: add enumerate_adapters, add enumerate_adapters_async, change get_preferred_canvas_format, change request_adapter, change request_adapter_async
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
@@ -20,15 +20,21 @@
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
 * Validated 37 classes, 112 methods, 45 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 111 methods, 0 properties
+* Validated 37 classes, 112 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
+* Enum field FeatureName.texture-compression-bc-sliced-3d missing in wgpu.h
 * Enum field FeatureName.clip-distances missing in wgpu.h
+* Enum field FeatureName.dual-source-blending missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
 * Enum AutoLayoutMode missing in wgpu.h
+* Enum field BlendFactor.src1 missing in wgpu.h
+* Enum field BlendFactor.one-minus-src1 missing in wgpu.h
+* Enum field BlendFactor.src1-alpha missing in wgpu.h
+* Enum field BlendFactor.one-minus-src1-alpha missing in wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in wgpu.h
 * Enum CanvasAlphaMode missing in wgpu.h
-* Enum field DeviceLostReason.unknown missing in wgpu.h
-* Wrote 235 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
+* Enum CanvasToneMappingMode missing in wgpu.h
+* Wrote 236 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 132 C function calls
-* Not using 72 C functions
-* Validated 77 C structs
+* Not using 73 C functions
+* Validated 78 C structs

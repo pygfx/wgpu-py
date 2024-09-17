@@ -47,15 +47,6 @@ __all__ = classes.__all__.copy()
 # %% Helper functions and objects
 
 
-# Features that wgpu-native supports that are not part of WebGPU
-NATIVE_FEATURES = (
-    "PushConstants",
-    "TextureAdapterSpecificFormatFeatures",
-    "MultiDrawIndirect",
-    "MultiDrawIndirectCount",
-    "VertexWritableStorage",
-)
-
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
 
@@ -288,7 +279,7 @@ class GPU(classes.GPU):
                 nonlocal adapter_id
                 adapter_id = result
 
-        # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallback callback, void * userdata)
+        # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPUInstanceRequestAdapterCallback callback, void * userdata)
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback, ffi.NULL)
 
         # For now, Rust will call the callback immediately
@@ -329,47 +320,52 @@ class GPU(classes.GPU):
     def _create_adapter(self, adapter_id):
         # ----- Get adapter info
 
-        # H: nextInChain: WGPUChainedStructOut *, vendorID: int, vendorName: char *, architecture: char *, deviceID: int, name: char *, driverDescription: char *, adapterType: WGPUAdapterType, backendType: WGPUBackendType
-        c_properties = new_struct_p(
-            "WGPUAdapterProperties *",
+        # H: nextInChain: WGPUChainedStructOut *, vendor: char *, architecture: char *, device: char *, description: char *, backendType: WGPUBackendType, adapterType: WGPUAdapterType, vendorID: int, deviceID: int
+        c_info = new_struct_p(
+            "WGPUAdapterInfo *",
             # not used: nextInChain
-            # not used: deviceID
-            # not used: vendorID
-            # not used: name
-            # not used: driverDescription
-            # not used: adapterType
-            # not used: backendType
-            # not used: vendorName
+            # not used: vendor
             # not used: architecture
+            # not used: device
+            # not used: description
+            # not used: backendType
+            # not used: adapterType
+            # not used: vendorID
+            # not used: deviceID
         )
 
-        # H: void f(WGPUAdapter adapter, WGPUAdapterProperties * properties)
-        libf.wgpuAdapterGetProperties(adapter_id, c_properties)
+        # H: void f(WGPUAdapter adapter, WGPUAdapterInfo * info)
+        libf.wgpuAdapterGetInfo(adapter_id, c_info)
 
         def to_py_str(key):
-            char_p = getattr(c_properties, key)
+            char_p = getattr(c_info, key)
             if char_p:
                 return ffi.string(char_p).decode(errors="ignore")
             return ""
 
         # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo
         # And add all other info we get from wgpu-native too.
+        # note: device is human readable. description is driver-description; usually more cryptic, or empty.
         adapter_info = {
             # Spec
-            "vendor": to_py_str("vendorName"),
+            "vendor": to_py_str("vendor"),
             "architecture": to_py_str("architecture"),
-            "device": to_py_str("name"),
-            "description": to_py_str("driverDescription"),
+            "device": to_py_str("device"),
+            "description": to_py_str("description"),
             # Extra
-            "vendor_id": c_properties.vendorID,
-            "device_id": c_properties.deviceID,
+            "vendor_id": int(c_info.vendorID),
+            "device_id": int(c_info.deviceID),
             "adapter_type": enum_int2str["AdapterType"].get(
-                c_properties.adapterType, "unknown"
+                c_info.adapterType, "unknown"
             ),
             "backend_type": enum_int2str["BackendType"].get(
-                c_properties.backendType, "unknown"
+                c_info.backendType, "unknown"
             ),
         }
+
+        # Allow Rust to release its string objects
+        # H: void f(WGPUAdapterInfo adapterInfo)
+        libf.wgpuAdapterInfoFreeMembers(c_info[0])
 
         # ----- Get adapter limits
 
@@ -389,7 +385,11 @@ class GPU(classes.GPU):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
-            if f in ["clip-distances"]:
+            if f in [
+                "clip-distances",
+                "dual-source-blending",
+                "texture-compression-bc-sliced-3d",
+            ]:
                 continue  # not supported by wgpu-native yet
             key = f"FeatureName.{f}"
             i = enummap[key]
@@ -398,11 +398,10 @@ class GPU(classes.GPU):
                 features.add(f)
 
         # Native features
-        for f in NATIVE_FEATURES:
-            i = getattr(lib, f"WGPUNativeFeature_{f}")
+        for name, i in enum_str2int["NativeFeature"].items():
             # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
             if libf.wgpuAdapterHasFeature(adapter_id, i):
-                features.add(f)
+                features.add(name)
 
         # ----- Done
 
@@ -442,6 +441,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         usage: "flags.TextureUsage" = 0x10,
         view_formats: "List[enums.TextureFormat]" = [],
         color_space: str = "srgb",
+        tone_mapping: "structs.CanvasToneMapping" = {},
         alpha_mode: "enums.CanvasAlphaMode" = "opaque",
     ):
         # Handle inputs
@@ -463,55 +463,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             format = self.get_preferred_format(device.adapter)
         # The color_space is not used for now
         color_space
-
-        # Get what's supported
-
-        # H: nextInChain: WGPUChainedStructOut *, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
-        capabilities = new_struct_p(
-            "WGPUSurfaceCapabilities *",
-            # not used: formatCount
-            # not used: formats
-            # not used: presentModeCount
-            # not used: presentModes
-            # not used: alphaModeCount
-            # not used: alphaModes
-            # not used: nextInChain
-        )
-        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
-        libf.wgpuSurfaceGetCapabilities(
-            self._get_surface_id(), self._device.adapter._internal, capabilities
-        )
-
-        capable_formats = []
-        for i in range(capabilities.formatCount):
-            int_val = capabilities.formats[i]
-            capable_formats.append(enum_int2str["TextureFormat"][int_val])
-
-        capable_present_modes = []
-        for i in range(capabilities.presentModeCount):
-            int_val = capabilities.presentModes[i]
-            str_val = enum_int2str["PresentMode"][int_val]
-            capable_present_modes.append(str_val.lower())
-
-        capable_alpha_modes = []
-        for i in range(capabilities.alphaModeCount):
-            int_val = capabilities.alphaModes[i]
-            str_val = enum_int2str["CompositeAlphaMode"][int_val]
-            capable_alpha_modes.append(str_val.lower())
-
-        # H: void f(WGPUSurfaceCapabilities capabilities)
-        libf.wgpuSurfaceCapabilitiesFreeMembers(capabilities[0])
-
-        # Check if input is supported
-
-        if format not in capable_formats:
-            raise ValueError(
-                f"Given format '{format}' is not in supported formats {capable_formats}"
-            )
-        if alpha_mode not in capable_alpha_modes:
-            raise ValueError(
-                f"Given format '{alpha_mode}' is not in supported formats {capable_alpha_modes}"
-            )
+        # Same for tone mapping
+        check_struct("CanvasToneMapping", tone_mapping)
+        tone_mapping_mode = tone_mapping.get("mode", "standard")
+        tone_mapping_mode
 
         # Select the present mode to determine vsync behavior.
         # * https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html
@@ -530,8 +485,26 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             present_mode_pref = ["fifo", "mailbox"]
         else:
             present_mode_pref = ["immediate", "mailbox", "fifo"]
-        present_modes = [p for p in present_mode_pref if p in capable_present_modes]
-        present_mode = (present_modes or capable_present_modes)[0]
+
+        # Get what's supported
+
+        capabilities = self._get_surface_capabilities(self._device.adapter)
+
+        if format not in capabilities["formats"]:
+            raise ValueError(
+                f"Given format '{format}' is not in supported formats {capabilities['formats']}"
+            )
+
+        if alpha_mode not in capabilities["alpha_modes"]:
+            raise ValueError(
+                f"Given format '{alpha_mode}' is not in supported formats {capabilities['alpha_modes']}"
+            )
+
+        # Select present mode
+        present_modes = [
+            p for p in present_mode_pref if p in capabilities["present_modes"]
+        ]
+        present_mode = (present_modes or capabilities["present_modes"])[0]
         c_present_mode = getattr(lib, f"WGPUPresentMode_{present_mode.capitalize()}")
 
         # Prepare config object
@@ -604,7 +577,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # for doing this check on the former systems, is that errors
         # get logged, which would not be there if we did not
         # pre-emptively reconfigure. These log entries are harmless but
-        # anoying, and I currently don't know how to prevent them
+        # annoying, and I currently don't know how to prevent them
         # elegantly. See issue #352
         old_size = (self._config.width, self._config.height)
         new_size = tuple(self._get_canvas().get_physical_size())
@@ -612,7 +585,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             self._configure(self._config)
 
         # Try to obtain a texture.
-        # `If it fails, depending on status, we reconfure and try again.
+        # `If it fails, depending on status, we reconfigure and try again.
 
         # H: texture: WGPUTexture, suboptimal: WGPUBool/int, status: WGPUSurfaceGetCurrentTextureStatus
         surface_texture = new_struct_p(
@@ -727,11 +700,78 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             self._drop_texture()
 
     def get_preferred_format(self, adapter):
-        # H: WGPUTextureFormat f(WGPUSurface surface, WGPUAdapter adapter)
-        format = libf.wgpuSurfaceGetPreferredFormat(
-            self._get_surface_id(), adapter._internal
+        if self._config is not None:
+            # this shortcut might not be correct if a different format is specified during .configure()
+            return enum_int2str["TextureFormat"][self._config.format]
+        else:
+            return self._get_surface_capabilities(adapter)["formats"][0]
+
+    def _get_surface_capabilities(self, adapter):
+        adapter_id = adapter._internal
+
+        # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
+        c_capabilities = new_struct_p(
+            "WGPUSurfaceCapabilities *",
+            # not used: nextInChain
+            # not used: usages
+            # not used: formatCount
+            # not used: formats
+            # not used: presentModeCount
+            # not used: presentModes
+            # not used: alphaModeCount
+            # not used: alphaModes
         )
-        return enum_int2str["TextureFormat"][format]
+
+        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
+        libf.wgpuSurfaceGetCapabilities(
+            self._get_surface_id(), adapter_id, c_capabilities
+        )
+
+        # Convert to Python.
+        capabilities = {}
+
+        # When the surface is found not to be compatible, the fields below may
+        # be null pointers. This probably means that the surface won't work,
+        # and trying to use it will result in an error (or Rust panic). Since
+        # I'm not sure what the best time/place to error would be, we pretend
+        # that everything is fine here, and populate the fields with values
+        # that wgpu-core claims are guaranteed to exist on any (compatible)
+        # surface.
+
+        if c_capabilities.formats:
+            capabilities["formats"] = formats = []
+            for i in range(c_capabilities.formatCount):
+                int_val = c_capabilities.formats[i]
+                formats.append(enum_int2str["TextureFormat"][int_val])
+
+        else:
+            capabilities["formats"] = [
+                enums.TextureFormat.bgra8unorm_srgb,
+                enums.TextureFormat.bgra8unorm,
+            ]
+
+        if c_capabilities.alphaModes:
+            capabilities["alpha_modes"] = alpha_modes = []
+            for i in range(c_capabilities.alphaModeCount):
+                int_val = c_capabilities.alphaModes[i]
+                str_val = enum_int2str["CompositeAlphaMode"][int_val]
+                alpha_modes.append(str_val.lower())
+        else:
+            capabilities["alpha_modes"] = [enums.CanvasAlphaMode.opaque]
+
+        if c_capabilities.presentModes:
+            capabilities["present_modes"] = present_modes = []
+            for i in range(c_capabilities.presentModeCount):
+                int_val = c_capabilities.presentModes[i]
+                str_val = enum_int2str["PresentMode"][int_val]
+                present_modes.append(str_val.lower())
+        else:
+            capabilities["present_modes"] = ["fifo"]
+
+        # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
+        libf.wgpuSurfaceCapabilitiesFreeMembers(c_capabilities[0])
+
+        return capabilities
 
     def _release(self):
         self._drop_texture()
@@ -774,12 +814,11 @@ class GPUAdapter(classes.GPUAdapter):
         c_features = set()
         for f in required_features:
             if isinstance(f, str):
-                if "_" in f:
-                    f = "".join(x.title() for x in f.split("_"))
-                i1 = enummap.get(f"FeatureName.{f}", None)
-                i2 = getattr(lib, f"WGPUNativeFeature_{f}", None)
-                i = i2 if i1 is None else i1
-                if i is None:  # pragma: no cover
+                f = f.replace("_", "-")
+                i = enummap.get(f"FeatureName.{f}", None)
+                if i is None:
+                    i = enum_str2int["NativeFeature"].get(f, None)
+                if i is None:
                     raise KeyError(f"Unknown feature: '{f}'")
                 c_features.add(i)
             else:
@@ -838,14 +877,35 @@ class GPUAdapter(classes.GPUAdapter):
         def device_lost_callback(c_reason, c_message, userdata):
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
             message = ffi.string(c_message).decode(errors="ignore")
-            error_handler.log_error(f"The WGPU device was lost ({reason}):\n{message}")
+            msg = f"The WGPU device was lost ({reason}):\n{message}"
+            # This is afaik an error that cannot usually be attributed to a specific call,
+            # so we cannot raise it as an error. We log it instead.
+            # WebGPU provides (promise-based) API for user-code to handle the error.
+            # We might want to do something similar, once we have async figured out.
+            error_handler.log_error(msg)
 
-        # Keep the ref alive
-        self._device_lost_callback = device_lost_callback
+        # ----- Uncaptured error
+
+        # TODO: For some errors (seen for errors in wgsl, but not for some others) the error gets logged via the logger as well (duplicate). Probably an issue with wgpu-core.
+
+        @ffi.callback("void(WGPUErrorType, char *, void *)")
+        def uncaptured_error_callback(c_type, c_message, userdata):
+            error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
+            message = ffi.string(c_message).decode(errors="ignore")
+            message = "\n".join(line.rstrip() for line in message.splitlines())
+            error_handler.handle_error(error_type, message)
+
+        # H: nextInChain: WGPUChainedStruct *, callback: WGPUErrorCallback, userdata: void *
+        uncaptured_error_callback_info = new_struct(
+            "WGPUUncapturedErrorCallbackInfo",
+            callback=uncaptured_error_callback,
+            userdata=ffi.NULL,
+            # not used: nextInChain
+        )
 
         # ----- Request device
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *
+        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *, uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
             label=to_c_label(label),
@@ -855,6 +915,7 @@ class GPUAdapter(classes.GPUAdapter):
             requiredLimits=c_required_limits,
             defaultQueue=queue_struct,
             deviceLostCallback=device_lost_callback,
+            uncapturedErrorCallbackInfo=uncaptured_error_callback_info,
             # not used: deviceLostUserdata
         )
 
@@ -871,7 +932,7 @@ class GPUAdapter(classes.GPUAdapter):
                 nonlocal device_id
                 device_id = result
 
-        # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallback callback, void * userdata)
+        # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPUAdapterRequestDeviceCallback callback, void * userdata)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
 
         if device_id is None:  # pragma: no cover
@@ -896,7 +957,11 @@ class GPUAdapter(classes.GPUAdapter):
         # WebGPU features
         features = set()
         for f in sorted(enums.FeatureName):
-            if f in ["clip-distances"]:
+            if f in [
+                "clip-distances",
+                "dual-source-blending",
+                "texture-compression-bc-sliced-3d",
+            ]:
                 continue  # not supported by wgpu-native yet
             key = f"FeatureName.{f}"
             i = enummap[key]
@@ -905,11 +970,10 @@ class GPUAdapter(classes.GPUAdapter):
                 features.add(f)
 
         # Native features
-        for f in NATIVE_FEATURES:
-            i = getattr(lib, f"WGPUNativeFeature_{f}")
+        for name, i in enum_str2int["NativeFeature"].items():
             # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
             if libf.wgpuDeviceHasFeature(device_id, i):
-                features.add(f)
+                features.add(name)
 
         # ---- Get queue
 
@@ -919,7 +983,13 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Done
 
-        return GPUDevice(label, device_id, self, features, limits, queue)
+        device = GPUDevice(label, device_id, self, features, limits, queue)
+
+        # Bind some things to the lifetime of the device
+        device._uncaptured_error_callback = uncaptured_error_callback
+        device._device_lost_callback = device_lost_callback
+
+        return device
 
     async def request_device_async(
         self,
@@ -945,21 +1015,6 @@ class GPUAdapter(classes.GPUAdapter):
 class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def __init__(self, label, internal, adapter, features, limits, queue):
         super().__init__(label, internal, adapter, features, limits, queue)
-
-        @ffi.callback("void(WGPUErrorType, char *, void *)")
-        def uncaptured_error_callback(c_type, c_message, userdata):
-            error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
-            message = ffi.string(c_message).decode(errors="ignore")
-            message = "\n".join(line.rstrip() for line in message.splitlines())
-            error_handler.handle_error(error_type, message)
-
-        # Keep the ref alive
-        self._uncaptured_error_callback = uncaptured_error_callback
-
-        # H: void f(WGPUDevice device, WGPUErrorCallback callback, void * userdata)
-        libf.wgpuDeviceSetUncapturedErrorCallback(
-            self._internal, uncaptured_error_callback, ffi.NULL
-        )
 
     def _poll(self):
         # Internal function
@@ -1830,7 +1885,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Map it
         self._map_state = enums.BufferMapState.pending
-        # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapCallback callback, void * userdata)
+        # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapAsyncCallback callback, void * userdata)
         libf.wgpuBufferMapAsync(
             self._internal, map_mode, offset, size, callback, ffi.NULL
         )
@@ -2107,7 +2162,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         #     else:
         #         pass
         #
-        # H: void f(WGPUShaderModule shaderModule, WGPUCompilationInfoCallback callback, void * userdata)
+        # H: void f(WGPUShaderModule shaderModule, WGPUShaderModuleGetCompilationInfoCallback callback, void * userdata)
         # libf.wgpuShaderModuleGetCompilationInfo(self._internal, callback, ffi.NULL)
         #
         # self._device._poll()
@@ -2213,6 +2268,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
+    # whole class is likely going to solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label):
         c_group_label = ffi.new("char []", group_label.encode())
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, char const * groupLabel)
@@ -2344,8 +2400,9 @@ class GPUCommandEncoder(
             # not used: nextInChain
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
-        raw_pass = libf.wgpuCommandEncoderBeginComputePass(self._internal, struct)
-        return GPUComputePassEncoder(label, raw_pass, self)
+        raw_encoder = libf.wgpuCommandEncoderBeginComputePass(self._internal, struct)
+        encoder = GPUComputePassEncoder(label, raw_encoder, self)
+        return encoder
 
     def begin_render_pass(
         self,
@@ -2381,7 +2438,7 @@ class GPUCommandEncoder(
             check_struct("RenderPassColorAttachment", color_attachment)
             texture_view = color_attachment["view"]
             if not isinstance(texture_view, GPUTextureView):
-                raise TypeError("Color attachement view must be a GPUTextureView.")
+                raise TypeError("Color attachment view must be a GPUTextureView.")
             texture_view_id = texture_view._internal
             objects_to_keep_alive[texture_view_id] = texture_view
             c_resolve_target = (
@@ -2401,7 +2458,7 @@ class GPUCommandEncoder(
                 b=clear_value[2],
                 a=clear_value[3],
             )
-            # H: nextInChain: WGPUChainedStruct *, view: WGPUTextureView, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
+            # H: nextInChain: WGPUChainedStruct *, view: WGPUTextureView, depthSlice: int, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
             c_attachment = new_struct(
                 "WGPURenderPassColorAttachment",
                 view=texture_view_id,
@@ -2409,6 +2466,7 @@ class GPUCommandEncoder(
                 loadOp=color_attachment["load_op"],
                 storeOp=color_attachment["store_op"],
                 clearValue=c_clear_value,
+                depthSlice=lib.WGPU_DEPTH_SLICE_UNDEFINED,  # not implemented yet
                 # not used: resolveTarget
                 # not used: nextInChain
             )
@@ -2456,8 +2514,8 @@ class GPUCommandEncoder(
         )
 
         # H: WGPURenderPassEncoder f(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor)
-        raw_pass = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
-        encoder = GPURenderPassEncoder(label, raw_pass, self)
+        raw_encoder = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
+        encoder = GPURenderPassEncoder(label, raw_encoder, self)
         encoder._objects_to_keep_alive = objects_to_keep_alive
         return encoder
 
@@ -2693,7 +2751,7 @@ class GPUCommandEncoder(
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = libf.wgpuCommandEncoderFinish(self._internal, struct)
-        return GPUCommandBuffer(label, id, self)
+        return GPUCommandBuffer(label, id, self._device)
 
     def resolve_query_set(
         self, query_set, first_query, query_count, destination, destination_offset
@@ -2724,7 +2782,6 @@ class GPUComputePassEncoder(
     GPUBindingCommandsMixin,
     GPUObjectBase,
 ):
-    """ """
 
     # GPUDebugCommandsMixin
     _push_debug_group_function = libf.wgpuComputePassEncoderPushDebugGroup
@@ -2733,6 +2790,8 @@ class GPUComputePassEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
+
+    _ended = False
 
     def set_pipeline(self, pipeline):
         pipeline_id = pipeline._internal
@@ -2757,6 +2816,9 @@ class GPUComputePassEncoder(
     def end(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
+        self._ended = True
+        # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
+        self._release()
 
     def _release(self):
         if self._internal is not None and libf is not None:
@@ -2789,6 +2851,8 @@ class GPURenderPassEncoder(
     _draw_indirect_function = libf.wgpuRenderPassEncoderDrawIndirect
     _draw_indexed_function = libf.wgpuRenderPassEncoderDrawIndexed
     _draw_indexed_indirect_function = libf.wgpuRenderPassEncoderDrawIndexedIndirect
+
+    _ended = False
 
     def set_viewport(self, x, y, width, height, min_depth, max_depth):
         # H: void f(WGPURenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth)
@@ -2828,6 +2892,9 @@ class GPURenderPassEncoder(
     def end(self):
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
+        self._ended = True
+        # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
+        self._release()
 
     def execute_bundles(self, bundles):
         bundle_ids = [bundle._internal for bundle in bundles]
@@ -2886,7 +2953,7 @@ class GPURenderBundleEncoder(
         )
         # H: WGPURenderBundle f(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderBundleDescriptor const * descriptor)
         id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
-        return GPURenderBundle(label, id, self)
+        return GPURenderBundle(label, id, self._device)
 
     def _release(self):
         if self._internal is not None and libf is not None:
@@ -3091,7 +3158,28 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         return data
 
     def on_submitted_work_done(self):
+        # In JS, this returns a Promise that can be awaited to (async) wait
+        # for the work that is currently in the pipeline. We need to figure out
+        # how to expose these async parts.
         raise NotImplementedError()
+
+        status = 999
+
+        @ffi.callback("void(WGPUQueueWorkDoneStatus, void*)")
+        def callback(status_, user_data_p):
+            nonlocal status
+            status = status_
+            # -> here we must resolve the promise, or something
+
+        # H: void f(WGPUQueue queue, WGPUQueueOnSubmittedWorkDoneCallback callback, void * userdata)
+        libf.wgpuQueueOnSubmittedWorkDone(self._internal, callback, ffi.NULL)
+
+        # Wait for the queue to process all tasks (including the mapping of the buffer).
+        # Also see WebGPU's onSubmittedWorkDone() and C's WGPUQueueWorkDoneCallback.
+        self._device._poll()
+
+        if status != 0:
+            raise RuntimeError(f"Queue work done status: {status}")
 
     def _release(self):
         if self._internal is not None and libf is not None:

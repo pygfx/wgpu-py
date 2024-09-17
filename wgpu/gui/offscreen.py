@@ -68,7 +68,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     def present(self):
         if not self._texture:
-            msg = "present() is called without a preceeding call to "
+            msg = "present() is called without a preceding call to "
             msg += "get_current_texture(). Note that present() is usually "
             msg += "called automatically after the draw function returns."
             raise RuntimeError(msg)

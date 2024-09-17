@@ -1,7 +1,7 @@
 Utils
 =====
 
-The wgpu library provides a few utilities. Note that most functions below need to be explictly imported.
+The wgpu library provides a few utilities. Note that most functions below need to be explicitly imported.
 
 Logger
 ------
@@ -43,10 +43,18 @@ To inspect (for example) the total buffer usage:
     :members:
 
 
+Base class for flags and enums
+------------------------------
+
+.. autoclass:: wgpu.utils.BaseEnum
+
+
+
 Get default device
 ------------------
 
 .. autofunction:: wgpu.utils.get_default_device
+
 
 
 Compute with buffers

@@ -145,7 +145,7 @@ def test_glfw_canvas_render():
     # We should have had just one draw
     assert frame_counter == 2
 
-    # Change the canvase size
+    # Change the canvas size
     canvas.set_logical_size(300, 200)
     canvas.set_logical_size(400, 300)
     # We should have had just one draw

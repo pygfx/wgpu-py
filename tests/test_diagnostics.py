@@ -39,7 +39,7 @@ class CustomDiagnostics(DiagnosticsBase):
 
 
 def test_diagnostics_meta():
-    # Test that our custom class does what we expet it to do
+    # Test that our custom class does what we expect it to do
     assert isinstance(wgpu.diagnostics, DiagnosticsRoot)
     assert wgpu.diagnostics is _diagnostics.diagnostics
 

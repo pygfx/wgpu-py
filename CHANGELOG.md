@@ -17,6 +17,44 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.18.0] - 16-09-2024
+
+Added:
+
+* Now also building wheels for Windows aarch64.
+
+Changed:
+
+* Updated to latest wgpu-native (v22.1.0.5).
+
+Fixed:
+
+* Various typos in the docs.
+* Fixed the wheels for 32bit Windows.
+
+
+### [v0.17.3] - 10-09-2024
+
+Added:
+
+* Support for occlusion queries.
+* Support for render bundles.
+* Support for IMGUI, via `wgpu.utils.imgui`.
+* Wx is now a fully supported GUI backend.
+* A `BaseEnum` class was added to `wgpu.utils`, so it can be used in downstream libs like pygfx.
+* The `WGPUCanvas.add_event_handler()` method now has an `order` arg.
+
+Changed:
+
+* The flags and enums are implemented using a new enum class, enabling better static code analysis (i.e. autocompletion in IDE's).
+* Native (desktop) features must now be specified in the same way as normal (WebGPU) features: lowercase and with hyphens between the words.
+* Bindings can omit offset and size (the full size will be used). This makes our API follow WebGPU better.
+* Support omitting fields from `BindGroupLayoutEntry`, `BufferBindingLayout`, `SamplerBindingLayout`, `StorageTextureBindingLayout`, `VertexState`. See https://github.com/pygfx/wgpu-py/pull/534 for details.
+* In cases where a `view_dimension` is given, it must be provided as a string (e.g. '2d'). Ints are no longer allowed, because e.g. 2 does *not* mean '2d', which can be a source of confusion.
+
+(Due to problems with the CD process, we had to bump the version a few times.)
+
+
 ### [v0.16.0] - 13-06-2024
 
 Changed:
@@ -667,7 +705,7 @@ recommend using WGSL instead.
 
 Added:
 
-* Added `GPUAdaper.properties` (the amount of information it contains will increase in the future).
+* Added `GPUAdapter.properties` (the amount of information it contains will increase in the future).
 * Added proper support for WGSL.
 
 Changed:

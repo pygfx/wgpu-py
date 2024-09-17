@@ -12,7 +12,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     output arrays. Both input and output arrays are represented on the GPU
     using storage buffer objects.
 
-    Parameters:
+    Arguments:
         input_arrays (dict): A dict mapping int bindings to arrays. The array
             can be anything that supports the buffer protocol, including
             bytes, memoryviews, ctypes arrays and numpy arrays. The
@@ -39,9 +39,9 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     The format characters to cast a ``memoryview`` are hard to remember, so
     here's a refresher:
 
-    * "b" and "B" are signed and unsiged 8-bit ints.
-    * "h" and "H" are signed and unsiged 16-bit ints.
-    * "i" and "I" are signed and unsiged 32-bit ints.
+    * "b" and "B" are signed and unsigned 8-bit ints.
+    * "h" and "H" are signed and unsigned 16-bit ints.
+    * "i" and "I" are signed and unsigned 32-bit ints.
     * "e" and "f" are 16-bit and 32-bit floats.
     """
 

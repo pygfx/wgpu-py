@@ -40,7 +40,9 @@ def test_release_canvas_context(n):
 
     from wgpu.gui.glfw import WgpuCanvas  # noqa
 
-    yield {}
+    yield {
+        "ignore": {"CommandBuffer"},
+    }
 
     canvases = weakref.WeakSet()
 
@@ -60,10 +62,6 @@ def test_release_canvas_context(n):
 
     # Check that the canvas objects are really deleted
     assert not canvases, f"Still {len(canvases)} canvases"
-
-    # Help clear dangling CommandBuffer, see test_gui.py
-    command_encoder = DEVICE.create_command_encoder()
-    command_encoder.finish()
 
 
 if __name__ == "__main__":
