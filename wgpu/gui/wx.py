@@ -9,10 +9,13 @@ from typing import Optional
 
 import wx
 
-from ._gui_utils import get_alt_x11_display, get_alt_wayland_display, weakbind
+from ._gui_utils import (
+    SYSTEM_IS_WAYLAND,
+    get_alt_x11_display,
+    weakbind,
+)
 from .base import WgpuCanvasBase, WgpuAutoGui
 
-is_wayland = False  # We force wx to use X11 in _gui_utils.py
 
 BUTTON_MAP = {
     wx.MOUSE_BTN_LEFT: 1,
@@ -125,8 +128,11 @@ class TimerWithCallback(wx.Timer):
 class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
     """A wx Window representing a wgpu canvas that can be embedded in a wx application."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, draw_to_screen=True, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self._raw_surface_info = self._get_raw_surface_info()
+        self._draw_to_screen = draw_to_screen and bool(self._raw_surface_info)
 
         # A timer for limiting fps
         self._request_draw_timer = TimerWithCallback(self.Refresh)
@@ -304,18 +310,20 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
     # Methods that we add from wgpu
 
-    def get_surface_info(self):
+    def _get_raw_surface_info(self):
         if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
             return {
                 "window": int(self.GetHandle()),
             }
         elif sys.platform.startswith("linux"):
-            if is_wayland:
-                return {
-                    "platform": "wayland",
-                    "window": int(self.GetHandle()),
-                    "display": int(get_alt_wayland_display()),
-                }
+            if SYSTEM_IS_WAYLAND:
+                # Fallback to offscreen rendering. See comment in same place in qt.py.
+                return None
+                # return {
+                #     "platform": "wayland",
+                #     "window": int(self.GetHandle()),
+                #     "display": int(get_alt_wayland_display()),
+                # }
             else:
                 return {
                     "platform": "x11",
@@ -324,6 +332,17 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
                 }
         else:
             raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
+
+    def get_surface_info(self):
+        if self._draw_to_screen and self._raw_surface_info:
+            info = {"method": "screen"}
+            info.update(self._raw_surface_info)
+        else:
+            info = {
+                "method": "image",
+                "formats": ["rgba8unorm-srgb", "rgba8unorm"],
+            }
+        return info
 
     def get_pixel_ratio(self):
         # todo: this is not hidpi-ready (at least on win10)
@@ -371,19 +390,38 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
         wx.CallLater(max(delay_ms, 1), callback, *args)
 
+    def present_image(self, image_data, **kwargs):
+        size = image_data.shape[1], image_data.shape[0]  # width, height
+
+        dc = wx.PaintDC(self)
+        bitmap = wx.Bitmap.FromBufferRGBA(*size, image_data)
+        dc.DrawBitmap(bitmap, 0, 0, False)
+
 
 class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
     """A toplevel wx Frame providing a wgpu canvas."""
 
     # Most of this is proxying stuff to the inner widget.
 
-    def __init__(self, *, parent=None, size=None, title=None, max_fps=30, **kwargs):
+    def __init__(
+        self,
+        *,
+        parent=None,
+        size=None,
+        title=None,
+        max_fps=30,
+        draw_to_screen=True,
+        **kwargs,
+    ):
+        get_app()
         super().__init__(parent, **kwargs)
 
         self.set_logical_size(*(size or (640, 480)))
         self.SetTitle(title or "wx wgpu canvas")
 
-        self._subwidget = WxWgpuWindow(parent=self, max_fps=max_fps)
+        self._subwidget = WxWgpuWindow(
+            parent=self, max_fps=max_fps, draw_to_screen=draw_to_screen
+        )
         self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
 
@@ -435,7 +473,26 @@ class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
     def request_draw(self, *args, **kwargs):
         return self._subwidget.request_draw(*args, **kwargs)
 
+    def present_image(self, image, **kwargs):
+        return self._subwidget.present_image(image, **kwargs)
+
 
 # Make available under a name that is the same for all gui backends
 WgpuWidget = WxWgpuWindow
 WgpuCanvas = WxWgpuCanvas
+
+_the_app = None
+
+
+def get_app():
+    global _the_app
+    app = wx.App.GetInstance()
+    if app is None:
+        print("zxc")
+        _the_app = app = wx.App()
+        wx.App.SetInstance(app)
+    return app
+
+
+def run():
+    get_app().MainLoop()

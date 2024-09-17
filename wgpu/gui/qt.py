@@ -11,7 +11,6 @@ from .base import WgpuCanvasBase, WgpuAutoGui
 from ._gui_utils import (
     SYSTEM_IS_WAYLAND,
     get_alt_x11_display,
-    get_alt_wayland_display,
     weakbind,
     get_imported_qt_lib,
 )
@@ -141,8 +140,8 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def __init__(self, *args, draw_to_screen=True, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._raw_surface_id = self._get_surface_id()
-        self._draw_to_screen = draw_to_screen and bool(self._raw_surface_id)
+        self._raw_surface_info = self._get_raw_surface_info()
+        self._draw_to_screen = draw_to_screen and bool(self._raw_surface_info)
 
         self.setAttribute(WA_PaintOnScreen, self._draw_to_screen)
         self.setAutoFillBackground(False)
@@ -169,7 +168,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     # Methods that we add from wgpu (snake_case)
 
-    def _get_surface_id(self):
+    def _get_raw_surface_info(self):
         if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
             return {
                 "window": int(self.winId()),
@@ -195,9 +194,9 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                 }
 
     def get_surface_info(self):
-        if self._draw_to_screen and self._raw_surface_id:
+        if self._draw_to_screen and self._raw_surface_info:
             info = {"method": "screen"}
-            info.update(self._raw_surface_id)
+            info.update(self._raw_surface_info)
         else:
             info = {
                 "method": "image",
