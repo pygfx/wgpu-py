@@ -227,7 +227,7 @@ class GPUCanvasContext:
                     "alpha_modes": [enums.CanvasAlphaMode.opaque],
                 }
             # If capabilities were provided via surface info, overload them!
-            for key in ["formats", "usages", "alpha_modes"]:
+            for key in ["formats", "alpha_modes"]:
                 if key in self._surface_info:
                     self._capabilities[key] = self._surface_info[key]
             # Derived defaults

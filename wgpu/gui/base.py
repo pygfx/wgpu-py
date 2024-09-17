@@ -32,15 +32,31 @@ class WgpuCanvasInterface:
         self._canvas_context = None
 
     def get_surface_info(self):
-        """Get information about the native window / surface.
+        """Get information about the surface to render to.
 
-        This is used to obtain a surface id, so that wgpu can render to the
-        region of the screen occupied by the canvas. Should return None for
-        offscreen canvases. Otherwise, this should return a dict with a "window"
-        field. On Linux the dict should contain more fields, see the existing
-        implementations for reference.
+        The result is a small dict, by which the context determines how the
+        rendered image is presented to the canvas. There are two possible
+        methods.
+
+        If the ``method`` field is "screen", the context will render directly
+        to a surface representing the region on the screen. The dict should
+        have a ``window`` field containing the window id. On Linux there should
+        also be ``platform`` field to distinguish between "wayland" and "x11",
+        and a ``display`` field for the display id. This information is used
+        by wgpu to obtain the required surface id.
+
+        When the ``method`` field is "image", the context will render to a
+        texture, load the result into RAM, and call ``canvas.present_image()``
+        with the image data. Additional info (like format) is passed as kwargs.
+        This method enables various types of canvases (including remote ones),
+        but note that it has a performance penalty compared to rendering
+        directly to the screen.
+
+        The dict can further contain fields ``formats`` and ``alpha_modes`` to
+        define the canvas capabilities. By default formats is
+        ``["rgba8unorm_srgb", "rgba8unorm"]``, and alpha_modes is ``["opaque"]``.
         """
-        return None
+        raise NotImplementedError()
 
     def get_physical_size(self):
         """Get the physical size of the canvas in integer pixels."""
