@@ -9,14 +9,12 @@ import importlib
 
 from .base import WgpuCanvasBase, WgpuAutoGui
 from ._gui_utils import (
+    SYSTEM_IS_WAYLAND,
     get_alt_x11_display,
     get_alt_wayland_display,
     weakbind,
     get_imported_qt_lib,
 )
-
-
-is_wayland = False  # We force Qt to use X11 in _gui_utils.py
 
 
 # Select GUI toolkit
@@ -177,13 +175,18 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                 "window": int(self.winId()),
             }
         elif sys.platform.startswith("linux"):
-            # The trick to use an al display pointer works for X11, but results in a segfault on Wayland ...
-            if is_wayland:
-                return {
-                    "platform": "wayland",
-                    "window": int(self.winId()),
-                    "display": int(get_alt_wayland_display()),
-                }
+            if SYSTEM_IS_WAYLAND:
+                # Trying to do it the Wayland way segfaults. This might be because
+                # the "display" is not the real display id. We can tell Qt to use
+                # XWayland, so we can use the X11 path. This worked at some point,
+                # but later this resulted in a Rust panic. So, until this is sorted
+                # out, we fall back to rendering via an image.
+                return None
+                # return {
+                #     "platform": "wayland",
+                #     "window": int(self.winId()),
+                #     "display": int(get_alt_wayland_display()),
+                # }
             else:
                 return {
                     "platform": "x11",
@@ -381,7 +384,10 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         # Converting to a QPixmap and painting that only makes it slower.
 
         # Just in case, set render hints that may hurt performance.
-        painter.setRenderHints(painter.RenderHint.Antialiasing | painter.RenderHint.SmoothPixmapTransform, False)
+        painter.setRenderHints(
+            painter.RenderHint.Antialiasing | painter.RenderHint.SmoothPixmapTransform,
+            False,
+        )
 
         image = QtGui.QImage(
             image_data,
