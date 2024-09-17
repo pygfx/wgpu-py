@@ -17,6 +17,17 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.18.1] - 17-09-2024
+
+Added:
+
+* Add support for push constants (a wgpu native extension).
+
+Fixed:
+
+* Fixed jupyter gui backend.
+
+
 ### [v0.18.0] - 16-09-2024
 
 Added:
