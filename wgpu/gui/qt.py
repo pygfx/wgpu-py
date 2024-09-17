@@ -140,12 +140,11 @@ enable_hidpi()
 class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
 
-    def __init__(self, *args, **kwargs):
-        draw_to_screen = kwargs.pop("draw_to_screen", True)
+    def __init__(self, *args, draw_to_screen=True, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._raw_surface_id = self._get_surface_id()
-        self._draw_to_screen = bool(self._raw_surface_id) and draw_to_screen
+        self._draw_to_screen = draw_to_screen and bool(self._raw_surface_id)
 
         self.setAttribute(WA_PaintOnScreen, self._draw_to_screen)
         self.setAutoFillBackground(False)
@@ -402,12 +401,12 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     # size can be set to subpixel (logical) values, without being able to
     # detect this. See https://github.com/pygfx/wgpu-py/pull/68
 
-    def __init__(self, *, size=None, title=None, max_fps=30, **kwargs):
+    def __init__(
+        self, *, size=None, title=None, max_fps=30, draw_to_screen=True, **kwargs
+    ):
         # When using Qt, there needs to be an
         # application before any widget is created
         get_app()
-
-        draw_to_screen = kwargs.pop("draw_to_screen", False)
         super().__init__(**kwargs)
 
         self.setAttribute(WA_DeleteOnClose, True)
