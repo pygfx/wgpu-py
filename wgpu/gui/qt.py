@@ -9,6 +9,7 @@ import importlib
 
 from .base import WgpuCanvasBase, WgpuAutoGui
 from ._gui_utils import (
+    logger,
     SYSTEM_IS_WAYLAND,
     get_alt_x11_display,
     weakbind,
@@ -133,6 +134,10 @@ def enable_hidpi():
 # needed for wgpu, so not our responsibility (some users may NOT want it set).
 enable_hidpi()
 
+_show_image_method_warning = (
+    "Qt falling back to offscreen rendering, which is less performant."
+)
+
 
 class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
@@ -194,10 +199,14 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                 }
 
     def get_surface_info(self):
+        global _show_image_method_warning
         if self._draw_to_screen and self._raw_surface_info:
             info = {"method": "screen"}
             info.update(self._raw_surface_info)
         else:
+            if _show_image_method_warning:
+                logger.warn(_show_image_method_warning)
+                _show_image_method_warning = None
             info = {
                 "method": "image",
                 "formats": ["rgba8unorm-srgb", "rgba8unorm"],

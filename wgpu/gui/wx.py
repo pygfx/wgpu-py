@@ -10,6 +10,7 @@ from typing import Optional
 import wx
 
 from ._gui_utils import (
+    logger,
     SYSTEM_IS_WAYLAND,
     get_alt_x11_display,
     weakbind,
@@ -111,6 +112,11 @@ def enable_hidpi():
 
 
 enable_hidpi()
+
+
+_show_image_method_warning = (
+    "wx falling back to offscreen rendering, which is less performant."
+)
 
 
 class TimerWithCallback(wx.Timer):
@@ -334,10 +340,14 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
             raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
 
     def get_surface_info(self):
+        global _show_image_method_warning
         if self._draw_to_screen and self._raw_surface_info:
             info = {"method": "screen"}
             info.update(self._raw_surface_info)
         else:
+            if _show_image_method_warning:
+                logger.warn(_show_image_method_warning)
+                _show_image_method_warning = None
             info = {
                 "method": "image",
                 "formats": ["rgba8unorm-srgb", "rgba8unorm"],
