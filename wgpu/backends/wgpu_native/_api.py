@@ -234,7 +234,7 @@ class GPU(classes.GPU):
         # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
-            surface_id = canvas._surface_id
+            surface_id = canvas._surface_id  # can still be NULL
 
         # ----- Select backend
 
@@ -710,8 +710,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         self._drop_texture()
         if self._surface_id is not None and libf is not None:
             self._surface_id, surface_id = None, self._surface_id
-            # H: void f(WGPUSurface surface)
-            libf.wgpuSurfaceRelease(surface_id)
+            if surface_id:  # is not NULL
+                # H: void f(WGPUSurface surface)
+                libf.wgpuSurfaceRelease(surface_id)
 
 
 class GPUObjectBase(classes.GPUObjectBase):
