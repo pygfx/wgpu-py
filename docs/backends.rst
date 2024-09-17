@@ -59,40 +59,11 @@ The wgpu_native backend provides a few extra functionalities:
     :return: Device
     :rtype: wgpu.GPUDevice
 
-There are two functions that allow you to perform multiple draw calls at once.
-Both require that you enable the feature "multi-draw-indirect".
 The wgpu_native backend provides support for push constants.
 Since WebGPU does not support this feature, documentation on its use is hard to find.
 A full explanation of push constants and its use in Vulkan can be found
 `here <https://vkguide.dev/docs/chapter-3/push_constants/>`_.
 Using push constants in WGPU closely follows the Vulkan model.
-
-Typically, these calls do not reduce work or increase parallelism on the GPU. Rather
-they reduce driver overhead on the CPU.
-
-.. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
-
-     Equivalent to::
-        for i in range(count):
-            render_pass_encoder.draw_indirect(buffer, offset + i * 16)
-
-    :param render_pass_encoder: The current render pass encoder.
-    :param buffer: The indirect buffer containing the arguments.
-    :param offset: The byte offset in the indirect buffer containing the first argument.
-    :param count: The number of draw operations to perform.
-
-.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
-
-     Equivalent to::
-        for i in range(count):
-            render_pass_encoder.draw_indexed_indirect(buffer, offset + i * 2-)
-
-
-    :param render_pass_encoder: The current render pass encoder.
-    :param buffer: The indirect buffer containing the arguments.
-    :param offset: The byte offset in the indirect buffer containing the first argument.
-    :param count: The number of draw operations to perform.
-
 
 The advantage of push constants is that they are typically faster to update than uniform buffers.
 Modifications to push constants are included in the command encoder; updating a uniform
@@ -184,6 +155,36 @@ bytes you wish to change.
     :param size_in_bytes: The number of bytes to copy from the ata
     :param data: The data to copy to the buffer
     :param data_offset: The starting offset in the data at which to begin copying.
+
+
+There are two functions that allow you to perform multiple draw calls at once.
+Both require that you enable the feature "multi-draw-indirect".
+
+Typically, these calls do not reduce work or increase parallelism on the GPU. Rather
+they reduce driver overhead on the CPU.
+
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
+
+     Equivalent to::
+        for i in range(count):
+            render_pass_encoder.draw_indirect(buffer, offset + i * 16)
+
+    :param render_pass_encoder: The current render pass encoder.
+    :param buffer: The indirect buffer containing the arguments.
+    :param offset: The byte offset in the indirect buffer containing the first argument.
+    :param count: The number of draw operations to perform.
+
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
+
+     Equivalent to::
+        for i in range(count):
+            render_pass_encoder.draw_indexed_indirect(buffer, offset + i * 2-)
+
+
+    :param render_pass_encoder: The current render pass encoder.
+    :param buffer: The indirect buffer containing the arguments.
+    :param offset: The byte offset in the indirect buffer containing the first argument.
+    :param count: The number of draw operations to perform.
 
 
 The js_webgpu backend
