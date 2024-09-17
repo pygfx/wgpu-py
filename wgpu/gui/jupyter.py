@@ -3,7 +3,6 @@ Support for rendering in a Jupyter widget. Provides a widget subclass that
 can be used as cell output, or embedded in a ipywidgets gui.
 """
 
-from collections import defaultdict
 import weakref
 import asyncio
 
@@ -29,7 +28,6 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvasBase, RemoteFrameBuffer)
         self._logical_size = 0, 0
         self._is_closed = False
         self._request_draw_timer_running = False
-        self._event_handlers = defaultdict(set)
 
         # Register so this can be display'ed when run() is called
         pending_jupyter_canvases.append(weakref.ref(self))
