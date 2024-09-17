@@ -52,18 +52,23 @@ def download_file(url, filename):
 
 
 def extract_file(zip_filename, member, path):
+    # Read file from archive, find it no matter the folder structure
     z = ZipFile(zip_filename)
-    os.makedirs(path, exist_ok=True)
-    z.extract(member, path=path)
+    flat_map = {os.path.basename(fi.filename): fi.filename for fi in z.filelist}
+    bb = z.read(flat_map[member])
+    # Make newlines consistent with Git rules etc.
     if member.endswith(".h") and FORCE_SIMPLE_NEWLINES:
-        filename = os.path.join(path, member)
-        bb = open(filename, "rb").read()
-        with open(filename, "wb") as f:
-            f.write(bb.replace(b"\r\n", b"\n"))
+        bb = bb.replace(b"\r\n", b"\n")
+    # Write to disk
+    os.makedirs(path, exist_ok=True)
+    with open(os.path.join(path, member), "wb") as f:
+        f.write(bb)
 
 
 def get_os_string():
-    if sys.platform.startswith("win"):
+    if os.environ.get("CIBUILDWHEEL") == "1" and os.getenv("CIBW_PLATFORM"):
+        return os.getenv("CIBW_PLATFORM")
+    elif sys.platform.startswith("win"):
         return "windows"
     elif sys.platform.startswith("darwin"):
         return "macos"
@@ -81,24 +86,46 @@ def get_arch():
     is_64_bit = sys.maxsize > 2**32
     machine = platform.machine()
 
-    # See if this is run by cibuildwheel and check to see if ARCHFLAGS is
-    # specified (only done on macOS). This allows to select the proper binaries.
-    # For specifics of CIBUILDWHEEL and macOS build envs, see:
-    # https://github.com/pypa/cibuildwheel/blob/4307b52ff28b631519d38bfa0dd09d6a9b39a81e/cibuildwheel/macos.py#L277
-    if os.environ.get("CIBUILDWHEEL") == "1" and "ARCHFLAGS" in os.environ:
-        archflags = os.environ["ARCHFLAGS"]
-        return "aarch64" if "arm64" in archflags else "x86_64"
-
     if machine == "armv7l":
         # Raspberry pi
-        return "armv7"
+        detected_arch = "armv7"
     elif is_64_bit and machine.startswith(("arm", "aarch64")):
         # Includes MacOS M1, arm linux, ...
-        return "aarch64"
+        detected_arch = "aarch64"
     elif is_64_bit:
-        return "x86_64"
+        detected_arch = "x86_64"
     else:
-        return "i686"
+        detected_arch = "i686"
+
+    if os.environ.get("CIBUILDWHEEL") == "1":
+        # When running in cibuildwheel, we derive the intended arch from
+        # an env var (the same one that cibuildwheel uses) that we set in cd.yml.
+        cibw_arch = os.getenv("CIBW_ARCHS")  # must be singular
+        if not cibw_arch:
+            # Linux builds run on Docker, so env is not visible
+            cibw_arch = detected_arch
+        elif "," in cibw_arch:
+            raise RuntimeError("CIBW_ARCHS must have a single arch")
+        arch_map = {
+            "windows": {
+                "AMD64": "x86_64",
+                "ARM64": "aarch64",
+                "x86": "i686",
+            },
+            "macos": {
+                "arm64": "aarch64",
+                "x86_64": "x86_64",
+            },
+            "linux": {
+                "x86_64": "x86_64",
+                "aarch64": "aarch64",
+                "i868": "i686",
+            },
+        }
+        maps_for_os = arch_map[get_os_string()]
+        return maps_for_os[cibw_arch]
+
+    return detected_arch
 
 
 def main(version, os_string, arch, upstream):
