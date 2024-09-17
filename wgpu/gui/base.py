@@ -80,6 +80,12 @@ class WgpuCanvasInterface:
         return self._canvas_context
 
     def present_image(self, image, **kwargs):
+        """Consume the final rendered image.
+
+        This is called when using the "image" method, see ``get_surface_info()``.
+        Canvases that don't support offscreen rendering don't need to implement
+        this method.
+        """
         raise NotImplementedError()
 
 
