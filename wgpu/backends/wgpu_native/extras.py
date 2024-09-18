@@ -14,7 +14,7 @@ def enumerate_adapters():
     raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters() instead.")
 
 
-def request_device_tracing(
+def request_device(
     adapter,
     trace_path,
     *,
