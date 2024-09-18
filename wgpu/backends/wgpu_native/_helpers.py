@@ -202,15 +202,17 @@ def get_surface_id_from_canvas(canvas):
 # The functions below are copied from codegen/utils.py
 
 
-def to_snake_case(name):
+def to_snake_case(name, separator="_"):
     """Convert a name from camelCase to snake_case. Names that already are
     snake_case remain the same.
     """
     name2 = ""
     for c in name:
         c2 = c.lower()
-        if c2 != c and len(name2) > 0 and name2[-1] not in "_123":
-            name2 += "_"
+        if c2 != c and len(name2) > 0:
+            prev = name2[-1]
+            if prev not in "123" and prev != separator:
+                name2 += separator
         name2 += c2
     return name2
 

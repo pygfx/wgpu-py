@@ -424,16 +424,46 @@ def test_features_are_legal():
     )
     # We can also use underscore
     assert are_features_wgpu_legal(["push_constants", "vertex_writable_storage"])
+    # We can also use camel case
+    assert are_features_wgpu_legal(["PushConstants", "VertexWritableStorage"])
 
 
 def test_features_are_illegal():
-    # not camel Case
-    assert not are_features_wgpu_legal(["pushConstants"])
     # writable is misspelled
     assert not are_features_wgpu_legal(
         ["multi-draw-indirect", "vertex-writeable-storage"]
     )
     assert not are_features_wgpu_legal(["my-made-up-feature"])
+
+
+def are_limits_wgpu_legal(limits):
+    """Returns true if the list of features is legal. Determining whether a specific
+    set of features is implemented on a particular device would make the tests fragile,
+    so we only verify that the names are legal feature names."""
+    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+    try:
+        adapter.request_device(required_limits=limits)
+        return True
+    except RuntimeError as e:
+        assert "Unsupported features were requested" in str(e)
+        return True
+    except KeyError:
+        return False
+
+
+def test_limits_are_legal():
+    # A standard feature.  Probably exists
+    assert are_limits_wgpu_legal({"max-bind-groups": 8})
+    # Two common extension features
+    assert are_limits_wgpu_legal({"max-push-constant-size": 128})
+    # We can also use underscore
+    assert are_limits_wgpu_legal({"max_bind_groups": 8, "max_push_constant_size": 128})
+    # We can also use camel case
+    assert are_limits_wgpu_legal({"maxBindGroups": 8, "maxPushConstantSize": 128})
+
+
+def test_limits_are_not_legal():
+    assert not are_limits_wgpu_legal({"max-bind-group": 8})
 
 
 if __name__ == "__main__":
