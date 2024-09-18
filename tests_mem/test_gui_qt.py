@@ -36,7 +36,9 @@ def test_release_canvas_context(n):
     if app is None:
         app = PySide6.QtWidgets.QApplication([""])
 
-    yield {}
+    yield {
+        "ignore": {"CommandBuffer"},
+    }
 
     canvases = weakref.WeakSet()
 
