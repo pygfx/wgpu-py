@@ -842,7 +842,30 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
 
 class GPUObjectBase(classes.GPUObjectBase):
-    pass
+    def _release(self):
+        if self._internal is not None and libf is not None:
+            self._internal, internal = None, self._internal
+            # H: void wgpuDeviceRelease(WGPUDevice device)
+            # H: void wgpuBufferRelease(WGPUBuffer buffer)
+            # H: void wgpuTextureRelease(WGPUTexture texture)
+            # H: void wgpuTextureViewRelease(WGPUTextureView textureView)
+            # H: void wgpuSamplerRelease(WGPUSampler sampler)
+            # H: void wgpuBindGroupLayoutRelease(WGPUBindGroupLayout bindGroupLayout)
+            # H: void wgpuBindGroupRelease(WGPUBindGroup bindGroup)
+            # H: void wgpuPipelineLayoutRelease(WGPUPipelineLayout pipelineLayout)
+            # H: void wgpuShaderModuleRelease(WGPUShaderModule shaderModule)
+            # H: void wgpuComputePipelineRelease(WGPUComputePipeline computePipeline)
+            # H: void wgpuRenderPipelineRelease(WGPURenderPipeline renderPipeline)
+            # H: void wgpuCommandBufferRelease(WGPUCommandBuffer commandBuffer)
+            # H: void wgpuCommandEncoderRelease(WGPUCommandEncoder commandEncoder)
+            # H: void wgpuComputePassEncoderRelease(WGPUComputePassEncoder computePassEncoder)
+            # H: void wgpuRenderPassEncoderRelease(WGPURenderPassEncoder renderPassEncoder)
+            # H: void wgpuRenderBundleEncoderRelease(WGPURenderBundleEncoder renderBundleEncoder)
+            # H: void wgpuQueueRelease(WGPUQueue queue)
+            # H: void wgpuRenderBundleRelease(WGPURenderBundle renderBundle)
+            # H: void wgpuQuerySetRelease(WGPUQuerySet querySet)
+            function = type(self)._release_function
+            function(internal)
 
 
 class GPUAdapterInfo(classes.GPUAdapterInfo):
@@ -1072,6 +1095,9 @@ class GPUAdapter(classes.GPUAdapter):
 
 
 class GPUDevice(classes.GPUDevice, GPUObjectBase):
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuDeviceRelease
+
     def __init__(self, label, internal, adapter, features, limits, queue):
         super().__init__(label, internal, adapter, features, limits, queue)
 
@@ -1891,15 +1917,15 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
     def _release(self):
         if self._queue is not None:
-            self._queue._release()
-            self._queue = None
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUDevice device)
-            libf.wgpuDeviceRelease(internal)
+            queue, self._queue = self._queue, None
+            queue._release()
+        super()._release()
 
 
 class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuBufferRelease
+
     def __init__(self, label, internal, device, size, usage, map_state):
         super().__init__(label, internal, device, size, usage, map_state)
 
@@ -2121,13 +2147,13 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
     def _release(self):
         self._release_memoryviews()
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUBuffer buffer)
-            libf.wgpuBufferRelease(internal)
+        super()._release()
 
 
 class GPUTexture(classes.GPUTexture, GPUObjectBase):
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuTextureRelease
+
     def create_view(
         self,
         *,
@@ -2185,54 +2211,36 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             # H: void f(WGPUTexture texture)
             libf.wgpuTextureDestroy(internal)
 
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUTexture texture)
-            libf.wgpuTextureRelease(internal)
-
 
 class GPUTextureView(classes.GPUTextureView, GPUObjectBase):
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUTextureView textureView)
-            libf.wgpuTextureViewRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuTextureViewRelease
 
 
 class GPUSampler(classes.GPUSampler, GPUObjectBase):
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUSampler sampler)
-            libf.wgpuSamplerRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuSamplerRelease
 
 
 class GPUBindGroupLayout(classes.GPUBindGroupLayout, GPUObjectBase):
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUBindGroupLayout bindGroupLayout)
-            libf.wgpuBindGroupLayoutRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuBindGroupLayoutRelease
 
 
 class GPUBindGroup(classes.GPUBindGroup, GPUObjectBase):
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUBindGroup bindGroup)
-            libf.wgpuBindGroupRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuBindGroupRelease
 
 
 class GPUPipelineLayout(classes.GPUPipelineLayout, GPUObjectBase):
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUPipelineLayout pipelineLayout)
-            libf.wgpuPipelineLayoutRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuPipelineLayoutRelease
 
 
 class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuShaderModuleRelease
+
     def get_compilation_info(self):
         # Here's a little setup to implement this method. Unfortunately,
         # this is not yet implemented in wgpu-native. Another problem
@@ -2264,12 +2272,6 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
         return []
 
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUShaderModule shaderModule)
-            libf.wgpuShaderModuleRelease(internal)
-
 
 class GPUPipelineBase(classes.GPUPipelineBase):
     def get_bind_group_layout(self, index):
@@ -2286,30 +2288,18 @@ class GPUPipelineBase(classes.GPUPipelineBase):
 
 
 class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUComputePipeline computePipeline)
-            libf.wgpuComputePipelineRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuComputePipelineRelease
 
 
 class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPURenderPipeline renderPipeline)
-            libf.wgpuRenderPipelineRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuRenderPipelineRelease
 
 
 class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
-    def _release(self):
-        # Note that command buffers get destroyed when they are submitted.
-        # In earlier versions we had to take this into account by setting
-        # _internal to None. That seems not necessary anymore.
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUCommandBuffer commandBuffer)
-            libf.wgpuCommandBufferRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuCommandBufferRelease
 
 
 class GPUCommandsMixin(classes.GPUCommandsMixin):
@@ -2464,6 +2454,9 @@ class GPUCommandEncoder(
     _push_debug_group_function = libf.wgpuCommandEncoderPushDebugGroup
     _pop_debug_group_function = libf.wgpuCommandEncoderPopDebugGroup
     _insert_debug_marker_function = libf.wgpuCommandEncoderInsertDebugMarker
+
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuCommandEncoderRelease
 
     def begin_compute_pass(
         self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
@@ -2857,14 +2850,6 @@ class GPUCommandEncoder(
             int(destination_offset),
         )
 
-    def _release(self):
-        # Note that the native object gets destroyed on finish.
-        # Also see GPUCommandBuffer._release()
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUCommandEncoder commandEncoder)
-            libf.wgpuCommandEncoderRelease(internal)
-
 
 class GPUComputePassEncoder(
     classes.GPUComputePassEncoder,
@@ -2881,6 +2866,9 @@ class GPUComputePassEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
+
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuComputePassEncoderRelease
 
     _ended = False
 
@@ -2909,13 +2897,8 @@ class GPUComputePassEncoder(
         libf.wgpuComputePassEncoderEnd(self._internal)
         self._ended = True
         # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
+        # As of wgpu-native v22.1.0.5, this bug is still present.
         self._release()
-
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUComputePassEncoder computePassEncoder)
-            libf.wgpuComputePassEncoderRelease(internal)
 
 
 class GPURenderPassEncoder(
@@ -2942,6 +2925,9 @@ class GPURenderPassEncoder(
     _draw_indirect_function = libf.wgpuRenderPassEncoderDrawIndirect
     _draw_indexed_function = libf.wgpuRenderPassEncoderDrawIndexed
     _draw_indexed_indirect_function = libf.wgpuRenderPassEncoderDrawIndexedIndirect
+
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuRenderPassEncoderRelease
 
     _ended = False
 
@@ -2985,6 +2971,7 @@ class GPURenderPassEncoder(
         libf.wgpuRenderPassEncoderEnd(self._internal)
         self._ended = True
         # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
+        # As of wgpu-native v22.1.0.5, this bug is still present.
         self._release()
 
     def execute_bundles(self, bundles):
@@ -3032,12 +3019,6 @@ class GPURenderPassEncoder(
             self._internal, int(visibility), offset, size, c_data + data_offset
         )
 
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPURenderPassEncoder renderPassEncoder)
-            libf.wgpuRenderPassEncoderRelease(internal)
-
 
 class GPURenderBundleEncoder(
     classes.GPURenderBundleEncoder,
@@ -3064,6 +3045,9 @@ class GPURenderBundleEncoder(
     _draw_indexed_function = libf.wgpuRenderBundleEncoderDrawIndexed
     _draw_indexed_indirect_function = libf.wgpuRenderBundleEncoderDrawIndexedIndirect
 
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuRenderBundleEncoderRelease
+
     def finish(self, *, label=""):
         # H: nextInChain: WGPUChainedStruct *, label: char *
         struct = new_struct_p(
@@ -3073,16 +3057,15 @@ class GPURenderBundleEncoder(
         )
         # H: WGPURenderBundle f(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderBundleDescriptor const * descriptor)
         id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
+        # The other encoders require that we call self._release() when
+        # we're done with it.  But that doesn't seem to be an issue here.
         return GPURenderBundle(label, id, self._device)
-
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPURenderBundleEncoder renderBundleEncoder)
-            libf.wgpuRenderBundleEncoderRelease(internal)
 
 
 class GPUQueue(classes.GPUQueue, GPUObjectBase):
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuQueueRelease
+
     def submit(self, command_buffers):
         command_buffer_ids = [cb._internal for cb in command_buffers]
         c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
@@ -3301,34 +3284,22 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         if status != 0:
             raise RuntimeError(f"Queue work done status: {status}")
 
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUQueue queue)
-            libf.wgpuQueueRelease(internal)
-
 
 class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPURenderBundle renderBundle)
-            libf.wgpuRenderBundleRelease(internal)
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuRenderBundleRelease
 
 
 class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
+    # GPUObjectBaseMixin
+    _release_function = libf.wgpuQuerySetRelease
+
     def destroy(self):
         # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUQuerySet querySet)
             libf.wgpuQuerySetDestroy(internal)
-
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPUQuerySet querySet)
-            libf.wgpuQuerySetRelease(internal)
 
 
 # %% Subclasses that don't need anything else
