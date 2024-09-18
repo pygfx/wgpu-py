@@ -6,6 +6,11 @@ from ._gui_utils import log_exception
 
 
 def create_canvas_context(canvas):
+    """ Create a GPUCanvasContext for the given canvas.
+
+    Helper function to keep the implementation of WgpuCanvasInterface
+    as small as possible.
+    """
     backend_module = sys.modules["wgpu"].gpu.__module__
     if backend_module == "wgpu._classes":
         raise RuntimeError(
@@ -32,9 +37,9 @@ class WgpuCanvasInterface:
     def get_surface_info(self):
         """Get information about the surface to render to.
 
-        The result is a small dict, used by the canvas-context to determine how
-        the rendered result should be presented to the canvas. There are two
-        possible methods.
+        It must return a small dict, used by the canvas-context to determine
+        how the rendered result should be presented to the canvas. There are
+        two possible methods.
 
         If the ``method`` field is "screen", the context will render directly
         to a surface representing the region on the screen. The dict should
@@ -44,15 +49,16 @@ class WgpuCanvasInterface:
         by wgpu to obtain the required surface id.
 
         When the ``method`` field is "image", the context will render to a
-        texture, load the result into RAM, and call ``canvas.present_image()``
+        texture, download the result to RAM, and call ``canvas.present_image()``
         with the image data. Additional info (like format) is passed as kwargs.
         This method enables various types of canvases (including remote ones),
         but note that it has a performance penalty compared to rendering
         directly to the screen.
 
         The dict can further contain fields ``formats`` and ``alpha_modes`` to
-        define the canvas capabilities. By default formats is
-        ``["rgba8unorm-srgb", "rgba8unorm"]``, and alpha_modes is ``["opaque"]``.
+        define the canvas capabilities. For the "image" method, the default
+        formats is ``["rgba8unorm-srgb", "rgba8unorm"]``, and the default
+        alpha_modes is ``["opaque"]``.
         """
         raise NotImplementedError()
 
