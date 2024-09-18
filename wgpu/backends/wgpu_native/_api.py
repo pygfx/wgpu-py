@@ -3019,6 +3019,24 @@ class GPURenderPassEncoder(
             self._internal, int(visibility), offset, size, c_data + data_offset
         )
 
+    def _multi_draw_indirect(self, buffer, offset, count):
+        # H: void f(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count)
+        libf.wgpuRenderPassEncoderMultiDrawIndirect(
+            self._internal, buffer._internal, int(offset), int(count)
+        )
+
+    def _multi_draw_indexed_indirect(self, buffer, offset, count):
+        # H: void f(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count)
+        libf.wgpuRenderPassEncoderMultiDrawIndexedIndirect(
+            self._internal, buffer._internal, int(offset), int(count)
+        )
+
+    def _release(self):
+        if self._internal is not None and libf is not None:
+            self._internal, internal = None, self._internal
+            # H: void f(WGPURenderPassEncoder renderPassEncoder)
+            libf.wgpuRenderPassEncoderRelease(internal)
+
 
 class GPURenderBundleEncoder(
     classes.GPURenderBundleEncoder,
