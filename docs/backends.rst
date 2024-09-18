@@ -44,11 +44,13 @@ It also works out of the box, because the wgpu-native DLL is shipped with wgpu-p
 
 The wgpu_native backend provides a few extra functionalities:
 
-.. py:function:: wgpu.backends.wgpu_native.request_device_tracing(adapter, trace_path, *, label="", required_features, required_limits, default_queue)
+.. py:function:: wgpu.backends.wgpu_native.request_device(adapter, trace_path, *, label="", required_features, required_limits, default_queue)
 
     An alternative to :func:`wgpu.GPUAdapter.request_adapter`, that streams a trace
     of all low level calls to disk, so the visualization can be replayed (also on other systems),
     investigated, and debugged.
+
+    The trace_path argument is ignored on drivers that do not support tracing.
 
     :param adapter: The adapter to create a device for.
     :param trace_path: The path to an (empty) directory. Is created if it does not exist.
