@@ -410,9 +410,9 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         painter.drawImage(rect2, image, rect1)
 
         # Uncomment for testing purposes
-        painter.setPen(QtGui.QColor("#0000ff"))
-        painter.setFont(QtGui.QFont("Arial", 30))
-        painter.drawText(100, 100, "This is an image")
+        # painter.setPen(QtGui.QColor("#0000ff"))
+        # painter.setFont(QtGui.QFont("Arial", 30))
+        # painter.drawText(100, 100, "This is an image")
 
 
 class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
