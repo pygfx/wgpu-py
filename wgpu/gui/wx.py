@@ -137,8 +137,8 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
     def __init__(self, *args, draw_to_screen=True, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._raw_surface_info = self._get_raw_surface_info()
-        self._draw_to_screen = draw_to_screen and bool(self._raw_surface_info)
+        self._surface_ids = self._get_surface_ids()
+        self._draw_to_screen = draw_to_screen and bool(self._surface_ids)
 
         # A timer for limiting fps
         self._request_draw_timer = TimerWithCallback(self.Refresh)
@@ -316,7 +316,7 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
     # Methods that we add from wgpu
 
-    def _get_raw_surface_info(self):
+    def _get_surface_ids(self):
         if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
             return {
                 "window": int(self.GetHandle()),
@@ -339,11 +339,11 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
         else:
             raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
 
-    def get_surface_info(self):
+    def get_present_info(self):
         global _show_image_method_warning
-        if self._draw_to_screen and self._raw_surface_info:
+        if self._draw_to_screen and self._surface_ids:
             info = {"method": "screen"}
-            info.update(self._raw_surface_info)
+            info.update(self._surface_ids)
         else:
             if _show_image_method_warning:
                 logger.warn(_show_image_method_warning)
@@ -445,8 +445,8 @@ class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
 
     # Methods that we add from wgpu
 
-    def get_surface_info(self):
-        return self._subwidget.get_surface_info()
+    def get_present_info(self):
+        return self._subwidget.get_present_info()
 
     def get_pixel_ratio(self):
         return self._subwidget.get_pixel_ratio()

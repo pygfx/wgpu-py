@@ -38,7 +38,7 @@ def test_base_canvas_context():
     assert not issubclass(wgpu.gui.WgpuCanvasInterface, wgpu.GPUCanvasContext)
     assert hasattr(wgpu.gui.WgpuCanvasInterface, "get_context")
     canvas = wgpu.gui.WgpuCanvasInterface()
-    # Cannot instantiate, because get_surface_info is not implemented
+    # Cannot instantiate, because get_present_info is not implemented
     with raises(NotImplementedError):
         wgpu.GPUCanvasContext(canvas)
 
@@ -86,7 +86,7 @@ class MyOffscreenCanvas(wgpu.gui.WgpuCanvasBase):
         self.frame_count = 0
         self.physical_size = 100, 100
 
-    def get_surface_info(self):
+    def get_present_info(self):
         return {
             "method": "image",
             "formats": ["rgba8unorm-srgb"],

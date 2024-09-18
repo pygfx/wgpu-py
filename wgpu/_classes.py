@@ -189,11 +189,11 @@ class GPUCanvasContext:
         self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
 
-        # The configuration from the canvas, obtained with canvas.get_surface_info()
-        self._surface_info = canvas.get_surface_info()
-        if self._surface_info.get("method", None) not in ("screen", "image"):
+        # The configuration from the canvas, obtained with canvas.get_present_info()
+        self._present_info = canvas.get_present_info()
+        if self._present_info.get("method", None) not in ("screen", "image"):
             raise RuntimeError(
-                "canvas.get_surface_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
+                "canvas.get_present_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
             )
 
         # Surface capabilities. Stored the first time it is obtained
@@ -219,7 +219,7 @@ class GPUCanvasContext:
         """Get dict of capabilities and cache the result."""
         if self._capabilities is None:
             self._capabilities = {}
-            if self._surface_info["method"] == "screen":
+            if self._present_info["method"] == "screen":
                 # Query capabilities from the surface
                 self._capabilities.update(self._get_capabilities_screen(adapter))
             else:
@@ -231,8 +231,8 @@ class GPUCanvasContext:
                 }
             # If capabilities were provided via surface info, overload them!
             for key in ["formats", "alpha_modes"]:
-                if key in self._surface_info:
-                    self._capabilities[key] = self._surface_info[key]
+                if key in self._present_info:
+                    self._capabilities[key] = self._present_info[key]
             # Derived defaults
             if "view_formats" not in self._capabilities:
                 self._capabilities["view_formats"] = self._capabilities["formats"]
@@ -341,7 +341,7 @@ class GPUCanvasContext:
             "alpha_mode": alpha_mode,
         }
 
-        if self._surface_info["method"] == "screen":
+        if self._present_info["method"] == "screen":
             self._configure_screen(**self._config)
 
     def _configure_screen(
@@ -362,7 +362,7 @@ class GPUCanvasContext:
         """Removes the presentation context configuration.
         Destroys any textures produced while configured.
         """
-        if self._surface_info["method"] == "screen":
+        if self._present_info["method"] == "screen":
             self._unconfigure_screen()
         self._config = None
         self._drop_texture()
@@ -385,7 +385,7 @@ class GPUCanvasContext:
         # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
 
         if self._texture is None:
-            if self._surface_info["method"] == "screen":
+            if self._present_info["method"] == "screen":
                 self._texture = self._create_texture_screen()
             else:
                 self._texture = self._create_texture_image()
@@ -434,7 +434,7 @@ class GPUCanvasContext:
             logger.debug(msg)
             return
 
-        if self._surface_info["method"] == "screen":
+        if self._present_info["method"] == "screen":
             self._present_screen()
         else:
             self._present_image()

@@ -104,7 +104,7 @@ KEY_MAP_MOD = {
 }
 
 
-def get_surface_info(window):
+def get_glfw_present_info(window):
 
     if sys.platform.startswith("win"):
         return {
@@ -303,8 +303,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
     # API
 
-    def get_surface_info(self):
-        return get_surface_info(self._window)
+    def get_present_info(self):
+        return get_glfw_present_info(self._window)
 
     def get_pixel_ratio(self):
         return self._pixel_ratio

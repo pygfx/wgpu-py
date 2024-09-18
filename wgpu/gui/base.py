@@ -6,7 +6,7 @@ from ._gui_utils import log_exception
 
 
 def create_canvas_context(canvas):
-    """ Create a GPUCanvasContext for the given canvas.
+    """Create a GPUCanvasContext for the given canvas.
 
     Helper function to keep the implementation of WgpuCanvasInterface
     as small as possible.
@@ -34,7 +34,7 @@ class WgpuCanvasInterface:
         super().__init__(*args, **kwargs)
         self._canvas_context = None
 
-    def get_surface_info(self):
+    def get_present_info(self):
         """Get information about the surface to render to.
 
         It must return a small dict, used by the canvas-context to determine
@@ -86,7 +86,7 @@ class WgpuCanvasInterface:
     def present_image(self, image, **kwargs):
         """Consume the final rendered image.
 
-        This is called when using the "image" method, see ``get_surface_info()``.
+        This is called when using the "image" method, see ``get_present_info()``.
         Canvases that don't support offscreen rendering don't need to implement
         this method.
         """

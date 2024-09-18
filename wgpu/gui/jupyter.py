@@ -92,7 +92,7 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, RemoteFrameBuffer):
 
     # Implementation needed for WgpuCanvasInterface
 
-    def get_surface_info(self):
+    def get_present_info(self):
         # Use a format that maps well to PNG: rgba8norm. Use srgb for
         # perseptive color mapping. This is the common colorspace for
         # e.g. png and jpg images. Most tools (browsers included) will

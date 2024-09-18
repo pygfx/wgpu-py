@@ -145,8 +145,8 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def __init__(self, *args, draw_to_screen=True, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._raw_surface_info = self._get_raw_surface_info()
-        self._draw_to_screen = draw_to_screen and bool(self._raw_surface_info)
+        self._surface_ids = self._get_surface_ids()
+        self._draw_to_screen = draw_to_screen and bool(self._surface_ids)
 
         self.setAttribute(WA_PaintOnScreen, self._draw_to_screen)
         self.setAutoFillBackground(False)
@@ -173,7 +173,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     # Methods that we add from wgpu (snake_case)
 
-    def _get_raw_surface_info(self):
+    def _get_surface_ids(self):
         if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
             return {
                 "window": int(self.winId()),
@@ -198,11 +198,11 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                     "display": int(get_alt_x11_display()),
                 }
 
-    def get_surface_info(self):
+    def get_present_info(self):
         global _show_image_method_warning
-        if self._draw_to_screen and self._raw_surface_info:
+        if self._draw_to_screen and self._surface_ids:
             info = {"method": "screen"}
-            info.update(self._raw_surface_info)
+            info.update(self._surface_ids)
         else:
             if _show_image_method_warning:
                 logger.warn(_show_image_method_warning)
@@ -469,8 +469,8 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def draw_frame(self, f):
         self._subwidget.draw_frame = f
 
-    def get_surface_info(self):
-        return self._subwidget.get_surface_info()
+    def get_present_info(self):
+        return self._subwidget.get_present_info()
 
     def get_pixel_ratio(self):
         return self._subwidget.get_pixel_ratio()
