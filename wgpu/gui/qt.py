@@ -142,13 +142,28 @@ _show_image_method_warning = (
 class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
 
-    def __init__(self, *args, draw_to_screen=True, **kwargs):
+    def __init__(self, *args, present_method=None, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Determine present method
         self._surface_ids = self._get_surface_ids()
-        self._draw_to_screen = draw_to_screen and bool(self._surface_ids)
+        if not present_method:
+            self._present_to_screen = True
+            if SYSTEM_IS_WAYLAND:
+                # Trying to render to screen on Wayland segfaults. This might be because
+                # the "display" is not the real display id. We can tell Qt to use
+                # XWayland, so we can use the X11 path. This worked at some point,
+                # but later this resulted in a Rust panic. So, until this is sorted
+                # out, we fall back to rendering via an image.
+                self._present_to_screen = False
+        elif present_method == "screen":
+            self._present_to_screen = True
+        elif present_method == "image":
+            self._present_to_screen = False
+        else:
+            raise ValueError(f"Invalid present_method {present_method}")
 
-        self.setAttribute(WA_PaintOnScreen, self._draw_to_screen)
+        self.setAttribute(WA_PaintOnScreen, self._present_to_screen)
         self.setAutoFillBackground(False)
         self.setAttribute(WA_DeleteOnClose, True)
         self.setAttribute(WA_InputMethodEnabled, True)
@@ -163,7 +178,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
-        if self._draw_to_screen:
+        if self._present_to_screen:
             return None
         else:
             return super().paintEngine()
@@ -179,18 +194,13 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                 "window": int(self.winId()),
             }
         elif sys.platform.startswith("linux"):
-            if SYSTEM_IS_WAYLAND:
-                # Trying to do it the Wayland way segfaults. This might be because
-                # the "display" is not the real display id. We can tell Qt to use
-                # XWayland, so we can use the X11 path. This worked at some point,
-                # but later this resulted in a Rust panic. So, until this is sorted
-                # out, we fall back to rendering via an image.
-                return None
-                # return {
-                #     "platform": "wayland",
-                #     "window": int(self.winId()),
-                #     "display": int(get_alt_wayland_display()),
-                # }
+            if False:
+                # We fall back to XWayland, see _gui_utils.py
+                return {
+                    "platform": "wayland",
+                    "window": int(self.winId()),
+                    "display": int(get_alt_wayland_display()),
+                }
             else:
                 return {
                     "platform": "x11",
@@ -200,7 +210,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def get_present_info(self):
         global _show_image_method_warning
-        if self._draw_to_screen and self._surface_ids:
+        if self._present_to_screen:
             info = {"method": "screen"}
             info.update(self._surface_ids)
         else:
@@ -424,7 +434,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     # detect this. See https://github.com/pygfx/wgpu-py/pull/68
 
     def __init__(
-        self, *, size=None, title=None, max_fps=30, draw_to_screen=True, **kwargs
+        self, *, size=None, title=None, max_fps=30, present_method=None, **kwargs
     ):
         # When using Qt, there needs to be an
         # application before any widget is created
@@ -437,7 +447,7 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setMouseTracking(True)
 
         self._subwidget = QWgpuWidget(
-            self, max_fps=max_fps, draw_to_screen=draw_to_screen
+            self, max_fps=max_fps, present_method=present_method
         )
         self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
 

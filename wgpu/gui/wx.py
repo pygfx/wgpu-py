@@ -134,11 +134,22 @@ class TimerWithCallback(wx.Timer):
 class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
     """A wx Window representing a wgpu canvas that can be embedded in a wx application."""
 
-    def __init__(self, *args, draw_to_screen=True, **kwargs):
+    def __init__(self, *args, present_method=None, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Determine present method
         self._surface_ids = self._get_surface_ids()
-        self._draw_to_screen = draw_to_screen and bool(self._surface_ids)
+        if not present_method:
+            self._present_to_screen = True
+            if SYSTEM_IS_WAYLAND:
+                # See comments in same place in qt.py
+                self._present_to_screen = False
+        elif present_method == "screen":
+            self._present_to_screen = True
+        elif present_method == "image":
+            self._present_to_screen = False
+        else:
+            raise ValueError(f"Invalid present_method {present_method}")
 
         # A timer for limiting fps
         self._request_draw_timer = TimerWithCallback(self.Refresh)
@@ -322,14 +333,13 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
                 "window": int(self.GetHandle()),
             }
         elif sys.platform.startswith("linux"):
-            if SYSTEM_IS_WAYLAND:
-                # Fallback to offscreen rendering. See comment in same place in qt.py.
-                return None
-                # return {
-                #     "platform": "wayland",
-                #     "window": int(self.GetHandle()),
-                #     "display": int(get_alt_wayland_display()),
-                # }
+            if False:
+                # We fall back to XWayland, see _gui_utils.py
+                return {
+                    "platform": "wayland",
+                    "window": int(self.GetHandle()),
+                    "display": int(get_alt_wayland_display()),
+                }
             else:
                 return {
                     "platform": "x11",
@@ -341,7 +351,7 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
 
     def get_present_info(self):
         global _show_image_method_warning
-        if self._draw_to_screen and self._surface_ids:
+        if self._present_to_screen and self._surface_ids:
             info = {"method": "screen"}
             info.update(self._surface_ids)
         else:
@@ -420,7 +430,7 @@ class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
         size=None,
         title=None,
         max_fps=30,
-        draw_to_screen=True,
+        present_method=None,
         **kwargs,
     ):
         get_app()
@@ -430,7 +440,7 @@ class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
         self.SetTitle(title or "wx wgpu canvas")
 
         self._subwidget = WxWgpuWindow(
-            parent=self, max_fps=max_fps, draw_to_screen=draw_to_screen
+            parent=self, max_fps=max_fps, present_method=present_method
         )
         self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
