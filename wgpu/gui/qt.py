@@ -12,6 +12,7 @@ from ._gui_utils import (
     logger,
     SYSTEM_IS_WAYLAND,
     get_alt_x11_display,
+    get_alt_wayland_display,
     weakbind,
     get_imported_qt_lib,
 )
