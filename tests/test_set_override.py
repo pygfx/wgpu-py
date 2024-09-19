@@ -2,7 +2,7 @@ import pytest
 
 import wgpu.utils
 from tests.testutils import can_use_wgpu_lib, run_tests
-from wgpu import TextureFormat
+from wgpu import GPUValidationError, TextureFormat
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
@@ -197,10 +197,16 @@ def test_override_compute_constants(runner):
 
 def test_numbered_constants_must_be_overridden_by_number(runner):
     overrides = {"c": 23, "d": 24}
-    # This does absolutely nothing.  It doesn't even error.
-    assert [1, 2, 3, 0, 1, 2, 3, 0] == runner.run_test(
-        render=True, vertex_constants=overrides, fragment_constants=overrides
-    )
+    try:
+        # In naga, the bad constant is ignored.
+        # In the JS implementation, this throws an exception, which I think is the
+        # correct behavior.  So just in case this ever gets fixed, we accept either.
+        result = runner.run_test(
+            render=True, vertex_constants=overrides, fragment_constants=overrides
+        )
+    except GPUValidationError:
+        return
+    assert [1, 2, 3, 0, 1, 2, 3, 0] == result
 
 
 if __name__ == "__main__":

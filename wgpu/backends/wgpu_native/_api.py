@@ -3031,12 +3031,6 @@ class GPURenderPassEncoder(
             self._internal, buffer._internal, int(offset), int(count)
         )
 
-    def _release(self):
-        if self._internal is not None and libf is not None:
-            self._internal, internal = None, self._internal
-            # H: void f(WGPURenderPassEncoder renderPassEncoder)
-            libf.wgpuRenderPassEncoderRelease(internal)
-
 
 class GPURenderBundleEncoder(
     classes.GPURenderBundleEncoder,
