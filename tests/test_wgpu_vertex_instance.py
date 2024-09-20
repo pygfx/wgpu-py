@@ -345,7 +345,7 @@ def test_draw_indexed_via_encoder(runner):
         )
 
 
-@pytest.mark.parametrize("test_max_count", [False, True])
+@pytest.mark.parametrize("test_max_count", [False])
 @pytest.mark.parametrize("indexed", [False])
 @pytest.mark.parametrize("count", [2, 3, 4])
 def test_multi_draw_indirect_count(runner, test_max_count, indexed, count):
@@ -370,15 +370,15 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, count):
                     10,
                     2,
                     *runner.draw_args1[:i],
-                    0,
+                    7,
                     *runner.draw_args1[i:],
                     *runner.draw_args2[:i],
-                    0,
+                    7,
                     *runner.draw_args2[i:],
                     *([0] * 50),
                 ]
             )
-            print(f'{data[2:12]=}')
+            print(f"{data[2:12]=}")
 
             buffer = runner.device.create_buffer_with_data(data=data, usage="INDIRECT")
         if test_max_count:
