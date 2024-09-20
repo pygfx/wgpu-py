@@ -169,7 +169,7 @@ class Runner:
             # The zeros at the beginning are to test "offset".
             # The zeros at the end are because the _count methods require to buffer to
             # be at least byte_offset + 16 * max_count bytes long
-            data=np.uint32([0, 0, *self.draw_args1, *self.draw_args2, *([0] * 50)]),
+            data=np.uint32([10, 2, *self.draw_args1, *self.draw_args2, *([0] * 50)]),
             usage="INDIRECT",
         )
         self.draw_data_buffer_indexed = self.device.create_buffer_with_data(
@@ -177,7 +177,7 @@ class Runner:
             # The zeros at the end are because the _count methods require to buffer to
             # be at least byte_offset + 20 * max_count bytes long
             data=np.uint32(
-                [0, 0, *self.draw_indexed_args1, *self.draw_indexed_args2, *([0] * 50)]
+                [10, 2, *self.draw_indexed_args1, *self.draw_indexed_args2, *([0] * 50)]
             ),
             usage="INDIRECT",
         )
