@@ -169,7 +169,7 @@ class Runner:
             # The zeros at the beginning are to test "offset".
             # The zeros at the end are because the _count methods require to buffer to
             # be at least byte_offset + 16 * max_count bytes long
-            data=np.uint32([10, 2, *self.draw_args1, *self.draw_args2, *([0] * 50)]),
+            data=np.uint32([0, 0, *self.draw_args1, *self.draw_args2, *([0] * 50)]),
             usage="INDIRECT",
         )
         self.draw_data_buffer_indexed = self.device.create_buffer_with_data(
@@ -177,7 +177,7 @@ class Runner:
             # The zeros at the end are because the _count methods require to buffer to
             # be at least byte_offset + 20 * max_count bytes long
             data=np.uint32(
-                [10, 2, *self.draw_indexed_args1, *self.draw_indexed_args2, *([0] * 50)]
+                [0, 0, *self.draw_indexed_args1, *self.draw_indexed_args2, *([0] * 50)]
             ),
             usage="INDIRECT",
         )
@@ -358,11 +358,9 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bu
 
     print(f"{test_max_count=}, {indexed=} {deal_with_bug=}\n")
 
+    count_buffer_data = np.int32([10, 2])
     count_buffer = runner.device.create_buffer_with_data(
-        data=(np.int32([10, 2])), usage="INDIRECT"
-    )
-    zero_buffer = runner.device.create_buffer_with_data(
-        data=(np.int32([0, 0])), usage="INDIRECT"
+        data=(count_buffer_data), usage="INDIRECT"
     )
 
     def draw(encoder):
@@ -374,7 +372,7 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bu
             buffer = runner.draw_data_buffer
 
         if deal_with_bug:
-            encoder.copy_buffer_to_buffer(count_buffer, 0, buffer, 0, 8)
+            runner.device.write_buffer(buffer, 0, count_buffer_data, 8)
 
         if test_max_count:
             # We pull a count of 10, but we're limited by max_count to 2
@@ -391,10 +389,11 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bu
             count_buffer_offset=count_buffer_offset,
             max_count=max_count,
         )
-        if deal_with_bug:
-            encoder.copy_buffer_to_buffer(zero_buffer, 0, buffer, 0, 8)
 
-    runner.run_draw_test(draw, indexed)
+        try:
+            runner.run_draw_test(draw, indexed)
+        finally:
+            runner.device.write_buffer(buffer, 0, np.uint32(0, 0), 8)
 
 
 if __name__ == "__main__":
