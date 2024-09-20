@@ -35,7 +35,7 @@ jobs:
           python-version: '3.12'
       - name: Install dev dependencies
         run: |
-            python -m pip install --upgrade pip build hatchling requests
+            python -m pip install --upgrade pip build hatchling requests twine
       - name: Build wheels (and sdist)
         run: python tools/build_all_wheels.py
       - name: Twine check
