@@ -8,16 +8,18 @@ from wgpu import TextureFormat
 from wgpu.backends.wgpu_native.extras import (
     multi_draw_indexed_indirect,
     multi_draw_indirect,
+    multi_draw_indirect_count,
+    multi_draw_indexed_indirect_count,
 )
 
-MAX_INFO = 100
+MAX_INFO = 1000
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
 """
-The fundamental informartion about any of the many draw commands is the
+The fundamental information about any of the many draw commands is the
 <vertex_instance, instance_index> pair that is passed to the vertex shader. By using
 point-list topology, each call to the vertex shader turns into a single call to the
 fragment shader, where the pair is recorded.
@@ -68,7 +70,7 @@ BIND_GROUP_ENTRIES = [
 
 class Runner:
     REQUIRED_FEATURES = ["indirect-first-instance"]
-    OPTIONAL_FEATURES = ["multi-draw-indirect"]  # we'll be adding more
+    OPTIONAL_FEATURES = ["multi-draw-indirect", "multi-draw-indirect-count"]
 
     @classmethod
     def is_usable(cls):
@@ -82,6 +84,7 @@ class Runner:
             *[x for x in self.OPTIONAL_FEATURES if x in adapter.features],
         ]
         self.device = adapter.request_device(required_features=features)
+
         self.output_texture = self.device.create_texture(
             # Actual size is immaterial.  Could just be 1x1
             size=[128, 128],
@@ -163,11 +166,19 @@ class Runner:
         # We're going to want to try calling these draw functions from a buffer, and it
         # would be nice to test that these buffers have an offset
         self.draw_data_buffer = self.device.create_buffer_with_data(
-            data=np.uint32([0, 0, *self.draw_args1, *self.draw_args2]),
+            # The zeros at the beginning are to test "offset".
+            # The zeros at the end are because the _count methods require to buffer to
+            # be at least byte_offset + 16 * max_count bytes long
+            data=np.uint32([0, 0, *self.draw_args1, *self.draw_args2, *([0] * 50)]),
             usage="INDIRECT",
         )
         self.draw_data_buffer_indexed = self.device.create_buffer_with_data(
-            data=np.uint32([0, 0, *self.draw_indexed_args1, *self.draw_indexed_args2]),
+            # The zeros at the beginning are to test "offset".
+            # The zeros at the end are because the _count methods require to buffer to
+            # be at least byte_offset + 20 * max_count bytes long
+            data=np.uint32(
+                [0, 0, *self.draw_indexed_args1, *self.draw_indexed_args2, *([0] * 50)]
+            ),
             usage="INDIRECT",
         )
 
@@ -211,7 +222,8 @@ class Runner:
                 expected_result = self.expected_result_draw_indexed
             else:
                 expected_result = self.expected_result_draw
-        assert info_set == expected_result
+        if info_set != expected_result:
+            pytest.fail(f"Expected {sorted(info_set)}\nGot {sorted(expected_result)}")
 
 
 if not Runner.is_usable():
@@ -335,6 +347,45 @@ def test_draw_indexed_via_encoder(runner):
         runner.run_draw_test(
             lambda encoder: encoder.execute_bundles([render_bundle_encoder]), True
         )
+
+
+@pytest.mark.parametrize("indexed", [False, True])
+@pytest.mark.parametrize("test_max_count", [False, True])
+def test_multi_draw_indirect_count(runner, test_max_count, indexed):
+    if "multi-draw-indirect-count" not in runner.device.features:
+        pytest.skip("Must have 'multi-draw-indirect-count' to run")
+
+    print(f"{test_max_count=}, {indexed=} \n")
+
+    count_buffer = runner.device.create_buffer_with_data(
+        data=(np.int32([10, 2])), usage="INDIRECT"
+    )
+    if indexed:
+        function = multi_draw_indexed_indirect_count
+        buffer = runner.draw_data_buffer_indexed
+    else:
+        function = multi_draw_indirect_count
+        buffer = runner.draw_data_buffer
+
+    if test_max_count:
+        # We pull a count of 10, but we're limiting it to 2 via max_count
+        count_buffer_offset, max_count = 0, 2
+    else:
+        # We pull a count of 2, and set the max_count to something bigger.  Buffer
+        # is required to be big enough to handle max_count.
+        count_buffer_offset, max_count = 4, 10
+
+    def draw(encoder):
+        function(
+            encoder,
+            buffer,
+            offset=8,
+            count_buffer=count_buffer,
+            count_buffer_offset=count_buffer_offset,
+            max_count=max_count,
+        )
+
+        runner.run_draw_test(draw, indexed)
 
 
 if __name__ == "__main__":
