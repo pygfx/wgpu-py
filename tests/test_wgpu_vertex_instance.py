@@ -358,29 +358,28 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bu
 
     print(f"{test_max_count=}, {indexed=} {deal_with_bug=}\n")
 
-    count_buffer_data = np.int32([10, 2])
     count_buffer = runner.device.create_buffer_with_data(
-        data=(count_buffer_data), usage="INDIRECT"
+        data=(np.int32([10, 2])), usage="INDIRECT"
     )
+    if indexed:
+        function = multi_draw_indexed_indirect_count
+        buffer = runner.draw_data_buffer_indexed
+    else:
+        function = multi_draw_indirect_count
+        buffer = runner.draw_data_buffer
+
+    if test_max_count:
+        # We pull a count of 10, but we're limiting it to 2 via max_count
+        count_buffer_offset, max_count = 0, 2
+    else:
+        # We pull a count of 2, and set the max_count to something bigger.  Buffer
+        # is required to be big enough to handle max_count.
+        count_buffer_offset, max_count = 4, 10
+
+    if deal_with_bug:
+        runner.device.writeBuffer(buffer, 0, np.int32([10, 2]), 0, 8)
 
     def draw(encoder):
-        if indexed:
-            function = multi_draw_indexed_indirect_count
-            buffer = runner.draw_data_buffer_indexed
-        else:
-            function = multi_draw_indirect_count
-            buffer = runner.draw_data_buffer
-
-        if deal_with_bug:
-            runner.device.write_buffer(buffer, 0, count_buffer_data, 8)
-
-        if test_max_count:
-            # We pull a count of 10, but we're limited by max_count to 2
-            count_buffer_offset, max_count = 0, 2
-        else:
-            # We pull a count of 2, and set the max_count to something bigger.  Buffer
-            # is required to be big enough to handle max_count.
-            count_buffer_offset, max_count = 4, 10
         function(
             encoder,
             buffer,
@@ -393,8 +392,8 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bu
         try:
             runner.run_draw_test(draw, indexed)
         finally:
-            # Undo deal_with bug.
-            runner.device.write_buffer(buffer, 0, np.uint32(0, 0), 8)
+            if deal_with_bug:
+                runner.device.write_buffer(buffer, 0, np.uint32([0, 0]), 8)
 
 
 if __name__ == "__main__":
