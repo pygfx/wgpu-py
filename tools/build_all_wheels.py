@@ -81,13 +81,19 @@ assert len(all_tags) == len(PLATFORM_TAGS), "Wheel tags in PLATFORM_TAGS are not
 found_files = os.listdir("dist")
 found_wheels = [fname for fname in found_files if fname.endswith(".whl")]
 found_tags = {fname.split("none-")[1].split(".")[0] for fname in found_wheels}
-assert found_tags == all_tags, f"Found tags does not match expected tags: {found_tags}\n{all_tags}"
+assert (
+    found_tags == all_tags
+), f"Found tags does not match expected tags: {found_tags}\n{all_tags}"
 
 found_others = list(set(found_files) - set(found_wheels))
-assert len(found_others) == 1 and found_others[0].endswith(".tar.gz"), f"Found unexpected files: {found_others}"
+assert len(found_others) == 1 and found_others[0].endswith(
+    ".tar.gz"
+), f"Found unexpected files: {found_others}"
 
 for archive_name in found_wheels:
-    assert "-any-" not in archive_name, f"There should not be an 'any' wheel: {archive_name}"
+    assert (
+        "-any-" not in archive_name
+    ), f"There should not be an 'any' wheel: {archive_name}"
 
 
 # --- Report and check content of archives
@@ -115,9 +121,13 @@ for archive_name in found_wheels:
             hash = hashlib.sha256(bb).hexdigest()
             lib_hashes.append(hash)
             print(f"    - {fname}  ({len(bb)/1e6:0.2f} MB)\n      {hash}")
-    assert len(lib_hashes) == 1, f"Expected 1 lib per wheel, got {len(lib_hashes)} in {archive_name}"
+    assert (
+        len(lib_hashes) == 1
+    ), f"Expected 1 lib per wheel, got {len(lib_hashes)} in {archive_name}"
     hash = lib_hashes[0]
-    assert hash not in hash_to_file, f"Same lib found in {hash_to_file[hash]} and archive_name"
+    assert (
+        hash not in hash_to_file
+    ), f"Same lib found in {hash_to_file[hash]} and archive_name"
     hash_to_file[hash] = archive_name
 
 # Meta check

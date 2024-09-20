@@ -27,7 +27,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         usage=flags.TextureUsage.RENDER_ATTACHMENT | flags.TextureUsage.COPY_SRC,
         view_formats=[],
         color_space="srgb",
-        alpha_mode="opaque"
+        alpha_mode="opaque",
     ):
         if format is None:
             format = self.get_preferred_format(device.adapter)
