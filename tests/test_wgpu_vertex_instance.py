@@ -170,7 +170,7 @@ class Runner:
             # The zeros at the end are because the _count methods require to buffer to
             # be at least byte_offset + 16 * max_count bytes long
             data=np.uint32([0, 0, *self.draw_args1, *self.draw_args2, *([0] * 50)]),
-            usage="INDIRECT",
+            usage="INDIRECT",  # copy dst for patching
         )
         self.draw_data_buffer_indexed = self.device.create_buffer_with_data(
             # The zeros at the beginning are to test "offset".
@@ -178,6 +178,26 @@ class Runner:
             # be at least byte_offset + 20 * max_count bytes long
             data=np.uint32(
                 [0, 0, *self.draw_indexed_args1, *self.draw_indexed_args2, *([0] * 50)]
+            ),
+            usage="INDIRECT",
+        )
+
+        self.count_buffer = self.device.create_buffer_with_data(
+            data=(np.int32([10, 2])), usage="INDIRECT"
+        )
+        self.draw_data_buffer_patched = self.device.create_buffer_with_data(
+            # The zeros at the beginning are to test the "offset".
+            # The zeros at the end are because the _count methods require to buffer to
+            # be at least byte_offset + 16 * max_count bytes long
+            data=np.uint32([10, 2, *self.draw_args1, *self.draw_args2, *([0] * 50)]),
+            usage="INDIRECT",  # copy dst for patching
+        )
+        self.draw_data_buffer_indexed_patched = self.device.create_buffer_with_data(
+            # The zeros at the beginning are to test "offset".
+            # The zeros at the end are because the _count methods require to buffer to
+            # be at least byte_offset + 20 * max_count bytes long
+            data=np.uint32(
+                [10, 2, *self.draw_indexed_args1, *self.draw_indexed_args2, *([0] * 50)]
             ),
             usage="INDIRECT",
         )
@@ -223,7 +243,7 @@ class Runner:
             else:
                 expected_result = self.expected_result_draw
         if info_set != expected_result:
-            pytest.fail(f"Expected {sorted(info_set)}\nGot {sorted(expected_result)}")
+            pytest.fail(f"Expected {sorted(expected_result)}\nGot {sorted(info_set)}")
 
 
 if not Runner.is_usable():
@@ -349,24 +369,30 @@ def test_draw_indexed_via_encoder(runner):
         )
 
 
+@pytest.mark.parametrize("bug_patch", [False, True])
 @pytest.mark.parametrize("indexed", [False, True])
 @pytest.mark.parametrize("test_max_count", [False, True])
-def test_multi_draw_indirect_count(runner, test_max_count, indexed):
+def test_multi_draw_indirect_count(runner, test_max_count, indexed, bug_patch):
     if "multi-draw-indirect-count" not in runner.device.features:
         pytest.skip("Must have 'multi-draw-indirect-count' to run")
 
-    print(f"{test_max_count=}, {indexed=} \n")
+    print(f"{bug_patch=}, {indexed=}, {test_max_count=} \n")
 
-    count_buffer = runner.device.create_buffer_with_data(
-        data=(np.int32([10, 2])), usage="INDIRECT"
-    )
     if indexed:
         function = multi_draw_indexed_indirect_count
-        buffer = runner.draw_data_buffer_indexed
+        if not bug_patch:
+            buffer = runner.draw_data_buffer_indexed
+        else:
+            buffer = runner.draw_data_buffer_indexed_patched
     else:
         function = multi_draw_indirect_count
-        buffer = runner.draw_data_buffer
+        if not bug_patch:
+            buffer = runner.draw_data_buffer
+        else:
+            buffer = runner.draw_data_buffer_patched
 
+    # Either way, we're going to do 2 draws.  But one via the max_count and one via the
+    # information in the buffer.
     if test_max_count:
         # We pull a count of 10, but we're limiting it to 2 via max_count
         count_buffer_offset, max_count = 0, 2
@@ -380,7 +406,7 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed):
             encoder,
             buffer,
             offset=8,
-            count_buffer=count_buffer,
+            count_buffer=runner.count_buffer,
             count_buffer_offset=count_buffer_offset,
             max_count=max_count,
         )
