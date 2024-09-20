@@ -349,9 +349,9 @@ def test_draw_indexed_via_encoder(runner):
         )
 
 
-@pytest.mark.parametrize("test_max_count", [False, True])
+@pytest.mark.parametrize("deal_with_bug", [False, True])
 @pytest.mark.parametrize("indexed", [False, True])
-@pytest.mark.paramtetrize("deal_with_bug", [False, True])
+@pytest.mark.parametrize("test_max_count", [False, True])
 def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bug):
     if "multi-draw-indirect-count" not in runner.device.features:
         pytest.skip("Must have 'multi-draw-indirect-count' to run")
