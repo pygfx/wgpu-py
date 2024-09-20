@@ -12,7 +12,7 @@ from wgpu.backends.wgpu_native.extras import (
     multi_draw_indexed_indirect_count,
 )
 
-MAX_INFO = 100
+MAX_INFO = 1000
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
