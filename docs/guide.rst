@@ -232,7 +232,7 @@ You can run your application via RenderDoc, which is able to capture a
 frame, including all API calls, objects and the complete pipeline state,
 and display all of that information within a nice UI.
 
-You can use ``adapter.request_device_tracing()`` to provide a directory path
+You can use ``adapter.request_device()`` to provide a directory path
 where a trace of all API calls will be written. This trace can then be used
 to re-play your use-case elsewhere (it's cross-platform).
 
