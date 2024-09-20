@@ -159,11 +159,13 @@ bytes you wish to change.
     :param data_offset: The starting offset in the data at which to begin copying.
 
 
-There are two functions that allow you to perform multiple draw calls at once.
-Both require that you enable the feature "multi-draw-indirect".
+There are four functions that allow you to perform multiple draw calls at once.
+Two take the number of draws to perform as an argument; two have this value in a buffer.
 
 Typically, these calls do not reduce work or increase parallelism on the GPU. Rather
 they reduce driver overhead on the CPU.
+
+The first two require that you enable the feature ``"multi-draw-indirect"``.
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
 
@@ -172,8 +174,10 @@ they reduce driver overhead on the CPU.
             render_pass_encoder.draw_indirect(buffer, offset + i * 16)
 
     :param render_pass_encoder: The current render pass encoder.
-    :param buffer: The indirect buffer containing the arguments.
+    :param buffer: The indirect buffer containing the arguments. Must have length
+                   at least offset + 16 * count.
     :param offset: The byte offset in the indirect buffer containing the first argument.
+                   Must be a multiple of 4.
     :param count: The number of draw operations to perform.
 
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
@@ -184,9 +188,50 @@ they reduce driver overhead on the CPU.
 
 
     :param render_pass_encoder: The current render pass encoder.
-    :param buffer: The indirect buffer containing the arguments.
+    :param buffer: The indirect buffer containing the arguments. Must have length
+                   at least offset + 20 * count.
     :param offset: The byte offset in the indirect buffer containing the first argument.
+                   Must be a multiple of 4.
     :param count: The number of draw operations to perform.
+
+The second two require that you enable the feature ``"multi-draw-indirect-count"``.
+They are identical to the previous two, except that the ``count`` argument is replaced by
+three arguments. The value at ``count_buffer_offset`` in ``count_buffer`` is treated as
+an unsigned 32-bit integer. The ``count`` is the minimum of this value and ``max_count``.
+
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect_count(render_pass_encoder, buffer, *, offset=0, count_buffer, count_offset=0, max_count):
+
+     Equivalent to::
+        count = min(<u32 at count_buffer_offset in count_buffer>, max_count)
+        for i in range(count):
+            render_pass_encoder.draw_indirect(buffer, offset + i * 16)
+
+    :param render_pass_encoder: The current render pass encoder.
+    :param buffer: The indirect buffer containing the arguments. Must have length
+                   at least offset + 16 * max_count.
+    :param offset: The byte offset in the indirect buffer containing the first argument.
+                   Must be a multiple of 4.
+    :param count_buffer: The indirect buffer containing the count.
+    :param count_buffer_offset: The offset into count_buffer.
+                   Must be a multiple of 4.
+    :param max_count: The maximum number of draw operations to perform.
+
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect_count(render_pass_encoder, buffer, *, offset=0, count_buffer, count_offset=0, max_count):
+
+     Equivalent to::
+        count = min(<u32 at count_buffer_offset in count_buffer>, max_count)
+        for i in range(count):
+            render_pass_encoder.draw_indexed_indirect(buffer, offset + i * 2-)
+
+    :param render_pass_encoder: The current render pass encoder.
+    :param buffer: The indirect buffer containing the arguments. Must have length
+                   at least offset + 20 * max_count.
+    :param offset: The byte offset in the indirect buffer containing the first argument.
+                   Must be a multiple of 4.
+    :param count_buffer: The indirect buffer containing the count.
+    :param count_buffer_offset: The offset into count_buffer.
+                   Must be a multiple of 4.
+    :param max_count: The maximum number of draw operations to perform.
 
 
 The js_webgpu backend

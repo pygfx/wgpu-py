@@ -97,7 +97,9 @@ def multi_draw_indirect_count(
     max_count,
 ):
     """
-    This is equivalent to
+    This is equivalent to:
+
+    count = min(<u32 at offset count_buffer_offset of count_buffer>, max_count)
     for i in range(count):
         render_pass_encoder.draw(buffer, offset + i * 16)
 
@@ -118,8 +120,9 @@ def multi_draw_indexed_indirect_count(
     max_count,
 ):
     """
-    This is equivalent to
+    This is equivalent to:
 
+    count = min(<u32 at offset count_buffer_offset of count_buffer>, max_count)
     for i in range(count):
         render_pass_encoder.draw_indexed(buffer, offset + i * 20)
 
