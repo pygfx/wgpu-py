@@ -347,12 +347,11 @@ def test_draw_indexed_via_encoder(runner):
 
 @pytest.mark.parametrize("test_max_count", [False])
 @pytest.mark.parametrize("indexed", [False])
-@pytest.mark.parametrize("count", [2, 3, 4])
-def test_multi_draw_indirect_count(runner, test_max_count, indexed, count):
+def test_multi_draw_indirect_count(runner, test_max_count, indexed):
     if "multi-draw-indirect-count" not in runner.device.features:
         pytest.skip("Must have 'multi-draw-indirect-count' to run")
 
-    print(f"{test_max_count=}, {indexed=}, {count=}")
+    print(f"{test_max_count=}, {indexed=}")
 
     count_buffer = runner.device.create_buffer_with_data(
         data=(np.int32([10, 2])), usage="INDIRECT"
@@ -364,10 +363,8 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, count):
             buffer = runner.draw_data_buffer_indexed
         else:
             function = multi_draw_indirect_count
-            i = count
             data = np.uint32([10, 2, *range(1, 100)])
-            print(f"{data[2:12]=}")
-
+            print(f"{data[0:12]=}")
             buffer = runner.device.create_buffer_with_data(data=data, usage="INDIRECT")
         if test_max_count:
             # We pull a count of 10, but we're limited by max_count to 2
