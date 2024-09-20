@@ -9,17 +9,21 @@ from zipfile import ZipFile
 import requests
 
 
+DEFAULT_UPSTREAM = "gfx-rs/wgpu-native"
+
+ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
+
 # The directory containing non-python resources that are included in packaging
-RESOURCE_DIR = os.path.join("wgpu", "resources")
+RESOURCE_DIR = os.path.join(ROOT_DIR, "wgpu", "resources")
 # The version installed through this script is tracked in the backend module
-VERSION_FILE = os.path.join("wgpu", "backends", "wgpu_native", "__init__.py")
+VERSION_FILE = os.path.join(ROOT_DIR, "wgpu", "backends", "wgpu_native", "__init__.py")
 
 # Whether to ensure we export \n instead of \r\n
-FORCE_SIMPLE_NEWLINES = False
+NEWLINE_FLAVOUR = b"\n"
 if sys.platform.startswith("win"):
     sample = open(os.path.join(RESOURCE_DIR, "codegen_report.md"), "rb").read()
-    if sample.count(b"\r\n") == 0:
-        FORCE_SIMPLE_NEWLINES = True
+    if sample.count(b"\r\n") > 0.5 * sample.count(b"\n"):
+        NEWLINE_FLAVOUR = b"\r\n"
 
 
 def get_current_version():
@@ -57,8 +61,9 @@ def extract_file(zip_filename, member, path):
     flat_map = {os.path.basename(fi.filename): fi.filename for fi in z.filelist}
     bb = z.read(flat_map[member])
     # Make newlines consistent with Git rules etc.
-    if member.endswith(".h") and FORCE_SIMPLE_NEWLINES:
+    if member.endswith(".h"):
         bb = bb.replace(b"\r\n", b"\n")
+        bb = bb.replace(b"\n", NEWLINE_FLAVOUR)
     # Write to disk
     os.makedirs(path, exist_ok=True)
     with open(os.path.join(path, member), "wb") as f:
@@ -66,9 +71,7 @@ def extract_file(zip_filename, member, path):
 
 
 def get_os_string():
-    if os.environ.get("CIBUILDWHEEL") == "1" and os.getenv("CIBW_PLATFORM"):
-        return os.getenv("CIBW_PLATFORM")
-    elif sys.platform.startswith("win"):
+    if sys.platform.startswith("win"):
         return "windows"
     elif sys.platform.startswith("darwin"):
         return "macos"
@@ -96,39 +99,19 @@ def get_arch():
         detected_arch = "x86_64"
     else:
         detected_arch = "i686"
-
-    if os.environ.get("CIBUILDWHEEL") == "1":
-        # When running in cibuildwheel, we derive the intended arch from
-        # an env var (the same one that cibuildwheel uses) that we set in cd.yml.
-        cibw_arch = os.getenv("CIBW_ARCHS")  # must be singular
-        if not cibw_arch:
-            # Linux builds run on Docker, so env is not visible
-            cibw_arch = detected_arch
-        elif "," in cibw_arch:
-            raise RuntimeError("CIBW_ARCHS must have a single arch")
-        arch_map = {
-            "windows": {
-                "AMD64": "x86_64",
-                "ARM64": "aarch64",
-                "x86": "i686",
-            },
-            "macos": {
-                "arm64": "aarch64",
-                "x86_64": "x86_64",
-            },
-            "linux": {
-                "x86_64": "x86_64",
-                "aarch64": "aarch64",
-                "i868": "i686",
-            },
-        }
-        maps_for_os = arch_map[get_os_string()]
-        return maps_for_os[cibw_arch]
-
     return detected_arch
 
 
-def main(version, os_string, arch, upstream):
+def main(version=None, os_string=None, arch=None, upstream=None):
+    if version is None:
+        version = get_current_version()
+    if os_string is None:
+        os_string = get_os_string()
+    if arch is None:
+        arch = get_arch()
+    if upstream is None:
+        upstream = DEFAULT_UPSTREAM
+
     for build in ["release"]:  # ["release", "debug"]
         if os_string == "windows":
             arch += "-msvc"  # -gnu is also available.
@@ -136,7 +119,7 @@ def main(version, os_string, arch, upstream):
         url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
         tmp = tempfile.gettempdir()
         zip_filename = os.path.join(tmp, filename)
-        print(f"Downloading {url} to {zip_filename}")
+        print(f"Downloading {url}")
         download_file(url, zip_filename)
         headerfile1 = "webgpu.h"
         headerfile2 = "wgpu.h"
@@ -161,6 +144,7 @@ def main(version, os_string, arch, upstream):
             os.path.join(RESOURCE_DIR, binaryfile),
             os.path.join(RESOURCE_DIR, binaryfile_name),
         )
+
     current_version = get_current_version()
     if version != current_version:
         print(f"Version changed, updating {VERSION_FILE}")
@@ -196,7 +180,7 @@ if __name__ == "__main__":
         default=arch_string,
         choices=("x86_64", "i686", "aarch64"),
     )
-    upstream = "gfx-rs/wgpu-native"
+    upstream = DEFAULT_UPSTREAM
     parser.add_argument(
         "--upstream",
         help=f"Upstream repository to download release from (default: {upstream})",
