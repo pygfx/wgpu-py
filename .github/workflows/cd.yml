@@ -77,9 +77,9 @@ jobs:
       shell: bash
       run: |
           rm -rf ./wgpu
-          pip install --find-links dist wgpu
-          pip uninstall wgpu
-          pip install --force-reinstall --no-deps --no-index --find-links dist wgpu
+          pip install --no-input --find-links dist wgpu
+          pip uninstall --no-input wgpu
+          pip install --no-input --force-reinstall --no-deps --no-index --find-links dist wgpu
           pushd $HOME
           python -c 'import wgpu.backends.wgpu_native; print(wgpu.backends.wgpu_native._ffi.lib_path)'
           popd
