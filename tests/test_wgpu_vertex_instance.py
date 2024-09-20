@@ -349,14 +349,13 @@ def test_draw_indexed_via_encoder(runner):
         )
 
 
-@pytest.mark.parametrize("deal_with_bug", [False, True])
 @pytest.mark.parametrize("indexed", [False, True])
 @pytest.mark.parametrize("test_max_count", [False, True])
-def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bug):
+def test_multi_draw_indirect_count(runner, test_max_count, indexed):
     if "multi-draw-indirect-count" not in runner.device.features:
         pytest.skip("Must have 'multi-draw-indirect-count' to run")
 
-    print(f"{test_max_count=}, {indexed=} {deal_with_bug=}\n")
+    print(f"{test_max_count=}, {indexed=} \n")
 
     count_buffer = runner.device.create_buffer_with_data(
         data=(np.int32([10, 2])), usage="INDIRECT"
@@ -376,9 +375,6 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bu
         # is required to be big enough to handle max_count.
         count_buffer_offset, max_count = 4, 10
 
-    if deal_with_bug:
-        runner.device.writeBuffer(buffer, 0, np.int32([10, 2]), 0, 8)
-
     def draw(encoder):
         function(
             encoder,
@@ -389,11 +385,7 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bu
             max_count=max_count,
         )
 
-        try:
-            runner.run_draw_test(draw, indexed)
-        finally:
-            if deal_with_bug:
-                runner.device.write_buffer(buffer, 0, np.uint32([0, 0]), 8)
+        runner.run_draw_test(draw, indexed)
 
 
 if __name__ == "__main__":
