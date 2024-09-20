@@ -363,7 +363,7 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed):
             buffer = runner.draw_data_buffer_indexed
         else:
             function = multi_draw_indirect_count
-            data = np.uint32([10, 2, *range(1, 100)])
+            data = np.uint32([2, 2, *range(3, 100)])
             print(f"{data[0:12]=}")
             buffer = runner.device.create_buffer_with_data(data=data, usage="INDIRECT")
         if test_max_count:
