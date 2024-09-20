@@ -3034,7 +3034,6 @@ class GPURenderPassEncoder(
     def _multi_draw_indirect_count(
         self, buffer, offset, count_buffer, count_buffer_offset, max_count
     ):
-        libf.wgpuBufferRelease(buffer._internal)
         # H: void f(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, WGPUBuffer count_buffer, uint64_t count_buffer_offset, uint32_t max_count)
         libf.wgpuRenderPassEncoderMultiDrawIndirectCount(
             self._internal,
@@ -3048,7 +3047,6 @@ class GPURenderPassEncoder(
     def _multi_draw_indexed_indirect_count(
         self, buffer, offset, count_buffer, count_buffer_offset, max_count
     ):
-        libf.wgpuBufferRelease(buffer._internal)
         # H: void f(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, WGPUBuffer count_buffer, uint64_t count_buffer_offset, uint32_t max_count)
         libf.wgpuRenderPassEncoderMultiDrawIndexedIndirectCount(
             self._internal,
