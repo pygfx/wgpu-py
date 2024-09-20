@@ -393,6 +393,7 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed, deal_with_bu
         try:
             runner.run_draw_test(draw, indexed)
         finally:
+            # Undo deal_with bug.
             runner.device.write_buffer(buffer, 0, np.uint32(0, 0), 8)
 
 
