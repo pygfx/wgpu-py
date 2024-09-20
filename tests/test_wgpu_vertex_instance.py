@@ -385,7 +385,7 @@ def test_multi_draw_indirect_count(runner, test_max_count, indexed):
             max_count=max_count,
         )
 
-        runner.run_draw_test(draw, indexed)
+    runner.run_draw_test(draw, indexed)
 
 
 if __name__ == "__main__":
