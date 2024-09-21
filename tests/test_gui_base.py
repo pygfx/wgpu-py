@@ -9,7 +9,7 @@ import subprocess
 import numpy as np
 import wgpu.gui  # noqa
 from testutils import run_tests, can_use_wgpu_lib, is_pypy
-from pytest import mark
+from pytest import mark, raises
 
 
 class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
@@ -37,10 +37,10 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
 def test_base_canvas_context():
     assert not issubclass(wgpu.gui.WgpuCanvasInterface, wgpu.GPUCanvasContext)
     assert hasattr(wgpu.gui.WgpuCanvasInterface, "get_context")
-    # Provides good default already
     canvas = wgpu.gui.WgpuCanvasInterface()
-    ctx = wgpu.GPUCanvasContext(canvas)
-    assert ctx.get_preferred_format(None) == "bgra8unorm-srgb"
+    # Cannot instantiate, because get_present_info is not implemented
+    with raises(NotImplementedError):
+        wgpu.GPUCanvasContext(canvas)
 
 
 def test_canvas_logging(caplog):
@@ -80,11 +80,21 @@ def test_canvas_logging(caplog):
     assert text.count("division by zero") == 4
 
 
-class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvasBase):
+class MyOffscreenCanvas(wgpu.gui.WgpuCanvasBase):
     def __init__(self):
         super().__init__()
-        self.textures = []
+        self.frame_count = 0
         self.physical_size = 100, 100
+
+    def get_present_info(self):
+        return {
+            "method": "image",
+            "formats": ["rgba8unorm-srgb"],
+        }
+
+    def present_image(self, image, **kwargs):
+        self.frame_count += 1
+        self.array = np.frombuffer(image, np.uint8).reshape(image.shape)
 
     def get_pixel_ratio(self):
         return 1
@@ -98,26 +108,6 @@ class MyOffscreenCanvas(wgpu.gui.WgpuOffscreenCanvasBase):
     def _request_draw(self):
         # Note: this would normally schedule a call in a later event loop iteration
         self._draw_frame_and_present()
-
-    def present(self, texture):
-        self.textures.append(texture)
-        device = texture._device
-        size = texture.size
-        bytes_per_pixel = 4
-        data = device.queue.read_texture(
-            {
-                "texture": texture,
-                "mip_level": 0,
-                "origin": (0, 0, 0),
-            },
-            {
-                "offset": 0,
-                "bytes_per_row": bytes_per_pixel * size[0],
-                "rows_per_image": size[1],
-            },
-            size,
-        )
-        self.array = np.frombuffer(data, np.uint8).reshape(size[1], size[0], 4)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -181,7 +171,7 @@ def test_offscreen_canvas():
         render_pass.end()
         device.queue.submit([command_encoder.finish()])
 
-    assert len(canvas.textures) == 0
+    assert canvas.frame_count == 0
 
     # Draw 1
     canvas.request_draw(draw_frame)
@@ -214,8 +204,7 @@ def test_offscreen_canvas():
     assert np.all(canvas.array[:, :, 1] == 255)
 
     # We now have four unique texture objects
-    assert len(canvas.textures) == 4
-    assert len(set(canvas.textures)) == 4
+    assert canvas.frame_count == 4
 
 
 def test_autogui_mixin():

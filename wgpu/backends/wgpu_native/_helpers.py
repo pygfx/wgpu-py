@@ -94,23 +94,16 @@ def get_wgpu_instance():
     return _the_instance
 
 
-def get_surface_id_from_canvas(canvas):
+def get_surface_id_from_info(present_info):
     """Get an id representing the surface to render to. The way to
     obtain this id differs per platform and GUI toolkit.
     """
-
-    # Use cached
-    surface_id = getattr(canvas, "_wgpu_surface_id", None)
-    if surface_id:
-        return surface_id
-
-    surface_info = canvas.get_surface_info()
 
     if sys.platform.startswith("win"):  # no-cover
         GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa
         struct = ffi.new("WGPUSurfaceDescriptorFromWindowsHWND *")
         struct.hinstance = ffi.cast("void *", GetModuleHandle(lib_path))
-        struct.hwnd = ffi.cast("void *", int(surface_info["window"]))
+        struct.hwnd = ffi.cast("void *", int(present_info["window"]))
         struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWindowsHWND
 
     elif sys.platform.startswith("darwin"):  # no-cover
@@ -124,7 +117,7 @@ def get_surface_id_from_canvas(canvas):
         #     [ns_window.contentView setLayer:metal_layer];
         #     surface = wgpu_create_surface_from_metal_layer(metal_layer);
         # }
-        window = ctypes.c_void_p(surface_info["window"])
+        window = ctypes.c_void_p(present_info["window"])
 
         cw = ObjCInstance(window)
         try:
@@ -165,22 +158,22 @@ def get_surface_id_from_canvas(canvas):
         struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromMetalLayer
 
     elif sys.platform.startswith("linux"):  # no-cover
-        platform = surface_info.get("platform", "x11")
+        platform = present_info.get("platform", "x11")
         if platform == "x11":
             struct = ffi.new("WGPUSurfaceDescriptorFromXlibWindow *")
-            struct.display = ffi.cast("void *", surface_info["display"])
-            struct.window = int(surface_info["window"])
+            struct.display = ffi.cast("void *", present_info["display"])
+            struct.window = int(present_info["window"])
             struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
         elif platform == "wayland":
             struct = ffi.new("WGPUSurfaceDescriptorFromWaylandSurface *")
-            struct.display = ffi.cast("void *", surface_info["display"])
-            struct.surface = ffi.cast("void *", surface_info["window"])
+            struct.display = ffi.cast("void *", present_info["display"])
+            struct.surface = ffi.cast("void *", present_info["window"])
             struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWaylandSurface
         elif platform == "xcb":
             # todo: xcb untested
             struct = ffi.new("WGPUSurfaceDescriptorFromXcbWindow *")
-            struct.connection = ffi.cast("void *", surface_info["connection"])  # ??
-            struct.window = int(surface_info["window"])
+            struct.connection = ffi.cast("void *", present_info["connection"])  # ??
+            struct.window = int(present_info["window"])
             struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
         else:
             raise RuntimeError("Unexpected Linux surface platform '{platform}'.")
@@ -192,11 +185,7 @@ def get_surface_id_from_canvas(canvas):
     surface_descriptor.label = ffi.NULL
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
-    surface_id = lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
-
-    # Cache and return
-    canvas._wgpu_surface_id = surface_id
-    return surface_id
+    return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
 
 
 # The functions below are copied from codegen/utils.py

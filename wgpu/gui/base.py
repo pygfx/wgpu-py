@@ -5,6 +5,21 @@ from collections import defaultdict
 from ._gui_utils import log_exception
 
 
+def create_canvas_context(canvas):
+    """Create a GPUCanvasContext for the given canvas.
+
+    Helper function to keep the implementation of WgpuCanvasInterface
+    as small as possible.
+    """
+    backend_module = sys.modules["wgpu"].gpu.__module__
+    if backend_module == "wgpu._classes":
+        raise RuntimeError(
+            "A backend must be selected (e.g. with request_adapter()) before canvas.get_context() can be called."
+        )
+    CanvasContext = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
+    return CanvasContext(canvas)
+
+
 class WgpuCanvasInterface:
     """The minimal interface to be a valid canvas.
 
@@ -19,16 +34,33 @@ class WgpuCanvasInterface:
         super().__init__(*args, **kwargs)
         self._canvas_context = None
 
-    def get_surface_info(self):
-        """Get information about the native window / surface.
+    def get_present_info(self):
+        """Get information about the surface to render to.
 
-        This is used to obtain a surface id, so that wgpu can render to the
-        region of the screen occupied by the canvas. Should return None for
-        offscreen canvases. Otherwise, this should return a dict with a "window"
-        field. On Linux the dict should contain more fields, see the existing
-        implementations for reference.
+        It must return a small dict, used by the canvas-context to determine
+        how the rendered result should be presented to the canvas. There are
+        two possible methods.
+
+        If the ``method`` field is "screen", the context will render directly
+        to a surface representing the region on the screen. The dict should
+        have a ``window`` field containing the window id. On Linux there should
+        also be ``platform`` field to distinguish between "wayland" and "x11",
+        and a ``display`` field for the display id. This information is used
+        by wgpu to obtain the required surface id.
+
+        When the ``method`` field is "image", the context will render to a
+        texture, download the result to RAM, and call ``canvas.present_image()``
+        with the image data. Additional info (like format) is passed as kwargs.
+        This method enables various types of canvases (including remote ones),
+        but note that it has a performance penalty compared to rendering
+        directly to the screen.
+
+        The dict can further contain fields ``formats`` and ``alpha_modes`` to
+        define the canvas capabilities. For the "image" method, the default
+        formats is ``["rgba8unorm-srgb", "rgba8unorm"]``, and the default
+        alpha_modes is ``["opaque"]``.
         """
-        return None
+        raise NotImplementedError()
 
     def get_physical_size(self):
         """Get the physical size of the canvas in integer pixels."""
@@ -48,16 +80,17 @@ class WgpuCanvasInterface:
         # here the only valid arg is 'webgpu', which is also made the default.
         assert kind == "webgpu"
         if self._canvas_context is None:
-            # Get the active wgpu backend module
-            backend_module = sys.modules["wgpu"].gpu.__module__
-            if backend_module == "wgpu._classes":
-                raise RuntimeError(
-                    "A backend must be selected (e.g. with request_adapter()) before canvas.get_context() can be called."
-                )
-            # Instantiate the context
-            CC = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
-            self._canvas_context = CC(self)
+            self._canvas_context = create_canvas_context(self)
         return self._canvas_context
+
+    def present_image(self, image, **kwargs):
+        """Consume the final rendered image.
+
+        This is called when using the "image" method, see ``get_present_info()``.
+        Canvases that don't support offscreen rendering don't need to implement
+        this method.
+        """
+        raise NotImplementedError()
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
@@ -77,11 +110,12 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     also want to set ``vsync`` to False.
     """
 
-    def __init__(self, *args, max_fps=30, vsync=True, **kwargs):
+    def __init__(self, *args, max_fps=30, vsync=True, present_method=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._last_draw_time = 0
         self._max_fps = float(max_fps)
         self._vsync = bool(vsync)
+        present_method  # We just catch the arg here in case a backend does implement support it
 
     def __del__(self):
         # On delete, we call the custom close method.
