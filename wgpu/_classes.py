@@ -12,7 +12,7 @@ import weakref
 import logging
 from typing import List, Dict, Union
 
-from ._coreutils import ApiDiff
+from ._coreutils import ApiDiff, str_flag_to_int
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -173,11 +173,14 @@ gpu = GPU()
 
 
 class GPUCanvasContext:
-    """Represents a context to configure a canvas.
-
-    Is also used to obtain the texture to render to.
+    """Represents a context to configure a canvas and render to it.
 
     Can be obtained via `gui.WgpuCanvasInterface.get_context()`.
+
+    The canvas-context plays a crucial role in connecting the wgpu API to the
+    GUI layer, in a way that allows the GUI to be agnostic about wgpu. It
+    combines (and checks) the user's preferences with the capabilities and
+    preferences of the canvas.
     """
 
     _ot = object_tracker
@@ -185,6 +188,22 @@ class GPUCanvasContext:
     def __init__(self, canvas):
         self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
+
+        # The configuration from the canvas, obtained with canvas.get_present_info()
+        self._present_info = canvas.get_present_info()
+        if self._present_info.get("method", None) not in ("screen", "image"):
+            raise RuntimeError(
+                "canvas.get_present_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
+            )
+
+        # Surface capabilities. Stored the first time it is obtained
+        self._capabilities = None
+
+        # Configuration dict from the user, set via self.configure()
+        self._config = None
+
+        # The last used texture
+        self._texture = None
 
     def _get_canvas(self):
         """Getter method for internal use."""
@@ -195,6 +214,41 @@ class GPUCanvasContext:
     def canvas(self):
         """The associated canvas object."""
         return self._canvas_ref()
+
+    def _get_capabilities(self, adapter):
+        """Get dict of capabilities and cache the result."""
+        if self._capabilities is None:
+            self._capabilities = {}
+            if self._present_info["method"] == "screen":
+                # Query capabilities from the surface
+                self._capabilities.update(self._get_capabilities_screen(adapter))
+            else:
+                # Default image capabilities
+                self._capabilities = {
+                    "formats": ["rgba8unorm-srgb", "rgba8unorm"],
+                    "usages": 0xFF,
+                    "alpha_modes": [enums.CanvasAlphaMode.opaque],
+                }
+            # If capabilities were provided via surface info, overload them!
+            for key in ["formats", "alpha_modes"]:
+                if key in self._present_info:
+                    self._capabilities[key] = self._present_info[key]
+            # Derived defaults
+            if "view_formats" not in self._capabilities:
+                self._capabilities["view_formats"] = self._capabilities["formats"]
+
+        return self._capabilities
+
+    def _get_capabilities_screen(self, adapter):
+        """Get capabilities for a native surface."""
+        raise NotImplementedError()
+
+    @apidiff.add("Better place to define the preferred format")
+    def get_preferred_format(self, adapter):
+        """Get the preferred surface texture format."""
+        capabilities = self._get_capabilities(adapter)
+        formats = capabilities["formats"]
+        return formats[0] if formats else "bgra8-unorm"
 
     # IDL: undefined configure(GPUCanvasConfiguration configuration);
     def configure(
@@ -216,32 +270,150 @@ class GPUCanvasContext:
             device (WgpuDevice): The GPU device object to create compatible textures for.
             format (enums.TextureFormat): The format that textures returned by
                 ``get_current_texture()`` will have. Must be one of the supported context
-                formats. An often used format is "bgra8unorm-srgb".
+                formats. Can be ``None`` to use the canvas' preferred format.
             usage (flags.TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
             view_formats (List[enums.TextureFormat]): The formats that views created
                 from textures returned by ``get_current_texture()`` may use.
             color_space (PredefinedColorSpace): The color space that values written
                 into textures returned by ``get_current_texture()`` should be displayed with.
-                Default "srgb".
+                Default "srgb". Not yet supported.
             tone_mapping (enums.CanvasToneMappingMode): Not yet supported.
             alpha_mode (structs.CanvasAlphaMode): Determines the effect that alpha values
                 will have on the content of textures returned by ``get_current_texture()``
                 when read, displayed, or used as an image source. Default "opaque".
         """
+
+        # Check types
+
+        if not isinstance(device, GPUDevice):
+            raise TypeError("Given device is not a device.")
+
+        if format is None:
+            format = self.get_preferred_format(device.adapter)
+        if format not in enums.TextureFormat:
+            raise ValueError(f"Configure: format {format} not in {enums.TextureFormat}")
+
+        if not isinstance(usage, int):
+            usage = str_flag_to_int(flags.TextureUsage, usage)
+
+        color_space  # not really supported, just assume srgb for now
+        tone_mapping  # not supported yet
+
+        if alpha_mode not in enums.CanvasAlphaMode:
+            raise ValueError(
+                f"Configure: alpha_mode {alpha_mode} not in {enums.CanvasAlphaMode}"
+            )
+
+        # Check against capabilities
+
+        capabilities = self._get_capabilities(device.adapter)
+
+        if format not in capabilities["formats"]:
+            raise ValueError(
+                f"Configure: unsupported texture format: {format} not in {capabilities['formats']}"
+            )
+
+        if not usage & capabilities["usages"]:
+            raise ValueError(
+                f"Configure: unsupported texture usage: {usage} not in {capabilities['usages']}"
+            )
+
+        for view_format in view_formats:
+            if view_format not in capabilities["view_formats"]:
+                raise ValueError(
+                    f"Configure: unsupported view format: {view_format} not in {capabilities['view_formats']}"
+                )
+
+        if alpha_mode not in capabilities["alpha_modes"]:
+            raise ValueError(
+                f"Configure: unsupported alpha-mode: {alpha_mode} not in {capabilities['alpha_modes']}"
+            )
+
+        # Store
+
+        self._config = {
+            "device": device,
+            "format": format,
+            "usage": usage,
+            "view_formats": view_formats,
+            "color_space": color_space,
+            "tone_mapping": tone_mapping,
+            "alpha_mode": alpha_mode,
+        }
+
+        if self._present_info["method"] == "screen":
+            self._configure_screen(**self._config)
+
+    def _configure_screen(
+        self,
+        *,
+        device,
+        format,
+        usage,
+        view_formats,
+        color_space,
+        tone_mapping,
+        alpha_mode,
+    ):
         raise NotImplementedError()
 
     # IDL: undefined unconfigure();
     def unconfigure(self):
         """Removes the presentation context configuration.
-        Destroys any textures produced while configured."""
+        Destroys any textures produced while configured.
+        """
+        if self._present_info["method"] == "screen":
+            self._unconfigure_screen()
+        self._config = None
+        self._drop_texture()
+
+    def _unconfigure_screen(self):
         raise NotImplementedError()
 
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
-        """Get the `GPUTexture` that will be composited to the canvas next.
-        This method should be called exactly once during each draw event.
-        """
+        """Get the `GPUTexture` that will be composited to the canvas next."""
+        if not self._config:
+            raise RuntimeError(
+                "Canvas context must be configured before calling get_current_texture()."
+            )
+
+        # When the texture is active right now, we could either:
+        # * return the existing texture
+        # * warn about it, and create a new one
+        # * raise an error
+        # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
+
+        if self._texture is None:
+            if self._present_info["method"] == "screen":
+                self._texture = self._create_texture_screen()
+            else:
+                self._texture = self._create_texture_image()
+
+        return self._texture
+
+    def _create_texture_image(self):
+
+        canvas = self._get_canvas()
+        width, height = canvas.get_physical_size()
+        width, height = max(width, 1), max(height, 1)
+
+        device = self._config["device"]
+        self._texture = device.create_texture(
+            label="presentation-context",
+            size=(width, height, 1),
+            format=self._config["format"],
+            usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
+        )
+        return self._texture
+
+    def _create_texture_screen(self):
         raise NotImplementedError()
+
+    def _drop_texture(self):
+        if self._texture:
+            self._texture._release()  # not destroy, because it may be in use.
+            self._texture = None
 
     @apidiff.add("Present method is exposed")
     def present(self):
@@ -249,19 +421,75 @@ class GPUCanvasContext:
         to the canvas. Note that a canvas based on `gui.WgpuCanvasBase` will call this
         method automatically at the end of each draw event.
         """
-        raise NotImplementedError()
+        # todo: can we remove this present() method?
 
-    @apidiff.add("Better place to define the preferred format")
-    def get_preferred_format(self, adapter):
-        """Get the preferred surface texture format."""
-        return "bgra8unorm-srgb"  # seems to be a good default
+        if not self._texture:
+            # This can happen when a user somehow forgot to call
+            # get_current_texture(). But then what was this person rendering to
+            # then? The thing is that this also happens when there is an
+            # exception in the draw function before the call to
+            # get_current_texture(). In this scenario our warning may
+            # add confusion, so provide context and make it a debug level warning.
+            msg = "Warning in present(): No texture to present, missing call to get_current_texture()?"
+            logger.debug(msg)
+            return
+
+        if self._present_info["method"] == "screen":
+            self._present_screen()
+        else:
+            self._present_image()
+
+        self._drop_texture()
+
+    def _present_image(self):
+        texture = self._texture
+        device = texture._device
+
+        size = texture.size
+        format = texture.format
+        nchannels = 4  # we expect rgba or bgra
+        if not format.startswith(("rgba", "bgra")):
+            raise RuntimeError(f"Image present unsupported texture format {format}.")
+        if "8" in format:
+            bytes_per_pixel = nchannels
+        elif "16" in format:
+            bytes_per_pixel = nchannels * 2
+        elif "32" in format:
+            bytes_per_pixel = nchannels * 4
+        else:
+            raise RuntimeError(
+                f"Image present unsupported texture format bitdepth {format}."
+            )
+
+        data = device.queue.read_texture(
+            {
+                "texture": texture,
+                "mip_level": 0,
+                "origin": (0, 0, 0),
+            },
+            {
+                "offset": 0,
+                "bytes_per_row": bytes_per_pixel * size[0],
+                "rows_per_image": size[1],
+            },
+            size,
+        )
+
+        # Represent as memory object to avoid numpy dependency
+        # Equivalent: np.frombuffer(data, np.uint8).reshape(size[1], size[0], nchannels)
+        data = data.cast("B", (size[1], size[0], nchannels))
+
+        self._get_canvas().present_image(data, format=format)
+
+    def _present_screen(self):
+        raise NotImplementedError()
 
     def __del__(self):
         self._ot.decrease(self.__class__.__name__)
         self._release()
 
     def _release(self):
-        pass
+        self._drop_texture()
 
 
 class GPUAdapterInfo:
