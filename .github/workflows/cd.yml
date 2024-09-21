@@ -88,8 +88,7 @@ jobs:
       run: |
           rm -rf ./wgpu
           rm -rf ./dist/*.whl
-          # Install 'normally' to install deps, then force the install from dist-folder and nothing else
-          pip install --find-links dist wgpu
+          pip install requests
           pip install --force-reinstall --no-deps --no-index --find-links dist wgpu
           pip uninstall -y wgpu
           git reset --hard HEAD

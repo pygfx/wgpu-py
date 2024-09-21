@@ -120,7 +120,7 @@ jobs:
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -e .[examples]
+          pip install -U -e .[tests,examples]
     - name: Test examples
       env:
         EXPECT_LAVAPIPE: true
@@ -142,7 +142,7 @@ jobs:
     - name: Install dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -e .[pyinstaller]
+          pip install -U -e .[tests] glfw pyinstaller
     - name: Test PyInstaller
       run: |
           pyinstaller --version
