@@ -1,15 +1,8 @@
 # Github Actions script to produce binary wheels.
 #
-# Note that a lot of the cibuildwheel config is in pyproject.toml.
-#
-# We perform one build for each wheel that we generate, i.e. one per architecture.
-# In download_wgpu_native.py, we detect CIBW_PLATFORM and CIBW_ARCHS to determine
-# the required binary from wgpu-native.
-#
-# If https://github.com/pypa/cibuildwheel/issues/944 gets implemented, we can build more wheels per build.
-#
-# Also includes the sdist build that does not include a binary.
-
+# * One build to create all wheels (cross-platform).
+# * One build (with matrix) test the wheels on a selection of platforms.
+# * One build to publish the wheels on GitHub and Pypi.
 
 name: CD
 
@@ -35,7 +28,8 @@ jobs:
           python-version: '3.12'
       - name: Install dev dependencies
         run: |
-            python -m pip install --upgrade pip build hatchling requests twine
+            python -m pip install --upgrade pip
+            pip install -U -e .[build]
       - name: Build wheels (and sdist)
         run: python tools/build_all_wheels.py
       - name: Twine check
@@ -45,7 +39,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: dist
-          name: dist
+          name: all_wheels
 
   test-wheels:
     name: Test wheel for ${{ matrix.name }}
@@ -73,15 +67,30 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: dist
+    - name: Flatten dist dir
+      run: |
+          find dist -mindepth 2 -type f -exec mv -f '{}' dist/ ';'
+          rm -rf dist/*/
     - name: Install and test wheel
       shell: bash
       run: |
           rm -rf ./wgpu
+          # Install 'normally' to install deps, then force the install from dist-folder and nothing else
           pip install --find-links dist wgpu
           pip install --force-reinstall --no-deps --no-index --find-links dist wgpu
           pushd $HOME
           python -c 'import wgpu.backends.wgpu_native; print(wgpu.backends.wgpu_native._ffi.lib_path)'
           popd
+          pip uninstall -y wgpu
+          git reset --hard HEAD
+    - name: Install from sdist
+      shell: bash
+      run: |
+          rm -rf ./wgpu
+          rm -rf ./dist/*.whl
+          # Install 'normally' to install deps, then force the install from dist-folder and nothing else
+          pip install --find-links dist wgpu
+          pip install --force-reinstall --no-deps --no-index --find-links dist wgpu
           pip uninstall -y wgpu
           git reset --hard HEAD
 

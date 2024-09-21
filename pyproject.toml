@@ -12,10 +12,19 @@ requires-python = ">= 3.8"
 dependencies = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'"]
 
 [project.optional-dependencies]
+# For users
 jupyter = ["jupyter_rfb>=0.4.2"]
 glfw = ["glfw>=1.9"]
-docs = ["sphinx>7.2", "sphinx_rtd_theme"]
 imgui = ["imgui-bundle>=1.2.1"]
+# For devs / ci
+build = ["build", "hatchling", "requests", "twine"]
+codegen = ["pytest", "numpy", "black", "cffi"]
+lint = ["black", "flake8", "flake8-black", "pep8-naming"]
+docs = ["sphinx>7.2", "sphinx_rtd_theme"]
+tests = ["numpy", "pytest", "psutil"]
+examples = ["wgpu[tests]", "imageio"]
+pyinstaller = ["wgpu[tests]", "glfw", "pyinstaller>=4.9"]
+dev = ["wgpu[build,codegen,lint,docs,tests,examples]"]
 
 [project.entry-points."pyinstaller40"]
 hook-dirs = "wgpu.__pyinstaller:get_hook_dirs"
@@ -28,10 +37,11 @@ Repository = "https://github.com/pygfx/wgpu-py"
 
 # ===== Building
 #
-# We use the hatch build backend, because its modern, with pretty good defaults,
-# and configurable. Flit is really nice, but a bit too simple for what we need
-# with our binary libs. We use a hatch build hook to install the correct
-# wgpu-native lib right before the wheel is build. See the tools dir.
+# There are a variety of build backends, e.g.:
+# * setuptools: need this if you have a setup.py
+# * flit: really nice for pure Python libs.
+# * hatchling: modern, with pretty good defaults, and configurable. Just right for us!
+# * mesonpy: numpy, scikit-image, et al. use this because they compile stuff.
 
 [build-system]
 requires = ["requests", "hatchling"]
@@ -48,6 +58,8 @@ exclude = ["*.so", "*.dll", "*.dylib"]
 packages = ["wgpu"]
 artifacts = ["*.so", "*.dll", "*.dylib"]
 
+# We use a hatch build hook to install the correct wgpu-native lib right before
+# the wheel is build, and to allow cross-platform builds. See the tools dir.
 [tool.hatch.build.targets.wheel.hooks.custom]
 path = "tools/hatch_build.py"
 

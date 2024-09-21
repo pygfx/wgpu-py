@@ -28,7 +28,7 @@ jobs:
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U black flake8 flake8-black pep8-naming
+          pip install -U -e .[lint]
     - name: Flake8
       run: |
           flake8 .
@@ -48,7 +48,7 @@ jobs:
     - name: Install dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U pytest numpy black cffi
+          pip install -U -e .[codegen]
     - name: Test codegen
       run: |
           pytest -v codegen
@@ -95,7 +95,7 @@ jobs:
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -r dev-requirements.txt
+          pip install -U -e .[docs]
     - name: Build docs
       run: |
           cd docs
@@ -120,8 +120,7 @@ jobs:
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -r dev-requirements.txt
-          pip install -e .
+          pip install -U -e .[examples]
     - name: Test examples
       env:
         EXPECT_LAVAPIPE: true
@@ -143,9 +142,7 @@ jobs:
     - name: Install dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U requests numpy pytest
-          pip install -e .
-          pip install psutil glfw pyinstaller>=4.9
+          pip install -U -e .[pyinstaller]
     - name: Test PyInstaller
       run: |
           pyinstaller --version
@@ -191,8 +188,7 @@ jobs:
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -r dev-requirements.txt
-          pip install -e .
+          pip install -U -e .[tests]
     - name: Unit tests
       run: |
           pytest -v tests
