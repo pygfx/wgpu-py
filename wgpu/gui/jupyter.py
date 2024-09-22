@@ -6,8 +6,7 @@ can be used as cell output, or embedded in a ipywidgets gui.
 import weakref
 import asyncio
 
-from .offscreen import WgpuOffscreenCanvasBase
-from .base import WgpuAutoGui
+from .base import WgpuAutoGui, WgpuCanvasBase
 
 import numpy as np
 from jupyter_rfb import RemoteFrameBuffer
@@ -17,13 +16,14 @@ from IPython.display import display
 pending_jupyter_canvases = []
 
 
-class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvasBase, RemoteFrameBuffer):
+class JupyterWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, RemoteFrameBuffer):
     """An ipywidgets widget providing a wgpu canvas. Needs the jupyter_rfb library."""
 
     def __init__(self, *, size=None, title=None, **kwargs):
         super().__init__(**kwargs)
 
         # Internal variables
+        self._last_image = None
         self._pixel_ratio = 1
         self._logical_size = 0, 0
         self._is_closed = False
@@ -56,7 +56,8 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvasBase, RemoteFrameBuffer)
         # present_context.present(), which calls our present() method.
         # The result is either a numpy array or None, and this matches
         # with what this method is expected to return.
-        return self._draw_frame_and_present()
+        self._draw_frame_and_present()
+        return self._last_image
 
     # Implementation needed for WgpuCanvasBase
 
@@ -89,34 +90,21 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuOffscreenCanvasBase, RemoteFrameBuffer)
             self._request_draw_timer_running = True
             call_later(self._get_draw_wait_time(), RemoteFrameBuffer.request_draw, self)
 
-    # Implementation needed for WgpuOffscreenCanvasBase
+    # Implementation needed for WgpuCanvasInterface
 
-    def present(self, texture):
-        # This gets called at the end of a draw pass via offscreen.GPUCanvasContext
-        device = texture._device
-        size = texture.size
-        bytes_per_pixel = 4
-        data = device.queue.read_texture(
-            {
-                "texture": texture,
-                "mip_level": 0,
-                "origin": (0, 0, 0),
-            },
-            {
-                "offset": 0,
-                "bytes_per_row": bytes_per_pixel * size[0],
-                "rows_per_image": size[1],
-            },
-            size,
-        )
-        return np.frombuffer(data, np.uint8).reshape(size[1], size[0], 4)
-
-    def get_preferred_format(self):
+    def get_present_info(self):
         # Use a format that maps well to PNG: rgba8norm. Use srgb for
         # perseptive color mapping. This is the common colorspace for
         # e.g. png and jpg images. Most tools (browsers included) will
         # blit the png to screen as-is, and a screen wants colors in srgb.
-        return "rgba8unorm-srgb"
+        return {
+            "method": "image",
+            "formats": ["rgba8unorm-srgb", "rgba8unorm"],
+        }
+
+    def present_image(self, image, **kwargs):
+        # Convert memoryview to ndarray (no copy)
+        self._last_image = np.frombuffer(image, np.uint8).reshape(image.shape)
 
 
 # Make available under a name that is the same for all gui backends

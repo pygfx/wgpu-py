@@ -9,6 +9,8 @@ import importlib
 
 from .base import WgpuCanvasBase, WgpuAutoGui
 from ._gui_utils import (
+    logger,
+    SYSTEM_IS_WAYLAND,
     get_alt_x11_display,
     get_alt_wayland_display,
     weakbind,
@@ -16,13 +18,11 @@ from ._gui_utils import (
 )
 
 
-is_wayland = False  # We force Qt to use X11 in _gui_utils.py
-
-
 # Select GUI toolkit
 libname, already_had_app_on_import = get_imported_qt_lib()
 if libname:
     QtCore = importlib.import_module(".QtCore", libname)
+    QtGui = importlib.import_module(".QtGui", libname)
     QtWidgets = importlib.import_module(".QtWidgets", libname)
     try:
         WA_PaintOnScreen = QtCore.Qt.WidgetAttribute.WA_PaintOnScreen
@@ -135,18 +135,39 @@ def enable_hidpi():
 # needed for wgpu, so not our responsibility (some users may NOT want it set).
 enable_hidpi()
 
+_show_image_method_warning = (
+    "Qt falling back to offscreen rendering, which is less performant."
+)
+
 
 class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, present_method=None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Configure how Qt renders this widget
-        self.setAttribute(WA_PaintOnScreen, True)
+        # Determine present method
+        self._surface_ids = self._get_surface_ids()
+        if not present_method:
+            self._present_to_screen = True
+            if SYSTEM_IS_WAYLAND:
+                # Trying to render to screen on Wayland segfaults. This might be because
+                # the "display" is not the real display id. We can tell Qt to use
+                # XWayland, so we can use the X11 path. This worked at some point,
+                # but later this resulted in a Rust panic. So, until this is sorted
+                # out, we fall back to rendering via an image.
+                self._present_to_screen = False
+        elif present_method == "screen":
+            self._present_to_screen = True
+        elif present_method == "image":
+            self._present_to_screen = False
+        else:
+            raise ValueError(f"Invalid present_method {present_method}")
+
+        self.setAttribute(WA_PaintOnScreen, self._present_to_screen)
+        self.setAutoFillBackground(False)
         self.setAttribute(WA_DeleteOnClose, True)
         self.setAttribute(WA_InputMethodEnabled, True)
-        self.setAutoFillBackground(False)
         self.setMouseTracking(True)
         self.setFocusPolicy(FocusPolicy.StrongFocus)
 
@@ -158,21 +179,24 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
-        return None
+        if self._present_to_screen:
+            return None
+        else:
+            return super().paintEngine()
 
     def paintEvent(self, event):  # noqa: N802 - this is a Qt method
         self._draw_frame_and_present()
 
     # Methods that we add from wgpu (snake_case)
 
-    def get_surface_info(self):
+    def _get_surface_ids(self):
         if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
             return {
                 "window": int(self.winId()),
             }
         elif sys.platform.startswith("linux"):
-            # The trick to use an al display pointer works for X11, but results in a segfault on Wayland ...
-            if is_wayland:
+            if False:
+                # We fall back to XWayland, see _gui_utils.py
                 return {
                     "platform": "wayland",
                     "window": int(self.winId()),
@@ -184,8 +208,21 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                     "window": int(self.winId()),
                     "display": int(get_alt_x11_display()),
                 }
+
+    def get_present_info(self):
+        global _show_image_method_warning
+        if self._present_to_screen:
+            info = {"method": "screen"}
+            info.update(self._surface_ids)
         else:
-            raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
+            if _show_image_method_warning:
+                logger.warn(_show_image_method_warning)
+                _show_image_method_warning = None
+            info = {
+                "method": "image",
+                "formats": ["rgba8unorm-srgb", "rgba8unorm"],
+            }
+        return info
 
     def get_pixel_ratio(self):
         # Observations:
@@ -356,6 +393,38 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def closeEvent(self, event):  # noqa: N802
         self._handle_event_and_flush({"event_type": "close"})
 
+    def present_image(self, image_data, **kwargs):
+        size = image_data.shape[1], image_data.shape[0]  # width, height
+
+        painter = QtGui.QPainter(self)
+
+        # We want to simply blit the image (copy pixels one-to-one on framebuffer).
+        # Maybe Qt does this when the sizes match exactly (like they do here).
+        # Converting to a QPixmap and painting that only makes it slower.
+
+        # Just in case, set render hints that may hurt performance.
+        painter.setRenderHints(
+            painter.RenderHint.Antialiasing | painter.RenderHint.SmoothPixmapTransform,
+            False,
+        )
+
+        image = QtGui.QImage(
+            image_data,
+            size[0],
+            size[1],
+            size[0] * 4,
+            QtGui.QImage.Format.Format_RGBA8888,
+        )
+
+        rect1 = QtCore.QRect(0, 0, size[0], size[1])
+        rect2 = self.rect()
+        painter.drawImage(rect2, image, rect1)
+
+        # Uncomment for testing purposes
+        # painter.setPen(QtGui.QColor("#0000ff"))
+        # painter.setFont(QtGui.QFont("Arial", 30))
+        # painter.drawText(100, 100, "This is an image")
+
 
 class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     """A toplevel Qt widget providing a wgpu canvas."""
@@ -365,11 +434,12 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     # size can be set to subpixel (logical) values, without being able to
     # detect this. See https://github.com/pygfx/wgpu-py/pull/68
 
-    def __init__(self, *, size=None, title=None, max_fps=30, **kwargs):
+    def __init__(
+        self, *, size=None, title=None, max_fps=30, present_method=None, **kwargs
+    ):
         # When using Qt, there needs to be an
         # application before any widget is created
         get_app()
-
         super().__init__(**kwargs)
 
         self.setAttribute(WA_DeleteOnClose, True)
@@ -377,7 +447,9 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setWindowTitle(title or "qt wgpu canvas")
         self.setMouseTracking(True)
 
-        self._subwidget = QWgpuWidget(self, max_fps=max_fps)
+        self._subwidget = QWgpuWidget(
+            self, max_fps=max_fps, present_method=present_method
+        )
         self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
 
         # Note: At some point we called `self._subwidget.winId()` here. For some
@@ -408,8 +480,8 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def draw_frame(self, f):
         self._subwidget.draw_frame = f
 
-    def get_surface_info(self):
-        return self._subwidget.get_surface_info()
+    def get_present_info(self):
+        return self._subwidget.get_present_info()
 
     def get_pixel_ratio(self):
         return self._subwidget.get_pixel_ratio()
@@ -445,6 +517,9 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     def request_draw(self, *args, **kwargs):
         return self._subwidget.request_draw(*args, **kwargs)
+
+    def present_image(self, image, **kwargs):
+        return self._subwidget.present_image(image, **kwargs)
 
 
 # Make available under a name that is the same for all gui backends

@@ -14,7 +14,7 @@ from pathlib import Path
 import glfw
 
 from wgpu.backends.wgpu_native import GPUCanvasContext
-from wgpu.gui.glfw import get_surface_info, get_physical_size
+from wgpu.gui.glfw import get_glfw_present_info, get_physical_size
 from wgpu.utils.device import get_default_device
 
 
@@ -29,9 +29,9 @@ class GlfwCanvas:
     def __init__(self, window):
         self._window = window
 
-    def get_surface_info(self):
+    def get_present_info(self):
         """get window and display id, includes some triage to deal with OS differences"""
-        return get_surface_info(self._window)
+        return get_glfw_present_info(self._window)
 
     def get_physical_size(self):
         """get framebuffer size in integer pixels"""

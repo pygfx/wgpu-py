@@ -171,7 +171,7 @@ def test_glfw_canvas_render_custom_canvas():
             self.window = glfw.create_window(300, 200, "canvas", None, None)
             self._present_context = None
 
-        def get_surface_info(self):
+        def get_present_info(self):
             if sys.platform.startswith("win"):
                 return {
                     "platform": "windows",

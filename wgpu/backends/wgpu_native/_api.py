@@ -28,7 +28,7 @@ from ._ffi import ffi, lib
 from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
 from ._helpers import (
     get_wgpu_instance,
-    get_surface_id_from_canvas,
+    get_surface_id_from_info,
     get_memoryview_from_address,
     get_memoryview_and_address,
     to_snake_case,
@@ -327,8 +327,7 @@ class GPU(classes.GPU):
         # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
-            if canvas.get_surface_info():  # e.g. could be an off-screen canvas
-                surface_id = canvas.get_context()._get_surface_id()
+            surface_id = canvas._surface_id  # can still be NULL
 
         # ----- Select backend
 
@@ -482,45 +481,114 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     def __init__(self, canvas):
         super().__init__(canvas)
-        self._device = None  # set in configure()
-        self._surface_id = None
-        self._config = None
-        self._texture = None
 
-    def _get_surface_id(self):
-        if self._surface_id is None:
-            # get_surface_id_from_canvas calls wgpuInstanceCreateSurface
-            self._surface_id = get_surface_id_from_canvas(self._get_canvas())
-        return self._surface_id
+        # Obtain the surface id. The lifetime is of the surface is bound
+        # to the lifetime of this context object.
+        if self._present_info["method"] == "screen":
+            self._surface_id = get_surface_id_from_info(self._present_info)
+        else:  # method == "image"
+            self._surface_id = ffi.NULL
 
-    def configure(
+    def _get_capabilities_screen(self, adapter):
+        adapter_id = adapter._internal
+        surface_id = self._surface_id
+        assert surface_id
+
+        minimal_capabilities = {
+            "usages": flags.TextureUsage.RENDER_ATTACHMENT,
+            "formats": [
+                enums.TextureFormat.bgra8unorm_srgb,
+                enums.TextureFormat.bgra8unorm,
+            ],
+            "alpha_modes": enums.CanvasAlphaMode.opaque,
+            "present_modes": ["fifo"],
+        }
+
+        # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
+        c_capabilities = new_struct_p(
+            "WGPUSurfaceCapabilities *",
+            # not used: nextInChain
+            # not used: usages
+            # not used: formatCount
+            # not used: formats
+            # not used: presentModeCount
+            # not used: presentModes
+            # not used: alphaModeCount
+            # not used: alphaModes
+        )
+
+        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
+        libf.wgpuSurfaceGetCapabilities(surface_id, adapter_id, c_capabilities)
+
+        # Convert to Python.
+        capabilities = {}
+
+        # When the surface is found not to be compatible, the fields below may
+        # be null pointers. This probably means that the surface won't work,
+        # and trying to use it will result in an error (or Rust panic). Since
+        # I'm not sure what the best time/place to error would be, we pretend
+        # that everything is fine here, and populate the fields with values
+        # that wgpu-core claims are guaranteed to exist on any (compatible)
+        # surface.
+
+        capabilities["usages"] = c_capabilities.usages
+
+        if c_capabilities.formats:
+            capabilities["formats"] = formats = []
+            for i in range(c_capabilities.formatCount):
+                int_val = c_capabilities.formats[i]
+                formats.append(enum_int2str["TextureFormat"][int_val])
+
+        else:
+            capabilities["formats"] = minimal_capabilities["formats"]
+
+        if c_capabilities.alphaModes:
+            capabilities["alpha_modes"] = alpha_modes = []
+            for i in range(c_capabilities.alphaModeCount):
+                int_val = c_capabilities.alphaModes[i]
+                str_val = enum_int2str["CompositeAlphaMode"][int_val]
+                alpha_modes.append(str_val.lower())
+        else:
+            capabilities["alpha_modes"] = minimal_capabilities["alpha_modes"]
+
+        if c_capabilities.presentModes:
+            capabilities["present_modes"] = present_modes = []
+            for i in range(c_capabilities.presentModeCount):
+                int_val = c_capabilities.presentModes[i]
+                str_val = enum_int2str["PresentMode"][int_val]
+                present_modes.append(str_val.lower())
+        else:
+            capabilities["present_modes"] = minimal_capabilities["present_modes"]
+
+        # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
+        libf.wgpuSurfaceCapabilitiesFreeMembers(c_capabilities[0])
+
+        return capabilities
+
+    def _configure_screen(
         self,
         *,
-        device: "GPUDevice",
-        format: "enums.TextureFormat",
-        usage: "flags.TextureUsage" = 0x10,
-        view_formats: "List[enums.TextureFormat]" = [],
-        color_space: str = "srgb",
-        tone_mapping: "structs.CanvasToneMapping" = {},
-        alpha_mode: "enums.CanvasAlphaMode" = "opaque",
+        device,
+        format,
+        usage,
+        view_formats,
+        color_space,
+        tone_mapping,
+        alpha_mode,
     ):
-        # Handle inputs
 
-        # Store for later
-        self._device = device
-        # Handle usage
-        if isinstance(usage, str):
-            usage = str_flag_to_int(flags.TextureUsage, usage)
-        # View formats
+        capabilities = self._get_capabilities(device.adapter)
+
+        # Convert to C values
+
         c_view_formats = ffi.NULL
         if view_formats:
             view_formats_list = [enummap["TextureFormat." + x] for x in view_formats]
             c_view_formats = ffi.new("WGPUTextureFormat []", view_formats_list)
+
         # Lookup alpha mode, needs explicit conversion because enum names mismatch
         c_alpha_mode = getattr(lib, f"WGPUCompositeAlphaMode_{alpha_mode.capitalize()}")
-        # The format is used as-is
-        if format is None:
-            format = self.get_preferred_format(device.adapter)
+
         # The color_space is not used for now
         color_space
         # Same for tone mapping
@@ -546,21 +614,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         else:
             present_mode_pref = ["immediate", "mailbox", "fifo"]
 
-        # Get what's supported
-
-        capabilities = self._get_surface_capabilities(self._device.adapter)
-
-        if format not in capabilities["formats"]:
-            raise ValueError(
-                f"Given format '{format}' is not in supported formats {capabilities['formats']}"
-            )
-
-        if alpha_mode not in capabilities["alpha_modes"]:
-            raise ValueError(
-                f"Given format '{alpha_mode}' is not in supported formats {capabilities['alpha_modes']}"
-            )
-
-        # Select present mode
         present_modes = [
             p for p in present_mode_pref if p in capabilities["present_modes"]
         ]
@@ -570,7 +623,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # Prepare config object
 
         # H: nextInChain: WGPUChainedStruct *, device: WGPUDevice, format: WGPUTextureFormat, usage: WGPUTextureUsageFlags/int, viewFormatCount: int, viewFormats: WGPUTextureFormat *, alphaMode: WGPUCompositeAlphaMode, width: int, height: int, presentMode: WGPUPresentMode
-        config = new_struct_p(
+        self._wgpu_config = new_struct_p(
             "WGPUSurfaceConfiguration *",
             device=device._internal,
             format=format,
@@ -584,50 +637,29 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # not used: nextInChain
         )
 
-        # Configure
-        self._configure(config)
-
-    def _configure(self, config):
+    def _configure_screen_real(self, width, height):
         # If a texture is still active, better release it first
         self._drop_texture()
         # Set the size
-        width, height = self._get_canvas().get_physical_size()
-        config.width = width
-        config.height = height
+        self._wgpu_config.width = width
+        self._wgpu_config.height = height
         if width <= 0 or height <= 0:
             raise RuntimeError(
                 "Cannot configure canvas that has no pixels ({width}x{height})."
             )
         # Configure, and store the config if we did not error out
-        # H: void f(WGPUSurface surface, WGPUSurfaceConfiguration const * config)
-        libf.wgpuSurfaceConfigure(self._get_surface_id(), config)
-        self._config = config
+        if self._surface_id:
+            # H: void f(WGPUSurface surface, WGPUSurfaceConfiguration const * config)
+            libf.wgpuSurfaceConfigure(self._surface_id, self._wgpu_config)
 
-    def unconfigure(self):
-        self._drop_texture()
-        self._config = None
-        # H: void f(WGPUSurface surface)
-        libf.wgpuSurfaceUnconfigure(self._get_surface_id())
+    def _unconfigure_screen(self):
+        if self._surface_id:
+            # H: void f(WGPUSurface surface)
+            libf.wgpuSurfaceUnconfigure(self._surface_id)
 
-    def _drop_texture(self):
-        if self._texture:
-            self._texture._release()  # not destroy, because it may be in use.
-            self._texture = None
+    def _create_texture_screen(self):
 
-    def get_current_texture(self):
-        # If the canvas has changed since the last configure, we need to re-configure it
-        if not self._config:
-            raise RuntimeError(
-                "Canvas context must be configured before calling get_current_texture()."
-            )
-
-        # When the texture is active right now, we could either:
-        # * return the existing texture
-        # * warn about it, and create a new one
-        # * raise an error
-        # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
-        if self._texture:
-            return self._texture
+        surface_id = self._surface_id
 
         # Reconfigure when the canvas has resized.
         # On some systems (Windows+Qt) this is not necessary, because
@@ -639,10 +671,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # pre-emptively reconfigure. These log entries are harmless but
         # annoying, and I currently don't know how to prevent them
         # elegantly. See issue #352
-        old_size = (self._config.width, self._config.height)
+        old_size = (self._wgpu_config.width, self._wgpu_config.height)
         new_size = tuple(self._get_canvas().get_physical_size())
         if old_size != new_size:
-            self._configure(self._config)
+            self._configure_screen_real(*new_size)
 
         # Try to obtain a texture.
         # `If it fails, depending on status, we reconfigure and try again.
@@ -657,7 +689,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         for attempt in [1, 2]:
             # H: void f(WGPUSurface surface, WGPUSurfaceTexture * surfaceTexture)
-            libf.wgpuSurfaceGetCurrentTexture(self._get_surface_id(), surface_texture)
+            libf.wgpuSurfaceGetCurrentTexture(surface_id, surface_texture)
             status = surface_texture.status
             texture_id = surface_texture.texture
             if status == lib.WGPUSurfaceGetCurrentTextureStatus_Success:
@@ -675,7 +707,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 # (status==Outdated), but also when moving the window from one
                 # monitor to another with different scale-factor.
                 logger.info(f"Re-configuring canvas context ({status}).")
-                self._configure(self._config)
+                self._configure_screen_real(*new_size)
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
                 # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
@@ -690,20 +722,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         if surface_texture.suboptimal:
             logger.warning("The surface texture is suboptimal.")
 
-        return self._create_python_texture(texture_id)
-
-    def _create_python_texture(self, texture_id):
-        # Create the Python wrapper
-
-        # We can derive texture props from the config and common sense:
-        # width = self._config.width
-        # height = self._config.height
-        # depth = 1
-        # mip_level_count = 1
-        # sample_count = 1
-        # dimension = enums.TextureDimension.d2
-        # format = enum_int2str["TextureFormat"][self._config.format]
-        # usage = self._config.usage
+        # Wrap it in a Python texture object
 
         # But we can also read them from the texture
         # H: uint32_t f(WGPUTexture texture)
@@ -740,105 +759,20 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             "usage": usage,
         }
 
-        self._texture = GPUTexture(label, texture_id, self._device, tex_info)
-        return self._texture
+        device = self._config["device"]
+        return GPUTexture(label, texture_id, device, tex_info)
 
-    def present(self):
-        if not self._texture:
-            # This can happen when a user somehow forgot to call
-            # get_current_texture(). But then what was this person rendering to
-            # then? The thing is that this also happens when there is an
-            # exception in the draw function before the call to
-            # get_current_texture(). In this scenario our warning may
-            # add confusion, so provide context and make it a debug level warning.
-            msg = "Warning in present(): No texture to present, missing call to get_current_texture()?"
-            logger.debug(msg)
-        else:
-            # Present the texture, then destroy it
-            # H: void f(WGPUSurface surface)
-            libf.wgpuSurfacePresent(self._get_surface_id())
-            self._drop_texture()
-
-    def get_preferred_format(self, adapter):
-        if self._config is not None:
-            # this shortcut might not be correct if a different format is specified during .configure()
-            return enum_int2str["TextureFormat"][self._config.format]
-        else:
-            return self._get_surface_capabilities(adapter)["formats"][0]
-
-    def _get_surface_capabilities(self, adapter):
-        adapter_id = adapter._internal
-
-        # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
-        c_capabilities = new_struct_p(
-            "WGPUSurfaceCapabilities *",
-            # not used: nextInChain
-            # not used: usages
-            # not used: formatCount
-            # not used: formats
-            # not used: presentModeCount
-            # not used: presentModes
-            # not used: alphaModeCount
-            # not used: alphaModes
-        )
-
-        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
-        libf.wgpuSurfaceGetCapabilities(
-            self._get_surface_id(), adapter_id, c_capabilities
-        )
-
-        # Convert to Python.
-        capabilities = {}
-
-        # When the surface is found not to be compatible, the fields below may
-        # be null pointers. This probably means that the surface won't work,
-        # and trying to use it will result in an error (or Rust panic). Since
-        # I'm not sure what the best time/place to error would be, we pretend
-        # that everything is fine here, and populate the fields with values
-        # that wgpu-core claims are guaranteed to exist on any (compatible)
-        # surface.
-
-        if c_capabilities.formats:
-            capabilities["formats"] = formats = []
-            for i in range(c_capabilities.formatCount):
-                int_val = c_capabilities.formats[i]
-                formats.append(enum_int2str["TextureFormat"][int_val])
-
-        else:
-            capabilities["formats"] = [
-                enums.TextureFormat.bgra8unorm_srgb,
-                enums.TextureFormat.bgra8unorm,
-            ]
-
-        if c_capabilities.alphaModes:
-            capabilities["alpha_modes"] = alpha_modes = []
-            for i in range(c_capabilities.alphaModeCount):
-                int_val = c_capabilities.alphaModes[i]
-                str_val = enum_int2str["CompositeAlphaMode"][int_val]
-                alpha_modes.append(str_val.lower())
-        else:
-            capabilities["alpha_modes"] = [enums.CanvasAlphaMode.opaque]
-
-        if c_capabilities.presentModes:
-            capabilities["present_modes"] = present_modes = []
-            for i in range(c_capabilities.presentModeCount):
-                int_val = c_capabilities.presentModes[i]
-                str_val = enum_int2str["PresentMode"][int_val]
-                present_modes.append(str_val.lower())
-        else:
-            capabilities["present_modes"] = ["fifo"]
-
-        # H: void f(WGPUSurfaceCapabilities surfaceCapabilities)
-        libf.wgpuSurfaceCapabilitiesFreeMembers(c_capabilities[0])
-
-        return capabilities
+    def _present_screen(self):
+        # H: void f(WGPUSurface surface)
+        libf.wgpuSurfacePresent(self._surface_id)
 
     def _release(self):
         self._drop_texture()
         if self._surface_id is not None and libf is not None:
             self._surface_id, surface_id = None, self._surface_id
-            # H: void f(WGPUSurface surface)
-            libf.wgpuSurfaceRelease(surface_id)
+            if surface_id:  # is not NULL
+                # H: void f(WGPUSurface surface)
+                libf.wgpuSurfaceRelease(surface_id)
 
 
 class GPUObjectBase(classes.GPUObjectBase):

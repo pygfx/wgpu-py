@@ -23,7 +23,7 @@ def make_draw_func_for_canvas(canvas):
     so that we can really present something to a canvas being tested.
     """
     ctx = canvas.get_context()
-    ctx.configure(device=DEVICE, format="bgra8unorm-srgb")
+    ctx.configure(device=DEVICE, format=None)
 
     def draw():
         ctx = canvas.get_context()

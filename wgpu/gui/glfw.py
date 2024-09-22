@@ -104,26 +104,31 @@ KEY_MAP_MOD = {
 }
 
 
-def get_surface_info(window):
+def get_glfw_present_info(window):
+
     if sys.platform.startswith("win"):
         return {
+            "method": "screen",
             "platform": "windows",
             "window": int(glfw.get_win32_window(window)),
         }
     elif sys.platform.startswith("darwin"):
         return {
+            "method": "screen",
             "platform": "cocoa",
             "window": int(glfw.get_cocoa_window(window)),
         }
     elif sys.platform.startswith("linux"):
         if is_wayland:
             return {
+                "method": "screen",
                 "platform": "wayland",
                 "window": int(glfw.get_wayland_window(window)),
                 "display": int(glfw.get_wayland_display()),
             }
         else:
             return {
+                "method": "screen",
                 "platform": "x11",
                 "window": int(glfw.get_x11_window(window)),
                 "display": int(glfw.get_x11_display()),
@@ -298,8 +303,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
     # API
 
-    def get_surface_info(self):
-        return get_surface_info(self._window)
+    def get_present_info(self):
+        return get_glfw_present_info(self._window)
 
     def get_pixel_ratio(self):
         return self._pixel_ratio
@@ -511,6 +516,12 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "modifiers": tuple(self._key_modifiers),
         }
         self._handle_event_and_flush(ev)
+
+    def present_image(self, image, **kwargs):
+        raise NotImplementedError()
+        # AFAIK glfw does not have a builtin way to blit an image. It also does
+        # not really need one, since it's the most reliable GUI backend to
+        # render to the screen.
 
 
 # Make available under a name that is the same for all gui backends
