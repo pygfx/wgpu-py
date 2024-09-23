@@ -4,6 +4,7 @@ Hook for building wheels with the hatchling build backend.
 * Set wheel to being platform-specific (not pure Python).
 * Download the wgpu-native library before creating the wheel.
 * Support cross-platform wheel building with a custom env var.
+* Note that for sdist we go into pure-Python mode.
 """
 
 # Note on an alternative approach:
@@ -24,11 +25,12 @@ Hook for building wheels with the hatchling build backend.
 
 import os
 import sys
-from subprocess import getoutput
+from subprocess import run, PIPE, STDOUT
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
-sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..")))
+root_dir = os.path.abspath(os.path.join(__file__, "..", ".."))
+sys.path.insert(0, os.path.join(root_dir, "tools"))
 
 from download_wgpu_native import main as download_lib  # noqa
 
@@ -37,7 +39,11 @@ class CustomBuildHook(BuildHookInterface):
     def initialize(self, version, build_data):
         # See https://hatch.pypa.io/latest/plugins/builder/wheel/#build-data
 
-        if self.target_name == "wheel":
+        # We only do our thing when this is a wheel build from the repo.
+        # If this is an sdist build, or a wheel build from an sdist,
+        # we go pure-Python mode, and expect the user to set WGPU_LIB_PATH.
+
+        if self.target_name == "wheel" and is_git_repo():
 
             # Prepare
             check_git_status()
@@ -63,16 +69,23 @@ class CustomBuildHook(BuildHookInterface):
             check_git_status()
 
 
+def is_git_repo():
+    return os.path.isdir(os.path.join(root_dir, ".git"))
+
+
 def check_git_status():
-    git_status = getoutput("git status --porcelain")
+    p = run(
+        "git status --porcelain", shell=True, cwd=root_dir, stdout=PIPE, stderr=STDOUT
+    )
+    git_status = p.stdout.decode(errors="ignore")
     # print("Git status:\n" + git_status)
     for line in git_status.splitlines():
         assert not line.strip().startswith("M wgpu/"), "Git has open changes!"
 
 
 def remove_all_libs():
-    dir = "wgpu/resources/"
+    dir = os.path.join(root_dir, "wgpu", "resources")
     for fname in os.listdir(dir):
         if fname.endswith((".so", ".dll", ".dylib")):
-            os.remove(dir + fname)
+            os.remove(os.path.join(dir, fname))
             print(f"Removed {fname} from resource dir")

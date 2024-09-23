@@ -52,6 +52,7 @@ path = "wgpu/__init__.py"
 [tool.hatch.build.targets.sdist]
 packages = ["wgpu"]
 exclude = ["*.so", "*.dll", "*.dylib"]
+force-include = { "tools" = "tools" }
 
 [tool.hatch.build.targets.wheel]
 packages = ["wgpu"]
