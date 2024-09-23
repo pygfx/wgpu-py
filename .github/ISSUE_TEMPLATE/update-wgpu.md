@@ -47,7 +47,7 @@ For context, see the [codegen readme](https://github.com/pygfx/wgpu-py/blob/main
 
 *The lines below can be copied in the PR's top post.*
 
-* [ ] Run `python download-wgpu-native.py --version xx` to download the latest webgpu.h and DLL.
+* [ ] Run `python tools/download_wgpu_native.py --version xx` to download the latest webgpu.h and DLL.
 * [ ] Run `python codegen` to apply the automatic patches to the code.
 * [ ] It may be necessary to tweak the `hparser.py` to adjust to new formatting.
 * [ ] Diff the report for new differences to take into account.
