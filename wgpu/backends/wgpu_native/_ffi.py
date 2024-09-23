@@ -90,9 +90,7 @@ def get_wgpu_lib_path():
         hints = [pip_hint, download_hint, env_hint]
         hints = "\n".join([hint for hint in hints if hint])
         hints = "\n" + hints if hints else ""
-        raise RuntimeError(
-            f"Could not find WGPU library in {embedded_path}.{hints}"
-        )
+        raise RuntimeError(f"Could not find WGPU library in {embedded_path}.{hints}")
     else:
         return embedded_path
 
