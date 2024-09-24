@@ -69,7 +69,7 @@ In some cases we may want to deviate from the WebGPU API, because well ... Pytho
 Other changes include:
 
 * Where in JS the input args are provided via a dict, we use kwargs directly. Nevertheless, some input args have subdicts (and sub-sub-dicts)
-*  For methods that are async in IDL, we also provide sync methods. The Async method names have an "_async" suffix.
+* For methods that are async in JavaScript (i.e return a `Promise`), we provide both an asynchronous and synchronous variant, indicated by an `_async` and `_sync` suffix.
 
 ### Codegen summary
 
