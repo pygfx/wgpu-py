@@ -132,7 +132,7 @@ class Runner:
         compute: bool = False,
         vertex_constants=None,
         fragment_constants=None,
-        compute_constants=None
+        compute_constants=None,
     ):
         assert render + compute == 1
         device = self.device
