@@ -11,7 +11,7 @@ from typing import List
 
 def enumerate_adapters():
     """Deprecated."""
-    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters() instead.")
+    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters_sync() instead.")
 
 
 def request_device_sync(

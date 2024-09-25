@@ -201,6 +201,7 @@ def test_register_backend_fails():
         with raises(RuntimeError):
             wgpu.backends._register_backend(fake_gpu)
 
+        fake_gpu.request_adapter_sync = lambda: None
         fake_gpu.request_adapter_async = lambda: None
         fake_gpu.wgsl_language_features = set()
         wgpu.backends._register_backend(fake_gpu)
