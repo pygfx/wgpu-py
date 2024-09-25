@@ -14,7 +14,7 @@ def _register_backend(gpu):
 
     root_namespace = sys.modules["wgpu"].__dict__
     needed_attributes = (
-        "request_adapter",
+        "request_adapter_sync",
         "request_adapter_async",
         "wgsl_language_features",
     )
