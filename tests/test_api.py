@@ -16,13 +16,13 @@ def test_basic_api():
     assert isinstance(wgpu.gpu, wgpu.GPU)
 
     # Entrypoint funcs
-    assert wgpu.gpu.request_adapter
+    assert wgpu.gpu.request_adapter_sync
     assert wgpu.gpu.request_adapter_async
 
-    code1 = wgpu.GPU.request_adapter.__code__
+    code1 = wgpu.GPU.request_adapter_sync.__code__
     code2 = wgpu.GPU.request_adapter_async.__code__
-    nargs1 = code1.co_argcount + code1.co_kwonlyargcount
-    assert code1.co_varnames[:nargs1] == code2.co_varnames
+    # nargs1 = code1.co_argcount + code1.co_kwonlyargcount
+    assert code1.co_varnames == code2.co_varnames
 
     assert repr(wgpu.classes.GPU()).startswith(
         "<wgpu.GPU "

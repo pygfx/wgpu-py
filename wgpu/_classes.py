@@ -2529,6 +2529,7 @@ def _set_compat_methods_for_async_methods():
             return getattr(self, name)(*args, **kwargs)
 
         proxy_method.__name__ = name + "_backwards_compat_proxy"
+        proxy_method.__doc__ = f"Backwards compatibile method for {name}()"
         return proxy_method
 
     m = globals()
