@@ -136,7 +136,7 @@ The majority of work in the wgpu-native backend is the conversion of  Python dic
 
 ### The update process
 
-* Download the latest `webgpu.h` and DLL using `python download-wgpu-native.py --version xx`
+* Download the latest `webgpu.h` and DLL using `python tools/download_wgpu_native.py --version xx`
 * Run `python codegen` to apply the automatic patches to the code.
 * It may be necessary to tweak the `hparser.py` to adjust to new formatting.
 * Diff the report for new differences to take into account.
