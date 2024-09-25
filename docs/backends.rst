@@ -221,6 +221,7 @@ an unsigned 32-bit integer. The ``count`` is the minimum of this value and ``max
 .. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect_count(render_pass_encoder, buffer, *, offset=0, count_buffer, count_offset=0, max_count):
 
      Equivalent to::
+
         count = min(<u32 at count_buffer_offset in count_buffer>, max_count)
         for i in range(count):
             render_pass_encoder.draw_indexed_indirect(buffer, offset + i * 2-)
