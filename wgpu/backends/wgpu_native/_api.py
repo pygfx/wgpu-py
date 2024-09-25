@@ -45,9 +45,11 @@ __all__ = classes.__all__.copy()
 
 # %% Helper functions and objects
 
+
 def check_can_use_sync_variants():
     if False:  # placeholder, let's implement a little wgpu config thingy
         raise RuntimeError("Disallowed use of '_sync' API.")
+
 
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
@@ -2222,7 +2224,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         return self._get_compilation_info()
 
     def _get_compilation_info(self):
-         # Here's a little setup to implement this method. Unfortunately,
+        # Here's a little setup to implement this method. Unfortunately,
         # this is not yet implemented in wgpu-native. Another problem
         # is that if there is an error in the shader source, we raise
         # an exception, so the user never gets a GPUShaderModule object

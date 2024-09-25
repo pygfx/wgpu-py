@@ -2546,4 +2546,4 @@ def _set_compat_methods_for_async_methods():
 
 _seed_object_counts()
 _set_repr_methods()
-# _set_compat_methods_for_async_methods()
+_set_compat_methods_for_async_methods()
