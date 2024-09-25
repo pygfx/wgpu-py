@@ -2224,7 +2224,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         return []
 
     async def get_compilation_info_async(self):
-        raise NotImplementedError()
+        return self.get_compilation_info_sync()
 
 
 class GPUPipelineBase(classes.GPUPipelineBase):
@@ -3098,7 +3098,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        tmp_buffer.map("READ_NOSYNC")
+        tmp_buffer.map_sync("READ_NOSYNC")
         data = tmp_buffer.read_mapped()
 
         # Explicit drop.
@@ -3202,7 +3202,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        tmp_buffer.map("READ_NOSYNC")
+        tmp_buffer.map_sync("READ_NOSYNC")
         data = tmp_buffer.read_mapped()
 
         # Explicit drop.

@@ -213,10 +213,10 @@ def test_glfw_canvas_render_custom_canvas():
     canvas = CustomCanvas()
 
     # Also pass canvas here, to touch that code somewhere
-    adapter = wgpu.gpu.request_adapter(
+    adapter = wgpu.gpu.request_adapter_sync(
         canvas=canvas, power_preference="high-performance"
     )
-    device = adapter.request_device()
+    device = adapter.request_device_sync()
     draw_frame = _get_draw_function(device, canvas)
 
     for i in range(5):

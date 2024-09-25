@@ -15,9 +15,9 @@ from wgpu.utils.imgui import ImguiRenderer
 canvas = WgpuCanvas(title="imgui_sea", size=(800, 450), max_fps=60)
 
 # Create a wgpu device
-adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
 
-device = adapter.request_device()
+device = adapter.request_device_sync()
 
 # Prepare present context
 present_context = canvas.get_context()

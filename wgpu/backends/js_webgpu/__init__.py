@@ -12,7 +12,7 @@ from .. import _register_backend
 
 
 class GPU:
-    def request_adapter(self, **parameters):
+    def request_adapter_sync(self, **parameters):
         raise NotImplementedError("Cannot use sync API functions in JS.")
 
     async def request_adapter_async(self, **parameters):

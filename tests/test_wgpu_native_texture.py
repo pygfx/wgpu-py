@@ -58,7 +58,7 @@ def test_do_a_copy_roundtrip():
 
     # Upload from CPU to buffer
     # assert buf1.state == "unmapped"
-    # mapped_data = buf1.map(wgpu.MapMode.WRITE)
+    # mapped_data = buf1.map_sync(wgpu.MapMode.WRITE)
     # assert buf1.state == "mapped"
     # mapped_data.cast("f")[:] = data1
     # buf1.unmap()
@@ -97,7 +97,7 @@ def test_do_a_copy_roundtrip():
     # Download from buffer to CPU
     # assert buf5.state == "unmapped"
     # assert buf5.map_mode == 0
-    # result_data = buf5.map(wgpu.MapMode.READ)  # a memoryview
+    # result_data = buf5.map_sync(wgpu.MapMode.READ)  # a memoryview
     # assert buf5.state == "mapped"
     # assert buf5.map_mode == wgpu.MapMode.READ
     # buf5.unmap()
@@ -115,7 +115,7 @@ def test_do_a_copy_roundtrip():
     # Upload from CPU to buffer
     # assert buf1.state == "unmapped"
     # assert buf1.map_mode == 0
-    # mapped_data = buf1.map(wgpu.MapMode.WRITE)
+    # mapped_data = buf1.map_sync(wgpu.MapMode.WRITE)
     # assert buf1.state == "mapped"
     # assert buf1.map_mode == wgpu.MapMode.WRITE
     # mapped_data.cast("f")[:] = data3
@@ -150,7 +150,7 @@ def test_do_a_copy_roundtrip():
 
     # Download from buffer to CPU
     # assert buf5.state == "unmapped"
-    # result_data = buf5.map(wgpu.MapMode.READ)  # always an uint8 array
+    # result_data = buf5.map_sync(wgpu.MapMode.READ)  # always an uint8 array
     # assert buf5.state == "mapped"
     # buf5.unmap()
     # assert buf5.state == "unmapped"

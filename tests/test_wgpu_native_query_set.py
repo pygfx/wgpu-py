@@ -30,8 +30,8 @@ def test_query_set():
     for i in range(n):
         data1[i] = float(i)
 
-    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-    device = adapter.request_device(
+    adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
+    device = adapter.request_device_sync(
         required_features=[wgpu.FeatureName.timestamp_query]
     )
 

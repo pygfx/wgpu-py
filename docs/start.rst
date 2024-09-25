@@ -99,7 +99,7 @@ You can verify whether the `"DiscreteGPU"` adapters are found:
     import wgpu
     import pprint
 
-    for a in wgpu.gpu.enumerate_adapters():
+    for a in wgpu.gpu.enumerate_adapters_sync():
         pprint.pprint(a.info)
 
 If you are using a remote frame buffer via `jupyter-rfb <https://github.com/vispy/jupyter_rfb>`_ we also recommend installing the following for optimal performance:

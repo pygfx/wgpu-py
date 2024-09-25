@@ -681,7 +681,7 @@ class GPUDevice(GPUObjectBase):
     from it: when the device is lost, all objects created from it become
     invalid.
 
-    Create a device using `GPUAdapter.request_device()` or
+    Create a device using `GPUAdapter.request_device_sync()` or
     `GPUAdapter.request_device_async()`.
     """
 
@@ -2221,7 +2221,7 @@ class GPUQueue(GPUObjectBase):
 
         Alignment: the buffer offset must be a multiple of 4, the total size to write must be a multiple of 4 bytes.
 
-        Also see `GPUBuffer.map()`.
+        Also see `GPUBuffer.map_sync()` and `GPUBuffer.map_async()`.
 
         """
         raise NotImplementedError()
@@ -2239,7 +2239,7 @@ class GPUQueue(GPUObjectBase):
         and then maps that buffer to read the data. The given buffer's
         usage must include COPY_SRC.
 
-        Also see `GPUBuffer.map()`.
+        Also see `GPUBuffer._sync()` and `GPUBuffer._async()`.
         """
         raise NotImplementedError()
 
@@ -2546,4 +2546,4 @@ def _set_compat_methods_for_async_methods():
 
 _seed_object_counts()
 _set_repr_methods()
-_set_compat_methods_for_async_methods()
+# _set_compat_methods_for_async_methods()
