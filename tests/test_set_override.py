@@ -1,7 +1,7 @@
 import pytest
 
 import wgpu.utils
-from tests.testutils import can_use_wgpu_lib, run_tests
+from testutils import can_use_wgpu_lib, run_tests
 from wgpu import TextureFormat
 
 if not can_use_wgpu_lib:
@@ -170,7 +170,7 @@ def test_no_overridden_constants_render(runner):
 
 
 def test_no_constants_compute(runner):
-    runner.run_test(compute=True) == [1, 2, 3, 0]
+    assert runner.run_test(compute=True) == [1, 2, 3, 0]
 
 
 def test_override_vertex_constants(runner):

@@ -380,9 +380,9 @@ def render():
     global_time = current_time
 
     canvas_texture = present_context.get_current_texture()
-    render_pass_descriptor["color_attachments"][0][
-        "view"
-    ] = canvas_texture.create_view()
+    render_pass_descriptor["color_attachments"][0]["view"] = (
+        canvas_texture.create_view()
+    )
 
     # Update uniform buffer
     uniform_data["resolution"] = (canvas_texture.size[0], canvas_texture.size[1])

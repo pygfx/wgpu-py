@@ -296,8 +296,8 @@ class GPUCanvasContext:
         if not isinstance(usage, int):
             usage = str_flag_to_int(flags.TextureUsage, usage)
 
-        color_space  # not really supported, just assume srgb for now
-        tone_mapping  # not supported yet
+        color_space  # noqa - not really supported, just assume srgb for now
+        tone_mapping  # noqa - not supported yet
 
         if alpha_mode not in enums.CanvasAlphaMode:
             raise ValueError(
@@ -393,7 +393,6 @@ class GPUCanvasContext:
         return self._texture
 
     def _create_texture_image(self):
-
         canvas = self._get_canvas()
         width, height = canvas.get_physical_size()
         width, height = max(width, 1), max(height, 1)
@@ -496,7 +495,7 @@ class GPUAdapterInfo:
     """Represents information about an adapter."""
 
     def __init__(self, info):
-        self._info
+        self._info = info
 
     # IDL: readonly attribute DOMString vendor;
     @property

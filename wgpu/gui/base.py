@@ -115,7 +115,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._last_draw_time = 0
         self._max_fps = float(max_fps)
         self._vsync = bool(vsync)
-        present_method  # We just catch the arg here in case a backend does implement support it
+        present_method  # noqa - We just catch the arg here in case a backend does implement support it
 
     def __del__(self):
         # On delete, we call the custom close method.

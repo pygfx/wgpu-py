@@ -1,5 +1,4 @@
-""" Private gui utilities.
-"""
+"""Private gui utilities."""
 
 import os
 import sys

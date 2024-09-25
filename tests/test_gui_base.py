@@ -31,7 +31,7 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
         raise Exception("call-failed-" + "but-test-passed")
 
     def spam_method(self):
-        1 / 0
+        raise ZeroDivisionError()
 
 
 def test_base_canvas_context():

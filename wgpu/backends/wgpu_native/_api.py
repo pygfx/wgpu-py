@@ -148,7 +148,7 @@ def _tuple_from_tuple_or_dict(ob, fields, defaults=()):
                 for index, key in enumerate(fields)
             )
         except KeyError:
-            raise ValueError(error_msg.format(", ".join(fields)))
+            raise ValueError(error_msg.format(", ".join(fields))) from None
     else:
         raise TypeError(error_msg.format(", ".join(fields)))
 
@@ -576,7 +576,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         tone_mapping,
         alpha_mode,
     ):
-
         capabilities = self._get_capabilities(device.adapter)
 
         # Convert to C values
@@ -590,11 +589,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         c_alpha_mode = getattr(lib, f"WGPUCompositeAlphaMode_{alpha_mode.capitalize()}")
 
         # The color_space is not used for now
-        color_space
-        # Same for tone mapping
+        color_space  # noqa - not used yet
         check_struct("CanvasToneMapping", tone_mapping)
         tone_mapping_mode = tone_mapping.get("mode", "standard")
-        tone_mapping_mode
+        tone_mapping_mode  # noqa - not used yet
 
         # Select the present mode to determine vsync behavior.
         # * https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html
@@ -658,7 +656,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             libf.wgpuSurfaceUnconfigure(self._surface_id)
 
     def _create_texture_screen(self):
-
         surface_id = self._surface_id
 
         # Reconfigure when the canvas has resized.
@@ -1803,7 +1800,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
     ):
-
         c_color_formats, color_formats_count = ffi.NULL, 0
         if color_formats:
             color_formats_list = [enummap["TextureFormat." + x] for x in color_formats]
@@ -2383,7 +2379,6 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 class GPUCommandEncoder(
     classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase
 ):
-
     # GPUDebugCommandsMixin
     _push_debug_group_function = libf.wgpuCommandEncoderPushDebugGroup
     _pop_debug_group_function = libf.wgpuCommandEncoderPopDebugGroup
@@ -2792,7 +2787,6 @@ class GPUComputePassEncoder(
     GPUBindingCommandsMixin,
     GPUObjectBase,
 ):
-
     # GPUDebugCommandsMixin
     _push_debug_group_function = libf.wgpuComputePassEncoderPushDebugGroup
     _pop_debug_group_function = libf.wgpuComputePassEncoderPopDebugGroup

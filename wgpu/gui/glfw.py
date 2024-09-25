@@ -105,7 +105,6 @@ KEY_MAP_MOD = {
 
 
 def get_glfw_present_info(window):
-
     if sys.platform.startswith("win"):
         return {
             "method": "screen",

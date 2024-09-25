@@ -44,7 +44,6 @@ class CustomBuildHook(BuildHookInterface):
         # we go pure-Python mode, and expect the user to set WGPU_LIB_PATH.
 
         if self.target_name == "wheel" and is_git_repo():
-
             # Prepare
             check_git_status()
             remove_all_libs()

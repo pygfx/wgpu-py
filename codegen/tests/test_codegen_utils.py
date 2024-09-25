@@ -201,7 +201,7 @@ def test_patcher():
     for line, i in p.iter_lines():
         if line.lstrip().startswith("#"):
             p.replace_line(i, "# comment")
-            with raises(Exception):
+            with raises(AssertionError):
                 p.replace_line(i, "# comment")
     code2 = p.dumps()
     assert code2.count("#") == 4

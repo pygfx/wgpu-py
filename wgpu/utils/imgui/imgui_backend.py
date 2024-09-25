@@ -94,7 +94,6 @@ class ImguiWgpuBackend:
     """Basic integration base class."""
 
     def __init__(self, device, target_format):
-
         if not imgui.get_current_context():
             raise RuntimeError(
                 "No valid ImGui context. Use imgui.create_context() first and/or "
@@ -183,7 +182,6 @@ class ImguiWgpuBackend:
         self.io.fonts.clear_tex_data()
 
     def _create_device_objects(self):
-
         vertex_shader_program = self._device.create_shader_module(
             label="triangle_vert", code=VERTEX_SHADER_SRC
         )
@@ -316,7 +314,6 @@ class ImguiWgpuBackend:
         )
 
     def _update_vertex_buffer(self, draw_data: imgui.ImDrawData):
-
         # check if we need to recreate the vertex buffer and index buffer
         vtx_count = draw_data.total_vtx_count
         if self._vertex_buffer is None or self._vertex_buffer_size < vtx_count:

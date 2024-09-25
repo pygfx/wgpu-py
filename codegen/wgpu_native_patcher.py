@@ -236,7 +236,7 @@ class FunctionPatcher(Patcher):
                 else:
                     detected.add(var_name)
                     anno = hp.functions[var_name].replace(var_name, "f").strip(";")
-                    self.insert_line(i, indent + f"# H: " + anno)
+                    self.insert_line(i, indent + "# H: " + anno)
                     count += 1
             elif match := re.search(r"(_\w+_function) = libf?\.(wgpu\w*)", line):
                 # Assignment of libf function to a class variable. We'll point the
@@ -266,7 +266,7 @@ class FunctionPatcher(Patcher):
             count += len(lib_names)
             for lib_name in lib_names:
                 self.insert_line(
-                    i, indent + f"# H: " + hp.functions[lib_name].strip(";")
+                    i, indent + "# H: " + hp.functions[lib_name].strip(";")
                 )
         # At this point, generic_class_var_assignment should be empty.
         # If it is not, we've done an assignment to a class variable name, but have
@@ -363,12 +363,12 @@ class StructPatcher(Patcher):
         if name.endswith("*"):
             if "new_struct_p" not in lines[0]:
                 self.insert_line(
-                    i1, indent + f"# FIXME: invalid C struct, use new_struct_p()"
+                    i1, indent + "# FIXME: invalid C struct, use new_struct_p()"
                 )
         else:
             if "new_struct_p" in lines[0]:
                 self.insert_line(
-                    i1, indent + f"# FIXME: invalid C struct, use new_struct()"
+                    i1, indent + "# FIXME: invalid C struct, use new_struct()"
                 )
 
         # Get struct object and create annotation line
@@ -380,7 +380,7 @@ class StructPatcher(Patcher):
         else:
             struct = hp.structs[struct_name]
             fields = ", ".join(f"{key}: {val}" for key, val in struct.items())
-            self.insert_line(i1, indent + f"# H: " + fields)
+            self.insert_line(i1, indent + "# H: " + fields)
 
         # Check keys
         keys_found = []

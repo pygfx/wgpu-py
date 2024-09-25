@@ -1,5 +1,4 @@
-"""Loading the header, the lib, and setting up its logging.
-"""
+"""Loading the header, the lib, and setting up its logging."""
 
 import os
 import sys

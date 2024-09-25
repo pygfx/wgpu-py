@@ -5,6 +5,7 @@ Codegen utils.
 import os
 import sys
 import tempfile
+import subprocess
 
 import black
 
@@ -103,14 +104,30 @@ def remove_c_comments(code):
     return new_code
 
 
+class FormatException(Exception):
+    pass
+
+# todo: rename blacken to format_code
 def blacken(src, singleline=False):
     """Format the given src string using black. If singleline is True,
     all function signatures become single-line, so they can be parsed
     and updated.
     """
-    # Normal black
-    mode = black.FileMode(line_length=999 if singleline else 88)
-    result = black.format_str(src, mode=mode)
+    # Use Ruff to format the line. Ruff does not yet have a Python API, so we use its CLI.
+    tempfilename = os.path.join(tempfile.gettempdir(), "toruff.py")
+    with open(tempfilename, "wb") as fp:
+        fp.write(src.encode())
+    line_length = 320 if singleline else 88
+    cmd = [sys.executable, "-m", "ruff", "format","--line-length", str(line_length), tempfilename]
+    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if p.returncode:
+        raise FormatException(p.stdout.decode(errors='ignore'))
+    with open(tempfilename, "rb") as fp:
+        result = fp.read().decode()
+
+    # # Normal black
+    # mode = black.FileMode(line_length=999 if singleline else 88)
+    # result = black.format_str(src, mode=mode)
 
     # Make defs single-line. You'd think that setting the line length
     # to a very high number would do the trick, but it does not.
@@ -222,7 +239,7 @@ class Patcher:
         if format:
             try:
                 text = blacken(text)
-            except black.InvalidInput as err:  # pragma: no cover
+            except FormatException as err:  # pragma: no cover
                 # If you get this error, it really helps to load the code
                 # in an IDE to see where the error is. Let's help with that ...
                 filename = os.path.join(tempfile.gettempdir(), "wgpu_patcher_fail.py")
@@ -234,7 +251,7 @@ class Patcher:
                     f"It appears that the patcher has generated invalid Python:"
                     f"\n\n    {err}\n\n"
                     f'Wrote the generated (but unblackened) code to:\n\n  "{filename}"'
-                )
+                ) from None
 
         return text
 

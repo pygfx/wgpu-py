@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import wgpu.utils
-from tests.testutils import can_use_wgpu_lib, run_tests
+from testutils import can_use_wgpu_lib, run_tests
 from wgpu import TextureFormat
 from wgpu.backends.wgpu_native.extras import create_pipeline_layout, set_push_constants
 

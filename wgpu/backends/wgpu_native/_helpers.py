@@ -1,5 +1,4 @@
-"""Utilities used in the wgpu-native backend.
-"""
+"""Utilities used in the wgpu-native backend."""
 
 import sys
 import ctypes
