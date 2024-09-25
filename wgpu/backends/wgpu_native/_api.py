@@ -389,7 +389,7 @@ class GPU(classes.GPU):
         """Async version of ``request_adapter()``.
         This is the implementation based on wgpu-native.
         """
-        return self.request_adapter(
+        return self.request_adapter_sync(
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
@@ -837,7 +837,9 @@ class GPUAdapter(classes.GPUAdapter):
         required_limits: "Dict[str, int]" = {},
         default_queue: "structs.QueueDescriptor" = {},
     ):
-        return self.request_device_async(
+        if default_queue:
+            check_struct("QueueDescriptor", default_queue)
+        return self._request_device(
             label,
             required_features=required_features,
             required_limits=required_limits,
@@ -1029,20 +1031,6 @@ class GPUAdapter(classes.GPUAdapter):
         device._device_lost_callback = device_lost_callback
 
         return device
-
-    async def request_device_async(
-        self,
-        *,
-        label="",
-        required_features: "List[enums.FeatureName]" = [],
-        required_limits: "Dict[str, int]" = {},
-        default_queue: "structs.QueueDescriptor" = {},
-    ):
-        if default_queue:
-            check_struct("QueueDescriptor", default_queue)
-        return self._request_device(
-            label, required_features, required_limits, default_queue, ""
-        )  # no-cover
 
     def _release(self):
         if self._internal is not None and libf is not None:
@@ -1980,7 +1968,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         self._mapped_memoryviews = []
 
     async def map_async(self, mode, offset=0, size=None):
-        return self.map(mode, offset, size)  # for now
+        return self.map_sync(mode, offset, size)  # for now
 
     def unmap(self):
         if self._map_state != enums.BufferMapState.mapped:

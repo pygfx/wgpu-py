@@ -2517,5 +2517,32 @@ def _set_repr_methods():
             cls.__repr__ = generic_repr
 
 
+_async_warnings = {}
+
+
+def _set_compat_methods_for_async():
+    def create_new_method(name):
+        def proxy_method(self, *args, **kwargs):
+            warning = _async_warnings.pop(name, None)
+            if warning:
+                logger.warning(warning)
+            return getattr(self, name)(*args, **kwargs)
+
+        proxy_method.__name__ = name + "_backwards_compat_proxy"
+        return proxy_method
+
+    m = globals()
+    for class_name in __all__:
+        cls = m[class_name]
+        for name, func in list(cls.__dict__.items()):
+            if name.endswith("_sync") and callable(func):
+                old_name = name[:-5]
+                setattr(cls, old_name, create_new_method(name))
+                _async_warnings[name] = (
+                    f"WGPU: {old_name}() is deprecated, use {name}() instead."
+                )
+
+
 _seed_object_counts()
 _set_repr_methods()
+_set_compat_methods_for_async()
