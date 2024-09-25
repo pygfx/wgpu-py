@@ -2520,7 +2520,7 @@ def _set_repr_methods():
 _async_warnings = {}
 
 
-def _set_compat_methods_for_async():
+def _set_compat_methods_for_async_methods():
     def create_new_method(name):
         def proxy_method(self, *args, **kwargs):
             warning = _async_warnings.pop(name, None)
@@ -2545,4 +2545,4 @@ def _set_compat_methods_for_async():
 
 _seed_object_counts()
 _set_repr_methods()
-_set_compat_methods_for_async()
+_set_compat_methods_for_async_methods()

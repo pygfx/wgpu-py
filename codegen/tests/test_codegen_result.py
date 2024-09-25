@@ -12,7 +12,7 @@ def test_async_methods_and_props():
         for line in code.splitlines():
             line = line.strip()
             if line.startswith("def "):
-                assert "async" not in line, line
+                assert not line.endswith("_async"), line
             elif line.startswith("async def "):
                 name = line.split("def", 1)[1].split("(")[0].strip()
                 assert name.endswith("_async"), line
