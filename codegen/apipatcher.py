@@ -179,7 +179,7 @@ class AbstractApiPatcher(Patcher):
                 elif "@apidiff.hide" in pre_lines:
                     pass  # continue as normal
                 old_line = self.lines[j1]
-                new_line = f"    def {propname}(self):"
+                new_line = self.get_property_def(classname, propname)
                 if old_line != new_line:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
@@ -321,7 +321,7 @@ class IdlPatcherMixin:
             if name_py.endswith("_async"):
                 return idl_async
             elif name_py.endswith("_sync"):
-                return name_idl_base + "InvalidVariantSync"
+                return name_idl_base + "InvalidVariant"
             else:
                 return idl_sync
         elif idl_async:
@@ -333,9 +333,9 @@ class IdlPatcherMixin:
                 return name_idl_base + "InvalidVariant"
         else:  # idl_sync only
             if name_py.endswith("_async"):
-                return name_idl_base + "InvalidVariantAsync"
+                return name_idl_base + "InvalidVariant"
             elif name_py.endswith("_sync"):
-                return name_idl_base + "InvalidVariantSync"
+                return name_idl_base + "InvalidVariant"
             else:
                 return idl_sync
 
