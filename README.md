@@ -115,18 +115,14 @@ This code is distributed under the 2-clause BSD license.
 ## Developers
 
 * Clone the repo.
-* Install devtools using `pip install -r dev-requirements.txt` (you can replace
-  `pip` with `pipenv` to install to a virtualenv).
-* Install wgpu-py in editable mode by running `pip install -e .`, this will also
-  install runtime dependencies as needed.
-* Run `python download-wgpu-native.py` to download the upstream wgpu-native
+* Install devtools using `pip install -e .[dev]`.
+* Using `pip install -e .` will also download the upstream wgpu-native
   binaries.
-  * Or alternatively point the `WGPU_LIB_PATH` environment variable to a custom
-    build.
+  * You can use `python tools/download_wgpu_native.py` when needed.
+  * Or point the `WGPU_LIB_PATH` environment variable to a custom build of `wgpu-native`.
 * Use `black .` to apply autoformatting.
 * Use `flake8 .` to check for flake errors.
 * Use `pytest .` to run the tests.
-* Use `pip wheel --no-deps .` to build a wheel.
 
 
 ### Updating to a later version of WebGPU or wgpu-native
