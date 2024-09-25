@@ -746,7 +746,11 @@ class GPUDevice(GPUObjectBase):
     @apidiff.hide("Specific to browsers")
     @property
     def onuncapturederror(self):
-        """Method called when an error is capured?"""
+        """Event handler.
+
+        In JS you'd do ``gpuDevice.addEventListener('uncapturederror', ...)``. We'd need
+        to figure out how to do this in Python.
+        """
         raise NotImplementedError()
 
     # IDL: undefined destroy();
