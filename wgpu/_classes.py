@@ -730,7 +730,7 @@ class GPUDevice(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        return self._get_lost_sync()
 
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @apidiff.hide("Not a Pythonic API")
@@ -740,6 +740,14 @@ class GPUDevice(GPUObjectBase):
         # In JS you can device.lost.then ... to handle lost devices.
         # We may want to eventually support something similar async-like?
         # at some point
+
+        # Properties don't get repeated at _api.py, so we use a proxy method.
+        return await self._get_lost_async()
+
+    def _get_lost_sync(self):
+        raise NotImplementedError()
+
+    async def _get_lost_async(self):
         raise NotImplementedError()
 
     # IDL: attribute EventHandler onuncapturederror;

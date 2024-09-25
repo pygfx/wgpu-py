@@ -1865,6 +1865,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         query_id = libf.wgpuDeviceCreateQuerySet(self._internal, query_set_descriptor)
         return GPUQuerySet(label, query_id, self._internal, type, count)
 
+    def _get_lost_sync(self):
+        raise NotImplementedError()
+
+    async def _get_lost_async(self):
+        raise NotImplementedError()
+
     def destroy(self):
         # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
         internal = self._internal
