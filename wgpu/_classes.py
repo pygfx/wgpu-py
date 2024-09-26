@@ -81,7 +81,25 @@ class GPU:
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include canvas")
-    def request_adapter(
+    def request_adapter_sync(
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+    ):
+        """Sync version of `request_adapter_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        # If this method gets called, no backend has been loaded yet, let's do that now!
+        from .backends.auto import gpu  # noqa
+
+        return gpu.request_adapter_sync(
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
+        )
+
+    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
+    @apidiff.change("arguments include canvas")
+    async def request_adapter_async(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
@@ -97,26 +115,26 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu  # noqa
 
-        return gpu.request_adapter(
-            power_preference=power_preference,
-            force_fallback_adapter=force_fallback_adapter,
-            canvas=canvas,
-        )
-
-    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
-    @apidiff.change("arguments include canvas")
-    async def request_adapter_async(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
-    ):
-        """Async version of `request_adapter()`."""
-        return self.request_adapter(
+        return await gpu.request_adapter_async(
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
-    def enumerate_adapters(self):
+    def enumerate_adapters_sync(self):
+        """Sync version of `enumerate_adapters_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+
+        # If this method gets called, no backend has been loaded yet, let's do that now!
+        from .backends.auto import gpu  # noqa
+
+        return gpu.enumerate_adapters_sync()
+
+    @apidiff.add("Method useful for multi-gpu environments")
+    async def enumerate_adapters_async(self):
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using it's summary), and a device
@@ -143,12 +161,7 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu  # noqa
 
-        return gpu.enumerate_adapters()
-
-    @apidiff.add("Method useful on desktop")
-    async def enumerate_adapters_async(self):
-        """Async version of enumerate_adapters."""
-        return self.enumerate_adapters()
+        return await gpu.enumerate_adapters_async()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
@@ -563,7 +576,22 @@ class GPUAdapter:
         return self._limits
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    def request_device(
+    def request_device_sync(
+        self,
+        *,
+        label="",
+        required_features: "List[enums.FeatureName]" = [],
+        required_limits: "Dict[str, int]" = {},
+        default_queue: "structs.QueueDescriptor" = {},
+    ):
+        """Sync version of `request_device_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    async def request_device_async(
         self,
         *,
         label="",
@@ -579,18 +607,6 @@ class GPUAdapter:
             required_limits (dict): the various limits that you need. Default {}.
             default_queue (structs.QueueDescriptor): Descriptor for the default queue. Optional.
         """
-        raise NotImplementedError()
-
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def request_device_async(
-        self,
-        *,
-        label="",
-        required_features: "List[enums.FeatureName]" = [],
-        required_limits: "Dict[str, int]" = {},
-        default_queue: "structs.QueueDescriptor" = {},
-    ):
-        """Async version of `request_device()`."""
         raise NotImplementedError()
 
     def _release(self):
@@ -664,7 +680,7 @@ class GPUDevice(GPUObjectBase):
     from it: when the device is lost, all objects created from it become
     invalid.
 
-    Create a device using `GPUAdapter.request_device()` or
+    Create a device using `GPUAdapter.request_device_sync()` or
     `GPUAdapter.request_device_async()`.
     """
 
@@ -708,18 +724,40 @@ class GPUDevice(GPUObjectBase):
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @apidiff.hide("Not a Pythonic API")
     @property
-    def lost(self):
+    def lost_sync(self):
+        """Sync version of `lost`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        return self._get_lost_sync()
+
+    # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
+    @apidiff.hide("Not a Pythonic API")
+    @property
+    async def lost_async(self):
         """Provides information about why the device is lost."""
         # In JS you can device.lost.then ... to handle lost devices.
         # We may want to eventually support something similar async-like?
         # at some point
+
+        # Properties don't get repeated at _api.py, so we use a proxy method.
+        return await self._get_lost_async()
+
+    def _get_lost_sync(self):
+        raise NotImplementedError()
+
+    async def _get_lost_async(self):
         raise NotImplementedError()
 
     # IDL: attribute EventHandler onuncapturederror;
     @apidiff.hide("Specific to browsers")
     @property
     def onuncapturederror(self):
-        """Method called when an error is capured?"""
+        """Event handler.
+
+        In JS you'd do ``gpuDevice.addEventListener('uncapturederror', ...)``. We'd need
+        to figure out how to do this in Python.
+        """
         raise NotImplementedError()
 
     # IDL: undefined destroy();
@@ -1001,7 +1039,9 @@ class GPUDevice(GPUObjectBase):
         layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         compute: "structs.ProgrammableStage",
     ):
-        """Async version of create_compute_pipeline()."""
+        """Async version of `create_compute_pipeline()`.
+
+        Both versions are compatible with WebGPU."""
         raise NotImplementedError()
 
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
@@ -1160,7 +1200,9 @@ class GPUDevice(GPUObjectBase):
         multisample: "structs.MultisampleState" = {},
         fragment: "structs.FragmentState" = None,
     ):
-        """Async version of create_render_pipeline()."""
+        """Async version of `create_render_pipeline()`.
+
+        Both versions are compatible with WebGPU."""
         raise NotImplementedError()
 
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
@@ -1214,7 +1256,16 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: Promise<GPUError?> popErrorScope();
     @apidiff.hide
-    def pop_error_scope(self):
+    def pop_error_scope_sync(self):
+        """Sync version of `pop_error_scope_async().
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<GPUError?> popErrorScope();
+    @apidiff.hide
+    async def pop_error_scope_async(self):
         """Pops a GPU error scope from the stack."""
         raise NotImplementedError()
 
@@ -1289,7 +1340,15 @@ class GPUBuffer(GPUObjectBase):
     # an array-like object that exposes the shared memory.
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def map(self, mode, offset=0, size=None):
+    def map_sync(self, mode, offset=0, size=None):
+        """Sync version of `map_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    async def map_async(self, mode, offset=0, size=None):
         """Maps the given range of the GPUBuffer.
 
         When this call returns, the buffer content is ready to be
@@ -1304,11 +1363,6 @@ class GPUBuffer(GPUObjectBase):
 
         Alignment: the offset must be a multiple of 8, the size must be a multiple of 4.
         """
-        raise NotImplementedError()
-
-    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    async def map_async(self, mode, offset=0, size=None):
-        """Alternative version of map()."""
         raise NotImplementedError()
 
     # IDL: undefined unmap();
@@ -1616,7 +1670,15 @@ class GPUShaderModule(GPUObjectBase):
     """
 
     # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
-    def get_compilation_info(self):
+    def get_compilation_info_sync(self):
+        """Sync version of `get_compilation_info_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
+    async def get_compilation_info_async(self):
         """Get shader compilation info. Always returns empty list at the moment."""
         # How can this return shader errors if one cannot create a
         # shader module when the shader source has errors?
@@ -2158,7 +2220,7 @@ class GPUQueue(GPUObjectBase):
 
         Alignment: the buffer offset must be a multiple of 4, the total size to write must be a multiple of 4 bytes.
 
-        Also see `GPUBuffer.map()`.
+        Also see `GPUBuffer.map_sync()` and `GPUBuffer.map_async()`.
 
         """
         raise NotImplementedError()
@@ -2176,7 +2238,7 @@ class GPUQueue(GPUObjectBase):
         and then maps that buffer to read the data. The given buffer's
         usage must include COPY_SRC.
 
-        Also see `GPUBuffer.map()`.
+        Also see `GPUBuffer._sync()` and `GPUBuffer._async()`.
         """
         raise NotImplementedError()
 
@@ -2221,14 +2283,22 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: Promise<undefined> onSubmittedWorkDone();
-    def on_submitted_work_done(self):
-        """TODO"""
-        raise NotImplementedError()
-
     # IDL: undefined copyExternalImageToTexture( GPUImageCopyExternalImage source, GPUImageCopyTextureTagged destination, GPUExtent3D copySize);
     @apidiff.hide("Specific to browsers")
     def copy_external_image_to_texture(self, source, destination, copy_size):
+        raise NotImplementedError()
+
+    # IDL: Promise<undefined> onSubmittedWorkDone();
+    def on_submitted_work_done_sync(self):
+        """Sync version of `on_submitted_work_done_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<undefined> onSubmittedWorkDone();
+    async def on_submitted_work_done_async(self):
+        """TODO"""
         raise NotImplementedError()
 
 
@@ -2446,5 +2516,33 @@ def _set_repr_methods():
             cls.__repr__ = generic_repr
 
 
+_async_warnings = {}
+
+
+def _set_compat_methods_for_async_methods():
+    def create_new_method(name):
+        def proxy_method(self, *args, **kwargs):
+            warning = _async_warnings.pop(name, None)
+            if warning:
+                logger.warning(warning)
+            return getattr(self, name)(*args, **kwargs)
+
+        proxy_method.__name__ = name + "_backwards_compat_proxy"
+        proxy_method.__doc__ = f"Backwards compatibile method for {name}()"
+        return proxy_method
+
+    m = globals()
+    for class_name in __all__:
+        cls = m[class_name]
+        for name, func in list(cls.__dict__.items()):
+            if name.endswith("_sync") and callable(func):
+                old_name = name[:-5]
+                setattr(cls, old_name, create_new_method(name))
+                _async_warnings[name] = (
+                    f"WGPU: {old_name}() is deprecated, use {name}() instead."
+                )
+
+
 _seed_object_counts()
 _set_repr_methods()
+_set_compat_methods_for_async_methods()

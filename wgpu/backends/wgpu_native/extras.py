@@ -11,10 +11,10 @@ from typing import List
 
 def enumerate_adapters():
     """Deprecated."""
-    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters() instead.")
+    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters_sync() instead.")
 
 
-def request_device(
+def request_device_sync(
     adapter,
     trace_path,
     *,
@@ -33,6 +33,14 @@ def request_device(
     return adapter._request_device(
         label, required_features, required_limits, default_queue, trace_path
     )
+
+
+# Backwards compat for deprecated function
+def request_device(*args, **kwargs):
+    logger.warning(
+        "WGPU: wgpu.backends.wgpu_native.request_device() is deprecated, use request_device_sync() instead."
+    )
+    return request_device_sync(*args, **kwargs)
 
 
 def create_pipeline_layout(

@@ -12,7 +12,7 @@ import numpy as np
 
 
 print("Available adapters on this system:")
-for a in wgpu.gpu.enumerate_adapters():
+for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
 
 
@@ -22,8 +22,8 @@ for a in wgpu.gpu.enumerate_adapters():
 canvas = WgpuCanvas(title="wgpu cube", size=(640, 480))
 
 # Create a wgpu device
-adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-device = adapter.request_device()
+adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
+device = adapter.request_device_sync()
 
 # Prepare present context
 present_context = canvas.get_context()

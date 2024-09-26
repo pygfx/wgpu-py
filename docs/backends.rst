@@ -44,7 +44,7 @@ It also works out of the box, because the wgpu-native DLL is shipped with wgpu-p
 
 The wgpu_native backend provides a few extra functionalities:
 
-.. py:function:: wgpu.backends.wgpu_native.request_device(adapter, trace_path, *, label="", required_features, required_limits, default_queue)
+.. py:function:: wgpu.backends.wgpu_native.request_device_sync(adapter, trace_path, *, label="", required_features, required_limits, default_queue)
 
     An alternative to :func:`wgpu.GPUAdapter.request_adapter`, that streams a trace
     of all low level calls to disk, so the visualization can be replayed (also on other systems),
@@ -88,7 +88,7 @@ You must tell the adapter to create a device that supports push constants,
 and you must tell it the number of bytes of push constants that you are using.
 Overestimating is okay::
 
-    device = adapter.request_device(
+    device = adapter.request_device_sync(
         required_features=["push-constants"],
         required_limits={"max-push-constant-size": 256},
     )

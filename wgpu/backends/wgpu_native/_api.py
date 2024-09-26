@@ -46,6 +46,11 @@ __all__ = classes.__all__.copy()
 # %% Helper functions and objects
 
 
+def check_can_use_sync_variants():
+    if False:  # placeholder, let's implement a little wgpu config thingy
+        raise RuntimeError("Disallowed use of '_sync' API.")
+
+
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
 
@@ -304,7 +309,21 @@ libf = SafeLibCalls(lib, error_handler)
 
 
 class GPU(classes.GPU):
-    def request_adapter(
+
+    def request_adapter_sync(
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+    ):
+        """Async version of ``request_adapter_async()``.
+        This is the implementation based on wgpu-native.
+        """
+        check_can_use_sync_variants()
+        return self._request_adapter(
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
+        )
+
+    async def request_adapter_async(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
@@ -319,7 +338,15 @@ class GPU(classes.GPU):
             canvas (WgpuCanvasInterface): The canvas that the adapter should
                 be able to render to. This can typically be left to None.
         """
+        return self._request_adapter(
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
+        )  # no-cover
 
+    def _request_adapter(
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+    ):
         # ----- Surface ID
 
         # Get surface id that the adapter must be compatible with. If we
@@ -382,22 +409,20 @@ class GPU(classes.GPU):
 
         return self._create_adapter(adapter_id)
 
-    async def request_adapter_async(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
-    ):
-        """Async version of ``request_adapter()``.
+    def enumerate_adapters_sync(self):
+        """Sync version of ``enumerate_adapters_async()``.
         This is the implementation based on wgpu-native.
         """
-        return self.request_adapter(
-            power_preference=power_preference,
-            force_fallback_adapter=force_fallback_adapter,
-            canvas=canvas,
-        )  # no-cover
+        check_can_use_sync_variants()
+        return self._enumerate_adapters()
 
-    def enumerate_adapters(self):
+    async def enumerate_adapters_async(self):
         """Get a list of adapter objects available on the current system.
         This is the implementation based on wgpu-native.
         """
+        return self._enumerate_adapters()
+
+    def _enumerate_adapters(self):
         # The first call is to get the number of adapters, and the second call
         # is to get the actual adapters. Note that the second arg (now NULL) can
         # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
@@ -804,7 +829,23 @@ class GPUAdapterInfo(classes.GPUAdapterInfo):
 
 
 class GPUAdapter(classes.GPUAdapter):
-    def request_device(
+
+    def request_device_sync(
+        self,
+        *,
+        label="",
+        required_features: "List[enums.FeatureName]" = [],
+        required_limits: "Dict[str, int]" = {},
+        default_queue: "structs.QueueDescriptor" = {},
+    ):
+        check_can_use_sync_variants()
+        if default_queue:
+            check_struct("QueueDescriptor", default_queue)
+        return self._request_device(
+            label, required_features, required_limits, default_queue, ""
+        )
+
+    async def request_device_async(
         self,
         *,
         label="",
@@ -815,7 +856,10 @@ class GPUAdapter(classes.GPUAdapter):
         if default_queue:
             check_struct("QueueDescriptor", default_queue)
         return self._request_device(
-            label, required_features, required_limits, default_queue, ""
+            label,
+            required_features=required_features,
+            required_limits=required_limits,
+            default_queue=default_queue,
         )
 
     def _request_device(
@@ -1003,20 +1047,6 @@ class GPUAdapter(classes.GPUAdapter):
         device._device_lost_callback = device_lost_callback
 
         return device
-
-    async def request_device_async(
-        self,
-        *,
-        label="",
-        required_features: "List[enums.FeatureName]" = [],
-        required_limits: "Dict[str, int]" = {},
-        default_queue: "structs.QueueDescriptor" = {},
-    ):
-        if default_queue:
-            check_struct("QueueDescriptor", default_queue)
-        return self._request_device(
-            label, required_features, required_limits, default_queue, ""
-        )  # no-cover
 
     def _release(self):
         if self._internal is not None and libf is not None:
@@ -1838,6 +1868,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         query_id = libf.wgpuDeviceCreateQuerySet(self._internal, query_set_descriptor)
         return GPUQuerySet(label, query_id, self._internal, type, count)
 
+    def _get_lost_sync(self):
+        check_can_use_sync_variants()
+        raise NotImplementedError()
+
+    async def _get_lost_async(self):
+        raise NotImplementedError()
+
     def destroy(self):
         # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
         internal = self._internal
@@ -1896,7 +1933,14 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             raise ValueError("Mapped range must not extend beyond total buffer size.")
         return offset, size
 
-    def map(self, mode, offset=0, size=None):
+    def map_sync(self, mode, offset=0, size=None):
+        check_can_use_sync_variants()
+        return self._map(mode, offset, size)
+
+    async def map_async(self, mode, offset=0, size=None):
+        return self._map(mode, offset, size)  # for now
+
+    def _map(self, mode, offset=0, size=None):
         sync_on_read = True
 
         # Check mode
@@ -1945,9 +1989,6 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         self._map_state = enums.BufferMapState.mapped
         self._mapped_status = offset, offset + size, mode
         self._mapped_memoryviews = []
-
-    async def map_async(self, mode, offset=0, size=None):
-        return self.map(mode, offset, size)  # for now
 
     def unmap(self):
         if self._map_state != enums.BufferMapState.mapped:
@@ -2171,7 +2212,14 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuShaderModuleRelease
 
-    def get_compilation_info(self):
+    def get_compilation_info_sync(self):
+        check_can_use_sync_variants()
+        return self._get_compilation_info()
+
+    async def get_compilation_info_async(self):
+        return self._get_compilation_info()
+
+    def _get_compilation_info(self):
         # Here's a little setup to implement this method. Unfortunately,
         # this is not yet implemented in wgpu-native. Another problem
         # is that if there is an error in the shader source, we raise
@@ -3072,7 +3120,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        tmp_buffer.map("READ_NOSYNC")
+        tmp_buffer._map("READ_NOSYNC")
         data = tmp_buffer.read_mapped()
 
         # Explicit drop.
@@ -3176,7 +3224,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        tmp_buffer.map("READ_NOSYNC")
+        tmp_buffer._map("READ_NOSYNC")
         data = tmp_buffer.read_mapped()
 
         # Explicit drop.
@@ -3200,7 +3248,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
         return data
 
-    def on_submitted_work_done(self):
+    def on_submitted_work_done_sync(self):
+        check_can_use_sync_variants()
         # In JS, this returns a Promise that can be awaited to (async) wait
         # for the work that is currently in the pipeline. We need to figure out
         # how to expose these async parts.
@@ -3223,6 +3272,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
         if status != 0:
             raise RuntimeError(f"Queue work done status: {status}")
+
+    async def on_submitted_work_done_async(self):
+        raise NotImplementedError()
 
 
 class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):

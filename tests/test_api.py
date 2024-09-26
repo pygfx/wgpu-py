@@ -16,13 +16,13 @@ def test_basic_api():
     assert isinstance(wgpu.gpu, wgpu.GPU)
 
     # Entrypoint funcs
-    assert wgpu.gpu.request_adapter
+    assert wgpu.gpu.request_adapter_sync
     assert wgpu.gpu.request_adapter_async
 
-    code1 = wgpu.GPU.request_adapter.__code__
+    code1 = wgpu.GPU.request_adapter_sync.__code__
     code2 = wgpu.GPU.request_adapter_async.__code__
-    nargs1 = code1.co_argcount + code1.co_kwonlyargcount
-    assert code1.co_varnames[:nargs1] == code2.co_varnames
+    # nargs1 = code1.co_argcount + code1.co_kwonlyargcount
+    assert code1.co_varnames == code2.co_varnames
 
     assert repr(wgpu.classes.GPU()).startswith(
         "<wgpu.GPU "
@@ -111,7 +111,7 @@ def test_base_wgpu_api():
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_backend_is_selected_automatically():
     # Test this in a subprocess to have a clean wgpu with no backend imported yet
-    code = "import wgpu; print(wgpu.gpu.request_adapter())"
+    code = "import wgpu; print(wgpu.gpu.request_adapter_sync())"
     result = subprocess.run(
         [sys.executable, "-c", code],
         stdout=subprocess.PIPE,
@@ -201,6 +201,7 @@ def test_register_backend_fails():
         with raises(RuntimeError):
             wgpu.backends._register_backend(fake_gpu)
 
+        fake_gpu.request_adapter_sync = lambda: None
         fake_gpu.request_adapter_async = lambda: None
         fake_gpu.wgsl_language_features = set()
         wgpu.backends._register_backend(fake_gpu)

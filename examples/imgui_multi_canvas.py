@@ -17,8 +17,8 @@ canvas3 = WgpuCanvas(title="imgui", size=(512, 256))
 canvases = [canvas1, canvas2, canvas3]
 
 # Create a wgpu device
-adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-device = adapter.request_device()
+adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
+device = adapter.request_device_sync()
 
 # create a imgui renderer for each canvas
 imgui_renderer1 = ImguiRenderer(device, canvas1)

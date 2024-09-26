@@ -255,7 +255,7 @@ def test_compute_shader_wgsl():
     assert isinstance(code, str)
 
     shader = device.create_shader_module(code=code)
-    assert shader.get_compilation_info() == []
+    assert shader.get_compilation_info_sync() == []
 
     run_compute_shader(device, shader)
 
@@ -268,7 +268,7 @@ def test_compute_shader_glsl():
     assert isinstance(code, str)
 
     shader = device.create_shader_module(label="simple comp", code=code)
-    assert shader.get_compilation_info() == []
+    assert shader.get_compilation_info_sync() == []
 
     run_compute_shader(device, shader)
 
@@ -282,7 +282,7 @@ def test_compute_shader_spirv():
     assert isinstance(code, bytes)
 
     shader = device.create_shader_module(code=code)
-    assert shader.get_compilation_info() == []
+    assert shader.get_compilation_info_sync() == []
 
     run_compute_shader(device, shader)
 
@@ -328,7 +328,7 @@ def test_wgpu_native_tracer():
     assert not os.path.isdir(tempdir)
 
     # Works!
-    wgpu.backends.wgpu_native.request_device(adapter, tempdir)
+    wgpu.backends.wgpu_native.request_device_sync(adapter, tempdir)
     assert os.path.isdir(tempdir)
 
     # Make dir not empty
@@ -336,13 +336,13 @@ def test_wgpu_native_tracer():
         pass
 
     # Still works, but produces warning
-    wgpu.backends.wgpu_native.request_device(adapter, tempdir)
+    wgpu.backends.wgpu_native.request_device_sync(adapter, tempdir)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_enumerate_adapters():
     # Get all available adapters
-    adapters = wgpu.gpu.enumerate_adapters()
+    adapters = wgpu.gpu.enumerate_adapters_sync()
     assert len(adapters) > 0
 
     # Check adapter summaries
@@ -353,13 +353,13 @@ def test_enumerate_adapters():
 
     # Check that we can get a device from each adapter
     for adapter in adapters:
-        d = adapter.request_device()
+        d = adapter.request_device_sync()
         assert isinstance(d, wgpu.backends.wgpu_native.GPUDevice)
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_adapter_destroy():
-    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
     assert adapter._internal is not None
     adapter.__del__()
     assert adapter._internal is None
@@ -401,9 +401,9 @@ def are_features_wgpu_legal(features):
     """Returns true if the list of features is legal. Determining whether a specific
     set of features is implemented on a particular device would make the tests fragile,
     so we only verify that the names are legal feature names."""
-    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
     try:
-        adapter.request_device(required_features=features)
+        adapter.request_device_sync(required_features=features)
         return True
     except RuntimeError as e:
         assert "Unsupported features were requested" in str(e)
@@ -440,9 +440,9 @@ def are_limits_wgpu_legal(limits):
     """Returns true if the list of features is legal. Determining whether a specific
     set of features is implemented on a particular device would make the tests fragile,
     so we only verify that the names are legal feature names."""
-    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+    adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
     try:
-        adapter.request_device(required_limits=limits)
+        adapter.request_device_sync(required_limits=limits)
         return True
     except RuntimeError as e:
         assert "Unsupported features were requested" in str(e)

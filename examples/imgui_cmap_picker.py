@@ -26,8 +26,8 @@ from cmap import Colormap
 canvas = WgpuCanvas(title="imgui", size=(512, 256))
 
 # Create a wgpu device
-adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-device = adapter.request_device()
+adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
+device = adapter.request_device_sync()
 
 imgui_renderer = ImguiRenderer(device, canvas)
 
