@@ -1074,7 +1074,7 @@ class GPUDevice(GPUObjectBase):
                 properties, including the testing, operations, and bias. Optional.
             multisample (structs.MultisampleState): Describes the multi-sampling properties of the pipeline.
             fragment (structs.FragmentState): Describes the fragment shader
-                entry point of the pipeline and its output colors. If it’s
+                entry point of the pipeline and its output colors. If it's
                 None, the No-Color-Output mode is enabled: the pipeline
                 does not produce any color attachment outputs. It still
                 performs rasterization and produces depth values based on
@@ -1369,7 +1369,7 @@ class GPUBuffer(GPUObjectBase):
     def unmap(self):
         """Unmaps the buffer.
 
-        Unmaps the mapped range of the GPUBuffer and makes it’s contents
+        Unmaps the mapped range of the GPUBuffer and makes it's contents
         available for use by the GPU again.
         """
         raise NotImplementedError()

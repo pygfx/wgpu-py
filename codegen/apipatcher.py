@@ -433,9 +433,9 @@ class IdlPatcherMixin:
             py_args = [self._arg_from_struct_field(field) for field in fields]
             if py_args[0].startswith("label: str"):
                 py_args[0] = 'label=""'
-            py_args = ["self", "*"] + py_args
+            py_args = ["self", "*", *py_args]
         else:
-            py_args = ["self"] + argnames
+            py_args = ["self", *argnames]
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"

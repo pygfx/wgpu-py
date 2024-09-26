@@ -76,12 +76,7 @@ ignore = [
     "B006",   # Do not use mutable data structures for argument defaults
     "B007",   # Loop control variable `x` not used within loop body
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
-    "RUF013",
-    "RUF005",
-    "RUF015",
-    "RUF017",
-    "RUF002",
-
+    "RUF013", # PEP 484 prohibits implicit `Optional` - we should fix this!
 ]
 
 [tool.coverage.report]

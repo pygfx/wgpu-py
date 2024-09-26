@@ -2,10 +2,10 @@
 Test render pipeline by rendering to a texture.
 """
 
-import ctypes
-import numpy as np
 import sys
+import ctypes
 
+import numpy as np
 import wgpu
 from pytest import skip
 from testutils import run_tests, get_default_device
@@ -552,7 +552,7 @@ def render_textured_square(fragment_shader, texture_format, texture_size, textur
         [150, 150, 150, 50, 50, 50],
         [50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50],
     ]
-    ref1, ref2 = sum(ref1, []), sum(ref2, [])
+    ref1, ref2 = sum(ref1, []), sum(ref2, [])  # noqa: RUF017
 
     assert np.allclose(sq[0, :, 0], ref1, atol=1)
     assert np.allclose(sq[:, 0, 0], ref2, atol=1)

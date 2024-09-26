@@ -473,7 +473,7 @@ class VersionDiagnostics(DiagnosticsBase):
     def get_dict(self):
         core_libs = ["wgpu", "cffi"]
         qt_libs = ["PySide6", "PyQt6", "PySide2", "PyQt5"]
-        gui_libs = qt_libs + ["glfw", "jupyter_rfb", "wx"]
+        gui_libs = [*qt_libs, "glfw", "jupyter_rfb", "wx"]
         extra_libs = ["numpy", "pygfx", "pylinalg", "fastplotlib"]
 
         info = {}

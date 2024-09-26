@@ -47,7 +47,7 @@ def print(*args, **kwargs):
     """Report something (will be printed and added to a file."""
     # __builtins__.print(*args, **kwargs)
     if args and not args[0].lstrip().startswith("#"):
-        args = ("*",) + args
+        args = ("*", *args)
     for f in _file_objects_to_print_to:
         __builtins__["print"](*args, file=f, flush=True, **kwargs)
 

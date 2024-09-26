@@ -103,7 +103,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
     # Get nx, ny, nz from n
     if n is None:
-        output_info = list(output_infos.values())[0]
+        output_info = next(iter(output_infos.values()))
         nx, ny, nz = output_info["length"], 1, 1
     elif isinstance(n, int):
         nx, ny, nz = int(n), 1, 1
