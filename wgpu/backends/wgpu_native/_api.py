@@ -3236,11 +3236,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             data2 = memoryview((ctypes.c_uint8 * data_length2)()).cast(data.format)
             for i in range(size[1] * size[2]):
                 row = data[i * full_stride : i * full_stride + ori_stride]
-                data2[
-                    ori_offset + i * ori_stride : ori_offset
-                    + i * ori_stride
-                    + ori_stride
-                ] = row
+                i_start = ori_offset + i * ori_stride
+                i_end = ori_offset + i * ori_stride + ori_stride
+                data2[i_start:i_end] = row
             data = data2
 
         return data
