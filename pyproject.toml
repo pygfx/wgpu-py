@@ -19,7 +19,7 @@ imgui = ["imgui-bundle>=1.2.1"]
 # For devs / ci
 build = ["build", "hatchling", "requests", "twine"]
 codegen = ["pytest", "numpy", "black"]
-lint = ["black", "flake8", "flake8-black", "pep8-naming"]
+lint = ["ruff"]
 tests = ["numpy", "pytest", "psutil", "imageio"]
 examples = []
 docs = ["sphinx>7.2", "sphinx_rtd_theme"]
