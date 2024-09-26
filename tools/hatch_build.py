@@ -32,7 +32,7 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 root_dir = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, os.path.join(root_dir, "tools"))
 
-from download_wgpu_native import main as download_lib  # noqa
+from download_wgpu_native import main as download_lib  # noqa: E402
 
 
 class CustomBuildHook(BuildHookInterface):
@@ -44,7 +44,6 @@ class CustomBuildHook(BuildHookInterface):
         # we go pure-Python mode, and expect the user to set WGPU_LIB_PATH.
 
         if self.target_name == "wheel" and is_git_repo():
-
             # Prepare
             check_git_status()
             remove_all_libs()

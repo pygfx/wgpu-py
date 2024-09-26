@@ -11,7 +11,7 @@ from wgpu.gui.glfw import WgpuCanvas, run
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from triangle import main  # noqa: E402, The function to call to run the visualization
+from triangle import main
 
 
 canvas = WgpuCanvas()

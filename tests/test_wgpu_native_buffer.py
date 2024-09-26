@@ -35,7 +35,7 @@ def test_buffer_init1():
     )
 
     # Download from buffer to CPU
-    buf.map(wgpu.MapMode.READ)
+    buf.map_sync(wgpu.MapMode.READ)
     wgpu.backends.wgpu_native._api.libf.wgpuDevicePoll(
         buf._device._internal, True, wgpu.backends.wgpu_native.ffi.NULL
     )
@@ -74,7 +74,7 @@ def test_buffer_init2():
     buf.unmap()
 
     # Download from buffer to CPU
-    buf.map("read")
+    buf.map_sync("read")
     data2 = buf.read_mapped()
     buf.unmap()
     print(data2.tobytes())
@@ -108,7 +108,7 @@ def test_buffer_init3():
     buf = device.create_buffer(size=len(data1), usage="MAP_WRITE | COPY_SRC")
 
     # Write data to it
-    buf.map("write")
+    buf.map_sync("write")
     buf.write_mapped(data1)
     buf.unmap()
 
@@ -124,7 +124,7 @@ def test_buffer_init3():
     device.queue.write_buffer(buf, 0, data1)
 
     # Download from buffer to CPU
-    buf.map("read")
+    buf.map_sync("read")
     data2 = buf.read_mapped()
     buf.unmap()
     assert data1 == data2
@@ -149,7 +149,7 @@ def test_consequitive_writes1():
 
     # Write in parts
     for i in range(4):
-        buf.map("write")
+        buf.map_sync("write")
         buf.write_mapped(f"{i+1}".encode() * 8, i * 8)
         buf.unmap()
 
@@ -175,7 +175,7 @@ def test_consequitive_writes2():
     )
 
     # Write in parts
-    buf.map("write")
+    buf.map_sync("write")
     for i in range(4):
         buf.write_mapped(f"{i+1}".encode() * 8, i * 8)
     buf.unmap()
@@ -205,13 +205,13 @@ def test_consequitive_reads():
 
     # Read in parts, the inefficient way
     for i in range(4):
-        buf.map("read")
+        buf.map_sync("read")
         data = buf.read_mapped(i * 8, 8)
         assert data == f"{i+1}".encode() * 8
         buf.unmap()
 
     # Read in parts, the efficient way
-    buf.map("read")
+    buf.map_sync("read")
     for i in range(4):
         data = buf.read_mapped(i * 8, 8)
         assert data == f"{i+1}".encode() * 8
@@ -234,15 +234,15 @@ def test_buffer_mapping_fails():
         buf.read_mapped()  # Not mapped
 
     with raises(ValueError):
-        buf.map("boo")  # Invalid map mode
+        buf.map_sync("boo")  # Invalid map mode
 
-    buf.map("write", 0, 28)
-
-    with raises(RuntimeError):
-        buf.map("write")  # Cannot map twice
+    buf.map_sync("write", 0, 28)
 
     with raises(RuntimeError):
-        buf.map("read")  # Cannot map twice
+        buf.map_sync("write")  # Cannot map twice
+
+    with raises(RuntimeError):
+        buf.map_sync("read")  # Cannot map twice
 
     with raises(RuntimeError):
         buf.read_mapped()  # Not mapped in read mode
@@ -296,13 +296,13 @@ def test_buffer_mapping_fails():
     with raises(RuntimeError):
         buf.write_mapped(data)  # not mapped
 
-    buf.map("read", 8, 20)
+    buf.map_sync("read", 8, 20)
 
     with raises(RuntimeError):
-        buf.map("read")  # Cannot map twice
+        buf.map_sync("read")  # Cannot map twice
 
     with raises(RuntimeError):
-        buf.map("write")  # Cannot map twice
+        buf.map_sync("write")  # Cannot map twice
 
     with raises(RuntimeError):
         buf.write_mapped(data)  # not mapped in write mode
@@ -334,7 +334,7 @@ def test_buffer_read_no_copy():
     device.queue.write_buffer(buf, 0, data1)
 
     # Download from buffer to CPU
-    buf.map("read")
+    buf.map_sync("read")
     data2 = buf.read_mapped(copy=False)
     data3 = buf.read_mapped(0, 8, copy=False)
     data4 = buf.read_mapped(8, 8, copy=False)
@@ -502,7 +502,7 @@ def test_buffer_map_read_and_write():
 
     # Upload
     data1 = b"abcdefghijkl"
-    buf1.map("write")
+    buf1.map_sync("write")
     buf1.write_mapped(data1)
     buf1.unmap()
 
@@ -512,7 +512,7 @@ def test_buffer_map_read_and_write():
     device.queue.submit([command_encoder.finish()])
 
     # Download
-    buf2.map("read")
+    buf2.map_sync("read")
     data2 = buf2.read_mapped()
     buf2.unmap()
     assert data1 == data2

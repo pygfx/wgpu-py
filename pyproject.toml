@@ -18,12 +18,12 @@ glfw = ["glfw>=1.9"]
 imgui = ["imgui-bundle>=1.2.1"]
 # For devs / ci
 build = ["build", "hatchling", "requests", "twine"]
-codegen = ["pytest", "numpy", "black"]
-lint = ["black", "flake8", "flake8-black", "pep8-naming"]
-docs = ["sphinx>7.2", "sphinx_rtd_theme"]
+codegen = ["pytest", "numpy", "ruff"]
+lint = ["ruff"]
 tests = ["numpy", "pytest", "psutil", "imageio"]
 examples = []
-dev = ["wgpu[build,codegen,lint,docs,tests,examples]"]
+docs = ["sphinx>7.2", "sphinx_rtd_theme"]
+dev = ["wgpu[build,codegen,lint,tests,examples,docs]"]
 
 [project.entry-points."pyinstaller40"]
 hook-dirs = "wgpu.__pyinstaller:get_hook_dirs"
@@ -64,6 +64,20 @@ artifacts = ["*.so", "*.dll", "*.dylib"]
 path = "tools/hatch_build.py"
 
 # ===== Tooling
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "N", "B", "RUF"]
+ignore = [
+    "E501",   # Line too long
+    "E731",   # Do not assign a `lambda` expression, use a `def`
+    "B006",   # Do not use mutable data structures for argument defaults
+    "B007",   # Loop control variable `x` not used within loop body
+    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "RUF013", # PEP 484 prohibits implicit `Optional` - we should fix this!
+]
 
 [tool.coverage.report]
 exclude_also = [

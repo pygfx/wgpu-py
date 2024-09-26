@@ -15,8 +15,8 @@ from wgpu.utils.imgui import ImguiRenderer
 canvas = WgpuCanvas(title="imgui", size=(640, 480))
 
 # Create a wgpu device
-adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-device = adapter.request_device()
+adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
+device = adapter.request_device_sync()
 
 app_state = {"text": "Hello, World\nLorem ipsum, etc.\netc."}
 imgui_renderer = ImguiRenderer(device, canvas)

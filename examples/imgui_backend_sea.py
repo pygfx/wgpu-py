@@ -15,9 +15,9 @@ from wgpu.utils.imgui import ImguiWgpuBackend
 canvas = WgpuCanvas(title="imgui_sea", size=(800, 450), max_fps=60)
 
 # Create a wgpu device
-adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
 
-device = adapter.request_device()
+device = adapter.request_device_sync()
 
 # Prepare present context
 present_context = canvas.get_context()
@@ -380,9 +380,8 @@ def render():
     global_time = current_time
 
     canvas_texture = present_context.get_current_texture()
-    render_pass_descriptor["color_attachments"][0][
-        "view"
-    ] = canvas_texture.create_view()
+    ca0 = render_pass_descriptor["color_attachments"][0]
+    ca0["view"] = canvas_texture.create_view()
 
     # Update uniform buffer
     uniform_data["resolution"] = (canvas_texture.size[0], canvas_texture.size[1])

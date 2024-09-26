@@ -11,7 +11,8 @@ import pytest
 import wgpu
 from pytest import skip
 from testutils import run_tests, can_use_wgpu_lib, is_ci, get_default_device
-from renderutils import render_to_texture, render_to_screen  # noqa
+from renderutils import render_to_texture
+from renderutils import render_to_screen  # noqa: F401 - sometimes used for debugging
 
 
 if not can_use_wgpu_lib:

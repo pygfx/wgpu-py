@@ -149,7 +149,7 @@ def str_flag_to_int(flag, s):
                 v = flag.__dict__[p.upper()]
                 value += v
             except KeyError:
-                raise ValueError(f"Invalid flag value for {flag}: '{p}'")
+                raise ValueError(f"Invalid flag value for {flag}: '{p}'") from None
         _flag_cache[cache_key] = value
 
     return value

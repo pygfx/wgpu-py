@@ -3,7 +3,7 @@ import itertools
 import numpy as np
 import pytest
 import wgpu.utils
-from tests.testutils import can_use_wgpu_lib, run_tests
+from testutils import can_use_wgpu_lib, run_tests
 from wgpu import TextureFormat
 from wgpu.backends.wgpu_native.extras import (
     multi_draw_indexed_indirect,
@@ -74,17 +74,16 @@ class Runner:
 
     @classmethod
     def is_usable(cls):
-        adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+        adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
         return set(cls.REQUIRED_FEATURES) <= adapter.features
 
     def __init__(self):
-        adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+        adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
         features = [
             *self.REQUIRED_FEATURES,
             *[x for x in self.OPTIONAL_FEATURES if x in adapter.features],
         ]
-        self.device = adapter.request_device(required_features=features)
-
+        self.device = adapter.request_device_sync(required_features=features)
         self.output_texture = self.device.create_texture(
             # Actual size is immaterial.  Could just be 1x1
             size=[128, 128],

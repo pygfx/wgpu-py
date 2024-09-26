@@ -2,8 +2,10 @@
 The wgpu-native backend.
 """
 
-from ._api import *  # noqa: F401, F403
-from ._ffi import ffi, lib, lib_path, lib_version_info  # noqa: F401
+# ruff: noqa: F401, E402, F403
+
+from ._api import *
+from ._ffi import ffi, lib, lib_path, lib_version_info
 from ._ffi import _check_expected_version
 from .. import _register_backend
 
@@ -16,6 +18,7 @@ _check_expected_version(version_info)  # produces a warning on mismatch
 
 # Instantiate and register this backend
 gpu = GPU()  # noqa: F405
-_register_backend(gpu)  # noqa: F405
+_register_backend(gpu)
 
-from .extras import enumerate_adapters, request_device  # noqa: F401, E402
+from .extras import enumerate_adapters
+from .extras import request_device_sync, request_device

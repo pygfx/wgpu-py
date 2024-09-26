@@ -62,7 +62,7 @@ assert result == list(range(20))
 device = wgpu.utils.get_default_device()
 
 # Show all available adapters
-adapters = wgpu.gpu.enumerate_adapters()
+adapters = wgpu.gpu.enumerate_adapters_sync()
 for a in adapters:
     print(a.summary)
 
@@ -73,7 +73,7 @@ for a in adapters:
 #         adapter = a
 #         break
 # assert adapter is not None
-# device = adapter.request_device()
+# device = adapter.request_device_sync()
 
 # %%
 cshader = device.create_shader_module(code=shader_source)

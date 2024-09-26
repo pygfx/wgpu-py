@@ -1,5 +1,4 @@
-"""Utilities used in the wgpu-native backend.
-"""
+"""Utilities used in the wgpu-native backend."""
 
 import sys
 import ctypes
@@ -100,7 +99,7 @@ def get_surface_id_from_info(present_info):
     """
 
     if sys.platform.startswith("win"):  # no-cover
-        GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa
+        GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa: N806
         struct = ffi.new("WGPUSurfaceDescriptorFromWindowsHWND *")
         struct.hinstance = ffi.cast("void *", GetModuleHandle(lib_path))
         struct.hwnd = ffi.cast("void *", int(present_info["window"]))
