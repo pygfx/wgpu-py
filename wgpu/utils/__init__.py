@@ -13,10 +13,12 @@ Higher level utilities. Must be explicitly imported from ``wgpu.utils.xx``.
 # GPU/wgpu semantics), but without using low level details of the wgpu
 # API itself.
 
-from .._coreutils import BaseEnum  # noqa: F401
+# ruff: noqa: F401
+
+from .._coreutils import BaseEnum
 
 # The get_default_device() is so small and generally convenient that we import it by default.
-from .device import get_default_device  # noqa: F401
+from .device import get_default_device
 
 
 class _StubModule:

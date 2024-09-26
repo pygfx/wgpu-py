@@ -4,7 +4,7 @@ Strive for full coverage of the codegen utils module.
 
 from codegen.utils import (
     remove_c_comments,
-    blacken,
+    format_code,
     Patcher,
     to_snake_case,
     to_camel_case,
@@ -59,7 +59,7 @@ def test_remove_c_comments():
     assert code2 == code3
 
 
-def test_blacken_singleline():
+def test_format_code_singleline():
     code1 = """
     def foo():
         pass
@@ -98,20 +98,20 @@ def test_blacken_singleline():
     code1 = dedent(code1).strip()
     code2 = dedent(code2).strip()
 
-    code3 = blacken(code1, True)
+    code3 = format_code(code1, True)
     code3 = code3.replace("\n\n", "\n").replace("\n\n", "\n").strip()
 
     assert code3 == code2
 
     # Also test simply long lines
-    code = "foo = 1" + " + 1" * 100
-    assert len(code) > 300
+    code = "foo = 1" + " + 1" * 75
+    assert len(code) > 300  # Ruff's max line-length is 320
     assert code.count("\n") == 0
-    assert blacken(code, False).strip().count("\n") > 3
-    assert blacken(code, True).strip().count("\n") == 0
+    assert format_code(code, False).strip().count("\n") > 3
+    assert format_code(code, True).strip().count("\n") == 0
 
 
-def test_blacken_comments():
+def test_format_code_comments():
     code1 = """
     def foo():  # hi
         pass
@@ -133,7 +133,7 @@ def test_blacken_comments():
     code1 = dedent(code1).strip()
     code2 = dedent(code2).strip()
 
-    code3 = blacken(code1, True)
+    code3 = format_code(code1, True)
     code3 = code3.replace("\n\n", "\n").replace("\n\n", "\n").strip()
 
     assert code3 == code2
@@ -160,7 +160,7 @@ def test_patcher():
             pass
     """
 
-    code = blacken(dedent(code))
+    code = format_code(dedent(code))
     p = Patcher(code)
 
     # Dump before doing anything, should yield original
@@ -201,7 +201,7 @@ def test_patcher():
     for line, i in p.iter_lines():
         if line.lstrip().startswith("#"):
             p.replace_line(i, "# comment")
-            with raises(Exception):
+            with raises(AssertionError):
                 p.replace_line(i, "# comment")
     code2 = p.dumps()
     assert code2.count("#") == 4

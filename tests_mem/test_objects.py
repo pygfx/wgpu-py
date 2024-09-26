@@ -3,8 +3,8 @@ Test all the wgpu objects.
 """
 
 import pytest
-import testutils  # noqa
 from testutils import can_use_wgpu_lib, create_and_release
+import testutils  # noqa: F401 - sometimes used in debugging
 
 
 if not can_use_wgpu_lib:

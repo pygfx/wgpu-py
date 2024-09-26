@@ -6,7 +6,7 @@ import subprocess
 from io import StringIO
 from pathlib import Path
 
-from wgpu.utils import get_default_device  # noqa
+from wgpu.utils import get_default_device  # noqa: F401 - imported by tests
 
 
 ROOT = Path(__file__).parent.parent  # repo root

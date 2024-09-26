@@ -4,7 +4,7 @@ from testutils import run_tests
 from pytest import raises
 
 
-dedent = lambda s: s.replace("\n        ", "\n").strip()  # noqa
+dedent = lambda s: s.replace("\n        ", "\n").strip()
 
 
 def test_parse_shader_error1(caplog):

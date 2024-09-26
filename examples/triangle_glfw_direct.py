@@ -20,7 +20,7 @@ from wgpu.utils.device import get_default_device
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from triangle import setup_draw  # noqa: E402
+from triangle import setup_draw
 
 
 class GlfwCanvas:

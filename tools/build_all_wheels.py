@@ -12,7 +12,7 @@ import hashlib
 import zipfile
 from subprocess import run
 
-from download_wgpu_native import main as download_lib  # noqa
+from download_wgpu_native import main as download_lib
 
 
 # Define platform tags. These are pairs of wgpu-native-tag and wheel-tag. The

@@ -36,7 +36,7 @@ from ._helpers import (
     SafeLibCalls,
 )
 
-logger = logging.getLogger("wgpu")  # noqa
+logger = logging.getLogger("wgpu")
 
 
 # The API is prettu well defined
@@ -153,7 +153,7 @@ def _tuple_from_tuple_or_dict(ob, fields, defaults=()):
                 for index, key in enumerate(fields)
             )
         except KeyError:
-            raise ValueError(error_msg.format(", ".join(fields)))
+            raise ValueError(error_msg.format(", ".join(fields))) from None
     else:
         raise TypeError(error_msg.format(", ".join(fields)))
 
@@ -276,10 +276,10 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
 
     if adapter:
         # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
-        has_feature = lambda feature: libf.wgpuAdapterHasFeature(id, feature)  # noqa
+        has_feature = lambda feature: libf.wgpuAdapterHasFeature(id, feature)
     else:
         # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
-        has_feature = lambda feature: libf.wgpuDeviceHasFeature(id, feature)  # noqa
+        has_feature = lambda feature: libf.wgpuDeviceHasFeature(id, feature)
 
     features = set()
 
@@ -309,7 +309,6 @@ libf = SafeLibCalls(lib, error_handler)
 
 
 class GPU(classes.GPU):
-
     def request_adapter_sync(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
@@ -601,7 +600,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         tone_mapping,
         alpha_mode,
     ):
-
         capabilities = self._get_capabilities(device.adapter)
 
         # Convert to C values
@@ -615,11 +613,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         c_alpha_mode = getattr(lib, f"WGPUCompositeAlphaMode_{alpha_mode.capitalize()}")
 
         # The color_space is not used for now
-        color_space
-        # Same for tone mapping
+        color_space  # noqa - not used yet
         check_struct("CanvasToneMapping", tone_mapping)
         tone_mapping_mode = tone_mapping.get("mode", "standard")
-        tone_mapping_mode
+        tone_mapping_mode  # noqa - not used yet
 
         # Select the present mode to determine vsync behavior.
         # * https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html
@@ -683,7 +680,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             libf.wgpuSurfaceUnconfigure(self._surface_id)
 
     def _create_texture_screen(self):
-
         surface_id = self._surface_id
 
         # Reconfigure when the canvas has resized.
@@ -832,7 +828,6 @@ class GPUAdapterInfo(classes.GPUAdapterInfo):
 
 
 class GPUAdapter(classes.GPUAdapter):
-
     def request_device_sync(
         self,
         *,
@@ -1833,7 +1828,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
     ):
-
         c_color_formats, color_formats_count = ffi.NULL, 0
         if color_formats:
             color_formats_list = [enummap["TextureFormat." + x] for x in color_formats]
@@ -2345,7 +2339,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         # H: void wgpuComputePassEncoderPopDebugGroup(WGPUComputePassEncoder computePassEncoder)
         # H: void wgpuRenderPassEncoderPopDebugGroup(WGPURenderPassEncoder renderPassEncoder)
         # H: void wgpuRenderBundleEncoderPopDebugGroup(WGPURenderBundleEncoder renderBundleEncoder)
-        function = type(self)._pop_debug_group_function  # noqa
+        function = type(self)._pop_debug_group_function
         function(self._internal)
 
     def insert_debug_marker(self, marker_label):
@@ -2388,7 +2382,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
     def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
         # H: void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
         # H: void wgpuRenderBundleEncoderDraw(WGPURenderBundleEncoder renderBundleEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
-        function = type(self)._draw_function  # noqa
+        function = type(self)._draw_function
         function(
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
@@ -2397,7 +2391,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         # H: void wgpuRenderBundleEncoderDrawIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        function = type(self)._draw_indirect_function  # noqa
+        function = type(self)._draw_indirect_function
         function(self._internal, buffer_id, int(indirect_offset))
 
     def draw_indexed(
@@ -2431,7 +2425,6 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 class GPUCommandEncoder(
     classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase
 ):
-
     # GPUDebugCommandsMixin
     _push_debug_group_function = libf.wgpuCommandEncoderPushDebugGroup
     _pop_debug_group_function = libf.wgpuCommandEncoderPopDebugGroup
@@ -2840,7 +2833,6 @@ class GPUComputePassEncoder(
     GPUBindingCommandsMixin,
     GPUObjectBase,
 ):
-
     # GPUDebugCommandsMixin
     _push_debug_group_function = libf.wgpuComputePassEncoderPushDebugGroup
     _pop_debug_group_function = libf.wgpuComputePassEncoderPopDebugGroup
@@ -3244,12 +3236,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             data2 = memoryview((ctypes.c_uint8 * data_length2)()).cast(data.format)
             for i in range(size[1] * size[2]):
                 row = data[i * full_stride : i * full_stride + ori_stride]
-                data2[
-                    ori_offset
-                    + i * ori_stride : ori_offset
-                    + i * ori_stride
-                    + ori_stride
-                ] = row
+                i_start = ori_offset + i * ori_stride
+                i_end = ori_offset + i * ori_stride + ori_stride
+                data2[i_start:i_end] = row
             data = data2
 
         return data

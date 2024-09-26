@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 
 
-from codegen import main, file_cache  # noqa: E402
+from codegen import main, file_cache
 
 
 if __name__ == "__main__":

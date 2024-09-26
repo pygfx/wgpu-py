@@ -3,7 +3,7 @@ The logic to generate/patch the base API from the WebGPU
 spec (IDL), and the backend implementations from the base API.
 """
 
-from codegen.utils import print, blacken, to_snake_case, to_camel_case, Patcher
+from codegen.utils import print, format_code, to_snake_case, to_camel_case, Patcher
 from codegen.idlparser import get_idl_parser
 from codegen.files import file_cache
 
@@ -268,7 +268,6 @@ class IdlPatcherMixin:
         self.detect_async_props_and_methods()
 
     def detect_async_props_and_methods(self):
-
         self.async_idl_names = async_idl_names = {}  # (sync-name, async-name)
 
         for classname, interface in self.idl.classes.items():
@@ -434,13 +433,13 @@ class IdlPatcherMixin:
             py_args = [self._arg_from_struct_field(field) for field in fields]
             if py_args[0].startswith("label: str"):
                 py_args[0] = 'label=""'
-            py_args = ["self", "*"] + py_args
+            py_args = ["self", "*", *py_args]
         else:
-            py_args = ["self"] + argnames
+            py_args = ["self", *argnames]
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"
-        line = blacken(line, True).split("):")[0] + "):"
+        line = format_code(line, True).split("):")[0] + "):"
         return "    " + line
 
     def _arg_from_struct_field(self, field):

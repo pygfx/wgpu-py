@@ -12,7 +12,7 @@ import gc
 import wgpu
 from pytest import skip
 from testutils import run_tests, can_use_glfw, can_use_wgpu_lib, is_pypy
-from renderutils import render_to_texture, render_to_screen  # noqa
+# from renderutils import render_to_texture, render_to_screen
 
 
 if not can_use_glfw or not can_use_wgpu_lib:

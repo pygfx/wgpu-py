@@ -1,7 +1,6 @@
-""" Test some parts of apipatcher.py, and Implicitly tests idlparser.py.
-"""
+"""Test some parts of apipatcher.py, and Implicitly tests idlparser.py."""
 
-from codegen.utils import blacken
+from codegen.utils import format_code
 from codegen.apipatcher import CommentRemover, AbstractCommentInjector, IdlPatcherMixin
 
 
@@ -101,7 +100,7 @@ def test_comment_injector():
         def eggs(self):
             pass
     """
-    code3 = blacken(dedent(code3)).strip()
+    code3 = format_code(dedent(code3)).strip()
 
     p = MyCommentInjector()
     p.apply(dedent(code1))
@@ -111,7 +110,6 @@ def test_comment_injector():
 
 
 def test_async_api_logic():
-
     class Object(object):
         pass
 

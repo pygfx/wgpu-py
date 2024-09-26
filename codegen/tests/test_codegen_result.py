@@ -1,5 +1,4 @@
-""" Test some aspects of the generated code.
-"""
+"""Test some aspects of the generated code."""
 
 from codegen.files import read_file
 

@@ -89,7 +89,7 @@ class GPU:
         Provided by wgpu-py, but not compatible with WebGPU.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
         return gpu.request_adapter_sync(
             power_preference=power_preference,
@@ -113,7 +113,7 @@ class GPU:
                 be able to render to. This can typically be left to None.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
         return await gpu.request_adapter_async(
             power_preference=power_preference,
@@ -129,7 +129,7 @@ class GPU:
         """
 
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
         return gpu.enumerate_adapters_sync()
 
@@ -159,7 +159,7 @@ class GPU:
         # and then return both or one (if they represent the same adapter).
 
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
         return await gpu.enumerate_adapters_async()
 
@@ -309,8 +309,8 @@ class GPUCanvasContext:
         if not isinstance(usage, int):
             usage = str_flag_to_int(flags.TextureUsage, usage)
 
-        color_space  # not really supported, just assume srgb for now
-        tone_mapping  # not supported yet
+        color_space  # noqa - not really supported, just assume srgb for now
+        tone_mapping  # noqa - not supported yet
 
         if alpha_mode not in enums.CanvasAlphaMode:
             raise ValueError(
@@ -406,7 +406,6 @@ class GPUCanvasContext:
         return self._texture
 
     def _create_texture_image(self):
-
         canvas = self._get_canvas()
         width, height = canvas.get_physical_size()
         width, height = max(width, 1), max(height, 1)
@@ -509,7 +508,7 @@ class GPUAdapterInfo:
     """Represents information about an adapter."""
 
     def __init__(self, info):
-        self._info
+        self._info = info
 
     # IDL: readonly attribute DOMString vendor;
     @property
@@ -1075,7 +1074,7 @@ class GPUDevice(GPUObjectBase):
                 properties, including the testing, operations, and bias. Optional.
             multisample (structs.MultisampleState): Describes the multi-sampling properties of the pipeline.
             fragment (structs.FragmentState): Describes the fragment shader
-                entry point of the pipeline and its output colors. If it’s
+                entry point of the pipeline and its output colors. If it's
                 None, the No-Color-Output mode is enabled: the pipeline
                 does not produce any color attachment outputs. It still
                 performs rasterization and produces depth values based on
@@ -1370,7 +1369,7 @@ class GPUBuffer(GPUObjectBase):
     def unmap(self):
         """Unmaps the buffer.
 
-        Unmaps the mapped range of the GPUBuffer and makes it’s contents
+        Unmaps the mapped range of the GPUBuffer and makes it's contents
         available for use by the GPU again.
         """
         raise NotImplementedError()

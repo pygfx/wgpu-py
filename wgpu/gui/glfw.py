@@ -35,9 +35,9 @@ if sys.platform.startswith("linux") and SYSTEM_IS_WAYLAND:
 
 
 # Some glfw functions are not always available
-set_window_content_scale_callback = lambda *args: None  # noqa: E731
-set_window_maximize_callback = lambda *args: None  # noqa: E731
-get_window_content_scale = lambda *args: (1, 1)  # noqa: E731
+set_window_content_scale_callback = lambda *args: None
+set_window_maximize_callback = lambda *args: None
+get_window_content_scale = lambda *args: (1, 1)
 
 if hasattr(glfw, "set_window_content_scale_callback"):
     set_window_content_scale_callback = glfw.set_window_content_scale_callback
@@ -105,7 +105,6 @@ KEY_MAP_MOD = {
 
 
 def get_glfw_present_info(window):
-
     if sys.platform.startswith("win"):
         return {
             "method": "screen",

@@ -16,9 +16,9 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
         pass
 
 
-from wgpu.gui.qt import WgpuCanvas  # WgpuCanvas is a QWidget subclass
+from wgpu.gui.qt import WgpuCanvas  # noqa: E402
 
-from triangle import main  # The function to call to run the visualization
+from triangle import main  # noqa: E402
 
 
 app = QtWidgets.QApplication([])
