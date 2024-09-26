@@ -59,13 +59,11 @@ __all__ = [
 
 
 class PowerPreference(Enum):
-
     low_power = "low-power"
     high_performance = "high-performance"
 
 
 class FeatureName(Enum):
-
     depth_clip_control = "depth-clip-control"
     depth32float_stencil8 = "depth32float-stencil8"
     texture_compression_bc = "texture-compression-bc"
@@ -83,21 +81,18 @@ class FeatureName(Enum):
 
 
 class BufferMapState(Enum):
-
     unmapped = "unmapped"
     pending = "pending"
     mapped = "mapped"
 
 
 class TextureDimension(Enum):
-
     d1 = "1d"
     d2 = "2d"
     d3 = "3d"
 
 
 class TextureViewDimension(Enum):
-
     d1 = "1d"
     d2 = "2d"
     d2_array = "2d-array"
@@ -107,14 +102,12 @@ class TextureViewDimension(Enum):
 
 
 class TextureAspect(Enum):
-
     all = "all"
     stencil_only = "stencil-only"
     depth_only = "depth-only"
 
 
 class TextureFormat(Enum):
-
     r8unorm = "r8unorm"
     r8snorm = "r8snorm"
     r8uint = "r8uint"
@@ -213,26 +206,22 @@ class TextureFormat(Enum):
 
 
 class AddressMode(Enum):
-
     clamp_to_edge = "clamp-to-edge"
     repeat = "repeat"
     mirror_repeat = "mirror-repeat"
 
 
 class FilterMode(Enum):
-
     nearest = "nearest"
     linear = "linear"
 
 
 class MipmapFilterMode(Enum):
-
     nearest = "nearest"
     linear = "linear"
 
 
 class CompareFunction(Enum):
-
     never = "never"
     less = "less"
     equal = "equal"
@@ -244,21 +233,18 @@ class CompareFunction(Enum):
 
 
 class BufferBindingType(Enum):
-
     uniform = "uniform"
     storage = "storage"
     read_only_storage = "read-only-storage"
 
 
 class SamplerBindingType(Enum):
-
     filtering = "filtering"
     non_filtering = "non-filtering"
     comparison = "comparison"
 
 
 class TextureSampleType(Enum):
-
     float = "float"
     unfilterable_float = "unfilterable-float"
     depth = "depth"
@@ -267,32 +253,27 @@ class TextureSampleType(Enum):
 
 
 class StorageTextureAccess(Enum):
-
     write_only = "write-only"
     read_only = "read-only"
     read_write = "read-write"
 
 
 class CompilationMessageType(Enum):
-
     error = "error"
     warning = "warning"
     info = "info"
 
 
 class PipelineErrorReason(Enum):
-
     validation = "validation"
     internal = "internal"
 
 
 class AutoLayoutMode(Enum):
-
     auto = "auto"
 
 
 class PrimitiveTopology(Enum):
-
     point_list = "point-list"
     line_list = "line-list"
     line_strip = "line-strip"
@@ -301,20 +282,17 @@ class PrimitiveTopology(Enum):
 
 
 class FrontFace(Enum):
-
     ccw = "ccw"
     cw = "cw"
 
 
 class CullMode(Enum):
-
     none = "none"
     front = "front"
     back = "back"
 
 
 class BlendFactor(Enum):
-
     zero = "zero"
     one = "one"
     src = "src"
@@ -335,7 +313,6 @@ class BlendFactor(Enum):
 
 
 class BlendOperation(Enum):
-
     add = "add"
     subtract = "subtract"
     reverse_subtract = "reverse-subtract"
@@ -344,7 +321,6 @@ class BlendOperation(Enum):
 
 
 class StencilOperation(Enum):
-
     keep = "keep"
     zero = "zero"
     replace = "replace"
@@ -356,13 +332,11 @@ class StencilOperation(Enum):
 
 
 class IndexFormat(Enum):
-
     uint16 = "uint16"
     uint32 = "uint32"
 
 
 class VertexFormat(Enum):
-
     uint8x2 = "uint8x2"
     uint8x4 = "uint8x4"
     sint8x2 = "sint8x2"
@@ -397,49 +371,41 @@ class VertexFormat(Enum):
 
 
 class VertexStepMode(Enum):
-
     vertex = "vertex"
     instance = "instance"
 
 
 class LoadOp(Enum):
-
     load = "load"
     clear = "clear"
 
 
 class StoreOp(Enum):
-
     store = "store"
     discard = "discard"
 
 
 class QueryType(Enum):
-
     occlusion = "occlusion"
     timestamp = "timestamp"
 
 
 class CanvasAlphaMode(Enum):
-
     opaque = "opaque"
     premultiplied = "premultiplied"
 
 
 class CanvasToneMappingMode(Enum):
-
     standard = "standard"
     extended = "extended"
 
 
 class DeviceLostReason(Enum):
-
     unknown = "unknown"
     destroyed = "destroyed"
 
 
 class ErrorFilter(Enum):
-
     validation = "validation"
     out_of_memory = "out-of-memory"
     internal = "internal"

@@ -107,6 +107,7 @@ def remove_c_comments(code):
 class FormatException(Exception):
     pass
 
+
 # todo: rename blacken to format_code
 def blacken(src, singleline=False):
     """Format the given src string using black. If singleline is True,
@@ -118,10 +119,18 @@ def blacken(src, singleline=False):
     with open(tempfilename, "wb") as fp:
         fp.write(src.encode())
     line_length = 320 if singleline else 88
-    cmd = [sys.executable, "-m", "ruff", "format","--line-length", str(line_length), tempfilename]
+    cmd = [
+        sys.executable,
+        "-m",
+        "ruff",
+        "format",
+        "--line-length",
+        str(line_length),
+        tempfilename,
+    ]
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if p.returncode:
-        raise FormatException(p.stdout.decode(errors='ignore'))
+        raise FormatException(p.stdout.decode(errors="ignore"))
     with open(tempfilename, "rb") as fp:
         result = fp.read().decode()
 

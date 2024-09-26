@@ -110,7 +110,6 @@ def test_comment_injector():
 
 
 def test_async_api_logic():
-
     class Object(object):
         pass
 

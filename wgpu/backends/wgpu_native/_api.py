@@ -309,7 +309,6 @@ libf = SafeLibCalls(lib, error_handler)
 
 
 class GPU(classes.GPU):
-
     def request_adapter_sync(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
@@ -829,7 +828,6 @@ class GPUAdapterInfo(classes.GPUAdapterInfo):
 
 
 class GPUAdapter(classes.GPUAdapter):
-
     def request_device_sync(
         self,
         *,
@@ -3239,8 +3237,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             for i in range(size[1] * size[2]):
                 row = data[i * full_stride : i * full_stride + ori_stride]
                 data2[
-                    ori_offset
-                    + i * ori_stride : ori_offset
+                    ori_offset + i * ori_stride : ori_offset
                     + i * ori_stride
                     + ori_stride
                 ] = row

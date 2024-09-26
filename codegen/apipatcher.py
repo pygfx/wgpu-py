@@ -268,7 +268,6 @@ class IdlPatcherMixin:
         self.detect_async_props_and_methods()
 
     def detect_async_props_and_methods(self):
-
         self.async_idl_names = async_idl_names = {}  # (sync-name, async-name)
 
         for classname, interface in self.idl.classes.items():
