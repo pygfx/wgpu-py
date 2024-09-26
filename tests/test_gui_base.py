@@ -31,7 +31,8 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
         raise Exception("call-failed-" + "but-test-passed")
 
     def spam_method(self):
-        raise ZeroDivisionError()
+        msg = "intended-fail"  # avoid line with the message to show in the tb
+        raise Exception(msg)
 
 
 def test_base_canvas_context():
@@ -64,7 +65,7 @@ def test_canvas_logging(caplog):
     assert text.count("(5)") == 0
 
     assert text.count("spam_method") == 0
-    assert text.count("division by zero") == 0
+    assert text.count("intended-fail") == 0
 
     canvas._draw_frame_and_present()  # prints traceback
     canvas._draw_frame_and_present()  # prints short logs ...
@@ -77,7 +78,7 @@ def test_canvas_logging(caplog):
     assert text.count("call-failed-but-test-passed") == 4
 
     assert text.count("spam_method") == 2
-    assert text.count("division by zero") == 4
+    assert text.count("intended-fail") == 4
 
 
 class MyOffscreenCanvas(wgpu.gui.WgpuCanvasBase):
