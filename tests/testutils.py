@@ -6,8 +6,6 @@ import subprocess
 from io import StringIO
 from pathlib import Path
 
-from wgpu.utils import get_default_device  # noqa
-
 
 ROOT = Path(__file__).parent.parent  # repo root
 examples_dir = ROOT / "examples"

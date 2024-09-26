@@ -7,7 +7,7 @@ import sys
 import subprocess
 
 import numpy as np
-import wgpu.gui  # noqa
+import wgpu.gui
 from testutils import run_tests, can_use_wgpu_lib, is_pypy
 from pytest import mark, raises
 

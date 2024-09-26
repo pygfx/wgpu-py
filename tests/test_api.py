@@ -9,7 +9,7 @@ from testutils import run_tests, can_use_wgpu_lib
 
 
 def test_basic_api():
-    import wgpu  # noqa: F401
+    import wgpu
 
     assert isinstance(wgpu.__version__, str)
     assert isinstance(wgpu.version_info, tuple)
@@ -188,7 +188,7 @@ def test_register_backend_fails():
 
     fake_gpu = GPU()
 
-    ori_gpu = wgpu.gpu  # noqa: N806
+    ori_gpu = wgpu.gpu
     try:
         wgpu.gpu = wgpu.classes.GPU()
 

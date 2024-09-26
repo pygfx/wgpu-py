@@ -89,7 +89,7 @@ class GPU:
         Provided by wgpu-py, but not compatible with WebGPU.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
         return gpu.request_adapter_sync(
             power_preference=power_preference,
@@ -113,7 +113,7 @@ class GPU:
                 be able to render to. This can typically be left to None.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
         return await gpu.request_adapter_async(
             power_preference=power_preference,
@@ -129,7 +129,7 @@ class GPU:
         """
 
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
         return gpu.enumerate_adapters_sync()
 
@@ -159,7 +159,7 @@ class GPU:
         # and then return both or one (if they represent the same adapter).
 
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
         return await gpu.enumerate_adapters_async()
 

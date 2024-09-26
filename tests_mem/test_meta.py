@@ -64,7 +64,7 @@ def test_meta_buffers_2():
     ori = wgpu.backends.wgpu_native.GPUBuffer._release
     wgpu.backends.wgpu_native.GPUBuffer._release = lambda self: None
 
-    from test_objects import test_release_buffer  # noqa
+    from test_objects import test_release_buffer
 
     try:
         with pytest.raises(AssertionError):

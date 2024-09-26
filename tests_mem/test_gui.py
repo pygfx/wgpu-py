@@ -7,8 +7,8 @@ import weakref
 
 import wgpu
 import pytest
-import testutils  # noqa
 from testutils import can_use_wgpu_lib, create_and_release, is_pypy
+import testutils  # noqa: F401 - sometimes used in debugging
 
 
 if not can_use_wgpu_lib:

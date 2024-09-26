@@ -9,7 +9,7 @@ from ..._coreutils import get_resource_filename, logger_set_level_callbacks
 from cffi import FFI, __version_info__ as cffi_version_info
 
 
-logger = logging.getLogger("wgpu")  # noqa
+logger = logging.getLogger("wgpu")
 
 
 if cffi_version_info < (1, 10):  # no-cover
@@ -115,7 +115,7 @@ def _maybe_get_pip_hint():
     # Get pip version
     pip_version = ()
     try:
-        import pip  # noqa
+        import pip
 
         parts = []
         for x in pip.__version__.split("."):

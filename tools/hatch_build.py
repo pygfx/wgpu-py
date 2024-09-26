@@ -32,7 +32,7 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 root_dir = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, os.path.join(root_dir, "tools"))
 
-from download_wgpu_native import main as download_lib  # noqa
+from download_wgpu_native import main as download_lib  # noqa: E402
 
 
 class CustomBuildHook(BuildHookInterface):

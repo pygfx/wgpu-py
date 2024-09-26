@@ -20,15 +20,15 @@ WGPU_GUI_BACKEND_NAMES = ["glfw", "qt", "jupyter", "offscreen"]
 def _load_backend(backend_name):
     """Load a gui backend by name."""
     if backend_name == "glfw":
-        from . import glfw as module  # noqa
+        from . import glfw as module
     elif backend_name == "qt":
-        from . import qt as module  # noqa
+        from . import qt as module
     elif backend_name == "jupyter":
-        from . import jupyter as module  # noqa
+        from . import jupyter as module
     elif backend_name == "wx":
-        from . import wx as module  # noqa
+        from . import wx as module
     elif backend_name == "offscreen":
-        from . import offscreen as module  # noqa
+        from . import offscreen as module
     else:  # no-cover
         raise ImportError("Unknown wgpu gui backend: '{backend_name}'")
     return module

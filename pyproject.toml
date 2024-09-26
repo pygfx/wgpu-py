@@ -69,11 +69,19 @@ path = "tools/hatch_build.py"
 line-length = 88
 
 [tool.ruff.lint]
-#select = ["F", "E", "W", "N", "B", "RUF"] # todo: add D and DOC for docstrings?
+select = ["F", "E", "W", "N", "B", "RUF"]
 ignore = [
-    "E501", # Line too long
-    "B006", # Do not use mutable data structures for argument defaults
-    "B007", # Loop control variable `x` not used within loop body
+    "E501",   # Line too long
+    "E731",   # Do not assign a `lambda` expression, use a `def`
+    "B006",   # Do not use mutable data structures for argument defaults
+    "B007",   # Loop control variable `x` not used within loop body
+    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "RUF013",
+    "RUF005",
+    "RUF015",
+    "RUF017",
+    "RUF002",
+
 ]
 
 [tool.coverage.report]
@@ -83,4 +91,3 @@ exclude_also = [
     "no-cover",
     "raise NotImplementedError",
 ]
-select = ["E", "F"]

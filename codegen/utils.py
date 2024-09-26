@@ -102,7 +102,7 @@ def remove_c_comments(code):
     return new_code
 
 
-class FormatException(Exception):
+class FormatError(Exception):
     pass
 
 
@@ -127,7 +127,7 @@ def format_code(src, singleline=False):
     ]
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if p.returncode:
-        raise FormatException(p.stdout.decode(errors="ignore"))
+        raise FormatError(p.stdout.decode(errors="ignore"))
     with open(tempfilename, "rb") as fp:
         result = fp.read().decode()
     os.remove(tempfilename)
@@ -242,7 +242,7 @@ class Patcher:
         if format:
             try:
                 text = format_code(text)
-            except FormatException as err:  # pragma: no cover
+            except FormatError as err:  # pragma: no cover
                 # If you get this error, it really helps to load the code
                 # in an IDE to see where the error is. Let's help with that ...
                 filename = os.path.join(tempfile.gettempdir(), "wgpu_patcher_fail.py")

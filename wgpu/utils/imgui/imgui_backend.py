@@ -288,7 +288,7 @@ class ImguiWgpuBackend:
     def _set_render_state(self, draw_data: imgui.ImDrawData):
         # update the uniform buffer (mvp and gamma)
 
-        l = draw_data.display_pos.x  # noqa
+        l = draw_data.display_pos.x  # noqa: E741
         r = draw_data.display_pos.x + draw_data.display_size.x
         t = draw_data.display_pos.y
         b = draw_data.display_pos.y + draw_data.display_size.y

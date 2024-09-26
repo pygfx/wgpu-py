@@ -16,7 +16,7 @@ class GPU:
         raise NotImplementedError("Cannot use sync API functions in JS.")
 
     async def request_adapter_async(self, **parameters):
-        gpu = window.navigator.gpu  # noqa
+        gpu = window.navigator.gpu  # noqa: F821
         return await gpu.request_adapter(**parameters)
 
     def get_preferred_canvas_format(self):

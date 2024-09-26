@@ -6,9 +6,9 @@ def _load_backend(backend_name):
     """Load a wgpu backend by name."""
 
     if backend_name == "wgpu_native":
-        from . import wgpu_native as module  # noqa: F401,F403
+        from . import wgpu_native as module
     elif backend_name == "js_webgpu":
-        from . import js_webgpu as module  # noqa: F401,F403
+        from . import js_webgpu as module
     else:  # no-cover
         raise ImportError(f"Unknown wgpu backend: '{backend_name}'")
 

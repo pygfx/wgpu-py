@@ -1,3 +1,5 @@
+# ruff: noqa: N999
+
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
 
 # Init variables that PyInstaller will pick up.
@@ -20,7 +22,7 @@ hiddenimports += ["wgpu.backends.auto", "wgpu.backends.wgpu_native"]
 # code below. Makes the binaray a bit larger, but only marginally (less
 # than 300kb).
 try:
-    import glfw  # noqa
+    import glfw  # noqa: F401
 except ImportError:
     pass
 else:

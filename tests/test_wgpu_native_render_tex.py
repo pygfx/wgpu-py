@@ -10,7 +10,7 @@ import wgpu
 from pytest import skip
 from testutils import run_tests, get_default_device
 from testutils import can_use_wgpu_lib, is_ci
-from renderutils import upload_to_texture, render_to_texture, render_to_screen  # noqa
+from renderutils import upload_to_texture, render_to_texture
 
 
 if not can_use_wgpu_lib:

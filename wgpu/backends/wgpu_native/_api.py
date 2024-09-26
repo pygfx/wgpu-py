@@ -36,7 +36,7 @@ from ._helpers import (
     SafeLibCalls,
 )
 
-logger = logging.getLogger("wgpu")  # noqa
+logger = logging.getLogger("wgpu")
 
 
 # The API is prettu well defined
@@ -276,10 +276,10 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
 
     if adapter:
         # H: WGPUBool f(WGPUAdapter adapter, WGPUFeatureName feature)
-        has_feature = lambda feature: libf.wgpuAdapterHasFeature(id, feature)  # noqa
+        has_feature = lambda feature: libf.wgpuAdapterHasFeature(id, feature)
     else:
         # H: WGPUBool f(WGPUDevice device, WGPUFeatureName feature)
-        has_feature = lambda feature: libf.wgpuDeviceHasFeature(id, feature)  # noqa
+        has_feature = lambda feature: libf.wgpuDeviceHasFeature(id, feature)
 
     features = set()
 
@@ -2339,7 +2339,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         # H: void wgpuComputePassEncoderPopDebugGroup(WGPUComputePassEncoder computePassEncoder)
         # H: void wgpuRenderPassEncoderPopDebugGroup(WGPURenderPassEncoder renderPassEncoder)
         # H: void wgpuRenderBundleEncoderPopDebugGroup(WGPURenderBundleEncoder renderBundleEncoder)
-        function = type(self)._pop_debug_group_function  # noqa
+        function = type(self)._pop_debug_group_function
         function(self._internal)
 
     def insert_debug_marker(self, marker_label):
@@ -2382,7 +2382,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
     def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
         # H: void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
         # H: void wgpuRenderBundleEncoderDraw(WGPURenderBundleEncoder renderBundleEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
-        function = type(self)._draw_function  # noqa
+        function = type(self)._draw_function
         function(
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
@@ -2391,7 +2391,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         # H: void wgpuRenderBundleEncoderDrawIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        function = type(self)._draw_indirect_function  # noqa
+        function = type(self)._draw_indirect_function
         function(self._internal, buffer_id, int(indirect_offset))
 
     def draw_indexed(

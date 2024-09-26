@@ -8,9 +8,9 @@ import asyncio
 
 import wgpu
 import pytest
-import testutils  # noqa
 from testutils import create_and_release, can_use_glfw, can_use_wgpu_lib
 from test_gui import make_draw_func_for_canvas
+import testutils  # noqa: F401 - sometimes used in debugging
 
 
 if not can_use_wgpu_lib:
@@ -38,7 +38,7 @@ def test_release_canvas_context(n):
     # Texture and a TextureView, but these are released in present(),
     # so we don't see them in the counts.
 
-    from wgpu.gui.glfw import WgpuCanvas  # noqa
+    from wgpu.gui.glfw import WgpuCanvas
 
     yield {
         "ignore": {"CommandBuffer"},
