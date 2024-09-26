@@ -25,5 +25,5 @@ gpu = GPU()  # noqa: F405
 def request_adapter(*args, **kwargs):
     """Deprecated!"""
     raise DeprecationWarning(
-        "wgpu.request_adapter() is deprecated! Use wgpu.gpu.request_adapter() instead."
+        "wgpu.request_adapter() is deprecated! Use wgpu.gpu.request_adapter_sync() instead."
     )

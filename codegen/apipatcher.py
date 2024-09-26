@@ -179,7 +179,7 @@ class AbstractApiPatcher(Patcher):
                 elif "@apidiff.hide" in pre_lines:
                     pass  # continue as normal
                 old_line = self.lines[j1]
-                new_line = f"    def {propname}(self):"
+                new_line = self.get_property_def(classname, propname)
                 if old_line != new_line:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
@@ -241,7 +241,7 @@ class AbstractApiPatcher(Patcher):
             if propname not in seen_props:
                 lines.append("    # FIXME: new prop to implement")
                 lines.append("    @property")
-                lines.append(f"    def {propname}(self):")
+                lines.append(self.get_property_def(classname, propname))
                 lines.append("        raise NotImplementedError()")
                 lines.append("")
         return lines
@@ -265,16 +265,105 @@ class IdlPatcherMixin:
     def __init__(self):
         super().__init__()
         self.idl = get_idl_parser()
+        self.detect_async_props_and_methods()
 
-    def name2idl(self, name):
-        m = {"__init__": "constructor"}
-        name = m.get(name, name)
-        return to_camel_case(name)
+    def detect_async_props_and_methods(self):
 
-    def name2py(self, name):
-        m = {"constructor": "__init__"}
-        name = m.get(name, name)
-        return to_snake_case(name)
+        self.async_idl_names = async_idl_names = {}  # (sync-name, async-name)
+
+        for classname, interface in self.idl.classes.items():
+            for namedict in [interface.attributes, interface.functions]:
+                for name_idl, idl_line in namedict.items():
+                    idl_result = idl_line.split(name_idl)[0]
+                    if "Promise" in idl_result:
+                        # We found an async property or method.
+                        name_idl_base = name_idl
+                        if name_idl.endswith("Async"):
+                            name_idl_base = name_idl[:-5]
+                        key = classname, name_idl_base
+                        # Now we determine the kind
+                        if name_idl_base != name_idl and name_idl_base in namedict:
+                            # Has both
+                            async_idl_names[key] = name_idl_base, name_idl
+                        else:
+                            # Only has async
+                            async_idl_names[key] = None, name_idl
+
+    def get_idl_name_variants(self, classname, base_name):
+        """Returns the names of an idl prop/method for its sync and async variant.
+        Either can be None.
+        """
+        # Must be a base name, without the suffix
+        assert not base_name.lower().endswith(("sync", "async"))
+
+        key = classname, base_name
+        default = base_name, None
+        return self.async_idl_names.get(key, default)
+
+    def name2idl(self, classname, name_py):
+        """Map a python propname/methodname to the idl variant.
+        Take async into account.
+        """
+        if name_py == "__init__":
+            return "constructor"
+
+        # Get idl base name
+        if name_py.endswith(("_sync", "_async")):
+            name_idl_base = to_camel_case(name_py.rsplit("_", 1)[0])
+        else:
+            name_idl_base = to_camel_case(name_py)
+
+        # Get idl variant names
+        idl_sync, idl_async = self.get_idl_name_variants(classname, name_idl_base)
+
+        # Triage
+        if idl_sync and idl_async:
+            if name_py.endswith("_async"):
+                return idl_async
+            elif name_py.endswith("_sync"):
+                return name_idl_base + "InvalidVariant"
+            else:
+                return idl_sync
+        elif idl_async:
+            if name_py.endswith("_async"):
+                return idl_async
+            elif name_py.endswith("_sync"):
+                return idl_async
+            else:
+                return name_idl_base + "InvalidVariant"
+        else:  # idl_sync only
+            if name_py.endswith("_async"):
+                return name_idl_base + "InvalidVariant"
+            elif name_py.endswith("_sync"):
+                return name_idl_base + "InvalidVariant"
+            else:
+                return idl_sync
+
+    def name2py_names(self, classname, name_idl):
+        """Map a idl propname/methodname to the python variants.
+        Take async into account. Returns a list with one or two names;
+        for async props/methods Python has the sync and the async variant.
+        """
+
+        if name_idl == "constructor":
+            return ["__init__"]
+
+        # Get idl base name
+        name_idl_base = name_idl
+        if name_idl.endswith("Async"):
+            name_idl_base = name_idl[:-5]
+        name_py_base = to_snake_case(name_idl_base)
+
+        # Get idl variant names
+        idl_sync, idl_async = self.get_idl_name_variants(classname, name_idl_base)
+
+        if idl_sync and idl_async:
+            return [to_snake_case(idl_sync), name_py_base + "_async"]
+        elif idl_async:
+            return [name_py_base + "_sync", name_py_base + "_async"]
+        else:
+            assert idl_sync == name_idl_base
+            return [name_py_base]
 
     def class_is_known(self, classname):
         return classname in self.idl.classes
@@ -295,22 +384,28 @@ class IdlPatcherMixin:
         bases = "" if not bases else f"({', '.join(bases)})"
         return f"class {classname}{bases}:"
 
+    def get_property_def(self, classname, propname):
+        attributes = self.idl.classes[classname].attributes
+        name_idl = self.name2idl(classname, propname)
+        assert name_idl in attributes
+
+        line = "def " + to_snake_case(propname) + "(self):"
+        if propname.endswith("_async"):
+            line = "async " + line
+        return "    " + line
+
     def get_method_def(self, classname, methodname):
-        # Get the corresponding IDL line
         functions = self.idl.classes[classname].functions
-        name_idl = self.name2idl(methodname)
-        if methodname.endswith("_async") and name_idl not in functions:
-            name_idl = self.name2idl(methodname.replace("_async", ""))
-        elif name_idl not in functions and name_idl + "Async" in functions:
-            name_idl += "Async"
-        idl_line = functions[name_idl]
+        name_idl = self.name2idl(classname, methodname)
+        assert name_idl in functions
 
         # Construct preamble
         preamble = "def " + to_snake_case(methodname) + "("
-        if "async" in methodname:
+        if methodname.endswith("_async"):
             preamble = "async " + preamble
 
         # Get arg names and types
+        idl_line = functions[name_idl]
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
         args = [arg.strip() for arg in args if arg.strip()]
         raw_defaults = [arg.partition("=")[2].strip() for arg in args]
@@ -361,28 +456,31 @@ class IdlPatcherMixin:
         return result
 
     def prop_is_known(self, classname, propname):
-        propname_idl = self.name2idl(propname)
-        return propname_idl in self.idl.classes[classname].attributes
+        attributes = self.idl.classes[classname].attributes
+        propname_idl = self.name2idl(classname, propname)
+        return propname_idl if propname_idl in attributes else None
 
     def method_is_known(self, classname, methodname):
         functions = self.idl.classes[classname].functions
-        name_idl = self.name2idl(methodname)
-        if "_async" in methodname and name_idl not in functions:
-            name_idl = self.name2idl(methodname.replace("_async", ""))
-        elif name_idl not in functions and name_idl + "Async" in functions:
-            name_idl += "Async"
-        return name_idl if name_idl in functions else None
+        methodname_idl = self.name2idl(classname, methodname)
+        return methodname_idl if methodname_idl in functions else None
 
     def get_class_names(self):
         return list(self.idl.classes.keys())
 
     def get_required_prop_names(self, classname):
-        propnames_idl = self.idl.classes[classname].attributes.keys()
-        return [self.name2py(x) for x in propnames_idl]
+        attributes = self.idl.classes[classname].attributes
+        names = []
+        for name_idl in attributes.keys():
+            names.extend(self.name2py_names(classname, name_idl))
+        return names
 
     def get_required_method_names(self, classname):
-        methodnames_idl = self.idl.classes[classname].functions.keys()
-        return [self.name2py(x) for x in methodnames_idl]
+        functions = self.idl.classes[classname].functions
+        names = []
+        for name_idl in functions.keys():
+            names.extend(self.name2py_names(classname, name_idl))
+        return names
 
 
 class BaseApiPatcher(IdlPatcherMixin, AbstractApiPatcher):
@@ -398,14 +496,16 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
         return None
 
     def get_prop_comment(self, classname, propname):
-        if self.prop_is_known(classname, propname):
-            propname_idl = self.name2idl(propname)
-            return "    # IDL: " + self.idl.classes[classname].attributes[propname_idl]
+        attributes = self.idl.classes[classname].attributes
+        name_idl = self.prop_is_known(classname, propname)
+        if name_idl:
+            return "    # IDL: " + attributes[name_idl]
 
     def get_method_comment(self, classname, methodname):
+        functions = self.idl.classes[classname].functions
         name_idl = self.method_is_known(classname, methodname)
         if name_idl:
-            return "    # IDL: " + self.idl.classes[classname].functions[name_idl]
+            return "    # IDL: " + functions[name_idl]
 
 
 class BackendApiPatcher(AbstractApiPatcher):

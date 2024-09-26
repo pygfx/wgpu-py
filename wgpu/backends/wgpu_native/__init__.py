@@ -18,4 +18,5 @@ _check_expected_version(version_info)  # produces a warning on mismatch
 gpu = GPU()  # noqa: F405
 _register_backend(gpu)  # noqa: F405
 
-from .extras import enumerate_adapters, request_device  # noqa: F401, E402
+from .extras import enumerate_adapters  # noqa: F401, E402
+from .extras import request_device_sync, request_device  # noqa: F401, E402

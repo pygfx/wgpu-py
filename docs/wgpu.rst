@@ -34,10 +34,14 @@ Some arguments have a default value. Most do not.
 Differences from WebGPU
 -----------------------
 
-This API is derived from the WebGPU spec, but differs in a few ways.
-For example, methods that in WebGPU accept a descriptor/struct/dict,
-here accept the fields in that struct as keyword arguments.
+This API is derived from the WebGPU spec, but differs in a few ways:
 
+* Methods names are snake_case (instead of camelCase).
+* Enums and flags are represented as objects with snake_case field names.
+* Methods that in WebGPU accept a single descriptor, will accept the fields of that descriptor as keyword arguments.
+* Async methods have a different name, read more below.
+
+Further changes:
 
 .. autodata:: wgpu._classes.apidiff
     :annotation: Differences of base API:
@@ -45,6 +49,21 @@ here accept the fields in that struct as keyword arguments.
 
 Each backend may implement extra functionality on top of the base API.
 This is listed in :doc:`backends <backends>`.
+
+
+Async code
+----------
+
+Some methods and properties in the WebGPU API are asynchronous. In wgpu-py, these methods
+are always suffixed with ``_async``. These method also have a synchronous variant, which
+come in two flafours:
+
+* If the method has the plain method name (no suffix), the synchronous method is
+  available in WebGPU as well. There's no problem to use this variant.
+* If the method ends with ``_sync``, this is a convenience method, added in
+  wgpu-py to fully support synchronous code. However, the synchronous variant is
+  not part of the WebGPU spec, and as a consequence, code that uses this method
+  is less portable (to e.g. pyodide/pyscript).
 
 
 Overview

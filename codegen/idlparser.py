@@ -67,8 +67,7 @@ class IdlParser:
     * enums: a dict mapping the (Pythonic) enum name to a dict of field-value pairs.
     * structs: a dict mapping the (Pythonic) struct name to a dict of StructField
       objects.
-    * functions: a dict mapping the (normalized) func name to the line defining the
-      function.
+    * classes: a dict mapping the (normalized) class name an Interface object.
 
     """
 

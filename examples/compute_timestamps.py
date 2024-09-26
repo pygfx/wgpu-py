@@ -41,10 +41,12 @@ for i in range(n):
 for i in range(n):
     data2[i] = i * 2
 
-adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
+adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
 
 # Request a device with the timestamp_query feature, so we can profile our computation
-device = adapter.request_device(required_features=[wgpu.FeatureName.timestamp_query])
+device = adapter.request_device_sync(
+    required_features=[wgpu.FeatureName.timestamp_query]
+)
 cshader = device.create_shader_module(code=shader_source)
 
 # Create buffer objects, input buffer is mapped.

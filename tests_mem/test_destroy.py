@@ -26,7 +26,7 @@ def test_destroy_device(n):
 
     adapter = DEVICE.adapter
     for i in range(n):
-        d = adapter.request_device()
+        d = adapter.request_device_sync()
         d.destroy()
         # NOTE: destroy is not yet implemented in wgpu-natice - this does not actually do anything yet
         yield d
@@ -57,7 +57,7 @@ def test_destroy_buffer(n):
 
         # Uncomment the following lines to see. These are commented because it makes wgpu-core create a command-buffer.
         # try:
-        #     b.map("READ")
+        #     b.map_sync("READ")
         # except wgpu.GPUValidationError as err:
         #     error = err
         # assert "destroyed" in error.message.lower()
