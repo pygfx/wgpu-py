@@ -18,7 +18,7 @@ glfw = ["glfw>=1.9"]
 imgui = ["imgui-bundle>=1.2.1"]
 # For devs / ci
 build = ["build", "hatchling", "requests", "twine"]
-codegen = ["pytest", "numpy", "black"]
+codegen = ["pytest", "numpy", "ruff"]
 lint = ["ruff"]
 tests = ["numpy", "pytest", "psutil", "imageio"]
 examples = []

@@ -120,9 +120,8 @@ This code is distributed under the 2-clause BSD license.
   binaries.
   * You can use `python tools/download_wgpu_native.py` when needed.
   * Or point the `WGPU_LIB_PATH` environment variable to a custom build of `wgpu-native`.
-* Use `black .` to apply autoformatting.
-* Use `flake8 .` to check for flake errors.
-* Use `pytest .` to run the tests.
+* Use `ruff format` to apply autoformatting.
+* Use `ruff check` to check for linting errors.
 
 
 ### Updating to a later version of WebGPU or wgpu-native
@@ -136,11 +135,11 @@ for more information.
 
 The test suite is divided into multiple parts:
 
-* `pytest -v tests` runs the core unit tests.
+* `pytest -v tests` runs the unit tests.
 * `pytest -v examples` tests the examples.
-* `pytest -v wgpu/__pyinstaller` tests if wgpu is properly supported by
-  pyinstaller.
-* `pytest -v codegen` lints the generated binding code.
+* `pytest -v wgpu/__pyinstaller` tests if wgpu is properly supported by pyinstaller.
+* `pytest -v codegen` tests the code that autogenerates the API.
+* `pytest -v tests_mem` tests against memoryleaks.
 
 There are two types of tests for examples included:
 

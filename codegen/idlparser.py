@@ -161,7 +161,7 @@ class IdlParser:
         return "\n".join(lines)
 
     def resolve_type(self, typename):
-        """Resolve a type to a suitable name that is also valid so that flake8
+        """Resolve a type to a suitable name that is also valid so that the linter
         wont complain when this is used as a type annotation.
         """
 
