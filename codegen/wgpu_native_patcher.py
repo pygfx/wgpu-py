@@ -16,7 +16,7 @@ focuses on the API, here we focus on the C library usage.
 import re
 from collections import defaultdict
 
-from codegen.utils import print, blacken, Patcher, to_snake_case
+from codegen.utils import print, format_code, Patcher, to_snake_case
 from codegen.hparser import get_h_parser
 from codegen.idlparser import get_idl_parser
 from codegen.files import file_cache
@@ -169,7 +169,7 @@ def write_mappings():
     pylines.append("}")
 
     # Wrap up
-    code = blacken("\n".join(pylines))  # just in case; code is already black
+    code = format_code("\n".join(pylines))
     file_cache.write("backends/wgpu_native/_mappings.py", code)
     print(
         f"Wrote {len(enummap)} enum mappings and {len(cstructfield2enum)} struct-field mappings to wgpu_native/_mappings.py"
@@ -354,7 +354,7 @@ class StructPatcher(Patcher):
             self.replace_line(i1 + 1, self.lines[i1 + 1] + ",")
             return
 
-        # We can assume that the struct is multi-line and formatted by Black!
+        # We can assume that the struct is multi-line and formatted
         assert len(lines) >= 3
 
         # Get struct name, and verify

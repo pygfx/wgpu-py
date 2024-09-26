@@ -3,7 +3,7 @@ The logic to generate/patch the base API from the WebGPU
 spec (IDL), and the backend implementations from the base API.
 """
 
-from codegen.utils import print, blacken, to_snake_case, to_camel_case, Patcher
+from codegen.utils import print, format_code, to_snake_case, to_camel_case, Patcher
 from codegen.idlparser import get_idl_parser
 from codegen.files import file_cache
 
@@ -439,7 +439,7 @@ class IdlPatcherMixin:
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"
-        line = blacken(line, True).split("):")[0] + "):"
+        line = format_code(line, True).split("):")[0] + "):"
         return "    " + line
 
     def _arg_from_struct_field(self, field):

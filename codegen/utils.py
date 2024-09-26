@@ -7,8 +7,6 @@ import sys
 import tempfile
 import subprocess
 
-import black
-
 
 def to_snake_case(name):
     """Convert a name from camelCase to snake_case. Names that already are
@@ -108,14 +106,13 @@ class FormatException(Exception):
     pass
 
 
-# todo: rename blacken to format_code
-def blacken(src, singleline=False):
-    """Format the given src string using black. If singleline is True,
-    all function signatures become single-line, so they can be parsed
-    and updated.
+def format_code(src, singleline=False):
+    """Format the given src string. If singleline is True, all function
+    signatures become single-line, so they can be parsed and updated.
     """
+
     # Use Ruff to format the line. Ruff does not yet have a Python API, so we use its CLI.
-    tempfilename = os.path.join(tempfile.gettempdir(), "toruff.py")
+    tempfilename = os.path.join(tempfile.gettempdir(), "wgpupy_codegen_format.py")
     with open(tempfilename, "wb") as fp:
         fp.write(src.encode())
     line_length = 320 if singleline else 88
@@ -133,10 +130,7 @@ def blacken(src, singleline=False):
         raise FormatException(p.stdout.decode(errors="ignore"))
     with open(tempfilename, "rb") as fp:
         result = fp.read().decode()
-
-    # # Normal black
-    # mode = black.FileMode(line_length=999 if singleline else 88)
-    # result = black.format_str(src, mode=mode)
+    os.remove(tempfilename)
 
     # Make defs single-line. You'd think that setting the line length
     # to a very high number would do the trick, but it does not.
@@ -201,7 +195,7 @@ class Patcher:
         self._diffs = {}
         self._classes = {}
         if code:
-            self.lines = blacken(code, True).splitlines()  # inf line length
+            self.lines = format_code(code, True).splitlines()  # inf line length
 
     def remove_line(self, i):
         """Remove the line at the given position. There must not have been
@@ -247,7 +241,7 @@ class Patcher:
         text = "\n".join(lines)
         if format:
             try:
-                text = blacken(text)
+                text = format_code(text)
             except FormatException as err:  # pragma: no cover
                 # If you get this error, it really helps to load the code
                 # in an IDE to see where the error is. Let's help with that ...
@@ -259,7 +253,7 @@ class Patcher:
                 raise RuntimeError(
                     f"It appears that the patcher has generated invalid Python:"
                     f"\n\n    {err}\n\n"
-                    f'Wrote the generated (but unblackened) code to:\n\n  "{filename}"'
+                    f'Wrote the generated (but unformatted) code to:\n\n  "{filename}"'
                 ) from None
 
         return text
