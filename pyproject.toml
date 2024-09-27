@@ -1,31 +1,88 @@
+# ===== Project info
+
+[project]
+dynamic = ["version"]
+name = "wgpu"
+description = "WebGPU for Python"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Almar Klein" }, { name = "Korijn van Golen" }]
+keywords = ["webgpu", "wgpu", "vulkan", "metal", "DX12", "opengl"]
+requires-python = ">= 3.8"
+dependencies = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'"]
+
+[project.optional-dependencies]
+# For users
+jupyter = ["jupyter_rfb>=0.4.2"]
+glfw = ["glfw>=1.9"]
+imgui = ["imgui-bundle>=1.2.1"]
+# For devs / ci
+build = ["build", "hatchling", "requests", "twine"]
+codegen = ["pytest", "numpy", "ruff"]
+lint = ["ruff"]
+tests = ["numpy", "pytest", "psutil", "imageio"]
+examples = []
+docs = ["sphinx>7.2", "sphinx_rtd_theme"]
+dev = ["wgpu[build,codegen,lint,tests,examples,docs]"]
+
+[project.entry-points."pyinstaller40"]
+hook-dirs = "wgpu.__pyinstaller:get_hook_dirs"
+tests = "wgpu.__pyinstaller:get_test_dirs"
+
+[project.urls]
+Homepage = "https://github.com/pygfx/wgpu-py"
+Documentation = "https://wgpu-py.readthedocs.io"
+Repository = "https://github.com/pygfx/wgpu-py"
+
+# ===== Building
+#
+# There are a variety of build backends, e.g.:
+# * setuptools: need this if you have a setup.py
+# * flit: really nice for pure Python libs.
+# * hatchling: modern, with pretty good defaults, and configurable. Just right for us!
+# * mesonpy: numpy, scikit-image, et al. use this because they compile stuff.
+
 [build-system]
-requires = ["setuptools>=42"]
-build-backend = "setuptools.build_meta"
+requires = ["requests", "hatchling"]
+build-backend = "hatchling.build"
 
+[tool.hatch.version]
+path = "wgpu/__init__.py"
 
-[tool.cibuildwheel]
-# we only build on one python version since the wheels are not bound to it
-build = "cp312-*"
-# Print system info before build
-before-all = "uname -a"
-# Can't list requests under build-system.requires because that step happens _after_ the before-build command
-before-build = "pip install requests && python download-wgpu-native.py"
-# This is sufficient to trigger an install of the built wheel
-test-command = "echo Wheel installed"
+[tool.hatch.build.targets.sdist]
+packages = ["wgpu"]
+exclude = ["*.so", "*.dll", "*.dylib"]
+force-include = { "tools" = "tools" }
 
-[tool.cibuildwheel.windows]
-# Only for local use, overridden in cd.yml
-archs = ["amd64"]
+[tool.hatch.build.targets.wheel]
+packages = ["wgpu"]
+artifacts = ["*.so", "*.dll", "*.dylib"]
 
-[tool.cibuildwheel.macos]
-# Only for local use, overridden in cd.yml
-archs = ["arm64"]
+# We use a hatch build hook to install the correct wgpu-native lib right before
+# the wheel is build, and to allow cross-platform builds. See the tools dir.
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "tools/hatch_build.py"
 
-[tool.cibuildwheel.linux]
-# wgpu-native does not build for musllinux yet
-skip = "*musllinux*"
-# Use custom images, with minimal version that matches wgpu-native
-manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64"
-manylinux-aarch64-image = "quay.io/pypa/manylinux_2_28_aarch64"
-manylinux-i686-image = "quay.io/pypa/manylinux_2_28_i686"
-manylinux-ppc64le-image = "quay.io/pypa/manylinux_2_28_ppc64le"
+# ===== Tooling
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["F", "E", "W", "N", "B", "RUF"]
+ignore = [
+    "E501",   # Line too long
+    "E731",   # Do not assign a `lambda` expression, use a `def`
+    "B006",   # Do not use mutable data structures for argument defaults
+    "B007",   # Loop control variable `x` not used within loop body
+    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "RUF013", # PEP 484 prohibits implicit `Optional` - we should fix this!
+]
+
+[tool.coverage.report]
+exclude_also = [
+    # Have to re-enable the standard pragma, plus a less-ugly flavor
+    "pragma: no cover",
+    "no-cover",
+    "raise NotImplementedError",
+]

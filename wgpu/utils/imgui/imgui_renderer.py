@@ -53,7 +53,6 @@ class ImguiRenderer:
     def __init__(
         self, device, canvas: wgpu.gui.WgpuCanvasBase, render_target_format=None
     ):
-
         # Prepare present context
         self._canvas_context = canvas.get_context()
 

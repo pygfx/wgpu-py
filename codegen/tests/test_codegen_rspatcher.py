@@ -1,5 +1,4 @@
-""" Test some parts of rsbackend.py, and implicitly tests hparser.py.
-"""
+"""Test some parts of rsbackend.py, and implicitly tests hparser.py."""
 
 from codegen.wgpu_native_patcher import patch_wgpu_native_backend
 

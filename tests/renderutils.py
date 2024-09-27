@@ -1,11 +1,11 @@
-""" Utils to render to a texture or screen. Tuned to the tests, so quite some
+"""Utils to render to a texture or screen. Tuned to the tests, so quite some
 assumptions here.
 """
 
 import ctypes
 import numpy as np
 
-import wgpu.backends.wgpu_native  # noqa
+import wgpu.backends.wgpu_native
 
 
 def upload_to_texture(device, texture, data, nx, ny, nz):

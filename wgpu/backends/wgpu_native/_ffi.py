@@ -1,5 +1,4 @@
-"""Loading the header, the lib, and setting up its logging.
-"""
+"""Loading the header, the lib, and setting up its logging."""
 
 import os
 import sys
@@ -10,7 +9,7 @@ from ..._coreutils import get_resource_filename, logger_set_level_callbacks
 from cffi import FFI, __version_info__ as cffi_version_info
 
 
-logger = logging.getLogger("wgpu")  # noqa
+logger = logging.getLogger("wgpu")
 
 
 if cffi_version_info < (1, 10):  # no-cover
@@ -84,24 +83,28 @@ def get_wgpu_lib_path():
     # Note that this can be a false positive, e.g. ARM linux.
     embedded_path = get_resource_filename(lib_filename)
     if not os.path.isfile(embedded_path):  # no-cover
-        download_hint = _maybe_get_hint_on_download_script()
-        pip_hint = _maybe_get_pip_hint()
-        raise RuntimeError(
-            f"Could not find WGPU library in {embedded_path}. {download_hint} {pip_hint}"
-        )
+        env_hint = "You can set the WGPU_LIB_PATH env var to the location of the wgpu-native library."
+        download_hint = _maybe_get_hint_on_download_script().strip()
+        pip_hint = _maybe_get_pip_hint().strip()
+        hints = [pip_hint, download_hint, env_hint]
+        hints = "\n".join([hint for hint in hints if hint])
+        hints = "\n" + hints if hints else ""
+        raise RuntimeError(f"Could not find WGPU library in {embedded_path}.{hints}")
     else:
         return embedded_path
 
 
 def _maybe_get_hint_on_download_script():
     root_dir = os.path.join(get_resource_filename(""), "..", "..")
-    filename = os.path.abspath(os.path.join(root_dir, "download-wgpu-native.py"))
+    filename = os.path.abspath(
+        os.path.join(root_dir, "tools", "download_wgpu_native.py")
+    )
     uses_repo = os.path.isfile(filename)
 
     uses_custom_lib = os.getenv("WGPU_LIB_PATH", "").strip()
 
     if uses_repo and not uses_custom_lib:
-        return "You may need to run download-wgpu-native.py (in the root of the repo)."
+        return "You may need to run tools/download_wgpu_native.py."
     return ""
 
 
@@ -112,7 +115,7 @@ def _maybe_get_pip_hint():
     # Get pip version
     pip_version = ()
     try:
-        import pip  # noqa
+        import pip
 
         parts = []
         for x in pip.__version__.split("."):

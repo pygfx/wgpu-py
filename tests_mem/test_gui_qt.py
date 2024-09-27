@@ -7,9 +7,9 @@ import weakref
 
 import wgpu
 import pytest
-import testutils  # noqa
 from testutils import create_and_release, can_use_pyside6, can_use_wgpu_lib
 from test_gui import make_draw_func_for_canvas
+import testutils  # noqa: F401 - sometimes used in debugging
 
 
 if not can_use_wgpu_lib:
@@ -29,14 +29,16 @@ def test_release_canvas_context(n):
     # Texture and a TextureView, but these are released in present(),
     # so we don't see them in the counts.
 
-    import PySide6  # noqa
-    from wgpu.gui.qt import WgpuCanvas  # noqa
+    import PySide6
+    from wgpu.gui.qt import WgpuCanvas
 
     app = PySide6.QtWidgets.QApplication.instance()
     if app is None:
         app = PySide6.QtWidgets.QApplication([""])
 
-    yield {}
+    yield {
+        "ignore": {"CommandBuffer"},
+    }
 
     canvases = weakref.WeakSet()
 

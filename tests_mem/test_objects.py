@@ -3,8 +3,8 @@ Test all the wgpu objects.
 """
 
 import pytest
-import testutils  # noqa
 from testutils import can_use_wgpu_lib, create_and_release
+import testutils  # noqa: F401 - sometimes used in debugging
 
 
 if not can_use_wgpu_lib:
@@ -20,7 +20,7 @@ DEVICE = wgpu.utils.get_default_device()
 def test_release_adapter(n):
     yield {}
     for i in range(n):
-        yield wgpu.gpu.request_adapter(power_preference="high-performance")
+        yield wgpu.gpu.request_adapter_sync(power_preference="high-performance")
 
 
 @create_and_release
@@ -33,7 +33,7 @@ def test_release_device(n):
     }
     adapter = DEVICE.adapter
     for i in range(n):
-        d = adapter.request_device()
+        d = adapter.request_device_sync()
         yield d
 
 
@@ -197,7 +197,7 @@ def test_release_queue(n):
     }
     adapter = DEVICE.adapter
     for i in range(n):
-        d = adapter.request_device()
+        d = adapter.request_device_sync()
         q = d.queue
         d._queue = None  # detach
         yield q

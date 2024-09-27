@@ -69,7 +69,7 @@ In some cases we may want to deviate from the WebGPU API, because well ... Pytho
 Other changes include:
 
 * Where in JS the input args are provided via a dict, we use kwargs directly. Nevertheless, some input args have subdicts (and sub-sub-dicts)
-*  For methods that are async in IDL, we also provide sync methods. The Async method names have an "_async" suffix.
+* For methods that are async in JavaScript (i.e return a `Promise`), we provide both an asynchronous and synchronous variant, indicated by an `_async` and `_sync` suffix.
 
 ### Codegen summary
 
@@ -136,7 +136,7 @@ The majority of work in the wgpu-native backend is the conversion of  Python dic
 
 ### The update process
 
-* Download the latest `webgpu.h` and DLL using `python download-wgpu-native.py --version xx`
+* Download the latest `webgpu.h` and DLL using `python tools/download_wgpu_native.py --version xx`
 * Run `python codegen` to apply the automatic patches to the code.
 * It may be necessary to tweak the `hparser.py` to adjust to new formatting.
 * Diff the report for new differences to take into account.

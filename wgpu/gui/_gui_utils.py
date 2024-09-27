@@ -1,5 +1,4 @@
-""" Private gui utilities.
-"""
+"""Private gui utilities."""
 
 import os
 import sys
@@ -35,7 +34,7 @@ def get_imported_qt_lib():
     # Get which of these have an application object
     imported_libs_with_app = []
     for libname in imported_libs:
-        QtWidgets = sys.modules.get(libname + ".QtWidgets", None)  # noqa
+        QtWidgets = sys.modules.get(libname + ".QtWidgets", None)  # noqa: N806
         if QtWidgets:
             app = QtWidgets.QApplication.instance()
             if app is not None:

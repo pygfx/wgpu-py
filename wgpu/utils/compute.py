@@ -75,7 +75,9 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
             try:
                 format_size = FORMAT_SIZES[format]
             except KeyError:
-                raise ValueError(f"Invalid format for output array {key}: {format}")
+                raise ValueError(
+                    f"Invalid format for output array {key}: {format}"
+                ) from None
             shape = tuple(int(i) for i in array_descr[:-1])
             if not (shape and all(i > 0 for i in shape)):
                 raise ValueError(f"Invalid shape for output array {key}: {shape}")
@@ -101,7 +103,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
 
     # Get nx, ny, nz from n
     if n is None:
-        output_info = list(output_infos.values())[0]
+        output_info = next(iter(output_infos.values()))
         nx, ny, nz = output_info["length"], 1, 1
     elif isinstance(n, int):
         nx, ny, nz = int(n), 1, 1

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 import wgpu.utils
-from tests.testutils import can_use_wgpu_lib, run_tests
+from testutils import can_use_wgpu_lib, run_tests
 from wgpu import TextureFormat
 from wgpu.backends.wgpu_native.extras import create_pipeline_layout, set_push_constants
 
@@ -66,8 +66,8 @@ BIND_GROUP_ENTRIES = [
 
 
 def setup_pipeline():
-    adapter = wgpu.gpu.request_adapter(power_preference="high-performance")
-    device = adapter.request_device(
+    adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
+    device = adapter.request_device_sync(
         required_features=["push-constants"],
         required_limits={"max-push-constant-size": 128},
     )

@@ -31,7 +31,6 @@ __all__ = [
 
 
 class BufferUsage(Flags):
-
     MAP_READ = 1
     MAP_WRITE = 2
     COPY_SRC = 4
@@ -45,13 +44,11 @@ class BufferUsage(Flags):
 
 
 class MapMode(Flags):
-
     READ = 1
     WRITE = 2
 
 
 class TextureUsage(Flags):
-
     COPY_SRC = 1
     COPY_DST = 2
     TEXTURE_BINDING = 4
@@ -60,14 +57,12 @@ class TextureUsage(Flags):
 
 
 class ShaderStage(Flags):
-
     VERTEX = 1
     FRAGMENT = 2
     COMPUTE = 4
 
 
 class ColorWrite(Flags):
-
     RED = 1
     GREEN = 2
     BLUE = 4

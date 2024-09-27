@@ -12,7 +12,7 @@ import weakref
 import logging
 from typing import List, Dict, Union
 
-from ._coreutils import ApiDiff
+from ._coreutils import ApiDiff, str_flag_to_int
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -81,7 +81,25 @@ class GPU:
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
     @apidiff.change("arguments include canvas")
-    def request_adapter(
+    def request_adapter_sync(
+        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+    ):
+        """Sync version of `request_adapter_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        # If this method gets called, no backend has been loaded yet, let's do that now!
+        from .backends.auto import gpu
+
+        return gpu.request_adapter_sync(
+            power_preference=power_preference,
+            force_fallback_adapter=force_fallback_adapter,
+            canvas=canvas,
+        )
+
+    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
+    @apidiff.change("arguments include canvas")
+    async def request_adapter_async(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
@@ -95,28 +113,28 @@ class GPU:
                 be able to render to. This can typically be left to None.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
-        return gpu.request_adapter(
-            power_preference=power_preference,
-            force_fallback_adapter=force_fallback_adapter,
-            canvas=canvas,
-        )
-
-    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
-    @apidiff.change("arguments include canvas")
-    async def request_adapter_async(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
-    ):
-        """Async version of `request_adapter()`."""
-        return self.request_adapter(
+        return await gpu.request_adapter_async(
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
-    def enumerate_adapters(self):
+    def enumerate_adapters_sync(self):
+        """Sync version of `enumerate_adapters_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+
+        # If this method gets called, no backend has been loaded yet, let's do that now!
+        from .backends.auto import gpu
+
+        return gpu.enumerate_adapters_sync()
+
+    @apidiff.add("Method useful for multi-gpu environments")
+    async def enumerate_adapters_async(self):
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using it's summary), and a device
@@ -141,14 +159,9 @@ class GPU:
         # and then return both or one (if they represent the same adapter).
 
         # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu  # noqa
+        from .backends.auto import gpu
 
-        return gpu.enumerate_adapters()
-
-    @apidiff.add("Method useful on desktop")
-    async def enumerate_adapters_async(self):
-        """Async version of enumerate_adapters."""
-        return self.enumerate_adapters()
+        return await gpu.enumerate_adapters_async()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
@@ -173,11 +186,14 @@ gpu = GPU()
 
 
 class GPUCanvasContext:
-    """Represents a context to configure a canvas.
-
-    Is also used to obtain the texture to render to.
+    """Represents a context to configure a canvas and render to it.
 
     Can be obtained via `gui.WgpuCanvasInterface.get_context()`.
+
+    The canvas-context plays a crucial role in connecting the wgpu API to the
+    GUI layer, in a way that allows the GUI to be agnostic about wgpu. It
+    combines (and checks) the user's preferences with the capabilities and
+    preferences of the canvas.
     """
 
     _ot = object_tracker
@@ -185,6 +201,22 @@ class GPUCanvasContext:
     def __init__(self, canvas):
         self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
+
+        # The configuration from the canvas, obtained with canvas.get_present_info()
+        self._present_info = canvas.get_present_info()
+        if self._present_info.get("method", None) not in ("screen", "image"):
+            raise RuntimeError(
+                "canvas.get_present_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
+            )
+
+        # Surface capabilities. Stored the first time it is obtained
+        self._capabilities = None
+
+        # Configuration dict from the user, set via self.configure()
+        self._config = None
+
+        # The last used texture
+        self._texture = None
 
     def _get_canvas(self):
         """Getter method for internal use."""
@@ -195,6 +227,41 @@ class GPUCanvasContext:
     def canvas(self):
         """The associated canvas object."""
         return self._canvas_ref()
+
+    def _get_capabilities(self, adapter):
+        """Get dict of capabilities and cache the result."""
+        if self._capabilities is None:
+            self._capabilities = {}
+            if self._present_info["method"] == "screen":
+                # Query capabilities from the surface
+                self._capabilities.update(self._get_capabilities_screen(adapter))
+            else:
+                # Default image capabilities
+                self._capabilities = {
+                    "formats": ["rgba8unorm-srgb", "rgba8unorm"],
+                    "usages": 0xFF,
+                    "alpha_modes": [enums.CanvasAlphaMode.opaque],
+                }
+            # If capabilities were provided via surface info, overload them!
+            for key in ["formats", "alpha_modes"]:
+                if key in self._present_info:
+                    self._capabilities[key] = self._present_info[key]
+            # Derived defaults
+            if "view_formats" not in self._capabilities:
+                self._capabilities["view_formats"] = self._capabilities["formats"]
+
+        return self._capabilities
+
+    def _get_capabilities_screen(self, adapter):
+        """Get capabilities for a native surface."""
+        raise NotImplementedError()
+
+    @apidiff.add("Better place to define the preferred format")
+    def get_preferred_format(self, adapter):
+        """Get the preferred surface texture format."""
+        capabilities = self._get_capabilities(adapter)
+        formats = capabilities["formats"]
+        return formats[0] if formats else "bgra8-unorm"
 
     # IDL: undefined configure(GPUCanvasConfiguration configuration);
     def configure(
@@ -216,32 +283,149 @@ class GPUCanvasContext:
             device (WgpuDevice): The GPU device object to create compatible textures for.
             format (enums.TextureFormat): The format that textures returned by
                 ``get_current_texture()`` will have. Must be one of the supported context
-                formats. An often used format is "bgra8unorm-srgb".
+                formats. Can be ``None`` to use the canvas' preferred format.
             usage (flags.TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
             view_formats (List[enums.TextureFormat]): The formats that views created
                 from textures returned by ``get_current_texture()`` may use.
             color_space (PredefinedColorSpace): The color space that values written
                 into textures returned by ``get_current_texture()`` should be displayed with.
-                Default "srgb".
+                Default "srgb". Not yet supported.
             tone_mapping (enums.CanvasToneMappingMode): Not yet supported.
             alpha_mode (structs.CanvasAlphaMode): Determines the effect that alpha values
                 will have on the content of textures returned by ``get_current_texture()``
                 when read, displayed, or used as an image source. Default "opaque".
         """
+
+        # Check types
+
+        if not isinstance(device, GPUDevice):
+            raise TypeError("Given device is not a device.")
+
+        if format is None:
+            format = self.get_preferred_format(device.adapter)
+        if format not in enums.TextureFormat:
+            raise ValueError(f"Configure: format {format} not in {enums.TextureFormat}")
+
+        if not isinstance(usage, int):
+            usage = str_flag_to_int(flags.TextureUsage, usage)
+
+        color_space  # noqa - not really supported, just assume srgb for now
+        tone_mapping  # noqa - not supported yet
+
+        if alpha_mode not in enums.CanvasAlphaMode:
+            raise ValueError(
+                f"Configure: alpha_mode {alpha_mode} not in {enums.CanvasAlphaMode}"
+            )
+
+        # Check against capabilities
+
+        capabilities = self._get_capabilities(device.adapter)
+
+        if format not in capabilities["formats"]:
+            raise ValueError(
+                f"Configure: unsupported texture format: {format} not in {capabilities['formats']}"
+            )
+
+        if not usage & capabilities["usages"]:
+            raise ValueError(
+                f"Configure: unsupported texture usage: {usage} not in {capabilities['usages']}"
+            )
+
+        for view_format in view_formats:
+            if view_format not in capabilities["view_formats"]:
+                raise ValueError(
+                    f"Configure: unsupported view format: {view_format} not in {capabilities['view_formats']}"
+                )
+
+        if alpha_mode not in capabilities["alpha_modes"]:
+            raise ValueError(
+                f"Configure: unsupported alpha-mode: {alpha_mode} not in {capabilities['alpha_modes']}"
+            )
+
+        # Store
+
+        self._config = {
+            "device": device,
+            "format": format,
+            "usage": usage,
+            "view_formats": view_formats,
+            "color_space": color_space,
+            "tone_mapping": tone_mapping,
+            "alpha_mode": alpha_mode,
+        }
+
+        if self._present_info["method"] == "screen":
+            self._configure_screen(**self._config)
+
+    def _configure_screen(
+        self,
+        *,
+        device,
+        format,
+        usage,
+        view_formats,
+        color_space,
+        tone_mapping,
+        alpha_mode,
+    ):
         raise NotImplementedError()
 
     # IDL: undefined unconfigure();
     def unconfigure(self):
         """Removes the presentation context configuration.
-        Destroys any textures produced while configured."""
+        Destroys any textures produced while configured.
+        """
+        if self._present_info["method"] == "screen":
+            self._unconfigure_screen()
+        self._config = None
+        self._drop_texture()
+
+    def _unconfigure_screen(self):
         raise NotImplementedError()
 
     # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self):
-        """Get the `GPUTexture` that will be composited to the canvas next.
-        This method should be called exactly once during each draw event.
-        """
+        """Get the `GPUTexture` that will be composited to the canvas next."""
+        if not self._config:
+            raise RuntimeError(
+                "Canvas context must be configured before calling get_current_texture()."
+            )
+
+        # When the texture is active right now, we could either:
+        # * return the existing texture
+        # * warn about it, and create a new one
+        # * raise an error
+        # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
+
+        if self._texture is None:
+            if self._present_info["method"] == "screen":
+                self._texture = self._create_texture_screen()
+            else:
+                self._texture = self._create_texture_image()
+
+        return self._texture
+
+    def _create_texture_image(self):
+        canvas = self._get_canvas()
+        width, height = canvas.get_physical_size()
+        width, height = max(width, 1), max(height, 1)
+
+        device = self._config["device"]
+        self._texture = device.create_texture(
+            label="presentation-context",
+            size=(width, height, 1),
+            format=self._config["format"],
+            usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
+        )
+        return self._texture
+
+    def _create_texture_screen(self):
         raise NotImplementedError()
+
+    def _drop_texture(self):
+        if self._texture:
+            self._texture._release()  # not destroy, because it may be in use.
+            self._texture = None
 
     @apidiff.add("Present method is exposed")
     def present(self):
@@ -249,26 +433,82 @@ class GPUCanvasContext:
         to the canvas. Note that a canvas based on `gui.WgpuCanvasBase` will call this
         method automatically at the end of each draw event.
         """
-        raise NotImplementedError()
+        # todo: can we remove this present() method?
 
-    @apidiff.add("Better place to define the preferred format")
-    def get_preferred_format(self, adapter):
-        """Get the preferred surface texture format."""
-        return "bgra8unorm-srgb"  # seems to be a good default
+        if not self._texture:
+            # This can happen when a user somehow forgot to call
+            # get_current_texture(). But then what was this person rendering to
+            # then? The thing is that this also happens when there is an
+            # exception in the draw function before the call to
+            # get_current_texture(). In this scenario our warning may
+            # add confusion, so provide context and make it a debug level warning.
+            msg = "Warning in present(): No texture to present, missing call to get_current_texture()?"
+            logger.debug(msg)
+            return
+
+        if self._present_info["method"] == "screen":
+            self._present_screen()
+        else:
+            self._present_image()
+
+        self._drop_texture()
+
+    def _present_image(self):
+        texture = self._texture
+        device = texture._device
+
+        size = texture.size
+        format = texture.format
+        nchannels = 4  # we expect rgba or bgra
+        if not format.startswith(("rgba", "bgra")):
+            raise RuntimeError(f"Image present unsupported texture format {format}.")
+        if "8" in format:
+            bytes_per_pixel = nchannels
+        elif "16" in format:
+            bytes_per_pixel = nchannels * 2
+        elif "32" in format:
+            bytes_per_pixel = nchannels * 4
+        else:
+            raise RuntimeError(
+                f"Image present unsupported texture format bitdepth {format}."
+            )
+
+        data = device.queue.read_texture(
+            {
+                "texture": texture,
+                "mip_level": 0,
+                "origin": (0, 0, 0),
+            },
+            {
+                "offset": 0,
+                "bytes_per_row": bytes_per_pixel * size[0],
+                "rows_per_image": size[1],
+            },
+            size,
+        )
+
+        # Represent as memory object to avoid numpy dependency
+        # Equivalent: np.frombuffer(data, np.uint8).reshape(size[1], size[0], nchannels)
+        data = data.cast("B", (size[1], size[0], nchannels))
+
+        self._get_canvas().present_image(data, format=format)
+
+    def _present_screen(self):
+        raise NotImplementedError()
 
     def __del__(self):
         self._ot.decrease(self.__class__.__name__)
         self._release()
 
     def _release(self):
-        pass
+        self._drop_texture()
 
 
 class GPUAdapterInfo:
     """Represents information about an adapter."""
 
     def __init__(self, info):
-        self._info
+        self._info = info
 
     # IDL: readonly attribute DOMString vendor;
     @property
@@ -336,7 +576,22 @@ class GPUAdapter:
         return self._limits
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    def request_device(
+    def request_device_sync(
+        self,
+        *,
+        label="",
+        required_features: "List[enums.FeatureName]" = [],
+        required_limits: "Dict[str, int]" = {},
+        default_queue: "structs.QueueDescriptor" = {},
+    ):
+        """Sync version of `request_device_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    async def request_device_async(
         self,
         *,
         label="",
@@ -352,18 +607,6 @@ class GPUAdapter:
             required_limits (dict): the various limits that you need. Default {}.
             default_queue (structs.QueueDescriptor): Descriptor for the default queue. Optional.
         """
-        raise NotImplementedError()
-
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
-    async def request_device_async(
-        self,
-        *,
-        label="",
-        required_features: "List[enums.FeatureName]" = [],
-        required_limits: "Dict[str, int]" = {},
-        default_queue: "structs.QueueDescriptor" = {},
-    ):
-        """Async version of `request_device()`."""
         raise NotImplementedError()
 
     def _release(self):
@@ -437,7 +680,7 @@ class GPUDevice(GPUObjectBase):
     from it: when the device is lost, all objects created from it become
     invalid.
 
-    Create a device using `GPUAdapter.request_device()` or
+    Create a device using `GPUAdapter.request_device_sync()` or
     `GPUAdapter.request_device_async()`.
     """
 
@@ -481,18 +724,40 @@ class GPUDevice(GPUObjectBase):
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @apidiff.hide("Not a Pythonic API")
     @property
-    def lost(self):
+    def lost_sync(self):
+        """Sync version of `lost`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        return self._get_lost_sync()
+
+    # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
+    @apidiff.hide("Not a Pythonic API")
+    @property
+    async def lost_async(self):
         """Provides information about why the device is lost."""
         # In JS you can device.lost.then ... to handle lost devices.
         # We may want to eventually support something similar async-like?
         # at some point
+
+        # Properties don't get repeated at _api.py, so we use a proxy method.
+        return await self._get_lost_async()
+
+    def _get_lost_sync(self):
+        raise NotImplementedError()
+
+    async def _get_lost_async(self):
         raise NotImplementedError()
 
     # IDL: attribute EventHandler onuncapturederror;
     @apidiff.hide("Specific to browsers")
     @property
     def onuncapturederror(self):
-        """Method called when an error is capured?"""
+        """Event handler.
+
+        In JS you'd do ``gpuDevice.addEventListener('uncapturederror', ...)``. We'd need
+        to figure out how to do this in Python.
+        """
         raise NotImplementedError()
 
     # IDL: undefined destroy();
@@ -774,7 +1039,9 @@ class GPUDevice(GPUObjectBase):
         layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
         compute: "structs.ProgrammableStage",
     ):
-        """Async version of create_compute_pipeline()."""
+        """Async version of `create_compute_pipeline()`.
+
+        Both versions are compatible with WebGPU."""
         raise NotImplementedError()
 
     # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
@@ -807,7 +1074,7 @@ class GPUDevice(GPUObjectBase):
                 properties, including the testing, operations, and bias. Optional.
             multisample (structs.MultisampleState): Describes the multi-sampling properties of the pipeline.
             fragment (structs.FragmentState): Describes the fragment shader
-                entry point of the pipeline and its output colors. If it’s
+                entry point of the pipeline and its output colors. If it's
                 None, the No-Color-Output mode is enabled: the pipeline
                 does not produce any color attachment outputs. It still
                 performs rasterization and produces depth values based on
@@ -933,7 +1200,9 @@ class GPUDevice(GPUObjectBase):
         multisample: "structs.MultisampleState" = {},
         fragment: "structs.FragmentState" = None,
     ):
-        """Async version of create_render_pipeline()."""
+        """Async version of `create_render_pipeline()`.
+
+        Both versions are compatible with WebGPU."""
         raise NotImplementedError()
 
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
@@ -987,7 +1256,16 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: Promise<GPUError?> popErrorScope();
     @apidiff.hide
-    def pop_error_scope(self):
+    def pop_error_scope_sync(self):
+        """Sync version of `pop_error_scope_async().
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<GPUError?> popErrorScope();
+    @apidiff.hide
+    async def pop_error_scope_async(self):
         """Pops a GPU error scope from the stack."""
         raise NotImplementedError()
 
@@ -1062,7 +1340,15 @@ class GPUBuffer(GPUObjectBase):
     # an array-like object that exposes the shared memory.
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def map(self, mode, offset=0, size=None):
+    def map_sync(self, mode, offset=0, size=None):
+        """Sync version of `map_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
+    async def map_async(self, mode, offset=0, size=None):
         """Maps the given range of the GPUBuffer.
 
         When this call returns, the buffer content is ready to be
@@ -1079,16 +1365,11 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    async def map_async(self, mode, offset=0, size=None):
-        """Alternative version of map()."""
-        raise NotImplementedError()
-
     # IDL: undefined unmap();
     def unmap(self):
         """Unmaps the buffer.
 
-        Unmaps the mapped range of the GPUBuffer and makes it’s contents
+        Unmaps the mapped range of the GPUBuffer and makes it's contents
         available for use by the GPU again.
         """
         raise NotImplementedError()
@@ -1389,7 +1670,15 @@ class GPUShaderModule(GPUObjectBase):
     """
 
     # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
-    def get_compilation_info(self):
+    def get_compilation_info_sync(self):
+        """Sync version of `get_compilation_info_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
+    async def get_compilation_info_async(self):
         """Get shader compilation info. Always returns empty list at the moment."""
         # How can this return shader errors if one cannot create a
         # shader module when the shader source has errors?
@@ -1931,7 +2220,7 @@ class GPUQueue(GPUObjectBase):
 
         Alignment: the buffer offset must be a multiple of 4, the total size to write must be a multiple of 4 bytes.
 
-        Also see `GPUBuffer.map()`.
+        Also see `GPUBuffer.map_sync()` and `GPUBuffer.map_async()`.
 
         """
         raise NotImplementedError()
@@ -1949,7 +2238,7 @@ class GPUQueue(GPUObjectBase):
         and then maps that buffer to read the data. The given buffer's
         usage must include COPY_SRC.
 
-        Also see `GPUBuffer.map()`.
+        Also see `GPUBuffer._sync()` and `GPUBuffer._async()`.
         """
         raise NotImplementedError()
 
@@ -1994,14 +2283,22 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: Promise<undefined> onSubmittedWorkDone();
-    def on_submitted_work_done(self):
-        """TODO"""
-        raise NotImplementedError()
-
     # IDL: undefined copyExternalImageToTexture( GPUImageCopyExternalImage source, GPUImageCopyTextureTagged destination, GPUExtent3D copySize);
     @apidiff.hide("Specific to browsers")
     def copy_external_image_to_texture(self, source, destination, copy_size):
+        raise NotImplementedError()
+
+    # IDL: Promise<undefined> onSubmittedWorkDone();
+    def on_submitted_work_done_sync(self):
+        """Sync version of `on_submitted_work_done_async()`.
+
+        Provided by wgpu-py, but not compatible with WebGPU.
+        """
+        raise NotImplementedError()
+
+    # IDL: Promise<undefined> onSubmittedWorkDone();
+    async def on_submitted_work_done_async(self):
+        """TODO"""
         raise NotImplementedError()
 
 
@@ -2219,5 +2516,33 @@ def _set_repr_methods():
             cls.__repr__ = generic_repr
 
 
+_async_warnings = {}
+
+
+def _set_compat_methods_for_async_methods():
+    def create_new_method(name):
+        def proxy_method(self, *args, **kwargs):
+            warning = _async_warnings.pop(name, None)
+            if warning:
+                logger.warning(warning)
+            return getattr(self, name)(*args, **kwargs)
+
+        proxy_method.__name__ = name + "_backwards_compat_proxy"
+        proxy_method.__doc__ = f"Backwards compatibile method for {name}()"
+        return proxy_method
+
+    m = globals()
+    for class_name in __all__:
+        cls = m[class_name]
+        for name, func in list(cls.__dict__.items()):
+            if name.endswith("_sync") and callable(func):
+                old_name = name[:-5]
+                setattr(cls, old_name, create_new_method(name))
+                _async_warnings[name] = (
+                    f"WGPU: {old_name}() is deprecated, use {name}() instead."
+                )
+
+
 _seed_object_counts()
 _set_repr_methods()
+_set_compat_methods_for_async_methods()

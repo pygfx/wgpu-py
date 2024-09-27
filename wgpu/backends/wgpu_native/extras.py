@@ -11,10 +11,10 @@ from typing import List
 
 def enumerate_adapters():
     """Deprecated."""
-    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters() instead.")
+    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters_sync() instead.")
 
 
-def request_device_tracing(
+def request_device_sync(
     adapter,
     trace_path,
     *,
@@ -33,6 +33,14 @@ def request_device_tracing(
     return adapter._request_device(
         label, required_features, required_limits, default_queue, trace_path
     )
+
+
+# Backwards compat for deprecated function
+def request_device(*args, **kwargs):
+    logger.warning(
+        "WGPU: wgpu.backends.wgpu_native.request_device() is deprecated, use request_device_sync() instead."
+    )
+    return request_device_sync(*args, **kwargs)
 
 
 def create_pipeline_layout(
@@ -62,3 +70,26 @@ def set_push_constants(
     render_pass_encoder._set_push_constants(
         visibility, offset, size_in_bytes, data, data_offset
     )
+
+
+def multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
+    """
+    This is equvalent to
+    for i in range(count):
+        render_pass_encoder.draw(buffer, offset + i * 16)
+
+    You must enable the featue "multi-draw-indirect" to use this function.
+    """
+    render_pass_encoder._multi_draw_indirect(buffer, offset, count)
+
+
+def multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
+    """
+    This is equvalent to
+
+    for i in range(count):
+        render_pass_encoder.draw_indexed(buffer, offset + i * 20)
+
+    You must enable the featue "multi-draw-indirect" to use this function.
+    """
+    render_pass_encoder._multi_draw_indexed_indirect(buffer, offset, count)

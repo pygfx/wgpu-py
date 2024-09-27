@@ -2,15 +2,17 @@
 WebGPU for Python.
 """
 
-from ._coreutils import logger  # noqa: F401,F403
-from ._diagnostics import diagnostics, DiagnosticsBase  # noqa: F401,F403
-from .flags import *  # noqa: F401,F403
-from .enums import *  # noqa: F401,F403
-from .classes import *  # noqa: F401,F403
-from .gui import WgpuCanvasInterface  # noqa: F401,F403
-from . import utils  # noqa: F401,F403
-from . import backends  # noqa: F401,F403
-from . import resources  # noqa: F401,F403
+# ruff: noqa: F401, F403
+
+from ._coreutils import logger
+from ._diagnostics import diagnostics, DiagnosticsBase
+from .flags import *
+from .enums import *
+from .classes import *
+from .gui import WgpuCanvasInterface
+from . import utils
+from . import backends
+from . import resources
 
 
 __version__ = "0.18.1"
@@ -25,5 +27,5 @@ gpu = GPU()  # noqa: F405
 def request_adapter(*args, **kwargs):
     """Deprecated!"""
     raise DeprecationWarning(
-        "wgpu.request_adapter() is deprecated! Use wgpu.gpu.request_adapter() instead."
+        "wgpu.request_adapter() is deprecated! Use wgpu.gpu.request_adapter_sync() instead."
     )

@@ -12,7 +12,7 @@ import gc
 import wgpu
 from pytest import skip
 from testutils import run_tests, can_use_glfw, can_use_wgpu_lib, is_pypy
-from renderutils import render_to_texture, render_to_screen  # noqa
+# from renderutils import render_to_texture, render_to_screen
 
 
 if not can_use_glfw or not can_use_wgpu_lib:
@@ -171,7 +171,7 @@ def test_glfw_canvas_render_custom_canvas():
             self.window = glfw.create_window(300, 200, "canvas", None, None)
             self._present_context = None
 
-        def get_surface_info(self):
+        def get_present_info(self):
             if sys.platform.startswith("win"):
                 return {
                     "platform": "windows",
@@ -213,10 +213,10 @@ def test_glfw_canvas_render_custom_canvas():
     canvas = CustomCanvas()
 
     # Also pass canvas here, to touch that code somewhere
-    adapter = wgpu.gpu.request_adapter(
+    adapter = wgpu.gpu.request_adapter_sync(
         canvas=canvas, power_preference="high-performance"
     )
-    device = adapter.request_device()
+    device = adapter.request_device_sync()
     draw_frame = _get_draw_function(device, canvas)
 
     for i in range(5):

@@ -16,9 +16,9 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
         pass
 
 
-from wgpu.gui.qt import WgpuWidget
+from wgpu.gui.qt import WgpuWidget  # noqa: E402
 
-from triangle import main
+from triangle import main  # noqa: E402
 
 
 class ExampleWidget(QtWidgets.QWidget):

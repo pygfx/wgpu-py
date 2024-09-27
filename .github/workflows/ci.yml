@@ -25,13 +25,16 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
-    - name: Install dev dependencies
+    - name: Install dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U black flake8 flake8-black pep8-naming
-    - name: Flake8
+          pip install ruff
+    - name: Ruff lint
       run: |
-          flake8 .
+          ruff check --output-format=github .
+    - name: Ruff format
+      run: |
+          ruff format --check .
 
   test-codegen-build:
     name: Test Codegen
@@ -48,7 +51,7 @@ jobs:
     - name: Install dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U pytest numpy black cffi
+          pip install -U -e .[codegen]
     - name: Test codegen
       run: |
           pytest -v codegen
@@ -68,9 +71,6 @@ jobs:
     - name: Install dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install requests
-          python download-wgpu-native.py
-          pip uninstall -q -y requests
           pip install -e .
     - name: Test imports
       env:
@@ -96,7 +96,7 @@ jobs:
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -r dev-requirements.txt
+          pip install -U -e .[docs]
     - name: Build docs
       run: |
           cd docs
@@ -121,9 +121,7 @@ jobs:
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -r dev-requirements.txt
-          python download-wgpu-native.py
-          pip install -e .
+          pip install -U -e .[tests,examples]
     - name: Test examples
       env:
         EXPECT_LAVAPIPE: true
@@ -145,10 +143,8 @@ jobs:
     - name: Install dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U requests numpy pytest
-          python download-wgpu-native.py
-          pip install -e .
-          pip install psutil glfw pyinstaller>=4.9
+          pip install -U -e .
+          pip install -U pytest numpy psutil pyinstaller glfw
     - name: Test PyInstaller
       run: |
           pyinstaller --version
@@ -194,9 +190,7 @@ jobs:
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -r dev-requirements.txt
-          python download-wgpu-native.py
-          pip install -e .
+          pip install -U -e .[tests]
     - name: Unit tests
       run: |
           pytest -v tests

@@ -7,8 +7,8 @@ import weakref
 
 import wgpu
 import pytest
-import testutils  # noqa
 from testutils import can_use_wgpu_lib, create_and_release, is_pypy
+import testutils  # noqa: F401 - sometimes used in debugging
 
 
 if not can_use_wgpu_lib:
@@ -23,7 +23,7 @@ def make_draw_func_for_canvas(canvas):
     so that we can really present something to a canvas being tested.
     """
     ctx = canvas.get_context()
-    ctx.configure(device=DEVICE, format="bgra8unorm-srgb")
+    ctx.configure(device=DEVICE, format=None)
 
     def draw():
         ctx = canvas.get_context()
