@@ -18,7 +18,6 @@ import os
 import ctypes
 import logging
 import ctypes.util
-from collections.abc import Sequence
 from weakref import WeakKeyDictionary
 from typing import List, Dict, Optional, Union
 
@@ -1867,7 +1866,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             label, lib.WGPUNativeQueryType_PipelineStatistics, count, values
         )
 
-    def _create_query_set(self, label, type, count, statistics: Sequence[int]):
+    def _create_query_set(self, label, type, count, statistics):
         next_in_chain = ffi.NULL
         if statistics:
             c_statistics = ffi.new("WGPUPipelineStatisticName[]", statistics)
