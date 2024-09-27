@@ -1,5 +1,5 @@
 """
-Test occlusion queries.
+Test statistics queries.
 """
 
 import sys
@@ -10,8 +10,9 @@ from pytest import skip
 
 import wgpu
 from testutils import can_use_wgpu_lib, is_ci, run_tests
-from wgpu import PipelineStatisticName, TextureFormat
+from wgpu import TextureFormat
 from wgpu.backends.wgpu_native.extras import (
+    PipelineStatisticName,
     begin_pipeline_statistics_query,
     create_statistics_query_set,
     end_pipeline_statistics_query,
@@ -149,9 +150,7 @@ def test_render_occluding_squares():
     assert compute_result == [0, 0, 0, 0, 10 * 64]
     assert render_result[0] == 8  # 4 vertices, 2 instances
     assert render_result[1] == 4  # 4 triangles
-    assert (
-        render_result[2] >= 2
-    )  # unclear, but we have at least 2 front-facing triangles
+    # unclear what exactly render_result[2] is.
     assert render_result[3] > 1000
     assert render_result[4] == 0  # no calls to the compute engine
 

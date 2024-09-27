@@ -4,7 +4,6 @@ Writes the parts of the API that are simple: flags, enums, structs.
 
 import re
 
-from codegen.hparser import get_h_parser
 from codegen.utils import print, format_code, to_snake_case
 from codegen.idlparser import get_idl_parser
 from codegen.files import file_cache
@@ -65,9 +64,6 @@ def write_flags():
     print(f"Wrote {n} flags to flags.py")
 
 
-ENUM_NATIVE_EXTRAS = ["PipelineStatisticName"]
-
-
 def write_enums():
     # Get preamble
     pylines = []
@@ -78,14 +74,11 @@ def write_enums():
             break
     # Prepare
     idl = get_idl_parser()
-    n = len(idl.enums) + len(ENUM_NATIVE_EXTRAS)
+    n = len(idl.enums)
     # List'm
     pylines.append(f"# There are {n} enums\n")
     pylines.append("__all__ = [")
     for name in idl.enums.keys():
-        pylines.append(f'    "{name}",')
-    pylines.append("    # wgpu natives")
-    for name in ENUM_NATIVE_EXTRAS:
         pylines.append(f'    "{name}",')
     pylines.append("]\n\n")
     for name, d in idl.enums.items():
@@ -94,17 +87,6 @@ def write_enums():
         for key, val in d.items():
             pylines.append(f'    {key} = "{val}"')  # note: can add docs using "#: "
         pylines.append("\n")
-
-    hp = get_h_parser()
-    for name in ["PipelineStatisticName"]:
-        pylines.append(f"class {name}(Enum):  # wgpu native\n")
-        for key in hp.enums[name]:
-            if key == "Force32":
-                continue
-            value = to_snake_case(key).replace("_", "-")
-            pylines.append(f'    {key} = "{value}"')
-        pylines.append("\n")
-
     # Write
     code = format_code("\n".join(pylines))
     file_cache.write("enums.py", code)

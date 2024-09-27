@@ -6,7 +6,7 @@
 * The wgpu.h defines 7 flags, 52 enums, 93 structs
 ## Updating API
 * Wrote 5 flags to flags.py
-* Wrote 35 enums to enums.py
+* Wrote 34 enums to enums.py
 * Wrote 60 structs to structs.py
 ### Patching API for _classes.py
 * Diffs for GPU: add enumerate_adapters_async, add enumerate_adapters_sync, change get_preferred_canvas_format, change request_adapter_async, change request_adapter_sync

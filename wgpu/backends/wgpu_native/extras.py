@@ -1,15 +1,23 @@
 import os
-from collections.abc import Sequence
 from typing import List
 
 from . import GPUComputePassEncoder, GPURenderPassEncoder
 from ._api import Dict, GPUBindGroupLayout, enums, logger, structs
+from ...enums import Enum
 
 
 # NOTE: these functions represent backend-specific extra API.
 # NOTE: changes to this module must be reflected in docs/backends.rst.
 # We don't use Sphinx automodule because this way the doc build do not
 # need to be able to load wgpu-native.
+
+
+class PipelineStatisticName(Enum):  # wgpu native
+    VertexShaderInvocations = "vertex-shader-invocations"
+    ClipperInvocations = "clipper-invocations"
+    ClipperPrimitivesOut = "clipper-primitives-out"
+    FragmentShaderInvocations = "fragment-shader-invocations"
+    ComputeShaderInvocations = "compute-shader-invocations"
 
 
 def enumerate_adapters():
@@ -98,9 +106,12 @@ def multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count)
     render_pass_encoder._multi_draw_indexed_indirect(buffer, offset, count)
 
 
-def create_statistics_query_set(
-    device, *, label="", count: int, statistics: Sequence[str]
-):
+def create_statistics_query_set(device, *, label="", count: int, statistics):
+    """
+    Create a query set that can collect the specified pipeline statistics.
+    You must enable the feature "pipeline-statitistics_query" to collect pipeline
+    statistics.
+    """
     return device._create_statistics_query_set(label, count, statistics)
 
 
