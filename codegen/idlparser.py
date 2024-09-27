@@ -50,7 +50,7 @@ class Attribute:
             assert default is None
         elif arg_type.startswith("optional "):
             arg_type = arg_type.split(" ", 1)[1]
-            default = default or 'None'
+            default = default or "None"
 
         self.name = arg_name
         self.typename = arg_type

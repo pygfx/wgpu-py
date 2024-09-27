@@ -21,6 +21,11 @@
 * Validated 37 classes, 126 methods, 46 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 105 methods, 0 properties
+* ERROR: missing check_struct in copy_buffer_to_texture: ['ImageCopyBuffer', 'ImageCopyTexture', 'Origin3D']
+* ERROR: missing check_struct in copy_texture_to_buffer: ['ImageCopyBuffer', 'ImageCopyTexture', 'Origin3D']
+* ERROR: missing check_struct in copy_texture_to_texture: ['ImageCopyTexture', 'Origin3D']
+* ERROR: missing check_struct in set_blend_constant: ['Color']
+* ERROR: missing check_struct in write_texture: ['ImageCopyTexture', 'ImageDataLayout', 'Origin3D']
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.texture-compression-bc-sliced-3d missing in wgpu.h
 * Enum field FeatureName.clip-distances missing in wgpu.h
