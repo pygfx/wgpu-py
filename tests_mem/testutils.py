@@ -12,25 +12,13 @@ from wgpu._diagnostics import int_repr
 p = psutil.Process()
 
 
-def _determine_can_use_wgpu_lib():
-    # For some reason, since wgpu-native 5c304b5ea1b933574edb52d5de2d49ea04a053db
-    # the process' exit code is not zero, so we test more pragmatically.
-    code = "import wgpu.utils; wgpu.utils.get_default_device(); print('ok')"
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            code,
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    print("_determine_can_use_wgpu_lib() status code:", result.returncode)
-    return (
-        result.stdout.strip().endswith("ok")
-        and "traceback" not in result.stderr.lower()
-    )
+def get_default_adapter_summary():
+    """Get description of adapter, or None when no adapter is available."""
+    try:
+        adapter = wgpu.gpu.request_adapter_sync()
+    except RuntimeError:
+        return None  # lib not available, or no adapter on this system
+    return adapter.summary
 
 
 def _determine_can_use_glfw():
@@ -53,11 +41,13 @@ def _determine_can_use_pyside6():
         return True
 
 
-can_use_wgpu_lib = _determine_can_use_wgpu_lib()
+adapter_summary = get_default_adapter_summary()
+can_use_wgpu_lib = bool(adapter_summary)
 can_use_glfw = _determine_can_use_glfw()
 can_use_pyside6 = _determine_can_use_pyside6()
 is_ci = bool(os.getenv("CI", None))
 is_pypy = sys.implementation.name == "pypy"
+
 
 TEST_ITERS = None
 
