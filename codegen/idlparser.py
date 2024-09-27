@@ -32,17 +32,32 @@ def get_idl_parser(*, allow_cache=True):
     return idl
 
 
-class StructField:
-    """A little object to specify the field of a struct."""
+class Attribute:
+    """A little object to hold a function argument or struct field."""
 
-    def __init__(self, line, name, typename, default=None):
+    def __init__(self, line):
         self.line = line
-        self.name = name
-        self.typename = typename
+
+        arg = line.strip().strip(",;").strip()
+        default = None  # None means 'no default' and "None" kinda means "auto".
+        if "=" in arg:
+            arg, default = arg.rsplit("=", 1)
+            arg, default = arg.strip(), default.strip()
+        arg_type, arg_name = arg.strip().rsplit(" ", 1)
+        if arg_type.startswith("required "):
+            arg_type = arg_type.split(" ", 1)[1]
+            # required args should not have a default
+            assert default is None
+        elif arg_type.startswith("optional "):
+            arg_type = arg_type.split(" ", 1)[1]
+            default = default or 'None'
+
+        self.name = arg_name
+        self.typename = arg_type
         self.default = default
 
     def __repr__(self):
-        return f"<StructField '{self.typename} {self.name}'>"
+        return f"<Attribute '{self.typename} {self.name}'>"
 
     def to_str(self):
         return self.line
@@ -65,7 +80,7 @@ class IdlParser:
 
     * flags: a dict mapping the (neutral) flag name to a dict of field-value pairs.
     * enums: a dict mapping the (Pythonic) enum name to a dict of field-value pairs.
-    * structs: a dict mapping the (Pythonic) struct name to a dict of StructField
+    * structs: a dict mapping the (Pythonic) struct name to a dict of Attribute
       objects.
     * classes: a dict mapping the (normalized) class name an Interface object.
 
@@ -199,6 +214,7 @@ class IdlParser:
             "ImageBitmap": "memoryview",
             "ImageData": "memoryview",
             "VideoFrame": "memoryview",
+            "AllowSharedBufferSource": "memoryview",
             "GPUPipelineConstantValue": "float",
             "GPUExternalTexture": "object",
         }
@@ -208,22 +224,22 @@ class IdlParser:
         if name.startswith("sequence<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             name = self.resolve_type(name).strip("'")
-            return f"'List[{name}]'"
+            return f"List[{name}]"
         elif name.startswith("record<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             names = [self.resolve_type(t).strip("'") for t in name.split(",")]
-            return f"'Dict[{', '.join(names)}]'"
+            return f"Dict[{', '.join(names)}]"
         elif " or " in name:
             name = name.strip("()")
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
             names = sorted(set(names))
-            return f"'Union[{', '.join(names)}]'"
+            return f"Union[{', '.join(names)}]"
 
         # Triage
         if name in __builtins__:
             return name  # ok
         elif name in self.classes:
-            return f"'{name}'"  # ok, but wrap in string because can be declared later
+            return name
         elif name.startswith("HTML"):
             return "object"  # anything, we ignore this stuff anyway
         elif name in ["OffscreenCanvas"]:
@@ -235,11 +251,11 @@ class IdlParser:
             name = name[3:]
             name = name[:-4] if name.endswith("Dict") else name
             if name in self.flags:
-                return f"'flags.{name}'"
+                return f"flags.{name}"
             elif name in self.enums:
-                return f"'enums.{name}'"
+                return f"enums.{name}"
             elif name in self.structs:
-                return f"'structs.{name}'"
+                return f"structs.{name}"
             else:
                 # When this happens, update the code above or the pythonmap
                 raise RuntimeError("Encountered unknown IDL type: ", name)
@@ -373,19 +389,9 @@ class IdlParser:
                     if not line:
                         continue
                     assert line.endswith(";")
-                    arg = line.strip().strip(",;").strip()
-                    default = None
-                    if "=" in arg:
-                        arg, default = arg.rsplit("=", 1)
-                        arg, default = arg.strip(), default.strip()
-                    arg_type, arg_name = arg.strip().rsplit(" ", 1)
-                    if arg_type.startswith("required "):
-                        arg_type = arg_type[9:]
-                        # required args should not have a default
-                        assert default is None
-                    else:
-                        default = default or "None"
-                    d[arg_name] = StructField(line, arg_name, arg_type, default)
+
+                    attribute = Attribute(line)
+                    d[attribute.name] = attribute
                 self.structs[name] = d
             elif line.startswith(("[Exposed=", "[Serializable]")):
                 pass
