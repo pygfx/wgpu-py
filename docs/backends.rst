@@ -44,8 +44,7 @@ It also works out of the box, because the wgpu-native DLL is shipped with wgpu-p
 
 The wgpu_native backend provides a few extra functionalities:
 
-.. py:function:: wgpu.backends.wgpu_native.request_device_sync(adapter, trace_path, *, label="", required_features, required_limits, default_queue)
-
+.. py:function:: wgpu.backends.wgpu_native.extras.request_device_sync(adapter, trace_path, *, label="", required_features, required_limits, default_queue)
     An alternative to :func:`wgpu.GPUAdapter.request_adapter`, that streams a trace
     of all low level calls to disk, so the visualization can be replayed (also on other systems),
     investigated, and debugged.
@@ -132,7 +131,7 @@ Bytes must be set separately for each of the three shader stages.  If the push c
 already been set, on the next use you only need to call ``set_push_constants`` on those
 bytes you wish to change.
 
-.. py:function:: wgpu.backends.wpgu_native.create_pipeline_layout(device, *, label="", bind_group_layouts, push_constant_layouts=[])
+.. py:function:: wgpu.backends.wpgu_native.extras.create_pipeline_layout(device, *, label="", bind_group_layouts, push_constant_layouts=[])
 
    This method provides the same functionality as :func:`wgpu.GPUDevice.create_pipeline_layout`,
    but provides an extra `push_constant_layouts` argument.
@@ -144,7 +143,7 @@ bytes you wish to change.
     :param bind_group_layouts:
     :param push_constant_layouts: Described above.
 
-.. py:function:: wgpu.backends.wgpu_native.set_push_constants(render_pass_encoder, visibility, offset, size_in_bytes, data, data_offset=0)
+.. py:function:: wgpu.backends.wgpu_native.extras.set_push_constants(render_pass_encoder, visibility, offset, size_in_bytes, data, data_offset=0)
 
     This function requires that the underlying GPU implement `push_constants`.
     These push constants are a buffer of bytes available to the `fragment` and `vertex`
@@ -176,7 +175,7 @@ they reduce driver overhead on the CPU.
     :param offset: The byte offset in the indirect buffer containing the first argument.
     :param count: The number of draw operations to perform.
 
-.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
+.. py:function:: wgpu.backends.wgpu_native.extras.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
 
      Equivalent to::
         for i in range(count):
@@ -187,6 +186,50 @@ they reduce driver overhead on the CPU.
     :param buffer: The indirect buffer containing the arguments.
     :param offset: The byte offset in the indirect buffer containing the first argument.
     :param count: The number of draw operations to perform.
+
+Some GPUs allow you collect statistics on their pipelines. Those GPUs that support this
+have the feature "pipeline-statistics-query", and you must enable this feature when
+getting the device.
+
+You create a query set using the function
+``wgpu.backends.wgpu_native.extras.create_statistics_query_set``.
+The size of each entry in the query set is 8 bytes times the number of statistics you
+have chosen to include.
+
+The possible statistics are:
+
+* "vertex-shader-invocations": The number of calls to the vertex shader
+* "clipper-invocations": The number of triangles generated
+* "clipper-primitives-out": The number of primitives the clipper stage produces
+* "fragment-shader-invocations": The number of calls to the fragment shader
+* "compute-shader-invocations": The number of calls to the compute shader
+
+You may use any number of these statistics in a query set. Each result is an 8-byte
+unsigned integer, and the total size of an entry is 8 times the number of statistics chosen.
+The statistics are output in the order above.
+
+.. py:function:: wgpu.backends.wgpu_native.create_statistics_query_set(device, count, statistics):
+
+    Create a query set that could hold count entries for the specified statistics.
+    The statistics are specified as a list of strings.
+
+    :param device: The device.
+    :param count: Number of entries that go into the query set.
+    :param statistics: A sequence of strings giving the desired statistics.
+
+.. py:function:: wgpu.backends.wgpu_native.begin_pipeline_statistics_query(encoder, query_set, index):
+
+    Start collecting statistics.
+
+    :param encoder: The ComputePassEncoder or RenderPassEncoder.
+    :param query_set: The query set into which to save the result.
+    :param index: The index of the query set into which to write the result.
+
+.. py:function:: wgpu.backends.wgpu_native.begin_pipeline_statistics_query(encoder, query_set, index):
+
+    Stop collecting statistics and write them into the query set.
+
+    :param encoder: The ComputePassEncoder or RenderPassEncoder.
 
 
 The js_webgpu backend

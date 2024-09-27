@@ -6,7 +6,7 @@
 * The wgpu.h defines 7 flags, 52 enums, 93 structs
 ## Updating API
 * Wrote 5 flags to flags.py
-* Wrote 34 enums to enums.py
+* Wrote 35 enums to enums.py
 * Wrote 60 structs to structs.py
 ### Patching API for _classes.py
 * Diffs for GPU: add enumerate_adapters_async, add enumerate_adapters_sync, change get_preferred_canvas_format, change request_adapter_async, change request_adapter_sync
@@ -20,7 +20,7 @@
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
 * Validated 37 classes, 126 methods, 46 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 105 methods, 0 properties
+* Validated 37 classes, 111 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.texture-compression-bc-sliced-3d missing in wgpu.h
 * Enum field FeatureName.clip-distances missing in wgpu.h
@@ -35,6 +35,6 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum CanvasToneMappingMode missing in wgpu.h
 * Wrote 236 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 133 C function calls
-* Not using 70 C functions
-* Validated 81 C structs
+* Validated 137 C function calls
+* Not using 66 C functions
+* Validated 82 C structs
