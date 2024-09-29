@@ -163,6 +163,7 @@ def test_glfw_canvas_render_custom_canvas():
     """
 
     import glfw
+    from wgpu.gui.glfw import get_glfw_present_info
 
     class CustomCanvas:  # implements wgpu.WgpuCanvasInterface
         def __init__(self):
@@ -172,32 +173,7 @@ def test_glfw_canvas_render_custom_canvas():
             self._present_context = None
 
         def get_present_info(self):
-            if sys.platform.startswith("win"):
-                return {
-                    "platform": "windows",
-                    "window": int(glfw.get_win32_window(self.window)),
-                }
-            elif sys.platform.startswith("darwin"):
-                return {
-                    "platform": "cocoa",
-                    "window": int(glfw.get_cocoa_window(self.window)),
-                }
-            elif sys.platform.startswith("linux"):
-                is_wayland = hasattr(glfw, "get_wayland_display")
-                if is_wayland:
-                    return {
-                        "platform": "wayland",
-                        "window": int(glfw.get_wayland_window(self.window)),
-                        "display": int(glfw.get_wayland_display()),
-                    }
-                else:
-                    return {
-                        "platform": "x11",
-                        "window": int(glfw.get_x11_window(self.window)),
-                        "display": int(glfw.get_x11_display()),
-                    }
-            else:
-                raise RuntimeError(f"Cannot get GLFW surafce info on {sys.platform}.")
+            return get_glfw_present_info(self.window)
 
         def get_physical_size(self):
             psize = glfw.get_framebuffer_size(self.window)
