@@ -8,7 +8,14 @@ from codegen.idlparser import get_idl_parser, Attribute
 from codegen.files import file_cache
 
 
+# In wgpu-py, we make some args optional, that are not optional in the
+# IDL. E.g. for backwards compat or because we e.g. thing depth-stencil
+# stuff should be optional. These args have a default value of
+# 'optional'  (which is just None) so we can recognise them. If IDL
+# changes makes one of these args optional, its presense in this list
+# will not do anything.
 ARGS_TO_MAKE_OPTIONAL = {
+    ("compilation_hints", "compilation_hints"),  # idl actually has a default
     ("create_shader_module", "source_map"),
     ("begin_compute_pass", "timestamp_writes"),
     ("begin_render_pass", "timestamp_writes"),

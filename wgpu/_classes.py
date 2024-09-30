@@ -73,8 +73,8 @@ apidiff = ApiDiff()
 object_tracker = diagnostics.object_counts.tracker
 
 # The 'optional' value is used as the default value for optional arguments in the following two cases:
-# * The method accepts a descriptior that is optional, so we make all arguments (i.e. the descriptor's fields) optional, and this one does not have a default value.
-# * In wgpu-py we decided that this argument is optonal, even thoug it's not according to the WebGPU spec.
+# * The method accepts a descriptior that is optional, so we make all arguments (i.e. descriptor fields) optional, and this one does not have a default value.
+# * In wgpu-py we decided that this argument should be optonal, even though it's currently not according to the WebGPU spec.
 optional = None
 
 
