@@ -1062,7 +1062,7 @@ class GPUDevice(GPUObjectBase):
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
         multisample: structs.MultisampleState = {},
-        fragment: structs.FragmentState,
+        fragment: structs.FragmentState = optional,
     ):
         """Create a `GPURenderPipeline` object.
 
@@ -1206,7 +1206,7 @@ class GPUDevice(GPUObjectBase):
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
         multisample: structs.MultisampleState = {},
-        fragment: structs.FragmentState,
+        fragment: structs.FragmentState = optional,
     ):
         """Async version of `create_render_pipeline()`.
 

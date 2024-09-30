@@ -1603,7 +1603,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
         multisample: structs.MultisampleState = {},
-        fragment: structs.FragmentState,
+        fragment: structs.FragmentState = optional,
     ):
         depth_stencil = depth_stencil or {}
         multisample = multisample or {}
@@ -1800,7 +1800,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
         multisample: structs.MultisampleState = {},
-        fragment: structs.FragmentState,
+        fragment: structs.FragmentState = optional,
     ):
         return self.create_render_pipeline(
             label=label,

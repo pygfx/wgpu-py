@@ -9,11 +9,12 @@ from codegen.files import file_cache
 
 
 # In wgpu-py, we make some args optional, that are not optional in the
-# IDL. E.g. for backwards compat or because we e.g. thing depth-stencil
-# stuff should be optional. These args have a default value of
+# IDL. Reasons may be because it makes sense to be able to omit them,
+# or because the WebGPU says its optional while IDL says its not, or
+# for backwards compatibility. These args have a default value of
 # 'optional'  (which is just None) so we can recognise them. If IDL
-# changes makes one of these args optional, its presense in this list
-# will not do anything.
+# makes any of these args optional, their presense in this list is
+# ignored.
 ARGS_TO_MAKE_OPTIONAL = {
     ("compilation_hints", "compilation_hints"),  # idl actually has a default
     ("create_shader_module", "source_map"),
@@ -22,7 +23,9 @@ ARGS_TO_MAKE_OPTIONAL = {
     ("begin_render_pass", "depth_stencil_attachment"),
     ("begin_render_pass", "occlusion_query_set"),
     ("create_render_pipeline", "depth_stencil"),
+    ("create_render_pipeline", "fragment"),
     ("create_render_pipeline_async", "depth_stencil"),
+    ("create_render_pipeline_async", "fragment"),
     ("create_render_bundle_encoder", "depth_stencil_format"),
 }
 
