@@ -1,36 +1,351 @@
 """
-This example renders a simple textured rotating cube.
+Example that renders a textured rotating cube.
+
+This example is a bit more interesting (and larger) than the triangle,
+because it adds buffers and textures.
+
+This example is set up so it can be run with any canvas. Running this file
+as a script will use the auto-backend.
 """
 
 # test_example = true
 
 import time
 
-from wgpu.gui.auto import WgpuCanvas, run
 import wgpu
 import numpy as np
 
 
-print("Available adapters on this system:")
-for a in wgpu.gpu.enumerate_adapters_sync():
-    print(a.summary)
+# %% Entrypoints (sync and async)
 
 
-# %% Create canvas and device
+def setup_cube(canvas, power_preference="high-performance", limits=None):
+    """Regular function to setup a viz on the given canvas."""
 
-# Create a canvas to render to
-canvas = WgpuCanvas(title="wgpu cube", size=(640, 480))
+    adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
+    device = adapter.request_device_sync(required_limits=limits)
 
-# Create a wgpu device
-adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
-device = adapter.request_device_sync()
+    pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
 
-# Prepare present context
-present_context = canvas.get_context()
-render_texture_format = present_context.get_preferred_format(device.adapter)
-present_context.configure(device=device, format=render_texture_format)
+    render_pipeline = get_render_pipeline_sync(canvas, device, pipeline_layout)
+    draw_function = get_draw_function(
+        canvas, device, render_pipeline, uniform_buffer, bind_groups
+    )
 
-# %% Generate data
+    canvas.request_draw(draw_function)
+
+
+async def setup_cube_async(canvas, limits=None):
+    """Async function to setup a viz on the given canvas."""
+
+    adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
+    device = await adapter.request_device_async(required_limits=limits)
+
+    pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
+
+    render_pipeline = await get_render_pipeline_async(canvas, device, pipeline_layout)
+    draw_function = get_draw_function(
+        canvas, device, render_pipeline, uniform_buffer, bind_groups
+    )
+
+    canvas.request_draw(draw_function)
+
+
+def get_render_pipeline_sync(canvas, device, *args):
+    return device.create_render_pipeline(
+        **get_render_pipeline_kwargs(canvas, device, *args)
+    )
+
+
+async def get_render_pipeline_async(canvas, device, *args):
+    return await device.create_render_pipeline_async(
+        **get_render_pipeline_kwargs(canvas, device, *args)
+    )
+
+
+# %% Functions to create wgpu objects
+
+
+def get_render_pipeline_kwargs(canvas, device, pipeline_layout):
+    context = canvas.get_context()
+    render_texture_format = context.get_preferred_format(device.adapter)
+    context.configure(device=device, format=render_texture_format)
+
+    shader = device.create_shader_module(code=shader_source)
+
+    return dict(
+        layout=pipeline_layout,
+        vertex={
+            "module": shader,
+            "entry_point": "vs_main",
+            "buffers": [
+                {
+                    "array_stride": 4 * 6,
+                    "step_mode": wgpu.VertexStepMode.vertex,
+                    "attributes": [
+                        {
+                            "format": wgpu.VertexFormat.float32x4,
+                            "offset": 0,
+                            "shader_location": 0,
+                        },
+                        {
+                            "format": wgpu.VertexFormat.float32x2,
+                            "offset": 4 * 4,
+                            "shader_location": 1,
+                        },
+                    ],
+                },
+            ],
+        },
+        primitive={
+            "topology": wgpu.PrimitiveTopology.triangle_list,
+            "front_face": wgpu.FrontFace.ccw,
+            "cull_mode": wgpu.CullMode.back,
+        },
+        depth_stencil=None,
+        multisample=None,
+        fragment={
+            "module": shader,
+            "entry_point": "fs_main",
+            "targets": [
+                {
+                    "format": render_texture_format,
+                    "blend": {
+                        "alpha": {},
+                        "color": {},
+                    },
+                }
+            ],
+        },
+    )
+
+
+def create_pipeline_layout(device):
+    # Create uniform buffer - data is uploaded each frame
+    uniform_buffer = device.create_buffer(
+        size=uniform_data.nbytes,
+        usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST,
+    )
+
+    # Create texture, and upload data
+    texture = device.create_texture(
+        size=texture_size,
+        usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
+        dimension=wgpu.TextureDimension.d2,
+        format=wgpu.TextureFormat.r8unorm,
+        mip_level_count=1,
+        sample_count=1,
+    )
+    texture_view = texture.create_view()
+
+    device.queue.write_texture(
+        {
+            "texture": texture,
+            "mip_level": 0,
+            "origin": (0, 0, 0),
+        },
+        texture_data,
+        {
+            "offset": 0,
+            "bytes_per_row": texture_data.strides[0],
+        },
+        texture_size,
+    )
+
+    # Create a sampler
+    sampler = device.create_sampler()
+
+    # We always have two bind groups, so we can play distributing our
+    # resources over these two groups in different configurations.
+    bind_groups_entries = [[]]
+    bind_groups_layout_entries = [[]]
+
+    bind_groups_entries[0].append(
+        {
+            "binding": 0,
+            "resource": {
+                "buffer": uniform_buffer,
+                "offset": 0,
+                "size": uniform_buffer.size,
+            },
+        }
+    )
+    bind_groups_layout_entries[0].append(
+        {
+            "binding": 0,
+            "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
+            "buffer": {},
+        }
+    )
+
+    bind_groups_entries[0].append({"binding": 1, "resource": texture_view})
+    bind_groups_layout_entries[0].append(
+        {
+            "binding": 1,
+            "visibility": wgpu.ShaderStage.FRAGMENT,
+            "texture": {},
+        }
+    )
+
+    bind_groups_entries[0].append({"binding": 2, "resource": sampler})
+    bind_groups_layout_entries[0].append(
+        {
+            "binding": 2,
+            "visibility": wgpu.ShaderStage.FRAGMENT,
+            "sampler": {},
+        }
+    )
+
+    # Create the wgou binding objects
+    bind_group_layouts = []
+    bind_groups = []
+
+    for entries, layout_entries in zip(bind_groups_entries, bind_groups_layout_entries):
+        bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
+        bind_group_layouts.append(bind_group_layout)
+        bind_groups.append(
+            device.create_bind_group(layout=bind_group_layout, entries=entries)
+        )
+
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=bind_group_layouts
+    )
+
+    return pipeline_layout, uniform_buffer, bind_groups
+
+
+def get_draw_function(canvas, device, render_pipeline, uniform_buffer, bind_groups):
+    # Create vertex buffer, and upload data
+    vertex_buffer = device.create_buffer_with_data(
+        data=vertex_data, usage=wgpu.BufferUsage.VERTEX
+    )
+
+    # Create index buffer, and upload data
+    index_buffer = device.create_buffer_with_data(
+        data=index_data, usage=wgpu.BufferUsage.INDEX
+    )
+
+    def draw_frame():
+        # Update uniform transform
+        a1 = -0.3
+        a2 = time.time()
+        s = 0.6
+        ortho = np.array(
+            [
+                [s, 0, 0, 0],
+                [0, s, 0, 0],
+                [0, 0, s, 0],
+                [0, 0, 0, 1],
+            ],
+        )
+        rot1 = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, np.cos(a1), -np.sin(a1), 0],
+                [0, np.sin(a1), +np.cos(a1), 0],
+                [0, 0, 0, 1],
+            ],
+        )
+        rot2 = np.array(
+            [
+                [np.cos(a2), 0, np.sin(a2), 0],
+                [0, 1, 0, 0],
+                [-np.sin(a2), 0, np.cos(a2), 0],
+                [0, 0, 0, 1],
+            ],
+        )
+        uniform_data["transform"] = rot2 @ rot1 @ ortho
+
+        # Upload the uniform struct
+        tmp_buffer = device.create_buffer_with_data(
+            data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
+        )
+
+        command_encoder = device.create_command_encoder()
+        command_encoder.copy_buffer_to_buffer(
+            tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
+        )
+
+        current_texture_view = canvas.get_context().get_current_texture().create_view()
+        render_pass = command_encoder.begin_render_pass(
+            color_attachments=[
+                {
+                    "view": current_texture_view,
+                    "resolve_target": None,
+                    "clear_value": (0, 0, 0, 1),
+                    "load_op": wgpu.LoadOp.clear,
+                    "store_op": wgpu.StoreOp.store,
+                }
+            ],
+        )
+
+        render_pass.set_pipeline(render_pipeline)
+        render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
+        render_pass.set_vertex_buffer(0, vertex_buffer)
+        for bind_group_id, bind_group in enumerate(bind_groups):
+            render_pass.set_bind_group(bind_group_id, bind_group)
+        render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
+        render_pass.end()
+
+        device.queue.submit([command_encoder.finish()])
+
+        canvas.request_draw()
+
+    return draw_frame
+
+
+# %% WGSL
+
+
+shader_source = """
+struct Locals {
+    transform: mat4x4<f32>,
+};
+@group(0) @binding(0)
+var<uniform> r_locals: Locals;
+
+struct VertexInput {
+    @location(0) pos : vec4<f32>,
+    @location(1) texcoord: vec2<f32>,
+};
+struct VertexOutput {
+    @location(0) texcoord: vec2<f32>,
+    @builtin(position) pos: vec4<f32>,
+};
+struct FragmentOutput {
+    @location(0) color : vec4<f32>,
+};
+
+
+@vertex
+fn vs_main(in: VertexInput) -> VertexOutput {
+    let ndc: vec4<f32> = r_locals.transform * in.pos;
+    let xy_ratio = 0.75;  // hardcoded for 640x480 canvas size
+    var out: VertexOutput;
+    out.pos = vec4<f32>(ndc.x * xy_ratio, ndc.y, 0.0, 1.0);
+    out.texcoord = in.texcoord;
+    return out;
+}
+
+@group(0) @binding(1)
+var r_tex: texture_2d<f32>;
+
+@group(0) @binding(2)
+var r_sampler: sampler;
+
+@fragment
+fn fs_main(in: VertexOutput) -> FragmentOutput {
+    let value = textureSample(r_tex, r_sampler, in.texcoord).r;
+    let physical_color = vec3<f32>(pow(value, 2.2));  // gamma correct
+    var out: FragmentOutput;
+    out.color = vec4<f32>(physical_color.rgb, 1.0);
+    return out;
+}
+"""
+
+
+# %% Data
+
 
 # pos         texcoord
 # x, y, z, w, u, v
@@ -102,282 +417,14 @@ uniform_dtype = [("transform", "float32", (4, 4))]
 uniform_data = np.zeros((), dtype=uniform_dtype)
 
 
-# %% Create resource objects (buffers, textures, samplers)
-
-# Create vertex buffer, and upload data
-vertex_buffer = device.create_buffer_with_data(
-    data=vertex_data, usage=wgpu.BufferUsage.VERTEX
-)
-
-# Create index buffer, and upload data
-index_buffer = device.create_buffer_with_data(
-    data=index_data, usage=wgpu.BufferUsage.INDEX
-)
-
-# Create uniform buffer - data is uploaded each frame
-uniform_buffer = device.create_buffer(
-    size=uniform_data.nbytes, usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST
-)
-
-# Create texture, and upload data
-texture = device.create_texture(
-    size=texture_size,
-    usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
-    dimension=wgpu.TextureDimension.d2,
-    format=wgpu.TextureFormat.r8unorm,
-    mip_level_count=1,
-    sample_count=1,
-)
-texture_view = texture.create_view()
-
-device.queue.write_texture(
-    {
-        "texture": texture,
-        "mip_level": 0,
-        "origin": (0, 0, 0),
-    },
-    texture_data,
-    {
-        "offset": 0,
-        "bytes_per_row": texture_data.strides[0],
-    },
-    texture_size,
-)
-
-# Create a sampler
-sampler = device.create_sampler()
-
-
-# %% The shaders
-
-
-shader_source = """
-struct Locals {
-    transform: mat4x4<f32>,
-};
-@group(0) @binding(0)
-var<uniform> r_locals: Locals;
-
-struct VertexInput {
-    @location(0) pos : vec4<f32>,
-    @location(1) texcoord: vec2<f32>,
-};
-struct VertexOutput {
-    @location(0) texcoord: vec2<f32>,
-    @builtin(position) pos: vec4<f32>,
-};
-struct FragmentOutput {
-    @location(0) color : vec4<f32>,
-};
-
-
-@vertex
-fn vs_main(in: VertexInput) -> VertexOutput {
-    let ndc: vec4<f32> = r_locals.transform * in.pos;
-    let xy_ratio = 0.75;  // hardcoded for 640x480 canvas size
-    var out: VertexOutput;
-    out.pos = vec4<f32>(ndc.x * xy_ratio, ndc.y, 0.0, 1.0);
-    out.texcoord = in.texcoord;
-    return out;
-}
-
-@group(0) @binding(1)
-var r_tex: texture_2d<f32>;
-
-@group(0) @binding(2)
-var r_sampler: sampler;
-
-@fragment
-fn fs_main(in: VertexOutput) -> FragmentOutput {
-    let value = textureSample(r_tex, r_sampler, in.texcoord).r;
-    let physical_color = vec3<f32>(pow(value, 2.2));  // gamma correct
-    var out: FragmentOutput;
-    out.color = vec4<f32>(physical_color.rgb, 1.0);
-    return out;
-}
-"""
-
-shader = device.create_shader_module(code=shader_source)
-
-
-# %% The bind groups
-
-# We always have two bind groups, so we can play distributing our
-# resources over these two groups in different configurations.
-bind_groups_entries = [[]]
-bind_groups_layout_entries = [[]]
-
-bind_groups_entries[0].append(
-    {
-        "binding": 0,
-        "resource": {
-            "buffer": uniform_buffer,
-            "offset": 0,
-            "size": uniform_buffer.size,
-        },
-    }
-)
-bind_groups_layout_entries[0].append(
-    {
-        "binding": 0,
-        "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-        "buffer": {},
-    }
-)
-
-bind_groups_entries[0].append({"binding": 1, "resource": texture_view})
-bind_groups_layout_entries[0].append(
-    {
-        "binding": 1,
-        "visibility": wgpu.ShaderStage.FRAGMENT,
-        "texture": {},
-    }
-)
-
-bind_groups_entries[0].append({"binding": 2, "resource": sampler})
-bind_groups_layout_entries[0].append(
-    {
-        "binding": 2,
-        "visibility": wgpu.ShaderStage.FRAGMENT,
-        "sampler": {},
-    }
-)
-
-
-# Create the wgou binding objects
-bind_group_layouts = []
-bind_groups = []
-
-for entries, layout_entries in zip(bind_groups_entries, bind_groups_layout_entries):
-    bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
-    bind_group_layouts.append(bind_group_layout)
-    bind_groups.append(
-        device.create_bind_group(layout=bind_group_layout, entries=entries)
-    )
-
-pipeline_layout = device.create_pipeline_layout(bind_group_layouts=bind_group_layouts)
-
-
-# %% The render pipeline
-
-render_pipeline = device.create_render_pipeline(
-    layout=pipeline_layout,
-    vertex={
-        "module": shader,
-        "entry_point": "vs_main",
-        "buffers": [
-            {
-                "array_stride": 4 * 6,
-                "step_mode": wgpu.VertexStepMode.vertex,
-                "attributes": [
-                    {
-                        "format": wgpu.VertexFormat.float32x4,
-                        "offset": 0,
-                        "shader_location": 0,
-                    },
-                    {
-                        "format": wgpu.VertexFormat.float32x2,
-                        "offset": 4 * 4,
-                        "shader_location": 1,
-                    },
-                ],
-            },
-        ],
-    },
-    primitive={
-        "topology": wgpu.PrimitiveTopology.triangle_list,
-        "front_face": wgpu.FrontFace.ccw,
-        "cull_mode": wgpu.CullMode.back,
-    },
-    depth_stencil=None,
-    multisample=None,
-    fragment={
-        "module": shader,
-        "entry_point": "fs_main",
-        "targets": [
-            {
-                "format": render_texture_format,
-                "blend": {
-                    "alpha": {},
-                    "color": {},
-                },
-            }
-        ],
-    },
-)
-
-
-# %% Setup the render function
-
-
-def draw_frame():
-    # Update uniform transform
-    a1 = -0.3
-    a2 = time.time()
-    s = 0.6
-    ortho = np.array(
-        [
-            [s, 0, 0, 0],
-            [0, s, 0, 0],
-            [0, 0, s, 0],
-            [0, 0, 0, 1],
-        ],
-    )
-    rot1 = np.array(
-        [
-            [1, 0, 0, 0],
-            [0, np.cos(a1), -np.sin(a1), 0],
-            [0, np.sin(a1), +np.cos(a1), 0],
-            [0, 0, 0, 1],
-        ],
-    )
-    rot2 = np.array(
-        [
-            [np.cos(a2), 0, np.sin(a2), 0],
-            [0, 1, 0, 0],
-            [-np.sin(a2), 0, np.cos(a2), 0],
-            [0, 0, 0, 1],
-        ],
-    )
-    uniform_data["transform"] = rot2 @ rot1 @ ortho
-
-    # Upload the uniform struct
-    tmp_buffer = device.create_buffer_with_data(
-        data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
-    )
-
-    command_encoder = device.create_command_encoder()
-    command_encoder.copy_buffer_to_buffer(
-        tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
-    )
-
-    current_texture_view = present_context.get_current_texture().create_view()
-    render_pass = command_encoder.begin_render_pass(
-        color_attachments=[
-            {
-                "view": current_texture_view,
-                "resolve_target": None,
-                "clear_value": (0, 0, 0, 1),
-                "load_op": wgpu.LoadOp.clear,
-                "store_op": wgpu.StoreOp.store,
-            }
-        ],
-    )
-
-    render_pass.set_pipeline(render_pipeline)
-    render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
-    render_pass.set_vertex_buffer(0, vertex_buffer)
-    for bind_group_id, bind_group in enumerate(bind_groups):
-        render_pass.set_bind_group(bind_group_id, bind_group)
-    render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
-    render_pass.end()
-
-    device.queue.submit([command_encoder.finish()])
-
-    canvas.request_draw()
-
-
-canvas.request_draw(draw_frame)
-
 if __name__ == "__main__":
+    from wgpu.gui.auto import WgpuCanvas, run
+
+    print("Available adapters on this system:")
+    for a in wgpu.gpu.enumerate_adapters_sync():
+        print(a.summary)
+
+    canvas = WgpuCanvas(title="wgpu cube", size=(640, 480))
+
+    setup_cube(canvas)
     run()
