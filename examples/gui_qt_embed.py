@@ -2,8 +2,9 @@
 An example demonstrating a qt app with a wgpu viz inside.
 If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
 
-# run_example = false
 """
+
+# run_example = false
 
 import importlib
 
@@ -18,7 +19,8 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
 
 from wgpu.gui.qt import WgpuWidget  # noqa: E402
 
-from triangle import main  # noqa: E402
+from triangle import setup_triangle  # noqa
+from cube import setup_cube  # noqa
 
 
 class ExampleWidget(QtWidgets.QWidget):
@@ -47,8 +49,8 @@ class ExampleWidget(QtWidgets.QWidget):
 app = QtWidgets.QApplication([])
 example = ExampleWidget()
 
-main(example.canvas1)
-main(example.canvas2)
+setup_triangle(example.canvas1)
+setup_triangle(example.canvas2)
 
 # Enter Qt event loop (compatible with qt5/qt6)
 app.exec() if hasattr(app, "exec") else app.exec_()

@@ -160,6 +160,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 if __name__ == "__main__":
     from wgpu.gui.auto import WgpuCanvas, run
 
-    canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle")
+    canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle example")
     setup_triangle(canvas)
     run()

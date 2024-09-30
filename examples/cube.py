@@ -424,7 +424,7 @@ if __name__ == "__main__":
     for a in wgpu.gpu.enumerate_adapters_sync():
         print(a.summary)
 
-    canvas = WgpuCanvas(title="wgpu cube", size=(640, 480))
+    canvas = WgpuCanvas(size=(640, 480), title="wgpu cube example")
 
     setup_cube(canvas)
     run()

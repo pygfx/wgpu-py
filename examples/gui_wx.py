@@ -1,5 +1,5 @@
 """
-Import the viz from triangle.py and run it in a wxPython window.
+Run the triangle/cube example in the wx GUI backend.
 """
 
 # run_example = false
@@ -7,11 +7,12 @@ Import the viz from triangle.py and run it in a wxPython window.
 import wx
 from wgpu.gui.wx import WgpuCanvas
 
-from triangle import main  # The function to call to run the visualization
+from triangle import setup_triangle  # noqa: F401, RUF100
+from cube import setup_cube  # noqa: F401, RUF100
 
 
 app = wx.App()
-canvas = WgpuCanvas()
+canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
 
-main(canvas)
+setup_triangle(canvas)
 app.MainLoop()

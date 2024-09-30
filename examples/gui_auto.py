@@ -1,21 +1,17 @@
 """
-Import the viz from triangle.py and run it using the auto-gui.
+Run triangle/cube example in an automatically selected GUI backend.
 """
 
 # test_example = true
 
-import sys
-from pathlib import Path
-
 from wgpu.gui.auto import WgpuCanvas, run
 
-sys.path.insert(0, str(Path(__file__).parent))
+from triangle import setup_triangle  # noqa: F401, RUF100
+from cube import setup_cube  # noqa: F401, RUF100
 
-from triangle import main
 
-
-canvas = WgpuCanvas()
-device = main(canvas)
+canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
+setup_triangle(canvas)
 
 
 if __name__ == "__main__":
