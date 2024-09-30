@@ -2651,13 +2651,15 @@ class GPUCommandEncoder(
             int(size),
         )
 
-    # FIXME: missing check_struct in copy_buffer_to_texture: ['ImageCopyBuffer', 'ImageCopyTexture', 'Origin3D']
     def copy_buffer_to_texture(
         self,
         source: structs.ImageCopyBuffer,
         destination: structs.ImageCopyTexture,
         copy_size: Union[List[int], structs.Extent3D],
     ):
+        check_struct("ImageCopyBuffer", source)
+        check_struct("ImageCopyTexture", destination)
+
         row_alignment = 256
         bytes_per_row = int(source["bytes_per_row"])
         if (bytes_per_row % row_alignment) != 0:
@@ -2716,13 +2718,15 @@ class GPUCommandEncoder(
             c_copy_size,
         )
 
-    # FIXME: missing check_struct in copy_texture_to_buffer: ['ImageCopyBuffer', 'ImageCopyTexture', 'Origin3D']
     def copy_texture_to_buffer(
         self,
         source: structs.ImageCopyTexture,
         destination: structs.ImageCopyBuffer,
         copy_size: Union[List[int], structs.Extent3D],
     ):
+        check_struct("ImageCopyTexture", source)
+        check_struct("ImageCopyBuffer", destination)
+
         row_alignment = 256
         bytes_per_row = int(destination["bytes_per_row"])
         if (bytes_per_row % row_alignment) != 0:
@@ -2781,13 +2785,15 @@ class GPUCommandEncoder(
             c_copy_size,
         )
 
-    # FIXME: missing check_struct in copy_texture_to_texture: ['ImageCopyTexture', 'Origin3D']
     def copy_texture_to_texture(
         self,
         source: structs.ImageCopyTexture,
         destination: structs.ImageCopyTexture,
         copy_size: Union[List[int], structs.Extent3D],
     ):
+        check_struct("ImageCopyTexture", source)
+        check_struct("ImageCopyTexture", destination)
+
         if isinstance(source["texture"], GPUTextureView):
             raise ValueError("copy source texture must be a texture, not a view")
         if isinstance(destination["texture"], GPUTextureView):
@@ -2987,9 +2993,10 @@ class GPURenderPassEncoder(
             self._internal, int(x), int(y), int(width), int(height)
         )
 
-    # FIXME: missing check_struct in set_blend_constant: ['Color']
     def set_blend_constant(self, color: Union[List[float], structs.Color]):
-        color = _tuple_from_color(color)
+        if isinstance(color, dict):
+            check_struct("Color", color)
+            color = _tuple_from_color(color)
         # H: r: float, g: float, b: float, a: float
         c_color = new_struct_p(
             "WGPUColor *",
@@ -3198,7 +3205,6 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
         return data
 
-    # FIXME: missing check_struct in write_texture: ['ImageCopyTexture', 'ImageDataLayout', 'Origin3D']
     def write_texture(
         self,
         destination: structs.ImageCopyTexture,
@@ -3208,6 +3214,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     ):
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
+
+        check_struct("ImageCopyTexture", destination)
+        check_struct("ImageDataLayout", data_layout)
 
         if isinstance(destination["texture"], GPUTextureView):
             raise ValueError("copy destination texture must be a texture, not a view")

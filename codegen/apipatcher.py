@@ -576,7 +576,7 @@ class StructValidationChecker(Patcher):
 
         idl = get_idl_parser()
         all_structs = set()
-        ignore_structs = {"Extent3D"}
+        ignore_structs = {"Extent3D", "Origin3D"}
 
         for classname, i1, i2 in self.iter_classes():
             if classname not in idl.classes:
