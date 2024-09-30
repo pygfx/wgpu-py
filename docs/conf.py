@@ -21,7 +21,10 @@ sys.path.insert(0, ROOT_DIR)
 
 os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
 
+
+# Load wgpu so autodoc can query docstrings
 import wgpu  # noqa: E402
+import wgpu.utils.compute  # noqa: E402
 
 
 # -- Tests -------------------------------------------------------------------
