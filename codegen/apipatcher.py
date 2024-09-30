@@ -8,6 +8,18 @@ from codegen.idlparser import get_idl_parser, Attribute
 from codegen.files import file_cache
 
 
+ARGS_TO_MAKE_OPTIONAL = {
+    ("create_shader_module", "source_map"),
+    ("begin_compute_pass", "timestamp_writes"),
+    ("begin_render_pass", "timestamp_writes"),
+    ("begin_render_pass", "depth_stencil_attachment"),
+    ("begin_render_pass", "occlusion_query_set"),
+    ("create_render_pipeline", "depth_stencil"),
+    ("create_render_pipeline_async", "depth_stencil"),
+    ("create_render_bundle_encoder", "depth_stencil_format"),
+}
+
+
 def patch_base_api(code):
     """Given the Python code, applies patches to make the code conform
     to the IDL.
@@ -413,13 +425,17 @@ class IdlPatcherMixin:
             ("Options", "Descriptor", "Configuration")
         ):
             assert args[0].typename.startswith("GPU")
+            des_is_optional = bool(args[0].default)
             attributes = self.idl.structs[args[0].typename[3:]].values()
-            py_args = [self._arg_from_attribute(attr) for attr in attributes]
+            py_args = [
+                self._arg_from_attribute(methodname, attr, des_is_optional)
+                for attr in attributes
+            ]
             if py_args[0].startswith("label: str"):
                 py_args[0] = 'label: str=""'
             py_args = ["self", "*", *py_args]
         else:
-            py_args = [self._arg_from_attribute(attr) for attr in args]
+            py_args = [self._arg_from_attribute(methodname, attr) for attr in args]
             py_args = ["self", *py_args]
 
             # IDL has some signatures that cannot work in Python. This may be a bug in idl
@@ -439,11 +455,14 @@ class IdlPatcherMixin:
         line = format_code(line, True).split("):")[0] + "):"
         return "    " + line
 
-    def _arg_from_attribute(self, attribute):
+    def _arg_from_attribute(self, methodname, attribute, force_optional=False):
         name = to_snake_case(attribute.name)
+        optional_in_py = (methodname, name) in ARGS_TO_MAKE_OPTIONAL
         d = attribute.default
         t = self.idl.resolve_type(attribute.typename)
         result = name
+        if (force_optional or optional_in_py) and not d:
+            d = "optional"
         if t:
             # If default is None, the type won't match, so we need to mark it optional
             if d == "None":
@@ -505,7 +524,20 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
         functions = self.idl.classes[classname].functions
         name_idl = self.method_is_known(classname, methodname)
         if name_idl:
-            return "    # IDL: " + functions[name_idl]
+            idl_line = functions[name_idl]
+
+            args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
+            args = [Attribute(arg) for arg in args if arg.strip()]
+
+            # If one arg that is a dict, flatten dict to kwargs
+            if len(args) == 1 and args[0].typename.endswith(
+                ("Options", "Descriptor", "Configuration")
+            ):
+                assert args[0].typename.startswith("GPU")
+                attributes = self.idl.structs[args[0].typename[3:]].values()
+                idl_line += " -> " + ", ".join(attr.line for attr in attributes)
+
+            return "    # IDL: " + idl_line
 
 
 class BackendApiPatcher(AbstractApiPatcher):

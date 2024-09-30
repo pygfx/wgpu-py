@@ -48,6 +48,9 @@ __all__ = classes.__all__.copy()
 
 # %% Helper functions and objects
 
+# The 'optional' value is used as the default value for certain optional arguments, see the comment in _classes.py for details.
+optional = None
+
 
 def check_can_use_sync_variants():
     if False:  # placeholder, let's implement a little wgpu config thingy
@@ -1190,7 +1193,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         mipmap_filter: enums.MipmapFilterMode = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 32,
-        compare: enums.CompareFunction,
+        compare: enums.CompareFunction = optional,
         max_anisotropy: int = 1,
     ):
         # H: nextInChain: WGPUChainedStruct *, label: char *, addressModeU: WGPUAddressMode, addressModeV: WGPUAddressMode, addressModeW: WGPUAddressMode, magFilter: WGPUFilterMode, minFilter: WGPUFilterMode, mipmapFilter: WGPUMipmapFilterMode, lodMinClamp: float, lodMaxClamp: float, compare: WGPUCompareFunction, maxAnisotropy: int
@@ -1205,7 +1208,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             mipmapFilter=mipmap_filter,
             lodMinClamp=lod_min_clamp,
             lodMaxClamp=lod_max_clamp,
-            compare=0 if compare is None else compare,
+            compare=0 if compare is None else compare,  # 0 means undefined
             maxAnisotropy=max_anisotropy,
             # not used: nextInChain
         )
@@ -1448,7 +1451,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         code: str,
-        source_map: dict,
+        source_map: dict = optional,
         compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
     ):
         if compilation_hints:
@@ -1598,7 +1601,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
-        depth_stencil: structs.DepthStencilState,
+        depth_stencil: structs.DepthStencilState = optional,
         multisample: structs.MultisampleState = {},
         fragment: structs.FragmentState,
     ):
@@ -1795,7 +1798,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
-        depth_stencil: structs.DepthStencilState,
+        depth_stencil: structs.DepthStencilState = optional,
         multisample: structs.MultisampleState = {},
         fragment: structs.FragmentState,
     ):
@@ -1826,7 +1829,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         color_formats: List[enums.TextureFormat],
-        depth_stencil_format: enums.TextureFormat,
+        depth_stencil_format: enums.TextureFormat = optional,
         sample_count: int = 1,
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
@@ -2134,13 +2137,13 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         self,
         *,
         label: str = "",
-        format: enums.TextureFormat,
-        dimension: enums.TextureViewDimension,
+        format: enums.TextureFormat = optional,
+        dimension: enums.TextureViewDimension = optional,
         aspect: enums.TextureAspect = "all",
         base_mip_level: int = 0,
-        mip_level_count: int,
+        mip_level_count: int = optional,
         base_array_layer: int = 0,
-        array_layer_count: int,
+        array_layer_count: int = optional,
     ):
         # Resolve defaults
         if not format:
@@ -2455,7 +2458,10 @@ class GPUCommandEncoder(
     _release_function = libf.wgpuCommandEncoderRelease
 
     def begin_compute_pass(
-        self, *, label: str = "", timestamp_writes: structs.ComputePassTimestampWrites
+        self,
+        *,
+        label: str = "",
+        timestamp_writes: structs.ComputePassTimestampWrites = optional,
     ):
         c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
@@ -2488,9 +2494,9 @@ class GPUCommandEncoder(
         *,
         label: str = "",
         color_attachments: List[structs.RenderPassColorAttachment],
-        depth_stencil_attachment: structs.RenderPassDepthStencilAttachment,
-        occlusion_query_set: GPUQuerySet,
-        timestamp_writes: structs.RenderPassTimestampWrites,
+        depth_stencil_attachment: structs.RenderPassDepthStencilAttachment = optional,
+        occlusion_query_set: GPUQuerySet = optional,
+        timestamp_writes: structs.RenderPassTimestampWrites = optional,
         max_draw_count: int = 50000000,
     ):
         # Note that occlusion_query_set is ignored because wgpu-native does not have it.

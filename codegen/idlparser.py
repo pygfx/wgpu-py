@@ -36,10 +36,10 @@ class Attribute:
     """A little object to hold a function argument or struct field."""
 
     def __init__(self, line):
-        self.line = line
+        self.line = line.strip().strip(",;").strip()
 
-        arg = line.strip().strip(",;").strip()
         default = None  # None means 'no default' and "None" kinda means "auto".
+        arg = self.line
         if "=" in arg:
             arg, default = arg.rsplit("=", 1)
             arg, default = arg.strip(), default.strip()
