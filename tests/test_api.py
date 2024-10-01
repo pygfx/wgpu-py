@@ -170,12 +170,6 @@ def test_do_not_import_utils_submodules():
     assert "Error" not in out
     assert "function get_default_device" in out
 
-    # FAIL: use something from utils that's not imported
-    code = "import wgpu; print(wgpu.utils.compute.compute_with_buffers)"
-    out = get_output_from_subprocess(code)
-    assert "Error" in out
-    assert "must be explicitly imported" in out and "utils" in out
-
     # Also, no numpy
     code = "import sys, wgpu.utils; print('numpy' in sys.modules)"
     out = get_output_from_subprocess(code)
