@@ -155,5 +155,21 @@ def test_render_occluding_squares():
     assert render_result[4] == 0  # no calls to the compute engine
 
 
+def test_enum_is_in_sync():
+    """
+    The enum PipelineStatisticsName is created by hand, while the enum_str2int value
+    is generated automatically from wgpu.h.  They should both contain the same strings.
+    If this test fails, their values have diverged.
+
+    Either fix PipelineStatisticsName or modify this test and explain what the difference
+    is.
+    """
+    from wgpu.backends.wgpu_native._mappings import enum_str2int
+
+    enum_list = set(PipelineStatisticName)
+    native_list = set(enum_str2int["PipelineStatisticName"].keys())
+    assert enum_list == native_list
+
+
 if __name__ == "__main__":
     run_tests(globals())
