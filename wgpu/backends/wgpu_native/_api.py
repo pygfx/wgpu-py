@@ -1859,7 +1859,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         )
         return GPURenderBundleEncoder(label, render_bundle_id, self)
 
-    def create_query_set(self, *, label: str = "", type: "enums.QueryType", count: int):
+    def create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
         return self._create_query_set(label, type, count, None)
 
     def _create_statistics_query_set(self, label, count, statistics):
