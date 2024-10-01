@@ -333,7 +333,15 @@ enum_str2int = {
         "shader-primitive-index": 196639,
         "shader-early-depth-test": 196640,
     },
+    "PipelineStatisticName": {
+        "vertex-shader-invocations": 0,
+        "clipper-invocations": 1,
+        "clipper-primitives-out": 2,
+        "fragment-shader-invocations": 3,
+        "compute-shader-invocations": 4,
+    },
 }
+
 enum_int2str = {
     "BackendType": {
         0: "Undefined",

@@ -1,8 +1,8 @@
 """
 Example showing how to use multiple imgui contexts to draw to multiple canvases
+"""
 
 # run_example = false
-"""
 
 import wgpu
 from imgui_bundle import imgui

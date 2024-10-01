@@ -4,8 +4,30 @@ spec (IDL), and the backend implementations from the base API.
 """
 
 from codegen.utils import print, format_code, to_snake_case, to_camel_case, Patcher
-from codegen.idlparser import get_idl_parser
+from codegen.idlparser import get_idl_parser, Attribute
 from codegen.files import file_cache
+
+
+# In wgpu-py, we make some args optional, that are not optional in the
+# IDL. Reasons may be because it makes sense to be able to omit them,
+# or because the WebGPU says its optional while IDL says its not, or
+# for backwards compatibility. These args have a default value of
+# 'optional'  (which is just None) so we can recognise them. If IDL
+# makes any of these args optional, their presense in this list is
+# ignored.
+ARGS_TO_MAKE_OPTIONAL = {
+    ("compilation_hints", "compilation_hints"),  # idl actually has a default
+    ("create_shader_module", "source_map"),
+    ("begin_compute_pass", "timestamp_writes"),
+    ("begin_render_pass", "timestamp_writes"),
+    ("begin_render_pass", "depth_stencil_attachment"),
+    ("begin_render_pass", "occlusion_query_set"),
+    ("create_render_pipeline", "depth_stencil"),
+    ("create_render_pipeline", "fragment"),
+    ("create_render_pipeline_async", "depth_stencil"),
+    ("create_render_pipeline_async", "fragment"),
+    ("create_render_bundle_encoder", "depth_stencil_format"),
+}
 
 
 def patch_base_api(code):
@@ -406,49 +428,57 @@ class IdlPatcherMixin:
         # Get arg names and types
         idl_line = functions[name_idl]
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-        args = [arg.strip() for arg in args if arg.strip()]
-        raw_defaults = [arg.partition("=")[2].strip() for arg in args]
-        place_holder_default = False
-        defaults = []
-        for default, arg in zip(raw_defaults, args):
-            if default:
-                place_holder_default = "None"  # any next args must have a default
-            elif arg.startswith("optional "):
-                default = "None"
-            else:
-                default = place_holder_default
-            defaults.append(default)
-
-        argnames = [arg.split("=")[0].split()[-1] for arg in args]
-        argnames = [to_snake_case(argname) for argname in argnames]
-        argnames = [(f"{n}={v}" if v else n) for n, v in zip(argnames, defaults)]
-        argtypes = [arg.split("=")[0].split()[-2] for arg in args]
+        args = [Attribute(arg) for arg in args if arg.strip()]
 
         # If one arg that is a dict, flatten dict to kwargs
-        if len(argtypes) == 1 and argtypes[0].endswith(
+        if len(args) == 1 and args[0].typename.endswith(
             ("Options", "Descriptor", "Configuration")
         ):
-            assert argtypes[0].startswith("GPU")
-            fields = self.idl.structs[argtypes[0][3:]].values()  # struct fields
-            py_args = [self._arg_from_struct_field(field) for field in fields]
+            assert args[0].typename.startswith("GPU")
+            des_is_optional = bool(args[0].default)
+            attributes = self.idl.structs[args[0].typename[3:]].values()
+            py_args = [
+                self._arg_from_attribute(methodname, attr, des_is_optional)
+                for attr in attributes
+            ]
             if py_args[0].startswith("label: str"):
-                py_args[0] = 'label=""'
+                py_args[0] = 'label: str=""'
             py_args = ["self", "*", *py_args]
         else:
-            py_args = ["self", *argnames]
+            py_args = [self._arg_from_attribute(methodname, attr) for attr in args]
+            py_args = ["self", *py_args]
+
+            # IDL has some signatures that cannot work in Python. This may be a bug in idl
+            known_bugged_methods = {"GPUPipelineError.__init__"}
+            remove_default = False
+            for i in reversed(range(len(py_args))):
+                arg = py_args[i]
+                if "=" in arg:
+                    if remove_default:
+                        py_args[i] = arg.split("=")[0]
+                        assert f"{classname}.{methodname}" in known_bugged_methods
+                else:
+                    remove_default = True
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"
         line = format_code(line, True).split("):")[0] + "):"
         return "    " + line
 
-    def _arg_from_struct_field(self, field):
-        name = to_snake_case(field.name)
-        d = field.default
-        t = self.idl.resolve_type(field.typename)
+    def _arg_from_attribute(self, methodname, attribute, force_optional=False):
+        name = to_snake_case(attribute.name)
+        optional_in_py = (methodname, name) in ARGS_TO_MAKE_OPTIONAL
+        d = attribute.default
+        t = self.idl.resolve_type(attribute.typename)
         result = name
+        if (force_optional or optional_in_py) and not d:
+            d = "optional"
         if t:
-            result += f": {t}"
+            # If default is None, the type won't match, so we need to mark it optional
+            if d == "None":
+                result += f": Optional[{t}]"
+            else:
+                result += f": {t}"
         if d:
             d = {"false": "False", "true": "True"}.get(d, d)
             result += f"={d}"
@@ -504,7 +534,20 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
         functions = self.idl.classes[classname].functions
         name_idl = self.method_is_known(classname, methodname)
         if name_idl:
-            return "    # IDL: " + functions[name_idl]
+            idl_line = functions[name_idl]
+
+            args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
+            args = [Attribute(arg) for arg in args if arg.strip()]
+
+            # If one arg that is a dict, flatten dict to kwargs
+            if len(args) == 1 and args[0].typename.endswith(
+                ("Options", "Descriptor", "Configuration")
+            ):
+                assert args[0].typename.startswith("GPU")
+                attributes = self.idl.structs[args[0].typename[3:]].values()
+                idl_line += " -> " + ", ".join(attr.line for attr in attributes)
+
+            return "    # IDL: " + idl_line
 
 
 class BackendApiPatcher(AbstractApiPatcher):
@@ -575,7 +618,7 @@ class StructValidationChecker(Patcher):
 
         idl = get_idl_parser()
         all_structs = set()
-        ignore_structs = {"Extent3D"}
+        ignore_structs = {"Extent3D", "Origin3D"}
 
         for classname, i1, i2 in self.iter_classes():
             if classname not in idl.classes:
@@ -621,8 +664,8 @@ class StructValidationChecker(Patcher):
 
     def _get_sub_structs(self, idl, structname):
         structnames = {structname}
-        for structfield in idl.structs[structname].values():
-            structname2 = structfield.typename[3:]  # remove "GPU"
+        for attribute in idl.structs[structname].values():
+            structname2 = attribute.typename[3:]  # remove "GPU"
             if structname2 in idl.structs:
                 structnames.update(self._get_sub_structs(idl, structname2))
         return structnames

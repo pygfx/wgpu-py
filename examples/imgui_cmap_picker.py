@@ -7,9 +7,9 @@ pip install cmap
 
 Instead of using the cmap library you can create 2D arrays in
 the shape [2, 255, 3] that represent the LUT for the colormap
+"""
 
 # run_example = false
-"""
 
 import ctypes
 

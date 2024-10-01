@@ -1,12 +1,23 @@
 import os
-
-from ._api import GPUBindGroupLayout, structs, enums, Dict, logger
 from typing import List
+
+from . import GPUComputePassEncoder, GPURenderPassEncoder
+from ._api import Dict, GPUBindGroupLayout, enums, logger, structs
+from ...enums import Enum
+
 
 # NOTE: these functions represent backend-specific extra API.
 # NOTE: changes to this module must be reflected in docs/backends.rst.
 # We don't use Sphinx automodule because this way the doc build do not
 # need to be able to load wgpu-native.
+
+
+class PipelineStatisticName(Enum):  # wgpu native
+    VertexShaderInvocations = "vertex-shader-invocations"
+    ClipperInvocations = "clipper-invocations"
+    ClipperPrimitivesOut = "clipper-primitives-out"
+    FragmentShaderInvocations = "fragment-shader-invocations"
+    ComputeShaderInvocations = "compute-shader-invocations"
 
 
 def request_device_sync(
@@ -134,3 +145,23 @@ def multi_draw_indexed_indirect_count(
     render_pass_encoder._multi_draw_indexed_indirect_count(
         buffer, offset, count_buffer, count_buffer_offset, max_count
     )
+
+
+def create_statistics_query_set(device, *, label="", count: int, statistics):
+    """
+    Create a query set that can collect the specified pipeline statistics.
+    You must enable the feature "pipeline-statitistics_query" to collect pipeline
+    statistics.
+    """
+    return device._create_statistics_query_set(label, count, statistics)
+
+
+def begin_pipeline_statistics_query(encoder, query_set, query_index):
+    print(encoder, type(encoder))
+    assert isinstance(encoder, (GPURenderPassEncoder, GPUComputePassEncoder))
+    encoder._begin_pipeline_statistics_query(query_set, query_index)
+
+
+def end_pipeline_statistics_query(encoder):
+    assert isinstance(encoder, (GPURenderPassEncoder, GPUComputePassEncoder))
+    encoder._end_pipeline_statistics_query()

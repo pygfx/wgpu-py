@@ -1,8 +1,8 @@
 """
 An example demonstrating a wgpu app with imgui renderer
+"""
 
 # run_example = false
-"""
 
 from wgpu.gui.auto import WgpuCanvas, run
 import wgpu

@@ -121,22 +121,21 @@ def write_mappings():
 
     # Write a few native-only mappings: key => int
     pylines.append("enum_str2int = {")
-    for name in ["BackendType"]:
+    for name, use_snake in (
+        ("BackendType", False),
+        ("NativeFeature", True),
+        ("PipelineStatisticName", True),
+    ):
         pylines.append(f'    "{name}":' + " {")
         for key, val in hp.enums[name].items():
             if key == "Force32":
                 continue
+            if use_snake:
+                key = to_snake_case(key).replace("_", "-")
             pylines.append(f'        "{key}": {val},')
         pylines.append("    },")
-    for name in ["NativeFeature"]:
-        pylines.append(f'    "{name}":' + " {")
-        for key, val in hp.enums[name].items():
-            if key == "Force32":
-                continue
-            xkey = to_snake_case(key).replace("_", "-")
-            pylines.append(f'        "{xkey}": {val},')
-        pylines.append("    },")
     pylines.append("}")
+    pylines.append("")
 
     # Write a few native-only mappings: int => key
     # If possible, resolve to WebGPU names, otherwise use the native name.
