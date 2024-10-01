@@ -1436,20 +1436,6 @@ class GPUBuffer(GPUObjectBase):
     def get_mapped_range(self, offset=0, size=None):
         raise NotImplementedError("The Python API differs from WebGPU here")
 
-    @apidiff.add("Deprecated but still here to raise a warning")
-    def map_read(self, offset=None, size=None, iter=None):
-        """Deprecated."""
-        raise DeprecationWarning(
-            "map_read() is deprecated, use map() and read_mapped() instead."
-        )
-
-    @apidiff.add("Deprecated but still here to raise a warning")
-    def map_write(self, data):
-        """Deprecated."""
-        raise DeprecationWarning(
-            "map_read() is deprecated, use map() and write_mapped() instead."
-        )
-
     # IDL: undefined destroy();
     def destroy(self):
         """Destroy the buffer.
