@@ -1,12 +1,23 @@
 import os
-
-from ._api import GPUBindGroupLayout, structs, enums, Dict, logger
 from typing import List
+
+from . import GPUComputePassEncoder, GPURenderPassEncoder
+from ._api import Dict, GPUBindGroupLayout, enums, logger, structs
+from ...enums import Enum
+
 
 # NOTE: these functions represent backend-specific extra API.
 # NOTE: changes to this module must be reflected in docs/backends.rst.
 # We don't use Sphinx automodule because this way the doc build do not
 # need to be able to load wgpu-native.
+
+
+class PipelineStatisticName(Enum):  # wgpu native
+    VertexShaderInvocations = "vertex-shader-invocations"
+    ClipperInvocations = "clipper-invocations"
+    ClipperPrimitivesOut = "clipper-primitives-out"
+    FragmentShaderInvocations = "fragment-shader-invocations"
+    ComputeShaderInvocations = "compute-shader-invocations"
 
 
 def request_device_sync(
@@ -69,22 +80,42 @@ def set_push_constants(
 
 def multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
     """
-    This is equvalent to
+    This is equivalent to
     for i in range(count):
         render_pass_encoder.draw(buffer, offset + i * 16)
 
-    You must enable the featue "multi-draw-indirect" to use this function.
+    You must enable the feature "multi-draw-indirect" to use this function.
     """
     render_pass_encoder._multi_draw_indirect(buffer, offset, count)
 
 
 def multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
     """
-    This is equvalent to
+    This is equivalent to
 
     for i in range(count):
         render_pass_encoder.draw_indexed(buffer, offset + i * 20)
 
-    You must enable the featue "multi-draw-indirect" to use this function.
+    You must enable the feature "multi-draw-indirect" to use this function.
     """
     render_pass_encoder._multi_draw_indexed_indirect(buffer, offset, count)
+
+
+def create_statistics_query_set(device, *, label="", count: int, statistics):
+    """
+    Create a query set that can collect the specified pipeline statistics.
+    You must enable the feature "pipeline-statitistics_query" to collect pipeline
+    statistics.
+    """
+    return device._create_statistics_query_set(label, count, statistics)
+
+
+def begin_pipeline_statistics_query(encoder, query_set, query_index):
+    print(encoder, type(encoder))
+    assert isinstance(encoder, (GPURenderPassEncoder, GPUComputePassEncoder))
+    encoder._begin_pipeline_statistics_query(query_set, query_index)
+
+
+def end_pipeline_statistics_query(encoder):
+    assert isinstance(encoder, (GPURenderPassEncoder, GPUComputePassEncoder))
+    encoder._end_pipeline_statistics_query()
