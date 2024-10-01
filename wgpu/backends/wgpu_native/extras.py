@@ -20,11 +20,6 @@ class PipelineStatisticName(Enum):  # wgpu native
     ComputeShaderInvocations = "compute-shader-invocations"
 
 
-def enumerate_adapters():
-    """Deprecated."""
-    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters_sync() instead.")
-
-
 def request_device_sync(
     adapter,
     trace_path,

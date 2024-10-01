@@ -64,5 +64,5 @@ Compute with buffers
 
     from wgpu.utils.compute import compute_with_buffers
 
-.. autofunction:: wgpu.utils.compute_with_buffers
+.. autofunction:: wgpu.utils.compute.compute_with_buffers
 
