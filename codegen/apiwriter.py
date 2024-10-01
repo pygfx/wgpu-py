@@ -118,7 +118,7 @@ def write_structs():
         # Object-docstring as a comment
         for field in d.values():
             tp = idl.resolve_type(field.typename).strip("'")
-            if field.default is not None:
+            if field.default:
                 pylines.append(
                     resolve_crossrefs(f"#: * {field.name} :: {tp} = {field.default}")
                 )
