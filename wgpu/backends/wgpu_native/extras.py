@@ -9,11 +9,6 @@ from typing import List
 # need to be able to load wgpu-native.
 
 
-def enumerate_adapters():
-    """Deprecated."""
-    raise RuntimeError("Deprecated: use wgpu.gpu.enumerate_adapters_sync() instead.")
-
-
 def request_device_sync(
     adapter,
     trace_path,

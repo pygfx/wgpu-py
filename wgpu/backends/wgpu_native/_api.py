@@ -864,6 +864,7 @@ class GPUAdapter(classes.GPUAdapter):
             required_features=required_features,
             required_limits=required_limits,
             default_queue=default_queue,
+            trace_path="",
         )
 
     def _request_device(

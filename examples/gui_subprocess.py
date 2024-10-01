@@ -7,9 +7,9 @@ process. Just a proof of concept, this is far from perfect yet:
 * You'll want to let the proxy know about size changes.
 * The request_draw should invoke a draw (in asyncio?), not draw directly.
 * Properly handling closing the figure (from both ends).
+"""
 
 # run_example = false
-"""
 
 import sys
 import json
@@ -19,7 +19,7 @@ import subprocess
 from wgpu.gui import WgpuCanvasBase
 
 # Import the (async) function that we must call to run the visualization
-from triangle import main
+from triangle import setup_triangle
 
 
 code = """
@@ -81,5 +81,5 @@ p = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE)
 canvas = ProxyCanvas()
 
 # Go!
-main(canvas)
+setup_triangle(canvas)
 time.sleep(3)

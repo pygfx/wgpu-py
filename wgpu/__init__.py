@@ -21,11 +21,3 @@ version_info = tuple(map(int, __version__.split(".")))
 
 # The API entrypoint, from wgpu.classes - gets replaced when a backend loads.
 gpu = GPU()  # noqa: F405
-
-
-# Temporary stub to help transitioning
-def request_adapter(*args, **kwargs):
-    """Deprecated!"""
-    raise DeprecationWarning(
-        "wgpu.request_adapter() is deprecated! Use wgpu.gpu.request_adapter_sync() instead."
-    )

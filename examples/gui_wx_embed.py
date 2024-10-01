@@ -7,7 +7,8 @@ An example demonstrating a wx app with a wgpu viz inside.
 import wx
 from wgpu.gui.wx import WgpuWidget
 
-from triangle import main
+from triangle import setup_triangle  # noqa: F401, RUF100
+from cube import setup_cube  # noqa: F401, RUF100
 
 
 class Example(wx.Frame):
@@ -35,7 +36,7 @@ class Example(wx.Frame):
 app = wx.App()
 example = Example()
 
-main(example.canvas1)
-main(example.canvas2)
+setup_triangle(example.canvas1)
+setup_triangle(example.canvas2)
 
 app.MainLoop()

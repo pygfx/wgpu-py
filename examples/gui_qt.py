@@ -1,9 +1,9 @@
 """
-Import the viz from triangle.py and run it in a Qt window.
+Run triangle/cube example in the Qt GUI backend.
 Works with either PySide6, PyQt6, PyQt5 or PySide2.
+"""
 
 # run_example = false
-"""
 
 import importlib
 
@@ -18,13 +18,14 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
 
 from wgpu.gui.qt import WgpuCanvas  # noqa: E402
 
-from triangle import main  # noqa: E402
+from triangle import setup_triangle  # noqa
+from cube import setup_cube  # noqa
 
 
 app = QtWidgets.QApplication([])
-canvas = WgpuCanvas()
+canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
 
-device = main(canvas)
+setup_triangle(canvas)
 
 # Enter Qt event loop (compatible with qt5/qt6)
 app.exec() if hasattr(app, "exec") else app.exec_()
