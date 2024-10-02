@@ -19,47 +19,43 @@ import numpy as np
 # %% Entrypoints (sync and async)
 
 
-def setup_cube(canvas, power_preference="high-performance", limits=None):
-    """Regular function to setup a viz on the given canvas."""
+def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+    """Setup to draw a rotating cube on the given canvas.
+
+    The given canvas must implement WgpuCanvasInterface, but nothing more.
+    Returns the draw function.
+    """
 
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(required_limits=limits)
 
     pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
-    render_pipeline = get_render_pipeline_sync(canvas, device, pipeline_layout)
-    draw_function = get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_groups
+    render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
+
+    return get_draw_function(
+        canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=False
     )
 
-    canvas.request_draw(draw_function)
 
+async def setup_drawing_async(canvas, limits=None):
+    """Setup to async-draw a rotating cube on the given canvas.
 
-async def setup_cube_async(canvas, limits=None):
-    """Async function to setup a viz on the given canvas."""
+    The given canvas must implement WgpuCanvasInterface, but nothing more.
+    Returns the draw function.
+    """
 
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async(required_limits=limits)
 
     pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
-    render_pipeline = await get_render_pipeline_async(canvas, device, pipeline_layout)
-    draw_function = get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_groups
-    )
+    render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
 
-    canvas.request_draw(draw_function)
-
-
-def get_render_pipeline_sync(canvas, device, *args):
-    return device.create_render_pipeline(
-        **get_render_pipeline_kwargs(canvas, device, *args)
-    )
-
-
-async def get_render_pipeline_async(canvas, device, *args):
-    return await device.create_render_pipeline_async(
-        **get_render_pipeline_kwargs(canvas, device, *args)
+    return get_draw_function(
+        canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=True
     )
 
 
@@ -125,6 +121,12 @@ def create_pipeline_layout(device):
     uniform_buffer = device.create_buffer(
         size=uniform_data.nbytes,
         usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST,
+    )
+
+    # Create another buffer to copy data to it (by mapping it and then copying the data)
+    uniform_buffer.copy_buffer = device.create_buffer(
+        size=uniform_data.nbytes,
+        usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC,
     )
 
     # Create texture, and upload data
@@ -214,7 +216,9 @@ def create_pipeline_layout(device):
     return pipeline_layout, uniform_buffer, bind_groups
 
 
-def get_draw_function(canvas, device, render_pipeline, uniform_buffer, bind_groups):
+def get_draw_function(
+    canvas, device, render_pipeline, uniform_buffer, bind_groups, *, asynchronous
+):
     # Create vertex buffer, and upload data
     vertex_buffer = device.create_buffer_with_data(
         data=vertex_data, usage=wgpu.BufferUsage.VERTEX
@@ -225,7 +229,7 @@ def get_draw_function(canvas, device, render_pipeline, uniform_buffer, bind_grou
         data=index_data, usage=wgpu.BufferUsage.INDEX
     )
 
-    def draw_frame():
+    def update_transform():
         # Update uniform transform
         a1 = -0.3
         a2 = time.time()
@@ -256,17 +260,36 @@ def get_draw_function(canvas, device, render_pipeline, uniform_buffer, bind_grou
         )
         uniform_data["transform"] = rot2 @ rot1 @ ortho
 
-        # Upload the uniform struct
-        tmp_buffer = device.create_buffer_with_data(
-            data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
-        )
-
+    def upload_uniform_buffer_sync():
+        if True:
+            tmp_buffer = uniform_buffer.copy_buffer
+            tmp_buffer.map_sync(wgpu.MapMode.WRITE)
+            tmp_buffer.write_mapped(uniform_data)
+            tmp_buffer.unmap()
+        else:
+            tmp_buffer = device.create_buffer_with_data(
+                data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
+            )
         command_encoder = device.create_command_encoder()
         command_encoder.copy_buffer_to_buffer(
             tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
         )
+        device.queue.submit([command_encoder.finish()])
 
+    async def upload_uniform_buffer_async():
+        tmp_buffer = uniform_buffer.copy_buffer
+        await tmp_buffer.map_async(wgpu.MapMode.WRITE)
+        tmp_buffer.write_mapped(uniform_data)
+        tmp_buffer.unmap()
+        command_encoder = device.create_command_encoder()
+        command_encoder.copy_buffer_to_buffer(
+            tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
+        )
+        device.queue.submit([command_encoder.finish()])
+
+    def draw_frame():
         current_texture_view = canvas.get_context().get_current_texture().create_view()
+        command_encoder = device.create_command_encoder()
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
                 {
@@ -289,9 +312,20 @@ def get_draw_function(canvas, device, render_pipeline, uniform_buffer, bind_grou
 
         device.queue.submit([command_encoder.finish()])
 
-        canvas.request_draw()
+    def draw_frame_sync():
+        update_transform()
+        upload_uniform_buffer_sync()
+        draw_frame()
 
-    return draw_frame
+    async def draw_frame_async():
+        update_transform()
+        await upload_uniform_buffer_async()
+        draw_frame()
+
+    if asynchronous:
+        return draw_frame_async
+    else:
+        return draw_frame_sync
 
 
 # %% WGSL
@@ -426,5 +460,12 @@ if __name__ == "__main__":
 
     canvas = WgpuCanvas(size=(640, 480), title="wgpu cube example")
 
-    setup_cube(canvas)
+    draw_frame = setup_drawing_sync(canvas)
+
+    def animate():
+        draw_frame()
+        canvas.request_draw()
+
+    canvas.request_draw(animate)
+
     run()

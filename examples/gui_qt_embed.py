@@ -19,8 +19,7 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
 
 from wgpu.gui.qt import WgpuWidget  # noqa: E402
 
-from triangle import setup_triangle  # noqa
-from cube import setup_cube  # noqa
+from triangle import setup_drawing_sync  # noqa: E402
 
 
 class ExampleWidget(QtWidgets.QWidget):
@@ -49,8 +48,11 @@ class ExampleWidget(QtWidgets.QWidget):
 app = QtWidgets.QApplication([])
 example = ExampleWidget()
 
-setup_triangle(example.canvas1)
-setup_triangle(example.canvas2)
+draw_frame1 = setup_drawing_sync(example.canvas1)
+draw_frame2 = setup_drawing_sync(example.canvas2)
+
+example.canvas1.request_draw(draw_frame1)
+example.canvas2.request_draw(draw_frame2)
 
 # Enter Qt event loop (compatible with qt5/qt6)
 app.exec() if hasattr(app, "exec") else app.exec_()

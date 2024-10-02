@@ -18,14 +18,20 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
 
 from wgpu.gui.qt import WgpuCanvas  # noqa: E402
 
-from triangle import setup_triangle  # noqa
-from cube import setup_cube  # noqa
+from triangle import setup_drawing_sync  # noqa: E402
 
 
 app = QtWidgets.QApplication([])
 canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
 
-setup_triangle(canvas)
+draw_frame = setup_drawing_sync(canvas)
+
+
+@canvas.request_draw
+def animate():
+    draw_frame()
+    canvas.request_draw()
+
 
 # Enter Qt event loop (compatible with qt5/qt6)
 app.exec() if hasattr(app, "exec") else app.exec_()
