@@ -317,7 +317,11 @@ libf = SafeLibCalls(lib, error_handler)
 
 class GPU(classes.GPU):
     def request_adapter_sync(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+        self,
+        *,
+        power_preference: enums.GPUPowerPreference = None,
+        force_fallback_adapter: bool = False,
+        canvas=None,
     ):
         """Async version of ``request_adapter_async()``.
         This is the implementation based on wgpu-native.
@@ -332,7 +336,11 @@ class GPU(classes.GPU):
         return awaitable.sync_wait()
 
     async def request_adapter_async(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+        self,
+        *,
+        power_preference: enums.GPUPowerPreference = None,
+        force_fallback_adapter: bool = False,
+        canvas=None,
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -343,8 +351,8 @@ class GPU(classes.GPU):
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
-            canvas (WgpuCanvasInterface): The canvas that the adapter should
-                be able to render to. This can typically be left to None.
+            canvas : The canvas that the adapter should be able to render to. This can typically
+                 be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
         awaitable = self._request_adapter(
             power_preference=power_preference,
@@ -875,7 +883,12 @@ class GPUAdapter(classes.GPUAdapter):
         return await awaitable
 
     def _request_device(
-        self, label, required_features, required_limits, default_queue, trace_path
+        self,
+        label: str,
+        required_features: List[enums.FeatureName],
+        required_limits: Dict[str, int],
+        default_queue: structs.QueueDescriptor,
+        trace_path: str,
     ):
         # ---- Handle features
 
@@ -951,6 +964,8 @@ class GPUAdapter(classes.GPUAdapter):
         # ---- Set queue descriptor
 
         # Note that the default_queue arg is a descriptor (dict for QueueDescriptor), but is currently empty :)
+        check_struct("QueueDescriptor", {})
+
         # H: nextInChain: WGPUChainedStruct *, label: char *
         queue_struct = new_struct(
             "WGPUQueueDescriptor",
@@ -1405,7 +1420,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     ):
         return self._create_pipeline_layout(label, bind_group_layouts, [])
 
-    def _create_pipeline_layout(self, label, bind_group_layouts, push_constant_layouts):
+    def _create_pipeline_layout(
+        self,
+        label: str,
+        bind_group_layouts: List[GPUBindGroupLayout],
+        push_constant_layouts,
+    ):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
 
         c_layout_array = ffi.new("WGPUBindGroupLayout []", bind_group_layouts_ids)
@@ -1552,6 +1572,26 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
         compute: structs.ProgrammableStage,
     ):
+        return self._create_compute_pipeline(label, layout, compute, asynchronous=False)
+
+    async def create_compute_pipeline_async(
+        self,
+        *,
+        label: str = "",
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        compute: structs.ProgrammableStage,
+    ):
+        # TODO: wgpuDeviceCreateComputePipelineAsync is not yet implemented in wgpu-native
+        return self._create_compute_pipeline(label, layout, compute, asynchronous=False)
+
+    def _create_compute_pipeline(
+        self,
+        label: str,
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        compute: structs.ProgrammableStage,
+        *,
+        asynchronous,
+    ):
         check_struct("ProgrammableStage", compute)
         c_constants, c_constant_entries = _get_override_constant_entries(compute)
         # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *
@@ -1581,20 +1621,14 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             compute=c_compute_stage,
             # not used: nextInChain
         )
+
+        if asynchronous:
+            raise NotImplementedError()
+
         # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
         return GPUComputePipeline(label, id, self)
 
-    async def create_compute_pipeline_async(
-        self,
-        *,
-        label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
-        compute: structs.ProgrammableStage,
-    ):
-        return self.create_compute_pipeline(label=label, layout=layout, compute=compute)
-
-    # FIXME: missing check_struct in create_render_pipeline: ['DepthStencilState', 'FragmentState', 'MultisampleState', 'PrimitiveState', 'StencilFaceState', 'VertexState']
     def create_render_pipeline(
         self,
         *,
@@ -1617,7 +1651,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             asynchronous=False,
         )
 
-    # FIXME: missing check_struct in create_render_pipeline_async: ['DepthStencilState', 'FragmentState', 'MultisampleState', 'PrimitiveState', 'StencilFaceState', 'VertexState']
     async def create_render_pipeline_async(
         self,
         *,
@@ -1629,18 +1662,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         multisample: structs.MultisampleState = {},
         fragment: structs.FragmentState = optional,
     ):
-        # TODO: wgpuDeviceCreateRenderPipelineAsync is not yet implemented in wgpu-nat
-        # awaitable = self._create_render_pipeline(
-        #     label,
-        #     layout,
-        #     vertex,
-        #     primitive,
-        #     depth_stencil,
-        #     multisample,
-        #     fragment,
-        #     asynchronous=True,
-        # )
-        # return await awaitable
+        # TODO: wgpuDeviceCreateRenderPipelineAsync is not yet implemented in wgpu-native
         return self._create_render_pipeline(
             label,
             layout,
@@ -1654,13 +1676,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
     def _create_render_pipeline(
         self,
-        label,
-        layout,
-        vertex,
-        primitive,
-        depth_stencil,
-        multisample,
-        fragment,
+        label: str,
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        vertex: structs.VertexState,
+        primitive: structs.PrimitiveState,
+        depth_stencil: structs.DepthStencilState,
+        multisample: structs.MultisampleState,
+        fragment: structs.FragmentState,
         *,
         asynchronous,
     ):
