@@ -26,6 +26,9 @@ def setup_module():
 
 
 def teardown_module():
+    from wgpu.gui.glfw import poll_glfw_briefly
+
+    poll_glfw_briefly()
     pass  # Do not glfw.terminate() because other tests may still need glfw
 
 
