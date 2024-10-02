@@ -90,7 +90,11 @@ class GPU:
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false
     @apidiff.change("arguments include canvas")
     def request_adapter_sync(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+        self,
+        *,
+        power_preference: enums.GPUPowerPreference = None,
+        force_fallback_adapter: bool = False,
+        canvas=None,
     ):
         """Sync version of `request_adapter_async()`.
 
@@ -108,7 +112,11 @@ class GPU:
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false
     @apidiff.change("arguments include canvas")
     async def request_adapter_async(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+        self,
+        *,
+        power_preference: enums.GPUPowerPreference = None,
+        force_fallback_adapter: bool = False,
+        canvas=None,
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -117,8 +125,8 @@ class GPU:
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
-            canvas (WgpuCanvasInterface): The canvas that the adapter should
-                be able to render to. This can typically be left to None.
+            canvas : The canvas that the adapter should be able to render to. This can typically
+                 be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu

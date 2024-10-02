@@ -648,12 +648,17 @@ class StructValidationChecker(Patcher):
                 # Test that a matching check is done
                 unchecked = method_structs.difference(checked)
                 unchecked = list(sorted(unchecked.difference(ignore_structs)))
-                if (
-                    methodname.endswith("_async")
-                    and f"return self.{methodname[:-7]}" in code
-                ):
-                    pass
-                elif unchecked:
+                # Must we check, or does this method defer to another
+                defer_func_name = "_" + methodname
+                defer_line_starts = (
+                    f"return self.{defer_func_name[:-7]}",
+                    f"awaitable = self.{defer_func_name[:-7]}",
+                )
+                this_method_defers = any(
+                    line.strip().startswith(defer_line_starts)
+                    for line in code.splitlines()
+                )
+                if not this_method_defers and unchecked:
                     msg = f"missing check_struct in {methodname}: {unchecked}"
                     self.insert_line(j1, f"# FIXME: {msg}")
                     print(f"ERROR: {msg}")

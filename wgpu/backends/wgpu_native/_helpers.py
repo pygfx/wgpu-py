@@ -1,6 +1,7 @@
 """Utilities used in the wgpu-native backend."""
 
 import sys
+import time
 import ctypes
 from queue import deque
 
@@ -222,6 +223,58 @@ def to_camel_case(name):
     if name2.endswith(("1d", "2d", "3d")):
         name2 = name2[:-1] + "D"
     return name2
+
+
+class WgpuAwaitable:
+    """An object that can be waited for, either synchronously using sync_wait() or asynchronously using await.
+
+    The purpose of this class is to implememt the asynchronous methods in a
+    truely async manner, as well as to support a synchronous version of them.
+    """
+
+    def __init__(self, title, result, callback, poll_function, finalizer, timeout=5.0):
+        self.title = title  # for context in error messages
+        self.result = result  # a dict that the callbacks writes to
+        self.callback = callback  # only used to prevent it from being gc'd
+        self.poll_function = poll_function  # call this to poll wgpu
+        self.finalizer = finalizer  # function to finish the result
+        self.maxtime = time.perf_counter() + float(timeout)
+
+    def is_done(self):
+        self.poll_function()
+        if self.result:
+            return True
+        if time.perf_counter() > self.maxtime:
+            self.result["timeout"] = True
+            return True
+        return False
+
+    def finish(self):
+        if "result" in self.result:
+            return self.finalizer(self.result["result"])
+        elif "error" in self.result:
+            raise RuntimeError(self.result["error"])
+        elif "timeout" in self.result:
+            raise RuntimeError(f"Waiting for {self.title} timed out.")
+        else:
+            raise RuntimeError(f"Failed to obtain result for {self.title}.")
+
+    def sync_wait(self):
+        # Basically a spin-lock, but we sleep(0) to give other threads more room to run.
+        while not self.is_done():
+            time.sleep(0)  # yield to the GIL
+        return self.finish()
+
+    def __await__(self):
+        # With this approach the CPU is also kept busy, because the task will
+        # continuously be scheduled to do a next step, but at least other tasks
+        # will have a chance to run as well (e.g. GUI's running in the same loop
+        # stay active). In theory we could async-sleep here, but there are two
+        # problems: how long should we sleep, and using asyncio.sleep() would
+        # not work on e.g. Trio.
+        while not self.is_done():
+            yield None  # yield to the loop
+        return self.finish()
 
 
 class ErrorHandler:
