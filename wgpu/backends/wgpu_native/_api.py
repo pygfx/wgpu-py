@@ -1952,13 +1952,44 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPURenderBundleEncoder(label, render_bundle_id, self)
 
     def create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
+        return self._create_query_set(label, type, count, None)
+
+    def _create_statistics_query_set(self, label, count, statistics):
+        values = []
+        for name in statistics:
+            key = to_snake_case(name.replace("_", "-"), "-")
+            value = enum_str2int["PipelineStatisticName"][key]
+            values.append(value)
+        values.sort()
+        return self._create_query_set(
+            label, lib.WGPUNativeQueryType_PipelineStatistics, count, values
+        )
+
+    def _create_query_set(self, label, type, count, statistics):
+        next_in_chain = ffi.NULL
+        if statistics:
+            c_statistics = ffi.new("WGPUPipelineStatisticName[]", statistics)
+            # H: chain: WGPUChainedStruct, pipelineStatistics: WGPUPipelineStatisticName *, pipelineStatisticCount: int
+            query_set_descriptor_extras = new_struct_p(
+                "WGPUQuerySetDescriptorExtras *",
+                pipelineStatisticCount=len(statistics),
+                pipelineStatistics=ffi.cast(
+                    "WGPUPipelineStatisticName const *", c_statistics
+                ),
+                # not used: chain
+            )
+            query_set_descriptor_extras.chain.sType = (
+                lib.WGPUSType_QuerySetDescriptorExtras
+            )
+            next_in_chain = ffi.cast("WGPUChainedStruct *", query_set_descriptor_extras)
+
         # H: nextInChain: WGPUChainedStruct *, label: char *, type: WGPUQueryType, count: int
         query_set_descriptor = new_struct_p(
             "WGPUQuerySetDescriptor *",
             label=to_c_label(label),
             type=type,
             count=count,
-            # not used: nextInChain
+            nextInChain=next_in_chain,
         )
 
         # H: WGPUQuerySet f(WGPUDevice device, WGPUQuerySetDescriptor const * descriptor)
@@ -2601,8 +2632,6 @@ class GPUCommandEncoder(
         timestamp_writes: structs.RenderPassTimestampWrites = optional,
         max_draw_count: int = 50000000,
     ):
-        # Note that occlusion_query_set is ignored because wgpu-native does not have it.
-
         c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
             check_struct("RenderPassTimestampWrites", timestamp_writes)
@@ -3036,6 +3065,16 @@ class GPUComputePassEncoder(
             self._internal, buffer_id, int(indirect_offset)
         )
 
+    def _begin_pipeline_statistics_query(self, query_set, query_index):
+        # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
+        libf.wgpuComputePassEncoderBeginPipelineStatisticsQuery(
+            self._internal, query_set._internal, int(query_index)
+        )
+
+    def _end_pipeline_statistics_query(self):
+        # H: void f(WGPUComputePassEncoder computePassEncoder)
+        libf.wgpuComputePassEncoderEndPipelineStatisticsQuery(self._internal)
+
     def end(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
@@ -3184,6 +3223,16 @@ class GPURenderPassEncoder(
         libf.wgpuRenderPassEncoderMultiDrawIndexedIndirect(
             self._internal, buffer._internal, int(offset), int(count)
         )
+
+    def _begin_pipeline_statistics_query(self, query_set, query_index):
+        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
+        libf.wgpuRenderPassEncoderBeginPipelineStatisticsQuery(
+            self._internal, query_set._internal, int(query_index)
+        )
+
+    def _end_pipeline_statistics_query(self):
+        # H: void f(WGPURenderPassEncoder renderPassEncoder)
+        libf.wgpuRenderPassEncoderEndPipelineStatisticsQuery(self._internal)
 
 
 class GPURenderBundleEncoder(
