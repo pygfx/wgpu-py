@@ -45,16 +45,14 @@ void main()
 # %% The wgpu calls
 
 
-def setup_triangle(canvas, power_preference="high-performance", limits=None):
+def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
     """Regular function to setup a viz on the given canvas."""
 
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(required_limits=limits)
 
     render_pipeline = get_render_pipeline(canvas, device)
-    draw_function = get_draw_function(canvas, device, render_pipeline)
-
-    canvas.request_draw(draw_function)
+    return get_draw_function(canvas, device, render_pipeline)
 
 
 def get_render_pipeline(canvas, device):
@@ -129,5 +127,6 @@ if __name__ == "__main__":
     from wgpu.gui.auto import WgpuCanvas, run
 
     canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle glsl example")
-    setup_triangle(canvas)
+    draw_frame = setup_drawing_sync(canvas)
+    canvas.request_draw(draw_frame)
     run()

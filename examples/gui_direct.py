@@ -9,65 +9,59 @@ Demonstration for hardcore users that need total low-level control.
 # run_example = false
 
 import time
+import atexit
 
 import glfw
 
 from wgpu.backends.wgpu_native import GPUCanvasContext
-from wgpu.gui.glfw import get_glfw_present_info, get_physical_size
+from wgpu.gui.glfw import get_glfw_present_info, poll_glfw_briefly
 
-from triangle import setup_triangle  # noqa: F401, RUF100
-from cube import setup_cube  # noqa: F401, RUF100
+# from triangle import setup_drawing_sync
+from cube import setup_drawing_sync
+
+# Setup glfw
+glfw.init()
+atexit.register(glfw.terminate)
 
 
 class MinimalGlfwCanvas:  # implements WgpuCanvasInterface
-    """Minimal canvas interface implementation triangle.py has everything it needs to draw."""
+    """Minimal canvas interface required by wgpu."""
 
-    def __init__(self, window):
-        self._window = window
+    def __init__(self, title):
+        # disable automatic API selection, we are not using opengl
+        glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
+        glfw.window_hint(glfw.RESIZABLE, True)
+
+        self.window = glfw.create_window(640, 480, title, None, None)
         self.context = GPUCanvasContext(self)
-        self.draw_frame = None
 
     def get_present_info(self):
         """get window and display id, includes some triage to deal with OS differences"""
-        return get_glfw_present_info(self._window)
+        return get_glfw_present_info(self.window)
 
     def get_physical_size(self):
         """get framebuffer size in integer pixels"""
-        return get_physical_size(self._window)
+        psize = glfw.get_framebuffer_size(self.window)
+        return int(psize[0]), int(psize[1])
 
     def get_context(self, kind="webgpu"):
         return self.context
 
-    def request_draw(self, func=None):
-        # A method from WGPUCanvasBase that is called by triangle.py
-        if func is not None:
-            self.draw_frame = func
-
 
 def main():
-    # create a window with glfw
-    glfw.init()
-    # disable automatic API selection, we are not using opengl
-    glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
-    glfw.window_hint(glfw.RESIZABLE, True)
-    window = glfw.create_window(640, 480, "wgou demo glfw direct", None, None)
-
     # create canvas
-    canvas = MinimalGlfwCanvas(window)
-    setup_cube(canvas)
+    canvas = MinimalGlfwCanvas("wgpu gui direct")
+    draw_frame = setup_drawing_sync(canvas)
 
     last_frame_time = time.perf_counter()
     frame_count = 0
 
     # render loop
-    while True:
+    while not glfw.window_should_close(canvas.window):
         # process inputs
         glfw.poll_events()
-        # break on close
-        if glfw.window_should_close(window):
-            break
         # draw a frame
-        canvas.draw_frame()
+        draw_frame()
         # present the frame to the screen
         canvas.context.present()
         # stats
@@ -77,10 +71,9 @@ def main():
             print(f"{frame_count/etime:0.1f} FPS")
             last_frame_time, frame_count = time.perf_counter(), 0
 
-    # dispose all resources and quit
-    glfw.destroy_window(window)
-    glfw.poll_events()
-    glfw.terminate()
+    # dispose resources
+    glfw.destroy_window(canvas.window)
+    poll_glfw_briefly()
 
 
 if __name__ == "__main__":

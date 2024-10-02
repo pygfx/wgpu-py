@@ -18,8 +18,9 @@ import subprocess
 
 from wgpu.gui import WgpuCanvasBase
 
-# Import the (async) function that we must call to run the visualization
-from triangle import setup_triangle
+# Import the function that we must call to run the visualization
+from triangle import setup_drawing_sync
+# from cube import setup_drawing_sync
 
 
 code = """
@@ -81,5 +82,6 @@ p = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE)
 canvas = ProxyCanvas()
 
 # Go!
-setup_triangle(canvas)
+draw_frame = setup_drawing_sync(canvas)
+canvas.request_draw(draw_frame)
 time.sleep(3)

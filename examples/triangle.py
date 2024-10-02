@@ -23,38 +23,38 @@ import wgpu
 # %% Entrypoints (sync and async)
 
 
-def setup_triangle(canvas, power_preference="high-performance", limits=None):
-    """Regular function to setup a viz on the given canvas."""
+def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+    """Setup to draw a triangle on the given canvas.
+
+    The given canvas must implement WgpuCanvasInterface, but nothing more.
+    Returns the draw function.
+    """
 
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(required_limits=limits)
 
-    render_pipeline = get_render_pipeline_sync(canvas, device)
-    draw_function = get_draw_function(canvas, device, render_pipeline)
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device)
 
-    canvas.request_draw(draw_function)
+    render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
+
+    return get_draw_function(canvas, device, render_pipeline, asynchronous=False)
 
 
-async def setup_triangle_async(canvas, limits=None):
-    """Async function to setup a viz on the given canvas."""
+async def setup_drawing_async(canvas, limits=None):
+    """Setup to async-draw a triangle on the given canvas.
+
+    The given canvas must implement WgpuCanvasInterface, but nothing more.
+    Returns the draw function.
+    """
 
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async(required_limits=limits)
 
-    render_pipeline = await get_render_pipeline_async(canvas, device)
-    draw_function = get_draw_function(canvas, device, render_pipeline)
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device)
 
-    canvas.request_draw(draw_function)
+    render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
 
-
-def get_render_pipeline_sync(canvas, device):
-    return device.create_render_pipeline(**get_render_pipeline_kwargs(canvas, device))
-
-
-async def get_render_pipeline_async(canvas, device):
-    return await device.create_render_pipeline_async(
-        **get_render_pipeline_kwargs(canvas, device)
-    )
+    return get_draw_function(canvas, device, render_pipeline, asynchronous=True)
 
 
 # %% Functions to create wgpu objects
@@ -92,8 +92,8 @@ def get_render_pipeline_kwargs(canvas, device):
     )
 
 
-def get_draw_function(canvas, device, render_pipeline):
-    def draw_frame():
+def get_draw_function(canvas, device, render_pipeline, *, asynchronous):
+    def draw_frame_sync():
         current_texture = canvas.get_context().get_current_texture()
         command_encoder = device.create_command_encoder()
 
@@ -115,7 +115,13 @@ def get_draw_function(canvas, device, render_pipeline):
         render_pass.end()
         device.queue.submit([command_encoder.finish()])
 
-    return draw_frame
+    async def draw_frame_async():
+        draw_frame_sync()  # nothing async here
+
+    if asynchronous:
+        return draw_frame_async
+    else:
+        return draw_frame_sync
 
 
 # %% WGSL
@@ -161,5 +167,6 @@ if __name__ == "__main__":
     from wgpu.gui.auto import WgpuCanvas, run
 
     canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle example")
-    setup_triangle(canvas)
+    draw_frame = setup_drawing_sync(canvas)
+    canvas.request_draw(draw_frame)
     run()
