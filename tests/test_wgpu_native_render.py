@@ -557,18 +557,6 @@ def _render_orange_square_depth(depth_stencil_tex_format, use_render_bundle):
         format=depth_stencil_tex_format,
         depth_write_enabled=True,
         depth_compare=wgpu.CompareFunction.less_equal,
-        # stencil_front={
-        #     "compare": wgpu.CompareFunction.equal,
-        #     "fail_op": wgpu.StencilOperation.keep,
-        #     "depth_fail_op": wgpu.StencilOperation.keep,
-        #     "pass_op": wgpu.StencilOperation.keep,
-        # },
-        # stencil_back={
-        #     "compare": wgpu.CompareFunction.equal,
-        #     "fail_op": wgpu.StencilOperation.keep,
-        #     "depth_fail_op": wgpu.StencilOperation.keep,
-        #     "pass_op": wgpu.StencilOperation.keep,
-        # },
         stencil_read_mask=0,
         stencil_write_mask=0,
         depth_bias=0,
@@ -581,9 +569,15 @@ def _render_orange_square_depth(depth_stencil_tex_format, use_render_bundle):
         depth_clear_value=0.1,
         depth_load_op=wgpu.LoadOp.clear,
         depth_store_op=wgpu.StoreOp.store,
-        stencil_load_op=wgpu.LoadOp.load,
-        stencil_store_op=wgpu.StoreOp.store,
     )
+
+    if "stencil" in depth_stencil_tex_format:
+        depth_stencil_attachment["stencil_load_op"] = wgpu.LoadOp.load
+        depth_stencil_attachment["stencil_store_op"] = wgpu.StoreOp.store
+
+    if "stencil" in depth_stencil_tex_format:
+        depth_stencil_attachment["stencil_load_op"] = wgpu.LoadOp.load
+        depth_stencil_attachment["stencil_store_op"] = wgpu.StoreOp.store
 
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group

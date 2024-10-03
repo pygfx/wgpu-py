@@ -21,6 +21,7 @@ import os
 import ctypes
 import logging
 import ctypes.util
+import warnings
 from weakref import WeakKeyDictionary
 from typing import List, Dict, Union, Optional
 
@@ -2694,22 +2695,10 @@ class GPUCommandEncoder(
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
             check_struct("RenderPassDepthStencilAttachment", depth_stencil_attachment)
-            depth_clear_value = depth_stencil_attachment.get("depth_clear_value", 0)
-            stencil_clear_value = depth_stencil_attachment.get("stencil_clear_value", 0)
-            # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: WGPUBool/int, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: WGPUBool/int
-            c_depth_stencil_attachment = new_struct_p(
-                "WGPURenderPassDepthStencilAttachment *",
-                view=depth_stencil_attachment["view"]._internal,
-                depthLoadOp=depth_stencil_attachment["depth_load_op"],
-                depthStoreOp=depth_stencil_attachment["depth_store_op"],
-                depthClearValue=float(depth_clear_value),
-                depthReadOnly=depth_stencil_attachment.get("depth_read_only", False),
-                stencilLoadOp=depth_stencil_attachment["stencil_load_op"],
-                stencilStoreOp=depth_stencil_attachment["stencil_store_op"],
-                stencilClearValue=int(stencil_clear_value),
-                stencilReadOnly=depth_stencil_attachment.get(
-                    "stencil_read_only", False
-                ),
+            c_depth_stencil_attachment = (
+                self._create_c_render_pass_depth_stencil_attachment(
+                    depth_stencil_attachment
+                )
             )
 
         c_occlusion_query_set = ffi.NULL
@@ -2734,6 +2723,66 @@ class GPUCommandEncoder(
         encoder = GPURenderPassEncoder(label, raw_encoder, self)
         encoder._objects_to_keep_alive = objects_to_keep_alive
         return encoder
+
+    # Pulled out from create_render_pass because it was too large.
+    @staticmethod
+    def _create_c_render_pass_depth_stencil_attachment(ds_attachment):
+        view = ds_attachment["view"]
+        depth_read_only = stencil_read_only = False
+        depth_load_op = depth_store_op = stencil_load_op = stencil_store_op = 0
+        depth_clear_value = stencil_clear_value = 0
+        depth_keys_okay = stencil_keys_okay = False
+        # All depth texture formats have "depth" in their name.
+        if "depth" in view.texture.format:
+            depth_read_only = ds_attachment.get("depth_read_only", False)
+            if not depth_read_only:
+                depth_keys_okay = True
+                depth_load_op = ds_attachment["depth_load_op"]
+                depth_store_op = ds_attachment["depth_store_op"]
+                if depth_load_op == "clear":
+                    depth_clear_value = ds_attachment["depth_clear_value"]
+        # All stencil texture formats all have "stencil" in their name
+        if "stencil" in view.texture.format:
+            stencil_read_only = ds_attachment.get("stencil_read_only", False)
+            if not stencil_read_only:
+                stencil_keys_okay = True
+                stencil_load_op = ds_attachment["stencil_load_op"]
+                stencil_store_op = ds_attachment["stencil_store_op"]
+                # We only need this if load_op == "clear". It has a default value.
+                stencil_clear_value = ds_attachment.get("stencil_clear_value", 0)
+
+        # By the spec, we shouldn't allow "depth_load_op" or "depth_store_op"
+        # unless we have a non-read-only depth format. Likewise, "stencil_load_op"
+        # and "stencil_store_op" aren't allowed unless we have a non-read-only stencil
+        # format.
+        # But until now, they were required, even if not needed. So let's make it a
+        # warning for now, with the possibility of making it an error in the future.
+        unexpected_keys = [
+            *(("depth_load_op", "depth_store_op") if not depth_keys_okay else ()),
+            *(("stencil_load_op", "stencil_store_op") if not stencil_keys_okay else ()),
+        ]
+        for key in unexpected_keys:
+            if key in ds_attachment:
+                warnings.warn(
+                    f"Unexpected key {key} in depth_stencil_attachment",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+
+        # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: WGPUBool/int, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: WGPUBool/int
+        c_depth_stencil_attachment = new_struct_p(
+            "WGPURenderPassDepthStencilAttachment *",
+            view=view._internal,
+            depthLoadOp=depth_load_op,
+            depthStoreOp=depth_store_op,
+            depthClearValue=float(depth_clear_value),
+            depthReadOnly=depth_read_only,
+            stencilLoadOp=stencil_load_op,
+            stencilStoreOp=stencil_store_op,
+            stencilClearValue=int(stencil_clear_value),
+            stencilReadOnly=stencil_read_only,
+        )
+        return c_depth_stencil_attachment
 
     def clear_buffer(
         self, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
