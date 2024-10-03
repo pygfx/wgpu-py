@@ -597,6 +597,21 @@ async def keep_glfw_alive():
             loop.stop()
 
 
+def poll_glfw_briefly(poll_time=0.1):
+    """Briefly poll glfw for a set amount of time.
+
+    Intended to work around the bug that destroyed windows sometimes hang
+    around if the mainloop exits: https://github.com/glfw/glfw/issues/1766
+
+    I found that 10ms is enough, but make it 100ms just in case. You should
+    only run this right after your mainloop stops.
+
+    """
+    end_time = time.perf_counter() + poll_time
+    while time.perf_counter() < end_time:
+        glfw.wait_events_timeout(end_time - time.perf_counter())
+
+
 def call_later(delay, callback, *args):
     loop = app.get_loop()
     loop.call_later(delay, callback, *args)
@@ -610,3 +625,4 @@ def run():
     app.stop_if_no_more_canvases = True
     loop.run_forever()
     app.stop_if_no_more_canvases = False
+    poll_glfw_briefly()
