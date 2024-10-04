@@ -3,6 +3,12 @@ An example demonstrating a qt app with a wgpu viz inside.
 
 This is the same as the ``gui_qt_embed.py`` example, except this uses
 the asyncio compatible mode that was introduced in Pyside 6.6.
+
+For more info see:
+
+* https://doc.qt.io/qtforpython-6/PySide6/QtAsyncio/index.html
+* https://www.qt.io/blog/introducing-qtasyncio-in-technical-preview
+
 """
 
 # ruff: noqa: N802
@@ -28,14 +34,15 @@ class ExampleWidget(QtWidgets.QWidget):
         self.canvas = WgpuWidget(splitter)
         self.output = QtWidgets.QTextEdit(splitter)
 
-        # self.button.clicked.connect(self.whenButtonClicked)
+        # With QtAsyncio, the callbacks can now return a future. You'd
+        # think that you could also return a coro, but we need to wrap
+        # it into a future, making this code a bit ugly.
+        # self.button.clicked.connect(self.whenButtonClicked)  # why not :/
         self.button.clicked.connect(
             lambda: asyncio.ensure_future(self.whenButtonClicked())
         )
 
-        splitter.addWidget(
-            self.canvas,
-        )
+        splitter.addWidget(self.canvas)
         splitter.addWidget(self.output)
         splitter.setSizes([400, 300])
 

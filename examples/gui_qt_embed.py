@@ -37,9 +37,7 @@ class ExampleWidget(QtWidgets.QWidget):
 
         self.button.clicked.connect(self.whenButtonClicked)
 
-        splitter.addWidget(
-            self.canvas,
-        )
+        splitter.addWidget(self.canvas)
         splitter.addWidget(self.output)
         splitter.setSizes([400, 300])
 
