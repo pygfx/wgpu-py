@@ -35,15 +35,3 @@ def animate():
 
 # Enter Qt event loop (compatible with qt5/qt6)
 app.exec() if hasattr(app, "exec") else app.exec_()
-
-
-# For those interested, this is a simple way to integrate Qt's event
-# loop with asyncio, but for real apps you probably want to use
-# something like the qasync library.
-# async def mainloop():
-#     await main_async(canvas)
-#     while not canvas.is_closed():
-#         await asyncio.sleep(0.001)
-#         app.flush()
-#         app.processEvents()
-#     loop.stop()

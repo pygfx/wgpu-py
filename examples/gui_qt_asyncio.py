@@ -1,26 +1,19 @@
 """
 An example demonstrating a qt app with a wgpu viz inside.
-If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
 
+This is the same as the ``gui_qt_embed.py`` example, except this uses
+the asyncio compatible mode that was introduced in Pyside 6.6.
 """
 
 # ruff: noqa: N802
 # run_example = false
 
 import time
-import importlib
+import asyncio
 
+from PySide6 import QtWidgets, QtAsyncio
+from wgpu.gui.qt import WgpuWidget
 from triangle import setup_drawing_sync
-
-# For the sake of making this example Just Work, we try multiple QT libs
-for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
-    try:
-        QtWidgets = importlib.import_module(".QtWidgets", lib)
-        break
-    except ModuleNotFoundError:
-        pass
-
-from wgpu.gui.qt import WgpuWidget  # noqa: E402
 
 
 class ExampleWidget(QtWidgets.QWidget):
@@ -35,7 +28,10 @@ class ExampleWidget(QtWidgets.QWidget):
         self.canvas = WgpuWidget(splitter)
         self.output = QtWidgets.QTextEdit(splitter)
 
-        self.button.clicked.connect(self.whenButtonClicked)
+        # self.button.clicked.connect(self.whenButtonClicked)
+        self.button.clicked.connect(
+            lambda: asyncio.ensure_future(self.whenButtonClicked())
+        )
 
         splitter.addWidget(
             self.canvas,
@@ -55,7 +51,9 @@ class ExampleWidget(QtWidgets.QWidget):
         t += "\n" + line
         self.output.setPlainText(t)
 
-    def whenButtonClicked(self):
+    async def whenButtonClicked(self):
+        self.addLine("Waiting 1 sec ...")
+        await asyncio.sleep(1)
         self.addLine(f"Clicked at {time.time():0.1f}")
 
 
@@ -65,5 +63,5 @@ example = ExampleWidget()
 draw_frame = setup_drawing_sync(example.canvas)
 example.canvas.request_draw(draw_frame)
 
-# Enter Qt event loop (compatible with qt5/qt6)
-app.exec() if hasattr(app, "exec") else app.exec_()
+# Enter Qt event loop the asyncio-compatible way
+QtAsyncio.run()
