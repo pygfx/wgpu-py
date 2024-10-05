@@ -21,7 +21,6 @@ import os
 import ctypes
 import logging
 import ctypes.util
-import warnings
 from weakref import WeakKeyDictionary
 from typing import List, Dict, Union, Optional
 
@@ -1950,7 +1949,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         render_bundle_id = libf.wgpuDeviceCreateRenderBundleEncoder(
             self._internal, render_bundle_encoder_descriptor
         )
-        return GPURenderBundleEncoder(label, render_bundle_id, self)
+        return GPURenderBundleEncoder(label, render_bundle_id, self._device)
 
     def create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
         return self._create_query_set(label, type, count, None)
@@ -1995,7 +1994,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUQuerySet f(WGPUDevice device, WGPUQuerySetDescriptor const * descriptor)
         query_id = libf.wgpuDeviceCreateQuerySet(self._internal, query_set_descriptor)
-        return GPUQuerySet(label, query_id, self._internal, type, count)
+        return GPUQuerySet(label, query_id, self._device, type, count)
 
     def _get_lost_sync(self):
         check_can_use_sync_variants()
@@ -2720,13 +2719,12 @@ class GPUCommandEncoder(
 
         # H: WGPURenderPassEncoder f(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor)
         raw_encoder = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
-        encoder = GPURenderPassEncoder(label, raw_encoder, self)
+        encoder = GPURenderPassEncoder(label, raw_encoder, self._device)
         encoder._objects_to_keep_alive = objects_to_keep_alive
         return encoder
 
     # Pulled out from create_render_pass because it was too large.
-    @staticmethod
-    def _create_c_render_pass_depth_stencil_attachment(ds_attachment):
+    def _create_c_render_pass_depth_stencil_attachment(self, ds_attachment):
         view = ds_attachment["view"]
         depth_read_only = stencil_read_only = False
         depth_load_op = depth_store_op = stencil_load_op = stencil_store_op = 0
@@ -2763,11 +2761,11 @@ class GPUCommandEncoder(
         ]
         for key in unexpected_keys:
             if key in ds_attachment:
-                warnings.warn(
-                    f"Unexpected key {key} in depth_stencil_attachment",
-                    DeprecationWarning,
-                    stacklevel=2,
-                )
+                if not getattr(self._device, f"warned_about_{key}", False):
+                    from wgpu import logger
+
+                    logger.warning(f"Unexpected key {key} in depth_stencil_attachment")
+                    setattr(self._device, f"warned_about_{key}", True)
 
         # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: WGPUBool/int, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: WGPUBool/int
         c_depth_stencil_attachment = new_struct_p(
