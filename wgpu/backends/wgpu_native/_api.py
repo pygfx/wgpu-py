@@ -1946,10 +1946,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # not used: nextInChain
         )
         # H: WGPURenderBundleEncoder f(WGPUDevice device, WGPURenderBundleEncoderDescriptor const * descriptor)
-        render_bundle_id = libf.wgpuDeviceCreateRenderBundleEncoder(
+        render_bundle_encoder_id = libf.wgpuDeviceCreateRenderBundleEncoder(
             self._internal, render_bundle_encoder_descriptor
         )
-        return GPURenderBundleEncoder(label, render_bundle_id, self._device)
+        return GPURenderBundleEncoder(label, render_bundle_encoder_id, self)
 
     def create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
         return self._create_query_set(label, type, count, None)
@@ -1994,7 +1994,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUQuerySet f(WGPUDevice device, WGPUQuerySetDescriptor const * descriptor)
         query_id = libf.wgpuDeviceCreateQuerySet(self._internal, query_set_descriptor)
-        return GPUQuerySet(label, query_id, self._device, type, count)
+        return GPUQuerySet(label, query_id, self, type, count)
 
     def _get_lost_sync(self):
         check_can_use_sync_variants()
@@ -2619,7 +2619,7 @@ class GPUCommandEncoder(
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
         raw_encoder = libf.wgpuCommandEncoderBeginComputePass(self._internal, struct)
-        encoder = GPUComputePassEncoder(label, raw_encoder, self)
+        encoder = GPUComputePassEncoder(label, raw_encoder, self._device)
         return encoder
 
     def begin_render_pass(
