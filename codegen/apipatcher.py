@@ -10,10 +10,10 @@ from codegen.files import file_cache
 
 # In wgpu-py, we make some args optional, that are not optional in the
 # IDL. Reasons may be because it makes sense to be able to omit them,
-# or because the WebGPU says its optional while IDL says its not, or
+# or because the WebGPU says its optional while IDL says it's not, or
 # for backwards compatibility. These args have a default value of
 # 'optional'  (which is just None) so we can recognise them. If IDL
-# makes any of these args optional, their presense in this list is
+# makes any of these args optional, their presence in this list is
 # ignored.
 ARGS_TO_MAKE_OPTIONAL = {
     ("compilation_hints", "compilation_hints"),  # idl actually has a default
@@ -91,7 +91,7 @@ class AbstractCommentInjector(Patcher):
     since that is the task of the API patchers.
 
     Also moves decorators just above the def. Doing this here in a
-    post-processing step means we dont have to worry about decorators
+    post-processing step means we don't have to worry about decorators
     in the other patchers, keeping them simpler.
     """
 
@@ -137,7 +137,7 @@ class AbstractApiPatcher(Patcher):
     """The base patcher to update a wgpu API.
 
     This code is generalized, so it can be used both to generate the base API
-    as well as the backends (implementations).
+    and the backends (implementations).
 
     The idea is to walk over all classes, patch it if necessary, then
     walk over each of its properties and methods to patch these too.
@@ -361,7 +361,7 @@ class IdlPatcherMixin:
                 return idl_sync
 
     def name2py_names(self, classname, name_idl):
-        """Map a idl propname/methodname to the python variants.
+        """Map an idl propname/methodname to the python variants.
         Take async into account. Returns a list with one or two names;
         for async props/methods Python has the sync and the async variant.
         """

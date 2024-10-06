@@ -12,7 +12,7 @@ class DiagnosticsRoot:
 
     Per-topic diagnostics can be accessed as attributes on this object.
     These include ``system``, ``wgpu_native_info``, ``versions``,
-    ``object_counts``, ``wgpu_natrive_counts``.
+    ``object_counts``, ``wgpu_native_counts``.
     """
 
     def __init__(self):

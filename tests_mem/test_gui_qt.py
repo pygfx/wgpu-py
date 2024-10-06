@@ -26,7 +26,7 @@ def test_release_canvas_context(n):
     # Test with PySide canvases.
 
     # Note: in a draw, the textureview is obtained (thus creating a
-    # Texture and a TextureView, but these are released in present(),
+    # Texture and a TextureView), but these are released in present(),
     # so we don't see them in the counts.
 
     import PySide6

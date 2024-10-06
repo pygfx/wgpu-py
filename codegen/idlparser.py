@@ -143,7 +143,7 @@ class IdlParser:
 
     def _pre_process(self, text):
         """Pre-process the text to make it a bit easier to parse.
-        Beware to keep line numbers the same
+        Be careful to keep line numbers the same
         """
         text = text.replace("\n[\n", "\n\n[").replace("\n]\n", "]\n\n")
         text = text.replace("[    ", "[")
@@ -177,7 +177,7 @@ class IdlParser:
 
     def resolve_type(self, typename):
         """Resolve a type to a suitable name that is also valid so that the linter
-        wont complain when this is used as a type annotation.
+        won't complain when this is used as a type annotation.
         """
 
         name = typename.strip().strip("?")
