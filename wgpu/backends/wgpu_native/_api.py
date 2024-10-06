@@ -43,7 +43,7 @@ from ._helpers import (
 logger = logging.getLogger("wgpu")
 
 
-# The API is prettu well defined
+# The API is pretty well defined
 __all__ = classes.__all__.copy()
 
 
@@ -323,7 +323,7 @@ class GPU(classes.GPU):
         force_fallback_adapter: bool = False,
         canvas=None,
     ):
-        """Async version of ``request_adapter_async()``.
+        """Sync version of ``request_adapter_async()``.
         This is the implementation based on wgpu-native.
         """
         check_can_use_sync_variants()
@@ -753,7 +753,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 # Or if this is the second attempt.
                 raise RuntimeError(f"Cannot get surface texture ({status}).")
 
-        # I don't expect this to happen, but lets check just in case.
+        # I don't expect this to happen, but let's check just in case.
         if not texture_id:
             raise RuntimeError("Cannot get surface texture (no texture)")
 
@@ -2109,7 +2109,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             awaitable_result["result"] = status
 
         def poll_func():
-            # Doing nothing here will result in timeouts. I.e. unlike request_device, this method is truely async.
+            # Doing nothing here will result in timeouts. I.e. unlike request_device, this method is truly async.
             # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
             libf.wgpuDevicePoll(self._device._internal, False, ffi.NULL)
 
@@ -2467,7 +2467,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
-    # whole class is likely going to solved better: https://github.com/pygfx/wgpu-py/pull/546
+    # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label: str):
         c_group_label = to_c_string(group_label)
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, char const * groupLabel)
