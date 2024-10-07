@@ -701,7 +701,7 @@ class GPUDevice(GPUObjectBase):
     """
 
     def __init__(self, label, internal, adapter, features, limits, queue):
-        super().__init__(label, internal, self)
+        super().__init__(label, internal, None)
 
         assert isinstance(adapter, GPUAdapter)
         assert isinstance(features, set)
