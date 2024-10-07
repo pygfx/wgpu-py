@@ -138,7 +138,7 @@ def create_and_release(create_objects_func):
     """
     This wrapper goes around a test that takes a single argument n. That test should
     be a generator function that yields a descriptor followed
-    n different objects corresponding to the name of the test function.  Hence
+    n different objects corresponding to the name of the test function. Hence,
     a test named `test_release_foo_bar` would yield a descriptor followed by
     n FooBar objects.
 

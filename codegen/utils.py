@@ -44,7 +44,7 @@ _file_objects_to_print_to = [sys.stdout]
 
 
 def print(*args, **kwargs):
-    """Report something (will be printed and added to a file."""
+    """Report something will be printed and added to a file."""
     # __builtins__.print(*args, **kwargs)
     if args and not args[0].lstrip().startswith("#"):
         args = ("*", *args)
@@ -206,7 +206,7 @@ class Patcher:
 
     def insert_line(self, i, line):
         """Insert a new line at the given position. It's ok if there
-        has already been an insertion an line i, but there must not have been
+        has already been an insertion on line i, but there must not have been
         any other actions.
         """
         if i in self._diffs and self._diffs[i][1] == "insert":

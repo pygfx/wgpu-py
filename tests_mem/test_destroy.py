@@ -1,6 +1,6 @@
 """
 A few objects have a destroy method. We test its behavior here.
-In practice it does not really affect the lifetime, so these tests look
+In practice, it does not really affect the lifetime, so these tests look
 a lot like the corresponding release tests :)
 """
 

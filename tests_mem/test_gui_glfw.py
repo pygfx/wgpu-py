@@ -35,7 +35,7 @@ def test_release_canvas_context(n):
     # Test with GLFW canvases.
 
     # Note: in a draw, the textureview is obtained (thus creating a
-    # Texture and a TextureView, but these are released in present(),
+    # Texture and a TextureView), but these are released in present(),
     # so we don't see them in the counts.
 
     from wgpu.gui.glfw import WgpuCanvas, poll_glfw_briefly

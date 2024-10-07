@@ -134,7 +134,7 @@ class HParser:
                 self.flags[name] = self.enums.pop(name)
 
         # Collect structs. This is relatively easy, since we only need the C code.
-        # But we dont deal with union structs.
+        # But we don't deal with union structs.
         i1 = i2 = i3 = i4 = 0
         while True:
             # Find struct

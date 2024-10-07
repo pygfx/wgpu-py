@@ -51,7 +51,7 @@ def select_backend():
         except Exception as err:
             failed_backends[backend_name] = str(err)
 
-    # Always report failed backeds, because we only try them when it looks like we can.
+    # Always report failed backends, because we only try them when it looks like we can.
     if failed_backends:
         msg = "WGPU could not load some backends:"
         for key, val in failed_backends.items():
@@ -128,7 +128,7 @@ def backends_by_jupyter():
         if gui_module_name in QT_MODULE_NAMES:
             yield "qt", "running on Jupyter with qt gui"
         # elif "wx" in app.__class__.__name__.lower() == "wx":
-        #     yield "wx", "running on Hupyter with wx gui"
+        #     yield "wx", "running on Jupyter with wx gui"
 
     yield "jupyter", "running on Jupyter"
 

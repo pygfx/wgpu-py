@@ -46,7 +46,7 @@ void main()
 
 
 def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
-    """Regular function to setup a viz on the given canvas."""
+    """Regular function to set up a viz on the given canvas."""
 
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(required_limits=limits)

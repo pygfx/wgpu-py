@@ -17,7 +17,7 @@ if not can_use_wgpu_lib:
 
 
 """
-The fundamental informartion about any of the many draw commands is the
+The fundamental information about any of the many draw commands is the
 <vertex_instance, instance_index> pair that is passed to the vertex shader. By using
 point-list topology, each call to the vertex shader turns into a single call to the
 fragment shader, where the pair is recorded.

@@ -152,11 +152,11 @@ def test_bad_set_push_constants():
         return np.zeros(n, dtype=np.uint32)
 
     with pytest.raises(ValueError):
-        # Buffer is to short
+        # Buffer is too short
         set_push_constants(this_pass, "VERTEX", 0, COUNT * 4, zeros(COUNT - 1))
 
     with pytest.raises(ValueError):
-        # Buffer is to short
+        # Buffer is too short
         set_push_constants(this_pass, "VERTEX", 0, COUNT * 4, zeros(COUNT + 1), 8)
 
 

@@ -131,8 +131,8 @@ def test_that_we_know_how_our_api_differs():
 
 
 def test_that_all_docstrings_are_there():
-    for name, cls in wgpu.classes.__dict__.items():
-        if name.startswith("_"):
+    for class_name, cls in wgpu.classes.__dict__.items():
+        if class_name.startswith("_"):
             continue
         assert isinstance(cls, type)
         assert cls.__doc__, f"No docstring on {cls.__name__}"
