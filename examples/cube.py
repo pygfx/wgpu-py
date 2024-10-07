@@ -198,7 +198,7 @@ def create_pipeline_layout(device):
         }
     )
 
-    # Create the wgou binding objects
+    # Create the wgpu binding objects
     bind_group_layouts = []
     bind_groups = []
 

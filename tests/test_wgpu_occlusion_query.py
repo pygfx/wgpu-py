@@ -120,7 +120,7 @@ def test_render_occluding_squares():
     # small square completely outside the clipping area.
     draw_square(False, x_offset=2, y_offset=2)
 
-    # Draw a square that should be visible, but it is culled because it is a rear-
+    # Draw a square that should be visible, but it is culled because it is a rear
     # facing rectangle. And to keep us honest, redraw the example again, but have it
     # face forward.
     draw_square(False, x_offset=0.1, y_offset=0.1, reverse=True)

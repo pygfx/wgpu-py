@@ -2,7 +2,7 @@
 Run the triangle/cube example in as custom event loop based on asyncio.
 It uses the asynchronous path, which calls the async versions of the wgpu API.
 
-Uses glfw as a GUI because its loop-agnostic.
+Uses glfw as a GUI because it's loop-agnostic.
 """
 
 # run_example = false

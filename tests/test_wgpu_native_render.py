@@ -392,7 +392,7 @@ def test_render_orange_square_color_attachment2(use_render_bundle):
     bg = a.copy()
     bg[16:-16, 16:-16, :] = 0
     # assert np.all(bg == 0)
-    # Actually, it seems unpredictable what the bg is if we dont clear it?
+    # Actually, it seems unpredictable what the bg is if we don't clear it?
 
     # Check the square
     sq = a[16:-16, 16:-16, :]
