@@ -158,7 +158,7 @@ def str_flag_to_int(flag, s):
 class ApiDiff:
     """Helper class to define differences in the API by annotating
     methods. This way, these difference are made explicit, plus they're
-    logged so we can automatically included these changes in the docs.
+    logged so we can automatically include these changes in the docs.
     """
 
     def __init__(self):

@@ -3,7 +3,7 @@ Higher level utilities. Must be explicitly imported from ``wgpu.utils.xx``.
 """
 
 # The purpose of wgpu-py is to provide a Pythonic wrapper around
-# wgpu-native. In principal, a higher-level API is not within the scope
+# wgpu-native. In principle, a higher-level API is not within the scope
 # of the project. However, by providing a few utility functions, other
 # projects can use wgpu without having to keep track of changes in wgpu
 # itself.

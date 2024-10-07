@@ -6,10 +6,10 @@ Although asyncio is builtin, it is not the only asynchronous framework
 for Python; there's also e.g. uvloop and Trio. In order not to lock
 people into a specific async framework, wgpu must be framework agnostic.
 In practice this means it must not use anything from the asyncio
-libraray (e.g. asyncio.sleep()). This example makes sure wgpu works
+library (e.g. asyncio.sleep()). This example makes sure wgpu works
 with Trio, although it may not cover all async parts of the API.
 
-Uses glfw as a GUI because its loop-agnostic.
+Uses glfw as a GUI because it's loop-agnostic.
 """
 
 # run_example = false
