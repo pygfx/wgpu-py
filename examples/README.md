@@ -1,6 +1,6 @@
 # The wgpu Examples
 
-Please note that the examples you see on Github may not be compatible with the
+Please note that the examples you see on GitHub may not be compatible with the
 wgpu version you've installed on your system.
 
 You can:

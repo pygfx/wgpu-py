@@ -31,7 +31,7 @@ if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
-# run all tests unless they opt-out
+# run all tests unless they opt out
 examples_to_run = find_examples(
     negative_query="# run_example = false", return_stems=True
 )
