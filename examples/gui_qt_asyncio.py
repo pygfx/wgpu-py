@@ -22,6 +22,24 @@ from wgpu.gui.qt import WgpuWidget
 from triangle import setup_drawing_sync
 
 
+def async_connect(signal, async_function):
+    # Unfortunately, the signal.connect() methods don't detect
+    # coroutine functions, so we have to wrap it in a function that creates
+    # a Future for the coroutine (which will then run in the current event loop).
+    #
+    # The docs on QtAsyncio do something like
+    #
+    #     self.button.clicked.connect(
+    #         lambda: asyncio.ensure_future(self.whenButtonClicked()
+    #     )
+    #
+    # But that's ugly, so we create a little convenience function
+    def proxy():
+        return asyncio.ensure_future(async_function())
+
+    signal.connect(proxy)
+
+
 class ExampleWidget(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -34,13 +52,8 @@ class ExampleWidget(QtWidgets.QWidget):
         self.canvas = WgpuWidget(splitter)
         self.output = QtWidgets.QTextEdit(splitter)
 
-        # With QtAsyncio, the callbacks can now return a future. You'd
-        # think that you could also return a coro, but we need to wrap
-        # it into a future, making this code a bit ugly.
-        # self.button.clicked.connect(self.whenButtonClicked)  # why not :/
-        self.button.clicked.connect(
-            lambda: asyncio.ensure_future(self.whenButtonClicked())
-        )
+        # self.button.clicked.connect(self.whenButtonClicked)  # see above :(
+        async_connect(self.button.clicked, self.whenButtonClicked)
 
         splitter.addWidget(self.canvas)
         splitter.addWidget(self.output)
