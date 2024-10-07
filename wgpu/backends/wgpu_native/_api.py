@@ -3224,6 +3224,32 @@ class GPURenderPassEncoder(
             self._internal, buffer._internal, int(offset), int(count)
         )
 
+    def _multi_draw_indirect_count(
+        self, buffer, offset, count_buffer, count_buffer_offset, max_count
+    ):
+        # H: void f(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, WGPUBuffer count_buffer, uint64_t count_buffer_offset, uint32_t max_count)
+        libf.wgpuRenderPassEncoderMultiDrawIndirectCount(
+            self._internal,
+            buffer._internal,
+            int(offset),
+            count_buffer._internal,
+            int(count_buffer_offset),
+            int(max_count),
+        )
+
+    def _multi_draw_indexed_indirect_count(
+        self, buffer, offset, count_buffer, count_buffer_offset, max_count
+    ):
+        # H: void f(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, WGPUBuffer count_buffer, uint64_t count_buffer_offset, uint32_t max_count)
+        libf.wgpuRenderPassEncoderMultiDrawIndexedIndirectCount(
+            self._internal,
+            buffer._internal,
+            int(offset),
+            count_buffer._internal,
+            int(count_buffer_offset),
+            int(max_count),
+        )
+
     def _begin_pipeline_statistics_query(self, query_set, query_index):
         # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         libf.wgpuRenderPassEncoderBeginPipelineStatisticsQuery(
