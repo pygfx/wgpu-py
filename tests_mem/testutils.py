@@ -218,13 +218,10 @@ def create_and_release(create_objects_func):
             # Test that everything that's a subclass of GPUObjectBase has a device
             # in its _device field.
             if issubclass(cls, GPUObjectBase):
-                if issubclass(cls, GPUDevice):
-                    assert all(objects[i]._device is None for i in range(len(objects)))
-                else:
-                    assert all(
-                        isinstance(objects[i]._device, GPUDevice)
-                        for i in range(len(objects))
-                    )
+                assert all(
+                    isinstance(objects[i]._device, GPUDevice)
+                    for i in range(len(objects))
+                )
 
             # Test that class matches function name (should prevent a group of copy-paste errors)
             assert ob_name == cls.__name__[3:]
