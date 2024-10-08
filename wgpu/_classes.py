@@ -73,8 +73,8 @@ apidiff = ApiDiff()
 object_tracker = diagnostics.object_counts.tracker
 
 # The 'optional' value is used as the default value for optional arguments in the following two cases:
-# * The method accepts a descriptior that is optional, so we make all arguments (i.e. descriptor fields) optional, and this one does not have a default value.
-# * In wgpu-py we decided that this argument should be optonal, even though it's currently not according to the WebGPU spec.
+# * The method accepts a descriptor that is optional, so we make all arguments (i.e. descriptor fields) optional, and this one does not have a default value.
+# * In wgpu-py we decided that this argument should be optional, even though it's currently not according to the WebGPU spec.
 optional = None
 
 
@@ -618,7 +618,7 @@ class GPUAdapter:
         """Request a `GPUDevice` from the adapter.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             required_features (list of str): the features (extensions) that you need. Default [].
             required_limits (dict): the various limits that you need. Default {}.
             default_queue (structs.QueueDescriptor): Descriptor for the default queue. Optional.
@@ -701,7 +701,7 @@ class GPUDevice(GPUObjectBase):
     """
 
     def __init__(self, label, internal, adapter, features, limits, queue):
-        super().__init__(label, internal, None)
+        super().__init__(label, internal, self)
 
         assert isinstance(adapter, GPUAdapter)
         assert isinstance(features, set)
@@ -800,7 +800,7 @@ class GPUDevice(GPUObjectBase):
         """Create a `GPUBuffer` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (flags.BufferUsage): The ways in which this buffer will be used.
             mapped_at_creation (bool): Whether the buffer is initially mapped.
@@ -815,7 +815,7 @@ class GPUDevice(GPUObjectBase):
         writes the given data to it, and then unmaps the buffer.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             data: Any object supporting the Python buffer protocol (this
                 includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
             usage (flags.BufferUsage): The ways in which this buffer will be used.
@@ -858,7 +858,7 @@ class GPUDevice(GPUObjectBase):
         """Create a `GPUTexture` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             size (tuple or dict): The texture size as a 3-tuple or a `structs.Extent3D`.
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
@@ -870,7 +870,7 @@ class GPUDevice(GPUObjectBase):
               a performance penalty.
 
         See https://gpuweb.github.io/gpuweb/#texture-format-caps for a
-        list of available texture formats. Note that less formats are
+        list of available texture formats. Note that fewer formats are
         available for storage usage.
         """
         raise NotImplementedError()
@@ -894,7 +894,7 @@ class GPUDevice(GPUObjectBase):
         """Create a `GPUSampler` object. Samplers specify how a texture is sampled.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             address_mode_u (enums.AddressMode): What happens when sampling beyond the x edge.
                 Default "clamp-to-edge".
             address_mode_v (enums.AddressMode): What happens when sampling beyond the y edge.
@@ -923,7 +923,7 @@ class GPUDevice(GPUObjectBase):
         docs on bind groups for details.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             entries (list): A list of `structs.BindGroupLayoutEntry` dicts.
                 Each contains either a `structs.BufferBindingLayout`,
                 `structs.SamplerBindingLayout`, `structs.TextureBindingLayout`,
@@ -962,7 +962,7 @@ class GPUDevice(GPUObjectBase):
         `pass.set_bind_group()` to attach a group of resources.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
             entries (list): A list of `structs.BindGroupEntry` dicts. The ``resource`` field
@@ -1002,7 +1002,7 @@ class GPUDevice(GPUObjectBase):
         used in `create_render_pipeline()` or `create_compute_pipeline()`.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             bind_group_layouts (list): A list of `GPUBindGroupLayout` objects.
         """
         raise NotImplementedError()
@@ -1022,7 +1022,7 @@ class GPUDevice(GPUObjectBase):
         as well as GLSL (experimental).
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             code (str | bytes): The shader code, as WGSL, GLSL or SpirV.
                 For GLSL code, the label must be given and contain the word
                 'comp', 'vert' or 'frag'. For SpirV the code must be bytes.
@@ -1041,7 +1041,7 @@ class GPUDevice(GPUObjectBase):
         """Create a `GPUComputePipeline` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             layout (GPUPipelineLayout): object created with `create_pipeline_layout()`.
             compute (structs.ProgrammableStage): Binds shader module and entrypoint.
         """
@@ -1075,7 +1075,7 @@ class GPUDevice(GPUObjectBase):
         """Create a `GPURenderPipeline` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             layout (GPUPipelineLayout): The layout for the new pipeline.
             vertex (structs.VertexState): Describes the vertex shader entry point of the
                 pipeline and its input buffer layouts.
@@ -1228,7 +1228,7 @@ class GPUDevice(GPUObjectBase):
         at once to the GPU.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
         """
         raise NotImplementedError()
 
@@ -1250,7 +1250,7 @@ class GPUDevice(GPUObjectBase):
         performance by removing the overhead of repeating the commands.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             color_formats (list): A list of the `GPUTextureFormats` of the color attachments for this pass or bundle.
             depth_stencil_format (GPUTextureFormat): The format of the depth/stencil attachment for this pass or bundle.
             sample_count (int): The number of samples per pixel in the attachments for this pass or bundle. Default 1.
@@ -1389,7 +1389,7 @@ class GPUBuffer(GPUObjectBase):
     def unmap(self):
         """Unmaps the buffer.
 
-        Unmaps the mapped range of the GPUBuffer and makes it's contents
+        Unmaps the mapped range of the GPUBuffer and makes its contents
         available for use by the GPU again.
         """
         raise NotImplementedError()
@@ -1574,7 +1574,7 @@ class GPUTexture(GPUObjectBase):
         same format and dimension as the texture.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             format (enums.TextureFormat): What channels it stores and how.
             dimension (enums.TextureViewDimension): The dimensionality of the texture view.
             aspect (enums.TextureAspect): Whether this view is used for depth, stencil, or all.
@@ -1920,7 +1920,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         `GPUComputePassEncoder` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             timestamp_writes: unused
         """
         raise NotImplementedError()
@@ -1940,7 +1940,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         `GPURenderPassEncoder` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             color_attachments (list): List of `structs.RenderPassColorAttachment` dicts.
             depth_stencil_attachment (structs.RenderPassDepthStencilAttachment): Describes the depth stencil attachment. Default None.
             occlusion_query_set (GPUQuerySet): Default None.
@@ -2043,7 +2043,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         submit to a `GPUQueue`.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
         """
         raise NotImplementedError()
 
@@ -2242,7 +2242,7 @@ class GPURenderBundleEncoder(
         """Finish recording and return a `GPURenderBundle`.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
         """
         raise NotImplementedError()
 
@@ -2609,7 +2609,7 @@ def _set_compat_methods_for_async_methods():
             return getattr(self, name)(*args, **kwargs)
 
         proxy_method.__name__ = name + "_backwards_compat_proxy"
-        proxy_method.__doc__ = f"Backwards compatibile method for {name}()"
+        proxy_method.__doc__ = f"Backwards compatible method for {name}()"
         return proxy_method
 
     m = globals()

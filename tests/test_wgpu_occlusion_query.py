@@ -141,9 +141,6 @@ def test_render_occluding_squares():
         "depth_clear_value": 1.0,
         "depth_load_op": "clear",
         "depth_store_op": "store",
-        "stencil_clear_value": 1.0,
-        "stencil_load_op": "clear",
-        "stencil_store_op": "store",
     }
 
     render_pass = command_encoder.begin_render_pass(
