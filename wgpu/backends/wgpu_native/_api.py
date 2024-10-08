@@ -43,7 +43,7 @@ from ._helpers import (
 logger = logging.getLogger("wgpu")
 
 
-# The API is prettu well defined
+# The API is pretty well defined
 __all__ = classes.__all__.copy()
 
 
@@ -323,7 +323,7 @@ class GPU(classes.GPU):
         force_fallback_adapter: bool = False,
         canvas=None,
     ):
-        """Async version of ``request_adapter_async()``.
+        """Sync version of ``request_adapter_async()``.
         This is the implementation based on wgpu-native.
         """
         check_can_use_sync_variants()
@@ -753,7 +753,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 # Or if this is the second attempt.
                 raise RuntimeError(f"Cannot get surface texture ({status}).")
 
-        # I don't expect this to happen, but lets check just in case.
+        # I don't expect this to happen, but let's check just in case.
         if not texture_id:
             raise RuntimeError("Cannot get surface texture (no texture)")
 
@@ -1946,10 +1946,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # not used: nextInChain
         )
         # H: WGPURenderBundleEncoder f(WGPUDevice device, WGPURenderBundleEncoderDescriptor const * descriptor)
-        render_bundle_id = libf.wgpuDeviceCreateRenderBundleEncoder(
+        render_bundle_encoder_id = libf.wgpuDeviceCreateRenderBundleEncoder(
             self._internal, render_bundle_encoder_descriptor
         )
-        return GPURenderBundleEncoder(label, render_bundle_id, self)
+        return GPURenderBundleEncoder(label, render_bundle_encoder_id, self)
 
     def create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
         return self._create_query_set(label, type, count, None)
@@ -1994,7 +1994,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUQuerySet f(WGPUDevice device, WGPUQuerySetDescriptor const * descriptor)
         query_id = libf.wgpuDeviceCreateQuerySet(self._internal, query_set_descriptor)
-        return GPUQuerySet(label, query_id, self._internal, type, count)
+        return GPUQuerySet(label, query_id, self, type, count)
 
     def _get_lost_sync(self):
         check_can_use_sync_variants()
@@ -2109,7 +2109,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             awaitable_result["result"] = status
 
         def poll_func():
-            # Doing nothing here will result in timeouts. I.e. unlike request_device, this method is truely async.
+            # Doing nothing here will result in timeouts. I.e. unlike request_device, this method is truly async.
             # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
             libf.wgpuDevicePoll(self._device._internal, False, ffi.NULL)
 
@@ -2467,7 +2467,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
-    # whole class is likely going to solved better: https://github.com/pygfx/wgpu-py/pull/546
+    # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label: str):
         c_group_label = to_c_string(group_label)
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, char const * groupLabel)
@@ -2619,7 +2619,7 @@ class GPUCommandEncoder(
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
         raw_encoder = libf.wgpuCommandEncoderBeginComputePass(self._internal, struct)
-        encoder = GPUComputePassEncoder(label, raw_encoder, self)
+        encoder = GPUComputePassEncoder(label, raw_encoder, self._device)
         return encoder
 
     def begin_render_pass(
@@ -2694,22 +2694,10 @@ class GPUCommandEncoder(
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
             check_struct("RenderPassDepthStencilAttachment", depth_stencil_attachment)
-            depth_clear_value = depth_stencil_attachment.get("depth_clear_value", 0)
-            stencil_clear_value = depth_stencil_attachment.get("stencil_clear_value", 0)
-            # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: WGPUBool/int, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: WGPUBool/int
-            c_depth_stencil_attachment = new_struct_p(
-                "WGPURenderPassDepthStencilAttachment *",
-                view=depth_stencil_attachment["view"]._internal,
-                depthLoadOp=depth_stencil_attachment["depth_load_op"],
-                depthStoreOp=depth_stencil_attachment["depth_store_op"],
-                depthClearValue=float(depth_clear_value),
-                depthReadOnly=depth_stencil_attachment.get("depth_read_only", False),
-                stencilLoadOp=depth_stencil_attachment["stencil_load_op"],
-                stencilStoreOp=depth_stencil_attachment["stencil_store_op"],
-                stencilClearValue=int(stencil_clear_value),
-                stencilReadOnly=depth_stencil_attachment.get(
-                    "stencil_read_only", False
-                ),
+            c_depth_stencil_attachment = (
+                self._create_c_render_pass_depth_stencil_attachment(
+                    depth_stencil_attachment
+                )
             )
 
         c_occlusion_query_set = ffi.NULL
@@ -2731,9 +2719,68 @@ class GPUCommandEncoder(
 
         # H: WGPURenderPassEncoder f(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor)
         raw_encoder = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
-        encoder = GPURenderPassEncoder(label, raw_encoder, self)
+        encoder = GPURenderPassEncoder(label, raw_encoder, self._device)
         encoder._objects_to_keep_alive = objects_to_keep_alive
         return encoder
+
+    # Pulled out from create_render_pass because it was too large.
+    def _create_c_render_pass_depth_stencil_attachment(self, ds_attachment):
+        view = ds_attachment["view"]
+        depth_read_only = stencil_read_only = False
+        depth_load_op = depth_store_op = stencil_load_op = stencil_store_op = 0
+        depth_clear_value = stencil_clear_value = 0
+        depth_keys_okay = stencil_keys_okay = False
+        # All depth texture formats have "depth" in their name.
+        if "depth" in view.texture.format:
+            depth_read_only = ds_attachment.get("depth_read_only", False)
+            if not depth_read_only:
+                depth_keys_okay = True
+                depth_load_op = ds_attachment["depth_load_op"]
+                depth_store_op = ds_attachment["depth_store_op"]
+                if depth_load_op == "clear":
+                    depth_clear_value = ds_attachment["depth_clear_value"]
+        # All stencil texture formats all have "stencil" in their name
+        if "stencil" in view.texture.format:
+            stencil_read_only = ds_attachment.get("stencil_read_only", False)
+            if not stencil_read_only:
+                stencil_keys_okay = True
+                stencil_load_op = ds_attachment["stencil_load_op"]
+                stencil_store_op = ds_attachment["stencil_store_op"]
+                # We only need this if load_op == "clear". It has a default value.
+                stencil_clear_value = ds_attachment.get("stencil_clear_value", 0)
+
+        # By the spec, we shouldn't allow "depth_load_op" or "depth_store_op"
+        # unless we have a non-read-only depth format. Likewise, "stencil_load_op"
+        # and "stencil_store_op" aren't allowed unless we have a non-read-only stencil
+        # format.
+        # But until now, they were required, even if not needed. So let's make it a
+        # warning for now, with the possibility of making it an error in the future.
+        unexpected_keys = [
+            *(("depth_load_op", "depth_store_op") if not depth_keys_okay else ()),
+            *(("stencil_load_op", "stencil_store_op") if not stencil_keys_okay else ()),
+        ]
+        for key in unexpected_keys:
+            if key in ds_attachment:
+                if not getattr(self._device, f"warned_about_{key}", False):
+                    from wgpu import logger
+
+                    logger.warning(f"Unexpected key {key} in depth_stencil_attachment")
+                    setattr(self._device, f"warned_about_{key}", True)
+
+        # H: view: WGPUTextureView, depthLoadOp: WGPULoadOp, depthStoreOp: WGPUStoreOp, depthClearValue: float, depthReadOnly: WGPUBool/int, stencilLoadOp: WGPULoadOp, stencilStoreOp: WGPUStoreOp, stencilClearValue: int, stencilReadOnly: WGPUBool/int
+        c_depth_stencil_attachment = new_struct_p(
+            "WGPURenderPassDepthStencilAttachment *",
+            view=view._internal,
+            depthLoadOp=depth_load_op,
+            depthStoreOp=depth_store_op,
+            depthClearValue=float(depth_clear_value),
+            depthReadOnly=depth_read_only,
+            stencilLoadOp=stencil_load_op,
+            stencilStoreOp=stencil_store_op,
+            stencilClearValue=int(stencil_clear_value),
+            stencilReadOnly=stencil_read_only,
+        )
+        return c_depth_stencil_attachment
 
     def clear_buffer(
         self, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None

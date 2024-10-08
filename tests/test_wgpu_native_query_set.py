@@ -86,7 +86,7 @@ def test_query_set():
     )
     assert query_set.count == query_count
     assert query_set.type == query_type
-    assert query_set._device == device._internal
+    assert query_set._device == device
     assert query_set.label == query_label
 
     query_buf_size = 8 * query_set.count
