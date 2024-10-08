@@ -536,6 +536,9 @@ def run():
     if already_had_app_on_import:
         return  # Likely in an interactive session or larger application that will start the Qt app.
     app = get_app()
+
+    # todo: we could detect if asyncio is running (interactive session) and wheter we can use QtAsyncio.
+    # But let's wait how things look with new scheduler etc.
     app.exec() if hasattr(app, "exec") else app.exec_()
 
 
