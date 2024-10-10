@@ -112,25 +112,25 @@ def format_code(src, singleline=False):
     """
 
     # Use Ruff to format the line. Ruff does not yet have a Python API, so we use its CLI.
-    tempfilename = os.path.join(tempfile.gettempdir(), "wgpupy_codegen_format.py")
-    with open(tempfilename, "wb") as fp:
+    with tempfile.NamedTemporaryFile(suffix=".py", delete_on_close=False) as fp:
         fp.write(src.encode())
-    line_length = 320 if singleline else 88
-    cmd = [
-        sys.executable,
-        "-m",
-        "ruff",
-        "format",
-        "--line-length",
-        str(line_length),
-        tempfilename,
-    ]
-    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    if p.returncode:
-        raise FormatError(p.stdout.decode(errors="ignore"))
-    with open(tempfilename, "rb") as fp:
-        result = fp.read().decode()
-    os.remove(tempfilename)
+        fp.close()
+
+        line_length = 320 if singleline else 88
+        cmd = [
+            sys.executable,
+            "-m",
+            "ruff",
+            "format",
+            "--line-length",
+            str(line_length),
+            fp.name,
+        ]
+        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        if p.returncode:
+            raise FormatError(p.stdout.decode(errors="ignore"))
+        with open(fp.name, "rb") as fp:
+            result = fp.read().decode()
 
     # Make defs single-line. You'd think that setting the line length
     # to a very high number would do the trick, but it does not.
