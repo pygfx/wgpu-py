@@ -317,7 +317,7 @@ class GPU(classes.GPU):
     def request_adapter_sync(
         self,
         *,
-        power_preference: enums.GPUPowerPreference = None,
+        power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ):
@@ -336,7 +336,7 @@ class GPU(classes.GPU):
     async def request_adapter_async(
         self,
         *,
-        power_preference: enums.GPUPowerPreference = None,
+        power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ):
@@ -1470,7 +1470,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
     ):
         if compilation_hints:
-            for hint in compilation_hints.values():
+            for hint in compilation_hints:
                 check_struct("ShaderModuleCompilationHint", hint)
         if isinstance(code, str):
             looks_like_wgsl = any(
