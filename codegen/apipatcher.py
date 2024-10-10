@@ -3,6 +3,9 @@ The logic to generate/patch the base API from the WebGPU
 spec (IDL), and the backend implementations from the base API.
 """
 
+from collections import defaultdict
+from functools import cache
+
 from codegen.utils import print, format_code, to_snake_case, to_camel_case, Patcher
 from codegen.idlparser import get_idl_parser, Attribute
 from codegen.files import file_cache
@@ -620,6 +623,8 @@ class StructValidationChecker(Patcher):
         all_structs = set()
         ignore_structs = {"Extent3D", "Origin3D"}
 
+        structure_checks = self.get_structure_checks()
+
         for classname, i1, i2 in self.iter_classes():
             if classname not in idl.classes:
                 continue
@@ -639,12 +644,8 @@ class StructValidationChecker(Patcher):
                         method_structs.update(self._get_sub_structs(idl, structname))
                 all_structs.update(method_structs)
                 # Collect structs being checked
-                checked = set()
-                for line in code.splitlines():
-                    line = line.lstrip()
-                    if line.startswith("check_struct("):
-                        name = line.split("(")[1].split(",")[0].strip('"')
-                        checked.add(name)
+                checked = structure_checks[classname, methodname]
+
                 # Test that a matching check is done
                 unchecked = method_structs.difference(checked)
                 unchecked = list(sorted(unchecked.difference(ignore_structs)))
@@ -674,3 +675,43 @@ class StructValidationChecker(Patcher):
             if structname2 in idl.structs:
                 structnames.update(self._get_sub_structs(idl, structname2))
         return structnames
+
+    @staticmethod
+    def get_structure_checks():
+        import ast
+
+        module = ast.parse(file_cache.read("backends/wgpu_native/_api.py"))
+
+        structure_checks = defaultdict(list)
+        method_helper_calls = defaultdict(list)
+        all_methods = []
+
+        for module_item in module.body:
+            # We only care about top level classes and their top level methods.
+            if isinstance(module_item, ast.ClassDef):
+                class_name = module_item.name
+                for class_item in module_item.body:
+                    if isinstance(class_item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        function_name = class_item.name
+                        key = class_name, function_name
+                        all_methods.append(key)
+                        for node in ast.walk(class_item):
+                            if isinstance(node, ast.Call):
+                                name = ast.unparse(node.func)
+                                if name.startswith("self._"):
+                                    method_helper_calls[key].append(
+                                        (class_name, name[5:])
+                                    )
+                                if name == "check_struct":
+                                    if isinstance(node.args[0], ast.Constant):
+                                        struct_name = node.args[0].value
+                                        structure_checks[key].append(struct_name)
+
+        @cache
+        def get_function_checks(key):
+            result = set(structure_checks[key])
+            for method in method_helper_calls[key]:
+                result.update(get_function_checks(method))
+            return sorted(result)
+
+        return {method: get_function_checks(method) for method in all_methods}
