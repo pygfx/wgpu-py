@@ -2181,13 +2181,14 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         if copy:
             data = memoryview(bytearray(src_m)).cast("B")
-            data[:] = src_m
             return data
         else:
-            # Return view on the actually mapped data
-            data = src_m
-            if hasattr(data, "toreadonly"):  # Py 3.8+
-                data = data.toreadonly()
+            # Return view on the actually mapped data.
+            try:
+                data = src_m.toreadonly()
+            except AttributeError:
+                # support for ≤ 3.7.  Do we still care??
+                data = src_m
             self._mapped_memoryviews.append(data)
             return data
 
