@@ -92,7 +92,7 @@ class GPU:
     def request_adapter_sync(
         self,
         *,
-        power_preference: enums.GPUPowerPreference = None,
+        power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ):
@@ -114,7 +114,7 @@ class GPU:
     async def request_adapter_async(
         self,
         *,
-        power_preference: enums.GPUPowerPreference = None,
+        power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ):
@@ -1079,7 +1079,7 @@ class GPUDevice(GPUObjectBase):
             layout (GPUPipelineLayout): The layout for the new pipeline.
             vertex (structs.VertexState): Describes the vertex shader entry point of the
                 pipeline and its input buffer layouts.
-            primitive (structs.PrimitiveState): Describes the the primitive-related properties
+            primitive (structs.PrimitiveState): Describes the primitive-related properties
                 of the pipeline. If `strip_index_format` is present (which means the
                 primitive topology is a strip), and the drawCall is indexed, the
                 vertex index list is split into sub-lists using the maximum value of this
