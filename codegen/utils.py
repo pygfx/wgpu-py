@@ -110,27 +110,32 @@ def format_code(src, singleline=False):
     """Format the given src string. If singleline is True, all function
     signatures become single-line, so they can be parsed and updated.
     """
+    line_length = 320 if singleline else 88
+    cmd = [
+        sys.executable,
+        "-m",
+        "ruff",
+        "format",
+        "--line-length",
+        str(line_length),
+        "--no-cache",
+        "--stdin-filename",
+        "tmp.py",
+    ]
 
-    # Use Ruff to format the line. Ruff does not yet have a Python API, so we use its CLI.
-    with tempfile.NamedTemporaryFile(suffix=".py", delete_on_close=False) as fp:
-        fp.write(src.encode())
-        fp.close()
+    p = subprocess.run(cmd, input=src.encode(), capture_output=True)
 
-        line_length = 320 if singleline else 88
-        cmd = [
-            sys.executable,
-            "-m",
-            "ruff",
-            "format",
-            "--line-length",
-            str(line_length),
-            fp.name,
-        ]
-        p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        if p.returncode:
-            raise FormatError(p.stdout.decode(errors="ignore"))
-        with open(fp.name, "rb") as fp:
-            result = fp.read().decode()
+    if p.returncode:
+        stdout = p.stdout.decode(errors="ignore")
+        stderr = p.stderr.decode(errors="ignore")
+        raise FormatError(
+            f"Could not format source ({p.returncode}).\n\nstdout: "
+            + stdout
+            + "\n\nstderr: "
+            + stderr
+        )
+    else:
+        result = p.stdout.decode(errors="ignore")
 
     # Make defs single-line. You'd think that setting the line length
     # to a very high number would do the trick, but it does not.
