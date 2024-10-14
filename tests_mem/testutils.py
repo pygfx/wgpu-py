@@ -7,7 +7,7 @@ import subprocess
 import psutil
 import wgpu
 from wgpu._diagnostics import int_repr
-
+from wgpu.backends.wgpu_native import GPUDevice, GPUObjectBase
 
 p = psutil.Process()
 
@@ -211,9 +211,17 @@ def create_and_release(create_objects_func):
             assert len(objects) == n_objects
 
             # Test that all objects are of the same class.
-            # (this for-loop is a bit weird, but its to avoid leaking refs to objects)
+            # (this for-loop is a bit weird, but it's to avoid leaking refs to objects)
             cls = objects[0].__class__
             assert all(isinstance(objects[i], cls) for i in range(len(objects)))
+
+            # Test that everything that's a subclass of GPUObjectBase has a device
+            # in its _device field.
+            if issubclass(cls, GPUObjectBase):
+                assert all(
+                    isinstance(objects[i]._device, GPUDevice)
+                    for i in range(len(objects))
+                )
 
             # Test that class matches function name (should prevent a group of copy-paste errors)
             assert ob_name == cls.__name__[3:]
