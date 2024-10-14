@@ -8,15 +8,19 @@ import tempfile
 import subprocess
 
 
-def to_snake_case(name):
+def to_snake_case(name, separator="_"):
     """Convert a name from camelCase to snake_case. Names that already are
     snake_case remain the same.
     """
     name2 = ""
     for c in name:
         c2 = c.lower()
-        if c2 != c and len(name2) > 0 and name2[-1] not in "_123":
-            name2 += "_"
+        if c2 != c and len(name2) > 0:
+            prev = name2[-1]
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
+                name2 += separator
         name2 += c2
     return name2
 
@@ -28,7 +32,7 @@ def to_camel_case(name):
     is_capital = False
     name2 = ""
     for c in name:
-        if c == "_" and name2:
+        if c in "_-" and name2:
             is_capital = True
         elif is_capital:
             name2 += c.upper()
