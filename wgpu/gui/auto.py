@@ -188,4 +188,4 @@ def backends_by_trying_in_order():
 
 # Load!
 module = select_backend()
-WgpuCanvas, run, call_later = module.WgpuCanvas, module.run, module.call_later
+WgpuCanvas, loop = module.WgpuCanvas, module.loop

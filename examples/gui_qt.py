@@ -22,7 +22,10 @@ from triangle import setup_drawing_sync  # noqa: E402
 
 
 app = QtWidgets.QApplication([])
-canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
+canvas = WgpuCanvas(
+    title=f"Triangle example on {WgpuCanvas.__name__}",
+    # present_method="image"
+)
 
 draw_frame = setup_drawing_sync(canvas)
 
@@ -30,7 +33,7 @@ draw_frame = setup_drawing_sync(canvas)
 @canvas.request_draw
 def animate():
     draw_frame()
-    canvas.request_draw()
+    # canvas.request_draw()
 
 
 # Enter Qt event loop (compatible with qt5/qt6)

@@ -11,11 +11,11 @@ import sys
 import time
 import atexit
 import weakref
-import asyncio
 
 import glfw
 
-from .base import WgpuCanvasBase, WgpuAutoGui
+from .base import WgpuCanvasBase
+from .asyncio import AsyncioWgpuLoop
 from ._gui_utils import SYSTEM_IS_WAYLAND, weakbind, logger
 
 
@@ -141,13 +141,13 @@ def get_physical_size(window):
     return int(psize[0]), int(psize[1])
 
 
-class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
+class GlfwWgpuCanvas(WgpuCanvasBase):
     """A glfw window providing a wgpu canvas."""
 
     # See https://www.glfw.org/docs/latest/group__window.html
 
     def __init__(self, *, size=None, title=None, **kwargs):
-        app.init_glfw()
+        loop.init_glfw()
         super().__init__(**kwargs)
 
         # Handle inputs
@@ -163,13 +163,11 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._window = glfw.create_window(int(size[0]), int(size[1]), title, None, None)
 
         # Other internal variables
-        self._need_draw = False
-        self._request_draw_timer_running = False
         self._changing_pixel_ratio = False
         self._is_minimized = False
 
         # Register ourselves
-        app.all_glfw_canvases.add(self)
+        loop.all_glfw_canvases.add(self)
 
         # Register callbacks. We may get notified too often, but that's
         # ok, they'll result in a single draw.
@@ -198,7 +196,6 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._pixel_ratio = -1
         self._screen_size_is_logical = False
         self.set_logical_size(*size)
-        self._request_draw()
 
     # Callbacks to provide a minimal working canvas for wgpu
 
@@ -210,11 +207,11 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             self._set_logical_size(self._logical_size)
         finally:
             self._changing_pixel_ratio = False
-        self._request_draw()
+        self.request_draw()
 
     def _on_size_change(self, *args):
         self._determine_size()
-        self._request_draw()
+        self.request_draw()
 
     def _check_close(self, *args):
         # Follow the close flow that glfw intended.
@@ -224,24 +221,19 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             self._on_close()
 
     def _on_close(self, *args):
-        app.all_glfw_canvases.discard(self)
+        loop.all_glfw_canvases.discard(self)
         if self._window is not None:
             glfw.destroy_window(self._window)  # not just glfw.hide_window
             self._window = None
-            self._handle_event_and_flush({"event_type": "close"})
+            self._events.submit({"event_type": "close"})
 
     def _on_window_dirty(self, *args):
-        self._request_draw()
+        self.request_draw()
 
     def _on_iconify(self, window, iconified):
         self._is_minimized = bool(iconified)
 
     # helpers
-
-    def _mark_ready_for_draw(self):
-        self._request_draw_timer_running = False
-        self._need_draw = True  # The event loop looks at this flag
-        glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
 
     def _determine_size(self):
         if self._window is None:
@@ -262,7 +254,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "height": self._logical_size[1],
             "pixel_ratio": self._pixel_ratio,
         }
-        self._handle_event_and_flush(ev)
+        self._events.submit(ev)
 
     def _set_logical_size(self, new_logical_size):
         if self._window is None:
@@ -302,6 +294,15 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
     # API
 
+    def _get_loop(self):
+        return loop
+
+    def _request_draw(self):
+        self._get_loop().call_soon(self._tick_draw)
+
+    def _force_draw(self):
+        self._tick_draw()
+
     def get_present_info(self):
         return get_glfw_present_info(self._window)
 
@@ -321,11 +322,6 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
     def set_title(self, title):
         glfw.set_window_title(self._window, title)
-
-    def _request_draw(self):
-        if not self._request_draw_timer_running:
-            self._request_draw_timer_running = True
-            call_later(self._get_draw_wait_time(), self._mark_ready_for_draw)
 
     def close(self):
         if self._window is not None:
@@ -376,7 +372,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
         }
 
         # Emit the current event
-        self._handle_event_and_flush(ev)
+        self._events.submit(ev)
 
         # Maybe emit a double-click event
         self._follow_double_click(action, button)
@@ -428,7 +424,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
                 "ntouches": 0,  # glfw does not have touch support
                 "touches": {},
             }
-            self._handle_event_and_flush(ev)
+            self._events.submit(ev)
 
     def _on_cursor_pos(self, window, x, y):
         # Store pointer position in logical coordinates
@@ -448,9 +444,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "touches": {},
         }
 
-        match_keys = {"buttons", "modifiers", "ntouches"}
-        accum_keys = {}
-        self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
+        self._events.submit(ev)
 
     def _on_scroll(self, window, dx, dy):
         # wheel is 1 or -1 in glfw, in jupyter_rfb this is ~100
@@ -463,9 +457,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "buttons": tuple(self._pointer_buttons),
             "modifiers": tuple(self._key_modifiers),
         }
-        match_keys = {"modifiers"}
-        accum_keys = {"dx", "dy"}
-        self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
+        self._events.submit(ev)
 
     def _on_key(self, window, key, scancode, action, mods):
         modifier = KEY_MAP_MOD.get(key, None)
@@ -505,7 +497,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "key": keyname,
             "modifiers": tuple(self._key_modifiers),
         }
-        self._handle_event_and_flush(ev)
+        self._events.submit(ev)
 
     def _on_char(self, window, char):
         # Undocumented char event to make imgui work, see https://github.com/pygfx/wgpu-py/issues/530
@@ -514,7 +506,7 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
             "char_str": chr(char),
             "modifiers": tuple(self._key_modifiers),
         }
-        self._handle_event_and_flush(ev)
+        self._events.submit(ev)
 
     def present_image(self, image, **kwargs):
         raise NotImplementedError()
@@ -527,13 +519,11 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 WgpuCanvas = GlfwWgpuCanvas
 
 
-class AppState:
-    """Little container for state about the loop and glfw."""
-
+class GlfwAsyncioWgpuLoop(AsyncioWgpuLoop):
     def __init__(self):
+        super().__init__()
         self.all_glfw_canvases = weakref.WeakSet()
-        self._loop = None
-        self.stop_if_no_more_canvases = False
+        self.stop_if_no_more_canvases = True
         self._glfw_initialized = False
 
     def init_glfw(self):
@@ -542,59 +532,19 @@ class AppState:
             self._glfw_initialized = True
             atexit.register(glfw.terminate)
 
-    def get_loop(self):
-        if self._loop is None:
-            self._loop = self._get_loop()
-            self._loop.create_task(keep_glfw_alive())
-        return self._loop
-
-    def _get_loop(self):
-        try:
-            return asyncio.get_running_loop()
-        except Exception:
-            pass
-        try:
-            return asyncio.get_event_loop()
-        except RuntimeError:
-            pass
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop
-
-
-app = AppState()
-
-
-def update_glfw_canvasses():
-    """Call this in your glfw event loop to draw each canvas that needs
-    an update. Returns the number of visible canvases.
-    """
-    # Note that _draw_frame_and_present already catches errors, it can
-    # only raise errors if the logging system fails.
-    canvases = tuple(app.all_glfw_canvases)
-    for canvas in canvases:
-        if canvas._need_draw and not canvas._is_minimized:
-            canvas._need_draw = False
-            canvas._draw_frame_and_present()
-    return len(canvases)
-
-
-async def keep_glfw_alive():
-    """Co-routine that lives forever, keeping glfw going.
-
-    Although it stops the event-loop if there are no more canvases (and we're
-    running the loop), this task stays active and continues when the loop is
-    restarted.
-    """
-    # TODO: this is not particularly pretty. It'd be better to use normal asyncio to
-    # schedule draws and then also process events. But let's address when we do #355 / #391
-    while True:
-        await asyncio.sleep(0.001)
+    def poll(self):
+        glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
         glfw.poll_events()
-        n = update_glfw_canvasses()
-        if app.stop_if_no_more_canvases and not n:
-            loop = asyncio.get_running_loop()
-            loop.stop()
+        if self.stop_if_no_more_canvases and not tuple(self.all_glfw_canvases):
+            self.stop()
+
+    def run(self):
+        super().run()
+        poll_glfw_briefly()
+
+
+loop = GlfwAsyncioWgpuLoop()
+# todo: loop or app?
 
 
 def poll_glfw_briefly(poll_time=0.1):
@@ -610,19 +560,3 @@ def poll_glfw_briefly(poll_time=0.1):
     end_time = time.perf_counter() + poll_time
     while time.perf_counter() < end_time:
         glfw.wait_events_timeout(end_time - time.perf_counter())
-
-
-def call_later(delay, callback, *args):
-    loop = app.get_loop()
-    loop.call_later(delay, callback, *args)
-
-
-def run():
-    loop = app.get_loop()
-    if loop.is_running():
-        return  # Interactive mode!
-
-    app.stop_if_no_more_canvases = True
-    loop.run_forever()
-    app.stop_if_no_more_canvases = False
-    poll_glfw_briefly()
