@@ -30,6 +30,13 @@ support for events (interactivity). In the next sections we demonstrates the dif
 canvas classes that you can use.
 
 
+Events
+------
+
+.. autoclass:: WgpuEventType
+    :members:
+
+
 The auto GUI backend
 --------------------
 

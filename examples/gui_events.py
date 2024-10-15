@@ -8,9 +8,9 @@ from wgpu.gui.auto import WgpuCanvas, loop
 canvas = WgpuCanvas(size=(640, 480), title="wgpu events")
 
 
-@canvas.events.add_handler("*")
+@canvas.add_event_handler("*")
 def process_event(event):
-    if event["event_type"] not in ["pointer_move", "before_draw"]:
+    if event["event_type"] not in ["pointer_move", "before_draw", "animate"]:
         print(event)
 
 

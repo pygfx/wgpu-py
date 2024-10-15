@@ -2,8 +2,35 @@ import time
 from collections import defaultdict, deque
 
 from ._gui_utils import log_exception
+from ..enums import Enum
 
-# todo: create an enum with all possible `event_type` values, and check for it in add_handler and submit.
+
+class WgpuEventType(Enum):
+    """The WgpuEventType enum specifies the possible events for a WgpuCanvas.
+
+    This includes the events from the jupyter_rfb event spec (see
+    https://jupyter-rfb.readthedocs.io/en/stable/events.html) plus some
+    wgpu-specific events.
+    """
+
+    # Jupter_rfb spec
+
+    resize = None  #: The canvas has changed size. Has 'width' and 'height' in logical pixels, 'pixel_ratio'.
+    close = None  #: The canvas is closed. No additional fields.
+    pointer_down = None  #: The pointing device is pressed down. Has 'x', 'y', 'button', 'butons', 'modifiers', 'ntouches', 'touches'.
+    pointer_up = None  #: The pointing device is released. Same fields as pointer_down.
+    pointer_move = None  #: The  pointing device is moved. Same fields as pointer_down.
+    double_click = None  #: A double-click / long-tap. This event looks like a pointer event, but without the touches.
+    wheel = None  #: The mouse-wheel is used (scrolling), or the touchpad/touchscreen is scrolled/pinched. Has 'dx', 'dy', 'x', 'y', 'modifiers'.
+    key_down = None  #: A key is pressed down. Has 'key', 'modifiers'.
+    key_up = None  #: A key is released. Has 'key', 'modifiers'.
+
+    # Our extra events
+
+    before_draw = (
+        None  #: Event emitted right before a draw is performed. Has no extra fields.
+    )
+    animate = None  #: Animation event. Has 'step' representing the step size in seconds. This is stable, except when the 'catch_up' field is nonzero.
 
 
 class EventEmitter:
@@ -76,6 +103,8 @@ class EventEmitter:
         for type in types:
             if not isinstance(type, str):
                 raise TypeError(f"Event types must be str, but got {type}")
+            if not (type == "*" or type in WgpuEventType):
+                raise ValueError(f"Adding handler with invalid event_type: '{type}'")
 
         def decorator(_callback):
             for type in types:
@@ -105,6 +134,9 @@ class EventEmitter:
         Events are emitted later by the scheduler.
         """
         event_type = event["event_type"]
+        if event_type not in WgpuEventType:
+            raise ValueError(f"Submitting with invalid event_type: '{event_type}'")
+
         event.setdefault("time_stamp", time.perf_counter())
         event_merge_info = self._EVENTS_THAT_MERGE.get(event_type, None)
 

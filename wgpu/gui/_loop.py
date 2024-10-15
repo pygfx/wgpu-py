@@ -41,7 +41,7 @@ class AnimationScheduler:
     """
     Some ideas:
 
-    * canvas.events.connect("animate", callback)
+    * canvas.add_event_handler("animate", callback)
     * canvas.animate.add_handler(1/30, callback)
     """
 
@@ -232,7 +232,7 @@ class Scheduler:
         animation_iters = 0
         while self._animation_time > time.perf_counter() - step:
             self._animation_time += step
-            self._events.submit({"event_type": "animate", "step": step})
+            self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
             # Do the animations. This costs time.
             self._events.flush()
             # Abort when we cannot keep up

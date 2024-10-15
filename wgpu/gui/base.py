@@ -143,12 +143,8 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def remove_event_handler(self, *args, **kwargs):
         return self._events.remove_handler(*args, **kwargs)
 
-    def submit_event(self, event):
-        return self._event.submit(event)
-
     add_event_handler.__doc__ = EventEmitter.add_handler.__doc__
     remove_event_handler.__doc__ = EventEmitter.remove_handler.__doc__
-    submit_event.__doc__ = EventEmitter.submit.__doc__
 
     # === Scheduling
 
