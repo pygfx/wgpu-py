@@ -1,6 +1,6 @@
 """A Trio-based event loop."""
 
-import trio
+import trio  # noqa
 from .base import WgpuLoop
 
 

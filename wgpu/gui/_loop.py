@@ -1,5 +1,4 @@
 import time
-import asyncio
 
 from ._gui_utils import log_exception
 
@@ -45,10 +44,10 @@ class AnimationScheduler:
     * canvas.animate.add_handler(1/30, callback)
     """
 
-    def iter(self):
-        # Something like this?
-        for scheduler in all_schedulers:
-            scheduler._event_emitter.submit_and_dispatch(event)
+    # def iter(self):
+    #     # Something like this?
+    #     for scheduler in all_schedulers:
+    #         scheduler._event_emitter.submit_and_dispatch(event)
 
 
 # todo: statistics on time spent doing what

@@ -1,9 +1,7 @@
 import sys
-import time
 
-from ._gui_utils import log_exception
 from ._events import EventEmitter
-from ._loop import WgpuLoop, Scheduler
+from ._loop import Scheduler, WgpuLoop  # noqa: F401
 
 
 class WgpuCanvasInterface:

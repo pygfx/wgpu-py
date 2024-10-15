@@ -13,7 +13,6 @@ from ._gui_utils import (
     SYSTEM_IS_WAYLAND,
     get_alt_x11_display,
     get_alt_wayland_display,
-    weakbind,
     get_imported_qt_lib,
 )
 
@@ -540,39 +539,14 @@ class QtWgpuLoop(WgpuLoop):
     def __init__(self):
         super().__init__()
         self._context_for_timer = None
-        self._timers = {}
 
     def init_qt(self):
         _ = self._app
 
-    # class CallbackEventHandler(QtCore.QObject):
-    #
-    #     def __init__(self):
-    #         super().__init__()
-    #         self.queue = dequeu()
-    #
-    #     def customEvent(self, event):
-    #         while True:
-    #             try:
-    #                 callback, args = self.queue.get_nowait()
-    #             except Empty:
-    #                 break
-    #             try:
-    #                 callback(*args)
-    #             except Exception as why:
-    #                 print("callback failed: {}:\n{}".format(callback, why))
-    #
-    #     def postEventWithCallback(self, callback, *args):
-    #         self.queue.put((callback, args))
-    #         QtWidgets.qApp.postEvent(self, QtCore.QEvent(QtCore.QEvent.Type.User))
-
     @property
     def _app(self):
         """Return global instance of Qt app instance or create one if not created yet."""
-        app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
-        if self._context_for_timer is None:
-            self._context_for_timer = QtCore.QObject()
-        return app
+        return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
     def poll(self):
         # todo: can check if loop is running ....
@@ -585,26 +559,11 @@ class QtWgpuLoop(WgpuLoop):
 
     def call_later(self, delay, callback, *args):
         func = callback
+        if args:
+            func = lambda: callback(*args)
 
-        def func():
-            # timer.deleteLater()
-            self._timers.pop(timer_id, None)
-            callback(*args)
-
-        timer = QtCore.QTimer()
-        timer.timeout.connect(func)
-        timer.setSingleShot(True)
-        timer.setTimerType(PreciseTimer)
-        timer.start(int(delay * 1000))
-        timer_id = id(timer)
-        self._timers[timer_id] = timer
-        # print(self._timers)
-        # self._timer = timer
-        # self._timers.append(timer)
-        # self._timers[:-1] = []
-        # QtCore.QTimer.singleShot(
-        #     int(delay * 1000), PreciseTimer, self._context_for_timer, func
-        # )
+        # Would like to use the PreciseTimer flagm but there's no signature that allows that, plus a simple callback func.
+        QtCore.QTimer.singleShot(int(delay * 1000), func)
 
     def run(self):
         if already_had_app_on_import:
