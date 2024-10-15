@@ -170,17 +170,12 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         self.setMouseTracking(True)
         self.setFocusPolicy(FocusPolicy.StrongFocus)
 
-        self._qt_draw_requested = False
-
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
         if self._present_to_screen:
             return None
         else:
             return super().paintEngine()
-
-    # def update(self):
-    #     pass
 
     def paintEvent(self, event):  # noqa: N802 - this is a Qt method
         self._draw_frame_and_present()
@@ -189,12 +184,10 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
 
     def _request_draw(self):
         # Ask Qt to do a paint event
-        self._qt_draw_requested = True
         QtWidgets.QWidget.update(self)
 
     def _force_draw(self):
         # Call the paintEvent right now
-        self._qt_draw_requested = True
         self.repaint()
 
     def _get_loop(self):
@@ -457,10 +450,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self._subwidget = QWgpuWidget(
             self, max_fps=max_fps, present_method=present_method
         )
-
         self._events = self._subwidget._events
-        # self._scheduler._canvas = None
-        # self._scheduler = self._subwidget.scheduler
 
         # Note: At some point we called `self._subwidget.winId()` here. For some
         # reason this was needed to "activate" the canvas. Otherwise the viz was
@@ -475,10 +465,6 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self.show()
 
     # Qt methods
-
-    # def update(self):
-    #     super().update()
-    #     self._subwidget.update()
 
     # Methods that we add from wgpu (snake_case)
 

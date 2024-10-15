@@ -71,7 +71,7 @@ but you can replace ``from wgpu.gui.auto`` with ``from wgpu.gui.glfw`` to force 
     canvas = WgpuCanvas(title="Example")
     canvas.request_draw(your_draw_function)
 
-    loop()
+    loop.run()
 
 
 Support for Qt
