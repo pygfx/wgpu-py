@@ -2180,15 +2180,13 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         src_m = get_memoryview_from_address(src_address, size)
 
         if copy:
-            data = memoryview(bytearray(src_m)).cast("B")
-            return data
+            # Copy the data. The memoryview created above becomes invalid when the buffer
+            # is unmapped. bytearray() makes a copy of the data; memoryview() creates a
+            # view on the bytearray.
+            return memoryview(bytearray(src_m)).cast("B")
         else:
-            # Return view on the actually mapped data.
-            try:
-                data = src_m.toreadonly()
-            except AttributeError:
-                # support for ≤ 3.7.  Do we still care??
-                data = src_m
+            # Return view on the actual mapped data.
+            data = src_m.toreadonly()
             self._mapped_memoryviews.append(data)
             return data
 

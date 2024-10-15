@@ -623,7 +623,7 @@ class StructValidationChecker(Patcher):
         all_structs = set()
         ignore_structs = {"Extent3D", "Origin3D"}
 
-        structure_checks = self.get_structure_checks()
+        structure_checks = self._get_structure_checks()
 
         for classname, i1, i2 in self.iter_classes():
             if classname not in idl.classes:
@@ -677,7 +677,16 @@ class StructValidationChecker(Patcher):
         return structnames
 
     @staticmethod
-    def get_structure_checks():
+    def _get_structure_checks():
+        """
+        Returns a map
+            (class_name, method_name) -> <list of structure names>
+        mapping each top-level method in _api.py to the calls to check_struct made by
+        that method or by any helper methods called by that method.
+
+        For now, the helper function must be methods within the same class.  This code
+        does not yet deal with global functions or with methods in superclasses.
+        """
         module = ast.parse(file_cache.read("backends/wgpu_native/_api.py"))
         # We only care about top-level classes and their top-level methods.
         top_level_methods = {
@@ -701,9 +710,10 @@ class StructValidationChecker(Patcher):
                     if name.startswith("self._"):
                         method_helper_calls[key].append(name[5:])
                     if name == "check_struct":
-                        if isinstance(node.args[0], ast.Constant):
-                            struct_name = node.args[0].value
-                            structure_checks[key].append(struct_name)
+                        assert isinstance(node.args[0], ast.Constant)
+                        struct_name = node.args[0].value
+                        assert isinstance(struct_name, str)
+                        structure_checks[key].append(struct_name)
 
         @cache
         def get_function_checks(class_name, method_name):
