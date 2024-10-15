@@ -522,10 +522,6 @@ WgpuCanvas = QWgpuCanvas
 
 
 class QtWgpuLoop(WgpuLoop):
-    def __init__(self):
-        super().__init__()
-        self._context_for_timer = None
-
     def init_qt(self):
         _ = self._app
 
