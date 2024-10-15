@@ -184,12 +184,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
     #     pass
 
     def paintEvent(self, event):  # noqa: N802 - this is a Qt method
-        self._tick_draw()
-        # if self._qt_draw_requested:
-        #     self._qt_draw_requested = False
-        #     self._tick_draw()
-        # else:
-        #     event.ignore()
+        self._draw_frame_and_present()
 
     # Methods that we add from wgpu (snake_case)
 
@@ -453,7 +448,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         # When using Qt, there needs to be an
         # application before any widget is created
         loop.init_qt()
-        super().__init__(**kwargs, ticking=False)
+        super().__init__(**kwargs, use_scheduler=False)
 
         self.setAttribute(WA_DeleteOnClose, True)
         self.set_logical_size(*(size or (640, 480)))
@@ -464,7 +459,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
             self, max_fps=max_fps, present_method=present_method
         )
 
-        self._events = self._subwidget.events
+        self._events = self._subwidget._events
         # self._scheduler._canvas = None
         # self._scheduler = self._subwidget.scheduler
 

@@ -298,10 +298,10 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         return loop
 
     def _request_draw(self):
-        self._get_loop().call_soon(self._tick_draw)
+        self._get_loop().call_soon(self._draw_frame_and_present)
 
     def _force_draw(self):
-        self._tick_draw()
+        self._draw_frame_and_present()
 
     def get_present_info(self):
         return get_glfw_present_info(self._window)
