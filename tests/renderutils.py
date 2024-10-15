@@ -233,7 +233,7 @@ def render_to_screen(
 ):
     """Render to a window on screen, for debugging purposes."""
     import glfw
-    from wgpu.gui.glfw import WgpuCanvas, update_glfw_canvasses
+    from wgpu.gui.glfw import WgpuCanvas, loop
 
     vbos = vbos or []
     vbo_views = vbo_views or []
@@ -327,6 +327,4 @@ def render_to_screen(
     canvas.request_draw(draw_frame)
 
     # Enter main loop
-    while update_glfw_canvasses():
-        glfw.poll_events()
-    glfw.terminate()
+    loop.run()

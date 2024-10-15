@@ -60,34 +60,28 @@ def test_glfw_canvas_basics():
 
     # Close
     assert not canvas.is_closed()
-    if sys.platform.startswith("win"):  # On Linux we cant do this multiple times
-        canvas.close()
-        glfw.poll_events()
-        assert canvas.is_closed()
+    canvas.close()
+    glfw.poll_events()
+    assert canvas.is_closed()
 
 
 def test_glfw_canvas_del():
-    from wgpu.gui.glfw import WgpuCanvas, update_glfw_canvasses
-    import glfw
+    from wgpu.gui.glfw import WgpuCanvas, loop
 
-    loop = asyncio.get_event_loop()
-
-    async def miniloop():
-        for i in range(10):
-            glfw.poll_events()
-            update_glfw_canvasses()
-            await asyncio.sleep(0.01)
+    def run_briefly():
+        asyncio_loop = loop._loop
+        asyncio_loop.run_until_complete(asyncio.sleep(0.5))
+        # poll_glfw_briefly()
 
     canvas = WgpuCanvas()
     ref = weakref.ref(canvas)
 
     assert ref() is not None
-    loop.run_until_complete(miniloop())
+    run_briefly()
     assert ref() is not None
     del canvas
     if is_pypy:
         gc.collect()  # force garbage collection for pypy
-    loop.run_until_complete(miniloop())
     assert ref() is None
 
 
@@ -110,9 +104,12 @@ def test_glfw_canvas_render():
     """Render an orange square ... in a glfw window."""
 
     import glfw
-    from wgpu.gui.glfw import update_glfw_canvasses, WgpuCanvas
+    from wgpu.gui.glfw import WgpuCanvas, loop
 
-    loop = asyncio.get_event_loop()
+    def run_briefly():
+        asyncio_loop = loop._loop
+        asyncio_loop.run_until_complete(asyncio.sleep(0.5))
+        # poll_glfw_briefly()
 
     canvas = WgpuCanvas(max_fps=9999)
 
@@ -128,22 +125,16 @@ def test_glfw_canvas_render():
 
     canvas.request_draw(draw_frame2)
 
-    # Give it a few rounds to start up
-    async def miniloop():
-        for i in range(10):
-            glfw.poll_events()
-            update_glfw_canvasses()
-            await asyncio.sleep(0.01)
-
-    loop.run_until_complete(miniloop())
+    run_briefly()
     # There should have been exactly one draw now
+    # This assumes ondemand scheduling mode
     assert frame_counter == 1
 
     # Ask for a lot of draws
     for i in range(5):
         canvas.request_draw()
     # Process evens for a while
-    loop.run_until_complete(miniloop())
+    run_briefly()
     # We should have had just one draw
     assert frame_counter == 2
 
@@ -151,7 +142,7 @@ def test_glfw_canvas_render():
     canvas.set_logical_size(300, 200)
     canvas.set_logical_size(400, 300)
     # We should have had just one draw
-    loop.run_until_complete(miniloop())
+    run_briefly()
     assert frame_counter == 3
 
     # canvas.close()

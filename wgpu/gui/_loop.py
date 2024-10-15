@@ -1,4 +1,5 @@
 import time
+import weakref
 
 from ._gui_utils import log_exception
 
@@ -93,19 +94,21 @@ class Scheduler:
     #  schedule             pseuso_tick          pseuso_tick
     #                     + event_tick
 
-    def __init__(self, canvas, *, min_fps=1, max_fps=30):
-        # Objects related to the canvas
-        self._canvas = canvas
+    def __init__(self, canvas, *, mode="ondemand", min_fps=1, max_fps=30):
+        # Objects related to the canvas.
+        # We don't keep a ref to the canvas to help gc. This scheduler object can be
+        # referenced via a callback in an event loop, but it won't prevent the canvas
+        # from being deleted!
+        self._canvas_ref = weakref.ref(canvas)
         self._events = canvas._events
-
-        # The draw function
-        self._draw_frame = lambda: None
+        self._loop = canvas._get_loop()
+        # ... = canvas.get_context() -> No, context creation should be lazy!
 
         # Lock the scheduling while its waiting
         self._waiting_lock = False
 
         # Scheduling variables
-        self._mode = "continuous"
+        self._mode = mode
         self._min_fps = float(min_fps)
         self._max_fps = float(max_fps)
         self._draw_requested = True
@@ -120,11 +123,12 @@ class Scheduler:
 
         # Start by doing the first scheduling.
         # Note that the gui may do a first draw earlier, starting the loop, and that's fine.
-        canvas._get_loop().call_later(0.1, self._schedule_next_tick)
+        self._loop.call_later(0.1, self._schedule_next_tick)
 
-    def set_draw_func(self, draw_frame):
-        """Set the callable that must be called to do a draw."""
-        self._draw_frame = draw_frame
+    def _get_canvas(self):
+        canvas = self._canvas_ref()
+        if not (canvas is None or canvas.is_closed()):
+            return canvas
 
     def request_draw(self):
         """Request a new draw to be done. Only affects the 'ondemand' mode."""
@@ -183,13 +187,17 @@ class Scheduler:
             # Enable scheduling again
             self._waiting_lock = False
 
+            # Get canvas or stop
+            if (canvas := self._get_canvas()) is None:
+                return
+
             if self._mode == "fastest":
                 # fastest: draw continuously as fast as possible, ignoring fps settings.
-                self._canvas._request_draw()
+                canvas._request_draw()
 
             elif self._mode == "continuous":
                 # continuous: draw continuously, aiming for a steady max framerate.
-                self._canvas._request_draw()
+                canvas._request_draw()
 
             elif self._mode == "ondemand":
                 # ondemand: draw when needed (detected by calls to request_draw).
@@ -199,7 +207,7 @@ class Scheduler:
                     time.perf_counter() - self._last_draw_time > 1 / self._min_fps
                 )
                 if self._draw_requested or its_draw_time:
-                    self._canvas._request_draw()
+                    canvas._request_draw()
                 else:
                     self._schedule_next_tick()
 
@@ -211,13 +219,13 @@ class Scheduler:
             else:
                 raise RuntimeError(f"Unexpected scheduling mode: '{self._mode}'")
 
-        self._canvas._get_loop().call_later(delay, pseudo_tick)
+        self._loop.call_later(delay, pseudo_tick)
 
     def event_tick(self):
         """A lightweight tick that processes evets and animations."""
 
         # Get events from the GUI into our event mechanism.
-        self._canvas._get_loop().poll()
+        self._loop.poll()
 
         # Flush our events, so downstream code can update stuff.
         # Maybe that downstream code request a new draw.
@@ -250,7 +258,7 @@ class Scheduler:
 
         # It could be that the canvas is closed now. When that happens,
         # we stop here and do not schedule a new iter.
-        if self._canvas.is_closed():
+        if (canvas := self._get_canvas()) is None:
             return
 
         # Keep ticking
@@ -274,14 +282,15 @@ class Scheduler:
         # Stats (uncomment to see fps)
         count, last_time = self._draw_stats
         fps = count / (time.perf_counter() - last_time)
-        self._canvas.set_title(f"wgpu {fps:0.1f} fps")
+        canvas.set_title(f"wgpu {fps:0.1f} fps")
 
         # Perform the user-defined drawing code. When this errors,
         # we should report the error and then continue, otherwise we crash.
         with log_exception("Draw error"):
-            self._draw_frame()
+            canvas._draw_frame()
         with log_exception("Present error"):
-            context = self._canvas._canvas_context
+            # Note: we use canvas._canvas_context, so that if the draw_frame is a stub we also dont trigger creating a context.
+            # Note: if vsync is used, this call may wait a little (happens down at the level of the driver or OS)
+            context = canvas._canvas_context
             if context:
                 context.present()
-                # Note, if vsync is used, this call may wait a little (happens down at the level of the driver or OS)

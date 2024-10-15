@@ -103,7 +103,6 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def __init__(
         self,
         *args,
-        min_fps=1,
         max_fps=30,
         vsync=True,
         present_method=None,
@@ -114,11 +113,13 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._vsync = bool(vsync)
         present_method  # noqa - We just catch the arg here in case a backend does implement support it
 
+        self._draw_frame = lambda: None
+
         self._events = EventEmitter()
 
         self._scheduler = None
         if use_scheduler:
-            self._scheduler = Scheduler(self, min_fps=min_fps, max_fps=max_fps)
+            self._scheduler = Scheduler(self, max_fps=max_fps)
 
     def __del__(self):
         # On delete, we call the custom close method.
@@ -167,11 +168,15 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         if self._scheduler is None:
             return
         if draw_function is not None:
-            self._scheduler.set_draw_func(draw_function)
+            self._draw_frame = draw_function
         self._scheduler.request_draw()
 
         # todo: maybe requesting a new draw can be done by setting a field in an event?
         # todo: can just make the draw_function a handler for the draw event?
+        # -> Note that the draw func is likely to hold a ref to the canvas. By storing it
+        #   here, the circular ref can be broken. This fails if we'd store _draw_frame on the
+        #   scheduler! So with a draw event, we should provide the context and more info so
+        #   that a draw funcion does not need the canvas object.
 
     def force_draw(self):
         self._force_draw()

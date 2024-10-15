@@ -549,7 +549,8 @@ class QtWgpuLoop(WgpuLoop):
         return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
     def poll(self):
-        self._app.process_events()
+        # todo: make this a private method with a wgpu prefix.
+        pass  # we assume the Qt event loop is running. Calling processEvents() will cause recursive repaints.
 
     def call_later(self, delay, callback, *args):
         func = callback
