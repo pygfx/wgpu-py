@@ -2,8 +2,8 @@ import time
 
 from ._gui_utils import log_exception
 
-# todo: idea: a global loop proxy object that defers to any of the other loops
-# would e.g. allow using glfw with qt together. Probably to weird a use-case for the added complexity.
+# Note: technically, we could have a global loop proxy object that defers to any of the other loops.
+# That would e.g. allow using glfw with qt together. Probably to too weird use-case for the added complexity.
 
 
 class WgpuLoop:
@@ -21,7 +21,7 @@ class WgpuLoop:
         raise NotImplementedError()
 
     def poll(self):
-        """Poll the underlying GUI toolkit for events.
+        """Poll the underlying GUI toolkit for window events.
 
         Some event loops (e.g. asyncio) are just that and dont have a GUI to update.
         """
@@ -48,9 +48,6 @@ class AnimationScheduler:
     #     # Something like this?
     #     for scheduler in all_schedulers:
     #         scheduler._event_emitter.submit_and_dispatch(event)
-
-
-# todo: statistics on time spent doing what
 
 
 class Scheduler:
@@ -218,8 +215,9 @@ class Scheduler:
 
     def event_tick(self):
         """A lightweight tick that processes evets and animations."""
+
         # Get events from the GUI into our event mechanism.
-        self._canvas._get_loop().poll()  # todo: maybe self._process_gui_events()?
+        self._canvas._get_loop().poll()
 
         # Flush our events, so downstream code can update stuff.
         # Maybe that downstream code request a new draw.

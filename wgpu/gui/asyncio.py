@@ -1,5 +1,9 @@
 """Implements an asyncio event loop."""
 
+# This is used for GUI backends that don't have an event loop by themselves, lik glfw.
+# Would be nice to also allow a loop based on e.g. Trio. But we can likely fit that in
+# when the time comes.
+
 import asyncio
 
 from .base import WgpuLoop

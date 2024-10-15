@@ -544,7 +544,6 @@ class GlfwAsyncioWgpuLoop(AsyncioWgpuLoop):
 
 
 loop = GlfwAsyncioWgpuLoop()
-# todo: loop or app?
 
 
 def poll_glfw_briefly(poll_time=0.1):

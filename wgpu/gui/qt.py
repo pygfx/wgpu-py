@@ -549,13 +549,7 @@ class QtWgpuLoop(WgpuLoop):
         return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
     def poll(self):
-        # todo: can check if loop is running ....
-        pass
-        # Don't actually do anything, because we assume that when using a Qt canvas, the qt event loop is running.
-        # If necessary, we can have a different (kind of) call for users and for the scheduler.
-        # app = self._app
-        # app.sendPostedEvents()
-        # app.process_events()
+        self._app.process_events()
 
     def call_later(self, delay, callback, *args):
         func = callback
@@ -566,12 +560,19 @@ class QtWgpuLoop(WgpuLoop):
         QtCore.QTimer.singleShot(int(delay * 1000), func)
 
     def run(self):
+        # Note: we could detect if asyncio is running (interactive session) and wheter
+        # we can use QtAsyncio. However, there's no point because that's up for the
+        # end-user to decide.
+
+        # Note: its possible, and perfectly ok, if the application is started from user
+        # code. This works fine because the application object is global. This means
+        # though, that we cannot assume anything based on whether this method is called
+        # or not.
+
         if already_had_app_on_import:
             return  # Likely in an interactive session or larger application that will start the Qt app.
-        app = self._app
 
-        # todo: we could detect if asyncio is running (interactive session) and wheter we can use QtAsyncio.
-        # But let's wait how things look with new scheduler etc.
+        app = self._app
         app.exec() if hasattr(app, "exec") else app.exec_()
 
     def stop(self):

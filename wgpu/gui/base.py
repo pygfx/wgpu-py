@@ -153,10 +153,11 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def request_draw(self, draw_function=None):
         """Schedule a new draw event.
 
-        This function does not perform a draw directly, but schedules
-        a draw at a suitable moment in time. At that time the
-        draw function is called, and the resulting rendered image
-        is presented to screen.
+        This function does not perform a draw directly, but schedules a draw at
+        a suitable moment in time. At that time the draw function is called, and
+        the resulting rendered image is presented to screen.
+
+        Only affects drawing with schedule-mode 'ondemand'.
 
         Arguments:
             draw_function (callable or None): The function to set as the new draw
@@ -169,27 +170,11 @@ class WgpuCanvasBase(WgpuCanvasInterface):
             self._scheduler.set_draw_func(draw_function)
         self._scheduler.request_draw()
 
-        # We don't call self._request_draw() directly but let the scheduler do that based on the policy
-        # self._scheduler.request_draw()
-        # todo: maybe have set_draw_function() separately
         # todo: maybe requesting a new draw can be done by setting a field in an event?
-        # todo: can we invoke the draw function via a draw event?
-
-        # We can assume that this function is called when we flush events.
-        # So we can also maybe replace this by letting downstream code set a flag on the event object.
-        # In any case, we only really have to do something in ondemand mode; in other modes we draw regardless.
+        # todo: can just make the draw_function a handler for the draw event?
 
     def force_draw(self):
         self._force_draw()
-
-    def _process_input(self):
-        """This should process all GUI events.
-
-        In some GUI systems, like Qt, events are already processed because the
-        Qt event loop is running, so this can be a no-op. In other cases, like
-        glfw, this hook allows glfw to do a tick.
-        """
-        raise NotImplementedError()
 
     def _draw_frame_and_present(self):
         """Draw the frame and present the result.
