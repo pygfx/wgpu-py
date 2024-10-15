@@ -20,18 +20,17 @@ The Canvas base classes
 
     ~WgpuCanvasInterface
     ~WgpuCanvasBase
-    ~WgpuAutoGui
 
 
 For each supported GUI toolkit there is a module that implements a ``WgpuCanvas`` class,
 which inherits from :class:`WgpuCanvasBase`, providing a common API.
-The GLFW, Qt, and Jupyter backends also inherit from  :class:`WgpuAutoGui` to include
-support for events (interactivity). In the next sections we demonstrates the different
-canvas classes that you can use.
 
 
 Events
 ------
+
+To implement interaction with a ``WgpuCanvas``, use the :func:`WgpuCanvasBase.add_event_handler()` method.
+Events come in the following flavours:
 
 .. autoclass:: WgpuEventType
     :members:
@@ -46,22 +45,16 @@ across different machines and environments. Using ``wgpu.gui.auto`` selects a
 suitable backend depending on the environment and more. See
 :ref:`interactive_use` for details.
 
-To implement interaction, the ``canvas`` has a :func:`WgpuAutoGui.handle_event()` method
-that can be overloaded. Alternatively you can use it's :func:`WgpuAutoGui.add_event_handler()`
-method. See the `event spec <https://jupyter-rfb.readthedocs.io/en/stable/events.html>`_
-for details about the event objects.
-
-Also see the `triangle auto <https://github.com/pygfx/wgpu-py/blob/main/examples/triangle_auto.py>`_
-and `cube <https://github.com/pygfx/wgpu-py/blob/main/examples/cube.py>`_ examples that demonstrate the auto gui.
+Also see the e.g. the `gui_auto.py <https://github.com/pygfx/wgpu-py/blob/main/examples/gui_auto.py>`_ example.
 
 .. code-block:: py
 
-    from wgpu.gui.auto import WgpuCanvas, run, call_later
+    from wgpu.gui.auto import WgpuCanvas, loop
 
     canvas = WgpuCanvas(title="Example")
     canvas.request_draw(your_draw_function)
 
-    run()
+    loop.run()
 
 
 Support for GLFW
@@ -73,12 +66,12 @@ but you can replace ``from wgpu.gui.auto`` with ``from wgpu.gui.glfw`` to force 
 
 .. code-block:: py
 
-    from wgpu.gui.glfw import WgpuCanvas, run, call_later
+    from wgpu.gui.glfw import WgpuCanvas, loop
 
     canvas = WgpuCanvas(title="Example")
     canvas.request_draw(your_draw_function)
 
-    run()
+    loop()
 
 
 Support for Qt

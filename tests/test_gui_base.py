@@ -117,11 +117,11 @@ def test_run_bare_canvas():
 
     # This is (more or less) the equivalent of:
     #
-    #     from wgpu.gui.auto import WgpuCanvas, run
+    #     from wgpu.gui.auto import WgpuCanvas, loop
     #     canvas = WgpuCanvas()
-    #     run()
+    #     loop.run()
     #
-    # Note: run() calls _draw_frame_and_present() in event loop.
+    # Note: loop.run() calls _draw_frame_and_present() in event loop.
 
     canvas = MyOffscreenCanvas()
     canvas._draw_frame_and_present()
@@ -208,8 +208,8 @@ def test_offscreen_canvas():
     assert canvas.frame_count == 4
 
 
-def test_autogui_mixin():
-    c = wgpu.gui.WgpuAutoGui()
+def test_canvas_base_events():
+    c = wgpu.gui.WgpuCanvasBase()
 
     # It's a mixin
     assert not isinstance(c, wgpu.gui.WgpuCanvasBase)
