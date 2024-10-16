@@ -18,9 +18,7 @@ Read the codegen/readme.md for more information.
 from __future__ import annotations
 
 import os
-import ctypes
 import logging
-import ctypes.util
 from weakref import WeakKeyDictionary
 from typing import List, Dict, Union, Optional
 
@@ -319,7 +317,7 @@ class GPU(classes.GPU):
     def request_adapter_sync(
         self,
         *,
-        power_preference: enums.GPUPowerPreference = None,
+        power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ):
@@ -338,7 +336,7 @@ class GPU(classes.GPU):
     async def request_adapter_async(
         self,
         *,
-        power_preference: enums.GPUPowerPreference = None,
+        power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ):
@@ -1238,10 +1236,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         c_entries_list = []
         for entry in entries:
             check_struct("BindGroupLayoutEntry", entry)
-            buffer = {}
-            sampler = {}
-            texture = {}
-            storage_texture = {}
+            buffer = sampler = texture = storage_texture = ()
             if "buffer" in entry:  # Note, it might be an empty dictionary
                 info = entry["buffer"]
                 check_struct("BufferBindingLayout", info)
@@ -1475,7 +1470,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
     ):
         if compilation_hints:
-            for hint in compilation_hints.values():
+            for hint in compilation_hints:
                 check_struct("ShaderModuleCompilationHint", hint)
         if isinstance(code, str):
             looks_like_wgsl = any(
@@ -1695,28 +1690,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         check_struct("MultisampleState", multisample)
         check_struct("PrimitiveState", primitive)
 
-        c_vertex_buffer_layout_list = []
-        for buffer_des in vertex.get("buffers", ()):
-            c_attributes_list = []
-            for attribute in buffer_des["attributes"]:
-                # H: format: WGPUVertexFormat, offset: int, shaderLocation: int
-                c_attribute = new_struct(
-                    "WGPUVertexAttribute",
-                    format=attribute["format"],
-                    offset=attribute["offset"],  # this offset is required
-                    shaderLocation=attribute["shader_location"],
-                )
-                c_attributes_list.append(c_attribute)
-            c_attributes_array = ffi.new("WGPUVertexAttribute []", c_attributes_list)
-            # H: arrayStride: int, stepMode: WGPUVertexStepMode, attributeCount: int, attributes: WGPUVertexAttribute *
-            c_vertex_buffer_descriptor = new_struct(
-                "WGPUVertexBufferLayout",
-                arrayStride=buffer_des["array_stride"],
-                stepMode=buffer_des.get("step_mode", "vertex"),
-                attributes=c_attributes_array,
-                attributeCount=len(c_attributes_list),
-            )
-            c_vertex_buffer_layout_list.append(c_vertex_buffer_descriptor)
+        c_vertex_buffer_layout_list = [
+            self._create_vertex_buffer_layout(buffer_des)
+            for buffer_des in vertex.get("buffers", ())
+        ]
         c_vertex_buffer_descriptors_array = ffi.new(
             "WGPUVertexBufferLayout []", c_vertex_buffer_layout_list
         )
@@ -1745,43 +1722,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         c_depth_stencil_state = ffi.NULL
         if depth_stencil:
-            if depth_stencil.get("format", None) is None:
-                raise ValueError("depth_stencil needs format")
-            stencil_front = depth_stencil.get("stencil_front", {})
-            check_struct("StencilFaceState", stencil_front)
-            # H: compare: WGPUCompareFunction, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
-            c_stencil_front = new_struct(
-                "WGPUStencilFaceState",
-                compare=stencil_front.get("compare", "always"),
-                failOp=stencil_front.get("fail_op", "keep"),
-                depthFailOp=stencil_front.get("depth_fail_op", "keep"),
-                passOp=stencil_front.get("pass_op", "keep"),
-            )
-            stencil_back = depth_stencil.get("stencil_back", {})
-            check_struct("StencilFaceState", stencil_back)
-            # H: compare: WGPUCompareFunction, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
-            c_stencil_back = new_struct(
-                "WGPUStencilFaceState",
-                compare=stencil_back.get("compare", "always"),
-                failOp=stencil_back.get("fail_op", "keep"),
-                depthFailOp=stencil_back.get("depth_fail_op", "keep"),
-                passOp=stencil_back.get("pass_op", "keep"),
-            )
-            # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, depthWriteEnabled: WGPUBool/int, depthCompare: WGPUCompareFunction, stencilFront: WGPUStencilFaceState, stencilBack: WGPUStencilFaceState, stencilReadMask: int, stencilWriteMask: int, depthBias: int, depthBiasSlopeScale: float, depthBiasClamp: float
-            c_depth_stencil_state = new_struct_p(
-                "WGPUDepthStencilState *",
-                format=depth_stencil["format"],
-                depthWriteEnabled=bool(depth_stencil.get("depth_write_enabled", False)),
-                depthCompare=depth_stencil.get("depth_compare", "always"),
-                stencilFront=c_stencil_front,
-                stencilBack=c_stencil_back,
-                stencilReadMask=depth_stencil.get("stencil_read_mask", 0xFFFFFFFF),
-                stencilWriteMask=depth_stencil.get("stencil_write_mask", 0xFFFFFFFF),
-                depthBias=depth_stencil.get("depth_bias", 0),
-                depthBiasSlopeScale=depth_stencil.get("depth_bias_slope_scale", 0),
-                depthBiasClamp=depth_stencil.get("depth_bias_clamp", 0),
-                # not used: nextInChain
-            )
+            c_depth_stencil_state = self._create_depth_stencil_state(depth_stencil)
 
         # H: nextInChain: WGPUChainedStruct *, count: int, mask: int, alphaToCoverageEnabled: WGPUBool/int
         c_multisample_state = new_struct(
@@ -1794,39 +1735,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         c_fragment_state = ffi.NULL
         if fragment is not None:
-            c_color_targets_list = []
-            for target in fragment["targets"]:
-                if not target.get("blend", None):
-                    c_blend = ffi.NULL
-                else:
-                    c_alpha_blend, c_color_blend = [
-                        # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
-                        new_struct(
-                            "WGPUBlendComponent",
-                            srcFactor=blend.get("src_factor", "one"),
-                            dstFactor=blend.get("dst_factor", "zero"),
-                            operation=blend.get("operation", "add"),
-                        )
-                        for blend in (
-                            target["blend"]["alpha"],
-                            target["blend"]["color"],
-                        )
-                    ]
-                    # H: color: WGPUBlendComponent, alpha: WGPUBlendComponent
-                    c_blend = new_struct_p(
-                        "WGPUBlendState *",
-                        color=c_color_blend,
-                        alpha=c_alpha_blend,
-                    )
-                # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, blend: WGPUBlendState *, writeMask: WGPUColorWriteMaskFlags/int
-                c_color_state = new_struct(
-                    "WGPUColorTargetState",
-                    format=target["format"],
-                    blend=c_blend,
-                    writeMask=target.get("write_mask", 0xF),
-                    # not used: nextInChain
-                )
-                c_color_targets_list.append(c_color_state)
+            c_color_targets_list = [
+                self._create_color_target_state(target)
+                for target in fragment["targets"]
+            ]
             c_color_targets_array = ffi.new(
                 "WGPUColorTargetState []", c_color_targets_list
             )
@@ -1904,6 +1816,101 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return WgpuAwaitable(
             "create_render_pipeline", awaitable_result, callback, poll_func, finalizer
         )
+
+    def _create_color_target_state(self, target):
+        if not target.get("blend", None):
+            c_blend = ffi.NULL
+        else:
+            c_alpha_blend, c_color_blend = [
+                # H: operation: WGPUBlendOperation, srcFactor: WGPUBlendFactor, dstFactor: WGPUBlendFactor
+                new_struct(
+                    "WGPUBlendComponent",
+                    srcFactor=blend.get("src_factor", "one"),
+                    dstFactor=blend.get("dst_factor", "zero"),
+                    operation=blend.get("operation", "add"),
+                )
+                for blend in (
+                    target["blend"]["alpha"],
+                    target["blend"]["color"],
+                )
+            ]
+            # H: color: WGPUBlendComponent, alpha: WGPUBlendComponent
+            c_blend = new_struct_p(
+                "WGPUBlendState *",
+                color=c_color_blend,
+                alpha=c_alpha_blend,
+            )
+        # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, blend: WGPUBlendState *, writeMask: WGPUColorWriteMaskFlags/int
+        c_color_state = new_struct(
+            "WGPUColorTargetState",
+            format=target["format"],
+            blend=c_blend,
+            writeMask=target.get("write_mask", 0xF),
+            # not used: nextInChain
+        )
+        return c_color_state
+
+    def _create_vertex_buffer_layout(self, buffer_des):
+        c_attributes_list = []
+        for attribute in buffer_des["attributes"]:
+            # H: format: WGPUVertexFormat, offset: int, shaderLocation: int
+            c_attribute = new_struct(
+                "WGPUVertexAttribute",
+                format=attribute["format"],
+                offset=attribute["offset"],  # this offset is required
+                shaderLocation=attribute["shader_location"],
+            )
+            c_attributes_list.append(c_attribute)
+        c_attributes_array = ffi.new("WGPUVertexAttribute []", c_attributes_list)
+        # H: arrayStride: int, stepMode: WGPUVertexStepMode, attributeCount: int, attributes: WGPUVertexAttribute *
+        c_vertex_buffer_descriptor = new_struct(
+            "WGPUVertexBufferLayout",
+            arrayStride=buffer_des["array_stride"],
+            stepMode=buffer_des.get("step_mode", "vertex"),
+            attributes=c_attributes_array,
+            attributeCount=len(c_attributes_list),
+        )
+        return c_vertex_buffer_descriptor
+
+    def _create_depth_stencil_state(self, depth_stencil):
+        if depth_stencil.get("format", None) is None:
+            raise ValueError("depth_stencil needs format")
+        stencil_front = depth_stencil.get("stencil_front", {})
+        check_struct("StencilFaceState", stencil_front)
+        # H: compare: WGPUCompareFunction, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
+        c_stencil_front = new_struct(
+            "WGPUStencilFaceState",
+            compare=stencil_front.get("compare", "always"),
+            failOp=stencil_front.get("fail_op", "keep"),
+            depthFailOp=stencil_front.get("depth_fail_op", "keep"),
+            passOp=stencil_front.get("pass_op", "keep"),
+        )
+        stencil_back = depth_stencil.get("stencil_back", {})
+        check_struct("StencilFaceState", stencil_back)
+        # H: compare: WGPUCompareFunction, failOp: WGPUStencilOperation, depthFailOp: WGPUStencilOperation, passOp: WGPUStencilOperation
+        c_stencil_back = new_struct(
+            "WGPUStencilFaceState",
+            compare=stencil_back.get("compare", "always"),
+            failOp=stencil_back.get("fail_op", "keep"),
+            depthFailOp=stencil_back.get("depth_fail_op", "keep"),
+            passOp=stencil_back.get("pass_op", "keep"),
+        )
+        # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, depthWriteEnabled: WGPUBool/int, depthCompare: WGPUCompareFunction, stencilFront: WGPUStencilFaceState, stencilBack: WGPUStencilFaceState, stencilReadMask: int, stencilWriteMask: int, depthBias: int, depthBiasSlopeScale: float, depthBiasClamp: float
+        c_depth_stencil_state = new_struct_p(
+            "WGPUDepthStencilState *",
+            format=depth_stencil["format"],
+            depthWriteEnabled=bool(depth_stencil.get("depth_write_enabled", False)),
+            depthCompare=depth_stencil.get("depth_compare", "always"),
+            stencilFront=c_stencil_front,
+            stencilBack=c_stencil_back,
+            stencilReadMask=depth_stencil.get("stencil_read_mask", 0xFFFFFFFF),
+            stencilWriteMask=depth_stencil.get("stencil_write_mask", 0xFFFFFFFF),
+            depthBias=depth_stencil.get("depth_bias", 0),
+            depthBiasSlopeScale=depth_stencil.get("depth_bias_slope_scale", 0),
+            depthBiasClamp=depth_stencil.get("depth_bias_clamp", 0),
+            # not used: nextInChain
+        )
+        return c_depth_stencil_state
 
     def create_command_encoder(self, *, label: str = ""):
         # H: nextInChain: WGPUChainedStruct *, label: char *
@@ -2174,15 +2181,12 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         if copy:
             # Copy the data. The memoryview created above becomes invalid when the buffer
-            # is unmapped, so we don't want to pass that memory to the user.
-            data = memoryview((ctypes.c_uint8 * size)()).cast("B")
-            data[:] = src_m
-            return data
+            # is unmapped. bytearray() makes a copy of the data; memoryview() creates a
+            # view on the bytearray.
+            return memoryview(bytearray(src_m)).cast("B")
         else:
-            # Return view on the actually mapped data
-            data = src_m
-            if hasattr(data, "toreadonly"):  # Py 3.8+
-                data = data.toreadonly()
+            # Return view on the actual mapped data.
+            data = src_m.toreadonly()
             self._mapped_memoryviews.append(data)
             return data
 
@@ -2649,44 +2653,12 @@ class GPUCommandEncoder(
 
         objects_to_keep_alive = {}
 
-        c_color_attachments_list = []
-        for color_attachment in color_attachments:
-            check_struct("RenderPassColorAttachment", color_attachment)
-            texture_view = color_attachment["view"]
-            if not isinstance(texture_view, GPUTextureView):
-                raise TypeError("Color attachment view must be a GPUTextureView.")
-            texture_view_id = texture_view._internal
-            objects_to_keep_alive[texture_view_id] = texture_view
-            c_resolve_target = (
-                ffi.NULL
-                if color_attachment.get("resolve_target", None) is None
-                else color_attachment["resolve_target"]._internal
-            )  # this is a TextureViewId or null
-            clear_value = color_attachment.get("clear_value", (0, 0, 0, 0))
-            if isinstance(clear_value, dict):
-                check_struct("Color", clear_value)
-                clear_value = _tuple_from_color(clear_value)
-            # H: r: float, g: float, b: float, a: float
-            c_clear_value = new_struct(
-                "WGPUColor",
-                r=clear_value[0],
-                g=clear_value[1],
-                b=clear_value[2],
-                a=clear_value[3],
+        c_color_attachments_list = [
+            self._create_render_pass_color_attachment(
+                color_attachment, objects_to_keep_alive
             )
-            # H: nextInChain: WGPUChainedStruct *, view: WGPUTextureView, depthSlice: int, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
-            c_attachment = new_struct(
-                "WGPURenderPassColorAttachment",
-                view=texture_view_id,
-                resolveTarget=c_resolve_target,
-                loadOp=color_attachment["load_op"],
-                storeOp=color_attachment["store_op"],
-                clearValue=c_clear_value,
-                depthSlice=lib.WGPU_DEPTH_SLICE_UNDEFINED,  # not implemented yet
-                # not used: resolveTarget
-                # not used: nextInChain
-            )
-            c_color_attachments_list.append(c_attachment)
+            for color_attachment in color_attachments
+        ]
         c_color_attachments_array = ffi.new(
             "WGPURenderPassColorAttachment []", c_color_attachments_list
         )
@@ -2694,10 +2666,8 @@ class GPUCommandEncoder(
         c_depth_stencil_attachment = ffi.NULL
         if depth_stencil_attachment is not None:
             check_struct("RenderPassDepthStencilAttachment", depth_stencil_attachment)
-            c_depth_stencil_attachment = (
-                self._create_c_render_pass_depth_stencil_attachment(
-                    depth_stencil_attachment
-                )
+            c_depth_stencil_attachment = self._create_render_pass_stencil_attachment(
+                depth_stencil_attachment
             )
 
         c_occlusion_query_set = ffi.NULL
@@ -2723,8 +2693,48 @@ class GPUCommandEncoder(
         encoder._objects_to_keep_alive = objects_to_keep_alive
         return encoder
 
+    def _create_render_pass_color_attachment(
+        self, color_attachment, objects_to_keep_alive
+    ):
+        check_struct("RenderPassColorAttachment", color_attachment)
+        texture_view = color_attachment["view"]
+        if not isinstance(texture_view, GPUTextureView):
+            raise TypeError("Color attachment view must be a GPUTextureView.")
+        texture_view_id = texture_view._internal
+        objects_to_keep_alive[texture_view_id] = texture_view
+        c_resolve_target = (
+            ffi.NULL
+            if color_attachment.get("resolve_target", None) is None
+            else color_attachment["resolve_target"]._internal
+        )  # this is a TextureViewId or null
+        clear_value = color_attachment.get("clear_value", (0, 0, 0, 0))
+        if isinstance(clear_value, dict):
+            check_struct("Color", clear_value)
+            clear_value = _tuple_from_color(clear_value)
+        # H: r: float, g: float, b: float, a: float
+        c_clear_value = new_struct(
+            "WGPUColor",
+            r=clear_value[0],
+            g=clear_value[1],
+            b=clear_value[2],
+            a=clear_value[3],
+        )
+        # H: nextInChain: WGPUChainedStruct *, view: WGPUTextureView, depthSlice: int, resolveTarget: WGPUTextureView, loadOp: WGPULoadOp, storeOp: WGPUStoreOp, clearValue: WGPUColor
+        c_attachment = new_struct(
+            "WGPURenderPassColorAttachment",
+            view=texture_view_id,
+            resolveTarget=c_resolve_target,
+            loadOp=color_attachment["load_op"],
+            storeOp=color_attachment["store_op"],
+            clearValue=c_clear_value,
+            depthSlice=lib.WGPU_DEPTH_SLICE_UNDEFINED,  # not implemented yet
+            # not used: resolveTarget
+            # not used: nextInChain
+        )
+        return c_attachment
+
     # Pulled out from create_render_pass because it was too large.
-    def _create_c_render_pass_depth_stencil_attachment(self, ds_attachment):
+    def _create_render_pass_stencil_attachment(self, ds_attachment):
         view = ds_attachment["view"]
         depth_read_only = stencil_read_only = False
         depth_load_op = depth_store_op = stencil_load_op = stencil_store_op = 0
@@ -3525,7 +3535,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # and Numpy is not a dependency.
         if extra_stride or ori_offset:
             data_length2 = ori_stride * size[1] * size[2] + ori_offset
-            data2 = memoryview((ctypes.c_uint8 * data_length2)()).cast(data.format)
+            data2 = memoryview(bytearray(data_length2)).cast(data.format)
             for i in range(size[1] * size[2]):
                 row = data[i * full_stride : i * full_stride + ori_stride]
                 i_start = ori_offset + i * ori_stride
