@@ -13,10 +13,7 @@ class WgpuCanvasInterface:
     In most cases it's more convenient to subclass :class:`WgpuCanvasBase <wgpu.gui.WgpuCanvasBase>`.
     """
 
-    def __init__(self, *args, **kwargs):
-        # The args/kwargs are there because we may be mixed with e.g. a Qt widget
-        super().__init__(*args, **kwargs)
-        self._canvas_context = None
+    _canvas_context = None  # set in get_context()
 
     def get_present_info(self):
         """Get information about the surface to render to.
