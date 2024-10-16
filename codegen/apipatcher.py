@@ -3,10 +3,13 @@ The logic to generate/patch the base API from the WebGPU
 spec (IDL), and the backend implementations from the base API.
 """
 
-from codegen.utils import print, format_code, to_snake_case, to_camel_case, Patcher
-from codegen.idlparser import get_idl_parser, Attribute
-from codegen.files import file_cache
+import ast
+from collections import defaultdict
+from functools import cache
 
+from codegen.files import file_cache
+from codegen.idlparser import Attribute, get_idl_parser
+from codegen.utils import Patcher, format_code, print, to_camel_case, to_snake_case
 
 # In wgpu-py, we make some args optional, that are not optional in the
 # IDL. Reasons may be because it makes sense to be able to omit them,
@@ -620,6 +623,8 @@ class StructValidationChecker(Patcher):
         all_structs = set()
         ignore_structs = {"Extent3D", "Origin3D"}
 
+        structure_checks = self._get_structure_checks()
+
         for classname, i1, i2 in self.iter_classes():
             if classname not in idl.classes:
                 continue
@@ -639,12 +644,8 @@ class StructValidationChecker(Patcher):
                         method_structs.update(self._get_sub_structs(idl, structname))
                 all_structs.update(method_structs)
                 # Collect structs being checked
-                checked = set()
-                for line in code.splitlines():
-                    line = line.lstrip()
-                    if line.startswith("check_struct("):
-                        name = line.split("(")[1].split(",")[0].strip('"')
-                        checked.add(name)
+                checked = structure_checks[classname, methodname]
+
                 # Test that a matching check is done
                 unchecked = method_structs.difference(checked)
                 unchecked = list(sorted(unchecked.difference(ignore_structs)))
@@ -674,3 +675,51 @@ class StructValidationChecker(Patcher):
             if structname2 in idl.structs:
                 structnames.update(self._get_sub_structs(idl, structname2))
         return structnames
+
+    @staticmethod
+    def _get_structure_checks():
+        """
+        Returns a map
+            (class_name, method_name) -> <list of structure names>
+        mapping each top-level method in _api.py to the calls to check_struct made by
+        that method or by any helper methods called by that method.
+
+        For now, the helper function must be methods within the same class.  This code
+        does not yet deal with global functions or with methods in superclasses.
+        """
+        module = ast.parse(file_cache.read("backends/wgpu_native/_api.py"))
+        # We only care about top-level classes and their top-level methods.
+        top_level_methods = {
+            # (class_name, method_name) -> method_ast
+            (class_ast.name, method_ast.name): method_ast
+            for class_ast in module.body
+            if isinstance(class_ast, ast.ClassDef)
+            for method_ast in class_ast.body
+            if isinstance(method_ast, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        # (class_name, method_name) -> list of helper methods
+        method_helper_calls = defaultdict(list)
+        # (class_name, method_name) -> list of structures checked
+        structure_checks = defaultdict(list)
+
+        for key, method_ast in top_level_methods.items():
+            for node in ast.walk(method_ast):
+                if isinstance(node, ast.Call):
+                    name = ast.unparse(node.func)
+                    if name.startswith("self._"):
+                        method_helper_calls[key].append(name[5:])
+                    if name == "check_struct":
+                        assert isinstance(node.args[0], ast.Constant)
+                        struct_name = node.args[0].value
+                        assert isinstance(struct_name, str)
+                        structure_checks[key].append(struct_name)
+
+        @cache
+        def get_function_checks(class_name, method_name):
+            result = set(structure_checks[class_name, method_name])
+            for helper_method_name in method_helper_calls[class_name, method_name]:
+                result.update(get_function_checks(class_name, helper_method_name))
+            return sorted(result)
+
+        return {key: get_function_checks(*key) for key in top_level_methods.keys()}
