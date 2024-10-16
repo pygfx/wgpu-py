@@ -218,13 +218,6 @@ class GPUCanvasContext:
         self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
 
-        # The configuration from the canvas, obtained with canvas.get_present_info()
-        self._present_info = canvas.get_present_info()
-        if self._present_info.get("method", None) not in ("screen", "image"):
-            raise RuntimeError(
-                "canvas.get_present_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
-            )
-
         # Surface capabilities. Stored the first time it is obtained
         self._capabilities = None
 
@@ -233,6 +226,14 @@ class GPUCanvasContext:
 
         # The last used texture
         self._texture = None
+
+        # The configuration from the canvas, obtained with canvas.get_present_info()
+        # The configuration from the canvas, obtained with canvas.get_present_info()
+        self._present_info = canvas.get_present_info()
+        if self._present_info.get("method", None) not in ("screen", "image"):
+            raise RuntimeError(
+                "canvas.get_present_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
+            )
 
     def _get_canvas(self):
         """Getter method for internal use."""
