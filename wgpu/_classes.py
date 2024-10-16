@@ -228,7 +228,6 @@ class GPUCanvasContext:
         self._texture = None
 
         # The configuration from the canvas, obtained with canvas.get_present_info()
-        # The configuration from the canvas, obtained with canvas.get_present_info()
         self._present_info = canvas.get_present_info()
         if self._present_info.get("method", None) not in ("screen", "image"):
             raise RuntimeError(
