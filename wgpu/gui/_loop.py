@@ -130,7 +130,10 @@ class Scheduler:
 
     def _get_canvas(self):
         canvas = self._canvas_ref()
-        if not (canvas is None or canvas.is_closed()):
+        if canvas is None or canvas.is_closed():
+            self._events._wgpu_close()
+            return None
+        else:
             return canvas
 
     def request_draw(self):

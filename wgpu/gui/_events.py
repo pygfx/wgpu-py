@@ -25,6 +25,9 @@ class WgpuEventType(Enum):
     key_down = None  #: A key is pressed down. Has 'key', 'modifiers'.
     key_up = None  #: A key is released. Has 'key', 'modifiers'.
 
+    # Pending for the spec, may become part of key_down/key_up
+    char = None  #: Experimental
+
     # Our extra events
 
     before_draw = (
@@ -57,6 +60,7 @@ class EventEmitter:
     def __init__(self):
         self._pending_events = deque()
         self._event_handlers = defaultdict(list)
+        self._closed = False
 
     def add_handler(self, *args, order=0):
         """Register an event handler to receive events.
@@ -146,6 +150,8 @@ class EventEmitter:
         event_type = event["event_type"]
         if event_type not in WgpuEventType:
             raise ValueError(f"Submitting with invalid event_type: '{event_type}'")
+        if event_type == "close":
+            self._closed = True
 
         event.setdefault("time_stamp", time.perf_counter())
         event_merge_info = self._EVENTS_THAT_MERGE.get(event_type, None)
@@ -187,3 +193,10 @@ class EventEmitter:
                     break
                 with log_exception(f"Error during handling {event_type} event"):
                     callback(event)
+
+    def _wgpu_close(self):
+        """Wrap up when the scheduler detects the canvas is closed/dead."""
+        # This is a little feature because detecting a widget from closing can be tricky.
+        if not self._closed:
+            self.submit({"event_type": "close"})
+        self.flush()

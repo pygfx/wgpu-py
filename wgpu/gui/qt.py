@@ -4,6 +4,7 @@ can be used as a standalone window or in a larger GUI.
 """
 
 import sys
+import time
 import ctypes
 import importlib
 
@@ -466,6 +467,9 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
 
     # Qt methods
 
+    def closeEvent(self, event):  # noqa: N802
+        self.submit_event({"event_type": "close"})
+
     # Methods that we add from wgpu (snake_case)
 
     def _request_draw(self):
@@ -475,7 +479,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self._subwidget._force_draw()
 
     def _get_loop(self):
-        return loop
+        return None  # This means this outer widget won't have a scheduler
 
     def get_present_info(self):
         return self._subwidget.get_present_info()
@@ -498,7 +502,6 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self._subwidget.set_title(title)
 
     def close(self):
-        self._subwidget.close()
         QtWidgets.QWidget.close(self)
 
     def is_closed(self):
@@ -524,6 +527,7 @@ WgpuCanvas = QWgpuCanvas
 class QtWgpuLoop(WgpuLoop):
     def init_qt(self):
         _ = self._app
+        self._latest_timeout = 0
 
     @property
     def _app(self):
@@ -542,6 +546,9 @@ class QtWgpuLoop(WgpuLoop):
         # Would like to use the PreciseTimer flagm but there's no signature that allows that, plus a simple callback func.
         QtCore.QTimer.singleShot(int(delay * 1000), func)
 
+        # Store timeout
+        self._latest_timeout = max(self._latest_timeout, time.perf_counter() + delay)
+
     def run(self):
         # Note: we could detect if asyncio is running (interactive session) and wheter
         # we can use QtAsyncio. However, there's no point because that's up for the
@@ -557,6 +564,14 @@ class QtWgpuLoop(WgpuLoop):
 
         app = self._app
         app.exec() if hasattr(app, "exec") else app.exec_()
+
+        # When the loop ends because the last window is closed, the close event may not
+        # be processed yet. Give it some time, so we get consistent close events.
+        # Note that this only works when the user code called this run() method.
+        end_time = min(time.perf_counter() + 2, self._latest_timeout)
+        end_time = max(time.perf_counter(), end_time) + 0.1
+        while time.perf_counter() < end_time:
+            app.processEvents()
 
     def stop(self):
         self._app.quit()
