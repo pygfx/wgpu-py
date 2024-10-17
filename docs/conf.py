@@ -109,7 +109,11 @@ for module, hide_class_signature in [(wgpu.classes, True), (wgpu.gui, False)]:
         cls.__doc__ = docs or None
         # Docstring of methods
         for method in cls.__dict__.values():
-            if callable(method) and hasattr(method, "__code__"):
+            if (
+                callable(method)
+                and hasattr(method, "__code__")
+                and not method.__name__.startswith("_")
+            ):
                 docs = resolve_crossrefs(method.__doc__)
                 if (
                     method.__code__.co_argcount == 1

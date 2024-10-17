@@ -1,9 +1,9 @@
 import time
 
-from .base import WgpuCanvasBase, WgpuAutoGui
+from .base import WgpuCanvasBase, WgpuLoop
 
 
-class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuCanvasBase):
+class WgpuManualOffscreenCanvas(WgpuCanvasBase):
     """An offscreen canvas intended for manual use.
 
     Call the ``.draw()`` method to perform a draw and get the result.
@@ -49,9 +49,15 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuCanvasBase):
     def is_closed(self):
         return self._closed
 
+    def _get_loop(self):
+        return loop
+
     def _request_draw(self):
         # Deliberately a no-op, because people use .draw() instead.
         pass
+
+    def _force_draw(self):
+        self._draw_frame_and_present()
 
     def draw(self):
         """Perform a draw and get the resulting image.
@@ -60,40 +66,47 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuCanvasBase):
         This object can be converted to a numpy array (without copying data)
         using ``np.asarray(arr)``.
         """
-        self._draw_frame_and_present()
+        self._force_draw()
         return self._last_image
 
 
 WgpuCanvas = WgpuManualOffscreenCanvas
 
 
-# If we consider the use-cases for using this offscreen canvas:
-#
-# * Using wgpu.gui.auto in test-mode: in this case run() should not hang,
-#   and call_later should not cause lingering refs.
-# * Using the offscreen canvas directly, in a script: in this case you
-#   do not have/want an event system.
-# * Using the offscreen canvas in an evented app. In that case you already
-#   have an app with a specific event-loop (it might be PySide6 or
-#   something else entirely).
-#
-# In summary, we provide a call_later() and run() that behave pretty
-# well for the first case.
+class StubLoop(WgpuLoop):
+    # If we consider the use-cases for using this offscreen canvas:
+    #
+    # * Using wgpu.gui.auto in test-mode: in this case run() should not hang,
+    #   and call_later should not cause lingering refs.
+    # * Using the offscreen canvas directly, in a script: in this case you
+    #   do not have/want an event system.
+    # * Using the offscreen canvas in an evented app. In that case you already
+    #   have an app with a specific event-loop (it might be PySide6 or
+    #   something else entirely).
+    #
+    # In summary, we provide a call_later() and run() that behave pretty
+    # well for the first case.
 
-_pending_calls = []
+    def __init__(self):
+        super().__init__()
+        self._pending_calls = []
+
+    def call_later(self, delay, callback, *args):
+        # Note that this module never calls call_later() itself; request_draw() is a no-op.
+        etime = time.time() + delay
+        self._pending_calls.append((etime, callback, args))
+
+    def run(self):
+        # Process pending calls
+        for etime, callback, args in self._pending_calls.copy():
+            if time.time() >= etime:
+                callback(*args)
+
+        # Clear any leftover scheduled calls, to avoid lingering refs.
+        self._pending_calls.clear()
+
+    def stop(self):
+        pass
 
 
-def call_later(delay, callback, *args):
-    # Note that this module never calls call_later() itself; request_draw() is a no-op.
-    etime = time.time() + delay
-    _pending_calls.append((etime, callback, args))
-
-
-def run():
-    # Process pending calls
-    for etime, callback, args in _pending_calls.copy():
-        if time.time() >= etime:
-            callback(*args)
-
-    # Clear any leftover scheduled calls, to avoid lingering refs.
-    _pending_calls.clear()
+loop = StubLoop()

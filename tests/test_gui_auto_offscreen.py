@@ -32,14 +32,13 @@ def test_canvas_class():
 
     assert WgpuCanvas is WgpuManualOffscreenCanvas
     assert issubclass(WgpuCanvas, wgpu.gui.WgpuCanvasBase)
-    assert issubclass(WgpuCanvas, wgpu.gui.WgpuAutoGui)
 
 
 def test_event_loop():
     """Check that the event loop handles queued tasks and then returns."""
     # Note: if this test fails, it may run forever, so it's a good idea to have a timeout on the CI job or something
 
-    from wgpu.gui.auto import run, call_later
+    from wgpu.gui.auto import loop
 
     ran = False
 
@@ -47,8 +46,8 @@ def test_event_loop():
         nonlocal ran
         ran = True
 
-    call_later(0, check)
-    run()
+    loop.call_later(0, check)
+    loop.run()
 
     assert ran
 

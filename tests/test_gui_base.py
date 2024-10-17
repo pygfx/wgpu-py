@@ -117,11 +117,11 @@ def test_run_bare_canvas():
 
     # This is (more or less) the equivalent of:
     #
-    #     from wgpu.gui.auto import WgpuCanvas, run
+    #     from wgpu.gui.auto import WgpuCanvas, loop
     #     canvas = WgpuCanvas()
-    #     run()
+    #     loop.run()
     #
-    # Note: run() calls _draw_frame_and_present() in event loop.
+    # Note: loop.run() calls _draw_frame_and_present() in event loop.
 
     canvas = MyOffscreenCanvas()
     canvas._draw_frame_and_present()
@@ -208,11 +208,8 @@ def test_offscreen_canvas():
     assert canvas.frame_count == 4
 
 
-def test_autogui_mixin():
-    c = wgpu.gui.WgpuAutoGui()
-
-    # It's a mixin
-    assert not isinstance(c, wgpu.gui.WgpuCanvasBase)
+def test_canvas_base_events():
+    c = wgpu.gui.WgpuCanvasBase()
 
     # It's event handling mechanism should be fully functional
 
@@ -221,20 +218,13 @@ def test_autogui_mixin():
     def handler(event):
         events.append(event["value"])
 
-    c.add_event_handler(handler, "foo", "bar")
-    c.handle_event({"event_type": "foo", "value": 1})
-    c.handle_event({"event_type": "bar", "value": 2})
-    c.handle_event({"event_type": "spam", "value": 3})
-    c.remove_event_handler(handler, "foo")
-    c.handle_event({"event_type": "foo", "value": 4})
-    c.handle_event({"event_type": "bar", "value": 5})
-    c.handle_event({"event_type": "spam", "value": 6})
-    c.remove_event_handler(handler, "bar")
-    c.handle_event({"event_type": "foo", "value": 7})
-    c.handle_event({"event_type": "bar", "value": 8})
-    c.handle_event({"event_type": "spam", "value": 9})
+    c.add_event_handler(handler, "resize")
+    c.submit_event({"event_type": "resize", "value": 1})
+    c.submit_event({"event_type": "resize", "value": 2})
+    c.remove_event_handler(handler)
+    c.submit_event({"event_type": "resize", "value": 3})
 
-    assert events == [1, 2, 5]
+    assert events == [1, 2]
 
 
 def test_weakbind():

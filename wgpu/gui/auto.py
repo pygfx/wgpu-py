@@ -5,7 +5,7 @@ Right now we only chose between GLFW, Qt and Jupyter. We might add support
 for e.g. wx later. Or we might decide to stick with these three.
 """
 
-__all__ = ["WgpuCanvas", "run", "call_later"]
+__all__ = ["WgpuCanvas", "loop"]
 
 import os
 import sys
@@ -13,7 +13,7 @@ import importlib
 from ._gui_utils import logger, QT_MODULE_NAMES, get_imported_qt_lib, asyncio_is_running
 
 
-# Note that wx is not in here, because it does not (yet) implement base.WgpuAutoGui
+# Note that wx is not in here, because it does not (yet) fully implement base.WgpuCanvasBase
 WGPU_GUI_BACKEND_NAMES = ["glfw", "qt", "jupyter", "offscreen"]
 
 
@@ -188,4 +188,4 @@ def backends_by_trying_in_order():
 
 # Load!
 module = select_backend()
-WgpuCanvas, run, call_later = module.WgpuCanvas, module.run, module.call_later
+WgpuCanvas, loop = module.WgpuCanvas, module.loop
