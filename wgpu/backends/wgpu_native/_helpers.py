@@ -188,7 +188,7 @@ def get_surface_id_from_info(present_info):
     return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
 
 
-# The functions below are copied from codegen/utils.py
+# The functions below are copied from codegen/utils.py - let's keep these in sync!
 
 
 def to_snake_case(name, separator="_"):
@@ -200,7 +200,9 @@ def to_snake_case(name, separator="_"):
         c2 = c.lower()
         if c2 != c and len(name2) > 0:
             prev = name2[-1]
-            if prev not in "123" and prev != separator:
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
                 name2 += separator
         name2 += c2
     return name2
@@ -213,7 +215,7 @@ def to_camel_case(name):
     is_capital = False
     name2 = ""
     for c in name:
-        if c == "_" and name2:
+        if c in "_-" and name2:
             is_capital = True
         elif is_capital:
             name2 += c.upper()

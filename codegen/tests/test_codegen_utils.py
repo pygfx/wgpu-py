@@ -22,7 +22,8 @@ def test_to_snake_case():
     assert to_snake_case("_foo_bar_spam") == "_foo_bar_spam"
     assert to_snake_case("fooBarSpam") == "foo_bar_spam"
     assert to_snake_case("_fooBarSpam") == "_foo_bar_spam"
-    assert to_snake_case("maxTextureDimension1D") == "max_texture_dimension1d"
+    assert to_snake_case("maxTextureDimension1D") == "max_texture_dimension_1d"
+    assert to_snake_case("max_texture_dimension_1d") == "max_texture_dimension_1d"
 
 
 def test_to_camel_case():
@@ -30,7 +31,11 @@ def test_to_camel_case():
     assert to_camel_case("_foo_bar_spam") == "_fooBarSpam"
     assert to_camel_case("fooBarSpam") == "fooBarSpam"
     assert to_camel_case("_fooBarSpam") == "_fooBarSpam"
+    assert to_camel_case("max_texture_dimension_1d") == "maxTextureDimension1D"
     assert to_camel_case("max_texture_dimension1d") == "maxTextureDimension1D"
+    assert to_camel_case("max-texture-dimension1d") == "maxTextureDimension1D"
+    assert to_camel_case("max-texture-dimension-1d") == "maxTextureDimension1D"
+    assert to_camel_case("maxTextureDimension1D") == "maxTextureDimension1D"
 
 
 def test_remove_c_comments():
