@@ -117,7 +117,7 @@ jobs:
     - name: Install llvmpipe and lavapipe for offscreen canvas
       run: |
         sudo apt-get update -y -qq
-        sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
+        sudo apt install -y libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
@@ -143,12 +143,13 @@ jobs:
     - name: Install dependencies
       run: |
           python -m pip install --upgrade pip
-          pip install -U -e .
+          pip install -U .
           pip install -U pytest numpy psutil pyinstaller glfw
     - name: Test PyInstaller
       run: |
+          pushd $HOME
           pyinstaller --version
-          pytest -v wgpu/__pyinstaller
+          pytest -v --pyargs wgpu.__pyinstaller
 
   test-builds:
     name: ${{ matrix.name }}
@@ -173,6 +174,9 @@ jobs:
           - name: Test Linux py312
             os: ubuntu-latest
             pyversion: '3.12'
+          - name: Test Linux py313
+            os: ubuntu-latest
+            pyversion: '3.13'
           - name: Test Linux pypy3
             os: ubuntu-latest
             pyversion: 'pypy3.9'
@@ -186,11 +190,12 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update -y -qq
-        sudo apt install -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
+        sudo apt install -y libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
     - name: Install dev dependencies
       run: |
           python -m pip install --upgrade pip
           pip install -U -e .[tests]
+          python -c "import wgpu; print(wgpu.__version__)"
     - name: Unit tests
       run: |
           pytest -v tests

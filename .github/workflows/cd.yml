@@ -92,6 +92,7 @@ jobs:
           # Install sdist, but no test, because there is no wgpu-native lib now.
           filename=$(ls dist/*.tar.gz)
           pip install $filename
+          python -c "import wgpu; print(wgpu.__version__)"
           pip uninstall -y wgpu
           git reset --hard HEAD
 

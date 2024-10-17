@@ -8,15 +8,19 @@ import tempfile
 import subprocess
 
 
-def to_snake_case(name):
+def to_snake_case(name, separator="_"):
     """Convert a name from camelCase to snake_case. Names that already are
     snake_case remain the same.
     """
     name2 = ""
     for c in name:
         c2 = c.lower()
-        if c2 != c and len(name2) > 0 and name2[-1] not in "_123":
-            name2 += "_"
+        if c2 != c and len(name2) > 0:
+            prev = name2[-1]
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
+                name2 += separator
         name2 += c2
     return name2
 
@@ -28,7 +32,7 @@ def to_camel_case(name):
     is_capital = False
     name2 = ""
     for c in name:
-        if c == "_" and name2:
+        if c in "_-" and name2:
             is_capital = True
         elif is_capital:
             name2 += c.upper()
@@ -110,11 +114,6 @@ def format_code(src, singleline=False):
     """Format the given src string. If singleline is True, all function
     signatures become single-line, so they can be parsed and updated.
     """
-
-    # Use Ruff to format the line. Ruff does not yet have a Python API, so we use its CLI.
-    tempfilename = os.path.join(tempfile.gettempdir(), "wgpupy_codegen_format.py")
-    with open(tempfilename, "wb") as fp:
-        fp.write(src.encode())
     line_length = 320 if singleline else 88
     cmd = [
         sys.executable,
@@ -123,14 +122,24 @@ def format_code(src, singleline=False):
         "format",
         "--line-length",
         str(line_length),
-        tempfilename,
+        "--no-cache",
+        "--stdin-filename",
+        "tmp.py",
     ]
-    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    p = subprocess.run(cmd, input=src.encode(), capture_output=True)
+
     if p.returncode:
-        raise FormatError(p.stdout.decode(errors="ignore"))
-    with open(tempfilename, "rb") as fp:
-        result = fp.read().decode()
-    os.remove(tempfilename)
+        stdout = p.stdout.decode(errors="ignore")
+        stderr = p.stderr.decode(errors="ignore")
+        raise FormatError(
+            f"Could not format source ({p.returncode}).\n\nstdout: "
+            + stdout
+            + "\n\nstderr: "
+            + stderr
+        )
+    else:
+        result = p.stdout.decode(errors="ignore")
 
     # Make defs single-line. You'd think that setting the line length
     # to a very high number would do the trick, but it does not.
