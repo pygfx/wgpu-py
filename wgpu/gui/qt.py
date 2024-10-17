@@ -188,8 +188,16 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         QtWidgets.QWidget.update(self)
 
     def _force_draw(self):
-        # Call the paintEvent right now
+        # Call the paintEvent right now.
+        # * When drawing to the screen, directly calling _draw_frame_and_present()
+        #   actually works, but let's play as nice as we can be.
+        # * When drawing via the image, calling repaint() is not enough, we also need to
+        #   call processEvents(). Note that this may also process our scheduler's
+        #   call_later(), and process more of our events, and maybe even another call to
+        #   this method, if the user was not careful.
         self.repaint()
+        if not self._present_to_screen:
+            loop._app.processEvents()
 
     def _get_loop(self):
         return loop
