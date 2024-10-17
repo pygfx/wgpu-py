@@ -115,7 +115,7 @@ class JupyterAsyncioWgpuLoop(AsyncioWgpuLoop):
         super().__init__()
         self._pending_jupyter_canvases = []
 
-    def poll(self):
+    def _wgpu_gui_poll(self):
         pass  # Jupyter is running in a separate process :)
 
     def run(self):

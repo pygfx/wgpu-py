@@ -532,7 +532,7 @@ class GlfwAsyncioWgpuLoop(AsyncioWgpuLoop):
             self._glfw_initialized = True
             atexit.register(glfw.terminate)
 
-    def poll(self):
+    def _wgpu_gui_poll(self):
         glfw.post_empty_event()  # Awake the event loop, if it's in wait-mode
         glfw.poll_events()
         if self.stop_if_no_more_canvases and not tuple(self.all_glfw_canvases):

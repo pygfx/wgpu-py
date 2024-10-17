@@ -530,7 +530,7 @@ class QtWgpuLoop(WgpuLoop):
         """Return global instance of Qt app instance or create one if not created yet."""
         return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
-    def poll(self):
+    def _wgpu_gui_poll(self):
         # todo: make this a private method with a wgpu prefix.
         pass  # we assume the Qt event loop is running. Calling processEvents() will cause recursive repaints.
 

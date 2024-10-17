@@ -48,6 +48,10 @@ class EventEmitter:
             "match_keys": {"modifiers"},
             "accum_keys": {"dx", "dy"},
         },
+        "resize": {
+            "match_keys": {},
+            "accum_keys": {},
+        },
     }
 
     def __init__(self):
@@ -152,15 +156,17 @@ class EventEmitter:
             if last_event["event_type"] == event_type:
                 match_keys = event_merge_info["match_keys"]
                 accum_keys = event_merge_info["accum_keys"]
-                if any(event[key] != last_event[key] for key in match_keys):
-                    # Keys don't match: new event
-                    self._pending_events.append(event)
-                else:
-                    # Update last event (i.e. merge)
+                if all(
+                    event.get(key, None) == last_event.get(key, None)
+                    for key in match_keys
+                ):
+                    # Merge-able event
+                    self._pending_events.pop()  # remove last_event
+                    # Update new event
                     for key in accum_keys:
-                        last_event[key] += event[key]
-        else:
-            self._pending_events.append(event)
+                        event[key] += last_event[key]
+
+        self._pending_events.append(event)
 
     def flush(self):
         """Dispatch all pending events.

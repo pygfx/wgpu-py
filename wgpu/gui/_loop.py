@@ -240,7 +240,7 @@ class Scheduler:
         animation_iters = 0
         while self._animation_time > time.perf_counter() - step:
             self._animation_time += step
-            self._submit_event({"event_type": "animate", "step": step, "catch_up": 0})
+            self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
             # Do the animations. This costs time.
             self._events.flush()
             # Abort when we cannot keep up
@@ -249,7 +249,7 @@ class Scheduler:
             if animation_iters > 20:
                 n = (time.perf_counter() - self._animation_time) // step
                 self._animation_time += step * n
-                self._submit_event(
+                self._events.submit(
                     {"event_type": "animate", "step": step * n, "catch_up": n}
                 )
 
@@ -269,7 +269,7 @@ class Scheduler:
         self._schedule_next_tick()
 
         # Special event for drawing
-        self._submit_event({"event_type": "before_draw"})
+        self._events.submit({"event_type": "before_draw"})
         self._events.flush()
 
         # Schedule a new draw right before doing the draw. Important that it happens *after* processing events.

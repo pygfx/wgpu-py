@@ -515,7 +515,7 @@ class WxWgpuLoop(WgpuLoop):
             wx.App.SetInstance(app)
         return app
 
-    def poll(self):
+    def _wgpu_gui_poll(self):
         pass  # We can assume the wx loop is running.
 
     def call_later(self, delay, callback, *args):
