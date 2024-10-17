@@ -9,7 +9,7 @@ build:
     python: "3.11"
 # If we ever want to run wgpu stuff in the doc build
 #  apt_packages:
-#    - libegl1-mesa
+#    - libegl1-mesa-dev
 #    - libgl1-mesa-dri
 #    - libxcb-xfixes0-dev
 #    - mesa-vulkan-drivers
