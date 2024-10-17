@@ -191,7 +191,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
             "height": float(size.GetHeight()),
             "pixel_ratio": self.get_pixel_ratio(),
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def _on_resize_done(self, *args):
         self._draw_lock = False
@@ -222,7 +222,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
             "key": KEY_MAP.get(event.GetKeyCode(), char_str),
             "modifiers": modifiers,
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def _char_input_event(self, char_str: Optional[str]):
         if char_str is None:
@@ -233,7 +233,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
             "char_str": char_str,
             "modifiers": None,
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     @staticmethod
     def _get_char_from_event(event: wx.KeyEvent) -> Optional[str]:
@@ -302,11 +302,11 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
 
             ev.update({"dx": -dx, "dy": -dy})
 
-            self._events.submit(ev)
+            self.submit_event(ev)
         elif event_type == "pointer_move":
             self._hand_event.submit(ev)
         else:
-            self._events.submit(ev)
+            self.submit_event(ev)
 
     def _on_mouse_events(self, event: wx.MouseEvent):
         event_type = event.GetEventType()
@@ -476,7 +476,7 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         return self._subwidget._request_draw()
 
     def close(self):
-        self._events.submit({"event_type": "close"})
+        self.submit_event({"event_type": "close"})
         super().close()
 
     def is_closed(self):

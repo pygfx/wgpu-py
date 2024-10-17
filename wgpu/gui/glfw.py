@@ -225,7 +225,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         if self._window is not None:
             glfw.destroy_window(self._window)  # not just glfw.hide_window
             self._window = None
-            self._events.submit({"event_type": "close"})
+            self.submit_event({"event_type": "close"})
 
     def _on_window_dirty(self, *args):
         self.request_draw()
@@ -254,7 +254,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "height": self._logical_size[1],
             "pixel_ratio": self._pixel_ratio,
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def _set_logical_size(self, new_logical_size):
         if self._window is None:
@@ -372,7 +372,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         }
 
         # Emit the current event
-        self._events.submit(ev)
+        self.submit_event(ev)
 
         # Maybe emit a double-click event
         self._follow_double_click(action, button)
@@ -424,7 +424,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
                 "ntouches": 0,  # glfw does not have touch support
                 "touches": {},
             }
-            self._events.submit(ev)
+            self.submit_event(ev)
 
     def _on_cursor_pos(self, window, x, y):
         # Store pointer position in logical coordinates
@@ -444,7 +444,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "touches": {},
         }
 
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def _on_scroll(self, window, dx, dy):
         # wheel is 1 or -1 in glfw, in jupyter_rfb this is ~100
@@ -457,7 +457,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "buttons": tuple(self._pointer_buttons),
             "modifiers": tuple(self._key_modifiers),
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def _on_key(self, window, key, scancode, action, mods):
         modifier = KEY_MAP_MOD.get(key, None)
@@ -497,7 +497,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "key": keyname,
             "modifiers": tuple(self._key_modifiers),
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def _on_char(self, window, char):
         # Undocumented char event to make imgui work, see https://github.com/pygfx/wgpu-py/issues/530
@@ -506,7 +506,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             "char_str": chr(char),
             "modifiers": tuple(self._key_modifiers),
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def present_image(self, image, **kwargs):
         raise NotImplementedError()

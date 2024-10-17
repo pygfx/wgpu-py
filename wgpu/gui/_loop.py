@@ -21,7 +21,7 @@ class WgpuLoop:
         """Arrange for a callback to be called after the given delay (in seconds)."""
         raise NotImplementedError()
 
-    def poll(self):
+    def _wgpu_gui_poll(self):
         """Poll the underlying GUI toolkit for window events.
 
         Some event loops (e.g. asyncio) are just that and dont have a GUI to update.
@@ -94,15 +94,18 @@ class Scheduler:
     #  schedule             pseuso_tick          pseuso_tick
     #                     + event_tick
 
-    def __init__(self, canvas, *, mode="ondemand", min_fps=1, max_fps=30):
+    def __init__(self, canvas, loop, *, mode="ondemand", min_fps=1, max_fps=30):
         # Objects related to the canvas.
         # We don't keep a ref to the canvas to help gc. This scheduler object can be
         # referenced via a callback in an event loop, but it won't prevent the canvas
         # from being deleted!
         self._canvas_ref = weakref.ref(canvas)
         self._events = canvas._events
-        self._loop = canvas._get_loop()
         # ... = canvas.get_context() -> No, context creation should be lazy!
+
+        # We need to call_later and process gui events. The loop object abstracts these.
+        self._loop = loop
+        assert loop is not None
 
         # Lock the scheduling while its waiting
         self._waiting_lock = False
@@ -225,7 +228,7 @@ class Scheduler:
         """A lightweight tick that processes evets and animations."""
 
         # Get events from the GUI into our event mechanism.
-        self._loop.poll()
+        self._loop._wgpu_gui_poll()
 
         # Flush our events, so downstream code can update stuff.
         # Maybe that downstream code request a new draw.
@@ -237,7 +240,7 @@ class Scheduler:
         animation_iters = 0
         while self._animation_time > time.perf_counter() - step:
             self._animation_time += step
-            self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
+            self._submit_event({"event_type": "animate", "step": step, "catch_up": 0})
             # Do the animations. This costs time.
             self._events.flush()
             # Abort when we cannot keep up
@@ -246,7 +249,7 @@ class Scheduler:
             if animation_iters > 20:
                 n = (time.perf_counter() - self._animation_time) // step
                 self._animation_time += step * n
-                self._events.submit(
+                self._submit_event(
                     {"event_type": "animate", "step": step * n, "catch_up": n}
                 )
 
@@ -266,7 +269,7 @@ class Scheduler:
         self._schedule_next_tick()
 
         # Special event for drawing
-        self._events.submit({"event_type": "before_draw"})
+        self._submit_event({"event_type": "before_draw"})
         self._events.flush()
 
         # Schedule a new draw right before doing the draw. Important that it happens *after* processing events.

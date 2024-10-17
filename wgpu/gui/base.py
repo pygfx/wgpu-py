@@ -108,15 +108,16 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     ):
         super().__init__(*args, **kwargs)
         self._vsync = bool(vsync)
-        present_method  # noqa - We just catch the arg here in case a backend does implement support it
+        present_method  # noqa - We just catch the arg here in case a backend does implement it
 
         self._draw_frame = lambda: None
 
         self._events = EventEmitter()
 
         self._scheduler = None
-        if use_scheduler:
-            self._scheduler = Scheduler(self, max_fps=max_fps)
+        loop = self._get_loop()
+        if loop and use_scheduler:
+            self._scheduler = Scheduler(self, loop, max_fps=max_fps)
 
     def __del__(self):
         # On delete, we call the custom close method.
@@ -139,14 +140,17 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def remove_event_handler(self, *args, **kwargs):
         return self._events.remove_handler(*args, **kwargs)
 
+    def submit_event(self, event):
+        # Not strictly necessary for normal use-cases, but this allows
+        # the ._event to be an implementation detail to subclasses, and it
+        # allows users to e.g. emulate events in tests.
+        return self._events.submit(event)
+
     add_event_handler.__doc__ = EventEmitter.add_handler.__doc__
     remove_event_handler.__doc__ = EventEmitter.remove_handler.__doc__
+    submit_event.__doc__ = EventEmitter.submit.__doc__
 
     # === Scheduling
-
-    @property
-    def loop(self):
-        return self._get_loop()
 
     def request_draw(self, draw_function=None):
         """Schedule a new draw event.
@@ -176,6 +180,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         #   that a draw funcion does not need the canvas object.
 
     def force_draw(self):
+        """Perform a draw right now."""
         self._force_draw()
 
     def _draw_frame_and_present(self):
@@ -184,43 +189,38 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         Errors are logged to the "wgpu" logger. Should be called by the
         subclass at an appropriate time.
         """
-        # This method is called from the GUI layer. It can be called from a "draw event" that we requested, or as part of a forced draw.
-        # So this call must to the complete tick.
+        # This method is called from the GUI layer. It can be called from a
+        # "draw event" that we requested, or as part of a forced draw. So this
+        # call must to the complete tick.
         if self._scheduler is not None:
             self._scheduler.draw_tick()
 
-    # === Canvas management methods
-
     def _get_loop(self):
-        """Must return the global loop instance."""
-        raise NotImplementedError()
+        """Must return the global loop instance (WgpuLoop) for the canvas subclass, or None for a non-interactive canvas."""
+        return None
 
     def _request_draw(self):
-        """Like requestAnimationFrame in JS. Must schedule a call to self._scheduler.draw() ???"""
+        """Request the GUI layer to perform a draw. Like requestAnimationFrame in JS.
+        The draw must be performed by calling self._draw_frame_and_present()
+        """
         raise NotImplementedError()
 
     def _force_draw(self):
-        """Perform a draw right now."""
+        """Perform a synchronous draw. When it returns, the draw must have been done."""
         raise NotImplementedError()
 
-    def get_pixel_ratio(self):
-        """Get the float ratio between logical and physical pixels."""
+    # === Primary canvas management methods
+
+    def get_physical_size(self):
+        """Get the physical size in integer pixels."""
         raise NotImplementedError()
 
     def get_logical_size(self):
         """Get the logical size in float pixels."""
         raise NotImplementedError()
 
-    def get_physical_size(self):
-        """Get the physical size in integer pixels."""
-        raise NotImplementedError()
-
-    def set_logical_size(self, width, height):
-        """Set the window size (in logical pixels)."""
-        raise NotImplementedError()
-
-    def set_title(self, title):
-        """Set the window title."""
+    def get_pixel_ratio(self):
+        """Get the float ratio between logical and physical pixels."""
         raise NotImplementedError()
 
     def close(self):
@@ -230,3 +230,16 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def is_closed(self):
         """Get whether the window is closed."""
         raise NotImplementedError()
+
+    # === Secondary canvas management methods
+
+    # These methods provide extra control over the canvas. Subclasses should
+    # implement the methods they can, but these features are likely not critical.
+
+    def set_logical_size(self, width, height):
+        """Set the window size (in logical pixels)."""
+        pass
+
+    def set_title(self, title):
+        """Set the window title."""
+        pass

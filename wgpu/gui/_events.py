@@ -107,14 +107,20 @@ class EventEmitter:
                 raise ValueError(f"Adding handler with invalid event_type: '{type}'")
 
         def decorator(_callback):
-            for type in types:
-                self._event_handlers[type].append((order, _callback))
-                self._event_handlers[type].sort(key=lambda x: x[0])
+            self._add_handler(_callback, order, *types)
             return _callback
 
         if decorating:
             return decorator
         return decorator(callback)
+
+    def _add_handler(self, callback, order, *types):
+        self.remove_handler(callback, *types)
+        for type in types:
+            self._event_handlers[type].append((order, callback))
+            self._event_handlers[type].sort(key=lambda x: x[0])
+            # Note: that sort is potentially expensive. I tried an approach with a custom dequeu to add the handler
+            # at the correct position, but the overhead was apparently larger than the benefit of avoiding sort.
 
     def remove_handler(self, callback, *types):
         """Unregister an event handler.

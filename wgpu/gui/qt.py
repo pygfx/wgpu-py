@@ -287,7 +287,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
             "key": KEY_MAP.get(event.key(), event.text()),
             "modifiers": modifiers,
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def _char_input_event(self, char_str):
         ev = {
@@ -295,7 +295,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
             "char_str": char_str,
             "modifiers": None,
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
@@ -340,7 +340,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
                 }
             )
 
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def mousePressEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_down", event)
@@ -377,7 +377,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
             "buttons": buttons,
             "modifiers": modifiers,
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def resizeEvent(self, event):  # noqa: N802
         ev = {
@@ -386,10 +386,10 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
             "height": float(event.size().height()),
             "pixel_ratio": self.get_pixel_ratio(),
         }
-        self._events.submit(ev)
+        self.submit_event(ev)
 
     def closeEvent(self, event):  # noqa: N802
-        self._events.submit({"event_type": "close"})
+        self.submit_event({"event_type": "close"})
 
     # Methods related to presentation of resulting image data
 
