@@ -15,7 +15,7 @@ A Python implementation of WebGPU - the next generation GPU API. 🚀
 
 ## Introduction
 
-The purpose of wgpu-py to provide Python with a powerful and reliable GPU API.
+The purpose of wgpu-py is to provide Python with a powerful and reliable GPU API.
 
 It serves as a basis to build a broad range of applications and libraries
 related to visualization and GPU compute. We use it in
