@@ -820,7 +820,8 @@ class GPUDevice(GPUObjectBase):
                 includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
             usage (flags.BufferUsage): The ways in which this buffer will be used.
 
-        Alignment: the size (in bytes) of the data must be a multiple of 4.
+        Alignment: if the size (in bytes) of data is not a multiple of 4, the buffer
+                   size is rounded up to the nearest multiple of 4.
 
         Also see `GPUBuffer.write_mapped()` and `GPUQueue.write_buffer()`.
         """
@@ -832,7 +833,7 @@ class GPUDevice(GPUObjectBase):
 
         # Create a view of known type
         data = memoryview(data).cast("B")
-        size = data.nbytes
+        size = (data.nbytes + 3) & ~3  # round up to a multiple of 4
 
         # Create the buffer and write data
         buf = self.create_buffer(
@@ -1425,7 +1426,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def write_mapped(self, data, buffer_offset=None, size=None):
+    def write_mapped(self, data, buffer_offset=None):
         """Write mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1445,7 +1446,8 @@ class GPUBuffer(GPUObjectBase):
                 the data, so this argument can typically be ignored. The
                 resulting range must fit into the range specified in ``map()``.
 
-        Alignment: the buffer offset must be a multiple of 8, the size must be a multiple of 4.
+        Alignment: the buffer offset must be a multiple of 8.
+
 
         Also see `GPUBuffer.read_mapped, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """
