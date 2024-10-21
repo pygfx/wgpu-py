@@ -232,6 +232,8 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
 
     def _on_iconify(self, window, iconified):
         self._is_minimized = bool(iconified)
+        if not self._is_minimized:
+            self._request_draw()
 
     # helpers
 
@@ -298,7 +300,8 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         return loop
 
     def _request_draw(self):
-        loop.call_soon(self._draw_frame_and_present)
+        if not self._is_minimized:
+            loop.call_soon(self._draw_frame_and_present)
 
     def _force_draw(self):
         self._draw_frame_and_present()
