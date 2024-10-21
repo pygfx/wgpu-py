@@ -448,7 +448,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         # When using Qt, there needs to be an
         # application before any widget is created
         loop.init_qt()
-        super().__init__(**kwargs, use_scheduler=False)
+        super().__init__(**kwargs)
 
         self.setAttribute(WA_DeleteOnClose, True)
         self.set_logical_size(*(size or (640, 480)))

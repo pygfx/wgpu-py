@@ -429,7 +429,7 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         **kwargs,
     ):
         loop.init_wx()
-        super().__init__(parent, use_scheduler=False, **kwargs)
+        super().__init__(parent, **kwargs)
 
         self.set_logical_size(*(size or (640, 480)))
         self.SetTitle(title or "wx wgpu canvas")

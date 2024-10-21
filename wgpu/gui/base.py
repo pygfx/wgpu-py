@@ -103,7 +103,6 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         max_fps=30,
         vsync=True,
         present_method=None,
-        use_scheduler=True,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -111,12 +110,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         present_method  # noqa - We just catch the arg here in case a backend does implement it
 
         self._draw_frame = lambda: None
-
         self._events = EventEmitter()
-
         self._scheduler = None
         loop = self._get_loop()
-        if loop and use_scheduler:
+        if loop:
             self._scheduler = Scheduler(self, loop, max_fps=max_fps)
 
     def __del__(self):
@@ -187,7 +184,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """Draw the frame and present the result.
 
         Errors are logged to the "wgpu" logger. Should be called by the
-        subclass at an appropriate time.
+        subclass at its draw event.
         """
         # This method is called from the GUI layer. It can be called from a
         # "draw event" that we requested, or as part of a forced draw. So this
@@ -196,17 +193,25 @@ class WgpuCanvasBase(WgpuCanvasInterface):
             self._scheduler.draw_frame_and_present()
 
     def _get_loop(self):
-        """Must return the global loop instance (WgpuLoop) for the canvas subclass, or None for a non-interactive canvas."""
+        """For the subclass to implement:
+
+        Must return the global loop instance (WgpuLoop) for the canvas subclass, or None for a non-interactive canvas.
+        """
         return None
 
     def _request_draw(self):
-        """Request the GUI layer to perform a draw. Like requestAnimationFrame in JS.
+        """For the subclass to implement:
+
+        Request the GUI layer to perform a draw. Like requestAnimationFrame in JS.
         The draw must be performed by calling self._draw_frame_and_present()
         """
         raise NotImplementedError()
 
     def _force_draw(self):
-        """Perform a synchronous draw. When it returns, the draw must have been done."""
+        """For the subclass to implement:
+
+        Perform a synchronous draw. When it returns, the draw must have been done.
+        """
         raise NotImplementedError()
 
     # === Primary canvas management methods

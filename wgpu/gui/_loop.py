@@ -117,14 +117,14 @@ class WgpuLoop:
     def __init__(self):
         self._schedulers = set()
         self._stop_when_no_canvases = False
-        self._gui_timer = self._TimerClass(self, self._gui_tick, one_shot=False)
+        self._gui_timer = self._TimerClass(self, self._tick, one_shot=False)
 
     def _register_scheduler(self, scheduler):
         # Gets called whenever a canvas in instantiated
         self._schedulers.add(scheduler)
         self._gui_timer.start(0.1)  # (re)start our internal timer
 
-    def _gui_tick(self):
+    def _tick(self):
         # Keep the GUI alive on every tick
         self._wgpu_gui_poll()
 
