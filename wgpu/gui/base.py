@@ -2,6 +2,7 @@ import sys
 
 from ._events import EventEmitter
 from ._loop import Scheduler, WgpuLoop, WgpuTimer  # noqa: F401
+from ._gui_utils import log_exception
 
 
 class WgpuCanvasInterface:
@@ -163,11 +164,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
                 function. If not given or None, the last set draw function is used.
 
         """
-        if self._scheduler is None:
-            return
         if draw_function is not None:
             self._draw_frame = draw_function
-        self._scheduler.request_draw()
+        if self._scheduler is not None:
+            self._scheduler.request_draw()
 
         # todo: maybe requesting a new draw can be done by setting a field in an event?
         # todo: can just make the draw_function a handler for the draw event?
@@ -180,6 +180,40 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """Perform a draw right now."""
         self._force_draw()
 
+    def _process_events(self):
+        """Process events and animations."""
+
+        loop = self._get_loop()
+        if loop is None:
+            return
+
+        # Get events from the GUI into our event mechanism.
+        loop._wgpu_gui_poll()
+
+        # Flush our events, so downstream code can update stuff.
+        # Maybe that downstream code request a new draw.
+        self._events.flush()
+
+        # TODO: implement later (this is a start but is not tested)
+        # Schedule animation events until the lag is gone
+        # step = self._animation_step
+        # self._animation_time = self._animation_time or time.perf_counter()  # start now
+        # animation_iters = 0
+        # while self._animation_time > time.perf_counter() - step:
+        #     self._animation_time += step
+        #     self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
+        #     # Do the animations. This costs time.
+        #     self._events.flush()
+        #     # Abort when we cannot keep up
+        #     # todo: test this
+        #     animation_iters += 1
+        #     if animation_iters > 20:
+        #         n = (time.perf_counter() - self._animation_time) // step
+        #         self._animation_time += step * n
+        #         self._events.submit(
+        #             {"event_type": "animate", "step": step * n, "catch_up": n}
+        #         )
+
     def _draw_frame_and_present(self):
         """Draw the frame and present the result.
 
@@ -187,15 +221,33 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         subclass at its draw event.
         """
         # This method is called from the GUI layer. It can be called from a
-        # "draw event" that we requested, or as part of a forced draw. So this
-        # call must to the complete tick.
+        # "draw event" that we requested, or as part of a forced draw.
+
+        # Process events
+        self._process_events()
+        self._events.submit({"event_type": "before_draw"})
+        self._events.flush()
+
+        # Notify the scheduler
         if self._scheduler is not None:
-            self._scheduler.draw_frame_and_present()
+            self._scheduler.on_draw()
+
+        # Perform the user-defined drawing code. When this errors,
+        # we should report the error and then continue, otherwise we crash.
+        with log_exception("Draw error"):
+            self._draw_frame()
+        with log_exception("Present error"):
+            # Note: we use canvas._canvas_context, so that if the draw_frame is a stub we also dont trigger creating a context.
+            # Note: if vsync is used, this call may wait a little (happens down at the level of the driver or OS)
+            context = self._canvas_context
+            if context:
+                context.present()
 
     def _get_loop(self):
         """For the subclass to implement:
 
-        Must return the global loop instance (WgpuLoop) for the canvas subclass, or None for a non-interactive canvas.
+        Must return the global loop instance (WgpuLoop) for the canvas subclass,
+        or None for an interactive canvas without scheduled draws.
         """
         return None
 
@@ -203,7 +255,8 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """For the subclass to implement:
 
         Request the GUI layer to perform a draw. Like requestAnimationFrame in JS.
-        The draw must be performed by calling self._draw_frame_and_present()
+        The draw must be performed by calling _draw_frame_and_present().
+        It's the responsibility for the canvas subclass to make sure that a draw is made (eventually).
         """
         raise NotImplementedError()
 
@@ -211,8 +264,9 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """For the subclass to implement:
 
         Perform a synchronous draw. When it returns, the draw must have been done.
+        The default implementation just calls _draw_frame_and_present().
         """
-        raise NotImplementedError()
+        self._draw_frame_and_present()
 
     # === Primary canvas management methods
 

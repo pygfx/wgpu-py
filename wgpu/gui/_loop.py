@@ -305,7 +305,6 @@ class Scheduler:
         # ... = canvas.get_context() -> No, context creation should be lazy!
 
         # We need to call_later and process gui events. The loop object abstracts these.
-        self._loop = loop
         assert loop is not None
         loop._register_scheduler(self)
 
@@ -372,7 +371,7 @@ class Scheduler:
             return
 
         # Process events, may set _draw_requested
-        self.process_events()
+        canvas._process_events()
 
         # Determine what to do next ...
 
@@ -402,48 +401,13 @@ class Scheduler:
         else:
             raise RuntimeError(f"Unexpected scheduling mode: '{self._mode}'")
 
-    def process_events(self):
-        """Process events and animations."""
-
-        # Get events from the GUI into our event mechanism.
-        self._loop._wgpu_gui_poll()
-
-        # Flush our events, so downstream code can update stuff.
-        # Maybe that downstream code request a new draw.
-        self._events.flush()
-
-        # TODO: implement later (this is a start but is not tested)
-        # Schedule animation events until the lag is gone
-        # step = self._animation_step
-        # self._animation_time = self._animation_time or time.perf_counter()  # start now
-        # animation_iters = 0
-        # while self._animation_time > time.perf_counter() - step:
-        #     self._animation_time += step
-        #     self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
-        #     # Do the animations. This costs time.
-        #     self._events.flush()
-        #     # Abort when we cannot keep up
-        #     # todo: test this
-        #     animation_iters += 1
-        #     if animation_iters > 20:
-        #         n = (time.perf_counter() - self._animation_time) // step
-        #         self._animation_time += step * n
-        #         self._events.submit(
-        #             {"event_type": "animate", "step": step * n, "catch_up": n}
-        #         )
-
-    def draw_frame_and_present(self):
-        """Perform a draw, and present the result."""
+    def on_draw(self):
+        """Called from canvas._draw_frame_and_present()."""
 
         # It could be that the canvas is closed now. When that happens,
         # we stop here and do not schedule a new iter.
         if (canvas := self._get_canvas()) is None:
             return
-
-        # Events and animations
-        self.process_events()
-        self._events.submit({"event_type": "before_draw"})
-        self._events.flush()
 
         # Update stats
         count, last_time = self._draw_stats
@@ -460,17 +424,6 @@ class Scheduler:
         # Bookkeeping
         self._last_draw_time = time.perf_counter()
         self._draw_requested = False
-
-        # Perform the user-defined drawing code. When this errors,
-        # we should report the error and then continue, otherwise we crash.
-        with log_exception("Draw error"):
-            canvas._draw_frame()
-        with log_exception("Present error"):
-            # Note: we use canvas._canvas_context, so that if the draw_frame is a stub we also dont trigger creating a context.
-            # Note: if vsync is used, this call may wait a little (happens down at the level of the driver or OS)
-            context = canvas._canvas_context
-            if context:
-                context.present()
 
         # Keep ticking
         self._schedule_next_tick()

@@ -17,7 +17,9 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
         super().__init__()
         self._count = 0
 
-    def draw_frame(self):
+    def _get_loop(self):
+
+    def _draw_frame(self):
         self._count += 1
         if self._count <= 4:
             self.foo_method()
