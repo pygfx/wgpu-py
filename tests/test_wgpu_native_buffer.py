@@ -1,5 +1,3 @@
-import random
-import ctypes
 import sys
 
 import wgpu.utils
@@ -137,7 +135,7 @@ def test_buffer_init3():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_consequitive_writes1():
+def test_consecutive_writes1():
     # The inefficient way
 
     device = wgpu.utils.get_default_device()
@@ -164,7 +162,7 @@ def test_consequitive_writes1():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_consequitive_writes2():
+def test_consecutive_writes2():
     # The efficient way
 
     device = wgpu.utils.get_default_device()
@@ -191,7 +189,27 @@ def test_consequitive_writes2():
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_consequitive_reads():
+def test_unaligned_writes():
+    device = wgpu.utils.get_default_device()
+
+    # Create buffer
+    buf = device.create_buffer(
+        size=12, usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC
+    )
+
+    # Write in parts
+    buf.map_sync("write")
+    buf.write_mapped(b"xyz", 8)
+    buf.write_mapped(b"abcdefghi", 0)
+    buf.unmap()
+
+    # Download from buffer to CPU
+    data = device.queue.read_buffer(buf)
+    assert data == b"abcdefghiyz\0"
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_consecutive_reads():
     device = wgpu.utils.get_default_device()
 
     # Create buffer
@@ -268,18 +286,17 @@ def test_buffer_mapping_fails():
     buf.write_mapped(b"1" * 12, 0)
     buf.write_mapped(b"1" * 12, 8)
 
+    # These are no okay, too!
+    buf.write_mapped(b"1" * 3)  # not multiple of 4
+    buf.write_mapped(b"1" * 6)  # not multiple of 4
+    buf.write_mapped(b"1" * 9)  # not multiple of 4
+
     with raises(ValueError):
         buf.write_mapped(b"")  # not empty
     with raises(ValueError):
         buf.write_mapped(b"1" * 64)  # too large for buffer
     with raises(ValueError):
         buf.write_mapped(b"1" * 32)  # too large for mapped range
-    with raises(ValueError):
-        buf.write_mapped(b"1" * 3)  # not multiple of 4
-    with raises(ValueError):
-        buf.write_mapped(b"1" * 6)  # not multiple of 4
-    with raises(ValueError):
-        buf.write_mapped(b"1" * 9)  # not multiple of 4
 
     # Can unmap multiple times though!
     buf.unmap()
@@ -436,18 +453,15 @@ def test_write_buffer1():
 def test_write_buffer2():
     device = wgpu.utils.get_default_device()
 
-    nx, ny, nz = 100, 1, 1
-    data0 = (ctypes.c_float * 100)(*[random.random() for i in range(nx * ny * nz)])
-    data1 = (ctypes.c_float * 100)()
-    nbytes = ctypes.sizeof(data1)
+    size = 100
+    data0 = np.random.random(size)  # it's just bits.  f32 or f64 doesn't matter
+    data1 = np.array(data0)
+    nbytes = data1.nbytes
 
     # Create buffer
     buf4 = device.create_buffer(
         size=nbytes, usage=wgpu.BufferUsage.COPY_DST | wgpu.BufferUsage.COPY_SRC
     )
-
-    for i in range(len(data1)):
-        data1[i] = data0[i]
 
     # Upload from CPU to buffer
     device.create_command_encoder()  # we seem to need to create one
@@ -456,13 +470,11 @@ def test_write_buffer2():
     # We swipe the data. You could also think that we passed something into
     # write_buffer without holding a reference to it. Anyway, write_buffer
     # seems to copy the data at the moment it is called.
-    for i in range(len(data1)):
-        data1[i] = 1
-
+    data1.fill(1.0)
     device.queue.submit([])
 
     # Download from buffer to CPU
-    data2 = data1.__class__.from_buffer(device.queue.read_buffer(buf4))
+    data2 = np.frombuffer(device.queue.read_buffer(buf4), dtype=data0.dtype)
     assert iters_equal(data0, data2)
 
 
