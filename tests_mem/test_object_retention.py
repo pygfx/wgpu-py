@@ -24,12 +24,12 @@ SHADER_SOURCE = """
     fn vertex_main( @location(0) position: vec2f ) -> @builtin(position) vec4f {
         return vec4f(position + offset, 0, 1.0);
     }
-    
+
     @fragment
-    fn fragment_main() -> @location(0) vec4f { 
-        return vec4f(); 
+    fn fragment_main() -> @location(0) vec4f {
+        return vec4f();
     }
-    
+
     @compute
     @workgroup_size(1)
     fn main(@builtin(global_invocation_id) index: vec3<u32>) {

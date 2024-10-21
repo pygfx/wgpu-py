@@ -3329,8 +3329,7 @@ class GPURenderBundleEncoder(
         id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
         # The other encoders require that we call self._release() when
         # we're done with it.  But that doesn't seem to be an issue here.
-        # There doesn't seem to be an issue with needing to keep the objects alive after
-        # the call to finish().
+        # We no longer need to keep these objects alive after the call to finish().
         self._objects_to_keep_alive.clear()
         return GPURenderBundle(label, id, self._device)
 
