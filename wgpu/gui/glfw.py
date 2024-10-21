@@ -538,9 +538,10 @@ class GlfwAsyncioWgpuLoop(AsyncioWgpuLoop):
         if self.stop_if_no_more_canvases and not tuple(self.all_glfw_canvases):
             self.stop()
 
-    def run(self):
-        super().run()
-        poll_glfw_briefly()
+    def _run(self):
+        super()._run()
+        if not self._is_interactive:
+            poll_glfw_briefly()
 
 
 loop = GlfwAsyncioWgpuLoop()

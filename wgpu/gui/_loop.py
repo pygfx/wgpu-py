@@ -1,3 +1,7 @@
+"""
+Implemens loop mechanics: The base timer, base loop, and scheduler.
+"""
+
 import time
 import weakref
 
@@ -7,34 +11,219 @@ from ._gui_utils import log_exception
 # That would e.g. allow using glfw with qt together. Probably to too weird use-case for the added complexity.
 
 
+class WgpuTimer:
+    """Base class for a timer objects."""
+
+    _running_timers = set()
+
+    def __init__(self, loop, callback, *args, one_shot=False):
+        # The loop arg is passed as an argument, so that the Loop object itself can create a timer.
+        self._loop = loop
+        # Check callable
+        if not callable(callback):
+            raise TypeError("Given timer callback is not a callable.")
+        self._callback = callback
+        self._args = args
+        # Internal variables
+        self._one_shot = bool(one_shot)
+        self._interval = 0.0
+        self._expect_tick_at = None
+
+    def start(self, interval):
+        """Start the timer with the given interval.
+
+        When the interval has passed, the callback function will be called,
+        unless the timer is stopped earlier.
+
+        When the timer is currently running, it is first stopped and then
+        restarted.
+        """
+        if self.is_running:
+            self._stop()
+        WgpuTimer._running_timers.add(self)
+        self._interval = float(interval)
+        self._expect_tick_at = time.perf_counter() + self._interval
+        self._start()
+
+    def stop(self):
+        """Stop the timer.
+
+        If the timer is currently running, it is stopped, and the
+        callback is *not* called. If the timer is currently not running,
+        this method does nothing.
+        """
+        WgpuTimer._running_timers.discard(self)
+        self._expect_tick_at = None
+        self._stop()
+
+    def _tick(self):
+        """The implementations must call this method."""
+        # Stop or restart
+        if self._one_shot:
+            WgpuTimer._running_timers.discard(self)
+            self._expect_tick_at = None
+        else:
+            self._expect_tick_at = time.perf_counter() + self._interval
+            self._start()
+        # Callback
+        with log_exception("Timer callback error"):
+            self._callback(*self._args)
+
+    @property
+    def time_left(self):
+        """The expected time left before the callback is called.
+
+        None means that the timer is not running. The value can be negative
+        (which means that the timer is late).
+        """
+        if self._expect_tick_at is None:
+            return None
+        else:
+            return self._expect_tick_at - time.perf_counter()
+
+    @property
+    def is_running(self):
+        """Whether the timer is running."""
+        return self._expect_tick_at is not None
+
+    @property
+    def is_one_shot(self):
+        """Whether the timer is one-shot or continuous."""
+        return self._one_shot
+
+    def _start(self):
+        """For the subclass to implement:
+
+        * Must schedule for ``self._tick`` to be called in ``self._interval`` seconds.
+        * Must call it exactly once (the base class takes care of repeating the timer).
+        * When ``self._stop()`` is called before the timer finished, the call to ``self._tick()`` must be cancelled.
+        """
+        raise NotImplementedError()
+
+    def _stop(self):
+        """For the subclass to implement:
+
+        * If the timer is running, cancel the pending call to ``self._tick()``.
+        * Otherwise, this should do nothing.
+        """
+        raise NotImplementedError()
+
+
 class WgpuLoop:
-    """Base class for different event-loop classes."""
+    """Base class for event-loop objects."""
+
+    _TimerClass = None  # subclases must set this
+
+    def __init__(self):
+        self._schedulers = set()
+        self._stop_when_no_canvases = False
+        self._gui_timer = self._TimerClass(self, self._gui_tick, one_shot=False)
+
+    def _register_scheduler(self, scheduler):
+        # Gets called whenever a canvas in instantiated
+        self._schedulers.add(scheduler)
+        self._gui_timer.start(0.1)  # (re)start our internal timer
+
+    def _gui_tick(self):
+        # Keep the GUI alive on every tick
+        self._wgpu_gui_poll()
+
+        # Check all schedulers
+        schedulers_to_close = []
+        for scheduler in self._schedulers:
+            if scheduler._get_canvas() is None:
+                schedulers_to_close.append(scheduler)
+
+        # Forget schedulers that no longer have an live canvas
+        for scheduler in schedulers_to_close:
+            self._schedulers.discard(scheduler)
+
+        # Check whether we must stop the loop
+        if self._stop_when_no_canvases and not self._schedulers:
+            self.stop()
 
     def call_soon(self, callback, *args):
         """Arrange for a callback to be called as soon as possible.
 
-        Callbacks are called in the order in which they are registered.
+        The callback will be called in the next iteration of the event-loop,
+        but other pending events/callbacks may be handled first. Returns None.
         """
-        self.call_later(0, callback, *args)
+        self._call_soon(callback, *args)
 
     def call_later(self, delay, callback, *args):
-        """Arrange for a callback to be called after the given delay (in seconds)."""
-        raise NotImplementedError()
+        """Arrange for a callback to be called after the given delay (in seconds).
 
-    def _wgpu_gui_poll(self):
-        """Poll the underlying GUI toolkit for window events.
+        Returns a timer object (in one-shot mode) that can be used to
+        stop the time (i.e. cancel the callback being called), and/or
+        to restart the timer.
 
-        Some event loops (e.g. asyncio) are just that and dont have a GUI to update.
+        It's not necessary to hold a reference to the timer object; a
+        ref is held automatically, and discarded when the timer ends or stops.
         """
-        pass
+        timer = self._TimerClass(self, callback, *args, one_shot=True)
+        timer.start(delay)
+        return timer
 
-    def run(self):
-        """Enter the main loop."""
-        raise NotImplementedError()
+    def call_repeated(self, interval, callback, *args):
+        """Arrange for a callback to be called repeatedly.
+
+        Returns a timer object (in multi-shot mode) that can be used for
+        further control.
+
+        It's not necessary to hold a reference to the timer object; a
+        ref is held automatically, and discarded when the timer is
+        stopped.
+        """
+        timer = self._TimerClass(self, callback, *args, one_shot=False)
+        timer.start()
+        return timer
+
+    def run(self, stop_when_no_canvases=True):
+        """Enter the main loop.
+
+        This provides a generic API to start the loop. When building an application (e.g. with Qt)
+        its fine to start the loop in the normal way.
+        """
+        self._stop_when_no_canvases = bool(stop_when_no_canvases)
+        self._run()
 
     def stop(self):
         """Stop the currently running event loop."""
+        self._stop()
+
+    def _run(self):
+        """For the subclass to implement:
+
+        * Start the event loop.
+        * The rest of the loop object must work just fine, also when the loop is
+          started in the "normal way" (i.e. this method may not be called).
+        """
         raise NotImplementedError()
+
+    def _stop(self):
+        """For the subclass to implement:
+
+        * Stop the running event loop.
+        * When running in an interactive session, this call should probably be ignored.
+        """
+        raise NotImplementedError()
+
+    def _call_soon(self, callback, *args):
+        """For the subclass to implement:
+
+        * A quick path to have callback called in a next invocation of the event loop.
+        * This method is optional: the default implementation just calls ``call_later()`` with a zero delay.
+        """
+        self.call_later(0, callback, *args)
+
+    def _wgpu_gui_poll(self):
+        """For the subclass to implement:
+
+        Some event loops (e.g. asyncio) are just that and dont have a GUI to update.
+        Other loops (like Qt) already process events. So this is only intended for
+        backends like glfw.
+        """
+        pass
 
 
 class AnimationScheduler:
@@ -56,45 +245,57 @@ class Scheduler:
 
     # This class makes the canvas tick. Since we do not own the event-loop, but
     # ride on e.g. Qt, asyncio, wx, JS, or something else, our little "loop" is
-    # implemented with call_later calls. It's crucial that the loop stays clean
-    # and does not 'duplicate', e.g. by an extra draw being done behind our
-    # back, otherwise the fps might double (but be irregular). Taking care of
-    # this is surprising tricky.
+    # implemented with a timer.
     #
     # The loop looks a little like this:
     #
-    #     ________________      __      ________________      __
-    #   /    call_later    \  / rd \  /   call_later     \  / rd \
+    #     ________________      __      ________________      __      rd = request_draw
+    #   /   wait           \  / rd \  /   wait           \  / rd \
     #  |                    ||      ||                    ||      |
     # --------------------------------------------------------------------> time
     #  |                    |       |                     |       |
-    #  |                    |       draw_tick             |       draw_tick
-    #  schedule             pseuso_tick                   pseudo_tick
-    #
-    #
-    # While the loop is waiting - via call_later, in between the calls to
-    # _schedule_tick() and pseudo_tick() - a new tick cannot be scheduled. In
-    # pseudo_tick() the _request_draw() method is called that asks the GUI to
-    # schedule a draw. This happens in a later event-loop iteration, an can
-    # happen (nearly) directly, or somewhat later. The first thing that the
-    # draw_tick() method does, is schedule a new draw. Any extra draws that are
-    # performed still call _schedule_tick(), but this has no effect.
+    #  |                    |       draw                  |       draw
+    #  schedule             tick                          tick
     #
     # With update modes 'ondemand' and 'manual', the loop ticks at the same rate
-    # as on 'continuous' mode, but won't draw every tick. The event_tick() is
-    # then called instead, so that events handlers and animations stay active,
-    # from which a new draw may be requested.
+    # as on 'continuous' mode, but won't draw every tick:
     #
     #     ________________     ________________      __
-    #   /    call_later    \  /   call_later    \  / rd \
+    #   /    wait          \  /   wait          \  / rd \
     #  |                    ||                   ||      |
     # --------------------------------------------------------------------> time
     #  |                    |                    |       |
-    #  |                    |                    |       draw_tick
-    #  schedule             pseuso_tick          pseuso_tick
-    #                     + event_tick
+    #  |                    |                    |       draw
+    #  schedule             tick                tick
+    #
+    # A tick is scheduled by calling _schedule_next_tick(). If this method is
+    # called when the timer is already running, it has no effect. In the _tick()
+    # method, events are processed (including animations). Then, depending on
+    # the mode and whether a draw was requested, a new tick is scheduled, or a
+    # draw is requested. In the latter case, the timer is not started, but we
+    # wait for the canvas to perform a draw. In _draw_drame_and_present() the
+    # draw is done, and a new tick is scheduled.
+    #
+    # The next tick is scheduled when a draw is done, and not earlier, otherwise
+    # the drawing may not keep up with the event loop.
+    #
+    # On desktop canvases the draw usually occurs very soon after it is
+    # requested, but on remote frame buffers, it may take a bit longer. To make
+    # sure the rendered image reflects the latest state, events are also
+    # processed right before doing the draw.
+    #
+    # When the window is minimized, the draw will not occur until the window is
+    # shown again. For the canvas to detect minimized-state, it will need to
+    # receive GUI events. This is one of the reasons why the loop object also
+    # runs a timer-loop.
+    #
+    # The drawing itself may take longer than the intended wait time. In that
+    # case, it will simply take longer than we hoped and get a lower fps.
+    #
+    # Note that any extra draws, e.g. via force_draw() or due to window resizes,
+    # don't affect the scheduling loop; they are just extra draws.
 
-    def __init__(self, canvas, loop, *, mode="ondemand", min_fps=1, max_fps=30):
+    def __init__(self, canvas, loop, *, mode="continuous", min_fps=1, max_fps=30):
         # Objects related to the canvas.
         # We don't keep a ref to the canvas to help gc. This scheduler object can be
         # referenced via a callback in an event loop, but it won't prevent the canvas
@@ -106,9 +307,7 @@ class Scheduler:
         # We need to call_later and process gui events. The loop object abstracts these.
         self._loop = loop
         assert loop is not None
-
-        # Lock the scheduling while its waiting
-        self._waiting_lock = False
+        loop._register_scheduler(self)
 
         # Scheduling variables
         self._mode = mode
@@ -124,9 +323,10 @@ class Scheduler:
         self._animation_time = 0
         self._animation_step = 1 / 20
 
-        # Start by doing the first scheduling.
-        # Note that the gui may do a first draw earlier, starting the loop, and that's fine.
-        self._loop.call_later(0.1, self._schedule_next_tick)
+        # Initialise the scheduling loop. Note that the gui may do a first draw
+        # earlier, starting the loop, and that's fine.
+        self._last_tick_time = -0.1
+        self._timer = loop.call_later(0.1, self._tick)
 
     def _get_canvas(self):
         canvas = self._canvas_ref()
@@ -142,42 +342,10 @@ class Scheduler:
         self._draw_requested = True
 
     def _schedule_next_tick(self):
-        # Scheduling flow:
-        #
-        # * _schedule_next_tick():
-        #   * determine delay
-        #   * use call_later() to have pseudo_tick() called
-        #
-        # * pseudo_tick():
-        #   * decide whether to request a draw
-        #     * a draw is requested:
-        #       * the GUI will call canvas._draw_frame_and_present()
-        #       * wich calls draw_tick()
-        #     * A draw is not requested:
-        #       * call event_tick()
-        #       * call _schedule_next_tick()
-        #
-        # * event_tick():
-        #   * let GUI process events
-        #   * flush events
-        #   * run animations
-        #
-        # * draw_tick():
-        #   * calls _schedule_next_tick()
-        #   * calls event_tick()
-        #   * draw!
+        """Schedule _tick() to be called via our timer."""
 
-        # Notes:
-        #
-        # * New ticks must be scheduled from the draw_tick, otherwise
-        #   new draws may get scheduled faster than it can keep up.
-        # * It's crucial to not have two cycles running at the same time.
-        # * We must assume that the GUI can do extra draws (i.e. draw_tick gets called) any time, e.g. when resizing.
-
-        # Flag that allows this method to be called at any time, without introducing an extra "loop".
-        if self._waiting_lock:
+        if self._timer.is_running:
             return
-        self._waiting_lock = True
 
         # Determine delay
         if self._mode == "fastest":
@@ -186,49 +354,56 @@ class Scheduler:
             delay = 1 / self._max_fps
             delay = 0 if delay < 0 else delay  # 0 means cannot keep up
 
-        def pseudo_tick():
-            # Since this resets the waiting lock, we really want to avoid accidentally
-            # calling this function. That's why we define it locally.
+        # Offset delay for time spent on processing events, etc.
+        time_since_tick_start = time.perf_counter() - self._last_tick_time
+        delay -= time_since_tick_start
+        delay = max(0, delay)
 
-            # Enable scheduling again
-            self._waiting_lock = False
+        # Go!
+        self._timer.start(delay)
 
-            # Get canvas or stop
-            if (canvas := self._get_canvas()) is None:
-                return
+    def _tick(self):
+        """Process event and schedule a new draw or tick."""
 
-            if self._mode == "fastest":
-                # fastest: draw continuously as fast as possible, ignoring fps settings.
+        self._last_tick_time = time.perf_counter()
+
+        # Get canvas or stop
+        if (canvas := self._get_canvas()) is None:
+            return
+
+        # Process events, may set _draw_requested
+        self.process_events()
+
+        # Determine what to do next ...
+
+        if self._mode == "fastest":
+            # fastest: draw continuously as fast as possible, ignoring fps settings.
+            canvas._request_draw()
+
+        elif self._mode == "continuous":
+            # continuous: draw continuously, aiming for a steady max framerate.
+            canvas._request_draw()
+
+        elif self._mode == "ondemand":
+            # ondemand: draw when needed (detected by calls to request_draw).
+            # Aim for max_fps when drawing is needed, otherwise min_fps.
+            its_draw_time = (
+                time.perf_counter() - self._last_draw_time > 1 / self._min_fps
+            )
+            if self._draw_requested or its_draw_time:
                 canvas._request_draw()
-
-            elif self._mode == "continuous":
-                # continuous: draw continuously, aiming for a steady max framerate.
-                canvas._request_draw()
-
-            elif self._mode == "ondemand":
-                # ondemand: draw when needed (detected by calls to request_draw).
-                # Aim for max_fps when drawing is needed, otherwise min_fps.
-                self.event_tick()  # may set _draw_requested
-                its_draw_time = (
-                    time.perf_counter() - self._last_draw_time > 1 / self._min_fps
-                )
-                if self._draw_requested or its_draw_time:
-                    canvas._request_draw()
-                else:
-                    self._schedule_next_tick()
-
-            elif self._mode == "manual":
-                # manual: never draw, except when ... ?
-                self.event_tick()
+            else:
                 self._schedule_next_tick()
 
-            else:
-                raise RuntimeError(f"Unexpected scheduling mode: '{self._mode}'")
+        elif self._mode == "manual":
+            # manual: never draw, except when ... ?
+            self._schedule_next_tick()
 
-        self._loop.call_later(delay, pseudo_tick)
+        else:
+            raise RuntimeError(f"Unexpected scheduling mode: '{self._mode}'")
 
-    def event_tick(self):
-        """A lightweight tick that processes evets and animations."""
+    def process_events(self):
+        """Process events and animations."""
 
         # Get events from the GUI into our event mechanism.
         self._loop._wgpu_gui_poll()
@@ -237,46 +412,38 @@ class Scheduler:
         # Maybe that downstream code request a new draw.
         self._events.flush()
 
+        # TODO: implement later (this is a start but is not tested)
         # Schedule animation events until the lag is gone
-        step = self._animation_step
-        self._animation_time = self._animation_time or time.perf_counter()  # start now
-        animation_iters = 0
-        while self._animation_time > time.perf_counter() - step:
-            self._animation_time += step
-            self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
-            # Do the animations. This costs time.
-            self._events.flush()
-            # Abort when we cannot keep up
-            # todo: test this
-            animation_iters += 1
-            if animation_iters > 20:
-                n = (time.perf_counter() - self._animation_time) // step
-                self._animation_time += step * n
-                self._events.submit(
-                    {"event_type": "animate", "step": step * n, "catch_up": n}
-                )
+        # step = self._animation_step
+        # self._animation_time = self._animation_time or time.perf_counter()  # start now
+        # animation_iters = 0
+        # while self._animation_time > time.perf_counter() - step:
+        #     self._animation_time += step
+        #     self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
+        #     # Do the animations. This costs time.
+        #     self._events.flush()
+        #     # Abort when we cannot keep up
+        #     # todo: test this
+        #     animation_iters += 1
+        #     if animation_iters > 20:
+        #         n = (time.perf_counter() - self._animation_time) // step
+        #         self._animation_time += step * n
+        #         self._events.submit(
+        #             {"event_type": "animate", "step": step * n, "catch_up": n}
+        #         )
 
-    def draw_tick(self):
-        """Perform a full tick: processing events, animations, drawing, and presenting."""
-
-        # Events and animations
-        self.event_tick()
+    def draw_frame_and_present(self):
+        """Perform a draw, and present the result."""
 
         # It could be that the canvas is closed now. When that happens,
         # we stop here and do not schedule a new iter.
         if (canvas := self._get_canvas()) is None:
             return
 
-        # Keep ticking
-        self._draw_requested = False
-        self._schedule_next_tick()
-
-        # Special event for drawing
+        # Events and animations
+        self.process_events()
         self._events.submit({"event_type": "before_draw"})
         self._events.flush()
-
-        # Schedule a new draw right before doing the draw. Important that it happens *after* processing events.
-        self._last_draw_time = time.perf_counter()
 
         # Update stats
         count, last_time = self._draw_stats
@@ -290,6 +457,10 @@ class Scheduler:
         fps = count / (time.perf_counter() - last_time)
         canvas.set_title(f"wgpu {fps:0.1f} fps")
 
+        # Bookkeeping
+        self._last_draw_time = time.perf_counter()
+        self._draw_requested = False
+
         # Perform the user-defined drawing code. When this errors,
         # we should report the error and then continue, otherwise we crash.
         with log_exception("Draw error"):
@@ -300,3 +471,6 @@ class Scheduler:
             context = canvas._canvas_context
             if context:
                 context.present()
+
+        # Keep ticking
+        self._schedule_next_tick()

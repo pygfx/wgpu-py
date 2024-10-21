@@ -1,7 +1,7 @@
 import sys
 
 from ._events import EventEmitter
-from ._loop import Scheduler, WgpuLoop  # noqa: F401
+from ._loop import Scheduler, WgpuLoop, WgpuTimer  # noqa: F401
 
 
 class WgpuCanvasInterface:
@@ -193,7 +193,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         # "draw event" that we requested, or as part of a forced draw. So this
         # call must to the complete tick.
         if self._scheduler is not None:
-            self._scheduler.draw_tick()
+            self._scheduler.draw_frame_and_present()
 
     def _get_loop(self):
         """Must return the global loop instance (WgpuLoop) for the canvas subclass, or None for a non-interactive canvas."""

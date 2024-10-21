@@ -4,11 +4,10 @@ can be used as a standalone window or in a larger GUI.
 """
 
 import sys
-import time
 import ctypes
 import importlib
 
-from .base import WgpuCanvasBase, WgpuLoop
+from .base import WgpuCanvasBase, WgpuLoop, WgpuTimer
 from ._gui_utils import (
     logger,
     SYSTEM_IS_WAYLAND,
@@ -532,7 +531,26 @@ WgpuWidget = QWgpuWidget
 WgpuCanvas = QWgpuCanvas
 
 
+class QtWgpuTimer(WgpuTimer):
+    """Wgpu timer basef on Qt."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._qt_timer = QtCore.QTimer()
+        self._qt_timer.timeout.connect(self._tick)
+        self._qt_timer.setSingleShot(True)
+        self._qt_timer.setTimerType(PreciseTimer)
+
+    def _start(self):
+        self._qt_timer.start(int(self._interval * 1000))
+
+    def _stop(self):
+        self._qt_timer.stop()
+
+
 class QtWgpuLoop(WgpuLoop):
+    _TimerClass = QtWgpuTimer
+
     def init_qt(self):
         _ = self._app
         self._latest_timeout = 0
@@ -542,22 +560,7 @@ class QtWgpuLoop(WgpuLoop):
         """Return global instance of Qt app instance or create one if not created yet."""
         return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
-    def _wgpu_gui_poll(self):
-        # todo: make this a private method with a wgpu prefix.
-        pass  # we assume the Qt event loop is running. Calling processEvents() will cause recursive repaints.
-
-    def call_later(self, delay, callback, *args):
-        func = callback
-        if args:
-            func = lambda: callback(*args)
-
-        # Would like to use the PreciseTimer flagm but there's no signature that allows that, plus a simple callback func.
-        QtCore.QTimer.singleShot(int(delay * 1000), func)
-
-        # Store timeout
-        self._latest_timeout = max(self._latest_timeout, time.perf_counter() + delay)
-
-    def run(self):
+    def _run(self):
         # Note: we could detect if asyncio is running (interactive session) and wheter
         # we can use QtAsyncio. However, there's no point because that's up for the
         # end-user to decide.
@@ -571,18 +574,16 @@ class QtWgpuLoop(WgpuLoop):
             return  # Likely in an interactive session or larger application that will start the Qt app.
 
         app = self._app
+        app.setQuitOnLastWindowClosed(False)
         app.exec() if hasattr(app, "exec") else app.exec_()
 
-        # When the loop ends because the last window is closed, the close event may not
-        # be processed yet. Give it some time, so we get consistent close events.
-        # Note that this only works when the user code called this run() method.
-        end_time = min(time.perf_counter() + 2, self._latest_timeout)
-        end_time = max(time.perf_counter(), end_time) + 0.1
-        while time.perf_counter() < end_time:
-            app.processEvents()
+    def _stop(self):
+        if not already_had_app_on_import:
+            self._app.quit()
 
-    def stop(self):
-        self._app.quit()
+    def _wgpu_gui_poll(self):
+        # todo: make this a private method with a wgpu prefix.
+        pass  # we assume the Qt event loop is running. Calling processEvents() will cause recursive repaints.
 
 
 loop = QtWgpuLoop()
