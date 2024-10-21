@@ -1,6 +1,4 @@
-import time
-
-from .base import WgpuCanvasBase, WgpuLoop
+from .base import WgpuCanvasBase, WgpuLoop, WgpuTimer
 
 
 class WgpuManualOffscreenCanvas(WgpuCanvasBase):
@@ -50,7 +48,7 @@ class WgpuManualOffscreenCanvas(WgpuCanvasBase):
         return self._closed
 
     def _get_loop(self):
-        return loop
+        return None  # No scheduling for this canvas
 
     def _request_draw(self):
         # Deliberately a no-op, because people use .draw() instead.
@@ -73,6 +71,14 @@ class WgpuManualOffscreenCanvas(WgpuCanvasBase):
 WgpuCanvas = WgpuManualOffscreenCanvas
 
 
+class StubWgpuTimer(WgpuTimer):
+    def _start(self):
+        pass
+
+    def _stop(self):
+        pass
+
+
 class StubLoop(WgpuLoop):
     # If we consider the use-cases for using this offscreen canvas:
     #
@@ -87,25 +93,15 @@ class StubLoop(WgpuLoop):
     # In summary, we provide a call_later() and run() that behave pretty
     # well for the first case.
 
-    def __init__(self):
-        super().__init__()
-        self._pending_calls = []
+    _TimerClass = StubWgpuTimer  # subclases must set this
 
-    def call_later(self, delay, callback, *args):
-        # Note that this module never calls call_later() itself; request_draw() is a no-op.
-        etime = time.time() + delay
-        self._pending_calls.append((etime, callback, args))
+    def _run(self):
+        # Running this loop processes any timers
+        for timer in WgpuTimer._running_timers:
+            if timer.time_left <= 0:
+                timer._tick()
 
-    def run(self):
-        # Process pending calls
-        for etime, callback, args in self._pending_calls.copy():
-            if time.time() >= etime:
-                callback(*args)
-
-        # Clear any leftover scheduled calls, to avoid lingering refs.
-        self._pending_calls.clear()
-
-    def stop(self):
+    def _stop(self):
         pass
 
 
