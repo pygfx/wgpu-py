@@ -48,7 +48,7 @@ class WgpuManualOffscreenCanvas(WgpuCanvasBase):
         return self._closed
 
     def _get_loop(self):
-        return None  # No scheduling for this canvas
+        return loop
 
     def _request_draw(self):
         # Deliberately a no-op, because people use .draw() instead.
@@ -64,6 +64,7 @@ class WgpuManualOffscreenCanvas(WgpuCanvasBase):
         This object can be converted to a numpy array (without copying data)
         using ``np.asarray(arr)``.
         """
+        loop._process_events()  # Little trick to keep the event loop going
         self._force_draw()
         return self._last_image
 
@@ -95,11 +96,14 @@ class StubLoop(WgpuLoop):
 
     _TimerClass = StubWgpuTimer  # subclases must set this
 
-    def _run(self):
+    def _process_events(self):
         # Running this loop processes any timers
-        for timer in WgpuTimer._running_timers:
+        for timer in list(WgpuTimer._running_timers):
             if timer.time_left <= 0:
                 timer._tick()
+
+    def _run(self):
+        self._process_events()
 
     def _stop(self):
         pass
