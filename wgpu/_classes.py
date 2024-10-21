@@ -676,6 +676,12 @@ class GPUObjectBase:
         """A human-readable name identifying the GPU object."""
         return self._label
 
+    def __str__(self):
+        if self._label:
+            return f'<{self.__class__.__name__} "{self._label}">'
+        else:
+            return f"<{self.__class__.__name__} id(self)>"
+
     def _release(self):
         """Subclasses can implement this to clean up."""
         pass
@@ -1639,9 +1645,7 @@ class GPUBindGroupLayout(GPUObjectBase):
     Create a bind group layout using `GPUDevice.create_bind_group_layout()`.
     """
 
-    def __init__(self, label, internal, device, bindings):
-        super().__init__(label, internal, device)
-        self._bindings = tuple(bindings)
+    pass
 
 
 class GPUBindGroup(GPUObjectBase):
@@ -1653,9 +1657,7 @@ class GPUBindGroup(GPUObjectBase):
     Create a bind group using `GPUDevice.create_bind_group()`.
     """
 
-    def __init__(self, label, internal, device, bindings):
-        super().__init__(label, internal, device)
-        self._bindings = bindings
+    pass
 
 
 class GPUPipelineLayout(GPUObjectBase):
@@ -1664,9 +1666,7 @@ class GPUPipelineLayout(GPUObjectBase):
     Create a pipeline layout using `GPUDevice.create_pipeline_layout()`.
     """
 
-    def __init__(self, label, internal, device, layouts):
-        super().__init__(label, internal, device)
-        self._layouts = tuple(layouts)  # GPUBindGroupLayout objects
+    pass
 
 
 class GPUShaderModule(GPUObjectBase):
@@ -1693,9 +1693,6 @@ class GPUShaderModule(GPUObjectBase):
 
 class GPUPipelineBase:
     """A mixin class for render and compute pipelines."""
-
-    def __init__(self, label, internal, device):
-        super().__init__(label, internal, device)
 
     # IDL: [NewObject] GPUBindGroupLayout getBindGroupLayout(unsigned long index);
     def get_bind_group_layout(self, index: int):
