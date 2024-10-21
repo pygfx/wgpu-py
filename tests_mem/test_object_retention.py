@@ -11,6 +11,12 @@ from wgpu.backends.wgpu_native.extras import (
     end_pipeline_statistics_query,
 )
 
+#
+# wgpu is generally good at keeping alive those objects that it needs to complete a
+# GPU operation.  This file has tests that agressively deletes objects (so that their
+# release method will be called) even though the GPU has pending operations on them.
+# We confirm that the operations complete successfully.
+
 SHADER_SOURCE = """
     @group(0) @binding(0) var<uniform> offset: vec2f;
 
