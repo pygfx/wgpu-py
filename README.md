@@ -120,8 +120,8 @@ This code is distributed under the 2-clause BSD license.
   binaries.
   * You can use `python tools/download_wgpu_native.py` when needed.
   * Or point the `WGPU_LIB_PATH` environment variable to a custom build of `wgpu-native`.
-* Use `ruff format` to apply autoformatting.
-* Use `ruff check` to check for linting errors.
+* Install the `pre-commit` hooks with `pre-commit install`.
+* Linting and formatting will be automatically applied on `git commit` but you can manually verify compliance with `pre-commit run --all-files`.
 
 
 ### Updating to a later version of WebGPU or wgpu-native
