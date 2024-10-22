@@ -6,6 +6,7 @@ import time
 import weakref
 
 from ._gui_utils import log_exception
+from ..enums import Enum
 
 # Note: technically, we could have a global loop proxy object that defers to any of the other loops.
 # That would e.g. allow using glfw with qt together. Probably to too weird use-case for the added complexity.
@@ -240,6 +241,15 @@ class AnimationScheduler:
     #         scheduler._event_emitter.submit_and_dispatch(event)
 
 
+class UpdateMode(Enum):
+    """The different modes to schedule draws for the canvas."""
+
+    manual = None  #: Draw events are never scheduled. Draws only happen when you ``canvas.force_draw()``, and maybe when the GUI system issues them (e.g. when resizing).
+    ondemand = None  #: Draws are only scheduled when ``canvas.request_draw()`` is called when an update is needed. Safes your laptop battery. Honours ``min_fps`` and ``max_fps``.
+    continuous = None  #: Continuously schedules draw events, honouring ``max_fps``. Calls to ``canvas.request_draw()`` have no effect.
+    fastest = None  #: Continuously schedules draw events as fast as possible. Gives high FPS (and drains your battery).
+
+
 class Scheduler:
     """Helper class to schedule event processing and drawing."""
 
@@ -309,6 +319,10 @@ class Scheduler:
         loop._register_scheduler(self)
 
         # Scheduling variables
+        if mode not in UpdateMode:
+            raise ValueError(
+                f"Invalid update_mode '{mode}', must be in {set(UpdateMode)}."
+            )
         self._mode = mode
         self._min_fps = float(min_fps)
         self._max_fps = float(max_fps)
