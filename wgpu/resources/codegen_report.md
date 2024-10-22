@@ -18,9 +18,9 @@
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 124 methods, 46 properties
+* Validated 37 classes, 121 methods, 46 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 117 methods, 0 properties
+* Validated 37 classes, 120 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.texture-compression-bc-sliced-3d missing in wgpu.h
 * Enum field FeatureName.clip-distances missing in wgpu.h

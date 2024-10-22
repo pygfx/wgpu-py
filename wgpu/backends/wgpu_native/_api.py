@@ -1338,7 +1338,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUBindGroupLayout f(WGPUDevice device, WGPUBindGroupLayoutDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateBindGroupLayout(self._internal, struct)
-        return GPUBindGroupLayout(label, id, self, entries)
+        return GPUBindGroupLayout(label, id, self)
 
     def create_bind_group(
         self,
@@ -1408,7 +1408,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUBindGroup f(WGPUDevice device, WGPUBindGroupDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateBindGroup(self._internal, struct)
-        return GPUBindGroup(label, id, self, entries)
+        return GPUBindGroup(label, id, self)
 
     def create_pipeline_layout(
         self, *, label: str = "", bind_group_layouts: List[GPUBindGroupLayout]
@@ -1459,7 +1459,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUPipelineLayout f(WGPUDevice device, WGPUPipelineLayoutDescriptor const * descriptor)
         id = libf.wgpuDeviceCreatePipelineLayout(self._internal, struct)
-        return GPUPipelineLayout(label, id, self, bind_group_layouts)
+        return GPUPipelineLayout(label, id, self)
 
     def create_shader_module(
         self,
@@ -1956,7 +1956,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         render_bundle_encoder_id = libf.wgpuDeviceCreateRenderBundleEncoder(
             self._internal, render_bundle_encoder_descriptor
         )
-        return GPURenderBundleEncoder(label, render_bundle_encoder_id, self)
+        result = GPURenderBundleEncoder(label, render_bundle_encoder_id, self)
+        result._objects_to_keep_alive = set()
+        return result
 
     def create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
         return self._create_query_set(label, type, count, None)
@@ -2398,26 +2400,27 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
 class GPUPipelineBase(classes.GPUPipelineBase):
     def get_bind_group_layout(self, index: int):
-        """Get the bind group layout at the given index."""
-        if isinstance(self, GPUComputePipeline):
-            # H: WGPUBindGroupLayout f(WGPUComputePipeline computePipeline, uint32_t groupIndex)
-            layout_id = libf.wgpuComputePipelineGetBindGroupLayout(
-                self._internal, index
-            )
-        else:
-            # H: WGPUBindGroupLayout f(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
-            layout_id = libf.wgpuRenderPipelineGetBindGroupLayout(self._internal, index)
-        return GPUBindGroupLayout("", layout_id, self._device, [])
+        # H: WGPUBindGroupLayout wgpuComputePipelineGetBindGroupLayout(WGPUComputePipeline computePipeline, uint32_t groupIndex)
+        # H: WGPUBindGroupLayout wgpuRenderPipelineGetBindGroupLayout(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
+        function = type(self)._get_bind_group_layout_function
+        layout_id = function(self._internal, index)
+        return GPUBindGroupLayout("", layout_id, self._device)
 
 
 class GPUComputePipeline(classes.GPUComputePipeline, GPUPipelineBase, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePipelineRelease
 
+    # GPUPipelineBase
+    _get_bind_group_layout_function = libf.wgpuComputePipelineGetBindGroupLayout
+
 
 class GPURenderPipeline(classes.GPURenderPipeline, GPUPipelineBase, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuRenderPipelineRelease
+
+    # GPUPipelineBase
+    _get_bind_group_layout_function = libf.wgpuRenderPipelineGetBindGroupLayout
 
 
 class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
@@ -2461,13 +2464,12 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
         offsets = list(dynamic_offsets_data)
         c_offsets = ffi.new("uint32_t []", offsets)
-        bind_group_id = bind_group._internal
-
+        self._maybe_keep_alive(bind_group)
         # H: void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
         # H: void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
         # H: void wgpuRenderBundleEncoderSetBindGroup(WGPURenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
         function = type(self)._set_bind_group_function
-        function(self._internal, index, bind_group_id, len(offsets), c_offsets)
+        function(self._internal, index, bind_group._internal, len(offsets), c_offsets)
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
@@ -2501,6 +2503,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
 
 class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
     def set_pipeline(self, pipeline: GPURenderPipeline):
+        self._maybe_keep_alive(pipeline)
         pipeline_id = pipeline._internal
         # H: void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
         # H: void wgpuRenderBundleEncoderSetPipeline(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderPipeline pipeline)
@@ -2514,6 +2517,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         offset: int = 0,
         size: Optional[int] = None,
     ):
+        self._maybe_keep_alive(buffer)
         if not size:
             size = lib.WGPU_WHOLE_SIZE
         c_index_format = enummap[f"IndexFormat.{index_format}"]
@@ -2527,6 +2531,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
     def set_vertex_buffer(
         self, slot: int, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
     ):
+        self._maybe_keep_alive(buffer)
         if not size:
             size = lib.WGPU_WHOLE_SIZE
         # H: void wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
@@ -2549,6 +2554,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         )
 
     def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
+        self._maybe_keep_alive(indirect_buffer)
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         # H: void wgpuRenderBundleEncoderDrawIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
@@ -2576,6 +2582,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         )
 
     def draw_indexed_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
+        self._maybe_keep_alive(indirect_buffer)
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndexedIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         # H: void wgpuRenderBundleEncoderDrawIndexedIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
@@ -2651,12 +2658,8 @@ class GPUCommandEncoder(
                 ),
             )
 
-        objects_to_keep_alive = {}
-
         c_color_attachments_list = [
-            self._create_render_pass_color_attachment(
-                color_attachment, objects_to_keep_alive
-            )
+            self._create_render_pass_color_attachment(color_attachment)
             for color_attachment in color_attachments
         ]
         c_color_attachments_array = ffi.new(
@@ -2673,7 +2676,6 @@ class GPUCommandEncoder(
         c_occlusion_query_set = ffi.NULL
         if occlusion_query_set is not None:
             c_occlusion_query_set = occlusion_query_set._internal
-            objects_to_keep_alive[c_occlusion_query_set] = occlusion_query_set
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet, timestampWrites: WGPURenderPassTimestampWrites *
         struct = new_struct_p(
@@ -2690,18 +2692,14 @@ class GPUCommandEncoder(
         # H: WGPURenderPassEncoder f(WGPUCommandEncoder commandEncoder, WGPURenderPassDescriptor const * descriptor)
         raw_encoder = libf.wgpuCommandEncoderBeginRenderPass(self._internal, struct)
         encoder = GPURenderPassEncoder(label, raw_encoder, self._device)
-        encoder._objects_to_keep_alive = objects_to_keep_alive
         return encoder
 
-    def _create_render_pass_color_attachment(
-        self, color_attachment, objects_to_keep_alive
-    ):
+    def _create_render_pass_color_attachment(self, color_attachment):
         check_struct("RenderPassColorAttachment", color_attachment)
         texture_view = color_attachment["view"]
         if not isinstance(texture_view, GPUTextureView):
             raise TypeError("Color attachment view must be a GPUTextureView.")
         texture_view_id = texture_view._internal
-        objects_to_keep_alive[texture_view_id] = texture_view
         c_resolve_target = (
             ffi.NULL
             if color_attachment.get("resolve_target", None) is None
@@ -3095,8 +3093,6 @@ class GPUComputePassEncoder(
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePassEncoderRelease
 
-    _ended = False
-
     def set_pipeline(self, pipeline: GPUComputePipeline):
         pipeline_id = pipeline._internal
         # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)
@@ -3135,10 +3131,12 @@ class GPUComputePassEncoder(
     def end(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
-        self._ended = True
         # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
         # As of wgpu-native v22.1.0.5, this bug is still present.
         self._release()
+
+    def _maybe_keep_alive(self, object):
+        pass
 
 
 class GPURenderPassEncoder(
@@ -3168,8 +3166,6 @@ class GPURenderPassEncoder(
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuRenderPassEncoderRelease
-
-    _ended = False
 
     def set_viewport(
         self,
@@ -3219,7 +3215,6 @@ class GPURenderPassEncoder(
     def end(self):
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
-        self._ended = True
         # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
         # As of wgpu-native v22.1.0.5, this bug is still present.
         self._release()
@@ -3291,6 +3286,9 @@ class GPURenderPassEncoder(
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEndPipelineStatisticsQuery(self._internal)
 
+    def _maybe_keep_alive(self, object):
+        pass
+
 
 class GPURenderBundleEncoder(
     classes.GPURenderBundleEncoder,
@@ -3331,7 +3329,12 @@ class GPURenderBundleEncoder(
         id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
         # The other encoders require that we call self._release() when
         # we're done with it.  But that doesn't seem to be an issue here.
+        # We no longer need to keep these objects alive after the call to finish().
+        self._objects_to_keep_alive.clear()
         return GPURenderBundle(label, id, self._device)
+
+    def _maybe_keep_alive(self, object):
+        self._objects_to_keep_alive.add(object)
 
 
 class GPUQueue(classes.GPUQueue, GPUObjectBase):
