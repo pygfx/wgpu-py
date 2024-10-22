@@ -102,7 +102,7 @@ def test_render_occluding_squares():
         "view": output_texture.create_view(),
     }
 
-    occlusion_query_set = create_statistics_query_set(
+    statistics_query_set = create_statistics_query_set(
         device,
         count=2,
         statistics=[
@@ -113,7 +113,7 @@ def test_render_occluding_squares():
             PipelineStatisticName.ComputeShaderInvocations,  # and there's an enum.
         ],
     )
-    occlusion_buffer = device.create_buffer(
+    statistics_buffer = device.create_buffer(
         size=2 * 5 * np.uint64().itemsize,
         usage=wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.QUERY_RESOLVE,
     )
@@ -123,27 +123,27 @@ def test_render_occluding_squares():
     render_pass = command_encoder.begin_render_pass(
         color_attachments=[color_attachment]
     )
-    begin_pipeline_statistics_query(render_pass, occlusion_query_set, 0)
+    begin_pipeline_statistics_query(render_pass, statistics_query_set, 0)
     render_pass.set_pipeline(render_pipeline)
     render_pass.draw(4, 2)
     end_pipeline_statistics_query(render_pass)
     render_pass.end()
 
     compute_pass = command_encoder.begin_compute_pass()
-    begin_pipeline_statistics_query(compute_pass, occlusion_query_set, 1)
+    begin_pipeline_statistics_query(compute_pass, statistics_query_set, 1)
     compute_pass.set_pipeline(compute_pipeline)
     compute_pass.dispatch_workgroups(10)
     end_pipeline_statistics_query(compute_pass)
     compute_pass.end()
 
-    command_encoder.resolve_query_set(occlusion_query_set, 0, 2, occlusion_buffer, 0)
+    command_encoder.resolve_query_set(statistics_query_set, 0, 2, statistics_buffer, 0)
     device.queue.submit([command_encoder.finish()])
 
     render_result = (
-        device.queue.read_buffer(occlusion_buffer, size=40).cast("Q").tolist()
+        device.queue.read_buffer(statistics_buffer, size=40).cast("Q").tolist()
     )
     compute_result = (
-        device.queue.read_buffer(occlusion_buffer, buffer_offset=40).cast("Q").tolist()
+        device.queue.read_buffer(statistics_buffer, buffer_offset=40).cast("Q").tolist()
     )
 
     # We know that compute was called 10 * 60 times, exactly
