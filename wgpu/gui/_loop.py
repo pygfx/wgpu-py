@@ -312,7 +312,7 @@ class Scheduler:
         self._mode = mode
         self._min_fps = float(min_fps)
         self._max_fps = float(max_fps)
-        self._draw_requested = True
+        self._draw_requested = True  # Start with a draw in ondemand mode
 
         # Stats
         self._last_draw_time = 0
@@ -330,6 +330,7 @@ class Scheduler:
     def _get_canvas(self):
         canvas = self._canvas_ref()
         if canvas is None or canvas.is_closed():
+            # Pretty nice, we can send a close event, even if the canvas no longer exists
             self._events._wgpu_close()
             return None
         else:
@@ -370,9 +371,6 @@ class Scheduler:
         if (canvas := self._get_canvas()) is None:
             return
 
-        # Process events, may set _draw_requested
-        canvas._process_events()
-
         # Determine what to do next ...
 
         if self._mode == "fastest":
@@ -386,16 +384,19 @@ class Scheduler:
         elif self._mode == "ondemand":
             # ondemand: draw when needed (detected by calls to request_draw).
             # Aim for max_fps when drawing is needed, otherwise min_fps.
-            its_draw_time = (
+            its_time_to_draw = (
                 time.perf_counter() - self._last_draw_time > 1 / self._min_fps
             )
-            if self._draw_requested or its_draw_time:
+            if not self._draw_requested:
+                canvas._process_events()  # handlers may request a draw
+            if self._draw_requested or its_time_to_draw:
                 canvas._request_draw()
             else:
                 self._schedule_next_tick()
 
         elif self._mode == "manual":
             # manual: never draw, except when ... ?
+            canvas._process_events()
             self._schedule_next_tick()
 
         else:

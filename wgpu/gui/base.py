@@ -101,6 +101,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def __init__(
         self,
         *args,
+        min_fps=1,
         max_fps=30,
         vsync=True,
         present_method=None,
@@ -115,7 +116,9 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._scheduler = None
         loop = self._get_loop()
         if loop:
-            self._scheduler = Scheduler(self, loop, max_fps=max_fps, mode=update_mode)
+            self._scheduler = Scheduler(
+                self, loop, min_fps=min_fps, max_fps=max_fps, mode=update_mode
+            )
 
     def __del__(self):
         # On delete, we call the custom close method.
@@ -150,6 +153,10 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     def _process_events(self):
         """Process events and animations. To be called right before a draw, and from the scheduler."""
+
+        # We don't want this to be called too often, because we want the
+        # accumulative events to accumulate. Once per draw, and at max_fps
+        # when there are no draws (in ondemand and manual mode).
 
         # Get events from the GUI into our event mechanism.
         loop = self._get_loop()
