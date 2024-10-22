@@ -1,23 +1,51 @@
 """
-Test the canvas basics.
+Test the base canvas class.
 """
 
-import gc
 import sys
 import subprocess
 
 import numpy as np
 import wgpu.gui
-from testutils import run_tests, can_use_wgpu_lib, is_pypy
+from testutils import run_tests, can_use_wgpu_lib
 from pytest import mark, raises
 
 
-class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
+def test_base_canvas_context():
+    assert not issubclass(wgpu.gui.WgpuCanvasInterface, wgpu.GPUCanvasContext)
+    assert hasattr(wgpu.gui.WgpuCanvasInterface, "get_context")
+
+
+def test_base_canvas_cannot_use_context():
+    canvas = wgpu.gui.WgpuCanvasInterface()
+    with raises(NotImplementedError):
+        wgpu.GPUCanvasContext(canvas)
+
+    canvas = wgpu.gui.WgpuCanvasBase()
+    with raises(NotImplementedError):
+        canvas.get_context()
+
+
+def test_canvas_get_context_needs_backend_to_be_selected():
+    code = "from wgpu.gui import WgpuCanvasBase; canvas = WgpuCanvasBase(); canvas.get_context()"
+
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+    )
+    out = result.stdout.rstrip()
+
+    assert "RuntimeError" in out
+    assert "backend must be selected" in out.lower()
+    assert "canvas.get_context" in out.lower()
+
+
+class CanvasThatRaisesErrorsDuringDrawing(wgpu.gui.WgpuCanvasBase):
     def __init__(self):
         super().__init__()
         self._count = 0
-
-    def _get_loop(self):
 
     def _draw_frame(self):
         self._count += 1
@@ -37,22 +65,13 @@ class TheTestCanvas(wgpu.gui.WgpuCanvasBase):
         raise Exception(msg)
 
 
-def test_base_canvas_context():
-    assert not issubclass(wgpu.gui.WgpuCanvasInterface, wgpu.GPUCanvasContext)
-    assert hasattr(wgpu.gui.WgpuCanvasInterface, "get_context")
-    canvas = wgpu.gui.WgpuCanvasInterface()
-    # Cannot instantiate, because get_present_info is not implemented
-    with raises(NotImplementedError):
-        wgpu.GPUCanvasContext(canvas)
-
-
 def test_canvas_logging(caplog):
     """As we attempt to draw, the canvas will error, which are logged.
     Each first occurrence is logged with a traceback. Subsequent same errors
     are much shorter and have a counter.
     """
 
-    canvas = TheTestCanvas()
+    canvas = CanvasThatRaisesErrorsDuringDrawing()
 
     canvas._draw_frame_and_present()  # prints traceback
     canvas._draw_frame_and_present()  # prints short logs ...
@@ -108,10 +127,6 @@ class MyOffscreenCanvas(wgpu.gui.WgpuCanvasBase):
     def get_physical_size(self):
         return self.physical_size
 
-    def _request_draw(self):
-        # Note: this would normally schedule a call in a later event loop iteration
-        self._draw_frame_and_present()
-
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_run_bare_canvas():
@@ -129,25 +144,8 @@ def test_run_bare_canvas():
     canvas._draw_frame_and_present()
 
 
-def test_canvas_context_not_base():
-    """Check that it is prevented that canvas context is instance of base context class."""
-    code = "from wgpu.gui import WgpuCanvasBase; canvas = WgpuCanvasBase(); canvas.get_context()"
-
-    result = subprocess.run(
-        [sys.executable, "-c", code],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True,
-    )
-    out = result.stdout.rstrip()
-
-    assert "RuntimeError" in out
-    assert "backend must be selected" in out.lower()
-    assert "canvas.get_context" in out.lower()
-
-
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
-def test_offscreen_canvas():
+def test_simpple_offscreen_canvas():
     canvas = MyOffscreenCanvas()
     device = wgpu.utils.get_default_device()
     present_context = canvas.get_context()
@@ -176,14 +174,16 @@ def test_offscreen_canvas():
 
     assert canvas.frame_count == 0
 
-    # Draw 1
     canvas.request_draw(draw_frame)
+
+    # Draw 1
+    canvas.force_draw()
     assert canvas.array.shape == (100, 100, 4)
     assert np.all(canvas.array[:, :, 0] == 0)
     assert np.all(canvas.array[:, :, 1] == 255)
 
     # Draw 2
-    canvas.request_draw(draw_frame)
+    canvas.force_draw()
     assert canvas.array.shape == (100, 100, 4)
     assert np.all(canvas.array[:, :, 0] == 0)
     assert np.all(canvas.array[:, :, 1] == 255)
@@ -192,7 +192,7 @@ def test_offscreen_canvas():
     canvas.physical_size = 120, 100
 
     # Draw 3
-    canvas.request_draw(draw_frame)
+    canvas.force_draw()
     assert canvas.array.shape == (100, 120, 4)
     assert np.all(canvas.array[:, :, 0] == 0)
     assert np.all(canvas.array[:, :, 1] == 255)
@@ -201,7 +201,7 @@ def test_offscreen_canvas():
     canvas.physical_size = 120, 140
 
     # Draw 4
-    canvas.request_draw(draw_frame)
+    canvas.force_draw()
     assert canvas.array.shape == (140, 120, 4)
     assert np.all(canvas.array[:, :, 0] == 0)
     assert np.all(canvas.array[:, :, 1] == 255)
@@ -213,54 +213,19 @@ def test_offscreen_canvas():
 def test_canvas_base_events():
     c = wgpu.gui.WgpuCanvasBase()
 
-    # It's event handling mechanism should be fully functional
+    # We test events extensively in another test module. This is just
+    # to make sure that events are working for the base canvas.
 
     events = []
 
     def handler(event):
         events.append(event["value"])
 
-    c.add_event_handler(handler, "resize")
-    c.submit_event({"event_type": "resize", "value": 1})
-    c.submit_event({"event_type": "resize", "value": 2})
-    c.remove_event_handler(handler)
-    c.submit_event({"event_type": "resize", "value": 3})
-
+    c.add_event_handler(handler, "key_down")
+    c.submit_event({"event_type": "key_down", "value": 1})
+    c.submit_event({"event_type": "key_down", "value": 2})
+    c._events.flush()
     assert events == [1, 2]
-
-
-def test_weakbind():
-    weakbind = wgpu.gui._gui_utils.weakbind
-
-    xx = []
-
-    class Foo:
-        def bar(self):
-            xx.append(1)
-
-    f1 = Foo()
-    f2 = Foo()
-
-    b1 = f1.bar
-    b2 = weakbind(f2.bar)
-
-    assert len(xx) == 0
-    b1()
-    assert len(xx) == 1
-    b2()
-    assert len(xx) == 2
-
-    del f1
-    del f2
-
-    if is_pypy:
-        gc.collect()
-
-    assert len(xx) == 2
-    b1()
-    assert len(xx) == 3  # f1 still exists
-    b2()
-    assert len(xx) == 3  # f2 is gone!
 
 
 if __name__ == "__main__":

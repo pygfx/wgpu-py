@@ -295,7 +295,7 @@ class Scheduler:
     # Note that any extra draws, e.g. via force_draw() or due to window resizes,
     # don't affect the scheduling loop; they are just extra draws.
 
-    def __init__(self, canvas, loop, *, mode="continuous", min_fps=1, max_fps=30):
+    def __init__(self, canvas, loop, *, mode="ondemand", min_fps=1, max_fps=30):
         # Objects related to the canvas.
         # We don't keep a ref to the canvas to help gc. This scheduler object can be
         # referenced via a callback in an event loop, but it won't prevent the canvas

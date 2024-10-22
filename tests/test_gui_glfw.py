@@ -111,7 +111,7 @@ def test_glfw_canvas_render():
         asyncio_loop.run_until_complete(asyncio.sleep(0.5))
         # poll_glfw_briefly()
 
-    canvas = WgpuCanvas(max_fps=9999)
+    canvas = WgpuCanvas(max_fps=9999, update_mode="ondemand")
 
     device = wgpu.utils.get_default_device()
     draw_frame1 = _get_draw_function(device, canvas)

@@ -104,18 +104,18 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         max_fps=30,
         vsync=True,
         present_method=None,
+        update_mode="ondemand",
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self._vsync = bool(vsync)
         present_method  # noqa - We just catch the arg here in case a backend does implement it
 
-        self._draw_frame = lambda: None
         self._events = EventEmitter()
         self._scheduler = None
         loop = self._get_loop()
         if loop:
-            self._scheduler = Scheduler(self, loop, max_fps=max_fps)
+            self._scheduler = Scheduler(self, loop, max_fps=max_fps, mode=update_mode)
 
     def __del__(self):
         # On delete, we call the custom close method.
@@ -148,7 +148,46 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     remove_event_handler.__doc__ = EventEmitter.remove_handler.__doc__
     submit_event.__doc__ = EventEmitter.submit.__doc__
 
-    # === Scheduling
+    def _process_events(self):
+        """Process events and animations. To be called right before a draw, and from the scheduler."""
+
+        # Get events from the GUI into our event mechanism.
+        loop = self._get_loop()
+        if loop:
+            loop._wgpu_gui_poll()
+
+        # Flush our events, so downstream code can update stuff.
+        # Maybe that downstream code request a new draw.
+        self._events.flush()
+
+        # TODO: implement later (this is a start but is not tested)
+        # Schedule animation events until the lag is gone
+        # step = self._animation_step
+        # self._animation_time = self._animation_time or time.perf_counter()  # start now
+        # animation_iters = 0
+        # while self._animation_time > time.perf_counter() - step:
+        #     self._animation_time += step
+        #     self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
+        #     # Do the animations. This costs time.
+        #     self._events.flush()
+        #     # Abort when we cannot keep up
+        #     # todo: test this
+        #     animation_iters += 1
+        #     if animation_iters > 20:
+        #         n = (time.perf_counter() - self._animation_time) // step
+        #         self._animation_time += step * n
+        #         self._events.submit(
+        #             {"event_type": "animate", "step": step * n, "catch_up": n}
+        #         )
+
+    # === Scheduling and drawing
+
+    def _draw_frame(self):
+        """The method to call to draw a frame.
+
+        Cen be overriden by subclassing, or by passing a callable to request_draw().
+        """
+        pass
 
     def request_draw(self, draw_function=None):
         """Schedule a new draw event.
@@ -179,40 +218,6 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def force_draw(self):
         """Perform a draw right now."""
         self._force_draw()
-
-    def _process_events(self):
-        """Process events and animations."""
-
-        loop = self._get_loop()
-        if loop is None:
-            return
-
-        # Get events from the GUI into our event mechanism.
-        loop._wgpu_gui_poll()
-
-        # Flush our events, so downstream code can update stuff.
-        # Maybe that downstream code request a new draw.
-        self._events.flush()
-
-        # TODO: implement later (this is a start but is not tested)
-        # Schedule animation events until the lag is gone
-        # step = self._animation_step
-        # self._animation_time = self._animation_time or time.perf_counter()  # start now
-        # animation_iters = 0
-        # while self._animation_time > time.perf_counter() - step:
-        #     self._animation_time += step
-        #     self._events.submit({"event_type": "animate", "step": step, "catch_up": 0})
-        #     # Do the animations. This costs time.
-        #     self._events.flush()
-        #     # Abort when we cannot keep up
-        #     # todo: test this
-        #     animation_iters += 1
-        #     if animation_iters > 20:
-        #         n = (time.perf_counter() - self._animation_time) // step
-        #         self._animation_time += step * n
-        #         self._events.submit(
-        #             {"event_type": "animate", "step": step * n, "catch_up": n}
-        #         )
 
     def _draw_frame_and_present(self):
         """Draw the frame and present the result.
@@ -247,18 +252,20 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         """For the subclass to implement:
 
         Must return the global loop instance (WgpuLoop) for the canvas subclass,
-        or None for an interactive canvas without scheduled draws.
+        or None for a canvas without scheduled draws.
         """
         return None
 
     def _request_draw(self):
         """For the subclass to implement:
 
-        Request the GUI layer to perform a draw. Like requestAnimationFrame in JS.
-        The draw must be performed by calling _draw_frame_and_present().
-        It's the responsibility for the canvas subclass to make sure that a draw is made (eventually).
+        Request the GUI layer to perform a draw. Like requestAnimationFrame in
+        JS. The draw must be performed by calling _draw_frame_and_present().
+        It's the responsibility for the canvas subclass to make sure that a draw
+        is made (eventually). By default does nothing, which is equivalent to
+        waiting for a forced draw or a draw invoked by the GUI system.
         """
-        raise NotImplementedError()
+        pass
 
     def _force_draw(self):
         """For the subclass to implement:
@@ -269,6 +276,8 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._draw_frame_and_present()
 
     # === Primary canvas management methods
+
+    # todo: we require subclasses to implement public methods, while everywhere else the implementable-methods are private.
 
     def get_physical_size(self):
         """Get the physical size in integer pixels."""
