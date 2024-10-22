@@ -268,9 +268,9 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         self.resize(width, height)  # See comment on pixel ratio
 
     def set_title(self, title):
-        self.setWindowTitle(title)
-        if isinstance(self.parent(), QWgpuCanvas):
-            self.parent().setWindowTitle(title)
+        # A QWidgets title can actually be shown when the widget is shown in a dock.
+        # But the application should probably determine that title, not us.
+        pass
 
     def close(self):
         QtWidgets.QWidget.close(self)
@@ -506,7 +506,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self.resize(width, height)  # See comment on pixel ratio
 
     def set_title(self, title):
-        self._subwidget.set_title(title)
+        self.setWindowTitle(title)
 
     def close(self):
         QtWidgets.QWidget.close(self)
