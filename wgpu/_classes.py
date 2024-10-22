@@ -810,6 +810,9 @@ class GPUDevice(GPUObjectBase):
             size (int): The size of the buffer in bytes.
             usage (flags.BufferUsage): The ways in which this buffer will be used.
             mapped_at_creation (bool): Whether the buffer is initially mapped.
+
+        Alignment: the size must be a multiple of 4.
+
         """
         raise NotImplementedError()
 
@@ -1448,9 +1451,6 @@ class GPUBuffer(GPUObjectBase):
             buffer_offset (int): the buffer offset in bytes. Must be at least
                 as large as the offset specified in ``map()``. The default
                 is the offset of the mapped range.
-            size (int): the size to write (in bytes). The default is the size of
-                the data, so this argument can typically be ignored. The
-                resulting range must fit into the range specified in ``map()``.
 
         Alignment: the buffer offset must be a multiple of 8.
 

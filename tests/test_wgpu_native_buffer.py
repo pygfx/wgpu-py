@@ -1,5 +1,7 @@
 import sys
 
+import pytest
+
 import wgpu.utils
 import numpy as np
 
@@ -528,6 +530,22 @@ def test_buffer_map_read_and_write():
     data2 = buf2.read_mapped()
     buf2.unmap()
     assert data1 == data2
+
+
+@pytest.mark.parametrize("size", [4, 11, 20, 22, 10000])
+def test_create_buffer_with_data(size):
+    device = wgpu.utils.get_default_device()
+    data = np.random.bytes(size)
+    buffer = device.create_buffer_with_data(data=data, usage=wgpu.BufferUsage.COPY_SRC)
+
+    # Make sure that the length of the buffer is the next multiple of 4
+    assert buffer._nbytes % 4 == 0
+    assert 0 <= buffer._nbytes - size <= 3
+
+    # Make sure that the contents of the buffer is the data padded with 0s.
+    copy = device.queue.read_buffer(buffer)
+    assert copy[0:size] == data
+    assert copy[size:] == bytes(buffer._nbytes - size)
 
 
 if __name__ == "__main__":
