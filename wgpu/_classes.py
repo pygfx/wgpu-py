@@ -680,7 +680,7 @@ class GPUObjectBase:
         if self._label:
             return f'<{self.__class__.__name__} "{self._label}">'
         else:
-            return f"<{self.__class__.__name__} id(self)>"
+            return f"<{self.__class__.__name__} {id(self)}>"
 
     def _release(self):
         """Subclasses can implement this to clean up."""
