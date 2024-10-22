@@ -154,14 +154,49 @@ def test_events_handler_order():
     def handler3(event):
         values.append(300 + event["value"])
 
-    # handler3 goes first, the other two maintain order
+    # Handlers are called in the order they were added.
+    # This is what most systems use. Except Vispy (and therefore Napari),
+    # which causes them a lot of trouble:
+    # https://github.com/vispy/vispy/blob/af84742/vispy/util/event.py#L263-L264
+    # https://github.com/napari/napari/pull/7150
+    # https://github.com/napari/napari-animation/pull/234
     ee.add_handler(handler1, "key_down")
     ee.add_handler(handler2, "key_down")
+    ee.add_handler(handler3, "key_down")
+
+    ee.submit({"event_type": "key_down", "value": 1})
+    ee.flush()
+    assert values == [101, 201, 301]
+
+    # Now re-connect with priorities
+    values.clear()
+    ee.add_handler(handler1, "key_down", order=0)  # default
+    ee.add_handler(handler2, "key_down", order=2)
+    ee.add_handler(handler3, "key_down", order=1)
+
+    ee.submit({"event_type": "key_down", "value": 1})
+    ee.flush()
+    assert values == [101, 301, 201]
+
+    # Another run using negative priorities too
+    values.clear()
+    ee.add_handler(handler1, "key_down", order=1)  # default
+    ee.add_handler(handler2, "key_down", order=-2)
     ee.add_handler(handler3, "key_down", order=-1)
 
     ee.submit({"event_type": "key_down", "value": 1})
     ee.flush()
-    assert values == [301, 101, 201]
+    assert values == [201, 301, 101]
+
+    # Use floats!
+    values.clear()
+    ee.add_handler(handler1, "key_down", order=0.33)  # default
+    ee.add_handler(handler2, "key_down", order=0.22)
+    ee.add_handler(handler3, "key_down", order=0.11)
+
+    ee.submit({"event_type": "key_down", "value": 1})
+    ee.flush()
+    assert values == [301, 201, 101]
 
 
 def test_events_duplicate_handler():

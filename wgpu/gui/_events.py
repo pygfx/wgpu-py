@@ -62,16 +62,20 @@ class EventEmitter:
         self._event_handlers = defaultdict(list)
         self._closed = False
 
-    def add_handler(self, *args, order=0):
+    def add_handler(self, *args, order: float = 0):
         """Register an event handler to receive events.
 
         Arguments:
-            callback (callable): The event handler. Must accept a single event argument.
-            *types (list of strings): A list of event types.
-            order (int): The order in which the handler is called. Lower numbers are called first. Default is 0.
+            callback (callable): The event handler. Must accept a single event
+                argument. *types (list of strings): A list of event types.
+            order (float): Set callback priority order. Callbacks with lower priorities
+                are called first. Default is 0.
 
         For the available events, see
         https://jupyter-rfb.readthedocs.io/en/stable/events.html.
+
+        When an event is emitted, callbacks with the same priority are called in
+        the order that they were added.
 
         The callback is stored, so it can be a lambda or closure. This also
         means that if a method is given, a reference to the object is held,
@@ -91,8 +95,8 @@ class EventEmitter:
 
         .. code-block:: py
 
-            @canvas.add_event_handler("pointer_up", "pointer_down")
-            def my_handler(event):
+            @canvas.add_event_handler("pointer_up", "pointer_down") def
+            my_handler(event):
                 print(event)
 
         Catch 'm all:
@@ -102,6 +106,7 @@ class EventEmitter:
             canvas.add_event_handler(my_handler, "*")
 
         """
+        order = float(order)
         decorating = not callable(args[0])
         callback = None if decorating else args[0]
         types = args if decorating else args[1:]
