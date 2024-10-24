@@ -189,15 +189,23 @@ class EventEmitter:
                 event = self._pending_events.popleft()
             except IndexError:
                 break
-            # Collect callbacks
-            event_type = event.get("event_type")
-            callbacks = self._event_handlers[event_type] + self._event_handlers["*"]
-            # Dispatch
-            for _order, callback in callbacks:
-                if event.get("stop_propagation", False):
-                    break
-                with log_exception(f"Error during handling {event_type} event"):
-                    callback(event)
+            self.emit(event)
+
+    def emit(self, event):
+        """Directly emit the given event.
+
+        In most cases events should be submitted, so that they are flushed
+        with the rest at a good time.
+        """
+        # Collect callbacks
+        event_type = event.get("event_type")
+        callbacks = self._event_handlers[event_type] + self._event_handlers["*"]
+        # Dispatch
+        for _order, callback in callbacks:
+            if event.get("stop_propagation", False):
+                break
+            with log_exception(f"Error during handling {event_type} event"):
+                callback(event)
 
     def _wgpu_close(self):
         """Wrap up when the scheduler detects the canvas is closed/dead."""

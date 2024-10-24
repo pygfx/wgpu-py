@@ -83,6 +83,26 @@ def test_events_handler_decorated():
     assert values == [1, 2]
 
 
+def test_direct_emit_():
+    ee = EventEmitter()
+
+    values = []
+
+    @ee.add_handler("key_down", "key_up")
+    def handler(event):
+        values.append(event["value"])
+
+    ee.submit({"event_type": "key_down", "value": 1})
+    ee.flush()
+    ee.submit({"event_type": "key_up", "value": 2})
+    ee.emit({"event_type": "key_up", "value": 3})  # goes before pending events
+    ee.submit({"event_type": "key_up", "value": 4})
+    ee.flush()
+    ee.submit({"event_type": "key_up", "value": 5})
+
+    assert values == [1, 3, 2, 4]
+
+
 def test_events_two_types():
     ee = EventEmitter()
 

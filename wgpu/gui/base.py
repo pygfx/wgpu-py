@@ -253,8 +253,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
             # Process special events
             # Note that we must not process normal events here, since these can do stuff
             # with the canvas (resize/close/etc) and most GUI systems don't like that.
-            self._events.submit({"event_type": "before_draw"})
-            self._events.flush()
+            self._events.emit({"event_type": "before_draw"})
 
             # Notify the scheduler
             if self._scheduler is not None:
