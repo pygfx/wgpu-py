@@ -112,6 +112,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._vsync = bool(vsync)
         present_method  # noqa - We just catch the arg here in case a backend does implement it
 
+        self.__is_drawing = False
         self._events = EventEmitter()
         self._scheduler = None
         loop = self._get_loop()
@@ -224,6 +225,8 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     def force_draw(self):
         """Perform a draw right now."""
+        if self.__is_drawing:
+            raise RuntimeError("Cannot force a draw while drawing.")
         self._force_draw()
 
     def _draw_frame_and_present(self):
@@ -233,33 +236,43 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         subclass at its draw event.
         """
 
-        # This method is called from the GUI layer. It can be called from a
-        # "draw event" that we requested, or as part of a forced draw.
-
-        # Cannot draw to a closed canvas.
-        if self.is_closed():
+        # Re-entrent drawing is problematic. Let's actively prevent it.
+        if self.__is_drawing:
             return
+        self.__is_drawing = True
 
-        # Process special events
-        # Note that we must not process normal events here, since these can do stuff\
-        # with the canvas (resize/close/etc) and most GUI systems don't like that.
-        self._events.submit({"event_type": "before_draw"})
-        self._events.flush()
+        try:
 
-        # Notify the scheduler
-        if self._scheduler is not None:
-            self._scheduler.on_draw()
+            # This method is called from the GUI layer. It can be called from a
+            # "draw event" that we requested, or as part of a forced draw.
 
-        # Perform the user-defined drawing code. When this errors,
-        # we should report the error and then continue, otherwise we crash.
-        with log_exception("Draw error"):
-            self._draw_frame()
-        with log_exception("Present error"):
-            # Note: we use canvas._canvas_context, so that if the draw_frame is a stub we also dont trigger creating a context.
-            # Note: if vsync is used, this call may wait a little (happens down at the level of the driver or OS)
-            context = self._canvas_context
-            if context:
-                context.present()
+            # Cannot draw to a closed canvas.
+            if self.is_closed():
+                return
+
+            # Process special events
+            # Note that we must not process normal events here, since these can do stuff
+            # with the canvas (resize/close/etc) and most GUI systems don't like that.
+            self._events.submit({"event_type": "before_draw"})
+            self._events.flush()
+
+            # Notify the scheduler
+            if self._scheduler is not None:
+                self._scheduler.on_draw()
+
+            # Perform the user-defined drawing code. When this errors,
+            # we should report the error and then continue, otherwise we crash.
+            with log_exception("Draw error"):
+                self._draw_frame()
+            with log_exception("Present error"):
+                # Note: we use canvas._canvas_context, so that if the draw_frame is a stub we also dont trigger creating a context.
+                # Note: if vsync is used, this call may wait a little (happens down at the level of the driver or OS)
+                context = self._canvas_context
+                if context:
+                    context.present()
+
+        finally:
+            self.__is_drawing = False
 
     def _get_loop(self):
         """For the subclass to implement:
