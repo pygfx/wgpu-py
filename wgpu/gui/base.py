@@ -232,10 +232,17 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         Errors are logged to the "wgpu" logger. Should be called by the
         subclass at its draw event.
         """
+
         # This method is called from the GUI layer. It can be called from a
         # "draw event" that we requested, or as part of a forced draw.
 
+        # Cannot draw to a closed canvas.
+        if self.is_closed():
+            return
+
         # Process special events
+        # Note that we must not process normal events here, since these can do stuff\
+        # with the canvas (resize/close/etc) and most GUI systems don't like that.
         self._events.submit({"event_type": "before_draw"})
         self._events.flush()
 
