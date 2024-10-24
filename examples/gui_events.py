@@ -6,7 +6,7 @@ Also serves as a test-app for the canvas backends.
 
 import time
 
-from wgpu.gui.wx import WgpuCanvas, loop
+from wgpu.gui.auto import WgpuCanvas, loop
 
 from cube import setup_drawing_sync
 
