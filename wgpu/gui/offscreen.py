@@ -1,9 +1,7 @@
-import time
-
-from .base import WgpuCanvasBase, WgpuAutoGui
+from .base import WgpuCanvasBase, WgpuLoop, WgpuTimer
 
 
-class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuCanvasBase):
+class WgpuManualOffscreenCanvas(WgpuCanvasBase):
     """An offscreen canvas intended for manual use.
 
     Call the ``.draw()`` method to perform a draw and get the result.
@@ -49,9 +47,16 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuCanvasBase):
     def is_closed(self):
         return self._closed
 
+    def _get_loop(self):
+        return None  # No scheduling
+
     def _request_draw(self):
-        # Deliberately a no-op, because people use .draw() instead.
+        # Ok, cool, the scheduler want a draw. But we only draw when the user
+        # calls draw(), so that's how this canvas ticks.
         pass
+
+    def _force_draw(self):
+        self._draw_frame_and_present()
 
     def draw(self):
         """Perform a draw and get the resulting image.
@@ -60,6 +65,7 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuCanvasBase):
         This object can be converted to a numpy array (without copying data)
         using ``np.asarray(arr)``.
         """
+        loop._process_timers()  # Little trick to keep the event loop going
         self._draw_frame_and_present()
         return self._last_image
 
@@ -67,33 +73,41 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuCanvasBase):
 WgpuCanvas = WgpuManualOffscreenCanvas
 
 
-# If we consider the use-cases for using this offscreen canvas:
-#
-# * Using wgpu.gui.auto in test-mode: in this case run() should not hang,
-#   and call_later should not cause lingering refs.
-# * Using the offscreen canvas directly, in a script: in this case you
-#   do not have/want an event system.
-# * Using the offscreen canvas in an evented app. In that case you already
-#   have an app with a specific event-loop (it might be PySide6 or
-#   something else entirely).
-#
-# In summary, we provide a call_later() and run() that behave pretty
-# well for the first case.
+class StubWgpuTimer(WgpuTimer):
+    def _start(self):
+        pass
 
-_pending_calls = []
+    def _stop(self):
+        pass
 
 
-def call_later(delay, callback, *args):
-    # Note that this module never calls call_later() itself; request_draw() is a no-op.
-    etime = time.time() + delay
-    _pending_calls.append((etime, callback, args))
+class StubLoop(WgpuLoop):
+    # If we consider the use-cases for using this offscreen canvas:
+    #
+    # * Using wgpu.gui.auto in test-mode: in this case run() should not hang,
+    #   and call_later should not cause lingering refs.
+    # * Using the offscreen canvas directly, in a script: in this case you
+    #   do not have/want an event system.
+    # * Using the offscreen canvas in an evented app. In that case you already
+    #   have an app with a specific event-loop (it might be PySide6 or
+    #   something else entirely).
+    #
+    # In summary, we provide a call_later() and run() that behave pretty
+    # well for the first case.
+
+    _TimerClass = StubWgpuTimer  # subclases must set this
+
+    def _process_timers(self):
+        # Running this loop processes any timers
+        for timer in list(WgpuTimer._running_timers):
+            if timer.time_left <= 0:
+                timer._tick()
+
+    def _run(self):
+        self._process_timers()
+
+    def _stop(self):
+        pass
 
 
-def run():
-    # Process pending calls
-    for etime, callback, args in _pending_calls.copy():
-        if time.time() >= etime:
-            callback(*args)
-
-    # Clear any leftover scheduled calls, to avoid lingering refs.
-    _pending_calls.clear()
+loop = StubLoop()

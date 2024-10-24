@@ -18,7 +18,7 @@ if not can_use_wgpu_lib:
 if not can_use_glfw:
     pytest.skip("Need glfw for this test", allow_module_level=True)
 
-loop = asyncio.get_event_loop_policy().get_event_loop()
+loop = asyncio.get_event_loop()
 if loop.is_running():
     pytest.skip("Asyncio loop is running", allow_module_level=True)
 
@@ -54,6 +54,7 @@ def test_release_canvas_context(n):
         yield c.get_context()
 
     # Need some shakes to get all canvas refs gone.
+    # Note that the draw function closure holds a ref to the canvas.
     del c
     loop.run_until_complete(stub_event_loop())
     gc.collect()

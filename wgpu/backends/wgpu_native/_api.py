@@ -519,6 +519,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     # we can give meaningful errors/warnings on invalid use, rather than
     # the more cryptic Rust panics.
 
+    _surface_id = ffi.NULL
+
     def __init__(self, canvas):
         super().__init__(canvas)
 

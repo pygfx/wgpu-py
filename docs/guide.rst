@@ -19,7 +19,7 @@ GUI toolkits are supported, see the :doc:`gui`. In general, it's easiest to let 
 
 .. code-block:: py
 
-    from wgpu.gui.auto import WgpuCanvas, run
+    from wgpu.gui.auto import WgpuCanvas
 
     canvas = WgpuCanvas(title="a wgpu example")
 

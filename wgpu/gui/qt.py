@@ -7,13 +7,12 @@ import sys
 import ctypes
 import importlib
 
-from .base import WgpuCanvasBase, WgpuAutoGui
+from .base import WgpuCanvasBase, WgpuLoop, WgpuTimer, pop_kwargs_for_base_canvas
 from ._gui_utils import (
     logger,
     SYSTEM_IS_WAYLAND,
     get_alt_x11_display,
     get_alt_wayland_display,
-    weakbind,
     get_imported_qt_lib,
 )
 
@@ -140,14 +139,14 @@ _show_image_method_warning = (
 )
 
 
-class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
+class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
     """A QWidget representing a wgpu canvas that can be embedded in a Qt application."""
 
     def __init__(self, *args, present_method=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Determine present method
-        self._surface_ids = self._get_surface_ids()
+        self._surface_ids = None
         if not present_method:
             self._present_to_screen = True
             if SYSTEM_IS_WAYLAND:
@@ -164,18 +163,14 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         else:
             raise ValueError(f"Invalid present_method {present_method}")
 
+        self._is_closed = False
+
         self.setAttribute(WA_PaintOnScreen, self._present_to_screen)
         self.setAutoFillBackground(False)
         self.setAttribute(WA_DeleteOnClose, True)
         self.setAttribute(WA_InputMethodEnabled, True)
         self.setMouseTracking(True)
         self.setFocusPolicy(FocusPolicy.StrongFocus)
-
-        # A timer for limiting fps
-        self._request_draw_timer = QtCore.QTimer()
-        self._request_draw_timer.setTimerType(PreciseTimer)
-        self._request_draw_timer.setSingleShot(True)
-        self._request_draw_timer.timeout.connect(self.update)
 
     def paintEngine(self):  # noqa: N802 - this is a Qt method
         # https://doc.qt.io/qt-5/qt.html#WidgetAttribute-enum  WA_PaintOnScreen
@@ -188,6 +183,20 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self._draw_frame_and_present()
 
     # Methods that we add from wgpu (snake_case)
+
+    def _request_draw(self):
+        # Ask Qt to do a paint event
+        QtWidgets.QWidget.update(self)
+
+    def _force_draw(self):
+        # Call the paintEvent right now.
+        # This works on all platforms I tested, except on MacOS when drawing with the 'image' method.
+        # Not sure why this is. It be made to work by calling processEvents() but that has all sorts
+        # of nasty side-effects (e.g. the scheduler timer keeps ticking, invoking other draws, etc.).
+        self.repaint()
+
+    def _get_loop(self):
+        return loop
 
     def _get_surface_ids(self):
         if sys.platform.startswith("win") or sys.platform.startswith("darwin"):
@@ -208,9 +217,13 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                     "window": int(self.winId()),
                     "display": int(get_alt_x11_display()),
                 }
+        else:
+            raise RuntimeError(f"Cannot get Qt surface info on {sys.platform}.")
 
     def get_present_info(self):
         global _show_image_method_warning
+        if self._surface_ids is None:
+            self._surface_ids = self._get_surface_ids()
         if self._present_to_screen:
             info = {"method": "screen"}
             info.update(self._surface_ids)
@@ -256,17 +269,17 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.resize(width, height)  # See comment on pixel ratio
 
     def set_title(self, title):
-        self.setWindowTitle(title)
-
-    def _request_draw(self):
-        if not self._request_draw_timer.isActive():
-            self._request_draw_timer.start(int(self._get_draw_wait_time() * 1000))
+        # A QWidgets title can actually be shown when the widget is shown in a dock.
+        # But the application should probably determine that title, not us.
+        parent = self.parent()
+        if isinstance(parent, QWgpuCanvas):
+            parent.setWindowTitle(title)
 
     def close(self):
         QtWidgets.QWidget.close(self)
 
     def is_closed(self):
-        return not self.isVisible()
+        return self._is_closed
 
     # User events to jupyter_rfb events
 
@@ -282,7 +295,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "key": KEY_MAP.get(event.key(), event.text()),
             "modifiers": modifiers,
         }
-        self._handle_event_and_flush(ev)
+        self.submit_event(ev)
 
     def _char_input_event(self, char_str):
         ev = {
@@ -290,7 +303,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "char_str": char_str,
             "modifiers": None,
         }
-        self._handle_event_and_flush(ev)
+        self.submit_event(ev)
 
     def keyPressEvent(self, event):  # noqa: N802
         self._key_event("key_down", event)
@@ -335,12 +348,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                 }
             )
 
-        if event_type == "pointer_move":
-            match_keys = {"buttons", "modifiers", "ntouches"}
-            accum_keys = {}
-            self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
-        else:
-            self._handle_event_and_flush(ev)
+        self.submit_event(ev)
 
     def mousePressEvent(self, event):  # noqa: N802
         self._mouse_event("pointer_down", event)
@@ -377,9 +385,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "buttons": buttons,
             "modifiers": modifiers,
         }
-        match_keys = {"modifiers"}
-        accum_keys = {"dx", "dy"}
-        self._handle_event_rate_limited(ev, call_later, match_keys, accum_keys)
+        self.submit_event(ev)
 
     def resizeEvent(self, event):  # noqa: N802
         ev = {
@@ -388,15 +394,23 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             "height": float(event.size().height()),
             "pixel_ratio": self.get_pixel_ratio(),
         }
-        self._handle_event_and_flush(ev)
+        self.submit_event(ev)
 
     def closeEvent(self, event):  # noqa: N802
-        self._handle_event_and_flush({"event_type": "close"})
+        self._is_closed = True
+        self.submit_event({"event_type": "close"})
+
+    # Methods related to presentation of resulting image data
 
     def present_image(self, image_data, **kwargs):
         size = image_data.shape[1], image_data.shape[0]  # width, height
+        rect1 = QtCore.QRect(0, 0, size[0], size[1])
+        rect2 = self.rect()
 
         painter = QtGui.QPainter(self)
+        # backingstore = self.backingStore()
+        # backingstore.beginPaint(rect2)
+        # painter = QtGui.QPainter(backingstore.paintDevice())
 
         # We want to simply blit the image (copy pixels one-to-one on framebuffer).
         # Maybe Qt does this when the sizes match exactly (like they do here).
@@ -416,8 +430,6 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
             QtGui.QImage.Format.Format_RGBA8888,
         )
 
-        rect1 = QtCore.QRect(0, 0, size[0], size[1])
-        rect2 = self.rect()
         painter.drawImage(rect2, image, rect1)
 
         # Uncomment for testing purposes
@@ -425,8 +437,12 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         # painter.setFont(QtGui.QFont("Arial", 30))
         # painter.drawText(100, 100, "This is an image")
 
+        painter.end()
+        # backingstore.endPaint()
+        # backingstore.flush(rect2)
 
-class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
+
+class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
     """A toplevel Qt widget providing a wgpu canvas."""
 
     # Most of this is proxying stuff to the inner widget.
@@ -434,12 +450,12 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     # size can be set to subpixel (logical) values, without being able to
     # detect this. See https://github.com/pygfx/wgpu-py/pull/68
 
-    def __init__(
-        self, *, size=None, title=None, max_fps=30, present_method=None, **kwargs
-    ):
+    def __init__(self, *, size=None, title=None, **kwargs):
         # When using Qt, there needs to be an
         # application before any widget is created
-        get_app()
+        loop.init_qt()
+
+        sub_kwargs = pop_kwargs_for_base_canvas(kwargs)
         super().__init__(**kwargs)
 
         self.setAttribute(WA_DeleteOnClose, True)
@@ -447,10 +463,8 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
         self.setWindowTitle(title or "qt wgpu canvas")
         self.setMouseTracking(True)
 
-        self._subwidget = QWgpuWidget(
-            self, max_fps=max_fps, present_method=present_method
-        )
-        self._subwidget.add_event_handler(weakbind(self.handle_event), "*")
+        self._subwidget = QWgpuWidget(self, **sub_kwargs)
+        self._events = self._subwidget._events
 
         # Note: At some point we called `self._subwidget.winId()` here. For some
         # reason this was needed to "activate" the canvas. Otherwise the viz was
@@ -466,19 +480,20 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
 
     # Qt methods
 
-    def update(self):
-        super().update()
-        self._subwidget.update()
+    def closeEvent(self, event):  # noqa: N802
+        self._subwidget._is_closed = True
+        self.submit_event({"event_type": "close"})
 
     # Methods that we add from wgpu (snake_case)
 
-    @property
-    def draw_frame(self):
-        return self._subwidget.draw_frame
+    def _request_draw(self):
+        self._subwidget._request_draw()
 
-    @draw_frame.setter
-    def draw_frame(self, f):
-        self._subwidget.draw_frame = f
+    def _force_draw(self):
+        self._subwidget._force_draw()
+
+    def _get_loop(self):
+        return None  # This means this outer widget won't have a scheduler
 
     def get_present_info(self):
         return self._subwidget.get_present_info()
@@ -500,15 +515,11 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def set_title(self, title):
         self.setWindowTitle(title)
 
-    def _request_draw(self):
-        return self._subwidget._request_draw()
-
     def close(self):
-        self._subwidget.close()
         QtWidgets.QWidget.close(self)
 
     def is_closed(self):
-        return not self.isVisible()
+        return self._subwidget.is_closed()
 
     # Methods that we need to explicitly delegate to the subwidget
 
@@ -527,20 +538,64 @@ WgpuWidget = QWgpuWidget
 WgpuCanvas = QWgpuCanvas
 
 
-def get_app():
-    """Return global instance of Qt app instance or create one if not created yet."""
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+class QtWgpuTimer(WgpuTimer):
+    """Wgpu timer basef on Qt."""
+
+    def _init(self):
+        self._qt_timer = QtCore.QTimer()
+        self._qt_timer.timeout.connect(self._tick)
+        self._qt_timer.setSingleShot(True)
+        self._qt_timer.setTimerType(PreciseTimer)
+
+    def _start(self):
+        self._qt_timer.start(int(self._interval * 1000))
+
+    def _stop(self):
+        self._qt_timer.stop()
 
 
-def run():
-    if already_had_app_on_import:
-        return  # Likely in an interactive session or larger application that will start the Qt app.
-    app = get_app()
+class QtWgpuLoop(WgpuLoop):
+    _TimerClass = QtWgpuTimer
 
-    # todo: we could detect if asyncio is running (interactive session) and wheter we can use QtAsyncio.
-    # But let's wait how things look with new scheduler etc.
-    app.exec() if hasattr(app, "exec") else app.exec_()
+    def init_qt(self):
+        _ = self._app
+        self._latest_timeout = 0
+
+    @property
+    def _app(self):
+        """Return global instance of Qt app instance or create one if not created yet."""
+        return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+    def _call_soon(self, callback, *args):
+        func = callback
+        if args:
+            func = lambda: callback(*args)
+        QtCore.QTimer.singleshot(0, func)
+
+    def _run(self):
+        # Note: we could detect if asyncio is running (interactive session) and wheter
+        # we can use QtAsyncio. However, there's no point because that's up for the
+        # end-user to decide.
+
+        # Note: its possible, and perfectly ok, if the application is started from user
+        # code. This works fine because the application object is global. This means
+        # though, that we cannot assume anything based on whether this method is called
+        # or not.
+
+        if already_had_app_on_import:
+            return  # Likely in an interactive session or larger application that will start the Qt app.
+
+        app = self._app
+        app.setQuitOnLastWindowClosed(False)
+        app.exec() if hasattr(app, "exec") else app.exec_()
+
+    def _stop(self):
+        if not already_had_app_on_import:
+            self._app.quit()
+
+    def _wgpu_gui_poll(self):
+        # todo: make this a private method with a wgpu prefix.
+        pass  # we assume the Qt event loop is running. Calling processEvents() will cause recursive repaints.
 
 
-def call_later(delay, callback, *args):
-    QtCore.QTimer.singleShot(int(delay * 1000), lambda: callback(*args))
+loop = QtWgpuLoop()
