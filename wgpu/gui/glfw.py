@@ -133,7 +133,7 @@ def get_glfw_present_info(window):
                 "display": int(glfw.get_x11_display()),
             }
     else:
-        raise RuntimeError(f"Cannot get GLFW surafce info on {sys.platform}.")
+        raise RuntimeError(f"Cannot get GLFW surface info on {sys.platform}.")
 
 
 def get_physical_size(window):

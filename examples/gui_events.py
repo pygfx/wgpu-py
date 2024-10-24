@@ -6,7 +6,7 @@ Also serves as a test-app for the canvas backends.
 
 import time
 
-from wgpu.gui.auto import WgpuCanvas, loop
+from wgpu.gui.wx import WgpuCanvas, loop
 
 from cube import setup_drawing_sync
 
@@ -16,8 +16,10 @@ canvas = WgpuCanvas(
     title="wgpu events",
     max_fps=10,
     update_mode="continuous",
-    present_method="screen",
+    present_method="",
 )
+
+
 draw_frame = setup_drawing_sync(canvas)
 canvas.request_draw(lambda: (draw_frame(), canvas.request_draw()))
 

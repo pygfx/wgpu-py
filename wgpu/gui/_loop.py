@@ -27,7 +27,7 @@ class WgpuTimer:
         self._args = args
         # Internal variables
         self._one_shot = bool(one_shot)
-        self._interval = 0.0
+        self._interval = None
         self._expect_tick_at = None
 
     def start(self, interval):
@@ -39,10 +39,12 @@ class WgpuTimer:
         When the timer is currently running, it is first stopped and then
         restarted.
         """
+        if self._interval is None:
+            self._init()
         if self.is_running:
             self._stop()
         WgpuTimer._running_timers.add(self)
-        self._interval = float(interval)
+        self._interval = max(0.0, float(interval))
         self._expect_tick_at = time.perf_counter() + self._interval
         self._start()
 
@@ -91,6 +93,14 @@ class WgpuTimer:
     def is_one_shot(self):
         """Whether the timer is one-shot or continuous."""
         return self._one_shot
+
+    def _init(self):
+        """For the subclass to implement:
+
+        Opportunity to initialize the timer object. This is called right
+        before the timer is first started.
+        """
+        pass
 
     def _start(self):
         """For the subclass to implement:

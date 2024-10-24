@@ -3,8 +3,9 @@ Support for rendering in a wxPython window. Provides a widget that
 can be used as a standalone window or in a larger GUI.
 """
 
-import ctypes
 import sys
+import time
+import ctypes
 from typing import Optional
 
 import wx
@@ -119,18 +120,6 @@ _show_image_method_warning = (
 )
 
 
-class TimerWithCallback(wx.Timer):
-    def __init__(self, callback):
-        super().__init__()
-        self._callback = callback
-
-    def Notify(self, *args):  # noqa: N802
-        try:
-            self._callback()
-        except RuntimeError:
-            pass  # wrapped C/C++ object of type WxWgpuWindow has been deleted
-
-
 class WxWgpuWindow(WgpuCanvasBase, wx.Window):
     """A wx Window representing a wgpu canvas that can be embedded in a wx application."""
 
@@ -138,7 +127,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         super().__init__(*args, **kwargs)
 
         # Determine present method
-        self._surface_ids = self._get_surface_ids()
+        self._surface_ids = None
         if not present_method:
             self._present_to_screen = True
             if SYSTEM_IS_WAYLAND:
@@ -151,8 +140,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         else:
             raise ValueError(f"Invalid present_method {present_method}")
 
-        # A timer for limiting fps
-        self._request_draw_timer = TimerWithCallback(self.Refresh)
+        self._is_closed = False
 
         # We keep a timer to prevent draws during a resize. This prevents
         # issues with mismatching present sizes during resizing (on Linux).
@@ -168,6 +156,8 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
 
         self.Bind(wx.EVT_MOUSE_EVENTS, self._on_mouse_events)
         self.Bind(wx.EVT_MOTION, self._on_mouse_move)
+
+        self.Show()
 
     def _get_loop(self):
         return loop
@@ -195,7 +185,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
 
     def _on_resize_done(self, *args):
         self._draw_lock = False
-        self._request_draw()
+        self.Refresh()
 
     # Methods for input events
 
@@ -304,7 +294,7 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
 
             self.submit_event(ev)
         elif event_type == "pointer_move":
-            self._hand_event.submit(ev)
+            self.submit_event(ev)
         else:
             self.submit_event(ev)
 
@@ -342,9 +332,11 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
                     "display": int(get_alt_x11_display()),
                 }
         else:
-            raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
+            raise RuntimeError(f"Cannot get wx surface info on {sys.platform}.")
 
     def get_present_info(self):
+        if self._surface_ids is None:
+            self._surface_ids = self._get_surface_ids()
         global _show_image_method_warning
         if self._present_to_screen and self._surface_ids:
             info = {"method": "screen"}
@@ -382,23 +374,28 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
 
     def set_title(self, title):
         # Set title only on frame
-        parent = self.parent()
+        parent = self.Parent
         if isinstance(parent, WxWgpuCanvas):
-            parent.setWindowTitle(title)
+            parent.SetTitle(title)
 
     def _request_draw(self):
-        # Despite the FPS limiting the delayed call to refresh solves
-        # that drawing only happens when the mouse is down, see #209.
-        if not self._request_draw_timer.IsRunning():
-            self._request_draw_timer.Start(
-                max(1, int(self._get_draw_wait_time() * 1000)), wx.TIMER_ONE_SHOT
-            )
+        if self._draw_lock:
+            return
+        try:
+            self.Refresh()
+        except Exception:
+            pass  # avoid errors when window no longer lives
+
+    def _force_draw(self):
+        self.Refresh()
+        self.Update()
 
     def close(self):
+        self._is_closed = True
         self.Hide()
 
     def is_closed(self):
-        return not self.IsShown()
+        return self._is_closed
 
     @staticmethod
     def _call_later(delay, callback, *args):
@@ -442,7 +439,17 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
 
         self.Show()
 
+        # Force the canvas to be shown, so that it gets a valid handle.
+        # Otherwise GetHandle() is initially 0, and getting a surface will fail.
+        etime = time.perf_counter() + 1
+        while self._subwidget.GetHandle() == 0 and time.perf_counter() < etime:
+            loop.process_wx_events()
+
     # wx methods
+
+    def Destroy(self):  # noqa: N802 - this is a wx method
+        self._subwidget._is_closed = True
+        super().Destroy()
 
     # Methods that we add from wgpu
     def _get_loop(self):
@@ -471,11 +478,15 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
     def _request_draw(self):
         return self._subwidget._request_draw()
 
+    def _force_draw(self):
+        return self._subwidget._force_draw()
+
     def close(self):
-        super().close()
+        self._subwidget._is_closed = True
+        super().Close()
 
     def is_closed(self):
-        return not self.isVisible()
+        return self._subwidget._is_closed
 
     # Methods that we need to explicitly delegate to the subwidget
 
@@ -494,13 +505,23 @@ WgpuWidget = WxWgpuWindow
 WgpuCanvas = WxWgpuCanvas
 
 
-class WxWgpuTimer(WgpuTimer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._wx_timer = wx.Timer()
-        self._wx_timer.Notify = self._tick
+class TimerWithCallback(wx.Timer):
+    def __init__(self, callback):
+        super().__init__()
+        self._callback = callback
 
-    def _run(self):
+    def Notify(self, *args):  # noqa: N802
+        try:
+            self._callback()
+        except RuntimeError:
+            pass  # wrapped C/C++ object of type WxWgpuWindow has been deleted
+
+
+class WxWgpuTimer(WgpuTimer):
+    def _init(self):
+        self._wx_timer = TimerWithCallback(self._tick)
+
+    def _start(self):
         self._wx_timer.StartOnce(int(self._interval * 1000))
 
     def _stop(self):
@@ -510,6 +531,7 @@ class WxWgpuTimer(WgpuTimer):
 class WxWgpuLoop(WgpuLoop):
     _TimerClass = WxWgpuTimer
     _the_app = None
+    _frame_to_keep_loop_alive = None
 
     def init_wx(self):
         _ = self._app
@@ -526,13 +548,23 @@ class WxWgpuLoop(WgpuLoop):
         wx.CallSoon(callback, args)
 
     def _run(self):
+        self._frame_to_keep_loop_alive = wx.Frame(None)
         self._app.MainLoop()
 
     def _stop(self):
-        pass  # Possible with wx?
+        self._frame_to_keep_loop_alive.Destroy()
+        _frame_to_keep_loop_alive = None
 
     def _wgpu_gui_poll(self):
         pass  # We can assume the wx loop is running.
+
+    def process_wx_events(self):
+        old = wx.GUIEventLoop.GetActive()
+        new = wx.GUIEventLoop()
+        wx.GUIEventLoop.SetActive(new)
+        while new.Pending():
+            new.Dispatch()
+        wx.GUIEventLoop.SetActive(old)
 
 
 loop = WxWgpuLoop()

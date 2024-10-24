@@ -146,7 +146,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         super().__init__(*args, **kwargs)
 
         # Determine present method
-        self._surface_ids = self._get_surface_ids()
+        self._surface_ids = None
         if not present_method:
             self._present_to_screen = True
             if SYSTEM_IS_WAYLAND:
@@ -221,9 +221,13 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
                     "window": int(self.winId()),
                     "display": int(get_alt_x11_display()),
                 }
+        else:
+            raise RuntimeError(f"Cannot get Qt surface info on {sys.platform}.")
 
     def get_present_info(self):
         global _show_image_method_warning
+        if self._surface_ids is None:
+            self._surface_ids = self._get_surface_ids()
         if self._present_to_screen:
             info = {"method": "screen"}
             info.update(self._surface_ids)
@@ -541,8 +545,7 @@ WgpuCanvas = QWgpuCanvas
 class QtWgpuTimer(WgpuTimer):
     """Wgpu timer basef on Qt."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def _init(self):
         self._qt_timer = QtCore.QTimer()
         self._qt_timer.timeout.connect(self._tick)
         self._qt_timer.setSingleShot(True)
