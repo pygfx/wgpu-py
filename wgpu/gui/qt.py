@@ -197,7 +197,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         #   call_later(), and process more of our events, and maybe even another call to
         #   this method, if the user was not careful.
         self.repaint()
-        loop._app.processEvents()
+        # loop._app.processEvents()
 
     def _get_loop(self):
         return loop
@@ -566,6 +566,12 @@ class QtWgpuLoop(WgpuLoop):
     def _app(self):
         """Return global instance of Qt app instance or create one if not created yet."""
         return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+
+    def _call_soon(self, callback, *args):
+        func = callback
+        if args:
+            func = lambda: callback(*args)
+        QtCore.QTimer.singleshot(0, func)
 
     def _run(self):
         # Note: we could detect if asyncio is running (interactive session) and wheter
