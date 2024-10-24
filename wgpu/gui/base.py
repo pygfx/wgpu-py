@@ -242,7 +242,6 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self.__is_drawing = True
 
         try:
-
             # This method is called from the GUI layer. It can be called from a
             # "draw event" that we requested, or as part of a forced draw.
 

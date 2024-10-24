@@ -11,7 +11,13 @@ from wgpu.gui.auto import WgpuCanvas, loop
 from cube import setup_drawing_sync
 
 
-canvas = WgpuCanvas(size=(640, 480), title="wgpu events", max_fps=10)
+canvas = WgpuCanvas(
+    size=(640, 480),
+    title="wgpu events",
+    max_fps=10,
+    update_mode="continuous",
+    present_method="screen",
+)
 draw_frame = setup_drawing_sync(canvas)
 canvas.request_draw(lambda: (draw_frame(), canvas.request_draw()))
 
