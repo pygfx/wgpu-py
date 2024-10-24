@@ -15,7 +15,7 @@ from ._gui_utils import (
     get_alt_x11_display,
     get_alt_wayland_display,
 )
-from .base import WgpuCanvasBase, WgpuLoop
+from .base import WgpuCanvasBase, WgpuLoop, WgpuTimer, pop_kwargs_for_base_canvas
 
 
 BUTTON_MAP = {
@@ -381,7 +381,10 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
         self.SetSize(width, height)
 
     def set_title(self, title):
-        pass  # only on frames
+        # Set title only on frame
+        parent = self.parent()
+        if isinstance(parent, WxWgpuCanvas):
+            parent.setWindowTitle(title)
 
     def _request_draw(self):
         # Despite the FPS limiting the delayed call to refresh solves
@@ -424,19 +427,16 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         parent=None,
         size=None,
         title=None,
-        max_fps=30,
-        present_method=None,
         **kwargs,
     ):
         loop.init_wx()
+        sub_kwargs = pop_kwargs_for_base_canvas(kwargs)
         super().__init__(parent, **kwargs)
 
         self.set_logical_size(*(size or (640, 480)))
         self.SetTitle(title or "wx wgpu canvas")
 
-        self._subwidget = WxWgpuWindow(
-            parent=self, max_fps=max_fps, present_method=present_method
-        )
+        self._subwidget = WxWgpuWindow(parent=self, **sub_kwargs)
         self._events = self._subwidget._events
         self.Bind(wx.EVT_CLOSE, lambda e: self.Destroy())
 
@@ -444,13 +444,9 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
 
     # wx methods
 
-    # def Refresh(self)
-    #     super().Refresh()
-    #     self._subwidget.Refresh()
-
     # Methods that we add from wgpu
     def _get_loop(self):
-        return loop
+        return None  # wrapper widget does not have scheduling
 
     def get_present_info(self):
         return self._subwidget.get_present_info()
@@ -476,7 +472,6 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         return self._subwidget._request_draw()
 
     def close(self):
-        self.submit_event({"event_type": "close"})
         super().close()
 
     def is_closed(self):
@@ -499,10 +494,22 @@ WgpuWidget = WxWgpuWindow
 WgpuCanvas = WxWgpuCanvas
 
 
+class WxWgpuTimer(WgpuTimer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._wx_timer = wx.Timer()
+        self._wx_timer.Notify = self._tick
+
+    def _run(self):
+        self._wx_timer.StartOnce(int(self._interval * 1000))
+
+    def _stop(self):
+        self._wx_timer.Stop()
+
+
 class WxWgpuLoop(WgpuLoop):
-    def __init__(self):
-        super.__init__()
-        self._the_app = None
+    _TimerClass = WxWgpuTimer
+    _the_app = None
 
     def init_wx(self):
         _ = self._app
@@ -515,18 +522,17 @@ class WxWgpuLoop(WgpuLoop):
             wx.App.SetInstance(app)
         return app
 
-    def _wgpu_gui_poll(self):
-        pass  # We can assume the wx loop is running.
+    def _call_soon(self, delay, callback, *args):
+        wx.CallSoon(callback, args)
 
-    def call_later(self, delay, callback, *args):
-        wx.CallLater(int(delay * 1000), callback, args)
-        # todo: does this work, or do we need to keep a ref to the result?
-
-    def run(self):
+    def _run(self):
         self._app.MainLoop()
 
-    def stop(self):
+    def _stop(self):
         pass  # Possible with wx?
+
+    def _wgpu_gui_poll(self):
+        pass  # We can assume the wx loop is running.
 
 
 loop = WxWgpuLoop()
