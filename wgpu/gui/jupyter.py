@@ -44,9 +44,7 @@ class JupyterWgpuCanvas(WgpuCanvasBase, RemoteFrameBuffer):
             self._pixel_ratio = event["pixel_ratio"]
             self._logical_size = event["width"], event["height"]
 
-        # No need to rate-limit the pointer_move and wheel events;
-        # they're already rate limited by jupyter_rfb in the client.
-        super().handle_event(event)
+        self.submit_event(event)
 
     def get_frame(self):
         # The _draw_frame_and_present() does the drawing and then calls
@@ -98,7 +96,13 @@ class JupyterWgpuCanvas(WgpuCanvasBase, RemoteFrameBuffer):
         RemoteFrameBuffer.request_draw(self)
 
     def _force_draw(self):
-        raise NotImplementedError()  # todo: how?
+        # A bit hacky to use the internals of jupyter_rfb this way.
+        # This pushes frames to the browser. The only thing holding
+        # this back it the websocket buffer. It works!
+        # But a better way would be `await canvas.wait_draw()`.
+        array = self.get_frame()
+        if array is not None:
+            self._rfb_send_frame(array)
 
     # Implementation needed for WgpuCanvasInterface
 
