@@ -152,7 +152,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     submit_event.__doc__ = EventEmitter.submit.__doc__
 
     def _process_events(self):
-        """Process events and animations. To be called right before a draw, and from the scheduler."""
+        """Process events and animations. Called from the scheduler."""
 
         # We don't want this to be called too often, because we want the
         # accumulative events to accumulate. Once per draw, and at max_fps
@@ -235,8 +235,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         # This method is called from the GUI layer. It can be called from a
         # "draw event" that we requested, or as part of a forced draw.
 
-        # Process events
-        self._process_events()
+        # Process special events
         self._events.submit({"event_type": "before_draw"})
         self._events.flush()
 
@@ -269,8 +268,15 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         Request the GUI layer to perform a draw. Like requestAnimationFrame in
         JS. The draw must be performed by calling _draw_frame_and_present().
         It's the responsibility for the canvas subclass to make sure that a draw
-        is made (eventually). By default does nothing, which is equivalent to
-        waiting for a forced draw or a draw invoked by the GUI system.
+        is made as soon as possible.
+
+        Canvases that have a limit on how fast they can 'consume' frames, like
+        remote frame buffers, do good to call self._process_events() when the
+        draw had to wait a little. That way the user interaction will lag as
+        little as possible.
+
+        The default implementation does nothing, which is equivalent to waiting
+        for a forced draw or a draw invoked by the GUI system.
         """
         pass
 
@@ -318,3 +324,14 @@ class WgpuCanvasBase(WgpuCanvasInterface):
     def set_title(self, title):
         """Set the window title."""
         pass
+
+
+def pop_kwargs_for_base_canvas(kwargs_dict):
+    """Convenience functions for wrapper canvases like in Qt and wx."""
+    code = WgpuCanvasBase.__init__.__code__
+    base_kwarg_names = code.co_varnames[: code.co_argcount + code.co_kwonlyargcount]
+    d = {}
+    for key in base_kwarg_names:
+        if key in kwargs_dict:
+            d[key] = kwargs_dict.pop(key)
+    return d

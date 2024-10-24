@@ -264,8 +264,7 @@ class Scheduler:
     #  |                    ||      ||                    ||      |
     # --------------------------------------------------------------------> time
     #  |                    |       |                     |       |
-    #  |                    |       draw                  |       draw
-    #  schedule             tick                          tick
+    #  schedule             tick    draw                  tick    draw
     #
     # With update modes 'ondemand' and 'manual', the loop ticks at the same rate
     # as on 'continuous' mode, but won't draw every tick:
@@ -275,8 +274,7 @@ class Scheduler:
     #  |                    ||                   ||      |
     # --------------------------------------------------------------------> time
     #  |                    |                    |       |
-    #  |                    |                    |       draw
-    #  schedule             tick                tick
+    #  schedule             tick                tick     draw
     #
     # A tick is scheduled by calling _schedule_next_tick(). If this method is
     # called when the timer is already running, it has no effect. In the _tick()
@@ -287,7 +285,7 @@ class Scheduler:
     # draw is done, and a new tick is scheduled.
     #
     # The next tick is scheduled when a draw is done, and not earlier, otherwise
-    # the drawing may not keep up with the event loop.
+    # the drawing may not keep up with the ticking.
     #
     # On desktop canvases the draw usually occurs very soon after it is
     # requested, but on remote frame buffers, it may take a bit longer. To make
@@ -385,6 +383,9 @@ class Scheduler:
         if (canvas := self._get_canvas()) is None:
             return
 
+        # Process events, handlers may request a draw
+        canvas._process_events()
+
         # Determine what to do next ...
 
         if self._mode == "fastest":
@@ -398,19 +399,18 @@ class Scheduler:
         elif self._mode == "ondemand":
             # ondemand: draw when needed (detected by calls to request_draw).
             # Aim for max_fps when drawing is needed, otherwise min_fps.
-            its_time_to_draw = (
-                time.perf_counter() - self._last_draw_time > 1 / self._min_fps
-            )
-            if not self._draw_requested:
-                canvas._process_events()  # handlers may request a draw
-            if self._draw_requested or its_time_to_draw:
+            if self._draw_requested:
                 canvas._request_draw()
+            elif (
+                self._min_fps > 0
+                and time.perf_counter() - self._last_draw_time > 1 / self._min_fps
+            ):
+                canvas._request_draw()  # time to do a draw
             else:
                 self._schedule_next_tick()
 
         elif self._mode == "manual":
             # manual: never draw, except when ... ?
-            canvas._process_events()
             self._schedule_next_tick()
 
         else:

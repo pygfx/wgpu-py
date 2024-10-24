@@ -7,7 +7,7 @@ import sys
 import ctypes
 import importlib
 
-from .base import WgpuCanvasBase, WgpuLoop, WgpuTimer
+from .base import WgpuCanvasBase, WgpuLoop, WgpuTimer, pop_kwargs_for_base_canvas
 from ._gui_utils import (
     logger,
     SYSTEM_IS_WAYLAND,
@@ -163,6 +163,8 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         else:
             raise ValueError(f"Invalid present_method {present_method}")
 
+        self._is_closed = False
+
         self.setAttribute(WA_PaintOnScreen, self._present_to_screen)
         self.setAutoFillBackground(False)
         self.setAttribute(WA_DeleteOnClose, True)
@@ -195,8 +197,7 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         #   call_later(), and process more of our events, and maybe even another call to
         #   this method, if the user was not careful.
         self.repaint()
-        if not self._present_to_screen:
-            loop._app.processEvents()
+        loop._app.processEvents()
 
     def _get_loop(self):
         return loop
@@ -270,16 +271,15 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
     def set_title(self, title):
         # A QWidgets title can actually be shown when the widget is shown in a dock.
         # But the application should probably determine that title, not us.
-        pass
+        parent = self.parent()
+        if isinstance(parent, QWgpuCanvas):
+            parent.setWindowTitle(title)
 
     def close(self):
         QtWidgets.QWidget.close(self)
 
     def is_closed(self):
-        try:
-            return not self.isVisible()
-        except Exception:
-            return True  # Internal C++ object already deleted
+        return self._is_closed
 
     # User events to jupyter_rfb events
 
@@ -397,14 +397,20 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
         self.submit_event(ev)
 
     def closeEvent(self, event):  # noqa: N802
+        self._is_closed = True
         self.submit_event({"event_type": "close"})
 
     # Methods related to presentation of resulting image data
 
     def present_image(self, image_data, **kwargs):
         size = image_data.shape[1], image_data.shape[0]  # width, height
+        rect1 = QtCore.QRect(0, 0, size[0], size[1])
+        rect2 = self.rect()
 
         painter = QtGui.QPainter(self)
+        # backingstore = self.backingStore()
+        # backingstore.beginPaint(rect2)
+        # painter = QtGui.QPainter(backingstore.paintDevice())
 
         # We want to simply blit the image (copy pixels one-to-one on framebuffer).
         # Maybe Qt does this when the sizes match exactly (like they do here).
@@ -424,14 +430,16 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
             QtGui.QImage.Format.Format_RGBA8888,
         )
 
-        rect1 = QtCore.QRect(0, 0, size[0], size[1])
-        rect2 = self.rect()
         painter.drawImage(rect2, image, rect1)
 
         # Uncomment for testing purposes
         # painter.setPen(QtGui.QColor("#0000ff"))
         # painter.setFont(QtGui.QFont("Arial", 30))
         # painter.drawText(100, 100, "This is an image")
+
+        painter.end()
+        # backingstore.endPaint()
+        # backingstore.flush(rect2)
 
 
 class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
@@ -442,12 +450,12 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
     # size can be set to subpixel (logical) values, without being able to
     # detect this. See https://github.com/pygfx/wgpu-py/pull/68
 
-    def __init__(
-        self, *, size=None, title=None, max_fps=30, present_method=None, **kwargs
-    ):
+    def __init__(self, *, size=None, title=None, **kwargs):
         # When using Qt, there needs to be an
         # application before any widget is created
         loop.init_qt()
+
+        sub_kwargs = pop_kwargs_for_base_canvas(kwargs)
         super().__init__(**kwargs)
 
         self.setAttribute(WA_DeleteOnClose, True)
@@ -455,9 +463,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self.setWindowTitle(title or "qt wgpu canvas")
         self.setMouseTracking(True)
 
-        self._subwidget = QWgpuWidget(
-            self, max_fps=max_fps, present_method=present_method
-        )
+        self._subwidget = QWgpuWidget(self, **sub_kwargs)
         self._events = self._subwidget._events
 
         # Note: At some point we called `self._subwidget.winId()` here. For some
@@ -475,6 +481,7 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
     # Qt methods
 
     def closeEvent(self, event):  # noqa: N802
+        self._subwidget._is_closed = True
         self.submit_event({"event_type": "close"})
 
     # Methods that we add from wgpu (snake_case)

@@ -3,6 +3,7 @@ Support for rendering in a Jupyter widget. Provides a widget subclass that
 can be used as cell output, or embedded in an ipywidgets gui.
 """
 
+import time
 import weakref
 
 from .base import WgpuCanvasBase
@@ -24,6 +25,7 @@ class JupyterWgpuCanvas(WgpuCanvasBase, RemoteFrameBuffer):
         self._pixel_ratio = 1
         self._logical_size = 0, 0
         self._is_closed = False
+        self._draw_request_time = 0
 
         # Register so this can be display'ed when run() is called
         loop._pending_jupyter_canvases.append(weakref.ref(self))
@@ -51,6 +53,14 @@ class JupyterWgpuCanvas(WgpuCanvasBase, RemoteFrameBuffer):
         # present_context.present(), which calls our present() method.
         # The result is either a numpy array or None, and this matches
         # with what this method is expected to return.
+
+        # When we had to wait relatively long for the drawn to be made,
+        # we do another round processing events, to minimize the perceived lag.
+        # We only do this when the delay is significant, so that under good
+        # circumstances, the scheduling behaves the same as for other canvases.
+        if time.perf_counter() - self._draw_request_time > 0.02:
+            self._process_events()
+
         self._draw_frame_and_present()
         return self._last_image
 
@@ -84,6 +94,7 @@ class JupyterWgpuCanvas(WgpuCanvasBase, RemoteFrameBuffer):
         return self._is_closed
 
     def _request_draw(self):
+        self._draw_request_time = time.perf_counter()
         RemoteFrameBuffer.request_draw(self)
 
     def _force_draw(self):
