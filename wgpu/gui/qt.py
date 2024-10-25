@@ -599,3 +599,4 @@ class QtWgpuLoop(WgpuLoop):
 
 
 loop = QtWgpuLoop()
+run = loop.run  # backwards compat

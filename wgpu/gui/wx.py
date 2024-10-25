@@ -568,3 +568,4 @@ class WxWgpuLoop(WgpuLoop):
 
 
 loop = WxWgpuLoop()
+run = loop.run  # backwards compat

@@ -5,7 +5,7 @@ Right now we only chose between GLFW, Qt and Jupyter. We might add support
 for e.g. wx later. Or we might decide to stick with these three.
 """
 
-__all__ = ["WgpuCanvas", "loop"]
+__all__ = ["WgpuCanvas", "loop", "run"]
 
 import os
 import sys
@@ -189,3 +189,4 @@ def backends_by_trying_in_order():
 # Load!
 module = select_backend()
 WgpuCanvas, loop = module.WgpuCanvas, module.loop
+run = loop.run  # backwards compat

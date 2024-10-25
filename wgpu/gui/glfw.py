@@ -548,6 +548,7 @@ class GlfwAsyncioWgpuLoop(AsyncioWgpuLoop):
 
 
 loop = GlfwAsyncioWgpuLoop()
+run = loop.run  # backwards compat
 
 
 def poll_glfw_briefly(poll_time=0.1):
