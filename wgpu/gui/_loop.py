@@ -9,7 +9,7 @@ from ._gui_utils import log_exception
 from ..enums import Enum
 
 # Note: technically, we could have a global loop proxy object that defers to any of the other loops.
-# That would e.g. allow using glfw with qt together. Probably to too weird use-case for the added complexity.
+# That would e.g. allow using glfw with qt together. Probably a too weird use-case for the added complexity.
 
 
 class WgpuTimer:
@@ -128,6 +128,14 @@ class WgpuLoop:
     def __init__(self):
         self._schedulers = set()
         self._stop_when_no_canvases = False
+
+        # The loop object runs a lightweight timer for a few reasons:
+        # * Support running the loop without windows (e.g. to keep animations going).
+        # * Detect closed windows. Relying on the backend alone is tricky, since the
+        #   loop usually stops when the last window is closed, so the close event may
+        #   not be fired.
+        # * Keep the GUI going even when the canvas loop is on pause e.g. because its
+        #   minimized (applies to backends that implement _wgpu_gui_poll).
         self._gui_timer = self._TimerClass(self, self._tick, one_shot=False)
 
     def _register_scheduler(self, scheduler):
@@ -237,20 +245,6 @@ class WgpuLoop:
         pass
 
 
-class AnimationScheduler:
-    """
-    Some ideas:
-
-    * canvas.add_event_handler("animate", callback)
-    * canvas.animate.add_handler(1/30, callback)
-    """
-
-    # def iter(self):
-    #     # Something like this?
-    #     for scheduler in all_schedulers:
-    #         scheduler._event_emitter.submit_and_dispatch(event)
-
-
 class UpdateMode(Enum):
     """The different modes to schedule draws for the canvas."""
 
@@ -299,8 +293,8 @@ class Scheduler:
     #
     # On desktop canvases the draw usually occurs very soon after it is
     # requested, but on remote frame buffers, it may take a bit longer. To make
-    # sure the rendered image reflects the latest state, events are also
-    # processed right before doing the draw.
+    # sure the rendered image reflects the latest state, these backends may
+    # issue an extra call to _process_events() right before doing the draw.
     #
     # When the window is minimized, the draw will not occur until the window is
     # shown again. For the canvas to detect minimized-state, it will need to
@@ -314,17 +308,12 @@ class Scheduler:
     # don't affect the scheduling loop; they are just extra draws.
 
     def __init__(self, canvas, loop, *, mode="ondemand", min_fps=1, max_fps=30):
-        # Objects related to the canvas.
         # We don't keep a ref to the canvas to help gc. This scheduler object can be
         # referenced via a callback in an event loop, but it won't prevent the canvas
         # from being deleted!
         self._canvas_ref = weakref.ref(canvas)
         self._events = canvas._events
         # ... = canvas.get_context() -> No, context creation should be lazy!
-
-        # We need to call_later and process gui events. The loop object abstracts these.
-        assert loop is not None
-        loop._register_scheduler(self)
 
         # Scheduling variables
         if mode not in UpdateMode:
@@ -335,19 +324,20 @@ class Scheduler:
         self._min_fps = float(min_fps)
         self._max_fps = float(max_fps)
         self._draw_requested = True  # Start with a draw in ondemand mode
-
-        # Stats
         self._last_draw_time = 0
+
+        # Keep track of fps
         self._draw_stats = 0, time.perf_counter()
 
-        # Variables for animation
-        self._animation_time = 0
-        self._animation_step = 1 / 20
+        assert loop is not None
 
-        # Initialise the scheduling loop. Note that the gui may do a first draw
-        # earlier, starting the loop, and that's fine.
+        # Initialise the timer that runs our scheduling loop.
+        # Note that the gui may do a first draw earlier, starting the loop, and that's fine.
         self._last_tick_time = -0.1
         self._timer = loop.call_later(0.1, self._tick)
+
+        # Register this scheduler/canvas at the loop object
+        loop._register_scheduler(self)
 
     def _get_canvas(self):
         canvas = self._canvas_ref()
@@ -415,7 +405,7 @@ class Scheduler:
                 self._min_fps > 0
                 and time.perf_counter() - self._last_draw_time > 1 / self._min_fps
             ):
-                canvas._request_draw()  # time to do a draw
+                canvas._request_draw()
             else:
                 self._schedule_next_tick()
 
@@ -429,26 +419,22 @@ class Scheduler:
     def on_draw(self):
         """Called from canvas._draw_frame_and_present()."""
 
-        # It could be that the canvas is closed now. When that happens,
-        # we stop here and do not schedule a new iter.
-        if (canvas := self._get_canvas()) is None:
-            return
-
-        # Update stats
-        count, last_time = self._draw_stats
-        if time.perf_counter() - last_time > 1.0:
-            self._draw_stats = 0, time.perf_counter()
-        else:
-            self._draw_stats = count + 1, last_time
-
-        # Stats (uncomment to see fps)
-        count, last_time = self._draw_stats
-        fps = count / (time.perf_counter() - last_time)
-        canvas.set_title(f"wgpu {fps:0.1f} fps")
-
         # Bookkeeping
         self._last_draw_time = time.perf_counter()
         self._draw_requested = False
 
         # Keep ticking
         self._schedule_next_tick()
+
+        # Update stats
+        count, last_time = self._draw_stats
+        count += 1
+        if time.perf_counter() - last_time > 1.0:
+            fps = count / (time.perf_counter() - last_time)
+            self._draw_stats = 0, time.perf_counter()
+        else:
+            fps = None
+            self._draw_stats = count, last_time
+
+        # Return fps or None. Will change with better stats at some point
+        return fps

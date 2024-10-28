@@ -112,6 +112,13 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         self._vsync = bool(vsync)
         present_method  # noqa - We just catch the arg here in case a backend does implement it
 
+        # Canvas
+        self.__raw_title = ""
+        self.__title_kwargs = {
+            "fps": "?",
+            "backend": self.__class__.__name__,
+        }
+
         self.__is_drawing = False
         self._events = EventEmitter()
         self._scheduler = None
@@ -216,12 +223,9 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         if self._scheduler is not None:
             self._scheduler.request_draw()
 
-        # todo: maybe requesting a new draw can be done by setting a field in an event?
-        # todo: can just make the draw_function a handler for the draw event?
-        # -> Note that the draw func is likely to hold a ref to the canvas. By storing it
-        #   here, the circular ref can be broken. This fails if we'd store _draw_frame on the
-        #   scheduler! So with a draw event, we should provide the context and more info so
-        #   that a draw funcion does not need the canvas object.
+        # -> Note that the draw func is likely to hold a ref to the canvas. By
+        #   storing it here, the gc can detect this case, and its fine. However,
+        #   this fails if we'd store _draw_frame on the scheduler!
 
     def force_draw(self):
         """Perform a draw right now."""
@@ -256,7 +260,13 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
             # Notify the scheduler
             if self._scheduler is not None:
-                self._scheduler.on_draw()
+                fps = self._scheduler.on_draw()
+
+                # Maybe update title
+                if fps is not None:
+                    self.__title_kwargs["fps"] = f"{fps:0.1f}"
+                    if "$fps" in self.__raw_title:
+                        self.set_title(self.__raw_title)
 
             # Perform the user-defined drawing code. When this errors,
             # we should report the error and then continue, otherwise we crash.
@@ -341,6 +351,12 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     def set_title(self, title):
         """Set the window title."""
+        self.__raw_title = title
+        for k, v in self.__title_kwargs.items():
+            title = title.replace("$" + k, v)
+        self._set_title(title)
+
+    def _set_title(self, title):
         pass
 
 

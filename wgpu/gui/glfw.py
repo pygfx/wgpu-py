@@ -151,9 +151,10 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         super().__init__(**kwargs)
 
         # Handle inputs
+        if title is None:
+            title = "glfw canvas"
         if not size:
             size = 640, 480
-        title = str(title or "glfw wgpu canvas")
 
         # Set window hints
         glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
@@ -195,7 +196,10 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
         # Initialize the size
         self._pixel_ratio = -1
         self._screen_size_is_logical = False
+
+        # Apply incoming args via the proper route
         self.set_logical_size(*size)
+        self.set_title(title)
 
     # Callbacks to provide a minimal working canvas for wgpu
 
@@ -323,7 +327,7 @@ class GlfwWgpuCanvas(WgpuCanvasBase):
             raise ValueError("Window width and height must not be negative")
         self._set_logical_size((float(width), float(height)))
 
-    def set_title(self, title):
+    def _set_title(self, title):
         glfw.set_window_title(self._window, title)
 
     def close(self):

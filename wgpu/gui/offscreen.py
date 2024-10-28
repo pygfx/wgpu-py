@@ -11,7 +11,6 @@ class WgpuManualOffscreenCanvas(WgpuCanvasBase):
         super().__init__(*args, **kwargs)
         self._logical_size = (float(size[0]), float(size[1])) if size else (640, 480)
         self._pixel_ratio = pixel_ratio
-        self._title = title
         self._closed = False
         self._last_image = None
 
@@ -38,7 +37,7 @@ class WgpuManualOffscreenCanvas(WgpuCanvasBase):
     def set_logical_size(self, width, height):
         self._logical_size = width, height
 
-    def set_title(self, title):
+    def _set_title(self, title):
         pass
 
     def close(self):

@@ -370,9 +370,13 @@ class WxWgpuWindow(WgpuCanvasBase, wx.Window):
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
             raise ValueError("Window width and height must not be negative")
-        self.SetSize(width, height)
+        parent = self.Parent
+        if isinstance(parent, WxWgpuCanvas):
+            parent.SetSize(width, height)
+        else:
+            self.SetSize(width, height)
 
-    def set_title(self, title):
+    def _set_title(self, title):
         # Set title only on frame
         parent = self.Parent
         if isinstance(parent, WxWgpuCanvas):
@@ -430,8 +434,11 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         sub_kwargs = pop_kwargs_for_base_canvas(kwargs)
         super().__init__(parent, **kwargs)
 
-        self.set_logical_size(*(size or (640, 480)))
-        self.SetTitle(title or "wx wgpu canvas")
+        # Handle inputs
+        if title is None:
+            title = "wx canvas"
+        if not size:
+            size = 640, 480
 
         self._subwidget = WxWgpuWindow(parent=self, **sub_kwargs)
         self._events = self._subwidget._events
@@ -444,6 +451,9 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         etime = time.perf_counter() + 1
         while self._subwidget.GetHandle() == 0 and time.perf_counter() < etime:
             loop.process_wx_events()
+
+        self.set_logical_size(*size)
+        self.set_title(title)
 
     # wx methods
 
@@ -473,7 +483,7 @@ class WxWgpuCanvas(WgpuCanvasBase, wx.Frame):
         self.SetSize(width, height)
 
     def set_title(self, title):
-        self.SetTitle(title)
+        self._subwiget.set_title(title)
 
     def _request_draw(self):
         return self._subwidget._request_draw()

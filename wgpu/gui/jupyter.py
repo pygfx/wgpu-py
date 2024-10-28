@@ -82,7 +82,7 @@ class JupyterWgpuCanvas(WgpuCanvasBase, RemoteFrameBuffer):
         self.css_width = f"{width}px"
         self.css_height = f"{height}px"
 
-    def set_title(self, title):
+    def _set_title(self, title):
         pass  # not supported yet
 
     def close(self):
@@ -97,9 +97,10 @@ class JupyterWgpuCanvas(WgpuCanvasBase, RemoteFrameBuffer):
 
     def _force_draw(self):
         # A bit hacky to use the internals of jupyter_rfb this way.
-        # This pushes frames to the browser. The only thing holding
-        # this back it the websocket buffer. It works!
+        # This pushes frames to the browser as long as the websocket
+        # buffer permits it. It works!
         # But a better way would be `await canvas.wait_draw()`.
+        # Todo: would also be nice if jupyter_rfb had a public api for this.
         array = self.get_frame()
         if array is not None:
             self._rfb_send_frame(array)

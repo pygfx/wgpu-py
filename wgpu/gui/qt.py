@@ -266,9 +266,13 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
     def set_logical_size(self, width, height):
         if width < 0 or height < 0:
             raise ValueError("Window width and height must not be negative")
-        self.resize(width, height)  # See comment on pixel ratio
+        parent = self.parent()
+        if isinstance(parent, QWgpuCanvas):
+            parent.resize(width, height)
+        else:
+            self.resize(width, height)  # See comment on pixel ratio
 
-    def set_title(self, title):
+    def _set_title(self, title):
         # A QWidgets title can actually be shown when the widget is shown in a dock.
         # But the application should probably determine that title, not us.
         parent = self.parent()
@@ -458,9 +462,13 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         sub_kwargs = pop_kwargs_for_base_canvas(kwargs)
         super().__init__(**kwargs)
 
+        # Handle inputs
+        if title is None:
+            title = "qt canvas"
+        if not size:
+            size = 640, 480
+
         self.setAttribute(WA_DeleteOnClose, True)
-        self.set_logical_size(*(size or (640, 480)))
-        self.setWindowTitle(title or "qt wgpu canvas")
         self.setMouseTracking(True)
 
         self._subwidget = QWgpuWidget(self, **sub_kwargs)
@@ -476,6 +484,8 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         self.setLayout(layout)
         layout.addWidget(self._subwidget)
 
+        self.set_logical_size(*size)
+        self.set_title(title)
         self.show()
 
     # Qt methods
@@ -512,9 +522,6 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
             raise ValueError("Window width and height must not be negative")
         self.resize(width, height)  # See comment on pixel ratio
 
-    def set_title(self, title):
-        self.setWindowTitle(title)
-
     def close(self):
         QtWidgets.QWidget.close(self)
 
@@ -522,6 +529,9 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
         return self._subwidget.is_closed()
 
     # Methods that we need to explicitly delegate to the subwidget
+
+    def set_title(self, *args):
+        self._subwidget.set_title(*args)
 
     def get_context(self, *args, **kwargs):
         return self._subwidget.get_context(*args, **kwargs)
@@ -594,7 +604,6 @@ class QtWgpuLoop(WgpuLoop):
             self._app.quit()
 
     def _wgpu_gui_poll(self):
-        # todo: make this a private method with a wgpu prefix.
         pass  # we assume the Qt event loop is running. Calling processEvents() will cause recursive repaints.
 
 
