@@ -345,7 +345,7 @@ class WgpuCanvasBase(WgpuCanvasInterface):
 
     def is_closed(self):
         """Get whether the window is closed."""
-        raise NotImplementedError()
+        return False
 
     # === Secondary canvas management methods
 

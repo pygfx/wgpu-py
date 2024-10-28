@@ -129,8 +129,10 @@ def test_gui_scheduling_ondemand():
     assert canvas.draw_count == 2
 
     # Forcing a draw has direct effect
+    canvas.draw_count = canvas.events_count = 0
     canvas.force_draw()
-    assert canvas.draw_count == 3
+    assert canvas.draw_count == 1
+    assert canvas.events_count == 0
 
 
 def test_gui_scheduling_ondemand_always_request_draw():
@@ -177,7 +179,7 @@ def _test_gui_scheduling_continuous(canvas):
     canvas.draw_count = canvas.events_count = 0
     canvas.force_draw()
     assert canvas.draw_count == 1
-    assert canvas.events_count == 1
+    assert canvas.events_count == 0
 
 
 def test_gui_scheduling_fastest():
@@ -203,7 +205,7 @@ def test_gui_scheduling_fastest():
     canvas.draw_count = canvas.events_count = 0
     canvas.force_draw()
     assert canvas.draw_count == 1
-    assert canvas.events_count == 1
+    assert canvas.events_count == 0
 
 
 if __name__ == "__main__":
