@@ -1,6 +1,6 @@
 import sys
 
-from ._events import EventEmitter
+from ._events import EventEmitter, WgpuEventType  # noqa: F401
 from ._loop import Scheduler, WgpuLoop, WgpuTimer  # noqa: F401
 from ._gui_utils import log_exception
 
@@ -82,30 +82,32 @@ class WgpuCanvasInterface:
 
 
 class WgpuCanvasBase(WgpuCanvasInterface):
-    """A convenient base canvas class.
+    """The base canvas class.
 
-    This class provides a uniform API and implements common
-    functionality, to increase consistency and reduce code duplication.
-    It is convenient (but not strictly necessary) for canvas classes
-    to inherit from this class (but all builtin canvases do).
+    This class provides a uniform canvas API so render systems can be use
+    code that is portable accross multiple GUI libraries and canvas targets.
 
-    This class provides an API for scheduling draws (``request_draw()``)
-    and implements a mechanism to call the provided draw function
-    (``draw_frame()``) and then present the result to the canvas.
+    Arguments:
+        update_mode (WgpuEventType): The mode for scheduling draws and events. Default 'ondemand'.
+        min_fps (float): A minimal frames-per-second to use when the ``update_mode`` is 'ondemand'.
+            The default is 1: even without draws requested, it still draws every second.
+        max_fps (float): A maximal frames-per-second to use when the ``update_mode`` is 'ondemand' or 'continuous'.
+            The default is 30, which is usually enough.
+        vsync (bool): Whether to sync the draw with the monitor update.  Helps
+            against screen tearing, but can reduce fps. Default True.
+        present_method (str | None): The method to present the rendered image.
+            Can be set to 'screen' or 'image'. Default None (auto-select).
 
-    This class also implements draw rate limiting, which can be set
-    with the ``max_fps`` attribute (default 30). For benchmarks you may
-    also want to set ``vsync`` to False.
     """
 
     def __init__(
         self,
         *args,
-        min_fps=1,
-        max_fps=30,
+        update_mode="ondemand",
+        min_fps=1.0,
+        max_fps=30.0,
         vsync=True,
         present_method=None,
-        update_mode="ondemand",
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -228,7 +230,12 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         #   this fails if we'd store _draw_frame on the scheduler!
 
     def force_draw(self):
-        """Perform a draw right now."""
+        """Perform a draw right now.
+
+        In most cases you want to use ``request_draw()``. If you find yourself using
+        this, consider using a timer. Nevertheless, sometimes you just want to force
+        a draw right now.
+        """
         if self.__is_drawing:
             raise RuntimeError("Cannot force a draw while drawing.")
         self._force_draw()
