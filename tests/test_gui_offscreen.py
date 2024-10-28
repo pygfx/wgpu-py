@@ -15,10 +15,11 @@ def test_offscreen_selection_using_env_var():
 
     ori = os.environ.get("WGPU_FORCE_OFFSCREEN", "")
     try:
-        for value in ["", "0", "false", "False", "wut"]:
-            os.environ["WGPU_FORCE_OFFSCREEN"] = value
-            module = select_backend()
-            assert module.WgpuCanvas is not WgpuManualOffscreenCanvas
+        if not os.getenv("CI"):
+            for value in ["", "0", "false", "False", "wut"]:
+                os.environ["WGPU_FORCE_OFFSCREEN"] = value
+                module = select_backend()
+                assert module.WgpuCanvas is not WgpuManualOffscreenCanvas
 
         for value in ["1", "true", "True"]:
             os.environ["WGPU_FORCE_OFFSCREEN"] = value

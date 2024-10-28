@@ -66,8 +66,8 @@ class EventEmitter:
         """Register an event handler to receive events.
 
         Arguments:
-            callback (callable): The event handler. Must accept a single event
-                argument. *types (list of strings): A list of event types.
+            callback (callable): The event handler. Must accept a single event argument.
+            *types (list of strings): A list of event types.
             order (float): Set callback priority order. Callbacks with lower priorities
                 are called first. Default is 0.
 
