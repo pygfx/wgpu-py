@@ -11,9 +11,13 @@ from testutils import is_pypy, run_tests
 
 def test_offscreen_selection_using_env_var():
     from wgpu.gui.offscreen import WgpuManualOffscreenCanvas
-    from wgpu.gui.auto import select_backend
 
     ori = os.environ.get("WGPU_FORCE_OFFSCREEN", "")
+    os.environ["WGPU_FORCE_OFFSCREEN"] = "1"
+
+    # We only need the func, but this triggers the auto-import
+    from wgpu.gui.auto import select_backend
+
     try:
         if not os.getenv("CI"):
             for value in ["", "0", "false", "False", "wut"]:
