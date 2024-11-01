@@ -34,8 +34,8 @@ from ._helpers import (
     get_memoryview_and_address,
     to_snake_case,
     ErrorHandler,
-    WgpuAwaitable,
     SafeLibCalls,
+    WgpuAwaitable,
 )
 
 logger = logging.getLogger("wgpu")
@@ -331,7 +331,7 @@ class GPU(classes.GPU):
             canvas=canvas,
         )
 
-        return awaitable.sync_wait()
+        return awaitable.wait_sync()
 
     async def request_adapter_async(
         self,
@@ -357,8 +357,7 @@ class GPU(classes.GPU):
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
         )  # no-cover
-
-        return await awaitable
+        return await awaitable.wait_async()
 
     def _request_adapter(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
@@ -401,28 +400,25 @@ class GPU(classes.GPU):
             # not used: nextInChain
         )
 
-        awaitable_result = {}
-
         @ffi.callback("void(WGPURequestAdapterStatus, WGPUAdapter, char *, void *)")
-        def callback(status, result, message, userdata):
+        def callback(status, result, message, _userdata):
             if status != 0:
                 msg = "-" if message == ffi.NULL else ffi.string(message).decode()
-                awaitable_result["error"] = f"Request adapter failed ({status}): {msg}"
+                awaitable.set_error(f"Request adapter failed ({status}): {msg}")
             else:
-                awaitable_result["result"] = result
-
-        def poll_func():
-            pass  # actually does not need a poll func at the moment
+                awaitable.set_result(result)
 
         def finalizer(adapter_id):
             return self._create_adapter(adapter_id)
 
+        # Note that although we claim this is an asynchronous method, the callback
+        # happens within libf.wgpuInstanceRequestAdapter
+        awaitable = WgpuAwaitable("request_adapter", callback, finalizer)
+
         # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPUInstanceRequestAdapterCallback callback, void * userdata)
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback, ffi.NULL)
 
-        return WgpuAwaitable(
-            "request_adapter", awaitable_result, callback, poll_func, finalizer
-        )
+        return awaitable
 
     def enumerate_adapters_sync(self):
         """Sync version of ``enumerate_adapters_async()``.
@@ -858,7 +854,7 @@ class GPUAdapter(classes.GPUAdapter):
         awaitable = self._request_device(
             label, required_features, required_limits, default_queue, ""
         )
-        return awaitable.sync_wait()
+        return awaitable.wait_sync()
 
     async def request_device_async(
         self,
@@ -871,14 +867,11 @@ class GPUAdapter(classes.GPUAdapter):
         if default_queue:
             check_struct("QueueDescriptor", default_queue)
         awaitable = self._request_device(
-            label,
-            required_features=required_features,
-            required_limits=required_limits,
-            default_queue=default_queue,
-            trace_path="",
+            label, required_features, required_limits, default_queue, ""
         )
-
-        return await awaitable
+        # Note that although we claim this function is async, the callback always
+        # happens inside the call to libf.wgpuAdapterRequestDevice
+        return await awaitable.wait_async()
 
     def _request_device(
         self,
@@ -1033,18 +1026,13 @@ class GPUAdapter(classes.GPUAdapter):
             # not used: deviceLostUserdata
         )
 
-        awaitable_result = {}
-
         @ffi.callback("void(WGPURequestDeviceStatus, WGPUDevice, char *, void *)")
         def callback(status, result, message, userdata):
             if status != 0:
                 msg = "-" if message == ffi.NULL else ffi.string(message).decode()
-                awaitable_result["error"] = f"Request device failed ({status}): {msg}"
+                awaitable.set_error(f"Request device failed ({status}): {msg}")
             else:
-                awaitable_result["result"] = result
-
-        def poll_func():
-            pass  # not needed at the moment. Replace with future poll method later.
+                awaitable.set_result(result)
 
         def finalizer(device_id):
             limits = _get_limits(device_id, device=True)
@@ -1061,12 +1049,12 @@ class GPUAdapter(classes.GPUAdapter):
 
             return device
 
+        awaitable = WgpuAwaitable("request_device", callback, finalizer)
+
         # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPUAdapterRequestDeviceCallback callback, void * userdata)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
 
-        return WgpuAwaitable(
-            "request_device", awaitable_result, callback, poll_func, finalizer
-        )
+        return awaitable
 
     def _release(self):
         if self._internal is not None and libf is not None:
@@ -1078,6 +1066,8 @@ class GPUAdapter(classes.GPUAdapter):
 class GPUDevice(classes.GPUDevice, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuDeviceRelease
+
+    CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED = True
 
     def _poll(self):
         # Internal function
@@ -1567,7 +1557,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
         compute: structs.ProgrammableStage,
     ):
-        return self._create_compute_pipeline(label, layout, compute, asynchronous=False)
+        descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
+        id = libf.wgpuDeviceCreateComputePipeline(self._internal, descriptor)
+        return GPUComputePipeline(label, id, self)
 
     async def create_compute_pipeline_async(
         self,
@@ -1576,16 +1568,43 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
         compute: structs.ProgrammableStage,
     ):
-        # TODO: wgpuDeviceCreateComputePipelineAsync is not yet implemented in wgpu-native
-        return self._create_compute_pipeline(label, layout, compute, asynchronous=False)
+        descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
 
-    def _create_compute_pipeline(
+        if self.CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED:
+            id = libf.wgpuDeviceCreateComputePipeline(self._internal, descriptor)
+            return GPUComputePipeline(label, id, self)
+
+        # This code is virtually identical to the code in create_render_pipeline_async.
+        # Can they be merged??
+        @ffi.callback(
+            "void(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline, char *, void *)"
+        )
+        def callback(status, result, message, _userdata):
+            if status != 0:
+                msg = "-" if message == ffi.NULL else ffi.string(message).decode()
+                awaitable.set_error(f"create_compute_pipeline failed ({status}): {msg}")
+            else:
+                awaitable.set_result(result)
+
+        def finalizer(id):
+            return GPUComputePipeline(label, id, self)
+
+        awaitable = WgpuAwaitable(
+            "create_compute_pipeline", callback, finalizer, self._device.poll
+        )
+
+        # H: void f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUDeviceCreateRenderPipelineAsyncCallback callback, void * userdata)
+        libf.wgpuDeviceCreateComputePipelineAsync(
+            self._internal, descriptor, callback, ffi.NULL
+        )
+
+        return await awaitable.wait_async()
+
+    def _create_compute_pipeline_descriptor(
         self,
         label: str,
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
         compute: structs.ProgrammableStage,
-        *,
-        asynchronous,
     ):
         check_struct("ProgrammableStage", compute)
         c_constants, c_constant_entries = _get_override_constant_entries(compute)
@@ -1616,13 +1635,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             compute=c_compute_stage,
             # not used: nextInChain
         )
-
-        if asynchronous:
-            raise NotImplementedError()
-
-        # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
-        id = libf.wgpuDeviceCreateComputePipeline(self._internal, struct)
-        return GPUComputePipeline(label, id, self)
+        return struct
 
     def create_render_pipeline(
         self,
@@ -1635,16 +1648,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         multisample: structs.MultisampleState = {},
         fragment: structs.FragmentState = optional,
     ):
-        return self._create_render_pipeline(
-            label,
-            layout,
-            vertex,
-            primitive,
-            depth_stencil,
-            multisample,
-            fragment,
-            asynchronous=False,
+        descriptor = self._create_render_pipeline_descriptor(
+            label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
+        id = libf.wgpuDeviceCreateRenderPipeline(self._internal, descriptor)
+        return GPURenderPipeline(label, id, self)
 
     async def create_render_pipeline_async(
         self,
@@ -1658,18 +1666,40 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         fragment: structs.FragmentState = optional,
     ):
         # TODO: wgpuDeviceCreateRenderPipelineAsync is not yet implemented in wgpu-native
-        return self._create_render_pipeline(
-            label,
-            layout,
-            vertex,
-            primitive,
-            depth_stencil,
-            multisample,
-            fragment,
-            asynchronous=False,
+        descriptor = self._create_render_pipeline_descriptor(
+            label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
 
-    def _create_render_pipeline(
+        if self.CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED:
+            id = libf.wgpuDeviceCreateRenderPipeline(self._internal, descriptor)
+            return GPURenderPipeline(label, id, self)
+
+        @ffi.callback(
+            "void(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline, char *, void *)"
+        )
+        def callback(status, result, message, _userdata):
+            print("Callback!")
+            if status != 0:
+                msg = "-" if message == ffi.NULL else ffi.string(message).decode()
+                awaitable.set_error(f"Create renderPipeline failed ({status}): {msg}")
+            else:
+                awaitable.set_result(result)
+
+        def finalizer(id):
+            return GPURenderPipeline(label, id, self)
+
+        awaitable = WgpuAwaitable(
+            "create_render_pipeline", callback, finalizer, self._device._poll
+        )
+
+        # H: void f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUDeviceCreateRenderPipelineAsyncCallback callback, void * userdata)
+        libf.wgpuDeviceCreateRenderPipelineAsync(
+            self._internal, descriptor, callback, ffi.NULL
+        )
+
+        return await awaitable.wait_async()
+
+    def _create_render_pipeline_descriptor(
         self,
         label: str,
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
@@ -1678,8 +1708,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_stencil: structs.DepthStencilState,
         multisample: structs.MultisampleState,
         fragment: structs.FragmentState,
-        *,
-        asynchronous,
     ):
         depth_stencil = depth_stencil or {}
         multisample = multisample or {}
@@ -1779,43 +1807,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             fragment=c_fragment_state,
             # not used: nextInChain
         )
-
-        if not asynchronous:
-            # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
-            id = libf.wgpuDeviceCreateRenderPipeline(self._internal, struct)
-            return GPURenderPipeline(label, id, self)
-
-        # Else, async approach
-
-        awaitable_result = {}
-
-        @ffi.callback(
-            "void(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline, char *, void *)"
-        )
-        def callback(status, result, message, userdata):
-            if status != 0:
-                msg = "-" if message == ffi.NULL else ffi.string(message).decode()
-                awaitable_result["error"] = (
-                    f"Create renderPipeline failed ({status}): {msg}"
-                )
-            else:
-                awaitable_result["result"] = result
-
-        def poll_func():
-            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
-            libf.wgpuDevicePoll(self._device._internal, False, ffi.NULL)
-
-        def finalizer(id):
-            return GPURenderPipeline(label, id, self)
-
-        # H: void f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUDeviceCreateRenderPipelineAsyncCallback callback, void * userdata)
-        libf.wgpuDeviceCreateRenderPipelineAsync(
-            self._internal, struct, callback, ffi.NULL
-        )
-
-        return WgpuAwaitable(
-            "create_render_pipeline", awaitable_result, callback, poll_func, finalizer
-        )
+        return struct
 
     def _create_color_target_state(self, target):
         if not target.get("blend", None):
@@ -2075,13 +2067,13 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
     ):
         check_can_use_sync_variants()
         awaitable = self._map(mode, offset, size)
-        return awaitable.sync_wait()
+        return awaitable.wait_sync()
 
     async def map_async(
         self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
     ):
         awaitable = self._map(mode, offset, size)  # for now
-        return await awaitable
+        return await awaitable.wait_async()
 
     def _map(self, mode, offset=0, size=None):
         sync_on_read = True
@@ -2111,23 +2103,19 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Setup awaitable
 
-        awaitable_result = {}
-
         @ffi.callback("void(WGPUBufferMapAsyncStatus, void*)")
-        def callback(status, user_data):
-            awaitable_result["result"] = status
+        def callback(status, _user_data):
+            if status != 0:
+                awaitable.set_error(f"Could not map buffer ({status}).")
+            else:
+                awaitable.set_result(status)
 
-        def poll_func():
-            # Doing nothing here will result in timeouts. I.e. unlike request_device, this method is truly async.
-            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
-            libf.wgpuDevicePoll(self._device._internal, False, ffi.NULL)
-
-        def finalizer(status):
-            if status != 0:  # no-cover
-                raise RuntimeError(f"Could not map buffer ({status}).")
+        def finalizer(_status):
             self._map_state = enums.BufferMapState.mapped
             self._mapped_status = offset, offset + size, mode
             self._mapped_memoryviews = []
+
+        awaitable = WgpuAwaitable("buffer.map", callback, finalizer, self._device._poll)
 
         # Map it
         self._map_state = enums.BufferMapState.pending
@@ -2136,9 +2124,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._internal, map_mode, offset, size, callback, ffi.NULL
         )
 
-        return WgpuAwaitable(
-            "buffer.map", awaitable_result, callback, poll_func, finalizer
-        )
+        return awaitable
 
     def unmap(self):
         if self._map_state != enums.BufferMapState.mapped:
@@ -3406,7 +3392,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        tmp_buffer._map("READ_NOSYNC").sync_wait()
+        tmp_buffer._map("READ_NOSYNC").wait_sync()
         data = tmp_buffer.read_mapped()
 
         # Explicit drop.
@@ -3519,7 +3505,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        tmp_buffer._map("READ_NOSYNC").sync_wait()
+        tmp_buffer._map("READ_NOSYNC").wait_sync()
         data = tmp_buffer.read_mapped()
 
         # Explicit drop.
@@ -3542,31 +3528,35 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     def on_submitted_work_done_sync(self):
         check_can_use_sync_variants()
-        # In JS, this returns a Promise that can be awaited to (async) wait
-        # for the work that is currently in the pipeline. We need to figure out
-        # how to expose these async parts.
-        raise NotImplementedError()
+        awaitable = self._on_submitted_word_done()
+        awaitable.wait_sync()
 
-        status = 999
+    async def on_submitted_work_done_async(self):
+        awaitable = self._on_submitted_word_done()
+        awaitable.wait_async()
 
+    def _on_submitted_word_done(self):
         @ffi.callback("void(WGPUQueueWorkDoneStatus, void*)")
-        def callback(status_, user_data_p):
-            nonlocal status
-            status = status_
-            # -> here we must resolve the promise, or something
+        def callback(status, _user_data_p):
+            if status == 0:
+                awaitable.set_result(True)
+            else:
+                result = {1: "Error", 2: "Unknown", 3: "DeviceLost"}.get(
+                    status, "Other"
+                )
+                awaitable.set_error(f"Queue work done status: {result}")
+
+        def finalizer(_value):
+            return None
+
+        awaitable = WgpuAwaitable(
+            "on_submitted_work_done", callback, finalizer, self._device._poll
+        )
 
         # H: void f(WGPUQueue queue, WGPUQueueOnSubmittedWorkDoneCallback callback, void * userdata)
         libf.wgpuQueueOnSubmittedWorkDone(self._internal, callback, ffi.NULL)
 
-        # Wait for the queue to process all tasks (including the mapping of the buffer).
-        # Also see WebGPU's onSubmittedWorkDone() and C's WGPUQueueWorkDoneCallback.
-        self._device._poll()
-
-        if status != 0:
-            raise RuntimeError(f"Queue work done status: {status}")
-
-    async def on_submitted_work_done_async(self):
-        raise NotImplementedError()
+        return awaitable
 
 
 class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):

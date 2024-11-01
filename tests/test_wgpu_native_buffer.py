@@ -548,5 +548,26 @@ def test_create_buffer_with_data(size):
     assert copy[size:] == bytes(buffer._nbytes - size)
 
 
+@pytest.mark.skip
+def test_show_bug_wgpu_native_305_still_not_fixed():
+    # When this bug is fixed, we can remove READ_NOSYNC, and just tread "READ" as if
+    # it were READ_NOSYNC.  No need to handle the command buffer.
+    device = wgpu.utils.get_default_device()
+    data1 = b"abcdefghijkl"
+
+    # Create buffer with data
+    buf = device.create_buffer(
+        size=len(data1), usage=wgpu.BufferUsage.MAP_READ, mapped_at_creation=True
+    )
+    buf.write_mapped(data1)
+    buf.unmap()
+
+    # Download from buffer to CPU
+    buf.map("READ_NOSYNC")
+    data2 = buf.read_mapped()
+    buf.unmap()
+    assert data1 == data2
+
+
 if __name__ == "__main__":
     run_tests(globals())

@@ -1,5 +1,7 @@
 """Utilities used in the wgpu-native backend."""
 
+import asyncio
+import contextlib
 import sys
 import time
 import ctypes
@@ -230,53 +232,62 @@ def to_camel_case(name):
 class WgpuAwaitable:
     """An object that can be waited for, either synchronously using sync_wait() or asynchronously using await.
 
-    The purpose of this class is to implememt the asynchronous methods in a
-    truely async manner, as well as to support a synchronous version of them.
+    The purpose of this class is to implement the asynchronous methods in a
+    truly async manner, as well as to support a synchronous version of them.
     """
 
-    def __init__(self, title, result, callback, poll_function, finalizer, timeout=5.0):
+    def __init__(self, title, callback, finalizer, poll_function=None, timeout=5.0):
         self.title = title  # for context in error messages
-        self.result = result  # a dict that the callbacks writes to
         self.callback = callback  # only used to prevent it from being gc'd
-        self.poll_function = poll_function  # call this to poll wgpu
         self.finalizer = finalizer  # function to finish the result
-        self.maxtime = time.perf_counter() + float(timeout)
+        self.poll_function = poll_function  # call this to poll wgpu
+        self.timeout = timeout
+        self.event = asyncio.Event()
+        self.result = None
 
-    def is_done(self):
-        self.poll_function()
-        if self.result:
-            return True
-        if time.perf_counter() > self.maxtime:
-            self.result["timeout"] = True
-            return True
-        return False
+    def set_result(self, result):
+        self.result = (result, None)
+        self.event.set()
+
+    def set_error(self, error):
+        self.result = (None, error)
+        self.event.set()
+
+    def wait_sync(self):
+        if not self.poll_function:
+            # The result must come back without any polling.
+            assert self.event.is_set()
+        else:
+            maxtime = time.perf_counter() + float(self.timeout)
+            while True:
+                self.poll_function()
+                if self.event.is_set() or time.perf_counter() > maxtime:
+                    break
+                time.sleep(0.100)
+        return self.finish()
+
+    async def wait_async(self):
+        if not self.poll_function:
+            # The result must come back with the original function call.
+            assert self.event.is_set()
+        else:
+            maxtime = time.perf_counter() + float(self.timeout)
+            while True:
+                self.poll_function()
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(self.event.wait(), 0.100)
+                if self.event.is_set() or time.perf_counter() > maxtime:
+                    break
+        return self.finish()
 
     def finish(self):
-        if "result" in self.result:
-            return self.finalizer(self.result["result"])
-        elif "error" in self.result:
-            raise RuntimeError(self.result["error"])
-        elif "timeout" in self.result:
+        if not self.result:
             raise RuntimeError(f"Waiting for {self.title} timed out.")
+        result, error = self.result
+        if error:
+            raise RuntimeError(error)
         else:
-            raise RuntimeError(f"Failed to obtain result for {self.title}.")
-
-    def sync_wait(self):
-        # Basically a spin-lock, but we sleep(0) to give other threads more room to run.
-        while not self.is_done():
-            time.sleep(0)  # yield to the GIL
-        return self.finish()
-
-    def __await__(self):
-        # With this approach the CPU is also kept busy, because the task will
-        # continuously be scheduled to do a next step, but at least other tasks
-        # will have a chance to run as well (e.g. GUI's running in the same loop
-        # stay active). In theory we could async-sleep here, but there are two
-        # problems: how long should we sleep, and using asyncio.sleep() would
-        # not work on e.g. Trio.
-        while not self.is_done():
-            yield None  # yield to the loop
-        return self.finish()
+            return self.finalizer(result)
 
 
 class ErrorHandler:

@@ -20,7 +20,7 @@ imgui = ["imgui-bundle>=1.2.1"]
 build = ["build", "hatchling", "requests", "twine"]
 codegen = ["pytest", "numpy", "ruff"]
 lint = ["ruff", "pre-commit"]
-tests = ["numpy", "pytest", "psutil", "imageio"]
+tests = ["numpy", "pytest", "pytest-asyncio", "psutil", "imageio"]
 examples = []
 docs = ["sphinx>7.2", "sphinx_rtd_theme"]
 dev = ["wgpu[build,codegen,lint,tests,examples,docs]"]
@@ -62,6 +62,9 @@ artifacts = ["*.so", "*.dll", "*.dylib"]
 # the wheel is build, and to allow cross-platform builds. See the tools dir.
 [tool.hatch.build.targets.wheel.hooks.custom]
 path = "tools/hatch_build.py"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
 
 # ===== Tooling
 
