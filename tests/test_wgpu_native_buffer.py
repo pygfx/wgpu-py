@@ -564,7 +564,7 @@ def test_show_bug_wgpu_native_305_still_not_fixed():
 
     # Download from buffer to CPU
     buf.map("READ_NOSYNC")
-    data2 = buf.read_mapped()
+    data2 = bytes(buf.read_mapped())
     buf.unmap()
     assert data1 == data2
 

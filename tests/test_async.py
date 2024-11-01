@@ -31,6 +31,7 @@ async def test_awaitable_async(use_async, loop_scope="function"):
         result = await awaitable.wait_async()
     else:
         result = awaitable.wait_sync()
+    assert result == 10 * 10
 
 
 @pytest.mark.asyncio
@@ -71,7 +72,7 @@ async def test_asynchronous_make_pipeline(loop_scope="function"):
         fn vertex_main() -> @builtin(position) vec4f {
             return vec4f(0, 0, 0, 1.);
         }
-    
+
         @compute @workgroup_size(1)
         fn compute_main() { }
     """

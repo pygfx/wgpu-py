@@ -1558,6 +1558,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         compute: structs.ProgrammableStage,
     ):
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
+        # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateComputePipeline(self._internal, descriptor)
         return GPUComputePipeline(label, id, self)
 
@@ -1571,6 +1572,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
 
         if self.CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED:
+            # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
             id = libf.wgpuDeviceCreateComputePipeline(self._internal, descriptor)
             return GPUComputePipeline(label, id, self)
 
@@ -1593,7 +1595,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "create_compute_pipeline", callback, finalizer, self._device.poll
         )
 
-        # H: void f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUDeviceCreateRenderPipelineAsyncCallback callback, void * userdata)
+        # H: void f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor, WGPUDeviceCreateComputePipelineAsyncCallback callback, void * userdata)
         libf.wgpuDeviceCreateComputePipelineAsync(
             self._internal, descriptor, callback, ffi.NULL
         )
@@ -1651,6 +1653,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         descriptor = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
+        # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateRenderPipeline(self._internal, descriptor)
         return GPURenderPipeline(label, id, self)
 
@@ -1671,6 +1674,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         )
 
         if self.CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED:
+            # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
             id = libf.wgpuDeviceCreateRenderPipeline(self._internal, descriptor)
             return GPURenderPipeline(label, id, self)
 
