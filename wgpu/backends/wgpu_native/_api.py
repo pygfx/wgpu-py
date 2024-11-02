@@ -17,26 +17,25 @@ Read the codegen/readme.md for more information.
 # Allow using class names in type annotations, before the class is defined. Py3.7+
 from __future__ import annotations
 
-import os
 import logging
+import os
+from typing import Dict, List, NoReturn, Optional, Union
 from weakref import WeakKeyDictionary
-from typing import List, Dict, Union, Optional
-
-from ... import classes, flags, enums, structs
-from ..._coreutils import str_flag_to_int
 
 from ._ffi import ffi, lib
-from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
 from ._helpers import (
-    get_wgpu_instance,
-    get_surface_id_from_info,
-    get_memoryview_from_address,
-    get_memoryview_and_address,
-    to_snake_case,
     ErrorHandler,
-    WgpuAwaitable,
     SafeLibCalls,
+    WgpuAwaitable,
+    get_memoryview_and_address,
+    get_memoryview_from_address,
+    get_surface_id_from_info,
+    get_wgpu_instance,
+    to_snake_case,
 )
+from ._mappings import cstructfield2enum, enum_int2str, enum_str2int, enummap
+from ... import classes, enums, flags, structs
+from ..._coreutils import str_flag_to_int
 
 logger = logging.getLogger("wgpu")
 
@@ -2425,6 +2424,10 @@ class GPUCommandsMixin(classes.GPUCommandsMixin):
 
 
 class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
+    # It is unfortunate that there is no common Mixin that includes just
+    # GPUComputePassEncoder and GPURenderPassEncodeer, but not GPURenderBundleEncoder.
+    # We put set_push_constants, and XX_pipeline_statistics_query here because they
+    # don't really fit anywhere else.
     def set_bind_group(
         self,
         index,
@@ -2489,19 +2492,28 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
         # H: void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void const * data)
         function = type(self)._set_push_constants_function
+        if function is None:
+            self._not_implemented("set_push_constants")
         function(self._internal, int(visibility), offset, size, c_data + data_offset)
 
     def _begin_pipeline_statistics_query(self, query_set, query_index):
         # H: void wgpuComputePassEncoderBeginPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         # H: void wgpuRenderPassEncoderBeginPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         function = type(self)._begin_pipeline_statistics_query_function
+        if function is None:
+            self._not_implemented("begin_pipeline_statistics")
         function(self._internal, query_set._internal, int(query_index))
 
     def _end_pipeline_statistics_query(self):
         # H: void wgpuComputePassEncoderEndPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder)
         # H: void wgpuRenderPassEncoderEndPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder)
         function = type(self)._end_pipeline_statistics_query_function
+        if function is None:
+            self._not_implemented("end_pipeline_statistics")
         function(self._internal)
+
+    def _not_implemented(self, name) -> NoReturn:
+        raise RuntimeError(f"{name} not implemented for {type(self).__name__}")
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
@@ -3123,7 +3135,7 @@ class GPUComputePassEncoder(
     _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
     _begin_pipeline_statistics_query_function = libf.wgpuComputePassEncoderBeginPipelineStatisticsQuery  # fmt: skip
     _end_pipeline_statistics_query_function = libf.wgpuComputePassEncoderEndPipelineStatisticsQuery  # fmt: skip
-    # Add _set_push_constants_function when it becomes available
+    _set_push_constants_function = None  # coming soon
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePassEncoderRelease
@@ -3226,7 +3238,6 @@ class GPURenderPassEncoder(
             check_struct("Color", color)
             color = _tuple_from_color(color)
         red, green, blue, alpha = color
-        # H: r: float, g: float, b: float, a: float
         c_color = new_struct_p(
             "WGPUColor *",
             r=red,
@@ -3295,6 +3306,9 @@ class GPURenderBundleEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuRenderBundleEncoderSetBindGroup
+    _set_push_constants_function = None
+    _begin_pipeline_statistics_query_function = None
+    _end_pipeline_statistics_query_function = None
 
     # GPURenderCommandsMixin
     _set_pipeline_function = libf.wgpuRenderBundleEncoderSetPipeline
