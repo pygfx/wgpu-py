@@ -230,10 +230,13 @@ def to_camel_case(name):
 
 
 class WgpuAwaitable:
-    """An object that can be waited for, either synchronously using sync_wait() or asynchronously using await.
+    """
+    Create an object representing the result of a wgpu call that requires a callback
+    to complete.  The code can then call "awaitable.wait_sync()" to wait for the result
+    synchronously, or "await awaitable.wait_async()" to perform an asynchronous wait.
 
-    The purpose of this class is to implement the asynchronous methods in a
-    truly async manner, as well as to support a synchronous version of them.
+    The callback should call "awaitable.set_result()" when it has a result, or
+    "awaitable.set_error()" when it encounters an error.
     """
 
     def __init__(self, title, callback, finalizer, poll_function=None, timeout=5.0):
@@ -255,7 +258,8 @@ class WgpuAwaitable:
 
     def wait_sync(self):
         if not self.poll_function:
-            # The result must come back without any polling.
+            if not self.event.is_set():
+                raise RuntimeError("Expected callback to have already happened")
             assert self.event.is_set()
         else:
             maxtime = time.perf_counter() + float(self.timeout)
@@ -268,7 +272,8 @@ class WgpuAwaitable:
 
     async def wait_async(self):
         if not self.poll_function:
-            # The result must come back with the original function call.
+            if not self.event.is_set():
+                raise RuntimeError("Expected callback to have already happened")
             assert self.event.is_set()
         else:
             maxtime = time.perf_counter() + float(self.timeout)
