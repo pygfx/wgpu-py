@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Dict, List, NoReturn, Optional, Union
+from typing import Dict, List, Optional, Union
 from weakref import WeakKeyDictionary
 
 from ._ffi import ffi, lib
@@ -428,25 +428,29 @@ class GPU(classes.GPU):
         This is the implementation based on wgpu-native.
         """
         check_can_use_sync_variants()
-        return self._enumerate_adapters()
+        adapter_ids = self._enumerate_adapter_ids()
+        for adapter_id in adapter_ids:
+            yield self._create_adapter(adapter_id)
 
     async def enumerate_adapters_async(self):
         """Get a list of adapter objects available on the current system.
         This is the implementation based on wgpu-native.
         """
-        return self._enumerate_adapters()
+        adapter_ids = self._enumerate_adapter_ids()
+        for adapter_id in adapter_ids:
+            yield self._create_adapter(adapter_id)
 
-    def _enumerate_adapters(self):
+    def _enumerate_adapter_ids(self):
         # The first call is to get the number of adapters, and the second call
         # is to get the actual adapters. Note that the second arg (now NULL) can
         # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
         instance = get_wgpu_instance()
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         count = libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, ffi.NULL)
-        adapters = ffi.new("WGPUAdapter[]", count)
+        adapter_ids = ffi.new("WGPUAdapter[]", count)
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
-        libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, adapters)
-        return [self._create_adapter(adapter) for adapter in adapters]
+        libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, adapter_ids)
+        return adapter_ids
 
     def _create_adapter(self, adapter_id):
         # ----- Get adapter info
@@ -2424,10 +2428,6 @@ class GPUCommandsMixin(classes.GPUCommandsMixin):
 
 
 class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
-    # It is unfortunate that there is no common Mixin that includes just
-    # GPUComputePassEncoder and GPURenderPassEncodeer, but not GPURenderBundleEncoder.
-    # We put set_push_constants, and XX_pipeline_statistics_query here because they
-    # don't really fit anywhere else.
     def set_bind_group(
         self,
         index,
@@ -2465,6 +2465,13 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         # H: void wgpuRenderBundleEncoderSetBindGroup(WGPURenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
         function = type(self)._set_bind_group_function
         function(self._internal, index, bind_group._internal, len(offsets), c_offsets)
+
+    ##
+    # It is unfortunate that there is no common Mixin that includes just
+    # GPUComputePassEncoder and GPURenderPassEncodeer, but not GPURenderBundleEncoder.
+    # We put set_push_constants, and XX_pipeline_statistics_query here because they
+    # don't really fit anywhere else.
+    #
 
     def _set_push_constants(self, visibility, offset, size_in_bytes, data, data_offset):
         # Implementation of set_push_constant. The public API is in extras.py since
@@ -2512,7 +2519,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             self._not_implemented("end_pipeline_statistics")
         function(self._internal)
 
-    def _not_implemented(self, name) -> NoReturn:
+    def _not_implemented(self, name):
         raise RuntimeError(f"{name} not implemented for {type(self).__name__}")
 
 

@@ -342,7 +342,7 @@ def test_wgpu_native_tracer():
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_enumerate_adapters():
     # Get all available adapters
-    adapters = wgpu.gpu.enumerate_adapters_sync()
+    adapters = list(wgpu.gpu.enumerate_adapters_sync())
     assert len(adapters) > 0
 
     # Check adapter summaries
@@ -350,6 +350,25 @@ def test_enumerate_adapters():
         assert isinstance(adapter.summary, str)
         assert "\n" not in adapter.summary
         assert len(adapter.summary.strip()) > 10
+
+    # Check that we can get a device from each adapter
+    for adapter in adapters:
+        d = adapter.request_device_sync()
+        assert isinstance(d, wgpu.backends.wgpu_native.GPUDevice)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+@mark.asyncio
+async def test_enumerate_adapters_async():
+    # Get all available adapters
+    adapters = []
+    async for adapter in wgpu.gpu.enumerate_adapters_async():
+        assert isinstance(adapter.summary, str)
+        assert "\n" not in adapter.summary
+        assert len(adapter.summary.strip()) > 10
+        adapters.append(adapter)
+
+    assert len(adapters) > 0
 
     # Check that we can get a device from each adapter
     for adapter in adapters:
