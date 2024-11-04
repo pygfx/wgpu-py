@@ -10,7 +10,7 @@ from wgpu.backends.wgpu_native import WgpuAwaitable
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("use_async", [False, True])
-async def test_awaitable_async(use_async, loop_scope="function"):
+async def test_awaitable_async(use_async):
     count = 0
 
     def finalizer(i):
@@ -28,21 +28,21 @@ async def test_awaitable_async(use_async, loop_scope="function"):
     awaitable = WgpuAwaitable("test", callback, finalizer, poll_function)
 
     if use_async:
-        result = await awaitable.wait_async()
+        result = await awaitable
     else:
-        result = awaitable.wait_sync()
+        result = awaitable.sync_wait()
     assert result == 10 * 10
 
 
 @pytest.mark.asyncio
-async def test_asynchronous_get_device(loop_scope="function"):
+async def test_asynchronous_get_device():
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async()
     assert device is not None
 
 
 @pytest.mark.asyncio
-async def test_asynchronous_buffer_map(loop_scope="function"):
+async def test_asynchronous_buffer_map():
     device = wgpu.utils.get_default_device()
 
     data = b"1" * 10000
@@ -64,7 +64,7 @@ async def test_asynchronous_buffer_map(loop_scope="function"):
 
 
 @pytest.mark.asyncio
-async def test_asynchronous_make_pipeline(loop_scope="function"):
+async def test_asynchronous_make_pipeline():
     device = wgpu.utils.get_default_device()
 
     shader_source = """
@@ -79,7 +79,8 @@ async def test_asynchronous_make_pipeline(loop_scope="function"):
 
     shader = device.create_shader_module(code=shader_source)
 
-    render_pipeline, compute_pipeline = await asyncio.gather(
+    compute_pipeline, render_pipeline = await asyncio.gather(
+        device.create_compute_pipeline_async(layout="auto", compute={"module": shader}),
         device.create_render_pipeline_async(
             layout="auto",
             vertex={
@@ -87,7 +88,6 @@ async def test_asynchronous_make_pipeline(loop_scope="function"):
             },
             depth_stencil={"format": TextureFormat.rgba8unorm},
         ),
-        device.create_compute_pipeline_async(layout="auto", compute={"module": shader}),
     )
 
     assert compute_pipeline is not None

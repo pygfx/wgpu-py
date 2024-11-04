@@ -295,6 +295,61 @@ class WgpuAwaitable:
             return self.finalizer(result)
 
 
+class WgpuAwaitable:
+    """An object that can be waited for, either synchronously using sync_wait() or asynchronously using await.
+
+    The purpose of this class is to implememt the asynchronous methods in a
+    truely async manner, as well as to support a synchronous version of them.
+    """
+
+    SLEEP_TIME = 0.005  # 5ms
+
+    def __init__(self, title, callback, finalizer, poll_function=None, timeout=5.0):
+        self.title = title  # for context in error messages
+        self.callback = callback  # only used to prevent it from being gc'd
+        self.finalizer = finalizer  # function to finish the result
+        self.poll_function = poll_function  # call this to poll wgpu
+        self.maxtime = time.perf_counter() + float(timeout)
+        self.result = None
+
+    def set_result(self, result):
+        self.result = (result, None)
+
+    def set_error(self, error):
+        self.result = (None, error)
+
+    def sync_wait(self):
+        if not self.poll_function:
+            if self.result is None:
+                raise RuntimeError("Expected callback to have already happened")
+        else:
+            while not self._is_done():
+                time.sleep(self.SLEEP_TIME)
+        return self.finish()
+
+    def __await__(self):
+        if not self.poll_function:
+            if self.result is None:
+                raise RuntimeError("Expected callback to have already happened")
+        else:
+            while not self._is_done():
+                yield None
+        return self.finish()
+
+    def _is_done(self):
+        self.poll_function()
+        return self.result is not None or time.perf_counter() > self.maxtime
+
+    def finish(self):
+        if not self.result:
+            raise RuntimeError(f"Waiting for {self.title} timed out.")
+        result, error = self.result
+        if error:
+            raise RuntimeError(error)
+        else:
+            return self.finalizer(result)
+
+
 class ErrorHandler:
     """Object that logs errors, with the option to collect incoming
     errors elsewhere.
