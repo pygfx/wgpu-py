@@ -424,20 +424,7 @@ class GPU(classes.GPU):
             "request_adapter", awaitable_result, callback, poll_func, finalizer
         )
 
-    def enumerate_adapters_sync(self):
-        """Sync version of ``enumerate_adapters_async()``.
-        This is the implementation based on wgpu-native.
-        """
-        check_can_use_sync_variants()
-        return self._enumerate_adapters()
-
-    async def enumerate_adapters_async(self):
-        """Get a list of adapter objects available on the current system.
-        This is the implementation based on wgpu-native.
-        """
-        return self._enumerate_adapters()
-
-    def _enumerate_adapters(self):
+    def enumerate_adapters(self):
         # The first call is to get the number of adapters, and the second call
         # is to get the actual adapters. Note that the second arg (now NULL) can
         # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.

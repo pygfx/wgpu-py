@@ -9,7 +9,7 @@
 * Wrote 34 enums to enums.py
 * Wrote 60 structs to structs.py
 ### Patching API for _classes.py
-* Diffs for GPU: add enumerate_adapters_async, add enumerate_adapters_sync, change get_preferred_canvas_format, change request_adapter_async, change request_adapter_sync
+* Diffs for GPU: add enumerate_adapters, change get_preferred_canvas_format, change request_adapter_async, change request_adapter_sync
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
 * Diffs for GPUAdapter: add summary
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost_async, hide lost_sync, hide onuncapturederror, hide pop_error_scope_async, hide pop_error_scope_sync, hide push_error_scope
@@ -18,9 +18,9 @@
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 121 methods, 46 properties
+* Validated 37 classes, 120 methods, 46 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 120 methods, 0 properties
+* Validated 37 classes, 118 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.texture-compression-bc-sliced-3d missing in wgpu.h
 * Enum field FeatureName.clip-distances missing in wgpu.h

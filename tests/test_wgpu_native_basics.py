@@ -342,7 +342,7 @@ def test_wgpu_native_tracer():
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_enumerate_adapters():
     # Get all available adapters
-    adapters = wgpu.gpu.enumerate_adapters_sync()
+    adapters = wgpu.gpu.enumerate_adapters()
     assert len(adapters) > 0
 
     # Check adapter summaries

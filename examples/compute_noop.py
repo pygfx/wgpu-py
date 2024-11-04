@@ -62,7 +62,7 @@ assert result == list(range(20))
 device = wgpu.utils.get_default_device()
 
 # Show all available adapters
-adapters = wgpu.gpu.enumerate_adapters_sync()
+adapters = wgpu.gpu.enumerate_adapters()
 for a in adapters:
     print(a.summary)
 

@@ -455,7 +455,7 @@ if __name__ == "__main__":
     from wgpu.gui.auto import WgpuCanvas, run
 
     print("Available adapters on this system:")
-    for a in wgpu.gpu.enumerate_adapters_sync():
+    for a in wgpu.gpu.enumerate_adapters():
         print(a.summary)
 
     canvas = WgpuCanvas(size=(640, 480), title="wgpu cube example")

@@ -138,19 +138,7 @@ class GPU:
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
-    def enumerate_adapters_sync(self):
-        """Sync version of `enumerate_adapters_async()`.
-
-        Provided by wgpu-py, but not compatible with WebGPU.
-        """
-
-        # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu
-
-        return gpu.enumerate_adapters_sync()
-
-    @apidiff.add("Method useful for multi-gpu environments")
-    async def enumerate_adapters_async(self):
+    def enumerate_adapters(self):
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using it's summary), and a device
@@ -177,7 +165,7 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
 
-        return await gpu.enumerate_adapters_async()
+        return gpu.enumerate_adapters()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
