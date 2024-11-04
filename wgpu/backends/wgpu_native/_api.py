@@ -519,6 +519,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     # we can give meaningful errors/warnings on invalid use, rather than
     # the more cryptic Rust panics.
 
+    _surface_id = ffi.NULL
+
     def __init__(self, canvas):
         super().__init__(canvas)
 
@@ -2065,7 +2067,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         if size < 1:
             raise ValueError("Mapped size must be larger than zero.")
         if size % 4:
-            raise ValueError("Mapped offset must be a multiple of 4.")
+            raise ValueError("Mapped size must be a multiple of 4.")
         if offset + size > self.size:
             raise ValueError("Mapped range must not extend beyond total buffer size.")
         return offset, size
@@ -2192,7 +2194,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._mapped_memoryviews.append(data)
             return data
 
-    def write_mapped(self, data, buffer_offset=None, size=None):
+    def write_mapped(self, data, buffer_offset=None):
         # Can we even write?
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only write to a buffer if its mapped.")
@@ -2204,27 +2206,19 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # Cast data to a memoryview. This also works for e.g. numpy arrays,
         # and the resulting memoryview will be a view on the data.
         data = memoryview(data).cast("B")
+        size = (data.nbytes + 3) & ~3
 
-        # Check offset and size
-        if size is None:
-            size = data.nbytes
         offset, size = self._check_range(buffer_offset, size)
         if offset < self._mapped_status[0] or (offset + size) > self._mapped_status[1]:
             raise ValueError(
                 "The range for buffer writing is not contained in the currently mapped range."
             )
 
-        # Check data size and given size. If the latter was given, it should match!
-        if data.nbytes != size:  # no-cover
-            raise ValueError(
-                "Data passed to GPUBuffer.write_mapped() does not match the given size."
-            )
-
         # Get mapped memoryview
         # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
         src_ptr = libf.wgpuBufferGetMappedRange(self._internal, offset, size)
         src_address = int(ffi.cast("intptr_t", src_ptr))
-        src_m = get_memoryview_from_address(src_address, size)
+        src_m = get_memoryview_from_address(src_address, data.nbytes)
 
         # Copy data. If not contiguous, this operation may be slower.
         src_m[:] = data

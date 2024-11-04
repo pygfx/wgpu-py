@@ -8,7 +8,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Almar Klein" }, { name = "Korijn van Golen" }]
 keywords = ["webgpu", "wgpu", "vulkan", "metal", "DX12", "opengl"]
-requires-python = ">= 3.8"
+requires-python = ">= 3.9"
 dependencies = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'"]
 
 [project.optional-dependencies]
@@ -19,7 +19,7 @@ imgui = ["imgui-bundle>=1.2.1"]
 # For devs / ci
 build = ["build", "hatchling", "requests", "twine"]
 codegen = ["pytest", "numpy", "ruff"]
-lint = ["ruff"]
+lint = ["ruff", "pre-commit"]
 tests = ["numpy", "pytest", "psutil", "imageio"]
 examples = []
 docs = ["sphinx>7.2", "sphinx_rtd_theme"]
