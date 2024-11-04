@@ -1,22 +1,19 @@
 """Utilities used in the wgpu-native backend."""
 
-import asyncio
-import contextlib
+import ctypes
 import sys
 import time
-import ctypes
 from queue import deque
 
 from ._ffi import ffi, lib, lib_path
 from ..._diagnostics import DiagnosticsBase
 from ...classes import (
     GPUError,
-    GPUOutOfMemoryError,
-    GPUValidationError,
-    GPUPipelineError,
     GPUInternalError,
+    GPUOutOfMemoryError,
+    GPUPipelineError,
+    GPUValidationError,
 )
-
 
 ERROR_TYPES = {
     "": GPUError,
@@ -227,72 +224,6 @@ def to_camel_case(name):
     if name2.endswith(("1d", "2d", "3d")):
         name2 = name2[:-1] + "D"
     return name2
-
-
-class WgpuAwaitable:
-    """
-    Create an object representing the result of a wgpu call that requires a callback
-    to complete.  The code can then call "awaitable.wait_sync()" to wait for the result
-    synchronously, or "await awaitable.wait_async()" to perform an asynchronous wait.
-
-    The callback should call "awaitable.set_result()" when it has a result, or
-    "awaitable.set_error()" when it encounters an error.
-    """
-
-    def __init__(self, title, callback, finalizer, poll_function=None, timeout=5.0):
-        self.title = title  # for context in error messages
-        self.callback = callback  # only used to prevent it from being gc'd
-        self.finalizer = finalizer  # function to finish the result
-        self.poll_function = poll_function  # call this to poll wgpu
-        self.timeout = timeout
-        self.event = asyncio.Event()
-        self.result = None
-
-    def set_result(self, result):
-        self.result = (result, None)
-        self.event.set()
-
-    def set_error(self, error):
-        self.result = (None, error)
-        self.event.set()
-
-    def wait_sync(self):
-        if not self.poll_function:
-            if not self.event.is_set():
-                raise RuntimeError("Expected callback to have already happened")
-            assert self.event.is_set()
-        else:
-            maxtime = time.perf_counter() + float(self.timeout)
-            while True:
-                self.poll_function()
-                if self.event.is_set() or time.perf_counter() > maxtime:
-                    break
-                time.sleep(0.100)
-        return self.finish()
-
-    async def wait_async(self):
-        if not self.poll_function:
-            if not self.event.is_set():
-                raise RuntimeError("Expected callback to have already happened")
-            assert self.event.is_set()
-        else:
-            maxtime = time.perf_counter() + float(self.timeout)
-            while True:
-                self.poll_function()
-                with contextlib.suppress(asyncio.TimeoutError):
-                    await asyncio.wait_for(self.event.wait(), 0.100)
-                if self.event.is_set() or time.perf_counter() > maxtime:
-                    break
-        return self.finish()
-
-    def finish(self):
-        if not self.result:
-            raise RuntimeError(f"Waiting for {self.title} timed out.")
-        result, error = self.result
-        if error:
-            raise RuntimeError(error)
-        else:
-            return self.finalizer(result)
 
 
 class WgpuAwaitable:
