@@ -7,7 +7,7 @@ Install with pip
 ----------------
 
 You can install ``wgpu-py`` via pip.
-Python 3.8 or higher is required. Pypy is supported. Only depends on ``cffi`` (installed automatically by pip).
+Python 3.9 or higher is required. Pypy is supported. Only depends on ``cffi`` (installed automatically by pip).
 
 .. code-block:: bash
 
