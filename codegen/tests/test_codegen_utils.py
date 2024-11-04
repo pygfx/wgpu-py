@@ -144,6 +144,34 @@ def test_format_code_comments():
     assert code3 == code2
 
 
+def test_format_code_return_type():
+    code1 = """
+    def foo() -> None:
+        pass
+    def foo(
+        a1,
+        a2,
+        a3,
+    ) -> None:
+        pass
+    """
+
+    code2 = """
+    def foo() -> None:
+        pass
+    def foo(a1, a2, a3) -> None:
+        pass
+    """
+
+    code1 = dedent(code1).strip()
+    code2 = dedent(code2).strip()
+
+    code3 = format_code(code1, True)
+    code3 = code3.replace("\n\n", "\n").replace("\n\n", "\n").strip()
+
+    assert code3 == code2
+
+
 def test_patcher():
     code = """
     class Foo1:
