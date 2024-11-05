@@ -243,16 +243,13 @@ class WgpuAwaitable:
         self.finalizer = finalizer  # function to finish the result
         self.poll_function = poll_function  # call this to poll wgpu
         self.maxtime = time.perf_counter() + float(timeout)
-        self.event = anyio.Event()
         self.result = None
 
     def set_result(self, result):
         self.result = (result, None)
-        self.event.set()
 
     def set_error(self, error):
         self.result = (None, error)
-        self.event.set()
 
     def sync_wait(self):
         if not self.poll_function:
@@ -269,8 +266,8 @@ class WgpuAwaitable:
                 raise RuntimeError("Expected callback to have already happened")
         else:
             while not self._is_done():
-                with anyio.move_on_after(self.SLEEP_TIME):
-                    self.event.wait()
+                # A bug in anyio prevents us from waiting on an Event()
+                await anyio.sleep(self.SLEEP_TIME)
         return self.finish()
 
     def _is_done(self):
