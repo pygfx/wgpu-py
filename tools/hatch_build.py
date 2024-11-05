@@ -25,7 +25,7 @@ Hook for building wheels with the hatchling build backend.
 
 import os
 import sys
-from subprocess import run, PIPE, STDOUT
+from subprocess import run, PIPE
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
