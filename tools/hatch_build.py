@@ -74,7 +74,7 @@ def is_git_repo():
 
 def check_git_status():
     p = run(
-        "git status --porcelain", shell=True, cwd=root_dir, stdout=PIPE, stderr=STDOUT
+        "git status --porcelain", shell=True, cwd=root_dir, stdout=PIPE, stderr=PIPE
     )
     git_status = p.stdout.decode(errors="ignore")
     # print("Git status:\n" + git_status)
