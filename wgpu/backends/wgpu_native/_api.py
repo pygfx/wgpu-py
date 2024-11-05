@@ -357,7 +357,7 @@ class GPU(classes.GPU):
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
         )  # no-cover
-        return await awaitable
+        return await awaitable.async_wait()
 
     def _request_adapter(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
@@ -873,7 +873,7 @@ class GPUAdapter(classes.GPUAdapter):
         )
         # Note that although we claim this function is async, the callback always
         # happens inside the call to libf.wgpuAdapterRequestDevice
-        return await awaitable
+        return await awaitable.async_wait()
 
     def _request_device(
         self,
@@ -1602,7 +1602,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             self._internal, descriptor, callback, ffi.NULL
         )
 
-        return await awaitable
+        return await awaitable.async_wait()
 
     def _create_compute_pipeline_descriptor(
         self,
@@ -1703,7 +1703,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             self._internal, descriptor, callback, ffi.NULL
         )
 
-        return await awaitable
+        return await awaitable.async_wait()
 
     def _create_render_pipeline_descriptor(
         self,
@@ -2079,7 +2079,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
     ):
         awaitable = self._map(mode, offset, size)  # for now
-        return await awaitable
+        return await awaitable.async_wait()
 
     def _map(self, mode, offset=0, size=None):
         sync_on_read = True
@@ -3539,7 +3539,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     async def on_submitted_work_done_async(self):
         awaitable = self._on_submitted_word_done()
-        await awaitable
+        await awaitable.async_wait()
 
     def _on_submitted_word_done(self):
         @ffi.callback("void(WGPUQueueWorkDoneStatus, void*)")

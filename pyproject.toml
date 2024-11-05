@@ -9,7 +9,7 @@ license = { file = "LICENSE" }
 authors = [{ name = "Almar Klein" }, { name = "Korijn van Golen" }]
 keywords = ["webgpu", "wgpu", "vulkan", "metal", "DX12", "opengl"]
 requires-python = ">= 3.9"
-dependencies = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'"]
+dependencies = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'", "anyio>=4.6"]
 
 [project.optional-dependencies]
 # For users

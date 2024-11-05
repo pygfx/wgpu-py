@@ -1,4 +1,4 @@
-import asyncio
+import anyio
 
 import pytest
 
@@ -8,7 +8,7 @@ from wgpu import MapMode, TextureFormat
 from wgpu.backends.wgpu_native import WgpuAwaitable
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 @pytest.mark.parametrize("use_async", [False, True])
 async def test_awaitable_async(use_async):
     count = 0
@@ -28,20 +28,20 @@ async def test_awaitable_async(use_async):
     awaitable = WgpuAwaitable("test", callback, finalizer, poll_function)
 
     if use_async:
-        result = await awaitable
+        result = await awaitable.async_wait()
     else:
         result = awaitable.sync_wait()
     assert result == 10 * 10
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_asynchronous_get_device():
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async()
     assert device is not None
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_asynchronous_buffer_map():
     device = wgpu.utils.get_default_device()
 
@@ -63,7 +63,7 @@ async def test_asynchronous_buffer_map():
     assert bytes(data2) == data
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_asynchronous_make_pipeline():
     device = wgpu.utils.get_default_device()
 
@@ -79,17 +79,28 @@ async def test_asynchronous_make_pipeline():
 
     shader = device.create_shader_module(code=shader_source)
 
-    compute_pipeline, render_pipeline = await asyncio.gather(
-        device.create_compute_pipeline_async(layout="auto", compute={"module": shader}),
-        device.create_render_pipeline_async(
-            layout="auto",
-            vertex={
-                "module": shader,
-            },
-            depth_stencil={"format": TextureFormat.rgba8unorm},
-        ),
-    )
+    results = [None, None]
+    async with anyio.create_task_group() as tg:
+        # It's unfortunate anyio doesn't have async.gather. This code would just be
+        # compute_pipeline, render_pipeline = asyncio.gather(.....)
+        async def create_compute_pipeline():
+            results[0] = await device.create_compute_pipeline_async(
+                layout="auto", compute={"module": shader}
+            )
 
+        async def create_render_pipeline():
+            results[1] = await device.create_render_pipeline_async(
+                layout="auto",
+                vertex={
+                    "module": shader,
+                },
+                depth_stencil={"format": TextureFormat.rgba8unorm},
+            )
+
+        tg.start_soon(create_compute_pipeline)
+        tg.start_soon(create_render_pipeline)
+
+    compute_pipeline, render_pipeline = results
     assert compute_pipeline is not None
     assert render_pipeline is not None
 
