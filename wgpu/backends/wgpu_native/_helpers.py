@@ -5,8 +5,6 @@ import sys
 import time
 from queue import deque
 
-import anyio
-
 from ._ffi import ffi, lib, lib_path
 from ..._diagnostics import DiagnosticsBase
 from ...classes import (
@@ -278,6 +276,7 @@ class WgpuAwaitable:
         return self
 
     def __await__(self):
+        import anyio
         # There is no documentation on what __await__() is supposed to return, but we
         # can certainly copy from a function that *does* know what to return
         async def wait_for_callback():
