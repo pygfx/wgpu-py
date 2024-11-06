@@ -251,30 +251,11 @@ class WgpuAwaitable:
     def set_error(self, error):
         self.result = (None, error)
 
-    def sync_wait(self):
-        if not self.poll_function:
-            if self.result is None:
-                raise RuntimeError("Expected callback to have already happened")
-        else:
-            while not self._is_done():
-                time.sleep(self.SLEEP_TIME)
-        return self.finish()
-
-    async def async_wait(self):
-        if not self.poll_function:
-            if self.result is None:
-                raise RuntimeError("Expected callback to have already happened")
-        else:
-            while not self._is_done():
-                # A bug in anyio prevents us from waiting on an Event()
-                await anyio.sleep(self.SLEEP_TIME)
-        return self.finish()
-
     def _is_done(self):
         self.poll_function()
         return self.result is not None or time.perf_counter() > self.maxtime
 
-    def finish(self):
+    def _finish(self):
         if not self.result:
             raise RuntimeError(f"Waiting for {self.title} timed out.")
         result, error = self.result
@@ -282,6 +263,33 @@ class WgpuAwaitable:
             raise RuntimeError(error)
         else:
             return self.finalizer(result)
+
+    def sync_wait(self):
+        if self.result is not None:
+            pass
+        elif not self.poll_function:
+            raise RuntimeError("Expected callback to have already happened")
+        else:
+            while not self._is_done():
+                time.sleep(self.SLEEP_TIME)
+        return self._finish()
+
+    def async_wait(self):
+        return self
+
+    def __await__(self):
+        # There is no documentation on what __await__() is supposed to return, but we
+        # can certainly copy from a function that *does* know what to return
+        async def wait_for_callback():
+            if self.result is not None:
+                return
+            if not self.poll_function:
+                raise RuntimeError("Expected callback to have already happened")
+            while not self._is_done():
+                await anyio.sleep(self.SLEEP_TIME)
+
+        yield from wait_for_callback().__await__()
+        return self._finish()
 
 
 class ErrorHandler:

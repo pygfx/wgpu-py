@@ -1,3 +1,4 @@
+
 import anyio
 
 import pytest
@@ -28,7 +29,7 @@ async def test_awaitable_async(use_async):
     awaitable = WgpuAwaitable("test", callback, finalizer, poll_function)
 
     if use_async:
-        result = await awaitable.async_wait()
+        result = await awaitable
     else:
         result = awaitable.sync_wait()
     assert result == 10 * 10
