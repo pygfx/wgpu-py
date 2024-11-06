@@ -277,6 +277,7 @@ class WgpuAwaitable:
 
     def __await__(self):
         import anyio
+
         # There is no documentation on what __await__() is supposed to return, but we
         # can certainly copy from a function that *does* know what to return
         async def wait_for_callback():
