@@ -3247,6 +3247,7 @@ class GPURenderPassEncoder(
             check_struct("Color", color)
             color = _tuple_from_color(color)
         red, green, blue, alpha = color
+        # H: r: float, g: float, b: float, a: float
         c_color = new_struct_p(
             "WGPUColor *",
             r=red,
