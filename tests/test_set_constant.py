@@ -143,6 +143,17 @@ def test_normal_push_constants():
     assert all(result == expected_result)
 
 
+def test_render_bundle_push_constants_fails():
+    device, pipeline, render_pass_descriptor = setup_pipeline()
+    encoder = device.create_render_bundle_encoder(
+        color_formats=[TextureFormat.rgba8unorm],
+    )
+    encoder.set_pipeline(pipeline)
+    buffer = np.random.randint(0, 1_000_000, size=(2 * COUNT), dtype=np.uint32)
+    with pytest.raises(RuntimeError):
+        set_push_constants(encoder, "VERTEX", 0, COUNT * 4, buffer)
+
+
 def test_bad_set_push_constants():
     device, pipeline, render_pass_descriptor = setup_pipeline()
     encoder = device.create_command_encoder()
