@@ -184,6 +184,10 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
 
     # Methods that we add from wgpu (snake_case)
 
+    def update(self):
+        # Overload update() because that's how Qt devs are used to requesting a new draw
+        self.request_draw()
+
     def _request_draw(self):
         # Ask Qt to do a paint event
         QtWidgets.QWidget.update(self)
