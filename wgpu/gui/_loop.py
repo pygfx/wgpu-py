@@ -360,7 +360,7 @@ class Scheduler:
             return
 
         # Determine delay
-        if self._mode == "fastest":
+        if self._mode == "fastest" or self._max_fps <= 0:
             delay = 0
         else:
             delay = 1 / self._max_fps
