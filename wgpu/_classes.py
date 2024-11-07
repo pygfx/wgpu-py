@@ -153,7 +153,7 @@ class GPU:
     async def enumerate_adapters_async(self):
         """Get a list of adapter objects available on the current system.
 
-        An adapter can then be selected (e.g. using it's summary), and a device
+        An adapter can then be selected (e.g. using its summary), and a device
         then created from it.
 
         The order of the devices is such that Vulkan adapters go first, then

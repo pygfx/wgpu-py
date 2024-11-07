@@ -1,15 +1,15 @@
 import anyio
 
-import pytest
+from pytest import mark
 
 import wgpu.utils
-from tests.testutils import run_tests
-from wgpu import MapMode, TextureFormat
+from tests.testutils import can_use_wgpu_lib, run_tests
+from wgpu import GPUDevice, MapMode, TextureFormat
 from wgpu.backends.wgpu_native import WgpuAwaitable
 
 
-@pytest.mark.anyio
-@pytest.mark.parametrize("use_async", [False, True])
+@mark.anyio
+@mark.parametrize("use_async", [False, True])
 async def test_awaitable_async(use_async):
     count = 0
 
@@ -34,15 +34,27 @@ async def test_awaitable_async(use_async):
     assert result == 10 * 10
 
 
-@pytest.mark.anyio
-async def test_asynchronous_get_device():
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+@mark.anyio
+async def test_enumerate_adapters_async():
+    adapters = await wgpu.gpu.enumerate_adapters_async()
+    assert len(adapters) > 0
+    for adapter in adapters:
+        device = await adapter.request_device_async()
+        assert isinstance(device, GPUDevice)
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+@mark.anyio
+async def test_request_device_async():
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async()
     assert device is not None
 
 
-@pytest.mark.anyio
-async def test_asynchronous_buffer_map():
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+@mark.anyio
+async def test_buffer_map_async():
     device = wgpu.utils.get_default_device()
 
     data = b"1" * 10000
@@ -63,8 +75,9 @@ async def test_asynchronous_buffer_map():
     assert bytes(data2) == data
 
 
-@pytest.mark.anyio
-async def test_asynchronous_make_pipeline():
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+@mark.anyio
+async def make_pipeline_async():
     device = wgpu.utils.get_default_device()
 
     shader_source = """
