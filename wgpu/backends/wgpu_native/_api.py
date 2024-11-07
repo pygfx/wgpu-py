@@ -1069,7 +1069,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuDeviceRelease
 
-    CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED = True
+    # This flag  should be deleted once create_compute_pipeline_async() and
+    # create_render_pipeline_async() are actually implemented in the wgpu-native library.
+    _CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED = True
 
     def _poll(self):
         # Internal function
@@ -1573,7 +1575,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     ):
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
 
-        if self.CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED:
+        if self._CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED:
             # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
             id = libf.wgpuDeviceCreateComputePipeline(self._internal, descriptor)
             return GPUComputePipeline(label, id, self)
@@ -1675,7 +1677,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
 
-        if self.CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED:
+        if self._CREATE_PIPELINE_ASYNC_NOT_IMPLEMENTED:
             # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
             id = libf.wgpuDeviceCreateRenderPipeline(self._internal, descriptor)
             return GPURenderPipeline(label, id, self)
