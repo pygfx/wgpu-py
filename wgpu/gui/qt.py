@@ -184,10 +184,6 @@ class QWgpuWidget(WgpuCanvasBase, QtWidgets.QWidget):
 
     # Methods that we add from wgpu (snake_case)
 
-    def update(self):
-        # Overload update() because that's how Qt devs are used to requesting a new draw
-        self.request_draw()
-
     def _request_draw(self):
         # Ask Qt to do a paint event
         QtWidgets.QWidget.update(self)
@@ -494,15 +490,15 @@ class QWgpuCanvas(WgpuCanvasBase, QtWidgets.QWidget):
 
     # Qt methods
 
+    def update(self):
+        super().update()
+        self._subwidget.update()
+
     def closeEvent(self, event):  # noqa: N802
         self._subwidget._is_closed = True
         self.submit_event({"event_type": "close"})
 
     # Methods that we add from wgpu (snake_case)
-
-    def update(self):
-        # Overload update() because that's how Qt devs are used to requesting a new draw
-        self.request_draw()
 
     def _request_draw(self):
         self._subwidget._request_draw()
