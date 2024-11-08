@@ -20,7 +20,7 @@ from __future__ import annotations
 import os
 import logging
 from weakref import WeakKeyDictionary
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, NoReturn
 
 from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int
@@ -2465,6 +2465,62 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         function = type(self)._set_bind_group_function
         function(self._internal, index, bind_group._internal, len(offsets), c_offsets)
 
+    ##
+    # It is unfortunate that there is no common Mixin that includes just
+    # GPUComputePassEncoder and GPURenderPassEncodeer, but not GPURenderBundleEncoder.
+    # We put set_push_constants, and XX_pipeline_statistics_query here because they
+    # don't really fit anywhere else.
+    #
+
+    def _set_push_constants(self, visibility, offset, size_in_bytes, data, data_offset):
+        # Implementation of set_push_constant. The public API is in extras.py since
+        # this is a wgpu extension.
+
+        # We support anything that memoryview supports, i.e. anything
+        # that implements the buffer protocol, including, bytes,
+        # bytearray, ctypes arrays, numpy arrays, etc.
+        m, address = get_memoryview_and_address(data)
+
+        # Deal with offset and size
+        offset = int(offset)
+        data_offset = int(data_offset)
+        size = int(size_in_bytes)
+        if isinstance(visibility, str):
+            visibility = str_flag_to_int(flags.ShaderStage, visibility)
+
+        if not (0 <= size_in_bytes <= m.nbytes):
+            raise ValueError("Invalid size_in_bytes")
+        if not (0 <= size_in_bytes <= m.nbytes):
+            raise ValueError("Invalid data_offset")
+        if size_in_bytes + data_offset > m.nbytes:
+            raise ValueError("size_in_bytes + data_offset is too large")
+
+        c_data = ffi.cast("void *", address)  # do we want to add data_offset?
+        # H: void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void const * data)
+        function = type(self)._set_push_constants_function
+        if function is None:
+            self._not_implemented("set_push_constants")
+        function(self._internal, int(visibility), offset, size, c_data + data_offset)
+
+    def _begin_pipeline_statistics_query(self, query_set, query_index):
+        # H: void wgpuComputePassEncoderBeginPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
+        # H: void wgpuRenderPassEncoderBeginPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
+        function = type(self)._begin_pipeline_statistics_query_function
+        if function is None:
+            self._not_implemented("begin_pipeline_statistics")
+        function(self._internal, query_set._internal, int(query_index))
+
+    def _end_pipeline_statistics_query(self):
+        # H: void wgpuComputePassEncoderEndPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder)
+        # H: void wgpuRenderPassEncoderEndPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder)
+        function = type(self)._end_pipeline_statistics_query_function
+        if function is None:
+            self._not_implemented("end_pipeline_statistics")
+        function(self._internal)
+
+    def _not_implemented(self, name) -> NoReturn:
+        raise RuntimeError(f"{type(self).__name__} does not implement {name}")
+
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
@@ -3083,6 +3139,9 @@ class GPUComputePassEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
+    _begin_pipeline_statistics_query_function = libf.wgpuComputePassEncoderBeginPipelineStatisticsQuery  # fmt: skip
+    _end_pipeline_statistics_query_function = libf.wgpuComputePassEncoderEndPipelineStatisticsQuery  # fmt: skip
+    _set_push_constants_function = None  # coming soon
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePassEncoderRelease
@@ -3112,16 +3171,6 @@ class GPUComputePassEncoder(
             self._internal, buffer_id, int(indirect_offset)
         )
 
-    def _begin_pipeline_statistics_query(self, query_set, query_index):
-        # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
-        libf.wgpuComputePassEncoderBeginPipelineStatisticsQuery(
-            self._internal, query_set._internal, int(query_index)
-        )
-
-    def _end_pipeline_statistics_query(self):
-        # H: void f(WGPUComputePassEncoder computePassEncoder)
-        libf.wgpuComputePassEncoderEndPipelineStatisticsQuery(self._internal)
-
     def end(self):
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
@@ -3148,6 +3197,9 @@ class GPURenderPassEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuRenderPassEncoderSetBindGroup
+    _set_push_constants_function = libf.wgpuRenderPassEncoderSetPushConstants
+    _begin_pipeline_statistics_query_function = libf.wgpuRenderPassEncoderBeginPipelineStatisticsQuery  # fmt: skip
+    _end_pipeline_statistics_query_function = libf.wgpuRenderPassEncoderEndPipelineStatisticsQuery  # fmt: skip
 
     # GPURenderCommandsMixin
     _set_pipeline_function = libf.wgpuRenderPassEncoderSetPipeline
@@ -3229,35 +3281,6 @@ class GPURenderPassEncoder(
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEndOcclusionQuery(self._internal)
 
-    def _set_push_constants(self, visibility, offset, size_in_bytes, data, data_offset):
-        # Implementation of set_push_constant. The public API is in extras.py since
-        # this is a wgpu extension.
-
-        # We support anything that memoryview supports, i.e. anything
-        # that implements the buffer protocol, including, bytes,
-        # bytearray, ctypes arrays, numpy arrays, etc.
-        m, address = get_memoryview_and_address(data)
-
-        # Deal with offset and size
-        offset = int(offset)
-        data_offset = int(data_offset)
-        size = int(size_in_bytes)
-        if isinstance(visibility, str):
-            visibility = str_flag_to_int(flags.ShaderStage, visibility)
-
-        if not (0 <= size_in_bytes <= m.nbytes):
-            raise ValueError("Invalid size_in_bytes")
-        if not (0 <= size_in_bytes <= m.nbytes):
-            raise ValueError("Invalid data_offset")
-        if size_in_bytes + data_offset > m.nbytes:
-            raise ValueError("size_in_bytes + data_offset is too large")
-
-        c_data = ffi.cast("void *", address)  # do we want to add data_offset?
-        # H: void f(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void const * data)
-        libf.wgpuRenderPassEncoderSetPushConstants(
-            self._internal, int(visibility), offset, size, c_data + data_offset
-        )
-
     def _multi_draw_indirect(self, buffer, offset, count):
         # H: void f(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count)
         libf.wgpuRenderPassEncoderMultiDrawIndirect(
@@ -3296,16 +3319,6 @@ class GPURenderPassEncoder(
             int(max_count),
         )
 
-    def _begin_pipeline_statistics_query(self, query_set, query_index):
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
-        libf.wgpuRenderPassEncoderBeginPipelineStatisticsQuery(
-            self._internal, query_set._internal, int(query_index)
-        )
-
-    def _end_pipeline_statistics_query(self):
-        # H: void f(WGPURenderPassEncoder renderPassEncoder)
-        libf.wgpuRenderPassEncoderEndPipelineStatisticsQuery(self._internal)
-
     def _maybe_keep_alive(self, object):
         pass
 
@@ -3325,6 +3338,9 @@ class GPURenderBundleEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuRenderBundleEncoderSetBindGroup
+    _set_push_constants_function = None
+    _begin_pipeline_statistics_query_function = None
+    _end_pipeline_statistics_query_function = None
 
     # GPURenderCommandsMixin
     _set_pipeline_function = libf.wgpuRenderBundleEncoderSetPipeline
