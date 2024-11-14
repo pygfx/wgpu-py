@@ -233,8 +233,6 @@ class WgpuAwaitable:
     truely async manner, as well as to support a synchronous version of them.
     """
 
-    SLEEP_TIME = 0.005  # 5ms
-
     def __init__(self, title, callback, finalizer, poll_function=None, timeout=5.0):
         self.title = title  # for context in error messages
         self.callback = callback  # only used to prevent it from being gc'd
@@ -269,7 +267,7 @@ class WgpuAwaitable:
             raise RuntimeError("Expected callback to have already happened")
         else:
             while not self._is_done():
-                time.sleep(self.SLEEP_TIME)
+                time.sleep(0)
         return self._finish()
 
     def async_wait(self):
@@ -286,7 +284,7 @@ class WgpuAwaitable:
             if not self.poll_function:
                 raise RuntimeError("Expected callback to have already happened")
             while not self._is_done():
-                await anyio.sleep(self.SLEEP_TIME)
+                await anyio.sleep(0)
 
         yield from wait_for_callback().__await__()
         return self._finish()
