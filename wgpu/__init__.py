@@ -17,3 +17,14 @@ from . import resources
 
 # The API entrypoint, from wgpu.classes - gets replaced when a backend loads.
 gpu = GPU()  # noqa: F405
+
+
+def rendercanvas_context_hook(canvas, present_methods):
+    import sys
+
+    backend_module = gpu.__module__
+    if backend_module in ("", "wgpu._classes"):
+        raise RuntimeError(
+            "A backend must be selected (e.g. with wgpu.gpu.request_adapter()) before canvas.get_context() can be called."
+        )
+    return sys.modules[backend_module].GPUCanvasContext(canvas, present_methods)
