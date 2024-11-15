@@ -521,8 +521,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     _surface_id = ffi.NULL
 
-    def __init__(self, *args):
-        super().__init__(*args)
+    def __init__(self, canvas, present_methods):
+        super().__init__(canvas, present_methods)
 
         # Obtain the surface id. The lifetime is of the surface is bound
         # to the lifetime of this context object.
