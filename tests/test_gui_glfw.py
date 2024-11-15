@@ -166,7 +166,7 @@ def test_glfw_canvas_render_custom_canvas():
     """
 
     import glfw
-    from wgpu.gui.glfw import get_glfw_present_info
+    from wgpu.gui.glfw import get_glfw_present_methods
 
     class CustomCanvas:  # implements wgpu.WgpuCanvasInterface
         def __init__(self):
@@ -175,8 +175,8 @@ def test_glfw_canvas_render_custom_canvas():
             self.window = glfw.create_window(300, 200, "canvas", None, None)
             self._present_context = None
 
-        def get_present_info(self):
-            return get_glfw_present_info(self.window)
+        def get_present_methods(self):
+            return get_glfw_present_methods(self.window)
 
         def get_physical_size(self):
             psize = glfw.get_framebuffer_size(self.window)
@@ -186,7 +186,7 @@ def test_glfw_canvas_render_custom_canvas():
             if self._present_context is None:
                 backend_module = sys.modules["wgpu"].gpu.__module__
                 PC = sys.modules[backend_module].GPUCanvasContext  # noqa N806
-                self._present_context = PC(self)
+                self._present_context = PC(self, self.get_present_methods())
             return self._present_context
 
     canvas = CustomCanvas()

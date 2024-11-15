@@ -528,7 +528,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # to the lifetime of this context object.
         if self._present_method == "screen":
             self._surface_id = get_surface_id_from_info(self._present_methods["screen"])
-        else:  # method == "image"
+        else:  # method == "bitmap"
             self._surface_id = ffi.NULL
 
     def _get_capabilities_screen(self, adapter):
