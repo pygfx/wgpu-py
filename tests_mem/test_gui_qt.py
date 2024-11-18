@@ -47,7 +47,7 @@ def test_release_canvas_context(n):
         canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         app.processEvents()
-        yield c.get_context()
+        yield c.get_context("wgpu")
 
     # Need some shakes to get all canvas refs gone.
     del c

@@ -166,7 +166,7 @@ def test_glfw_canvas_render_custom_canvas():
     """
 
     import glfw
-    from wgpu.gui.glfw import get_glfw_present_info
+    from wgpu.gui.glfw import get_glfw_present_methods
 
     class CustomCanvas:  # implements wgpu.WgpuCanvasInterface
         def __init__(self):
@@ -175,18 +175,18 @@ def test_glfw_canvas_render_custom_canvas():
             self.window = glfw.create_window(300, 200, "canvas", None, None)
             self._present_context = None
 
-        def get_present_info(self):
-            return get_glfw_present_info(self.window)
+        def get_present_methods(self):
+            return get_glfw_present_methods(self.window)
 
         def get_physical_size(self):
             psize = glfw.get_framebuffer_size(self.window)
             return int(psize[0]), int(psize[1])
 
-        def get_context(self):
+        def get_context(self, kind="wgpu"):
             if self._present_context is None:
                 backend_module = sys.modules["wgpu"].gpu.__module__
                 PC = sys.modules[backend_module].GPUCanvasContext  # noqa N806
-                self._present_context = PC(self)
+                self._present_context = PC(self, self.get_present_methods())
             return self._present_context
 
     canvas = CustomCanvas()
@@ -202,7 +202,7 @@ def test_glfw_canvas_render_custom_canvas():
         time.sleep(0.01)
         glfw.poll_events()
         draw_frame()
-        canvas.get_context().present()  # WgpuCanvasBase normally automates this
+        canvas.get_context("wgpu").present()  # WgpuCanvasBase normally automates this
 
     glfw.hide_window(canvas.window)
 
@@ -213,7 +213,7 @@ def _get_draw_function(device, canvas):
 
     shader = device.create_shader_module(code=shader_source)
 
-    present_context = canvas.get_context()
+    present_context = canvas.get_context("wgpu")
     render_texture_format = present_context.get_preferred_format(device.adapter)
     present_context.configure(device=device, format=render_texture_format)
 
