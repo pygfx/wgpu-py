@@ -65,15 +65,12 @@ class WgpuCanvasInterface:
         """Get the physical size of the canvas in integer pixels."""
         raise NotImplementedError()
 
-    def get_context(self, kind="webgpu"):
+    def get_context(self, kind="wgpu"):
         """Get the ``GPUCanvasContext`` object corresponding to this canvas.
 
         The context is used to obtain a texture to render to, and to
         present that texture to the canvas. This class provides a
         default implementation to get the appropriate context.
-
-        The ``kind`` argument is a remnant from the WebGPU spec and
-        must always be "webgpu".
         """
         # Note that this function is analog to HtmlCanvas.getContext(), except
         # here the only valid arg is 'webgpu', which is also made the default.

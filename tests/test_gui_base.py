@@ -147,7 +147,7 @@ def test_canvas_context_not_base():
 def test_offscreen_canvas():
     canvas = MyOffscreenCanvas()
     device = wgpu.utils.get_default_device()
-    present_context = canvas.get_context()
+    present_context = canvas.get_context("wgpu")
     present_context.configure(device=device, format=None)
 
     def draw_frame():

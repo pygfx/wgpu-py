@@ -54,7 +54,7 @@ class ImguiRenderer:
         self, device, canvas: wgpu.gui.WgpuCanvasBase, render_target_format=None
     ):
         # Prepare present context
-        self._canvas_context = canvas.get_context()
+        self._canvas_context = canvas.get_context("wgpu")
 
         if render_target_format is None:
             # todo: not sure if this is the correct format, maybe we should expose it in the public API

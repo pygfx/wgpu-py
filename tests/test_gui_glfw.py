@@ -182,7 +182,7 @@ def test_glfw_canvas_render_custom_canvas():
             psize = glfw.get_framebuffer_size(self.window)
             return int(psize[0]), int(psize[1])
 
-        def get_context(self):
+        def get_context(self, kind="wgpu"):
             if self._present_context is None:
                 backend_module = sys.modules["wgpu"].gpu.__module__
                 PC = sys.modules[backend_module].GPUCanvasContext  # noqa N806
@@ -202,7 +202,7 @@ def test_glfw_canvas_render_custom_canvas():
         time.sleep(0.01)
         glfw.poll_events()
         draw_frame()
-        canvas.get_context().present()  # WgpuCanvasBase normally automates this
+        canvas.get_context("wgpu").present()  # WgpuCanvasBase normally automates this
 
     glfw.hide_window(canvas.window)
 
@@ -213,7 +213,7 @@ def _get_draw_function(device, canvas):
 
     shader = device.create_shader_module(code=shader_source)
 
-    present_context = canvas.get_context()
+    present_context = canvas.get_context("wgpu")
     render_texture_format = present_context.get_preferred_format(device.adapter)
     present_context.configure(device=device, format=render_texture_format)
 

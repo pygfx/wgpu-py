@@ -370,7 +370,7 @@ class GPU(classes.GPU):
         # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
-            surface_id = canvas.get_context()._surface_id  # can still be NULL
+            surface_id = canvas.get_context("wgpu")._surface_id  # can still be NULL
 
         # ----- Select backend
 

@@ -40,7 +40,7 @@ class MinimalGlfwCanvas:  # implements WgpuCanvasInterface
         psize = glfw.get_framebuffer_size(self.window)
         return int(psize[0]), int(psize[1])
 
-    def get_context(self, kind="webgpu"):
+    def get_context(self, kind="wgpu"):
         return self.context
 
 
