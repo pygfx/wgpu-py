@@ -17,7 +17,19 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.19.0] - 04-10-2024
+### [v0.19.1] - 19-11-2024
+
+Some internal refactoring, fix the doc theme, and compatibility with rendercanvas.
+
+Changed:
+
+* Do not confound STDERR and STDOUT by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/638
+* More consolidation by @fyellin in https://github.com/pygfx/wgpu-py/pull/641
+* Use rtd theme for docs by @almarklein in https://github.com/pygfx/wgpu-py/pull/639
+* Refactor present-method mechanic by @almarklein in https://github.com/pygfx/wgpu-py/pull/642
+
+
+### [v0.19.0] - 04-11-2024
 
 Added:
 
