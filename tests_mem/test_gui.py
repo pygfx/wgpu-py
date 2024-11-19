@@ -22,11 +22,11 @@ def make_draw_func_for_canvas(canvas):
     """Create a draw function for the given canvas,
     so that we can really present something to a canvas being tested.
     """
-    ctx = canvas.get_context()
+    ctx = canvas.get_context("wgpu")
     ctx.configure(device=DEVICE, format=None)
 
     def draw():
-        ctx = canvas.get_context()
+        ctx = canvas.get_context("wgpu")
         command_encoder = DEVICE.create_command_encoder()
         current_texture_view = ctx.get_current_texture().create_view()
         render_pass = command_encoder.begin_render_pass(
@@ -70,7 +70,7 @@ def test_release_canvas_context(n):
         canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         c.draw()
-        yield c.get_context()
+        yield c.get_context("wgpu")
 
     del c
     gc.collect()

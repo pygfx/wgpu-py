@@ -104,33 +104,37 @@ KEY_MAP_MOD = {
 }
 
 
-def get_glfw_present_info(window):
+def get_glfw_present_methods(window):
     if sys.platform.startswith("win"):
         return {
-            "method": "screen",
-            "platform": "windows",
-            "window": int(glfw.get_win32_window(window)),
+            "screen": {
+                "platform": "windows",
+                "window": int(glfw.get_win32_window(window)),
+            }
         }
     elif sys.platform.startswith("darwin"):
         return {
-            "method": "screen",
-            "platform": "cocoa",
-            "window": int(glfw.get_cocoa_window(window)),
+            "screen": {
+                "platform": "cocoa",
+                "window": int(glfw.get_cocoa_window(window)),
+            }
         }
     elif sys.platform.startswith("linux"):
         if is_wayland:
             return {
-                "method": "screen",
-                "platform": "wayland",
-                "window": int(glfw.get_wayland_window(window)),
-                "display": int(glfw.get_wayland_display()),
+                "screen": {
+                    "platform": "wayland",
+                    "window": int(glfw.get_wayland_window(window)),
+                    "display": int(glfw.get_wayland_display()),
+                }
             }
         else:
             return {
-                "method": "screen",
-                "platform": "x11",
-                "window": int(glfw.get_x11_window(window)),
-                "display": int(glfw.get_x11_display()),
+                "screen": {
+                    "platform": "x11",
+                    "window": int(glfw.get_x11_window(window)),
+                    "display": int(glfw.get_x11_display()),
+                }
             }
     else:
         raise RuntimeError(f"Cannot get GLFW surafce info on {sys.platform}.")
@@ -302,8 +306,8 @@ class GlfwWgpuCanvas(WgpuAutoGui, WgpuCanvasBase):
 
     # API
 
-    def get_present_info(self):
-        return get_glfw_present_info(self._window)
+    def get_present_methods(self):
+        return get_glfw_present_methods(self._window)
 
     def get_pixel_ratio(self):
         return self._pixel_ratio

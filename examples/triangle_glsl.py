@@ -64,7 +64,7 @@ def get_render_pipeline(canvas, device):
     # No bind group and layout, we should not create empty ones.
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
-    present_context = canvas.get_context()
+    present_context = canvas.get_context("wgpu")
     render_texture_format = present_context.get_preferred_format(device.adapter)
     present_context.configure(device=device, format=render_texture_format)
 
@@ -99,7 +99,7 @@ def get_render_pipeline(canvas, device):
 
 def get_draw_function(canvas, device, render_pipeline):
     def draw_frame():
-        current_texture = canvas.get_context().get_current_texture()
+        current_texture = canvas.get_context("wgpu").get_current_texture()
         command_encoder = device.create_command_encoder()
 
         render_pass = command_encoder.begin_render_pass(

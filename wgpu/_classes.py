@@ -204,7 +204,7 @@ gpu = GPU()
 class GPUCanvasContext:
     """Represents a context to configure a canvas and render to it.
 
-    Can be obtained via `gui.WgpuCanvasInterface.get_context()`.
+    Can be obtained via `gui.WgpuCanvasInterface.get_context("wgpu")`.
 
     The canvas-context plays a crucial role in connecting the wgpu API to the
     GUI layer, in a way that allows the GUI to be agnostic about wgpu. It
@@ -214,7 +214,7 @@ class GPUCanvasContext:
 
     _ot = object_tracker
 
-    def __init__(self, canvas):
+    def __init__(self, canvas, present_methods):
         self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
 
@@ -227,12 +227,9 @@ class GPUCanvasContext:
         # The last used texture
         self._texture = None
 
-        # The configuration from the canvas, obtained with canvas.get_present_info()
-        self._present_info = canvas.get_present_info()
-        if self._present_info.get("method", None) not in ("screen", "image"):
-            raise RuntimeError(
-                "canvas.get_present_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
-            )
+        # Determine the present method
+        self._present_methods = present_methods
+        self._present_method = "screen" if "screen" in present_methods else "bitmap"
 
     def _get_canvas(self):
         """Getter method for internal use."""
@@ -248,7 +245,7 @@ class GPUCanvasContext:
         """Get dict of capabilities and cache the result."""
         if self._capabilities is None:
             self._capabilities = {}
-            if self._present_info["method"] == "screen":
+            if self._present_method == "screen":
                 # Query capabilities from the surface
                 self._capabilities.update(self._get_capabilities_screen(adapter))
             else:
@@ -258,10 +255,6 @@ class GPUCanvasContext:
                     "usages": 0xFF,
                     "alpha_modes": [enums.CanvasAlphaMode.opaque],
                 }
-            # If capabilities were provided via surface info, overload them!
-            for key in ["formats", "alpha_modes"]:
-                if key in self._present_info:
-                    self._capabilities[key] = self._present_info[key]
             # Derived defaults
             if "view_formats" not in self._capabilities:
                 self._capabilities["view_formats"] = self._capabilities["formats"]
@@ -311,7 +304,6 @@ class GPUCanvasContext:
                 will have on the content of textures returned by ``get_current_texture()``
                 when read, displayed, or used as an image source. Default "opaque".
         """
-
         # Check types
 
         if not isinstance(device, GPUDevice):
@@ -370,7 +362,7 @@ class GPUCanvasContext:
             "alpha_mode": alpha_mode,
         }
 
-        if self._present_info["method"] == "screen":
+        if self._present_method == "screen":
             self._configure_screen(**self._config)
 
     def _configure_screen(
@@ -391,7 +383,7 @@ class GPUCanvasContext:
         """Removes the presentation context configuration.
         Destroys any textures produced while configured.
         """
-        if self._present_info["method"] == "screen":
+        if self._present_method == "screen":
             self._unconfigure_screen()
         self._config = None
         self._drop_texture()
@@ -414,14 +406,14 @@ class GPUCanvasContext:
         # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
 
         if self._texture is None:
-            if self._present_info["method"] == "screen":
+            if self._present_method == "screen":
                 self._texture = self._create_texture_screen()
             else:
-                self._texture = self._create_texture_image()
+                self._texture = self._create_texture_bitmap()
 
         return self._texture
 
-    def _create_texture_image(self):
+    def _create_texture_bitmap(self):
         canvas = self._get_canvas()
         width, height = canvas.get_physical_size()
         width, height = max(width, 1), max(height, 1)
@@ -443,33 +435,29 @@ class GPUCanvasContext:
             self._texture._release()  # not destroy, because it may be in use.
             self._texture = None
 
-    @apidiff.add("Present method is exposed")
+    @apidiff.add("The present method is used by the canvas")
     def present(self):
-        """Present what has been drawn to the current texture, by compositing it
-        to the canvas. Note that a canvas based on `gui.WgpuCanvasBase` will call this
-        method automatically at the end of each draw event.
+        """Hook for the canvas to present the rendered result.
+
+        Present what has been drawn to the current texture, by compositing it to the
+        canvas. Don't call this yourself; this is called automatically by the canvas.
         """
-        # todo: can we remove this present() method?
 
         if not self._texture:
-            # This can happen when a user somehow forgot to call
-            # get_current_texture(). But then what was this person rendering to
-            # then? The thing is that this also happens when there is an
-            # exception in the draw function before the call to
-            # get_current_texture(). In this scenario our warning may
-            # add confusion, so provide context and make it a debug level warning.
-            msg = "Warning in present(): No texture to present, missing call to get_current_texture()?"
-            logger.debug(msg)
-            return
-
-        if self._present_info["method"] == "screen":
+            result = {"method": "skip"}
+        elif self._present_method == "screen":
             self._present_screen()
+            result = {"method": "screen"}
+        elif self._present_method == "bitmap":
+            bitmap = self._present_bitmap()
+            result = {"method": "bitmap", "format": "rgba-u8", "data": bitmap}
         else:
-            self._present_image()
+            result = {"method": "fail", "message": "incompatible present methods"}
 
         self._drop_texture()
+        return result
 
-    def _present_image(self):
+    def _present_bitmap(self):
         texture = self._texture
         device = texture._device
 
@@ -505,9 +493,7 @@ class GPUCanvasContext:
 
         # Represent as memory object to avoid numpy dependency
         # Equivalent: np.frombuffer(data, np.uint8).reshape(size[1], size[0], nchannels)
-        data = data.cast("B", (size[1], size[0], nchannels))
-
-        self._get_canvas().present_image(data, format=format)
+        return data.cast("B", (size[1], size[0], nchannels))
 
     def _present_screen(self):
         raise NotImplementedError()
