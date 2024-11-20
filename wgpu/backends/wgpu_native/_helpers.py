@@ -252,13 +252,17 @@ class WgpuAwaitable:
         return self.result is not None or time.perf_counter() > self.maxtime
 
     def _finish(self):
-        if not self.result:
-            raise RuntimeError(f"Waiting for {self.title} timed out.")
-        result, error = self.result
-        if error:
-            raise RuntimeError(error)
-        else:
-            return self.finalizer(result)
+        try:
+            if not self.result:
+                raise RuntimeError(f"Waiting for {self.title} timed out.")
+            result, error = self.result
+            if error:
+                raise RuntimeError(error)
+            else:
+                return self.finalizer(result)
+        finally:
+            # Reset attrs to prevent potential memory leaks
+            self.callback = self.finalizer = self.poll_function = self.result = None
 
     def sync_wait(self):
         if self.result is not None:
@@ -269,9 +273,6 @@ class WgpuAwaitable:
             while not self._is_done():
                 time.sleep(0)
         return self._finish()
-
-    def async_wait(self):
-        return self
 
     def __await__(self):
         import anyio
