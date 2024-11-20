@@ -113,6 +113,18 @@ def _new_struct_p(ctype, **kwargs):
     return struct_p
 
 
+def new_array(ctype, elements):
+    assert ctype.endswith("[]")
+    if isinstance(elements, int):
+        return ffi.new(ctype, elements)
+    elif elements:
+        array = ffi.new(ctype, elements)
+        _refs_per_struct[array] = elements  # prevent gc
+        return array
+    else:
+        return ffi.NULL
+
+
 def _tuple_from_tuple_or_dict(ob, fields, defaults=()):
     """Given a tuple/list/dict, return a tuple. Also checks tuple size.
 
@@ -200,7 +212,7 @@ def _get_override_constant_entries(field):
         c_constant_entries.append(c_constant_entry)
     # We need to return and hold onto c_constant_entries in order to prevent the C
     # strings from being GC'ed.
-    c_constants = ffi.new("WGPUConstantEntry[]", c_constant_entries)
+    c_constants = new_array("WGPUConstantEntry[]", c_constant_entries)
     return c_constants, c_constant_entries
 
 
@@ -440,7 +452,7 @@ class GPU(classes.GPU):
         instance = get_wgpu_instance()
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         count = libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, ffi.NULL)
-        adapters = ffi.new("WGPUAdapter[]", count)
+        adapters = new_array("WGPUAdapter[]", count)
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, adapters)
         return [self._create_adapter(adapter) for adapter in adapters]
@@ -618,10 +630,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         # Convert to C values
 
-        c_view_formats = ffi.NULL
-        if view_formats:
-            view_formats_list = [enummap["TextureFormat." + x] for x in view_formats]
-            c_view_formats = ffi.new("WGPUTextureFormat []", view_formats_list)
+        view_formats_list = [enummap["TextureFormat." + x] for x in view_formats]
+        c_view_formats = new_array("WGPUTextureFormat[]", view_formats_list)
 
         # Lookup alpha mode, needs explicit conversion because enum names mismatch
         c_alpha_mode = getattr(lib, f"WGPUCompositeAlphaMode_{alpha_mode.capitalize()}")
@@ -1020,7 +1030,7 @@ class GPUAdapter(classes.GPUAdapter):
             label=to_c_label(label),
             nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
             requiredFeatureCount=len(c_features),
-            requiredFeatures=ffi.new("WGPUFeatureName []", c_features),
+            requiredFeatures=new_array("WGPUFeatureName[]", c_features),
             requiredLimits=c_required_limits,
             defaultQueue=queue_struct,
             deviceLostCallback=device_lost_callback,
@@ -1313,15 +1323,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             )
             c_entries_list.append(c_entry)
 
-        c_entries_array = ffi.NULL
-        if c_entries_list:
-            c_entries_array = ffi.new("WGPUBindGroupLayoutEntry []", c_entries_list)
-
         # H: nextInChain: WGPUChainedStruct *, label: char *, entryCount: int, entries: WGPUBindGroupLayoutEntry *
         struct = new_struct_p(
             "WGPUBindGroupLayoutDescriptor *",
             label=to_c_label(label),
-            entries=c_entries_array,
+            entries=new_array("WGPUBindGroupLayoutEntry[]", c_entries_list),
             entryCount=len(c_entries_list),
             # not used: nextInChain
         )
@@ -1391,16 +1397,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 raise TypeError(f"Unexpected resource type {type(resource)}")
             c_entries_list.append(c_entry)
 
-        c_entries_array = ffi.NULL
-        if c_entries_list:
-            c_entries_array = ffi.new("WGPUBindGroupEntry []", c_entries_list)
-
         # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUBindGroupLayout, entryCount: int, entries: WGPUBindGroupEntry *
         struct = new_struct_p(
             "WGPUBindGroupDescriptor *",
             label=to_c_label(label),
             layout=layout._internal,
-            entries=c_entries_array,
+            entries=new_array("WGPUBindGroupEntry[]", c_entries_list),
             entryCount=len(c_entries_list),
             # not used: nextInChain
         )
@@ -1421,12 +1423,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         push_constant_layouts,
     ):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
+        c_layout_array = new_array("WGPUBindGroupLayout[]", bind_group_layouts_ids)
 
-        c_layout_array = ffi.new("WGPUBindGroupLayout []", bind_group_layouts_ids)
         next_in_chain = ffi.NULL
         if push_constant_layouts:
             count = len(push_constant_layouts)
-            c_push_constant_ranges = ffi.new("WGPUPushConstantRange[]", count)
+            c_push_constant_ranges = new_array("WGPUPushConstantRange[]", count)
             for layout, c_push_constant_range in zip(
                 push_constant_layouts, c_push_constant_ranges
             ):
@@ -1494,18 +1496,17 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                         # H: name: char *, value: char *
                         new_struct(
                             "WGPUShaderDefine",
-                            name=ffi.new("char []", b"gl_VertexID"),
-                            value=ffi.new("char []", b"gl_VertexIndex"),
+                            name=to_c_string("gl_VertexID"),
+                            value=to_c_string("gl_VertexIndex"),
                         )
                     )
-                c_defines = ffi.new("WGPUShaderDefine []", defines)
                 # H: chain: WGPUChainedStruct, stage: WGPUShaderStage, code: char *, defineCount: int, defines: WGPUShaderDefine *
                 source_struct = new_struct_p(
                     "WGPUShaderModuleGLSLDescriptor *",
                     code=to_c_string(code),
                     stage=c_stage,
                     defineCount=len(defines),
-                    defines=c_defines,
+                    defines=new_array("WGPUShaderDefine[]", defines),
                     # not used: chain
                 )
                 source_struct[0].chain.next = ffi.NULL
@@ -1724,7 +1725,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_stencil = depth_stencil or {}
         multisample = multisample or {}
         primitive = primitive or {}
-
         check_struct("VertexState", vertex)
         check_struct("DepthStencilState", depth_stencil)
         check_struct("MultisampleState", multisample)
@@ -1734,8 +1734,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             self._create_vertex_buffer_layout(buffer_des)
             for buffer_des in vertex.get("buffers", ())
         ]
-        c_vertex_buffer_descriptors_array = ffi.new(
-            "WGPUVertexBufferLayout []", c_vertex_buffer_layout_list
+        c_vertex_buffer_descriptors_array = new_array(
+            "WGPUVertexBufferLayout[]", c_vertex_buffer_layout_list
         )
         c_vertex_constants, c_vertex_entries = _get_override_constant_entries(vertex)
         # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, bufferCount: int, buffers: WGPUVertexBufferLayout *
@@ -1779,8 +1779,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 self._create_color_target_state(target)
                 for target in fragment["targets"]
             ]
-            c_color_targets_array = ffi.new(
-                "WGPUColorTargetState []", c_color_targets_list
+            c_color_targets_array = new_array(
+                "WGPUColorTargetState[]", c_color_targets_list
             )
             check_struct("FragmentState", fragment)
             c_fragment_constants, c_fragment_entries = _get_override_constant_entries(
@@ -1819,6 +1819,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             fragment=c_fragment_state,
             # not used: nextInChain
         )
+
         return struct
 
     def _create_color_target_state(self, target):
@@ -1865,7 +1866,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 shaderLocation=attribute["shader_location"],
             )
             c_attributes_list.append(c_attribute)
-        c_attributes_array = ffi.new("WGPUVertexAttribute []", c_attributes_list)
+        c_attributes_array = new_array("WGPUVertexAttribute[]", c_attributes_list)
         # H: arrayStride: int, stepMode: WGPUVertexStepMode, attributeCount: int, attributes: WGPUVertexAttribute *
         c_vertex_buffer_descriptor = new_struct(
             "WGPUVertexBufferLayout",
@@ -1941,7 +1942,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         c_color_formats, color_formats_count = ffi.NULL, 0
         if color_formats:
             color_formats_list = [enummap["TextureFormat." + x] for x in color_formats]
-            c_color_formats = ffi.new("WGPUTextureFormat []", color_formats_list)
+            c_color_formats = new_array("WGPUTextureFormat[]", color_formats_list)
             color_formats_count = len(color_formats_list)
 
         # H: nextInChain: WGPUChainedStruct *, label: char *, colorFormatCount: int, colorFormats: WGPUTextureFormat *, depthStencilFormat: WGPUTextureFormat, sampleCount: int, depthReadOnly: WGPUBool/int, stencilReadOnly: WGPUBool/int
@@ -1981,7 +1982,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def _create_query_set(self, label, type, count, statistics):
         next_in_chain = ffi.NULL
         if statistics:
-            c_statistics = ffi.new("WGPUPipelineStatisticName[]", statistics)
+            c_statistics = new_array("WGPUPipelineStatisticName[]", statistics)
             # H: chain: WGPUChainedStruct, pipelineStatistics: WGPUPipelineStatisticName *, pipelineStatisticCount: int
             query_set_descriptor_extras = new_struct_p(
                 "WGPUQuerySetDescriptorExtras *",
@@ -2708,8 +2709,8 @@ class GPUCommandEncoder(
             self._create_render_pass_color_attachment(color_attachment)
             for color_attachment in color_attachments
         ]
-        c_color_attachments_array = ffi.new(
-            "WGPURenderPassColorAttachment []", c_color_attachments_list
+        c_color_attachments_array = new_array(
+            "WGPURenderPassColorAttachment[]", c_color_attachments_list
         )
 
         c_depth_stencil_attachment = ffi.NULL
@@ -3263,7 +3264,7 @@ class GPURenderPassEncoder(
 
     def execute_bundles(self, bundles: List[GPURenderBundle]):
         bundle_ids = [bundle._internal for bundle in bundles]
-        c_bundle_info = ffi.new("WGPURenderBundle []", bundle_ids)
+        c_bundle_info = new_array("WGPURenderBundle[]", bundle_ids)
         # H: void f(WGPURenderPassEncoder renderPassEncoder, size_t bundleCount, WGPURenderBundle const * bundles)
         libf.wgpuRenderPassEncoderExecuteBundles(
             self._internal, len(bundles), c_bundle_info
@@ -3349,7 +3350,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     def submit(self, command_buffers: List[GPUCommandBuffer]):
         command_buffer_ids = [cb._internal for cb in command_buffers]
-        c_command_buffers = ffi.new("WGPUCommandBuffer []", command_buffer_ids)
+        c_command_buffers = new_array("WGPUCommandBuffer[]", command_buffer_ids)
         # H: void f(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands)
         libf.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
 
