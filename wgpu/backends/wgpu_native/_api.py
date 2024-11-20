@@ -68,6 +68,28 @@ _cstructfield2enum_alt = {
 }
 
 
+def print_struct(s, indent=""):
+    """Tool to pretty-print struct contents during debugging."""
+    for key in dir(s):
+        val = getattr(s, key)
+        if repr(val).startswith("<cdata "):
+            if "NULL" in repr(val):
+                print(indent + key + ": null")
+            elif "'char *'" in repr(val):
+                print(indent + key + ":", ffi.string(val).decode())
+            elif " *'" in repr(val):
+                print(indent + key + ": pointer")
+            elif "struct WGPU" in repr(val):
+                print(indent + key + ":", repr(val))
+            else:
+                print(indent + key + ":")
+                print(indent + "{")
+                print_struct(val, indent + "  ")
+                print(indent + "}")
+        else:
+            print(indent + key + ":", val)
+
+
 def new_struct_p(ctype, **kwargs):
     """Create a pointer to an ffi struct. Provides a flatter syntax
     and converts our string enums to int enums needed in C. The passed
