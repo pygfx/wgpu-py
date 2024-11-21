@@ -115,7 +115,7 @@ def new_struct(ctype, **kwargs):
     assert not ctype.endswith("*")
     struct_p = _new_struct_p(ctype + " *", **kwargs)
     struct = struct_p[0]
-    _refs_per_struct[struct] = kwargs
+    _refs_per_struct[struct] = tuple(kwargs.values())
     return struct
 
 
@@ -141,7 +141,10 @@ def new_array(ctype, elements):
         return ffi.new(ctype, elements)
     elif elements:
         array = ffi.new(ctype, elements)
-        _refs_per_struct[array] = elements  # prevent gc
+        # The array is a contiguous copy of the element structs. We don't need
+        # to keep a reference to the elements, but we do to sub-structs and
+        # sub-arrays of these elements.
+        _refs_per_struct[array] = [_refs_per_struct.get(el, None) for el in elements]
         return array
     else:
         return ffi.NULL
@@ -1841,7 +1844,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             fragment=c_fragment_state,
             # not used: nextInChain
         )
-
         return struct
 
     def _create_color_target_state(self, target):
