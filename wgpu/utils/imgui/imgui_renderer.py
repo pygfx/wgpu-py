@@ -44,10 +44,10 @@ class ImguiRenderer:
     }
 
     KEY_MAP_MOD = {
-        "Shift": imgui.Key.im_gui_mod_shift,
-        "Control": imgui.Key.im_gui_mod_ctrl,
-        "Alt": imgui.Key.im_gui_mod_alt,
-        "Meta": imgui.Key.im_gui_mod_super,
+        "Shift": imgui.Key.mod_shift,
+        "Control": imgui.Key.mod_ctrl,
+        "Alt": imgui.Key.mod_alt,
+        "Meta": imgui.Key.mod_super,
     }
 
     def __init__(
