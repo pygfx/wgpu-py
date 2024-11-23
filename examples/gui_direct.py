@@ -14,7 +14,7 @@ import atexit
 import glfw
 
 from wgpu.backends.wgpu_native import GPUCanvasContext
-from wgpu.gui.glfw import get_glfw_present_info, poll_glfw_briefly
+from wgpu.gui.glfw import get_glfw_present_methods, poll_glfw_briefly
 
 # from triangle import setup_drawing_sync
 from cube import setup_drawing_sync
@@ -33,18 +33,14 @@ class MinimalGlfwCanvas:  # implements WgpuCanvasInterface
         glfw.window_hint(glfw.RESIZABLE, True)
 
         self.window = glfw.create_window(640, 480, title, None, None)
-        self.context = GPUCanvasContext(self)
-
-    def get_present_info(self):
-        """get window and display id, includes some triage to deal with OS differences"""
-        return get_glfw_present_info(self.window)
+        self.context = GPUCanvasContext(self, get_glfw_present_methods(self.window))
 
     def get_physical_size(self):
         """get framebuffer size in integer pixels"""
         psize = glfw.get_framebuffer_size(self.window)
         return int(psize[0]), int(psize[1])
 
-    def get_context(self, kind="webgpu"):
+    def get_context(self, kind="wgpu"):
         return self.context
 
 

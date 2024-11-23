@@ -32,7 +32,7 @@ from wgpu.gui.qt import WgpuCanvas
 app = QtWidgets.QApplication([])
 canvas = WgpuCanvas(title="wgpu triangle in Qt subprocess")
 
-print(json.dumps(canvas.get_present_info()))
+print(json.dumps(canvas.get_present_methods()))
 print(canvas.get_physical_size())
 sys.stdout.flush()
 
@@ -43,15 +43,15 @@ app.exec_()
 class ProxyCanvas(WgpuCanvasBase):
     def __init__(self):
         super().__init__()
-        self._present_info = json.loads(p.stdout.readline().decode())
+        self._present_methods = json.loads(p.stdout.readline().decode())
         self._psize = tuple(
             int(x) for x in p.stdout.readline().decode().strip().strip("()").split(",")
         )
         print(self._psize)
         time.sleep(0.2)
 
-    def get_present_info(self):
-        return self._present_info
+    def get_present_methods(self):
+        return self._present_methods
 
     def get_physical_size(self):
         return self._psize

@@ -278,7 +278,7 @@ def render_to_screen(
         },
     )
 
-    present_context = canvas.get_context()
+    present_context = canvas.get_context("wgpu")
     present_context.configure(device=device, format=None)
 
     def draw_frame():

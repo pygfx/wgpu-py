@@ -370,7 +370,7 @@ class GPU(classes.GPU):
         # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
-            surface_id = canvas.get_context()._surface_id  # can still be NULL
+            surface_id = canvas.get_context("wgpu")._surface_id  # can still be NULL
 
         # ----- Select backend
 
@@ -521,14 +521,14 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     _surface_id = ffi.NULL
 
-    def __init__(self, canvas):
-        super().__init__(canvas)
+    def __init__(self, canvas, present_methods):
+        super().__init__(canvas, present_methods)
 
         # Obtain the surface id. The lifetime is of the surface is bound
         # to the lifetime of this context object.
-        if self._present_info["method"] == "screen":
-            self._surface_id = get_surface_id_from_info(self._present_info)
-        else:  # method == "image"
+        if self._present_method == "screen":
+            self._surface_id = get_surface_id_from_info(self._present_methods["screen"])
+        else:  # method == "bitmap"
             self._surface_id = ffi.NULL
 
     def _get_capabilities_screen(self, adapter):

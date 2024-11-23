@@ -5,7 +5,7 @@ from collections import defaultdict
 from ._gui_utils import log_exception
 
 
-def create_canvas_context(canvas):
+def create_canvas_context(canvas, render_methods):
     """Create a GPUCanvasContext for the given canvas.
 
     Helper function to keep the implementation of WgpuCanvasInterface
@@ -17,7 +17,7 @@ def create_canvas_context(canvas):
             "A backend must be selected (e.g. with request_adapter()) before canvas.get_context() can be called."
         )
     CanvasContext = sys.modules[backend_module].GPUCanvasContext  # noqa: N806
-    return CanvasContext(canvas)
+    return CanvasContext(canvas, render_methods)
 
 
 class WgpuCanvasInterface:
@@ -34,31 +34,30 @@ class WgpuCanvasInterface:
         super().__init__(*args, **kwargs)
         self._canvas_context = None
 
-    def get_present_info(self):
-        """Get information about the surface to render to.
+    def get_present_methods(self):
+        """Get info on the present methods supported by this canvas.
 
-        It must return a small dict, used by the canvas-context to determine
-        how the rendered result should be presented to the canvas. There are
-        two possible methods.
+        Must return a small dict, used by the canvas-context to determine
+        how the rendered result will be presented to the canvas.
+        This method is only called once, when the context is created.
 
-        If the ``method`` field is "screen", the context will render directly
-        to a surface representing the region on the screen. The dict should
-        have a ``window`` field containing the window id. On Linux there should
-        also be ``platform`` field to distinguish between "wayland" and "x11",
-        and a ``display`` field for the display id. This information is used
-        by wgpu to obtain the required surface id.
+        Each supported method is represented by a field in the dict. The value
+        is another dict with information specific to that present method.
+        A canvas backend must implement at least either "screen" or "bitmap".
 
-        When the ``method`` field is "image", the context will render to a
-        texture, download the result to RAM, and call ``canvas.present_image()``
-        with the image data. Additional info (like format) is passed as kwargs.
-        This method enables various types of canvases (including remote ones),
-        but note that it has a performance penalty compared to rendering
-        directly to the screen.
+        With method "screen", the context will render directly to a surface
+        representing the region on the screen. The sub-dict should have a ``window``
+        field containing the window id. On Linux there should also be ``platform``
+        field to distinguish between "wayland" and "x11", and a ``display`` field
+        for the display id. This information is used by wgpu to obtain the required
+        surface id.
 
-        The dict can further contain fields ``formats`` and ``alpha_modes`` to
-        define the canvas capabilities. For the "image" method, the default
-        formats is ``["rgba8unorm-srgb", "rgba8unorm"]``, and the default
-        alpha_modes is ``["opaque"]``.
+        With method "bitmap", the context will present the result as an image
+        bitmap. On GPU-based contexts, the result will first be rendered to an
+        offscreen texture, and then downloaded to RAM. The sub-dict must have a
+        field 'formats': a list of supported image formats. Examples are "rgba-u8"
+        and "i-u8". A canvas must support at least "rgba-u8". Note that srgb mapping
+        is assumed to be handled by the canvas.
         """
         raise NotImplementedError()
 
@@ -66,27 +65,26 @@ class WgpuCanvasInterface:
         """Get the physical size of the canvas in integer pixels."""
         raise NotImplementedError()
 
-    def get_context(self, kind="webgpu"):
+    def get_context(self, kind="wgpu"):
         """Get the ``GPUCanvasContext`` object corresponding to this canvas.
 
         The context is used to obtain a texture to render to, and to
         present that texture to the canvas. This class provides a
         default implementation to get the appropriate context.
-
-        The ``kind`` argument is a remnant from the WebGPU spec and
-        must always be "webgpu".
         """
         # Note that this function is analog to HtmlCanvas.getContext(), except
         # here the only valid arg is 'webgpu', which is also made the default.
-        assert kind == "webgpu"
+        assert kind in ("wgpu", "webgpu", None)
         if self._canvas_context is None:
-            self._canvas_context = create_canvas_context(self)
+            render_methods = self.get_present_methods()
+            self._canvas_context = create_canvas_context(self, render_methods)
+
         return self._canvas_context
 
     def present_image(self, image, **kwargs):
         """Consume the final rendered image.
 
-        This is called when using the "image" method, see ``get_present_info()``.
+        This is called when using the "bitmap" method, see ``get_present_methods()``.
         Canvases that don't support offscreen rendering don't need to implement
         this method.
         """
@@ -168,8 +166,15 @@ class WgpuCanvasBase(WgpuCanvasInterface):
         with log_exception("Draw error"):
             self.draw_frame()
         with log_exception("Present error"):
-            if self._canvas_context:
-                return self._canvas_context.present()
+            context = self._canvas_context
+            if context:
+                result = context.present()
+                method = result.pop("method")
+                if method == "bitmap":
+                    image = result.pop("data")
+                    self.present_image(image, **result)
+                else:
+                    pass  # method is "skip", "fail, ""screen"
 
     def _get_draw_wait_time(self):
         """Get time (in seconds) to wait until the next draw in order to honour max_fps."""
