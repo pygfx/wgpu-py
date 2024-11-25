@@ -5,7 +5,7 @@ Right now we only chose between GLFW, Qt and Jupyter. We might add support
 for e.g. wx later. Or we might decide to stick with these three.
 """
 
-__all__ = ["WgpuCanvas", "run", "call_later"]
+__all__ = ["WgpuCanvas", "call_later", "run"]
 
 import os
 import sys
