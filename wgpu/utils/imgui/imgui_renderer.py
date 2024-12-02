@@ -1,24 +1,6 @@
-import imgui_bundle
 from imgui_bundle import imgui
 import wgpu
 from .imgui_backend import ImguiWgpuBackend
-
-from packaging.version import Version
-
-# imgui changed its API between 1.5.2 and 1.6.0
-# But as of Dec 1, 2024, it is too early for us to force
-# users to use one specific version.
-# So we will support both versions for now with this small shim
-if Version(imgui_bundle.__version__) < Version("1.6.0"):
-    imgui_key_mod_shift = imgui.Key.im_gui_mod_shift
-    imgui_key_mod_ctrl = imgui.Key.im_gui_mod_ctrl
-    imgui_key_mod_alt = imgui.Key.im_gui_mod_alt
-    imgui_key_mod_super = imgui.Key.im_gui_mod_super
-else:
-    imgui_key_mod_shift = imgui.Key.mod_shift
-    imgui_key_mod_ctrl = imgui.Key.mod_ctrl
-    imgui_key_mod_alt = imgui.Key.mod_alt
-    imgui_key_mod_super = imgui.Key.mod_super
 
 
 class ImguiRenderer:
@@ -61,12 +43,26 @@ class ImguiRenderer:
         "Tab": imgui.Key.tab,
     }
 
-    KEY_MAP_MOD = {
-        "Shift": imgui_key_mod_shift,
-        "Control": imgui_key_mod_ctrl,
-        "Alt": imgui_key_mod_alt,
-        "Meta": imgui_key_mod_super,
-    }
+    # imgui changed its API between 1.5.2 and 1.6.0
+    # But as of Dec 1, 2024, it is too early for us to force
+    # users to use one specific version.
+    # So we will support both versions for now with this small shim
+    try:
+        # Version 1.6.0 and above
+        KEY_MAP_MOD = {
+            "Shift": imgui.Key.mod_shift,
+            "Control": imgui.Key.mod_ctrl,
+            "Alt": imgui.Key.mod_alt,
+            "Meta": imgui.Key.mod_super,
+        }
+    except AttributeError:
+        # Version 1.2.1 to 1.5.2
+        KEY_MAP_MOD = {
+            "Shift": imgui.Key.im_gui_mod_shift,
+            "Control": imgui.Key.im_gui_mod_ctrl,
+            "Alt": imgui.Key.im_gui_mod_alt,
+            "Meta": imgui.Key.im_gui_mod_super,
+        }
 
     def __init__(
         self, device, canvas: wgpu.gui.WgpuCanvasBase, render_target_format=None
