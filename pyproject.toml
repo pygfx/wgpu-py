@@ -15,7 +15,7 @@ dependencies = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'"]
 # For users
 jupyter = ["jupyter_rfb>=0.4.2"]
 glfw = ["glfw>=1.9"]
-imgui = ["imgui-bundle>=1.6.0"]
+imgui = ["imgui-bundle>=1.2.1"]
 # For devs / ci
 build = ["build", "hatchling", "requests", "twine"]
 codegen = ["pytest", "numpy", "ruff"]
