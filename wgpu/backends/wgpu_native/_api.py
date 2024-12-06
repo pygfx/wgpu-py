@@ -138,13 +138,18 @@ def _new_struct_p(ctype, **kwargs):
 def new_array(ctype, elements):
     assert ctype.endswith("[]")
     if isinstance(elements, int):
+        # elements == count
         return ffi.new(ctype, elements)
     elif elements:
         array = ffi.new(ctype, elements)
         # The array is a contiguous copy of the element structs. We don't need
         # to keep a reference to the elements, but we do to sub-structs and
         # sub-arrays of these elements.
-        _refs_per_struct[array] = [_refs_per_struct.get(el, None) for el in elements]
+        _refs_per_struct[array] = [
+            _refs_per_struct.get(el, None)
+            for el in elements
+            if isinstance(el, ffi.CData)
+        ]
         return array
     else:
         return ffi.NULL
