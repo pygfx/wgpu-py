@@ -9,7 +9,11 @@ license = { file = "LICENSE" }
 authors = [{ name = "Almar Klein" }, { name = "Korijn van Golen" }]
 keywords = ["webgpu", "wgpu", "vulkan", "metal", "DX12", "opengl"]
 requires-python = ">= 3.9"
-dependencies = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'", "anyio>=4.6"]
+dependencies = [
+    "cffi>=1.15.0",
+    "rubicon-objc>=0.4.1; sys_platform == 'darwin'",
+    "sniffio",
+]
 
 [project.optional-dependencies]
 # For users
@@ -20,7 +24,15 @@ imgui = ["imgui-bundle>=1.2.1"]
 build = ["build", "hatchling", "requests", "twine"]
 codegen = ["pytest", "numpy", "ruff"]
 lint = ["ruff", "pre-commit"]
-tests = ["numpy", "pytest", "pytest-anyio", "psutil", "imageio", "anyio", "trio"]
+tests = [
+    "numpy",
+    "pytest",
+    "pytest-anyio",
+    "psutil",
+    "imageio",
+    "anyio",
+    "trio",
+]
 examples = []
 docs = ["sphinx>7.2", "sphinx_rtd_theme"]
 dev = ["wgpu[build,codegen,lint,tests,examples,docs]"]

@@ -5,6 +5,8 @@ import sys
 import time
 from queue import deque
 
+import sniffio
+
 from ._ffi import ffi, lib, lib_path
 from ..._diagnostics import DiagnosticsBase
 from ...classes import (
@@ -226,6 +228,13 @@ def to_camel_case(name):
     return name2
 
 
+async def async_sleep(delay):
+    """Async sleep that uses sniffio to be compatible with asyncio, trio, rendercanvas.utils.asyncadapter, and possibly more."""
+    libname = sniffio.current_async_library()
+    sleep = sys.modules[libname].sleep
+    await sleep(delay)
+
+
 class WgpuAwaitable:
     """An object that can be waited for, either synchronously using sync_wait() or asynchronously using await.
 
@@ -275,8 +284,6 @@ class WgpuAwaitable:
         return self._finish()
 
     def __await__(self):
-        import anyio
-
         # There is no documentation on what __await__() is supposed to return, but we
         # can certainly copy from a function that *does* know what to return
         async def wait_for_callback():
@@ -285,7 +292,7 @@ class WgpuAwaitable:
             if not self.poll_function:
                 raise RuntimeError("Expected callback to have already happened")
             while not self._is_done():
-                await anyio.sleep(0)
+                await async_sleep(0)
 
         yield from wait_for_callback().__await__()
         return self._finish()
