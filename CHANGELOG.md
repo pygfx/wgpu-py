@@ -17,6 +17,13 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.19.2] - 25-11-2024
+
+Changed:
+
+* Update to Imgui 1.6+ by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/645
+
+
 ### [v0.19.1] - 19-11-2024
 
 Some internal refactoring, fix the doc theme, and compatibility with rendercanvas.
