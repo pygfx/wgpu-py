@@ -1,20 +1,21 @@
 """Utilities used in the wgpu-native backend."""
 
+import ctypes
 import sys
 import time
-import ctypes
 from queue import deque
+
+import sniffio
 
 from ._ffi import ffi, lib, lib_path
 from ..._diagnostics import DiagnosticsBase
 from ...classes import (
     GPUError,
-    GPUOutOfMemoryError,
-    GPUValidationError,
-    GPUPipelineError,
     GPUInternalError,
+    GPUOutOfMemoryError,
+    GPUPipelineError,
+    GPUValidationError,
 )
-
 
 ERROR_TYPES = {
     "": GPUError,
@@ -227,6 +228,13 @@ def to_camel_case(name):
     return name2
 
 
+async def async_sleep(delay):
+    """Async sleep that uses sniffio to be compatible with asyncio, trio, rendercanvas.utils.asyncadapter, and possibly more."""
+    libname = sniffio.current_async_library()
+    sleep = sys.modules[libname].sleep
+    await sleep(delay)
+
+
 class WgpuAwaitable:
     """An object that can be waited for, either synchronously using sync_wait() or asynchronously using await.
 
@@ -234,49 +242,64 @@ class WgpuAwaitable:
     truely async manner, as well as to support a synchronous version of them.
     """
 
-    def __init__(self, title, result, callback, poll_function, finalizer, timeout=5.0):
+    def __init__(self, title, callback, finalizer, poll_function=None, timeout=5.0):
         self.title = title  # for context in error messages
-        self.result = result  # a dict that the callbacks writes to
         self.callback = callback  # only used to prevent it from being gc'd
-        self.poll_function = poll_function  # call this to poll wgpu
         self.finalizer = finalizer  # function to finish the result
+        self.poll_function = poll_function  # call this to poll wgpu
         self.maxtime = time.perf_counter() + float(timeout)
+        self.result = None
 
-    def is_done(self):
+    def set_result(self, result):
+        self.result = (result, None)
+
+    def set_error(self, error):
+        self.result = (None, error)
+
+    def _is_done(self):
         self.poll_function()
-        if self.result:
-            return True
-        if time.perf_counter() > self.maxtime:
-            self.result["timeout"] = True
-            return True
-        return False
+        return self.result is not None or time.perf_counter() > self.maxtime
 
-    def finish(self):
-        if "result" in self.result:
-            return self.finalizer(self.result["result"])
-        elif "error" in self.result:
-            raise RuntimeError(self.result["error"])
-        elif "timeout" in self.result:
-            raise RuntimeError(f"Waiting for {self.title} timed out.")
-        else:
-            raise RuntimeError(f"Failed to obtain result for {self.title}.")
+    def _finish(self):
+        try:
+            if not self.result:
+                raise RuntimeError(f"Waiting for {self.title} timed out.")
+            result, error = self.result
+            if error:
+                raise RuntimeError(error)
+            else:
+                return self.finalizer(result)
+        finally:
+            # Reset attrs to prevent potential memory leaks
+            self.callback = self.finalizer = self.poll_function = self.result = None
 
     def sync_wait(self):
-        # Basically a spin-lock, but we sleep(0) to give other threads more room to run.
-        while not self.is_done():
-            time.sleep(0)  # yield to the GIL
-        return self.finish()
+        if self.result is not None:
+            pass
+        elif not self.poll_function:
+            raise RuntimeError("Expected callback to have already happened")
+        else:
+            while not self._is_done():
+                time.sleep(0)
+        return self._finish()
 
     def __await__(self):
-        # With this approach the CPU is also kept busy, because the task will
-        # continuously be scheduled to do a next step, but at least other tasks
-        # will have a chance to run as well (e.g. GUI's running in the same loop
-        # stay active). In theory we could async-sleep here, but there are two
-        # problems: how long should we sleep, and using asyncio.sleep() would
-        # not work on e.g. Trio.
-        while not self.is_done():
-            yield None  # yield to the loop
-        return self.finish()
+        # There is no documentation on what __await__() is supposed to return, but we
+        # can certainly copy from a function that *does* know what to return
+        async def wait_for_callback():
+            # In all the async cases that I've tried, the result is either already set, or
+            # resolves after the first call to the poll function. To make sure that our
+            # sleep-logic actually works, we always do at least one sleep call.
+            await async_sleep(0)
+            if self.result is not None:
+                return
+            if not self.poll_function:
+                raise RuntimeError("Expected callback to have already happened")
+            while not self._is_done():
+                await async_sleep(0)
+
+        yield from wait_for_callback().__await__()
+        return self._finish()
 
 
 class ErrorHandler:
