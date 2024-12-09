@@ -242,12 +242,11 @@ class WgpuAwaitable:
     truely async manner, as well as to support a synchronous version of them.
     """
 
-    def __init__(self, title, callback, finalizer, poll_function=None, timeout=5.0):
+    def __init__(self, title, callback, finalizer, poll_function=None):
         self.title = title  # for context in error messages
         self.callback = callback  # only used to prevent it from being gc'd
         self.finalizer = finalizer  # function to finish the result
         self.poll_function = poll_function  # call this to poll wgpu
-        self.maxtime = time.perf_counter() + float(timeout)
         self.result = None
 
     def set_result(self, result):
@@ -258,7 +257,7 @@ class WgpuAwaitable:
 
     def _is_done(self):
         self.poll_function()
-        return self.result is not None or time.perf_counter() > self.maxtime
+        return self.result is not None
 
     def _finish(self):
         try:
