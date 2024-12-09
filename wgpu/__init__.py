@@ -24,7 +24,9 @@ def rendercanvas_context_hook(canvas, present_methods):
 
     backend_module = gpu.__module__
     if backend_module in ("", "wgpu._classes"):
-        raise RuntimeError(
-            "A backend must be selected (e.g. with wgpu.gpu.request_adapter()) before canvas.get_context() can be called."
-        )
+        # Load backend now
+        from .backends import auto
+
+        backend_module = gpu.__module__
+
     return sys.modules[backend_module].GPUCanvasContext(canvas, present_methods)
