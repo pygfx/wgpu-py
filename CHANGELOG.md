@@ -17,6 +17,16 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.19.3] - 10-12-2024
+
+Fixed:
+
+* Ensure that wgpu is compatible both with imgui 1.6.0 and older by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/649
+* Clean up async code and add proper trio / rendercanvas support by @fyellin in https://github.com/pygfx/wgpu-py/pull/631
+* Remove timeout in awaitable by @almarklein in https://github.com/pygfx/wgpu-py/pull/651
+* Allow ``rendercanvas.get_context()`` before a backend is selected by @almarklein in https://github.com/pygfx/wgpu-py/pull/652
+
+
 ### [v0.19.2] - 25-11-2024
 
 Changed:
