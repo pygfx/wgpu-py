@@ -12,7 +12,6 @@ import numpy as np
 from testutils import run_tests, can_use_wgpu_lib, is_ci
 from pytest import mark, raises
 
-
 is_win = sys.platform.startswith("win")
 
 
@@ -464,10 +463,6 @@ def test_limits_are_legal():
 
 def test_limits_are_not_legal():
     assert not are_limits_wgpu_legal({"max-bind-group": 8})
-
-
-if __name__ == "__main__":
-    run_tests(globals())
 
 
 if __name__ == "__main__":

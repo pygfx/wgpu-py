@@ -43,12 +43,26 @@ class ImguiRenderer:
         "Tab": imgui.Key.tab,
     }
 
-    KEY_MAP_MOD = {
-        "Shift": imgui.Key.mod_shift,
-        "Control": imgui.Key.mod_ctrl,
-        "Alt": imgui.Key.mod_alt,
-        "Meta": imgui.Key.mod_super,
-    }
+    # imgui changed its API between 1.5.2 and 1.6.0
+    # But as of Dec 1, 2024, it is too early for us to force
+    # users to use one specific version.
+    # So we will support both versions for now with this small shim
+    try:
+        # Version 1.6.0 and above
+        KEY_MAP_MOD = {
+            "Shift": imgui.Key.mod_shift,
+            "Control": imgui.Key.mod_ctrl,
+            "Alt": imgui.Key.mod_alt,
+            "Meta": imgui.Key.mod_super,
+        }
+    except AttributeError:
+        # Version 1.2.1 to 1.5.2
+        KEY_MAP_MOD = {
+            "Shift": imgui.Key.im_gui_mod_shift,
+            "Control": imgui.Key.im_gui_mod_ctrl,
+            "Alt": imgui.Key.im_gui_mod_alt,
+            "Meta": imgui.Key.im_gui_mod_super,
+        }
 
     def __init__(
         self, device, canvas: wgpu.gui.WgpuCanvasBase, render_target_format=None

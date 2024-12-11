@@ -48,7 +48,7 @@ def write_flags():
     # List'm
     pylines.append(f"# There are {n} flags\n")
     pylines.append("__all__ = [")
-    for name in idl.flags.keys():
+    for name in sorted(idl.flags.keys()):
         pylines.append(f'    "{name}",')
     pylines.append("]\n\n")
     # The flags definitions
@@ -78,7 +78,7 @@ def write_enums():
     # List'm
     pylines.append(f"# There are {n} enums\n")
     pylines.append("__all__ = [")
-    for name in idl.enums.keys():
+    for name in sorted(idl.enums.keys()):
         pylines.append(f'    "{name}",')
     pylines.append("]\n\n")
     for name, d in idl.enums.items():
@@ -108,7 +108,7 @@ def write_structs():
     pylines.append(f"# There are {n} structs\n")
     # List'm
     pylines.append("__all__ = [")
-    for name in idl.structs.keys():
+    for name in sorted(idl.structs.keys()):
         if name not in ignore:
             pylines.append(f'    "{name}",')
     pylines.append("]\n\n")

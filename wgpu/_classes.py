@@ -21,43 +21,43 @@ from . import flags, enums, structs
 
 
 __all__ = [
-    "GPUObjectBase",
-    "GPUAdapterInfo",
     "GPU",
     "GPUAdapter",
-    "GPUDevice",
-    "GPUBuffer",
-    "GPUTexture",
-    "GPUTextureView",
-    "GPUSampler",
-    "GPUBindGroupLayout",
+    "GPUAdapterInfo",
     "GPUBindGroup",
-    "GPUPipelineLayout",
-    "GPUShaderModule",
-    "GPUCompilationMessage",
-    "GPUCompilationInfo",
-    "GPUPipelineError",
-    "GPUPipelineBase",
-    "GPUComputePipeline",
-    "GPURenderPipeline",
-    "GPUCommandBuffer",
-    "GPUCommandsMixin",
-    "GPUCommandEncoder",
+    "GPUBindGroupLayout",
     "GPUBindingCommandsMixin",
-    "GPUDebugCommandsMixin",
-    "GPUComputePassEncoder",
-    "GPURenderPassEncoder",
-    "GPURenderCommandsMixin",
-    "GPURenderBundle",
-    "GPURenderBundleEncoder",
-    "GPUQueue",
-    "GPUQuerySet",
+    "GPUBuffer",
     "GPUCanvasContext",
+    "GPUCommandBuffer",
+    "GPUCommandEncoder",
+    "GPUCommandsMixin",
+    "GPUCompilationInfo",
+    "GPUCompilationMessage",
+    "GPUComputePassEncoder",
+    "GPUComputePipeline",
+    "GPUDebugCommandsMixin",
+    "GPUDevice",
     "GPUDeviceLostInfo",
     "GPUError",
-    "GPUValidationError",
-    "GPUOutOfMemoryError",
     "GPUInternalError",
+    "GPUObjectBase",
+    "GPUOutOfMemoryError",
+    "GPUPipelineBase",
+    "GPUPipelineError",
+    "GPUPipelineLayout",
+    "GPUQuerySet",
+    "GPUQueue",
+    "GPURenderBundle",
+    "GPURenderBundleEncoder",
+    "GPURenderCommandsMixin",
+    "GPURenderPassEncoder",
+    "GPURenderPipeline",
+    "GPUSampler",
+    "GPUShaderModule",
+    "GPUTexture",
+    "GPUTextureView",
+    "GPUValidationError",
 ]
 
 logger = logging.getLogger("wgpu")
@@ -153,7 +153,7 @@ class GPU:
     async def enumerate_adapters_async(self):
         """Get a list of adapter objects available on the current system.
 
-        An adapter can then be selected (e.g. using it's summary), and a device
+        An adapter can then be selected (e.g. using its summary), and a device
         then created from it.
 
         The order of the devices is such that Vulkan adapters go first, then

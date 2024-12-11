@@ -36,5 +36,9 @@
 * Enum CanvasToneMappingMode missing in wgpu.h
 * Wrote 236 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 142 C function calls
+<<<<<<< HEAD
 * Not using 63 C functions
+=======
+* Not using 64 C functions
+>>>>>>> main
 * Validated 82 C structs
