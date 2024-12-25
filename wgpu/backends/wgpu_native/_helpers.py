@@ -292,7 +292,6 @@ class WgpuAwaitable:
         # It would also be nice if wait_for_callback and sync_wait() could be merged,
         # but Python has no wait of combining them.
         async def wait_for_callback():
-            # Set self.event before checking self.result to prevent data race.
             if self.result is not None:
                 pass
             elif not self.poll_function:
