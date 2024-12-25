@@ -75,9 +75,9 @@ jobs:
     - name: Install and test wheel
       shell: bash
       run: |
-          rm -rf ./wgpu
           # Install 'normally' to install deps, then force the install from dist-folder and nothing else
-          pip install --find-links dist wgpu
+          pip install .
+          rm -rf ./wgpu
           pip install --force-reinstall --no-deps --no-index --find-links dist wgpu
           pushd $HOME
           python -c 'import wgpu.backends.wgpu_native; print(wgpu.backends.wgpu_native._ffi.lib_path)'
@@ -92,6 +92,7 @@ jobs:
           # Install sdist, but no test, because there is no wgpu-native lib now.
           filename=$(ls dist/*.tar.gz)
           pip install $filename
+          python -c "import wgpu; print(wgpu.__version__)"
           pip uninstall -y wgpu
           git reset --hard HEAD
 

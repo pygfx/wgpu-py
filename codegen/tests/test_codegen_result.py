@@ -4,7 +4,7 @@ from codegen.files import read_file
 
 
 def test_async_methods_and_props():
-    # Test that only and all aync methods are suffixed with '_async'
+    # Test that only and all async methods are suffixed with '_async'
 
     for fname in ["_classes.py", "backends/wgpu_native/_api.py"]:
         code = read_file(fname)

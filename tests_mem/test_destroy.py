@@ -1,6 +1,6 @@
 """
 A few objects have a destroy method. We test its behavior here.
-In practice it does not really affect the lifetime, so these tests look
+In practice, it does not really affect the lifetime, so these tests look
 a lot like the corresponding release tests :)
 """
 
@@ -28,7 +28,7 @@ def test_destroy_device(n):
     for i in range(n):
         d = adapter.request_device_sync()
         d.destroy()
-        # NOTE: destroy is not yet implemented in wgpu-natice - this does not actually do anything yet
+        # NOTE: destroy is not yet implemented in wgpu-native - this does not actually do anything yet
         yield d
 
 
@@ -38,7 +38,7 @@ def test_destroy_query_set(n):
     for i in range(n):
         qs = DEVICE.create_query_set(type=wgpu.QueryType.occlusion, count=2)
         qs.destroy()
-        # NOTE: destroy is not yet implemented in wgpu-natice - this does not actually do anything yet
+        # NOTE: destroy is not yet implemented in wgpu-native - this does not actually do anything yet
         yield qs
 
 

@@ -6,7 +6,7 @@ from . import _gui_utils  # noqa: F401
 from .base import WgpuCanvasInterface, WgpuCanvasBase, WgpuAutoGui
 
 __all__ = [
-    "WgpuCanvasInterface",
-    "WgpuCanvasBase",
     "WgpuAutoGui",
+    "WgpuCanvasBase",
+    "WgpuCanvasInterface",
 ]

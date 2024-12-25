@@ -35,10 +35,10 @@ def test_release_canvas_context(n):
     # Test with GLFW canvases.
 
     # Note: in a draw, the textureview is obtained (thus creating a
-    # Texture and a TextureView, but these are released in present(),
+    # Texture and a TextureView), but these are released in present(),
     # so we don't see them in the counts.
 
-    from wgpu.gui.glfw import WgpuCanvas
+    from wgpu.gui.glfw import WgpuCanvas, poll_glfw_briefly
 
     yield {
         "ignore": {"CommandBuffer"},
@@ -51,7 +51,7 @@ def test_release_canvas_context(n):
         canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         loop.run_until_complete(stub_event_loop())
-        yield c.get_context()
+        yield c.get_context("wgpu")
 
     # Need some shakes to get all canvas refs gone.
     del c
@@ -59,6 +59,8 @@ def test_release_canvas_context(n):
     gc.collect()
     loop.run_until_complete(stub_event_loop())
     gc.collect()
+
+    poll_glfw_briefly()  # removes all windows from screen
 
     # Check that the canvas objects are really deleted
     assert not canvases, f"Still {len(canvases)} canvases"

@@ -3,9 +3,34 @@ The logic to generate/patch the base API from the WebGPU
 spec (IDL), and the backend implementations from the base API.
 """
 
-from codegen.utils import print, format_code, to_snake_case, to_camel_case, Patcher
-from codegen.idlparser import get_idl_parser
+import ast
+from collections import defaultdict
+from functools import cache
+
 from codegen.files import file_cache
+from codegen.idlparser import Attribute, get_idl_parser
+from codegen.utils import Patcher, format_code, print, to_camel_case, to_snake_case
+
+# In wgpu-py, we make some args optional, that are not optional in the
+# IDL. Reasons may be because it makes sense to be able to omit them,
+# or because the WebGPU says its optional while IDL says it's not, or
+# for backwards compatibility. These args have a default value of
+# 'optional'  (which is just None) so we can recognise them. If IDL
+# makes any of these args optional, their presence in this list is
+# ignored.
+ARGS_TO_MAKE_OPTIONAL = {
+    ("compilation_hints", "compilation_hints"),  # idl actually has a default
+    ("create_shader_module", "source_map"),
+    ("begin_compute_pass", "timestamp_writes"),
+    ("begin_render_pass", "timestamp_writes"),
+    ("begin_render_pass", "depth_stencil_attachment"),
+    ("begin_render_pass", "occlusion_query_set"),
+    ("create_render_pipeline", "depth_stencil"),
+    ("create_render_pipeline", "fragment"),
+    ("create_render_pipeline_async", "depth_stencil"),
+    ("create_render_pipeline_async", "fragment"),
+    ("create_render_bundle_encoder", "depth_stencil_format"),
+}
 
 
 def patch_base_api(code):
@@ -19,7 +44,7 @@ def patch_base_api(code):
     if found_all:
         part2 = part2.split("]", 1)[-1]
         line = "\n__all__ = ["
-        line += ", ".join(f'"{name}"' for name in idl.classes.keys())
+        line += ", ".join(f'"{name}"' for name in sorted(idl.classes.keys()))
         line += "]"
         code = part1 + line + part2
 
@@ -69,7 +94,7 @@ class AbstractCommentInjector(Patcher):
     since that is the task of the API patchers.
 
     Also moves decorators just above the def. Doing this here in a
-    post-processing step means we dont have to worry about decorators
+    post-processing step means we don't have to worry about decorators
     in the other patchers, keeping them simpler.
     """
 
@@ -115,7 +140,7 @@ class AbstractApiPatcher(Patcher):
     """The base patcher to update a wgpu API.
 
     This code is generalized, so it can be used both to generate the base API
-    as well as the backends (implementations).
+    and the backends (implementations).
 
     The idea is to walk over all classes, patch it if necessary, then
     walk over each of its properties and methods to patch these too.
@@ -339,7 +364,7 @@ class IdlPatcherMixin:
                 return idl_sync
 
     def name2py_names(self, classname, name_idl):
-        """Map a idl propname/methodname to the python variants.
+        """Map an idl propname/methodname to the python variants.
         Take async into account. Returns a list with one or two names;
         for async props/methods Python has the sync and the async variant.
         """
@@ -406,49 +431,57 @@ class IdlPatcherMixin:
         # Get arg names and types
         idl_line = functions[name_idl]
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-        args = [arg.strip() for arg in args if arg.strip()]
-        raw_defaults = [arg.partition("=")[2].strip() for arg in args]
-        place_holder_default = False
-        defaults = []
-        for default, arg in zip(raw_defaults, args):
-            if default:
-                place_holder_default = "None"  # any next args must have a default
-            elif arg.startswith("optional "):
-                default = "None"
-            else:
-                default = place_holder_default
-            defaults.append(default)
-
-        argnames = [arg.split("=")[0].split()[-1] for arg in args]
-        argnames = [to_snake_case(argname) for argname in argnames]
-        argnames = [(f"{n}={v}" if v else n) for n, v in zip(argnames, defaults)]
-        argtypes = [arg.split("=")[0].split()[-2] for arg in args]
+        args = [Attribute(arg) for arg in args if arg.strip()]
 
         # If one arg that is a dict, flatten dict to kwargs
-        if len(argtypes) == 1 and argtypes[0].endswith(
+        if len(args) == 1 and args[0].typename.endswith(
             ("Options", "Descriptor", "Configuration")
         ):
-            assert argtypes[0].startswith("GPU")
-            fields = self.idl.structs[argtypes[0][3:]].values()  # struct fields
-            py_args = [self._arg_from_struct_field(field) for field in fields]
+            assert args[0].typename.startswith("GPU")
+            des_is_optional = bool(args[0].default)
+            attributes = self.idl.structs[args[0].typename[3:]].values()
+            py_args = [
+                self._arg_from_attribute(methodname, attr, des_is_optional)
+                for attr in attributes
+            ]
             if py_args[0].startswith("label: str"):
-                py_args[0] = 'label=""'
+                py_args[0] = 'label: str=""'
             py_args = ["self", "*", *py_args]
         else:
-            py_args = ["self", *argnames]
+            py_args = [self._arg_from_attribute(methodname, attr) for attr in args]
+            py_args = ["self", *py_args]
+
+            # IDL has some signatures that cannot work in Python. This may be a bug in idl
+            known_bugged_methods = {"GPUPipelineError.__init__"}
+            remove_default = False
+            for i in reversed(range(len(py_args))):
+                arg = py_args[i]
+                if "=" in arg:
+                    if remove_default:
+                        py_args[i] = arg.split("=")[0]
+                        assert f"{classname}.{methodname}" in known_bugged_methods
+                else:
+                    remove_default = True
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"
         line = format_code(line, True).split("):")[0] + "):"
         return "    " + line
 
-    def _arg_from_struct_field(self, field):
-        name = to_snake_case(field.name)
-        d = field.default
-        t = self.idl.resolve_type(field.typename)
+    def _arg_from_attribute(self, methodname, attribute, force_optional=False):
+        name = to_snake_case(attribute.name)
+        optional_in_py = (methodname, name) in ARGS_TO_MAKE_OPTIONAL
+        d = attribute.default
+        t = self.idl.resolve_type(attribute.typename)
         result = name
+        if (force_optional or optional_in_py) and not d:
+            d = "optional"
         if t:
-            result += f": {t}"
+            # If default is None, the type won't match, so we need to mark it optional
+            if d == "None":
+                result += f": Optional[{t}]"
+            else:
+                result += f": {t}"
         if d:
             d = {"false": "False", "true": "True"}.get(d, d)
             result += f"={d}"
@@ -504,7 +537,20 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
         functions = self.idl.classes[classname].functions
         name_idl = self.method_is_known(classname, methodname)
         if name_idl:
-            return "    # IDL: " + functions[name_idl]
+            idl_line = functions[name_idl]
+
+            args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
+            args = [Attribute(arg) for arg in args if arg.strip()]
+
+            # If one arg that is a dict, flatten dict to kwargs
+            if len(args) == 1 and args[0].typename.endswith(
+                ("Options", "Descriptor", "Configuration")
+            ):
+                assert args[0].typename.startswith("GPU")
+                attributes = self.idl.structs[args[0].typename[3:]].values()
+                idl_line += " -> " + ", ".join(attr.line for attr in attributes)
+
+            return "    # IDL: " + idl_line
 
 
 class BackendApiPatcher(AbstractApiPatcher):
@@ -575,7 +621,9 @@ class StructValidationChecker(Patcher):
 
         idl = get_idl_parser()
         all_structs = set()
-        ignore_structs = {"Extent3D"}
+        ignore_structs = {"Extent3D", "Origin3D"}
+
+        structure_checks = self._get_structure_checks()
 
         for classname, i1, i2 in self.iter_classes():
             if classname not in idl.classes:
@@ -596,21 +644,22 @@ class StructValidationChecker(Patcher):
                         method_structs.update(self._get_sub_structs(idl, structname))
                 all_structs.update(method_structs)
                 # Collect structs being checked
-                checked = set()
-                for line in code.splitlines():
-                    line = line.lstrip()
-                    if line.startswith("check_struct("):
-                        name = line.split("(")[1].split(",")[0].strip('"')
-                        checked.add(name)
+                checked = structure_checks[classname, methodname]
+
                 # Test that a matching check is done
                 unchecked = method_structs.difference(checked)
                 unchecked = list(sorted(unchecked.difference(ignore_structs)))
-                if (
-                    methodname.endswith("_async")
-                    and f"return self.{methodname[:-7]}" in code
-                ):
-                    pass
-                elif unchecked:
+                # Must we check, or does this method defer to another
+                defer_func_name = "_" + methodname
+                defer_line_starts = (
+                    f"return self.{defer_func_name[:-7]}",
+                    f"awaitable = self.{defer_func_name[:-7]}",
+                )
+                this_method_defers = any(
+                    line.strip().startswith(defer_line_starts)
+                    for line in code.splitlines()
+                )
+                if not this_method_defers and unchecked:
                     msg = f"missing check_struct in {methodname}: {unchecked}"
                     self.insert_line(j1, f"# FIXME: {msg}")
                     print(f"ERROR: {msg}")
@@ -621,8 +670,56 @@ class StructValidationChecker(Patcher):
 
     def _get_sub_structs(self, idl, structname):
         structnames = {structname}
-        for structfield in idl.structs[structname].values():
-            structname2 = structfield.typename[3:]  # remove "GPU"
+        for attribute in idl.structs[structname].values():
+            structname2 = attribute.typename[3:]  # remove "GPU"
             if structname2 in idl.structs:
                 structnames.update(self._get_sub_structs(idl, structname2))
         return structnames
+
+    @staticmethod
+    def _get_structure_checks():
+        """
+        Returns a map
+            (class_name, method_name) -> <list of structure names>
+        mapping each top-level method in _api.py to the calls to check_struct made by
+        that method or by any helper methods called by that method.
+
+        For now, the helper function must be methods within the same class.  This code
+        does not yet deal with global functions or with methods in superclasses.
+        """
+        module = ast.parse(file_cache.read("backends/wgpu_native/_api.py"))
+        # We only care about top-level classes and their top-level methods.
+        top_level_methods = {
+            # (class_name, method_name) -> method_ast
+            (class_ast.name, method_ast.name): method_ast
+            for class_ast in module.body
+            if isinstance(class_ast, ast.ClassDef)
+            for method_ast in class_ast.body
+            if isinstance(method_ast, (ast.FunctionDef, ast.AsyncFunctionDef))
+        }
+
+        # (class_name, method_name) -> list of helper methods
+        method_helper_calls = defaultdict(list)
+        # (class_name, method_name) -> list of structures checked
+        structure_checks = defaultdict(list)
+
+        for key, method_ast in top_level_methods.items():
+            for node in ast.walk(method_ast):
+                if isinstance(node, ast.Call):
+                    name = ast.unparse(node.func)
+                    if name.startswith("self._"):
+                        method_helper_calls[key].append(name[5:])
+                    if name == "check_struct":
+                        assert isinstance(node.args[0], ast.Constant)
+                        struct_name = node.args[0].value
+                        assert isinstance(struct_name, str)
+                        structure_checks[key].append(struct_name)
+
+        @cache
+        def get_function_checks(class_name, method_name):
+            result = set(structure_checks[class_name, method_name])
+            for helper_method_name in method_helper_calls[class_name, method_name]:
+                result.update(get_function_checks(class_name, helper_method_name))
+            return sorted(result)
+
+        return {key: get_function_checks(*key) for key in top_level_methods.keys()}

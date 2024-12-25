@@ -7,9 +7,9 @@ process. Just a proof of concept, this is far from perfect yet:
 * You'll want to let the proxy know about size changes.
 * The request_draw should invoke a draw (in asyncio?), not draw directly.
 * Properly handling closing the figure (from both ends).
+"""
 
 # run_example = false
-"""
 
 import sys
 import json
@@ -18,8 +18,9 @@ import subprocess
 
 from wgpu.gui import WgpuCanvasBase
 
-# Import the (async) function that we must call to run the visualization
-from triangle import main
+# Import the function that we must call to run the visualization
+from triangle import setup_drawing_sync
+# from cube import setup_drawing_sync
 
 
 code = """
@@ -31,7 +32,7 @@ from wgpu.gui.qt import WgpuCanvas
 app = QtWidgets.QApplication([])
 canvas = WgpuCanvas(title="wgpu triangle in Qt subprocess")
 
-print(json.dumps(canvas.get_present_info()))
+print(json.dumps(canvas.get_present_methods()))
 print(canvas.get_physical_size())
 sys.stdout.flush()
 
@@ -42,15 +43,15 @@ app.exec_()
 class ProxyCanvas(WgpuCanvasBase):
     def __init__(self):
         super().__init__()
-        self._present_info = json.loads(p.stdout.readline().decode())
+        self._present_methods = json.loads(p.stdout.readline().decode())
         self._psize = tuple(
             int(x) for x in p.stdout.readline().decode().strip().strip("()").split(",")
         )
         print(self._psize)
         time.sleep(0.2)
 
-    def get_present_info(self):
-        return self._present_info
+    def get_present_methods(self):
+        return self._present_methods
 
     def get_physical_size(self):
         return self._psize
@@ -81,5 +82,6 @@ p = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE)
 canvas = ProxyCanvas()
 
 # Go!
-main(canvas)
+draw_frame = setup_drawing_sync(canvas)
+canvas.request_draw(draw_frame)
 time.sleep(3)

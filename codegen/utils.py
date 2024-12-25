@@ -8,15 +8,19 @@ import tempfile
 import subprocess
 
 
-def to_snake_case(name):
+def to_snake_case(name, separator="_"):
     """Convert a name from camelCase to snake_case. Names that already are
     snake_case remain the same.
     """
     name2 = ""
     for c in name:
         c2 = c.lower()
-        if c2 != c and len(name2) > 0 and name2[-1] not in "_123":
-            name2 += "_"
+        if c2 != c and len(name2) > 0:
+            prev = name2[-1]
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
+                name2 += separator
         name2 += c2
     return name2
 
@@ -28,7 +32,7 @@ def to_camel_case(name):
     is_capital = False
     name2 = ""
     for c in name:
-        if c == "_" and name2:
+        if c in "_-" and name2:
             is_capital = True
         elif is_capital:
             name2 += c.upper()
@@ -44,7 +48,7 @@ _file_objects_to_print_to = [sys.stdout]
 
 
 def print(*args, **kwargs):
-    """Report something (will be printed and added to a file."""
+    """Report something will be printed and added to a file."""
     # __builtins__.print(*args, **kwargs)
     if args and not args[0].lstrip().startswith("#"):
         args = ("*", *args)
@@ -110,11 +114,6 @@ def format_code(src, singleline=False):
     """Format the given src string. If singleline is True, all function
     signatures become single-line, so they can be parsed and updated.
     """
-
-    # Use Ruff to format the line. Ruff does not yet have a Python API, so we use its CLI.
-    tempfilename = os.path.join(tempfile.gettempdir(), "wgpupy_codegen_format.py")
-    with open(tempfilename, "wb") as fp:
-        fp.write(src.encode())
     line_length = 320 if singleline else 88
     cmd = [
         sys.executable,
@@ -123,61 +122,122 @@ def format_code(src, singleline=False):
         "format",
         "--line-length",
         str(line_length),
-        tempfilename,
+        "--no-cache",
+        "--stdin-filename",
+        "tmp.py",
     ]
-    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    p = subprocess.run(cmd, input=src.encode(), capture_output=True)
+
     if p.returncode:
-        raise FormatError(p.stdout.decode(errors="ignore"))
-    with open(tempfilename, "rb") as fp:
-        result = fp.read().decode()
-    os.remove(tempfilename)
+        stdout = p.stdout.decode(errors="ignore")
+        stderr = p.stderr.decode(errors="ignore")
+        raise FormatError(
+            f"Could not format source ({p.returncode}).\n\nstdout: "
+            + stdout
+            + "\n\nstderr: "
+            + stderr
+        )
+    else:
+        result = p.stdout.decode(errors="ignore")
 
     # Make defs single-line. You'd think that setting the line length
     # to a very high number would do the trick, but it does not.
     if singleline:
-        lines1 = result.splitlines()
-        lines2 = []
-        in_sig = False
-        comment = ""
-        for line in lines1:
-            if in_sig:
-                # Handle comment
-                line, _, c = line.partition("#")
-                line = line.rstrip()
-                c = c.strip()
-                if c:
-                    comment += " " + c.strip()
-                # Detect end
-                if line.endswith("):"):
-                    in_sig = False
-                # Compose line
-                current_line = lines2[-1]
-                if not current_line.endswith("("):
-                    current_line += " "
-                current_line += line.lstrip()
-                # Finalize
-                if not in_sig:
-                    # Remove trailing spaces and commas
-                    current_line = current_line.replace(" ):", "):")
-                    current_line = current_line.replace(",):", "):")
-                    # Add comment
-                    if comment:
-                        current_line += "  #" + comment
-                        comment = ""
-                lines2[-1] = current_line
-            else:
-                lines2.append(line)
-                line_nc = line.split("#")[0].strip()
-                if (
-                    line_nc.startswith(("def ", "async def", "class "))
-                    and "(" in line_nc
-                ):
-                    if not line_nc.endswith("):"):
-                        in_sig = True
-        lines2.append("")
-        result = "\n".join(lines2)
+        result = _make_sigs_singline(result)
 
     return result
+
+
+def _make_sigs_singline(code):
+    lines1 = code.splitlines()
+    lines2 = []
+
+    sig_state = 0
+    sig_brace_depth = 0
+    sig_line = ""
+    sig_comment = ""
+
+    for line in lines1:
+        # Check to enter in signature-retrieval mode
+        if not sig_state:
+            if line.lstrip().startswith(("def ", "async def", "class ")):
+                sig_state = 1
+                sig_line = ""
+                sig_comment = ""
+                sig_brace_depth = 0
+                if line.lstrip().startswith("class ") and "(" not in line:
+                    sig_state = 3  # search for closing colon directly
+            else:
+                lines2.append(line)
+                continue
+
+        # If we get here, we're in a signature
+
+        # Handle comment
+        line, _, c = line.partition("#")
+        line = line.rstrip()
+        c = c.strip()
+        if c:
+            sig_comment += " " + c.strip()
+
+        if sig_state == 1:
+            # Find the first opening brace
+            i = line.find("(")
+            if i >= 0:
+                i += 1
+                sig_brace_depth = 1
+                sig_line += line[:i]
+                line = line[i:]
+                sig_state = 2
+
+        line = line.lstrip()
+        if sig_line.endswith(","):
+            line = " " + line
+
+        if sig_state == 2:
+            # Resolve braces until we find the closing brace
+            while True:
+                i1 = line.find("(")
+                i2 = line.find(")")
+                if i1 >= 0 and i1 < i2:
+                    i = i1 + 1
+                    sig_brace_depth += 1
+                    sig_line += line[:i]
+                    line = line[i:]
+                elif i2 >= 0:
+                    i = i2 + 1
+                    sig_brace_depth -= 1
+                    sig_line += line[:i]
+                    line = line[i:]
+                else:
+                    break
+                if sig_brace_depth == 0:
+                    sig_state = 3
+                    break
+
+        if sig_state == 3:
+            # Find the closing colon
+            i = line.find(":")
+            if i >= 0:
+                i += 1
+                sig_line += line[:i]
+                line = line[i:]
+                # Finish the signature line
+                sig_line = sig_line.replace(", )", ")")
+                if sig_comment:
+                    sig_line += "  #" + sig_comment
+                lines2.append(sig_line)
+                if line.strip():
+                    lines2.append(" " * 12 + line.strip())
+                # End the search
+                sig_state = 0
+                line = ""
+
+        sig_line += line
+
+    lines2.append("")
+    return "\n".join(lines2)
 
 
 class Patcher:
@@ -206,7 +266,7 @@ class Patcher:
 
     def insert_line(self, i, line):
         """Insert a new line at the given position. It's ok if there
-        has already been an insertion an line i, but there must not have been
+        has already been an insertion on line i, but there must not have been
         any other actions.
         """
         if i in self._diffs and self._diffs[i][1] == "insert":

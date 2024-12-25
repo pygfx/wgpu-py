@@ -3,6 +3,7 @@ Test render pipeline, by drawing a whole lot of orange squares ...
 """
 
 import ctypes
+
 import numpy as np
 import sys
 
@@ -21,7 +22,7 @@ elif is_ci and sys.platform == "win32":
     skip("These tests fail on dx12 for some reason", allow_module_level=True)
 
 
-default_vertex_shader = """
+DEFAULT_SHADER = """
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4<f32> {
     var positions: array<vec3<f32>, 4> = array<vec3<f32>, 4>(
@@ -33,8 +34,18 @@ fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4
     let p: vec3<f32> = positions[vertex_index];
     return vec4<f32>(p, 1.0);
 }
+
+@fragment
+fn fs_main() -> @location(0) vec4<f32> {
+    return vec4<f32>(1.0, 0.499, 0.0, 1.0);
+}
 """
 
+DEPTH_STENCIL_TEX_FORMATS = [
+    wgpu.TextureFormat.depth16unorm,
+    wgpu.TextureFormat.depth24plus_stencil8,
+    wgpu.TextureFormat.depth32float,
+]
 
 # %% Simple square
 
@@ -48,20 +59,12 @@ def test_render_orange_square(use_render_bundle):
     # NOTE: the 0.499 instead of 0.5 is to make sure the resulting value is 127.
     # With 0.5 some drivers would produce 127 and others 128.
 
-    fragment_shader = """
-        @fragment
-        fn fs_main() -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
-        }
-    """
-    shader_source = default_vertex_shader + fragment_shader
-
     # Bindings and layout
     bind_group = None
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Render
-    render_args = device, shader_source, pipeline_layout, bind_group
+    render_args = device, DEFAULT_SHADER, pipeline_layout, bind_group
     # render_to_screen(*render_args)
     a = render_to_texture(
         *render_args, size=(64, 64), use_render_bundle=use_render_bundle
@@ -89,14 +92,6 @@ def test_render_orange_square_indexed(use_render_bundle):
 
     device = get_default_device()
 
-    fragment_shader = """
-        @fragment
-        fn fs_main() -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
-        }
-    """
-    shader_source = default_vertex_shader + fragment_shader
-
     # Bindings and layout
     bind_group = None
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
@@ -109,7 +104,7 @@ def test_render_orange_square_indexed(use_render_bundle):
     )
 
     # Render
-    render_args = device, shader_source, pipeline_layout, bind_group
+    render_args = device, DEFAULT_SHADER, pipeline_layout, bind_group
     # render_to_screen(*render_args, topology=wgpu.PrimitiveTopology.triangle_list, ibo=ibo)
     a = render_to_texture(
         *render_args,
@@ -138,14 +133,6 @@ def test_render_orange_square_indirect(use_render_bundle):
 
     device = get_default_device()
 
-    fragment_shader = """
-        @fragment
-        fn fs_main() -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
-        }
-    """
-    shader_source = default_vertex_shader + fragment_shader
-
     # Bindings and layout
     bind_group = None
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
@@ -158,7 +145,7 @@ def test_render_orange_square_indirect(use_render_bundle):
     )
 
     # Render
-    render_args = device, shader_source, pipeline_layout, bind_group
+    render_args = device, DEFAULT_SHADER, pipeline_layout, bind_group
     # render_to_screen(*render_args, indirect_buffer=indirect_buffer)
     a = render_to_texture(
         *render_args,
@@ -186,14 +173,6 @@ def test_render_orange_square_indexed_indirect(use_render_bundle):
 
     device = get_default_device()
 
-    fragment_shader = """
-        @fragment
-        fn fs_main() -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
-        }
-    """
-    shader_source = default_vertex_shader + fragment_shader
-
     # Bindings and layout
     bind_group = None
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
@@ -213,7 +192,7 @@ def test_render_orange_square_indexed_indirect(use_render_bundle):
     )
 
     # Render
-    render_args = device, shader_source, pipeline_layout, bind_group
+    render_args = device, DEFAULT_SHADER, pipeline_layout, bind_group
     # render_to_screen(*render_args, topology=wgpu.PrimitiveTopology.triangle_list, ibo=ibo, indirect_buffer=indirect_buffer)
     a = render_to_texture(
         *render_args,
@@ -309,14 +288,6 @@ def test_render_orange_square_color_attachment1(use_render_bundle):
 
     device = get_default_device()
 
-    fragment_shader = """
-        @fragment
-        fn fs_main() -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
-        }
-    """
-    shader_source = default_vertex_shader + fragment_shader
-
     # Bindings and layout
     bind_group = None
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
@@ -329,7 +300,7 @@ def test_render_orange_square_color_attachment1(use_render_bundle):
     }
 
     # Render
-    render_args = device, shader_source, pipeline_layout, bind_group
+    render_args = device, DEFAULT_SHADER, pipeline_layout, bind_group
     # render_to_screen(*render_args, color_attachment=ca)
     a = render_to_texture(
         *render_args,
@@ -360,14 +331,6 @@ def test_render_orange_square_color_attachment2(use_render_bundle):
 
     device = get_default_device()
 
-    fragment_shader = """
-        @fragment
-        fn fs_main() -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
-        }
-    """
-    shader_source = default_vertex_shader + fragment_shader
-
     # Bindings and layout
     bind_group = None
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
@@ -379,7 +342,7 @@ def test_render_orange_square_color_attachment2(use_render_bundle):
     }
 
     # Render
-    render_args = device, shader_source, pipeline_layout, bind_group
+    render_args = device, DEFAULT_SHADER, pipeline_layout, bind_group
     # render_to_screen(*render_args, color_attachment=ca)
     a = render_to_texture(
         *render_args,
@@ -392,7 +355,7 @@ def test_render_orange_square_color_attachment2(use_render_bundle):
     bg = a.copy()
     bg[16:-16, 16:-16, :] = 0
     # assert np.all(bg == 0)
-    # Actually, it seems unpredictable what the bg is if we dont clear it?
+    # Actually, it seems unpredictable what the bg is if we don't clear it?
 
     # Check the square
     sq = a[16:-16, 16:-16, :]
@@ -411,14 +374,6 @@ def test_render_orange_square_viewport(use_render_bundle):
 
     device = get_default_device()
 
-    fragment_shader = """
-        @fragment
-        fn fs_main() -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
-        }
-    """
-    shader_source = default_vertex_shader + fragment_shader
-
     def cb(renderpass):
         renderpass.set_viewport(10, 20, 32, 32, 0, 1)
 
@@ -427,7 +382,7 @@ def test_render_orange_square_viewport(use_render_bundle):
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Render
-    render_args = device, shader_source, pipeline_layout, bind_group
+    render_args = device, DEFAULT_SHADER, pipeline_layout, bind_group
     # render_to_screen(*render_args, renderpass_callback=cb)
     a = render_to_texture(
         *render_args,
@@ -455,14 +410,6 @@ def test_render_orange_square_scissor(use_render_bundle):
 
     device = get_default_device()
 
-    fragment_shader = """
-        @fragment
-        fn fs_main() -> @location(0) vec4<f32> {
-            return vec4<f32>(1.0, 0.499, 0.0, 1.0);
-        }
-    """
-    shader_source = default_vertex_shader + fragment_shader
-
     def cb(renderpass):
         renderpass.set_scissor_rect(0, 0, 32, 32)
         # Else set blend color. Does not change output, but covers the call.
@@ -473,7 +420,7 @@ def test_render_orange_square_scissor(use_render_bundle):
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     # Render
-    render_args = device, shader_source, pipeline_layout, bind_group
+    render_args = device, DEFAULT_SHADER, pipeline_layout, bind_group
     # render_to_screen(*render_args, renderpass_callback=cb)
     a = render_to_texture(
         *render_args,
@@ -496,26 +443,9 @@ def test_render_orange_square_scissor(use_render_bundle):
 
 
 @pytest.mark.parametrize("use_render_bundle", [True, False])
-def test_render_orange_square_depth16unorm(use_render_bundle):
+@pytest.mark.parametrize("depth_stencil_tex_format", DEPTH_STENCIL_TEX_FORMATS)
+def test_render_orange_square_with_depth(depth_stencil_tex_format, use_render_bundle):
     """Render an orange square, but disable half of it using a depth test using 16 bits."""
-    _render_orange_square_depth(wgpu.TextureFormat.depth16unorm, use_render_bundle)
-
-
-@pytest.mark.parametrize("use_render_bundle", [True, False])
-def test_render_orange_square_depth24plus_stencil8(use_render_bundle):
-    """Render an orange square, but disable half of it using a depth test using 24 bits."""
-    _render_orange_square_depth(
-        wgpu.TextureFormat.depth24plus_stencil8, use_render_bundle
-    )
-
-
-@pytest.mark.parametrize("use_render_bundle", [True, False])
-def test_render_orange_square_depth32float(use_render_bundle):
-    """Render an orange square, but disable half of it using a depth test using 32 bits."""
-    _render_orange_square_depth(wgpu.TextureFormat.depth32float, use_render_bundle)
-
-
-def _render_orange_square_depth(depth_stencil_tex_format, use_render_bundle):
     device = get_default_device()
 
     shader_source = """
@@ -544,7 +474,7 @@ def _render_orange_square_depth(depth_stencil_tex_format, use_render_bundle):
     bind_group = None
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
-    # Create dept-stencil texture
+    # Create depth-stencil texture
     depth_stencil_texture = device.create_texture(
         size=(64, 64, 1),  # when rendering to texture
         # size=(640, 480, 1),  # when rendering to screen
@@ -557,23 +487,6 @@ def _render_orange_square_depth(depth_stencil_tex_format, use_render_bundle):
         format=depth_stencil_tex_format,
         depth_write_enabled=True,
         depth_compare=wgpu.CompareFunction.less_equal,
-        # stencil_front={
-        #     "compare": wgpu.CompareFunction.equal,
-        #     "fail_op": wgpu.StencilOperation.keep,
-        #     "depth_fail_op": wgpu.StencilOperation.keep,
-        #     "pass_op": wgpu.StencilOperation.keep,
-        # },
-        # stencil_back={
-        #     "compare": wgpu.CompareFunction.equal,
-        #     "fail_op": wgpu.StencilOperation.keep,
-        #     "depth_fail_op": wgpu.StencilOperation.keep,
-        #     "pass_op": wgpu.StencilOperation.keep,
-        # },
-        stencil_read_mask=0,
-        stencil_write_mask=0,
-        depth_bias=0,
-        depth_bias_slope_scale=0.0,
-        depth_bias_clamp=0.0,
     )
 
     depth_stencil_attachment = dict(
@@ -581,9 +494,12 @@ def _render_orange_square_depth(depth_stencil_tex_format, use_render_bundle):
         depth_clear_value=0.1,
         depth_load_op=wgpu.LoadOp.clear,
         depth_store_op=wgpu.StoreOp.store,
-        stencil_load_op=wgpu.LoadOp.load,
-        stencil_store_op=wgpu.StoreOp.store,
     )
+
+    if "stencil" in depth_stencil_tex_format:
+        depth_stencil_attachment["stencil_load_op"] = wgpu.LoadOp.load
+        depth_stencil_attachment["stencil_store_op"] = wgpu.StoreOp.store
+        # The default values of depth_stencil_state are fine.
 
     # Render
     render_args = device, shader_source, pipeline_layout, bind_group
@@ -679,6 +595,60 @@ def test_render_orange_dots(use_render_bundle):
         assert np.all(dot[:, :, 1] == 127)  # green
         assert np.all(dot[:, :, 2] == 0)  # blue
         assert np.all(dot[:, :, 3] == 255)  # alpha
+
+
+@pytest.mark.parametrize("depth_stencil_tex_format", DEPTH_STENCIL_TEX_FORMATS)
+def test_stencil_depth_warning(depth_stencil_tex_format, monkeypatch):
+    # Verify that when you use stencil_load_op or stencil_store_op, and there is
+    # no stencil, you'll get a warning.  But only once.
+
+    # The only way we can see warnings is by monkeypatching wgpu.logger.warning
+    warnings = []
+    monkeypatch.setattr(wgpu.logger, "warning", lambda msg: warnings.append(msg))
+
+    # We need a new device for each run, since each device keeps track of which warnings
+    # it's issued.
+    adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
+    device = adapter.request_device_sync()
+
+    # Create depth-stencil texture
+    depth_stencil_texture = device.create_texture(
+        size=(64, 64, 1),  # when rendering to texture
+        format=depth_stencil_tex_format,
+        usage=wgpu.TextureUsage.RENDER_ATTACHMENT,
+    )
+
+    depth_stencil_attachment = dict(
+        view=depth_stencil_texture.create_view(),
+        depth_clear_value=0.1,
+        depth_load_op=wgpu.LoadOp.clear,
+        depth_store_op=wgpu.StoreOp.store,
+        stencil_load_op=wgpu.LoadOp.clear,
+        stencil_store_op=wgpu.StoreOp.store,
+    )
+
+    command_encoder = device.create_command_encoder()
+    # This call to begin_render_pass may create warnings.
+    render_pass = command_encoder.begin_render_pass(
+        color_attachments=[], depth_stencil_attachment=depth_stencil_attachment
+    )
+    render_pass.end()
+
+    if "stencil" in depth_stencil_tex_format:
+        assert not warnings
+    else:
+        assert len(warnings) == 2
+        warnings.sort()
+        assert "stencil_load_op" in warnings[0]
+        assert "stencil_store_op" in warnings[1]
+        warnings.clear()
+
+    # The warnings are issued only once.
+    render_pass = command_encoder.begin_render_pass(
+        color_attachments=[], depth_stencil_attachment=depth_stencil_attachment
+    )
+    render_pass.end()
+    assert not warnings
 
 
 if __name__ == "__main__":

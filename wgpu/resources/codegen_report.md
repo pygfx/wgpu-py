@@ -13,14 +13,14 @@
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
 * Diffs for GPUAdapter: add summary
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost_async, hide lost_sync, hide onuncapturederror, hide pop_error_scope_async, hide pop_error_scope_sync, hide push_error_scope
-* Diffs for GPUBuffer: add map_read, add map_write, add read_mapped, add write_mapped, hide get_mapped_range
+* Diffs for GPUBuffer: add read_mapped, add write_mapped, hide get_mapped_range
 * Diffs for GPUTexture: add size
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 126 methods, 46 properties
+* Validated 37 classes, 121 methods, 46 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 105 methods, 0 properties
+* Validated 37 classes, 121 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.texture-compression-bc-sliced-3d missing in wgpu.h
 * Enum field FeatureName.clip-distances missing in wgpu.h
@@ -35,6 +35,6 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum CanvasToneMappingMode missing in wgpu.h
 * Wrote 236 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 133 C function calls
-* Not using 70 C functions
-* Validated 81 C structs
+* Validated 142 C function calls
+* Not using 64 C functions
+* Validated 82 C structs

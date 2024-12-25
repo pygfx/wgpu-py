@@ -1,8 +1,8 @@
 """
 Example showing how to use multiple imgui contexts to draw to multiple canvases
+"""
 
 # run_example = false
-"""
 
 import wgpu
 from imgui_bundle import imgui
@@ -20,7 +20,7 @@ canvases = [canvas1, canvas2, canvas3]
 adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
 device = adapter.request_device_sync()
 
-# create a imgui renderer for each canvas
+# create an imgui renderer for each canvas
 imgui_renderer1 = ImguiRenderer(device, canvas1)
 imgui_renderer2 = ImguiRenderer(device, canvas2)
 imgui_renderer3 = ImguiRenderer(device, canvas3)

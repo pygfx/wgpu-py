@@ -26,7 +26,7 @@ def test_release_canvas_context(n):
     # Test with PySide canvases.
 
     # Note: in a draw, the textureview is obtained (thus creating a
-    # Texture and a TextureView, but these are released in present(),
+    # Texture and a TextureView), but these are released in present(),
     # so we don't see them in the counts.
 
     import PySide6
@@ -47,7 +47,7 @@ def test_release_canvas_context(n):
         canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         app.processEvents()
-        yield c.get_context()
+        yield c.get_context("wgpu")
 
     # Need some shakes to get all canvas refs gone.
     del c

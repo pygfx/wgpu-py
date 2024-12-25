@@ -15,7 +15,7 @@ A Python implementation of WebGPU - the next generation GPU API. 🚀
 
 ## Introduction
 
-The purpose of wgpu-py to to provide Python with a powerful and reliable GPU API.
+The purpose of wgpu-py is to provide Python with a powerful and reliable GPU API.
 
 It serves as a basis to build a broad range of applications and libraries
 related to visualization and GPU compute. We use it in
@@ -122,6 +122,7 @@ This code is distributed under the 2-clause BSD license.
   * Or point the `WGPU_LIB_PATH` environment variable to a custom build of `wgpu-native`.
 * Use `ruff format` to apply autoformatting.
 * Use `ruff check` to check for linting errors.
+* Optionally, if you install [pre-commit](https://github.com/pre-commit/pre-commit/) hooks with `pre-commit install`, lint fixes and formatting will be automatically applied on `git commit`.
 
 
 ### Updating to a later version of WebGPU or wgpu-native

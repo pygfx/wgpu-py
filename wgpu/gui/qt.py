@@ -159,7 +159,7 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                 self._present_to_screen = False
         elif present_method == "screen":
             self._present_to_screen = True
-        elif present_method == "image":
+        elif present_method == "bitmap":
             self._present_to_screen = False
         else:
             raise ValueError(f"Invalid present_method {present_method}")
@@ -209,20 +209,20 @@ class QWgpuWidget(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
                     "display": int(get_alt_x11_display()),
                 }
 
-    def get_present_info(self):
+    def get_present_methods(self):
         global _show_image_method_warning
+        if self._surface_ids is None:
+            self._surface_ids = self._get_surface_ids()
+
+        methods = {}
         if self._present_to_screen:
-            info = {"method": "screen"}
-            info.update(self._surface_ids)
+            methods["screen"] = self._surface_ids
         else:
             if _show_image_method_warning:
-                logger.warn(_show_image_method_warning)
+                logger.warning(_show_image_method_warning)
                 _show_image_method_warning = None
-            info = {
-                "method": "image",
-                "formats": ["rgba8unorm-srgb", "rgba8unorm"],
-            }
-        return info
+            methods["bitmap"] = {"formats": ["rgba-u8"]}
+        return methods
 
     def get_pixel_ratio(self):
         # Observations:
@@ -480,8 +480,8 @@ class QWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, QtWidgets.QWidget):
     def draw_frame(self, f):
         self._subwidget.draw_frame = f
 
-    def get_present_info(self):
-        return self._subwidget.get_present_info()
+    def get_present_methods(self):
+        return self._subwidget.get_present_methods()
 
     def get_pixel_ratio(self):
         return self._subwidget.get_pixel_ratio()
@@ -536,6 +536,9 @@ def run():
     if already_had_app_on_import:
         return  # Likely in an interactive session or larger application that will start the Qt app.
     app = get_app()
+
+    # todo: we could detect if asyncio is running (interactive session) and wheter we can use QtAsyncio.
+    # But let's wait how things look with new scheduler etc.
     app.exec() if hasattr(app, "exec") else app.exec_()
 
 

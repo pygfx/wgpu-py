@@ -22,7 +22,8 @@ def test_to_snake_case():
     assert to_snake_case("_foo_bar_spam") == "_foo_bar_spam"
     assert to_snake_case("fooBarSpam") == "foo_bar_spam"
     assert to_snake_case("_fooBarSpam") == "_foo_bar_spam"
-    assert to_snake_case("maxTextureDimension1D") == "max_texture_dimension1d"
+    assert to_snake_case("maxTextureDimension1D") == "max_texture_dimension_1d"
+    assert to_snake_case("max_texture_dimension_1d") == "max_texture_dimension_1d"
 
 
 def test_to_camel_case():
@@ -30,7 +31,11 @@ def test_to_camel_case():
     assert to_camel_case("_foo_bar_spam") == "_fooBarSpam"
     assert to_camel_case("fooBarSpam") == "fooBarSpam"
     assert to_camel_case("_fooBarSpam") == "_fooBarSpam"
+    assert to_camel_case("max_texture_dimension_1d") == "maxTextureDimension1D"
     assert to_camel_case("max_texture_dimension1d") == "maxTextureDimension1D"
+    assert to_camel_case("max-texture-dimension1d") == "maxTextureDimension1D"
+    assert to_camel_case("max-texture-dimension-1d") == "maxTextureDimension1D"
+    assert to_camel_case("maxTextureDimension1D") == "maxTextureDimension1D"
 
 
 def test_remove_c_comments():
@@ -127,6 +132,34 @@ def test_format_code_comments():
     def foo():  # hi
         pass
     def foo(a1, a2, a3):  # hi ha ho
+        pass
+    """
+
+    code1 = dedent(code1).strip()
+    code2 = dedent(code2).strip()
+
+    code3 = format_code(code1, True)
+    code3 = code3.replace("\n\n", "\n").replace("\n\n", "\n").strip()
+
+    assert code3 == code2
+
+
+def test_format_code_return_type():
+    code1 = """
+    def foo() -> None:
+        pass
+    def foo(
+        a1,
+        a2,
+        a3,
+    ) -> None:
+        pass
+    """
+
+    code2 = """
+    def foo() -> None:
+        pass
+    def foo(a1, a2, a3) -> None:
         pass
     """
 

@@ -147,7 +147,7 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
                 self._present_to_screen = False
         elif present_method == "screen":
             self._present_to_screen = True
-        elif present_method == "image":
+        elif present_method == "bitmap":
             self._present_to_screen = False
         else:
             raise ValueError(f"Invalid present_method {present_method}")
@@ -350,20 +350,18 @@ class WxWgpuWindow(WgpuAutoGui, WgpuCanvasBase, wx.Window):
         else:
             raise RuntimeError(f"Cannot get Qt surafce info on {sys.platform}.")
 
-    def get_present_info(self):
+    def get_present_methods(self):
         global _show_image_method_warning
+
+        methods = {}
         if self._present_to_screen and self._surface_ids:
-            info = {"method": "screen"}
-            info.update(self._surface_ids)
+            methods["screen"] = self._surface_ids
         else:
             if _show_image_method_warning:
-                logger.warn(_show_image_method_warning)
+                logger.warning(_show_image_method_warning)
                 _show_image_method_warning = None
-            info = {
-                "method": "image",
-                "formats": ["rgba8unorm-srgb", "rgba8unorm"],
-            }
-        return info
+            methods["bitmap"] = {"formats": ["rgba-u8"]}
+        return methods
 
     def get_pixel_ratio(self):
         # todo: this is not hidpi-ready (at least on win10)
@@ -456,8 +454,8 @@ class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
 
     # Methods that we add from wgpu
 
-    def get_present_info(self):
-        return self._subwidget.get_present_info()
+    def get_present_methods(self):
+        return self._subwidget.get_present_methods()
 
     def get_pixel_ratio(self):
         return self._subwidget.get_pixel_ratio()

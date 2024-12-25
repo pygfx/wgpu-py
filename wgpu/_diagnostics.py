@@ -12,7 +12,7 @@ class DiagnosticsRoot:
 
     Per-topic diagnostics can be accessed as attributes on this object.
     These include ``system``, ``wgpu_native_info``, ``versions``,
-    ``object_counts``, ``wgpu_natrive_counts``.
+    ``object_counts``, ``wgpu_native_counts``.
     """
 
     def __init__(self):
@@ -473,7 +473,7 @@ class VersionDiagnostics(DiagnosticsBase):
     def get_dict(self):
         core_libs = ["wgpu", "cffi"]
         qt_libs = ["PySide6", "PyQt6", "PySide2", "PyQt5"]
-        gui_libs = [*qt_libs, "glfw", "jupyter_rfb", "wx"]
+        gui_libs = ["rendercanvas", *qt_libs, "glfw", "jupyter_rfb", "wx"]
         extra_libs = ["numpy", "pygfx", "pylinalg", "fastplotlib"]
 
         info = {}

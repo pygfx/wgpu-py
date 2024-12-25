@@ -7,7 +7,7 @@ Install with pip
 ----------------
 
 You can install ``wgpu-py`` via pip.
-Python 3.8 or higher is required. Pypy is supported. Only depends on ``cffi`` (installed automatically by pip).
+Python 3.9 or higher is required. Pypy is supported. Only depends on ``cffi`` (installed automatically by pip).
 
 .. code-block:: bash
 
@@ -120,7 +120,7 @@ On Windows this (probably) just works via DX12. On Linux you can use LavaPipe:
 .. code-block:: bash
 
         sudo apt update -y -qq
-        sudo apt install --no-install-recommends -y libegl1-mesa libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
+        sudo apt install --no-install-recommends -y libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
 
 The distribution's version of Lavapipe may be a bit outdated. To get a more recent version, you can use this PPA:
 

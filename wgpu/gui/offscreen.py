@@ -17,11 +17,8 @@ class WgpuManualOffscreenCanvas(WgpuAutoGui, WgpuCanvasBase):
         self._closed = False
         self._last_image = None
 
-    def get_present_info(self):
-        return {
-            "method": "image",
-            "formats": ["rgba8unorm-srgb", "rgba8unorm"],
-        }
+    def get_present_methods(self):
+        return {"bitmap": {"formats": ["rgba-u8"]}}
 
     def present_image(self, image, **kwargs):
         self._last_image = image

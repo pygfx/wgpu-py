@@ -45,21 +45,17 @@ void main()
 # %% The wgpu calls
 
 
-def main(canvas, power_preference="high-performance", limits=None):
-    """Regular function to setup a viz on the given canvas."""
+def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+    """Regular function to set up a viz on the given canvas."""
+
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(required_limits=limits)
-    return _main(canvas, device)
+
+    render_pipeline = get_render_pipeline(canvas, device)
+    return get_draw_function(canvas, device, render_pipeline)
 
 
-async def main_async(canvas):
-    """Async function to setup a viz on the given canvas."""
-    adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
-    device = await adapter.request_device_async(required_limits={})
-    return _main(canvas, device)
-
-
-def _main(canvas, device):
+def get_render_pipeline(canvas, device):
     vert_shader = device.create_shader_module(label="triangle_vert", code=vertex_shader)
     frag_shader = device.create_shader_module(
         label="triangle_frag", code=fragment_shader
@@ -68,11 +64,11 @@ def _main(canvas, device):
     # No bind group and layout, we should not create empty ones.
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
-    present_context = canvas.get_context()
+    present_context = canvas.get_context("wgpu")
     render_texture_format = present_context.get_preferred_format(device.adapter)
     present_context.configure(device=device, format=render_texture_format)
 
-    render_pipeline = device.create_render_pipeline(
+    return device.create_render_pipeline(
         layout=pipeline_layout,
         vertex={
             "module": vert_shader,
@@ -100,8 +96,10 @@ def _main(canvas, device):
         },
     )
 
+
+def get_draw_function(canvas, device, render_pipeline):
     def draw_frame():
-        current_texture = present_context.get_current_texture()
+        current_texture = canvas.get_context("wgpu").get_current_texture()
         command_encoder = device.create_command_encoder()
 
         render_pass = command_encoder.begin_render_pass(
@@ -122,13 +120,13 @@ def _main(canvas, device):
         render_pass.end()
         device.queue.submit([command_encoder.finish()])
 
-    canvas.request_draw(draw_frame)
-    return device
+    return draw_frame
 
 
 if __name__ == "__main__":
     from wgpu.gui.auto import WgpuCanvas, run
 
-    canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle")
-    main(canvas)
+    canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle glsl example")
+    draw_frame = setup_drawing_sync(canvas)
+    canvas.request_draw(draw_frame)
     run()

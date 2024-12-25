@@ -120,7 +120,7 @@ def test_render_occluding_squares():
     # small square completely outside the clipping area.
     draw_square(False, x_offset=2, y_offset=2)
 
-    # Draw a square that should be visible, but it is culled because it is a rear-
+    # Draw a square that should be visible, but it is culled because it is a rear
     # facing rectangle. And to keep us honest, redraw the example again, but have it
     # face forward.
     draw_square(False, x_offset=0.1, y_offset=0.1, reverse=True)
@@ -141,9 +141,6 @@ def test_render_occluding_squares():
         "depth_clear_value": 1.0,
         "depth_load_op": "clear",
         "depth_store_op": "store",
-        "stencil_clear_value": 1.0,
-        "stencil_load_op": "clear",
-        "stencil_store_op": "store",
     }
 
     render_pass = command_encoder.begin_render_pass(

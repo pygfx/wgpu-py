@@ -21,7 +21,10 @@ sys.path.insert(0, ROOT_DIR)
 
 os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
 
+
+# Load wgpu so autodoc can query docstrings
 import wgpu  # noqa: E402
+import wgpu.utils.compute  # noqa: E402
 
 
 # -- Tests -------------------------------------------------------------------
@@ -155,8 +158,7 @@ master_doc = "index"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
-if not (os.getenv("READTHEDOCS") or os.getenv("CI")):
-    html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

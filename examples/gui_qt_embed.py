@@ -2,10 +2,15 @@
 An example demonstrating a qt app with a wgpu viz inside.
 If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
 
-# run_example = false
 """
 
+# ruff: noqa: N802
+# run_example = false
+
+import time
 import importlib
+
+from triangle import setup_drawing_sync
 
 # For the sake of making this example Just Work, we try multiple QT libs
 for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
@@ -15,10 +20,7 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
     except ModuleNotFoundError:
         pass
 
-
 from wgpu.gui.qt import WgpuWidget  # noqa: E402
-
-from triangle import main  # noqa: E402
 
 
 class ExampleWidget(QtWidgets.QWidget):
@@ -30,11 +32,14 @@ class ExampleWidget(QtWidgets.QWidget):
         splitter = QtWidgets.QSplitter()
 
         self.button = QtWidgets.QPushButton("Hello world", self)
-        self.canvas1 = WgpuWidget(splitter)
-        self.canvas2 = WgpuWidget(splitter)
+        self.canvas = WgpuWidget(splitter)
+        self.output = QtWidgets.QTextEdit(splitter)
 
-        splitter.addWidget(self.canvas1)
-        splitter.addWidget(self.canvas2)
+        self.button.clicked.connect(self.whenButtonClicked)
+
+        splitter.addWidget(self.canvas)
+        splitter.addWidget(self.output)
+        splitter.setSizes([400, 300])
 
         layout = QtWidgets.QHBoxLayout()
         layout.addWidget(self.button, 0)
@@ -43,12 +48,20 @@ class ExampleWidget(QtWidgets.QWidget):
 
         self.show()
 
+    def addLine(self, line):
+        t = self.output.toPlainText()
+        t += "\n" + line
+        self.output.setPlainText(t)
+
+    def whenButtonClicked(self):
+        self.addLine(f"Clicked at {time.time():0.1f}")
+
 
 app = QtWidgets.QApplication([])
 example = ExampleWidget()
 
-main(example.canvas1)
-main(example.canvas2)
+draw_frame = setup_drawing_sync(example.canvas)
+example.canvas.request_draw(draw_frame)
 
 # Enter Qt event loop (compatible with qt5/qt6)
 app.exec() if hasattr(app, "exec") else app.exec_()

@@ -8,9 +8,12 @@ automatically inserted code. Read the codegen/readme.md for more
 information.
 """
 
+# Allow using class names in type annotations, before the class is defined. Py3.7+
+from __future__ import annotations
+
 import weakref
 import logging
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 
 from ._coreutils import ApiDiff, str_flag_to_int
 from ._diagnostics import diagnostics, texture_format_to_bpp
@@ -18,43 +21,43 @@ from . import flags, enums, structs
 
 
 __all__ = [
-    "GPUObjectBase",
-    "GPUAdapterInfo",
     "GPU",
     "GPUAdapter",
-    "GPUDevice",
-    "GPUBuffer",
-    "GPUTexture",
-    "GPUTextureView",
-    "GPUSampler",
-    "GPUBindGroupLayout",
+    "GPUAdapterInfo",
     "GPUBindGroup",
-    "GPUPipelineLayout",
-    "GPUShaderModule",
-    "GPUCompilationMessage",
-    "GPUCompilationInfo",
-    "GPUPipelineError",
-    "GPUPipelineBase",
-    "GPUComputePipeline",
-    "GPURenderPipeline",
-    "GPUCommandBuffer",
-    "GPUCommandsMixin",
-    "GPUCommandEncoder",
+    "GPUBindGroupLayout",
     "GPUBindingCommandsMixin",
-    "GPUDebugCommandsMixin",
-    "GPUComputePassEncoder",
-    "GPURenderPassEncoder",
-    "GPURenderCommandsMixin",
-    "GPURenderBundle",
-    "GPURenderBundleEncoder",
-    "GPUQueue",
-    "GPUQuerySet",
+    "GPUBuffer",
     "GPUCanvasContext",
+    "GPUCommandBuffer",
+    "GPUCommandEncoder",
+    "GPUCommandsMixin",
+    "GPUCompilationInfo",
+    "GPUCompilationMessage",
+    "GPUComputePassEncoder",
+    "GPUComputePipeline",
+    "GPUDebugCommandsMixin",
+    "GPUDevice",
     "GPUDeviceLostInfo",
     "GPUError",
-    "GPUValidationError",
-    "GPUOutOfMemoryError",
     "GPUInternalError",
+    "GPUObjectBase",
+    "GPUOutOfMemoryError",
+    "GPUPipelineBase",
+    "GPUPipelineError",
+    "GPUPipelineLayout",
+    "GPUQuerySet",
+    "GPUQueue",
+    "GPURenderBundle",
+    "GPURenderBundleEncoder",
+    "GPURenderCommandsMixin",
+    "GPURenderPassEncoder",
+    "GPURenderPipeline",
+    "GPUSampler",
+    "GPUShaderModule",
+    "GPUTexture",
+    "GPUTextureView",
+    "GPUValidationError",
 ]
 
 logger = logging.getLogger("wgpu")
@@ -69,6 +72,11 @@ apidiff = ApiDiff()
 # therefore fail and produce warnings.
 object_tracker = diagnostics.object_counts.tracker
 
+# The 'optional' value is used as the default value for optional arguments in the following two cases:
+# * The method accepts a descriptor that is optional, so we make all arguments (i.e. descriptor fields) optional, and this one does not have a default value.
+# * In wgpu-py we decided that this argument should be optional, even though it's currently not according to the WebGPU spec.
+optional = None
+
 
 class GPU:
     """The entrypoint to the wgpu API.
@@ -79,10 +87,14 @@ class GPU:
     a backend-specific implementation.
     """
 
-    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
+    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false
     @apidiff.change("arguments include canvas")
     def request_adapter_sync(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+        self,
+        *,
+        power_preference: enums.PowerPreference = None,
+        force_fallback_adapter: bool = False,
+        canvas=None,
     ):
         """Sync version of `request_adapter_async()`.
 
@@ -97,10 +109,14 @@ class GPU:
             canvas=canvas,
         )
 
-    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {});
+    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false
     @apidiff.change("arguments include canvas")
     async def request_adapter_async(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+        self,
+        *,
+        power_preference: enums.PowerPreference = None,
+        force_fallback_adapter: bool = False,
+        canvas=None,
     ):
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -109,8 +125,8 @@ class GPU:
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
-            canvas (WgpuCanvasInterface): The canvas that the adapter should
-                be able to render to. This can typically be left to None.
+            canvas : The canvas that the adapter should be able to render to. This can typically
+                 be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
@@ -137,7 +153,7 @@ class GPU:
     async def enumerate_adapters_async(self):
         """Get a list of adapter objects available on the current system.
 
-        An adapter can then be selected (e.g. using it's summary), and a device
+        An adapter can then be selected (e.g. using its summary), and a device
         then created from it.
 
         The order of the devices is such that Vulkan adapters go first, then
@@ -188,7 +204,7 @@ gpu = GPU()
 class GPUCanvasContext:
     """Represents a context to configure a canvas and render to it.
 
-    Can be obtained via `gui.WgpuCanvasInterface.get_context()`.
+    Can be obtained via `gui.WgpuCanvasInterface.get_context("wgpu")`.
 
     The canvas-context plays a crucial role in connecting the wgpu API to the
     GUI layer, in a way that allows the GUI to be agnostic about wgpu. It
@@ -198,16 +214,9 @@ class GPUCanvasContext:
 
     _ot = object_tracker
 
-    def __init__(self, canvas):
+    def __init__(self, canvas, present_methods):
         self._ot.increase(self.__class__.__name__)
         self._canvas_ref = weakref.ref(canvas)
-
-        # The configuration from the canvas, obtained with canvas.get_present_info()
-        self._present_info = canvas.get_present_info()
-        if self._present_info.get("method", None) not in ("screen", "image"):
-            raise RuntimeError(
-                "canvas.get_present_info() must produce a dict with a field 'method' that is either 'screen' or 'image'."
-            )
 
         # Surface capabilities. Stored the first time it is obtained
         self._capabilities = None
@@ -217,6 +226,10 @@ class GPUCanvasContext:
 
         # The last used texture
         self._texture = None
+
+        # Determine the present method
+        self._present_methods = present_methods
+        self._present_method = "screen" if "screen" in present_methods else "bitmap"
 
     def _get_canvas(self):
         """Getter method for internal use."""
@@ -232,7 +245,7 @@ class GPUCanvasContext:
         """Get dict of capabilities and cache the result."""
         if self._capabilities is None:
             self._capabilities = {}
-            if self._present_info["method"] == "screen":
+            if self._present_method == "screen":
                 # Query capabilities from the surface
                 self._capabilities.update(self._get_capabilities_screen(adapter))
             else:
@@ -242,10 +255,6 @@ class GPUCanvasContext:
                     "usages": 0xFF,
                     "alpha_modes": [enums.CanvasAlphaMode.opaque],
                 }
-            # If capabilities were provided via surface info, overload them!
-            for key in ["formats", "alpha_modes"]:
-                if key in self._present_info:
-                    self._capabilities[key] = self._present_info[key]
             # Derived defaults
             if "view_formats" not in self._capabilities:
                 self._capabilities["view_formats"] = self._capabilities["formats"]
@@ -263,17 +272,17 @@ class GPUCanvasContext:
         formats = capabilities["formats"]
         return formats[0] if formats else "bgra8-unorm"
 
-    # IDL: undefined configure(GPUCanvasConfiguration configuration);
+    # IDL: undefined configure(GPUCanvasConfiguration configuration); -> required GPUDevice device, required GPUTextureFormat format, GPUTextureUsageFlags usage = 0x10, sequence<GPUTextureFormat> viewFormats = [], PredefinedColorSpace colorSpace = "srgb", GPUCanvasToneMapping toneMapping = {}, GPUCanvasAlphaMode alphaMode = "opaque"
     def configure(
         self,
         *,
-        device: "GPUDevice",
-        format: "enums.TextureFormat",
-        usage: "flags.TextureUsage" = 0x10,
-        view_formats: "List[enums.TextureFormat]" = [],
+        device: GPUDevice,
+        format: enums.TextureFormat,
+        usage: flags.TextureUsage = 0x10,
+        view_formats: List[enums.TextureFormat] = [],
         color_space: str = "srgb",
-        tone_mapping: "structs.CanvasToneMapping" = {},
-        alpha_mode: "enums.CanvasAlphaMode" = "opaque",
+        tone_mapping: structs.CanvasToneMapping = {},
+        alpha_mode: enums.CanvasAlphaMode = "opaque",
     ):
         """Configures the presentation context for the associated canvas.
         Destroys any textures produced with a previous configuration.
@@ -295,7 +304,6 @@ class GPUCanvasContext:
                 will have on the content of textures returned by ``get_current_texture()``
                 when read, displayed, or used as an image source. Default "opaque".
         """
-
         # Check types
 
         if not isinstance(device, GPUDevice):
@@ -354,7 +362,7 @@ class GPUCanvasContext:
             "alpha_mode": alpha_mode,
         }
 
-        if self._present_info["method"] == "screen":
+        if self._present_method == "screen":
             self._configure_screen(**self._config)
 
     def _configure_screen(
@@ -375,7 +383,7 @@ class GPUCanvasContext:
         """Removes the presentation context configuration.
         Destroys any textures produced while configured.
         """
-        if self._present_info["method"] == "screen":
+        if self._present_method == "screen":
             self._unconfigure_screen()
         self._config = None
         self._drop_texture()
@@ -398,14 +406,14 @@ class GPUCanvasContext:
         # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
 
         if self._texture is None:
-            if self._present_info["method"] == "screen":
+            if self._present_method == "screen":
                 self._texture = self._create_texture_screen()
             else:
-                self._texture = self._create_texture_image()
+                self._texture = self._create_texture_bitmap()
 
         return self._texture
 
-    def _create_texture_image(self):
+    def _create_texture_bitmap(self):
         canvas = self._get_canvas()
         width, height = canvas.get_physical_size()
         width, height = max(width, 1), max(height, 1)
@@ -427,33 +435,29 @@ class GPUCanvasContext:
             self._texture._release()  # not destroy, because it may be in use.
             self._texture = None
 
-    @apidiff.add("Present method is exposed")
+    @apidiff.add("The present method is used by the canvas")
     def present(self):
-        """Present what has been drawn to the current texture, by compositing it
-        to the canvas. Note that a canvas based on `gui.WgpuCanvasBase` will call this
-        method automatically at the end of each draw event.
+        """Hook for the canvas to present the rendered result.
+
+        Present what has been drawn to the current texture, by compositing it to the
+        canvas. Don't call this yourself; this is called automatically by the canvas.
         """
-        # todo: can we remove this present() method?
 
         if not self._texture:
-            # This can happen when a user somehow forgot to call
-            # get_current_texture(). But then what was this person rendering to
-            # then? The thing is that this also happens when there is an
-            # exception in the draw function before the call to
-            # get_current_texture(). In this scenario our warning may
-            # add confusion, so provide context and make it a debug level warning.
-            msg = "Warning in present(): No texture to present, missing call to get_current_texture()?"
-            logger.debug(msg)
-            return
-
-        if self._present_info["method"] == "screen":
+            result = {"method": "skip"}
+        elif self._present_method == "screen":
             self._present_screen()
+            result = {"method": "screen"}
+        elif self._present_method == "bitmap":
+            bitmap = self._present_bitmap()
+            result = {"method": "bitmap", "format": "rgba-u8", "data": bitmap}
         else:
-            self._present_image()
+            result = {"method": "fail", "message": "incompatible present methods"}
 
         self._drop_texture()
+        return result
 
-    def _present_image(self):
+    def _present_bitmap(self):
         texture = self._texture
         device = texture._device
 
@@ -489,9 +493,7 @@ class GPUCanvasContext:
 
         # Represent as memory object to avoid numpy dependency
         # Equivalent: np.frombuffer(data, np.uint8).reshape(size[1], size[0], nchannels)
-        data = data.cast("B", (size[1], size[0], nchannels))
-
-        self._get_canvas().present_image(data, format=format)
+        return data.cast("B", (size[1], size[0], nchannels))
 
     def _present_screen(self):
         raise NotImplementedError()
@@ -575,14 +577,14 @@ class GPUAdapter:
         """A dict with limits for the adapter."""
         return self._limits
 
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {}); -> USVString label = "", sequence<GPUFeatureName> requiredFeatures = [], record<DOMString, GPUSize64> requiredLimits = {}, GPUQueueDescriptor defaultQueue = {}
     def request_device_sync(
         self,
         *,
-        label="",
-        required_features: "List[enums.FeatureName]" = [],
-        required_limits: "Dict[str, int]" = {},
-        default_queue: "structs.QueueDescriptor" = {},
+        label: str = "",
+        required_features: List[enums.FeatureName] = [],
+        required_limits: Dict[str, int] = {},
+        default_queue: structs.QueueDescriptor = {},
     ):
         """Sync version of `request_device_async()`.
 
@@ -590,19 +592,19 @@ class GPUAdapter:
         """
         raise NotImplementedError()
 
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {});
+    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {}); -> USVString label = "", sequence<GPUFeatureName> requiredFeatures = [], record<DOMString, GPUSize64> requiredLimits = {}, GPUQueueDescriptor defaultQueue = {}
     async def request_device_async(
         self,
         *,
-        label="",
-        required_features: "List[enums.FeatureName]" = [],
-        required_limits: "Dict[str, int]" = {},
-        default_queue: "structs.QueueDescriptor" = {},
+        label: str = "",
+        required_features: List[enums.FeatureName] = [],
+        required_limits: Dict[str, int] = {},
+        default_queue: structs.QueueDescriptor = {},
     ):
         """Request a `GPUDevice` from the adapter.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             required_features (list of str): the features (extensions) that you need. Default [].
             required_limits (dict): the various limits that you need. Default {}.
             default_queue (structs.QueueDescriptor): Descriptor for the default queue. Optional.
@@ -660,6 +662,12 @@ class GPUObjectBase:
         """A human-readable name identifying the GPU object."""
         return self._label
 
+    def __str__(self):
+        if self._label:
+            return f'<{self.__class__.__name__} "{self._label}">'
+        else:
+            return f"<{self.__class__.__name__} {id(self)}>"
+
     def _release(self):
         """Subclasses can implement this to clean up."""
         pass
@@ -685,7 +693,7 @@ class GPUDevice(GPUObjectBase):
     """
 
     def __init__(self, label, internal, adapter, features, limits, queue):
-        super().__init__(label, internal, None)
+        super().__init__(label, internal, self)
 
         assert isinstance(adapter, GPUAdapter)
         assert isinstance(features, set)
@@ -772,22 +780,25 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
+    # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor); -> USVString label = "", required GPUSize64 size, required GPUBufferUsageFlags usage, boolean mappedAtCreation = false
     def create_buffer(
         self,
         *,
-        label="",
+        label: str = "",
         size: int,
-        usage: "flags.BufferUsage",
+        usage: flags.BufferUsage,
         mapped_at_creation: bool = False,
     ):
         """Create a `GPUBuffer` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             size (int): The size of the buffer in bytes.
             usage (flags.BufferUsage): The ways in which this buffer will be used.
             mapped_at_creation (bool): Whether the buffer is initially mapped.
+
+        Alignment: the size must be a multiple of 4.
+
         """
         raise NotImplementedError()
 
@@ -799,12 +810,13 @@ class GPUDevice(GPUObjectBase):
         writes the given data to it, and then unmaps the buffer.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             data: Any object supporting the Python buffer protocol (this
                 includes bytes, bytearray, ctypes arrays, numpy arrays, etc.).
             usage (flags.BufferUsage): The ways in which this buffer will be used.
 
-        Alignment: the size (in bytes) of the data must be a multiple of 4.
+        Alignment: if the size (in bytes) of data is not a multiple of 4, the buffer
+                   size is rounded up to the nearest multiple of 4.
 
         Also see `GPUBuffer.write_mapped()` and `GPUQueue.write_buffer()`.
         """
@@ -816,7 +828,7 @@ class GPUDevice(GPUObjectBase):
 
         # Create a view of known type
         data = memoryview(data).cast("B")
-        size = data.nbytes
+        size = (data.nbytes + 3) & ~3  # round up to a multiple of 4
 
         # Create the buffer and write data
         buf = self.create_buffer(
@@ -826,23 +838,23 @@ class GPUDevice(GPUObjectBase):
         buf.unmap()
         return buf
 
-    # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor);
+    # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor); -> USVString label = "", required GPUExtent3D size, GPUIntegerCoordinate mipLevelCount = 1, GPUSize32 sampleCount = 1, GPUTextureDimension dimension = "2d", required GPUTextureFormat format, required GPUTextureUsageFlags usage, sequence<GPUTextureFormat> viewFormats = []
     def create_texture(
         self,
         *,
-        label="",
-        size: "Union[List[int], structs.Extent3D]",
+        label: str = "",
+        size: Union[List[int], structs.Extent3D],
         mip_level_count: int = 1,
         sample_count: int = 1,
-        dimension: "enums.TextureDimension" = "2d",
-        format: "enums.TextureFormat",
-        usage: "flags.TextureUsage",
-        view_formats: "List[enums.TextureFormat]" = [],
+        dimension: enums.TextureDimension = "2d",
+        format: enums.TextureFormat,
+        usage: flags.TextureUsage,
+        view_formats: List[enums.TextureFormat] = [],
     ):
         """Create a `GPUTexture` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             size (tuple or dict): The texture size as a 3-tuple or a `structs.Extent3D`.
             mip_level_count (int): The number of mip leveles. Default 1.
             sample_count (int): The number of samples. Default 1.
@@ -854,31 +866,31 @@ class GPUDevice(GPUObjectBase):
               a performance penalty.
 
         See https://gpuweb.github.io/gpuweb/#texture-format-caps for a
-        list of available texture formats. Note that less formats are
+        list of available texture formats. Note that fewer formats are
         available for storage usage.
         """
         raise NotImplementedError()
 
-    # IDL: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {});
+    # IDL: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {}); -> USVString label = "", GPUAddressMode addressModeU = "clamp-to-edge", GPUAddressMode addressModeV = "clamp-to-edge", GPUAddressMode addressModeW = "clamp-to-edge", GPUFilterMode magFilter = "nearest", GPUFilterMode minFilter = "nearest", GPUMipmapFilterMode mipmapFilter = "nearest", float lodMinClamp = 0, float lodMaxClamp = 32, GPUCompareFunction compare, [Clamp] unsigned short maxAnisotropy = 1
     def create_sampler(
         self,
         *,
-        label="",
-        address_mode_u: "enums.AddressMode" = "clamp-to-edge",
-        address_mode_v: "enums.AddressMode" = "clamp-to-edge",
-        address_mode_w: "enums.AddressMode" = "clamp-to-edge",
-        mag_filter: "enums.FilterMode" = "nearest",
-        min_filter: "enums.FilterMode" = "nearest",
-        mipmap_filter: "enums.MipmapFilterMode" = "nearest",
+        label: str = "",
+        address_mode_u: enums.AddressMode = "clamp-to-edge",
+        address_mode_v: enums.AddressMode = "clamp-to-edge",
+        address_mode_w: enums.AddressMode = "clamp-to-edge",
+        mag_filter: enums.FilterMode = "nearest",
+        min_filter: enums.FilterMode = "nearest",
+        mipmap_filter: enums.MipmapFilterMode = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 32,
-        compare: "enums.CompareFunction" = None,
+        compare: enums.CompareFunction = optional,
         max_anisotropy: int = 1,
     ):
         """Create a `GPUSampler` object. Samplers specify how a texture is sampled.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             address_mode_u (enums.AddressMode): What happens when sampling beyond the x edge.
                 Default "clamp-to-edge".
             address_mode_v (enums.AddressMode): What happens when sampling beyond the y edge.
@@ -897,9 +909,9 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor);
+    # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayoutEntry> entries
     def create_bind_group_layout(
-        self, *, label="", entries: "List[structs.BindGroupLayoutEntry]"
+        self, *, label: str = "", entries: List[structs.BindGroupLayoutEntry]
     ):
         """Create a `GPUBindGroupLayout` object. One or more
         such objects are passed to `create_pipeline_layout()` to
@@ -907,7 +919,7 @@ class GPUDevice(GPUObjectBase):
         docs on bind groups for details.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             entries (list): A list of `structs.BindGroupLayoutEntry` dicts.
                 Each contains either a `structs.BufferBindingLayout`,
                 `structs.SamplerBindingLayout`, `structs.TextureBindingLayout`,
@@ -934,19 +946,19 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor);
+    # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor); -> USVString label = "", required GPUBindGroupLayout layout, required sequence<GPUBindGroupEntry> entries
     def create_bind_group(
         self,
         *,
-        label="",
-        layout: "GPUBindGroupLayout",
-        entries: "List[structs.BindGroupEntry]",
+        label: str = "",
+        layout: GPUBindGroupLayout,
+        entries: List[structs.BindGroupEntry],
     ):
         """Create a `GPUBindGroup` object, which can be used in
         `pass.set_bind_group()` to attach a group of resources.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
             entries (list): A list of `structs.BindGroupEntry` dicts. The ``resource`` field
@@ -978,27 +990,27 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor);
+    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayout> bindGroupLayouts
     def create_pipeline_layout(
-        self, *, label="", bind_group_layouts: "List[GPUBindGroupLayout]"
+        self, *, label: str = "", bind_group_layouts: List[GPUBindGroupLayout]
     ):
         """Create a `GPUPipelineLayout` object, which can be
         used in `create_render_pipeline()` or `create_compute_pipeline()`.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             bind_group_layouts (list): A list of `GPUBindGroupLayout` objects.
         """
         raise NotImplementedError()
 
-    # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor);
+    # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor); -> USVString label = "", required USVString code, object sourceMap, sequence<GPUShaderModuleCompilationHint> compilationHints = []
     def create_shader_module(
         self,
         *,
-        label="",
+        label: str = "",
         code: str,
-        source_map: dict = None,
-        compilation_hints: "List[structs.ShaderModuleCompilationHint]" = [],
+        source_map: dict = optional,
+        compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
     ):
         """Create a `GPUShaderModule` object from shader source.
 
@@ -1006,7 +1018,7 @@ class GPUDevice(GPUObjectBase):
         as well as GLSL (experimental).
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             code (str | bytes): The shader code, as WGSL, GLSL or SpirV.
                 For GLSL code, the label must be given and contain the word
                 'comp', 'vert' or 'frag'. For SpirV the code must be bytes.
@@ -1014,56 +1026,56 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor);
+    # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUProgrammableStage compute
     def create_compute_pipeline(
         self,
         *,
-        label="",
-        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
-        compute: "structs.ProgrammableStage",
+        label: str = "",
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        compute: structs.ProgrammableStage,
     ):
         """Create a `GPUComputePipeline` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             layout (GPUPipelineLayout): object created with `create_pipeline_layout()`.
             compute (structs.ProgrammableStage): Binds shader module and entrypoint.
         """
         raise NotImplementedError()
 
-    # IDL: Promise<GPUComputePipeline> createComputePipelineAsync(GPUComputePipelineDescriptor descriptor);
+    # IDL: Promise<GPUComputePipeline> createComputePipelineAsync(GPUComputePipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUProgrammableStage compute
     async def create_compute_pipeline_async(
         self,
         *,
-        label="",
-        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
-        compute: "structs.ProgrammableStage",
+        label: str = "",
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        compute: structs.ProgrammableStage,
     ):
         """Async version of `create_compute_pipeline()`.
 
         Both versions are compatible with WebGPU."""
         raise NotImplementedError()
 
-    # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor);
+    # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUVertexState vertex, GPUPrimitiveState primitive = {}, GPUDepthStencilState depthStencil, GPUMultisampleState multisample = {}, GPUFragmentState fragment
     def create_render_pipeline(
         self,
         *,
-        label="",
-        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
-        vertex: "structs.VertexState",
-        primitive: "structs.PrimitiveState" = {},
-        depth_stencil: "structs.DepthStencilState" = None,
-        multisample: "structs.MultisampleState" = {},
-        fragment: "structs.FragmentState" = None,
+        label: str = "",
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        vertex: structs.VertexState,
+        primitive: structs.PrimitiveState = {},
+        depth_stencil: structs.DepthStencilState = optional,
+        multisample: structs.MultisampleState = {},
+        fragment: structs.FragmentState = optional,
     ):
         """Create a `GPURenderPipeline` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             layout (GPUPipelineLayout): The layout for the new pipeline.
             vertex (structs.VertexState): Describes the vertex shader entry point of the
                 pipeline and its input buffer layouts.
-            primitive (structs.PrimitiveState): Describes the the primitive-related properties
+            primitive (structs.PrimitiveState): Describes the primitive-related properties
                 of the pipeline. If `strip_index_format` is present (which means the
                 primitive topology is a strip), and the drawCall is indexed, the
                 vertex index list is split into sub-lists using the maximum value of this
@@ -1188,41 +1200,41 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: Promise<GPURenderPipeline> createRenderPipelineAsync(GPURenderPipelineDescriptor descriptor);
+    # IDL: Promise<GPURenderPipeline> createRenderPipelineAsync(GPURenderPipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUVertexState vertex, GPUPrimitiveState primitive = {}, GPUDepthStencilState depthStencil, GPUMultisampleState multisample = {}, GPUFragmentState fragment
     async def create_render_pipeline_async(
         self,
         *,
-        label="",
-        layout: "Union[GPUPipelineLayout, enums.AutoLayoutMode]",
-        vertex: "structs.VertexState",
-        primitive: "structs.PrimitiveState" = {},
-        depth_stencil: "structs.DepthStencilState" = None,
-        multisample: "structs.MultisampleState" = {},
-        fragment: "structs.FragmentState" = None,
+        label: str = "",
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        vertex: structs.VertexState,
+        primitive: structs.PrimitiveState = {},
+        depth_stencil: structs.DepthStencilState = optional,
+        multisample: structs.MultisampleState = {},
+        fragment: structs.FragmentState = optional,
     ):
         """Async version of `create_render_pipeline()`.
 
         Both versions are compatible with WebGPU."""
         raise NotImplementedError()
 
-    # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {});
-    def create_command_encoder(self, *, label=""):
+    # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {}); -> USVString label = ""
+    def create_command_encoder(self, *, label: str = ""):
         """Create a `GPUCommandEncoder` object. A command
         encoder is used to record commands, which can then be submitted
         at once to the GPU.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
         """
         raise NotImplementedError()
 
-    # IDL: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor);
+    # IDL: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor); -> USVString label = "", required sequence<GPUTextureFormat?> colorFormats, GPUTextureFormat depthStencilFormat, GPUSize32 sampleCount = 1, boolean depthReadOnly = false, boolean stencilReadOnly = false
     def create_render_bundle_encoder(
         self,
         *,
-        label="",
-        color_formats: "List[enums.TextureFormat]",
-        depth_stencil_format: "enums.TextureFormat" = None,
+        label: str = "",
+        color_formats: List[enums.TextureFormat],
+        depth_stencil_format: enums.TextureFormat = optional,
         sample_count: int = 1,
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
@@ -1234,7 +1246,7 @@ class GPUDevice(GPUObjectBase):
         performance by removing the overhead of repeating the commands.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             color_formats (list): A list of the `GPUTextureFormats` of the color attachments for this pass or bundle.
             depth_stencil_format (GPUTextureFormat): The format of the depth/stencil attachment for this pass or bundle.
             sample_count (int): The number of samples per pixel in the attachments for this pass or bundle. Default 1.
@@ -1243,14 +1255,14 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor);
-    def create_query_set(self, *, label="", type: "enums.QueryType", count: int):
+    # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); -> USVString label = "", required GPUQueryType type, required GPUSize32 count
+    def create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
         """Create a `GPUQuerySet` object."""
         raise NotImplementedError()
 
     # IDL: undefined pushErrorScope(GPUErrorFilter filter);
     @apidiff.hide
-    def push_error_scope(self, filter):
+    def push_error_scope(self, filter: enums.ErrorFilter):
         """Pushes a new GPU error scope onto the stack."""
         raise NotImplementedError()
 
@@ -1269,13 +1281,13 @@ class GPUDevice(GPUObjectBase):
         """Pops a GPU error scope from the stack."""
         raise NotImplementedError()
 
-    # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor);
+    # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor); -> USVString label = "", required (HTMLVideoElement or VideoFrame) source, PredefinedColorSpace colorSpace = "srgb"
     @apidiff.hide("Specific to browsers")
     def import_external_texture(
         self,
         *,
-        label="",
-        source: "Union[memoryview, object]",
+        label: str = "",
+        source: Union[memoryview, object],
         color_space: str = "srgb",
     ):
         """For browsers only."""
@@ -1340,7 +1352,9 @@ class GPUBuffer(GPUObjectBase):
     # an array-like object that exposes the shared memory.
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def map_sync(self, mode, offset=0, size=None):
+    def map_sync(
+        self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
+    ):
         """Sync version of `map_async()`.
 
         Provided by wgpu-py, but not compatible with WebGPU.
@@ -1348,7 +1362,9 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    async def map_async(self, mode, offset=0, size=None):
+    async def map_async(
+        self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
+    ):
         """Maps the given range of the GPUBuffer.
 
         When this call returns, the buffer content is ready to be
@@ -1369,7 +1385,7 @@ class GPUBuffer(GPUObjectBase):
     def unmap(self):
         """Unmaps the buffer.
 
-        Unmaps the mapped range of the GPUBuffer and makes it's contents
+        Unmaps the mapped range of the GPUBuffer and makes its contents
         available for use by the GPU again.
         """
         raise NotImplementedError()
@@ -1405,7 +1421,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def write_mapped(self, data, buffer_offset=None, size=None):
+    def write_mapped(self, data, buffer_offset=None):
         """Write mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1421,11 +1437,9 @@ class GPUBuffer(GPUObjectBase):
             buffer_offset (int): the buffer offset in bytes. Must be at least
                 as large as the offset specified in ``map()``. The default
                 is the offset of the mapped range.
-            size (int): the size to write (in bytes). The default is the size of
-                the data, so this argument can typically be ignored. The
-                resulting range must fit into the range specified in ``map()``.
 
-        Alignment: the buffer offset must be a multiple of 8, the size must be a multiple of 4.
+        Alignment: the buffer offset must be a multiple of 8.
+
 
         Also see `GPUBuffer.read_mapped, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """
@@ -1433,22 +1447,8 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size);
     @apidiff.hide
-    def get_mapped_range(self, offset=0, size=None):
+    def get_mapped_range(self, offset: int = 0, size: Optional[int] = None):
         raise NotImplementedError("The Python API differs from WebGPU here")
-
-    @apidiff.add("Deprecated but still here to raise a warning")
-    def map_read(self, offset=None, size=None, iter=None):
-        """Deprecated."""
-        raise DeprecationWarning(
-            "map_read() is deprecated, use map() and read_mapped() instead."
-        )
-
-    @apidiff.add("Deprecated but still here to raise a warning")
-    def map_write(self, data):
-        """Deprecated."""
-        raise DeprecationWarning(
-            "map_read() is deprecated, use map() and write_mapped() instead."
-        )
 
     # IDL: undefined destroy();
     def destroy(self):
@@ -1549,18 +1549,18 @@ class GPUTexture(GPUObjectBase):
         """The allowed usages for this texture."""
         return self._tex_info["usage"]
 
-    # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {});
+    # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {}); -> USVString label = "", GPUTextureFormat format, GPUTextureViewDimension dimension, GPUTextureAspect aspect = "all", GPUIntegerCoordinate baseMipLevel = 0, GPUIntegerCoordinate mipLevelCount, GPUIntegerCoordinate baseArrayLayer = 0, GPUIntegerCoordinate arrayLayerCount
     def create_view(
         self,
         *,
-        label="",
-        format: "enums.TextureFormat" = None,
-        dimension: "enums.TextureViewDimension" = None,
-        aspect: "enums.TextureAspect" = "all",
+        label: str = "",
+        format: enums.TextureFormat = optional,
+        dimension: enums.TextureViewDimension = optional,
+        aspect: enums.TextureAspect = "all",
         base_mip_level: int = 0,
-        mip_level_count: int = None,
+        mip_level_count: int = optional,
         base_array_layer: int = 0,
-        array_layer_count: int = None,
+        array_layer_count: int = optional,
     ):
         """Create a `GPUTextureView` object.
 
@@ -1568,7 +1568,7 @@ class GPUTexture(GPUObjectBase):
         same format and dimension as the texture.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             format (enums.TextureFormat): What channels it stores and how.
             dimension (enums.TextureViewDimension): The dimensionality of the texture view.
             aspect (enums.TextureAspect): Whether this view is used for depth, stencil, or all.
@@ -1633,9 +1633,7 @@ class GPUBindGroupLayout(GPUObjectBase):
     Create a bind group layout using `GPUDevice.create_bind_group_layout()`.
     """
 
-    def __init__(self, label, internal, device, bindings):
-        super().__init__(label, internal, device)
-        self._bindings = tuple(bindings)
+    pass
 
 
 class GPUBindGroup(GPUObjectBase):
@@ -1647,9 +1645,7 @@ class GPUBindGroup(GPUObjectBase):
     Create a bind group using `GPUDevice.create_bind_group()`.
     """
 
-    def __init__(self, label, internal, device, bindings):
-        super().__init__(label, internal, device)
-        self._bindings = bindings
+    pass
 
 
 class GPUPipelineLayout(GPUObjectBase):
@@ -1658,9 +1654,7 @@ class GPUPipelineLayout(GPUObjectBase):
     Create a pipeline layout using `GPUDevice.create_pipeline_layout()`.
     """
 
-    def __init__(self, label, internal, device, layouts):
-        super().__init__(label, internal, device)
-        self._layouts = tuple(layouts)  # GPUBindGroupLayout objects
+    pass
 
 
 class GPUShaderModule(GPUObjectBase):
@@ -1688,11 +1682,8 @@ class GPUShaderModule(GPUObjectBase):
 class GPUPipelineBase:
     """A mixin class for render and compute pipelines."""
 
-    def __init__(self, label, internal, device):
-        super().__init__(label, internal, device)
-
     # IDL: [NewObject] GPUBindGroupLayout getBindGroupLayout(unsigned long index);
-    def get_bind_group_layout(self, index):
+    def get_bind_group_layout(self, index: int):
         """Get the bind group layout at the given index."""
         raise NotImplementedError()
 
@@ -1766,7 +1757,7 @@ class GPUDebugCommandsMixin:
     """Mixin for classes that support debug groups and markers."""
 
     # IDL: undefined pushDebugGroup(USVString groupLabel);
-    def push_debug_group(self, group_label):
+    def push_debug_group(self, group_label: str):
         """Push a named debug group into the command stream."""
         raise NotImplementedError()
 
@@ -1776,7 +1767,7 @@ class GPUDebugCommandsMixin:
         raise NotImplementedError()
 
     # IDL: undefined insertDebugMarker(USVString markerLabel);
-    def insert_debug_marker(self, marker_label):
+    def insert_debug_marker(self, marker_label: str):
         """Insert the given message into the debug message queue."""
         raise NotImplementedError()
 
@@ -1785,7 +1776,7 @@ class GPURenderCommandsMixin:
     """Mixin for classes that provide rendering commands."""
 
     # IDL: undefined setPipeline(GPURenderPipeline pipeline);
-    def set_pipeline(self, pipeline):
+    def set_pipeline(self, pipeline: GPURenderPipeline):
         """Set the pipeline for this render pass.
 
         Arguments:
@@ -1794,7 +1785,13 @@ class GPURenderCommandsMixin:
         raise NotImplementedError()
 
     # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def set_index_buffer(self, buffer, index_format, offset=0, size=None):
+    def set_index_buffer(
+        self,
+        buffer: GPUBuffer,
+        index_format: enums.IndexFormat,
+        offset: int = 0,
+        size: Optional[int] = None,
+    ):
         """Set the index buffer for this render pass.
 
         Arguments:
@@ -1809,7 +1806,9 @@ class GPURenderCommandsMixin:
         raise NotImplementedError()
 
     # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer? buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def set_vertex_buffer(self, slot, buffer, offset=0, size=None):
+    def set_vertex_buffer(
+        self, slot: int, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
+    ):
         """Associate a vertex buffer with a bind slot.
 
         Arguments:
@@ -1824,7 +1823,13 @@ class GPURenderCommandsMixin:
         raise NotImplementedError()
 
     # IDL: undefined draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1, optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
-    def draw(self, vertex_count, instance_count=1, first_vertex=0, first_instance=0):
+    def draw(
+        self,
+        vertex_count: int,
+        instance_count: int = 1,
+        first_vertex: int = 0,
+        first_instance: int = 0,
+    ):
         """Run the render pipeline without an index buffer.
 
         Arguments:
@@ -1836,7 +1841,7 @@ class GPURenderCommandsMixin:
         raise NotImplementedError()
 
     # IDL: undefined drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
-    def draw_indirect(self, indirect_buffer, indirect_offset):
+    def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
         """Like `draw()`, but the function arguments are in a buffer.
 
         Arguments:
@@ -1850,11 +1855,11 @@ class GPURenderCommandsMixin:
     # IDL: undefined drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1, optional GPUSize32 firstIndex = 0, optional GPUSignedOffset32 baseVertex = 0, optional GPUSize32 firstInstance = 0);
     def draw_indexed(
         self,
-        index_count,
-        instance_count=1,
-        first_index=0,
-        base_vertex=0,
-        first_instance=0,
+        index_count: int,
+        instance_count: int = 1,
+        first_index: int = 0,
+        base_vertex: int = 0,
+        first_instance: int = 0,
     ):
         """Run the render pipeline using an index buffer.
 
@@ -1870,7 +1875,7 @@ class GPURenderCommandsMixin:
         raise NotImplementedError()
 
     # IDL: undefined drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
-    def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
+    def draw_indexed_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
         """
         Like `draw_indexed()`, but the function arguments are in a buffer.
 
@@ -1889,35 +1894,38 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     Create a command encoder using `GPUDevice.create_command_encoder()`.
     """
 
-    # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {});
+    # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {}); -> USVString label = "", GPUComputePassTimestampWrites timestampWrites
     def begin_compute_pass(
-        self, *, label="", timestamp_writes: "structs.ComputePassTimestampWrites" = None
+        self,
+        *,
+        label: str = "",
+        timestamp_writes: structs.ComputePassTimestampWrites = optional,
     ):
         """Record the beginning of a compute pass. Returns a
         `GPUComputePassEncoder` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             timestamp_writes: unused
         """
         raise NotImplementedError()
 
-    # IDL: GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor);
+    # IDL: GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor); -> USVString label = "", required sequence<GPURenderPassColorAttachment?> colorAttachments, GPURenderPassDepthStencilAttachment depthStencilAttachment, GPUQuerySet occlusionQuerySet, GPURenderPassTimestampWrites timestampWrites, GPUSize64 maxDrawCount = 50000000
     def begin_render_pass(
         self,
         *,
-        label="",
-        color_attachments: "List[structs.RenderPassColorAttachment]",
-        depth_stencil_attachment: "structs.RenderPassDepthStencilAttachment" = None,
-        occlusion_query_set: "GPUQuerySet" = None,
-        timestamp_writes: "structs.RenderPassTimestampWrites" = None,
+        label: str = "",
+        color_attachments: List[structs.RenderPassColorAttachment],
+        depth_stencil_attachment: structs.RenderPassDepthStencilAttachment = optional,
+        occlusion_query_set: GPUQuerySet = optional,
+        timestamp_writes: structs.RenderPassTimestampWrites = optional,
         max_draw_count: int = 50000000,
     ):
         """Record the beginning of a render pass. Returns a
         `GPURenderPassEncoder` object.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
             color_attachments (list): List of `structs.RenderPassColorAttachment` dicts.
             depth_stencil_attachment (structs.RenderPassDepthStencilAttachment): Describes the depth stencil attachment. Default None.
             occlusion_query_set (GPUQuerySet): Default None.
@@ -1926,7 +1934,9 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    def clear_buffer(self, buffer, offset=0, size=None):
+    def clear_buffer(
+        self, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
+    ):
         """Set (part of) the given buffer to zeros.
 
         Arguments:
@@ -1940,7 +1950,12 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 
     # IDL: undefined copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, GPUSize64 size);
     def copy_buffer_to_buffer(
-        self, source, source_offset, destination, destination_offset, size
+        self,
+        source: GPUBuffer,
+        source_offset: int,
+        destination: GPUBuffer,
+        destination_offset: int,
+        size: int,
     ):
         """Copy the contents of a buffer to another buffer.
 
@@ -1956,7 +1971,12 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: undefined copyBufferToTexture( GPUImageCopyBuffer source, GPUImageCopyTexture destination, GPUExtent3D copySize);
-    def copy_buffer_to_texture(self, source, destination, copy_size):
+    def copy_buffer_to_texture(
+        self,
+        source: structs.ImageCopyBuffer,
+        destination: structs.ImageCopyTexture,
+        copy_size: Union[List[int], structs.Extent3D],
+    ):
         """Copy the contents of a buffer to a texture (view).
 
         Arguments:
@@ -1969,7 +1989,12 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: undefined copyTextureToBuffer( GPUImageCopyTexture source, GPUImageCopyBuffer destination, GPUExtent3D copySize);
-    def copy_texture_to_buffer(self, source, destination, copy_size):
+    def copy_texture_to_buffer(
+        self,
+        source: structs.ImageCopyTexture,
+        destination: structs.ImageCopyBuffer,
+        copy_size: Union[List[int], structs.Extent3D],
+    ):
         """Copy the contents of a texture (view) to a buffer.
 
         Arguments:
@@ -1982,7 +2007,12 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: undefined copyTextureToTexture( GPUImageCopyTexture source, GPUImageCopyTexture destination, GPUExtent3D copySize);
-    def copy_texture_to_texture(self, source, destination, copy_size):
+    def copy_texture_to_texture(
+        self,
+        source: structs.ImageCopyTexture,
+        destination: structs.ImageCopyTexture,
+        copy_size: Union[List[int], structs.Extent3D],
+    ):
         """Copy the contents of a texture (view) to another texture (view).
 
         Arguments:
@@ -1992,19 +2022,24 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {});
-    def finish(self, *, label=""):
+    # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {}); -> USVString label = ""
+    def finish(self, *, label: str = ""):
         """Finish recording. Returns a `GPUCommandBuffer` to
         submit to a `GPUQueue`.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
         """
         raise NotImplementedError()
 
     # IDL: undefined resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
     def resolve_query_set(
-        self, query_set, first_query, query_count, destination, destination_offset
+        self,
+        query_set: GPUQuerySet,
+        first_query: int,
+        query_count: int,
+        destination: GPUBuffer,
+        destination_offset: int,
     ):
         """
         Resolves query results from a ``GPUQuerySet`` out into a range of a ``GPUBuffer``.
@@ -2030,7 +2065,7 @@ class GPUComputePassEncoder(
     """
 
     # IDL: undefined setPipeline(GPUComputePipeline pipeline);
-    def set_pipeline(self, pipeline):
+    def set_pipeline(self, pipeline: GPUComputePipeline):
         """Set the pipeline for this compute pass.
 
         Arguments:
@@ -2040,7 +2075,10 @@ class GPUComputePassEncoder(
 
     # IDL: undefined dispatchWorkgroups(GPUSize32 workgroupCountX, optional GPUSize32 workgroupCountY = 1, optional GPUSize32 workgroupCountZ = 1);
     def dispatch_workgroups(
-        self, workgroup_count_x, workgroup_count_y=1, workgroup_count_z=1
+        self,
+        workgroup_count_x: int,
+        workgroup_count_y: int = 1,
+        workgroup_count_z: int = 1,
     ):
         """Run the compute shader.
 
@@ -2052,7 +2090,9 @@ class GPUComputePassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined dispatchWorkgroupsIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
-    def dispatch_workgroups_indirect(self, indirect_buffer, indirect_offset):
+    def dispatch_workgroups_indirect(
+        self, indirect_buffer: GPUBuffer, indirect_offset: int
+    ):
         """Like `dispatch_workgroups()`, but the function arguments are in a buffer.
 
         Arguments:
@@ -2080,7 +2120,15 @@ class GPURenderPassEncoder(
     """
 
     # IDL: undefined setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
-    def set_viewport(self, x, y, width, height, min_depth, max_depth):
+    def set_viewport(
+        self,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        min_depth: float,
+        max_depth: float,
+    ):
         """Set the viewport for this render pass. The whole scene is rendered
         to this sub-rectangle.
 
@@ -2096,7 +2144,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined setScissorRect(GPUIntegerCoordinate x, GPUIntegerCoordinate y,  GPUIntegerCoordinate width, GPUIntegerCoordinate height);
-    def set_scissor_rect(self, x, y, width, height):
+    def set_scissor_rect(self, x: int, y: int, width: int, height: int):
         """Set the scissor rectangle for this render pass. The scene
         is rendered as usual, but is only applied to this sub-rectangle.
 
@@ -2109,7 +2157,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined setBlendConstant(GPUColor color);
-    def set_blend_constant(self, color):
+    def set_blend_constant(self, color: Union[List[float], structs.Color]):
         """Set the blend color for the render pass.
 
         Arguments:
@@ -2118,7 +2166,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined setStencilReference(GPUStencilValue reference);
-    def set_stencil_reference(self, reference):
+    def set_stencil_reference(self, reference: int):
         """Set the reference stencil value for this render pass.
 
         Arguments:
@@ -2127,7 +2175,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined executeBundles(sequence<GPURenderBundle> bundles);
-    def execute_bundles(self, bundles):
+    def execute_bundles(self, bundles: List[GPURenderBundle]):
         """Executes commands previously recorded into the render bundles
           as part of this render pass.
 
@@ -2142,7 +2190,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined beginOcclusionQuery(GPUSize32 queryIndex);
-    def begin_occlusion_query(self, query_index):
+    def begin_occlusion_query(self, query_index: int):
         """Begins an occlusion query.
 
         Arguments:
@@ -2174,12 +2222,12 @@ class GPURenderBundleEncoder(
 ):
     """Encodes a series of render commands into a reusable render bundle."""
 
-    # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {});
-    def finish(self, *, label=""):
+    # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {}); -> USVString label = ""
+    def finish(self, *, label: str = ""):
         """Finish recording and return a `GPURenderBundle`.
 
         Arguments:
-            label (str): A human readable label. Optional.
+            label (str): A human-readable label. Optional.
         """
         raise NotImplementedError()
 
@@ -2191,7 +2239,7 @@ class GPUQueue(GPUObjectBase):
     """
 
     # IDL: undefined submit(sequence<GPUCommandBuffer> commandBuffers);
-    def submit(self, command_buffers):
+    def submit(self, command_buffers: List[GPUCommandBuffer]):
         """Submit a `GPUCommandBuffer` to the queue.
 
         Arguments:
@@ -2200,7 +2248,14 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: undefined writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, AllowSharedBufferSource data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
-    def write_buffer(self, buffer, buffer_offset, data, data_offset=0, size=None):
+    def write_buffer(
+        self,
+        buffer: GPUBuffer,
+        buffer_offset: int,
+        data: memoryview,
+        data_offset: int = 0,
+        size: Optional[int] = None,
+    ):
         """Takes the data contents and schedules a write operation to the buffer.
 
         Changes to the data after this function is called don't affect
@@ -2243,7 +2298,13 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: undefined writeTexture( GPUImageCopyTexture destination, AllowSharedBufferSource data, GPUImageDataLayout dataLayout, GPUExtent3D size);
-    def write_texture(self, destination, data, data_layout, size):
+    def write_texture(
+        self,
+        destination: structs.ImageCopyTexture,
+        data: memoryview,
+        data_layout: structs.ImageDataLayout,
+        size: Union[List[int], structs.Extent3D],
+    ):
         """Takes the data contents and schedules a write operation of
         these contents to the destination texture in the queue. A
         snapshot of the data is taken; any changes to the data after
@@ -2285,7 +2346,12 @@ class GPUQueue(GPUObjectBase):
 
     # IDL: undefined copyExternalImageToTexture( GPUImageCopyExternalImage source, GPUImageCopyTextureTagged destination, GPUExtent3D copySize);
     @apidiff.hide("Specific to browsers")
-    def copy_external_image_to_texture(self, source, destination, copy_size):
+    def copy_external_image_to_texture(
+        self,
+        source: structs.ImageCopyExternalImage,
+        destination: structs.ImageCopyTextureTagged,
+        copy_size: Union[List[int], structs.Extent3D],
+    ):
         raise NotImplementedError()
 
     # IDL: Promise<undefined> onSubmittedWorkDone();
@@ -2344,7 +2410,7 @@ class GPUOutOfMemoryError(GPUError, MemoryError):
     """An error raised when the GPU is out of memory."""
 
     # IDL: constructor(DOMString message);
-    def __init__(self, message):
+    def __init__(self, message: str):
         super().__init__(message or "GPU is out of memory.")
 
 
@@ -2352,7 +2418,7 @@ class GPUValidationError(GPUError):
     """An error raised when the pipeline could not be validated."""
 
     # IDL: constructor(DOMString message);
-    def __init__(self, message):
+    def __init__(self, message: str):
         super().__init__(message)
 
 
@@ -2360,7 +2426,7 @@ class GPUPipelineError(Exception):
     """An error raised when a pipeline could not be created."""
 
     # IDL: constructor(optional DOMString message = "", GPUPipelineErrorInit options);
-    def __init__(self, message="", options=None):
+    def __init__(self, message: str, options: structs.PipelineErrorInit):
         super().__init__(message or "")
         self._options = options
 
@@ -2379,7 +2445,7 @@ class GPUInternalError(GPUError):
     """
 
     # IDL: constructor(DOMString message);
-    def __init__(self, message):
+    def __init__(self, message: str):
         super().__init__(message)
 
 
@@ -2528,7 +2594,7 @@ def _set_compat_methods_for_async_methods():
             return getattr(self, name)(*args, **kwargs)
 
         proxy_method.__name__ = name + "_backwards_compat_proxy"
-        proxy_method.__doc__ = f"Backwards compatibile method for {name}()"
+        proxy_method.__doc__ = f"Backwards compatible method for {name}()"
         return proxy_method
 
     m = globals()

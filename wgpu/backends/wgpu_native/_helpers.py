@@ -1,19 +1,21 @@
 """Utilities used in the wgpu-native backend."""
 
-import sys
 import ctypes
+import sys
+import time
 from queue import deque
+
+import sniffio
 
 from ._ffi import ffi, lib, lib_path
 from ..._diagnostics import DiagnosticsBase
 from ...classes import (
     GPUError,
-    GPUOutOfMemoryError,
-    GPUValidationError,
-    GPUPipelineError,
     GPUInternalError,
+    GPUOutOfMemoryError,
+    GPUPipelineError,
+    GPUValidationError,
 )
-
 
 ERROR_TYPES = {
     "": GPUError,
@@ -187,7 +189,7 @@ def get_surface_id_from_info(present_info):
     return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
 
 
-# The functions below are copied from codegen/utils.py
+# The functions below are copied from codegen/utils.py - let's keep these in sync!
 
 
 def to_snake_case(name, separator="_"):
@@ -199,7 +201,9 @@ def to_snake_case(name, separator="_"):
         c2 = c.lower()
         if c2 != c and len(name2) > 0:
             prev = name2[-1]
-            if prev not in "123" and prev != separator:
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
                 name2 += separator
         name2 += c2
     return name2
@@ -212,7 +216,7 @@ def to_camel_case(name):
     is_capital = False
     name2 = ""
     for c in name:
-        if c == "_" and name2:
+        if c in "_-" and name2:
             is_capital = True
         elif is_capital:
             name2 += c.upper()
@@ -222,6 +226,79 @@ def to_camel_case(name):
     if name2.endswith(("1d", "2d", "3d")):
         name2 = name2[:-1] + "D"
     return name2
+
+
+async def async_sleep(delay):
+    """Async sleep that uses sniffio to be compatible with asyncio, trio, rendercanvas.utils.asyncadapter, and possibly more."""
+    libname = sniffio.current_async_library()
+    sleep = sys.modules[libname].sleep
+    await sleep(delay)
+
+
+class WgpuAwaitable:
+    """An object that can be waited for, either synchronously using sync_wait() or asynchronously using await.
+
+    The purpose of this class is to implememt the asynchronous methods in a
+    truely async manner, as well as to support a synchronous version of them.
+    """
+
+    def __init__(self, title, callback, finalizer, poll_function=None):
+        self.title = title  # for context in error messages
+        self.callback = callback  # only used to prevent it from being gc'd
+        self.finalizer = finalizer  # function to finish the result
+        self.poll_function = poll_function  # call this to poll wgpu
+        self.result = None
+
+    def set_result(self, result):
+        self.result = (result, None)
+
+    def set_error(self, error):
+        self.result = (None, error)
+
+    def _is_done(self):
+        self.poll_function()
+        return self.result is not None
+
+    def _finish(self):
+        try:
+            if not self.result:
+                raise RuntimeError(f"Waiting for {self.title} timed out.")
+            result, error = self.result
+            if error:
+                raise RuntimeError(error)
+            else:
+                return self.finalizer(result)
+        finally:
+            # Reset attrs to prevent potential memory leaks
+            self.callback = self.finalizer = self.poll_function = self.result = None
+
+    def sync_wait(self):
+        if self.result is not None:
+            pass
+        elif not self.poll_function:
+            raise RuntimeError("Expected callback to have already happened")
+        else:
+            while not self._is_done():
+                time.sleep(0)
+        return self._finish()
+
+    def __await__(self):
+        # There is no documentation on what __await__() is supposed to return, but we
+        # can certainly copy from a function that *does* know what to return
+        async def wait_for_callback():
+            # In all the async cases that I've tried, the result is either already set, or
+            # resolves after the first call to the poll function. To make sure that our
+            # sleep-logic actually works, we always do at least one sleep call.
+            await async_sleep(0)
+            if self.result is not None:
+                return
+            if not self.poll_function:
+                raise RuntimeError("Expected callback to have already happened")
+            while not self._is_done():
+                await async_sleep(0)
+
+        yield from wait_for_callback().__await__()
+        return self._finish()
 
 
 class ErrorHandler:

@@ -1,6 +1,6 @@
 """
 Support for rendering in a Jupyter widget. Provides a widget subclass that
-can be used as cell output, or embedded in a ipywidgets gui.
+can be used as cell output, or embedded in an ipywidgets gui.
 """
 
 import weakref
@@ -92,15 +92,8 @@ class JupyterWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, RemoteFrameBuffer):
 
     # Implementation needed for WgpuCanvasInterface
 
-    def get_present_info(self):
-        # Use a format that maps well to PNG: rgba8norm. Use srgb for
-        # perseptive color mapping. This is the common colorspace for
-        # e.g. png and jpg images. Most tools (browsers included) will
-        # blit the png to screen as-is, and a screen wants colors in srgb.
-        return {
-            "method": "image",
-            "formats": ["rgba8unorm-srgb", "rgba8unorm"],
-        }
+    def get_present_methods(self):
+        return {"bitmap": {"formats": ["rgba-u8"]}}
 
     def present_image(self, image, **kwargs):
         # Convert memoryview to ndarray (no copy)

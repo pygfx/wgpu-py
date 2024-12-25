@@ -23,10 +23,10 @@ class Flags(_BaseEnum):
 
 __all__ = [
     "BufferUsage",
-    "MapMode",
-    "TextureUsage",
-    "ShaderStage",
     "ColorWrite",
+    "MapMode",
+    "ShaderStage",
+    "TextureUsage",
 ]
 
 

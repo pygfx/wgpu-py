@@ -17,6 +17,90 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.19.3] - 10-12-2024
+
+Fixed:
+
+* Ensure that wgpu is compatible both with imgui 1.6.0 and older by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/649
+* Clean up async code and add proper trio / rendercanvas support by @fyellin in https://github.com/pygfx/wgpu-py/pull/631
+* Remove timeout in awaitable by @almarklein in https://github.com/pygfx/wgpu-py/pull/651
+* Allow ``rendercanvas.get_context()`` before a backend is selected by @almarklein in https://github.com/pygfx/wgpu-py/pull/652
+
+
+### [v0.19.2] - 25-11-2024
+
+Changed:
+
+* Update to Imgui 1.6+ by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/645
+
+
+### [v0.19.1] - 19-11-2024
+
+Some internal refactoring, fix the doc theme, and compatibility with rendercanvas.
+
+Changed:
+
+* Do not confound STDERR and STDOUT by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/638
+* More consolidation by @fyellin in https://github.com/pygfx/wgpu-py/pull/641
+* Use rtd theme for docs by @almarklein in https://github.com/pygfx/wgpu-py/pull/639
+* Refactor present-method mechanic by @almarklein in https://github.com/pygfx/wgpu-py/pull/642
+
+
+### [v0.19.0] - 04-11-2024
+
+Added:
+
+* Overrideable constants by @fyellin in https://github.com/pygfx/wgpu-py/pull/579
+* Implemention for multi-draw features by @fyellin in https://github.com/pygfx/wgpu-py/pull/583
+* Statistics query by @fyellin in https://github.com/pygfx/wgpu-py/pull/605
+* Examples for asyncio and trio by @almarklein in https://github.com/pygfx/wgpu-py/pull/608
+* Add example that uses PySide6 with asyncio compat by @almarklein in https://github.com/pygfx/wgpu-py/pull/612
+* Add pre-commit hooks for ruff by @claydugo in https://github.com/pygfx/wgpu-py/pull/629
+* Include pre-commit in optional dependencies by @claydugo in https://github.com/pygfx/wgpu-py/pull/630
+
+Changed:
+
+* Async API by @almarklein in https://github.com/pygfx/wgpu-py/pull/598
+  * Renamed `request_adapter()` to `request_adapter_sync()` (old method still works with warning).
+  * Renamed `enumerate_adapters()` to `enumerate_adapters_sync()` (old method still works with warning).
+  * Renamed `request_device()` to `request_device_sync()` (old method still works with warning).
+  * Renamed `buffer.map()` to `buffer.map_sync()` (old method still works with warning).
+* Renamed `request_device_trace` -> `request_device` by @fyellin in https://github.com/pygfx/wgpu-py/pull/589
+* Make depth_stencil_attachment follow the spec by @fyellin in https://github.com/pygfx/wgpu-py/pull/611
+* If data in `create_buffer_with_data` isn't a multiple of 4, just round up. by @fyellin in https://github.com/pygfx/wgpu-py/pull/626
+* Drop support for Python 3.8.
+
+Fixed:
+
+* Fix snake case for 1d/2d/3d suffix by @almarklein in https://github.com/pygfx/wgpu-py/pull/617
+
+Docs:
+
+* Add note on examples by @almarklein in https://github.com/pygfx/wgpu-py/pull/597
+* Tweaks to examples by @almarklein in https://github.com/pygfx/wgpu-py/pull/610
+* Add extra version info on dev installs by @almarklein in https://github.com/pygfx/wgpu-py/pull/623
+* Fix small typo in README intro by @otterbotter in https://github.com/pygfx/wgpu-py/pull/625
+
+Internal changes:
+
+* Remove _release code that's duplicated 19 times. by @fyellin in https://github.com/pygfx/wgpu-py/pull/590
+* Fix some small errors by @fyellin in https://github.com/pygfx/wgpu-py/pull/591
+* Refactor build system by @almarklein in https://github.com/pygfx/wgpu-py/pull/596
+* Use ruff instead of black and flake8 by @almarklein in https://github.com/pygfx/wgpu-py/pull/599
+* Fixes to testing by @almarklein in https://github.com/pygfx/wgpu-py/pull/604
+* Remove stuff that's been deprecated for a while by @almarklein in https://github.com/pygfx/wgpu-py/pull/607
+* Improve generated type hints and defaults by @almarklein in https://github.com/pygfx/wgpu-py/pull/606
+* Add better async support for wgpu-native by @almarklein in https://github.com/pygfx/wgpu-py/pull/609
+* Nitpicky changes flagged by PyCharm by @fyellin in https://github.com/pygfx/wgpu-py/pull/613
+* Python 3.13.  Remove ruff flakiness by @fyellin in https://github.com/pygfx/wgpu-py/pull/614
+* Structure checking by @fyellin in https://github.com/pygfx/wgpu-py/pull/615
+* Eliminate warning in test suite by @fyellin in https://github.com/pygfx/wgpu-py/pull/621
+* Fix install of mesa drivers by @almarklein in https://github.com/pygfx/wgpu-py/pull/622
+* Only keep alive those objects that are necessary. by @fyellin in https://github.com/pygfx/wgpu-py/pull/628
+* Refactor canvas context to allow presenting as image by @almarklein in https://github.com/pygfx/wgpu-py/pull/586
+* Prevent extra errors when canvascontext creation fails by @almarklein in https://github.com/pygfx/wgpu-py/pull/635
+
+
 ### [v0.18.1] - 17-09-2024
 
 Added:

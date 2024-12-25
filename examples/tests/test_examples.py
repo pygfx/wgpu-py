@@ -13,10 +13,9 @@ import numpy as np
 import pytest
 
 
-from tests.testutils import (
+from testutils import (
     can_use_wgpu_lib,
-    wgpu_backend,
-    is_lavapipe,
+    adapter_summary,
     find_examples,
     ROOT,
     screenshots_dir,
@@ -24,11 +23,15 @@ from tests.testutils import (
 )
 
 
+is_lavapipe = adapter_summary and all(
+    x in adapter_summary.lower() for x in ("llvmpipe", "vulkan")
+)
+
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
-# run all tests unless they opt-out
+# run all tests unless they opt out
 examples_to_run = find_examples(
     negative_query="# run_example = false", return_stems=True
 )
@@ -57,7 +60,7 @@ def mock_time():
 
 
 def test_that_we_are_on_lavapipe():
-    print(wgpu_backend)
+    print(adapter_summary)
     if os.getenv("EXPECT_LAVAPIPE"):
         assert is_lavapipe
 

@@ -19,7 +19,7 @@ hiddenimports += ["wgpu.backends.auto", "wgpu.backends.wgpu_native"]
 # problematic because PyInstaller cannot follow it to a specific
 # backend. Also, glfw does not have a hook like this, so it does not
 # include the binary when freezing. We can solve both problems with the
-# code below. Makes the binaray a bit larger, but only marginally (less
+# code below. Makes the binary a bit larger, but only marginally (less
 # than 300kb).
 try:
     import glfw  # noqa: F401

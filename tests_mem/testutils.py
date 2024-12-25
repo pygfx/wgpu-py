@@ -7,30 +7,18 @@ import subprocess
 import psutil
 import wgpu
 from wgpu._diagnostics import int_repr
-
+from wgpu.backends.wgpu_native import GPUDevice, GPUObjectBase
 
 p = psutil.Process()
 
 
-def _determine_can_use_wgpu_lib():
-    # For some reason, since wgpu-native 5c304b5ea1b933574edb52d5de2d49ea04a053db
-    # the process' exit code is not zero, so we test more pragmatically.
-    code = "import wgpu.utils; wgpu.utils.get_default_device(); print('ok')"
-    result = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            code,
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True,
-    )
-    print("_determine_can_use_wgpu_lib() status code:", result.returncode)
-    return (
-        result.stdout.strip().endswith("ok")
-        and "traceback" not in result.stderr.lower()
-    )
+def get_default_adapter_summary():
+    """Get description of adapter, or None when no adapter is available."""
+    try:
+        adapter = wgpu.gpu.request_adapter_sync()
+    except RuntimeError:
+        return None  # lib not available, or no adapter on this system
+    return adapter.summary
 
 
 def _determine_can_use_glfw():
@@ -53,11 +41,13 @@ def _determine_can_use_pyside6():
         return True
 
 
-can_use_wgpu_lib = _determine_can_use_wgpu_lib()
+adapter_summary = get_default_adapter_summary()
+can_use_wgpu_lib = bool(adapter_summary)
 can_use_glfw = _determine_can_use_glfw()
 can_use_pyside6 = _determine_can_use_pyside6()
 is_ci = bool(os.getenv("CI", None))
 is_pypy = sys.implementation.name == "pypy"
+
 
 TEST_ITERS = None
 
@@ -148,7 +138,7 @@ def create_and_release(create_objects_func):
     """
     This wrapper goes around a test that takes a single argument n. That test should
     be a generator function that yields a descriptor followed
-    n different objects corresponding to the name of the test function.  Hence
+    n different objects corresponding to the name of the test function. Hence,
     a test named `test_release_foo_bar` would yield a descriptor followed by
     n FooBar objects.
 
@@ -221,9 +211,17 @@ def create_and_release(create_objects_func):
             assert len(objects) == n_objects
 
             # Test that all objects are of the same class.
-            # (this for-loop is a bit weird, but its to avoid leaking refs to objects)
+            # (this for-loop is a bit weird, but it's to avoid leaking refs to objects)
             cls = objects[0].__class__
             assert all(isinstance(objects[i], cls) for i in range(len(objects)))
+
+            # Test that everything that's a subclass of GPUObjectBase has a device
+            # in its _device field.
+            if issubclass(cls, GPUObjectBase):
+                assert all(
+                    isinstance(objects[i]._device, GPUDevice)
+                    for i in range(len(objects))
+                )
 
             # Test that class matches function name (should prevent a group of copy-paste errors)
             assert ob_name == cls.__name__[3:]

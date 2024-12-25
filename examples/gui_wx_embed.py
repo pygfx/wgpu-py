@@ -7,7 +7,7 @@ An example demonstrating a wx app with a wgpu viz inside.
 import wx
 from wgpu.gui.wx import WgpuWidget
 
-from triangle import main
+from triangle import setup_drawing_sync
 
 
 class Example(wx.Frame):
@@ -35,7 +35,10 @@ class Example(wx.Frame):
 app = wx.App()
 example = Example()
 
-main(example.canvas1)
-main(example.canvas2)
+draw_frame1 = setup_drawing_sync(example.canvas1)
+draw_frame2 = setup_drawing_sync(example.canvas2)
+
+example.canvas1.request_draw(draw_frame1)
+example.canvas2.request_draw(draw_frame2)
 
 app.MainLoop()

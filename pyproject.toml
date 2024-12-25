@@ -8,8 +8,12 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Almar Klein" }, { name = "Korijn van Golen" }]
 keywords = ["webgpu", "wgpu", "vulkan", "metal", "DX12", "opengl"]
-requires-python = ">= 3.8"
-dependencies = ["cffi>=1.15.0", "rubicon-objc>=0.4.1; sys_platform == 'darwin'"]
+requires-python = ">= 3.9"
+dependencies = [
+    "cffi>=1.15.0",
+    "rubicon-objc>=0.4.1; sys_platform == 'darwin'",
+    "sniffio",
+]
 
 [project.optional-dependencies]
 # For users
@@ -19,8 +23,16 @@ imgui = ["imgui-bundle>=1.2.1"]
 # For devs / ci
 build = ["build", "hatchling", "requests", "twine"]
 codegen = ["pytest", "numpy", "ruff"]
-lint = ["ruff"]
-tests = ["numpy", "pytest", "psutil", "imageio"]
+lint = ["ruff", "pre-commit"]
+tests = [
+    "numpy",
+    "pytest",
+    "pytest-anyio",
+    "psutil",
+    "imageio",
+    "anyio",
+    "trio",
+]
 examples = []
 docs = ["sphinx>7.2", "sphinx_rtd_theme"]
 dev = ["wgpu[build,codegen,lint,tests,examples,docs]"]
@@ -47,7 +59,7 @@ requires = ["requests", "hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "wgpu/__init__.py"
+path = "wgpu/_version.py"
 
 [tool.hatch.build.targets.sdist]
 packages = ["wgpu"]
@@ -63,6 +75,9 @@ artifacts = ["*.so", "*.dll", "*.dylib"]
 [tool.hatch.build.targets.wheel.hooks.custom]
 path = "tools/hatch_build.py"
 
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+
 # ===== Tooling
 
 [tool.ruff]
@@ -76,7 +91,6 @@ ignore = [
     "B006",   # Do not use mutable data structures for argument defaults
     "B007",   # Loop control variable `x` not used within loop body
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
-    "RUF013", # PEP 484 prohibits implicit `Optional` - we should fix this!
 ]
 
 [tool.coverage.report]
