@@ -3,6 +3,7 @@
 import ctypes
 import sys
 import time
+from collections.abc import Generator
 from queue import deque
 
 import sniffio
@@ -255,14 +256,8 @@ class WgpuAwaitable:
     def set_error(self, error):
         self.result = (None, error)
 
-    def _is_done(self):
-        self.poll_function()
-        return self.result is not None
-
     def _finish(self):
         try:
-            if not self.result:
-                raise RuntimeError(f"Waiting for {self.title} timed out.")
             result, error = self.result
             if error:
                 raise RuntimeError(error)
@@ -278,27 +273,51 @@ class WgpuAwaitable:
         elif not self.poll_function:
             raise RuntimeError("Expected callback to have already happened")
         else:
-            while not self._is_done():
-                time.sleep(0)
+            backoff_time_generator = self._get_backoff_time_generator()
+            while True:
+                self.poll_function()
+                if self.result is not None:
+                    break
+                time.sleep(next(backoff_time_generator))
+                # We check the result after sleeping just in case another thread
+                # causes the callback to happen
+                if self.result is not None:
+                    break
+
         return self._finish()
 
     def __await__(self):
         # There is no documentation on what __await__() is supposed to return, but we
-        # can certainly copy from a function that *does* know what to return
+        # can certainly copy from a function that *does* know what to return.
+        # It would also be nice if wait_for_callback and sync_wait() could be merged,
+        # but Python has no wait of combining them.
         async def wait_for_callback():
-            # In all the async cases that I've tried, the result is either already set, or
-            # resolves after the first call to the poll function. To make sure that our
-            # sleep-logic actually works, we always do at least one sleep call.
-            await async_sleep(0)
             if self.result is not None:
-                return
-            if not self.poll_function:
+                pass
+            elif not self.poll_function:
                 raise RuntimeError("Expected callback to have already happened")
-            while not self._is_done():
-                await async_sleep(0)
+            else:
+                backoff_time_generator = self._get_backoff_time_generator()
+                while True:
+                    self.poll_function()
+                    if self.result is not None:
+                        break
+                    await async_sleep(next(backoff_time_generator))
+                    # We check the result after sleeping just in case another
+                    # flow of control causes the callback to happen
+                    if self.result is not None:
+                        break
+            return self._finish()
 
-        yield from wait_for_callback().__await__()
-        return self._finish()
+        return (yield from wait_for_callback().__await__())
+
+    def _get_backoff_time_generator(self) -> Generator[float, None, None]:
+        for _ in range(5):
+            yield 0
+        for i in range(1, 20):
+            yield i / 2000.0  # ramp up from 0ms to 10ms
+        while True:
+            yield 0.01
 
 
 class ErrorHandler:
