@@ -130,7 +130,7 @@ def enable_hidpi():
         # PySide so I'm going to conditionally disable it for "newer" PySide
         # hmaarrfk -- 2024/12
         # https://doc.qt.io/qt-6/highdpi.html
-        if qt_version < (6, 6):
+        if qt_version_info < (6, 6):
             QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     except Exception:
         pass  # fail on older Qt's
