@@ -124,7 +124,14 @@ def enable_hidpi():
         except Exception:
             pass  # fail on non-windows
     try:
-        QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
+        # This flag is not needed on Qt6.6
+        # But it has been definitely giving me a warning since PySide 6.6
+        # I'm a little cautious of removing its application for much older
+        # PySide so I'm going to conditionally disable it for "newer" PySide
+        # hmaarrfk -- 2024/12
+        # https://doc.qt.io/qt-6/highdpi.html
+        if qt_version < (6, 6):
+            QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     except Exception:
         pass  # fail on older Qt's
 
