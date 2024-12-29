@@ -133,7 +133,7 @@ def enable_hidpi():
         if qt_version_info < (6, 6):
             QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling, True)
     except Exception:
-        pass  # fail on older Qt's
+        pass  # fail on much older Qt's
 
 
 # If you import this module, you want to use wgpu in a way that does not suck
