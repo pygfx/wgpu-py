@@ -124,7 +124,7 @@ def enable_hidpi():
         except Exception:
             pass  # fail on non-windows
     try:
-        # This flag is not needed on Qt6.6
+        # This flag is not needed on Qt6
         # But it has been definitely giving me a warning since PySide 6.6
         # I'm a little cautious of removing its application for much older
         # PySide so I'm going to conditionally disable it for "newer" PySide
