@@ -4,7 +4,7 @@ from pathlib import Path
 import wgpu
 
 
-ROOT = Path(__file__).parent.parent  # repo root
+ROOT = Path(__file__).parent.parent.parent  # repo root
 examples_dir = ROOT / "examples"
 screenshots_dir = examples_dir / "screenshots"
 diffs_dir = screenshots_dir / "diffs"
