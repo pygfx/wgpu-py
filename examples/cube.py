@@ -453,7 +453,7 @@ uniform_dtype = [("transform", "float32", (4, 4))]
 uniform_data = np.zeros((), dtype=uniform_dtype)
 
 
-if __name__ == "__main__":
+if True or __name__ == "__main__":
     from wgpu.gui.auto import WgpuCanvas, run
 
     print("Available adapters on this system:")
