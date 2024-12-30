@@ -15,6 +15,8 @@ import time
 import wgpu
 import numpy as np
 
+from wgpu.gui.auto import WgpuCanvas, run
+
 
 # %% Entrypoints (sync and async)
 
@@ -453,21 +455,21 @@ uniform_dtype = [("transform", "float32", (4, 4))]
 uniform_data = np.zeros((), dtype=uniform_dtype)
 
 
-if True or __name__ == "__main__":
-    from wgpu.gui.auto import WgpuCanvas, run
+print("Available adapters on this system:")
+for a in wgpu.gpu.enumerate_adapters_sync():
+    print(a.summary)
 
-    print("Available adapters on this system:")
-    for a in wgpu.gpu.enumerate_adapters_sync():
-        print(a.summary)
+canvas = WgpuCanvas(size=(640, 480), title="wgpu cube example")
 
-    canvas = WgpuCanvas(size=(640, 480), title="wgpu cube example")
+draw_frame = setup_drawing_sync(canvas)
 
-    draw_frame = setup_drawing_sync(canvas)
 
-    def animate():
-        draw_frame()
-        canvas.request_draw()
+def animate():
+    draw_frame()
+    canvas.request_draw()
 
-    canvas.request_draw(animate)
 
+canvas.request_draw(animate)
+
+if __name__ == "__main__":
     run()
