@@ -27,7 +27,6 @@ lint = ["ruff", "pre-commit"]
 tests = [
     "numpy",
     "pytest",
-    "pytest-anyio",
     "psutil",
     "imageio",
     "anyio",
