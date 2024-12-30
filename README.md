@@ -178,3 +178,16 @@ differences.
 
 If you want to update the reference screenshot for a given example, you can grab
 those from the build artifacts as well and commit them to your branch.
+
+### Testing Locally
+
+Testing locally is possible, however pixel perfect results will differ from
+those on the CIs due to discrepencies in hardware, and driver (we use llvmpipe)
+versions.
+
+If you want to force the usage of LLVMPIPE to speed up local testing you
+may do so with the WGPUPY_WGPU_ADAPTER_NAME environment variable
+
+```
+WGPUPY_WGPU_ADAPTER_NAME=llvmpipe pytest -v examples/
+```
