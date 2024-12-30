@@ -6,9 +6,10 @@ Run triangle/cube example in an automatically selected GUI backend.
 
 from wgpu.gui.auto import WgpuCanvas, run
 
-from triangle import setup_drawing_sync
-# from cube import setup_drawing_sync
-
+try:
+    from .triangle import setup_drawing_sync
+except ImportError:
+    from triangle import setup_drawing_sync
 
 canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
 draw_frame = setup_drawing_sync(canvas)
