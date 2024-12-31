@@ -185,9 +185,21 @@ Testing locally is possible, however pixel perfect results will differ from
 those on the CIs due to discrepencies in hardware, and driver (we use llvmpipe)
 versions.
 
-If you want to force the usage of LLVMPIPE to speed up local testing you
-may do so with the WGPUPY_WGPU_ADAPTER_NAME environment variable
+On linux, it is possible to force to force the usage of LLVMPIPE in the test suite
+and compare the generated results of screenshots. Beware, the results on your machine
+may differ to those on the CI. We always include the CI screenshots in the test suite
+to improve the repeatability of the tests.
+
+If you have access to a linux machine with llvmpipe installed, you may run the
+example pixel comparison testing by setting the WGPUPY_WGPU_ADAPTER_NAME
+environment variable appropriately. For example
+
 
 ```
 WGPUPY_WGPU_ADAPTER_NAME=llvmpipe pytest -v examples/
 ```
+
+The `WGPUPY_WGPU_ADAPTER_NAME` variable is modeled after the
+https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
+and should only be used for testing the wgpupy library itself.
+It is not part of the supported wgpy-py interface.
