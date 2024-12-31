@@ -367,20 +367,6 @@ class GPU(classes.GPU):
         This is the implementation based on wgpu-native.
         """
         check_can_use_sync_variants()
-        # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
-        # It seems that the environment variables are only respected in their
-        # testing environments maybe????
-        # In Dec 2024 we couldn't get the use of their environment variables to work
-        # This should only be used in testing environments and API users
-        # should beware
-        # We chose the variable name WGPUPY_WGPU_ADAPTER_NAME instead WGPU_ADAPTER_NAME
-        # to avoid a clash
-        if adapter_name := os.getenv(("WGPUPY_WGPU_ADAPTER_NAME")):
-            adapters = self.enumerate_adapters_sync()
-            adapters_llvm = [a for a in adapters if adapter_name in a.summary]
-            if not adapters_llvm:
-                raise ValueError(f"Adapter with name '{adapter_name}' not found.")
-            return adapters_llvm[0]
 
         awaitable = self._request_adapter(
             power_preference=power_preference,
@@ -409,22 +395,6 @@ class GPU(classes.GPU):
             canvas : The canvas that the adapter should be able to render to. This can typically
                  be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
-        # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
-        # It seems that the environment variables are only respected in their
-        # testing environments maybe????
-        # In Dec 2024 we couldn't get the use of their environment variables to work
-        # This should only be used in testing environments and API users
-        # should beware
-        # We chose the variable name WGPUPY_WGPU_ADAPTER_NAME instead WGPU_ADAPTER_NAME
-        # to avoid a clash
-        if adapter_name := os.getenv(("WGPUPY_WGPU_ADAPTER_NAME")):
-            # Is this correct for async??? I know nothing of async...
-            awaitable = self.enumerate_adapters_async()
-            adapters = await awaitable
-            adapters_llvm = [a for a in adapters if adapter_name in a.summary]
-            if not adapters_llvm:
-                raise ValueError(f"Adapter with name '{adapter_name}' not found.")
-            return adapters_llvm[0]
 
         awaitable = self._request_adapter(
             power_preference=power_preference,
@@ -436,6 +406,27 @@ class GPU(classes.GPU):
     def _request_adapter(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
+        # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
+        # It seems that the environment variables are only respected in their
+        # testing environments maybe????
+        # In Dec 2024 we couldn't get the use of their environment variables to work
+        # This should only be used in testing environments and API users
+        # should beware
+        # We chose the variable name WGPUPY_WGPU_ADAPTER_NAME instead WGPU_ADAPTER_NAME
+        # to avoid a clash
+        if adapter_name := os.getenv(("WGPUPY_WGPU_ADAPTER_NAME")):
+            adapters = self._enumerate_adapters()
+            adapters_llvm = [a for a in adapters if adapter_name in a.summary]
+            if not adapters_llvm:
+                raise ValueError(f"Adapter with name '{adapter_name}' not found.")
+            awaitable = WgpuAwaitable(
+                'llvm adapter',
+                callback=lambda: (),
+                finalizer=lambda x: x,
+            )
+            awaitable.set_result(adapters_llvm[0])
+
+            return awaitable
         # ----- Surface ID
 
         # Get surface id that the adapter must be compatible with. If we
