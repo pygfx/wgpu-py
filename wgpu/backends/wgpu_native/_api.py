@@ -367,7 +367,6 @@ class GPU(classes.GPU):
         This is the implementation based on wgpu-native.
         """
         check_can_use_sync_variants()
-
         awaitable = self._request_adapter(
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
@@ -395,7 +394,6 @@ class GPU(classes.GPU):
             canvas : The canvas that the adapter should be able to render to. This can typically
                  be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
-
         awaitable = self._request_adapter(
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
