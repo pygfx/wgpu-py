@@ -201,5 +201,5 @@ WGPUPY_WGPU_ADAPTER_NAME=llvmpipe pytest -v examples/
 
 The `WGPUPY_WGPU_ADAPTER_NAME` variable is modeled after the
 https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
-and should only be used for testing the wgpupy library itself.
-It is not part of the supported wgpy-py interface.
+and should only be used for testing the wgpu-py library itself.
+It is not part of the supported wgpu-py interface.
