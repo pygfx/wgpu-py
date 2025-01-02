@@ -420,7 +420,7 @@ class GPU(classes.GPU):
             if not adapters_llvm:
                 raise ValueError(f"Adapter with name '{adapter_name}' not found.")
             awaitable = WgpuAwaitable(
-                'llvm adapter',
+                "llvm adapter",
                 callback=lambda: (),
                 finalizer=lambda x: x,
             )
