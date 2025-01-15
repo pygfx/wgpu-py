@@ -23,7 +23,7 @@ var<storage,read> data2: array<i32>;
 var<storage,read_write> data3: array<i32>;
 
 @compute
-@workgroup_size({','.join(map(str, local_size))})
+@workgroup_size({",".join(map(str, local_size))})
 fn main(@builtin(global_invocation_id) index: vec3<u32>) {{
     let i: u32 = index.x;
     data3[i] = data1[i] + data2[i];
@@ -152,7 +152,7 @@ Index 0: beginning timestamp
 Index 1: end timestamp
 """
 timestamps = device.queue.read_buffer(query_buf).cast("Q").tolist()
-print(f"Adding two {n} sized arrays took {(timestamps[1]-timestamps[0])/1000} us")
+print(f"Adding two {n} sized arrays took {(timestamps[1] - timestamps[0]) / 1000} us")
 
 # Read result
 out = device.queue.read_buffer(buffer3).cast("i")

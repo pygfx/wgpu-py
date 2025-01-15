@@ -64,7 +64,7 @@ def main():
         frame_count += 1
         etime = time.perf_counter() - last_frame_time
         if etime > 1:
-            print(f"{frame_count/etime:0.1f} FPS")
+            print(f"{frame_count / etime:0.1f} FPS")
             last_frame_time, frame_count = time.perf_counter(), 0
 
     # dispose resources
