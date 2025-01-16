@@ -185,7 +185,7 @@ Testing locally is possible, however pixel perfect results will differ from
 those on the CIs due to discrepencies in hardware, and driver (we use llvmpipe)
 versions.
 
-On linux, it is possible to force to force the usage of LLVMPIPE in the test suite
+On linux, it is possible to force the usage of LLVMPIPE in the test suite
 and compare the generated results of screenshots. Beware, the results on your machine
 may differ to those on the CI. We always include the CI screenshots in the test suite
 to improve the repeatability of the tests.
