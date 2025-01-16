@@ -445,8 +445,7 @@ class GPU(classes.GPU):
                 backend = enum_str2int["BackendType"][force_backend]
             except KeyError:
                 logger.warning(
-                    f"Invalid value for WGPU_BACKEND_TYPE: '{force_backend}'.\n"
-                    f"Valid values are: {list(enum_str2int['BackendType'].keys())}"
+                    f"Invalid value for WGPU_BACKEND_TYPE: '{force_backend}'.\nValid values are: {list(enum_str2int['BackendType'].keys())}"
                 )
             else:
                 logger.warning(f"Forcing backend: {force_backend} ({backend})")
