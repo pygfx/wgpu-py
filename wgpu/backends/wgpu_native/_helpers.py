@@ -339,7 +339,7 @@ class ErrorHandler:
         """Release the given name, returning the last captured error."""
         n = self._proxy_stack.pop()
         if n is not name:
-            messages = [m for _, m in self._proxy_message.values()]
+            messages = [m for _, m in self._proxy_messages.values()]
             self._proxy_messages.clear()
             self._proxy_stack.clear()
             self._logger.error("ErrorHandler capture/release out of sync")
