@@ -237,9 +237,9 @@ def create_and_release(create_objects_func):
 
             # Make sure the actual object has increased
             assert more2  # not empty
-            assert (
-                more2 == options["expected_counts_after_create"]
-            ), f"Expected:\n{options['expected_counts_after_create']}\nGot:\n{more2}"
+            assert more2 == options["expected_counts_after_create"], (
+                f"Expected:\n{options['expected_counts_after_create']}\nGot:\n{more2}"
+            )
 
             # It's ok if other objects are created too ...
 

@@ -150,7 +150,7 @@ def test_consecutive_writes1():
     # Write in parts
     for i in range(4):
         buf.map_sync("write")
-        buf.write_mapped(f"{i+1}".encode() * 8, i * 8)
+        buf.write_mapped(f"{i + 1}".encode() * 8, i * 8)
         buf.unmap()
 
     # Download from buffer to CPU
@@ -160,7 +160,7 @@ def test_consecutive_writes1():
     # Also in parts
     for i in range(4):
         data = device.queue.read_buffer(buf, i * 8, size=8)
-        assert data == f"{i+1}".encode() * 8
+        assert data == f"{i + 1}".encode() * 8
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -177,7 +177,7 @@ def test_consecutive_writes2():
     # Write in parts
     buf.map_sync("write")
     for i in range(4):
-        buf.write_mapped(f"{i+1}".encode() * 8, i * 8)
+        buf.write_mapped(f"{i + 1}".encode() * 8, i * 8)
     buf.unmap()
 
     # Download from buffer to CPU
@@ -187,7 +187,7 @@ def test_consecutive_writes2():
     # Also in parts
     for i in range(4):
         data = device.queue.read_buffer(buf, i * 8, size=8)
-        assert data == f"{i+1}".encode() * 8
+        assert data == f"{i + 1}".encode() * 8
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -221,20 +221,20 @@ def test_consecutive_reads():
 
     # Write using the queue. Do in parts, to touch those offsets too
     for i in range(4):
-        device.queue.write_buffer(buf, i * 8, f"{i+1}".encode() * 8)
+        device.queue.write_buffer(buf, i * 8, f"{i + 1}".encode() * 8)
 
     # Read in parts, the inefficient way
     for i in range(4):
         buf.map_sync("read")
         data = buf.read_mapped(i * 8, 8)
-        assert data == f"{i+1}".encode() * 8
+        assert data == f"{i + 1}".encode() * 8
         buf.unmap()
 
     # Read in parts, the efficient way
     buf.map_sync("read")
     for i in range(4):
         data = buf.read_mapped(i * 8, 8)
-        assert data == f"{i+1}".encode() * 8
+        assert data == f"{i + 1}".encode() * 8
     buf.unmap()
 
 
