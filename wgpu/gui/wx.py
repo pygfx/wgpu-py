@@ -452,6 +452,16 @@ class WxWgpuCanvas(WgpuAutoGui, WgpuCanvasBase, wx.Frame):
         super().Refresh()
         self._subwidget.Refresh()
 
+    def Bind(self, event, handler, source=None, id=wx.ID_ANY, id2=wx.ID_ANY):  # noqa: N802
+        self._subwidget.Bind(
+            event=event, handler=handler, source=source, id=id, id2=id2
+        )
+
+    def Unbind(self, event, source=None, id=wx.ID_ANY, id2=wx.ID_ANY, handler=None):  # noqa: N802
+        self._subwidget.Unbind(
+            event=event, source=source, id=id, id2=id2, handler=handler
+        )
+
     # Methods that we add from wgpu
 
     def get_present_methods(self):
