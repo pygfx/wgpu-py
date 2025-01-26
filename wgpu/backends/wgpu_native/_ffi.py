@@ -4,7 +4,11 @@ import os
 import sys
 import logging
 
-from ..._coreutils import get_resource_filename, logger_set_level_callbacks
+from ..._coreutils import (
+    get_library_filename,
+    logger_set_level_callbacks,
+    get_header_filename,
+)
 
 from cffi import FFI, __version_info__ as cffi_version_info
 
@@ -19,8 +23,8 @@ if cffi_version_info < (1, 10):  # no-cover
 def get_wgpu_header():
     """Read header file and strip some stuff that cffi would stumble on."""
     return _get_wgpu_header(
-        get_resource_filename("webgpu.h"),
-        get_resource_filename("wgpu.h"),
+        get_header_filename("webgpu.h"),
+        get_header_filename("wgpu.h"),
     )
 
 
@@ -66,38 +70,44 @@ def get_wgpu_lib_path():
 
     # Load the debug binary if requested
     debug_mode = os.getenv("WGPU_DEBUG", "").strip() == "1"
-    build = "debug" if debug_mode else "release"
+    candidate_builds = ["-debug" if debug_mode else "-release"]
+    if not debug_mode:
+        candidate_builds.append("")
 
-    # Get lib filename for supported platforms
-    if sys.platform.startswith("win"):  # no-cover
-        lib_filename = f"wgpu_native-{build}.dll"
-    elif sys.platform.startswith("darwin"):  # no-cover
-        lib_filename = f"libwgpu_native-{build}.dylib"
-    elif sys.platform.startswith("linux"):  # no-cover
-        lib_filename = f"libwgpu_native-{build}.so"
-    else:  # no-cover
-        raise RuntimeError(
-            f"No WGPU library shipped for platform {sys.platform}. Set WGPU_LIB_PATH instead."
-        )
+    for build in candidate_builds:
+        # Get lib filename for supported platforms
+        if sys.platform.startswith("win"):  # no-cover
+            lib_filename = f"wgpu_native{build}.dll"
+        elif sys.platform.startswith("darwin"):  # no-cover
+            lib_filename = f"libwgpu_native{build}.dylib"
+        elif sys.platform.startswith("linux"):  # no-cover
+            lib_filename = f"libwgpu_native{build}.so"
+        else:  # no-cover
+            raise RuntimeError(
+                f"No WGPU library shipped for platform {sys.platform}. Set WGPU_LIB_PATH instead."
+            )
 
-    # Note that this can be a false positive, e.g. ARM linux.
-    embedded_path = get_resource_filename(lib_filename)
-    if not os.path.isfile(embedded_path):  # no-cover
-        env_hint = "You can set the WGPU_LIB_PATH env var to the location of the wgpu-native library."
-        download_hint = _maybe_get_hint_on_download_script().strip()
-        pip_hint = _maybe_get_pip_hint().strip()
-        hints = [pip_hint, download_hint, env_hint]
-        hints = "\n".join([hint for hint in hints if hint])
-        hints = "\n" + hints if hints else ""
-        raise RuntimeError(f"Could not find WGPU library in {embedded_path}.{hints}")
+        try:
+            embedded_path = get_library_filename(lib_filename)
+            return embedded_path
+        except RuntimeError:
+            pass
     else:
-        return embedded_path
+        main_hint = "Could not find WGPU library libwpgu_native."
+        pip_hint = _maybe_get_pip_hint().strip()
+        download_hint = _maybe_get_hint_on_download_script().strip()
+        env_hint = "You can set the WGPU_LIB_PATH env var to the location of the wgpu-native library."
+
+        hints = [main_hint, pip_hint, download_hint, env_hint]
+        hints = "\n".join([hint for hint in hints if hint])
+        raise RuntimeError(hints)
 
 
 def _maybe_get_hint_on_download_script():
-    root_dir = os.path.join(get_resource_filename(""), "..", "..")
+    lib_module = sys.modules[__name__.split(".")[0]]
+    lib_dir = os.path.abspath(os.path.dirname(lib_module.__file__))
     filename = os.path.abspath(
-        os.path.join(root_dir, "tools", "download_wgpu_native.py")
+        os.path.join(lib_dir, "..", "tools", "download_wgpu_native.py")
     )
     uses_repo = os.path.isfile(filename)
 
