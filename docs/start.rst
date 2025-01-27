@@ -84,11 +84,15 @@ Cloud Compute
 GPU Environments
 ^^^^^^^^^^^^^^^^
 
-WGPU can work in GPU cloud compute environments on Linux machines with no physical display output. By default, these environments may lack system libraries that are typically found on a standard linux desktop. On Debian & Ubuntu based systems you should be able to get everything you need by installing the following in addition to your vendor-specific (Nvidia/AMD) GPU drivers:
+WGPU can work in GPU cloud compute environments on Linux machines with no
+physical display output. By default, these environments may lack system
+libraries that are typically found on a standard linux desktop. On Debian &
+Ubuntu based systems you should be able to get everything you need by installing
+the following in addition to your vendor-specific (Nvidia/AMD) GPU drivers:
 
 .. code-block:: bash
 
-    sudo apt install xserver-xorg-core mesa-vulkan-drivers libvulkan1
+    sudo apt install -y xserver-xorg-core mesa-vulkan-drivers libvulkan1
 
 .. note:: If your distro is not Debian/Ubuntu install the corresponding packages for your distribution.
 
@@ -120,13 +124,7 @@ On Windows this (probably) just works via DX12. On Linux you can use LavaPipe:
 .. code-block:: bash
 
         sudo apt update -y -qq
-        sudo apt install --no-install-recommends -y libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
-
-The distribution's version of Lavapipe may be a bit outdated. To get a more recent version, you can use this PPA:
-
-.. code-block:: bash
-
-        sudo add-apt-repository ppa:oibaf/graphics-drivers -y
+        sudo apt install -y libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
 
 .. note::
 
