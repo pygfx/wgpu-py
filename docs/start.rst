@@ -6,8 +6,8 @@ Installation
 Install with pip
 ----------------
 
-You can install ``wgpu-py`` via pip.
-Python 3.9 or higher is required. Pypy is supported. Only depends on ``cffi`` (installed automatically by pip).
+You can install ``wgpu-py`` with your favourite package manager (we use ``pip`` in the example commands below).
+Python 3.9 or higher is required. Pypy is supported.
 
 .. code-block:: bash
 
@@ -69,6 +69,8 @@ On Linux, it's advisable to install the proprietary drivers of your GPU (if you
 have a dedicated GPU). You may need to ``apt install mesa-vulkan-drivers``. On
 Wayland, wgpu-py requires XWayland (available by default on most distributions).
 
+Note that WSL is currently not supported.
+
 Binary wheels for Linux are only available for **manylinux_2_24**.
 This means that the installation requires ``pip >= 20.3``, and you need
 a recent Linux distribution, listed `here <https://github.com/pypa/manylinux#manylinux>`_.
@@ -84,7 +86,11 @@ Cloud Compute
 GPU Environments
 ^^^^^^^^^^^^^^^^
 
-WGPU can work in GPU cloud compute environments on Linux machines with no physical display output. By default, these environments may lack system libraries that are typically found on a standard linux desktop. On Debian & Ubuntu based systems you should be able to get everything you need by installing the following in addition to your vendor-specific (Nvidia/AMD) GPU drivers:
+WGPU can work in GPU cloud compute environments on Linux machines with no
+physical display output. By default, these environments may lack system
+libraries that are typically found on a standard linux desktop. On Debian &
+Ubuntu based systems you should be able to get everything you need by installing
+the following in addition to your vendor-specific (Nvidia/AMD) GPU drivers:
 
 .. code-block:: bash
 
@@ -119,14 +125,7 @@ On Windows this (probably) just works via DX12. On Linux you can use LavaPipe:
 
 .. code-block:: bash
 
-        sudo apt update -y -qq
-        sudo apt install --no-install-recommends -y libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
-
-The distribution's version of Lavapipe may be a bit outdated. To get a more recent version, you can use this PPA:
-
-.. code-block:: bash
-
-        sudo add-apt-repository ppa:oibaf/graphics-drivers -y
+        sudo apt install libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
 
 .. note::
 
