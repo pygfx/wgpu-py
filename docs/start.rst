@@ -92,7 +92,7 @@ the following in addition to your vendor-specific (Nvidia/AMD) GPU drivers:
 
 .. code-block:: bash
 
-    sudo apt install -y xserver-xorg-core mesa-vulkan-drivers libvulkan1
+    sudo apt install xserver-xorg-core mesa-vulkan-drivers libvulkan1
 
 .. note:: If your distro is not Debian/Ubuntu install the corresponding packages for your distribution.
 
@@ -123,8 +123,7 @@ On Windows this (probably) just works via DX12. On Linux you can use LavaPipe:
 
 .. code-block:: bash
 
-        sudo apt update -y -qq
-        sudo apt install -y libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
+        sudo apt install libegl1-mesa-dev libgl1-mesa-dri libxcb-xfixes0-dev mesa-vulkan-drivers
 
 .. note::
 
