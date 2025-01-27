@@ -69,6 +69,8 @@ On Linux, it's advisable to install the proprietary drivers of your GPU (if you
 have a dedicated GPU). You may need to ``apt install mesa-vulkan-drivers``. On
 Wayland, wgpu-py requires XWayland (available by default on most distributions).
 
+Note that WSL is currently not supported.
+
 Binary wheels for Linux are only available for **manylinux_2_24**.
 This means that the installation requires ``pip >= 20.3``, and you need
 a recent Linux distribution, listed `here <https://github.com/pypa/manylinux#manylinux>`_.
