@@ -1,10 +1,13 @@
 """Utilities used in the wgpu-native backend."""
 
-import ctypes
 import sys
 import time
-from collections.abc import Generator
+import types
+import ctypes
+import inspect
+import threading
 from queue import deque
+from collections.abc import Generator
 
 import sniffio
 
@@ -320,6 +323,15 @@ class WgpuAwaitable:
             yield 0.01
 
 
+class ErrorSlot:
+    __slot__ = ["name", "type", "message"]
+
+    def __init__(self, name):
+        self.name = name
+        self.type = type
+        self.message = None
+
+
 class ErrorHandler:
     """Object that logs errors, with the option to collect incoming
     errors elsewhere.
@@ -327,33 +339,58 @@ class ErrorHandler:
 
     def __init__(self, logger):
         self._logger = logger
-        self._proxy_stack = deque()
-        self._proxy_messages = {}
-        self._error_message_counts = {}
+        # threadlocal -> deque -> ErrorSlot
+        self._per_thread_data = threading.local()
+
+    def _get_proxy_stack(self):
+        try:
+            return self._per_thread_data.stack
+        except AttributeError:
+            stack = deque()
+            self._per_thread_data.stack = stack
+            self._per_thread_data.error_message_counts = {}
+            return stack
 
     def capture(self, name):
         """Capture incoming error messages instead of logging them directly."""
-        self._proxy_stack.append(name)
+        # This codepath must be as fast as it can be
+        self._get_proxy_stack().append(ErrorSlot(name))
 
     def release(self, name):
         """Release the given name, returning the last captured error."""
-        n = self._proxy_stack.pop()
-        if n is not name:
-            messages = [m for _, m in self._proxy_messages.values()]
-            self._proxy_messages.clear()
-            self._proxy_stack.clear()
+        # This codepath, with matching name, must be as fast as it can be
+
+        proxy_stack = self._get_proxy_stack()
+        try:
+            error_slot = proxy_stack.pop()
+        except IndexError:
+            error_slot = ErrorSlot("notavalidname")
+
+        if error_slot.name == name:
+            if error_slot.message is None:
+                return None
+            else:
+                return error_slot.type, error_slot.message
+        else:
+            # This should never happen, but if it does, we want to know.
             self._logger.error("ErrorHandler capture/release out of sync")
-            for message in messages:
-                self.log_error(message)
-        return self._proxy_messages.pop(name, None)
+            if error_slot.message:
+                self.log_error(error_slot.message)
+            while proxy_stack:
+                es = proxy_stack.pop()
+                if es.message:
+                    self.log_error(es.message)
+            return None
 
     def handle_error(self, error_type: str, message: str):
         """Handle an error message."""
-        if self._proxy_stack:
-            proxy_name = self._proxy_stack[-1]
-            if proxy_name in self._proxy_messages:
-                self.log_error(self._proxy_messages[proxy_name][1])
-            self._proxy_messages[proxy_name] = error_type, message
+        proxy_stack = self._get_proxy_stack()
+        if proxy_stack:
+            error_slot = proxy_stack[-1]
+            if error_slot.message:
+                self.log_error(error_slot.message)
+            error_slot.type = error_type
+            error_slot.message = message
         else:
             self.log_error(message)
 
@@ -363,8 +400,10 @@ class ErrorHandler:
         # digits in the message, because of id's getting renewed on
         # each draw.
         h = hash("".join(c for c in message if not c.isdigit()))
-        count = self._error_message_counts.get(h, 0) + 1
-        self._error_message_counts[h] = count
+        self._get_proxy_stack()  # make sure the error_message_counts attribute exists
+        error_message_counts = self._per_thread_data.error_message_counts
+        count = error_message_counts.get(h, 0) + 1
+        error_message_counts[h] = count
 
         # Decide what to do
         if count == 1:
@@ -407,10 +446,15 @@ class SafeLibCalls:
                 error_type, message = error_type_msg
                 cls = ERROR_TYPES.get(error_type, GPUError)
                 wgpu_error = cls(message)
-                # The line below will be the bottom line in the traceback,
-                # so better make it informative! As far as I know there is
-                # no way to exclude this frame from the traceback.
-                raise wgpu_error  # the frame above is more interesting ↑↑
+                # Select the traceback object matching the call that raised the error. The
+                # traceback will still actually show the line where we raise below, but the
+                # bottommost line (which ppl look at first) will be correct.
+                f = inspect.currentframe()
+                f = f.f_back
+                tb = types.TracebackType(None, f, f.f_lasti, f.f_lineno)
+                # Raise message with alt traceback
+                wgpu_error = wgpu_error.with_traceback(tb)
+                raise wgpu_error
             return result
 
         proxy_func.__name__ = name
