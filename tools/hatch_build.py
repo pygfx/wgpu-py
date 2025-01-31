@@ -44,7 +44,7 @@ class CustomBuildHook(BuildHookInterface):
         # we go pure-Python mode, and expect the user to set WGPU_LIB_PATH.
         # We also allow building an arch-agnostic wheel explicitly, using an env var.
 
-        if os.getenv("WGPU_PY_BUILD_NOARCH") in ("1", "true"):
+        if os.getenv("WGPU_PY_BUILD_NOARCH", "").lower() in ("1", "true"):
             pass  # Explicitly disable including the lib
         elif self.target_name == "wheel" and is_git_repo():
             # Prepare
