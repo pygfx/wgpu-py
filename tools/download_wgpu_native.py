@@ -6,8 +6,6 @@ import tempfile
 import platform
 from zipfile import ZipFile
 
-import requests
-
 
 DEFAULT_UPSTREAM = "gfx-rs/wgpu-native"
 
@@ -49,6 +47,8 @@ def write_current_version(version, commit_sha):
 
 
 def download_file(url, filename):
+    import requests  # lazy-load so build systems (like Conda) don't necessarily need it
+
     resp = requests.get(url, stream=True)
     with open(filename, mode="wb") as fh:
         for chunk in resp.iter_content(chunk_size=1024 * 128):
