@@ -6,7 +6,9 @@ import tempfile
 import platform
 from zipfile import ZipFile
 
-import requests
+# Import requests unless doing a noarch build
+if os.getenv("WGPU_PY_BUILD_NOARCH", "").lower() not in ("1", "true"):
+    import requests
 
 
 DEFAULT_UPSTREAM = "gfx-rs/wgpu-native"
