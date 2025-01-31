@@ -6,6 +6,10 @@ import tempfile
 import platform
 from zipfile import ZipFile
 
+# Import requests unless doing a noarch build
+if os.getenv("WGPU_PY_BUILD_NOARCH", "").lower() not in ("1", "true"):
+    import requests
+
 
 DEFAULT_UPSTREAM = "gfx-rs/wgpu-native"
 
@@ -47,8 +51,6 @@ def write_current_version(version, commit_sha):
 
 
 def download_file(url, filename):
-    import requests  # lazy-load so build systems (like Conda) don't necessarily need it
-
     resp = requests.get(url, stream=True)
     with open(filename, mode="wb") as fh:
         for chunk in resp.iter_content(chunk_size=1024 * 128):
