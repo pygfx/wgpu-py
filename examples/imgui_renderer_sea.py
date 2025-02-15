@@ -9,10 +9,10 @@ import wgpu
 import time
 import numpy as np
 from imgui_bundle import imgui
-from wgpu.utils.imgui import ImguiRenderer
+from wgpu.utils.imgui import ImguiRenderer, Stats
 
 # Create a canvas to render to
-canvas = WgpuCanvas(title="imgui_sea", size=(800, 450), max_fps=60)
+canvas = WgpuCanvas(title="imgui_sea", size=(800, 450), max_fps=-1, vsync=False)
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
@@ -377,10 +377,14 @@ def render():
 # set the GUI update function that gets called to return the draw data
 imgui_renderer.set_gui(lambda: gui(app_state))
 
+stats = Stats(device, canvas, align="right")
+
 
 def loop():
-    render()
+    with stats:
+        render()
     imgui_renderer.render()
+    stats.render()
     canvas.request_draw()
 
 

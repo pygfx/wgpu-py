@@ -70,16 +70,23 @@ class ImguiRenderer:
         # Prepare present context
         self._canvas_context = canvas.get_context("wgpu")
 
-        if render_target_format is None:
-            # todo: not sure if this is the correct format, maybe we should expose it in the public API
-            render_target_format = self._canvas_context.get_preferred_format(
-                device.adapter
-            )
-
         # if the canvas is not configured, we configure it self.
-        # todo: maybe we should just raise an error if the canvas is not configured?
         if self._canvas_context._config is None:
+            if render_target_format is None:
+                render_target_format = self._canvas_context.get_preferred_format(
+                    device.adapter
+                )
             self._canvas_context.configure(device=device, format=render_target_format)
+        else:
+            config_format = self._canvas_context._config.get("format")
+            if (
+                render_target_format is not None
+                and config_format != render_target_format
+            ):
+                raise ValueError(
+                    "The canvas is already configured with a different format."
+                )
+            render_target_format = self._canvas_context._config["format"]
 
         self._imgui_context = imgui.create_context()
         imgui.set_current_context(self._imgui_context)

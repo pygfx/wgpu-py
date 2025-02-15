@@ -9,21 +9,39 @@ class Stats:
     """A Stats helper which displays performance statistics such
     as FPS and draw time on the screen.
 
+    Parameters
+    ----------
+    device : wgpu.Device
+        The device to use for rendering the stats.
+    canvas : wgpu.gui.WgpuCanvasBase
+        The canvas to render the stats on.
+    foreground : tuple(4)
+        The color of the text.
+    background : tuple(4)
+        The color of the background.
+    align : str
+        The alignment of the stats window, either "left" or "right". Default is "left".
+
     """
 
     def __init__(
         self,
         device,
         canvas,
+        *,
+        foreground=(0, 1, 0, 1),
+        background=(0, 0.2, 0, 0.5),
+        align="left",
     ):
-        self._foreground = imgui.ImVec4(0, 1, 0, 1)
-        self._background = imgui.ImVec4(0, 0.2, 0, 0.5)
+        self._foreground = foreground
+        self._background = background
+        self._align = align
 
         self._renderer = ImguiRenderer(device, canvas)
 
         self._renderer.set_gui(self._draw_imgui)
 
-        canvas.add_event_handler(self._on_mouse, "pointer_down", order=-100)
+        canvas.add_event_handler(self._on_mouse, "pointer_down", order=-200)
 
         # flag used to skip the first frame
         # which typically has all the CPU->GPU transfer and
@@ -49,8 +67,13 @@ class Stats:
     def _draw_imgui(self):
         imgui.new_frame()
 
-        imgui.set_next_window_size((150, 0), imgui.Cond_.always)
-        imgui.set_next_window_pos((0, 0), imgui.Cond_.always)
+        imgui.set_next_window_size((125, 0), imgui.Cond_.always)
+        if self._align == "right":
+            pos = imgui.get_io().display_size.x - 125
+        else:
+            pos = 0
+
+        imgui.set_next_window_pos((pos, 0), imgui.Cond_.always)
 
         imgui.push_style_color(imgui.Col_.window_bg, self._background)
 
@@ -68,17 +91,17 @@ class Stats:
         if self._mode == 0:
             if self._fps is not None:
                 ms = self._ms_samples[-1]
-                text = f"{ms} ms ({self._tmin}-{self._tmax})"
-                text += f"\n{self._fps} fps ({self._fmin}-{self._fmax})"
+                text = f"{int(ms)} ms ({self._tmin}-{self._tmax})"
+                text += f"\n{self._fps}fps ({self._fmin}-{self._fmax})"
                 imgui.text(text)
 
         elif self._mode == 1:
-            imgui.text(f"{self._fps} fps ({self._fmin}-{self._fmax})")
-            imgui.plot_histogram("##", self._fps_samples, graph_size=(120, 30))
+            imgui.text(f"{self._fps}fps({self._fmin}-{self._fmax})")
+            imgui.plot_histogram("##", self._fps_samples, graph_size=(110, 25))
         elif self._mode == 2:
             ms = self._ms_samples[-1]
-            imgui.text(f"{ms} ms ({self._tmin}-{self._tmax})")
-            imgui.plot_lines("##", self._ms_samples, graph_size=(120, 30))
+            imgui.text(f"{int(ms)} ms({self._tmin}-{self._tmax})")
+            imgui.plot_lines("##", self._ms_samples, graph_size=(110, 25))
 
         imgui.pop_style_color()
 
@@ -91,7 +114,9 @@ class Stats:
         return imgui.get_draw_data()
 
     def _on_mouse(self, event):
-        self._mode = (self._mode + 1) % 3
+        if self._renderer.backend.io.want_capture_mouse:
+            self._mode = (self._mode + 1) % 3
+            event["stop_propagation"] = True
 
     def start(self):
         if not self._init:
