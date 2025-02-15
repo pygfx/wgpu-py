@@ -86,7 +86,7 @@ class ImguiRenderer:
                 raise ValueError(
                     "The canvas is already configured with a different format."
                 )
-            render_target_format = self._canvas_context._config["format"]
+            render_target_format = config_format
 
         self._imgui_context = imgui.create_context()
         imgui.set_current_context(self._imgui_context)
