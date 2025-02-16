@@ -9,6 +9,7 @@ import atexit
 import logging
 import importlib.resources
 from contextlib import ExitStack
+from pathlib import Path
 
 
 # Our resources are most probably always on the file system. But in
@@ -17,15 +18,52 @@ _resource_files = ExitStack()
 atexit.register(_resource_files.close)
 
 
-def get_resource_filename(name):
-    """Get the filename to a wgpu resource."""
-    if sys.version_info < (3, 9):
-        context = importlib.resources.path("wgpu.resources", name)
-    else:
-        ref = importlib.resources.files("wgpu.resources") / name
-        context = importlib.resources.as_file(ref)
+def get_header_filename(name):
+    """Get the filename to a wgpu related header resource."""
+    ref = importlib.resources.files("wgpu.resources") / name
+    context = importlib.resources.as_file(ref)
     path = _resource_files.enter_context(context)
-    return str(path)
+    if path.exists():
+        return str(path)
+
+    # conda or system based installations may have the headers in other
+    # locations
+    path = Path(sys.exec_prefix) / "include" / name
+    if path.exists():
+        return str(path)
+
+    # Windows conda file layout is slightly different and includes a
+    # Library before the include directory
+    path = Path(sys.exec_prefix) / "Library" / "include" / name
+    if path.exists():
+        return str(path)
+
+    raise RuntimeError(f"Could not find the requested header file {name}.")
+
+
+def get_library_filename(name):
+    """Get the filename to a wgpu related library resource."""
+    ref = importlib.resources.files("wgpu.resources") / name
+    context = importlib.resources.as_file(ref)
+    path = _resource_files.enter_context(context)
+    if path.exists():
+        return str(path)
+
+    # conda or system based installations may have the headers in other
+    # locations
+    # Question for other linux distributions, how can we detect if we should
+    # be using `lib` or `lib64`????
+    path = Path(sys.exec_prefix) / "lib" / name
+    if path.exists():
+        return str(path)
+
+    # Windows conda file layout is slightly different and includes a
+    # Library before the include directory
+    path = Path(sys.exec_prefix) / "Library" / "bin" / name
+    if path.exists():
+        return str(path)
+
+    raise RuntimeError(f"Could not find the requested header file {name}.")
 
 
 class WGPULogger(logging.getLoggerClass()):

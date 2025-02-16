@@ -94,7 +94,10 @@ def test_examples_screenshots(
     # the first part of the test everywhere else; ensuring that examples
     # can at least import, run and render something
     if not is_lavapipe:
-        pytest.skip("screenshot comparisons are only done when using lavapipe")
+        pytest.skip(
+            "screenshot comparisons are only done when using lavapipe. "
+            "Rerun your tests with WGPUPY_WGPU_ADAPTER_NAME=llvmpipe"
+        )
 
     # regenerate screenshot if requested
     screenshots_dir.mkdir(exist_ok=True)
@@ -103,41 +106,67 @@ def test_examples_screenshots(
         imageio.imwrite(screenshot_path, img)
 
     # if a reference screenshot exists, assert it is equal
-    assert (
-        screenshot_path.exists()
-    ), "found # test_example = true but no reference screenshot available"
+    assert screenshot_path.exists(), (
+        "found # test_example = true but no reference screenshot available"
+    )
     stored_img = imageio.imread(screenshot_path)
     # assert similarity
-    is_similar = np.allclose(img, stored_img, atol=1)
-    update_diffs(module, is_similar, img, stored_img)
-    assert is_similar, (
-        f"rendered image for example {module} changed, see "
-        f"the {diffs_dir.relative_to(ROOT).as_posix()} folder"
-        " for visual diffs (you can download this folder from"
-        " CI build artifacts as well)"
-    )
+    atol = 1
+    try:
+        np.testing.assert_allclose(img, stored_img, atol=atol)
+        is_similar = True
+    except Exception as e:
+        is_similar = False
+        raise AssertionError(
+            f"rendered image for example {module_name} changed, see "
+            f"the {diffs_dir.relative_to(ROOT).as_posix()} folder"
+            " for visual diffs (you can download this folder from"
+            " CI build artifacts as well)"
+        ) from e
+    finally:
+        update_diffs(module_name, is_similar, img, stored_img, atol=atol)
 
 
-def update_diffs(module, is_similar, img, stored_img):
+def update_diffs(module, is_similar, img, stored_img, *, atol):
     diffs_dir.mkdir(exist_ok=True)
+
+    if is_similar:
+        for path in [
+            # Keep filename in sync with the ones generated below
+            diffs_dir / f"{module}-rgb.png",
+            diffs_dir / f"{module}-alpha.png",
+            diffs_dir / f"{module}-rgb-above_atol.png",
+            diffs_dir / f"{module}-alpha-above_atol.png",
+            diffs_dir / f"{module}.png",
+        ]:
+            if path.exists():
+                path.unlink()
+        return
+
     # cast to float32 to avoid overflow
     # compute absolute per-pixel difference
     diffs_rgba = np.abs(stored_img.astype("f4") - img)
+
+    diffs_rgba_above_atol = diffs_rgba.copy()
+    diffs_rgba_above_atol[diffs_rgba <= atol] = 0
+
     # magnify small values, making it easier to spot small errors
     diffs_rgba = ((diffs_rgba / 255) ** 0.25) * 255
     # cast back to uint8
     diffs_rgba = diffs_rgba.astype("u1")
-    # split into an rgb and an alpha diff
-    diffs = {
-        diffs_dir / f"{module}-rgb.png": diffs_rgba[..., :3],
-        diffs_dir / f"{module}-alpha.png": diffs_rgba[..., 3],
-    }
 
-    for path, diff in diffs.items():
-        if not is_similar:
-            imageio.imwrite(path, diff)
-        elif path.exists():
-            path.unlink()
+    diffs_rgba_above_atol = ((diffs_rgba_above_atol / 255) ** 0.25) * 255
+    diffs_rgba_above_atol = diffs_rgba_above_atol.astype("u1")
+    # And highlight differences that are above the atol
+    imageio.imwrite(diffs_dir / f"{module}-rgb.png", diffs_rgba[..., :3])
+    imageio.imwrite(diffs_dir / f"{module}-alpha.png", diffs_rgba[..., 3])
+    imageio.imwrite(
+        diffs_dir / f"{module}-rgb-above_atol.png", diffs_rgba_above_atol[..., :3]
+    )
+    imageio.imwrite(
+        diffs_dir / f"{module}-alpha-above_atol.png", diffs_rgba_above_atol[..., 3]
+    )
+    imageio.imwrite(diffs_dir / f"{module}.png", img)
 
 
 @pytest.mark.parametrize("module", examples_to_run)

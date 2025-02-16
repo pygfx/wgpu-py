@@ -404,6 +404,27 @@ class GPU(classes.GPU):
     def _request_adapter(
         self, *, power_preference=None, force_fallback_adapter=False, canvas=None
     ):
+        # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
+        # It seems that the environment variables are only respected in their
+        # testing environments maybe????
+        # In Dec 2024 we couldn't get the use of their environment variables to work
+        # This should only be used in testing environments and API users
+        # should beware
+        # We chose the variable name WGPUPY_WGPU_ADAPTER_NAME instead WGPU_ADAPTER_NAME
+        # to avoid a clash
+        if adapter_name := os.getenv(("WGPUPY_WGPU_ADAPTER_NAME")):
+            adapters = self._enumerate_adapters()
+            adapters_llvm = [a for a in adapters if adapter_name in a.summary]
+            if not adapters_llvm:
+                raise ValueError(f"Adapter with name '{adapter_name}' not found.")
+            awaitable = WgpuAwaitable(
+                "llvm adapter",
+                callback=lambda: (),
+                finalizer=lambda x: x,
+            )
+            awaitable.set_result(adapters_llvm[0])
+
+            return awaitable
         # ----- Surface ID
 
         # Get surface id that the adapter must be compatible with. If we
@@ -424,8 +445,7 @@ class GPU(classes.GPU):
                 backend = enum_str2int["BackendType"][force_backend]
             except KeyError:
                 logger.warning(
-                    f"Invalid value for WGPU_BACKEND_TYPE: '{force_backend}'.\n"
-                    f"Valid values are: {list(enum_str2int['BackendType'].keys())}"
+                    f"Invalid value for WGPU_BACKEND_TYPE: '{force_backend}'.\nValid values are: {list(enum_str2int['BackendType'].keys())}"
                 )
             else:
                 logger.warning(f"Forcing backend: {force_backend} ({backend})")
