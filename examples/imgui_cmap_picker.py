@@ -102,7 +102,7 @@ def update_gui():
     for cmap_name, tex_id in cmap_data.items():
         # text part of each item
         clicked, enabled = imgui.menu_item(
-            cmap_name, None, p_selected=current_cmap == cmap_name
+            cmap_name, "", p_selected=current_cmap == cmap_name
         )
         imgui.same_line()
         # the image part of each item, give it the texture id
