@@ -2,8 +2,8 @@
 ## Preparing
 * The webgpu.idl defines 37 classes with 75 functions
 * The webgpu.idl defines 5 flags, 34 enums, 60 structs
-* The wgpu.h defines 199 functions
-* The wgpu.h defines 7 flags, 52 enums, 93 structs
+* The wgpu.h defines 211 functions
+* The wgpu.h defines 7 flags, 58 enums, 101 structs
 ## Updating API
 * Wrote 5 flags to flags.py
 * Wrote 34 enums to enums.py
@@ -22,19 +22,37 @@
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 121 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
-* Enum field FeatureName.texture-compression-bc-sliced-3d missing in wgpu.h
-* Enum field FeatureName.clip-distances missing in wgpu.h
-* Enum field FeatureName.dual-source-blending missing in wgpu.h
+* Flag BufferUsage missing in wgpu.h
+* Flag MapMode missing in wgpu.h
+* Flag TextureUsage missing in wgpu.h
+* Flag ShaderStage missing in wgpu.h
+* Flag ColorWriteMask missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
 * Enum AutoLayoutMode missing in wgpu.h
-* Enum field BlendFactor.src1 missing in wgpu.h
-* Enum field BlendFactor.one-minus-src1 missing in wgpu.h
-* Enum field BlendFactor.src1-alpha missing in wgpu.h
-* Enum field BlendFactor.one-minus-src1-alpha missing in wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in wgpu.h
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum CanvasToneMappingMode missing in wgpu.h
-* Wrote 236 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
+* Wrote 243 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 142 C function calls
-* Not using 64 C functions
+* Not using 76 C functions
+* ERROR: unknown C struct WGPUSupportedLimitsExtras
+* ERROR: unknown C struct WGPUSupportedLimits
+* ERROR: unknown C struct field WGPUSurfaceTexture.suboptimal
+* ERROR: unknown C struct WGPURequiredLimitsExtras
+* ERROR: unknown C struct WGPURequiredLimits
+* ERROR: unknown C struct field WGPUUncapturedErrorCallbackInfo.userdata
+* ERROR: unknown C struct field WGPUDeviceDescriptor.deviceLostCallback
+* ERROR: unknown C struct field WGPUDeviceDescriptor.deviceLostUserdata
+* ERROR: unknown C struct WGPUShaderModuleWGSLDescriptor
+* ERROR: unknown C struct WGPUShaderModuleSPIRVDescriptor
+* ERROR: unknown C struct field WGPUShaderModuleDescriptor.hintCount
+* ERROR: unknown C struct field WGPUShaderModuleDescriptor.hints
+* ERROR: unknown C struct WGPUTextureDataLayout
+* ERROR: unknown C struct WGPUImageCopyTexture
+* ERROR: unknown C struct WGPUImageCopyTexture
+* ERROR: unknown C struct WGPUTextureDataLayout
+* ERROR: unknown C struct WGPUImageCopyTexture
+* ERROR: unknown C struct WGPUImageCopyTexture
+* ERROR: unknown C struct WGPUImageCopyTexture
+* ERROR: unknown C struct WGPUTextureDataLayout
 * Validated 82 C structs

@@ -232,7 +232,7 @@ def _get_override_constant_entries(field):
     for key, value in constants.items():
         assert isinstance(key, (str, int))
         assert isinstance(value, (int, float, bool))
-        # H: nextInChain: WGPUChainedStruct *, key: char *, value: float
+        # H: nextInChain: WGPUChainedStruct *, key: WGPUStringView, value: float
         c_constant_entry = new_struct(
             "WGPUConstantEntry",
             key=to_c_string(str(key)),
@@ -288,24 +288,24 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
 
-    # H: chain: WGPUChainedStructOut, limits: WGPUNativeLimits
+    # FIXME: unknown C struct WGPUSupportedLimitsExtras
     c_supported_limits_extras = new_struct_p(
         "WGPUSupportedLimitsExtras *",
         # not used: chain
         # not used: limits
     )
     c_supported_limits_extras.chain.sType = lib.WGPUSType_SupportedLimitsExtras
-    # H: nextInChain: WGPUChainedStructOut *, limits: WGPULimits
+    # FIXME: unknown C struct WGPUSupportedLimits
     c_supported_limits = new_struct_p(
         "WGPUSupportedLimits *",
         nextInChain=ffi.cast("WGPUChainedStructOut *", c_supported_limits_extras),
         # not used: limits
     )
     if adapter:
-        # H: WGPUBool f(WGPUAdapter adapter, WGPUSupportedLimits * limits)
+        # H: WGPUStatus f(WGPUAdapter adapter, WGPULimits * limits)
         libf.wgpuAdapterGetLimits(id, c_supported_limits)
     else:
-        # H: WGPUBool f(WGPUDevice device, WGPUSupportedLimits * limits)
+        # H: WGPUStatus f(WGPUDevice device, WGPULimits * limits)
         libf.wgpuDeviceGetLimits(id, c_supported_limits)
 
     key_value_pairs = [
@@ -452,7 +452,7 @@ class GPU(classes.GPU):
 
         # ----- Request adapter
 
-        # H: nextInChain: WGPUChainedStruct *, compatibleSurface: WGPUSurface, powerPreference: WGPUPowerPreference, backendType: WGPUBackendType, forceFallbackAdapter: WGPUBool/int
+        # H: nextInChain: WGPUChainedStruct *, featureLevel: WGPUFeatureLevel, powerPreference: WGPUPowerPreference, forceFallbackAdapter: WGPUBool/int, backendType: WGPUBackendType, compatibleSurface: WGPUSurface
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
             compatibleSurface=surface_id,
@@ -460,6 +460,7 @@ class GPU(classes.GPU):
             forceFallbackAdapter=bool(force_fallback_adapter),
             backendType=backend,
             # not used: nextInChain
+            # not used: featureLevel
         )
 
         @ffi.callback("void(WGPURequestAdapterStatus, WGPUAdapter, char *, void *)")
@@ -477,7 +478,7 @@ class GPU(classes.GPU):
         # happens within libf.wgpuInstanceRequestAdapter
         awaitable = WgpuAwaitable("request_adapter", callback, finalizer)
 
-        # H: void f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPUInstanceRequestAdapterCallback callback, void * userdata)
+        # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback, ffi.NULL)
 
         return awaitable
@@ -510,7 +511,7 @@ class GPU(classes.GPU):
     def _create_adapter(self, adapter_id):
         # ----- Get adapter info
 
-        # H: nextInChain: WGPUChainedStructOut *, vendor: char *, architecture: char *, device: char *, description: char *, backendType: WGPUBackendType, adapterType: WGPUAdapterType, vendorID: int, deviceID: int
+        # H: nextInChain: WGPUChainedStructOut *, vendor: WGPUStringView, architecture: WGPUStringView, device: WGPUStringView, description: WGPUStringView, backendType: WGPUBackendType, adapterType: WGPUAdapterType, vendorID: int, deviceID: int
         c_info = new_struct_p(
             "WGPUAdapterInfo *",
             # not used: nextInChain
@@ -524,7 +525,7 @@ class GPU(classes.GPU):
             # not used: deviceID
         )
 
-        # H: void f(WGPUAdapter adapter, WGPUAdapterInfo * info)
+        # H: WGPUStatus f(WGPUAdapter adapter, WGPUAdapterInfo * info)
         libf.wgpuAdapterGetInfo(adapter_id, c_info)
 
         def to_py_str(key):
@@ -604,7 +605,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             "present_modes": ["fifo"],
         }
 
-        # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsageFlags/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
+        # H: nextInChain: WGPUChainedStructOut *, usages: WGPUTextureUsage/int, formatCount: int, formats: WGPUTextureFormat *, presentModeCount: int, presentModes: WGPUPresentMode *, alphaModeCount: int, alphaModes: WGPUCompositeAlphaMode *
         c_capabilities = new_struct_p(
             "WGPUSurfaceCapabilities *",
             # not used: nextInChain
@@ -617,7 +618,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # not used: alphaModes
         )
 
-        # H: void f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
+        # H: WGPUStatus f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
         libf.wgpuSurfaceGetCapabilities(surface_id, adapter_id, c_capabilities)
 
         # Convert to Python.
@@ -718,7 +719,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
         # Prepare config object
 
-        # H: nextInChain: WGPUChainedStruct *, device: WGPUDevice, format: WGPUTextureFormat, usage: WGPUTextureUsageFlags/int, viewFormatCount: int, viewFormats: WGPUTextureFormat *, alphaMode: WGPUCompositeAlphaMode, width: int, height: int, presentMode: WGPUPresentMode
+        # H: nextInChain: WGPUChainedStruct *, device: WGPUDevice, format: WGPUTextureFormat, usage: WGPUTextureUsage/int, width: int, height: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *, alphaMode: WGPUCompositeAlphaMode, presentMode: WGPUPresentMode
         self._wgpu_config = new_struct_p(
             "WGPUSurfaceConfiguration *",
             device=device._internal,
@@ -774,12 +775,14 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # Try to obtain a texture.
         # `If it fails, depending on status, we reconfigure and try again.
 
-        # H: texture: WGPUTexture, suboptimal: WGPUBool/int, status: WGPUSurfaceGetCurrentTextureStatus
+        # H: nextInChain: WGPUChainedStructOut *, texture: WGPUTexture, status: WGPUSurfaceGetCurrentTextureStatus
         surface_texture = new_struct_p(
             "WGPUSurfaceTexture *",
             # not used: texture
+            # FIXME: unknown C struct field WGPUSurfaceTexture.suboptimal
             # not used: suboptimal
             # not used: status
+            # not used: nextInChain
         )
 
         for attempt in [1, 2]:
@@ -836,13 +839,13 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # H: WGPUTextureFormat f(WGPUTexture texture)
         c_format = libf.wgpuTextureGetFormat(texture_id)
         format = enum_int2str["TextureFormat"][c_format]
-        # H: WGPUTextureUsageFlags f(WGPUTexture texture)
+        # H: WGPUTextureUsage f(WGPUTexture texture)
         usage = libf.wgpuTextureGetUsage(texture_id)
 
         label = ""
         # Cannot yet set label, because it's not implemented in wgpu-native
         # label = "surface-texture"
-        # H: void f(WGPUTexture texture, char const * label)
+        # H: void f(WGPUTexture texture, WGPUStringView label)
         # libf.wgpuTextureSetLabel(texture_id, to_c_label(label))
 
         tex_info = {
@@ -858,7 +861,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         return GPUTexture(label, texture_id, device, tex_info)
 
     def _present_screen(self):
-        # H: void f(WGPUSurface surface)
+        # H: WGPUStatus f(WGPUSurface surface)
         libf.wgpuSurfacePresent(self._surface_id)
 
     def _release(self):
@@ -965,14 +968,14 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Set limits
 
-        # H: chain: WGPUChainedStruct, limits: WGPUNativeLimits
+        # FIXME: unknown C struct WGPURequiredLimitsExtras
         c_required_limits_extras = new_struct_p(
             "WGPURequiredLimitsExtras *",
             # not used: chain
             # not used: limits
         )
         c_required_limits_extras.chain.sType = lib.WGPUSType_RequiredLimitsExtras
-        # H: nextInChain: WGPUChainedStruct *, limits: WGPULimits
+        # FIXME: unknown C struct WGPURequiredLimits
         c_required_limits = new_struct_p(
             "WGPURequiredLimits *",
             nextInChain=ffi.cast("WGPUChainedStruct*", c_required_limits_extras),
@@ -1019,7 +1022,7 @@ class GPUAdapter(classes.GPUAdapter):
         # Note that the default_queue arg is a descriptor (dict for QueueDescriptor), but is currently empty :)
         check_struct("QueueDescriptor", {})
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         queue_struct = new_struct(
             "WGPUQueueDescriptor",
             label=to_c_label("default_queue"),
@@ -1032,7 +1035,7 @@ class GPUAdapter(classes.GPUAdapter):
         if trace_path:  # no-cover
             c_trace_path = to_c_string(trace_path)
 
-        # H: chain: WGPUChainedStruct, tracePath: char *
+        # H: chain: WGPUChainedStruct, tracePath: WGPUStringView
         extras = new_struct_p(
             "WGPUDeviceExtras *",
             tracePath=c_trace_path,
@@ -1064,17 +1067,20 @@ class GPUAdapter(classes.GPUAdapter):
             message = "\n".join(line.rstrip() for line in message.splitlines())
             error_handler.handle_error(error_type, message)
 
-        # H: nextInChain: WGPUChainedStruct *, callback: WGPUErrorCallback, userdata: void *
+        # H: nextInChain: WGPUChainedStruct *, callback: WGPUUncapturedErrorCallback, userdata1: void*, userdata2: void*
         uncaptured_error_callback_info = new_struct(
             "WGPUUncapturedErrorCallbackInfo",
             callback=uncaptured_error_callback,
+            # FIXME: unknown C struct field WGPUUncapturedErrorCallbackInfo.userdata
             userdata=ffi.NULL,
             # not used: nextInChain
+            # not used: userdata1
+            # not used: userdata2
         )
 
         # ----- Request device
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPURequiredLimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallback: WGPUDeviceLostCallback, deviceLostUserdata: void *, uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPULimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallbackInfo: WGPUDeviceLostCallbackInfo, uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
             label=to_c_label(label),
@@ -1083,9 +1089,12 @@ class GPUAdapter(classes.GPUAdapter):
             requiredFeatures=new_array("WGPUFeatureName[]", c_features),
             requiredLimits=c_required_limits,
             defaultQueue=queue_struct,
+            # FIXME: unknown C struct field WGPUDeviceDescriptor.deviceLostCallback
             deviceLostCallback=device_lost_callback,
             uncapturedErrorCallbackInfo=uncaptured_error_callback_info,
+            # FIXME: unknown C struct field WGPUDeviceDescriptor.deviceLostUserdata
             # not used: deviceLostUserdata
+            # not used: deviceLostCallbackInfo
         )
 
         @ffi.callback("void(WGPURequestDeviceStatus, WGPUDevice, char *, void *)")
@@ -1113,7 +1122,7 @@ class GPUAdapter(classes.GPUAdapter):
 
         awaitable = WgpuAwaitable("request_device", callback, finalizer)
 
-        # H: void f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPUAdapterRequestDeviceCallback callback, void * userdata)
+        # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
 
         return awaitable
@@ -1136,12 +1145,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def _poll(self):
         # Internal function
         if self._internal:
-            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
+            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * wrappedSubmissionIndex)
             libf.wgpuDevicePoll(self._internal, False, ffi.NULL)
 
     def _poll_wait(self):
         if self._internal:
-            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUWrappedSubmissionIndex const * wrappedSubmissionIndex)
+            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * wrappedSubmissionIndex)
             libf.wgpuDevicePoll(self._internal, True, ffi.NULL)
 
     def create_buffer(
@@ -1158,7 +1167,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # Create a buffer object
         if isinstance(usage, str):
             usage = str_flag_to_int(flags.BufferUsage, usage)
-        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUBufferUsageFlags/int, size: int, mappedAtCreation: WGPUBool/int
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, usage: WGPUBufferUsage/int, size: int, mappedAtCreation: WGPUBool/int
         struct = new_struct_p(
             "WGPUBufferDescriptor *",
             label=to_c_label(label),
@@ -1224,7 +1233,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             sample_count = 1
         sample_count = int(sample_count)
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, usage: WGPUTextureUsageFlags/int, dimension: WGPUTextureDimension, size: WGPUExtent3D, format: WGPUTextureFormat, mipLevelCount: int, sampleCount: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, usage: WGPUTextureUsage/int, dimension: WGPUTextureDimension, size: WGPUExtent3D, format: WGPUTextureFormat, mipLevelCount: int, sampleCount: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *
         struct = new_struct_p(
             "WGPUTextureDescriptor *",
             label=to_c_label(label),
@@ -1268,7 +1277,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         compare: enums.CompareFunction = optional,
         max_anisotropy: int = 1,
     ):
-        # H: nextInChain: WGPUChainedStruct *, label: char *, addressModeU: WGPUAddressMode, addressModeV: WGPUAddressMode, addressModeW: WGPUAddressMode, magFilter: WGPUFilterMode, minFilter: WGPUFilterMode, mipmapFilter: WGPUMipmapFilterMode, lodMinClamp: float, lodMaxClamp: float, compare: WGPUCompareFunction, maxAnisotropy: int
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, addressModeU: WGPUAddressMode, addressModeV: WGPUAddressMode, addressModeW: WGPUAddressMode, magFilter: WGPUFilterMode, minFilter: WGPUFilterMode, mipmapFilter: WGPUMipmapFilterMode, lodMinClamp: float, lodMaxClamp: float, compare: WGPUCompareFunction, maxAnisotropy: int
         struct = new_struct_p(
             "WGPUSamplerDescriptor *",
             label=to_c_label(label),
@@ -1360,7 +1369,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             visibility = entry["visibility"]
             if isinstance(visibility, str):
                 visibility = str_flag_to_int(flags.ShaderStage, visibility)
-            # H: nextInChain: WGPUChainedStruct *, binding: int, visibility: WGPUShaderStageFlags/int, buffer: WGPUBufferBindingLayout, sampler: WGPUSamplerBindingLayout, texture: WGPUTextureBindingLayout, storageTexture: WGPUStorageTextureBindingLayout
+            # H: nextInChain: WGPUChainedStruct *, binding: int, visibility: WGPUShaderStage/int, buffer: WGPUBufferBindingLayout, sampler: WGPUSamplerBindingLayout, texture: WGPUTextureBindingLayout, storageTexture: WGPUStorageTextureBindingLayout
             c_entry = new_struct(
                 "WGPUBindGroupLayoutEntry",
                 binding=int(entry["binding"]),
@@ -1373,7 +1382,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             )
             c_entries_list.append(c_entry)
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, entryCount: int, entries: WGPUBindGroupLayoutEntry *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, entryCount: int, entries: WGPUBindGroupLayoutEntry *
         struct = new_struct_p(
             "WGPUBindGroupLayoutDescriptor *",
             label=to_c_label(label),
@@ -1447,7 +1456,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 raise TypeError(f"Unexpected resource type {type(resource)}")
             c_entries_list.append(c_entry)
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUBindGroupLayout, entryCount: int, entries: WGPUBindGroupEntry *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, layout: WGPUBindGroupLayout, entryCount: int, entries: WGPUBindGroupEntry *
         struct = new_struct_p(
             "WGPUBindGroupDescriptor *",
             label=to_c_label(label),
@@ -1499,7 +1508,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             c_pipeline_layout_extras.chain.sType = lib.WGPUSType_PipelineLayoutExtras
             next_in_chain = ffi.cast("WGPUChainedStruct *", c_pipeline_layout_extras)
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, bindGroupLayoutCount: int, bindGroupLayouts: WGPUBindGroupLayout *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, bindGroupLayoutCount: int, bindGroupLayouts: WGPUBindGroupLayout *
         struct = new_struct_p(
             "WGPUPipelineLayoutDescriptor *",
             label=to_c_label(label),
@@ -1543,14 +1552,14 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 defines = []
                 if c_stage == flags.ShaderStage.VERTEX:
                     defines.append(
-                        # H: name: char *, value: char *
+                        # H: name: WGPUStringView, value: WGPUStringView
                         new_struct(
                             "WGPUShaderDefine",
                             name=to_c_string("gl_VertexID"),
                             value=to_c_string("gl_VertexIndex"),
                         )
                     )
-                # H: chain: WGPUChainedStruct, stage: WGPUShaderStage, code: char *, defineCount: int, defines: WGPUShaderDefine *
+                # H: chain: WGPUChainedStruct, stage: WGPUShaderStage/int, code: WGPUStringView, defineCount: int, defines: WGPUShaderDefine *
                 source_struct = new_struct_p(
                     "WGPUShaderModuleGLSLDescriptor *",
                     code=to_c_string(code),
@@ -1563,7 +1572,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleGLSLDescriptor
             else:
                 # === WGSL
-                # H: chain: WGPUChainedStruct, code: char *
+                # FIXME: unknown C struct WGPUShaderModuleWGSLDescriptor
                 source_struct = new_struct_p(
                     "WGPUShaderModuleWGSLDescriptor *",
                     code=to_c_string(code),
@@ -1581,7 +1590,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # From bytes to WGPUU32Array
             data_u8 = ffi.new("uint8_t[]", data)
             data_u32 = ffi.cast("uint32_t *", data_u8)
-            # H: chain: WGPUChainedStruct, codeSize: int, code: uint32_t *
+            # FIXME: unknown C struct WGPUShaderModuleSPIRVDescriptor
             source_struct = new_struct_p(
                 "WGPUShaderModuleSPIRVDescriptor *",
                 code=data_u32,
@@ -1596,12 +1605,14 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             )
 
         # Note, we could give hints here that specify entrypoint and pipelinelayout before compiling
-        # H: nextInChain: WGPUChainedStruct *, label: char *, hintCount: int, hints: WGPUShaderModuleCompilationHint *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPUShaderModuleDescriptor *",
             label=to_c_label(label),
             nextInChain=ffi.cast("WGPUChainedStruct *", source_struct),
+            # FIXME: unknown C struct field WGPUShaderModuleDescriptor.hintCount
             hintCount=0,
+            # FIXME: unknown C struct field WGPUShaderModuleDescriptor.hints
             hints=ffi.NULL,
         )
         # H: WGPUShaderModule f(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor)
@@ -1655,7 +1666,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "create_compute_pipeline", callback, finalizer, self._device._poll
         )
 
-        # H: void f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor, WGPUDeviceCreateComputePipelineAsyncCallback callback, void * userdata)
+        # H: WGPUFuture f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor, WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo)
         libf.wgpuDeviceCreateComputePipelineAsync(
             self._internal, descriptor, callback, ffi.NULL
         )
@@ -1670,7 +1681,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     ):
         check_struct("ProgrammableStage", compute)
         c_constants, c_constant_entries = _get_override_constant_entries(compute)
-        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *
+        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: WGPUStringView, constantCount: int, constants: WGPUConstantEntry *
         c_compute_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
             module=compute["module"]._internal,
@@ -1689,7 +1700,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 "create_compute_pipeline() 'layout' arg must be a GPUPipelineLayout or 'auto'"
             )
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, layout: WGPUPipelineLayout, compute: WGPUProgrammableStageDescriptor
         struct = new_struct_p(
             "WGPUComputePipelineDescriptor *",
             label=to_c_label(label),
@@ -1755,7 +1766,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "create_render_pipeline", callback, finalizer, self._device._poll
         )
 
-        # H: void f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUDeviceCreateRenderPipelineAsyncCallback callback, void * userdata)
+        # H: WGPUFuture f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUCreateRenderPipelineAsyncCallbackInfo callbackInfo)
         libf.wgpuDeviceCreateRenderPipelineAsync(
             self._internal, descriptor, callback, ffi.NULL
         )
@@ -1788,7 +1799,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "WGPUVertexBufferLayout[]", c_vertex_buffer_layout_list
         )
         c_vertex_constants, c_vertex_entries = _get_override_constant_entries(vertex)
-        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, bufferCount: int, buffers: WGPUVertexBufferLayout *
+        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: WGPUStringView, constantCount: int, constants: WGPUConstantEntry *, bufferCount: int, buffers: WGPUVertexBufferLayout *
         c_vertex_state = new_struct(
             "WGPUVertexState",
             module=vertex["module"]._internal,
@@ -1800,7 +1811,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # not used: nextInChain
         )
 
-        # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode
+        # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode, unclippedDepth: WGPUBool/int
         c_primitive_state = new_struct(
             "WGPUPrimitiveState",
             topology=primitive.get("topology", "triangle-list"),
@@ -1808,6 +1819,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             frontFace=primitive.get("front_face", "ccw"),
             cullMode=primitive.get("cull_mode", "none"),
             # not used: nextInChain
+            # not used: unclippedDepth
         )
 
         c_depth_stencil_state = ffi.NULL
@@ -1836,7 +1848,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             c_fragment_constants, c_fragment_entries = _get_override_constant_entries(
                 fragment
             )
-            # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: char *, constantCount: int, constants: WGPUConstantEntry *, targetCount: int, targets: WGPUColorTargetState *
+            # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: WGPUStringView, constantCount: int, constants: WGPUConstantEntry *, targetCount: int, targets: WGPUColorTargetState *
             c_fragment_state = new_struct_p(
                 "WGPUFragmentState *",
                 module=fragment["module"]._internal,
@@ -1857,7 +1869,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 "create_render_pipeline() 'layout' arg must be a GPUPipelineLayout or 'auto'"
             )
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, layout: WGPUPipelineLayout, vertex: WGPUVertexState, primitive: WGPUPrimitiveState, depthStencil: WGPUDepthStencilState *, multisample: WGPUMultisampleState, fragment: WGPUFragmentState *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, layout: WGPUPipelineLayout, vertex: WGPUVertexState, primitive: WGPUPrimitiveState, depthStencil: WGPUDepthStencilState *, multisample: WGPUMultisampleState, fragment: WGPUFragmentState *
         struct = new_struct_p(
             "WGPURenderPipelineDescriptor *",
             label=to_c_label(label),
@@ -1894,7 +1906,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 color=c_color_blend,
                 alpha=c_alpha_blend,
             )
-        # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, blend: WGPUBlendState *, writeMask: WGPUColorWriteMaskFlags/int
+        # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, blend: WGPUBlendState *, writeMask: WGPUColorWriteMask/int
         c_color_state = new_struct(
             "WGPUColorTargetState",
             format=target["format"],
@@ -1916,7 +1928,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             )
             c_attributes_list.append(c_attribute)
         c_attributes_array = new_array("WGPUVertexAttribute[]", c_attributes_list)
-        # H: arrayStride: int, stepMode: WGPUVertexStepMode, attributeCount: int, attributes: WGPUVertexAttribute *
+        # H: stepMode: WGPUVertexStepMode, arrayStride: int, attributeCount: int, attributes: WGPUVertexAttribute *
         c_vertex_buffer_descriptor = new_struct(
             "WGPUVertexBufferLayout",
             arrayStride=buffer_des["array_stride"],
@@ -1949,7 +1961,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             depthFailOp=stencil_back.get("depth_fail_op", "keep"),
             passOp=stencil_back.get("pass_op", "keep"),
         )
-        # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, depthWriteEnabled: WGPUBool/int, depthCompare: WGPUCompareFunction, stencilFront: WGPUStencilFaceState, stencilBack: WGPUStencilFaceState, stencilReadMask: int, stencilWriteMask: int, depthBias: int, depthBiasSlopeScale: float, depthBiasClamp: float
+        # H: nextInChain: WGPUChainedStruct *, format: WGPUTextureFormat, depthWriteEnabled: WGPUOptionalBool, depthCompare: WGPUCompareFunction, stencilFront: WGPUStencilFaceState, stencilBack: WGPUStencilFaceState, stencilReadMask: int, stencilWriteMask: int, depthBias: int, depthBiasSlopeScale: float, depthBiasClamp: float
         c_depth_stencil_state = new_struct_p(
             "WGPUDepthStencilState *",
             format=depth_stencil["format"],
@@ -1967,7 +1979,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return c_depth_stencil_state
 
     def create_command_encoder(self, *, label: str = ""):
-        # H: nextInChain: WGPUChainedStruct *, label: char *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPUCommandEncoderDescriptor *",
             label=to_c_label(label),
@@ -1994,7 +2006,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             c_color_formats = new_array("WGPUTextureFormat[]", color_formats_list)
             color_formats_count = len(color_formats_list)
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, colorFormatCount: int, colorFormats: WGPUTextureFormat *, depthStencilFormat: WGPUTextureFormat, sampleCount: int, depthReadOnly: WGPUBool/int, stencilReadOnly: WGPUBool/int
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, colorFormatCount: int, colorFormats: WGPUTextureFormat *, depthStencilFormat: WGPUTextureFormat, sampleCount: int, depthReadOnly: WGPUBool/int, stencilReadOnly: WGPUBool/int
         render_bundle_encoder_descriptor = new_struct_p(
             "WGPURenderBundleEncoderDescriptor *",
             label=to_c_label(label),
@@ -2046,7 +2058,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             )
             next_in_chain = ffi.cast("WGPUChainedStruct *", query_set_descriptor_extras)
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, type: WGPUQueryType, count: int
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, type: WGPUQueryType, count: int
         query_set_descriptor = new_struct_p(
             "WGPUQuerySetDescriptor *",
             label=to_c_label(label),
@@ -2094,7 +2106,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._mapped_status = 0, self.size, flags.MapMode.WRITE
 
     def _get_size(self):
-        # H: WGPUBufferUsageFlags f(WGPUBuffer buffer)
+        # H: WGPUBufferUsage f(WGPUBuffer buffer)
         return libf.wgpuBufferGetUsage(self._internal)
 
     def _check_range(self, offset, size):
@@ -2181,7 +2193,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Map it
         self._map_state = enums.BufferMapState.pending
-        # H: void f(WGPUBuffer buffer, WGPUMapModeFlags mode, size_t offset, size_t size, WGPUBufferMapAsyncCallback callback, void * userdata)
+        # H: WGPUFuture f(WGPUBuffer buffer, WGPUMapMode mode, size_t offset, size_t size, WGPUBufferMapCallbackInfo callbackInfo)
         libf.wgpuBufferMapAsync(
             self._internal, map_mode, offset, size, callback, ffi.NULL
         )
@@ -2345,7 +2357,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             elif dimension in ("2d-array", "cube-array"):
                 array_layer_count = self._tex_info["size"][2] - base_array_layer
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, baseMipLevel: int, mipLevelCount: int, baseArrayLayer: int, arrayLayerCount: int, aspect: WGPUTextureAspect
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, baseMipLevel: int, mipLevelCount: int, baseArrayLayer: int, arrayLayerCount: int, aspect: WGPUTextureAspect, usage: WGPUTextureUsage/int
         struct = new_struct_p(
             "WGPUTextureViewDescriptor *",
             label=to_c_label(label),
@@ -2357,6 +2369,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             baseArrayLayer=base_array_layer,
             arrayLayerCount=array_layer_count,
             # not used: nextInChain
+            # not used: usage
         )
 
         # H: WGPUTextureView f(WGPUTexture texture, WGPUTextureViewDescriptor const * descriptor)
@@ -2425,7 +2438,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         #     else:
         #         pass
         #
-        # H: void f(WGPUShaderModule shaderModule, WGPUShaderModuleGetCompilationInfoCallback callback, void * userdata)
+        # H: WGPUFuture f(WGPUShaderModule shaderModule, WGPUCompilationInfoCallbackInfo callbackInfo)
         # libf.wgpuShaderModuleGetCompilationInfo(self._internal, callback, ffi.NULL)
         #
         # self._device._poll()
@@ -2542,7 +2555,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             raise ValueError("size_in_bytes + data_offset is too large")
 
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
-        # H: void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStageFlags stages, uint32_t offset, uint32_t sizeBytes, void const * data)
+        # H: void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStage stages, uint32_t offset, uint32_t sizeBytes, void const * data)
         function = type(self)._set_push_constants_function
         if function is None:
             self._not_implemented("set_push_constants")
@@ -2572,10 +2585,10 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label: str):
         c_group_label = to_c_string(group_label)
-        # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, char const * groupLabel)
-        # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, char const * groupLabel)
-        # H: void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, char const * groupLabel)
-        # H: void wgpuRenderBundleEncoderPushDebugGroup(WGPURenderBundleEncoder renderBundleEncoder, char const * groupLabel)
+        # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, WGPUStringView groupLabel)
+        # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, WGPUStringView groupLabel)
+        # H: void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, WGPUStringView groupLabel)
+        # H: void wgpuRenderBundleEncoderPushDebugGroup(WGPURenderBundleEncoder renderBundleEncoder, WGPUStringView groupLabel)
         function = type(self)._push_debug_group_function
         function(self._internal, c_group_label)
 
@@ -2589,10 +2602,10 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
 
     def insert_debug_marker(self, marker_label: str):
         c_marker_label = to_c_string(marker_label)
-        # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, char const * markerLabel)
-        # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, char const * markerLabel)
-        # H: void wgpuRenderPassEncoderInsertDebugMarker(WGPURenderPassEncoder renderPassEncoder, char const * markerLabel)
-        # H: void wgpuRenderBundleEncoderInsertDebugMarker(WGPURenderBundleEncoder renderBundleEncoder, char const * markerLabel)
+        # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, WGPUStringView markerLabel)
+        # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, WGPUStringView markerLabel)
+        # H: void wgpuRenderPassEncoderInsertDebugMarker(WGPURenderPassEncoder renderPassEncoder, WGPUStringView markerLabel)
+        # H: void wgpuRenderBundleEncoderInsertDebugMarker(WGPURenderBundleEncoder renderBundleEncoder, WGPUStringView markerLabel)
         function = type(self)._insert_debug_marker_function
         function(self._internal, c_marker_label)
 
@@ -2717,7 +2730,7 @@ class GPUCommandEncoder(
                     "end_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED
                 ),
             )
-        # H: nextInChain: WGPUChainedStruct *, label: char *, timestampWrites: WGPUComputePassTimestampWrites *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, timestampWrites: WGPUComputePassTimestampWrites *
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
             label=to_c_label(label),
@@ -2773,7 +2786,7 @@ class GPUCommandEncoder(
         if occlusion_query_set is not None:
             c_occlusion_query_set = occlusion_query_set._internal
 
-        # H: nextInChain: WGPUChainedStruct *, label: char *, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet, timestampWrites: WGPURenderPassTimestampWrites *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, colorAttachmentCount: int, colorAttachments: WGPURenderPassColorAttachment *, depthStencilAttachment: WGPURenderPassDepthStencilAttachment *, occlusionQuerySet: WGPUQuerySet, timestampWrites: WGPURenderPassTimestampWrites *
         struct = new_struct_p(
             "WGPURenderPassDescriptor *",
             label=to_c_label(label),
@@ -2962,7 +2975,7 @@ class GPUCommandEncoder(
         c_source = new_struct_p(
             "WGPUImageCopyBuffer *",
             buffer=source["buffer"]._internal,
-            # H: nextInChain: WGPUChainedStruct *, offset: int, bytesPerRow: int, rowsPerImage: int
+            # FIXME: unknown C struct WGPUTextureDataLayout
             layout=new_struct(
                 "WGPUTextureDataLayout",
                 offset=int(source.get("offset", 0)),
@@ -2980,7 +2993,7 @@ class GPUCommandEncoder(
             y=ori[1],
             z=ori[2],
         )
-        # H: nextInChain: WGPUChainedStruct *, texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
+        # FIXME: unknown C struct WGPUImageCopyTexture
         c_destination = new_struct_p(
             "WGPUImageCopyTexture *",
             texture=destination["texture"]._internal,
@@ -2998,7 +3011,7 @@ class GPUCommandEncoder(
             depthOrArrayLayers=size[2],
         )
 
-        # H: void f(WGPUCommandEncoder commandEncoder, WGPUImageCopyBuffer const * source, WGPUImageCopyTexture const * destination, WGPUExtent3D const * copySize)
+        # H: void f(WGPUCommandEncoder commandEncoder, WGPUTexelCopyBufferInfo const * source, WGPUTexelCopyTextureInfo const * destination, WGPUExtent3D const * copySize)
         libf.wgpuCommandEncoderCopyBufferToTexture(
             self._internal,
             c_source,
@@ -3034,7 +3047,7 @@ class GPUCommandEncoder(
             y=ori[1],
             z=ori[2],
         )
-        # H: nextInChain: WGPUChainedStruct *, texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
+        # FIXME: unknown C struct WGPUImageCopyTexture
         c_source = new_struct_p(
             "WGPUImageCopyTexture *",
             texture=source["texture"]._internal,
@@ -3047,7 +3060,7 @@ class GPUCommandEncoder(
         c_destination = new_struct_p(
             "WGPUImageCopyBuffer *",
             buffer=destination["buffer"]._internal,
-            # H: nextInChain: WGPUChainedStruct *, offset: int, bytesPerRow: int, rowsPerImage: int
+            # FIXME: unknown C struct WGPUTextureDataLayout
             layout=new_struct(
                 "WGPUTextureDataLayout",
                 offset=int(destination.get("offset", 0)),
@@ -3065,7 +3078,7 @@ class GPUCommandEncoder(
             depthOrArrayLayers=size[2],
         )
 
-        # H: void f(WGPUCommandEncoder commandEncoder, WGPUImageCopyTexture const * source, WGPUImageCopyBuffer const * destination, WGPUExtent3D const * copySize)
+        # H: void f(WGPUCommandEncoder commandEncoder, WGPUTexelCopyTextureInfo const * source, WGPUTexelCopyBufferInfo const * destination, WGPUExtent3D const * copySize)
         libf.wgpuCommandEncoderCopyTextureToBuffer(
             self._internal,
             c_source,
@@ -3095,7 +3108,7 @@ class GPUCommandEncoder(
             y=ori[1],
             z=ori[2],
         )
-        # H: nextInChain: WGPUChainedStruct *, texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
+        # FIXME: unknown C struct WGPUImageCopyTexture
         c_source = new_struct_p(
             "WGPUImageCopyTexture *",
             texture=source["texture"]._internal,
@@ -3113,7 +3126,7 @@ class GPUCommandEncoder(
             y=ori[1],
             z=ori[2],
         )
-        # H: nextInChain: WGPUChainedStruct *, texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
+        # FIXME: unknown C struct WGPUImageCopyTexture
         c_destination = new_struct_p(
             "WGPUImageCopyTexture *",
             texture=destination["texture"]._internal,
@@ -3132,7 +3145,7 @@ class GPUCommandEncoder(
             depthOrArrayLayers=size[2],
         )
 
-        # H: void f(WGPUCommandEncoder commandEncoder, WGPUImageCopyTexture const * source, WGPUImageCopyTexture const * destination, WGPUExtent3D const * copySize)
+        # H: void f(WGPUCommandEncoder commandEncoder, WGPUTexelCopyTextureInfo const * source, WGPUTexelCopyTextureInfo const * destination, WGPUExtent3D const * copySize)
         libf.wgpuCommandEncoderCopyTextureToTexture(
             self._internal,
             c_source,
@@ -3141,7 +3154,7 @@ class GPUCommandEncoder(
         )
 
     def finish(self, *, label: str = ""):
-        # H: nextInChain: WGPUChainedStruct *, label: char *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPUCommandBufferDescriptor *",
             label=to_c_label(label),
@@ -3375,7 +3388,7 @@ class GPURenderBundleEncoder(
     _release_function = libf.wgpuRenderBundleEncoderRelease
 
     def finish(self, *, label: str = ""):
-        # H: nextInChain: WGPUChainedStruct *, label: char *
+        # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPURenderBundleDescriptor *",
             label=to_c_label(label),
@@ -3518,7 +3531,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             y=ori[1],
             z=ori[2],
         )
-        # H: nextInChain: WGPUChainedStruct *, texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
+        # FIXME: unknown C struct WGPUImageCopyTexture
         c_destination = new_struct_p(
             "WGPUImageCopyTexture *",
             texture=destination["texture"]._internal,
@@ -3528,7 +3541,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             # not used: nextInChain
         )
 
-        # H: nextInChain: WGPUChainedStruct *, offset: int, bytesPerRow: int, rowsPerImage: int
+        # FIXME: unknown C struct WGPUTextureDataLayout
         c_data_layout = new_struct_p(
             "WGPUTextureDataLayout *",
             offset=data_layout.get("offset", 0),
@@ -3545,7 +3558,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             depthOrArrayLayers=size[2],
         )
 
-        # H: void f(WGPUQueue queue, WGPUImageCopyTexture const * destination, void const * data, size_t dataSize, WGPUTextureDataLayout const * dataLayout, WGPUExtent3D const * writeSize)
+        # H: void f(WGPUQueue queue, WGPUTexelCopyTextureInfo const * destination, void const * data, size_t dataSize, WGPUTexelCopyBufferLayout const * dataLayout, WGPUExtent3D const * writeSize)
         libf.wgpuQueueWriteTexture(
             self._internal, c_destination, c_data, data_length, c_data_layout, c_size
         )
@@ -3631,7 +3644,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             "on_submitted_work_done", callback, finalizer, self._device._poll_wait
         )
 
-        # H: void f(WGPUQueue queue, WGPUQueueOnSubmittedWorkDoneCallback callback, void * userdata)
+        # H: WGPUFuture f(WGPUQueue queue, WGPUQueueWorkDoneCallbackInfo callbackInfo)
         libf.wgpuQueueOnSubmittedWorkDone(self._internal, callback, ffi.NULL)
 
         return awaitable
