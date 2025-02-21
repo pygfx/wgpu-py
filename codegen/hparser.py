@@ -95,14 +95,16 @@ class HParser:
             assert name1.startswith("WGPU")
             name = name1[4:]
             self.enums[name] = enum = {}
-            for f in code[i2 + 1 : i3].strip().strip(";").split(","):
-                f = remove_c_comments(f).strip()
+            # print(f"Found enum {name}")
+            code_block = code[i2 + 1 : i3].strip().strip(";")
+            block = remove_c_comments(code_block).strip()
+            for f in block.split(","):
                 if not f:
-                    continue  # happens when last item has a comma
+                    continue  # happens when last item has a comma?
                 key, _, val = f.partition("=")
                 # Handle key
                 key = key.strip()
-                assert key.startswith("WGPU") and "_" in key
+                assert key.startswith("WGPU") and "_" in key, f"key={key}"
                 key = key.split("_", 1)[1]
                 # Turn value into an int
                 val = val.strip()
@@ -120,7 +122,8 @@ class HParser:
                 else:
                     enum[key] = int(val)
 
-        # Turn some enums into flags
+        # collect flags
+        # schme: typedef WGPUFlags WGPUFlagName;
         for line in code.splitlines():
             if line.startswith("typedef WGPUFlags "):
                 parts = line.strip().strip(";").split()
@@ -128,10 +131,21 @@ class HParser:
                 name = parts[-1]
                 if name.endswith("Flags"):
                     assert name.startswith("WGPU")
-                    name1 = name[4:-1]  # xxFlags -> xxFlag
-                    name2 = name[4:-5]  # xxFlags -> xx
-                    name = name1 if name1 in self.enums else name2
-                self.flags[name] = self.enums.pop(name)
+                self.flags[name] = self.enums.pop[name] if name in self.enums else {}
+
+        #fill flags
+        # schema: static const WGPUFlagName WGPUFlagName_Value = 0x0000000000000001;
+        for line in code.splitlines():
+            if line.startswith("static const"):
+                line = remove_c_comments(line).strip()
+                flag_name = line.removeprefix("static const").lstrip().split()[0]
+                assert flag_name in self.flags
+                flag_value, _, val = line.removeprefix(f"static const {flag_name}").strip().rstrip(";").partition("=")
+                assert flag_value.startswith("WGPU")
+                # taken from above, maybe refactor to a helper function (parse_value_as_int)
+                val = self._parse_val_to_int(val)
+                self.flags[flag_name][flag_value.strip()] = val
+
 
         # Collect structs. This is relatively easy, since we only need the C code.
         # But we don't deal with union structs.
@@ -229,3 +243,22 @@ class HParser:
                     while alt_name != ffi.getctype(alt_name):
                         alt_name = ffi.getctype(alt_name)
                         self.structs[alt_name] = self.structs[name]
+
+    def _parse_val_to_int(self, val):
+        """
+        little helper to parse complex values for enums.
+        """
+        val = val.strip(" ()")
+        if "|" in val:
+            # recursively handle the "OR" values?
+            res_val = 0
+            for sub_val in val.split("|"):
+                res_val |= self._parse_val_to_int(sub_val)
+            return res_val
+        if val.startswith("0x"):
+            return int(val, 16)
+        elif "<<" in val:
+            val1, _, val2 = val.partition("<<")
+            return int(val1) << int(val2)
+        else:
+            return int(val)
