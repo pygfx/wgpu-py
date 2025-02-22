@@ -106,10 +106,10 @@ def get_surface_id_from_info(present_info):
 
     if sys.platform.startswith("win"):  # no-cover
         GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa: N806
-        struct = ffi.new("WGPUSurfaceDescriptorFromWindowsHWND *")
+        struct = ffi.new("WGPUSurfaceSourceWindowsHWND *")
         struct.hinstance = ffi.cast("void *", GetModuleHandle(lib_path))
         struct.hwnd = ffi.cast("void *", int(present_info["window"]))
-        struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWindowsHWND
+        struct.chain.sType = lib.WGPUSType_SurfaceSourceWindowsHWND
 
     elif sys.platform.startswith("darwin"):  # no-cover
         # This is what the triangle example from wgpu-native does:
@@ -158,28 +158,28 @@ def get_surface_id_from_info(present_info):
             cv.setLayer(metal_layer)
             cv.setWantsLayer(True)
 
-        struct = ffi.new("WGPUSurfaceDescriptorFromMetalLayer *")
+        struct = ffi.new("WGPUSurfaceSourceMetalLayer *")
         struct.layer = ffi.cast("void *", metal_layer.ptr.value)
-        struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromMetalLayer
+        struct.chain.sType = lib.WGPUSType_SurfaceSourceMetalLayer
 
     elif sys.platform.startswith("linux"):  # no-cover
         platform = present_info.get("platform", "x11")
         if platform == "x11":
-            struct = ffi.new("WGPUSurfaceDescriptorFromXlibWindow *")
+            struct = ffi.new("WGPUSurfaceSourceXlibWindow *")
             struct.display = ffi.cast("void *", present_info["display"])
             struct.window = int(present_info["window"])
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
+            struct.chain.sType = lib.WGPUSType_SurfaceSourceXlibWindow
         elif platform == "wayland":
-            struct = ffi.new("WGPUSurfaceDescriptorFromWaylandSurface *")
+            struct = ffi.new("WGPUSurfaceSourceWaylandSurface *")
             struct.display = ffi.cast("void *", present_info["display"])
             struct.surface = ffi.cast("void *", present_info["window"])
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWaylandSurface
+            struct.chain.sType = lib.WGPUSType_SurfaceSourceWaylandSurface
         elif platform == "xcb":
             # todo: xcb untested
-            struct = ffi.new("WGPUSurfaceDescriptorFromXcbWindow *")
+            struct = ffi.new("WGPUSurfaceSourceXCBWindow *")
             struct.connection = ffi.cast("void *", present_info["connection"])  # ??
             struct.window = int(present_info["window"])
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
+            struct.chain.sType = lib.WGPUSType_SurfaceSourceXCBWindow
         else:
             raise RuntimeError("Unexpected Linux surface platform '{platform}'.")
 
@@ -187,7 +187,7 @@ def get_surface_id_from_info(present_info):
         raise RuntimeError("Cannot get surface id: unsupported platform.")
 
     surface_descriptor = ffi.new("WGPUSurfaceDescriptor *")
-    surface_descriptor.label = ffi.NULL
+    surface_descriptor.label.data = ffi.NULL # seemingly can also be omitted
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
     return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
