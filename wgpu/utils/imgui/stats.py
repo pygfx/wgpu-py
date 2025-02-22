@@ -122,6 +122,15 @@ class Stats:
             self._mode = (self._mode + 1) % 3
             event["stop_propagation"] = True
 
+    @property
+    def auto_render(self):
+        """If True, the render method will be called automatically. Default is True."""
+        return self._auto_render
+
+    @auto_render.setter
+    def auto_render(self, value):
+        self._auto_render = bool(value)
+
     def start(self):
         if not self._init:
             return
