@@ -251,7 +251,7 @@ def to_c_string(string: str):
 
 
 def to_c_string_view(string: str):
-    if string == ffi.NULL:
+    if string == ffi.NULL or string is None:
         # H: data: char *, length: int
         struct = new_struct(
             "WGPUStringView",
@@ -1902,13 +1902,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: WGPUStringView, constantCount: int, constants: WGPUConstantEntry *, bufferCount: int, buffers: WGPUVertexBufferLayout *
         c_vertex_state = new_struct(
             "WGPUVertexState",
+            # not used: nextInChain
             module=vertex["module"]._internal,
-            entryPoint=to_c_string_or_null(vertex.get("entry_point")),
-            buffers=c_vertex_buffer_descriptors_array,
-            bufferCount=len(c_vertex_buffer_layout_list),
+            entryPoint=to_c_string_view(vertex.get("entry_point")),
             constantCount=len(c_vertex_entries),
             constants=c_vertex_constants,
-            # not used: nextInChain
+            bufferCount=len(c_vertex_buffer_layout_list),
+            buffers=c_vertex_buffer_descriptors_array,
         )
 
         # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode, unclippedDepth: WGPUBool/int
@@ -1951,13 +1951,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: WGPUStringView, constantCount: int, constants: WGPUConstantEntry *, targetCount: int, targets: WGPUColorTargetState *
             c_fragment_state = new_struct_p(
                 "WGPUFragmentState *",
+                # not used: nextInChain
                 module=fragment["module"]._internal,
-                entryPoint=to_c_string_or_null(fragment.get("entry_point")),
-                targets=c_color_targets_array,
-                targetCount=len(c_color_targets_list),
+                entryPoint=to_c_string_view(fragment.get("entry_point")),
                 constantCount=len(c_fragment_entries),
                 constants=c_fragment_constants,
-                # not used: nextInChain
+                targetCount=len(c_color_targets_list),
+                targets=c_color_targets_array,
             )
 
         if isinstance(layout, GPUPipelineLayout):
