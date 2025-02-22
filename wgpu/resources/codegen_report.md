@@ -36,7 +36,6 @@
 * Wrote 243 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 142 C function calls
 * Not using 76 C functions
-* ERROR: unknown C struct field WGPUSurfaceTexture.suboptimal
 * ERROR: unknown C struct WGPUTextureDataLayout
 * ERROR: unknown C struct WGPUImageCopyTexture
 * ERROR: unknown C struct WGPUImageCopyTexture

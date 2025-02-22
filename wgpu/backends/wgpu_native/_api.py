@@ -831,11 +831,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # H: nextInChain: WGPUChainedStructOut *, texture: WGPUTexture, status: WGPUSurfaceGetCurrentTextureStatus
         surface_texture = new_struct_p(
             "WGPUSurfaceTexture *",
-            # not used: texture
-            # FIXME: unknown C struct field WGPUSurfaceTexture.suboptimal
-            # not used: suboptimal
-            # not used: status
             # not used: nextInChain
+            # not used: texture
+            # not used: status
         )
 
         for attempt in [1, 2]:
@@ -843,8 +841,14 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             libf.wgpuSurfaceGetCurrentTexture(surface_id, surface_texture)
             status = surface_texture.status
             texture_id = surface_texture.texture
-            if status == lib.WGPUSurfaceGetCurrentTextureStatus_Success:
+            print(status)
+            if status == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
                 break  # success
+            elif status == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
+                # Things look good, but texture may still be suboptimal, whatever that means
+                # ""
+                logger.warning("The surface texture is suboptimal.")
+                break
             if texture_id:
                 # H: void f(WGPUTexture texture)
                 libf.wgpuTextureRelease(texture_id)
@@ -862,16 +866,13 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
                 # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
+                # WGPUSurfaceGetCurrentTextureStatus_Error
                 # Or if this is the second attempt.
                 raise RuntimeError(f"Cannot get surface texture ({status}).")
 
         # I don't expect this to happen, but let's check just in case.
         if not texture_id:
             raise RuntimeError("Cannot get surface texture (no texture)")
-
-        # Things look good, but texture may still be suboptimal, whatever that means
-        if surface_texture.suboptimal:
-            logger.warning("The surface texture is suboptimal.")
 
         # Wrap it in a Python texture object
 
