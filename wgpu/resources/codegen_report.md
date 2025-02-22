@@ -21,6 +21,7 @@
 * Validated 37 classes, 121 methods, 46 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 121 methods, 0 properties
+* ERROR: missing check_struct in create_shader_module: ['ShaderModuleCompilationHint']
 ## Validating backends/wgpu_native/_api.py
 * Flag BufferUsage missing in wgpu.h
 * Flag MapMode missing in wgpu.h
@@ -36,10 +37,6 @@
 * Validated 142 C function calls
 * Not using 76 C functions
 * ERROR: unknown C struct field WGPUSurfaceTexture.suboptimal
-* ERROR: unknown C struct WGPUShaderModuleWGSLDescriptor
-* ERROR: unknown C struct WGPUShaderModuleSPIRVDescriptor
-* ERROR: unknown C struct field WGPUShaderModuleDescriptor.hintCount
-* ERROR: unknown C struct field WGPUShaderModuleDescriptor.hints
 * ERROR: unknown C struct WGPUTextureDataLayout
 * ERROR: unknown C struct WGPUImageCopyTexture
 * ERROR: unknown C struct WGPUImageCopyTexture

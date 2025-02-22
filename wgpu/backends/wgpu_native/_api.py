@@ -1624,6 +1624,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreatePipelineLayout(self._internal, struct)
         return GPUPipelineLayout(label, id, self)
 
+    # FIXME: was create_shader_module(self, *, label: str = "", code: str, source_map: dict = optional, compilation_hints: None):
+    # FIXME: missing check_struct in create_shader_module: ['ShaderModuleCompilationHint']
     def create_shader_module(
         self,
         *,
@@ -1632,9 +1634,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         source_map: dict = optional,
         compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
     ):
-        if compilation_hints:
-            for hint in compilation_hints:
-                check_struct("ShaderModuleCompilationHint", hint)
+        # TODO: compilation_hints has been removed: https://github.com/webgpu-native/webgpu-headers/pull/337
+        # needs and @apidiff in _classes.py or update to the .idl!
         if isinstance(code, str):
             looks_like_wgsl = any(
                 x in code for x in ("@compute", "@vertex", "@fragment")
@@ -1658,10 +1659,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                         # H: name: WGPUStringView, value: WGPUStringView
                         new_struct(
                             "WGPUShaderDefine",
-                            name=to_c_string("gl_VertexID"),
-                            value=to_c_string("gl_VertexIndex"),
+                            name=to_c_string_view("gl_VertexID"),
+                            value=to_c_string_view("gl_VertexIndex"),
                         )
                     )
+                # note, GLSL is a wgpu-native feature and still uses the older structure!
                 # H: chain: WGPUChainedStruct, stage: WGPUShaderStage/int, code: WGPUStringView, defineCount: int, defines: WGPUShaderDefine *
                 source_struct = new_struct_p(
                     "WGPUShaderModuleGLSLDescriptor *",
@@ -1675,14 +1677,14 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleGLSLDescriptor
             else:
                 # === WGSL
-                # FIXME: unknown C struct WGPUShaderModuleWGSLDescriptor
+                # H: chain: WGPUChainedStruct, code: WGPUStringView
                 source_struct = new_struct_p(
-                    "WGPUShaderModuleWGSLDescriptor *",
-                    code=to_c_string(code),
+                    "WGPUShaderSourceWGSL *",
                     # not used: chain
+                    code=to_c_string_view(code),
                 )
                 source_struct[0].chain.next = ffi.NULL
-                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleWGSLDescriptor
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderSourceWGSL
         elif isinstance(code, bytes):
             # === Spirv
             data = code
@@ -1693,30 +1695,25 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # From bytes to WGPUU32Array
             data_u8 = ffi.new("uint8_t[]", data)
             data_u32 = ffi.cast("uint32_t *", data_u8)
-            # FIXME: unknown C struct WGPUShaderModuleSPIRVDescriptor
+            # H: chain: WGPUChainedStruct, codeSize: int, code: uint32_t *
             source_struct = new_struct_p(
-                "WGPUShaderModuleSPIRVDescriptor *",
-                code=data_u32,
-                codeSize=len(data) // 4,
+                "WGPUShaderSourceSPIRV *",
                 # not used: chain
+                codeSize=len(data) // 4,
+                code=data_u32,
             )
             source_struct[0].chain.next = ffi.NULL
-            source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleSPIRVDescriptor
+            source_struct[0].chain.sType = lib.WGPUSType_ShaderSourceSPIRV
         else:
             raise TypeError(
                 "Shader code must be str for WGSL or GLSL, or bytes for SpirV."
             )
 
-        # Note, we could give hints here that specify entrypoint and pipelinelayout before compiling
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPUShaderModuleDescriptor *",
             label=to_c_label(label),
             nextInChain=ffi.cast("WGPUChainedStruct *", source_struct),
-            # FIXME: unknown C struct field WGPUShaderModuleDescriptor.hintCount
-            hintCount=0,
-            # FIXME: unknown C struct field WGPUShaderModuleDescriptor.hints
-            hints=ffi.NULL,
         )
         # H: WGPUShaderModule f(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateShaderModule(self._internal, struct)
