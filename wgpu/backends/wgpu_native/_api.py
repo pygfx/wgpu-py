@@ -3074,16 +3074,15 @@ class GPUCommandEncoder(
         size = _tuple_from_extent3d(copy_size)
 
         c_source = new_struct_p(
-            "WGPUImageCopyBuffer *",
-            buffer=source["buffer"]._internal,
-            # FIXME: unknown C struct WGPUTextureDataLayout
+            "WGPUTexelCopyBufferInfo *",
+            # H: offset: int, bytesPerRow: int, rowsPerImage: int
             layout=new_struct(
-                "WGPUTextureDataLayout",
+                "WGPUTexelCopyBufferLayout",
                 offset=int(source.get("offset", 0)),
                 bytesPerRow=bytes_per_row,
                 rowsPerImage=int(source.get("rows_per_image", size[1])),
-                # not used: nextInChain
             ),
+            buffer=source["buffer"]._internal,
         )
 
         ori = _tuple_from_origin3d(destination)
@@ -3094,14 +3093,13 @@ class GPUCommandEncoder(
             y=ori[1],
             z=ori[2],
         )
-        # FIXME: unknown C struct WGPUImageCopyTexture
+        # H: texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
         c_destination = new_struct_p(
-            "WGPUImageCopyTexture *",
+            "WGPUTexelCopyTextureInfo *",
             texture=destination["texture"]._internal,
             mipLevel=int(destination.get("mip_level", 0)),
             origin=c_origin,
             aspect=enums.TextureAspect.all,
-            # not used: nextInChain
         )
 
         # H: width: int, height: int, depthOrArrayLayers: int
@@ -3148,27 +3146,25 @@ class GPUCommandEncoder(
             y=ori[1],
             z=ori[2],
         )
-        # FIXME: unknown C struct WGPUImageCopyTexture
+        # H: texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
         c_source = new_struct_p(
-            "WGPUImageCopyTexture *",
+            "WGPUTexelCopyTextureInfo *",
             texture=source["texture"]._internal,
             mipLevel=int(source.get("mip_level", 0)),
             origin=c_origin,
             aspect=0,
-            # not used: nextInChain
         )
 
         c_destination = new_struct_p(
-            "WGPUImageCopyBuffer *",
-            buffer=destination["buffer"]._internal,
-            # FIXME: unknown C struct WGPUTextureDataLayout
+            "WGPUTexelCopyBufferInfo *",
+            # H: offset: int, bytesPerRow: int, rowsPerImage: int
             layout=new_struct(
-                "WGPUTextureDataLayout",
+                "WGPUTexelCopyBufferLayout",
                 offset=int(destination.get("offset", 0)),
                 bytesPerRow=bytes_per_row,
                 rowsPerImage=int(destination.get("rows_per_image", size[1])),
-                # not used: nextInChain
             ),
+            buffer=destination["buffer"]._internal,
         )
 
         # H: width: int, height: int, depthOrArrayLayers: int
@@ -3209,13 +3205,12 @@ class GPUCommandEncoder(
             y=ori[1],
             z=ori[2],
         )
-        # FIXME: unknown C struct WGPUImageCopyTexture
+        # H: texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
         c_source = new_struct_p(
-            "WGPUImageCopyTexture *",
+            "WGPUTexelCopyTextureInfo *",
             texture=source["texture"]._internal,
             mipLevel=int(source.get("mip_level", 0)),
             origin=c_origin1,
-            # not used: nextInChain
             # not used: aspect
         )
 
@@ -3227,13 +3222,12 @@ class GPUCommandEncoder(
             y=ori[1],
             z=ori[2],
         )
-        # FIXME: unknown C struct WGPUImageCopyTexture
+        # H: texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
         c_destination = new_struct_p(
-            "WGPUImageCopyTexture *",
+            "WGPUTexelCopyTextureInfo *",
             texture=destination["texture"]._internal,
             mipLevel=int(destination.get("mip_level", 0)),
             origin=c_origin2,
-            # not used: nextInChain
             # not used: aspect
         )
 
@@ -3632,23 +3626,21 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             y=ori[1],
             z=ori[2],
         )
-        # FIXME: unknown C struct WGPUImageCopyTexture
+        # H: texture: WGPUTexture, mipLevel: int, origin: WGPUOrigin3D, aspect: WGPUTextureAspect
         c_destination = new_struct_p(
-            "WGPUImageCopyTexture *",
+            "WGPUTexelCopyTextureInfo *",
             texture=destination["texture"]._internal,
             mipLevel=destination.get("mip_level", 0),
             origin=c_origin,
             aspect=enums.TextureAspect.all,
-            # not used: nextInChain
         )
 
-        # FIXME: unknown C struct WGPUTextureDataLayout
+        # H: offset: int, bytesPerRow: int, rowsPerImage: int
         c_data_layout = new_struct_p(
-            "WGPUTextureDataLayout *",
+            "WGPUTexelCopyBufferLayout *",
             offset=data_layout.get("offset", 0),
             bytesPerRow=data_layout["bytes_per_row"],
             rowsPerImage=data_layout.get("rows_per_image", size[1]),
-            # not used: nextInChain
         )
 
         # H: width: int, height: int, depthOrArrayLayers: int
