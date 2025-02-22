@@ -250,6 +250,24 @@ def to_c_string(string: str):
     return ffi.new("char []", string.encode())
 
 
+def to_c_string_view(string: str):
+    if string == ffi.NULL:
+        # H: data: char *, length: int
+        struct = new_struct(
+            "WGPUStringView",
+            data=ffi.NULL,
+            length=0,
+        )
+    else:
+        # H: data: char *, length: int
+        struct = new_struct(
+            "WGPUStringView",
+            data=to_c_string(string),
+            length=len(string.encode(encoding="utf-8")),
+        )
+    return struct
+
+
 def to_c_string_or_null(string: Optional[str]):
     return ffi.NULL if string is None else ffi.new("char []", string.encode())
 
@@ -262,7 +280,7 @@ def to_c_label(label):
     if not label:
         return _empty_label
     else:
-        return to_c_string(label)
+        return to_c_string_view(label)
 
 
 def feature_flag_to_feature_names(flag):
@@ -288,30 +306,51 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
 
-    # FIXME: unknown C struct WGPUSupportedLimitsExtras
-    c_supported_limits_extras = new_struct_p(
-        "WGPUSupportedLimitsExtras *",
-        # not used: chain
-        # not used: limits
-    )
-    c_supported_limits_extras.chain.sType = lib.WGPUSType_SupportedLimitsExtras
-    # FIXME: unknown C struct WGPUSupportedLimits
-    c_supported_limits = new_struct_p(
-        "WGPUSupportedLimits *",
-        nextInChain=ffi.cast("WGPUChainedStructOut *", c_supported_limits_extras),
-        # not used: limits
+    # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
+    c_limits = new_struct_p(
+        "WGPULimits *",
+        # not used: nextInChain
+        # not used: maxTextureDimension1D
+        # not used: maxTextureDimension2D
+        # not used: maxTextureDimension3D
+        # not used: maxTextureArrayLayers
+        # not used: maxBindGroups
+        # not used: maxBindGroupsPlusVertexBuffers
+        # not used: maxBindingsPerBindGroup
+        # not used: maxDynamicUniformBuffersPerPipelineLayout
+        # not used: maxDynamicStorageBuffersPerPipelineLayout
+        # not used: maxSampledTexturesPerShaderStage
+        # not used: maxSamplersPerShaderStage
+        # not used: maxStorageBuffersPerShaderStage
+        # not used: maxStorageTexturesPerShaderStage
+        # not used: maxUniformBuffersPerShaderStage
+        # not used: maxUniformBufferBindingSize
+        # not used: maxStorageBufferBindingSize
+        # not used: minUniformBufferOffsetAlignment
+        # not used: minStorageBufferOffsetAlignment
+        # not used: maxVertexBuffers
+        # not used: maxBufferSize
+        # not used: maxVertexAttributes
+        # not used: maxVertexBufferArrayStride
+        # not used: maxInterStageShaderVariables
+        # not used: maxColorAttachments
+        # not used: maxColorAttachmentBytesPerSample
+        # not used: maxComputeWorkgroupStorageSize
+        # not used: maxComputeInvocationsPerWorkgroup
+        # not used: maxComputeWorkgroupSizeX
+        # not used: maxComputeWorkgroupSizeY
+        # not used: maxComputeWorkgroupSizeZ
+        # not used: maxComputeWorkgroupsPerDimension
     )
     if adapter:
         # H: WGPUStatus f(WGPUAdapter adapter, WGPULimits * limits)
-        libf.wgpuAdapterGetLimits(id, c_supported_limits)
+        libf.wgpuAdapterGetLimits(id, c_limits)
     else:
         # H: WGPUStatus f(WGPUDevice device, WGPULimits * limits)
-        libf.wgpuDeviceGetLimits(id, c_supported_limits)
+        libf.wgpuDeviceGetLimits(id, c_limits)
 
     key_value_pairs = [
-        (to_snake_case(name, "-"), getattr(c_limits, name))
-        for c_limits in (c_supported_limits.limits, c_supported_limits_extras.limits)
-        for name in dir(c_limits)
+        (to_snake_case(name, "-"), getattr(c_limits, name)) for name in dir(c_limits)
     ]
     limits = dict(sorted(key_value_pairs))
     return limits
@@ -982,21 +1021,42 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Set limits
 
-        # FIXME: unknown C struct WGPURequiredLimitsExtras
-        c_required_limits_extras = new_struct_p(
-            "WGPURequiredLimitsExtras *",
-            # not used: chain
-            # not used: limits
-        )
-        c_required_limits_extras.chain.sType = lib.WGPUSType_RequiredLimitsExtras
-        # FIXME: unknown C struct WGPURequiredLimits
+        # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
         c_required_limits = new_struct_p(
-            "WGPURequiredLimits *",
-            nextInChain=ffi.cast("WGPUChainedStruct*", c_required_limits_extras),
-            # not used: limits
+            "WGPULimits *",
+            # not used: nextInChain
+            # not used: maxTextureDimension1D
+            # not used: maxTextureDimension2D
+            # not used: maxTextureDimension3D
+            # not used: maxTextureArrayLayers
+            # not used: maxBindGroups
+            # not used: maxBindGroupsPlusVertexBuffers
+            # not used: maxBindingsPerBindGroup
+            # not used: maxDynamicUniformBuffersPerPipelineLayout
+            # not used: maxDynamicStorageBuffersPerPipelineLayout
+            # not used: maxSampledTexturesPerShaderStage
+            # not used: maxSamplersPerShaderStage
+            # not used: maxStorageBuffersPerShaderStage
+            # not used: maxStorageTexturesPerShaderStage
+            # not used: maxUniformBuffersPerShaderStage
+            # not used: maxUniformBufferBindingSize
+            # not used: maxStorageBufferBindingSize
+            # not used: minUniformBufferOffsetAlignment
+            # not used: minStorageBufferOffsetAlignment
+            # not used: maxVertexBuffers
+            # not used: maxBufferSize
+            # not used: maxVertexAttributes
+            # not used: maxVertexBufferArrayStride
+            # not used: maxInterStageShaderVariables
+            # not used: maxColorAttachments
+            # not used: maxColorAttachmentBytesPerSample
+            # not used: maxComputeWorkgroupStorageSize
+            # not used: maxComputeInvocationsPerWorkgroup
+            # not used: maxComputeWorkgroupSizeX
+            # not used: maxComputeWorkgroupSizeY
+            # not used: maxComputeWorkgroupSizeZ
+            # not used: maxComputeWorkgroupsPerDimension
         )
-        c_limits = c_required_limits.limits
-        c_limits_extras = c_required_limits_extras.limits
 
         def canonicalize_limit_name(name):
             if name in self._limits:
@@ -1021,15 +1081,14 @@ class GPUAdapter(classes.GPUAdapter):
             # setting it to {}, but the loop below goes just a little bit faster.
             required_limits = self._limits
 
-        for limit in (c_limits, c_limits_extras):
-            for key in dir(limit):
-                snake_key = to_snake_case(key, "-")
-                # Use the value in required_limits if it exists. Otherwise, the old value
-                try:
-                    value = required_limits[snake_key]
-                except KeyError:
-                    value = self._limits[snake_key]
-                setattr(limit, key, value)
+        for key in dir(c_required_limits):
+            snake_key = to_snake_case(key, "-")
+            # Use the value in required_limits if it exists. Otherwise, the old value
+            try:
+                value = required_limits[snake_key]
+            except KeyError:
+                value = self._limits[snake_key]
+            setattr(c_required_limits, key, value)
 
         # ---- Set queue descriptor
 
@@ -1045,9 +1104,9 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Compose device descriptor extras
 
-        c_trace_path = ffi.NULL
+        c_trace_path = to_c_string_view(ffi.NULL)
         if trace_path:  # no-cover
-            c_trace_path = to_c_string(trace_path)
+            c_trace_path = to_c_string_view(trace_path)
 
         # H: chain: WGPUChainedStruct, tracePath: WGPUStringView
         extras = new_struct_p(
@@ -1069,6 +1128,16 @@ class GPUAdapter(classes.GPUAdapter):
             # WebGPU provides (promise-based) API for user-code to handle the error.
             # We might want to do something similar, once we have async figured out.
             error_handler.log_error(msg)
+
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUDeviceLostCallback, userdata1: void*, userdata2: void*
+        device_lost_callback_info = new_struct(
+            "WGPUDeviceLostCallbackInfo",
+            nextInChain=ffi.NULL,
+            mode=1,
+            callback=device_lost_callback,
+            # not used: userdata1
+            # not used: userdata2
+        )
 
         # ----- Uncaptured error
 
@@ -1097,27 +1166,39 @@ class GPUAdapter(classes.GPUAdapter):
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPULimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallbackInfo: WGPUDeviceLostCallbackInfo, uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
-            label=to_c_label(label),
             nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
+            label=to_c_label(label),
             requiredFeatureCount=len(c_features),
             requiredFeatures=new_array("WGPUFeatureName[]", c_features),
             requiredLimits=c_required_limits,
             defaultQueue=queue_struct,
-            # FIXME: unknown C struct field WGPUDeviceDescriptor.deviceLostCallback
-            deviceLostCallback=device_lost_callback,
+            deviceLostCallbackInfo=device_lost_callback_info,
             uncapturedErrorCallbackInfo=uncaptured_error_callback_info,
-            # FIXME: unknown C struct field WGPUDeviceDescriptor.deviceLostUserdata
-            # not used: deviceLostUserdata
-            # not used: deviceLostCallbackInfo
         )
 
-        @ffi.callback("void(WGPURequestDeviceStatus, WGPUDevice, char *, void *)")
+        @ffi.callback(
+            "void(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, void *)"
+        )
         def callback(status, result, message, userdata):
-            if status != 0:
-                msg = "-" if message == ffi.NULL else ffi.string(message).decode()
+            if status != 1:
+                msg = (
+                    "-"
+                    if message.data == ffi.NULL
+                    else ffi.string(message.data, message.length).decode()
+                )
                 awaitable.set_error(f"Request device failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
+
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPURequestDeviceCallback, userdata1: void*, userdata2: void*
+        callback_info = new_struct(
+            "WGPURequestDeviceCallbackInfo",
+            nextInChain=ffi.NULL,
+            mode=1,
+            callback=callback,
+            # not used: userdata1
+            # not used: userdata2
+        )
 
         def finalizer(device_id):
             limits = _get_limits(device_id, device=True)
@@ -1137,7 +1218,7 @@ class GPUAdapter(classes.GPUAdapter):
         awaitable = WgpuAwaitable("request_device", callback, finalizer)
 
         # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
-        libf.wgpuAdapterRequestDevice(self._internal, struct, callback, ffi.NULL)
+        libf.wgpuAdapterRequestDevice(self._internal, struct, callback_info)
 
         return awaitable
 

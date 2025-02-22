@@ -35,14 +35,8 @@
 * Wrote 243 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 142 C function calls
 * Not using 76 C functions
-* ERROR: unknown C struct WGPUSupportedLimitsExtras
-* ERROR: unknown C struct WGPUSupportedLimits
 * ERROR: unknown C struct field WGPUSurfaceTexture.suboptimal
-* ERROR: unknown C struct WGPURequiredLimitsExtras
-* ERROR: unknown C struct WGPURequiredLimits
 * ERROR: unknown C struct field WGPUUncapturedErrorCallbackInfo.userdata
-* ERROR: unknown C struct field WGPUDeviceDescriptor.deviceLostCallback
-* ERROR: unknown C struct field WGPUDeviceDescriptor.deviceLostUserdata
 * ERROR: unknown C struct WGPUShaderModuleWGSLDescriptor
 * ERROR: unknown C struct WGPUShaderModuleSPIRVDescriptor
 * ERROR: unknown C struct field WGPUShaderModuleDescriptor.hintCount
@@ -55,4 +49,4 @@
 * ERROR: unknown C struct WGPUImageCopyTexture
 * ERROR: unknown C struct WGPUImageCopyTexture
 * ERROR: unknown C struct WGPUTextureDataLayout
-* Validated 83 C structs
+* Validated 85 C structs
