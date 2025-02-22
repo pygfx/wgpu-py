@@ -463,23 +463,35 @@ class GPU(classes.GPU):
             # not used: featureLevel
         )
 
-        @ffi.callback("void(WGPURequestAdapterStatus, WGPUAdapter, char *, void *)")
-        def callback(status, result, message, _userdata):
-            if status != 0:
-                msg = "-" if message == ffi.NULL else ffi.string(message).decode()
+        @ffi.callback(
+            "void(WGPURequestAdapterStatus, WGPUAdapter, WGPUStringView, void *, void *)"
+        )
+        def callback(status, result, message, _userdata1, _userdata2):
+            if status != 1:
+                msg = "-" if message.data == ffi.NULL else ffi.string(*message).decode()
                 awaitable.set_error(f"Request adapter failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
+
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPURequestAdapterCallback, userdata1: void*, userdata2: void*
+        callback_info = new_struct(
+            "WGPURequestAdapterCallbackInfo",
+            nextInChain=ffi.NULL,
+            mode=1,
+            callback=callback,
+            # not used: userdata1
+            # not used: userdata2
+        )
 
         def finalizer(adapter_id):
             return self._create_adapter(adapter_id)
 
         # Note that although we claim this is an asynchronous method, the callback
         # happens within libf.wgpuInstanceRequestAdapter
-        awaitable = WgpuAwaitable("request_adapter", callback, finalizer)
+        awaitable = WgpuAwaitable("request_adapter", callback_info, finalizer)
 
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
-        libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback, ffi.NULL)
+        libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback_info)
 
         return awaitable
 
@@ -529,9 +541,11 @@ class GPU(classes.GPU):
         libf.wgpuAdapterGetInfo(adapter_id, c_info)
 
         def to_py_str(key):
-            char_p = getattr(c_info, key)
-            if char_p:
-                return ffi.string(char_p).decode(errors="ignore")
+            string_view = getattr(c_info, key)
+            if string_view and not string_view.data == ffi.NULL:
+                return ffi.string(string_view.data, string_view.length).decode(
+                    errors="ignore"
+                )
             return ""
 
         # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo

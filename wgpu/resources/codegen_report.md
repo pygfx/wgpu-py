@@ -55,4 +55,4 @@
 * ERROR: unknown C struct WGPUImageCopyTexture
 * ERROR: unknown C struct WGPUImageCopyTexture
 * ERROR: unknown C struct WGPUTextureDataLayout
-* Validated 82 C structs
+* Validated 83 C structs
