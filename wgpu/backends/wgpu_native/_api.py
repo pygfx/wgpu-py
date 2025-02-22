@@ -272,7 +272,7 @@ def to_c_string_or_null(string: Optional[str]):
     return ffi.NULL if string is None else ffi.new("char []", string.encode())
 
 
-_empty_label = ffi.new("char []", b"")
+_empty_label = to_c_string_view("")
 
 
 def to_c_label(label):
@@ -1118,10 +1118,14 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Device lost
 
-        @ffi.callback("void(WGPUDeviceLostReason, char *, void *)")
-        def device_lost_callback(c_reason, c_message, userdata):
+        @ffi.callback(
+            "void(WGPUDevice const *, WGPUDeviceLostReason, WGPUStringView, void *, void *)"
+        )
+        def device_lost_callback(c_device, c_reason, c_message, userdata1, userdata2):
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
-            message = ffi.string(c_message).decode(errors="ignore")
+            message = ffi.string(c_message.data, c_message.length).decode(
+                errors="ignore"
+            )
             msg = f"The WGPU device was lost ({reason}):\n{message}"
             # This is afaik an error that cannot usually be attributed to a specific call,
             # so we cannot raise it as an error. We log it instead.
@@ -1143,20 +1147,24 @@ class GPUAdapter(classes.GPUAdapter):
 
         # TODO: For some errors (seen for errors in wgsl, but not for some others) the error gets logged via the logger as well (duplicate). Probably an issue with wgpu-core.
 
-        @ffi.callback("void(WGPUErrorType, char *, void *)")
-        def uncaptured_error_callback(c_type, c_message, userdata):
+        @ffi.callback(
+            "void(WGPUDevice const *, WGPUErrorType, WGPUStringView, void *, void *)"
+        )
+        def uncaptured_error_callback(
+            c_device, c_type, c_message, userdata1, userdata2
+        ):
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
-            message = ffi.string(c_message).decode(errors="ignore")
+            message = ffi.string(c_message.data, c_message.length).decode(
+                errors="ignore"
+            )
             message = "\n".join(line.rstrip() for line in message.splitlines())
             error_handler.handle_error(error_type, message)
 
         # H: nextInChain: WGPUChainedStruct *, callback: WGPUUncapturedErrorCallback, userdata1: void*, userdata2: void*
         uncaptured_error_callback_info = new_struct(
             "WGPUUncapturedErrorCallbackInfo",
-            callback=uncaptured_error_callback,
-            # FIXME: unknown C struct field WGPUUncapturedErrorCallbackInfo.userdata
-            userdata=ffi.NULL,
             # not used: nextInChain
+            callback=uncaptured_error_callback,
             # not used: userdata1
             # not used: userdata2
         )
@@ -1177,9 +1185,9 @@ class GPUAdapter(classes.GPUAdapter):
         )
 
         @ffi.callback(
-            "void(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, void *)"
+            "void(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, void *, void *)"
         )
-        def callback(status, result, message, userdata):
+        def callback(status, result, message, userdata1, userdata2):
             if status != 1:
                 msg = (
                     "-"

@@ -36,7 +36,6 @@
 * Validated 142 C function calls
 * Not using 76 C functions
 * ERROR: unknown C struct field WGPUSurfaceTexture.suboptimal
-* ERROR: unknown C struct field WGPUUncapturedErrorCallbackInfo.userdata
 * ERROR: unknown C struct WGPUShaderModuleWGSLDescriptor
 * ERROR: unknown C struct WGPUShaderModuleSPIRVDescriptor
 * ERROR: unknown C struct field WGPUShaderModuleDescriptor.hintCount
