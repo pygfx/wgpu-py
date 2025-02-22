@@ -21,6 +21,8 @@ class Stats:
         The color of the background.
     align : str
         The alignment of the stats window, either "left" or "right". Default is "left".
+    auto_render : bool
+        If True, the render method will be called automatically. Default is True.
 
     """
 
@@ -32,6 +34,7 @@ class Stats:
         foreground=(0, 1, 0, 1),
         background=(0, 0.2, 0, 0.5),
         align="left",
+        auto_render=True,
     ):
         self._foreground = foreground
         self._background = background
@@ -63,13 +66,14 @@ class Stats:
         self._ms_samples = np.zeros(100, dtype=np.float32)
 
         self._mode = 0
+        self._auto_render = auto_render
 
     def _draw_imgui(self):
         imgui.new_frame()
 
-        imgui.set_next_window_size((125, 0), imgui.Cond_.always)
+        imgui.set_next_window_size((130, 0), imgui.Cond_.always)
         if self._align == "right":
-            pos = imgui.get_io().display_size.x - 125
+            pos = imgui.get_io().display_size.x - 130
         else:
             pos = 0
 
@@ -92,16 +96,16 @@ class Stats:
             if self._fps is not None:
                 ms = self._ms_samples[-1]
                 text = f"{int(ms)} ms ({self._tmin}-{self._tmax})"
-                text += f"\n{self._fps}fps ({self._fmin}-{self._fmax})"
+                text += f"\n{self._fps} fps ({self._fmin}-{self._fmax})"
                 imgui.text(text)
 
         elif self._mode == 1:
-            imgui.text(f"{self._fps}fps({self._fmin}-{self._fmax})")
-            imgui.plot_histogram("##", self._fps_samples, graph_size=(110, 25))
+            imgui.text(f"{self._fps} fps({self._fmin}-{self._fmax})")
+            imgui.plot_histogram("##", self._fps_samples, graph_size=(115, 25))
         elif self._mode == 2:
             ms = self._ms_samples[-1]
             imgui.text(f"{int(ms)} ms({self._tmin}-{self._tmax})")
-            imgui.plot_lines("##", self._ms_samples, graph_size=(110, 25))
+            imgui.plot_lines("##", self._ms_samples, graph_size=(115, 25))
 
         imgui.pop_style_color()
 
@@ -153,6 +157,9 @@ class Stats:
 
         self._ms_samples = np.roll(self._ms_samples, -1)
         self._ms_samples[-1] = delta
+
+        if self._auto_render:
+            self.render()
 
     def render(self):
         self._renderer.render()
