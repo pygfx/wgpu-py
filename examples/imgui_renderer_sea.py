@@ -384,7 +384,6 @@ def loop():
     with stats:
         render()
     imgui_renderer.render()
-    stats.render()
     canvas.request_draw()
 
 
