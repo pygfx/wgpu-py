@@ -67,14 +67,14 @@ def test_parse_shader_error2(caplog):
         Caused by:
           In wgpuDeviceCreateShaderModule
 
-        Shader '' parsing error: expected ',', found ';'
+        Shader '' parsing error: expected `,`, found ";"
           ┌─ wgsl:2:38
           │
         2 │     @location(0) texcoord : vec2<f32>;
-          │                                      ^ expected ','
+          │                                      ^ expected `,`
 
 
-              expected ',', found ';'
+              expected `,`, found ";"
     """
 
     code = dedent(code)
@@ -103,16 +103,14 @@ def test_parse_shader_error3(caplog):
         Caused by:
           In wgpuDeviceCreateShaderModule
 
-        Shader '' parsing error: unknown scalar type: 'f3'
+        Shader '' parsing error: unknown type: `f3`
           ┌─ wgsl:3:39
           │
         3 │     @builtin(position) position: vec4<f3>,
-          │                                       ^^ unknown scalar type
-          │
-          = note: Valid scalar types are f32, f64, i32, u32, bool
+          │                                       ^^ unknown type
 
 
-              unknown scalar type: 'f3'
+              unknown type: `f3`
     """
 
     code = dedent(code)
@@ -183,16 +181,19 @@ def test_validate_shader_error1(caplog):
         Caused by:
           In wgpuDeviceCreateShaderModule
 
-        Shader validation error:
+        Shader validation error: Entry point vs_main at Vertex is invalid
            ┌─ :10:20
            │
         10 │     out.position = matrics * out.position;
            │                    ^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [7]
+           │
+           = Expression [7] is invalid
+           = Operation Multiply can't work with [4] (of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }) and [6] (of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } })
 
 
               Entry point vs_main at Vertex is invalid
                 Expression [7] is invalid
-                  Operation Multiply can't work with [4] and [6]
+                  Operation Multiply can't work with [4] (of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }) and [6] (of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } })
     """
 
     code = dedent(code)
@@ -233,11 +234,13 @@ def test_validate_shader_error2(caplog):
         Caused by:
           In wgpuDeviceCreateShaderModule
 
-        Shader validation error:
+        Shader validation error: Entry point fs_main at Vertex is invalid
           ┌─ :9:16
           │
         9 │         return vec3<f32>(1.0, 0.0, 1.0);
           │                ^^^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [8]
+          │
+          = The `return` value Some([8]) does not match the function return value
 
 
               Entry point fs_main at Vertex is invalid
