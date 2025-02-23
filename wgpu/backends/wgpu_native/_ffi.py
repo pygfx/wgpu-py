@@ -33,13 +33,16 @@ def _get_wgpu_header(*filenames):
     # Read files
     lines1 = []
     for filename in filenames:
-        with open(filename) as f:
-            lines1.extend(f.readlines())
+        with open(filename, "r") as f:
+            lines1.extend(f.read().replace("\\\n", "").splitlines(True))
     # Deal with pre-processor commands, because cffi cannot handle them.
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
     for line in lines1:
-        if line.startswith("#define ") and len(line.split()) > 2 and "0x" in line:
+        if line.startswith("#define ") and len(line.split()) > 2 and ("0x" in line or "_MAX" in line):
+            # pattern to find: #define WGPU_CONSTANT (0x1234)
+            line = line.replace("SIZE_MAX", hex((1 << ffi.sizeof("size_t") * 8)-1))
+            line = line.replace("UINT32_MAX", hex((1 << ffi.sizeof("uint32_t") * 8)-1)).replace("UINT64_MAX", hex((1 << ffi.sizeof("uint64_t") * 8)-1))
             line = line.replace("(", "").replace(")", "")
         elif line.startswith("#"):
             continue
@@ -176,12 +179,12 @@ def _check_expected_version(version_info):
         )
 
 
-@ffi.callback("void(WGPULogLevel, char *, void *)")
-def _logger_callback(level, c_msg, userdata):
+@ffi.callback("void(WGPULogLevel, WGPUStringView, void *)")
+def _logger_callback(level, message, userdata):
     """Called when Rust emits a log message."""
     # Make a copy of the msg. Rust reclaims the memory when this returns
     try:
-        msg = ffi.string(c_msg).decode(errors="ignore")
+        msg = ffi.string(message.data, message.length).decode(errors="ignore")
     except Exception:
         if sys.is_finalizing():
             return  # Python is shutting down
