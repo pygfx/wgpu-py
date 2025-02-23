@@ -235,9 +235,9 @@ def _get_override_constant_entries(field):
         # H: nextInChain: WGPUChainedStruct *, key: WGPUStringView, value: float
         c_constant_entry = new_struct(
             "WGPUConstantEntry",
-            key=to_c_string(str(key)),
-            value=float(value),
             # not used: nextInChain
+            key=to_c_string_view(str(key)),
+            value=float(value),
         )
         c_constant_entries.append(c_constant_entry)
     # We need to return and hold onto c_constant_entries in order to prevent the C
@@ -251,7 +251,7 @@ def to_c_string(string: str):
 
 
 def to_c_string_view(string: str):
-    if string == ffi.NULL or string is None:
+    if string == ffi.NULL or not string:
         # H: data: char *, length: int
         struct = new_struct(
             "WGPUStringView",
@@ -506,8 +506,12 @@ class GPU(classes.GPU):
             "void(WGPURequestAdapterStatus, WGPUAdapter, WGPUStringView, void *, void *)"
         )
         def callback(status, result, message, _userdata1, _userdata2):
-            if status != 1:
-                msg = "-" if message.data == ffi.NULL else ffi.string(*message).decode()
+            if status != lib.WGPURequestAdapterStatus_Success:
+                msg = (
+                    "-"
+                    if message.data == ffi.NULL
+                    else ffi.string(message.data, message.length).decode()
+                )
                 awaitable.set_error(f"Request adapter failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
@@ -1188,7 +1192,7 @@ class GPUAdapter(classes.GPUAdapter):
             "void(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, void *, void *)"
         )
         def callback(status, result, message, userdata1, userdata2):
-            if status != 1:
+            if status != lib.WGPURequestDeviceStatus_Success:
                 msg = (
                     "-"
                     if message.data == ffi.NULL
@@ -1667,7 +1671,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # H: chain: WGPUChainedStruct, stage: WGPUShaderStage/int, code: WGPUStringView, defineCount: int, defines: WGPUShaderDefine *
                 source_struct = new_struct_p(
                     "WGPUShaderModuleGLSLDescriptor *",
-                    code=to_c_string(code),
+                    code=to_c_string_view(code),
                     stage=c_stage,
                     defineCount=len(defines),
                     defines=new_array("WGPUShaderDefine[]", defines),
@@ -1753,11 +1757,25 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "void(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline, char *, void *)"
         )
         def callback(status, result, message, _userdata):
-            if status != 0:
-                msg = "-" if message == ffi.NULL else ffi.string(message).decode()
+            if status != lib.WGPUCreatePipelineAsyncStatus_Success:
+                msg = (
+                    "-"
+                    if message.data == ffi.NULL
+                    else ffi.string(message.data, message.length).decode()
+                )
                 awaitable.set_error(f"create_compute_pipeline failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
+
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUCreateComputePipelineAsyncCallback, userdata1: void*, userdata2: void*
+        callback_info = new_struct(
+            "WGPUCreateComputePipelineAsyncCallbackInfo",
+            # not used: nextInChain
+            mode=1,
+            callback=callback,
+            # not used: userdata1
+            # not used: userdata2
+        )
 
         def finalizer(id):
             return GPUComputePipeline(label, id, self)
@@ -1768,7 +1786,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUFuture f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor, WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo)
         libf.wgpuDeviceCreateComputePipelineAsync(
-            self._internal, descriptor, callback, ffi.NULL
+            self._internal, descriptor, callback_info
         )
 
         return await awaitable
@@ -1784,11 +1802,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: WGPUStringView, constantCount: int, constants: WGPUConstantEntry *
         c_compute_stage = new_struct(
             "WGPUProgrammableStageDescriptor",
+            # not used: nextInChain
             module=compute["module"]._internal,
-            entryPoint=to_c_string_or_null(compute.get("entry_point")),
+            entryPoint=to_c_string_view(compute.get("entry_point")),
             constantCount=len(c_constant_entries),
             constants=c_constants,
-            # not used: nextInChain
         )
 
         if isinstance(layout, GPUPipelineLayout):
@@ -1850,14 +1868,28 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             return GPURenderPipeline(label, id, self)
 
         @ffi.callback(
-            "void(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline, char *, void *)"
+            "void(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline, WGPUStringView, void *, void *)"
         )
-        def callback(status, result, message, _userdata):
-            if status != 0:
-                msg = "-" if message == ffi.NULL else ffi.string(message).decode()
+        def callback(status, result, message, _userdata1, _userdata2):
+            if status != lib.WGPUCreatePipelineAsyncStatus_Success:
+                msg = (
+                    "-"
+                    if message.data == ffi.NULL
+                    else ffi.string(message.data, message.length).decode()
+                )
                 awaitable.set_error(f"Create renderPipeline failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
+
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUCreateRenderPipelineAsyncCallback, userdata1: void*, userdata2: void*
+        callback_info = new_struct(
+            "WGPUCreateRenderPipelineAsyncCallbackInfo",
+            # not used: nextInChain
+            mode=1,
+            callback=callback,
+            # not used: userdata1
+            # not used: userdata2
+        )
 
         def finalizer(id):
             return GPURenderPipeline(label, id, self)
@@ -1868,7 +1900,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUFuture f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUCreateRenderPipelineAsyncCallbackInfo callbackInfo)
         libf.wgpuDeviceCreateRenderPipelineAsync(
-            self._internal, descriptor, callback, ffi.NULL
+            self._internal,
+            descriptor,
+            callback_info,
         )
 
         return await awaitable
@@ -2277,10 +2311,15 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Setup awaitable
 
-        @ffi.callback("void(WGPUBufferMapAsyncStatus, void*)")
-        def callback(status, _user_data):
-            if status != 0:
-                awaitable.set_error(f"Could not map buffer ({status}).")
+        @ffi.callback("void(WGPUMapAsyncStatus, WGPUStringView, void *, void *)")
+        def buffer_map_callback(status, message, _userdata1, _userdata2):
+            if status != lib.WGPUMapAsyncStatus_Success:
+                msg = (
+                    "-"
+                    if message.data == ffi.NULL
+                    else ffi.string(message.data, message.length).decode()
+                )
+                awaitable.set_error(f"Could not map buffer ({status} : {msg}).")
             else:
                 awaitable.set_result(status)
 
@@ -3735,25 +3774,40 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         await awaitable
 
     def _on_submitted_work_done(self):
-        @ffi.callback("void(WGPUQueueWorkDoneStatus, void*)")
-        def callback(status, _user_data_p):
-            if status == 0:
+        @ffi.callback("void(WGPUQueueWorkDoneStatus, void *, void *)")
+        def work_done_callback(status, _userdata1, _userdata2):
+            if status == lib.WGPUQueueWorkDoneStatus_Success:
                 awaitable.set_result(True)
             else:
-                result = {1: "Error", 2: "Unknown", 3: "DeviceLost"}.get(
-                    status, "Other"
-                )
+                result = {
+                    lib.WGPUQueueWorkDoneStatus_InstanceDropped: "InstanceDropped",
+                    lib.WGPUQueueWorkDoneStatus_Error: "Error",
+                    lib.WGPUQueueWorkDoneStatus_Unknown: "Unknown",
+                }.get(status, "Other")
                 awaitable.set_error(f"Queue work done status: {result}")
+
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUQueueWorkDoneCallback, userdata1: void*, userdata2: void*
+        work_done_callback_info = new_struct(
+            "WGPUQueueWorkDoneCallbackInfo",
+            # not used: nextInChain
+            mode=1,
+            callback=work_done_callback,
+            # not used: userdata1
+            # not used: userdata2
+        )
 
         def finalizer(_value):
             return None
 
         awaitable = WgpuAwaitable(
-            "on_submitted_work_done", callback, finalizer, self._device._poll_wait
+            "on_submitted_work_done",
+            work_done_callback,
+            finalizer,
+            self._device._poll_wait,
         )
 
         # H: WGPUFuture f(WGPUQueue queue, WGPUQueueWorkDoneCallbackInfo callbackInfo)
-        libf.wgpuQueueOnSubmittedWorkDone(self._internal, callback, ffi.NULL)
+        libf.wgpuQueueOnSubmittedWorkDone(self._internal, work_done_callback_info)
 
         return awaitable
 
