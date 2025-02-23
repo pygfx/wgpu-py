@@ -306,10 +306,21 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
 
+    # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
+    c_limits_native = new_struct(
+        "WGPUNativeLimits",
+        # maxPushConstantSize = 0,
+        # not used: chain
+        # not used: maxPushConstantSize
+        # not used: maxNonSamplerBindings
+    )
+    # c_limits_native.chain.next = ffi.NULL
+    c_limits_native.chain.sType = lib.WGPUSType_NativeLimits
+
     # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
     c_limits = new_struct_p(
         "WGPULimits *",
-        # not used: nextInChain
+        nextInChain=ffi.addressof(c_limits_native.chain),
         # not used: maxTextureDimension1D
         # not used: maxTextureDimension2D
         # not used: maxTextureDimension3D
@@ -350,7 +361,9 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         libf.wgpuDeviceGetLimits(id, c_limits)
 
     key_value_pairs = [
-        (to_snake_case(name, "-"), getattr(c_limits, name)) for name in dir(c_limits)
+        (to_snake_case(name, "-"), getattr(limits, name))
+        for limits in (c_limits, c_limits_native)
+        for name in dir(limits)
     ]
     limits = dict(sorted(key_value_pairs))
     return limits
