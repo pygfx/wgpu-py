@@ -841,7 +841,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             libf.wgpuSurfaceGetCurrentTexture(surface_id, surface_texture)
             status = surface_texture.status
             texture_id = surface_texture.texture
-            print(status)
             if status == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
                 break  # success
             elif status == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
