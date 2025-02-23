@@ -77,6 +77,8 @@ def print_struct(s, indent=""):
                 print(indent + key + ": null")
             elif "'char *'" in repr(val):
                 print(indent + key + ":", ffi.string(val).decode())
+            elif "WGPUStringView" in repr(val):
+                print(indent + key + ":", ffi.string(val.data, val.length).decode())
             elif " *'" in repr(val):
                 print(indent + key + ": pointer")
             elif "struct WGPU" in repr(val):
@@ -256,7 +258,8 @@ def to_c_string_view(string: str):
         struct = new_struct(
             "WGPUStringView",
             data=ffi.NULL,
-            length=0,
+            # length=0,
+            # not used: length
         )
     else:
         # H: data: char *, length: int
@@ -314,13 +317,13 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         # not used: maxPushConstantSize
         # not used: maxNonSamplerBindings
     )
-    # c_limits_native.chain.next = ffi.NULL
+    c_limits_native.chain.next = ffi.NULL
     c_limits_native.chain.sType = lib.WGPUSType_NativeLimits
 
     # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
     c_limits = new_struct_p(
         "WGPULimits *",
-        nextInChain=ffi.addressof(c_limits_native.chain),
+        # nextInChain=ffi.addressof(c_limits_native.chain), #seems to cause a crash with enumerate_adapter_async
         # not used: maxTextureDimension1D
         # not used: maxTextureDimension2D
         # not used: maxTextureDimension3D
@@ -352,6 +355,7 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         # not used: maxComputeWorkgroupSizeY
         # not used: maxComputeWorkgroupSizeZ
         # not used: maxComputeWorkgroupsPerDimension
+        # not used: nextInChain
     )
     if adapter:
         # H: WGPUStatus f(WGPUAdapter adapter, WGPULimits * limits)
@@ -384,12 +388,12 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
 
     # Standard features
     for f in sorted(enums.FeatureName):
-        if f in [
-            "clip-distances",
-            "dual-source-blending",
-            "texture-compression-bc-sliced-3d",
-        ]:
-            continue  # not supported by wgpu-native yet
+        # if f in [
+        #     "clip-distances",
+        #     "dual-source-blending",
+        #     "texture-compression-bc-sliced-3d",
+        # ]:
+        #     continue  # not supported by wgpu-native yet
         if has_feature(enummap[f"FeatureName.{f}"]):
             features.add(f)
 
@@ -1260,7 +1264,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
     # This flag  should be deleted once create_compute_pipeline_async() and
     # create_render_pipeline_async() are actually implemented in the wgpu-native library.
-    _CREATE_PIPELINE_ASYNC_IS_IMPLEMENTED = False
+    # _CREATE_PIPELINE_ASYNC_IS_IMPLEMENTED = False
 
     def _poll(self):
         # Internal function
@@ -1767,9 +1771,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # This code is virtually identical to the code in create_render_pipeline_async.
         # Can they be merged??
         @ffi.callback(
-            "void(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline, char *, void *)"
+            "void(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline, char *, void *, void *)"
         )
-        def callback(status, result, message, _userdata):
+        def callback(status, result, message, _userdata1, _userdata2):
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
                 msg = (
                     "-"
@@ -2723,7 +2727,9 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             raise ValueError("size_in_bytes + data_offset is too large")
 
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
+        # H: void wgpuComputePassEncoderSetPushConstants(WGPUComputePassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const * data)
         # H: void wgpuRenderPassEncoderSetPushConstants(WGPURenderPassEncoder encoder, WGPUShaderStage stages, uint32_t offset, uint32_t sizeBytes, void const * data)
+        # H: void wgpuRenderBundleEncoderSetPushConstants(WGPURenderBundleEncoder encoder, WGPUShaderStage stages, uint32_t offset, uint32_t sizeBytes, void const * data)
         function = type(self)._set_push_constants_function
         if function is None:
             self._not_implemented("set_push_constants")
@@ -2732,6 +2738,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
     def _begin_pipeline_statistics_query(self, query_set, query_index):
         # H: void wgpuComputePassEncoderBeginPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         # H: void wgpuRenderPassEncoderBeginPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
+        # H: void wgpuRenderPassEncoderBeginPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         function = type(self)._begin_pipeline_statistics_query_function
         if function is None:
             self._not_implemented("begin_pipeline_statistics")
@@ -2739,6 +2746,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
     def _end_pipeline_statistics_query(self):
         # H: void wgpuComputePassEncoderEndPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder)
+        # H: void wgpuRenderPassEncoderEndPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder)
         # H: void wgpuRenderPassEncoderEndPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder)
         function = type(self)._end_pipeline_statistics_query_function
         if function is None:
@@ -2752,7 +2760,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label: str):
-        c_group_label = to_c_string(group_label)
+        c_group_label = to_c_label(group_label)
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, WGPUStringView groupLabel)
         # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, WGPUStringView groupLabel)
         # H: void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, WGPUStringView groupLabel)
@@ -2769,7 +2777,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         function(self._internal)
 
     def insert_debug_marker(self, marker_label: str):
-        c_marker_label = to_c_string(marker_label)
+        c_marker_label = to_c_label(marker_label)
         # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, WGPUStringView markerLabel)
         # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, WGPUStringView markerLabel)
         # H: void wgpuRenderPassEncoderInsertDebugMarker(WGPURenderPassEncoder renderPassEncoder, WGPUStringView markerLabel)
@@ -3362,7 +3370,7 @@ class GPUComputePassEncoder(
     _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
     _begin_pipeline_statistics_query_function = libf.wgpuComputePassEncoderBeginPipelineStatisticsQuery  # fmt: skip
     _end_pipeline_statistics_query_function = libf.wgpuComputePassEncoderEndPipelineStatisticsQuery  # fmt: skip
-    _set_push_constants_function = None  # coming soon
+    _set_push_constants_function = libf.wgpuComputePassEncoderSetPushConstants
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePassEncoderRelease
@@ -3533,9 +3541,9 @@ class GPURenderBundleEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuRenderBundleEncoderSetBindGroup
-    _set_push_constants_function = None
-    _begin_pipeline_statistics_query_function = None
-    _end_pipeline_statistics_query_function = None
+    _set_push_constants_function = libf.wgpuRenderBundleEncoderSetPushConstants
+    _begin_pipeline_statistics_query_function = libf.wgpuRenderPassEncoderBeginPipelineStatisticsQuery  # fmt: skip
+    _end_pipeline_statistics_query_function = libf.wgpuRenderPassEncoderEndPipelineStatisticsQuery  # fmt: skip
 
     # GPURenderCommandsMixin
     _set_pipeline_function = libf.wgpuRenderBundleEncoderSetPipeline
