@@ -2284,18 +2284,34 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             else:
                 awaitable.set_result(status)
 
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUBufferMapCallback, userdata1: void*, userdata2: void*
+        buffer_map_callback_info = new_struct(
+            "WGPUBufferMapCallbackInfo",
+            # not used: nextInChain
+            mode=1,
+            callback=buffer_map_callback,
+            # not used: userdata1
+            # not used: userdata2
+        )
+
         def finalizer(_status):
             self._map_state = enums.BufferMapState.mapped
             self._mapped_status = offset, offset + size, mode
             self._mapped_memoryviews = []
 
-        awaitable = WgpuAwaitable("buffer.map", callback, finalizer, self._device._poll)
+        awaitable = WgpuAwaitable(
+            "buffer.map", buffer_map_callback, finalizer, self._device._poll
+        )
 
         # Map it
         self._map_state = enums.BufferMapState.pending
         # H: WGPUFuture f(WGPUBuffer buffer, WGPUMapMode mode, size_t offset, size_t size, WGPUBufferMapCallbackInfo callbackInfo)
         libf.wgpuBufferMapAsync(
-            self._internal, map_mode, offset, size, callback, ffi.NULL
+            self._internal,
+            map_mode,
+            offset,
+            size,
+            buffer_map_callback_info,
         )
 
         return awaitable
