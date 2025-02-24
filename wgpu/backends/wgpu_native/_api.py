@@ -253,13 +253,12 @@ def to_c_string(string: str):
 
 
 def to_c_string_view(string: str):
-    if string == ffi.NULL or not string:
+    if string == ffi.NULL or not string or string is None:
         # H: data: char *, length: int
         struct = new_struct(
             "WGPUStringView",
             data=ffi.NULL,
-            # length=0,
-            # not used: length
+            length=lib.WGPU_STRLEN,
         )
     else:
         # H: data: char *, length: int
