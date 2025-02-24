@@ -522,7 +522,7 @@ class GPU(classes.GPU):
         @ffi.callback(
             "void(WGPURequestAdapterStatus, WGPUAdapter, WGPUStringView, void *, void *)"
         )
-        def callback(status, result, message, _userdata1, _userdata2):
+        def request_adapter_callback(status, result, message, _userdata1, _userdata2):
             if status != lib.WGPURequestAdapterStatus_Success:
                 msg = (
                     "-"
@@ -538,7 +538,7 @@ class GPU(classes.GPU):
             "WGPURequestAdapterCallbackInfo",
             nextInChain=ffi.NULL,
             mode=1,
-            callback=callback,
+            callback=request_adapter_callback,
             # not used: userdata1
             # not used: userdata2
         )
@@ -548,7 +548,9 @@ class GPU(classes.GPU):
 
         # Note that although we claim this is an asynchronous method, the callback
         # happens within libf.wgpuInstanceRequestAdapter
-        awaitable = WgpuAwaitable("request_adapter", callback_info, finalizer)
+        awaitable = WgpuAwaitable(
+            "request_adapter", request_adapter_callback, finalizer
+        )
 
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback_info)
@@ -1208,7 +1210,7 @@ class GPUAdapter(classes.GPUAdapter):
         @ffi.callback(
             "void(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, void *, void *)"
         )
-        def callback(status, result, message, userdata1, userdata2):
+        def request_device_callback(status, result, message, userdata1, userdata2):
             if status != lib.WGPURequestDeviceStatus_Success:
                 msg = (
                     "-"
@@ -1224,7 +1226,7 @@ class GPUAdapter(classes.GPUAdapter):
             "WGPURequestDeviceCallbackInfo",
             nextInChain=ffi.NULL,
             mode=1,
-            callback=callback,
+            callback=request_device_callback,
             # not used: userdata1
             # not used: userdata2
         )
@@ -1244,7 +1246,7 @@ class GPUAdapter(classes.GPUAdapter):
 
             return device
 
-        awaitable = WgpuAwaitable("request_device", callback, finalizer)
+        awaitable = WgpuAwaitable("request_device", request_device_callback, finalizer)
 
         # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback_info)
@@ -1264,7 +1266,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
     # This flag  should be deleted once create_compute_pipeline_async() and
     # create_render_pipeline_async() are actually implemented in the wgpu-native library.
-    # _CREATE_PIPELINE_ASYNC_IS_IMPLEMENTED = False
+    # they now exist in the header, but are still unimplemented: https://github.com/gfx-rs/wgpu-native/blob/f29ebee88362934f8f9fab530f3ccb7fde2d49a9/src/unimplemented.rs#L66-L82
+    _CREATE_PIPELINE_ASYNC_IS_IMPLEMENTED = False
 
     def _poll(self):
         # Internal function
