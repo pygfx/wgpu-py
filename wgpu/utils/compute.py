@@ -7,7 +7,7 @@ import ctypes
 import wgpu.utils
 
 
-def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
+def compute_with_buffers(input_arrays, output_arrays, shader, constants=None, n=None):
     """Apply the given compute shader to the given input_arrays and return
     output arrays. Both input and output arrays are represented on the GPU
     using storage buffer objects.
@@ -29,6 +29,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
             of a memoryview. Note that any buffer that is NOT in the
             output arrays dict will be considered readonly in the shader.
         shader (str or bytes): The shader as a string of WGSL code or SpirV bytes.
+        constants (dict, optional): provide override constants
         n (int, tuple, optional): The dispatch counts. Can be an int
             or a 3-tuple of ints to specify (x, y, z). If not given or None,
             the length of the first output array type is used.
@@ -164,10 +165,18 @@ def compute_with_buffers(input_arrays, output_arrays, shader, n=None):
     )
     bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
 
+    compute = {
+        "module": cshader,
+        "entry_point": "main",
+    }
+
+    if constants:
+        compute["constants"] = constants
+
     # Create a pipeline and "run it"
     compute_pipeline = device.create_compute_pipeline(
         layout=pipeline_layout,
-        compute={"module": cshader, "entry_point": "main"},
+        compute=compute,
     )
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
