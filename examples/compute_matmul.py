@@ -34,11 +34,60 @@ bindings = {
     4: np.array(B_shape, dtype=np.uint32),
 }
 
+shader_src = """
+@group(0) @binding(0)
+var<storage, read> A: array<f32>;
+@group(0) @binding(1)
+var<storage, read> B: array<f32>;
+@group(0) @binding(2)
+var<storage, read_write> C: array<f32>;
+
+@group(0) @binding(3)
+var<storage, read> A_shape: array<u32>;
+@group(0) @binding(4)
+var<storage, read> B_shape: array<u32>;
+
+
+fn get_1d_index(row_ix: u32, col_ix: u32, n_cols: u32) -> u32 {
+    // get the 1D index in the array which corresponds
+    // to the passed row and column index
+    return row_ix * n_cols + col_ix;
+}
+
+@compute @workgroup_size(1)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+    // naive matrix multiplication
+    // A ∈ R^(m x k), B ∈ R^(k x n), AB = C ∈ R^(m x n)
+    // gid.y is "m index", gid.x is "n index"
+
+    // we make these varibles because we cannot pass individual array elements to a function
+    // i.e. get_1d_index(A_shape[0]) is not possible
+    let m: u32 = A_shape[0];
+    let k: u32 = A_shape[1];
+    let n: u32 = B_shape[1];
+
+    // computes one element of C using A at row gid.y and B at column gid.x
+    var sum: f32 = 0.0;
+
+    // computes one element of C using A at row gid.y and B at column gid.x
+    for (var i: u32 = 0; i < k; i++) {
+        // dot product of A at row = gid.y, col = i and B at row = i, col = gid.x
+        // A col max index is k - 1, B row max index is k - 1
+        sum = sum + A[get_1d_index(gid.y, i, k)] * B[get_1d_index(i, gid.x, n)];
+    }
+
+    // set element of C
+    C[get_1d_index(gid.y, gid.x, n)] = sum;
+
+    return;
+}
+"""
+
 # run shader
 out = compute_with_buffers(
     input_arrays=bindings,
     output_arrays={2: (np.prod((m, n)), "f")},
-    shader=open(f"./matmul_simple.wgsl").read(),
+    shader=shader_src,
     n=(n, m, 1),  # n cols across "x dimension", m rows across "y dimension"
 )
 
@@ -46,7 +95,9 @@ out = compute_with_buffers(
 C = np.frombuffer(out[2], dtype=np.float32).reshape((m, n))
 
 # check that results are the same as numpy, we can expect 7 decimal precision
-print(f"np.allclose():\n {np.allclose(A @ B, C)}\n")
+all_close = np.allclose(A @ B, C)
+assert all_close
+print(f"np.allclose():\n {all_close}\n")
 print(f"AB - C:\n{A @ B - C}\n")
 diff_norms = np.linalg.norm(A @ B - C, ord="fro") / np.linalg.norm(A @ B, ord="fro")
 print(f"||AB - C||_F - ||AB||_F:\n{diff_norms}\n")
