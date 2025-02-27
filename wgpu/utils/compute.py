@@ -172,7 +172,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, constants=None, n=
 
     if constants:
         compute["constants"] = constants
-        
+
     # Create a pipeline and "run it"
     compute_pipeline = device.create_compute_pipeline(
         layout=pipeline_layout,
