@@ -214,7 +214,7 @@ class ImguiRenderer:
             event["stop_propagation"] = True
 
     def _on_wheel(self, event):
-        self._backend.io.add_mouse_wheel_event(event["dx"] / 100, event["dy"] / 100)
+        self._backend.io.add_mouse_wheel_event(event["dx"] / 100, -event["dy"] / 100)
 
         if self._backend.io.want_capture_mouse:
             event["stop_propagation"] = True
