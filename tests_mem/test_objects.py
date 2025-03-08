@@ -103,7 +103,8 @@ def test_release_buffer(n):
 
 @create_and_release
 def test_release_command_buffer(n):
-    # Note: a command encoder can only be used once (it gets destroyed on finish())
+    # Note: a command encoder can only be used once (it gets destroyed on finish()), see test below.
+    # Finishing returns a command buffer, which gets destroysed on submit() to the queue.
     yield {
         "expected_counts_after_create": {
             "CommandBuffer": (n, n),
@@ -112,7 +113,10 @@ def test_release_command_buffer(n):
 
     for i in range(n):
         command_encoder = DEVICE.create_command_encoder()
-        yield command_encoder.finish()
+        command_buffer = command_encoder.finish()
+        yield command_buffer
+        # to destroy the command buffer we submit it
+        DEVICE.queue.submit([command_buffer])
 
 
 @create_and_release
@@ -372,6 +376,19 @@ def test_release_texture_view(n):
     yield {}
     for i in range(n):
         yield texture.create_view()
+
+@create_and_release
+def test_release_pipeline_cache(n):
+    # not implemented in wgpu-native yet
+    # part of CreateRenderPipeline and CreateComputePipeline
+    # https://github.com/gfx-rs/wgpu-native/blob/v24.0.0.1/src/lib.rs#L1988
+    # https://github.com/gfx-rs/wgpu-native/blob/v24.0.0.1/src/lib.rs#L2292
+    yield {
+        "expected_counts_after_create": {
+            "PipelineCache": (n, 0),
+        },
+    }
+    pytest.skip("Not implemented in wgpu-native")
 
 
 # %% The end
