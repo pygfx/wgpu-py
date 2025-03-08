@@ -311,8 +311,8 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
     c_limits_native = new_struct(
         "WGPUNativeLimits",
-        maxPushConstantSize = 0,
-        maxNonSamplerBindings = 0,
+        # maxPushConstantSize = 0,
+        # maxNonSamplerBindings = 0,
         chain = new_struct(
             "WGPUChainedStructOut",
             # not used: next
@@ -1045,8 +1045,6 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Set limits
 
-        # TODO: handle native limits for the request?
-
         # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
         c_required_limits = new_struct_p(
             "WGPULimits *",
@@ -1110,8 +1108,7 @@ class GPUAdapter(classes.GPUAdapter):
         for key in dir(c_required_limits):
             snake_key = to_snake_case(key, "-")
             if "chain" in snake_key:
-                # these are pointers, not limits. We should remove them before iterating here!
-                # TODO: part of the TODO mentioned above!
+                # these are pointers, not limits. Maybe we should remove them before iterating here?
                 continue
             # Use the value in required_limits if it exists. Otherwise, the old value
             try:
@@ -1119,6 +1116,16 @@ class GPUAdapter(classes.GPUAdapter):
             except KeyError:
                 value = self._limits[snake_key]
             setattr(c_required_limits, key, value)
+
+        # the native only limits are passed in via the next-in-chain struct
+        c_required_limits_native = new_struct("WGPUNativeLimits",
+            maxPushConstantSize = required_limits.get("max-push-constant-size", 0),
+            maxNonSamplerBindings = required_limits.get("max-non-sampler-bindings", 0),
+        )
+        c_required_limits_native.chain.next = ffi.NULL
+        c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits
+
+        c_required_limits.nextInChain = ffi.addressof(c_required_limits_native, "chain")
 
         # ---- Set queue descriptor
 
