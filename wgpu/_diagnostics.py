@@ -109,7 +109,7 @@ class DiagnosticsBase:
 
     def get_report(self):
         """Get the textual diagnostics report for this topic."""
-        text = f"\n██ {self.name}:\n\n"
+        text = f"\n## {self.name}:\n\n"
         text += dict_to_text(self.get_dict())
         subscript = self.get_subscript()
         if subscript:
