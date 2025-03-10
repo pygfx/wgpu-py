@@ -308,16 +308,18 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
 
-    # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
     c_limits_native = new_struct(
         "WGPUNativeLimits",
         # maxPushConstantSize = 0,
         # maxNonSamplerBindings = 0,
-        chain = new_struct(
+        # H: next: WGPUChainedStructOut *, sType: WGPUSType
+        chain=new_struct(
             "WGPUChainedStructOut",
             # not used: next
-            sType=lib.WGPUSType_NativeLimits
-            )
+            sType=lib.WGPUSType_NativeLimits,
+        ),
+        # not used: maxPushConstantSize
+        # not used: maxNonSamplerBindings
     )
     # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
     c_limits = new_struct_p(
@@ -368,7 +370,8 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     key_value_pairs = [
         (to_snake_case(name, "-"), getattr(limits, name))
         for limits in (c_limits, c_limits_native)
-        for name in dir(limits) if type(getattr(limits, name)) is int
+        for name in dir(limits)
+        if type(getattr(limits, name)) is int
     ]
     limits = dict(sorted(key_value_pairs))
     return limits
@@ -1118,9 +1121,12 @@ class GPUAdapter(classes.GPUAdapter):
             setattr(c_required_limits, key, value)
 
         # the native only limits are passed in via the next-in-chain struct
-        c_required_limits_native = new_struct("WGPUNativeLimits",
-            maxPushConstantSize = required_limits.get("max-push-constant-size", 0),
-            maxNonSamplerBindings = required_limits.get("max-non-sampler-bindings", 0),
+        # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
+        c_required_limits_native = new_struct(
+            "WGPUNativeLimits",
+            maxPushConstantSize=required_limits.get("max-push-constant-size", 0),
+            maxNonSamplerBindings=required_limits.get("max-non-sampler-bindings", 0),
+            # not used: chain
         )
         c_required_limits_native.chain.next = ffi.NULL
         c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits

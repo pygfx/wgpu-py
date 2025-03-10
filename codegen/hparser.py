@@ -95,7 +95,6 @@ class HParser:
             assert name1.startswith("WGPU")
             name = name1[4:]
             self.enums[name] = enum = {}
-            # print(f"Found enum {name}")
             code_block = code[i2 + 1 : i3].strip().strip(";")
             block = remove_c_comments(code_block).strip()
             for f in block.split(","):
@@ -122,9 +121,9 @@ class HParser:
                 else:
                     enum[key] = int(val)
 
-        # collect flags
-        # schme: typedef WGPUFlags WGPUFlagName;
         for line in code.splitlines():
+            # collect flags
+            # schme: typedef WGPUFlags WGPUFlagName;
             if line.startswith("typedef WGPUFlags "):
                 parts = line.strip().strip(";").split()
                 assert len(parts) == 3
@@ -133,9 +132,8 @@ class HParser:
                     assert name.startswith("WGPU")
                 self.flags[name] = self.enums.pop[name] if name in self.enums else {}
 
-        #fill flags
-        # schema: static const WGPUFlagName WGPUFlagName_Value = 0x0000000000000001;
-        for line in code.splitlines():
+            #fill flags
+            # schema: static const WGPUFlagName WGPUFlagName_Value = 0x0000000000000001;
             if line.startswith("static const"):
                 line = remove_c_comments(line).strip()
                 flag_name = line.removeprefix("static const").lstrip().split()[0]
