@@ -308,10 +308,9 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
 
+    # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
     c_limits_native = new_struct(
         "WGPUNativeLimits",
-        # maxPushConstantSize = 0,
-        # maxNonSamplerBindings = 0,
         # H: next: WGPUChainedStructOut *, sType: WGPUSType
         chain=new_struct(
             "WGPUChainedStructOut",
@@ -3171,6 +3170,7 @@ class GPUCommandEncoder(
 
         size = _tuple_from_extent3d(copy_size)
 
+        # H: layout: WGPUTexelCopyBufferLayout, buffer: WGPUBuffer
         c_source = new_struct_p(
             "WGPUTexelCopyBufferInfo *",
             # H: offset: int, bytesPerRow: int, rowsPerImage: int
@@ -3253,6 +3253,7 @@ class GPUCommandEncoder(
             aspect=0,
         )
 
+        # H: layout: WGPUTexelCopyBufferLayout, buffer: WGPUBuffer
         c_destination = new_struct_p(
             "WGPUTexelCopyBufferInfo *",
             # H: offset: int, bytesPerRow: int, rowsPerImage: int
