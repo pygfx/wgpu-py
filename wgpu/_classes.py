@@ -1004,13 +1004,9 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor); -> USVString label = "", required USVString code, object sourceMap, sequence<GPUShaderModuleCompilationHint> compilationHints = []
+    @apidiff.change("compilation_hints got removed, IDL outdated.")
     def create_shader_module(
-        self,
-        *,
-        label: str = "",
-        code: str,
-        source_map: dict = optional,
-        compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
+        self, *, label: str = "", code: str, source_map: dict = optional
     ):
         """Create a `GPUShaderModule` object from shader source.
 

@@ -12,7 +12,7 @@
 * Diffs for GPU: add enumerate_adapters_async, add enumerate_adapters_sync, change get_preferred_canvas_format, change request_adapter_async, change request_adapter_sync
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
 * Diffs for GPUAdapter: add summary
-* Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost_async, hide lost_sync, hide onuncapturederror, hide pop_error_scope_async, hide pop_error_scope_sync, hide push_error_scope
+* Diffs for GPUDevice: add adapter, add create_buffer_with_data, change create_shader_module, hide import_external_texture, hide lost_async, hide lost_sync, hide onuncapturederror, hide pop_error_scope_async, hide pop_error_scope_sync, hide push_error_scope
 * Diffs for GPUBuffer: add read_mapped, add write_mapped, hide get_mapped_range
 * Diffs for GPUTexture: add size
 * Diffs for GPUTextureView: add size, add texture
@@ -21,7 +21,6 @@
 * Validated 37 classes, 121 methods, 46 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 121 methods, 0 properties
-* ERROR: missing check_struct in create_shader_module: ['ShaderModuleCompilationHint']
 ## Validating backends/wgpu_native/_api.py
 * Flag BufferUsage missing in wgpu.h
 * Flag MapMode missing in wgpu.h

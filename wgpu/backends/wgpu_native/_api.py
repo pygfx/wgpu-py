@@ -1667,18 +1667,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreatePipelineLayout(self._internal, struct)
         return GPUPipelineLayout(label, id, self)
 
-    # FIXME: was create_shader_module(self, *, label: str = "", code: str, source_map: dict = optional, compilation_hints: None):
-    # FIXME: missing check_struct in create_shader_module: ['ShaderModuleCompilationHint']
     def create_shader_module(
-        self,
-        *,
-        label: str = "",
-        code: str,
-        source_map: dict = optional,
-        compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
+        self, *, label: str = "", code: str, source_map: dict = optional
     ):
         # TODO: compilation_hints has been removed: https://github.com/webgpu-native/webgpu-headers/pull/337
-        # needs and @apidiff in _classes.py or update to the .idl!
+        # uses @apidiff in _classes.py for now, but .idl should be updated
         if isinstance(code, str):
             looks_like_wgsl = any(
                 x in code for x in ("@compute", "@vertex", "@fragment")
