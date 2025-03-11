@@ -3583,7 +3583,6 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             elif time.time() - time_since_size_ok > 5.0:
                 copy_buffer = None  # Too large too long
         if copy_buffer is None:
-            print("new copy buffer")
             buffer_size = data_length
             buffer_size += (4096 - buffer_size % 4096) % 4096
             buf_usage = flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ
