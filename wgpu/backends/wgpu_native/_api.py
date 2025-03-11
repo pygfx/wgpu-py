@@ -18,6 +18,7 @@ Read the codegen/readme.md for more information.
 from __future__ import annotations
 
 import os
+import time
 import logging
 from weakref import WeakKeyDictionary
 from typing import List, Dict, Union, Optional, NoReturn
@@ -3550,6 +3551,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             self._internal, c_destination, c_data, data_length, c_data_layout, c_size
         )
 
+    _shared_copy_buffer = None, 0
+
     def read_texture(self, source, data_layout, size):
         # Note that the bytes_per_row restriction does not apply for
         # this function; we have to deal with it.
@@ -3564,20 +3567,31 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         full_stride = ori_stride + extra_stride
 
         size = _tuple_from_extent3d(size)
-
-        # Create temporary buffer
         data_length = full_stride * size[1] * size[2]
 
+        # Create temporary buffer
         is_present_texture = source["texture"].label == "present"
         copy_buffer = None
         if is_present_texture:
-            copy_buffer = getattr(source["texture"], "_copy_buffer", None)
-
+            copy_buffer, time_since_size_ok = self._shared_copy_buffer
+            if copy_buffer is None:
+                pass  # No buffer
+            elif copy_buffer.size < data_length:
+                copy_buffer = None  # Buffer too small
+            elif copy_buffer.size < data_length * 4:
+                self._shared_copy_buffer = copy_buffer, time.time()  # Bufer size ok
+            elif time.time() - time_since_size_ok > 5.0:
+                copy_buffer = None  # Too large too long
         if copy_buffer is None:
+            print("new copy buffer")
+            buffer_size = data_length
+            buffer_size += (4096 - buffer_size % 4096) % 4096
             buf_usage = flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ
-            copy_buffer = device._create_buffer("", data_length, buf_usage, False)
+            copy_buffer = device._create_buffer(
+                "copy-buffer", buffer_size, buf_usage, False
+            )
             if is_present_texture:
-                source["texture"]._copy_buffer = copy_buffer
+                self._shared_copy_buffer = copy_buffer, time.time()
 
         destination = {
             "buffer": copy_buffer,
@@ -3592,7 +3606,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         command_buffer = encoder.finish()
         self.submit([command_buffer])
 
-        awaitable = copy_buffer._map("READ_NOSYNC")
+        awaitable = copy_buffer._map("READ_NOSYNC", 0, data_length)
 
         # Download from mappable buffer
         # Because we use `copy=False``, we *must* copy the data.
