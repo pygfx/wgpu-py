@@ -291,11 +291,7 @@ class FunctionPatcher(Patcher):
 class StructPatcher(Patcher):
     def apply(self, code):
         self._init(code)
-        hp = get_h_parser()
-
         count = 0
-        line_index = -1
-        brace_depth = 0
 
         for line, i in self.iter_lines():
             # detect struct definition start (only when not already inside a struct)
