@@ -540,7 +540,7 @@ class GPU(classes.GPU):
         callback_info = new_struct(
             "WGPURequestAdapterCallbackInfo",
             nextInChain=ffi.NULL,
-            mode=1,
+            mode=lib.WGPUCallbackMode_AllowProcessEvents,
             callback=request_adapter_callback,
             # not used: userdata1
             # not used: userdata2
@@ -1179,7 +1179,7 @@ class GPUAdapter(classes.GPUAdapter):
         device_lost_callback_info = new_struct(
             "WGPUDeviceLostCallbackInfo",
             nextInChain=ffi.NULL,
-            mode=1,
+            mode=lib.WGPUCallbackMode_AllowSpontaneous,
             callback=device_lost_callback,
             # not used: userdata1
             # not used: userdata2
@@ -1244,7 +1244,7 @@ class GPUAdapter(classes.GPUAdapter):
         callback_info = new_struct(
             "WGPURequestDeviceCallbackInfo",
             nextInChain=ffi.NULL,
-            mode=1,
+            mode=lib.WGPUCallbackMode_AllowProcessEvents,
             callback=request_device_callback,
             # not used: userdata1
             # not used: userdata2
@@ -1803,7 +1803,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         callback_info = new_struct(
             "WGPUCreateComputePipelineAsyncCallbackInfo",
             # not used: nextInChain
-            mode=1,
+            mode=lib.WGPUCallbackMode_AllowProcessEvents,
             callback=callback,
             # not used: userdata1
             # not used: userdata2
@@ -1917,7 +1917,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         callback_info = new_struct(
             "WGPUCreateRenderPipelineAsyncCallbackInfo",
             # not used: nextInChain
-            mode=1,
+            mode=lib.WGPUCallbackMode_AllowProcessEvents,
             callback=callback,
             # not used: userdata1
             # not used: userdata2
@@ -2359,7 +2359,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         buffer_map_callback_info = new_struct(
             "WGPUBufferMapCallbackInfo",
             # not used: nextInChain
-            mode=1,
+            mode=lib.WGPUCallbackMode_AllowProcessEvents,
             callback=buffer_map_callback,
             # not used: userdata1
             # not used: userdata2
@@ -3828,7 +3828,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         work_done_callback_info = new_struct(
             "WGPUQueueWorkDoneCallbackInfo",
             # not used: nextInChain
-            mode=1,
+            mode=lib.WGPUCallbackMode_AllowProcessEvents,
             callback=work_done_callback,
             # not used: userdata1
             # not used: userdata2
