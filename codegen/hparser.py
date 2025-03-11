@@ -132,18 +132,22 @@ class HParser:
                     assert name.startswith("WGPU")
                 self.flags[name] = self.enums.pop[name] if name in self.enums else {}
 
-            #fill flags
+            # fill flags
             # schema: static const WGPUFlagName WGPUFlagName_Value = 0x0000000000000001;
             if line.startswith("static const"):
                 line = remove_c_comments(line).strip()
                 flag_name = line.removeprefix("static const").lstrip().split()[0]
                 assert flag_name in self.flags
-                flag_value, _, val = line.removeprefix(f"static const {flag_name}").strip().rstrip(";").partition("=")
+                flag_value, _, val = (
+                    line.removeprefix(f"static const {flag_name}")
+                    .strip()
+                    .rstrip(";")
+                    .partition("=")
+                )
                 assert flag_value.startswith("WGPU")
                 # taken from above, maybe refactor to a helper function (parse_value_as_int)
                 val = self._parse_val_to_int(val)
                 self.flags[flag_name][flag_value.strip()] = val
-
 
         # Collect structs. This is relatively easy, since we only need the C code.
         # But we don't deal with union structs.

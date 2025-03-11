@@ -12,7 +12,13 @@ def read_file(*fname):
     """Read a file from disk using the relative filename. Line endings are normalized."""
     filename = os.path.join(lib_dir, *fname)
     with open(filename, "rb") as f:
-        return f.read().decode().replace("\r\n", "\n").replace("\r", "\n").replace("\\\n", "")
+        return (
+            f.read()
+            .decode()
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .replace("\\\n", "")
+        )
 
 
 class FileCache:

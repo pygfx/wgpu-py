@@ -187,7 +187,7 @@ def get_surface_id_from_info(present_info):
         raise RuntimeError("Cannot get surface id: unsupported platform.")
 
     surface_descriptor = ffi.new("WGPUSurfaceDescriptor *")
-    surface_descriptor.label.data = ffi.NULL # seemingly can also be omitted
+    surface_descriptor.label.data = ffi.NULL  # seemingly can also be omitted
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
     return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
@@ -529,7 +529,6 @@ class WgpuNativeCountsDiagnostics(DiagnosticsBase):
         # wgpu-core can keep objects around for re-use, which is why "allocated"
         # and released" are not in this equation.
         fields_to_add = ["kept"]
-
 
         # Process names in the root
         for name in root_names:

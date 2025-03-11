@@ -377,6 +377,7 @@ def test_release_texture_view(n):
     for i in range(n):
         yield texture.create_view()
 
+
 @create_and_release
 def test_release_pipeline_cache(n):
     # not implemented in wgpu-native yet

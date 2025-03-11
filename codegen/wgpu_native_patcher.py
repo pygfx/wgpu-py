@@ -295,7 +295,7 @@ class StructPatcher(Patcher):
 
         for line, i in self.iter_lines():
             # detect struct definition start (only when not already inside a struct)
-            if ("new_struct_p(" in line or "new_struct(" in line):
+            if "new_struct_p(" in line or "new_struct(" in line:
                 if line.lstrip().startswith("def "):
                     continue  # Implementation
                 if "_new_struct" in line:
@@ -316,7 +316,9 @@ class StructPatcher(Patcher):
         """
         brace_depth = 0
         hp = get_h_parser()
-        for line, i in chain([(first_line, 0)], self.iter_lines(start_line=start_line_index+1)):
+        for line, i in chain(
+            [(first_line, 0)], self.iter_lines(start_line=start_line_index + 1)
+        ):
             for c in line:
                 if c == "#":
                     break
@@ -328,7 +330,7 @@ class StructPatcher(Patcher):
                     if brace_depth == 0:
                         # here we have found the end of this struct so now we can validate it.
                         self._validate_struct(hp, start_line_index, i)
-                        return # we assume it always works?
+                        return  # we assume it always works?
 
     def _validate_struct(self, hp, i1, i2):
         """Validate a specific struct usage."""
@@ -399,7 +401,7 @@ class StructPatcher(Patcher):
             # (still) inside a multi-line structure
             for c in line.strip():
                 if c == "#":
-                    break # we can ignore this line past the comment in terms of nested structures
+                    break  # we can ignore this line past the comment in terms of nested structures
                 elif c == "(":
                     brace_count += 1
                 elif c == ")":

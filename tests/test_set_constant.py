@@ -159,7 +159,9 @@ def test_render_bundle_push_constants():
     bundle_encoder.set_bind_group(0, bind_group)
     buffer = np.random.randint(0, 1_000_000, size=(2 * COUNT), dtype=np.uint32)
     set_push_constants(bundle_encoder, "VERTEX", 0, COUNT * 4, buffer)
-    set_push_constants(bundle_encoder, "FRAGMENT", COUNT * 4, COUNT * 4, buffer, COUNT * 4)
+    set_push_constants(
+        bundle_encoder, "FRAGMENT", COUNT * 4, COUNT * 4, buffer, COUNT * 4
+    )
     bundle_encoder.draw(COUNT)
     render_bundle = bundle_encoder.finish()
 
