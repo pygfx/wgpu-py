@@ -18,7 +18,7 @@
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 121 methods, 46 properties
+* Validated 37 classes, 122 methods, 46 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 121 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
