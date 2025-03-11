@@ -226,6 +226,7 @@ class GPUCanvasContext:
 
         # The last used texture
         self._texture = None
+        self._bitmap_texture = None  # only used when method is 'bitmap'
 
         # Determine the present method
         self._present_methods = present_methods
@@ -387,6 +388,7 @@ class GPUCanvasContext:
             self._unconfigure_screen()
         self._config = None
         self._drop_texture()
+        self._bitmap_texture = None
 
     def _unconfigure_screen(self):
         raise NotImplementedError()
@@ -417,23 +419,31 @@ class GPUCanvasContext:
         canvas = self._get_canvas()
         width, height = canvas.get_physical_size()
         width, height = max(width, 1), max(height, 1)
+        size = width, height, 1
+
+        # Try to re-use the texture
+        if self._bitmap_texture is not None and self._bitmap_texture.size == size:
+            return self._bitmap_texture
 
         device = self._config["device"]
         self._texture = device.create_texture(
-            label="presentation-context",
-            size=(width, height, 1),
+            label="present",
+            size=size,
             format=self._config["format"],
             usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
         )
+        self._bitmap_texture = self._texture  # store for re-use in next draw
+
         return self._texture
 
     def _create_texture_screen(self):
         raise NotImplementedError()
 
     def _drop_texture(self):
-        if self._texture:
-            self._texture._release()  # not destroy, because it may be in use.
-            self._texture = None
+        # The presence of self._texture marks the state of the context,
+        # i.e. whether get_current_texture() has been called.
+        # But we don't release it, because it may be re-used.
+        self._texture = None
 
     @apidiff.add("The present method is used by the canvas")
     def present(self):
@@ -457,25 +467,32 @@ class GPUCanvasContext:
         self._drop_texture()
         return result
 
+    def _get_bytes_per_pixel(self, texture_format):
+        nchannels = 4  # we expect rgba or bgra
+        if not texture_format.startswith(("rgba", "bgra")):
+            raise RuntimeError(
+                f"Image present unsupported texture format {texture_format}."
+            )
+        if "8" in texture_format:
+            bytes_per_pixel = nchannels
+        elif "16" in texture_format:
+            bytes_per_pixel = nchannels * 2
+        elif "32" in texture_format:
+            bytes_per_pixel = nchannels * 4
+        else:
+            raise RuntimeError(
+                f"Image present unsupported texture format bitdepth {texture_format}."
+            )
+        return bytes_per_pixel
+
     def _present_bitmap(self):
         texture = self._texture
         device = texture._device
 
+        nchannels = 4
         size = texture.size
-        format = texture.format
-        nchannels = 4  # we expect rgba or bgra
-        if not format.startswith(("rgba", "bgra")):
-            raise RuntimeError(f"Image present unsupported texture format {format}.")
-        if "8" in format:
-            bytes_per_pixel = nchannels
-        elif "16" in format:
-            bytes_per_pixel = nchannels * 2
-        elif "32" in format:
-            bytes_per_pixel = nchannels * 4
-        else:
-            raise RuntimeError(
-                f"Image present unsupported texture format bitdepth {format}."
-            )
+        bytes_per_pixel = self._get_bytes_per_pixel(texture.format)
+        bytes_per_row = bytes_per_pixel * size[0]
 
         data = device.queue.read_texture(
             {
@@ -485,7 +502,7 @@ class GPUCanvasContext:
             },
             {
                 "offset": 0,
-                "bytes_per_row": bytes_per_pixel * size[0],
+                "bytes_per_row": bytes_per_row,
                 "rows_per_image": size[1],
             },
             size,
