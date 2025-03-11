@@ -425,6 +425,9 @@ class GPUCanvasContext:
         if self._bitmap_texture is not None and self._bitmap_texture.size == size:
             return self._bitmap_texture
 
+        # Create the texture.
+        # Note that the label 'present' is used by read_texture() to determine whether its
+        # ok to store a copy-buffer so that it can be re-used too.
         device = self._config["device"]
         self._texture = device.create_texture(
             label="present",
