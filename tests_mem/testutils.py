@@ -256,7 +256,9 @@ def create_and_release(create_objects_func):
                 print("  more after release:", more3)
 
             # Check!
-            assert more3 == options["expected_counts_after_release"]
+            assert more3 == options["expected_counts_after_release"], (
+                f"Expected:\n{options['expected_counts_after_release']}\nGot:\n{more3}"
+            )
 
             # Print mem usage info
             if TEST_ITERS:

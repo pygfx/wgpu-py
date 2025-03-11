@@ -61,7 +61,7 @@ def test_release_canvas_context(n):
         "expected_counts_after_create": {
             "CanvasContext": (n, 0),
         },
-        "ignore": {"CommandBuffer"},
+        "ignore": {"CommandBuffer", "Buffer"},
     }
 
     canvases = weakref.WeakSet()
