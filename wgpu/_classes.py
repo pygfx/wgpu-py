@@ -418,9 +418,11 @@ class GPUCanvasContext:
         width, height = canvas.get_physical_size()
         width, height = max(width, 1), max(height, 1)
 
+        # Note that the label 'present' is used by read_texture() to determine
+        # that it can use a shared copy buffer.
         device = self._config["device"]
         self._texture = device.create_texture(
-            label="presentation-context",
+            label="present",
             size=(width, height, 1),
             format=self._config["format"],
             usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
