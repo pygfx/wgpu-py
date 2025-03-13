@@ -187,7 +187,7 @@ def get_surface_id_from_info(present_info):
         raise RuntimeError("Cannot get surface id: unsupported platform.")
 
     surface_descriptor = ffi.new("WGPUSurfaceDescriptor *")
-    surface_descriptor.label.data = ffi.NULL  # seemingly can also be omitted
+    surface_descriptor.label.data = ffi.NULL  # not setting label for now
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
     return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)

@@ -33,8 +33,8 @@ def _get_wgpu_header(*filenames):
     # Read files
     lines1 = []
     for filename in filenames:
-        with open(filename, "r") as f:
-            lines1.extend(f.read().replace("\\\n", "").splitlines(True))
+        with open(filename, "rb") as f:
+            lines1.extend(f.read().decode().replace("\\\n", "").splitlines(True))
     # Deal with pre-processor commands, because cffi cannot handle them.
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
@@ -46,10 +46,14 @@ def _get_wgpu_header(*filenames):
         ):
             # pattern to find: #define WGPU_CONSTANT (0x1234)
             # we use ffi.sizeof() to hopefully get the correct max sizes per platform
-            line = line.replace("SIZE_MAX", hex((1 << ffi.sizeof("size_t") * 8) - 1))
-            line = line.replace(
-                "UINT32_MAX", hex((1 << ffi.sizeof("uint32_t") * 8) - 1)
-            ).replace("UINT64_MAX", hex((1 << ffi.sizeof("uint64_t") * 8) - 1))
+            max_size = hex((1 << ffi.sizeof("size_t") * 8) - 1)
+            max_32 = hex((1 << ffi.sizeof("uint32_t") * 8) - 1)
+            max_64 = hex((1 << ffi.sizeof("uint64_t") * 8) - 1)
+            line = (
+                line.replace("SIZE_MAX", max_size)
+                .replace("UINT32_MAX", max_32)
+                .replace("UINT64_MAX", max_64)
+            )
             line = line.replace("(", "").replace(")", "")
         elif line.startswith("#"):
             continue

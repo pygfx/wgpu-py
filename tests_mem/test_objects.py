@@ -104,7 +104,7 @@ def test_release_buffer(n):
 @create_and_release
 def test_release_command_buffer(n):
     # Note: a command encoder can only be used once (it gets destroyed on finish()), see test below.
-    # Finishing returns a command buffer, which gets destroysed on submit() to the queue.
+    # Finishing returns a command buffer, which gets destroyed on submit() to the queue.
     yield {
         "expected_counts_after_create": {
             "CommandBuffer": (n, n),

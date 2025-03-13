@@ -17,7 +17,7 @@ def read_file(*fname):
             .decode()
             .replace("\r\n", "\n")
             .replace("\r", "\n")
-            .replace("\\\n", "")
+            .replace("\\\n", "")  # Macros escaping a newline
         )
 
 
