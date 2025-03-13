@@ -363,13 +363,11 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         # H: WGPUStatus f(WGPUDevice device, WGPULimits * limits)
         libf.wgpuDeviceGetLimits(id, c_limits)
 
-    # non int values are the chain and nextinchain pointers. We don't want to keep references to them!
-    # as all ctypes are instances of int, using isinstance isn't enough it seems.
     key_value_pairs = [
         (to_snake_case(name, "-"), getattr(limits, name))
         for limits in (c_limits, c_limits_native)
         for name in dir(limits)
-        if type(getattr(limits, name)) is int
+        if "chain" not in name.lower()  # Skip the pointers
     ]
     limits = dict(sorted(key_value_pairs))
     return limits
@@ -1103,8 +1101,8 @@ class GPUAdapter(classes.GPUAdapter):
 
         for key in dir(c_required_limits):
             snake_key = to_snake_case(key, "-")
+            # Skip the  pointers
             if "chain" in snake_key:
-                # these are pointers, not limits. Maybe we should remove them before iterating here?
                 continue
             # Use the value in required_limits if it exists. Otherwise, the old value
             try:
@@ -1664,8 +1662,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def create_shader_module(
         self, *, label: str = "", code: str, source_map: dict = optional
     ):
-        # TODO: compilation_hints has been removed: https://github.com/webgpu-native/webgpu-headers/pull/337
-        # uses @apidiff in _classes.py for now, but .idl should be updated
         if isinstance(code, str):
             looks_like_wgsl = any(
                 x in code for x in ("@compute", "@vertex", "@fragment")

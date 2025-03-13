@@ -1020,6 +1020,8 @@ class GPUDevice(GPUObjectBase):
                 'comp', 'vert' or 'frag'. For SpirV the code must be bytes.
             compilation_hints: currently unused.
         """
+        # TODO: compilation_hints has been removed: https://github.com/webgpu-native/webgpu-headers/pull/337
+        # uses @apidiff in _classes.py for now, but .idl should be updated
         raise NotImplementedError()
 
     # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUProgrammableStage compute
