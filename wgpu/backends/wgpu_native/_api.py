@@ -78,7 +78,7 @@ def print_struct(s, indent=""):
             elif "'char *'" in repr(val):
                 print(indent + key + ":", ffi.string(val).decode())
             elif "WGPUStringView" in repr(val):
-                print(indent + key + ":", ffi.string(val.data, val.length).decode())
+                print(indent + key + ":", from_c_string_view(val))
             elif " *'" in repr(val):
                 print(indent + key + ": pointer")
             elif "struct WGPU" in repr(val):
@@ -249,19 +249,19 @@ def _get_override_constant_entries(field):
 
 
 def to_c_string_view(string: str):
-    if string is None:
-        # The null-string
-        data = ffi.NULL
-        length = lib.WGPU_STRLEN
-    elif not string:
+    # if string is None:
+    #     # The null-string
+    #     data = ffi.NULL
+    #     length = lib.WGPU_STRLEN
+    if not string:
         # The empty string
         data = ffi.NULL
         length = 0
     else:
         # A string with nonzero length
         data = ffi.new("char []", string.encode())  # includes null terminator!
-        length = len(data) - 1  # explicit length (minus null terminator)
-        # length = lib.WGPU_STRLEN  # Zero-terminated string
+        # length = len(data) - 1  # explicit length (minus null terminator)
+        length = lib.WGPU_STRLEN  # Zero-terminated string
     # H: data: char *, length: int
     struct = new_struct(
         "WGPUStringView",
@@ -271,8 +271,15 @@ def to_c_string_view(string: str):
     return struct
 
 
-def to_c_string_or_null(string: Optional[str]):
-    return ffi.NULL if string is None else ffi.new("char []", string.encode())
+def from_c_string_view(struct):
+    if not struct or struct.data == ffi.NULL or struct.length == 0:
+        return ""
+    elif struct.length == lib.WGPU_STRLEN:
+        # null-terminated
+        return ffi.string(struct.data).decode(errors="ignore")
+    else:
+        # explicit length
+        return ffi.string(struct.data, struct.length).decode(errors="ignore")
 
 
 _empty_label = to_c_string_view("")
@@ -519,13 +526,9 @@ class GPU(classes.GPU):
         @ffi.callback(
             "void(WGPURequestAdapterStatus, WGPUAdapter, WGPUStringView, void *, void *)"
         )
-        def request_adapter_callback(status, result, message, _userdata1, _userdata2):
+        def request_adapter_callback(status, result, c_message, _userdata1, _userdata2):
             if status != lib.WGPURequestAdapterStatus_Success:
-                msg = (
-                    "-"
-                    if message.data == ffi.NULL
-                    else ffi.string(message.data, message.length).decode()
-                )
+                msg = from_c_string_view(c_message)
                 awaitable.set_error(f"Request adapter failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
@@ -601,11 +604,7 @@ class GPU(classes.GPU):
 
         def to_py_str(key):
             string_view = getattr(c_info, key)
-            if string_view and not string_view.data == ffi.NULL:
-                return ffi.string(string_view.data, string_view.length).decode(
-                    errors="ignore"
-                )
-            return ""
+            return from_c_string_view(string_view)
 
         # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo
         # And add all other info we get from wgpu-native too.
@@ -1156,15 +1155,12 @@ class GPUAdapter(classes.GPUAdapter):
         )
         def device_lost_callback(c_device, c_reason, c_message, userdata1, userdata2):
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
-            message = ffi.string(c_message.data, c_message.length).decode(
-                errors="ignore"
-            )
-            msg = f"The WGPU device was lost ({reason}):\n{message}"
+            msg = from_c_string_view(c_message)
             # This is afaik an error that cannot usually be attributed to a specific call,
             # so we cannot raise it as an error. We log it instead.
             # WebGPU provides (promise-based) API for user-code to handle the error.
             # We might want to do something similar, once we have async figured out.
-            error_handler.log_error(msg)
+            error_handler.log_error(f"The WGPU device was lost ({reason}):\n{msg}")
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUDeviceLostCallback, userdata1: void*, userdata2: void*
         device_lost_callback_info = new_struct(
@@ -1187,11 +1183,9 @@ class GPUAdapter(classes.GPUAdapter):
             c_device, c_type, c_message, userdata1, userdata2
         ):
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
-            message = ffi.string(c_message.data, c_message.length).decode(
-                errors="ignore"
-            )
-            message = "\n".join(line.rstrip() for line in message.splitlines())
-            error_handler.handle_error(error_type, message)
+            msg = from_c_string_view(c_message)
+            msg = "\n".join(line.rstrip() for line in msg.splitlines())
+            error_handler.handle_error(error_type, msg)
 
         # H: nextInChain: WGPUChainedStruct *, callback: WGPUUncapturedErrorCallback, userdata1: void*, userdata2: void*
         uncaptured_error_callback_info = new_struct(
@@ -1220,13 +1214,9 @@ class GPUAdapter(classes.GPUAdapter):
         @ffi.callback(
             "void(WGPURequestDeviceStatus, WGPUDevice, WGPUStringView, void *, void *)"
         )
-        def request_device_callback(status, result, message, userdata1, userdata2):
+        def request_device_callback(status, result, c_message, userdata1, userdata2):
             if status != lib.WGPURequestDeviceStatus_Success:
-                msg = (
-                    "-"
-                    if message.data == ffi.NULL
-                    else ffi.string(message.data, message.length).decode()
-                )
+                msg = from_c_string_view(c_message)
                 awaitable.set_error(f"Request device failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
@@ -1777,13 +1767,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         @ffi.callback(
             "void(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline, char *, void *, void *)"
         )
-        def callback(status, result, message, _userdata1, _userdata2):
+        def callback(status, result, c_message, _userdata1, _userdata2):
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
-                msg = (
-                    "-"
-                    if message.data == ffi.NULL
-                    else ffi.string(message.data, message.length).decode()
-                )
+                msg = from_c_string_view(c_message)
                 awaitable.set_error(f"create_compute_pipeline failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
@@ -1891,13 +1877,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         @ffi.callback(
             "void(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline, WGPUStringView, void *, void *)"
         )
-        def callback(status, result, message, _userdata1, _userdata2):
+        def callback(status, result, c_message, _userdata1, _userdata2):
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
-                msg = (
-                    "-"
-                    if message.data == ffi.NULL
-                    else ffi.string(message.data, message.length).decode()
-                )
+                msg = from_c_string_view(c_message)
                 awaitable.set_error(f"Create renderPipeline failed ({status}): {msg}")
             else:
                 awaitable.set_result(result)
@@ -2333,13 +2315,9 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # Setup awaitable
 
         @ffi.callback("void(WGPUMapAsyncStatus, WGPUStringView, void *, void *)")
-        def buffer_map_callback(status, message, _userdata1, _userdata2):
+        def buffer_map_callback(status, c_message, _userdata1, _userdata2):
             if status != lib.WGPUMapAsyncStatus_Success:
-                msg = (
-                    "-"
-                    if message.data == ffi.NULL
-                    else ffi.string(message.data, message.length).decode()
-                )
+                msg = from_c_string_view(c_message)
                 awaitable.set_error(f"Could not map buffer ({status} : {msg}).")
             else:
                 awaitable.set_result(status)
