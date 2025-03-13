@@ -248,25 +248,26 @@ def _get_override_constant_entries(field):
     return c_constants, c_constant_entries
 
 
-def to_c_string(string: str):
-    return ffi.new("char []", string.encode())
-
-
 def to_c_string_view(string: str):
-    if string == ffi.NULL or not string or string is None:
-        # H: data: char *, length: int
-        struct = new_struct(
-            "WGPUStringView",
-            data=ffi.NULL,
-            length=lib.WGPU_STRLEN,
-        )
+    if string is None:
+        # The null-string
+        data = ffi.NULL
+        length = lib.WGPU_STRLEN
+    elif not string:
+        # The empty string
+        data = ffi.NULL
+        length = 0
     else:
-        # H: data: char *, length: int
-        struct = new_struct(
-            "WGPUStringView",
-            data=to_c_string(string),
-            length=len(string.encode(encoding="utf-8")),
-        )
+        # A string with nonzero length
+        data = ffi.new("char []", string.encode())  # includes null terminator!
+        length = len(data) - 1  # explicit length (minus null terminator)
+        # length = lib.WGPU_STRLEN  # Zero-terminated string
+    # H: data: char *, length: int
+    struct = new_struct(
+        "WGPUStringView",
+        data=data,
+        length=length,
+    )
     return struct
 
 
@@ -1138,9 +1139,7 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Compose device descriptor extras
 
-        c_trace_path = to_c_string_view(ffi.NULL)
-        if trace_path:  # no-cover
-            c_trace_path = to_c_string_view(trace_path)
+        c_trace_path = to_c_string_view(trace_path if trace_path else None)
 
         # H: chain: WGPUChainedStruct, tracePath: WGPUStringView
         extras = new_struct_p(
