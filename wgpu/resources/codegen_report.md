@@ -22,11 +22,6 @@
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 121 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
-* Flag BufferUsage missing in wgpu.h
-* Flag MapMode missing in wgpu.h
-* Flag TextureUsage missing in wgpu.h
-* Flag ShaderStage missing in wgpu.h
-* Flag ColorWriteMask missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
 * Enum AutoLayoutMode missing in wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in wgpu.h

@@ -99,7 +99,7 @@ class HParser:
             block = remove_c_comments(code_block).strip()
             for f in block.split(","):
                 if not f:
-                    continue  # happens when last item has a comma?
+                    continue  # no item after last comma
                 key, _, val = f.partition("=")
                 # Handle key
                 key = key.strip()
@@ -128,26 +128,31 @@ class HParser:
                 parts = line.strip().strip(";").split()
                 assert len(parts) == 3
                 name = parts[-1]
-                if name.endswith("Flags"):
-                    assert name.startswith("WGPU")
-                self.flags[name] = self.enums.pop[name] if name in self.enums else {}
+                assert name.startswith("WGPU")
+                name = name[4:]
+                assert not name.endswith("Flags"), "XxxxFlags should not longer exist"
+                assert name not in self.enums, "flags used to look like enums"
+                self.flags[name] = {}
 
             # fill flags
             # schema: static const WGPUFlagName WGPUFlagName_Value = 0x0000000000000001;
             if line.startswith("static const"):
                 line = remove_c_comments(line).strip()
                 flag_name = line.removeprefix("static const").lstrip().split()[0]
-                assert flag_name in self.flags
-                flag_value, _, val = (
+                flag_key, _, val = (
                     line.removeprefix(f"static const {flag_name}")
                     .strip()
                     .rstrip(";")
                     .partition("=")
                 )
-                assert flag_value.startswith("WGPU")
-                # taken from above, maybe refactor to a helper function (parse_value_as_int)
-                val = self._parse_val_to_int(val)
-                self.flags[flag_name][flag_value.strip()] = val
+                # Check / normalize flag_name
+                assert flag_name.startswith("WGPU")
+                flag_name = flag_name[4:]
+                assert flag_name in self.flags
+                # Check / normalize flag_key
+                assert flag_key.startswith(f"WGPU{flag_name}_")
+                flag_key = flag_key.partition("_")[2].strip()
+                self.flags[flag_name][flag_key] = self._parse_val_to_int(val)
 
         # Collect structs. This is relatively easy, since we only need the C code.
         # But we don't deal with union structs.
