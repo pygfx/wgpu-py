@@ -249,28 +249,40 @@ def _get_override_constant_entries(field):
     return c_constants, c_constant_entries
 
 
+# H: data: char *, length: int
+_null_string = new_struct(
+    "WGPUStringView",
+    data=ffi.NULL,
+    length=lib.WGPU_STRLEN,
+)
+# H: data: char *, length: int
+_empty_string = new_struct(
+    "WGPUStringView",
+    data=ffi.NULL,
+    length=0,
+)
+
+
 def to_c_string_view(string: str):
+    """Turn a string into a "WGPUStringView. None becomes the null-string."""
     if string is None:
         # The null-string. wgpu-core interprets this different from the empty sting,
         # e.g. when not-setting the trace path, it should be the null-string.
-        data = ffi.NULL
-        length = lib.WGPU_STRLEN
+        return _null_string
     elif not string:
         # The empty string
-        data = ffi.NULL
-        length = 0
+        return _empty_string
     else:
         # A string with nonzero length
         data = ffi.new("char []", string.encode())  # includes null terminator!
         # length = len(data) - 1  # explicit length (minus null terminator)
         length = lib.WGPU_STRLEN  # Zero-terminated string
-    # H: data: char *, length: int
-    struct = new_struct(
-        "WGPUStringView",
-        data=data,
-        length=length,
-    )
-    return struct
+        # H: data: char *, length: int
+        return new_struct(
+            "WGPUStringView",
+            data=data,
+            length=length,
+        )
 
 
 def from_c_string_view(struct):
@@ -282,17 +294,6 @@ def from_c_string_view(struct):
     else:
         # explicit length
         return ffi.string(struct.data, struct.length).decode(errors="ignore")
-
-
-_empty_label = to_c_string_view("")
-
-
-def to_c_label(label):
-    """Get the C representation of a label."""
-    if not label:
-        return _empty_label
-    else:
-        return to_c_string_view(label)
 
 
 def feature_flag_to_feature_names(flag):
@@ -927,7 +928,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # Cannot yet set label, because it's not implemented in wgpu-native
         # label = "surface-texture"
         # H: void f(WGPUTexture texture, WGPUStringView label)
-        # libf.wgpuTextureSetLabel(texture_id, to_c_label(label))
+        # libf.wgpuTextureSetLabel(texture_id, to_c_string_view(label))
 
         tex_info = {
             "size": (width, height, depth),
@@ -1145,7 +1146,7 @@ class GPUAdapter(classes.GPUAdapter):
         queue_struct = new_struct(
             "WGPUQueueDescriptor",
             # not used: nextInChain
-            label=to_c_label("default_queue"),
+            label=to_c_string_view("default_queue"),
         )
 
         # ----- Compose device descriptor extras
@@ -1214,7 +1215,7 @@ class GPUAdapter(classes.GPUAdapter):
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
             nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             requiredFeatureCount=len(c_features),
             requiredFeatures=new_array("WGPUFeatureName[]", c_features),
             requiredLimits=c_required_limits,
@@ -1310,7 +1311,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUBufferDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             size=size,
             usage=int(usage),
             mappedAtCreation=mapped_at_creation,
@@ -1376,7 +1377,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUTextureDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             size=c_size,
             mipLevelCount=mip_level_count,
             sampleCount=sample_count,
@@ -1420,7 +1421,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUSamplerDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             addressModeU=address_mode_u,
             addressModeV=address_mode_v,
             addressModeW=address_mode_w,
@@ -1525,7 +1526,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUBindGroupLayoutDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             entries=new_array("WGPUBindGroupLayoutEntry[]", c_entries_list),
             entryCount=len(c_entries_list),
         )
@@ -1599,7 +1600,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUBindGroupDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             layout=layout._internal,
             entries=new_array("WGPUBindGroupEntry[]", c_entries_list),
             entryCount=len(c_entries_list),
@@ -1651,7 +1652,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUPipelineLayoutDescriptor *",
             nextInChain=next_in_chain,
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             bindGroupLayouts=c_layout_array,
             bindGroupLayoutCount=len(bind_group_layouts),
         )
@@ -1740,7 +1741,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUShaderModuleDescriptor *",
             nextInChain=ffi.cast("WGPUChainedStruct *", source_struct),
-            label=to_c_label(label),
+            label=to_c_string_view(label),
         )
         # H: WGPUShaderModule f(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateShaderModule(self._internal, struct)
@@ -1841,7 +1842,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUComputePipelineDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             layout=layout_id,
             compute=c_compute_stage,
         )
@@ -2022,7 +2023,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPURenderPipelineDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             layout=layout_id,
             vertex=c_vertex_state,
             primitive=c_primitive_state,
@@ -2132,7 +2133,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         struct = new_struct_p(
             "WGPUCommandEncoderDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
         )
 
         # H: WGPUCommandEncoder f(WGPUDevice device, WGPUCommandEncoderDescriptor const * descriptor)
@@ -2159,7 +2160,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         render_bundle_encoder_descriptor = new_struct_p(
             "WGPURenderBundleEncoderDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             colorFormatCount=color_formats_count,
             colorFormats=c_color_formats,
             depthStencilFormat=depth_stencil_format or 0,
@@ -2211,7 +2212,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         query_set_descriptor = new_struct_p(
             "WGPUQuerySetDescriptor *",
             nextInChain=next_in_chain,
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             type=type,
             count=count,
         )
@@ -2529,7 +2530,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         struct = new_struct_p(
             "WGPUTextureViewDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             format=format,
             dimension=dimension,
             aspect=aspect,
@@ -2756,7 +2757,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label: str):
-        c_group_label = to_c_label(group_label)
+        c_group_label = to_c_string_view(group_label)
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, WGPUStringView groupLabel)
         # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, WGPUStringView groupLabel)
         # H: void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, WGPUStringView groupLabel)
@@ -2773,7 +2774,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         function(self._internal)
 
     def insert_debug_marker(self, marker_label: str):
-        c_marker_label = to_c_label(marker_label)
+        c_marker_label = to_c_string_view(marker_label)
         # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, WGPUStringView markerLabel)
         # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, WGPUStringView markerLabel)
         # H: void wgpuRenderPassEncoderInsertDebugMarker(WGPURenderPassEncoder renderPassEncoder, WGPUStringView markerLabel)
@@ -2906,7 +2907,7 @@ class GPUCommandEncoder(
         struct = new_struct_p(
             "WGPUComputePassDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             timestampWrites=c_timestamp_writes_struct,
         )
         # H: WGPUComputePassEncoder f(WGPUCommandEncoder commandEncoder, WGPUComputePassDescriptor const * descriptor)
@@ -2962,7 +2963,7 @@ class GPUCommandEncoder(
         struct = new_struct_p(
             "WGPURenderPassDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
             colorAttachments=c_color_attachments_array,
             colorAttachmentCount=len(c_color_attachments_list),
             depthStencilAttachment=c_depth_stencil_attachment,
@@ -3326,7 +3327,7 @@ class GPUCommandEncoder(
         struct = new_struct_p(
             "WGPUCommandBufferDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
         )
         # H: WGPUCommandBuffer f(WGPUCommandEncoder commandEncoder, WGPUCommandBufferDescriptor const * descriptor)
         id = libf.wgpuCommandEncoderFinish(self._internal, struct)
@@ -3560,7 +3561,7 @@ class GPURenderBundleEncoder(
         struct = new_struct_p(
             "WGPURenderBundleDescriptor *",
             # not used: nextInChain
-            label=to_c_label(label),
+            label=to_c_string_view(label),
         )
         # H: WGPURenderBundle f(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderBundleDescriptor const * descriptor)
         id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
