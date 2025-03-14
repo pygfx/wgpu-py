@@ -19,6 +19,12 @@ Possible sections in each release:
 
 ### [v0.20.1] - 14-03-2025
 
+Other:
+* Add release notes.
+
+
+### [v0.20.0] - 14-03-2025
+
 Added:
 
 * Add Imgui based Stats component by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/670 and https://github.com/pygfx/wgpu-py/pull/674
