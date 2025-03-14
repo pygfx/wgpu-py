@@ -37,7 +37,7 @@ def test_patch_structs():
     """
     code2 = patch_wgpu_native_backend(dedent(code1))
     assert all(line[4:] in code2 for line in code1 if line.strip())
-    assert "usage: WGPUBufferUsageFlags/int" in code2
+    assert "usage: WGPUBufferUsage/int" in code2
     assert "size: int" in code2
     assert "# FIXME:" not in code2
     assert code2 == patch_wgpu_native_backend(code2)  # Don't stack comments
@@ -53,7 +53,7 @@ def test_patch_structs():
     """
     code2 = patch_wgpu_native_backend(dedent(code1))
     assert all(line[4:] in code2 for line in code1 if line.strip())
-    assert "usage: WGPUBufferUsageFlags/int" in code2
+    assert "usage: WGPUBufferUsage/int" in code2
     assert "size: int" in code2
     assert "# FIXME:" not in code2
 
@@ -72,7 +72,7 @@ def test_patch_structs():
     # Missing values
     code1 = 'struct = new_struct_p("WGPUBufferDescriptor *",label=c_label,size=size,)'
     code2 = patch_wgpu_native_backend(dedent(code1))
-    assert "usage: WGPUBufferUsageFlags/int" in code2
+    assert "usage: WGPUBufferUsage/int" in code2
     assert "# FIXME:" not in code2
     assert "usage" in code2  # comment added
     assert code2 == patch_wgpu_native_backend(code2)  # Don't stack comments
@@ -80,7 +80,7 @@ def test_patch_structs():
     # Too many values
     code1 = 'struct = new_struct_p("WGPUBufferDescriptor *",label=c_label,foo=size,)'
     code2 = patch_wgpu_native_backend(dedent(code1))
-    assert "usage: WGPUBufferUsageFlags/int" in code2
+    assert "usage: WGPUBufferUsage/int" in code2
     assert "# FIXME: unknown" in code2
     assert code2 == patch_wgpu_native_backend(code2)  # Don't stack comments
 

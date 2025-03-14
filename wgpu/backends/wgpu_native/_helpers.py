@@ -106,10 +106,10 @@ def get_surface_id_from_info(present_info):
 
     if sys.platform.startswith("win"):  # no-cover
         GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa: N806
-        struct = ffi.new("WGPUSurfaceDescriptorFromWindowsHWND *")
+        struct = ffi.new("WGPUSurfaceSourceWindowsHWND *")
         struct.hinstance = ffi.cast("void *", GetModuleHandle(lib_path))
         struct.hwnd = ffi.cast("void *", int(present_info["window"]))
-        struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWindowsHWND
+        struct.chain.sType = lib.WGPUSType_SurfaceSourceWindowsHWND
 
     elif sys.platform.startswith("darwin"):  # no-cover
         # This is what the triangle example from wgpu-native does:
@@ -158,28 +158,28 @@ def get_surface_id_from_info(present_info):
             cv.setLayer(metal_layer)
             cv.setWantsLayer(True)
 
-        struct = ffi.new("WGPUSurfaceDescriptorFromMetalLayer *")
+        struct = ffi.new("WGPUSurfaceSourceMetalLayer *")
         struct.layer = ffi.cast("void *", metal_layer.ptr.value)
-        struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromMetalLayer
+        struct.chain.sType = lib.WGPUSType_SurfaceSourceMetalLayer
 
     elif sys.platform.startswith("linux"):  # no-cover
         platform = present_info.get("platform", "x11")
         if platform == "x11":
-            struct = ffi.new("WGPUSurfaceDescriptorFromXlibWindow *")
+            struct = ffi.new("WGPUSurfaceSourceXlibWindow *")
             struct.display = ffi.cast("void *", present_info["display"])
             struct.window = int(present_info["window"])
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
+            struct.chain.sType = lib.WGPUSType_SurfaceSourceXlibWindow
         elif platform == "wayland":
-            struct = ffi.new("WGPUSurfaceDescriptorFromWaylandSurface *")
+            struct = ffi.new("WGPUSurfaceSourceWaylandSurface *")
             struct.display = ffi.cast("void *", present_info["display"])
             struct.surface = ffi.cast("void *", present_info["window"])
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromWaylandSurface
+            struct.chain.sType = lib.WGPUSType_SurfaceSourceWaylandSurface
         elif platform == "xcb":
             # todo: xcb untested
-            struct = ffi.new("WGPUSurfaceDescriptorFromXcbWindow *")
+            struct = ffi.new("WGPUSurfaceSourceXCBWindow *")
             struct.connection = ffi.cast("void *", present_info["connection"])  # ??
             struct.window = int(present_info["window"])
-            struct.chain.sType = lib.WGPUSType_SurfaceDescriptorFromXlibWindow
+            struct.chain.sType = lib.WGPUSType_SurfaceSourceXCBWindow
         else:
             raise RuntimeError("Unexpected Linux surface platform '{platform}'.")
 
@@ -187,7 +187,7 @@ def get_surface_id_from_info(present_info):
         raise RuntimeError("Cannot get surface id: unsupported platform.")
 
     surface_descriptor = ffi.new("WGPUSurfaceDescriptor *")
-    surface_descriptor.label = ffi.NULL
+    surface_descriptor.label.data = ffi.NULL  # not setting label for now
     surface_descriptor.nextInChain = ffi.cast("WGPUChainedStruct *", struct)
 
     return lib.wgpuInstanceCreateSurface(get_wgpu_instance(), surface_descriptor)
@@ -478,24 +478,21 @@ def generate_report():
         "allocated": struct.surfaces.numAllocated,
         "kept": struct.surfaces.numKeptFromUser,
         "released": struct.surfaces.numReleasedFromUser,
-        "error": struct.surfaces.numError,
         "element_size": struct.surfaces.elementSize,
     }
 
-    for backend in ("vulkan", "metal", "dx12", "gl"):
-        c_hub_report = getattr(struct, backend)
-        report[backend] = {}
-        for key in dir(c_hub_report):
-            c_registry_report = getattr(c_hub_report, key)
-            registry_report = {
-                "allocated": c_registry_report.numAllocated,
-                "kept": c_registry_report.numKeptFromUser,
-                "released": c_registry_report.numReleasedFromUser,
-                "error": c_registry_report.numError,
-                "element_size": c_registry_report.elementSize,
-            }
-            # if any(x!=0 for x in registry_report.values()):
-            report[backend][key] = registry_report
+    c_hub_report = struct.hub
+    report["hub"] = {}
+    for key in dir(c_hub_report):
+        c_registry_report = getattr(c_hub_report, key)
+        registry_report = {
+            "allocated": c_registry_report.numAllocated,
+            "kept": c_registry_report.numKeptFromUser,
+            "released": c_registry_report.numReleasedFromUser,
+            "element_size": c_registry_report.elementSize,
+        }
+        # if any(x!=0 for x in registry_report.values()):
+        report["hub"][key] = registry_report
 
     return report
 
@@ -503,7 +500,7 @@ def generate_report():
 class WgpuNativeCountsDiagnostics(DiagnosticsBase):
     def get_subscript(self):
         text = ""
-        text += "    * The a, k, r, e are allocated, kept, released, and error, respectively.\n"
+        text += "    * The a, k, r are allocated, kept, and released, respectively.\n"
         text += "    * Reported memory does not include buffer/texture data.\n"
         return text
 
@@ -514,9 +511,8 @@ class WgpuNativeCountsDiagnostics(DiagnosticsBase):
         # Names in the root of the report (backend-less)
         root_names = ["surfaces"]
 
-        # Get per-backend names and a list of backends
-        names = list(native_report["vulkan"].keys())
-        backends = [name for name in native_report.keys() if name not in root_names]
+        # Get names and for other objects
+        names = list(native_report["hub"].keys())
 
         # Get a mapping from native names to wgpu-py names
         name_map = {"surfaces": "CanvasContext"}
@@ -532,17 +528,7 @@ class WgpuNativeCountsDiagnostics(DiagnosticsBase):
         # the number of objects "allocated" by wgpu-core. In practice,
         # wgpu-core can keep objects around for re-use, which is why "allocated"
         # and released" are not in this equation.
-        fields_to_add = ["kept", "error"]
-
-        # Establish what backends are active
-        active_backends = []
-        for backend in backends:
-            total = 0
-            for name in names:
-                d = native_report[backend][name]
-                total += sum(d[k] for k in fields_to_add)
-            if total > 0:
-                active_backends.append(backend)
+        fields_to_add = ["kept"]
 
         # Process names in the root
         for name in root_names:
@@ -552,39 +538,36 @@ class WgpuNativeCountsDiagnostics(DiagnosticsBase):
                 "a": d["allocated"],
                 "k": d["kept"],
                 "r": d["released"],
-                "e": d["error"],
                 "el_size": d["element_size"],
             }
             # Store in report
             report_name = name_map[name]
             result[report_name]["count"] = subtotal_count
             result[report_name]["mem"] = subtotal_count * d["element_size"]
-            result[report_name]["backend"] = {"": impl}
+            result[report_name]["hub"] = {"": impl}
 
-        # Iterate over backends
+        # Iterate over names
         for name in names:
             total_count = 0
             total_mem = 0
             implementations = {}
-            for backend in active_backends:
-                d = native_report[backend][name]
-                subtotal_count = sum(d[k] for k in fields_to_add)
-                subtotal_mem = subtotal_count * d["element_size"]
-                impl = {
-                    "a": d["allocated"],
-                    "k": d["kept"],
-                    "r": d["released"],
-                    "e": d["error"],
-                    "el_size": d["element_size"],
-                }
-                total_count += subtotal_count
-                total_mem += subtotal_mem
-                implementations[backend] = impl
+            d = native_report["hub"][name]
+            subtotal_count = sum(d[k] for k in fields_to_add)
+            subtotal_mem = subtotal_count * d["element_size"]
+            impl = {
+                "a": d["allocated"],
+                "k": d["kept"],
+                "r": d["released"],
+                "el_size": d["element_size"],
+            }
+            total_count += subtotal_count
+            total_mem += subtotal_mem
+            implementations["hub"] = impl
             # Store in report
             report_name = name_map[name]
             result[report_name]["count"] = total_count
             result[report_name]["mem"] = total_mem
-            result[report_name]["backend"] = implementations
+            result[report_name]["hub"] = implementations
 
         # Add totals
         totals = {}

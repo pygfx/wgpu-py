@@ -549,9 +549,14 @@ def test_create_buffer_with_data(size):
 
 
 @pytest.mark.skip
-def test_show_bug_wgpu_native_305_still_not_fixed():
-    # When this bug is fixed, we can remove READ_NOSYNC, and just tread "READ" as if
-    # it were READ_NOSYNC.  No need to handle the command buffer.
+def test_that_passes_when_bug_wgpu_native_305_is_fixed():
+    # See https://github.com/gfx-rs/wgpu-native/issues/305
+    # If the bug is still there, this test will fail. Therefore its skipped.
+    # If this test passes (on multiple machines) the bug is likely fixed.
+    # When this bug is fixed, we can remove the command-buffer trick in _api.py,
+    # and enable this test to detect regressions.
+
+    # Update
     device = wgpu.utils.get_default_device()
     data1 = b"abcdefghijkl"
 
