@@ -17,17 +17,7 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-### [v0.19.3] - 10-12-2024
-
-Fixed:
-
-* Ensure that wgpu is compatible both with imgui 1.6.0 and older by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/649
-* Clean up async code and add proper trio / rendercanvas support by @fyellin in https://github.com/pygfx/wgpu-py/pull/631
-* Remove timeout in awaitable by @almarklein in https://github.com/pygfx/wgpu-py/pull/651
-* Allow ``rendercanvas.get_context()`` before a backend is selected by @almarklein in https://github.com/pygfx/wgpu-py/pull/652
-
-
-### [v0.20.0] - 14-03-2025
+### [v0.20.1] - 14-03-2025
 
 Added:
 
@@ -58,6 +48,16 @@ Other:
 * Add patches for conda compatibility by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/666
 * Allow disabling downloading lib when creating wheel by @almarklein in https://github.com/pygfx/wgpu-py/pull/669
 * examples/imgui_cmap_picker.py - update for imgui bundle 1.6.2 by @pthom in https://github.com/pygfx/wgpu-py/pull/671
+
+
+### [v0.19.3] - 10-12-2024
+
+Fixed:
+
+* Ensure that wgpu is compatible both with imgui 1.6.0 and older by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/649
+* Clean up async code and add proper trio / rendercanvas support by @fyellin in https://github.com/pygfx/wgpu-py/pull/631
+* Remove timeout in awaitable by @almarklein in https://github.com/pygfx/wgpu-py/pull/651
+* Allow ``rendercanvas.get_context()`` before a backend is selected by @almarklein in https://github.com/pygfx/wgpu-py/pull/652
 
 
 ### [v0.19.2] - 25-11-2024
