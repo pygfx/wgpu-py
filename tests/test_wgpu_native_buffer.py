@@ -552,6 +552,7 @@ def test_create_buffer_with_data(size):
 def test_that_passes_when_bug_wgpu_native_305_is_fixed():
     # See https://github.com/gfx-rs/wgpu-native/issues/305
     # If the bug is still there, this test will fail. Therefore its skipped.
+    # If this test passes (on multiple machines) the bug is likely fixed.
     # When this bug is fixed, we can remove the command-buffer trick in _api.py,
     # and enable this test to detect regressions.
 
@@ -571,29 +572,6 @@ def test_that_passes_when_bug_wgpu_native_305_is_fixed():
     data2 = bytes(buf.read_mapped())
     buf.unmap()
     assert data1 == data2
-
-
-def test_that_fails_when_bug_wgpu_native_305_is_fixed():
-    # This test will fail when the bug is fixed upstream, so that we know and
-    # can remove the workaround. I hope it does not fail intermittently.
-    # When the bug is fixed, we can remove this test.
-
-    # Update
-    device = wgpu.utils.get_default_device()
-    data1 = b"abcdefghijkl"
-
-    # Create buffer with data
-    buf = device.create_buffer(
-        size=len(data1), usage=wgpu.BufferUsage.MAP_READ, mapped_at_creation=True
-    )
-    buf.write_mapped(data1)
-    buf.unmap()
-
-    # Download from buffer to CPU
-    buf.map("READ_NOSYNC")
-    data2 = bytes(buf.read_mapped())
-    buf.unmap()
-    assert data1 != data2
 
 
 if __name__ == "__main__":
