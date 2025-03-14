@@ -18,6 +18,7 @@ Read the codegen/readme.md for more information.
 from __future__ import annotations
 
 import os
+import time
 import logging
 from weakref import WeakKeyDictionary
 from typing import List, Dict, Union, Optional, NoReturn
@@ -3728,6 +3729,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             self._internal, c_destination, c_data, data_length, c_data_layout, c_size
         )
 
+    _shared_copy_buffer = None, 0
+
     def read_texture(self, source, data_layout, size):
         # Note that the bytes_per_row restriction does not apply for
         # this function; we have to deal with it.
@@ -3735,20 +3738,40 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         device = source["texture"]._device
 
         # Get and calculate striding info
+        # Note that full_stride (bytes per row) must be a multiple of 256
         ori_offset = data_layout.get("offset", 0)
         ori_stride = data_layout["bytes_per_row"]
         extra_stride = (256 - ori_stride % 256) % 256
         full_stride = ori_stride + extra_stride
 
         size = _tuple_from_extent3d(size)
+        data_length = full_stride * size[1] * size[2]
 
         # Create temporary buffer
-        data_length = full_stride * size[1] * size[2]
-        tmp_usage = flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ
-        tmp_buffer = device._create_buffer("", data_length, tmp_usage, False)
+        is_present_texture = source["texture"].label == "present"
+        copy_buffer = None
+        if is_present_texture:
+            copy_buffer, time_since_size_ok = self._shared_copy_buffer
+            if copy_buffer is None:
+                pass  # No buffer
+            elif copy_buffer.size < data_length:
+                copy_buffer = None  # Buffer too small
+            elif copy_buffer.size < data_length * 4:
+                self._shared_copy_buffer = copy_buffer, time.time()  # Bufer size ok
+            elif time.time() - time_since_size_ok > 5.0:
+                copy_buffer = None  # Too large too long
+        if copy_buffer is None:
+            buffer_size = data_length
+            buffer_size += (4096 - buffer_size % 4096) % 4096
+            buf_usage = flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ
+            copy_buffer = device._create_buffer(
+                "copy-buffer", buffer_size, buf_usage, False
+            )
+            if is_present_texture:
+                self._shared_copy_buffer = copy_buffer, time.time()
 
         destination = {
-            "buffer": tmp_buffer,
+            "buffer": copy_buffer,
             "offset": 0,
             "bytes_per_row": full_stride,  # or WGPU_COPY_STRIDE_UNDEFINED ?
             "rows_per_image": data_layout.get("rows_per_image", size[1]),
@@ -3760,25 +3783,43 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         command_buffer = encoder.finish()
         self.submit([command_buffer])
 
+        awaitable = copy_buffer._map("READ_NOSYNC", 0, data_length)
+
         # Download from mappable buffer
-        tmp_buffer._map("READ_NOSYNC").sync_wait()
-        data = tmp_buffer.read_mapped()
+        # Because we use `copy=False``, we *must* copy the data.
+        if copy_buffer.map_state == "pending":
+            awaitable.sync_wait()
+        mapped_data = copy_buffer.read_mapped(copy=False)
 
-        # Explicit drop.
-        tmp_buffer.destroy()
+        data_length2 = ori_stride * size[1] * size[2] + ori_offset
 
-        # Fix data strides if necessary
-        # Ugh, cannot do striding with memoryviews (yet: https://bugs.python.org/issue41226)
-        # and Numpy is not a dependency.
+        # Copy the data
         if extra_stride or ori_offset:
-            data_length2 = ori_stride * size[1] * size[2] + ori_offset
-            data2 = memoryview(bytearray(data_length2)).cast(data.format)
+            # Copy per row
+            data = memoryview(bytearray(data_length2)).cast(mapped_data.format)
+            i_start = ori_offset
             for i in range(size[1] * size[2]):
-                row = data[i * full_stride : i * full_stride + ori_stride]
-                i_start = ori_offset + i * ori_stride
-                i_end = ori_offset + i * ori_stride + ori_stride
-                data2[i_start:i_end] = row
-            data = data2
+                row = mapped_data[i * full_stride : i * full_stride + ori_stride]
+                data[i_start : i_start + ori_stride] = row
+                i_start += ori_stride
+        else:
+            # Copy as a whole
+            data = memoryview(bytearray(mapped_data)).cast(mapped_data.format)
+
+        # Alternative copy solution using Numpy.
+        # I expected this to be faster, but does not really seem to be. Seems not worth it
+        # since we technically don't depend on Numpy. Leaving here for reference.
+        # import numpy as np
+        # mapped_data = np.asarray(mapped_data)[:data_length]
+        # data = np.empty(data_length2, dtype=mapped_data.dtype)
+        # mapped_data.shape = -1, full_stride
+        # data.shape = -1, ori_stride
+        # data[:] = mapped_data[:, :ori_stride]
+        # data.shape = -1
+        # data = memoryview(data)
+
+        # Since we use read_mapped(copy=False), we must unmap it *after* we've copied the data.
+        copy_buffer.unmap()
 
         return data
 
