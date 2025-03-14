@@ -2522,6 +2522,8 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             elif dimension in ("2d-array", "cube-array"):
                 array_layer_count = self._tex_info["size"][2] - base_array_layer
 
+        usage = 0  # WGPUTextureUsage_None - assuming none means use the texture's usage
+
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, baseMipLevel: int, mipLevelCount: int, baseArrayLayer: int, arrayLayerCount: int, aspect: WGPUTextureAspect, usage: WGPUTextureUsage/int
         struct = new_struct_p(
             "WGPUTextureViewDescriptor *",
@@ -2534,7 +2536,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             mipLevelCount=mip_level_count,
             baseArrayLayer=base_array_layer,
             arrayLayerCount=array_layer_count,
-            # not used: usage
+            usage=usage,
         )
 
         # H: WGPUTextureView f(WGPUTexture texture, WGPUTextureViewDescriptor const * descriptor)
