@@ -249,11 +249,12 @@ def _get_override_constant_entries(field):
 
 
 def to_c_string_view(string: str):
-    # if string is None:
-    #     # The null-string
-    #     data = ffi.NULL
-    #     length = lib.WGPU_STRLEN
-    if not string:
+    if string is None:
+        # The null-string. wgpu-core interprets this different from the empty sting,
+        # e.g. when not-setting the trace path, it should be the null-string.
+        data = ffi.NULL
+        length = lib.WGPU_STRLEN
+    elif not string:
         # The empty string
         data = ffi.NULL
         length = 0
