@@ -366,10 +366,14 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     )
     if adapter:
         # H: WGPUStatus f(WGPUAdapter adapter, WGPULimits * limits)
-        libf.wgpuAdapterGetLimits(id, c_limits)
+        status = libf.wgpuAdapterGetLimits(id, c_limits)
+        if status != lib.WGPUStatus_Success:
+            raise RuntimeError("Error calling wgpuAdapterGetLimits")
     else:
         # H: WGPUStatus f(WGPUDevice device, WGPULimits * limits)
-        libf.wgpuDeviceGetLimits(id, c_limits)
+        status = libf.wgpuDeviceGetLimits(id, c_limits)
+        if status != lib.WGPUStatus_Success:
+            raise RuntimeError("Error calling wgpuDeviceGetLimits")
 
     key_value_pairs = [
         (to_snake_case(name, "-"), getattr(limits, name))
@@ -600,7 +604,9 @@ class GPU(classes.GPU):
         )
 
         # H: WGPUStatus f(WGPUAdapter adapter, WGPUAdapterInfo * info)
-        libf.wgpuAdapterGetInfo(adapter_id, c_info)
+        status = libf.wgpuAdapterGetInfo(adapter_id, c_info)
+        if status != lib.WGPUStatus_Success:
+            raise RuntimeError("Error calling wgpuAdapterGetInfo")
 
         def to_py_str(key):
             string_view = getattr(c_info, key)
@@ -691,7 +697,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         )
 
         # H: WGPUStatus f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
-        libf.wgpuSurfaceGetCapabilities(surface_id, adapter_id, c_capabilities)
+        status = libf.wgpuSurfaceGetCapabilities(surface_id, adapter_id, c_capabilities)
+        if status != lib.WGPUStatus_Success:
+            raise RuntimeError("Error calling wgpuSurfaceGetCapabilities")
 
         # Convert to Python.
         capabilities = {}
@@ -933,7 +941,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     def _present_screen(self):
         # H: WGPUStatus f(WGPUSurface surface)
-        libf.wgpuSurfacePresent(self._surface_id)
+        status = libf.wgpuSurfacePresent(self._surface_id)
+        if status != lib.WGPUStatus_Success:
+            raise RuntimeError("Error calling wgpuSurfacePresent")
 
     def _release(self):
         self._drop_texture()
