@@ -27,6 +27,39 @@ Fixed:
 * Allow ``rendercanvas.get_context()`` before a backend is selected by @almarklein in https://github.com/pygfx/wgpu-py/pull/652
 
 
+### [v0.20.0] - 14-03-2025
+
+Added:
+
+* Add Imgui based Stats component by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/670 and https://github.com/pygfx/wgpu-py/pull/674
+* Can pass constants to compute helper by @kushalkolar in https://github.com/pygfx/wgpu-py/pull/676
+* Add simple matmul example by @kushalkolar in https://github.com/pygfx/wgpu-py/pull/677
+
+Fixed:
+
+* Fix imgui scroll event by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/678
+
+Changed:
+
+* Improve error handling by @almarklein in https://github.com/pygfx/wgpu-py/pull/667
+* Bring sleep back to WgpuAwaitable. Slowly back off on the amount of time sleeping. by @fyellin in https://github.com/pygfx/wgpu-py/pull/655
+* Improve performance for 'bitmap' render method by @almarklein in https://github.com/pygfx/wgpu-py/pull/680
+
+Other:
+
+* Stop setting AA_EnableHighDpiScaling since Qt Says it is not needed by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/657
+* Remove unneeded pytest-anyio package by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/658
+* Actually run the tests instead of fully skipping them by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/659
+* Improve state of the art for screenshot testing by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/555
+* Use default lavapipe for screenshot by @Vipitis in https://github.com/pygfx/wgpu-py/pull/660
+* Fix one typo in _helpers.py by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/661
+* Fix typo in README.md by @patrini32 in https://github.com/pygfx/wgpu-py/pull/662
+* Improve docs regarding drives on Linux by @almarklein in https://github.com/pygfx/wgpu-py/pull/668
+* Add patches for conda compatibility by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/666
+* Allow disabling downloading lib when creating wheel by @almarklein in https://github.com/pygfx/wgpu-py/pull/669
+* examples/imgui_cmap_picker.py - update for imgui bundle 1.6.2 by @pthom in https://github.com/pygfx/wgpu-py/pull/671
+
+
 ### [v0.19.2] - 25-11-2024
 
 Changed:
