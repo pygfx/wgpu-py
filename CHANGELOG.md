@@ -17,6 +17,18 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.21.0] - 17-03-2025
+
+This releases updates to using wgpu-native v24.0.0.2, and updates the API to the latest WebGPU spec (IDL).
+
+Added:
+
+* New `canvas_context.get_configuration()` method.
+* New `device.adapter_info` property.
+* New `usage` arg for `texture.create_view()`.
+* New `feaure_level` arg for `request_adapter()`. More a diagnostic tool, not for most end-users.
+
+
 ### [v0.20.1] - 14-03-2025
 
 Other:
