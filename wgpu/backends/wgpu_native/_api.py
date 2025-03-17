@@ -1672,8 +1672,15 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPUPipelineLayout(label, id, self)
 
     def create_shader_module(
-        self, *, label: str = "", code: str, source_map: dict = optional
+        self,
+        *,
+        label: str = "",
+        code: str,
+        compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
     ):
+        if False:  # noqa - not used, but part of the WebGPU API (for now)
+            for compilation_hint in compilation_hints:
+                check_struct("ShaderModuleCompilationHint", compilation_hint)
         if isinstance(code, str):
             looks_like_wgsl = any(
                 x in code for x in ("@compute", "@vertex", "@fragment")
