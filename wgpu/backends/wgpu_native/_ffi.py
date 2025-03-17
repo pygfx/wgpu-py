@@ -34,7 +34,13 @@ def _get_wgpu_header(*filenames):
     lines1 = []
     for filename in filenames:
         with open(filename, "rb") as f:
-            lines1.extend(f.read().decode().replace("\\\n", "").splitlines(True))
+            lines1.extend(
+                f.read()
+                .decode()
+                .replace("\r\n", "\n")
+                .replace("\\\n", "")
+                .splitlines(True)
+            )
     # Deal with pre-processor commands, because cffi cannot handle them.
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
