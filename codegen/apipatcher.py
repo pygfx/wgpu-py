@@ -644,7 +644,10 @@ class StructValidationChecker(Patcher):
                         method_structs.update(self._get_sub_structs(idl, structname))
                 all_structs.update(method_structs)
                 # Collect structs being checked
-                checked = structure_checks[classname, methodname]
+                try:
+                    checked = structure_checks[classname, methodname]
+                except KeyError:
+                    print(f"Could not validate check_struct for {classname}.{methodname}; need another codegen run.")
 
                 # Test that a matching check is done
                 unchecked = method_structs.difference(checked)
