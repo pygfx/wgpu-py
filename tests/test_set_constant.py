@@ -143,15 +143,39 @@ def test_normal_push_constants():
     assert all(result == expected_result)
 
 
-def test_render_bundle_push_constants_fails():
+def test_render_bundle_push_constants():
     device, pipeline, render_pass_descriptor = setup_pipeline()
-    encoder = device.create_render_bundle_encoder(
+    vertex_call_buffer = device.create_buffer(size=COUNT * 4, usage="STORAGE|COPY_SRC")
+    bind_group = device.create_bind_group(
+        layout=pipeline.get_bind_group_layout(0),
+        entries=[
+            {"binding": 0, "resource": {"buffer": vertex_call_buffer}},
+        ],
+    )
+    bundle_encoder = device.create_render_bundle_encoder(
         color_formats=[TextureFormat.rgba8unorm],
     )
-    encoder.set_pipeline(pipeline)
+    bundle_encoder.set_pipeline(pipeline)
+    bundle_encoder.set_bind_group(0, bind_group)
     buffer = np.random.randint(0, 1_000_000, size=(2 * COUNT), dtype=np.uint32)
-    with pytest.raises(RuntimeError):
-        set_push_constants(encoder, "VERTEX", 0, COUNT * 4, buffer)
+    set_push_constants(bundle_encoder, "VERTEX", 0, COUNT * 4, buffer)
+    set_push_constants(
+        bundle_encoder, "FRAGMENT", COUNT * 4, COUNT * 4, buffer, COUNT * 4
+    )
+    bundle_encoder.draw(COUNT)
+    render_bundle = bundle_encoder.finish()
+
+    # a different encoder to execute the bundle
+    encoder = device.create_command_encoder()
+    this_pass = encoder.begin_render_pass(**render_pass_descriptor)
+    this_pass.execute_bundles([render_bundle])
+    this_pass.end()
+    device.queue.submit([encoder.finish()])
+
+    info_view = device.queue.read_buffer(vertex_call_buffer)
+    result = np.frombuffer(info_view, dtype=np.uint32)
+    expected_result = buffer[0:COUNT] + buffer[COUNT:]
+    assert all(result == expected_result)
 
 
 def test_bad_set_push_constants():

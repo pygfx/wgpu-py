@@ -15,6 +15,7 @@ focuses on the API, here we focus on the C library usage.
 
 import re
 from collections import defaultdict
+from itertools import chain
 
 from codegen.utils import print, format_code, Patcher, to_snake_case
 from codegen.hparser import get_h_parser
@@ -290,13 +291,10 @@ class FunctionPatcher(Patcher):
 class StructPatcher(Patcher):
     def apply(self, code):
         self._init(code)
-        hp = get_h_parser()
-
         count = 0
-        line_index = -1
-        brace_depth = 0
 
         for line, i in self.iter_lines():
+            # detect struct definition start (only when not already inside a struct)
             if "new_struct_p(" in line or "new_struct(" in line:
                 if line.lstrip().startswith("def "):
                     continue  # Implementation
@@ -304,27 +302,35 @@ class StructPatcher(Patcher):
                     continue  # Implementation
                 if "new_struct_p()" in line or "new_struct()" in line:
                     continue  # Comments or docs
-                line_index = i
                 j = line.index("new_struct")
                 line = line[j:]  # start brace searching from right pos
-                brace_depth = 0
-
-            if line_index >= 0:
-                for c in line:
-                    if c == "#":
-                        break
-                    elif c == "(":
-                        brace_depth += 1
-                    elif c == ")":
-                        brace_depth -= 1
-                        assert brace_depth >= 0
-                        if brace_depth == 0:
-                            self._validate_struct(hp, line_index, i)
-                            count += 1
-                            line_index = -1
-                            break
+                # call a function to find the end and validate so we don't skip over nested structure in this loop
+                self._find_struct_end(line, i)
+                count += 1
 
         print(f"Validated {count} C structs")
+
+    def _find_struct_end(self, first_line, start_line_index):
+        """
+        If a struct start is found, this function will find the end of the struct and then validate it
+        """
+        brace_depth = 0
+        hp = get_h_parser()
+        for line, i in chain(
+            [(first_line, 0)], self.iter_lines(start_line=start_line_index + 1)
+        ):
+            for c in line:
+                if c == "#":
+                    break
+                elif c == "(":
+                    brace_depth += 1
+                elif c == ")":
+                    brace_depth -= 1
+                    assert brace_depth >= 0
+                    if brace_depth == 0:
+                        # here we have found the end of this struct so now we can validate it.
+                        self._validate_struct(hp, start_line_index, i)
+                        return  # we assume it always works?
 
     def _validate_struct(self, hp, i1, i2):
         """Validate a specific struct usage."""
@@ -381,19 +387,32 @@ class StructPatcher(Patcher):
             self.insert_line(i1, indent + "# H: " + fields)
 
         # Check keys
+        brace_count = 0
         keys_found = []
         for j in range(2, len(lines) - 1):
             line = lines[j]
-            key = line.split("=")[0].strip()
-            if key.startswith("# not used:"):
-                key = key.split(":")[1].split("=")[0].strip()
-            elif key.startswith("#"):
-                continue
-            keys_found.append(key)
-            if key not in struct:
-                msg = f"unknown C struct field {struct_name}.{key}"
-                self.insert_line(i1 + j, f"{indent}# FIXME: {msg}")
-                print(f"ERROR: {msg}")
+            if brace_count <= 0:
+                # ready to find a new key candidate
+                key = line.split("=")[0].strip()
+                if key.startswith("# not used:"):
+                    key = key.split(":")[1].split("=")[0].strip()
+                elif key.startswith("#"):
+                    continue
+            # (still) inside a multi-line structure
+            for c in line.strip():
+                if c == "#":
+                    break  # we can ignore this line past the comment in terms of nested structures
+                elif c == "(":
+                    brace_count += 1
+                elif c == ")":
+                    brace_count -= 1
+            if brace_count == 0:
+                # here we finished through the multi line structure
+                keys_found.append(key)
+                if key not in struct:
+                    msg = f"unknown C struct field {struct_name}.{key}"
+                    self.insert_line(i1 + j, f"{indent}# FIXME: {msg}")
+                    print(f"ERROR: {msg}")
 
         # Insert comments for unused keys
         more_lines = []
