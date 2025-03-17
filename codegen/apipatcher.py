@@ -647,7 +647,9 @@ class StructValidationChecker(Patcher):
                 try:
                     checked = structure_checks[classname, methodname]
                 except KeyError:
-                    print(f"Could not validate check_struct for {classname}.{methodname}; need another codegen run.")
+                    print(
+                        f"Could not validate check_struct for {classname}.{methodname}; need another codegen run."
+                    )
 
                 # Test that a matching check is done
                 unchecked = method_structs.difference(checked)

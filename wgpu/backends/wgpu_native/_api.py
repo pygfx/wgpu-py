@@ -524,7 +524,7 @@ class GPU(classes.GPU):
 
         # ----- Request adapter
 
-        c_featureLevel = {
+        c_feature_level = {
             "core": lib.WGPUFeatureLevel_Core,
             "compatibility": lib.WGPUFeatureLevel_Compatibility,
         }[feaure_level]
@@ -533,7 +533,7 @@ class GPU(classes.GPU):
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
             # not used: nextInChain
-            featureLevel=c_featureLevel,
+            featureLevel=c_feature_level,
             powerPreference=power_preference or "high-performance",
             forceFallbackAdapter=bool(force_fallback_adapter),
             backendType=backend,
@@ -1678,7 +1678,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         code: str,
         compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
     ):
-        if False:  # noqa
+        if False:
             # Trick the check_struct check in the codegen.
             # Compilation_hint are not used, but part of the WebGPU API (for now)
             for compilation_hint in compilation_hints:
