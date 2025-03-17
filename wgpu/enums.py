@@ -70,14 +70,17 @@ class FeatureName(Enum):
     texture_compression_bc_sliced_d3 = "texture-compression-bc-sliced-3d"
     texture_compression_etc2 = "texture-compression-etc2"
     texture_compression_astc = "texture-compression-astc"
+    texture_compression_astc_sliced_d3 = "texture-compression-astc-sliced-3d"
     timestamp_query = "timestamp-query"
     indirect_first_instance = "indirect-first-instance"
     shader_f16 = "shader-f16"
     rg11b10ufloat_renderable = "rg11b10ufloat-renderable"
     bgra8unorm_storage = "bgra8unorm-storage"
     float32_filterable = "float32-filterable"
+    float32_blendable = "float32-blendable"
     clip_distances = "clip-distances"
     dual_source_blending = "dual-source-blending"
+    subgroups = "subgroups"
 
 
 class BufferMapState(Enum):
@@ -337,22 +340,31 @@ class IndexFormat(Enum):
 
 
 class VertexFormat(Enum):
+    uint8 = "uint8"
     uint8x2 = "uint8x2"
     uint8x4 = "uint8x4"
+    sint8 = "sint8"
     sint8x2 = "sint8x2"
     sint8x4 = "sint8x4"
+    unorm8 = "unorm8"
     unorm8x2 = "unorm8x2"
     unorm8x4 = "unorm8x4"
+    snorm8 = "snorm8"
     snorm8x2 = "snorm8x2"
     snorm8x4 = "snorm8x4"
+    uint16 = "uint16"
     uint16x2 = "uint16x2"
     uint16x4 = "uint16x4"
+    sint16 = "sint16"
     sint16x2 = "sint16x2"
     sint16x4 = "sint16x4"
+    unorm16 = "unorm16"
     unorm16x2 = "unorm16x2"
     unorm16x4 = "unorm16x4"
+    snorm16 = "snorm16"
     snorm16x2 = "snorm16x2"
     snorm16x4 = "snorm16x4"
+    float16 = "float16"
     float16x2 = "float16x2"
     float16x4 = "float16x4"
     float32 = "float32"
@@ -368,6 +380,7 @@ class VertexFormat(Enum):
     sint32x3 = "sint32x3"
     sint32x4 = "sint32x4"
     unorm10_10_10_2 = "unorm10-10-10-2"
+    unorm8x4_bgra = "unorm8x4-bgra"
 
 
 class VertexStepMode(Enum):

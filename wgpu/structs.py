@@ -48,16 +48,14 @@ __all__ = [
     "ComputePassDescriptor",
     "ComputePassTimestampWrites",
     "ComputePipelineDescriptor",
+    "CopyExternalImageDestInfo",
+    "CopyExternalImageSourceInfo",
     "DepthStencilState",
     "DeviceDescriptor",
     "Extent3D",
     "ExternalTextureBindingLayout",
     "ExternalTextureDescriptor",
     "FragmentState",
-    "ImageCopyBuffer",
-    "ImageCopyExternalImage",
-    "ImageCopyTexture",
-    "ImageDataLayout",
     "MultisampleState",
     "Origin2D",
     "Origin3D",
@@ -82,6 +80,9 @@ __all__ = [
     "ShaderModuleDescriptor",
     "StencilFaceState",
     "StorageTextureBindingLayout",
+    "TexelCopyBufferInfo",
+    "TexelCopyBufferLayout",
+    "TexelCopyTextureInfo",
     "TextureBindingLayout",
     "TextureDescriptor",
     "TextureViewDescriptor",
@@ -92,23 +93,27 @@ __all__ = [
 ]
 
 
+#: * featureLevel :: str = "core"
 #: * powerPreference :: :obj:`enums.PowerPreference <wgpu.enums.PowerPreference>`
 #: * forceFallbackAdapter :: bool = false
+#: * xrCompatible :: bool = false
 RequestAdapterOptions = Struct(
     "RequestAdapterOptions",
+    feature_level="str",
     power_preference="enums.PowerPreference",
     force_fallback_adapter="bool",
+    xr_compatible="bool",
 )
 
 #: * label :: str = ""
 #: * requiredFeatures :: List[:obj:`enums.FeatureName <wgpu.enums.FeatureName>`] = []
-#: * requiredLimits :: Dict[str, int] = {}
+#: * requiredLimits :: Dict[str, Union[None, int]] = {}
 #: * defaultQueue :: :obj:`structs.QueueDescriptor <QueueDescriptor>` = {}
 DeviceDescriptor = Struct(
     "DeviceDescriptor",
     label="str",
     required_features="List[enums.FeatureName]",
-    required_limits="Dict[str, int]",
+    required_limits="Dict[str, Union[None, int]]",
     default_queue="structs.QueueDescriptor",
 )
 
@@ -147,6 +152,7 @@ TextureDescriptor = Struct(
 #: * label :: str = ""
 #: * format :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
 #: * dimension :: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>`
+#: * usage :: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>` = 0
 #: * aspect :: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` = "all"
 #: * baseMipLevel :: int = 0
 #: * mipLevelCount :: int
@@ -157,6 +163,7 @@ TextureViewDescriptor = Struct(
     label="str",
     format="enums.TextureFormat",
     dimension="enums.TextureViewDimension",
+    usage="flags.TextureUsage",
     aspect="enums.TextureAspect",
     base_mip_level="int",
     mip_level_count="int",
@@ -304,13 +311,11 @@ PipelineLayoutDescriptor = Struct(
 
 #: * label :: str = ""
 #: * code :: str
-#: * sourceMap :: dict
 #: * compilationHints :: List[:obj:`structs.ShaderModuleCompilationHint <ShaderModuleCompilationHint>`] = []
 ShaderModuleDescriptor = Struct(
     "ShaderModuleDescriptor",
     label="str",
     code="str",
-    source_map="dict",
     compilation_hints="List[structs.ShaderModuleCompilationHint]",
 )
 
@@ -330,7 +335,7 @@ PipelineErrorInit = Struct(
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
 #: * entryPoint :: str
-#: * constants :: Dict[str, float]
+#: * constants :: Dict[str, float] = {}
 ProgrammableStage = Struct(
     "ProgrammableStage",
     module="GPUShaderModule",
@@ -392,7 +397,7 @@ MultisampleState = Struct(
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
 #: * entryPoint :: str
-#: * constants :: Dict[str, float]
+#: * constants :: Dict[str, float] = {}
 #: * targets :: List[:obj:`structs.ColorTargetState <ColorTargetState>`]
 FragmentState = Struct(
     "FragmentState",
@@ -468,7 +473,7 @@ StencilFaceState = Struct(
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
 #: * entryPoint :: str
-#: * constants :: Dict[str, float]
+#: * constants :: Dict[str, float] = {}
 #: * buffers :: List[:obj:`structs.VertexBufferLayout <VertexBufferLayout>`] = []
 VertexState = Struct(
     "VertexState",
@@ -501,8 +506,8 @@ VertexAttribute = Struct(
 #: * offset :: int = 0
 #: * bytesPerRow :: int
 #: * rowsPerImage :: int
-ImageDataLayout = Struct(
-    "ImageDataLayout",
+TexelCopyBufferLayout = Struct(
+    "TexelCopyBufferLayout",
     offset="int",
     bytes_per_row="int",
     rows_per_image="int",
@@ -512,8 +517,8 @@ ImageDataLayout = Struct(
 #: * bytesPerRow :: int
 #: * rowsPerImage :: int
 #: * buffer :: :class:`GPUBuffer <wgpu.GPUBuffer>`
-ImageCopyBuffer = Struct(
-    "ImageCopyBuffer",
+TexelCopyBufferInfo = Struct(
+    "TexelCopyBufferInfo",
     offset="int",
     bytes_per_row="int",
     rows_per_image="int",
@@ -524,19 +529,35 @@ ImageCopyBuffer = Struct(
 #: * mipLevel :: int = 0
 #: * origin :: Union[List[int], :obj:`structs.Origin3D <Origin3D>`] = {}
 #: * aspect :: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` = "all"
-ImageCopyTexture = Struct(
-    "ImageCopyTexture",
+TexelCopyTextureInfo = Struct(
+    "TexelCopyTextureInfo",
     texture="GPUTexture",
     mip_level="int",
     origin="Union[List[int], structs.Origin3D]",
     aspect="enums.TextureAspect",
 )
 
+#: * texture :: :class:`GPUTexture <wgpu.GPUTexture>`
+#: * mipLevel :: int = 0
+#: * origin :: Union[List[int], :obj:`structs.Origin3D <Origin3D>`] = {}
+#: * aspect :: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` = "all"
+#: * colorSpace :: str = "srgb"
+#: * premultipliedAlpha :: bool = false
+CopyExternalImageDestInfo = Struct(
+    "CopyExternalImageDestInfo",
+    texture="GPUTexture",
+    mip_level="int",
+    origin="Union[List[int], structs.Origin3D]",
+    aspect="enums.TextureAspect",
+    color_space="str",
+    premultiplied_alpha="bool",
+)
+
 #: * source :: Union[memoryview, object]
 #: * origin :: Union[List[int], :obj:`structs.Origin2D <Origin2D>`] = {}
 #: * flipY :: bool = false
-ImageCopyExternalImage = Struct(
-    "ImageCopyExternalImage",
+CopyExternalImageSourceInfo = Struct(
+    "CopyExternalImageSourceInfo",
     source="Union[memoryview, object]",
     origin="Union[List[int], structs.Origin2D]",
     flip_y="bool",

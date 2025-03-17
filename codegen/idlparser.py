@@ -217,6 +217,7 @@ class IdlParser:
             "AllowSharedBufferSource": "memoryview",
             "GPUPipelineConstantValue": "float",
             "GPUExternalTexture": "object",
+            "undefined": "None",
         }
         name = pythonmap.get(name, name)
 
