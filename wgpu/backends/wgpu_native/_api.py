@@ -1678,7 +1678,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         code: str,
         compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
     ):
-        if False:  # noqa - not used, but part of the WebGPU API (for now)
+        if False:  # noqa
+            # Trick the check_struct check in the codegen.
+            # Compilation_hint are not used, but part of the WebGPU API (for now)
             for compilation_hint in compilation_hints:
                 check_struct("ShaderModuleCompilationHint", compilation_hint)
         if isinstance(code, str):

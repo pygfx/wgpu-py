@@ -1023,7 +1023,7 @@ class GPUDevice(GPUObjectBase):
     def create_pipeline_layout(
         self, *, label: str = "", bind_group_layouts: List[GPUBindGroupLayout]
     ):
-        """Create a `GPUPipelineLayoqut` object, which can be
+        """Create a `GPUPipelineLayout` object, which can be
         used in `create_render_pipeline()` or `create_compute_pipeline()`.
 
         Arguments:
