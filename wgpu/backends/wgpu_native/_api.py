@@ -402,9 +402,10 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
     features = set()
 
     # Standard features
+    not_supported_by_wgpu_native = {"subgroups"}
     for f in sorted(enums.FeatureName):
-        # if f in not_supported_by_wgpu_native:
-        #     continue
+        if f in not_supported_by_wgpu_native:
+            continue
         if has_feature(enummap[f"FeatureName.{f}"]):
             features.add(f)
 
@@ -426,6 +427,7 @@ class GPU(classes.GPU):
     def request_adapter_sync(
         self,
         *,
+        feaure_level: str = "core",
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
@@ -435,6 +437,7 @@ class GPU(classes.GPU):
         """
         check_can_use_sync_variants()
         awaitable = self._request_adapter(
+            feaure_level=feaure_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
@@ -445,6 +448,7 @@ class GPU(classes.GPU):
     async def request_adapter_async(
         self,
         *,
+        feaure_level: str = "core",
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
@@ -462,6 +466,7 @@ class GPU(classes.GPU):
                  be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
         awaitable = self._request_adapter(
+            feaure_level=feaure_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
@@ -469,7 +474,7 @@ class GPU(classes.GPU):
         return await awaitable
 
     def _request_adapter(
-        self, *, power_preference=None, force_fallback_adapter=False, canvas=None
+        self, *, feaure_level, power_preference, force_fallback_adapter, canvas
     ):
         # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
         # It seems that the environment variables are only respected in their
@@ -519,15 +524,20 @@ class GPU(classes.GPU):
 
         # ----- Request adapter
 
+        c_featureLevel = {
+            "core": lib.WGPUFeatureLevel_Core,
+            "compatibility": lib.WGPUFeatureLevel_Compatibility,
+        }[feaure_level]
+
         # H: nextInChain: WGPUChainedStruct *, featureLevel: WGPUFeatureLevel, powerPreference: WGPUPowerPreference, forceFallbackAdapter: WGPUBool/int, backendType: WGPUBackendType, compatibleSurface: WGPUSurface
         struct = new_struct_p(
             "WGPURequestAdapterOptions *",
             # not used: nextInChain
-            compatibleSurface=surface_id,
+            featureLevel=c_featureLevel,
             powerPreference=power_preference or "high-performance",
             forceFallbackAdapter=bool(force_fallback_adapter),
             backendType=backend,
-            # not used: featureLevel
+            compatibleSurface=surface_id,
         )
 
         @ffi.callback(
@@ -994,7 +1004,7 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label: str = "",
         required_features: List[enums.FeatureName] = [],
-        required_limits: Dict[str, int] = {},
+        required_limits: Dict[str, Union[None, int]] = {},
         default_queue: structs.QueueDescriptor = {},
     ):
         check_can_use_sync_variants()
@@ -1010,7 +1020,7 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label: str = "",
         required_features: List[enums.FeatureName] = [],
-        required_limits: Dict[str, int] = {},
+        required_limits: Dict[str, Union[None, int]] = {},
         default_queue: structs.QueueDescriptor = {},
     ):
         if default_queue:
@@ -2497,6 +2507,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         label: str = "",
         format: enums.TextureFormat = optional,
         dimension: enums.TextureViewDimension = optional,
+        usage: flags.TextureUsage = 0,
         aspect: enums.TextureAspect = "all",
         base_mip_level: int = 0,
         mip_level_count: int = optional,
@@ -2523,8 +2534,6 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
                 array_layer_count = 6
             elif dimension in ("2d-array", "cube-array"):
                 array_layer_count = self._tex_info["size"][2] - base_array_layer
-
-        usage = lib.WGPUTextureUsage_None  # assuming none means use the texture's usage
 
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, baseMipLevel: int, mipLevelCount: int, baseArrayLayer: int, arrayLayerCount: int, aspect: WGPUTextureAspect, usage: WGPUTextureUsage/int
         struct = new_struct_p(
@@ -3127,12 +3136,12 @@ class GPUCommandEncoder(
 
     def copy_buffer_to_texture(
         self,
-        source: structs.ImageCopyBuffer,
-        destination: structs.ImageCopyTexture,
+        source: structs.TexelCopyBufferInfo,
+        destination: structs.TexelCopyTextureInfo,
         copy_size: Union[List[int], structs.Extent3D],
     ):
-        check_struct("ImageCopyBuffer", source)
-        check_struct("ImageCopyTexture", destination)
+        check_struct("TexelCopyBufferInfo", source)
+        check_struct("TexelCopyTextureInfo", destination)
 
         row_alignment = 256
         bytes_per_row = int(source["bytes_per_row"])
@@ -3193,12 +3202,12 @@ class GPUCommandEncoder(
 
     def copy_texture_to_buffer(
         self,
-        source: structs.ImageCopyTexture,
-        destination: structs.ImageCopyBuffer,
+        source: structs.TexelCopyTextureInfo,
+        destination: structs.TexelCopyBufferInfo,
         copy_size: Union[List[int], structs.Extent3D],
     ):
-        check_struct("ImageCopyTexture", source)
-        check_struct("ImageCopyBuffer", destination)
+        check_struct("TexelCopyTextureInfo", source)
+        check_struct("TexelCopyBufferInfo", destination)
 
         row_alignment = 256
         bytes_per_row = int(destination["bytes_per_row"])
@@ -3259,12 +3268,12 @@ class GPUCommandEncoder(
 
     def copy_texture_to_texture(
         self,
-        source: structs.ImageCopyTexture,
-        destination: structs.ImageCopyTexture,
+        source: structs.TexelCopyTextureInfo,
+        destination: structs.TexelCopyTextureInfo,
         copy_size: Union[List[int], structs.Extent3D],
     ):
-        check_struct("ImageCopyTexture", source)
-        check_struct("ImageCopyTexture", destination)
+        check_struct("TexelCopyTextureInfo", source)
+        check_struct("TexelCopyTextureInfo", destination)
 
         if isinstance(source["texture"], GPUTextureView):
             raise ValueError("copy source texture must be a texture, not a view")
@@ -3662,16 +3671,16 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     def write_texture(
         self,
-        destination: structs.ImageCopyTexture,
+        destination: structs.TexelCopyTextureInfo,
         data: memoryview,
-        data_layout: structs.ImageDataLayout,
+        data_layout: structs.TexelCopyBufferLayout,
         size: Union[List[int], structs.Extent3D],
     ):
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
 
-        check_struct("ImageCopyTexture", destination)
-        check_struct("ImageDataLayout", data_layout)
+        check_struct("TexelCopyTextureInfo", destination)
+        check_struct("TexelCopyBufferLayout", data_layout)
 
         if isinstance(destination["texture"], GPUTextureView):
             raise ValueError("copy destination texture must be a texture, not a view")

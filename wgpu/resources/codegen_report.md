@@ -1,6 +1,6 @@
 # Code generation report
 ## Preparing
-* The webgpu.idl defines 37 classes with 75 functions
+* The webgpu.idl defines 37 classes with 76 functions
 * The webgpu.idl defines 5 flags, 34 enums, 60 structs
 * The wgpu.h defines 211 functions
 * The wgpu.h defines 7 flags, 58 enums, 101 structs
@@ -18,16 +18,17 @@
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 37 classes, 121 methods, 46 properties
+* Validated 37 classes, 122 methods, 49 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 121 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
+* Enum field FeatureName.subgroups missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
 * Enum AutoLayoutMode missing in wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in wgpu.h
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum CanvasToneMappingMode missing in wgpu.h
-* Wrote 243 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
+* Wrote 255 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 146 C function calls
 * Not using 74 C functions
 * Validated 95 C structs
