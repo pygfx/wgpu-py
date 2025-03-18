@@ -368,27 +368,18 @@ def test_draw_indexed_via_encoder(runner):
         )
 
 
-@pytest.mark.parametrize("bug_patch", [False, True])
 @pytest.mark.parametrize("indexed", [False, True])
 @pytest.mark.parametrize("test_max_count", [False, True])
-def test_multi_draw_indirect_count(runner, test_max_count, indexed, bug_patch):
+def test_multi_draw_indirect_count(runner, test_max_count, indexed):
     if "multi-draw-indirect-count" not in runner.device.features:
         pytest.skip("Must have 'multi-draw-indirect-count' to run")
 
-    print(f"{bug_patch=}, {indexed=}, {test_max_count=} \n")
-
     if indexed:
         function = multi_draw_indexed_indirect_count
-        if not bug_patch:
-            buffer = runner.draw_data_buffer_indexed
-        else:
-            buffer = runner.draw_data_buffer_indexed_patched
+        buffer = runner.draw_data_buffer_indexed
     else:
         function = multi_draw_indirect_count
-        if not bug_patch:
-            buffer = runner.draw_data_buffer
-        else:
-            buffer = runner.draw_data_buffer_patched
+        buffer = runner.draw_data_buffer
 
     # Either way, we're going to do 2 draws.  But one via the max_count and one via the
     # information in the buffer.
