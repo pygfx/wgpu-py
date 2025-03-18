@@ -237,9 +237,9 @@ def create_and_release(create_objects_func):
 
             # Make sure the actual object has increased
             assert more2  # not empty
-            assert more2 == options["expected_counts_after_create"], (
-                f"Expected:\n{options['expected_counts_after_create']}\nGot:\n{more2}"
-            )
+            assert (
+                more2 == options["expected_counts_after_create"]
+            ), f"Expected:\n{options['expected_counts_after_create']}\nGot:\n{more2}"
 
             # It's ok if other objects are created too ...
 
@@ -256,9 +256,9 @@ def create_and_release(create_objects_func):
                 print("  more after release:", more3)
 
             # Check!
-            assert more3 == options["expected_counts_after_release"], (
-                f"Expected:\n{options['expected_counts_after_release']}\nGot:\n{more3}"
-            )
+            assert (
+                more3 == options["expected_counts_after_release"]
+            ), f"Expected:\n{options['expected_counts_after_release']}\nGot:\n{more3}"
 
             # Print mem usage info
             if TEST_ITERS:

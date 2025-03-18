@@ -35,12 +35,12 @@ with open(os.path.join(ROOT_DIR, "docs", "wgpu.rst"), "rb") as f:
     wgpu_text = f.read().decode()
     wgpu_lines = [line.strip() for line in wgpu_text.splitlines()]
 for cls_name in wgpu.classes.__all__:
-    assert f"~{cls_name}" in wgpu_lines, (
-        f"Class '{cls_name}' not listed in class list in wgpu.rst"
-    )
-    assert f":class:`{cls_name}`" in wgpu_text, (
-        f"Class '{cls_name}' not referenced in the text in wgpu.rst"
-    )
+    assert (
+        f"~{cls_name}" in wgpu_lines
+    ), f"Class '{cls_name}' not listed in class list in wgpu.rst"
+    assert (
+        f":class:`{cls_name}`" in wgpu_text
+    ), f"Class '{cls_name}' not referenced in the text in wgpu.rst"
 
 
 # -- Hacks to tweak docstrings -----------------------------------------------
