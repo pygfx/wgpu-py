@@ -101,6 +101,52 @@ def multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count)
     render_pass_encoder._multi_draw_indexed_indirect(buffer, offset, count)
 
 
+def multi_draw_indirect_count(
+    render_pass_encoder,
+    buffer,
+    *,
+    offset=0,
+    count_buffer,
+    count_buffer_offset=0,
+    max_count,
+):
+    """
+    This is equivalent to:
+
+    count = min(<u32 at offset count_buffer_offset of count_buffer>, max_count)
+    for i in range(count):
+        render_pass_encoder.draw(buffer, offset + i * 16)
+
+    You must enable the feature "multi-draw-indirect-count" to use this function.
+    """
+    render_pass_encoder._multi_draw_indirect_count(
+        buffer, offset, count_buffer, count_buffer_offset, max_count
+    )
+
+
+def multi_draw_indexed_indirect_count(
+    render_pass_encoder,
+    buffer,
+    *,
+    offset=0,
+    count_buffer,
+    count_buffer_offset=0,
+    max_count,
+):
+    """
+    This is equivalent to:
+
+    count = min(<u32 at offset count_buffer_offset of count_buffer>, max_count)
+    for i in range(count):
+        render_pass_encoder.draw_indexed(buffer, offset + i * 20)
+
+    You must enable the feature "multi-draw-indirect-count" to use this function.
+    """
+    render_pass_encoder._multi_draw_indexed_indirect_count(
+        buffer, offset, count_buffer, count_buffer_offset, max_count
+    )
+
+
 def create_statistics_query_set(device, *, label="", count: int, statistics):
     """
     Create a query set that can collect the specified pipeline statistics.
