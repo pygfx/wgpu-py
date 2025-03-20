@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from . import GPUComputePassEncoder, GPURenderPassEncoder
+from . import GPUCommandEncoder, GPUComputePassEncoder, GPURenderPassEncoder
 from ._api import Dict, GPUBindGroupLayout, enums, logger, structs
 from ...enums import Enum
 
@@ -165,3 +165,10 @@ def begin_pipeline_statistics_query(encoder, query_set, query_index):
 def end_pipeline_statistics_query(encoder):
     assert isinstance(encoder, (GPURenderPassEncoder, GPUComputePassEncoder))
     encoder._end_pipeline_statistics_query()
+
+
+def write_timestamp(encoder, query_set, query_index):
+    assert isinstance(
+        encoder, (GPURenderPassEncoder, GPUComputePassEncoder, GPUCommandEncoder)
+    )
+    encoder._write_timestamp(query_set, query_index)
