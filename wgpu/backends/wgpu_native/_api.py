@@ -21,7 +21,7 @@ import os
 import time
 import logging
 from weakref import WeakKeyDictionary
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, NoReturn, Union, Optional
 
 from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int
@@ -2766,7 +2766,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             self._not_implemented("end_pipeline_statistics")
         function(self._internal)
 
-    def _not_implemented(self, name):
+    def _not_implemented(self, name) -> NoReturn:
         raise RuntimeError(f"{type(self).__name__} does not implement {name}")
 
 
