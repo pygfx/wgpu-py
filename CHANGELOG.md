@@ -17,6 +17,15 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.21.1] - 20-03-2025
+
+This release updates to wgpu-native v24.0.3.1, which includes several upstream fixes.
+
+Added:
+
+* Add `multi_draw_indexed_indirect_count` and `multi_draw_indirect_count` by @fyellin in https://github.com/pygfx/wgpu-py/pull/687
+
+
 ### [v0.21.0] - 17-03-2025
 
 This releases updates to using wgpu-native v24.0.0.2, and updates the API to the latest WebGPU spec (IDL).
