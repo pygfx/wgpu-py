@@ -21,7 +21,7 @@ import os
 import time
 import logging
 from weakref import WeakKeyDictionary
-from typing import List, Dict, Union, Optional, NoReturn
+from typing import List, Dict, NoReturn, Union, Optional
 
 from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int
@@ -2753,7 +2753,6 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
     def _begin_pipeline_statistics_query(self, query_set, query_index):
         # H: void wgpuComputePassEncoderBeginPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         # H: void wgpuRenderPassEncoderBeginPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
-        # H: void wgpuRenderPassEncoderBeginPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         function = type(self)._begin_pipeline_statistics_query_function
         if function is None:
             self._not_implemented("begin_pipeline_statistics")
@@ -2761,7 +2760,6 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
     def _end_pipeline_statistics_query(self):
         # H: void wgpuComputePassEncoderEndPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder)
-        # H: void wgpuRenderPassEncoderEndPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder)
         # H: void wgpuRenderPassEncoderEndPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder)
         function = type(self)._end_pipeline_statistics_query_function
         if function is None:
@@ -2799,6 +2797,17 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         # H: void wgpuRenderBundleEncoderInsertDebugMarker(WGPURenderBundleEncoder renderBundleEncoder, WGPUStringView markerLabel)
         function = type(self)._insert_debug_marker_function
         function(self._internal, c_marker_label)
+
+    def _write_timestamp(self, query_set, query_index):
+        # H: void wgpuCommandEncoderWriteTimestamp(WGPUCommandEncoder commandEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
+        # H: void wgpuComputePassEncoderWriteTimestamp(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
+        # H: void wgpuRenderPassEncoderWriteTimestamp(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
+        function = type(self)._write_timestamp_function
+        if function is None:
+            raise RuntimeError(
+                f"{type(self).__name__} does not implement write_timestamp"
+            )
+        function(self._internal, query_set._internal, int(query_index))
 
 
 class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
@@ -2897,6 +2906,7 @@ class GPUCommandEncoder(
     _push_debug_group_function = libf.wgpuCommandEncoderPushDebugGroup
     _pop_debug_group_function = libf.wgpuCommandEncoderPopDebugGroup
     _insert_debug_marker_function = libf.wgpuCommandEncoderInsertDebugMarker
+    _write_timestamp_function = libf.wgpuCommandEncoderWriteTimestamp
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuCommandEncoderRelease
@@ -3382,6 +3392,7 @@ class GPUComputePassEncoder(
     _push_debug_group_function = libf.wgpuComputePassEncoderPushDebugGroup
     _pop_debug_group_function = libf.wgpuComputePassEncoderPopDebugGroup
     _insert_debug_marker_function = libf.wgpuComputePassEncoderInsertDebugMarker
+    _write_timestamp_function = libf.wgpuComputePassEncoderWriteTimestamp
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
@@ -3440,6 +3451,7 @@ class GPURenderPassEncoder(
     _push_debug_group_function = libf.wgpuRenderPassEncoderPushDebugGroup
     _pop_debug_group_function = libf.wgpuRenderPassEncoderPopDebugGroup
     _insert_debug_marker_function = libf.wgpuRenderPassEncoderInsertDebugMarker
+    _write_timestamp_function = libf.wgpuRenderPassEncoderWriteTimestamp
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuRenderPassEncoderSetBindGroup
@@ -3585,8 +3597,9 @@ class GPURenderBundleEncoder(
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuRenderBundleEncoderSetBindGroup
     _set_push_constants_function = libf.wgpuRenderBundleEncoderSetPushConstants
-    _begin_pipeline_statistics_query_function = libf.wgpuRenderPassEncoderBeginPipelineStatisticsQuery  # fmt: skip
-    _end_pipeline_statistics_query_function = libf.wgpuRenderPassEncoderEndPipelineStatisticsQuery  # fmt: skip
+    _begin_pipeline_statistics_query_function = None  # not implemented
+    _end_pipeline_statistics_query_function = None  # not implemented
+    _write_timestamp_function = None  # not implemented
 
     # GPURenderCommandsMixin
     _set_pipeline_function = libf.wgpuRenderBundleEncoderSetPipeline

@@ -20,7 +20,7 @@
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
 * Validated 37 classes, 122 methods, 49 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 37 classes, 123 methods, 0 properties
+* Validated 37 classes, 124 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.subgroups missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
@@ -29,6 +29,6 @@
 * Enum CanvasAlphaMode missing in wgpu.h
 * Enum CanvasToneMappingMode missing in wgpu.h
 * Wrote 255 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 148 C function calls
-* Not using 72 C functions
+* Validated 149 C function calls
+* Not using 69 C functions
 * Validated 95 C structs

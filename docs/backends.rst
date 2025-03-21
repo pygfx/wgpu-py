@@ -235,10 +235,33 @@ an unsigned 32-bit integer. The ``count`` is the minimum of this value and ``max
                    Must be a multiple of 4.
     :param max_count: The maximum number of draw operations to perform.
 
+Some GPUS allow you to collect timestamps other than via the ``timestamp_writes=`` argument
+to ``command_encoder.begin_compute_pass`` and ``command_encoder.begin_render_pass``.
+
+When ``write_timestamp`` is called with a command encoder as its first argument, a
+timestamp is written to the indicated query set at the indicated index when all previous
+command recorded into the same command encoder have been executed. This usage requires
+that the features ``"timestamp-query"`` and ``"timestamp-query-inside-encoders"`` are
+both enabled.
+
+When ``write_timestamp`` is called with a render pass or compute pass as its first
+argument, a timestamp is written to the indicated query set at the indicated index at
+that point in thie queue. This usage requires
+that the features ``"timestamp-query"`` and ``"timestamp-query-inside-passes"`` are
+both enabled.
+
+.. py:function:: wgpu.backends.wgpu_native.write_timestamp(encoder, query_set, query_index):
+
+     Writes a timestamp to the timestamp query set and the indicated index.
+
+    :param encoder: The ComputePassEncoder, RenderPassEncoder, or CommandEncoder.
+    :param query_set: The timestamp query set into which to save the result.
+    :param index: The index of the query set into which to write the result.
+
+
 Some GPUs allow you collect statistics on their pipelines. Those GPUs that support this
 have the feature "pipeline-statistics-query", and you must enable this feature when
 getting the device.
-
 You create a query set using the function
 ``wgpu.backends.wgpu_native.create_statistics_query_set``.
 
