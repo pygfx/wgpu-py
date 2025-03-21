@@ -211,5 +211,65 @@ def test_numbered_constants_must_be_overridden_by_number(runner):
     )
 
 
+SHADER_SOURCE2 = """
+    override workgroup_size: u32 = 32;
+    override block_size: u32 = 128;
+
+    // Put the results here
+    @group(0) @binding(0) var<storage, read_write> result: atomic<u32>;
+
+    // We are just verifying that this compiles.  It didn't used to.
+    var<workgroup> values: array<i32, block_size>;
+
+    @compute @workgroup_size(workgroup_size)
+    fn computeMain(@builtin(local_invocation_id) index: vec3<u32>) {
+        // the workgroup size is one larger than the maximum local invocation id.
+        atomicMax(&result, index.x + 1);
+    }
+"""
+
+BIND_GROUP_ENTRIES2 = BIND_GROUP_ENTRIES
+
+
+@pytest.mark.parametrize("workgroup_size_override", [None, 8, 64])
+def test_override_workgroup_size(workgroup_size_override):
+    device = wgpu.utils.get_default_device()
+    shader = device.create_shader_module(code=SHADER_SOURCE2)
+    bind_group_layout = device.create_bind_group_layout(entries=BIND_GROUP_ENTRIES2)
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout],
+    )
+    output_buffer = device.create_buffer(size=4, usage="STORAGE|COPY_SRC")
+    bind_group = device.create_bind_group(
+        layout=bind_group_layout,
+        entries=[{"binding": 0, "resource": {"buffer": output_buffer}}],
+    )
+    if workgroup_size_override is not None:
+        constants = {"workgroup_size": workgroup_size_override}
+        expected_result = workgroup_size_override
+    else:
+        constants = {}
+        # This is the value in the code
+        expected_result = 32
+    pipeline = device.create_compute_pipeline(
+        layout=pipeline_layout,
+        compute={
+            "module": shader,
+            "constants": constants,
+        },
+    )
+
+    encoder = device.create_command_encoder()
+    this_pass = encoder.begin_compute_pass()
+    this_pass.set_bind_group(0, bind_group)
+    this_pass.set_pipeline(pipeline)
+    this_pass.dispatch_workgroups(1)
+    this_pass.end()
+    device.queue.submit([encoder.finish()])
+    # Make sure this function actually returns the work group size.
+    result = device.queue.read_buffer(output_buffer).cast("I").tolist()
+    assert result[0] == expected_result
+
+
 if __name__ == "__main__":
     run_tests(globals())
