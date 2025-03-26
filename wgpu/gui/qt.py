@@ -536,7 +536,12 @@ WgpuCanvas = QWgpuCanvas
 
 def get_app():
     """Return global instance of Qt app instance or create one if not created yet."""
-    return QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication([])
+        # Store instance bc pyqt will not store it by itself, see https://github.com/pygfx/pygfx/issues/1054
+        QtWidgets.QApplication._wgpu_instance = app
+    return app
 
 
 def run():
