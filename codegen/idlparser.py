@@ -218,6 +218,7 @@ class IdlParser:
             "GPUPipelineConstantValue": "float",
             "GPUExternalTexture": "object",
             "undefined": "None",
+            "ArrayBuffer": "memoryview",
         }
         name = pythonmap.get(name, name)
 
@@ -248,7 +249,7 @@ class IdlParser:
         elif name in ["PredefinedColorSpace"]:
             return "str"
         else:
-            assert name.startswith("GPU")
+            assert name.startswith("GPU"), f"Unknown type: {name}"
             name = name[3:]
             name = name[:-4] if name.endswith("Dict") else name
             if name in self.flags:

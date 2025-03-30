@@ -1003,6 +1003,7 @@ class GPUAdapterInfo(classes.GPUAdapterInfo):
 
 
 class GPUAdapter(classes.GPUAdapter):
+    # FIXME: was request_device_sync(self, *, label: str = "", required_features: List[enums.FeatureName] = [], required_limits: Dict[str, Union[None, int]] = {}, default_queue: structs.QueueDescriptor = {}):
     def request_device_sync(
         self,
         *,
@@ -1010,7 +1011,7 @@ class GPUAdapter(classes.GPUAdapter):
         required_features: List[enums.FeatureName] = [],
         required_limits: Dict[str, Union[None, int]] = {},
         default_queue: structs.QueueDescriptor = {},
-    ):
+    ) -> GPUDevice:
         check_can_use_sync_variants()
         if default_queue:
             check_struct("QueueDescriptor", default_queue)
@@ -1019,6 +1020,7 @@ class GPUAdapter(classes.GPUAdapter):
         )
         return awaitable.sync_wait()
 
+    # FIXME: was request_device_async(self, *, label: str = "", required_features: List[enums.FeatureName] = [], required_limits: Dict[str, Union[None, int]] = {}, default_queue: structs.QueueDescriptor = {}):
     async def request_device_async(
         self,
         *,
@@ -1026,7 +1028,7 @@ class GPUAdapter(classes.GPUAdapter):
         required_features: List[enums.FeatureName] = [],
         required_limits: Dict[str, Union[None, int]] = {},
         default_queue: structs.QueueDescriptor = {},
-    ):
+    ) -> GPUDevice:
         if default_queue:
             check_struct("QueueDescriptor", default_queue)
         awaitable = self._request_device(
@@ -1307,6 +1309,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * wrappedSubmissionIndex)
             libf.wgpuDevicePoll(self._internal, True, ffi.NULL)
 
+    # FIXME: was create_buffer(self, *, label: str = "", size: int, usage: flags.BufferUsage, mapped_at_creation: bool = False):
     def create_buffer(
         self,
         *,
@@ -1314,7 +1317,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         size: int,
         usage: flags.BufferUsage,
         mapped_at_creation: bool = False,
-    ):
+    ) -> GPUBuffer:
         return self._create_buffer(label, int(size), usage, bool(mapped_at_creation))
 
     def _create_buffer(self, label, size, usage, mapped_at_creation):
@@ -1342,6 +1345,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # Return wrapped buffer
         return GPUBuffer(label, id, self, size, usage, map_state)
 
+    # FIXME: was create_texture(self, *, label: str = "", size: Union[List[int], structs.Extent3D], mip_level_count: int = 1, sample_count: int = 1, dimension: enums.TextureDimension = "2d", format: enums.TextureFormat, usage: flags.TextureUsage, view_formats: List[enums.TextureFormat] = []):
     def create_texture(
         self,
         *,
@@ -1353,7 +1357,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         format: enums.TextureFormat,
         usage: flags.TextureUsage,
         view_formats: List[enums.TextureFormat] = [],
-    ):
+    ) -> GPUTexture:
         if isinstance(usage, str):
             usage = str_flag_to_int(flags.TextureUsage, usage)
         usage = int(usage)
@@ -1416,6 +1420,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         }
         return GPUTexture(label, id, self, tex_info)
 
+    # FIXME: was create_sampler(self, *, label: str = "", address_mode_u: enums.AddressMode = "clamp-to-edge", address_mode_v: enums.AddressMode = "clamp-to-edge", address_mode_w: enums.AddressMode = "clamp-to-edge", mag_filter: enums.FilterMode = "nearest", min_filter: enums.FilterMode = "nearest", mipmap_filter: enums.MipmapFilterMode = "nearest", lod_min_clamp: float = 0, lod_max_clamp: float = 32, compare: enums.CompareFunction = optional, max_anisotropy: int = 1):
     def create_sampler(
         self,
         *,
@@ -1430,7 +1435,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         lod_max_clamp: float = 32,
         compare: enums.CompareFunction = optional,
         max_anisotropy: int = 1,
-    ):
+    ) -> GPUSampler:
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, addressModeU: WGPUAddressMode, addressModeV: WGPUAddressMode, addressModeW: WGPUAddressMode, magFilter: WGPUFilterMode, minFilter: WGPUFilterMode, mipmapFilter: WGPUMipmapFilterMode, lodMinClamp: float, lodMaxClamp: float, compare: WGPUCompareFunction, maxAnisotropy: int
         struct = new_struct_p(
             "WGPUSamplerDescriptor *",
@@ -1452,9 +1457,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreateSampler(self._internal, struct)
         return GPUSampler(label, id, self)
 
+    # FIXME: was create_bind_group_layout(self, *, label: str = "", entries: List[structs.BindGroupLayoutEntry]):
     def create_bind_group_layout(
         self, *, label: str = "", entries: List[structs.BindGroupLayoutEntry]
-    ):
+    ) -> GPUBindGroupLayout:
         c_entries_list = []
         for entry in entries:
             check_struct("BindGroupLayoutEntry", entry)
@@ -1558,13 +1564,14 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreateBindGroupLayout(self._internal, struct)
         return GPUBindGroupLayout(label, id, self)
 
+    # FIXME: was create_bind_group(self, *, label: str = "", layout: GPUBindGroupLayout, entries: List[structs.BindGroupEntry]):
     def create_bind_group(
         self,
         *,
         label: str = "",
         layout: GPUBindGroupLayout,
         entries: List[structs.BindGroupEntry],
-    ):
+    ) -> GPUBindGroup:
         c_entries_list = []
         for entry in entries:
             check_struct("BindGroupEntry", entry)
@@ -1624,9 +1631,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreateBindGroup(self._internal, struct)
         return GPUBindGroup(label, id, self)
 
+    # FIXME: was create_pipeline_layout(self, *, label: str = "", bind_group_layouts: List[GPUBindGroupLayout]):
     def create_pipeline_layout(
         self, *, label: str = "", bind_group_layouts: List[GPUBindGroupLayout]
-    ):
+    ) -> GPUPipelineLayout:
         return self._create_pipeline_layout(label, bind_group_layouts, [])
 
     def _create_pipeline_layout(
@@ -1675,13 +1683,14 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreatePipelineLayout(self._internal, struct)
         return GPUPipelineLayout(label, id, self)
 
+    # FIXME: was create_shader_module(self, *, label: str = "", code: str, compilation_hints: List[structs.ShaderModuleCompilationHint] = []):
     def create_shader_module(
         self,
         *,
         label: str = "",
         code: str,
         compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
-    ):
+    ) -> GPUShaderModule:
         if False:
             # Trick the check_struct check in the codegen.
             # Compilation_hint are not used, but part of the WebGPU API (for now)
@@ -1772,25 +1781,27 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             raise RuntimeError("Shader module creation failed")
         return GPUShaderModule(label, id, self)
 
+    # FIXME: was create_compute_pipeline(self, *, label: str = "", layout: Union[GPUPipelineLayout, enums.AutoLayoutMode], compute: structs.ProgrammableStage):
     def create_compute_pipeline(
         self,
         *,
         label: str = "",
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
         compute: structs.ProgrammableStage,
-    ):
+    ) -> GPUComputePipeline:
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
         # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateComputePipeline(self._internal, descriptor)
         return GPUComputePipeline(label, id, self)
 
+    # FIXME: was create_compute_pipeline_async(self, *, label: str = "", layout: Union[GPUPipelineLayout, enums.AutoLayoutMode], compute: structs.ProgrammableStage):
     async def create_compute_pipeline_async(
         self,
         *,
         label: str = "",
         layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
         compute: structs.ProgrammableStage,
-    ):
+    ) -> GPUComputePipeline:
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
 
         if not self._CREATE_PIPELINE_ASYNC_IS_IMPLEMENTED:
@@ -1871,6 +1882,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         )
         return struct
 
+    # FIXME: was create_render_pipeline(self, *, label: str = "", layout: Union[GPUPipelineLayout, enums.AutoLayoutMode], vertex: structs.VertexState, primitive: structs.PrimitiveState = {}, depth_stencil: structs.DepthStencilState = optional, multisample: structs.MultisampleState = {}, fragment: structs.FragmentState = optional):
     def create_render_pipeline(
         self,
         *,
@@ -1881,7 +1893,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_stencil: structs.DepthStencilState = optional,
         multisample: structs.MultisampleState = {},
         fragment: structs.FragmentState = optional,
-    ):
+    ) -> GPURenderPipeline:
         descriptor = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
@@ -1889,6 +1901,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreateRenderPipeline(self._internal, descriptor)
         return GPURenderPipeline(label, id, self)
 
+    # FIXME: was create_render_pipeline_async(self, *, label: str = "", layout: Union[GPUPipelineLayout, enums.AutoLayoutMode], vertex: structs.VertexState, primitive: structs.PrimitiveState = {}, depth_stencil: structs.DepthStencilState = optional, multisample: structs.MultisampleState = {}, fragment: structs.FragmentState = optional):
     async def create_render_pipeline_async(
         self,
         *,
@@ -1899,7 +1912,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_stencil: structs.DepthStencilState = optional,
         multisample: structs.MultisampleState = {},
         fragment: structs.FragmentState = optional,
-    ):
+    ) -> GPURenderPipeline:
         # TODO: wgpuDeviceCreateRenderPipelineAsync is not yet implemented in wgpu-native
         descriptor = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
@@ -2151,7 +2164,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         )
         return c_depth_stencil_state
 
-    def create_command_encoder(self, *, label: str = ""):
+    # FIXME: was create_command_encoder(self, *, label: str = ""):
+    def create_command_encoder(self, *, label: str = "") -> GPUCommandEncoder:
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPUCommandEncoderDescriptor *",
@@ -2163,6 +2177,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         id = libf.wgpuDeviceCreateCommandEncoder(self._internal, struct)
         return GPUCommandEncoder(label, id, self)
 
+    # FIXME: was create_render_bundle_encoder(self, *, label: str = "", color_formats: List[enums.TextureFormat], depth_stencil_format: enums.TextureFormat = optional, sample_count: int = 1, depth_read_only: bool = False, stencil_read_only: bool = False):
     def create_render_bundle_encoder(
         self,
         *,
@@ -2172,7 +2187,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         sample_count: int = 1,
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
-    ):
+    ) -> GPURenderBundleEncoder:
         c_color_formats, color_formats_count = ffi.NULL, 0
         if color_formats:
             color_formats_list = [enummap["TextureFormat." + x] for x in color_formats]
@@ -2199,7 +2214,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         result._objects_to_keep_alive = set()
         return result
 
-    def create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
+    # FIXME: was create_query_set(self, *, label: str = "", type: enums.QueryType, count: int):
+    def create_query_set(
+        self, *, label: str = "", type: enums.QueryType, count: int
+    ) -> GPUQuerySet:
         return self._create_query_set(label, type, count, None)
 
     def _create_statistics_query_set(self, label, count, statistics):
@@ -2251,7 +2269,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     async def _get_lost_async(self):
         raise NotImplementedError()
 
-    def destroy(self):
+    # FIXME: was destroy(self):
+    def destroy(self) -> None:
         # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
         internal = self._internal
         if internal is not None:
@@ -2309,16 +2328,18 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             raise ValueError("Mapped range must not extend beyond total buffer size.")
         return offset, size
 
+    # FIXME: was map_sync(self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None):
     def map_sync(
         self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
-    ):
+    ) -> None:
         check_can_use_sync_variants()
         awaitable = self._map(mode, offset, size)
         return awaitable.sync_wait()
 
+    # FIXME: was map_async(self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None):
     async def map_async(
         self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
-    ):
+    ) -> None:
         awaitable = self._map(mode, offset, size)  # for now
         return await awaitable
 
@@ -2390,7 +2411,8 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         return awaitable
 
-    def unmap(self):
+    # FIXME: was unmap(self):
+    def unmap(self) -> None:
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only unmap a buffer if its currently mapped.")
         # H: void f(WGPUBuffer buffer)
@@ -2496,7 +2518,8 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         return src_m
 
-    def destroy(self):
+    # FIXME: was destroy(self):
+    def destroy(self) -> None:
         # NOTE: destroy means that the wgpu-core object gets into a destroyed
         # state. The wgpu-core object still exists. So destroying is quite
         # different from releasing.
@@ -2514,6 +2537,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuTextureRelease
 
+    # FIXME: was create_view(self, *, label: str = "", format: enums.TextureFormat = optional, dimension: enums.TextureViewDimension = optional, usage: flags.TextureUsage = 0, aspect: enums.TextureAspect = "all", base_mip_level: int = 0, mip_level_count: int = optional, base_array_layer: int = 0, array_layer_count: int = optional):
     def create_view(
         self,
         *,
@@ -2526,7 +2550,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         mip_level_count: int = optional,
         base_array_layer: int = 0,
         array_layer_count: int = optional,
-    ):
+    ) -> GPUTextureView:
         # Resolve defaults
         if not format:
             format = self._tex_info["format"]
@@ -2567,7 +2591,8 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         id = libf.wgpuTextureCreateView(self._internal, struct)
         return GPUTextureView(label, id, self._device, self, self.size)
 
-    def destroy(self):
+    # FIXME: was destroy(self):
+    def destroy(self) -> None:
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUTexture texture)
@@ -2603,11 +2628,13 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuShaderModuleRelease
 
-    def get_compilation_info_sync(self):
+    # FIXME: was get_compilation_info_sync(self):
+    def get_compilation_info_sync(self) -> GPUCompilationInfo:
         check_can_use_sync_variants()
         return self._get_compilation_info()
 
-    async def get_compilation_info_async(self):
+    # FIXME: was get_compilation_info_async(self):
+    async def get_compilation_info_async(self) -> GPUCompilationInfo:
         return self._get_compilation_info()
 
     def _get_compilation_info(self):
@@ -2643,7 +2670,8 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
 
 class GPUPipelineBase(classes.GPUPipelineBase):
-    def get_bind_group_layout(self, index: int):
+    # FIXME: was get_bind_group_layout(self, index: int):
+    def get_bind_group_layout(self, index: int) -> GPUBindGroupLayout:
         # H: WGPUBindGroupLayout wgpuComputePipelineGetBindGroupLayout(WGPUComputePipeline computePipeline, uint32_t groupIndex)
         # H: WGPUBindGroupLayout wgpuRenderPipelineGetBindGroupLayout(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
         function = type(self)._get_bind_group_layout_function
@@ -2776,7 +2804,8 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
-    def push_debug_group(self, group_label: str):
+    # FIXME: was push_debug_group(self, group_label: str):
+    def push_debug_group(self, group_label: str) -> None:
         c_group_label = to_c_string_view(group_label)
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, WGPUStringView groupLabel)
         # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, WGPUStringView groupLabel)
@@ -2785,7 +2814,8 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         function = type(self)._push_debug_group_function
         function(self._internal, c_group_label)
 
-    def pop_debug_group(self):
+    # FIXME: was pop_debug_group(self):
+    def pop_debug_group(self) -> None:
         # H: void wgpuCommandEncoderPopDebugGroup(WGPUCommandEncoder commandEncoder)
         # H: void wgpuComputePassEncoderPopDebugGroup(WGPUComputePassEncoder computePassEncoder)
         # H: void wgpuRenderPassEncoderPopDebugGroup(WGPURenderPassEncoder renderPassEncoder)
@@ -2793,7 +2823,8 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         function = type(self)._pop_debug_group_function
         function(self._internal)
 
-    def insert_debug_marker(self, marker_label: str):
+    # FIXME: was insert_debug_marker(self, marker_label: str):
+    def insert_debug_marker(self, marker_label: str) -> None:
         c_marker_label = to_c_string_view(marker_label)
         # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, WGPUStringView markerLabel)
         # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, WGPUStringView markerLabel)
@@ -2815,7 +2846,8 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
 
 
 class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
-    def set_pipeline(self, pipeline: GPURenderPipeline):
+    # FIXME: was set_pipeline(self, pipeline: GPURenderPipeline):
+    def set_pipeline(self, pipeline: GPURenderPipeline) -> None:
         self._maybe_keep_alive(pipeline)
         pipeline_id = pipeline._internal
         # H: void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
@@ -2823,13 +2855,14 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         function = type(self)._set_pipeline_function
         function(self._internal, pipeline_id)
 
+    # FIXME: was set_index_buffer(self, buffer: GPUBuffer, index_format: enums.IndexFormat, offset: int = 0, size: Optional[int] = None):
     def set_index_buffer(
         self,
         buffer: GPUBuffer,
         index_format: enums.IndexFormat,
         offset: int = 0,
         size: Optional[int] = None,
-    ):
+    ) -> None:
         self._maybe_keep_alive(buffer)
         if not size:
             size = lib.WGPU_WHOLE_SIZE
@@ -2841,9 +2874,10 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
             self._internal, buffer._internal, c_index_format, int(offset), int(size)
         )
 
+    # FIXME: was set_vertex_buffer(self, slot: int, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None):
     def set_vertex_buffer(
         self, slot: int, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
-    ):
+    ) -> None:
         self._maybe_keep_alive(buffer)
         if not size:
             size = lib.WGPU_WHOLE_SIZE
@@ -2852,13 +2886,14 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         function = type(self)._set_vertex_buffer_function
         function(self._internal, int(slot), buffer._internal, int(offset), int(size))
 
+    # FIXME: was draw(self, vertex_count: int, instance_count: int = 1, first_vertex: int = 0, first_instance: int = 0):
     def draw(
         self,
         vertex_count: int,
         instance_count: int = 1,
         first_vertex: int = 0,
         first_instance: int = 0,
-    ):
+    ) -> None:
         # H: void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
         # H: void wgpuRenderBundleEncoderDraw(WGPURenderBundleEncoder renderBundleEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
         function = type(self)._draw_function
@@ -2866,7 +2901,8 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
 
-    def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
+    # FIXME: was draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
+    def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int) -> None:
         self._maybe_keep_alive(indirect_buffer)
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
@@ -2874,6 +2910,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         function = type(self)._draw_indirect_function
         function(self._internal, buffer_id, int(indirect_offset))
 
+    # FIXME: was draw_indexed(self, index_count: int, instance_count: int = 1, first_index: int = 0, base_vertex: int = 0, first_instance: int = 0):
     def draw_indexed(
         self,
         index_count: int,
@@ -2881,7 +2918,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         first_index: int = 0,
         base_vertex: int = 0,
         first_instance: int = 0,
-    ):
+    ) -> None:
         # H: void wgpuRenderPassEncoderDrawIndexed(WGPURenderPassEncoder renderPassEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
         # H: void wgpuRenderBundleEncoderDrawIndexed(WGPURenderBundleEncoder renderBundleEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
         function = type(self)._draw_indexed_function
@@ -2894,7 +2931,10 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
             first_instance,
         )
 
-    def draw_indexed_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
+    # FIXME: was draw_indexed_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
+    def draw_indexed_indirect(
+        self, indirect_buffer: GPUBuffer, indirect_offset: int
+    ) -> None:
         self._maybe_keep_alive(indirect_buffer)
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndexedIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
@@ -2915,12 +2955,13 @@ class GPUCommandEncoder(
     # GPUObjectBaseMixin
     _release_function = libf.wgpuCommandEncoderRelease
 
+    # FIXME: was begin_compute_pass(self, *, label: str = "", timestamp_writes: structs.ComputePassTimestampWrites = optional):
     def begin_compute_pass(
         self,
         *,
         label: str = "",
         timestamp_writes: structs.ComputePassTimestampWrites = optional,
-    ):
+    ) -> GPUComputePassEncoder:
         c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
             check_struct("ComputePassTimestampWrites", timestamp_writes)
@@ -2947,6 +2988,7 @@ class GPUCommandEncoder(
         encoder = GPUComputePassEncoder(label, raw_encoder, self._device)
         return encoder
 
+    # FIXME: was begin_render_pass(self, *, label: str = "", color_attachments: List[structs.RenderPassColorAttachment], depth_stencil_attachment: structs.RenderPassDepthStencilAttachment = optional, occlusion_query_set: GPUQuerySet = optional, timestamp_writes: structs.RenderPassTimestampWrites = optional, max_draw_count: int = 50000000):
     def begin_render_pass(
         self,
         *,
@@ -2956,7 +2998,7 @@ class GPUCommandEncoder(
         occlusion_query_set: GPUQuerySet = optional,
         timestamp_writes: structs.RenderPassTimestampWrites = optional,
         max_draw_count: int = 50000000,
-    ):
+    ) -> GPURenderPassEncoder:
         c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
             check_struct("RenderPassTimestampWrites", timestamp_writes)
@@ -3104,9 +3146,10 @@ class GPUCommandEncoder(
         )
         return c_depth_stencil_attachment
 
+    # FIXME: was clear_buffer(self, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None):
     def clear_buffer(
         self, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
-    ):
+    ) -> None:
         offset = int(offset)
         if offset % 4 != 0:  # pragma: no cover
             raise ValueError("offset must be a multiple of 4")
@@ -3128,6 +3171,7 @@ class GPUCommandEncoder(
             self._internal, buffer._internal, offset, size
         )
 
+    # FIXME: was copy_buffer_to_buffer(self, source: GPUBuffer, source_offset: int, destination: GPUBuffer, destination_offset: int, size: int):
     def copy_buffer_to_buffer(
         self,
         source: GPUBuffer,
@@ -3135,7 +3179,7 @@ class GPUCommandEncoder(
         destination: GPUBuffer,
         destination_offset: int,
         size: int,
-    ):
+    ) -> None:
         if source_offset % 4 != 0:  # pragma: no cover
             raise ValueError("source_offset must be a multiple of 4")
         if destination_offset % 4 != 0:  # pragma: no cover
@@ -3157,12 +3201,13 @@ class GPUCommandEncoder(
             int(size),
         )
 
+    # FIXME: was copy_buffer_to_texture(self, source: structs.TexelCopyBufferInfo, destination: structs.TexelCopyTextureInfo, copy_size: Union[List[int], structs.Extent3D]):
     def copy_buffer_to_texture(
         self,
         source: structs.TexelCopyBufferInfo,
         destination: structs.TexelCopyTextureInfo,
         copy_size: Union[List[int], structs.Extent3D],
-    ):
+    ) -> None:
         check_struct("TexelCopyBufferInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
 
@@ -3223,12 +3268,13 @@ class GPUCommandEncoder(
             c_copy_size,
         )
 
+    # FIXME: was copy_texture_to_buffer(self, source: structs.TexelCopyTextureInfo, destination: structs.TexelCopyBufferInfo, copy_size: Union[List[int], structs.Extent3D]):
     def copy_texture_to_buffer(
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyBufferInfo,
         copy_size: Union[List[int], structs.Extent3D],
-    ):
+    ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyBufferInfo", destination)
 
@@ -3289,12 +3335,13 @@ class GPUCommandEncoder(
             c_copy_size,
         )
 
+    # FIXME: was copy_texture_to_texture(self, source: structs.TexelCopyTextureInfo, destination: structs.TexelCopyTextureInfo, copy_size: Union[List[int], structs.Extent3D]):
     def copy_texture_to_texture(
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyTextureInfo,
         copy_size: Union[List[int], structs.Extent3D],
-    ):
+    ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
 
@@ -3354,7 +3401,8 @@ class GPUCommandEncoder(
             c_copy_size,
         )
 
-    def finish(self, *, label: str = ""):
+    # FIXME: was finish(self, *, label: str = ""):
+    def finish(self, *, label: str = "") -> GPUCommandBuffer:
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPUCommandBufferDescriptor *",
@@ -3366,6 +3414,7 @@ class GPUCommandEncoder(
 
         return GPUCommandBuffer(label, id, self._device)
 
+    # FIXME: was resolve_query_set(self, query_set: GPUQuerySet, first_query: int, query_count: int, destination: GPUBuffer, destination_offset: int):
     def resolve_query_set(
         self,
         query_set: GPUQuerySet,
@@ -3373,7 +3422,7 @@ class GPUCommandEncoder(
         query_count: int,
         destination: GPUBuffer,
         destination_offset: int,
-    ):
+    ) -> None:
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUQuerySet querySet, uint32_t firstQuery, uint32_t queryCount, WGPUBuffer destination, uint64_t destinationOffset)
         libf.wgpuCommandEncoderResolveQuerySet(
             self._internal,
@@ -3407,32 +3456,36 @@ class GPUComputePassEncoder(
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePassEncoderRelease
 
-    def set_pipeline(self, pipeline: GPUComputePipeline):
+    # FIXME: was set_pipeline(self, pipeline: GPUComputePipeline):
+    def set_pipeline(self, pipeline: GPUComputePipeline) -> None:
         pipeline_id = pipeline._internal
         # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)
         libf.wgpuComputePassEncoderSetPipeline(self._internal, pipeline_id)
 
+    # FIXME: was dispatch_workgroups(self, workgroup_count_x: int, workgroup_count_y: int = 1, workgroup_count_z: int = 1):
     def dispatch_workgroups(
         self,
         workgroup_count_x: int,
         workgroup_count_y: int = 1,
         workgroup_count_z: int = 1,
-    ):
+    ) -> None:
         # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ)
         libf.wgpuComputePassEncoderDispatchWorkgroups(
             self._internal, workgroup_count_x, workgroup_count_y, workgroup_count_z
         )
 
+    # FIXME: was dispatch_workgroups_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int):
     def dispatch_workgroups_indirect(
         self, indirect_buffer: GPUBuffer, indirect_offset: int
-    ):
+    ) -> None:
         buffer_id = indirect_buffer._internal
         # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         libf.wgpuComputePassEncoderDispatchWorkgroupsIndirect(
             self._internal, buffer_id, int(indirect_offset)
         )
 
-    def end(self):
+    # FIXME: was end(self):
+    def end(self) -> None:
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
         # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
@@ -3475,6 +3528,7 @@ class GPURenderPassEncoder(
     # GPUObjectBaseMixin
     _release_function = libf.wgpuRenderPassEncoderRelease
 
+    # FIXME: was set_viewport(self, x: float, y: float, width: float, height: float, min_depth: float, max_depth: float):
     def set_viewport(
         self,
         x: float,
@@ -3483,7 +3537,7 @@ class GPURenderPassEncoder(
         height: float,
         min_depth: float,
         max_depth: float,
-    ):
+    ) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth)
         libf.wgpuRenderPassEncoderSetViewport(
             self._internal,
@@ -3495,13 +3549,15 @@ class GPURenderPassEncoder(
             float(max_depth),
         )
 
-    def set_scissor_rect(self, x: int, y: int, width: int, height: int):
+    # FIXME: was set_scissor_rect(self, x: int, y: int, width: int, height: int):
+    def set_scissor_rect(self, x: int, y: int, width: int, height: int) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
         libf.wgpuRenderPassEncoderSetScissorRect(
             self._internal, int(x), int(y), int(width), int(height)
         )
 
-    def set_blend_constant(self, color: Union[List[float], structs.Color]):
+    # FIXME: was set_blend_constant(self, color: Union[List[float], structs.Color]):
+    def set_blend_constant(self, color: Union[List[float], structs.Color]) -> None:
         if isinstance(color, dict):
             check_struct("Color", color)
             color = _tuple_from_color(color)
@@ -3516,18 +3572,21 @@ class GPURenderPassEncoder(
         # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUColor const * color)
         libf.wgpuRenderPassEncoderSetBlendConstant(self._internal, c_color)
 
-    def set_stencil_reference(self, reference: int):
+    # FIXME: was set_stencil_reference(self, reference: int):
+    def set_stencil_reference(self, reference: int) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t reference)
         libf.wgpuRenderPassEncoderSetStencilReference(self._internal, int(reference))
 
-    def end(self):
+    # FIXME: was end(self):
+    def end(self) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
         # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
         # As of wgpu-native v22.1.0.5, this bug is still present.
         self._release()
 
-    def execute_bundles(self, bundles: List[GPURenderBundle]):
+    # FIXME: was execute_bundles(self, bundles: List[GPURenderBundle]):
+    def execute_bundles(self, bundles: List[GPURenderBundle]) -> None:
         bundle_ids = [bundle._internal for bundle in bundles]
         c_bundle_info = new_array("WGPURenderBundle[]", bundle_ids)
         # H: void f(WGPURenderPassEncoder renderPassEncoder, size_t bundleCount, WGPURenderBundle const * bundles)
@@ -3535,11 +3594,13 @@ class GPURenderPassEncoder(
             self._internal, len(bundles), c_bundle_info
         )
 
-    def begin_occlusion_query(self, query_index: int):
+    # FIXME: was begin_occlusion_query(self, query_index: int):
+    def begin_occlusion_query(self, query_index: int) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t queryIndex)
         libf.wgpuRenderPassEncoderBeginOcclusionQuery(self._internal, int(query_index))
 
-    def end_occlusion_query(self):
+    # FIXME: was end_occlusion_query(self):
+    def end_occlusion_query(self) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEndOcclusionQuery(self._internal)
 
@@ -3617,7 +3678,8 @@ class GPURenderBundleEncoder(
     # GPUObjectBaseMixin
     _release_function = libf.wgpuRenderBundleEncoderRelease
 
-    def finish(self, *, label: str = ""):
+    # FIXME: was finish(self, *, label: str = ""):
+    def finish(self, *, label: str = "") -> GPURenderBundle:
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPURenderBundleDescriptor *",
@@ -3640,12 +3702,14 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuQueueRelease
 
-    def submit(self, command_buffers: List[GPUCommandBuffer]):
+    # FIXME: was submit(self, command_buffers: List[GPUCommandBuffer]):
+    def submit(self, command_buffers: List[GPUCommandBuffer]) -> None:
         command_buffer_ids = [cb._internal for cb in command_buffers]
         c_command_buffers = new_array("WGPUCommandBuffer[]", command_buffer_ids)
         # H: void f(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands)
         libf.wgpuQueueSubmit(self._internal, len(command_buffer_ids), c_command_buffers)
 
+    # FIXME: was write_buffer(self, buffer: GPUBuffer, buffer_offset: int, data: memoryview, data_offset: int = 0, size: Optional[int] = None):
     def write_buffer(
         self,
         buffer: GPUBuffer,
@@ -3653,7 +3717,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         data: memoryview,
         data_offset: int = 0,
         size: Optional[int] = None,
-    ):
+    ) -> None:
         # We support anything that memoryview supports, i.e. anything
         # that implements the buffer protocol, including, bytes,
         # bytearray, ctypes arrays, numpy arrays, etc.
@@ -3721,13 +3785,14 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
         return data
 
+    # FIXME: was write_texture(self, destination: structs.TexelCopyTextureInfo, data: memoryview, data_layout: structs.TexelCopyBufferLayout, size: Union[List[int], structs.Extent3D]):
     def write_texture(
         self,
         destination: structs.TexelCopyTextureInfo,
         data: memoryview,
         data_layout: structs.TexelCopyBufferLayout,
         size: Union[List[int], structs.Extent3D],
-    ):
+    ) -> None:
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
 
@@ -3885,12 +3950,14 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
         return data
 
-    def on_submitted_work_done_sync(self):
+    # FIXME: was on_submitted_work_done_sync(self):
+    def on_submitted_work_done_sync(self) -> None:
         check_can_use_sync_variants()
         awaitable = self._on_submitted_work_done()
         awaitable.sync_wait()
 
-    async def on_submitted_work_done_async(self):
+    # FIXME: was on_submitted_work_done_async(self):
+    async def on_submitted_work_done_async(self) -> None:
         awaitable = self._on_submitted_work_done()
         await awaitable
 
@@ -3942,7 +4009,8 @@ class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuQuerySetRelease
 
-    def destroy(self):
+    # FIXME: was destroy(self):
+    def destroy(self) -> None:
         # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
         internal = self._internal
         if internal is not None:
