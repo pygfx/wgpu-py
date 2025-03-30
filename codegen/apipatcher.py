@@ -432,6 +432,19 @@ class IdlPatcherMixin:
         idl_line = functions[name_idl]
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
         args = [Attribute(arg) for arg in args if arg.strip()]
+        return_type = idl_line.split()[0]
+        if return_type.startswith("["):
+            # skip the [NewObject] and [SameObject] parts?
+            return_type = idl_line.split()[1]
+        if return_type.startswith("Promise"):
+            # resolve Promise<Type> to Type (should be in .resolve_type() I think)
+            return_type = return_type[8:-1]
+        return_type = return_type.removeprefix("constructor(")
+        if return_type == "optional":
+            return_type = idl_line.split()[1]
+        return_type = self.idl.resolve_type(return_type)
+        # assert not return_type or return_type in self.idl.classes, f"Unknown return type {return_type}"
+
 
         # If one arg that is a dict, flatten dict to kwargs
         if len(args) == 1 and args[0].typename.endswith(
@@ -465,7 +478,7 @@ class IdlPatcherMixin:
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"
-        line = format_code(line, True).split("):")[0] + "):"
+        line = format_code(line, True).split("):")[0] + f") -> {return_type}:"
         return "    " + line
 
     def _arg_from_attribute(self, methodname, attribute, force_optional=False):
