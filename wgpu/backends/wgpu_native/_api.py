@@ -628,12 +628,15 @@ class GPU(classes.GPU):
         # Populate a dict according to the WebGPU spec: https://gpuweb.github.io/gpuweb/#gpuadapterinfo
         # And add all other info we get from wgpu-native too.
         # note: device is human readable. description is driver-description; usually more cryptic, or empty.
-        adapter_info = {
+        adapter_info_data = {
             # Spec
             "vendor": to_py_str("vendor"),
             "architecture": to_py_str("architecture"),
             "device": to_py_str("device"),
             "description": to_py_str("description"),
+            # Defaults for stackgroup info from §3.6.2.4 of webgpu specification
+            "stackgroup_min_size": getattr(c_info, "stackgroupMinSize", 4),
+            "stackgroup_max_size": getattr(c_info, "stackgroupMaxSize", 128),
             # Extra
             "vendor_id": int(c_info.vendorID),
             "device_id": int(c_info.deviceID),
@@ -644,6 +647,7 @@ class GPU(classes.GPU):
                 c_info.backendType, "unknown"
             ),
         }
+        adapter_info = GPUAdapterInfo(adapter_info_data)
 
         # Allow Rust to release its string objects
         # H: void f(WGPUAdapterInfo adapterInfo)
