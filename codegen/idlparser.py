@@ -236,6 +236,10 @@ class IdlParser:
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
             names = sorted(set(names))
             return f"Union[{', '.join(names)}]"
+        if name.startswith("Promise<") and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            # recursive call if there are any of the above situations?
+            return self.resolve_type(name)
 
         # Triage
         if name in __builtins__:

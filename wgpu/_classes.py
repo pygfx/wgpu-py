@@ -2521,8 +2521,9 @@ class GPUOutOfMemoryError(GPUError, MemoryError):
     """An error raised when the GPU is out of memory."""
 
     # FIXME: was __init__(self, message: str):
+    # FIXME: was __init__(self, message: str) -> str:
     # IDL: constructor(DOMString message);
-    def __init__(self, message: str) -> str:
+    def __init__(self, message: str):
         super().__init__(message or "GPU is out of memory.")
 
 
@@ -2530,8 +2531,9 @@ class GPUValidationError(GPUError):
     """An error raised when the pipeline could not be validated."""
 
     # FIXME: was __init__(self, message: str):
+    # FIXME: was __init__(self, message: str) -> str:
     # IDL: constructor(DOMString message);
-    def __init__(self, message: str) -> str:
+    def __init__(self, message: str):
         super().__init__(message)
 
 
@@ -2539,8 +2541,9 @@ class GPUPipelineError(Exception):
     """An error raised when a pipeline could not be created."""
 
     # FIXME: was __init__(self, message: str, options: structs.PipelineErrorInit):
+    # FIXME: was __init__(self, message: str, options: structs.PipelineErrorInit) -> str:
     # IDL: constructor(optional DOMString message = "", GPUPipelineErrorInit options);
-    def __init__(self, message: str, options: structs.PipelineErrorInit) -> str:
+    def __init__(self, message: str, options: structs.PipelineErrorInit):
         super().__init__(message or "")
         self._options = options
 
@@ -2559,8 +2562,9 @@ class GPUInternalError(GPUError):
     """
 
     # FIXME: was __init__(self, message: str):
+    # FIXME: was __init__(self, message: str) -> str:
     # IDL: constructor(DOMString message);
-    def __init__(self, message: str) -> str:
+    def __init__(self, message: str):
         super().__init__(message)
 
 

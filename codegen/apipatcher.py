@@ -418,7 +418,7 @@ class IdlPatcherMixin:
             line = "async " + line
         return "    " + line
 
-    def get_method_def(self, classname, methodname):
+    def get_method_def(self, classname, methodname) -> str:
         functions = self.idl.classes[classname].functions
         name_idl = self.name2idl(classname, methodname)
         assert name_idl in functions
@@ -434,16 +434,14 @@ class IdlPatcherMixin:
         args = [Attribute(arg) for arg in args if arg.strip()]
         return_type = idl_line.split()[0]
         if return_type.startswith("["):
-            # skip the [NewObject] and [SameObject] parts?
+            # TODO: figure out if [NewObject] can be skipped: https://webidl.spec.whatwg.org/#NewObject
+            # [SameObject] only applicable to readonly attribute - so we shouldn't get here anyway.
             return_type = idl_line.split()[1]
-        if return_type.startswith("Promise"):
-            # resolve Promise<Type> to Type (should be in .resolve_type() I think)
-            return_type = return_type[8:-1]
-        return_type = return_type.removeprefix("constructor(")
-        if return_type == "optional":
-            return_type = idl_line.split()[1]
-        return_type = self.idl.resolve_type(return_type)
-        # assert not return_type or return_type in self.idl.classes, f"Unknown return type {return_type}"
+        if return_type.startswith("constructor"):
+            # this means __init__ which essentially returns None (used with Error Messages)
+            return_type = None
+        if return_type:
+            return_type = self.idl.resolve_type(return_type)
 
 
         # If one arg that is a dict, flatten dict to kwargs
@@ -478,7 +476,7 @@ class IdlPatcherMixin:
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"
-        line = format_code(line, True).split("):")[0] + f") -> {return_type}:"
+        line = format_code(line, True).split("):")[0] + f"){f' -> {return_type}' if return_type else ''}:"
         return "    " + line
 
     def _arg_from_attribute(self, methodname, attribute, force_optional=False):
