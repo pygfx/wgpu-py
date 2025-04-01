@@ -218,6 +218,7 @@ class IdlParser:
             "GPUPipelineConstantValue": "float",
             "GPUExternalTexture": "object",
             "undefined": "None",
+            "ArrayBuffer": "memoryview",
         }
         name = pythonmap.get(name, name)
 
@@ -235,6 +236,10 @@ class IdlParser:
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
             names = sorted(set(names))
             return f"Union[{', '.join(names)}]"
+        if name.startswith("Promise<") and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            # recursive call if there are any of the above situations?
+            return self.resolve_type(name)
 
         # Triage
         if name in __builtins__:
@@ -248,7 +253,7 @@ class IdlParser:
         elif name in ["PredefinedColorSpace"]:
             return "str"
         else:
-            assert name.startswith("GPU")
+            assert name.startswith("GPU"), f"Unknown type: {name}"
             name = name[3:]
             name = name[:-4] if name.endswith("Dict") else name
             if name in self.flags:
