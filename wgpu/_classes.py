@@ -551,13 +551,16 @@ class GPUAdapterInfo:
     @property
     def subgroup_min_size(self):
         """If the "subgroups" feature is supported, the minimum supported subgroup size for the adapter."""
-        return self._info.get("subgroup_min_size", None)
+        return self._info.get("subgroup_min_size")
 
     # IDL: readonly attribute unsigned long subgroupMaxSize;
     @property
     def subgroup_max_size(self):
         """If the "subgroups" feature is supported, the maximum supported subgroup size for the adapter."""
-        return self._info.get("subgroup_max_size", None)
+        return self._info.get("subgroup_max_size")
+
+    def __getitem__(self, item):
+        return self._info.get(item, None)
 
 
 class GPUAdapter:
@@ -582,7 +585,7 @@ class GPUAdapter:
 
         assert isinstance(features, set)
         assert isinstance(limits, dict)
-        assert isinstance(adapter_info, dict)
+        assert isinstance(adapter_info, GPUAdapterInfo)
 
         self._features = features
         self._limits = limits
@@ -599,6 +602,12 @@ class GPUAdapter:
     def limits(self):
         """A dict with limits for the adapter."""
         return self._limits
+
+    # IDL: [SameObject] readonly attribute GPUAdapterInfo info;
+    @property
+    def info(self):
+        """Information associated with this adapter."""
+        return self._adapter_info
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {}); -> USVString label = "", sequence<GPUFeatureName> requiredFeatures = [], record<DOMString, (GPUSize64 or undefined)> requiredLimits = {}, GPUQueueDescriptor defaultQueue = {}
     def request_device_sync(
@@ -647,19 +656,12 @@ class GPUAdapter:
         """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
-    # IDL: [SameObject] readonly attribute GPUAdapterInfo info;
-    @property
-    def info(self):
-        """A dict with information about this adapter, such as the vendor and device name."""
-        # Note: returns a dict rather than an GPUAdapterInfo instance.
-        return self._adapter_info
-
     @apidiff.add("Useful in multi-gpu environments")
     @property
     def summary(self):
         """A one-line summary of the info of this adapter (device, adapter_type, backend_type)."""
         d = self._adapter_info
-        return f"{d['device']} ({d['adapter_type']}) via {d['backend_type']}"
+        return f"{d.device} ({d['adapter_type']}) via {d['backend_type']}"
 
 
 class GPUObjectBase:
