@@ -442,7 +442,6 @@ class IdlPatcherMixin:
         if return_type:
             return_type = self.idl.resolve_type(return_type)
 
-
         # If one arg that is a dict, flatten dict to kwargs
         if len(args) == 1 and args[0].typename.endswith(
             ("Options", "Descriptor", "Configuration")
@@ -475,7 +474,10 @@ class IdlPatcherMixin:
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"
-        line = format_code(line, True).split("):")[0] + f"){f' -> {return_type}' if return_type else ''}:"
+        line = (
+            format_code(line, True).split("):")[0]
+            + f"){f' -> {return_type}' if return_type else ''}:"
+        )
         return "    " + line
 
     def _arg_from_attribute(self, methodname, attribute, force_optional=False):
