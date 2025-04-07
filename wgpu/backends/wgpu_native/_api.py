@@ -424,6 +424,7 @@ libf = SafeLibCalls(lib, error_handler)
 
 
 class GPU(classes.GPU):
+    # FIXME: was request_adapter_sync(self, *, feaure_level: str = "core", power_preference: enums.PowerPreference = None, force_fallback_adapter: bool = False, canvas=None):
     def request_adapter_sync(
         self,
         *,
@@ -431,7 +432,7 @@ class GPU(classes.GPU):
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
-    ):
+    ) -> GPUAdapter:
         """Sync version of ``request_adapter_async()``.
         This is the implementation based on wgpu-native.
         """
@@ -445,6 +446,7 @@ class GPU(classes.GPU):
 
         return awaitable.sync_wait()
 
+    # FIXME: was request_adapter_async(self, *, feaure_level: str = "core", power_preference: enums.PowerPreference = None, force_fallback_adapter: bool = False, canvas=None):
     async def request_adapter_async(
         self,
         *,
@@ -452,7 +454,7 @@ class GPU(classes.GPU):
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
-    ):
+    ) -> GPUAdapter:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 

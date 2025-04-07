@@ -433,9 +433,8 @@ class IdlPatcherMixin:
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
         args = [Attribute(arg) for arg in args if arg.strip()]
         return_type = idl_line.split()[0]
-        if return_type.startswith("["):
-            # TODO: figure out if [NewObject] can be skipped: https://webidl.spec.whatwg.org/#NewObject
-            # [SameObject] only applicable to readonly attribute - so we shouldn't get here anyway.
+        if return_type.startswith("[NewObject]"):
+            # [NewObject] can be skipped: https://webidl.spec.whatwg.org/#NewObject
             return_type = idl_line.split()[1]
         if return_type.startswith("constructor"):
             # this means __init__ which essentially returns None (used with Error Messages)

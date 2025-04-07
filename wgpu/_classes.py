@@ -96,7 +96,7 @@ class GPU:
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
-    ):
+    ) -> GPUAdapter:
         """Sync version of `request_adapter_async()`.
 
         Provided by wgpu-py, but not compatible with WebGPU.
@@ -119,7 +119,7 @@ class GPU:
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
-    ):
+    ) -> GPUAdapter:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 
