@@ -883,18 +883,21 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         for attempt in [1, 2]:
             # H: void f(WGPUSurface surface, WGPUSurfaceTexture * surfaceTexture)
             libf.wgpuSurfaceGetCurrentTexture(surface_id, surface_texture)
-            status = surface_texture.status
+            status_int = surface_texture.status
+            status_str = enum_int2str["SurfaceGetCurrentTextureStatus"].get(
+                status_int, "Unknown"
+            )
             texture_id = surface_texture.texture
-            if status == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
+            if status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
                 break  # Yay! Everything is good and we can render this frame.
-            elif status == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
+            elif status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
                 # Still OK - the surface can present the frame, but in a suboptimal way. The surface may need reconfiguration.
                 logger.warning("The surface texture is suboptimal.")
                 break
             if texture_id:
                 # H: void f(WGPUTexture texture)
                 libf.wgpuTextureRelease(texture_id)
-            if attempt == 1 and status in [
+            if attempt == 1 and status_int in [
                 lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
@@ -903,14 +906,18 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 # On Window+Qt this happens e.g. when the window has resized
                 # (status==Outdated), but also when moving the window from one
                 # monitor to another with different scale-factor.
-                logger.info(f"Re-configuring canvas context ({status}).")
+                logger.info(
+                    f"Re-configuring canvas context, because {status_str} ({status_int})."
+                )
                 self._configure_screen_real(*new_size)
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
                 # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
                 # WGPUSurfaceGetCurrentTextureStatus_Error
                 # Or if this is the second attempt.
-                raise RuntimeError(f"Cannot get surface texture ({status}).")
+                raise RuntimeError(
+                    f"Cannot get surface texture: {status_str} ({status_int})."
+                )
 
         # I don't expect this to happen, but let's check just in case.
         if not texture_id:

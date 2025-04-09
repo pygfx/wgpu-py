@@ -516,4 +516,14 @@ enum_int2str = {
         3: "Unpremultiplied",
         4: "Inherit",
     },
+    "SurfaceGetCurrentTextureStatus": {
+        1: "SuccessOptimal",
+        2: "SuccessSuboptimal",
+        3: "Timeout",
+        4: "Outdated",
+        5: "Lost",
+        6: "OutOfMemory",
+        7: "DeviceLost",
+        8: "Error",
+    },
 }
