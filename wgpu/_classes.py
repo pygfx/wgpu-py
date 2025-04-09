@@ -253,11 +253,29 @@ class GPUCanvasContext:
                 # Query capabilities from the surface
                 self._capabilities.update(self._get_capabilities_screen(adapter))
             else:
-                # Default image capabilities
+                # Query format capabilities from the info provided by the canvas
+                formats = []
+                for format in self._present_methods["bitmap"]["formats"]:
+                    channels, _, fmt = format.partition("-")
+                    channels = {"i": "r", "ia": "rg"}.get(channels, channels)
+                    fmt = {
+                        "u8": "8unorm",
+                        "u16": "16uint",
+                        "f16": "16float",
+                        "f32": "32float",
+                    }.get(fmt, fmt)
+                    wgpu_format = channels + fmt
+                    wgpu_format_srgb = wgpu_format + "-srgb"
+                    if wgpu_format_srgb in enums.TextureFormat:
+                        formats.append(wgpu_format_srgb)
+                    formats.append(wgpu_format)
+                # Assume alpha modes for now
+                alpha_modes = [enums.CanvasAlphaMode.opaque]
+                # Build capabilitied dict
                 self._capabilities = {
-                    "formats": ["rgba8unorm-srgb", "rgba8unorm"],
+                    "formats": formats,
                     "usages": 0xFF,
-                    "alpha_modes": [enums.CanvasAlphaMode.opaque],
+                    "alpha_modes": alpha_modes,
                 }
             # Derived defaults
             if "view_formats" not in self._capabilities:
@@ -502,9 +520,24 @@ class GPUCanvasContext:
             size,
         )
 
+        # Derive struct dtype from wgpu texture format
+        memoryview_type = "B"
+        if "float" in format:
+            memoryview_type = "e" if "16" in format else "f"
+        else:
+            if "32" in format:
+                memoryview_type = "I"
+            elif "16" in format:
+                memoryview_type = "H"
+            else:
+                memoryview_type = "B"
+            if "sint" in format:
+                memoryview_type = memoryview_type.lower()
+
         # Represent as memory object to avoid numpy dependency
         # Equivalent: np.frombuffer(data, np.uint8).reshape(size[1], size[0], nchannels)
-        return data.cast("B", (size[1], size[0], nchannels))
+
+        return data.cast(memoryview_type, (size[1], size[0], nchannels))
 
     def _present_screen(self):
         raise NotImplementedError()
