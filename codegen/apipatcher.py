@@ -418,7 +418,7 @@ class IdlPatcherMixin:
             line = "async " + line
         return "    " + line
 
-    def get_method_def(self, classname, methodname):
+    def get_method_def(self, classname, methodname) -> str:
         functions = self.idl.classes[classname].functions
         name_idl = self.name2idl(classname, methodname)
         assert name_idl in functions
@@ -432,6 +432,15 @@ class IdlPatcherMixin:
         idl_line = functions[name_idl]
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
         args = [Attribute(arg) for arg in args if arg.strip()]
+        return_type = idl_line.split()[0]
+        if return_type.startswith("[NewObject]"):
+            # [NewObject] can be skipped: https://webidl.spec.whatwg.org/#NewObject
+            return_type = idl_line.split()[1]
+        if return_type.startswith("constructor"):
+            # this means __init__ which essentially returns None (used with Error Messages)
+            return_type = None
+        if return_type:
+            return_type = self.idl.resolve_type(return_type)
 
         # If one arg that is a dict, flatten dict to kwargs
         if len(args) == 1 and args[0].typename.endswith(
@@ -465,7 +474,10 @@ class IdlPatcherMixin:
 
         # Construct final def
         line = preamble + ", ".join(py_args) + "): pass\n"
-        line = format_code(line, True).split("):")[0] + "):"
+        line = (
+            format_code(line, True).split("):")[0]
+            + f"){f' -> {return_type}' if return_type else ''}:"
+        )
         return "    " + line
 
     def _arg_from_attribute(self, methodname, attribute, force_optional=False):
