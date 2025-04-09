@@ -150,6 +150,7 @@ def write_mappings():
         "TextureDimension",
         "PresentMode",
         "CompositeAlphaMode",
+        "SurfaceGetCurrentTextureStatus",
     ]:
         webgpu_names = {}
         if name in idl.enums:
