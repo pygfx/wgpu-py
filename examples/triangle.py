@@ -23,7 +23,9 @@ import wgpu
 # %% Entrypoints (sync and async)
 
 
-def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+def setup_drawing_sync(
+    canvas, power_preference="high-performance", limits=None, format=None
+):
     """Setup to draw a triangle on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -33,14 +35,14 @@ def setup_drawing_sync(canvas, power_preference="high-performance", limits=None)
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(required_limits=limits)
 
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device)
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, format)
 
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(canvas, device, render_pipeline, asynchronous=False)
 
 
-async def setup_drawing_async(canvas, limits=None):
+async def setup_drawing_async(canvas, limits=None, format=None):
     """Setup to async-draw a triangle on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -50,7 +52,7 @@ async def setup_drawing_async(canvas, limits=None):
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async(required_limits=limits)
 
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device)
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, format)
 
     render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
 
@@ -60,9 +62,10 @@ async def setup_drawing_async(canvas, limits=None):
 # %% Functions to create wgpu objects
 
 
-def get_render_pipeline_kwargs(canvas, device):
+def get_render_pipeline_kwargs(canvas, device, render_texture_format):
     context = canvas.get_context("wgpu")
-    render_texture_format = context.get_preferred_format(device.adapter)
+    if render_texture_format is None:
+        render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
     shader = device.create_shader_module(code=shader_source)
