@@ -6,6 +6,8 @@ Render a wgpu example offscreen, safe to 16bit PNG, and show the result.
 
 """
 
+# test_example = true
+
 import os
 import tempfile
 import webbrowser
@@ -15,7 +17,11 @@ import png  # provided by the pypng package
 
 # from rendercanvas.offscreen import RenderCanvas
 from wgpu.gui.offscreen import WgpuCanvas as RenderCanvas
-from triangle import setup_drawing_sync
+
+try:
+    from .triangle import setup_drawing_sync
+except ImportError:
+    from triangle import setup_drawing_sync
 
 
 canvas = RenderCanvas(size=(640, 480), pixel_ratio=2)
