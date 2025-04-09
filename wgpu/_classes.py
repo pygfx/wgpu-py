@@ -239,9 +239,10 @@ class GPUCanvasContext:
         """Getter method for internal use."""
         return self._canvas_ref()
 
+    # FIXME: was canvas(self):
     # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
     @property
-    def canvas(self):
+    def canvas(self) -> Union[object]:
         """The associated canvas object."""
         return self._canvas_ref()
 
@@ -556,39 +557,45 @@ class GPUAdapterInfo(dict):
         parts = [f"{k}={v!r}" for k, v in self.items()]
         return f"<GPUAdapterInfo dict with {', '.join(parts)}>"
 
+    # FIXME: was vendor(self):
     # IDL: readonly attribute DOMString vendor;
     @property
-    def vendor(self):
+    def vendor(self) -> str:
         """The vendor that built this adaptor."""
         return self["vendor"]
 
+    # FIXME: was architecture(self):
     # IDL: readonly attribute DOMString architecture;
     @property
-    def architecture(self):
+    def architecture(self) -> str:
         """The adapters architecrure."""
         return self["architecture"]
 
+    # FIXME: was device(self):
     # IDL: readonly attribute DOMString device;
     @property
-    def device(self):
+    def device(self) -> str:
         """The kind of device that this adapter represents."""
         return self["device"]
 
+    # FIXME: was description(self):
     # IDL: readonly attribute DOMString description;
     @property
-    def description(self):
+    def description(self) -> str:
         """A textual description of the adapter."""
         return self["description"]
 
+    # FIXME: was subgroup_min_size(self):
     # IDL: readonly attribute unsigned long subgroupMinSize;
     @property
-    def subgroup_min_size(self):
+    def subgroup_min_size(self) -> int:
         """If the "subgroups" feature is supported, the minimum supported subgroup size for the adapter."""
         return self.get("subgroup_min_size")
 
+    # FIXME: was subgroup_max_size(self):
     # IDL: readonly attribute unsigned long subgroupMaxSize;
     @property
-    def subgroup_max_size(self):
+    def subgroup_max_size(self) -> int:
         """If the "subgroups" feature is supported, the maximum supported subgroup size for the adapter."""
         return self.get("subgroup_max_size")
 
@@ -633,9 +640,10 @@ class GPUAdapter:
         """A dict with limits for the adapter."""
         return self._limits
 
+    # FIXME: was info(self):
     # IDL: [SameObject] readonly attribute GPUAdapterInfo info;
     @property
-    def info(self):
+    def info(self) -> GPUAdapterInfo:
         """Information associated with this adapter."""
         return self._adapter_info
 
@@ -680,9 +688,10 @@ class GPUAdapter:
         self._ot.decrease(self.__class__.__name__)
         self._release()
 
+    # FIXME: was is_fallback_adapter(self):
     # IDL: readonly attribute boolean isFallbackAdapter;
     @property
-    def is_fallback_adapter(self):
+    def is_fallback_adapter(self) -> bool:
         """Whether this adapter runs on software (rather than dedicated hardware)."""
         return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
@@ -711,9 +720,10 @@ class GPUObjectBase:
         self._device = device
         logger.info(f"Creating {self.__class__.__name__} {label}")
 
+    # FIXME: was label(self):
     # IDL: attribute USVString label;
     @property
-    def label(self):
+    def label(self) -> str:
         """A human-readable name identifying the GPU object."""
         return self._label
 
@@ -772,15 +782,17 @@ class GPUDevice(GPUObjectBase):
         """A dict with limits for this device."""
         return self._limits
 
+    # FIXME: was queue(self):
     # IDL: [SameObject] readonly attribute GPUQueue queue;
     @property
-    def queue(self):
+    def queue(self) -> GPUQueue:
         """The default `GPUQueue` for this device."""
         return self._queue
 
+    # FIXME: was adapter_info(self):
     # IDL: [SameObject] readonly attribute GPUAdapterInfo adapterInfo;
     @property
-    def adapter_info(self):
+    def adapter_info(self) -> GPUAdapterInfo:
         """The adapter.info dict."""
         return self._adapter.info
 
@@ -790,20 +802,22 @@ class GPUDevice(GPUObjectBase):
         """The adapter object corresponding to this device."""
         return self._adapter
 
+    # FIXME: was lost_sync(self):
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @apidiff.hide("Not a Pythonic API")
     @property
-    def lost_sync(self):
+    def lost_sync(self) -> GPUDeviceLostInfo:
         """Sync version of `lost`.
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
         return self._get_lost_sync()
 
+    # FIXME: was lost_async(self):
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @apidiff.hide("Not a Pythonic API")
     @property
-    async def lost_async(self):
+    async def lost_async(self) -> GPUDeviceLostInfo:
         """Provides information about why the device is lost."""
         # In JS you can device.lost.then ... to handle lost devices.
         # We may want to eventually support something similar async-like?
@@ -1379,24 +1393,27 @@ class GPUBuffer(GPUObjectBase):
         self._usage = usage
         self._map_state = map_state
 
+    # FIXME: was size(self):
     # IDL: readonly attribute GPUSize64Out size;
     @property
-    def size(self):
+    def size(self) -> int:
         """The length of the GPUBuffer allocation in bytes."""
         return self._size
 
+    # FIXME: was usage(self):
     # IDL: readonly attribute GPUFlagsConstant usage;
     @property
-    def usage(self):
+    def usage(self) -> int:
         """The allowed usages (int bitmap) for this GPUBuffer, specifying
         e.g. whether the buffer may be used as a vertex buffer, uniform buffer,
         target or source for copying data, etc.
         """
         return self._usage
 
+    # FIXME: was map_state(self):
     # IDL: readonly attribute GPUBufferMapState mapState;
     @property
-    def map_state(self):
+    def map_state(self) -> enums.BufferMapState:
         """The mapping state of the buffer, see `BufferMapState`."""
         return self._map_state
 
@@ -1566,51 +1583,59 @@ class GPUTexture(GPUObjectBase):
         """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
         return self._tex_info["size"]
 
+    # FIXME: was width(self):
     # IDL: readonly attribute GPUIntegerCoordinateOut width;
     @property
-    def width(self):
+    def width(self) -> int:
         """The texture's width. Also see ``.size``."""
         return self._tex_info["size"][0]
 
+    # FIXME: was height(self):
     # IDL: readonly attribute GPUIntegerCoordinateOut height;
     @property
-    def height(self):
+    def height(self) -> int:
         """The texture's height. Also see ``.size``."""
         return self._tex_info["size"][1]
 
+    # FIXME: was depth_or_array_layers(self):
     # IDL: readonly attribute GPUIntegerCoordinateOut depthOrArrayLayers;
     @property
-    def depth_or_array_layers(self):
+    def depth_or_array_layers(self) -> int:
         """The texture's depth or number of layers. Also see ``.size``."""
         return self._tex_info["size"][2]
 
+    # FIXME: was mip_level_count(self):
     # IDL: readonly attribute GPUIntegerCoordinateOut mipLevelCount;
     @property
-    def mip_level_count(self):
+    def mip_level_count(self) -> int:
         """The total number of the mipmap levels of the texture."""
         return self._tex_info["mip_level_count"]
 
+    # FIXME: was sample_count(self):
     # IDL: readonly attribute GPUSize32Out sampleCount;
     @property
-    def sample_count(self):
+    def sample_count(self) -> int:
         """The number of samples in each texel of the texture."""
         return self._tex_info["sample_count"]
 
+    # FIXME: was dimension(self):
     # IDL: readonly attribute GPUTextureDimension dimension;
     @property
-    def dimension(self):
+    def dimension(self) -> enums.TextureDimension:
         """The dimension of the texture."""
         return self._tex_info["dimension"]
 
+    # FIXME: was format(self):
     # IDL: readonly attribute GPUTextureFormat format;
     @property
-    def format(self):
+    def format(self) -> enums.TextureFormat:
         """The format of the texture."""
         return self._tex_info["format"]
 
+    # FIXME: was usage(self):
     # IDL: readonly attribute GPUFlagsConstant usage;
     @property
-    def usage(self):
+    def usage(self) -> int:
         """The allowed usages for this texture."""
         return self._tex_info["usage"]
 
@@ -2451,15 +2476,17 @@ class GPUDeviceLostInfo:
         self._reason = reason
         self._message = message
 
+    # FIXME: was message(self):
     # IDL: readonly attribute DOMString message;
     @property
-    def message(self):
+    def message(self) -> str:
         """The error message specifying the reason for the device being lost."""
         return self._message
 
+    # FIXME: was reason(self):
     # IDL: readonly attribute GPUDeviceLostReason reason;
     @property
-    def reason(self):
+    def reason(self) -> enums.DeviceLostReason:
         """The reason (enums.GPUDeviceLostReason) for the device getting lost. Can be None."""
         return self._reason
 
@@ -2470,9 +2497,10 @@ class GPUError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
+    # FIXME: was message(self):
     # IDL: readonly attribute DOMString message;
     @property
-    def message(self):
+    def message(self) -> str:
         """The error message."""
         return self.args[0]
 
@@ -2501,9 +2529,10 @@ class GPUPipelineError(Exception):
         super().__init__(message or "")
         self._options = options
 
+    # FIXME: was reason(self):
     # IDL: readonly attribute GPUPipelineErrorReason reason;
     @property
-    def reason(self):
+    def reason(self) -> enums.PipelineErrorReason:
         """The reason for the failure."""
         return self.args[0]
 
@@ -2526,39 +2555,45 @@ class GPUInternalError(GPUError):
 class GPUCompilationMessage:
     """An object that contains information about a problem with shader compilation."""
 
+    # FIXME: was message(self):
     # IDL: readonly attribute DOMString message;
     @property
-    def message(self):
+    def message(self) -> str:
         """The warning/error message."""
         raise NotImplementedError()
 
+    # FIXME: was type(self):
     # IDL: readonly attribute GPUCompilationMessageType type;
     @property
-    def type(self):
+    def type(self) -> enums.CompilationMessageType:
         """The type of warning/problem."""
         raise NotImplementedError()
 
+    # FIXME: was line_num(self):
     # IDL: readonly attribute unsigned long long lineNum;
     @property
-    def line_num(self):
+    def line_num(self) -> int:
         """The corresponding line number in the shader source."""
         raise NotImplementedError()
 
+    # FIXME: was line_pos(self):
     # IDL: readonly attribute unsigned long long linePos;
     @property
-    def line_pos(self):
+    def line_pos(self) -> int:
         """The position on the line in the shader source."""
         raise NotImplementedError()
 
+    # FIXME: was offset(self):
     # IDL: readonly attribute unsigned long long offset;
     @property
-    def offset(self):
+    def offset(self) -> int:
         """Offset of ..."""
         raise NotImplementedError()
 
+    # FIXME: was length(self):
     # IDL: readonly attribute unsigned long long length;
     @property
-    def length(self):
+    def length(self) -> int:
         """The length of the line?"""
         raise NotImplementedError()
 
@@ -2584,15 +2619,17 @@ class GPUQuerySet(GPUObjectBase):
         self._type = type
         self._count = count
 
+    # FIXME: was type(self):
     # IDL: readonly attribute GPUQueryType type;
     @property
-    def type(self):
+    def type(self) -> enums.QueryType:
         """The type of the queries managed by this queryset."""
         return self._type
 
+    # FIXME: was count(self):
     # IDL: readonly attribute GPUSize32Out count;
     @property
-    def count(self):
+    def count(self) -> int:
         """The number of the queries managed by this queryset."""
         return self._count
 

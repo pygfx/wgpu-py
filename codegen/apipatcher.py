@@ -410,12 +410,21 @@ class IdlPatcherMixin:
         bases = "" if not bases else f"({', '.join(bases)})"
         return f"class {classname}{bases}:"
 
-    def get_property_def(self, classname, propname):
+    def get_property_def(self, classname, propname) -> str:
         attributes = self.idl.classes[classname].attributes
         name_idl = self.name2idl(classname, propname)
         assert name_idl in attributes
 
-        line = "def " + to_snake_case(propname) + "(self):"
+        idl_line = attributes[name_idl]
+        prop_type = idl_line.split("attribute")[1].split(name_idl)[0].strip()
+
+        try:
+            prop_type = self.idl.resolve_type(prop_type)
+        except (RuntimeError, AssertionError) as err:
+            print(f"Error resolving type for {classname}.{propname}: {err}")
+            prop_type = None
+
+        line = "def " + to_snake_case(propname) + "(self)" + f"{f' -> {prop_type}' if prop_type else ''}:"
         if propname.endswith("_async"):
             line = "async " + line
         return "    " + line
