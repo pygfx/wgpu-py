@@ -6,8 +6,6 @@ Render a wgpu example offscreen, safe to 16bit PNG, and show the result.
 
 """
 
-# test_example = true
-
 import os
 import tempfile
 import webbrowser
