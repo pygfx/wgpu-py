@@ -24,7 +24,6 @@
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Error resolving type for GPUCompilationInfo.messages: Unknown type: FrozenArray<GPUCompilationMessage>
 * Validated 37 classes, 122 methods, 49 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 124 methods, 0 properties

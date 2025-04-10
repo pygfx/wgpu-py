@@ -2601,9 +2601,10 @@ class GPUCompilationMessage:
 class GPUCompilationInfo:
     """TODO"""
 
+    # FIXME: was messages(self):
     # IDL: readonly attribute FrozenArray<GPUCompilationMessage> messages;
     @property
-    def messages(self):
+    def messages(self) -> List[GPUCompilationMessage]:
         """A list of `GPUCompilationMessage` objects."""
         raise NotImplementedError()
 
