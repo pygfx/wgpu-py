@@ -219,6 +219,8 @@ class IdlParser:
             "GPUExternalTexture": "object",
             "undefined": "None",
             "ArrayBuffer": "memoryview",
+            "WGSLLanguageFeatures" : "set",
+            "GPUSupportedFeatures": "set",
         }
         name = pythonmap.get(name, name)
 
