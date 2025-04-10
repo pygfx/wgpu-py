@@ -192,9 +192,10 @@ class GPU:
         """
         raise RuntimeError("Use canvas.get_preferred_format() instead.")
 
+    # FIXME: was wgsl_language_features(self):
     # IDL: [SameObject] readonly attribute WGSLLanguageFeatures wgslLanguageFeatures;
     @property
-    def wgsl_language_features(self):
+    def wgsl_language_features(self) -> set:
         """A set of strings representing the WGSL language extensions supported by all adapters.
         Returns an empty set for now."""
         # Looks like at the time of writing there are no definitions for extensions yet
@@ -628,9 +629,10 @@ class GPUAdapter:
         self._limits = limits
         self._adapter_info = adapter_info
 
+    # FIXME: was features(self):
     # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
-    def features(self):
+    def features(self) -> set:
         """A set of feature names supported by the adapter."""
         return self._features
 
@@ -770,9 +772,10 @@ class GPUDevice(GPUObjectBase):
         self._queue = queue
         queue._device = self  # because it could not be set earlier
 
+    # FIXME: was features(self):
     # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
-    def features(self):
+    def features(self) -> set:
         """A set of feature names supported by this device."""
         return self._features
 
