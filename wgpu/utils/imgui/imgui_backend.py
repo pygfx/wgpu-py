@@ -377,7 +377,10 @@ class ImguiWgpuBackend:
         )
 
     def render(
-        self, draw_data: imgui.ImDrawData, render_pass: wgpu.GPURenderPassEncoder
+        self,
+        draw_data: imgui.ImDrawData,
+        render_pass: wgpu.GPURenderPassEncoder,
+        psize: tuple,
     ):
         """
         Render the imgui draw data with the given render pass.
@@ -392,10 +395,7 @@ class ImguiWgpuBackend:
         if draw_data is None:
             return
 
-        display_width, display_height = draw_data.display_size
-        fb_width = int(display_width * draw_data.framebuffer_scale.x)
-        fb_height = int(display_height * draw_data.framebuffer_scale.y)
-
+        fb_width, fb_height = psize
         if fb_width <= 0 or fb_height <= 0 or draw_data.cmd_lists_count == 0:
             return
 
