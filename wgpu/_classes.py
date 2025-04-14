@@ -448,13 +448,12 @@ class GPUCanvasContext:
         # Note that the label 'present' is used by read_texture() to determine
         # that it can use a shared copy buffer.
         device = self._config["device"]
-        self._texture = device.create_texture(
+        return device.create_texture(
             label="present",
             size=(width, height, 1),
             format=self._config["format"],
             usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
         )
-        return self._texture
 
     def _create_texture_screen(self):
         raise NotImplementedError()
