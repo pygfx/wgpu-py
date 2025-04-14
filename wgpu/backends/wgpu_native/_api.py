@@ -675,6 +675,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     _surface_id = ffi.NULL
     _wgpu_config = None
+    _skip_present_screen = False
 
     def __init__(self, canvas, present_methods):
         super().__init__(canvas, present_methods)
@@ -948,6 +949,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 logger.warning(
                     f"Surface texture is {status_str!r}, using dummy texture"
                 )
+                self._skip_present_screen = True
                 return self._create_texture_bitmap()
         else:
             # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
@@ -1003,9 +1005,12 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     def _present_screen(self):
         # H: WGPUStatus f(WGPUSurface surface)
-        status = libf.wgpuSurfacePresent(self._surface_id)
-        if status != lib.WGPUStatus_Success:
-            raise RuntimeError("Error calling wgpuSurfacePresent")
+        if self._skip_present_screen:
+            self._skip_present_screen = False
+        else:
+            status = libf.wgpuSurfacePresent(self._surface_id)
+            if status != lib.WGPUStatus_Success:
+                logger.warning("wgpuSurfacePresent failed")
 
     def _release(self):
         self._drop_texture()
