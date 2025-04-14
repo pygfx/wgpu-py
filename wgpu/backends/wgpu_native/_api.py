@@ -687,6 +687,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         else:  # method == "bitmap"
             self._surface_id = ffi.NULL
 
+        # A stat for get_current_texture
+        self._number_of_successive_unsuccesful_textures = 0
+
     def _get_capabilities_screen(self, adapter):
         adapter_id = adapter._internal
         surface_id = self._surface_id
@@ -909,13 +912,16 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         status_str = status_str_map.get(status_int, "Unknown")
         texture_id = surface_texture.texture
 
-        # In some cases we may need to re-configure
-        if status_int in [
+        if status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
+            # Yay! Everything is good and we can render this frame.
+            self._number_of_successive_unsuccesful_textures = 0
+        elif status_int in [
             lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal,
             lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
             lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
             lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
         ]:
+            # Try to re-configure, if we can
             logger.warning(
                 f"Retry getting surface texture (status was {status_str!r})."
             )
@@ -925,40 +931,47 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             status_str = status_str_map.get(status_int, "Unknown")
             texture_id = surface_texture.texture
 
-        if status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
-            # Yay! Everything is good and we can render this frame.
-            pass
-        elif status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
-            # Still OK - we'll try re-configure next time
-            logger.warning("The surface texture is suboptimal.")
-        elif status_int in [
-            lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
-            lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
-            lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
-        ]:
-            if testflag == 2:
+        # If still not optimal, we need to make some decisions ...
+        if status_int != lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
+            # It's ok if we miss a sporadic frame during resizing, but warn if it becomes too much.
+            self._number_of_successive_unsuccesful_textures += 1
+            if self._number_of_successive_unsuccesful_textures > 5:
+                n = self._number_of_successive_unsuccesful_textures
+                self._number_of_successive_unsuccesful_textures = 0
+                logger.warning(
+                    f"No succesful surface texture obtained for {n} frames: {status_str!r}"
+                )
+            # Decide what to do
+            if status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
+                pass  # Can still use the texture
+            elif status_int in [
+                lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
+                lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
+                lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
+            ]:
+                if testflag == 2:
+                    if texture_id:
+                        # H: void f(WGPUTexture texture)
+                        libf.wgpuTextureRelease(texture_id)
+                        texture_id = 0
                 if texture_id:
-                    # H: void f(WGPUTexture texture)
-                    libf.wgpuTextureRelease(texture_id)
-                    texture_id = 0
-            if texture_id:
-                logger.warning(
-                    f"Surface texture is {status_str!r}, but still using texture"
-                )
+                    logger.warning(
+                        f"Surface texture is {status_str!r} ({self._number_of_successive_unsuccesful_textures}x), but still using texture"
+                    )
+                else:
+                    logger.warning(
+                        f"Surface texture is {status_str!r} ({self._number_of_successive_unsuccesful_textures})x, using dummy texture"
+                    )
+                    self._skip_present_screen = True
+                    return self._create_texture_bitmap()
             else:
-                logger.warning(
-                    f"Surface texture is {status_str!r}, using dummy texture"
+                # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
+                # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
+                # WGPUSurfaceGetCurrentTextureStatus_Error
+                # This is something we cannot recover from.
+                raise RuntimeError(
+                    f"Cannot get surface texture: {status_str} ({status_int})."
                 )
-                self._skip_present_screen = True
-                return self._create_texture_bitmap()
-        else:
-            # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
-            # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
-            # WGPUSurfaceGetCurrentTextureStatus_Error
-            # This is something we cannot recover from.
-            raise RuntimeError(
-                f"Cannot get surface texture: {status_str} ({status_int})."
-            )
 
         # I don't expect this to happen, but let's check just in case.
         if not texture_id:
