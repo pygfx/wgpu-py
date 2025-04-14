@@ -960,7 +960,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                     )
                 else:
                     logger.warning(
-                        f"Surface texture is {status_str!r} ({self._number_of_successive_unsuccesful_textures})x, using dummy texture"
+                        f"Surface texture is {status_str!r} ({self._number_of_successive_unsuccesful_textures}x), using dummy texture"
                     )
                     self._skip_present_screen = True
                     return self._create_texture_bitmap()
