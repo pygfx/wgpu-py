@@ -377,7 +377,10 @@ class ImguiWgpuBackend:
         )
 
     def render(
-        self, draw_data: imgui.ImDrawData, render_pass: wgpu.GPURenderPassEncoder, psize: tuple
+        self,
+        draw_data: imgui.ImDrawData,
+        render_pass: wgpu.GPURenderPassEncoder,
+        psize: tuple,
     ):
         """
         Render the imgui draw data with the given render pass.

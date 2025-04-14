@@ -149,7 +149,7 @@ class ImguiRenderer:
         draw_data = self._update_gui_function()
 
         pixel_ratio = self._canvas_context.canvas.get_pixel_ratio()
-        psize =  self._canvas_context.canvas.get_physical_size()
+        psize = self._canvas_context.canvas.get_physical_size()
         self._backend.io.display_framebuffer_scale = (pixel_ratio, pixel_ratio)
 
         command_encoder = self._backend._device.create_command_encoder()
