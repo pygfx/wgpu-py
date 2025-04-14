@@ -890,10 +890,11 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             raise RuntimeError("Cannot get texture for a canvas with zero pixels.")
 
         # Re-configure when the size has changed.
-        if new_size != old_size and testflag == 0:
+        if new_size != old_size:
             self._wgpu_config.width = new_size[0]
             self._wgpu_config.height = new_size[1]
-            self._configure_screen_real()
+            if testflag == 0:
+                self._configure_screen_real()
 
         # Prepare for obtaining a texture.
         status_str_map = enum_int2str["SurfaceGetCurrentTextureStatus"]
