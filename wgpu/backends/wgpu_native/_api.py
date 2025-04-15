@@ -926,6 +926,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 texture_id = 0
             # Try to re-configure, if we can
             self._configure_screen_real()
+            # H: void f(WGPUSurface surface, WGPUSurfaceTexture * surfaceTexture)
             libf.wgpuSurfaceGetCurrentTexture(self._surface_id, surface_texture)
             status_int = surface_texture.status
             status_str = status_str_map.get(status_int, "Unknown")
@@ -1010,10 +1011,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         return GPUTexture(label, texture_id, device, tex_info)
 
     def _present_screen(self):
-        # H: WGPUStatus f(WGPUSurface surface)
         if self._skip_present_screen:
             self._skip_present_screen = False
         else:
+            # H: WGPUStatus f(WGPUSurface surface)
             status = libf.wgpuSurfacePresent(self._surface_id)
             if status != lib.WGPUStatus_Success:
                 logger.warning("wgpuSurfacePresent failed")
