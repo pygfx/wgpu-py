@@ -878,9 +878,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # * On other systems (seen on Windows and Linux) the texture status would report 'SuccessSuboptimal',
         #   and the texture will either be stretched (Windows) or blitted to the window leaving either
         #   part of the texture invisible, or making part of the window black/transparent (Linux).
-        # * On some systems the texture status is 'Outdated' even if we do set the size.
-
-        testflag = getattr(self._get_canvas(), "testflag", 0)
+        # * On some systems the texture status is 'Outdated' even if we do set the size. We deal with
+        #   that by providing a dummy texture, and warn when this happens too often in succession.
 
         # Get size info
         old_size = (self._wgpu_config.width, self._wgpu_config.height)
@@ -893,8 +892,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         if new_size != old_size:
             self._wgpu_config.width = new_size[0]
             self._wgpu_config.height = new_size[1]
-            if testflag == 0:
-                self._configure_screen_real()
+            self._configure_screen_real()
 
         # Prepare for obtaining a texture.
         status_str_map = enum_int2str["SurfaceGetCurrentTextureStatus"]
@@ -922,10 +920,11 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
             lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
         ]:
+            if texture_id:
+                # H: void f(WGPUTexture texture)
+                libf.wgpuTextureRelease(texture_id)
+                texture_id = 0
             # Try to re-configure, if we can
-            logger.warning(
-                f"Retry getting surface texture (status was {status_str!r})."
-            )
             self._configure_screen_real()
             libf.wgpuSurfaceGetCurrentTexture(self._surface_id, surface_texture)
             status_int = surface_texture.status
@@ -944,27 +943,20 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 )
             # Decide what to do
             if status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
-                pass  # Can still use the texture
+                # Can still use the texture
+                pass
             elif status_int in [
                 lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
                 lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
             ]:
-                if testflag == 2:
-                    if texture_id:
-                        # H: void f(WGPUTexture texture)
-                        libf.wgpuTextureRelease(texture_id)
-                        texture_id = 0
+                # Use a dummy texture that we cannot present
                 if texture_id:
-                    logger.warning(
-                        f"Surface texture is {status_str!r} ({self._number_of_successive_unsuccesful_textures}x), but still using texture"
-                    )
-                else:
-                    logger.warning(
-                        f"Surface texture is {status_str!r} ({self._number_of_successive_unsuccesful_textures}x), using dummy texture"
-                    )
-                    self._skip_present_screen = True
-                    return self._create_texture_bitmap()
+                    # H: void f(WGPUTexture texture)
+                    libf.wgpuTextureRelease(texture_id)
+                    texture_id = 0
+                self._skip_present_screen = True
+                return self._create_texture_bitmap()
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
                 # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
