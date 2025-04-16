@@ -17,6 +17,31 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.22.0] - 16-04-2025
+
+Added:
+
+* Implement wgpu extension writeTimestamp() by @fyellin in https://github.com/pygfx/wgpu-py/pull/690
+* Implement proper support for alt texture formats for offscreen use by @almarklein in https://github.com/pygfx/wgpu-py/pull/701
+
+Changed:
+
+* Make ``adapter.info`` return GPUAdapterInfo by @fyellin in https://github.com/pygfx/wgpu-py/pull/699
+* Give AdapterInfo a repr by @almarklein in https://github.com/pygfx/wgpu-py/pull/707
+
+Fixed:
+
+* Fix constructing QApplication for PyQt6 by @almarklein in https://github.com/pygfx/wgpu-py/pull/694
+* Improve reporting when context.get_current_texture() fails by @almarklein in https://github.com/pygfx/wgpu-py/pull/702
+* Improve get_current_texture for window resizing by @almarklein in https://github.com/pygfx/wgpu-py/pull/705
+* Imgui get up-to-date framebuffer size by @almarklein in https://github.com/pygfx/wgpu-py/pull/706
+
+Other:
+
+* Add return type hints by @Vipitis in https://github.com/pygfx/wgpu-py/pull/697
+* Verify that override variables can be used for workgroup sizes and array lengths by @fyellin in https://github.com/pygfx/wgpu-py/pull/692
+
+
 ### [v0.21.1] - 20-03-2025
 
 This release updates to wgpu-native v24.0.3.1, which includes several upstream fixes.
