@@ -555,6 +555,10 @@ class GPUAdapterInfo:
     def __init__(self, info):
         self._info = info
 
+    def __repr__(self):
+        parts = [f"{k}={v!r}" for k, v in self._info.items()]
+        return f"<GPUAdapterInfo with {', '.join(parts)}>"
+
     # IDL: readonly attribute DOMString vendor;
     @property
     def vendor(self):
@@ -2648,8 +2652,11 @@ def generic_repr(self):
 
 
 def _set_repr_methods():
+    exceptions = ["GPUAdapterInfo"]
     m = globals()
     for class_name in __all__:
+        if class_name in exceptions:
+            continue
         cls = m[class_name]
         if len(cls.mro()) == 2:  # class itself and object
             cls.__repr__ = generic_repr
