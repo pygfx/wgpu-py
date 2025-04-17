@@ -17,6 +17,13 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.22.1] - 17-04-2025
+
+Changed:
+
+* Make ``GPUAdapterInfo`` a subclass of dict. Since ``adapter.info`` returned a dict before 0.22.0, this makes it compatible again, with code that expects a dict.
+
+
 ### [v0.22.0] - 16-04-2025
 
 Added:
@@ -26,8 +33,8 @@ Added:
 
 Changed:
 
-* Make ``adapter.info`` return GPUAdapterInfo by @fyellin in https://github.com/pygfx/wgpu-py/pull/699
-* Give AdapterInfo a repr by @almarklein in https://github.com/pygfx/wgpu-py/pull/707
+* Make ``adapter.info`` return ``GPUAdapterInfo`` by @fyellin in https://github.com/pygfx/wgpu-py/pull/699
+* Give ``GPUAdapterInfo`` a repr by @almarklein in https://github.com/pygfx/wgpu-py/pull/707
 
 Fixed:
 

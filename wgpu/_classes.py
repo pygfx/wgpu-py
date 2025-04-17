@@ -549,54 +549,48 @@ class GPUCanvasContext:
         self._drop_texture()
 
 
-class GPUAdapterInfo:
+class GPUAdapterInfo(dict):
     """Represents information about an adapter."""
 
-    def __init__(self, info):
-        self._info = info
-
     def __repr__(self):
-        parts = [f"{k}={v!r}" for k, v in self._info.items()]
-        return f"<GPUAdapterInfo with {', '.join(parts)}>"
+        parts = [f"{k}={v!r}" for k, v in self.items()]
+        return f"<GPUAdapterInfo dict with {', '.join(parts)}>"
 
     # IDL: readonly attribute DOMString vendor;
     @property
     def vendor(self):
         """The vendor that built this adaptor."""
-        return self._info["vendor"]
+        return self["vendor"]
 
     # IDL: readonly attribute DOMString architecture;
     @property
     def architecture(self):
         """The adapters architecrure."""
-        return self._info["architecture"]
+        return self["architecture"]
 
     # IDL: readonly attribute DOMString device;
     @property
     def device(self):
         """The kind of device that this adapter represents."""
-        return self._info["device"]
+        return self["device"]
 
     # IDL: readonly attribute DOMString description;
     @property
     def description(self):
         """A textual description of the adapter."""
-        return self._info["description"]
+        return self["description"]
 
     # IDL: readonly attribute unsigned long subgroupMinSize;
     @property
     def subgroup_min_size(self):
         """If the "subgroups" feature is supported, the minimum supported subgroup size for the adapter."""
-        return self._info.get("subgroup_min_size")
+        return self.get("subgroup_min_size")
 
     # IDL: readonly attribute unsigned long subgroupMaxSize;
     @property
     def subgroup_max_size(self):
         """If the "subgroups" feature is supported, the maximum supported subgroup size for the adapter."""
-        return self._info.get("subgroup_max_size")
-
-    def __getitem__(self, item):
-        return self._info.get(item, None)
+        return self.get("subgroup_max_size")
 
 
 class GPUAdapter:

@@ -404,6 +404,8 @@ class IdlPatcherMixin:
                 bases.append("MemoryError")
             elif not bases:
                 bases.append("Exception")
+        elif classname in ["GPUAdapterInfo"]:
+            bases.append("dict")
 
         bases = "" if not bases else f"({', '.join(bases)})"
         return f"class {classname}{bases}:"
