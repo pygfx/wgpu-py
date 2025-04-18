@@ -219,11 +219,13 @@ class IdlParser:
             "GPUExternalTexture": "object",
             "undefined": "None",
             "ArrayBuffer": "memoryview",
+            "WGSLLanguageFeatures" : "set",
+            "GPUSupportedFeatures": "set",
         }
         name = pythonmap.get(name, name)
 
         # Is this a case for which we need to recurse?
-        if name.startswith("sequence<") and name.endswith(">"):
+        if (name.startswith("sequence<") or name.startswith("FrozenArray<")) and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             name = self.resolve_type(name).strip("'")
             return f"List[{name}]"
