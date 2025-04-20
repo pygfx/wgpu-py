@@ -424,7 +424,12 @@ class IdlPatcherMixin:
             print(f"Error resolving type for {classname}.{propname}: {err}")
             prop_type = None
 
-        line = "def " + to_snake_case(propname) + "(self)" + f"{f' -> {prop_type}' if prop_type else ''}:"
+        line = (
+            "def "
+            + to_snake_case(propname)
+            + "(self)"
+            + f"{f' -> {prop_type}' if prop_type else ''}:"
+        )
         if propname.endswith("_async"):
             line = "async " + line
         return "    " + line
