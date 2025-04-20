@@ -241,7 +241,7 @@ class GPUCanvasContext:
 
     # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
     @property
-    def canvas(self) -> Union[object]:
+    def canvas(self) -> object:
         """The associated canvas object."""
         return self._canvas_ref()
 

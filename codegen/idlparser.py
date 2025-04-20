@@ -241,6 +241,8 @@ class IdlParser:
             name = name.strip("()")
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
             names = sorted(set(names))
+            if len(names) == 1:
+                return names[0]
             return f"Union[{', '.join(names)}]"
         if name.startswith("Promise<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
