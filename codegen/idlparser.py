@@ -222,6 +222,7 @@ class IdlParser:
             "WGSLLanguageFeatures" : "set",
             "GPUSupportedFeatures": "set",
             "GPUSupportedLimits": "dict",
+            "EventHandler": "None",
         }
         name = pythonmap.get(name, name)
 

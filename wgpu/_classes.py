@@ -837,10 +837,11 @@ class GPUDevice(GPUObjectBase):
     async def _get_lost_async(self):
         raise NotImplementedError()
 
+    # FIXME: was onuncapturederror(self):
     # IDL: attribute EventHandler onuncapturederror;
     @apidiff.hide("Specific to browsers")
     @property
-    def onuncapturederror(self):
+    def onuncapturederror(self) -> None:
         """Event handler.
 
         In JS you'd do ``gpuDevice.addEventListener('uncapturederror', ...)``. We'd need
