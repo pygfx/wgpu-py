@@ -221,6 +221,7 @@ class IdlParser:
             "ArrayBuffer": "memoryview",
             "WGSLLanguageFeatures" : "set",
             "GPUSupportedFeatures": "set",
+            "GPUSupportedLimits": "dict",
         }
         name = pythonmap.get(name, name)
 

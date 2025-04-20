@@ -636,9 +636,10 @@ class GPUAdapter:
         """A set of feature names supported by the adapter."""
         return self._features
 
+    # FIXME: was limits(self):
     # IDL: [SameObject] readonly attribute GPUSupportedLimits limits;
     @property
-    def limits(self):
+    def limits(self) -> dict:
         """A dict with limits for the adapter."""
         return self._limits
 
@@ -779,9 +780,10 @@ class GPUDevice(GPUObjectBase):
         """A set of feature names supported by this device."""
         return self._features
 
+    # FIXME: was limits(self):
     # IDL: [SameObject] readonly attribute GPUSupportedLimits limits;
     @property
-    def limits(self):
+    def limits(self) -> dict:
         """A dict with limits for this device."""
         return self._limits
 
