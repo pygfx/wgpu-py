@@ -402,8 +402,9 @@ def render():
     render_pass.draw(3, 1)
 
     # draw imgui
+    psize = canvas.get_physical_size()
     imgui_data = gui(app_state)
-    imgui_backend.render(imgui_data, render_pass)
+    imgui_backend.render(imgui_data, render_pass, psize)
 
     render_pass.end()
 
