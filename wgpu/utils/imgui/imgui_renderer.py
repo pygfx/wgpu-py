@@ -149,8 +149,9 @@ class ImguiRenderer:
         draw_data = self._update_gui_function()
 
         pixel_ratio = self._canvas_context.canvas.get_pixel_ratio()
-        psize = self._canvas_context.canvas.get_physical_size()
+        lsize = self._canvas_context.canvas.get_logical_size()
         self._backend.io.display_framebuffer_scale = (pixel_ratio, pixel_ratio)
+        self._backend.io.display_size = lsize
 
         command_encoder = self._backend._device.create_command_encoder()
         current_texture_view = self._canvas_context.get_current_texture().create_view()
@@ -165,7 +166,7 @@ class ImguiRenderer:
                 }
             ],
         )
-        self._backend.render(draw_data, render_pass, psize)
+        self._backend.render(draw_data, render_pass)
         render_pass.end()
         self._backend._device.queue.submit([command_encoder.finish()])
 
