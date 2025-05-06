@@ -390,6 +390,8 @@ class ImguiWgpuBackend:
             The draw data to render, this is usually obtained by calling ``imgui.get_draw_data()``
         render_pass : wgpu.GPURenderPassEncoder
             The render pass to render the imgui draw data with
+        psize : tuple(int, int)
+            The physical size of the canvas, get from calling ``canvas.get_physical_size()``
         """
         if draw_data is None:
             return
