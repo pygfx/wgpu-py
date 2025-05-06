@@ -147,7 +147,7 @@ class Stats:
     def extra_data(self):
         """A dictionary of extra data (key, value) to display in the stats window."""
         return self._extra_data
-    
+
     @extra_data.setter
     def extra_data(self, value):
         assert isinstance(value, dict), "extra_data must be a dictionary"

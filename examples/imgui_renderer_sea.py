@@ -347,6 +347,7 @@ stats_data = {
     "frame": 0,
 }
 
+
 def render():
     global global_time
     current_time = time.perf_counter()
@@ -378,7 +379,7 @@ def render():
 
     device.queue.submit([command_encoder.finish()])
 
-    stats_data["time"] = f"{uniform_data["time"]:.3f}"
+    stats_data["time"] = f"{uniform_data['time']:.3f}"
     stats_data["frame"] += 1
 
 
@@ -388,6 +389,7 @@ imgui_renderer.set_gui(lambda: gui(app_state))
 stats = Stats(device, canvas, align="right")
 
 stats.extra_data = stats_data
+
 
 def loop():
     with stats:
