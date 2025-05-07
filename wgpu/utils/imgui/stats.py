@@ -23,7 +23,8 @@ class Stats:
         The alignment of the stats window, either "left" or "right". Default is "left".
     auto_render : bool
         If True, the render method will be called automatically. Default is True.
-
+    extra_data : dict
+        A dictionary of extra data (key, value) to display in the stats window. Default is None.
     """
 
     def __init__(
@@ -35,6 +36,7 @@ class Stats:
         background=(0, 0.2, 0, 0.5),
         align="left",
         auto_render=True,
+        extra_data=None,
     ):
         self._foreground = foreground
         self._background = background
@@ -66,14 +68,18 @@ class Stats:
         self._ms_samples = np.zeros(100, dtype=np.float32)
 
         self._mode = 0
-        self._auto_render = auto_render
+
+        self.auto_render = auto_render
+        self.extra_data = extra_data or {}
+        self.__window_size = None
 
     def _draw_imgui(self):
         imgui.new_frame()
 
-        imgui.set_next_window_size((130, 0), imgui.Cond_.always)
-        if self._align == "right":
-            pos = imgui.get_io().display_size.x - 130
+        imgui.set_next_window_size((0, 0), imgui.Cond_.always)
+
+        if self._align == "right" and self.__window_size is not None:
+            pos = imgui.get_io().display_size.x - self.__window_size.x
         else:
             pos = 0
 
@@ -107,6 +113,12 @@ class Stats:
             imgui.text(f"{int(ms)} ms({self._tmin}-{self._tmax})")
             imgui.plot_lines("##", self._ms_samples, graph_size=(115, 25))
 
+        if self._extra_data:
+            imgui.separator()
+            for k, v in self._extra_data.items():
+                imgui.text(f"{k}: {v}")
+
+        self.__window_size = imgui.get_window_size()
         imgui.pop_style_color()
 
         imgui.end()
@@ -130,6 +142,16 @@ class Stats:
     @auto_render.setter
     def auto_render(self, value):
         self._auto_render = bool(value)
+
+    @property
+    def extra_data(self):
+        """A dictionary of extra data (key, value) to display in the stats window."""
+        return self._extra_data
+
+    @extra_data.setter
+    def extra_data(self, value):
+        assert isinstance(value, dict), "extra_data must be a dictionary"
+        self._extra_data = value
 
     def start(self):
         if not self._init:
