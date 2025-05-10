@@ -20,7 +20,7 @@ for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
     except ModuleNotFoundError:
         pass
 
-from wgpu.gui.qt import WgpuWidget  # noqa: E402
+from rendercanvas.qt import QRenderWidget  # noqa: E402
 
 
 class ExampleWidget(QtWidgets.QWidget):
@@ -32,7 +32,7 @@ class ExampleWidget(QtWidgets.QWidget):
         splitter = QtWidgets.QSplitter()
 
         self.button = QtWidgets.QPushButton("Hello world", self)
-        self.canvas = WgpuWidget(splitter)
+        self.canvas = QRenderWidget(splitter)
         self.output = QtWidgets.QTextEdit(splitter)
 
         self.button.clicked.connect(self.whenButtonClicked)

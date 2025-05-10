@@ -15,7 +15,7 @@ import time
 import wgpu
 import numpy as np
 
-from wgpu.gui.auto import WgpuCanvas, run
+from rendercanvas.auto import RenderCanvas, loop
 
 
 # %% Entrypoints (sync and async)
@@ -459,7 +459,7 @@ print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
 
-canvas = WgpuCanvas(size=(640, 480), title="wgpu cube example")
+canvas = RenderCanvas(size=(640, 480), title="wgpu cube example")
 
 draw_frame = setup_drawing_sync(canvas)
 
@@ -472,4 +472,4 @@ def animate():
 canvas.request_draw(animate)
 
 if __name__ == "__main__":
-    run()
+    loop.run()

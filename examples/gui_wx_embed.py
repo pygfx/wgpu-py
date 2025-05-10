@@ -5,7 +5,7 @@ An example demonstrating a wx app with a wgpu viz inside.
 # run_example = false
 
 import wx
-from wgpu.gui.wx import WgpuWidget
+from rendercanvas.wx import WxRenderWidget
 
 from triangle import setup_drawing_sync
 
@@ -18,8 +18,8 @@ class Example(wx.Frame):
         splitter = wx.SplitterWindow(self)
 
         self.button = wx.Button(self, -1, "Hello world")
-        self.canvas1 = WgpuWidget(splitter)
-        self.canvas2 = WgpuWidget(splitter)
+        self.canvas1 = WxRenderWidget(splitter)
+        self.canvas2 = WxRenderWidget(splitter)
 
         splitter.SplitVertically(self.canvas1, self.canvas2)
         splitter.SetSashGravity(0.5)

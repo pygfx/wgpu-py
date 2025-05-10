@@ -17,13 +17,13 @@ import numpy as np
 
 import wgpu
 from imgui_bundle import imgui
-from wgpu.gui.auto import WgpuCanvas, run
+from rendercanvas.auto import RenderCanvas, loop
 from wgpu.utils.imgui import ImguiRenderer
 
 from cmap import Colormap
 
 # Create a canvas to render to
-canvas = WgpuCanvas(title="imgui", size=(512, 256))
+canvas = RenderCanvas(title="imgui", size=(512, 256), max_fps=60, update_mode="continuous")
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
@@ -121,11 +121,6 @@ def update_gui():
 imgui_renderer.set_gui(update_gui)
 
 
-def draw_frame():
-    imgui_renderer.render()
-    canvas.request_draw()
-
-
 if __name__ == "__main__":
-    canvas.request_draw(draw_frame)
-    run()
+    canvas.request_draw(imgui_renderer.render)
+    loop.run()

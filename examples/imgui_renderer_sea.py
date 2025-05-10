@@ -4,7 +4,7 @@ An example demonstrating a wgpu app with imgui renderer
 
 # run_example = false
 
-from wgpu.gui.auto import WgpuCanvas, run
+from rendercanvas.auto import RenderCanvas, loop
 import wgpu
 import time
 import numpy as np
@@ -12,7 +12,7 @@ from imgui_bundle import imgui
 from wgpu.utils.imgui import ImguiRenderer, Stats
 
 # Create a canvas to render to
-canvas = WgpuCanvas(title="imgui_sea", size=(800, 450), max_fps=-1, vsync=False)
+canvas = RenderCanvas(title="imgui_sea", size=(800, 450), max_fps=-1, vsync=False)
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
@@ -391,7 +391,7 @@ stats = Stats(device, canvas, align="right")
 stats.extra_data = stats_data
 
 
-def loop():
+def render_loop():
     with stats:
         render()
     imgui_renderer.render()
@@ -399,5 +399,5 @@ def loop():
 
 
 if __name__ == "__main__":
-    canvas.request_draw(loop)
-    run()
+    canvas.request_draw(render_loop)
+    loop.run()

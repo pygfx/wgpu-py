@@ -167,9 +167,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
 
 if __name__ == "__main__":
-    from wgpu.gui.auto import WgpuCanvas, run
+    from rendercanvas.auto import RenderCanvas, loop
 
-    canvas = WgpuCanvas(size=(640, 480), title="wgpu triangle example")
+    canvas = RenderCanvas(size=(640, 480), title="wgpu triangle example")
     draw_frame = setup_drawing_sync(canvas)
     canvas.request_draw(draw_frame)
-    run()
+    loop.run()
