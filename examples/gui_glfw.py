@@ -6,8 +6,8 @@ Run triangle/cube example in the glfw rendercanvas backend.
 
 from rendercanvas.glfw import GlfwRenderCanvas, loop
 
-from triangle import setup_drawing_sync
-# from cube import setup_drawing_sync #TODO: this variant spawns and additional window!
+# from triangle import setup_drawing_sync
+from cube import setup_drawing_sync
 
 
 canvas = GlfwRenderCanvas(title=f"Triangle example on {GlfwRenderCanvas.__name__}")

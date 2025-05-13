@@ -459,17 +459,9 @@ print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
 
-canvas = RenderCanvas(size=(640, 480), title="wgpu cube example")
-
-draw_frame = setup_drawing_sync(canvas)
-
-
-def animate():
-    draw_frame()
-    canvas.request_draw()
-
-
-canvas.request_draw(animate)
 
 if __name__ == "__main__":
+    canvas = RenderCanvas(size=(640, 480), title="wgpu cube example at $fps using $backend", update_mode="continuous", max_fps=-1, vsync=True)
+    draw_frame = setup_drawing_sync(canvas)
+    canvas.request_draw(draw_frame)
     loop.run()
