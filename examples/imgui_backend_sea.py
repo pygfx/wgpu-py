@@ -12,7 +12,9 @@ from imgui_bundle import imgui
 from wgpu.utils.imgui import ImguiWgpuBackend
 
 # Create a canvas to render to
-canvas = RenderCanvas(title="imgui_sea", size=(800, 450), max_fps=60, update_mode="continuous")
+canvas = RenderCanvas(
+    title="imgui_sea", size=(800, 450), max_fps=60, update_mode="continuous"
+)
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")

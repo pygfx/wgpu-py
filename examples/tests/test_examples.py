@@ -70,6 +70,7 @@ def test_examples_screenshots(
     module, pytestconfig, force_offscreen, mock_time, request
 ):
     from rendercanvas.offscreen import RenderCanvas
+
     """Run every example marked for testing."""
 
     # import the example module

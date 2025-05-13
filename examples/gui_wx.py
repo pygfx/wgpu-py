@@ -12,7 +12,7 @@ from triangle import setup_drawing_sync
 
 
 app = wx.App()
-canvas = RenderCanvas(title=f"Triangle example on {RenderCanvas .__name__}")
+canvas = RenderCanvas(title=f"Triangle example on {RenderCanvas.__name__}")
 
 draw_func = setup_drawing_sync(canvas)
 canvas.request_draw(draw_func)
