@@ -16,7 +16,7 @@ import json
 import time
 import subprocess
 
-from wgpu.gui import WgpuCanvasBase
+from rendercanvas import BaseRenderCanvas
 
 # Import the function that we must call to run the visualization
 from triangle import setup_drawing_sync
@@ -26,31 +26,32 @@ from triangle import setup_drawing_sync
 code = """
 import sys
 import json
-from PySide6 import QtWidgets  # Use either PySide6 or PyQt6
-from wgpu.gui.qt import WgpuCanvas
+from PyQt6 import QtWidgets  # Use either PySide6 or PyQt6
+from rendercanvas.qt import RenderCanvas
 
 app = QtWidgets.QApplication([])
-canvas = WgpuCanvas(title="wgpu triangle in Qt subprocess")
+canvas = RenderCanvas(title="wgpu triangle in Qt subprocess", update_mode="ondemand")
 
-print(json.dumps(canvas.get_present_methods()))
+print(json.dumps(canvas._subwidget._rc_get_present_methods()))
 print(canvas.get_physical_size())
 sys.stdout.flush()
 
-app.exec_()
+app.exec()
 """
 
 
-class ProxyCanvas(WgpuCanvasBase):
+class ProxyCanvas(BaseRenderCanvas):
     def __init__(self):
         super().__init__()
         self._present_methods = json.loads(p.stdout.readline().decode())
+        print(self._present_methods)
         self._psize = tuple(
             int(x) for x in p.stdout.readline().decode().strip().strip("()").split(",")
         )
         print(self._psize)
         time.sleep(0.2)
 
-    def get_present_methods(self):
+    def _rc_get_present_methods(self):
         return self._present_methods
 
     def get_physical_size(self):
@@ -71,8 +72,8 @@ class ProxyCanvas(WgpuCanvasBase):
     def is_closed(self):
         raise NotImplementedError()
 
-    def _request_draw(self):
-        self.draw_frame()
+    def _rc_request_draw(self):
+        self._draw_frame()
 
 
 # Create subprocess
@@ -84,4 +85,5 @@ canvas = ProxyCanvas()
 # Go!
 draw_frame = setup_drawing_sync(canvas)
 canvas.request_draw(draw_frame)
+canvas.force_draw()
 time.sleep(3)
