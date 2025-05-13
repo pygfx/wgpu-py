@@ -14,13 +14,13 @@ import atexit
 import glfw
 
 from wgpu.backends.wgpu_native import GPUCanvasContext
-from wgpu.gui.glfw import get_glfw_present_methods, poll_glfw_briefly
+from rendercanvas.glfw import get_glfw_present_methods, poll_glfw_briefly, enable_glfw
 
 # from triangle import setup_drawing_sync
 from cube import setup_drawing_sync
 
 # Setup glfw
-glfw.init()
+enable_glfw()
 atexit.register(glfw.terminate)
 
 
