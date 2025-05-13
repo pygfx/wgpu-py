@@ -69,6 +69,7 @@ def test_that_we_are_on_lavapipe():
 def test_examples_screenshots(
     module, pytestconfig, force_offscreen, mock_time, request
 ):
+    from rendercanvas.offscreen import RenderCanvas
     """Run every example marked for testing."""
 
     # import the example module
@@ -81,8 +82,13 @@ def test_examples_screenshots(
 
     request.addfinalizer(unload_module)
 
+    # create a offscreen canvas here and just use the imported .setup_drawing function to get the example
+    canvas = RenderCanvas(size=(640, 480), update_mode="manual")
+    draw_frame = example.setup_drawing_sync(canvas)
+    canvas.request_draw(draw_frame)
+
     # render a frame
-    img = np.asarray(example.canvas.draw())
+    img = np.asarray(canvas.draw())
 
     # check if _something_ was rendered
     assert img is not None and img.size > 0
