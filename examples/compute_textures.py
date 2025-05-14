@@ -1,6 +1,5 @@
 """
 Example that shows how to use textures in a compute shader to convert an RGBA image to YCbCr.
-The output chroma channels (CbCr) are subsampled by 2 along the rows and columns, typical of 4:2:0 formats.
 
 The shader uses workgroups to processes non-overlapping 8x8 blocks of the input rgba texture.
 """
@@ -67,7 +66,7 @@ device.queue.write_texture(
         "offset": 0,
         "bytes_per_row": image.shape[0] * 4,
     },
-    rgba_size
+    rgba_size,
 )
 
 # texture for Y channel output
@@ -190,27 +189,18 @@ pipeline: wgpu.GPUComputePipeline = device.create_compute_pipeline(
         "module": shader_module,
         "entry_point": "main",
         "constants": workgroup_size_constants,
-    }
+    },
 )
 
 # create bindings for the texture resources and sampler
 bindings = [
-    {
-        "binding": 0,
-        "resource": texture_rgb.create_view()
-    },
-    {
-        "binding": 1,
-        "resource": texture_y.create_view()
-    },
-    {
-        "binding": 2,
-        "resource": texture_cbcr.create_view()
-    },
+    {"binding": 0, "resource": texture_rgb.create_view()},
+    {"binding": 1, "resource": texture_y.create_view()},
+    {"binding": 2, "resource": texture_cbcr.create_view()},
     {
         "binding": 3,
         "resource": chroma_sampler,
-    }
+    },
 ]
 
 # set layout
@@ -242,7 +232,7 @@ buffer_y = device.queue.read_texture(
         "offset": 0,
         "bytes_per_row": image.shape[1] * 4,
     },
-    size=size_from_array(image[:, :, 0], dim=2)
+    size=size_from_array(image[:, :, 0], dim=2),
 ).cast("f")
 
 # read CbCr output
@@ -256,7 +246,7 @@ buffer_cbcr = device.queue.read_texture(
         "offset": 0,
         "bytes_per_row": image.shape[1] * 4,
     },
-    size=size_from_array(image[::2, ::2, :2], dim=2)
+    size=size_from_array(image[::2, ::2, :2], dim=2),
 ).cast("f")
 
 # create numpy arrays
