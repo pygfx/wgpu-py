@@ -10,7 +10,7 @@ If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
 import time
 import importlib
 
-from triangle import setup_drawing_sync
+from cube import setup_drawing_sync
 
 # For the sake of making this example Just Work, we try multiple QT libs
 for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
@@ -32,21 +32,27 @@ class ExampleWidget(QtWidgets.QWidget):
         splitter = QtWidgets.QSplitter()
 
         self.button = QtWidgets.QPushButton("Hello world", self)
-        self.canvas = QRenderWidget(splitter)
+        self.button2 = QtWidgets.QPushButton("pause", self)
+        self.canvas = QRenderWidget(splitter, update_mode="continuous")
         self.output = QtWidgets.QTextEdit(splitter)
 
         self.button.clicked.connect(self.whenButtonClicked)
+        self.button2.clicked.connect(self.whenButton2Clicked)
 
         splitter.addWidget(self.canvas)
         splitter.addWidget(self.output)
         splitter.setSizes([400, 300])
 
+        button_layout = QtWidgets.QVBoxLayout()
+        button_layout.addWidget(self.button)
+        button_layout.addWidget(self.button2)
         layout = QtWidgets.QHBoxLayout()
-        layout.addWidget(self.button, 0)
+        layout.addLayout(button_layout)
         layout.addWidget(splitter, 1)
         self.setLayout(layout)
 
         self.show()
+        self._paused = False
 
     def addLine(self, line):
         t = self.output.toPlainText()
@@ -55,6 +61,19 @@ class ExampleWidget(QtWidgets.QWidget):
 
     def whenButtonClicked(self):
         self.addLine(f"Clicked at {time.time():0.1f}")
+
+    def whenButton2Clicked(self):
+        # showcases how rendercanvas allows changes to sheduling interactively
+        if self._paused:
+            self.canvas.set_update_mode("continuous", max_fps=60)
+            self.button2.setText("pause")
+            self._paused = False
+        else:
+            # note: the cube example bases rotation on unix time, which we don't pause with this button
+            # with "ondemand", resize events such as the window or the splitter will still trigger a draw!
+            self.canvas.set_update_mode("ondemand")
+            self.button2.setText("resume")
+            self._paused = True
 
 
 app = QtWidgets.QApplication([])
