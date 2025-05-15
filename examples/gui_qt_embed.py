@@ -27,7 +27,7 @@ class ExampleWidget(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
         self.resize(640, 480)
-        self.setWindowTitle("wgpu triangle embedded in a qt app")
+        self.setWindowTitle("wgpu cube embedded in a qt app")
 
         splitter = QtWidgets.QSplitter()
 

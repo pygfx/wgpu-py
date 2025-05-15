@@ -19,8 +19,8 @@ import subprocess
 from rendercanvas import BaseRenderCanvas
 
 # Import the function that we must call to run the visualization
-from triangle import setup_drawing_sync
-# from cube import setup_drawing_sync
+# from triangle import setup_drawing_sync
+from cube import setup_drawing_sync
 
 
 code = """
@@ -82,8 +82,14 @@ p = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE)
 # Create a canvas that maps to the window of that subprocess
 canvas = ProxyCanvas()
 
-# Go!
+# Register our draw function
 draw_frame = setup_drawing_sync(canvas)
 canvas.request_draw(draw_frame)
+
+# since we don't have access to the event loop of the subprocess, our proxy canvas is without a scheduler
+# here is a little fake loop to show it can work
+canvas.force_draw()
+time.sleep(0.5)
 canvas.force_draw()
 time.sleep(3)
+canvas.close()
