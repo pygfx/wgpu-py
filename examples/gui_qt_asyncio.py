@@ -18,7 +18,7 @@ import time
 import asyncio
 
 from PySide6 import QtWidgets, QtAsyncio
-from wgpu.gui.qt import WgpuWidget
+from rendercanvas.qt import QRenderWidget
 from triangle import setup_drawing_sync
 
 
@@ -49,7 +49,7 @@ class ExampleWidget(QtWidgets.QWidget):
         splitter = QtWidgets.QSplitter()
 
         self.button = QtWidgets.QPushButton("Hello world", self)
-        self.canvas = WgpuWidget(splitter)
+        self.canvas = QRenderWidget(splitter)
         self.output = QtWidgets.QTextEdit(splitter)
 
         # self.button.clicked.connect(self.whenButtonClicked)  # see above :(

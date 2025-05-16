@@ -7,12 +7,14 @@ An example demonstrating a wgpu app with basic imgui usage and events.
 import wgpu
 import sys
 from imgui_bundle import imgui, imgui_ctx
-from wgpu.gui.auto import WgpuCanvas, run
+from rendercanvas.auto import RenderCanvas, loop
 from wgpu.utils.imgui import ImguiRenderer
 
 
 # Create a canvas to render to
-canvas = WgpuCanvas(title="imgui", size=(640, 480))
+canvas = RenderCanvas(
+    title="imgui", size=(640, 480), max_fps=60, update_mode="continuous"
+)
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
@@ -75,11 +77,6 @@ def update_gui():
 imgui_renderer.set_gui(update_gui)
 
 
-def draw_frame():
-    imgui_renderer.render()
-    canvas.request_draw()
-
-
 if __name__ == "__main__":
-    canvas.request_draw(draw_frame)
-    run()
+    canvas.request_draw(imgui_renderer.render)
+    loop.run()

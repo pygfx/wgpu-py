@@ -13,8 +13,7 @@ import webbrowser
 import numpy as np
 import png  # provided by the pypng package
 
-# from rendercanvas.offscreen import RenderCanvas
-from wgpu.gui.offscreen import WgpuCanvas as RenderCanvas
+from rendercanvas.offscreen import RenderCanvas
 
 try:
     from .triangle import setup_drawing_sync

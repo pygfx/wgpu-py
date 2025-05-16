@@ -4,14 +4,14 @@ Run triangle/cube example in an automatically selected GUI backend.
 
 # test_example = true
 
-from wgpu.gui.auto import WgpuCanvas, run
+from rendercanvas.auto import RenderCanvas, loop
 
 try:
     from .triangle import setup_drawing_sync
 except ImportError:
     from triangle import setup_drawing_sync
 
-canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
+canvas = RenderCanvas(title="Triangle example on $backend")
 draw_frame = setup_drawing_sync(canvas)
 
 
@@ -22,4 +22,4 @@ def animate():
 
 
 if __name__ == "__main__":
-    run()
+    loop.run()

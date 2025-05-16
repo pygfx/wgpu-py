@@ -11,18 +11,19 @@ import importlib
 for lib in ("PySide6", "PyQt6", "PySide2", "PyQt5"):
     try:
         QtWidgets = importlib.import_module(".QtWidgets", lib)
+        print(f"Using {lib} for Qt GUI")
         break
     except ModuleNotFoundError:
         pass
 
 
-from wgpu.gui.qt import WgpuCanvas  # noqa: E402
+from rendercanvas.qt import RenderCanvas  # noqa: E402
 
 from triangle import setup_drawing_sync  # noqa: E402
 
 
 app = QtWidgets.QApplication([])
-canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
+canvas = RenderCanvas(title="Triangle example on $backend")
 
 draw_frame = setup_drawing_sync(canvas)
 

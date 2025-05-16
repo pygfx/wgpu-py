@@ -6,13 +6,13 @@ Example showing how to use multiple imgui contexts to draw to multiple canvases
 
 import wgpu
 from imgui_bundle import imgui
-from wgpu.gui.auto import WgpuCanvas, run
+from rendercanvas.auto import RenderCanvas, loop
 from wgpu.utils.imgui import ImguiRenderer
 
 # Create a canvas to render to
-canvas1 = WgpuCanvas(title="imgui", size=(512, 256))
-canvas2 = WgpuCanvas(title="imgui", size=(512, 256))
-canvas3 = WgpuCanvas(title="imgui", size=(512, 256))
+canvas1 = RenderCanvas(title="imgui", size=(512, 256))
+canvas2 = RenderCanvas(title="imgui", size=(512, 256))
+canvas3 = RenderCanvas(title="imgui", size=(512, 256))
 
 canvases = [canvas1, canvas2, canvas3]
 
@@ -105,4 +105,4 @@ if __name__ == "__main__":
     canvas2.request_draw(draw2)
     canvas3.request_draw(draw3)
 
-    run()
+    loop.run()
