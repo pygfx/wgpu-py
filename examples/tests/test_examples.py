@@ -69,8 +69,6 @@ def test_that_we_are_on_lavapipe():
 def test_examples_screenshots(
     module, pytestconfig, force_offscreen, mock_time, request
 ):
-    from rendercanvas.offscreen import RenderCanvas
-
     """Run every example marked for testing."""
 
     # import the example module
@@ -83,13 +81,14 @@ def test_examples_screenshots(
 
     request.addfinalizer(unload_module)
 
-    # create a offscreen canvas here and just use the imported .setup_drawing function to get the example
-    canvas = RenderCanvas(size=(640, 480), update_mode="manual")
-    draw_frame = example.setup_drawing_sync(canvas)
-    canvas.request_draw(draw_frame)
+    if not hasattr(example, "canvas"):
+        # some examples we screenshot test don't have a canvas as a global variable when imported,
+        # so running the the module as __main__ gives us access to it
+        module_globals = runpy.run_module(f"examples.{module}", run_name="__main__")
+        example.canvas = module_globals["canvas"]
 
     # render a frame
-    img = np.asarray(canvas.draw())
+    img = np.asarray(example.canvas.draw())
 
     # check if _something_ was rendered
     assert img is not None and img.size > 0
@@ -113,9 +112,9 @@ def test_examples_screenshots(
         imageio.imwrite(screenshot_path, img)
 
     # if a reference screenshot exists, assert it is equal
-    assert screenshot_path.exists(), (
-        "found # test_example = true but no reference screenshot available"
-    )
+    assert (
+        screenshot_path.exists()
+    ), "found # test_example = true but no reference screenshot available"
     stored_img = imageio.imread(screenshot_path)
     # assert similarity
     atol = 1
