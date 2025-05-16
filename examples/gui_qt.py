@@ -23,7 +23,7 @@ from triangle import setup_drawing_sync  # noqa: E402
 
 
 app = QtWidgets.QApplication([])
-canvas = RenderCanvas(title=f"Triangle example on {RenderCanvas.__name__}")
+canvas = RenderCanvas(title="Triangle example on $backend")
 
 draw_frame = setup_drawing_sync(canvas)
 

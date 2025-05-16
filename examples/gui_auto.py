@@ -11,7 +11,7 @@ try:
 except ImportError:
     from triangle import setup_drawing_sync
 
-canvas = RenderCanvas(title=f"Triangle example on {RenderCanvas.__name__}")
+canvas = RenderCanvas(title="Triangle example on $backend")
 draw_frame = setup_drawing_sync(canvas)
 
 
