@@ -112,9 +112,9 @@ def test_examples_screenshots(
         imageio.imwrite(screenshot_path, img)
 
     # if a reference screenshot exists, assert it is equal
-    assert (
-        screenshot_path.exists()
-    ), "found # test_example = true but no reference screenshot available"
+    assert screenshot_path.exists(), (
+        "found # test_example = true but no reference screenshot available"
+    )
     stored_img = imageio.imread(screenshot_path)
     # assert similarity
     atol = 1
