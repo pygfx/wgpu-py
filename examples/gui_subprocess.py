@@ -40,12 +40,14 @@ sys.stdout.flush()
 app.exec()
 """
 
+
 class ProxyCanvasGroup(BaseCanvasGroup):
     pass
 
-class ProxyCanvas(BaseRenderCanvas):
 
+class ProxyCanvas(BaseRenderCanvas):
     _rc_canvas_group = ProxyCanvasGroup(loop)
+
     def __init__(self):
         super().__init__()
         self._present_methods = json.loads(p.stdout.readline().decode())
