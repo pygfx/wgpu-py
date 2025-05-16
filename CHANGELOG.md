@@ -17,6 +17,20 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.22.2] - 16-05-2025
+
+Added:
+
+* Add type hints for properties by @Vipitis in https://github.com/pygfx/wgpu-py/pull/703
+* Support extra data in stats by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/712
+
+Changed:
+
+* Set the size via `imgui.io` instead of using the `psize` parameter of the render method. by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/713
+
+
+**Full Changelog**: https://github.com/pygfx/wgpu-py/compare/v0.22.1...asd
+
 ### [v0.22.1] - 17-04-2025
 
 Changed:
