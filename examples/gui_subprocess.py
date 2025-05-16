@@ -16,7 +16,8 @@ import json
 import time
 import subprocess
 
-from rendercanvas import BaseRenderCanvas
+from rendercanvas.asyncio import loop
+from rendercanvas.base import BaseRenderCanvas, BaseCanvasGroup
 
 # Import the function that we must call to run the visualization
 # from triangle import setup_drawing_sync
@@ -30,7 +31,7 @@ from PyQt6 import QtWidgets  # Use either PySide6 or PyQt6
 from rendercanvas.qt import RenderCanvas
 
 app = QtWidgets.QApplication([])
-canvas = RenderCanvas(title="wgpu triangle in Qt subprocess", update_mode="ondemand")
+canvas = RenderCanvas(title="wgpu cube in Qt subprocess", update_mode="ondemand")
 
 print(json.dumps(canvas._subwidget._rc_get_present_methods()))
 print(canvas.get_physical_size())
@@ -39,8 +40,12 @@ sys.stdout.flush()
 app.exec()
 """
 
+class ProxyCanvasGroup(BaseCanvasGroup):
+    pass
 
 class ProxyCanvas(BaseRenderCanvas):
+
+    _rc_canvas_group = ProxyCanvasGroup(loop)
     def __init__(self):
         super().__init__()
         self._present_methods = json.loads(p.stdout.readline().decode())
@@ -54,26 +59,28 @@ class ProxyCanvas(BaseRenderCanvas):
     def _rc_get_present_methods(self):
         return self._present_methods
 
-    def get_physical_size(self):
+    def _rc_request_draw(self):
+        loop = self._rc_canvas_group.get_loop()
+        loop.call_soon(self._draw_frame_and_present)
+
+    def _rc_get_physical_size(self):
         return self._psize
 
-    def get_pixel_ratio(self):
+    def _rc_get_pixel_ratio(self):
         return 1
 
-    def get_logical_size(self):
+    def _rc_get_logical_size(self):
         return self._psize
 
-    def set_logical_size(self, width, height):
+    def _rc_set_logical_size(self, width, height):
         pass
 
-    def close(self):
+    def _rc_close(self):
         p.kill()
 
-    def is_closed(self):
-        raise NotImplementedError()
-
-    def _rc_request_draw(self):
-        self._draw_frame()
+    def _rc_get_closed(self):
+        return_code = p.poll()
+        return return_code is not None
 
 
 # Create subprocess
@@ -81,15 +88,11 @@ p = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE)
 
 # Create a canvas that maps to the window of that subprocess
 canvas = ProxyCanvas()
+canvas.set_update_mode("continuous")
 
 # Register our draw function
 draw_frame = setup_drawing_sync(canvas)
 canvas.request_draw(draw_frame)
 
-# since we don't have access to the event loop of the subprocess, our proxy canvas is without a scheduler
-# here is a little fake loop to show it can work
-canvas.force_draw()
-time.sleep(0.5)
-canvas.force_draw()
-time.sleep(3)
-canvas.close()
+# Start the event loop
+loop.run()
