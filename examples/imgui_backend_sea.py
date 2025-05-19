@@ -4,7 +4,7 @@ An example demonstrating a wgpu app with imgui backend.
 # run_example = false
 """
 
-from wgpu.gui.auto import WgpuCanvas, run
+from rendercanvas.auto import RenderCanvas, loop
 import wgpu
 import time
 import numpy as np
@@ -12,7 +12,9 @@ from imgui_bundle import imgui
 from wgpu.utils.imgui import ImguiWgpuBackend
 
 # Create a canvas to render to
-canvas = WgpuCanvas(title="imgui_sea", size=(800, 450), max_fps=60)
+canvas = RenderCanvas(
+    title="imgui_sea", size=(800, 450), max_fps=60, update_mode="continuous"
+)
 
 # Create a wgpu device
 adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
@@ -410,11 +412,6 @@ def render():
     device.queue.submit([command_encoder.finish()])
 
 
-def loop():
-    render()
-    canvas.request_draw()
-
-
 if __name__ == "__main__":
-    canvas.request_draw(loop)
-    run()
+    canvas.request_draw(render)
+    loop.run()

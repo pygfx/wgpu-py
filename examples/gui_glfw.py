@@ -1,16 +1,16 @@
 """
-Run triangle/cube example in the glfw GUI backend.
+Run triangle/cube example in the glfw rendercanvas backend.
 """
 
 # run_example = false
 
-from wgpu.gui.glfw import WgpuCanvas, run
+from rendercanvas.glfw import GlfwRenderCanvas, loop
 
-from triangle import setup_drawing_sync
-# from cube import setup_drawing_sync
+# from triangle import setup_drawing_sync
+from cube import setup_drawing_sync
 
 
-canvas = WgpuCanvas(title=f"Triangle example on {WgpuCanvas.__name__}")
+canvas = GlfwRenderCanvas(title=f"Triangle example on {GlfwRenderCanvas.__name__}")
 draw_frame = setup_drawing_sync(canvas)
 
 
@@ -21,4 +21,4 @@ def animate():
 
 
 if __name__ == "__main__":
-    run()
+    loop.run()

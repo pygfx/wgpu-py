@@ -5,21 +5,22 @@ An example demonstrating a wx app with a wgpu viz inside.
 # run_example = false
 
 import wx
-from wgpu.gui.wx import WgpuWidget
+from rendercanvas.wx import WxRenderWidget
 
-from triangle import setup_drawing_sync
+from triangle import setup_drawing_sync as setup_drawing_sync_triangle
+from cube import setup_drawing_sync as setup_drawing_sync_cube
 
 
 class Example(wx.Frame):
     def __init__(self):
-        super().__init__(None, title="wgpu triangle embedded in a wx app")
+        super().__init__(None, title="wgpu triangle and cube embedded in a wx app")
         self.SetSize(640, 480)
 
         splitter = wx.SplitterWindow(self)
 
         self.button = wx.Button(self, -1, "Hello world")
-        self.canvas1 = WgpuWidget(splitter)
-        self.canvas2 = WgpuWidget(splitter)
+        self.canvas1 = WxRenderWidget(splitter)
+        self.canvas2 = WxRenderWidget(splitter, update_mode="continuous")
 
         splitter.SplitVertically(self.canvas1, self.canvas2)
         splitter.SetSashGravity(0.5)
@@ -35,8 +36,8 @@ class Example(wx.Frame):
 app = wx.App()
 example = Example()
 
-draw_frame1 = setup_drawing_sync(example.canvas1)
-draw_frame2 = setup_drawing_sync(example.canvas2)
+draw_frame1 = setup_drawing_sync_triangle(example.canvas1)
+draw_frame2 = setup_drawing_sync_cube(example.canvas2)
 
 example.canvas1.request_draw(draw_frame1)
 example.canvas2.request_draw(draw_frame2)

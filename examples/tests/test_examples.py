@@ -42,12 +42,12 @@ examples_to_test = find_examples(query="# test_example = true", return_stems=Tru
 
 @pytest.fixture
 def force_offscreen():
-    """Force the offscreen canvas to be selected by the auto gui module."""
-    os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
+    """Force the offscreen canvas to be selected by the auto rendercanvas module."""
+    os.environ["RENDERCANVAS_FORCE_OFFSCREEN"] = "true"
     try:
         yield
     finally:
-        del os.environ["WGPU_FORCE_OFFSCREEN"]
+        del os.environ["RENDERCANVAS_FORCE_OFFSCREEN"]
 
 
 @pytest.fixture
@@ -80,6 +80,12 @@ def test_examples_screenshots(
         del sys.modules[module_name]
 
     request.addfinalizer(unload_module)
+
+    if not hasattr(example, "canvas"):
+        # some examples we screenshot test don't have a canvas as a global variable when imported,
+        # so running the the module as __main__ gives us access to it
+        module_globals = runpy.run_module(f"examples.{module}", run_name="__main__")
+        example.canvas = module_globals["canvas"]
 
     # render a frame
     img = np.asarray(example.canvas.draw())
@@ -179,7 +185,7 @@ def test_examples_run(module, force_offscreen):
 
 if __name__ == "__main__":
     # Enable tweaking in an IDE by running in an interactive session.
-    os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
+    os.environ["RENDERCANVAS_FORCE_OFFSCREEN"] = "true"
     pytest.getoption = lambda x: False
     is_lavapipe = True
     test_examples_screenshots("validate_volume", pytest, None, None)

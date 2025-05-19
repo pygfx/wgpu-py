@@ -2,10 +2,10 @@
 A simple example to demonstrate events.
 """
 
-from wgpu.gui.auto import WgpuCanvas, run
+from rendercanvas.auto import RenderCanvas, loop
 
 
-canvas = WgpuCanvas(size=(640, 480), title="wgpu events")
+canvas = RenderCanvas(size=(640, 480), title="wgpu events")
 
 
 @canvas.add_event_handler("*")
@@ -15,4 +15,4 @@ def process_event(event):
 
 
 if __name__ == "__main__":
-    run()
+    loop.run()
