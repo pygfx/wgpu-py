@@ -427,7 +427,7 @@ class GPU(classes.GPU):
     def request_adapter_sync(
         self,
         *,
-        feaure_level: str = "core",
+        feature_level: str = "core",
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
@@ -437,7 +437,7 @@ class GPU(classes.GPU):
         """
         check_can_use_sync_variants()
         awaitable = self._request_adapter(
-            feaure_level=feaure_level,
+            feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
@@ -448,7 +448,7 @@ class GPU(classes.GPU):
     async def request_adapter_async(
         self,
         *,
-        feaure_level: str = "core",
+        feature_level: str = "core",
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
@@ -466,7 +466,7 @@ class GPU(classes.GPU):
                  be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
         awaitable = self._request_adapter(
-            feaure_level=feaure_level,
+            feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
@@ -474,7 +474,7 @@ class GPU(classes.GPU):
         return await awaitable
 
     def _request_adapter(
-        self, *, feaure_level, power_preference, force_fallback_adapter, canvas
+        self, *, feature_level, power_preference, force_fallback_adapter, canvas
     ):
         # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
         # It seems that the environment variables are only respected in their
@@ -527,7 +527,7 @@ class GPU(classes.GPU):
         c_feature_level = {
             "core": lib.WGPUFeatureLevel_Core,
             "compatibility": lib.WGPUFeatureLevel_Compatibility,
-        }[feaure_level]
+        }[feature_level]
 
         # H: nextInChain: WGPUChainedStruct *, featureLevel: WGPUFeatureLevel, powerPreference: WGPUPowerPreference, forceFallbackAdapter: WGPUBool/int, backendType: WGPUBackendType, compatibleSurface: WGPUSurface
         struct = new_struct_p(
