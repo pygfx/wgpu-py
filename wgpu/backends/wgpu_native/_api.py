@@ -314,6 +314,21 @@ def check_struct(struct_name, d):
     if invalid_keys:
         raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
 
+# forcing in the dynamic dx12 compiler to see if it works...
+dxil_path = r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxil.dll"
+dxc_path = r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxcompiler.dll"
+
+_instance_extras = new_struct_p("WGPUInstanceExtras *",
+                            backends = 8 , #lib.WGPUInstanceBackend_DX12, #TODO: this isn't evaluated for importing or available in flags.py
+                            dx12ShaderCompiler = lib.WGPUDx12Compiler_Dxc,
+                            dxilPath = to_c_string_view(dxil_path),
+                            dxcPath = to_c_string_view(dxc_path),
+                            dxcMaxShaderModel = lib.WGPUDxcMaxShaderModel_V6_7,
+                            flags=3,#lib.WGPUInstanceFlag_Debug, # figure out if this works or not.
+                            )
+_instance_extras.chain.sType = lib.WGPUSType_InstanceExtras
+def get_wgpu_instance_dx12():
+    return get_wgpu_instance(extras=_instance_extras)
 
 def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
@@ -570,7 +585,7 @@ class GPU(classes.GPU):
         )
 
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
-        libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback_info)
+        libf.wgpuInstanceRequestAdapter(get_wgpu_instance_dx12(), struct, callback_info)
 
         return awaitable
 
@@ -591,7 +606,7 @@ class GPU(classes.GPU):
         # The first call is to get the number of adapters, and the second call
         # is to get the actual adapters. Note that the second arg (now NULL) can
         # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
-        instance = get_wgpu_instance()
+        instance = get_wgpu_instance_dx12()
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         count = libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, ffi.NULL)
         adapters = new_array("WGPUAdapter[]", count)

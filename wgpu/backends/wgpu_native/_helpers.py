@@ -29,7 +29,6 @@ ERROR_TYPES = {
     "Internal": GPUInternalError,
 }
 
-
 if sys.platform.startswith("darwin"):
     from rubicon.objc.api import ObjCInstance, ObjCClass
 
@@ -87,14 +86,18 @@ def get_memoryview_from_address(address, nbytes, format="B"):
 _the_instance = None
 
 
-def get_wgpu_instance():
+def get_wgpu_instance(extras=None):
     """Get the global wgpu instance."""
     # Note, we could also use wgpuInstanceRelease,
     # but we keep a global instance, so we don't have to.
     global _the_instance
+
     if _the_instance is None:
+        print("requested without extras!")
         # H: nextInChain: WGPUChainedStruct *
         struct = ffi.new("WGPUInstanceDescriptor *")
+        if extras is not None:
+            struct.nextInChain = ffi.cast("WGPUChainedStruct *", extras)
         _the_instance = lib.wgpuCreateInstance(struct)
     return _the_instance
 
