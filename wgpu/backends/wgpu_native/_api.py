@@ -594,7 +594,7 @@ class GPU(classes.GPU):
         )
 
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
-        libf.wgpuInstanceRequestAdapter(get_wgpu_instance_dx12(), struct, callback_info)
+        libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback_info)
 
         return awaitable
 
@@ -615,7 +615,7 @@ class GPU(classes.GPU):
         # The first call is to get the number of adapters, and the second call
         # is to get the actual adapters. Note that the second arg (now NULL) can
         # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
-        instance = get_wgpu_instance_dx12()
+        instance = get_wgpu_instance()
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         count = libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, ffi.NULL)
         adapters = new_array("WGPUAdapter[]", count)
