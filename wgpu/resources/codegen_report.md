@@ -31,5 +31,4 @@
 * Wrote 255 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 151 C function calls
 * Not using 69 C functions
-* ERROR: unknown C struct WGPUShaderModuleGLSLDescriptor
 * Validated 96 C structs

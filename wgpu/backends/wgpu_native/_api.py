@@ -1795,18 +1795,17 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                             value=to_c_string_view("gl_VertexIndex"),
                         )
                     )
-                # note, GLSL is a wgpu-native feature and still uses the older structure!
-                # FIXME: unknown C struct WGPUShaderModuleGLSLDescriptor
+                # H: chain: WGPUChainedStruct, stage: WGPUShaderStage/int, code: WGPUStringView, defineCount: int, defines: WGPUShaderDefine *
                 source_struct = new_struct_p(
-                    "WGPUShaderModuleGLSLDescriptor *",
+                    "WGPUShaderSourceGLSL *",
+                    # not used: chain
                     code=to_c_string_view(code),
                     stage=c_stage,
                     defineCount=len(defines),
                     defines=new_array("WGPUShaderDefine[]", defines),
-                    # not used: chain
                 )
                 source_struct[0].chain.next = ffi.NULL
-                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleGLSLDescriptor
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderSourceGLSL
             else:
                 # === WGSL
                 # H: chain: WGPUChainedStruct, code: WGPUStringView
