@@ -93,10 +93,10 @@ def get_wgpu_instance(extras=None):
     global _the_instance
 
     if _the_instance is None:
-        print("requested without extras!")
         # H: nextInChain: WGPUChainedStruct *
         struct = ffi.new("WGPUInstanceDescriptor *")
         if extras is not None:
+            print("requested with extras!")
             struct.nextInChain = ffi.cast("WGPUChainedStruct *", extras)
         _the_instance = lib.wgpuCreateInstance(struct)
     return _the_instance
