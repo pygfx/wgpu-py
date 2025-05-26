@@ -185,7 +185,7 @@ def test_validate_shader_error1(caplog):
            ┌─ :10:20
            │
         10 │     out.position = matrics * out.position;
-           │                    ^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [7]
+           │                    ^^^^^^^^^^^^^^^^^^^^^^ naga::ir::Expression [7]
            │
            = Expression [7] is invalid
            = Operation Multiply can't work with [4] (of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }) and [6] (of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } })
@@ -238,7 +238,7 @@ def test_validate_shader_error2(caplog):
           ┌─ :9:16
           │
         9 │         return vec3<f32>(1.0, 0.0, 1.0);
-          │                ^^^^^^^^^^^^^^^^^^^^^^^^ naga::Expression [8]
+          │                ^^^^^^^^^^^^^^^^^^^^^^^^ naga::ir::Expression [8]
           │
           = The `return` value Some([8]) does not match the function return value
 
