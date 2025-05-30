@@ -315,30 +315,6 @@ def check_struct(struct_name, d):
         raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
 
 
-# forcing in the dynamic dx12 compiler to see if it works...
-dxil_path = r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxil.dll"
-dxc_path = r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxcompiler.dll"
-
-# H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
-_instance_extras = new_struct_p(
-    "WGPUInstanceExtras *",
-    backends=8,  # lib.WGPUInstanceBackend_DX12, #TODO: this isn't evaluated for importing or available in flags.py
-    dx12ShaderCompiler=lib.WGPUDx12Compiler_Dxc,
-    dxilPath=to_c_string_view(dxil_path),
-    dxcPath=to_c_string_view(dxc_path),
-    dxcMaxShaderModel=lib.WGPUDxcMaxShaderModel_V6_7,
-    flags=3,  # lib.WGPUInstanceFlag_Debug, # figure out if this works or not.
-    # not used: chain
-    # not used: gles3MinorVersion
-    # not used: glFenceBehaviour
-)
-_instance_extras.chain.sType = lib.WGPUSType_InstanceExtras
-
-
-def get_wgpu_instance_dx12():
-    return get_wgpu_instance(extras=_instance_extras)
-
-
 def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
@@ -1290,6 +1266,7 @@ class GPUAdapter(classes.GPUAdapter):
         def uncaptured_error_callback(
             c_device, c_type, c_message, userdata1, userdata2
         ):
+            # TODO: does this always raise an exception? retest the loop cases!
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             msg = from_c_string_view(c_message)
             msg = "\n".join(line.rstrip() for line in msg.splitlines())

@@ -2,8 +2,17 @@ import os
 from typing import List
 
 from . import GPUCommandEncoder, GPUComputePassEncoder, GPURenderPassEncoder
-from ._api import Dict, GPUBindGroupLayout, enums, logger, structs
+from ._api import (
+    Dict,
+    GPUBindGroupLayout,
+    enums,
+    logger,
+    structs,
+    new_struct_p,
+    to_c_string_view,
+)
 from ...enums import Enum
+from ._helpers import get_wgpu_instance
 
 
 # NOTE: these functions represent backend-specific extra API.
@@ -172,3 +181,48 @@ def write_timestamp(encoder, query_set, query_index):
         encoder, (GPURenderPassEncoder, GPUComputePassEncoder, GPUCommandEncoder)
     )
     encoder._write_timestamp(query_set, query_index)
+
+
+def set_instance_extras(
+    backends=0,  # default all
+    flags=0,
+    dx12_compiler="fxc",  # default, alternative "dxc"
+    gles3_minor_version=0,
+    fence_behavior=0,
+    dxil_path: os.PathLike | None = None,
+    dxc_path: os.PathLike | None = None,
+    dxc_max_shader_model: float = 6.5,
+):
+    """
+    Sets the global instance with extras.
+    """
+    # TODO document and explain, find reference for defaults
+
+    # maybe include wgpu.h enums and flags in our codegen? (especially make sure to evaluate the flags)
+    compiler_map = {
+        "undefined": 0,  # lib.WGPUDx12Compiler_Undefined
+        "fxc": 1,  # lib.WGPUDx12Compiler_Fxc
+        "dxc": 2,  # lib.WGPUDx12Compiler_Dxc
+    }
+    c_dx12_compiler = compiler_map.get(dx12_compiler, 0)  # default to "undefined"?
+    # the rust conv layer does all the checking, so fallbacks are handled there.
+
+    # TODO: translate to C enums/flags
+    # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
+    c_extras = new_struct_p(
+        "WGPUInstanceExtras *",
+        # not used: chain
+        backends=backends,
+        flags=flags,  # lib.WGPUInstanceFlag_Debug, # figure out if this works or not.
+        dx12ShaderCompiler=c_dx12_compiler,
+        gles3MinorVersion=gles3_minor_version,
+        glFenceBehaviour=fence_behavior,
+        dxilPath=to_c_string_view(dxil_path),
+        dxcPath=to_c_string_view(dxc_path),
+        # dxcMaxShaderModel=lib.WGPUDxcMaxShaderModel_V6_5,
+    )
+
+    c_extras.chain.sType = (
+        0x00030006  # lib.WGPUSType_InstanceExtras (but we don't import lib here?)
+    )
+    get_wgpu_instance(extras=c_extras)  # this sets a global

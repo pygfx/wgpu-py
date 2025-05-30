@@ -14,6 +14,8 @@ import time
 
 import wgpu
 import numpy as np
+from wgpu.backends.wgpu_native.extras import set_instance_extras
+
 
 from rendercanvas.auto import RenderCanvas, loop
 
@@ -454,6 +456,11 @@ texture_size = texture_data.shape[1], texture_data.shape[0], 1
 uniform_dtype = [("transform", "float32", (4, 4))]
 uniform_data = np.zeros((), dtype=uniform_dtype)
 
+
+# TODO: remove testing code
+set_instance_extras(
+    backends=1 << 3  # DX12 only
+)
 
 print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():
