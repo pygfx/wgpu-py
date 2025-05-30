@@ -10,6 +10,7 @@ from ._api import (
     structs,
     new_struct_p,
     to_c_string_view,
+    enum_str2int,
 )
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
@@ -198,14 +199,20 @@ def set_instance_extras(
     """
     # TODO document and explain, find reference for defaults
 
-    # maybe include wgpu.h enums and flags in our codegen? (especially make sure to evaluate the flags)
-    compiler_map = {
-        "undefined": 0,  # lib.WGPUDx12Compiler_Undefined
-        "fxc": 1,  # lib.WGPUDx12Compiler_Fxc
-        "dxc": 2,  # lib.WGPUDx12Compiler_Dxc
-    }
-    c_dx12_compiler = compiler_map.get(dx12_compiler, 0)  # default to "undefined"?
+    c_dx12_compiler = enum_str2int["Dx12Compiler"].get(
+        dx12_compiler.capitalize(), enum_str2int["Dx12Compiler"]["Undefined"]
+    )  # default to "undefined"?
     # the rust conv layer does all the checking, so fallbacks are handled there.
+    if (
+        c_dx12_compiler == enum_str2int["Dx12Compiler"]["Dxc"]
+        and not (dxil_path or dxc_path)
+    ):  # os.path.exists(dxil_path) or os.path.exists(dxc_path)): # this check errors with None as default. but we can't have empty strings.
+        # if dxc is specified but no paths are provided, there will be a panic about static-dxc, so maybe we check against that.
+        # TODO: warning maybe? - can we overwrite this ourself to force fxc instead?
+        c_dx12_compiler = enum_str2int["Dx12Compiler"]["Undefined"]
+
+    # hack as only version 6.0..6.7 are supported and enum mapping fits.
+    c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
     # TODO: translate to C enums/flags
     # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
@@ -213,13 +220,13 @@ def set_instance_extras(
         "WGPUInstanceExtras *",
         # not used: chain
         backends=backends,
-        flags=flags,  # lib.WGPUInstanceFlag_Debug, # figure out if this works or not.
+        flags=flags,
         dx12ShaderCompiler=c_dx12_compiler,
         gles3MinorVersion=gles3_minor_version,
         glFenceBehaviour=fence_behavior,
         dxilPath=to_c_string_view(dxil_path),
         dxcPath=to_c_string_view(dxc_path),
-        # dxcMaxShaderModel=lib.WGPUDxcMaxShaderModel_V6_5,
+        dxcMaxShaderModel=c_max_shader_model,
     )
 
     c_extras.chain.sType = (

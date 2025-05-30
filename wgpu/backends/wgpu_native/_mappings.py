@@ -365,6 +365,11 @@ enum_str2int = {
         "fragment-shader-invocations": 3,
         "compute-shader-invocations": 4,
     },
+    "Dx12Compiler": {
+        "Undefined": 0,
+        "Fxc": 1,
+        "Dxc": 2,
+    },
 }
 
 enum_int2str = {

@@ -457,9 +457,13 @@ uniform_dtype = [("transform", "float32", (4, 4))]
 uniform_data = np.zeros((), dtype=uniform_dtype)
 
 
-# TODO: remove testing code
+# TODO: remove testing code, this is all needed to use the Dxc compiler
 set_instance_extras(
-    backends=1 << 3  # DX12 only
+    backends=1 << 3,  # DX12 only: notice how it lists fewer adapters below
+    dx12_compiler="dxc",
+    dxil_path=r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxil.dll",
+    dxc_path=r"C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\dxcompiler.dll",
+    dxc_max_shader_model=6.7,
 )
 
 print("Available adapters on this system:")

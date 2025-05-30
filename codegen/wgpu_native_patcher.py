@@ -70,6 +70,7 @@ def write_mappings():
     idl = get_idl_parser()
     hp = get_h_parser()
 
+    # these are empty and have no use?
     name_map = {}
     name_map_i = {v: k for k, v in name_map.items()}
 
@@ -126,6 +127,7 @@ def write_mappings():
         ("BackendType", False),
         ("NativeFeature", True),
         ("PipelineStatisticName", True),
+        ("Dx12Compiler", False),
     ):
         pylines.append(f'    "{name}":' + " {")
         for key, val in hp.enums[name].items():
