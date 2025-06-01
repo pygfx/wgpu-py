@@ -81,6 +81,9 @@ class FeatureName(Enum):
     clip_distances = "clip-distances"
     dual_source_blending = "dual-source-blending"
     subgroups = "subgroups"
+    texture_adapter_specific_format_features = (
+        "texture-adapter-specific-format-features"
+    )
 
 
 class BufferMapState(Enum):
@@ -406,6 +409,7 @@ class QueryType(Enum):
 class CanvasAlphaMode(Enum):
     opaque = "opaque"
     premultiplied = "premultiplied"
+    unpremultiplied = "unpremultiplied"
 
 
 class CanvasToneMappingMode(Enum):
