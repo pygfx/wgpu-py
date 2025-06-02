@@ -91,6 +91,10 @@ def get_wgpu_instance(extras=None):
     # Note, we could also use wgpuInstanceRelease,
     # but we keep a global instance, so we don't have to.
     global _the_instance
+    if _the_instance is not None and extras is not None:
+        # reset the instance if extras are given to avoid not getting requested extras.
+        lib.wgpuInstanceRelease(_the_instance)
+        _the_instance = None
 
     if _the_instance is None:
         # H: nextInChain: WGPUChainedStruct *
