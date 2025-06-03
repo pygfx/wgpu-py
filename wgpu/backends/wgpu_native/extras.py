@@ -190,12 +190,12 @@ def set_instance_extras(
     dx12_compiler="fxc",  # default, alternative "dxc"
     gles3_minor_version=0,
     fence_behavior=0,
-    dxil_path: Union[os.PathLike | None] = None,
-    dxc_path: Union[os.PathLike | None] = None,
+    dxil_path: Union[os.PathLike, None] = None,
+    dxc_path: Union[os.PathLike, None] = None,
     dxc_max_shader_model: float = 6.5,
 ):
     """
-    Sets the global instance with extras. Removes any 
+    Sets the global instance with extras. Removes any existing instance.
     """
     # TODO document and explain, find reference for defaults
 
