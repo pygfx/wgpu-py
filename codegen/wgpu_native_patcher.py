@@ -41,7 +41,7 @@ def compare_flags():
     """
 
     idl = get_idl_parser()
-    hp = get_h_parser()
+    hp = get_h_parser()  # gets both headerfiles!
 
     name_map = {
         "ColorWrite": "ColorWriteMask",
@@ -50,7 +50,9 @@ def compare_flags():
     for name, flag in idl.flags.items():
         name = name_map.get(name, name)
         if name not in hp.flags:
-            print(f"Flag {name} missing in wgpu.h")
+            print(
+                f"Flag {name} missing in wgpu.h"
+            )  # should actually be webgpu.h/wgpu.h as this hparser here has both
         else:
             for key, val in flag.items():
                 key = key.title().replace("_", "")  # MAP_READ -> MapRead

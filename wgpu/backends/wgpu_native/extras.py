@@ -14,6 +14,7 @@ from ._api import (
 )
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
+from ..._coreutils import get_library_filename
 
 
 # NOTE: these functions represent backend-specific extra API.
@@ -208,13 +209,23 @@ def set_instance_extras(
         and not (dxil_path or dxc_path)
     ):  # os.path.exists(dxil_path) or os.path.exists(dxc_path)): # this check errors with None as default. but we can't have empty strings.
         # if dxc is specified but no paths are provided, there will be a panic about static-dxc, so maybe we check against that.
-        # TODO: warning maybe? - can we overwrite this ourself to force fxc instead?
-        c_dx12_compiler = enum_str2int["Dx12Compiler"]["Undefined"]
+        try:
+            dxil_path = get_library_filename("dxil.dll")
+            dxc_path = get_library_filename("dxcompiler.dll")
+        except RuntimeError as e:
+            # here we couldn't load the libs from wgpu/resources... so we assume the user doesn't have them.
+            # TODO: explain user to add DXC manually or provide a script/package it? (in the future)
+            logger.warning(
+                f"could not load .dll files for DXC from /resource: {e}.\n Please provide a path manually which can panic. Falling back to FXC"
+            )
+            c_dx12_compiler = enum_str2int["Dx12Compiler"]["Fxc"]
 
     # hack as only version 6.0..6.7 are supported and enum mapping fits.
     c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
     # TODO: translate to C enums/flags
+    # TODO: can we codegen the native only flags? do we put them here or in a flags.py?
+
     # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
     c_extras = new_struct_p(
         "WGPUInstanceExtras *",
