@@ -188,22 +188,32 @@ def write_timestamp(encoder, query_set, query_index):
 def set_instance_extras(
     backends=0,  # default all
     flags=0,
-    dx12_compiler="fxc",  # default, alternative "dxc"
-    gles3_minor_version=0,
-    fence_behavior=0,
+    dx12_compiler="fxc",
+    gles3_minor_version="Atomic",
+    fence_behavior="Normal",
     dxil_path: Union[os.PathLike, None] = None,
     dxc_path: Union[os.PathLike, None] = None,
     dxc_max_shader_model: float = 6.5,
 ):
     """
-    Sets the global instance with extras. Removes any existing instance.
+    Sets the global instance with extras. Replaces any existing instance.
+    Args:
+        backends: bitflag/int, which backends to enable on the instance level. Defaults to (0b0: all).
+        flags: bitflag/int for debugging the instance and compiler. Defaults to (0b0: default).
+        dx12_compiler: enum/str, either "Fxc", "Dxc" or "Undefined". Defaults to "Fxc" same as "Undefined". Dxc requires additional library files.
+        gles3_minor_version: enum/int, 0, 1 or 2. Defaults to "Atomic" (handled by driver).
+        fence_behavior: enum/int, "Normal" or "AutoFinish". Defaults to "Normal".
+        dxil_path: Path to the dxil.dll file, if not provided or `None`, will try to load from wgpu/resources.
+        dxc_path: Path to the dxcompiler.dll file, if not provided or `None`, will try to load from wgpu/resources.
+        dxc_max_shader_model: float between 6.0 and 6.7, the maximum shader model to use with DXC. Defaults to 6.5.
     """
     # TODO document and explain, find reference for defaults
 
     c_dx12_compiler = enum_str2int["Dx12Compiler"].get(
         dx12_compiler.capitalize(), enum_str2int["Dx12Compiler"]["Undefined"]
-    )  # default to "undefined"?
-    # the rust conv layer does all the checking, so fallbacks are handled there.
+    )
+    # https://docs.rs/wgpu/latest/wgpu/enum.Dx12Compiler.html#variant.DynamicDxc #explains the idea, will improve in the future.
+    # https://github.com/gfx-rs/wgpu-native/blob/v25.0.2.1/src/conv.rs#L308-L349 handles the fxc fallback, most of the time...
     if (
         c_dx12_compiler == enum_str2int["Dx12Compiler"]["Dxc"]
         and not (dxil_path or dxc_path)
@@ -220,10 +230,22 @@ def set_instance_extras(
             )
             c_dx12_compiler = enum_str2int["Dx12Compiler"]["Fxc"]
 
+    # https://docs.rs/wgpu/latest/wgpu/enum.Gles3MinorVersion.html
+    if gles3_minor_version[-1].isdigit():
+        gles3_minor_version = int(gles3_minor_version[-1]) + 1  # hack as the last char easily maps to the enum.
+    elif isinstance(gles3_minor_version, str):
+        gles3_minor_version = 0  # likely means atomic
+
+    # https://docs.rs/wgpu/latest/wgpu/enum.GlFenceBehavior.html
+    fence_behavior_map = {
+        "Normal": 0,  # WGPUGLFenceBehavior_Normal
+        "AutoFinish": 1,  # WGPUGLFenceBehavior_AutoFinish
+    }
+    fence_behavior = fence_behavior_map.get(fence_behavior, 0)
+
     # hack as only version 6.0..6.7 are supported and enum mapping fits.
     c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
-    # TODO: translate to C enums/flags
     # TODO: can we codegen the native only flags? do we put them here or in a flags.py?
 
     # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
