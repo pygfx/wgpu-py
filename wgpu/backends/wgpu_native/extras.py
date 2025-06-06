@@ -232,7 +232,9 @@ def set_instance_extras(
 
     # https://docs.rs/wgpu/latest/wgpu/enum.Gles3MinorVersion.html
     if gles3_minor_version[-1].isdigit():
-        gles3_minor_version = int(gles3_minor_version[-1]) + 1  # hack as the last char easily maps to the enum.
+        gles3_minor_version = (
+            int(gles3_minor_version[-1]) + 1
+        )  # hack as the last char easily maps to the enum.
     elif isinstance(gles3_minor_version, str):
         gles3_minor_version = 0  # likely means atomic
 
