@@ -1123,10 +1123,37 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Set limits
 
+
+        #  the native only limits are passed in via the next-in-chain struct
+        if "max-push-constant-size" in required_limits or "max-non-sampler-bindings" in required_limits:
+            # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
+            c_limits_native_chain = new_struct(
+                "WGPUChainedStructOut",
+                next=ffi.NULL,
+                sType=lib.WGPUSType_NativeLimits,
+            )
+
+            c_required_limits_native = new_struct_p(
+                "WGPUNativeLimits *",
+                maxPushConstantSize=required_limits.get("max-push-constant-size", self._limits["max-push-constant-size"]),
+                maxNonSamplerBindings=required_limits.get("max-non-sampler-bindings", self._limits["max-non-sampler-bindings"]),
+                chain=c_limits_native_chain,
+            )
+            # c_required_limits_native.chain.next = ffi.NULL
+            # c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits
+
+            # c_required_limits.nextInChain = ffi.addressof(c_required_limits_native, "chain")
+            # c_required_limits.nextInChain = ffi.cast("WGPUChainedStructOut", c_required_limits_native.chain)
+            # c_required_limits.nextInChain = c_required_limits_native
+
+            chain_ptr = ffi.addressof(c_required_limits_native, "chain")
+        else:
+            chain_ptr = ffi.NULL
+
         # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
         c_required_limits = new_struct_p(
             "WGPULimits *",
-            # not used: nextInChain
+            nextInChain = chain_ptr,
             # not used: maxTextureDimension1D
             # not used: maxTextureDimension2D
             # not used: maxTextureDimension3D
@@ -1160,6 +1187,8 @@ class GPUAdapter(classes.GPUAdapter):
             # not used: maxComputeWorkgroupsPerDimension
         )
 
+        # _refs_per_struct[c_required_limits] = (c_required_limits_native, c_limits_native_chain, chain_ptr)
+
         def canonicalize_limit_name(name):
             if name in self._limits:
                 return name
@@ -1183,10 +1212,12 @@ class GPUAdapter(classes.GPUAdapter):
             # setting it to {}, but the loop below goes just a little bit faster.
             required_limits = self._limits
 
+
         for key in dir(c_required_limits):
             snake_key = to_snake_case(key, "-")
             # Skip the  pointers
-            if "chain" in snake_key:
+            if snake_key in ("next-in-chain", "max-push-constant-size", "max-non-sampler-bindings"):
+                # Skip the chain and the native limits as they are handled in their own
                 continue
             # Use the value in required_limits if it exists. Otherwise, the old value
             try:
@@ -1195,18 +1226,7 @@ class GPUAdapter(classes.GPUAdapter):
                 value = self._limits[snake_key]
             setattr(c_required_limits, key, value)
 
-        # the native only limits are passed in via the next-in-chain struct
-        # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
-        c_required_limits_native = new_struct(
-            "WGPUNativeLimits",
-            maxPushConstantSize=required_limits.get("max-push-constant-size", 0),
-            maxNonSamplerBindings=required_limits.get("max-non-sampler-bindings", 0),
-            # not used: chain
-        )
-        c_required_limits_native.chain.next = ffi.NULL
-        c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits
 
-        c_required_limits.nextInChain = ffi.addressof(c_required_limits_native, "chain")
 
         # ---- Set queue descriptor
 
@@ -1238,6 +1258,7 @@ class GPUAdapter(classes.GPUAdapter):
             "void(WGPUDevice const *, WGPUDeviceLostReason, WGPUStringView, void *, void *)"
         )
         def device_lost_callback(c_device, c_reason, c_message, userdata1, userdata2):
+            print("DEVICE LOST!")
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
             msg = from_c_string_view(c_message)
             # This is afaik an error that cannot usually be attributed to a specific call,
@@ -1267,6 +1288,7 @@ class GPUAdapter(classes.GPUAdapter):
             c_device, c_type, c_message, userdata1, userdata2
         ):
             # TODO: does this always raise an exception? retest the loop cases!
+            print("UNCAPTURED ERROR!")
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             msg = from_c_string_view(c_message)
             msg = "\n".join(line.rstrip() for line in msg.splitlines())
@@ -1310,7 +1332,7 @@ class GPUAdapter(classes.GPUAdapter):
         callback_info = new_struct(
             "WGPURequestDeviceCallbackInfo",
             # not used: nextInChain
-            mode=lib.WGPUCallbackMode_AllowProcessEvents,
+            mode=lib.WGPUCallbackMode_AllowSpontaneous,
             callback=request_device_callback,
             # not used: userdata1
             # not used: userdata2

@@ -22,7 +22,7 @@ from rendercanvas.auto import RenderCanvas, loop
 # %% Entrypoints (sync and async)
 
 
-def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+def setup_drawing_sync(canvas, power_preference="high-performance", limits={}):
     """Setup to draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -42,7 +42,7 @@ def setup_drawing_sync(canvas, power_preference="high-performance", limits=None)
     )
 
 
-async def setup_drawing_async(canvas, limits=None):
+async def setup_drawing_async(canvas, limits={}):
     """Setup to async-draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
