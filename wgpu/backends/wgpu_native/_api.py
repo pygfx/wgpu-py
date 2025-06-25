@@ -1123,37 +1123,10 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Set limits
 
-
-        #  the native only limits are passed in via the next-in-chain struct
-        if "max-push-constant-size" in required_limits or "max-non-sampler-bindings" in required_limits:
-            # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
-            c_limits_native_chain = new_struct(
-                "WGPUChainedStructOut",
-                next=ffi.NULL,
-                sType=lib.WGPUSType_NativeLimits,
-            )
-
-            c_required_limits_native = new_struct_p(
-                "WGPUNativeLimits *",
-                maxPushConstantSize=required_limits.get("max-push-constant-size", self._limits["max-push-constant-size"]),
-                maxNonSamplerBindings=required_limits.get("max-non-sampler-bindings", self._limits["max-non-sampler-bindings"]),
-                chain=c_limits_native_chain,
-            )
-            # c_required_limits_native.chain.next = ffi.NULL
-            # c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits
-
-            # c_required_limits.nextInChain = ffi.addressof(c_required_limits_native, "chain")
-            # c_required_limits.nextInChain = ffi.cast("WGPUChainedStructOut", c_required_limits_native.chain)
-            # c_required_limits.nextInChain = c_required_limits_native
-
-            chain_ptr = ffi.addressof(c_required_limits_native, "chain")
-        else:
-            chain_ptr = ffi.NULL
-
         # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
         c_required_limits = new_struct_p(
             "WGPULimits *",
-            nextInChain = chain_ptr,
+            # not used: nextInChain
             # not used: maxTextureDimension1D
             # not used: maxTextureDimension2D
             # not used: maxTextureDimension3D
@@ -1187,8 +1160,6 @@ class GPUAdapter(classes.GPUAdapter):
             # not used: maxComputeWorkgroupsPerDimension
         )
 
-        # _refs_per_struct[c_required_limits] = (c_required_limits_native, c_limits_native_chain, chain_ptr)
-
         def canonicalize_limit_name(name):
             if name in self._limits:
                 return name
@@ -1212,11 +1183,14 @@ class GPUAdapter(classes.GPUAdapter):
             # setting it to {}, but the loop below goes just a little bit faster.
             required_limits = self._limits
 
-
         for key in dir(c_required_limits):
             snake_key = to_snake_case(key, "-")
             # Skip the  pointers
-            if snake_key in ("next-in-chain", "max-push-constant-size", "max-non-sampler-bindings"):
+            if snake_key in (
+                "next-in-chain",
+                "max-push-constant-size",
+                "max-non-sampler-bindings",
+            ):
                 # Skip the chain and the native limits as they are handled in their own
                 continue
             # Use the value in required_limits if it exists. Otherwise, the old value
@@ -1226,8 +1200,23 @@ class GPUAdapter(classes.GPUAdapter):
                 value = self._limits[snake_key]
             setattr(c_required_limits, key, value)
 
+        #  the native only limits are passed in via the next-in-chain struct
+        # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
+        c_required_limits_native = new_struct_p(
+            "WGPUNativeLimits *",
+            maxPushConstantSize=required_limits.get(
+                "max-push-constant-size", self._limits["max-push-constant-size"]
+            ),
+            maxNonSamplerBindings=required_limits.get(
+                "max-non-sampler-bindings", self._limits["max-non-sampler-bindings"]
+            ),
+            # not used: chain
+        )
+        c_required_limits_native.chain.next = ffi.NULL
+        c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits
 
-
+        # here we attached the chain to the struct that's passed further down.
+        c_required_limits.nextInChain = ffi.addressof(c_required_limits_native, "chain")
         # ---- Set queue descriptor
 
         # Note that the default_queue arg is a descriptor (dict for QueueDescriptor), but is currently empty :)
