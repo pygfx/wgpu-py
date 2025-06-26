@@ -54,7 +54,7 @@ def get_h_parser(*, allow_cache=True):
 
 
 class HParser:
-    """Object to parse the wgpu.h header file, by letting cffi do the heavy lifting."""
+    """Object to parse the webgpu.h/wgpu.h header files, by letting cffi do the heavy lifting."""
 
     def __init__(self, source):
         self.source = source
@@ -69,10 +69,10 @@ class HParser:
         self._parse_from_cffi()
 
         if verbose:
-            print(f"The wgpu.h defines {len(self.functions)} functions")
+            print(f"webgpu.h/wgpu.h define {len(self.functions)} functions")
             keys = "flags", "enums", "structs"
             stats = ", ".join(f"{len(getattr(self, key))} {key}" for key in keys)
-            print("The wgpu.h defines " + stats)
+            print("webgpu.h/wgpu.h define " + stats)
 
     def _parse_from_h(self):
         code = self.source
