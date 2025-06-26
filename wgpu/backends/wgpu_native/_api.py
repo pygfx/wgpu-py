@@ -1231,6 +1231,7 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Compose device descriptor extras
 
+        # TODO: is this supported anymore?
         c_trace_path = to_c_string_view(trace_path if trace_path else None)
 
         # H: chain: WGPUChainedStruct, tracePath: WGPUStringView
@@ -1247,7 +1248,7 @@ class GPUAdapter(classes.GPUAdapter):
             "void(WGPUDevice const *, WGPUDeviceLostReason, WGPUStringView, void *, void *)"
         )
         def device_lost_callback(c_device, c_reason, c_message, userdata1, userdata2):
-            print("DEVICE LOST!")
+            logger.error("DEVICE LOST!")
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
             msg = from_c_string_view(c_message)
             # This is afaik an error that cannot usually be attributed to a specific call,
@@ -1276,8 +1277,8 @@ class GPUAdapter(classes.GPUAdapter):
         def uncaptured_error_callback(
             c_device, c_type, c_message, userdata1, userdata2
         ):
-            # TODO: does this always raise an exception? retest the loop cases!
-            print("UNCAPTURED ERROR!")
+            # Let our error handler deal with it: the currently running API call will raise an error, or the error will be logged.
+            # Note that this call does/should not raise directly; it's a callback from Rust code
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             msg = from_c_string_view(c_message)
             msg = "\n".join(line.rstrip() for line in msg.splitlines())
@@ -1321,7 +1322,7 @@ class GPUAdapter(classes.GPUAdapter):
         callback_info = new_struct(
             "WGPURequestDeviceCallbackInfo",
             # not used: nextInChain
-            mode=lib.WGPUCallbackMode_AllowSpontaneous,
+            mode=lib.WGPUCallbackMode_AllowProcessEvents,
             callback=request_device_callback,
             # not used: userdata1
             # not used: userdata2
@@ -2937,7 +2938,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         )
 
     def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int) -> None:
-        self._maybe_keep_alive(indirect_buffer)
+        # self._maybe_keep_alive(indirect_buffer)
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         # H: void wgpuRenderBundleEncoderDrawIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
