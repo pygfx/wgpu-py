@@ -196,7 +196,7 @@ def set_instance_extras(
     dxc_max_shader_model: float = 6.5,
 ):
     """
-    Sets the global instance with extras. Replaces any existing instance.
+    Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
     Args:
         backends: bitflag/int, which backends to enable on the instance level. Defaults to (0b0: all).
         flags: bitflag/int for debugging the instance and compiler. Defaults to (0b0: default).
@@ -249,6 +249,7 @@ def set_instance_extras(
     c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
     # TODO: can we codegen the native only flags? do we put them here or in a flags.py?
+    # for backend and flags you have to lookup the values in wgpu.h: WGPUInstanceFlag and WGPUInstanceBackend
 
     # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
     c_extras = new_struct_p(

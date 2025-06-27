@@ -87,15 +87,18 @@ _the_instance = None
 
 
 def get_wgpu_instance(extras=None):
-    """Get the global wgpu instance."""
+    """Get the global wgpu instance.
+    Native only extras can be set with `wgpu.backends.wgpu_native.set_instance_extras`"""
     # Note, we could also use wgpuInstanceRelease,
     # but we keep a global instance, so we don't have to.
     global _the_instance
     if _the_instance is not None and extras is not None:
-        # reset the instance if extras are given to avoid not getting requested extras.
-        lib.wgpuInstanceRelease(_the_instance)
-        _the_instance = None
-
+        # For cases where it might be required, like testing to request new extras for the instance,
+        # it is possible to delete the existing instance using `del _the_instance` or `lib.wgpuInstanceRelease(_the_instance)`.
+        # However this means existing adapters/devices will most likely not work with new surfaces.
+        raise RuntimeError(
+            "Instance already exists. Please call `set_instance_extras` before the instance is created (calls to `request_adapter` or `enumerate_adapters`)"
+        )
     if _the_instance is None:
         # H: nextInChain: WGPUChainedStruct *
         struct = ffi.new("WGPUInstanceDescriptor *")
