@@ -15,6 +15,7 @@ from ._api import (
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
 from ..._coreutils import get_library_filename
+from ...flags import Flags
 
 
 # NOTE: these functions represent backend-specific extra API.
@@ -184,10 +185,27 @@ def write_timestamp(encoder, query_set, query_index):
     )
     encoder._write_timestamp(query_set, query_index)
 
+# obtained from codegen manually
+class InstanceBackend(Flags):
+    All = 0
+    Vulkan = 1
+    GL = 2
+    Metal = 4
+    DX12 = 8
+    DX11 = 16
+    BrowserWebGPU = 32
+    Primary = 45
+    Secondary = 18
+
+class InstanceFlag(Flags):
+    Default = 0
+    Debug = 1
+    Validation = 2
+    DiscardHalLabels = 4
 
 def set_instance_extras(
-    backends=0,  # default all
-    flags=0,
+    backends: InstanceBackend=InstanceBackend.All,
+    flags: InstanceFlag=InstanceFlag.Default,
     dx12_compiler="fxc",
     gles3_minor_version="Atomic",
     fence_behavior="Normal",
@@ -198,8 +216,8 @@ def set_instance_extras(
     """
     Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
     Args:
-        backends: bitflag/int, which backends to enable on the instance level. Defaults to (0b0: all).
-        flags: bitflag/int for debugging the instance and compiler. Defaults to (0b0: default).
+        backends: bitflag/int, which backends to enable on the instance level. Defaults to all.
+        flags: bitflag/int for debugging the instance and compiler. Defaults to default.
         dx12_compiler: enum/str, either "Fxc", "Dxc" or "Undefined". Defaults to "Fxc" same as "Undefined". Dxc requires additional library files.
         gles3_minor_version: enum/int, 0, 1 or 2. Defaults to "Atomic" (handled by driver).
         fence_behavior: enum/int, "Normal" or "AutoFinish". Defaults to "Normal".
