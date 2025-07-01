@@ -185,6 +185,7 @@ def write_timestamp(encoder, query_set, query_index):
     )
     encoder._write_timestamp(query_set, query_index)
 
+
 # obtained from codegen manually
 class InstanceBackend(Flags):
     All = 0
@@ -197,15 +198,17 @@ class InstanceBackend(Flags):
     Primary = 45
     Secondary = 18
 
+
 class InstanceFlag(Flags):
     Default = 0
     Debug = 1
     Validation = 2
     DiscardHalLabels = 4
 
+
 def set_instance_extras(
-    backends: InstanceBackend=InstanceBackend.All,
-    flags: InstanceFlag=InstanceFlag.Default,
+    backends: InstanceBackend = InstanceBackend.All,
+    flags: InstanceFlag = InstanceFlag.Default,
     dx12_compiler="fxc",
     gles3_minor_version="Atomic",
     fence_behavior="Normal",
