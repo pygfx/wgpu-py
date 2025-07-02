@@ -16,6 +16,7 @@ from ...enums import Enum
 from ._helpers import get_wgpu_instance
 from ..._coreutils import get_library_filename
 from ...flags import Flags
+from ._ffi import lib
 
 
 # NOTE: these functions represent backend-specific extra API.
@@ -269,9 +270,6 @@ def set_instance_extras(
     # hack as only version 6.0..6.7 are supported and enum mapping fits.
     c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
-    # TODO: can we codegen the native only flags? do we put them here or in a flags.py?
-    # for backend and flags you have to lookup the values in wgpu.h: WGPUInstanceFlag and WGPUInstanceBackend
-
     # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
     c_extras = new_struct_p(
         "WGPUInstanceExtras *",
@@ -286,7 +284,5 @@ def set_instance_extras(
         dxcMaxShaderModel=c_max_shader_model,
     )
 
-    c_extras.chain.sType = (
-        0x00030006  # lib.WGPUSType_InstanceExtras (but we don't import lib here?)
-    )
+    c_extras.chain.sType = lib.WGPUSType_InstanceExtras
     get_wgpu_instance(extras=c_extras)  # this sets a global
