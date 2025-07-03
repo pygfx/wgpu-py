@@ -532,3 +532,19 @@ enum_int2str = {
         8: "Error",
     },
 }
+
+native_flags = {
+    "InstanceBackend.All": 0,
+    "InstanceBackend.Vulkan": 1,
+    "InstanceBackend.GL": 2,
+    "InstanceBackend.Metal": 4,
+    "InstanceBackend.DX12": 8,
+    "InstanceBackend.DX11": 16,
+    "InstanceBackend.BrowserWebGPU": 32,
+    "InstanceBackend.Primary": 45,
+    "InstanceBackend.Secondary": 18,
+    "InstanceFlag.Default": 0,
+    "InstanceFlag.Debug": 1,
+    "InstanceFlag.Validation": 2,
+    "InstanceFlag.DiscardHalLabels": 4,
+}

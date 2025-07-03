@@ -169,6 +169,20 @@ def write_mappings():
             pylines.append(f'        {val}: "{enum_val}",')
         pylines.append("    },")
     pylines.append("}")
+    pylines.append("")
+
+    # Write a few native-only flags
+    pylines.append("native_flags = {")
+    for name in [
+        "InstanceBackend",
+        "InstanceFlag",
+    ]:
+        for key, val in hp.flags[name].items():
+            if key == "Force32":
+                continue
+            pylines.append(f'    "{name}.{key}": {val},')
+    pylines.append("}")
+    pylines.append("")
 
     # Wrap up
     code = format_code("\n".join(pylines))
