@@ -15,8 +15,8 @@ from ._api import (
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
 from ..._coreutils import get_library_filename
-from ...flags import Flags
 from ._ffi import lib
+from ._mappings import native_flags
 
 
 # NOTE: these functions represent backend-specific extra API.
@@ -187,29 +187,9 @@ def write_timestamp(encoder, query_set, query_index):
     encoder._write_timestamp(query_set, query_index)
 
 
-# obtained from codegen manually
-class InstanceBackend(Flags):
-    All = 0
-    Vulkan = 1
-    GL = 2
-    Metal = 4
-    DX12 = 8
-    DX11 = 16
-    BrowserWebGPU = 32
-    Primary = 45
-    Secondary = 18
-
-
-class InstanceFlag(Flags):
-    Default = 0
-    Debug = 1
-    Validation = 2
-    DiscardHalLabels = 4
-
-
 def set_instance_extras(
-    backends: InstanceBackend = InstanceBackend.All,
-    flags: InstanceFlag = InstanceFlag.Default,
+    backends: list[str] = ["All"],
+    flags: list[str] = ["Default"],
     dx12_compiler="fxc",
     gles3_minor_version="Atomic",
     fence_behavior="Normal",
@@ -220,8 +200,8 @@ def set_instance_extras(
     """
     Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
     Args:
-        backends: bitflag/int, which backends to enable on the instance level. Defaults to all.
-        flags: bitflag/int for debugging the instance and compiler. Defaults to default.
+        backends: bitflags as list[str], which backends to enable on the instance level. Defaults to ``["All"]``.
+        flags: bitflags as list[str], for debugging the instance and compiler. Defaults to ``["Default"]``.
         dx12_compiler: enum/str, either "Fxc", "Dxc" or "Undefined". Defaults to "Fxc" same as "Undefined". Dxc requires additional library files.
         gles3_minor_version: enum/int, 0, 1 or 2. Defaults to "Atomic" (handled by driver).
         fence_behavior: enum/int, "Normal" or "AutoFinish". Defaults to "Normal".
@@ -229,7 +209,16 @@ def set_instance_extras(
         dxc_path: Path to the dxcompiler.dll file, if not provided or `None`, will try to load from wgpu/resources.
         dxc_max_shader_model: float between 6.0 and 6.7, the maximum shader model to use with DXC. Defaults to 6.5.
     """
-    # TODO document and explain, find reference for defaults
+    # TODO document and explain, add examples
+
+    backend_bitflags = 0
+    for backend in backends:
+        # there will be KeyErrors and no fallback to warn the user.
+        backend_bitflags |= native_flags["InstanceBackend." + backend]
+
+    flag_bitflags = 0
+    for flag in flags:
+        flag_bitflags |= native_flags["InstanceFlag." + flag]
 
     c_dx12_compiler = enum_str2int["Dx12Compiler"].get(
         dx12_compiler.capitalize(), enum_str2int["Dx12Compiler"]["Undefined"]
@@ -274,8 +263,8 @@ def set_instance_extras(
     c_extras = new_struct_p(
         "WGPUInstanceExtras *",
         # not used: chain
-        backends=backends,
-        flags=flags,
+        backends=backend_bitflags,
+        flags=flag_bitflags,
         dx12ShaderCompiler=c_dx12_compiler,
         gles3MinorVersion=gles3_minor_version,
         glFenceBehaviour=fence_behavior,
