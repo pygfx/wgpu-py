@@ -16,6 +16,16 @@ Possible sections in each release:
 * Fixed: for any bug fixes.
 * Security: in case of vulnerabilities.
 
+### unreleased
+
+Added:
+* New `wgpu.backends.wgpu_native.extra.set_instance_extras()` function to enable additional debug features and using Dxc
+
+Changed:
+* Updated to wgpu-native v25.0.2.1
+
+Fixed:
+* Some native only features with Dx12 backend no longer crash, but can still produce incorrect numbers for push constants and indirect draws. Other backends work as expected, fixes are expected in v26 upstream.
 
 ### [v0.22.2] - 16-05-2025
 

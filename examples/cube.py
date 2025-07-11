@@ -15,6 +15,7 @@ import time
 import wgpu
 import numpy as np
 
+
 from rendercanvas.auto import RenderCanvas, loop
 
 
@@ -453,7 +454,6 @@ texture_size = texture_data.shape[1], texture_data.shape[0], 1
 # Use numpy to create a struct for the uniform
 uniform_dtype = [("transform", "float32", (4, 4))]
 uniform_data = np.zeros((), dtype=uniform_dtype)
-
 
 print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():

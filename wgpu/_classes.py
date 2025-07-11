@@ -92,7 +92,7 @@ class GPU:
     def request_adapter_sync(
         self,
         *,
-        feaure_level: str = "core",
+        feature_level: str = "core",
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
@@ -105,6 +105,7 @@ class GPU:
         from .backends.auto import gpu
 
         return gpu.request_adapter_sync(
+            feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
@@ -115,7 +116,7 @@ class GPU:
     async def request_adapter_async(
         self,
         *,
-        feaure_level: str = "core",
+        feature_level: str = "core",
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
@@ -124,7 +125,7 @@ class GPU:
         implementation, from which one can request a `GPUDevice`.
 
         Arguments:
-            feaure_level (str): The feature level "core" (default) or "compatibility".
+            feature_level (str): The feature level "core" (default) or "compatibility".
                 This provides a way to opt into additional validation restrictions.
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
@@ -135,7 +136,10 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
 
+        # note, feature_level current' does nothing: # not used currently: https://gpuweb.github.io/gpuweb/#dom-gpurequestadapteroptions-featurelevel
+
         return await gpu.request_adapter_async(
+            feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
