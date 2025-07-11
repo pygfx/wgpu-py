@@ -90,7 +90,7 @@ def update_gui():
     imgui.begin("window", None)
 
     # make the cmap images display height similar to the text height so that it looks nice
-    texture_height = 12
+    texture_height = imgui.get_font_size() - 2
 
     # add the items for the picker
     for cmap_name, tex_ref in cmap_data.items():
@@ -100,7 +100,11 @@ def update_gui():
         )
         imgui.same_line()
         # the image part of each item, give it the texture id
+        imgui.push_style_color(imgui.Col_.border, (1.0, 1.0, 1.0, 1.0))
+        imgui.push_style_var(imgui.StyleVar_.image_border_size, 1.0)
         imgui.image(tex_ref, image_size=(50, texture_height))
+        imgui.pop_style_var()
+        imgui.pop_style_color()
         if enabled:
             current_cmap = cmap_name
 
