@@ -19,7 +19,7 @@ dependencies = [
 # For users
 jupyter = ["jupyter_rfb>=0.4.2"]
 glfw = ["glfw>=1.9"]
-imgui = ["imgui-bundle>=1.92.0"]
+imgui = ["imgui-bundle>=1.92.0, <2"]
 # For devs / ci
 build = ["build", "hatchling", "requests", "twine"]
 codegen = ["pytest", "numpy", "ruff"]
