@@ -149,7 +149,9 @@ def main(version=None, os_string=None, arch=None, upstream=None):
 
     current_version = get_current_version()
     if version != current_version:
-        print(f"Version changed, updating {VERSION_FILE}")
+        print(
+            f"Version changed, updating {VERSION_FILE}, diff: https://github.com/{upstream}/compare/v{current_version}...v{version}"
+        )
         filename = "commit-sha"
         url = f"https://github.com/{upstream}/releases/download/v{version}/{filename}"
         commit_sha_filename = os.path.join(tmp, filename)

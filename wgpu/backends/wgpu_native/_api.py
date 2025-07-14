@@ -427,7 +427,7 @@ class GPU(classes.GPU):
     def request_adapter_sync(
         self,
         *,
-        feaure_level: str = "core",
+        feature_level: str = "core",
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
@@ -437,7 +437,7 @@ class GPU(classes.GPU):
         """
         check_can_use_sync_variants()
         awaitable = self._request_adapter(
-            feaure_level=feaure_level,
+            feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
@@ -448,7 +448,7 @@ class GPU(classes.GPU):
     async def request_adapter_async(
         self,
         *,
-        feaure_level: str = "core",
+        feature_level: str = "core",
         power_preference: enums.PowerPreference = None,
         force_fallback_adapter: bool = False,
         canvas=None,
@@ -466,7 +466,7 @@ class GPU(classes.GPU):
                  be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
         awaitable = self._request_adapter(
-            feaure_level=feaure_level,
+            feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
@@ -474,7 +474,7 @@ class GPU(classes.GPU):
         return await awaitable
 
     def _request_adapter(
-        self, *, feaure_level, power_preference, force_fallback_adapter, canvas
+        self, *, feature_level, power_preference, force_fallback_adapter, canvas
     ):
         # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
         # It seems that the environment variables are only respected in their
@@ -527,7 +527,7 @@ class GPU(classes.GPU):
         c_feature_level = {
             "core": lib.WGPUFeatureLevel_Core,
             "compatibility": lib.WGPUFeatureLevel_Compatibility,
-        }[feaure_level]
+        }[feature_level]
 
         # H: nextInChain: WGPUChainedStruct *, featureLevel: WGPUFeatureLevel, powerPreference: WGPUPowerPreference, forceFallbackAdapter: WGPUBool/int, backendType: WGPUBackendType, compatibleSurface: WGPUSurface
         struct = new_struct_p(
@@ -1186,7 +1186,12 @@ class GPUAdapter(classes.GPUAdapter):
         for key in dir(c_required_limits):
             snake_key = to_snake_case(key, "-")
             # Skip the  pointers
-            if "chain" in snake_key:
+            if snake_key in (
+                "next-in-chain",
+                "max-push-constant-size",
+                "max-non-sampler-bindings",
+            ):
+                # Skip the chain and the native limits as they are handled in their own
                 continue
             # Use the value in required_limits if it exists. Otherwise, the old value
             try:
@@ -1195,19 +1200,23 @@ class GPUAdapter(classes.GPUAdapter):
                 value = self._limits[snake_key]
             setattr(c_required_limits, key, value)
 
-        # the native only limits are passed in via the next-in-chain struct
+        #  the native only limits are passed in via the next-in-chain struct
         # H: chain: WGPUChainedStructOut, maxPushConstantSize: int, maxNonSamplerBindings: int
-        c_required_limits_native = new_struct(
-            "WGPUNativeLimits",
-            maxPushConstantSize=required_limits.get("max-push-constant-size", 0),
-            maxNonSamplerBindings=required_limits.get("max-non-sampler-bindings", 0),
+        c_required_limits_native = new_struct_p(
+            "WGPUNativeLimits *",
+            maxPushConstantSize=required_limits.get(
+                "max-push-constant-size", self._limits["max-push-constant-size"]
+            ),
+            maxNonSamplerBindings=required_limits.get(
+                "max-non-sampler-bindings", self._limits["max-non-sampler-bindings"]
+            ),
             # not used: chain
         )
         c_required_limits_native.chain.next = ffi.NULL
         c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits
 
+        # here we attached the chain to the struct that's passed further down.
         c_required_limits.nextInChain = ffi.addressof(c_required_limits_native, "chain")
-
         # ---- Set queue descriptor
 
         # Note that the default_queue arg is a descriptor (dict for QueueDescriptor), but is currently empty :)
@@ -1222,6 +1231,7 @@ class GPUAdapter(classes.GPUAdapter):
 
         # ----- Compose device descriptor extras
 
+        # TODO: is this supported anymore?
         c_trace_path = to_c_string_view(trace_path if trace_path else None)
 
         # H: chain: WGPUChainedStruct, tracePath: WGPUStringView
@@ -1238,6 +1248,7 @@ class GPUAdapter(classes.GPUAdapter):
             "void(WGPUDevice const *, WGPUDeviceLostReason, WGPUStringView, void *, void *)"
         )
         def device_lost_callback(c_device, c_reason, c_message, userdata1, userdata2):
+            logger.error("DEVICE LOST!")
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
             msg = from_c_string_view(c_message)
             # This is afaik an error that cannot usually be attributed to a specific call,
@@ -1266,6 +1277,8 @@ class GPUAdapter(classes.GPUAdapter):
         def uncaptured_error_callback(
             c_device, c_type, c_message, userdata1, userdata2
         ):
+            # Let our error handler deal with it: the currently running API call will raise an error, or the error will be logged.
+            # Note that this call does/should not raise directly; it's a callback from Rust code
             error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
             msg = from_c_string_view(c_message)
             msg = "\n".join(line.rstrip() for line in msg.splitlines())
@@ -1356,12 +1369,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def _poll(self):
         # Internal function
         if self._internal:
-            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * wrappedSubmissionIndex)
+            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * submissionIndex)
             libf.wgpuDevicePoll(self._internal, False, ffi.NULL)
 
     def _poll_wait(self):
         if self._internal:
-            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * wrappedSubmissionIndex)
+            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * submissionIndex)
             libf.wgpuDevicePoll(self._internal, True, ffi.NULL)
 
     def create_buffer(
@@ -1771,18 +1784,17 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                             value=to_c_string_view("gl_VertexIndex"),
                         )
                     )
-                # note, GLSL is a wgpu-native feature and still uses the older structure!
                 # H: chain: WGPUChainedStruct, stage: WGPUShaderStage/int, code: WGPUStringView, defineCount: int, defines: WGPUShaderDefine *
                 source_struct = new_struct_p(
-                    "WGPUShaderModuleGLSLDescriptor *",
+                    "WGPUShaderSourceGLSL *",
+                    # not used: chain
                     code=to_c_string_view(code),
                     stage=c_stage,
                     defineCount=len(defines),
                     defines=new_array("WGPUShaderDefine[]", defines),
-                    # not used: chain
                 )
                 source_struct[0].chain.next = ffi.NULL
-                source_struct[0].chain.sType = lib.WGPUSType_ShaderModuleGLSLDescriptor
+                source_struct[0].chain.sType = lib.WGPUSType_ShaderSourceGLSL
             else:
                 # === WGSL
                 # H: chain: WGPUChainedStruct, code: WGPUStringView
@@ -2926,7 +2938,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         )
 
     def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int) -> None:
-        self._maybe_keep_alive(indirect_buffer)
+        # self._maybe_keep_alive(indirect_buffer)
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         # H: void wgpuRenderBundleEncoderDrawIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
