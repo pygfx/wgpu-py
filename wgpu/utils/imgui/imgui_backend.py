@@ -58,38 +58,6 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
 """
 
 
-binding_layout = [
-    {
-        "binding": 0,
-        "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-        "buffer": {"type": wgpu.BufferBindingType.uniform},
-    },
-    {
-        "binding": 1,
-        "visibility": wgpu.ShaderStage.FRAGMENT,
-        "sampler": {"type": wgpu.SamplerBindingType.filtering},
-    },
-]
-
-image_binding_layout = [
-    {
-        "binding": 0,
-        "visibility": wgpu.ShaderStage.FRAGMENT,
-        "texture": {
-            "sample_type": wgpu.TextureSampleType.float,
-            "view_dimension": wgpu.TextureViewDimension.d2,
-        },
-    },
-]
-
-
-uniform_dtype = [
-    ("mvp", "float32", (4, 4)),
-    ("gamma", "float32"),
-    ("__padding", "uint8", (12)),  # padding to 80 bytes
-]
-
-
 class ImguiWgpuBackend:
     """Basic integration base class."""
 
@@ -100,86 +68,130 @@ class ImguiWgpuBackend:
                 "imgui.set_current_context()."
             )
 
-        self._uniform_data = np.zeros((), dtype=uniform_dtype)
-        self._font_texture = None
-        self._font_texture_view = None
-        self._font_texture_sampler = None
+        self._uniform_data = np.zeros(
+            (),
+            dtype=[
+                ("mvp", "float32", (4, 4)),
+                ("gamma", "float32"),
+                ("__padding", "uint8", (12)),  # padding to 80 bytes
+            ],
+        )
+
+        self._sampler = None
+        self._bind_group = None
+        self._texture_bind_group_layout = None
 
         self._vertex_buffer = None
         self._vertex_buffer_size = 0
         self._index_buffer = None
         self._index_buffer_size = 0
 
-        self._bind_group = None
-        self._image_bind_groups = {}
-
+        # Texture management
+        self._textures = {}
         self._texture_views = {}
+        self._texture_bind_groups = {}
 
         self.io = imgui.get_io()
         self.io.set_ini_filename("")
         self.io.backend_flags |= imgui.BackendFlags_.renderer_has_vtx_offset
-        self.io.delta_time = 1.0 / 60.0
-
-        self._gui_time = None
+        self.io.backend_flags |= imgui.BackendFlags_.renderer_has_textures
 
         self._device = device
         self._target_format = target_format
 
         self._create_device_objects()
 
-    def create_fonts_texture(self):
+    def register_texture(self, texture_view: wgpu.GPUTextureView) -> imgui.ImTextureRef:
+        """Register a custom wgpu.GPUTextureView (which you want to render using Imgui)
+        with backend and return a texture reference in Imgui format.
         """
-        Create the font texture and upload it to the gpu
+        # get the id so that imgui can display it
+        id_texture = ctypes.c_int32(id(texture_view)).value
+        # add texture view to the backend so that it can be retrieved for rendering
+        self._texture_views[id_texture] = texture_view
 
-        Example:
-        ```python
-            font = backend.io.fonts.add_font_from_file_ttf(...)
-            backend.create_fonts_texture()
-        ```
-        Then you can use the font in the gui like this:
-        ```python
-            imgui.push_font(font)
-            imgui.text("Hello world")
-            imgui.pop_font()
-        ```
-        """
-        font_matrix = self.io.fonts.get_tex_data_as_rgba32()
-        width = font_matrix.shape[1]
-        height = font_matrix.shape[0]
-        pixels = font_matrix.data
+        return imgui.ImTextureRef(id_texture)
 
-        self._font_texture = self._device.create_texture(
-            label="ImGui font_texture",
-            size=(width, height, 1),
-            format=wgpu.TextureFormat.rgba8unorm,
-            usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
-        )
+    def _update_texture(self, tex: imgui.ImTextureData):
+        if tex.status == imgui.ImTextureStatus.want_create:
+            # Create and upload new texture to graphics system
+            assert tex.tex_id == 0
+            assert tex.format == imgui.ImTextureFormat.rgba32
 
-        self._font_texture_view = self._font_texture.create_view()
+            # Create texture
+            wgpu_tex = self._device.create_texture(
+                label="Dear ImGui Texture",
+                size=(tex.width, tex.height, 1),
+                format=wgpu.TextureFormat.rgba8unorm,
+                usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
+            )
 
-        self._font_texture_sampler = self._device.create_sampler(
-            label="ImGui font_texture_sampler",
-            mag_filter=wgpu.FilterMode.linear,
-            min_filter=wgpu.FilterMode.linear,
-            mipmap_filter=wgpu.FilterMode.linear,
-            address_mode_u=wgpu.AddressMode.repeat,
-            address_mode_v=wgpu.AddressMode.repeat,
-            address_mode_w=wgpu.AddressMode.repeat,
-        )
+            wgpu_tex_view = wgpu_tex.create_view()
 
-        self._device.queue.write_texture(
-            {"texture": self._font_texture, "mip_level": 0, "origin": (0, 0, 0)},
-            pixels,
-            {"offset": 0, "bytes_per_row": 4 * width},
-            (width, height, 1),
-        )
+            # store indentifiers
+            # convert to c int32, because imgui requires it
+            id_32 = ctypes.c_int32(id(wgpu_tex_view)).value
+            tex.set_tex_id(id_32)
 
-        # convert to c int32, because imgui requires it
-        # todo: id_32 may be duplicated with two different textures, we need to handle this
-        id_32 = ctypes.c_int32(id(self._font_texture_view)).value
-        self.io.fonts.tex_id = id_32
-        self._texture_views[id_32] = self._font_texture_view
-        self.io.fonts.clear_tex_data()
+            # store backend user data
+            # tex.backend_user_data = (wgpu_tex, wgpu_tex_view)
+            self._textures[id_32] = wgpu_tex
+            self._texture_views[id_32] = wgpu_tex_view
+
+            # Note: Don't set tex.status to ImTextureStatus.ok to let the code fallthrough below.
+        if (
+            tex.status == imgui.ImTextureStatus.want_create
+            or tex.status == imgui.ImTextureStatus.want_updates
+        ):
+            wgpu_tex = self._textures[tex.tex_id]
+            wgpu_tex_view = self._texture_views[tex.tex_id]
+            # Update texture data
+            assert tex.format == imgui.ImTextureFormat.rgba32
+
+            # Get upload rect
+            if tex.status == imgui.ImTextureStatus.want_create:
+                upload_x = 0
+                upload_y = 0
+            else:
+                upload_x = tex.update_rect.x
+                upload_y = tex.update_rect.y
+
+            upload_w = tex.update_rect.w
+            upload_h = tex.update_rect.h
+
+            # Update full texture or selected blocks
+            full_data = tex.get_pixels_array()
+            offset = (upload_y * tex.width + upload_x) * tex.bytes_per_pixel
+            upload_data = full_data[offset:]
+
+            self._device.queue.write_texture(
+                {
+                    "texture": wgpu_tex,
+                    "mip_level": 0,
+                    "origin": (upload_x, upload_y, 0),
+                },
+                upload_data,
+                {"offset": 0, "bytes_per_row": tex.width * tex.bytes_per_pixel},
+                (upload_w, upload_h, 1),
+            )
+
+            # set status to ok
+            tex.set_status(imgui.ImTextureStatus.ok)
+
+        if tex.status == imgui.ImTextureStatus.want_destroy and tex.unused_frames > 0:
+            wgpu_tex = self._textures[tex.tex_id]
+            wgpu_tex_view = self._texture_views[tex.tex_id]
+
+            assert tex.tex_id == ctypes.c_int32(id(wgpu_tex_view)).value
+
+            # Clear identifiers and mark as destroyed
+            ImTextureID_Invalid = 0  # noqa
+            tex.set_tex_id(ImTextureID_Invalid)
+            tex.set_status(imgui.ImTextureStatus.destroyed)
+
+            self._textures.pop(tex.tex_id, None)
+            self._texture_views.pop(tex.tex_id, None)
+            self._texture_bind_groups.pop(tex.tex_id, None)
 
     def _create_device_objects(self):
         vertex_shader_program = self._device.create_shader_module(
@@ -189,19 +201,47 @@ class ImguiWgpuBackend:
             label="triangle_frag", code=FRAGMENT_SHADER_SRC
         )
 
-        self.create_fonts_texture()
-
         self._uniform_buffer = self._device.create_buffer(
             size=self._uniform_data.nbytes,
             usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST,
         )
 
-        bind_group_layout = self._device.create_bind_group_layout(
-            entries=binding_layout
+        self._sampler = self._device.create_sampler(
+            label="ImGui sampler",
+            mag_filter=wgpu.FilterMode.linear,
+            min_filter=wgpu.FilterMode.linear,
+            mipmap_filter=wgpu.FilterMode.linear,
+            address_mode_u=wgpu.AddressMode.repeat,
+            address_mode_v=wgpu.AddressMode.repeat,
+            address_mode_w=wgpu.AddressMode.repeat,
         )
 
-        self.image_bind_group_layout = self._device.create_bind_group_layout(
-            entries=image_binding_layout
+        bind_group_layout = self._device.create_bind_group_layout(
+            entries=[
+                {
+                    "binding": 0,
+                    "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
+                    "buffer": {"type": wgpu.BufferBindingType.uniform},
+                },
+                {
+                    "binding": 1,
+                    "visibility": wgpu.ShaderStage.FRAGMENT,
+                    "sampler": {"type": wgpu.SamplerBindingType.filtering},
+                },
+            ]
+        )
+
+        self._texture_bind_group_layout = self._device.create_bind_group_layout(
+            entries=[
+                {
+                    "binding": 0,
+                    "visibility": wgpu.ShaderStage.FRAGMENT,
+                    "texture": {
+                        "sample_type": wgpu.TextureSampleType.float,
+                        "view_dimension": wgpu.TextureViewDimension.d2,
+                    },
+                },
+            ]
         )
 
         bind_groups_layout_entries = [
@@ -215,7 +255,7 @@ class ImguiWgpuBackend:
             },
             {
                 "binding": 1,
-                "resource": self._font_texture_sampler,
+                "resource": self._sampler,
             },
         ]
 
@@ -250,7 +290,7 @@ class ImguiWgpuBackend:
 
         self._render_pipeline = self._device.create_render_pipeline(
             layout=self._device.create_pipeline_layout(
-                bind_group_layouts=[bind_group_layout, self.image_bind_group_layout]
+                bind_group_layouts=[bind_group_layout, self._texture_bind_group_layout]
             ),
             vertex={
                 "module": vertex_shader_program,
@@ -401,10 +441,16 @@ class ImguiWgpuBackend:
         if fb_width <= 0 or fb_height <= 0 or draw_data.cmd_lists_count == 0:
             return
 
-        self._set_render_state(draw_data)
+        if draw_data.textures is not None:
+            for tex in draw_data.textures:
+                if tex.status != imgui.ImTextureStatus.ok:
+                    # update tex
+                    self._update_texture(tex)
+
         self._update_vertex_buffer(draw_data)
 
         # set render state
+        self._set_render_state(draw_data)
         render_pass.set_viewport(0, 0, fb_width, fb_height, 0, 1)
 
         render_pass.set_pipeline(self._render_pipeline)
@@ -437,22 +483,23 @@ class ImguiWgpuBackend:
 
             for command in commands.cmd_buffer:
                 # todo command.user_callback
+                tex_id = command.tex_ref.get_tex_id()
 
-                tex_id = command.texture_id
-
-                if tex_id not in self._image_bind_groups:
-                    image_bind_group = self._device.create_bind_group(
-                        layout=self.image_bind_group_layout,
+                if tex_id not in self._texture_bind_groups:
+                    tex_view = self._texture_views[tex_id]
+                    texture_bind_group = self._device.create_bind_group(
+                        layout=self._texture_bind_group_layout,
                         entries=[
                             {
                                 "binding": 0,
-                                "resource": self._texture_views[tex_id],
+                                "resource": tex_view,
                             }
                         ],
                     )
-                    self._image_bind_groups[tex_id] = image_bind_group
+                    # cache the bind group
+                    self._texture_bind_groups[tex_id] = texture_bind_group
 
-                render_pass.set_bind_group(1, self._image_bind_groups[tex_id])
+                render_pass.set_bind_group(1, self._texture_bind_groups[tex_id])
 
                 clip_rect = command.clip_rect
                 clip_min = [
@@ -492,12 +539,3 @@ class ImguiWgpuBackend:
 
             global_vtx_offset += commands.vtx_buffer.size()
             global_idx_offset += commands.idx_buffer.size()
-
-    def _invalidate_device_objects(self):
-        self._render_pipeline = None
-        self._uniform_buffer.destroy()
-        self._font_texture.destroy()
-        self._font_texture_view = None
-        self._font_texture_sampler = None
-
-        self.io.fonts.set_tex_id(0)
