@@ -10,11 +10,14 @@ import requests
 
 from download_wgpu_native import RESOURCE_DIR, download_file, get_os_string
 
+
 # changed to use a specific arch
 def extract_file(zip_filename, member, path):
     # Read file from archive, find it no matter the folder structure
     z = ZipFile(zip_filename)
-    bb = z.read(f"bin/x64/{member}") # this one works for me... maybe we can parameterize arch?
+    bb = z.read(
+        f"bin/x64/{member}"
+    )  # this one works for me... maybe we can parameterize arch?
     # Write to disk
     os.makedirs(path, exist_ok=True)
     with open(os.path.join(path, member), "wb") as f:
@@ -27,7 +30,8 @@ def get_latest_release() -> str:
     if response.status_code != 200:
         raise RuntimeError(f"Failed to get latest release: {response.status_code=}")
     data = response.json()
-    return data["tag_name"] #.removeprefix("v") # to be inline with the other script?
+    return data["tag_name"]  # .removeprefix("v") # to be inline with the other script?
+
 
 def get_filename(version: str) -> str:
     """returns the filename of the dxc_yyyy_mm_dd.zip file so we can download it"""
@@ -41,6 +45,7 @@ def get_filename(version: str) -> str:
             return asset["name"]
     raise RuntimeError(f"Couldn't find dxc archive for release {version}")
 
+
 def main(version=None):
     if version is None:
         version = get_latest_release()
@@ -48,13 +53,13 @@ def main(version=None):
     if os_string != "windows":
         raise RuntimeError("Dxc only supported on Windows")
     filename = get_filename(version)
-    url = f"https://github.com/microsoft/DirectXShaderCompiler/releases/download/{version}/{filename}" # or use the api response for "browser_download_url"?
+    url = f"https://github.com/microsoft/DirectXShaderCompiler/releases/download/{version}/{filename}"  # or use the api response for "browser_download_url"?
     tmp = tempfile.gettempdir()
     zip_filename = os.path.join(tmp, filename)
     print(f"Downloading {url}")
     download_file(url, zip_filename)
     compiler_file = "dxcompiler.dll"
-    signing_file = "dxil.dll" # in v26 this won't be needed anymore
+    signing_file = "dxil.dll"  # in v26 this won't be needed anymore
     print(f"Extracting {compiler_file} to {RESOURCE_DIR}")
     extract_file(zip_filename, compiler_file, RESOURCE_DIR)
     print(f"Extracting {signing_file} to {RESOURCE_DIR}")
@@ -63,10 +68,9 @@ def main(version=None):
     # cleanup of tempfile?
     # os.remove(zip_filename)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Download Dxc from github release."
-    )
+    parser = argparse.ArgumentParser(description="Download Dxc from github release.")
     parser.add_argument(
         "--version",
         type=str,
