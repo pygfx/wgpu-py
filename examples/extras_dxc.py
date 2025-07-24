@@ -4,19 +4,21 @@ Since this will only work on Windows it's not meant for the test suite.
 You can run the download script using `python tools/download_dxc.py` to download the latest Dxc release from GitHub. And extract it to the resource directory.
 """
 
-# test_examples = false
+# test_example = false
 
 from rendercanvas.auto import RenderCanvas, loop
 
-# before we enumerate or request a device, we need to set the extras
+# before we enumerate or request a device, we need to set the instance extras
 # as we import from the base examples, those do the request_device call
 from wgpu.backends.wgpu_native.extras import set_instance_extras
 
 set_instance_extras(
-    backends=["DX12"], # we only want to use Dx12 for this example
-    dx12_compiler="Dxc", # request the Dxc compiler to be used
+    backends=[
+        "DX12"
+    ],  # using the env var `WGPU_BACKEND_TYPE` happens later during request_device, so you can only select backends that are requested for the instance
+    dx12_compiler="Dxc",  # request the Dxc compiler to be used
     # dxil_path and dxc_path can be set for a custom Dxc location
-    dxc_max_shader_model=6.7
+    dxc_max_shader_model=6.7,
 )
 
 
@@ -40,4 +42,3 @@ if __name__ == "__main__":
     loop.run()
     # But how do you know this is actually using Dxc over Fxc?
     # perhaps performance, but we can also use Debug tools to be sure.
-    # TODO: renderdoc launcher example?
