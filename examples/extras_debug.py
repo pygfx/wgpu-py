@@ -4,7 +4,7 @@ As debugger we will use RenderDoc (https://renderdoc.org/) - other tools will re
 While RenderDoc doesn't support WebGPU - it still works to inspect the Pipeline or with translated shaders.
 """
 
-# test_example = false
+# run_example = false
 
 from rendercanvas.auto import RenderCanvas, loop
 
@@ -14,7 +14,8 @@ from wgpu.backends.wgpu_native.extras import set_instance_extras
 
 # this communicates with the compiler to enable debug symbols.
 # I have confirmed this works for Vulkan and Dx12, however it seems like it's always enabled for Fxc and doesn't work for Dxc
-# TODO can someone test this on Metal (OpenGL?)
+# OpenGL sorta works, but even GLSL shader code gets translated by naga, so the code is messed up but symbols are part way still there.
+# TODO can someone test this on Metal?
 set_instance_extras(
     flags=["Debug"]  # an additional option here is "Validation".
 )
@@ -52,5 +53,6 @@ if __name__ == "__main__":
 # Now the Pipeline State should let you chose either Vertex Shader or Fragment Shader and see a button called "View" next to the ShaderModule.
 # If you see the source code from the example including symbols and comments then it worked!
 # Note that using Dx12 will not show the the same source, as naga translated the shader to HLSL.
+# as RenderDoc doesn't support WGSL, you won't be able to edit or step the source directly with Vulkan.
 
 # TODO: automate the launching and capturing using the scripting api?
