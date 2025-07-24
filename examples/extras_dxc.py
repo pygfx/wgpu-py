@@ -4,7 +4,7 @@ Since this will only work on Windows it's not meant for the test suite.
 You can run the download script using `python tools/download_dxc.py` to download the latest Dxc release from GitHub. And extract it to the resource directory.
 """
 
-# test_example = false
+# run_example = false
 
 from rendercanvas.auto import RenderCanvas, loop
 
