@@ -1,7 +1,7 @@
 """
 Basic example of how to use wgpu-native instance extras to enable debug symbols.
 As debugger we will use RenderDoc (https://renderdoc.org/) - other tools will require a similar setup.
-While RenderDoc doesn't support WebGPU - it still works to inspect the Pipeline or with translated shaders.
+While RenderDoc doesn't fully support WebGPU - it still works to inspect the Pipeline or with translated shaders.
 """
 
 # run_example = false
@@ -19,9 +19,9 @@ from rendercanvas.auto import RenderCanvas, loop
 
 def setup_demo():
     """
-    this is inside a function so it's only called later.
+    this is inside a function so it's only called later. Similar to other examples
     """
-    # before we enumerate or request a device, we need to set the instance extras
+    # before we enumerate or request a device, we need to set instance extras
     # as we import from the base examples, those do the request_device call
     from wgpu.backends.wgpu_native.extras import set_instance_extras
 
@@ -33,7 +33,7 @@ def setup_demo():
         flags=["Debug"]  # an additional option here is "Validation".
     )
 
-    # TODO: replace the default examples by including additional debug markers using Encoder.inser_debug_marker(label)
+    # TODO: replace the default examples by including additional debug markers using encoder.inser_debug_marker(label)
     try:
         from .cube import setup_drawing_sync
     except ImportError:
@@ -62,6 +62,9 @@ def renderdoc_launcher():
     This writes a temporary .cap file which contains all the renderdoc capture setup.
     Then launches the gui.
     """
+    # see https://renderdoc.org/docs/window/capture_attach.html for explanation
+    # and https://renderdoc.org/docs/python_api/qrenderdoc/main.html#qrenderdoc.CaptureSettings for details
+    # the following settings work for me, although variations should mostly work.
     cap_settings = {
         "rdocCaptureSettings": 1,
         "settings": {
@@ -113,8 +116,7 @@ def renderdoc_launcher():
 
     # relies on having associated the .cap file with RenderDoc in Windows?
     # TODO: other OS???
-    # is this now a child process or can the python script end?
-    subprocess.run(["start", cap_file.name], shell=True)
+    subprocess.run([cap_file.name], shell=True)
     # TODO: cleanup tempfiles?
 
 
