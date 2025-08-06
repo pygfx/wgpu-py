@@ -309,7 +309,7 @@ class GPUCanvasContext:
         *,
         device: GPUDevice,
         format: enums.TextureFormat,
-        usage: flags.TextureUsage = 0x10,
+        usage: flags.TextureUsage = flags.TextureUsage.RENDER_ATTACHMENT,
         view_formats: List[enums.TextureFormat] = [],
         color_space: str = "srgb",
         tone_mapping: structs.CanvasToneMapping = {},
