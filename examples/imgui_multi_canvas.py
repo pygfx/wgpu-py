@@ -28,8 +28,6 @@ imgui_renderer3 = ImguiRenderer(device, canvas3)
 
 # Separate GUIs that are drawn to each canvas
 def update_gui1():
-    imgui.new_frame()
-
     imgui.set_next_window_size((300, 0), imgui.Cond_.appearing)
     imgui.set_next_window_pos((0, 20), imgui.Cond_.appearing)
 
@@ -38,15 +36,8 @@ def update_gui1():
 
     imgui.end()
 
-    imgui.end_frame()
-    imgui.render()
-
-    return imgui.get_draw_data()
-
 
 def update_gui2():
-    imgui.new_frame()
-
     imgui.set_next_window_size((300, 0), imgui.Cond_.appearing)
     imgui.set_next_window_pos((0, 20), imgui.Cond_.appearing)
 
@@ -55,15 +46,8 @@ def update_gui2():
 
     imgui.end()
 
-    imgui.end_frame()
-    imgui.render()
-
-    return imgui.get_draw_data()
-
 
 def update_gui3():
-    imgui.new_frame()
-
     imgui.set_next_window_size((300, 0), imgui.Cond_.appearing)
     imgui.set_next_window_pos((0, 20), imgui.Cond_.appearing)
 
@@ -71,11 +55,6 @@ def update_gui3():
     imgui.button("b3")
 
     imgui.end()
-
-    imgui.end_frame()
-    imgui.render()
-
-    return imgui.get_draw_data()
 
 
 # give the corresponding gui updater functions to the imgui renderers

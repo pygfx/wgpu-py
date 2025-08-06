@@ -25,7 +25,6 @@ imgui_renderer = ImguiRenderer(device, canvas)
 
 
 def update_gui():
-    imgui.new_frame()
     if imgui.begin_main_menu_bar():
         if imgui.begin_menu("File", True):
             clicked_quit, _ = imgui.menu_item("Quit", "Cmd+Q", False, True)
@@ -66,11 +65,6 @@ def update_gui():
                 imgui.close_current_popup()
 
     imgui.end()
-
-    imgui.end_frame()
-    imgui.render()
-
-    return imgui.get_draw_data()
 
 
 # set the GUI update function that gets called to return the draw data
