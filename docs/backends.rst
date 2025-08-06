@@ -311,7 +311,7 @@ given in a different order in the list.
     :param query_set: The query set into which to save the result.
     :param index: The index of the query set into which to write the result.
 
-.. py:function:: wgpu.backends.wgpu_native.begin_pipeline_statistics_query(encoder, query_set, index)
+.. py:function:: wgpu.backends.wgpu_native.end_pipeline_statistics_query(encoder, query_set, index)
 
     Stop collecting statistics and write them into the query set.
 
