@@ -247,7 +247,7 @@ both enabled.
 
 When ``write_timestamp`` is called with a render pass or compute pass as its first
 argument, a timestamp is written to the indicated query set at the indicated index at
-that point in thie queue. This usage requires
+that point in this queue. This usage requires
 that the features ``"timestamp-query"`` and ``"timestamp-query-inside-passes"`` are
 both enabled.
 
@@ -346,7 +346,7 @@ Use like the following before the instance is created, which happens during requ
     for a in wgpu.gpu.enumerate_adapters_sync():
         print(a.summary)
 
-For additional useage examples look at `extras_dxc.py` and `extras_debug.py` in the examples directory.
+For additional usage examples look at `extras_dxc.py` and `extras_debug.py` in the examples directory.
 
 The js_webgpu backend
 ---------------------
