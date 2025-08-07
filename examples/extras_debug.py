@@ -123,8 +123,7 @@ def renderdoc_launcher():
 if __name__ == "__main__":
     # awful hack: if the script is run by a user, we write the tempfile to then run the launcher and auto catpure
     # while the capture itself has an envvar to launch the gui instead.
-    is_renderdoc = os.environ.get("RENDERDOC_CAPTURE", "0") == "1"
-    if is_renderdoc:
+    if "RENDERDOC_CAPTURE" in os.environ:
         setup_demo()
         loop.run()
     else:
