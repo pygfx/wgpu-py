@@ -319,7 +319,7 @@ given in a different order in the list.
 
 .. py:function:: wgpu.backends.wgpu_native.set_instance_extras(backends, flags, dx12_compiler, gles3_minor_version, fence_behavior, dxil_path, dxc_path, dxc_max_shader_model)
 
-    Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapters).
+    Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
 
     :param backends: bitflags as list[str], which backends to enable on the instance level. Defaults to ``["All"]``. Can be any combination of ``["Vulkan", "GL", "Metal", "DX12", "BrowserWebGPU"]`` or the premade combinations ``["All", "Primary", "secondary"]``. Note that your device needs to support these backends, for detailed information see https://docs.rs/wgpu/latest/wgpu/struct.Backends.html
     :param flags: bitflags as list[str], debug flags for the compiler. Defaults to ``["Default"]``, can be any combination of ``["Debug", "Validation", "DiscardHalLabels"]``.
@@ -330,7 +330,7 @@ given in a different order in the list.
     :param dxc_path: str, path to dxcompiler.dll, defaults to ``None``. None looks in the resource directory.
     :param dxc_max_shader_model: float between 6.0 and 6.7, Maximum shader model the given dll supports. Defaults to 6.5.
 
-Use like the following before the instance is created, which happens during request_adapters or enumerate_adapters.
+Use like the following before the instance is created, which happens during request_adapter or enumerate_adapters.
 
 .. code-block:: py
 
