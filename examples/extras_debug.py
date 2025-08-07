@@ -114,9 +114,15 @@ def renderdoc_launcher():
         f.write(cap_str)
     cap_file.close()  # doesn't the contextmanager make sure the file is closed and not blocked?
 
-    # relies on having associated the .cap file with RenderDoc in Windows?
-    # TODO: other OS???
-    subprocess.run([cap_file.name], shell=True)
+    # relies on having associated the .cap file with RenderDoc
+    # TODO: other OS - untested
+    if sys.platform.startswith("win"):
+        # apparently this should be none blocking and safer
+        os.startfile(cap_file.name)
+    elif sys.platform.startswith("darwin"):  # macOS
+        subprocess.Popen(["open", cap_file.name])
+    else:  # likely Linux
+        subprocess.Popen(["xdg-open", cap_file.name])
     # TODO: cleanup tempfiles?
 
 
