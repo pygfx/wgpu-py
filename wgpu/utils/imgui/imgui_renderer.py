@@ -166,8 +166,10 @@ class ImguiRenderer:
         )
 
         imgui.new_frame()
-        self._update_gui_function()
-        imgui.render()
+        try:
+            self._update_gui_function()
+        finally:
+            imgui.render()
         draw_data = imgui.get_draw_data()
 
         self._backend.render(draw_data, render_pass)
