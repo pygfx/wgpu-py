@@ -74,8 +74,6 @@ class Stats:
         self.__window_size = None
 
     def _draw_imgui(self):
-        imgui.new_frame()
-
         imgui.set_next_window_size((0, 0), imgui.Cond_.always)
 
         if self._align == "right" and self.__window_size is not None:
@@ -124,10 +122,6 @@ class Stats:
         imgui.end()
 
         imgui.pop_style_color()
-
-        imgui.end_frame()
-        imgui.render()
-        return imgui.get_draw_data()
 
     def _on_mouse(self, event):
         if self._renderer.backend.io.want_capture_mouse:

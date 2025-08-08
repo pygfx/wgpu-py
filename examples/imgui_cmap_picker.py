@@ -81,7 +81,6 @@ current_cmap = cmaps[0]
 
 
 def update_gui():
-    imgui.new_frame()
     global current_cmap
 
     imgui.set_next_window_size((175, 0), imgui.Cond_.appearing)
@@ -109,11 +108,6 @@ def update_gui():
             current_cmap = cmap_name
 
     imgui.end()
-
-    imgui.end_frame()
-    imgui.render()
-
-    return imgui.get_draw_data()
 
 
 imgui_renderer.set_gui(update_gui)
