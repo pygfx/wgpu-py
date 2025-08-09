@@ -227,14 +227,14 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     ):
         bind_group_layout = device.create_bind_group_layout(
             entries=layout_entries,
-            label=f"Cube Example bind group layout {entries[0]['binding']}",
+            label="Cube Example bind group layout",
         )
         bind_group_layouts.append(bind_group_layout)
         bind_groups.append(
             device.create_bind_group(
                 layout=bind_group_layout,
                 entries=entries,
-                label=f"Cube Example bind group {entries[0]['binding']}",
+                label=f"Cube Example bind group with {len(entries)} entries",
             )
         )
 
@@ -342,7 +342,9 @@ def get_draw_function(
 
     def draw_frame():
         current_texture_view = (
-            canvas.get_context("wgpu").get_current_texture().create_view(label="Cube Example current surface texture view")
+            canvas.get_context("wgpu")
+            .get_current_texture()
+            .create_view(label="Cube Example current surface texture view")
         )
         command_encoder = device.create_command_encoder(
             label="Cube Example render pass command encoder"
@@ -360,12 +362,18 @@ def get_draw_function(
             label="Cube Example render pass",
         )
 
+        # debug groups and markers can optionally be added to help debugging.
+        render_pass.push_debug_group("Cube Example Debug Group")
         render_pass.set_pipeline(render_pipeline)
         render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
         render_pass.set_vertex_buffer(0, vertex_buffer)
         for bind_group_id, bind_group in enumerate(bind_groups):
             render_pass.set_bind_group(bind_group_id, bind_group)
+            render_pass.insert_debug_marker(
+                f"Cube Example bind group {bind_group_id=} set"
+            )
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
+        render_pass.pop_debug_group()
         render_pass.end()
 
         device.queue.submit(
