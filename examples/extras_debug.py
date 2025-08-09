@@ -83,6 +83,12 @@ def renderdoc_launcher():
                     "value": 1,
                     "variable": "RENDERDOC_CAPTURE",  # this is used specifically for this example to avoid a fork bomb.
                 },
+                # {
+                #     "separator": "Platform style",
+                #     "type": "Set",
+                #     "value": 1,
+                #     "variable": "WGPU_DEBUG", # if you have a debug build of wgpu-native in your resource directory, you can use it like this.
+                # },
             ],
             "executable": str(sys.executable),
             "inject": "false",
