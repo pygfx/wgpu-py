@@ -3508,9 +3508,6 @@ class GPUComputePassEncoder(
     def end(self) -> None:
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
-        # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
-        # As of wgpu-native v22.1.0.5, this bug is still present.
-        self._release()
 
     def _maybe_keep_alive(self, object):
         pass
@@ -3596,9 +3593,6 @@ class GPURenderPassEncoder(
     def end(self) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
-        # Need to release, see https://github.com/gfx-rs/wgpu-native/issues/412
-        # As of wgpu-native v22.1.0.5, this bug is still present.
-        self._release()
 
     def execute_bundles(self, bundles: List[GPURenderBundle]) -> None:
         bundle_ids = [bundle._internal for bundle in bundles]
