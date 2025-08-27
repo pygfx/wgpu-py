@@ -34,7 +34,7 @@ def setup_drawing_sync(canvas, power_preference="high-performance", limits=None)
         required_limits=limits, label="Cube Example device"
     )
 
-    pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
+    pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
     render_pipeline = device.create_render_pipeline(
@@ -42,7 +42,7 @@ def setup_drawing_sync(canvas, power_preference="high-performance", limits=None)
     )
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=False
+        canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=False
     )
 
 
@@ -58,7 +58,7 @@ async def setup_drawing_async(canvas, limits=None):
         required_limits=limits, label="Cube Example async device"
     )
 
-    pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
+    pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
     render_pipeline = await device.create_render_pipeline_async(
@@ -66,7 +66,7 @@ async def setup_drawing_async(canvas, limits=None):
     )
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=True
+        canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=True
     )
 
 
@@ -177,12 +177,12 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     # Create a sampler
     sampler = device.create_sampler(label="Cube Example sampler")
 
-    # We always have two bind groups, so we can play distributing our
-    # resources over these two groups in different configurations.
-    bind_groups_entries = [[]]
-    bind_groups_layout_entries = [[]]
+    # Create bind group layouts for our resources
+    # We will use a single bind group with three resources
+    bind_group_entries = []
+    bind_group_layout_entries = []
 
-    bind_groups_entries[0].append(
+    bind_group_entries.append(
         {
             "binding": 0,
             "resource": {
@@ -192,7 +192,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
             },
         }
     )
-    bind_groups_layout_entries[0].append(
+    bind_group_layout_entries.append(
         {
             "binding": 0,
             "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
@@ -200,8 +200,8 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
         }
     )
 
-    bind_groups_entries[0].append({"binding": 1, "resource": texture_view})
-    bind_groups_layout_entries[0].append(
+    bind_group_entries.append({"binding": 1, "resource": texture_view})
+    bind_group_layout_entries.append(
         {
             "binding": 1,
             "visibility": wgpu.ShaderStage.FRAGMENT,
@@ -209,8 +209,8 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
         }
     )
 
-    bind_groups_entries[0].append({"binding": 2, "resource": sampler})
-    bind_groups_layout_entries[0].append(
+    bind_group_entries.append({"binding": 2, "resource": sampler})
+    bind_group_layout_entries.append(
         {
             "binding": 2,
             "visibility": wgpu.ShaderStage.FRAGMENT,
@@ -219,30 +219,21 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     )
 
     # Create the wgpu binding objects
-    bind_group_layouts = []
-    bind_groups = []
-
-    for entries, layout_entries in zip(
-        bind_groups_entries, bind_groups_layout_entries, strict=False
-    ):
-        bind_group_layout = device.create_bind_group_layout(
-            entries=layout_entries,
-            label="Cube Example bind group layout",
-        )
-        bind_group_layouts.append(bind_group_layout)
-        bind_groups.append(
-            device.create_bind_group(
-                layout=bind_group_layout,
-                entries=entries,
-                label=f"Cube Example bind group with {len(entries)} entries",
-            )
-        )
-
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=bind_group_layouts, label="Cube Example pipeline layout"
+    bind_group_layout = device.create_bind_group_layout(
+        entries=bind_group_layout_entries,
+        label="Cube Example bind group layout",
+    )
+    bind_group = device.create_bind_group(
+        layout=bind_group_layout,
+        entries=bind_group_entries,
+        label="Cube Example bind group",
     )
 
-    return pipeline_layout, uniform_buffer, bind_groups
+    pipeline_layout = device.create_pipeline_layout(
+        bind_group_layouts=[bind_group_layout], label="Cube Example pipeline layout"
+    )
+
+    return pipeline_layout, uniform_buffer, bind_group
 
 
 def get_draw_function(
@@ -250,7 +241,7 @@ def get_draw_function(
     device: wgpu.GPUDevice,
     render_pipeline: wgpu.GPURenderPipeline,
     uniform_buffer: wgpu.GPUBuffer,
-    bind_groups: list[wgpu.GPUBindGroup],
+    bind_group: wgpu.GPUBindGroup,
     *,
     asynchronous: bool,
 ):
@@ -367,11 +358,8 @@ def get_draw_function(
         render_pass.set_pipeline(render_pipeline)
         render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
         render_pass.set_vertex_buffer(0, vertex_buffer)
-        for bind_group_id, bind_group in enumerate(bind_groups):
-            render_pass.set_bind_group(bind_group_id, bind_group)
-            render_pass.insert_debug_marker(
-                f"Cube Example bind group {bind_group_id=} set"
-            )
+        render_pass.set_bind_group(0, bind_group)
+        render_pass.insert_debug_marker("Cube Example bind group set")
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
         render_pass.pop_debug_group()
         render_pass.end()
