@@ -1,7 +1,10 @@
 """
-Basic example of how to use wgpu-native instance extras to enable debug symbols.
+Basic example of how to use wgpu-native instance extras to enable debug symbols and labels in the shader compiler.
 As debugger we will use RenderDoc (https://renderdoc.org/) - other tools will require a similar setup.
-While RenderDoc doesn't fully support WebGPU - it still works to inspect the Pipeline or with translated shaders.
+While RenderDoc doesn't fully support WebGPU - it can still be useful for inspecting the render pipeline.
+RenderDoc also doesn't support WGSL, so it will work off the naga translated shaders for debug stepping and editing.
+Using DX12 (HLSL) or OpenGL (GLSL) gives a better decompilation experience compared to Vulkan (SPIR-V).
+The Vulkan research structure most closely matches WebGPU.
 """
 
 # run_example = false
@@ -14,8 +17,7 @@ import sys
 import tempfile
 from rendercanvas.auto import RenderCanvas, loop
 
-# this skript has two behaviours, either be an example - or launch RenderDoc.
-
+# this script has two behaviours: launch RenderDoc and run the example.
 
 def setup_demo():
     """
