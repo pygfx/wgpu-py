@@ -19,46 +19,6 @@ from rendercanvas.auto import RenderCanvas, loop
 
 # this script has two behaviours: launch RenderDoc and run the example.
 
-def setup_demo():
-    """
-    this is inside a function so it's only called later. Similar to other examples
-    """
-    # before we enumerate or request a device, we need to set instance extras
-    # as we import from the base examples, those do the request_device call
-    from wgpu.backends.wgpu_native.extras import set_instance_extras
-
-    # this communicates with the compiler to enable debug symbols.
-    # I have confirmed this works for Vulkan and Dx12, however it seems like it's always enabled for Fxc and doesn't work for Dxc
-    # OpenGL sorta works, but even GLSL shader code gets translated by naga, so the code is messed up but symbols are part way still there.
-    # TODO can someone test this on Metal?
-    set_instance_extras(
-        flags=["Debug"]  # an additional option here is "Validation".
-    )
-
-    # TODO: replace the default examples by including additional debug markers using encoder.inser_debug_marker(label)
-    try:
-        from .cube import setup_drawing_sync
-    except ImportError:
-        from cube import setup_drawing_sync
-
-    canvas = RenderCanvas(title="Cube example with debug symbols")
-    draw_frame = setup_drawing_sync(canvas)
-
-    # we set the auto capture on frame 50, so after 100 frames gui should exit
-    # this will lead to RenderDoc automatically opening the capture!
-    frame_count = 0
-
-    @canvas.request_draw
-    def animate():
-        nonlocal frame_count
-        frame_count += 1
-        draw_frame()
-        canvas.request_draw()
-        if frame_count > 100:
-            print("Stopping the loop after 100 frames")
-            canvas.close()
-
-
 def renderdoc_launcher():
     """
     This writes a temporary .cap file which contains all the renderdoc capture setup.
@@ -71,25 +31,20 @@ def renderdoc_launcher():
         "rdocCaptureSettings": 1,
         "settings": {
             "autoStart": "true",
-            "commandLine": str(Path(__file__).name),
+            "commandLine": str(Path(__file__).name) + " 1", # by adding an argument we signal that the script should run the example
             "environment": [
                 {
                     "separator": "Platform style",
                     "type": "Set",
-                    "value": "Vulkan",  # not required but you can set something else here!
+                    "value": "Vulkan",  # change the graphics Backend(API) here: "D3D12", "OpenGL", ...
                     "variable": "WGPU_BACKEND_TYPE",
                 },
-                {
-                    "separator": "Platform style",
-                    "type": "Set",
-                    "value": 1,
-                    "variable": "RENDERDOC_CAPTURE",  # this is used specifically for this example to avoid a fork bomb.
-                },
+                # this env var uses the debug build of wgpu-native, it's not required here as this will just add symbols for rust panic backtraces for example
                 # {
                 #     "separator": "Platform style",
                 #     "type": "Set",
                 #     "value": 1,
-                #     "variable": "WGPU_DEBUG", # if you have a debug build of wgpu-native in your resource directory, you can use it like this.
+                #     "variable": "WGPU_DEBUG",
                 # },
             ],
             "executable": str(sys.executable),
@@ -133,16 +88,55 @@ def renderdoc_launcher():
         subprocess.Popen(["xdg-open", cap_file.name])
     # TODO: cleanup tempfiles?
 
+def setup_demo():
+    """
+    this is inside a function so it's only called later. Similar to other examples
+    """
+    # before we enumerate or request a device, we need to set instance extras
+    # as we import from the base examples, those do the request_device call
+    from wgpu.backends.wgpu_native.extras import set_instance_extras
+
+    # this communicates with the compiler to enable debug symbols.
+    # I have confirmed this works for Vulkan and Dx12, however it seems like it's always enabled for Fxc and doesn't work for Dxc
+    # OpenGL sorta works, but even GLSL shader code gets translated by naga, so the code is messed up but symbols are part way still there.
+    # TODO can someone test this on Metal?
+    set_instance_extras(
+        flags=["Debug"]  # an additional option here is "Validation".
+    )
+
+    try:
+        from .cube import setup_drawing_sync
+    except ImportError:
+        from cube import setup_drawing_sync
+
+    canvas = RenderCanvas(title="Cube example with debug symbols")
+    draw_frame = setup_drawing_sync(canvas)
+
+    # we set the auto capture on frame 50, so after 100 frames gui should exit
+    # this will lead to RenderDoc automatically opening the capture!
+    frame_count = 0
+
+    @canvas.request_draw
+    def animate():
+        nonlocal frame_count
+        frame_count += 1
+        draw_frame()
+        canvas.request_draw()
+        if frame_count > 100:
+            print("Stopping the loop after 100 frames")
+            canvas.close()
+
+
 
 if __name__ == "__main__":
-    # awful hack: if the script is run by a user, we write the tempfile to then run the launcher and auto catpure
-    # while the capture itself has an envvar to launch the gui instead.
-    if "RENDERDOC_CAPTURE" in os.environ:
-        setup_demo()
-        loop.run()
-    else:
+    # if the script is run by a user, we write the tempfile to then run the launcher and auto catpure
+    # to know if the script is launched by the launcher, we call it with an argument
+    if len(sys.argv) == 1: # essentially means no arguments provided
         renderdoc_launcher()
         print("Should have opened the RenderDoc GUI, python process should close")
+    else:
+        setup_demo()
+        loop.run()
 
 # The capture should have opened now, on the left hand side in the Event Browser find the `vkCmdDrawIndexed` event. Click to open this event.
 # Now the Pipeline State should let you chose either Vertex Shader or Fragment Shader and see a button called "View" next to the ShaderModule.
