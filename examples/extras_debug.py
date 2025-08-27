@@ -131,7 +131,7 @@ def setup_demo():
 
 
 if __name__ == "__main__":
-    # if the script is run by a user, we write the tempfile to then run the launcher and auto catpure
+    # if the script is run by a user, we write the tempfile to then run the launcher with auto capture
     # to know if the script is launched by the launcher, we call it with an argument
     if len(sys.argv) == 1:  # essentially means no arguments provided
         renderdoc_launcher()
