@@ -19,6 +19,7 @@ from rendercanvas.auto import RenderCanvas, loop
 
 # this script has two behaviours: launch RenderDoc and run the example.
 
+
 def renderdoc_launcher():
     """
     This writes a temporary .cap file which contains all the renderdoc capture setup.
@@ -31,7 +32,8 @@ def renderdoc_launcher():
         "rdocCaptureSettings": 1,
         "settings": {
             "autoStart": "true",
-            "commandLine": str(Path(__file__).name) + " 1", # by adding an argument we signal that the script should run the example
+            "commandLine": str(Path(__file__).name)
+            + " example",  # by adding an argument we signal that the script should run the example
             "environment": [
                 {
                     "separator": "Platform style",
@@ -88,6 +90,7 @@ def renderdoc_launcher():
         subprocess.Popen(["xdg-open", cap_file.name])
     # TODO: cleanup tempfiles?
 
+
 def setup_demo():
     """
     this is inside a function so it's only called later. Similar to other examples
@@ -127,19 +130,22 @@ def setup_demo():
             canvas.close()
 
 
-
 if __name__ == "__main__":
     # if the script is run by a user, we write the tempfile to then run the launcher and auto catpure
     # to know if the script is launched by the launcher, we call it with an argument
-    if len(sys.argv) == 1: # essentially means no arguments provided
+    if len(sys.argv) == 1:  # essentially means no arguments provided
         renderdoc_launcher()
         print("Should have opened the RenderDoc GUI, python process should close")
     else:
         setup_demo()
         loop.run()
 
-# The capture should have opened now, on the left hand side in the Event Browser find the `vkCmdDrawIndexed` event. Click to open this event.
-# Now the Pipeline State should let you chose either Vertex Shader or Fragment Shader and see a button called "View" next to the ShaderModule.
+# The capture should have opened now, on the left hand side in the Event Browser find the `vkCmdDrawIndexed` event. Inside the render pass inside the debug group.
+# Clicking the timer button at the top of the Event Browser helps to locate interesting events. https://renderdoc.org/docs/window/event_browser.html#timing-actions
+# Now the Pipeline State tab should let you chose either Vertex Shader or Fragment Shader and see a button called "View" next to the ShaderModule.
 # If you see the source code from the example including symbols and comments then it worked!
-# Note that using Dx12 will not show the the same source, as naga translated the shader to HLSL.
-# as RenderDoc doesn't support WGSL, you won't be able to edit or step the source directly with Vulkan.
+
+# known issues:
+# Other backends don't always capture automatically. Make sure to press F11 to cycle if the overlays says so.
+# If the child process isn't automatically hooked, select the `python.exe` from the Child Processes list manually.
+# the auto capture and auto exit might be too quick, so increase those values don't capture manually.
