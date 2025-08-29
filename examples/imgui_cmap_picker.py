@@ -11,8 +11,6 @@ the shape [2, 255, 3] that represent the LUT for the colormap
 
 # run_example = false
 
-import ctypes
-
 import numpy as np
 
 import wgpu
@@ -58,12 +56,8 @@ def create_texture_and_upload(data: np.ndarray) -> int:
     # get a view
     texture_view = texture.create_view()
 
-    # get the id so that imgui can display it
-    id_texture = ctypes.c_int32(id(texture_view)).value
-    # add texture view to the backend so that it can be retrieved for rendering
-    imgui_renderer.backend._texture_views[id_texture] = texture_view
-
-    return id_texture
+    # register the texture with backend
+    return imgui_renderer.backend.register_texture(texture_view)
 
 
 # list of colormaps that we will display in the picker
@@ -77,17 +71,16 @@ for name in cmaps:
     data = Colormap(name)(np.linspace(0, 1)) * 255
 
     # vstack it so we have 2 rows to make a Texture, an array of shape [2, 255, 3], [rows, cols, RGB]
-    tex_id = create_texture_and_upload(np.vstack([[data]] * 2).astype(np.uint8))
+    tex_ref = create_texture_and_upload(np.vstack([[data]] * 2).astype(np.uint8))
 
-    # store the texture id
-    cmap_data[name] = tex_id
+    # store the texture
+    cmap_data[name] = tex_ref
 
 
 current_cmap = cmaps[0]
 
 
 def update_gui():
-    imgui.new_frame()
     global current_cmap
 
     imgui.set_next_window_size((175, 0), imgui.Cond_.appearing)
@@ -96,28 +89,25 @@ def update_gui():
     imgui.begin("window", None)
 
     # make the cmap images display height similar to the text height so that it looks nice
-    texture_height = (
-        imgui_renderer.backend.io.font_global_scale * imgui.get_font().font_size
-    ) - 2
+    texture_height = imgui.get_font_size() - 2
 
     # add the items for the picker
-    for cmap_name, tex_id in cmap_data.items():
+    for cmap_name, tex_ref in cmap_data.items():
         # text part of each item
         clicked, enabled = imgui.menu_item(
             cmap_name, "", p_selected=current_cmap == cmap_name
         )
         imgui.same_line()
         # the image part of each item, give it the texture id
-        imgui.image(tex_id, image_size=(50, texture_height), border_col=(1, 1, 1, 1))
+        imgui.push_style_color(imgui.Col_.border, (1.0, 1.0, 1.0, 1.0))
+        imgui.push_style_var(imgui.StyleVar_.image_border_size, 1.0)
+        imgui.image(tex_ref, image_size=(50, texture_height))
+        imgui.pop_style_var()
+        imgui.pop_style_color()
         if enabled:
             current_cmap = cmap_name
 
     imgui.end()
-
-    imgui.end_frame()
-    imgui.render()
-
-    return imgui.get_draw_data()
 
 
 imgui_renderer.set_gui(update_gui)
