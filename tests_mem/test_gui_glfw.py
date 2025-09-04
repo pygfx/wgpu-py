@@ -41,6 +41,9 @@ def test_release_canvas_context(n):
     from rendercanvas.glfw import RenderCanvas, poll_glfw_briefly
 
     yield {
+        "expected_counts_after_create": {
+            "CanvasContext": (n, 0),
+        },
         "ignore": {"CommandBuffer"},
     }
 

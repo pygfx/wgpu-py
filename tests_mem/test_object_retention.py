@@ -3,7 +3,6 @@ import struct
 import pytest
 
 import wgpu
-from tests.testutils import run_tests
 from wgpu.backends.wgpu_native.extras import (
     PipelineStatisticName,
     begin_pipeline_statistics_query,
@@ -365,4 +364,10 @@ def test_copy_texture_to_texture():
 
 
 if __name__ == "__main__":
-    run_tests(globals())
+    test_object_retention_in_render()
+    test_object_retention_in_compute()
+    test_clear_buffer()
+    test_copy_buffer_to_buffer()
+    test_copy_buffer_to_texture()
+    test_copy_texture_to_buffer()
+    test_copy_texture_to_texture()

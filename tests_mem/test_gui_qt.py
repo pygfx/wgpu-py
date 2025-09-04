@@ -29,13 +29,17 @@ def test_release_canvas_context(n):
     # Texture and a TextureView), but these are released in present(),
     # so we don't see them in the counts.
 
-    from rendercanvas.pyside6 import RenderCanvas
+    import PySide6
+    from rendercanvas.qt import RenderCanvas
 
     app = PySide6.QtWidgets.QApplication.instance()
     if app is None:
         app = PySide6.QtWidgets.QApplication([""])
 
     yield {
+        "expected_counts_after_create": {
+            "CanvasContext": (n, 0),
+        },
         "ignore": {"CommandBuffer"},
     }
 
