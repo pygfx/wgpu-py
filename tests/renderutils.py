@@ -233,7 +233,7 @@ def render_to_screen(
 ):
     """Render to a window on screen, for debugging purposes."""
     import glfw
-    from rendercanvas.glfw import RenderCanvas RenderCanvas, loop
+    from rendercanvas.glfw import RenderCanvas, loop
 
     vbos = vbos or []
     vbo_views = vbo_views or []
