@@ -232,14 +232,12 @@ def render_to_screen(
     renderpass_callback=lambda *args: None,
 ):
     """Render to a window on screen, for debugging purposes."""
-    import glfw
     from rendercanvas.glfw import RenderCanvas, loop
 
     vbos = vbos or []
     vbo_views = vbo_views or []
 
     # Setup canvas
-    glfw.init()
     canvas = RenderCanvas(title="wgpu test render with GLFW")
 
     shader = device.create_shader_module(code=shader_source)

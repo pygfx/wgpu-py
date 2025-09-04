@@ -141,7 +141,7 @@ jobs:
       run: |
           python -m pip install --upgrade pip
           pip install -U .
-          pip install -U pytest numpy psutil pyinstaller glfw
+          pip install -U pytest numpy psutil pyinstaller
     - name: Test PyInstaller
       run: |
           pushd $HOME
