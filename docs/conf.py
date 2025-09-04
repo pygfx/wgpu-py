@@ -99,7 +99,7 @@ def resolve_crossrefs(text):
 
 
 # Tweak docstrings of classes and their methods
-for module, hide_class_signature in [(wgpu.classes, True), (wgpu.gui, False)]:
+for module, hide_class_signature in [(wgpu.classes, True)]:
     for cls_name in module.__all__:
         cls = getattr(module, cls_name)
         # Class docstring

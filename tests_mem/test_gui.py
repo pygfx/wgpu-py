@@ -55,7 +55,7 @@ def test_release_canvas_context(n):
     # user want to use the result. The context does drop its ref to the
     # textures, which is why we don't see textures in the measurements.
 
-    from wgpu.gui.offscreen import WgpuCanvas
+    from rendercanvas.offscreen import RenderCanvas
 
     yield {
         "expected_counts_after_create": {
@@ -66,7 +66,7 @@ def test_release_canvas_context(n):
 
     canvases = weakref.WeakSet()
     for i in range(n):
-        c = WgpuCanvas()
+        c = RenderCanvas()
         canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         c.draw()
