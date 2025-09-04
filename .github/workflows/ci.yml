@@ -73,12 +73,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
     - name: Test imports
-      env:
-        WGPU_FORCE_OFFSCREEN: true
       run: |
           python -c "print('wgpu'); import wgpu; print(wgpu)"
           python -c "print('wgpu.backends.wgpu_native'); import wgpu.backends.wgpu_native"
-          python -c "print('wgpu.gui.offscreen'); import wgpu.gui.offscreen"
           python -c "print('wgpu.utils'); import wgpu.utils"
 
   docs-build:

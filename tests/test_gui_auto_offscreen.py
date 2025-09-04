@@ -17,15 +17,15 @@ if not can_use_wgpu_lib:
 
 @fixture(autouse=True, scope="module")
 def force_offscreen():
-    os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
+    os.environ["RENDERCANVAS_FORCE_OFFSCREEN"] = "true"
     try:
         yield
     finally:
-        del os.environ["WGPU_FORCE_OFFSCREEN"]
+        del os.environ["RENDERCANVAS_FORCE_OFFSCREEN"]
 
 
 def test_canvas_class():
-    """Check if we get an offscreen canvas when the WGPU_FORCE_OFFSCREEN
+    """Check if we get an offscreen canvas when the RENDERCANVAS_FORCE_OFFSCREEN
     environment variable is set."""
     from wgpu.gui.auto import WgpuCanvas
     from wgpu.gui.offscreen import WgpuManualOffscreenCanvas
