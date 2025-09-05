@@ -6,6 +6,7 @@ import wgpu
 
 # from rendercanvas import BaseRenderCanvas
 from rendercanvas.offscreen import RenderCanvas
+from wgpu._canvas import WgpuCanvasInterface
 
 from pytest import skip
 from testutils import run_tests, can_use_wgpu_lib
@@ -66,8 +67,25 @@ def test_rendercanvas():
     assert m.shape == (200, 300, 4)
 
 
+def test_canvas_interface():
+    """Render an orange square ... using the WgpuCanvasInterface."""
+    canvas = WgpuCanvasInterface()
+
+    device = wgpu.utils.get_default_device()
+    draw_frame = _get_draw_function(device, canvas)
+
+    def draw():
+        draw_frame()
+        info = canvas.get_context().present()
+        return info["data"]
+
+    m = draw()
+    assert isinstance(m, memoryview)
+    assert m.shape == (480, 640, 4)
+
+
 def test_custom_canvas():
-    """Render an orange square ... in a custom offscreen canva.
+    """Render an orange square ... in a custom offscreen canvas.
 
     This helps make sure that WgpuCanvasInterface is indeed
     the minimal required canvas API.
@@ -75,7 +93,7 @@ def test_custom_canvas():
 
     class CustomCanvas:  # implements wgpu.WgpuCanvasInterface
         def __init__(self):
-            self._present_context = None
+            self._canvas_context = None
             self._present_methods = {
                 "bitmap": {
                     "formats": ["rgba-u8"],
@@ -87,11 +105,11 @@ def test_custom_canvas():
 
         def get_context(self, context_type="wgpu"):
             assert context_type == "wgpu"
-            if self._present_context is None:
+            if self._canvas_context is None:
                 backend_module = sys.modules["wgpu"].gpu.__module__
-                PC = sys.modules[backend_module].GPUCanvasContext  # noqa N806
-                self._present_context = PC(self, self._present_methods)
-            return self._present_context
+                CC = sys.modules[backend_module].GPUCanvasContext  # noqa N806
+                self._canvas_context = CC(self, self._present_methods)
+            return self._canvas_context
 
     canvas = CustomCanvas()
 
