@@ -265,9 +265,9 @@ class IdlParser:
             name = name[3:]
             name = name[:-4] if name.endswith("Dict") else name
             if name in self.flags:
-                return f"flags.{name}"
+                return f"flags.{name}Flags"
             elif name in self.enums:
-                return f"enums.{name}"
+                return f"enums.{name}Enum"
             elif name in self.structs:
                 return f"structs.{name}"
             else:
