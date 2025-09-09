@@ -93,7 +93,7 @@ class GPU:
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreferenceEnum = None,
+        power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ) -> GPUAdapter:
@@ -117,7 +117,7 @@ class GPU:
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreferenceEnum = None,
+        power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ) -> GPUAdapter:
