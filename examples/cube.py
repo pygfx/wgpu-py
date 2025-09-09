@@ -205,7 +205,7 @@ def create_pipeline_layout(device):
     bind_group_layouts = []
     bind_groups = []
 
-    for entries, layout_entries in zip(bind_groups_entries, bind_groups_layout_entries):
+    for entries, layout_entries in zip(bind_groups_entries, bind_groups_layout_entries, strict=False):
         bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
         bind_group_layouts.append(bind_group_layout)
         bind_groups.append(

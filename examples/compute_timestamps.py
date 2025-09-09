@@ -159,7 +159,7 @@ out = device.queue.read_buffer(buffer3).cast("i")
 result = out.tolist()
 
 # Calculate the result on the CPU for comparison
-result_cpu = [a + b for a, b in zip(data1, data2)]
+result_cpu = [a + b for a, b in zip(data1, data2, strict=False)]
 
 # Ensure results are the same
 assert result == result_cpu
