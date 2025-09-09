@@ -6,6 +6,8 @@ Enum values are strings, so instead of ``wgpu.TextureFormat.rgba8unorm``,
 one can also write ``"rgba8unorm"``.
 """
 
+from typing import Literal
+
 from ._coreutils import BaseEnum as _BaseEnum
 
 
@@ -58,9 +60,36 @@ __all__ = [
 ]
 
 
+PowerPreferenceEnum = Literal["low-power", "high-performance"] | str
+
+
 class PowerPreference(Enum):
     low_power = "low-power"
     high_performance = "high-performance"
+
+
+FeatureNameEnum = (
+    Literal[
+        "depth-clip-control",
+        "depth32float-stencil8",
+        "texture-compression-bc",
+        "texture-compression-bc-sliced-3d",
+        "texture-compression-etc2",
+        "texture-compression-astc",
+        "texture-compression-astc-sliced-3d",
+        "timestamp-query",
+        "indirect-first-instance",
+        "shader-f16",
+        "rg11b10ufloat-renderable",
+        "bgra8unorm-storage",
+        "float32-filterable",
+        "float32-blendable",
+        "clip-distances",
+        "dual-source-blending",
+        "subgroups",
+    ]
+    | str
+)
 
 
 class FeatureName(Enum):
@@ -83,16 +112,27 @@ class FeatureName(Enum):
     subgroups = "subgroups"
 
 
+BufferMapStateEnum = Literal["unmapped", "pending", "mapped"] | str
+
+
 class BufferMapState(Enum):
     unmapped = "unmapped"
     pending = "pending"
     mapped = "mapped"
 
 
+TextureDimensionEnum = Literal["1d", "2d", "3d"] | str
+
+
 class TextureDimension(Enum):
     d1 = "1d"
     d2 = "2d"
     d3 = "3d"
+
+
+TextureViewDimensionEnum = (
+    Literal["1d", "2d", "2d-array", "cube", "cube-array", "3d"] | str
+)
 
 
 class TextureViewDimension(Enum):
@@ -104,10 +144,115 @@ class TextureViewDimension(Enum):
     d3 = "3d"
 
 
+TextureAspectEnum = Literal["all", "stencil-only", "depth-only"] | str
+
+
 class TextureAspect(Enum):
     all = "all"
     stencil_only = "stencil-only"
     depth_only = "depth-only"
+
+
+TextureFormatEnum = (
+    Literal[
+        "r8unorm",
+        "r8snorm",
+        "r8uint",
+        "r8sint",
+        "r16uint",
+        "r16sint",
+        "r16float",
+        "rg8unorm",
+        "rg8snorm",
+        "rg8uint",
+        "rg8sint",
+        "r32uint",
+        "r32sint",
+        "r32float",
+        "rg16uint",
+        "rg16sint",
+        "rg16float",
+        "rgba8unorm",
+        "rgba8unorm-srgb",
+        "rgba8snorm",
+        "rgba8uint",
+        "rgba8sint",
+        "bgra8unorm",
+        "bgra8unorm-srgb",
+        "rgb9e5ufloat",
+        "rgb10a2uint",
+        "rgb10a2unorm",
+        "rg11b10ufloat",
+        "rg32uint",
+        "rg32sint",
+        "rg32float",
+        "rgba16uint",
+        "rgba16sint",
+        "rgba16float",
+        "rgba32uint",
+        "rgba32sint",
+        "rgba32float",
+        "stencil8",
+        "depth16unorm",
+        "depth24plus",
+        "depth24plus-stencil8",
+        "depth32float",
+        "depth32float-stencil8",
+        "bc1-rgba-unorm",
+        "bc1-rgba-unorm-srgb",
+        "bc2-rgba-unorm",
+        "bc2-rgba-unorm-srgb",
+        "bc3-rgba-unorm",
+        "bc3-rgba-unorm-srgb",
+        "bc4-r-unorm",
+        "bc4-r-snorm",
+        "bc5-rg-unorm",
+        "bc5-rg-snorm",
+        "bc6h-rgb-ufloat",
+        "bc6h-rgb-float",
+        "bc7-rgba-unorm",
+        "bc7-rgba-unorm-srgb",
+        "etc2-rgb8unorm",
+        "etc2-rgb8unorm-srgb",
+        "etc2-rgb8a1unorm",
+        "etc2-rgb8a1unorm-srgb",
+        "etc2-rgba8unorm",
+        "etc2-rgba8unorm-srgb",
+        "eac-r11unorm",
+        "eac-r11snorm",
+        "eac-rg11unorm",
+        "eac-rg11snorm",
+        "astc-4x4-unorm",
+        "astc-4x4-unorm-srgb",
+        "astc-5x4-unorm",
+        "astc-5x4-unorm-srgb",
+        "astc-5x5-unorm",
+        "astc-5x5-unorm-srgb",
+        "astc-6x5-unorm",
+        "astc-6x5-unorm-srgb",
+        "astc-6x6-unorm",
+        "astc-6x6-unorm-srgb",
+        "astc-8x5-unorm",
+        "astc-8x5-unorm-srgb",
+        "astc-8x6-unorm",
+        "astc-8x6-unorm-srgb",
+        "astc-8x8-unorm",
+        "astc-8x8-unorm-srgb",
+        "astc-10x5-unorm",
+        "astc-10x5-unorm-srgb",
+        "astc-10x6-unorm",
+        "astc-10x6-unorm-srgb",
+        "astc-10x8-unorm",
+        "astc-10x8-unorm-srgb",
+        "astc-10x10-unorm",
+        "astc-10x10-unorm-srgb",
+        "astc-12x10-unorm",
+        "astc-12x10-unorm-srgb",
+        "astc-12x12-unorm",
+        "astc-12x12-unorm-srgb",
+    ]
+    | str
+)
 
 
 class TextureFormat(Enum):
@@ -208,10 +353,16 @@ class TextureFormat(Enum):
     astc_12x12_unorm_srgb = "astc-12x12-unorm-srgb"
 
 
+AddressModeEnum = Literal["clamp-to-edge", "repeat", "mirror-repeat"] | str
+
+
 class AddressMode(Enum):
     clamp_to_edge = "clamp-to-edge"
     repeat = "repeat"
     mirror_repeat = "mirror-repeat"
+
+
+FilterModeEnum = Literal["nearest", "linear"] | str
 
 
 class FilterMode(Enum):
@@ -219,9 +370,27 @@ class FilterMode(Enum):
     linear = "linear"
 
 
+MipmapFilterModeEnum = Literal["nearest", "linear"] | str
+
+
 class MipmapFilterMode(Enum):
     nearest = "nearest"
     linear = "linear"
+
+
+CompareFunctionEnum = (
+    Literal[
+        "never",
+        "less",
+        "equal",
+        "less-equal",
+        "greater",
+        "not-equal",
+        "greater-equal",
+        "always",
+    ]
+    | str
+)
 
 
 class CompareFunction(Enum):
@@ -235,16 +404,27 @@ class CompareFunction(Enum):
     always = "always"
 
 
+BufferBindingTypeEnum = Literal["uniform", "storage", "read-only-storage"] | str
+
+
 class BufferBindingType(Enum):
     uniform = "uniform"
     storage = "storage"
     read_only_storage = "read-only-storage"
 
 
+SamplerBindingTypeEnum = Literal["filtering", "non-filtering", "comparison"] | str
+
+
 class SamplerBindingType(Enum):
     filtering = "filtering"
     non_filtering = "non-filtering"
     comparison = "comparison"
+
+
+TextureSampleTypeEnum = (
+    Literal["float", "unfilterable-float", "depth", "sint", "uint"] | str
+)
 
 
 class TextureSampleType(Enum):
@@ -255,10 +435,16 @@ class TextureSampleType(Enum):
     uint = "uint"
 
 
+StorageTextureAccessEnum = Literal["write-only", "read-only", "read-write"] | str
+
+
 class StorageTextureAccess(Enum):
     write_only = "write-only"
     read_only = "read-only"
     read_write = "read-write"
+
+
+CompilationMessageTypeEnum = Literal["error", "warning", "info"] | str
 
 
 class CompilationMessageType(Enum):
@@ -267,13 +453,25 @@ class CompilationMessageType(Enum):
     info = "info"
 
 
+PipelineErrorReasonEnum = Literal["validation", "internal"] | str
+
+
 class PipelineErrorReason(Enum):
     validation = "validation"
     internal = "internal"
 
 
+AutoLayoutModeEnum = Literal["auto"] | str
+
+
 class AutoLayoutMode(Enum):
     auto = "auto"
+
+
+PrimitiveTopologyEnum = (
+    Literal["point-list", "line-list", "line-strip", "triangle-list", "triangle-strip"]
+    | str
+)
 
 
 class PrimitiveTopology(Enum):
@@ -284,15 +482,45 @@ class PrimitiveTopology(Enum):
     triangle_strip = "triangle-strip"
 
 
+FrontFaceEnum = Literal["ccw", "cw"] | str
+
+
 class FrontFace(Enum):
     ccw = "ccw"
     cw = "cw"
+
+
+CullModeEnum = Literal["none", "front", "back"] | str
 
 
 class CullMode(Enum):
     none = "none"
     front = "front"
     back = "back"
+
+
+BlendFactorEnum = (
+    Literal[
+        "zero",
+        "one",
+        "src",
+        "one-minus-src",
+        "src-alpha",
+        "one-minus-src-alpha",
+        "dst",
+        "one-minus-dst",
+        "dst-alpha",
+        "one-minus-dst-alpha",
+        "src-alpha-saturated",
+        "constant",
+        "one-minus-constant",
+        "src1",
+        "one-minus-src1",
+        "src1-alpha",
+        "one-minus-src1-alpha",
+    ]
+    | str
+)
 
 
 class BlendFactor(Enum):
@@ -315,12 +543,30 @@ class BlendFactor(Enum):
     one_minus_src1_alpha = "one-minus-src1-alpha"
 
 
+BlendOperationEnum = Literal["add", "subtract", "reverse-subtract", "min", "max"] | str
+
+
 class BlendOperation(Enum):
     add = "add"
     subtract = "subtract"
     reverse_subtract = "reverse-subtract"
     min = "min"
     max = "max"
+
+
+StencilOperationEnum = (
+    Literal[
+        "keep",
+        "zero",
+        "replace",
+        "invert",
+        "increment-clamp",
+        "decrement-clamp",
+        "increment-wrap",
+        "decrement-wrap",
+    ]
+    | str
+)
 
 
 class StencilOperation(Enum):
@@ -334,9 +580,60 @@ class StencilOperation(Enum):
     decrement_wrap = "decrement-wrap"
 
 
+IndexFormatEnum = Literal["uint16", "uint32"] | str
+
+
 class IndexFormat(Enum):
     uint16 = "uint16"
     uint32 = "uint32"
+
+
+VertexFormatEnum = (
+    Literal[
+        "uint8",
+        "uint8x2",
+        "uint8x4",
+        "sint8",
+        "sint8x2",
+        "sint8x4",
+        "unorm8",
+        "unorm8x2",
+        "unorm8x4",
+        "snorm8",
+        "snorm8x2",
+        "snorm8x4",
+        "uint16",
+        "uint16x2",
+        "uint16x4",
+        "sint16",
+        "sint16x2",
+        "sint16x4",
+        "unorm16",
+        "unorm16x2",
+        "unorm16x4",
+        "snorm16",
+        "snorm16x2",
+        "snorm16x4",
+        "float16",
+        "float16x2",
+        "float16x4",
+        "float32",
+        "float32x2",
+        "float32x3",
+        "float32x4",
+        "uint32",
+        "uint32x2",
+        "uint32x3",
+        "uint32x4",
+        "sint32",
+        "sint32x2",
+        "sint32x3",
+        "sint32x4",
+        "unorm10-10-10-2",
+        "unorm8x4-bgra",
+    ]
+    | str
+)
 
 
 class VertexFormat(Enum):
@@ -383,9 +680,15 @@ class VertexFormat(Enum):
     unorm8x4_bgra = "unorm8x4-bgra"
 
 
+VertexStepModeEnum = Literal["vertex", "instance"] | str
+
+
 class VertexStepMode(Enum):
     vertex = "vertex"
     instance = "instance"
+
+
+LoadOpEnum = Literal["load", "clear"] | str
 
 
 class LoadOp(Enum):
@@ -393,9 +696,15 @@ class LoadOp(Enum):
     clear = "clear"
 
 
+StoreOpEnum = Literal["store", "discard"] | str
+
+
 class StoreOp(Enum):
     store = "store"
     discard = "discard"
+
+
+QueryTypeEnum = Literal["occlusion", "timestamp"] | str
 
 
 class QueryType(Enum):
@@ -403,9 +712,15 @@ class QueryType(Enum):
     timestamp = "timestamp"
 
 
+CanvasAlphaModeEnum = Literal["opaque", "premultiplied"] | str
+
+
 class CanvasAlphaMode(Enum):
     opaque = "opaque"
     premultiplied = "premultiplied"
+
+
+CanvasToneMappingModeEnum = Literal["standard", "extended"] | str
 
 
 class CanvasToneMappingMode(Enum):
@@ -413,9 +728,15 @@ class CanvasToneMappingMode(Enum):
     extended = "extended"
 
 
+DeviceLostReasonEnum = Literal["unknown", "destroyed"] | str
+
+
 class DeviceLostReason(Enum):
     unknown = "unknown"
     destroyed = "destroyed"
+
+
+ErrorFilterEnum = Literal["validation", "out-of-memory", "internal"] | str
 
 
 class ErrorFilter(Enum):

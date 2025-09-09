@@ -428,7 +428,7 @@ class GPU(classes.GPU):
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreference = None,
+        power_preference: enums.PowerPreferenceEnum = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ) -> GPUAdapter:
@@ -449,7 +449,7 @@ class GPU(classes.GPU):
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreference = None,
+        power_preference: enums.PowerPreferenceEnum = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ) -> GPUAdapter:
@@ -1064,7 +1064,7 @@ class GPUAdapter(classes.GPUAdapter):
         self,
         *,
         label: str = "",
-        required_features: List[enums.FeatureName] = [],
+        required_features: List[enums.FeatureNameEnum] = [],
         required_limits: Dict[str, Union[None, int]] = {},
         default_queue: structs.QueueDescriptor = {},
     ) -> GPUDevice:
@@ -1080,7 +1080,7 @@ class GPUAdapter(classes.GPUAdapter):
         self,
         *,
         label: str = "",
-        required_features: List[enums.FeatureName] = [],
+        required_features: List[enums.FeatureNameEnum] = [],
         required_limits: Dict[str, Union[None, int]] = {},
         default_queue: structs.QueueDescriptor = {},
     ) -> GPUDevice:
@@ -1382,7 +1382,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         size: int,
-        usage: flags.BufferUsage,
+        usage: flags.BufferUsageFlags,
         mapped_at_creation: bool = False,
     ) -> GPUBuffer:
         return self._create_buffer(label, int(size), usage, bool(mapped_at_creation))
@@ -1419,10 +1419,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         size: Union[List[int], structs.Extent3D],
         mip_level_count: int = 1,
         sample_count: int = 1,
-        dimension: enums.TextureDimension = "2d",
-        format: enums.TextureFormat,
-        usage: flags.TextureUsage,
-        view_formats: List[enums.TextureFormat] = [],
+        dimension: enums.TextureDimensionEnum = "2d",
+        format: enums.TextureFormatEnum,
+        usage: flags.TextureUsageFlags,
+        view_formats: List[enums.TextureFormatEnum] = [],
     ) -> GPUTexture:
         if isinstance(usage, str):
             usage = str_flag_to_int(flags.TextureUsage, usage)
@@ -1490,15 +1490,15 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        address_mode_u: enums.AddressMode = "clamp-to-edge",
-        address_mode_v: enums.AddressMode = "clamp-to-edge",
-        address_mode_w: enums.AddressMode = "clamp-to-edge",
-        mag_filter: enums.FilterMode = "nearest",
-        min_filter: enums.FilterMode = "nearest",
-        mipmap_filter: enums.MipmapFilterMode = "nearest",
+        address_mode_u: enums.AddressModeEnum = "clamp-to-edge",
+        address_mode_v: enums.AddressModeEnum = "clamp-to-edge",
+        address_mode_w: enums.AddressModeEnum = "clamp-to-edge",
+        mag_filter: enums.FilterModeEnum = "nearest",
+        min_filter: enums.FilterModeEnum = "nearest",
+        mipmap_filter: enums.MipmapFilterModeEnum = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 32,
-        compare: enums.CompareFunction = optional,
+        compare: enums.CompareFunctionEnum = optional,
         max_anisotropy: int = 1,
     ) -> GPUSampler:
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, addressModeU: WGPUAddressMode, addressModeV: WGPUAddressMode, addressModeW: WGPUAddressMode, magFilter: WGPUFilterMode, minFilter: WGPUFilterMode, mipmapFilter: WGPUMipmapFilterMode, lodMinClamp: float, lodMaxClamp: float, compare: WGPUCompareFunction, maxAnisotropy: int
@@ -1845,7 +1845,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
         compute: structs.ProgrammableStage,
     ) -> GPUComputePipeline:
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
@@ -1857,7 +1857,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
         compute: structs.ProgrammableStage,
     ) -> GPUComputePipeline:
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
@@ -1944,7 +1944,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
@@ -1962,7 +1962,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
@@ -2236,8 +2236,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        color_formats: List[enums.TextureFormat],
-        depth_stencil_format: enums.TextureFormat = optional,
+        color_formats: List[enums.TextureFormatEnum],
+        depth_stencil_format: enums.TextureFormatEnum = optional,
         sample_count: int = 1,
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
@@ -2269,7 +2269,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return result
 
     def create_query_set(
-        self, *, label: str = "", type: enums.QueryType, count: int
+        self, *, label: str = "", type: enums.QueryTypeEnum, count: int
     ) -> GPUQuerySet:
         return self._create_query_set(label, type, count, None)
 
@@ -2381,14 +2381,14 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         return offset, size
 
     def map_sync(
-        self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
+        self, mode: flags.MapModeFlags, offset: int = 0, size: Optional[int] = None
     ) -> None:
         check_can_use_sync_variants()
         awaitable = self._map(mode, offset, size)
         return awaitable.sync_wait()
 
     async def map_async(
-        self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
+        self, mode: flags.MapModeFlags, offset: int = 0, size: Optional[int] = None
     ) -> None:
         awaitable = self._map(mode, offset, size)  # for now
         return await awaitable
@@ -2480,7 +2480,13 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
                 pass
         self._mapped_memoryviews = []
 
-    def read_mapped(self, buffer_offset=None, size=None, *, copy=True):
+    def read_mapped(
+        self,
+        buffer_offset: int | None = None,
+        size: int | None = None,
+        *,
+        copy: bool = True,
+    ):
         # Can we even read?
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only read from a buffer if its mapped.")
@@ -2513,7 +2519,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._mapped_memoryviews.append(data)
             return data
 
-    def write_mapped(self, data, buffer_offset=None):
+    def write_mapped(self, data, buffer_offset: int | None = None):
         # Can we even write?
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only write to a buffer if its mapped.")
@@ -2589,10 +2595,10 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         self,
         *,
         label: str = "",
-        format: enums.TextureFormat = optional,
-        dimension: enums.TextureViewDimension = optional,
-        usage: flags.TextureUsage = 0,
-        aspect: enums.TextureAspect = "all",
+        format: enums.TextureFormatEnum = optional,
+        dimension: enums.TextureViewDimensionEnum = optional,
+        usage: flags.TextureUsageFlags = 0,
+        aspect: enums.TextureAspectEnum = "all",
         base_mip_level: int = 0,
         mip_level_count: int = optional,
         base_array_layer: int = 0,
@@ -2897,7 +2903,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
     def set_index_buffer(
         self,
         buffer: GPUBuffer,
-        index_format: enums.IndexFormat,
+        index_format: enums.IndexFormatEnum,
         offset: int = 0,
         size: Optional[int] = None,
     ) -> None:
@@ -3752,7 +3758,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             self._internal, buffer._internal, buffer_offset, c_data, data_length
         )
 
-    def read_buffer(self, buffer, buffer_offset=0, size=None):
+    def read_buffer(self, buffer, buffer_offset: int = 0, size: int | None = None):
         # Note that write_buffer probably does a very similar thing
         # using a temporary buffer. But write_buffer is official API
         # so it's a single call, while here we must create the temporary
