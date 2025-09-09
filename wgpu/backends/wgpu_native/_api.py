@@ -14,7 +14,7 @@ new methods and checks plus annotates all structs and C api calls.
 Read the codegen/readme.md for more information.
 """
 
-# Allow using class names in type annotations, before the class is defined. Py3.7+
+# Allow using class names in type annotations, without Ruff triggering F821
 from __future__ import annotations
 
 import os
