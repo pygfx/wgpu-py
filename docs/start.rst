@@ -7,7 +7,7 @@ Install with pip
 ----------------
 
 You can install ``wgpu-py`` with your favourite package manager (we use ``pip`` in the example commands below).
-Python 3.9 or higher is required. Pypy is supported.
+Python 3.10 or higher is required. Pypy is supported.
 
 .. code-block:: bash
 
