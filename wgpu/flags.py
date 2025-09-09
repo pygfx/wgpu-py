@@ -6,6 +6,8 @@ They can also be passed as strings, so instead of ``wgpu.BufferUsage.MAP_READ | 
 one can also write ``"MAP_READ|COPY_DIST"``.
 """
 
+from __future__ import annotations
+
 from ._coreutils import BaseEnum as _BaseEnum
 
 

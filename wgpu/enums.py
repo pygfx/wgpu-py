@@ -6,6 +6,8 @@ Enum values are strings, so instead of ``wgpu.TextureFormat.rgba8unorm``,
 one can also write ``"rgba8unorm"``.
 """
 
+from __future__ import annotations
+
 from typing import Literal
 
 from ._coreutils import BaseEnum as _BaseEnum
