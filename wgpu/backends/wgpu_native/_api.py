@@ -1713,7 +1713,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             count = len(push_constant_layouts)
             c_push_constant_ranges = new_array("WGPUPushConstantRange[]", count)
             for layout, c_push_constant_range in zip(
-                push_constant_layouts, c_push_constant_ranges
+                push_constant_layouts, c_push_constant_ranges, strict=False
             ):
                 visibility = layout["visibility"]
                 if isinstance(visibility, str):
