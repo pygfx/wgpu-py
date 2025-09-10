@@ -54,6 +54,7 @@ def write_flags():
     # The flags definitions
     for name, d in idl.flags.items():
         # Generate Code
+        pylines.append(f"{name}Flags = int | str\n\n")
         pylines.append(f"class {name}(Flags):\n")
         for key, val in d.items():
             pylines.append(f"    {key} = {val!r}")  # note: can add docs using "#: "
@@ -83,6 +84,8 @@ def write_enums():
     pylines.append("]\n\n")
     for name, d in idl.enums.items():
         # Generate Code
+        quoted_values = [f'"{v}"' for v in d.values()]
+        pylines.append(f"{name}Enum = Literal[{', '.join(quoted_values)}] | str\n\n")
         pylines.append(f"class {name}(Enum):\n")
         for key, val in d.items():
             pylines.append(f'    {key} = "{val}"')  # note: can add docs using "#: "
@@ -118,6 +121,10 @@ def write_structs():
         # Object-docstring as a comment
         for field in d.values():
             tp = idl.resolve_type(field.typename).strip("'")
+            if tp.endswith("Flags"):
+                tp = tp[:-5]
+            elif tp.endswith("Enum"):
+                tp = tp[:-4]
             if field.default:
                 pylines.append(
                     resolve_crossrefs(f"#: * {field.name} :: {tp} = {field.default}")
