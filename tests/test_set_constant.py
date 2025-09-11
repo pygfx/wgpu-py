@@ -179,7 +179,7 @@ def test_render_bundle_push_constants():
 
 
 def test_bad_set_push_constants():
-    device, pipeline, render_pass_descriptor = setup_pipeline()
+    device, _pipeline, render_pass_descriptor = setup_pipeline()
     encoder = device.create_command_encoder()
     this_pass = encoder.begin_render_pass(**render_pass_descriptor)
 
