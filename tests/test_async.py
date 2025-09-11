@@ -5,7 +5,7 @@ from pytest import mark
 import wgpu.utils
 from testutils import can_use_wgpu_lib, run_tests
 from wgpu import GPUDevice, MapMode, TextureFormat
-from wgpu.backends.wgpu_native import WgpuAwaitable
+from wgpu.backends.wgpu_native import GPUPromise
 
 
 @mark.anyio
@@ -17,7 +17,7 @@ async def test_awaitable_async(use_async):
         return i * i
 
     def callback(i):
-        awaitable.set_result(i)
+        awaitable._wgpu_set_result(i)
 
     def poll_function():
         nonlocal count
@@ -25,7 +25,7 @@ async def test_awaitable_async(use_async):
         if count >= 3:
             callback(10)
 
-    awaitable = WgpuAwaitable("test", callback, finalizer, poll_function)
+    awaitable = GPUPromise("test", finalizer, callback, poll_function)
 
     if use_async:
         result = await awaitable
