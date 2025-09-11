@@ -21,4 +21,3 @@ gpu = GPU()  # noqa: F405
 _register_backend(gpu)
 
 from .extras import request_device_sync, request_device
-from ._helpers import WgpuAwaitable

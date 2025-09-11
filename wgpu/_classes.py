@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import weakref
 import logging
-from typing import Sequence
+from typing import Sequence, Callable, Any
 
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
@@ -46,6 +46,7 @@ __all__ = [
     "GPUPipelineBase",
     "GPUPipelineError",
     "GPUPipelineLayout",
+    "GPUPromise",
     "GPUQuerySet",
     "GPUQueue",
     "GPURenderBundle",
@@ -113,7 +114,7 @@ class GPU:
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> DOMString featureLevel = "core", GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false, boolean xrCompatible = false
     @apidiff.change("arguments include canvas")
-    async def request_adapter_async(
+    def request_adapter_async(
         self,
         *,
         feature_level: str = "core",
@@ -138,7 +139,7 @@ class GPU:
 
         # note, feature_level current' does nothing: # not used currently: https://gpuweb.github.io/gpuweb/#dom-gpurequestadapteroptions-featurelevel
 
-        return await gpu.request_adapter_async(
+        return gpu.request_adapter_async(
             feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
@@ -554,6 +555,125 @@ class GPUCanvasContext:
 
     def _release(self):
         self._drop_texture()
+
+
+# TODO: GPUFuture or GPUPromise; Python API or JS?
+# Leaning towards the JS
+#
+# JS:
+# promise.then(lambda result: ...)
+# promise.then(handle_result, handle_exception)
+# promise.catch(handle_exception)
+# primise.finally()
+#
+# Python:
+# future.result()
+# future.set_result()
+# future.set_exception()
+# future.done()
+# future.cancelled()
+# future.add_done_callback(lambda future: ...)
+# future.remove_done_callback()
+# future.cancel()
+# future.exception()
+# future.get_loop()
+
+
+@apidiff.add("Add a GPU-specific Future")
+class GPUPromise:
+    """A GPUPromise represents the eventual result of an asynchronous wgpu operation.
+
+    A ``GPUPromise`` is a bit like an ``asyncio.Future``, but specific for wgpu, and with
+    an API more similar to JavaScript's ``Promise``.
+
+    Some methods of the wgpu API are asynchronous. They return a ``GPUPromise``,
+    which provides a few different ways handle it:
+
+    * It can be awaited using ``await future``. This is the "cleanest" way, but
+      can only be used from a co-routine (i.e. an async code path).
+    * A callback can be registered using ``future.then(callback)``, which will
+      be called when the future resolves.
+    * You can sync-wait for it, using ``future.wait()``. This is simple, but
+      makes code less portable and potentially slower.
+
+    A ``GPUPromise`` is in one of these states:
+
+    * pending: initial state, neither fulfilled nor rejected.
+    * fulfilled: meaning that the operation was completed successfully.
+    * rejected: meaning that the operation failed.
+    """
+
+    def __init__(self, title: str, finalizer: Callable | None, *args):
+        self._title = title
+        self._finalizer = finalizer  # function to finish the result
+        self._result_or_error = None
+        self._callback = None
+
+    def __repr__(self):
+        state = "pending"
+        value_repr = ""
+        if self._result_or_error is not None:
+            if self._result_or_error[0] is not None:
+                state = "fulfilled"
+                value_repr = repr(self._result_or_error[0]).split("\n", 1)[0]
+                if len(value_repr) > 30:
+                    value_repr = value_repr[:29] + "…"
+                value_repr = f"'{value_repr}'"
+            else:
+                state = "rejected"
+        return f"<GPUPromise {state} {value_repr} at {hex(id(self))}>"
+
+    def _wgpu_set_result(self, result):
+        self._result_or_error = result, None
+
+    def _wgpu_set_error(self, error):
+        self._result_or_error = None, error
+
+    def _finish(self):
+        try:
+            result, error = self._result_or_error
+            if error:
+                raise RuntimeError(error)
+            else:
+                result = self._finalizer(result)
+                if self._callback is not None:
+                    # TODO: wrap in a try-except, or a log_exception thingy?
+                    self._callback(result)
+                return result
+        finally:
+            # Reset attrs to prevent potential memory leaks
+            self._finalizer = self._result_or_error = self._callback = None
+
+    def sync_wait(self) -> Any:
+        """Synchronously wait for the future to resolve and return the result.
+
+        Note that this method should be avoided in event callbacks, since it can
+        make them slow.
+
+        Note that this method may not be supported by all backends  (e.g. the
+        upcoming JavaScript/Pyodide one), and using it will make your code less
+        portable.
+        """
+        # TODO: allow calling multiple times
+        raise NotImplementedError()
+
+    def then(self, callback: Callable[Any, None]):
+        """Set a callback that will be called when the future resolves.
+
+        The callback will receive one argument: the result of the future.
+        """
+        # TODO: allow calling multiple times
+        # TODO: allow calling after being resolved -> tests!
+        # TODO: return another promise, so we can do chaining? Or maybe not interesting for this use-case...
+        if callable(callback):
+            self._callback = callback
+        else:
+            raise TypeError(
+                f"GPUPromise.then() got a callback that is not callable: {callback!r}"
+            )
+
+    def __await__(self):
+        raise NotImplementedError()
 
 
 class GPUAdapterInfo(dict):
@@ -2689,7 +2809,7 @@ def generic_repr(self):
 
 
 def _set_repr_methods():
-    exceptions = ["GPUAdapterInfo"]
+    exceptions = ["GPUAdapterInfo", "GPUPromise"]
     m = globals()
     for class_name in __all__:
         if class_name in exceptions:

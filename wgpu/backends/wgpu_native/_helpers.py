@@ -1,13 +1,11 @@
 """Utilities used in the wgpu-native backend."""
 
 import sys
-import time
 import types
 import ctypes
 import inspect
 import threading
 from queue import deque
-from collections.abc import Generator
 
 import sniffio
 
@@ -246,90 +244,6 @@ async def async_sleep(delay):
     libname = sniffio.current_async_library()
     sleep = sys.modules[libname].sleep
     await sleep(delay)
-
-
-class WgpuAwaitable:
-    """An object that can be waited for, either synchronously using sync_wait() or asynchronously using await.
-
-    The purpose of this class is to implememt the asynchronous methods in a
-    truely async manner, as well as to support a synchronous version of them.
-    """
-
-    def __init__(self, title, callback, finalizer, poll_function=None):
-        self.title = title  # for context in error messages
-        self.callback = callback  # only used to prevent it from being gc'd
-        self.finalizer = finalizer  # function to finish the result
-        self.poll_function = poll_function  # call this to poll wgpu
-        self.result = None
-
-    def set_result(self, result):
-        self.result = (result, None)
-
-    def set_error(self, error):
-        self.result = (None, error)
-
-    def _finish(self):
-        try:
-            result, error = self.result
-            if error:
-                raise RuntimeError(error)
-            else:
-                return self.finalizer(result)
-        finally:
-            # Reset attrs to prevent potential memory leaks
-            self.callback = self.finalizer = self.poll_function = self.result = None
-
-    def sync_wait(self):
-        if self.result is not None:
-            pass
-        elif not self.poll_function:
-            raise RuntimeError("Expected callback to have already happened")
-        else:
-            backoff_time_generator = self._get_backoff_time_generator()
-            while True:
-                self.poll_function()
-                if self.result is not None:
-                    break
-                time.sleep(next(backoff_time_generator))
-                # We check the result after sleeping just in case another thread
-                # causes the callback to happen
-                if self.result is not None:
-                    break
-
-        return self._finish()
-
-    def __await__(self):
-        # There is no documentation on what __await__() is supposed to return, but we
-        # can certainly copy from a function that *does* know what to return.
-        # It would also be nice if wait_for_callback and sync_wait() could be merged,
-        # but Python has no wait of combining them.
-        async def wait_for_callback():
-            if self.result is not None:
-                pass
-            elif not self.poll_function:
-                raise RuntimeError("Expected callback to have already happened")
-            else:
-                backoff_time_generator = self._get_backoff_time_generator()
-                while True:
-                    self.poll_function()
-                    if self.result is not None:
-                        break
-                    await async_sleep(next(backoff_time_generator))
-                    # We check the result after sleeping just in case another
-                    # flow of control causes the callback to happen
-                    if self.result is not None:
-                        break
-            return self._finish()
-
-        return (yield from wait_for_callback().__await__())
-
-    def _get_backoff_time_generator(self) -> Generator[float, None, None]:
-        for _ in range(5):
-            yield 0
-        for i in range(1, 20):
-            yield i / 2000.0  # ramp up from 0ms to 10ms
-        while True:
-            yield 0.01
 
 
 class ErrorSlot:

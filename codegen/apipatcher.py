@@ -38,11 +38,13 @@ def patch_base_api(code):
     idl = get_idl_parser()
 
     # Write __all__
+    extra_public_classes = ["GPUPromise"]
+    all_public_classes = [*idl.classes.keys(), *extra_public_classes]
     part1, found_all, part2 = code.partition("\n__all__ =")
     if found_all:
         part2 = part2.split("]", 1)[-1]
         line = "\n__all__ = ["
-        line += ", ".join(f'"{name}"' for name in sorted(idl.classes.keys()))
+        line += ", ".join(f'"{name}"' for name in sorted(all_public_classes))
         line += "]"
         code = part1 + line + part2
 
@@ -158,7 +160,13 @@ class AbstractApiPatcher(Patcher):
         for classname, i1, i2 in self.iter_classes():
             seen_classes.add(classname)
             self._apidiffs = set()
+            pre_lines = "\n".join(self.lines[i1 - 3 : i1])
+            self._apidiffs_from_lines(pre_lines, classname)
             if self.class_is_known(classname):
+                if "@apidiff.add" in pre_lines:
+                    print(f"ERROR: apidiff.add for known {classname}")
+                elif "@apidiff.hide" in pre_lines:
+                    pass  # continue as normal
                 old_line = self.lines[i1]
                 new_line = self.get_class_def(classname)
                 if old_line != new_line:
@@ -166,6 +174,8 @@ class AbstractApiPatcher(Patcher):
                     self.replace_line(i1, f"{fixme_line}\n{new_line}")
                 self.patch_properties(classname, i1 + 1, i2)
                 self.patch_methods(classname, i1 + 1, i2)
+            elif "@apidiff.add" in pre_lines:
+                pass
             else:
                 msg = f"unknown api: class {classname}"
                 self.insert_line(i1, "# FIXME: " + msg)
