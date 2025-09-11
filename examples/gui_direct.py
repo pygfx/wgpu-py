@@ -1,6 +1,6 @@
 """
 Direct integration of glfw and wgpu-py without using the
-wgpu.gui Canvas abstraction/class hierarchy.
+RenderCanvas abstraction/class hierarchy.
 
 Demonstration for hardcore users that need total low-level control.
 

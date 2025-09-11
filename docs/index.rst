@@ -11,7 +11,6 @@ Welcome to the wgpu-py docs!
     guide
     wgpu
     backends
-    gui
     utils
 
 

@@ -212,7 +212,7 @@ gpu = GPU()
 class GPUCanvasContext:
     """Represents a context to configure a canvas and render to it.
 
-    Can be obtained via `gui.WgpuCanvasInterface.get_context("wgpu")`.
+    Can be obtained via `canvas.get_context("wgpu")`.
 
     The canvas-context plays a crucial role in connecting the wgpu API to the
     GUI layer, in a way that allows the GUI to be agnostic about wgpu. It

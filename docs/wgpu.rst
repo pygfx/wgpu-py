@@ -66,6 +66,18 @@ come in two flafours:
   is less portable (to e.g. pyodide/pyscript).
 
 
+Canvas API
+----------
+
+In order for wgpu to render to a canvas (which can be on screen, inside a GUI, offscreen, etc.),
+a canvas object is needed. We recommend using the `rendercanvas <https://github.com/pygfx/rendercanvas>`_ library to get a wide variety of canvases.
+
+That said, the canvas object can be any object, as long as it adheres to the
+``WgpuCanvasInterface``, see https://github.com/pygfx/wgpu-py/blob/main/wgpu/_canvas.py for details.
+
+
+
+
 Overview
 --------
 

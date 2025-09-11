@@ -60,7 +60,11 @@ API closely resembling the [WebGPU spec](https://gpuweb.github.io/gpuweb/).
 ## Installation
 
 ```
-pip install wgpu glfw
+# Just wgpu
+pip install wgpu
+
+# If you want to render to screen
+pip install wgpu rendercanvas glfw
 ```
 
 Linux users should make sure that **pip >= 20.3**. That should do the
@@ -80,16 +84,13 @@ import wgpu
 To render to the screen you can use a variety of GUI toolkits:
 
 ```py
-# The auto backend selects either the glfw, qt or jupyter backend
-from wgpu.gui.auto import WgpuCanvas, run, call_later
+# The rendercanvas auto backend selects either the glfw, qt, wx, or jupyter backend
+from rendercanvas.auto import RenderCanvas, loop
 
 # Visualizations can be embedded as a widget in a Qt application.
 # Import PySide6, PyQt6, PySide2 or PyQt5 before running the line below.
 # The code will detect and use the library that is imported.
-from wgpu.gui.qt import WgpuCanvas
-
-# Visualizations can be embedded as a widget in a wx application.
-from wgpu.gui.wx import WgpuCanvas
+from rendercanvas.qt import RenderCanvas
 ```
 
 Some functions in the original `wgpu-native` API are async. In the Python API,
@@ -159,7 +160,7 @@ call it to see if an image is produced.
 
 To support this type of testing, ensure the following requirements are met:
 
-* The `WgpuCanvas` class is imported from the `wgpu.gui.auto` module.
+* The `RenderCanvas` class is imported from the `rendercanvas.auto` module.
 * The `canvas` instance is exposed as a global in the module.
 * A rendering callback has been registered with `canvas.request_draw(fn)`.
 

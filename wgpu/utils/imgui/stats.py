@@ -13,7 +13,7 @@ class Stats:
     ----------
     device : wgpu.Device
         The device to use for rendering the stats.
-    canvas : wgpu.gui.WgpuCanvasBase
+    canvas : rendercanvas.BaseRenderCanvas
         The canvas to render the stats on.
     foreground : tuple(4)
         The color of the text.

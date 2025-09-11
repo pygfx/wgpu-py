@@ -64,9 +64,7 @@ class ImguiRenderer:
             "Meta": imgui.Key.im_gui_mod_super,
         }
 
-    def __init__(
-        self, device, canvas: wgpu.gui.WgpuCanvasBase, render_target_format=None
-    ):
+    def __init__(self, device, canvas, render_target_format=None):
         # Prepare present context
         self._canvas_context = canvas.get_context("wgpu")
 

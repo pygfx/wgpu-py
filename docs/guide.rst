@@ -15,13 +15,13 @@ Creating a canvas
 +++++++++++++++++
 
 If you want to render to the screen, you need a canvas. Multiple
-GUI toolkits are supported, see the :doc:`gui`. In general, it's easiest to let ``wgpu`` select a GUI automatically:
+GUI toolkits are supported, see https://rendercanvas.readthedocs.io/stable/backends.htm. In general, it's easiest to let ``rendercanvas`` select a GUI automatically:
 
 .. code-block:: py
 
-    from wgpu.gui.auto import WgpuCanvas, run
+    from rendercanvas.auto import RenderCanvas, loop
 
-    canvas = WgpuCanvas(title="a wgpu example")
+    canvas = RenderCanvas(title="a wgpu example")
 
 
 Next, we can setup the render context, which we will need later on.
@@ -94,8 +94,11 @@ the previous step.
         render_pass.end()
         device.queue.submit([command_encoder.finish()])
 
-        # If you want to draw continuously, request a new draw right now
+        # You can request a new draw when you know something has changed.
         canvas.request_draw()
+
+        # Alternatively you can tell the canvas to draw continuously with
+        # canvas = RenderCanvas(update_mode='continuous')
 
 
 Starting the event loop
@@ -103,12 +106,12 @@ Starting the event loop
 
 
 We can now pass the above render function to the canvas. The canvas will then
-call the function whenever it (re)draws the window. And finally, we call ``run()`` to enter the mainloop.
+call the function whenever it (re)draws the window. And finally, we call ``loop.run()`` to enter the mainloop.
 
 .. code-block:: py
 
     canvas.request_draw(draw_frame)
-    run()
+    loop.run()
 
 
 Offscreen
@@ -246,9 +249,6 @@ Freezing apps
 In wgpu a PyInstaller-hook is provided to help simplify the freezing process
 (it e.g. ensures that the wgpu-native DLL is included). This hook requires
 PyInstaller version 4+.
-
-Our hook also includes ``glfw`` when it is available, so code using ``wgpu.gui.auto``
-should Just Work.
 
 Note that PyInstaller needs ``wgpu`` to be installed in `site-packages` for
 the hook to work (i.e. it seems not to work with a ``pip -e .`` dev install).

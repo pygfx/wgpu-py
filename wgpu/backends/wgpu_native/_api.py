@@ -463,7 +463,7 @@ class GPU(classes.GPU):
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
             canvas : The canvas that the adapter should be able to render to. This can typically
-                 be left to None. If given, the object must implement ``WgpuCanvasInterface``.
+                be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
         awaitable = self._request_adapter(
             feature_level=feature_level,

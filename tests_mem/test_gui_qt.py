@@ -30,20 +30,23 @@ def test_release_canvas_context(n):
     # so we don't see them in the counts.
 
     import PySide6
-    from wgpu.gui.qt import WgpuCanvas
+    from rendercanvas.qt import RenderCanvas
 
     app = PySide6.QtWidgets.QApplication.instance()
     if app is None:
         app = PySide6.QtWidgets.QApplication([""])
 
     yield {
+        "expected_counts_after_create": {
+            "CanvasContext": (n, 0),
+        },
         "ignore": {"CommandBuffer"},
     }
 
     canvases = weakref.WeakSet()
 
     for i in range(n):
-        c = WgpuCanvas()
+        c = RenderCanvas()
         canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         app.processEvents()
