@@ -227,7 +227,7 @@ def test_validate_shader_error2(caplog):
         }
     """
 
-    expected1 = """Returning Some(Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }) where Some(Vector { size: Quad, scalar: Scalar { kind: Float, width: 4 } }) is expected"""
+    expected1 = """Returning Some(Handle([3])) where Some([0]) is expected"""
     expected2 = """
         Validation Error
 
@@ -240,11 +240,11 @@ def test_validate_shader_error2(caplog):
         9 │         return vec3<f32>(1.0, 0.0, 1.0);
           │                ^^^^^^^^^^^^^^^^^^^^^^^^ naga::ir::Expression [8]
           │
-          = The `return` value Some([8]) does not match the function return value
+          = The `return` expression Some([8]) does not match the declared return type Some([0])
 
 
               Entry point fs_main at Vertex is invalid
-                The `return` value Some([8]) does not match the function return value
+                The `return` expression Some([8]) does not match the declared return type Some([0])
     """
 
     code = dedent(code)
