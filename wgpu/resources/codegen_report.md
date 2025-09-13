@@ -3,7 +3,7 @@
 * The webgpu.idl defines 37 classes with 76 functions
 * The webgpu.idl defines 5 flags, 34 enums, 60 structs
 * webgpu.h/wgpu.h define 211 functions
-* webgpu.h/wgpu.h define 7 flags, 60 enums, 102 structs
+* webgpu.h/wgpu.h define 7 flags, 61 enums, 103 structs
 ## Updating API
 * Wrote 5 flags to flags.py
 * Wrote 34 enums to enums.py
