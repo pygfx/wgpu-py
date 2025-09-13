@@ -23,19 +23,24 @@ fn main(@builtin(global_invocation_id) index: vec3<u32>) {
 """
 a = 0x1234567890
 b = 0x9876543210
-data = memoryview(bytearray(6*8)).cast("q") # signed long long >= 64 bits
+data = memoryview(bytearray(6 * 8)).cast("q")  # signed long long >= 64 bits
 data[0] = a
 data[1] = b
 data[3] = -a
 data[4] = -b
 
-buffer = device.create_buffer_with_data(data=data, usage=wgpu.BufferUsage.STORAGE | wgpu.BufferUsage.COPY_SRC | wgpu.BufferUsage.COPY_DST)
+buffer = device.create_buffer_with_data(
+    data=data,
+    usage=wgpu.BufferUsage.STORAGE
+    | wgpu.BufferUsage.COPY_SRC
+    | wgpu.BufferUsage.COPY_DST,
+)
 pipeline = device.create_compute_pipeline(
     layout="auto",
     compute={
         "module": device.create_shader_module(code=add_shader),
         "entry_point": "main",
-    }
+    },
 )
 
 bind_group = device.create_bind_group(
@@ -52,7 +57,7 @@ command_encoder = device.create_command_encoder()
 compute_pass = command_encoder.begin_compute_pass()
 compute_pass.set_pipeline(pipeline)
 compute_pass.set_bind_group(0, bind_group)
-compute_pass.dispatch_workgroups(2) # we do two calculations
+compute_pass.dispatch_workgroups(2)  # we do two calculations
 compute_pass.end()
 device.queue.submit([command_encoder.finish()])
 result = device.queue.read_buffer(buffer)
@@ -63,4 +68,3 @@ print(f"{a:#x} + {b:#x} = {c:#x}")
 d = -a + -b
 assert res[5] == d, f"expected {d}, got {res[5]}"
 print(f"{-a:#x} + {-b:#x} = {d:#x}")
-
