@@ -1,5 +1,5 @@
 import os
-from typing import Sequence
+from typing import Sequence, Union
 
 from . import (
     GPUAdapter,
@@ -231,8 +231,7 @@ def set_instance_extras(
     dx12_compiler="fxc",
     gles3_minor_version="Atomic",
     fence_behavior="Normal",
-    dxil_path: os.PathLike | None = None,
-    dxc_path: os.PathLike | None = None,
+    dxc_path: Union[os.PathLike, None] = None,
     dxc_max_shader_model: float = 6.5,
 ):
     """
@@ -243,7 +242,6 @@ def set_instance_extras(
         dx12_compiler: enum/str, either "Fxc", "Dxc" or "Undefined". Defaults to "Fxc" same as "Undefined". Dxc requires additional library files.
         gles3_minor_version: enum/int, 0, 1 or 2. Defaults to "Atomic" (handled by driver).
         fence_behavior: enum/int, "Normal" or "AutoFinish". Defaults to "Normal".
-        dxil_path: Path to the dxil.dll file, if not provided or `None`, will try to load from wgpu/resources.
         dxc_path: Path to the dxcompiler.dll file, if not provided or `None`, will try to load from wgpu/resources.
         dxc_max_shader_model: float between 6.0 and 6.7, the maximum shader model to use with DXC. Defaults to 6.5.
     """
@@ -262,14 +260,11 @@ def set_instance_extras(
         dx12_compiler.capitalize(), enum_str2int["Dx12Compiler"]["Undefined"]
     )
     # https://docs.rs/wgpu/latest/wgpu/enum.Dx12Compiler.html#variant.DynamicDxc #explains the idea, will improve in the future.
-    # https://github.com/gfx-rs/wgpu-native/blob/v25.0.2.1/src/conv.rs#L308-L349 handles the fxc fallback, most of the time...
     if (
-        c_dx12_compiler == enum_str2int["Dx12Compiler"]["Dxc"]
-        and not (dxil_path or dxc_path)
-    ):  # os.path.exists(dxil_path) or os.path.exists(dxc_path)): # this check errors with None as default. but we can't have empty strings.
+        c_dx12_compiler == enum_str2int["Dx12Compiler"]["Dxc"] and not dxc_path
+    ):  # or os.path.exists(dxc_path)): # this check errors with None as default. but we can't have empty strings.
         # if dxc is specified but no paths are provided, there will be a panic about static-dxc, so maybe we check against that.
         try:
-            dxil_path = get_library_filename("dxil.dll")
             dxc_path = get_library_filename("dxcompiler.dll")
         except RuntimeError as e:
             # here we couldn't load the libs from wgpu/resources... so we assume the user doesn't have them.
@@ -297,7 +292,7 @@ def set_instance_extras(
     # hack as only version 6.0..6.7 are supported and enum mapping fits.
     c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
-    # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
+    # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
     c_extras = new_struct_p(
         "WGPUInstanceExtras *",
         # not used: chain
@@ -306,7 +301,6 @@ def set_instance_extras(
         dx12ShaderCompiler=c_dx12_compiler,
         gles3MinorVersion=gles3_minor_version,
         glFenceBehaviour=fence_behavior,
-        dxilPath=to_c_string_view(dxil_path),
         dxcPath=to_c_string_view(dxc_path),
         dxcMaxShaderModel=c_max_shader_model,
     )
