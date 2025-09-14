@@ -128,6 +128,7 @@ def write_mappings():
         ("NativeFeature", True),
         ("PipelineStatisticName", True),
         ("Dx12Compiler", False),
+        ("PolygonMode", False),
     ):
         pylines.append(f'    "{name}":' + " {")
         for key, val in hp.enums[name].items():

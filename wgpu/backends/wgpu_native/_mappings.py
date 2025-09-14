@@ -374,6 +374,11 @@ enum_str2int = {
         "Fxc": 1,
         "Dxc": 2,
     },
+    "PolygonMode": {
+        "Fill": 0,
+        "Line": 1,
+        "Point": 2,
+    },
 }
 
 enum_int2str = {
