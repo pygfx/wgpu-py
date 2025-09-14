@@ -2059,6 +2059,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_stencil = depth_stencil or {}
         multisample = multisample or {}
         primitive = primitive or {}
+        # remove the extras so the struct can still be checked
+        primitive_extras = {}
+        primitive_extras["polygon_mode"] = primitive.pop("polygon_mode", "Fill")
+        primitive_extras["conservative"] = primitive.pop("conservative", False)
         check_struct("VertexState", vertex)
         check_struct("DepthStencilState", depth_stencil)
         check_struct("MultisampleState", multisample)
@@ -2084,10 +2088,25 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             buffers=c_vertex_buffer_descriptors_array,
         )
 
+        # explanations for extras: https://docs.rs/wgpu/latest/wgpu/struct.PrimitiveState.html
+        polygon_mode = enum_str2int["PolygonMode"].get(
+            primitive_extras.get("polygon_mode"), enum_str2int["PolygonMode"]["Fill"]
+        )
+
+        # H: chain: WGPUChainedStruct, polygonMode: WGPUPolygonMode, conservative: WGPUBool/int
+        c_primitive_state_extras = new_struct_p(
+            "WGPUPrimitiveStateExtras *",
+            # not used: chain
+            polygonMode=polygon_mode,
+            conservative=primitive_extras.get("conservative", False),
+        )
+        c_primitive_state_extras.chain.sType = lib.WGPUSType_PrimitiveStateExtras
+        next_in_chain = ffi.cast("WGPUChainedStruct *", c_primitive_state_extras)
+
         # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode, unclippedDepth: WGPUBool/int
         c_primitive_state = new_struct(
             "WGPUPrimitiveState",
-            # not used: nextInChain
+            nextInChain=next_in_chain,
             topology=primitive.get("topology", "triangle-list"),
             stripIndexFormat=primitive.get("strip_index_format", 0),
             frontFace=primitive.get("front_face", "ccw"),
