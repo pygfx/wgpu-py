@@ -19,7 +19,7 @@ import shutil
 ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, ROOT_DIR)
 
-os.environ["WGPU_FORCE_OFFSCREEN"] = "true"
+os.environ["RENDERCANVAS_FORCE_OFFSCREEN"] = "true"
 
 
 # Load wgpu so autodoc can query docstrings
@@ -99,7 +99,7 @@ def resolve_crossrefs(text):
 
 
 # Tweak docstrings of classes and their methods
-for module, hide_class_signature in [(wgpu.classes, True), (wgpu.gui, False)]:
+for module, hide_class_signature in [(wgpu.classes, True)]:
     for cls_name in module.__all__:
         cls = getattr(module, cls_name)
         # Class docstring

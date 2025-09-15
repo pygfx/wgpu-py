@@ -232,15 +232,13 @@ def render_to_screen(
     renderpass_callback=lambda *args: None,
 ):
     """Render to a window on screen, for debugging purposes."""
-    import glfw
-    from wgpu.gui.glfw import WgpuCanvas, update_glfw_canvasses
+    from rendercanvas.glfw import RenderCanvas, loop
 
     vbos = vbos or []
     vbo_views = vbo_views or []
 
     # Setup canvas
-    glfw.init()
-    canvas = WgpuCanvas(title="wgpu test render with GLFW")
+    canvas = RenderCanvas(title="wgpu test render with GLFW")
 
     shader = device.create_shader_module(code=shader_source)
 
@@ -327,6 +325,4 @@ def render_to_screen(
     canvas.request_draw(draw_frame)
 
     # Enter main loop
-    while update_glfw_canvasses():
-        glfw.poll_events()
-    glfw.terminate()
+    loop.run()

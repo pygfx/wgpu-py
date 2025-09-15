@@ -30,7 +30,7 @@ def test_basic_api():
 
 
 def test_api_subpackages_are_there():
-    code = "import wgpu; x = [wgpu.resources, wgpu.utils, wgpu.backends, wgpu.gui]; print('ok')"
+    code = "import wgpu; x = [wgpu.resources, wgpu.utils, wgpu.backends]; print('ok')"
     result = subprocess.run(
         [sys.executable, "-c", code],
         stdout=subprocess.PIPE,
