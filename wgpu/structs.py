@@ -284,11 +284,11 @@ BindGroupDescriptor = Struct(
 )
 
 #: * binding :: int
-#: * resource :: Union[:class:`GPUSampler <wgpu.GPUSampler>`, :class:`GPUTextureView <wgpu.GPUTextureView>`, object, :obj:`structs.BufferBinding <BufferBinding>`]
+#: * resource :: Union[:class:`GPUBuffer <wgpu.GPUBuffer>`, :class:`GPUSampler <wgpu.GPUSampler>`, :class:`GPUTexture <wgpu.GPUTexture>`, :class:`GPUTextureView <wgpu.GPUTextureView>`, object, :obj:`structs.BufferBinding <BufferBinding>`]
 BindGroupEntry = Struct(
     "BindGroupEntry",
     binding="int",
-    resource="Union[GPUSampler, GPUTextureView, object, structs.BufferBinding]",
+    resource="Union[GPUBuffer, GPUSampler, GPUTexture, GPUTextureView, object, structs.BufferBinding]",
 )
 
 #: * buffer :: :class:`GPUBuffer <wgpu.GPUBuffer>`
@@ -619,23 +619,23 @@ RenderPassDescriptor = Struct(
     max_draw_count="int",
 )
 
-#: * view :: :class:`GPUTextureView <wgpu.GPUTextureView>`
+#: * view :: Union[:class:`GPUTexture <wgpu.GPUTexture>`, :class:`GPUTextureView <wgpu.GPUTextureView>`]
 #: * depthSlice :: int
-#: * resolveTarget :: :class:`GPUTextureView <wgpu.GPUTextureView>`
+#: * resolveTarget :: Union[:class:`GPUTexture <wgpu.GPUTexture>`, :class:`GPUTextureView <wgpu.GPUTextureView>`]
 #: * clearValue :: Union[List[float], :obj:`structs.Color <Color>`]
 #: * loadOp :: :obj:`enums.LoadOp <wgpu.enums.LoadOp>`
 #: * storeOp :: :obj:`enums.StoreOp <wgpu.enums.StoreOp>`
 RenderPassColorAttachment = Struct(
     "RenderPassColorAttachment",
-    view="GPUTextureView",
+    view="Union[GPUTexture, GPUTextureView]",
     depth_slice="int",
-    resolve_target="GPUTextureView",
+    resolve_target="Union[GPUTexture, GPUTextureView]",
     clear_value="Union[List[float], structs.Color]",
     load_op="enums.LoadOpEnum",
     store_op="enums.StoreOpEnum",
 )
 
-#: * view :: :class:`GPUTextureView <wgpu.GPUTextureView>`
+#: * view :: Union[:class:`GPUTexture <wgpu.GPUTexture>`, :class:`GPUTextureView <wgpu.GPUTextureView>`]
 #: * depthClearValue :: float
 #: * depthLoadOp :: :obj:`enums.LoadOp <wgpu.enums.LoadOp>`
 #: * depthStoreOp :: :obj:`enums.StoreOp <wgpu.enums.StoreOp>`
@@ -646,7 +646,7 @@ RenderPassColorAttachment = Struct(
 #: * stencilReadOnly :: bool = false
 RenderPassDepthStencilAttachment = Struct(
     "RenderPassDepthStencilAttachment",
-    view="GPUTextureView",
+    view="Union[GPUTexture, GPUTextureView]",
     depth_clear_value="float",
     depth_load_op="enums.LoadOpEnum",
     depth_store_op="enums.StoreOpEnum",

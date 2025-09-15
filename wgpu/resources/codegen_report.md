@@ -11,6 +11,7 @@
 ### Patching API for _classes.py
 * Diffs for GPU: add enumerate_adapters_async, add enumerate_adapters_sync, change get_preferred_canvas_format, change request_adapter_async, change request_adapter_sync
 * Diffs for GPUCanvasContext: add get_preferred_format, add present
+* Warning: unknown api: prop GPUAdapter.is_fallback_adapter
 * Diffs for GPUAdapter: add summary
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost_async, hide lost_sync, hide onuncapturederror, hide pop_error_scope_async, hide pop_error_scope_sync, hide push_error_scope
 * Diffs for GPUBuffer: add read_mapped, add write_mapped, hide get_mapped_range
@@ -22,7 +23,17 @@
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 124 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
+* Enum field FeatureName.core-features-and-limits missing in webgpu.h/wgpu.h
 * Enum field FeatureName.subgroups missing in webgpu.h/wgpu.h
+* Enum field FeatureName.texture-formats-tier1 missing in webgpu.h/wgpu.h
+* Enum field FeatureName.texture-formats-tier2 missing in webgpu.h/wgpu.h
+* Enum field FeatureName.primitive-index missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.r16unorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.r16snorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.rg16unorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.rg16snorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.rgba16unorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.rgba16snorm missing in webgpu.h/wgpu.h
 * Enum PipelineErrorReason missing in webgpu.h/wgpu.h
 * Enum AutoLayoutMode missing in webgpu.h/wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in webgpu.h/wgpu.h
