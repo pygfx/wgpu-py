@@ -74,7 +74,7 @@ async def setup_drawing_async(canvas, limits=None):
 
 
 def get_render_pipeline_kwargs(
-    canvas: wgpu.WgpuCanvasInterface,
+    canvas,
     device: wgpu.GPUDevice,
     pipeline_layout: wgpu.GPUPipelineLayout,
 ) -> dict:
@@ -237,7 +237,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
 
 
 def get_draw_function(
-    canvas: wgpu.WgpuCanvasInterface,
+    canvas,
     device: wgpu.GPUDevice,
     render_pipeline: wgpu.GPURenderPipeline,
     uniform_buffer: wgpu.GPUBuffer,
