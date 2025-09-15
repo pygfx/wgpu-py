@@ -94,7 +94,7 @@ def update_gui():
     # add the items for the picker
     for cmap_name, tex_ref in cmap_data.items():
         # text part of each item
-        clicked, enabled = imgui.menu_item(
+        _clicked, enabled = imgui.menu_item(
             cmap_name, "", p_selected=current_cmap == cmap_name
         )
         imgui.same_line()

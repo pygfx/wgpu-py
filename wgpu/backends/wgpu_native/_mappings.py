@@ -357,6 +357,7 @@ enum_str2int = {
         "subgroup-barrier": 196643,
         "timestamp-query-inside-encoders": 196644,
         "timestamp-query-inside-passes": 196645,
+        "shader-int64": 196646,
     },
     "PipelineStatisticName": {
         "vertex-shader-invocations": 0,

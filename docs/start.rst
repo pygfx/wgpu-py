@@ -7,29 +7,18 @@ Install with pip
 ----------------
 
 You can install ``wgpu-py`` with your favourite package manager (we use ``pip`` in the example commands below).
-Python 3.9 or higher is required. Pypy is supported.
+Python 3.10 or higher is required. Pypy is supported.
 
 .. code-block:: bash
 
     pip install wgpu
 
 
-Since most users will want to render something to screen, we recommend installing GLFW as well:
+Since most users will want to render something to screen, we recommend installing `rendercanvas <https://github.com/pygfx/rendercanvas>`_ and `glfw <https://github.com/FlorianRhiem/pyGLFW>`_ as well:
 
 .. code-block:: bash
 
-    pip install wgpu glfw
-
-
-GUI libraries
--------------
-
-Multiple GUI backends are supported, see :doc:`the GUI API <gui>` for details:
-
-* `glfw <https://github.com/FlorianRhiem/pyGLFW>`_: a lightweight GUI for the desktop
-* `jupyter_rfb <https://jupyter-rfb.readthedocs.io>`_: only needed if you plan on using wgpu in Jupyter
-* qt (PySide6, PyQt6, PySide2, PyQt5)
-* wx
+    pip install wgpu rendercanvas glfw
 
 
 The wgpu-native library
