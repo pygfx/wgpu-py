@@ -1,5 +1,5 @@
 """
-A simple example to demonstrate events.
+A simple example to demonstrate events (no rendering).
 """
 
 from rendercanvas.auto import RenderCanvas, loop

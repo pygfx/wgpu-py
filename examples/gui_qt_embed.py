@@ -1,6 +1,13 @@
 """
-An example demonstrating a qt app with a wgpu viz inside.
+An example demonstrating a Qt app with a wgpu viz inside.
 If needed, change the PySide6 import to e.g. PyQt6, PyQt5, or PySide2.
+
+The rendercanvas supports multiple GUI backends and allows rendering wgpu in
+a widget. This example demonstrates this using Qt.
+
+See https://rendercanvas.readthedocs.io/stable/backends.html for more info,
+and https://rendercanvas.readthedocs.io/stable/gallery/index.html for examples
+with various GUI's and event loops.
 
 """
 
