@@ -402,7 +402,7 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
     features = set()
 
     # Standard features
-    not_supported_by_wgpu_native = {"subgroups"}
+    not_supported_by_wgpu_native = {"subgroups", "core-features-and-limits", "texture-formats-tier1", "texture-formats-tier2", "primitive-index"}
     for f in sorted(enums.FeatureName):
         if f in not_supported_by_wgpu_native:
             continue
