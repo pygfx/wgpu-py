@@ -1,6 +1,5 @@
 """
-Direct integration of glfw and wgpu-py without using the
-RenderCanvas abstraction/class hierarchy.
+Direct integration of glfw and wgpu-py without using the RenderCanvas library.
 
 Demonstration for hardcore users that need total low-level control.
 
@@ -8,19 +7,63 @@ Demonstration for hardcore users that need total low-level control.
 
 # run_example = false
 
+import os
+import sys
 import time
 import atexit
 
 import glfw
-
 from wgpu.backends.wgpu_native import GPUCanvasContext
-from rendercanvas.glfw import get_glfw_present_methods, poll_glfw_briefly, enable_glfw
 
 # from triangle import setup_drawing_sync
 from cube import setup_drawing_sync
 
+
+system_is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+api_is_wayland = False
+if sys.platform.startswith("linux") and system_is_wayland:
+    if not hasattr(glfw, "get_x11_window"):
+        api_is_wayland = True
+
+
+def get_glfw_present_methods(window):
+    if sys.platform.startswith("win"):
+        return {
+            "screen": {
+                "platform": "windows",
+                "window": int(glfw.get_win32_window(window)),
+            }
+        }
+    elif sys.platform.startswith("darwin"):
+        return {
+            "screen": {
+                "platform": "cocoa",
+                "window": int(glfw.get_cocoa_window(window)),
+            }
+        }
+    elif sys.platform.startswith("linux"):
+        if api_is_wayland:
+            return {
+                "screen": {
+                    "platform": "wayland",
+                    "window": int(glfw.get_wayland_window(window)),
+                    "display": int(glfw.get_wayland_display()),
+                }
+            }
+        else:
+            return {
+                "screen": {
+                    "platform": "x11",
+                    "window": int(glfw.get_x11_window(window)),
+                    "display": int(glfw.get_x11_display()),
+                }
+            }
+    else:
+        raise RuntimeError(f"Cannot get GLFW surface info on {sys.platform}.")
+
+
 # Setup glfw
-enable_glfw()
+glfw.init()
 atexit.register(glfw.terminate)
 
 
@@ -69,7 +112,11 @@ def main():
 
     # dispose resources
     glfw.destroy_window(canvas.window)
-    poll_glfw_briefly()
+
+    # allow proper cleanup (workaround for glfw bug)
+    end_time = time.perf_counter() + 0.1
+    while time.perf_counter() < end_time:
+        glfw.wait_events_timeout(end_time - time.perf_counter())
 
 
 if __name__ == "__main__":
