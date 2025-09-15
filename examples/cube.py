@@ -65,7 +65,9 @@ async def setup_drawing_async(canvas, limits=None):
 # %% Functions to create wgpu objects
 
 
-def get_render_pipeline_kwargs(canvas, device, pipeline_layout):
+def get_render_pipeline_kwargs(
+    canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
+):
     context = canvas.get_context("wgpu")
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
@@ -119,7 +121,7 @@ def get_render_pipeline_kwargs(canvas, device, pipeline_layout):
     )
 
 
-def create_pipeline_layout(device):
+def create_pipeline_layout(device: wgpu.GPUDevice):
     # Create uniform buffer - data is uploaded each frame
     uniform_buffer = device.create_buffer(
         size=uniform_data.nbytes,
@@ -222,7 +224,13 @@ def create_pipeline_layout(device):
 
 
 def get_draw_function(
-    canvas, device, render_pipeline, uniform_buffer, bind_groups, *, asynchronous
+    canvas,
+    device: wgpu.GPUDevice,
+    render_pipeline: wgpu.GPURenderPipeline,
+    uniform_buffer: wgpu.GPUBuffer,
+    bind_groups,
+    *,
+    asynchronous,
 ):
     # Create vertex buffer, and upload data
     vertex_buffer = device.create_buffer_with_data(

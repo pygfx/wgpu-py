@@ -175,7 +175,7 @@ class IdlParser:
                     lines.append(line)
         return "\n".join(lines)
 
-    def resolve_type(self, typename):
+    def resolve_type(self, typename) -> str:
         """Resolve a type to a suitable name that is also valid so that the linter
         won't complain when this is used as a type annotation.
         """
@@ -265,9 +265,9 @@ class IdlParser:
             name = name[3:]
             name = name[:-4] if name.endswith("Dict") else name
             if name in self.flags:
-                return f"flags.{name}"
+                return f"flags.{name}Flags"
             elif name in self.enums:
-                return f"enums.{name}"
+                return f"enums.{name}Enum"
             elif name in self.structs:
                 return f"structs.{name}"
             else:

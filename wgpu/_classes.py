@@ -8,7 +8,7 @@ automatically inserted code. Read the codegen/readme.md for more
 information.
 """
 
-# Allow using class names in type annotations, before the class is defined. Py3.7+
+# Allow using class names in type annotations, without Ruff triggering F821
 from __future__ import annotations
 
 import weakref
@@ -93,7 +93,7 @@ class GPU:
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreference = None,
+        power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ) -> GPUAdapter:
@@ -117,7 +117,7 @@ class GPU:
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreference = None,
+        power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas=None,
     ) -> GPUAdapter:
@@ -308,12 +308,12 @@ class GPUCanvasContext:
         self,
         *,
         device: GPUDevice,
-        format: enums.TextureFormat,
-        usage: flags.TextureUsage = 0x10,
-        view_formats: List[enums.TextureFormat] = [],
+        format: enums.TextureFormatEnum,
+        usage: flags.TextureUsageFlags = 0x10,
+        view_formats: List[enums.TextureFormatEnum] = [],
         color_space: str = "srgb",
         tone_mapping: structs.CanvasToneMapping = {},
-        alpha_mode: enums.CanvasAlphaMode = "opaque",
+        alpha_mode: enums.CanvasAlphaModeEnum = "opaque",
     ) -> None:
         """Configures the presentation context for the associated canvas.
         Destroys any textures produced with a previous configuration.
@@ -648,7 +648,7 @@ class GPUAdapter:
         self,
         *,
         label: str = "",
-        required_features: List[enums.FeatureName] = [],
+        required_features: List[enums.FeatureNameEnum] = [],
         required_limits: Dict[str, Union[None, int]] = {},
         default_queue: structs.QueueDescriptor = {},
     ) -> GPUDevice:
@@ -663,7 +663,7 @@ class GPUAdapter:
         self,
         *,
         label: str = "",
-        required_features: List[enums.FeatureName] = [],
+        required_features: List[enums.FeatureNameEnum] = [],
         required_limits: Dict[str, Union[None, int]] = {},
         default_queue: structs.QueueDescriptor = {},
     ) -> GPUDevice:
@@ -851,7 +851,7 @@ class GPUDevice(GPUObjectBase):
         *,
         label: str = "",
         size: int,
-        usage: flags.BufferUsage,
+        usage: flags.BufferUsageFlags,
         mapped_at_creation: bool = False,
     ) -> GPUBuffer:
         """Create a `GPUBuffer` object.
@@ -868,7 +868,7 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Convenience function")
-    def create_buffer_with_data(self, *, label="", data, usage: "flags.BufferUsage"):
+    def create_buffer_with_data(self, *, label="", data, usage: flags.BufferUsageFlags):
         """Create a `GPUBuffer` object initialized with the given data.
 
         This is a convenience function that creates a mapped buffer,
@@ -911,10 +911,10 @@ class GPUDevice(GPUObjectBase):
         size: Union[List[int], structs.Extent3D],
         mip_level_count: int = 1,
         sample_count: int = 1,
-        dimension: enums.TextureDimension = "2d",
-        format: enums.TextureFormat,
-        usage: flags.TextureUsage,
-        view_formats: List[enums.TextureFormat] = [],
+        dimension: enums.TextureDimensionEnum = "2d",
+        format: enums.TextureFormatEnum,
+        usage: flags.TextureUsageFlags,
+        view_formats: List[enums.TextureFormatEnum] = [],
     ) -> GPUTexture:
         """Create a `GPUTexture` object.
 
@@ -941,15 +941,15 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        address_mode_u: enums.AddressMode = "clamp-to-edge",
-        address_mode_v: enums.AddressMode = "clamp-to-edge",
-        address_mode_w: enums.AddressMode = "clamp-to-edge",
-        mag_filter: enums.FilterMode = "nearest",
-        min_filter: enums.FilterMode = "nearest",
-        mipmap_filter: enums.MipmapFilterMode = "nearest",
+        address_mode_u: enums.AddressModeEnum = "clamp-to-edge",
+        address_mode_v: enums.AddressModeEnum = "clamp-to-edge",
+        address_mode_w: enums.AddressModeEnum = "clamp-to-edge",
+        mag_filter: enums.FilterModeEnum = "nearest",
+        min_filter: enums.FilterModeEnum = "nearest",
+        mipmap_filter: enums.MipmapFilterModeEnum = "nearest",
         lod_min_clamp: float = 0,
         lod_max_clamp: float = 32,
-        compare: enums.CompareFunction = optional,
+        compare: enums.CompareFunctionEnum = optional,
         max_anisotropy: int = 1,
     ) -> GPUSampler:
         """Create a `GPUSampler` object. Samplers specify how a texture is sampled.
@@ -1096,7 +1096,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
         compute: structs.ProgrammableStage,
     ) -> GPUComputePipeline:
         """Create a `GPUComputePipeline` object.
@@ -1113,7 +1113,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
         compute: structs.ProgrammableStage,
     ) -> GPUComputePipeline:
         """Async version of `create_compute_pipeline()`.
@@ -1126,7 +1126,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
@@ -1270,7 +1270,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
@@ -1298,8 +1298,8 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        color_formats: List[enums.TextureFormat],
-        depth_stencil_format: enums.TextureFormat = optional,
+        color_formats: List[enums.TextureFormatEnum],
+        depth_stencil_format: enums.TextureFormatEnum = optional,
         sample_count: int = 1,
         depth_read_only: bool = False,
         stencil_read_only: bool = False,
@@ -1322,14 +1322,14 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); -> USVString label = "", required GPUQueryType type, required GPUSize32 count
     def create_query_set(
-        self, *, label: str = "", type: enums.QueryType, count: int
+        self, *, label: str = "", type: enums.QueryTypeEnum, count: int
     ) -> GPUQuerySet:
         """Create a `GPUQuerySet` object."""
         raise NotImplementedError()
 
     # IDL: undefined pushErrorScope(GPUErrorFilter filter);
     @apidiff.hide
-    def push_error_scope(self, filter: enums.ErrorFilter) -> None:
+    def push_error_scope(self, filter: enums.ErrorFilterEnum) -> None:
         """Pushes a new GPU error scope onto the stack."""
         raise NotImplementedError()
 
@@ -1400,7 +1400,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: readonly attribute GPUBufferMapState mapState;
     @property
-    def map_state(self) -> enums.BufferMapState:
+    def map_state(self) -> enums.BufferMapStateEnum:
         """The mapping state of the buffer, see `BufferMapState`."""
         return self._map_state
 
@@ -1420,7 +1420,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def map_sync(
-        self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
+        self, mode: flags.MapModeFlags, offset: int = 0, size: Optional[int] = None
     ) -> None:
         """Sync version of `map_async()`.
 
@@ -1430,7 +1430,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     async def map_async(
-        self, mode: flags.MapMode, offset: int = 0, size: Optional[int] = None
+        self, mode: flags.MapModeFlags, offset: int = 0, size: Optional[int] = None
     ) -> None:
         """Maps the given range of the GPUBuffer.
 
@@ -1458,7 +1458,13 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def read_mapped(self, buffer_offset=None, size=None, *, copy=True):
+    def read_mapped(
+        self,
+        buffer_offset: int | None = None,
+        size: int | None = None,
+        *,
+        copy: bool = True,
+    ):
         """Read mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1467,10 +1473,10 @@ class GPUBuffer(GPUObjectBase):
         become invalid when the buffer is ummapped).
 
         Arguments:
-            buffer_offset (int): the buffer offset in bytes. Must be at
+            buffer_offset (int, None): the buffer offset in bytes. Must be at
                 least as large as the offset specified in ``map()``. The default
                 is the offset of the mapped range.
-            size (int): the size to read (in bytes). The resulting range must fit into the range
+            size (int, None): the size to read (in bytes). The resulting range must fit into the range
                 specified in ``map()``. The default is as large as the mapped range allows.
             copy (bool): whether a copy of the data is given. Default True.
                 If False, the returned memoryview represents the mapped data
@@ -1488,7 +1494,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def write_mapped(self, data, buffer_offset=None):
+    def write_mapped(self, data, buffer_offset: int | None = None):
         """Write mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1501,7 +1507,7 @@ class GPUBuffer(GPUObjectBase):
                 Must be an object that supports the buffer protocol,
                 e.g. bytes, memoryview, numpy array, etc. Does not have to
                 be contiguous, since the data is copied anyway.
-            buffer_offset (int): the buffer offset in bytes. Must be at least
+            buffer_offset (int, None): the buffer offset in bytes. Must be at least
                 as large as the offset specified in ``map()``. The default
                 is the offset of the mapped range.
 
@@ -1602,13 +1608,13 @@ class GPUTexture(GPUObjectBase):
 
     # IDL: readonly attribute GPUTextureDimension dimension;
     @property
-    def dimension(self) -> enums.TextureDimension:
+    def dimension(self) -> enums.TextureDimensionEnum:
         """The dimension of the texture."""
         return self._tex_info["dimension"]
 
     # IDL: readonly attribute GPUTextureFormat format;
     @property
-    def format(self) -> enums.TextureFormat:
+    def format(self) -> enums.TextureFormatEnum:
         """The format of the texture."""
         return self._tex_info["format"]
 
@@ -1623,10 +1629,10 @@ class GPUTexture(GPUObjectBase):
         self,
         *,
         label: str = "",
-        format: enums.TextureFormat = optional,
-        dimension: enums.TextureViewDimension = optional,
-        usage: flags.TextureUsage = 0,
-        aspect: enums.TextureAspect = "all",
+        format: enums.TextureFormatEnum = optional,
+        dimension: enums.TextureViewDimensionEnum = optional,
+        usage: flags.TextureUsageFlags = 0,
+        aspect: enums.TextureAspectEnum = "all",
         base_mip_level: int = 0,
         mip_level_count: int = optional,
         base_array_layer: int = 0,
@@ -1861,7 +1867,7 @@ class GPURenderCommandsMixin:
     def set_index_buffer(
         self,
         buffer: GPUBuffer,
-        index_format: enums.IndexFormat,
+        index_format: enums.IndexFormatEnum,
         offset: int = 0,
         size: Optional[int] = None,
     ) -> None:
@@ -2356,12 +2362,12 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("For symmetry with queue.write_buffer")
-    def read_buffer(self, buffer, buffer_offset=0, size=None):
+    def read_buffer(self, buffer, buffer_offset: int = 0, size: int | None = None):
         """Takes the data contents of the buffer and return them as a memoryview.
 
         Arguments:
             buffer: The `GPUBuffer` object to read from.
-            buffer_offset (int): The offset in the buffer to start reading from.
+            buffer_offset (int, None): The offset in the buffer to start reading from.
             size: The number of bytes to read. Default all minus offset.
 
         This copies the data in the given buffer to a temporary buffer
@@ -2463,7 +2469,7 @@ class GPUDeviceLostInfo:
 
     # IDL: readonly attribute GPUDeviceLostReason reason;
     @property
-    def reason(self) -> enums.DeviceLostReason:
+    def reason(self) -> enums.DeviceLostReasonEnum:
         """The reason (enums.GPUDeviceLostReason) for the device getting lost. Can be None."""
         return self._reason
 
@@ -2507,7 +2513,7 @@ class GPUPipelineError(Exception):
 
     # IDL: readonly attribute GPUPipelineErrorReason reason;
     @property
-    def reason(self) -> enums.PipelineErrorReason:
+    def reason(self) -> enums.PipelineErrorReasonEnum:
         """The reason for the failure."""
         return self.args[0]
 
@@ -2538,7 +2544,7 @@ class GPUCompilationMessage:
 
     # IDL: readonly attribute GPUCompilationMessageType type;
     @property
-    def type(self) -> enums.CompilationMessageType:
+    def type(self) -> enums.CompilationMessageTypeEnum:
         """The type of warning/problem."""
         raise NotImplementedError()
 
@@ -2590,7 +2596,7 @@ class GPUQuerySet(GPUObjectBase):
 
     # IDL: readonly attribute GPUQueryType type;
     @property
-    def type(self) -> enums.QueryType:
+    def type(self) -> enums.QueryTypeEnum:
         """The type of the queries managed by this queryset."""
         return self._type
 
