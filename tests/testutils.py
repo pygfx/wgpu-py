@@ -2,7 +2,6 @@ import os
 import re
 import sys
 import logging
-import subprocess
 from io import StringIO
 
 import wgpu
@@ -69,19 +68,8 @@ def get_default_adapter_summary():
     return adapter.summary
 
 
-def _determine_can_use_glfw():
-    code = "import glfw;exit(0) if glfw.init() else exit(1)"
-    try:
-        subprocess.check_output([sys.executable, "-c", code])
-    except Exception:
-        return False
-    else:
-        return True
-
-
 adapter_summary = get_default_adapter_summary()
 can_use_wgpu_lib = bool(adapter_summary)
 
-can_use_glfw = _determine_can_use_glfw()
 is_ci = bool(os.getenv("CI", None))
 is_pypy = sys.implementation.name == "pypy"
