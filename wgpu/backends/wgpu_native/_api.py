@@ -402,7 +402,13 @@ def _get_features(id: int, device: bool = False, adapter: bool = False):
     features = set()
 
     # Standard features
-    not_supported_by_wgpu_native = {"subgroups"}
+    not_supported_by_wgpu_native = {
+        "subgroups",
+        "core-features-and-limits",
+        "texture-formats-tier1",
+        "texture-formats-tier2",
+        "primitive-index",
+    }
     for f in sorted(enums.FeatureName):
         if f in not_supported_by_wgpu_native:
             continue
@@ -3213,13 +3219,15 @@ class GPUCommandEncoder(
         source_offset: int,
         destination: GPUBuffer,
         destination_offset: int,
-        size: int,
+        size: Optional[int] = None,
     ) -> None:
         if source_offset % 4 != 0:  # pragma: no cover
             raise ValueError("source_offset must be a multiple of 4")
         if destination_offset % 4 != 0:  # pragma: no cover
             raise ValueError("destination_offset must be a multiple of 4")
-        if size % 4 != 0:  # pragma: no cover
+        if size is None:
+            size = lib.WGPU_WHOLE_SIZE
+        elif size % 4 != 0:  # pragma: no cover
             raise ValueError("size must be a multiple of 4")
 
         if not isinstance(source, GPUBuffer):  # pragma: no cover

@@ -70,6 +70,7 @@ class PowerPreference(Enum):
 
 FeatureNameEnum = (
     Literal[
+        "core-features-and-limits",
         "depth-clip-control",
         "depth32float-stencil8",
         "texture-compression-bc",
@@ -87,12 +88,16 @@ FeatureNameEnum = (
         "clip-distances",
         "dual-source-blending",
         "subgroups",
+        "texture-formats-tier1",
+        "texture-formats-tier2",
+        "primitive-index",
     ]
     | str
 )
 
 
 class FeatureName(Enum):
+    core_features_and_limits = "core-features-and-limits"
     depth_clip_control = "depth-clip-control"
     depth32float_stencil8 = "depth32float-stencil8"
     texture_compression_bc = "texture-compression-bc"
@@ -110,6 +115,9 @@ class FeatureName(Enum):
     clip_distances = "clip-distances"
     dual_source_blending = "dual-source-blending"
     subgroups = "subgroups"
+    texture_formats_tier1 = "texture-formats-tier1"
+    texture_formats_tier2 = "texture-formats-tier2"
+    primitive_index = "primitive-index"
 
 
 BufferMapStateEnum = Literal["unmapped", "pending", "mapped"] | str
@@ -159,6 +167,8 @@ TextureFormatEnum = (
         "r8snorm",
         "r8uint",
         "r8sint",
+        "r16unorm",
+        "r16snorm",
         "r16uint",
         "r16sint",
         "r16float",
@@ -169,6 +179,8 @@ TextureFormatEnum = (
         "r32uint",
         "r32sint",
         "r32float",
+        "rg16unorm",
+        "rg16snorm",
         "rg16uint",
         "rg16sint",
         "rg16float",
@@ -186,6 +198,8 @@ TextureFormatEnum = (
         "rg32uint",
         "rg32sint",
         "rg32float",
+        "rgba16unorm",
+        "rgba16snorm",
         "rgba16uint",
         "rgba16sint",
         "rgba16float",
@@ -260,6 +274,8 @@ class TextureFormat(Enum):
     r8snorm = "r8snorm"
     r8uint = "r8uint"
     r8sint = "r8sint"
+    r16unorm = "r16unorm"
+    r16snorm = "r16snorm"
     r16uint = "r16uint"
     r16sint = "r16sint"
     r16float = "r16float"
@@ -270,6 +286,8 @@ class TextureFormat(Enum):
     r32uint = "r32uint"
     r32sint = "r32sint"
     r32float = "r32float"
+    rg16unorm = "rg16unorm"
+    rg16snorm = "rg16snorm"
     rg16uint = "rg16uint"
     rg16sint = "rg16sint"
     rg16float = "rg16float"
@@ -287,6 +305,8 @@ class TextureFormat(Enum):
     rg32uint = "rg32uint"
     rg32sint = "rg32sint"
     rg32float = "rg32float"
+    rgba16unorm = "rgba16unorm"
+    rgba16snorm = "rgba16snorm"
     rgba16uint = "rgba16uint"
     rgba16sint = "rgba16sint"
     rgba16float = "rgba16float"

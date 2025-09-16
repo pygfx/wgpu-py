@@ -325,6 +325,8 @@ texture_format_to_bpp = {
     # 16 bit
     "r16uint": 16,
     "r16sint": 16,
+    "r16unorm": 16,
+    "r16snorm": 16,
     "r16float": 16,
     "rg8unorm": 16,
     "rg8snorm": 16,
@@ -336,6 +338,8 @@ texture_format_to_bpp = {
     "r32float": 32,
     "rg16uint": 32,
     "rg16sint": 32,
+    "rg16unorm": 32,
+    "rg16snorm": 32,
     "rg16float": 32,
     "rgba8unorm": 32,
     "rgba8unorm-srgb": 32,
@@ -355,6 +359,8 @@ texture_format_to_bpp = {
     "rg32float": 64,
     "rgba16uint": 64,
     "rgba16sint": 64,
+    "rgba16unorm": 64,
+    "rgba16snorm": 64,
     "rgba16float": 64,
     # 128 bit
     "rgba32uint": 128,

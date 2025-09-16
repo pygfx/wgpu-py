@@ -22,7 +22,17 @@
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 37 classes, 124 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
+* Enum field FeatureName.core-features-and-limits missing in webgpu.h/wgpu.h
 * Enum field FeatureName.subgroups missing in webgpu.h/wgpu.h
+* Enum field FeatureName.texture-formats-tier1 missing in webgpu.h/wgpu.h
+* Enum field FeatureName.texture-formats-tier2 missing in webgpu.h/wgpu.h
+* Enum field FeatureName.primitive-index missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.r16unorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.r16snorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.rg16unorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.rg16snorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.rgba16unorm missing in webgpu.h/wgpu.h
+* Enum field TextureFormat.rgba16snorm missing in webgpu.h/wgpu.h
 * Enum PipelineErrorReason missing in webgpu.h/wgpu.h
 * Enum AutoLayoutMode missing in webgpu.h/wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in webgpu.h/wgpu.h

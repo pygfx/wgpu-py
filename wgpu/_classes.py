@@ -596,6 +596,12 @@ class GPUAdapterInfo(dict):
         """If the "subgroups" feature is supported, the maximum supported subgroup size for the adapter."""
         return self.get("subgroup_max_size")
 
+    # IDL: readonly attribute boolean isFallbackAdapter;
+    @property
+    def is_fallback_adapter(self) -> bool:
+        """Whether this adapter runs on software (rather than dedicated hardware)."""
+        return self.get("adapter_type", "").lower() in ("software", "cpu")
+
 
 class GPUAdapter:
     """Represents an abstract wgpu implementation.
@@ -683,12 +689,6 @@ class GPUAdapter:
     def __del__(self):
         self._ot.decrease(self.__class__.__name__)
         self._release()
-
-    # IDL: readonly attribute boolean isFallbackAdapter;
-    @property
-    def is_fallback_adapter(self) -> bool:
-        """Whether this adapter runs on software (rather than dedicated hardware)."""
-        return self._adapter_info.get("adapter_type", "").lower() in ("software", "cpu")
 
     @apidiff.add("Useful in multi-gpu environments")
     @property
@@ -1807,7 +1807,7 @@ class GPUCommandsMixin:
 class GPUBindingCommandsMixin:
     """Mixin for classes that defines bindings."""
 
-    # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup? bindGroup, Uint32Array dynamicOffsetsData, GPUSize64 dynamicOffsetsDataStart, GPUSize32 dynamicOffsetsDataLength);
+    # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup? bindGroup, [AllowShared] Uint32Array dynamicOffsetsData, GPUSize64 dynamicOffsetsDataStart, GPUSize32 dynamicOffsetsDataLength);
     @apidiff.change(
         "In the WebGPU specification, this method has two different signatures."
     )
@@ -2029,14 +2029,14 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, GPUSize64 size);
+    # IDL: undefined copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, optional GPUSize64 size);
     def copy_buffer_to_buffer(
         self,
         source: GPUBuffer,
         source_offset: int,
         destination: GPUBuffer,
         destination_offset: int,
-        size: int,
+        size: Optional[int] = None,
     ) -> None:
         """Copy the contents of a buffer to another buffer.
 
@@ -2045,7 +2045,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
             source_offset (int): The byte offset.
             destination (GPUBuffer): The target buffer.
             destination_offset (int): The byte offset in the destination buffer.
-            size (int): The number of bytes to copy.
+            size (int, optional): The number of bytes to copy. If None, copy all bytes until the end.
 
         Alignment: the size, source offset, and destination offset must all be a multiple of 4.
         """
