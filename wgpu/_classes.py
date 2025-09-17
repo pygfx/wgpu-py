@@ -13,9 +13,8 @@ from __future__ import annotations
 
 import weakref
 import logging
-from typing import List, Dict, Union, Optional
 
-from ._coreutils import ApiDiff, str_flag_to_int
+from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -95,7 +94,7 @@ class GPU:
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas=None,
+        canvas: CanvasLike = None,
     ) -> GPUAdapter:
         """Sync version of `request_adapter_async()`.
 
@@ -119,7 +118,7 @@ class GPU:
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas=None,
+        canvas: CanvasLike = None,
     ) -> GPUAdapter:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -146,7 +145,7 @@ class GPU:
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
-    def enumerate_adapters_sync(self):
+    def enumerate_adapters_sync(self) -> list[GPUAdapter]:
         """Sync version of `enumerate_adapters_async()`.
 
         Provided by wgpu-py, but not compatible with WebGPU.
@@ -158,7 +157,7 @@ class GPU:
         return gpu.enumerate_adapters_sync()
 
     @apidiff.add("Method useful for multi-gpu environments")
-    async def enumerate_adapters_async(self):
+    async def enumerate_adapters_async(self) -> list[GPUAdapter]:
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using its summary), and a device
@@ -245,7 +244,7 @@ class GPUCanvasContext:
 
     # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
     @property
-    def canvas(self) -> object:
+    def canvas(self) -> CanvasLike:
         """The associated canvas object."""
         return self._canvas_ref()
 
@@ -292,7 +291,7 @@ class GPUCanvasContext:
         raise NotImplementedError()
 
     @apidiff.add("Better place to define the preferred format")
-    def get_preferred_format(self, adapter):
+    def get_preferred_format(self, adapter: GPUAdapter) -> enums.TextureFormatEnum:
         """Get the preferred surface texture format."""
         capabilities = self._get_capabilities(adapter)
         formats = capabilities["formats"]
@@ -310,7 +309,7 @@ class GPUCanvasContext:
         device: GPUDevice,
         format: enums.TextureFormatEnum,
         usage: flags.TextureUsageFlags = 0x10,
-        view_formats: List[enums.TextureFormatEnum] = [],
+        view_formats: list[enums.TextureFormatEnum] = [],
         color_space: str = "srgb",
         tone_mapping: structs.CanvasToneMapping = {},
         alpha_mode: enums.CanvasAlphaModeEnum = "opaque",
@@ -468,7 +467,7 @@ class GPUCanvasContext:
             self._texture = None
 
     @apidiff.add("The present method is used by the canvas")
-    def present(self):
+    def present(self) -> None:
         """Hook for the canvas to present the rendered result.
 
         Present what has been drawn to the current texture, by compositing it to the
@@ -654,8 +653,8 @@ class GPUAdapter:
         self,
         *,
         label: str = "",
-        required_features: List[enums.FeatureNameEnum] = [],
-        required_limits: Dict[str, Union[None, int]] = {},
+        required_features: list[enums.FeatureNameEnum] = [],
+        required_limits: dict[str, None | int] = {},
         default_queue: structs.QueueDescriptor = {},
     ) -> GPUDevice:
         """Sync version of `request_device_async()`.
@@ -669,8 +668,8 @@ class GPUAdapter:
         self,
         *,
         label: str = "",
-        required_features: List[enums.FeatureNameEnum] = [],
-        required_limits: Dict[str, Union[None, int]] = {},
+        required_features: list[enums.FeatureNameEnum] = [],
+        required_limits: dict[str, None | int] = {},
         default_queue: structs.QueueDescriptor = {},
     ) -> GPUDevice:
         """Request a `GPUDevice` from the adapter.
@@ -692,7 +691,7 @@ class GPUAdapter:
 
     @apidiff.add("Useful in multi-gpu environments")
     @property
-    def summary(self):
+    def summary(self) -> str:
         """A one-line summary of the info of this adapter (device, adapter_type, backend_type)."""
         d = self._adapter_info
         return f"{d.device} ({d['adapter_type']}) via {d['backend_type']}"
@@ -790,7 +789,7 @@ class GPUDevice(GPUObjectBase):
 
     @apidiff.add("Too useful to not-have")
     @property
-    def adapter(self):
+    def adapter(self) -> GPUAdapter:
         """The adapter object corresponding to this device."""
         return self._adapter
 
@@ -868,7 +867,9 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Convenience function")
-    def create_buffer_with_data(self, *, label="", data, usage: flags.BufferUsageFlags):
+    def create_buffer_with_data(
+        self, *, label: str = "", data: ArrayLike, usage: flags.BufferUsageFlags
+    ) -> GPUBuffer:
         """Create a `GPUBuffer` object initialized with the given data.
 
         This is a convenience function that creates a mapped buffer,
@@ -908,13 +909,13 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        size: Union[List[int], structs.Extent3D],
+        size: list[int] | structs.Extent3D,
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: enums.TextureDimensionEnum = "2d",
         format: enums.TextureFormatEnum,
         usage: flags.TextureUsageFlags,
-        view_formats: List[enums.TextureFormatEnum] = [],
+        view_formats: list[enums.TextureFormatEnum] = [],
     ) -> GPUTexture:
         """Create a `GPUTexture` object.
 
@@ -976,7 +977,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayoutEntry> entries
     def create_bind_group_layout(
-        self, *, label: str = "", entries: List[structs.BindGroupLayoutEntry]
+        self, *, label: str = "", entries: list[structs.BindGroupLayoutEntry]
     ) -> GPUBindGroupLayout:
         """Create a `GPUBindGroupLayout` object. One or more
         such objects are passed to `create_pipeline_layout()` to
@@ -1017,7 +1018,7 @@ class GPUDevice(GPUObjectBase):
         *,
         label: str = "",
         layout: GPUBindGroupLayout,
-        entries: List[structs.BindGroupEntry],
+        entries: list[structs.BindGroupEntry],
     ) -> GPUBindGroup:
         """Create a `GPUBindGroup` object, which can be used in
         `pass.set_bind_group()` to attach a group of resources.
@@ -1057,7 +1058,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayout?> bindGroupLayouts
     def create_pipeline_layout(
-        self, *, label: str = "", bind_group_layouts: List[GPUBindGroupLayout]
+        self, *, label: str = "", bind_group_layouts: list[GPUBindGroupLayout]
     ) -> GPUPipelineLayout:
         """Create a `GPUPipelineLayout` object, which can be
         used in `create_render_pipeline()` or `create_compute_pipeline()`.
@@ -1074,7 +1075,7 @@ class GPUDevice(GPUObjectBase):
         *,
         label: str = "",
         code: str,
-        compilation_hints: List[structs.ShaderModuleCompilationHint] = [],
+        compilation_hints: list[structs.ShaderModuleCompilationHint] = [],
     ) -> GPUShaderModule:
         """Create a `GPUShaderModule` object from shader source.
 
@@ -1096,7 +1097,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         compute: structs.ProgrammableStage,
     ) -> GPUComputePipeline:
         """Create a `GPUComputePipeline` object.
@@ -1113,7 +1114,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         compute: structs.ProgrammableStage,
     ) -> GPUComputePipeline:
         """Async version of `create_compute_pipeline()`.
@@ -1126,7 +1127,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
@@ -1270,7 +1271,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
@@ -1298,7 +1299,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        color_formats: List[enums.TextureFormatEnum],
+        color_formats: list[enums.TextureFormatEnum],
         depth_stencil_format: enums.TextureFormatEnum = optional,
         sample_count: int = 1,
         depth_read_only: bool = False,
@@ -1351,11 +1352,7 @@ class GPUDevice(GPUObjectBase):
     # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor); -> USVString label = "", required (HTMLVideoElement or VideoFrame) source, PredefinedColorSpace colorSpace = "srgb"
     @apidiff.hide("Specific to browsers")
     def import_external_texture(
-        self,
-        *,
-        label: str = "",
-        source: Union[memoryview, object],
-        color_space: str = "srgb",
+        self, *, label: str = "", source: ArrayLike | object, color_space: str = "srgb"
     ) -> object:
         """For browsers only."""
         raise NotImplementedError()
@@ -1420,7 +1417,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def map_sync(
-        self, mode: flags.MapModeFlags, offset: int = 0, size: Optional[int] = None
+        self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> None:
         """Sync version of `map_async()`.
 
@@ -1430,7 +1427,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     async def map_async(
-        self, mode: flags.MapModeFlags, offset: int = 0, size: Optional[int] = None
+        self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> None:
         """Maps the given range of the GPUBuffer.
 
@@ -1464,7 +1461,7 @@ class GPUBuffer(GPUObjectBase):
         size: int | None = None,
         *,
         copy: bool = True,
-    ):
+    ) -> ArrayLike:
         """Read mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1494,7 +1491,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def write_mapped(self, data, buffer_offset: int | None = None):
+    def write_mapped(self, data: ArrayLike, buffer_offset: int | None = None) -> None:
         """Write mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1520,9 +1517,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size);
     @apidiff.hide
-    def get_mapped_range(
-        self, offset: int = 0, size: Optional[int] = None
-    ) -> memoryview:
+    def get_mapped_range(self, offset: int = 0, size: int | None = None) -> ArrayLike:
         raise NotImplementedError("The Python API differs from WebGPU here")
 
     # IDL: undefined destroy();
@@ -1572,7 +1567,7 @@ class GPUTexture(GPUObjectBase):
 
     @apidiff.add("Too useful to not-have")
     @property
-    def size(self):
+    def size(self) -> tuple[int, int, int]:
         """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
         return self._tex_info["size"]
 
@@ -1683,13 +1678,13 @@ class GPUTextureView(GPUObjectBase):
 
     @apidiff.add("Need to know size e.g. for texture view provided by canvas")
     @property
-    def size(self):
+    def size(self) -> tuple[int, int, int]:
         """The texture size (as a 3-tuple)."""
         return self._size
 
     @apidiff.add("Too useful to not-have")
     @property
-    def texture(self):
+    def texture(self) -> GPUTexture:
         """The texture object to which this is a view."""
         return self._texture
 
@@ -1813,12 +1808,12 @@ class GPUBindingCommandsMixin:
     )
     def set_bind_group(
         self,
-        index,
-        bind_group,
-        dynamic_offsets_data=[],
-        dynamic_offsets_data_start=None,
-        dynamic_offsets_data_length=None,
-    ):
+        index: int,
+        bind_group: GPUBindGroup,
+        dynamic_offsets_data: list[int] = [],
+        dynamic_offsets_data_start: int | None = None,
+        dynamic_offsets_data_length: int | None = None,
+    ) -> None:
         """Associate the given bind group (i.e. group or resources) with the
         given slot/index.
 
@@ -1869,7 +1864,7 @@ class GPURenderCommandsMixin:
         buffer: GPUBuffer,
         index_format: enums.IndexFormatEnum,
         offset: int = 0,
-        size: Optional[int] = None,
+        size: int | None = None,
     ) -> None:
         """Set the index buffer for this render pass.
 
@@ -1886,7 +1881,7 @@ class GPURenderCommandsMixin:
 
     # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer? buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def set_vertex_buffer(
-        self, slot: int, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
+        self, slot: int, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
         """Associate a vertex buffer with a bind slot.
 
@@ -1996,7 +1991,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self,
         *,
         label: str = "",
-        color_attachments: List[structs.RenderPassColorAttachment],
+        color_attachments: list[structs.RenderPassColorAttachment],
         depth_stencil_attachment: structs.RenderPassDepthStencilAttachment = optional,
         occlusion_query_set: GPUQuerySet = optional,
         timestamp_writes: structs.RenderPassTimestampWrites = optional,
@@ -2016,7 +2011,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 
     # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def clear_buffer(
-        self, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
+        self, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
         """Set (part of) the given buffer to zeros.
 
@@ -2036,7 +2031,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         source_offset: int,
         destination: GPUBuffer,
         destination_offset: int,
-        size: Optional[int] = None,
+        size: int | None = None,
     ) -> None:
         """Copy the contents of a buffer to another buffer.
 
@@ -2056,7 +2051,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self,
         source: structs.TexelCopyBufferInfo,
         destination: structs.TexelCopyTextureInfo,
-        copy_size: Union[List[int], structs.Extent3D],
+        copy_size: list[int] | structs.Extent3D,
     ) -> None:
         """Copy the contents of a buffer to a texture (view).
 
@@ -2074,7 +2069,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyBufferInfo,
-        copy_size: Union[List[int], structs.Extent3D],
+        copy_size: list[int] | structs.Extent3D,
     ) -> None:
         """Copy the contents of a texture (view) to a buffer.
 
@@ -2092,7 +2087,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyTextureInfo,
-        copy_size: Union[List[int], structs.Extent3D],
+        copy_size: list[int] | structs.Extent3D,
     ) -> None:
         """Copy the contents of a texture (view) to another texture (view).
 
@@ -2238,7 +2233,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined setBlendConstant(GPUColor color);
-    def set_blend_constant(self, color: Union[List[float], structs.Color]) -> None:
+    def set_blend_constant(self, color: list[float] | structs.Color) -> None:
         """Set the blend color for the render pass.
 
         Arguments:
@@ -2256,7 +2251,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined executeBundles(sequence<GPURenderBundle> bundles);
-    def execute_bundles(self, bundles: List[GPURenderBundle]) -> None:
+    def execute_bundles(self, bundles: list[GPURenderBundle]) -> None:
         """Executes commands previously recorded into the render bundles
           as part of this render pass.
 
@@ -2320,7 +2315,7 @@ class GPUQueue(GPUObjectBase):
     """
 
     # IDL: undefined submit(sequence<GPUCommandBuffer> commandBuffers);
-    def submit(self, command_buffers: List[GPUCommandBuffer]) -> None:
+    def submit(self, command_buffers: list[GPUCommandBuffer]) -> None:
         """Submit a `GPUCommandBuffer` to the queue.
 
         Arguments:
@@ -2333,9 +2328,9 @@ class GPUQueue(GPUObjectBase):
         self,
         buffer: GPUBuffer,
         buffer_offset: int,
-        data: memoryview,
+        data: ArrayLike,
         data_offset: int = 0,
-        size: Optional[int] = None,
+        size: int | None = None,
     ) -> None:
         """Takes the data contents and schedules a write operation to the buffer.
 
@@ -2362,7 +2357,9 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("For symmetry with queue.write_buffer")
-    def read_buffer(self, buffer, buffer_offset: int = 0, size: int | None = None):
+    def read_buffer(
+        self, buffer: GPUBuffer, buffer_offset: int = 0, size: int | None = None
+    ) -> ArrayLike:
         """Takes the data contents of the buffer and return them as a memoryview.
 
         Arguments:
@@ -2382,9 +2379,9 @@ class GPUQueue(GPUObjectBase):
     def write_texture(
         self,
         destination: structs.TexelCopyTextureInfo,
-        data: memoryview,
+        data: ArrayLike,
         data_layout: structs.TexelCopyBufferLayout,
-        size: Union[List[int], structs.Extent3D],
+        size: list[int] | structs.Extent3D,
     ) -> None:
         """Takes the data contents and schedules a write operation of
         these contents to the destination texture in the queue. A
@@ -2407,7 +2404,9 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("For symmetry, and to help work around the bytes_per_row constraint")
-    def read_texture(self, source, data_layout, size):
+    def read_texture(
+        self, source: dict, data_layout: dict, size: tuple[int, int, int]
+    ) -> ArrayLike:
         """Reads the contents of the texture and return them as a memoryview.
 
         Arguments:
@@ -2431,7 +2430,7 @@ class GPUQueue(GPUObjectBase):
         self,
         source: structs.CopyExternalImageSourceInfo,
         destination: structs.CopyExternalImageDestInfo,
-        copy_size: Union[List[int], structs.Extent3D],
+        copy_size: list[int] | structs.Extent3D,
     ) -> None:
         raise NotImplementedError()
 
@@ -2578,7 +2577,7 @@ class GPUCompilationInfo:
 
     # IDL: readonly attribute FrozenArray<GPUCompilationMessage> messages;
     @property
-    def messages(self) -> List[GPUCompilationMessage]:
+    def messages(self) -> list[GPUCompilationMessage]:
         """A list of `GPUCompilationMessage` objects."""
         raise NotImplementedError()
 

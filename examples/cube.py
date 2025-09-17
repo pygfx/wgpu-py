@@ -11,6 +11,7 @@ as a script will use the auto-backend.
 # test_example = true
 
 import time
+from typing import Callable
 
 import wgpu
 import numpy as np
@@ -22,7 +23,9 @@ from rendercanvas.auto import RenderCanvas, loop
 # %% Entrypoints (sync and async)
 
 
-def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+def setup_drawing_sync(
+    canvas, power_preference="high-performance", limits: dict = {}
+) -> Callable:
     """Setup to draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -42,7 +45,7 @@ def setup_drawing_sync(canvas, power_preference="high-performance", limits=None)
     )
 
 
-async def setup_drawing_async(canvas, limits=None):
+async def setup_drawing_async(canvas, limits: dict = {}):
     """Setup to async-draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -67,7 +70,7 @@ async def setup_drawing_async(canvas, limits=None):
 
 def get_render_pipeline_kwargs(
     canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
-):
+) -> dict:
     context = canvas.get_context("wgpu")
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
