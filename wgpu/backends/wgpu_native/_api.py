@@ -309,7 +309,8 @@ def feature_flag_to_feature_names(flag):
 
 def check_struct(struct_name, d):
     """Check that all keys in the given dict exist in the corresponding struct."""
-    valid_keys = set(getattr(structs, struct_name))
+    typed_dict = getattr(structs, struct_name)
+    valid_keys = set(typed_dict.__annotations__.keys())
     invalid_keys = set(d.keys()).difference(valid_keys)
     if invalid_keys:
         raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
