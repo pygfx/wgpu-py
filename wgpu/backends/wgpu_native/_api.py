@@ -24,7 +24,7 @@ from weakref import WeakKeyDictionary
 from typing import NoReturn
 
 from ... import classes, flags, enums, structs
-from ..._coreutils import str_flag_to_int, ArrayLike
+from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
 
 from ._ffi import ffi, lib
 from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
@@ -436,7 +436,7 @@ class GPU(classes.GPU):
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas=None,
+        canvas: CanvasLike = None,
     ) -> GPUAdapter:
         """Sync version of ``request_adapter_async()``.
         This is the implementation based on wgpu-native.
@@ -457,7 +457,7 @@ class GPU(classes.GPU):
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas=None,
+        canvas: CanvasLike = None,
     ) -> GPUAdapter:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -580,14 +580,14 @@ class GPU(classes.GPU):
 
         return awaitable
 
-    def enumerate_adapters_sync(self):
+    def enumerate_adapters_sync(self) -> list[GPUAdapter]:
         """Sync version of ``enumerate_adapters_async()``.
         This is the implementation based on wgpu-native.
         """
         check_can_use_sync_variants()
         return self._enumerate_adapters()
 
-    async def enumerate_adapters_async(self):
+    async def enumerate_adapters_async(self) -> list[GPUAdapter]:
         """Get a list of adapter objects available on the current system.
         This is the implementation based on wgpu-native.
         """
@@ -1102,8 +1102,8 @@ class GPUAdapter(classes.GPUAdapter):
     def _request_device(
         self,
         label: str,
-        required_features: List[enums.FeatureName],
-        required_limits: Dict[str, int],
+        required_features: list[enums.FeatureNameEnum],
+        required_limits: dict[str, int],
         default_queue: structs.QueueDescriptor,
         trace_path: str,
     ):
@@ -1708,7 +1708,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def _create_pipeline_layout(
         self,
         label: str,
-        bind_group_layouts: List[GPUBindGroupLayout],
+        bind_group_layouts: list[GPUBindGroupLayout],
         push_constant_layouts,
     ):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
@@ -2492,7 +2492,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         size: int | None = None,
         *,
         copy: bool = True,
-    ):
+    ) -> ArrayLike:
         # Can we even read?
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only read from a buffer if its mapped.")
@@ -2525,7 +2525,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._mapped_memoryviews.append(data)
             return data
 
-    def write_mapped(self, data, buffer_offset: int | None = None):
+    def write_mapped(self, data: ArrayLike, buffer_offset: int | None = None) -> None:
         # Can we even write?
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only write to a buffer if its mapped.")
@@ -2762,12 +2762,12 @@ class GPUCommandsMixin(classes.GPUCommandsMixin):
 class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
     def set_bind_group(
         self,
-        index,
-        bind_group,
-        dynamic_offsets_data=[],
-        dynamic_offsets_data_start=None,
-        dynamic_offsets_data_length=None,
-    ):
+        index: int,
+        bind_group: GPUBindGroup,
+        dynamic_offsets_data: list[int] = [],
+        dynamic_offsets_data_start: int | None = None,
+        dynamic_offsets_data_length: int | None = None,
+    ) -> None:
         if (
             dynamic_offsets_data_start is not None
             or dynamic_offsets_data_length is not None
@@ -3766,7 +3766,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             self._internal, buffer._internal, buffer_offset, c_data, data_length
         )
 
-    def read_buffer(self, buffer, buffer_offset: int = 0, size: int | None = None):
+    def read_buffer(
+        self, buffer: GPUBuffer, buffer_offset: int = 0, size: int | None = None
+    ) -> ArrayLike:
         # Note that write_buffer probably does a very similar thing
         # using a temporary buffer. But write_buffer is official API
         # so it's a single call, while here we must create the temporary
@@ -3874,7 +3876,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     _shared_copy_buffer = None, 0
 
-    def read_texture(self, source, data_layout, size):
+    def read_texture(
+        self, source: dict, data_layout: dict, size: tuple[int, int, int]
+    ) -> ArrayLike:
         # Note that the bytes_per_row restriction does not apply for
         # this function; we have to deal with it.
 

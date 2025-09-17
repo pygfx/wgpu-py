@@ -223,6 +223,8 @@ class IdlParser:
             "GPUSupportedFeatures": "set",
             "GPUSupportedLimits": "dict",
             "EventHandler": "None",
+            "HTMLCanvasElement": "CanvasLike",
+            "OffscreenCanvas": "CanvasLike",
         }
         name = pythonmap.get(name, name)
 
@@ -252,14 +254,12 @@ class IdlParser:
         # Triage
         if name in __builtins__:
             return name  # ok
-        elif name in ["ArrayLike"]:
+        elif name in ["ArrayLike", "CanvasLike"]:
             return name  # virtual types
         elif name in self.classes:
             return name
         elif name.startswith("HTML"):
             return "object"  # anything, we ignore this stuff anyway
-        elif name in ["OffscreenCanvas"]:
-            return "object"
         elif name in ["PredefinedColorSpace"]:
             return "str"
         else:

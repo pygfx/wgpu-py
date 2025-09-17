@@ -14,7 +14,7 @@ from __future__ import annotations
 import weakref
 import logging
 
-from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike
+from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -94,7 +94,7 @@ class GPU:
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas=None,
+        canvas: CanvasLike = None,
     ) -> GPUAdapter:
         """Sync version of `request_adapter_async()`.
 
@@ -118,7 +118,7 @@ class GPU:
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas=None,
+        canvas: CanvasLike = None,
     ) -> GPUAdapter:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -145,7 +145,7 @@ class GPU:
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
-    def enumerate_adapters_sync(self):
+    def enumerate_adapters_sync(self) -> list[GPUAdapter]:
         """Sync version of `enumerate_adapters_async()`.
 
         Provided by wgpu-py, but not compatible with WebGPU.
@@ -157,7 +157,7 @@ class GPU:
         return gpu.enumerate_adapters_sync()
 
     @apidiff.add("Method useful for multi-gpu environments")
-    async def enumerate_adapters_async(self):
+    async def enumerate_adapters_async(self) -> list[GPUAdapter]:
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using its summary), and a device
@@ -244,7 +244,7 @@ class GPUCanvasContext:
 
     # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
     @property
-    def canvas(self) -> object:
+    def canvas(self) -> CanvasLike:
         """The associated canvas object."""
         return self._canvas_ref()
 
@@ -291,7 +291,7 @@ class GPUCanvasContext:
         raise NotImplementedError()
 
     @apidiff.add("Better place to define the preferred format")
-    def get_preferred_format(self, adapter):
+    def get_preferred_format(self, adapter: GPUAdapter) -> enums.TextureFormatEnum:
         """Get the preferred surface texture format."""
         capabilities = self._get_capabilities(adapter)
         formats = capabilities["formats"]
@@ -467,7 +467,7 @@ class GPUCanvasContext:
             self._texture = None
 
     @apidiff.add("The present method is used by the canvas")
-    def present(self):
+    def present(self) -> None:
         """Hook for the canvas to present the rendered result.
 
         Present what has been drawn to the current texture, by compositing it to the
@@ -691,7 +691,7 @@ class GPUAdapter:
 
     @apidiff.add("Useful in multi-gpu environments")
     @property
-    def summary(self):
+    def summary(self) -> str:
         """A one-line summary of the info of this adapter (device, adapter_type, backend_type)."""
         d = self._adapter_info
         return f"{d.device} ({d['adapter_type']}) via {d['backend_type']}"
@@ -789,7 +789,7 @@ class GPUDevice(GPUObjectBase):
 
     @apidiff.add("Too useful to not-have")
     @property
-    def adapter(self):
+    def adapter(self) -> GPUAdapter:
         """The adapter object corresponding to this device."""
         return self._adapter
 
@@ -867,7 +867,9 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Convenience function")
-    def create_buffer_with_data(self, *, label="", data, usage: flags.BufferUsageFlags):
+    def create_buffer_with_data(
+        self, *, label: str = "", data: ArrayLike, usage: flags.BufferUsageFlags
+    ) -> GPUBuffer:
         """Create a `GPUBuffer` object initialized with the given data.
 
         This is a convenience function that creates a mapped buffer,
@@ -1459,7 +1461,7 @@ class GPUBuffer(GPUObjectBase):
         size: int | None = None,
         *,
         copy: bool = True,
-    ):
+    ) -> ArrayLike:
         """Read mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1489,7 +1491,7 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("Replacement for get_mapped_range")
-    def write_mapped(self, data, buffer_offset: int | None = None):
+    def write_mapped(self, data: ArrayLike, buffer_offset: int | None = None) -> None:
         """Write mapped buffer data.
 
         This method must only be called when the buffer is in a mapped state.
@@ -1565,7 +1567,7 @@ class GPUTexture(GPUObjectBase):
 
     @apidiff.add("Too useful to not-have")
     @property
-    def size(self):
+    def size(self) -> tuple[int, int, int]:
         """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
         return self._tex_info["size"]
 
@@ -1676,13 +1678,13 @@ class GPUTextureView(GPUObjectBase):
 
     @apidiff.add("Need to know size e.g. for texture view provided by canvas")
     @property
-    def size(self):
+    def size(self) -> tuple[int, int, int]:
         """The texture size (as a 3-tuple)."""
         return self._size
 
     @apidiff.add("Too useful to not-have")
     @property
-    def texture(self):
+    def texture(self) -> GPUTexture:
         """The texture object to which this is a view."""
         return self._texture
 
@@ -1806,12 +1808,12 @@ class GPUBindingCommandsMixin:
     )
     def set_bind_group(
         self,
-        index,
-        bind_group,
-        dynamic_offsets_data=[],
-        dynamic_offsets_data_start=None,
-        dynamic_offsets_data_length=None,
-    ):
+        index: int,
+        bind_group: GPUBindGroup,
+        dynamic_offsets_data: list[int] = [],
+        dynamic_offsets_data_start: int | None = None,
+        dynamic_offsets_data_length: int | None = None,
+    ) -> None:
         """Associate the given bind group (i.e. group or resources) with the
         given slot/index.
 
@@ -2355,7 +2357,9 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("For symmetry with queue.write_buffer")
-    def read_buffer(self, buffer, buffer_offset: int = 0, size: int | None = None):
+    def read_buffer(
+        self, buffer: GPUBuffer, buffer_offset: int = 0, size: int | None = None
+    ) -> ArrayLike:
         """Takes the data contents of the buffer and return them as a memoryview.
 
         Arguments:
@@ -2400,7 +2404,9 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     @apidiff.add("For symmetry, and to help work around the bytes_per_row constraint")
-    def read_texture(self, source, data_layout, size):
+    def read_texture(
+        self, source: dict, data_layout: dict, size: tuple[int, int, int]
+    ) -> ArrayLike:
         """Reads the contents of the texture and return them as a memoryview.
 
         Arguments:

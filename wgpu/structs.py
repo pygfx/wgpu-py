@@ -553,12 +553,12 @@ CopyExternalImageDestInfo = Struct(
     premultiplied_alpha="bool",
 )
 
-#: * source :: ArrayLike | object
+#: * source :: ArrayLike | CanvasLike | object
 #: * origin :: list[int] | :obj:`structs.Origin2D <Origin2D>` = {}
 #: * flipY :: bool = false
 CopyExternalImageSourceInfo = Struct(
     "CopyExternalImageSourceInfo",
-    source="ArrayLike | object",
+    source="ArrayLike | CanvasLike | object",
     origin="list[int] | structs.Origin2D",
     flip_y="bool",
 )
