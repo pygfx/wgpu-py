@@ -70,14 +70,15 @@ async def setup_drawing_async(canvas, limits: dict = {}):
 
 def get_render_pipeline_kwargs(
     canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
-) -> dict:
+) -> wgpu.structs.RenderPipelineDescriptor:
     context = canvas.get_context("wgpu")
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
     shader = device.create_shader_module(code=shader_source)
 
-    return dict(
+    # wgpu.structs.RenderPipelineDescriptor
+    return wgpu.structs.RenderPipelineDescriptor(
         layout=pipeline_layout,
         vertex={
             "module": shader,
@@ -106,8 +107,6 @@ def get_render_pipeline_kwargs(
             "front_face": wgpu.FrontFace.ccw,
             "cull_mode": wgpu.CullMode.back,
         },
-        depth_stencil=None,
-        multisample=None,
         fragment={
             "module": shader,
             "entry_point": "fs_main",
@@ -304,7 +303,7 @@ def get_draw_function(
         device.queue.submit([command_encoder.finish()])
 
     def draw_frame():
-        current_texture_view = (
+        current_texture_view: wgpu.GPUTextureView = (
             canvas.get_context("wgpu").get_current_texture().create_view()
         )
         command_encoder = device.create_command_encoder()
@@ -312,7 +311,6 @@ def get_draw_function(
             color_attachments=[
                 {
                     "view": current_texture_view,
-                    "resolve_target": None,
                     "clear_value": (0, 0, 0, 1),
                     "load_op": wgpu.LoadOp.clear,
                     "store_op": wgpu.StoreOp.store,

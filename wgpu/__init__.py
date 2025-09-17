@@ -10,6 +10,7 @@ from ._diagnostics import diagnostics, DiagnosticsBase
 from .flags import *
 from .enums import *
 from .classes import *
+from . import structs
 from . import utils
 from . import backends
 from . import resources

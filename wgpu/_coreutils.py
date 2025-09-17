@@ -22,7 +22,7 @@ atexit.register(_resource_files.close)
 # VSCode just shows "ArrayLike" in the user-facing hints. The type checker allows anything, I guess.
 ArrayLike = memoryview | object
 
-# A stub type for a canvas-like object
+# A stub type for a canvas-like object.
 CanvasLike = object
 
 

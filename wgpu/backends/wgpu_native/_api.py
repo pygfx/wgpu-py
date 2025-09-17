@@ -309,7 +309,8 @@ def feature_flag_to_feature_names(flag):
 
 def check_struct(struct_name, d):
     """Check that all keys in the given dict exist in the corresponding struct."""
-    valid_keys = set(getattr(structs, struct_name))
+    typed_dict = getattr(structs, struct_name)
+    valid_keys = set(typed_dict.__annotations__.keys())
     invalid_keys = set(d.keys()).difference(valid_keys)
     if invalid_keys:
         raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
@@ -1422,7 +1423,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        size: list[int] | structs.Extent3D,
+        size: tuple[int, int, int] | structs.Extent3D,
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: enums.TextureDimensionEnum = "2d",
@@ -3248,7 +3249,7 @@ class GPUCommandEncoder(
         self,
         source: structs.TexelCopyBufferInfo,
         destination: structs.TexelCopyTextureInfo,
-        copy_size: list[int] | structs.Extent3D,
+        copy_size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         check_struct("TexelCopyBufferInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
@@ -3314,7 +3315,7 @@ class GPUCommandEncoder(
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyBufferInfo,
-        copy_size: list[int] | structs.Extent3D,
+        copy_size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyBufferInfo", destination)
@@ -3380,7 +3381,7 @@ class GPUCommandEncoder(
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyTextureInfo,
-        copy_size: list[int] | structs.Extent3D,
+        copy_size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
@@ -3585,7 +3586,9 @@ class GPURenderPassEncoder(
             self._internal, int(x), int(y), int(width), int(height)
         )
 
-    def set_blend_constant(self, color: list[float] | structs.Color) -> None:
+    def set_blend_constant(
+        self, color: tuple[float, float, float, float] | structs.Color
+    ) -> None:
         if isinstance(color, dict):
             check_struct("Color", color)
             color = _tuple_from_color(color)
@@ -3809,7 +3812,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         destination: structs.TexelCopyTextureInfo,
         data: ArrayLike,
         data_layout: structs.TexelCopyBufferLayout,
-        size: list[int] | structs.Extent3D,
+        size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
