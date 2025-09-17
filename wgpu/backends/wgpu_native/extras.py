@@ -1,20 +1,28 @@
 import os
-from typing import List, Union
 
-from . import GPUCommandEncoder, GPUComputePassEncoder, GPURenderPassEncoder
+from . import (
+    GPUAdapter,
+    GPUDevice,
+    GPUBuffer,
+    GPUCommandEncoder,
+    GPUComputePassEncoder,
+    GPURenderPassEncoder,
+    GPUPipelineLayout,
+    GPUQuerySet,
+)
 from ._api import (
-    Dict,
     GPUBindGroupLayout,
     enums,
     logger,
     structs,
+    flags,
     new_struct_p,
     to_c_string_view,
     enum_str2int,
 )
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
-from ..._coreutils import get_library_filename
+from ..._coreutils import get_library_filename, ArrayLike
 from ._ffi import lib
 from ._mappings import native_flags
 
@@ -34,14 +42,14 @@ class PipelineStatisticName(Enum):  # wgpu native
 
 
 def request_device_sync(
-    adapter,
-    trace_path,
+    adapter: GPUAdapter,
+    trace_path: str,
     *,
-    label="",
-    required_features: "list(enums.FeatureName)" = [],
-    required_limits: "Dict[str, int]" = {},
-    default_queue: "structs.QueueDescriptor" = {},
-):
+    label: str = "",
+    required_features: list[enums.FeatureName] = [],
+    required_limits: dict[str, int] = {},
+    default_queue: structs.QueueDescriptor = {},
+) -> GPUDevice:
     """Write a trace of all commands to a file so it can be reproduced
     elsewhere. The trace is cross-platform!
     """
@@ -63,19 +71,24 @@ def request_device(*args, **kwargs):
 
 
 def create_pipeline_layout(
-    device,
+    device: GPUDevice,
     *,
-    label="",
-    bind_group_layouts: "List[GPUBindGroupLayout]",
-    push_constant_layouts: "List[Dict]" = [],
-):
+    label: str = "",
+    bind_group_layouts: list[GPUBindGroupLayout],
+    push_constant_layouts: list[dict] = [],
+) -> GPUPipelineLayout:
     return device._create_pipeline_layout(
         label, bind_group_layouts, push_constant_layouts
     )
 
 
 def set_push_constants(
-    render_pass_encoder, visibility, offset, size_in_bytes, data, data_offset=0
+    render_pass_encoder: GPURenderPassEncoder,
+    visibility: flags.ShaderStageFlags,
+    offset: int,
+    size_in_bytes: int,
+    data: ArrayLike,
+    data_offset: int = 0,
 ):
     """
     Set push-constant data for subsequent draw calls.
@@ -91,7 +104,13 @@ def set_push_constants(
     )
 
 
-def multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
+def multi_draw_indirect(
+    render_pass_encoder: GPURenderPassEncoder,
+    buffer: GPUBuffer,
+    *,
+    offset: int = 0,
+    count: int,
+):
     """
     This is equivalent to
     for i in range(count):
@@ -102,7 +121,13 @@ def multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
     render_pass_encoder._multi_draw_indirect(buffer, offset, count)
 
 
-def multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
+def multi_draw_indexed_indirect(
+    render_pass_encoder: GPURenderPassEncoder,
+    buffer: GPUBuffer,
+    *,
+    offset: int = 0,
+    count: int,
+):
     """
     This is equivalent to
 
@@ -115,13 +140,13 @@ def multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count)
 
 
 def multi_draw_indirect_count(
-    render_pass_encoder,
-    buffer,
+    render_pass_encoder: GPURenderPassEncoder,
+    buffer: GPUBuffer,
     *,
-    offset=0,
-    count_buffer,
-    count_buffer_offset=0,
-    max_count,
+    offset: int = 0,
+    count_buffer: GPUBuffer,
+    count_buffer_offset: int = 0,
+    max_count: int,
 ):
     """
     This is equivalent to:
@@ -138,13 +163,13 @@ def multi_draw_indirect_count(
 
 
 def multi_draw_indexed_indirect_count(
-    render_pass_encoder,
-    buffer,
+    render_pass_encoder: GPURenderPassEncoder,
+    buffer: GPUBuffer,
     *,
-    offset=0,
-    count_buffer,
-    count_buffer_offset=0,
-    max_count,
+    offset: int = 0,
+    count_buffer: GPUBuffer,
+    count_buffer_offset: int = 0,
+    max_count: int,
 ):
     """
     This is equivalent to:
@@ -169,18 +194,28 @@ def create_statistics_query_set(device, *, label="", count: int, statistics):
     return device._create_statistics_query_set(label, count, statistics)
 
 
-def begin_pipeline_statistics_query(encoder, query_set, query_index):
+def begin_pipeline_statistics_query(
+    encoder: GPURenderPassEncoder | GPUComputePassEncoder,
+    query_set: GPUQuerySet,
+    query_index: int,
+):
     print(encoder, type(encoder))
     assert isinstance(encoder, (GPURenderPassEncoder, GPUComputePassEncoder))
     encoder._begin_pipeline_statistics_query(query_set, query_index)
 
 
-def end_pipeline_statistics_query(encoder):
+def end_pipeline_statistics_query(
+    encoder: GPURenderPassEncoder | GPUComputePassEncoder,
+):
     assert isinstance(encoder, (GPURenderPassEncoder, GPUComputePassEncoder))
     encoder._end_pipeline_statistics_query()
 
 
-def write_timestamp(encoder, query_set, query_index):
+def write_timestamp(
+    encoder: GPURenderPassEncoder | GPUComputePassEncoder | GPUCommandEncoder,
+    query_set: GPUQuerySet,
+    query_index: int,
+):
     assert isinstance(
         encoder, (GPURenderPassEncoder, GPUComputePassEncoder, GPUCommandEncoder)
     )
@@ -193,8 +228,8 @@ def set_instance_extras(
     dx12_compiler="fxc",
     gles3_minor_version="Atomic",
     fence_behavior="Normal",
-    dxil_path: Union[os.PathLike, None] = None,
-    dxc_path: Union[os.PathLike, None] = None,
+    dxil_path: os.PathLike | None = None,
+    dxc_path: os.PathLike | None = None,
     dxc_max_shader_model: float = 6.5,
 ):
     """
