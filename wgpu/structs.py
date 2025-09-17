@@ -86,142 +86,166 @@ __all__ = [
 
 
 class RequestAdapterOptions(TypedDict, total=False):
-    feature_level: str  #: (default "core")
-    power_preference: (
-        enums.PowerPreferenceEnum
-    )  #: :obj:`enums.PowerPreference <wgpu.enums.PowerPreference>` (optional)
-    force_fallback_adapter: bool  #: (default false)
-    xr_compatible: bool  #: (default false)
+    #: (default "core")
+    feature_level: str
+    #: :obj:`enums.PowerPreference <wgpu.enums.PowerPreference>` (optional)
+    power_preference: enums.PowerPreferenceEnum
+    #: (default false)
+    force_fallback_adapter: bool
+    #: (default false)
+    xr_compatible: bool
 
 
 class DeviceDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    required_features: list[
-        enums.FeatureNameEnum
-    ]  #: list[:obj:`enums.FeatureName <wgpu.enums.FeatureName>`] (default [])
-    required_limits: dict[str, None | int]  #: (default {})
-    default_queue: QueueDescriptor  #: (default {})
+    #: (default "")
+    label: str
+    #: list[:obj:`enums.FeatureName <wgpu.enums.FeatureName>`] (default [])
+    required_features: list[enums.FeatureNameEnum]
+    #: (default {})
+    required_limits: dict[str, None | int]
+    #: (default {})
+    default_queue: QueueDescriptor
 
 
 class BufferDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    size: int  #: (required)
-    usage: (
-        flags.BufferUsageFlags
-    )  #: :obj:`flags.BufferUsage <wgpu.flags.BufferUsage>` (required)
-    mapped_at_creation: bool  #: (default false)
+    #: (default "")
+    label: str
+    #: (required)
+    size: int
+    #: :obj:`flags.BufferUsage <wgpu.flags.BufferUsage>` (required)
+    usage: flags.BufferUsageFlags
+    #: (default false)
+    mapped_at_creation: bool
 
 
 class TextureDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    size: tuple[int, int, int] | Extent3D  #: (required)
-    mip_level_count: int  #: (default 1)
-    sample_count: int  #: (default 1)
-    dimension: (
-        enums.TextureDimensionEnum
-    )  #: :obj:`enums.TextureDimension <wgpu.enums.TextureDimension>` (default "2d")
-    format: (
-        enums.TextureFormatEnum
-    )  #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
-    usage: (
-        flags.TextureUsageFlags
-    )  #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>` (required)
-    view_formats: list[
-        enums.TextureFormatEnum
-    ]  #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`] (default [])
+    #: (default "")
+    label: str
+    #: (required)
+    size: tuple[int, int, int] | Extent3D
+    #: (default 1)
+    mip_level_count: int
+    #: (default 1)
+    sample_count: int
+    #: :obj:`enums.TextureDimension <wgpu.enums.TextureDimension>` (default "2d")
+    dimension: enums.TextureDimensionEnum
+    #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
+    format: enums.TextureFormatEnum
+    #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>` (required)
+    usage: flags.TextureUsageFlags
+    #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`] (default [])
+    view_formats: list[enums.TextureFormatEnum]
 
 
 class TextureViewDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    format: (
-        enums.TextureFormatEnum
-    )  #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (optional)
-    dimension: (
-        enums.TextureViewDimensionEnum
-    )  #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>` (optional)
-    usage: (
-        flags.TextureUsageFlags
-    )  #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>` (default 0)
-    aspect: (
-        enums.TextureAspectEnum
-    )  #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` (default "all")
-    base_mip_level: int  #: (default 0)
-    mip_level_count: int  #: (optional)
-    base_array_layer: int  #: (default 0)
-    array_layer_count: int  #: (optional)
+    #: (default "")
+    label: str
+    #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (optional)
+    format: enums.TextureFormatEnum
+    #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>` (optional)
+    dimension: enums.TextureViewDimensionEnum
+    #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>` (default 0)
+    usage: flags.TextureUsageFlags
+    #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` (default "all")
+    aspect: enums.TextureAspectEnum
+    #: (default 0)
+    base_mip_level: int
+    #: (optional)
+    mip_level_count: int
+    #: (default 0)
+    base_array_layer: int
+    #: (optional)
+    array_layer_count: int
 
 
 class ExternalTextureDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    source: ArrayLike | object  #: (required)
-    color_space: str  #: (default "srgb")
+    #: (default "")
+    label: str
+    #: (required)
+    source: ArrayLike | object
+    #: (default "srgb")
+    color_space: str
 
 
 class SamplerDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    address_mode_u: (
-        enums.AddressModeEnum
-    )  #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` (default "clamp-to-edge")
-    address_mode_v: (
-        enums.AddressModeEnum
-    )  #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` (default "clamp-to-edge")
-    address_mode_w: (
-        enums.AddressModeEnum
-    )  #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` (default "clamp-to-edge")
-    mag_filter: (
-        enums.FilterModeEnum
-    )  #: :obj:`enums.FilterMode <wgpu.enums.FilterMode>` (default "nearest")
-    min_filter: (
-        enums.FilterModeEnum
-    )  #: :obj:`enums.FilterMode <wgpu.enums.FilterMode>` (default "nearest")
-    mipmap_filter: enums.MipmapFilterModeEnum  #: :obj:`enums.MipmapFilterMode <wgpu.enums.MipmapFilterMode>` (default "nearest")
-    lod_min_clamp: float  #: (default 0)
-    lod_max_clamp: float  #: (default 32)
-    compare: (
-        enums.CompareFunctionEnum
-    )  #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>` (optional)
-    max_anisotropy: int  #: (default 1)
+    #: (default "")
+    label: str
+    #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` (default "clamp-to-edge")
+    address_mode_u: enums.AddressModeEnum
+    #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` (default "clamp-to-edge")
+    address_mode_v: enums.AddressModeEnum
+    #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>` (default "clamp-to-edge")
+    address_mode_w: enums.AddressModeEnum
+    #: :obj:`enums.FilterMode <wgpu.enums.FilterMode>` (default "nearest")
+    mag_filter: enums.FilterModeEnum
+    #: :obj:`enums.FilterMode <wgpu.enums.FilterMode>` (default "nearest")
+    min_filter: enums.FilterModeEnum
+    #: :obj:`enums.MipmapFilterMode <wgpu.enums.MipmapFilterMode>` (default "nearest")
+    mipmap_filter: enums.MipmapFilterModeEnum
+    #: (default 0)
+    lod_min_clamp: float
+    #: (default 32)
+    lod_max_clamp: float
+    #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>` (optional)
+    compare: enums.CompareFunctionEnum
+    #: (default 1)
+    max_anisotropy: int
 
 
 class BindGroupLayoutDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    entries: list[BindGroupLayoutEntry]  #: (required)
+    #: (default "")
+    label: str
+    #: (required)
+    entries: list[BindGroupLayoutEntry]
 
 
 class BindGroupLayoutEntry(TypedDict, total=False):
-    binding: int  #: (required)
-    visibility: (
-        flags.ShaderStageFlags
-    )  #: :obj:`flags.ShaderStage <wgpu.flags.ShaderStage>` (required)
-    buffer: BufferBindingLayout  #: (optional)
-    sampler: SamplerBindingLayout  #: (optional)
-    texture: TextureBindingLayout  #: (optional)
-    storage_texture: StorageTextureBindingLayout  #: (optional)
-    external_texture: ExternalTextureBindingLayout  #: (optional)
+    #: (required)
+    binding: int
+    #: :obj:`flags.ShaderStage <wgpu.flags.ShaderStage>` (required)
+    visibility: flags.ShaderStageFlags
+    #: (optional)
+    buffer: BufferBindingLayout
+    #: (optional)
+    sampler: SamplerBindingLayout
+    #: (optional)
+    texture: TextureBindingLayout
+    #: (optional)
+    storage_texture: StorageTextureBindingLayout
+    #: (optional)
+    external_texture: ExternalTextureBindingLayout
 
 
 class BufferBindingLayout(TypedDict, total=False):
-    type: enums.BufferBindingTypeEnum  #: :obj:`enums.BufferBindingType <wgpu.enums.BufferBindingType>` (default "uniform")
-    has_dynamic_offset: bool  #: (default false)
-    min_binding_size: int  #: (default 0)
+    #: :obj:`enums.BufferBindingType <wgpu.enums.BufferBindingType>` (default "uniform")
+    type: enums.BufferBindingTypeEnum
+    #: (default false)
+    has_dynamic_offset: bool
+    #: (default 0)
+    min_binding_size: int
 
 
 class SamplerBindingLayout(TypedDict, total=False):
-    type: enums.SamplerBindingTypeEnum  #: :obj:`enums.SamplerBindingType <wgpu.enums.SamplerBindingType>` (default "filtering")
+    #: :obj:`enums.SamplerBindingType <wgpu.enums.SamplerBindingType>` (default "filtering")
+    type: enums.SamplerBindingTypeEnum
 
 
 class TextureBindingLayout(TypedDict, total=False):
-    sample_type: enums.TextureSampleTypeEnum  #: :obj:`enums.TextureSampleType <wgpu.enums.TextureSampleType>` (default "float")
-    view_dimension: enums.TextureViewDimensionEnum  #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>` (default "2d")
-    multisampled: bool  #: (default false)
+    #: :obj:`enums.TextureSampleType <wgpu.enums.TextureSampleType>` (default "float")
+    sample_type: enums.TextureSampleTypeEnum
+    #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>` (default "2d")
+    view_dimension: enums.TextureViewDimensionEnum
+    #: (default false)
+    multisampled: bool
 
 
 class StorageTextureBindingLayout(TypedDict, total=False):
-    access: enums.StorageTextureAccessEnum  #: :obj:`enums.StorageTextureAccess <wgpu.enums.StorageTextureAccess>` (default "write-only")
-    format: (
-        enums.TextureFormatEnum
-    )  #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
-    view_dimension: enums.TextureViewDimensionEnum  #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>` (default "2d")
+    #: :obj:`enums.StorageTextureAccess <wgpu.enums.StorageTextureAccess>` (default "write-only")
+    access: enums.StorageTextureAccessEnum
+    #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
+    format: enums.TextureFormatEnum
+    #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>` (default "2d")
+    view_dimension: enums.TextureViewDimensionEnum
 
 
 class ExternalTextureBindingLayout(TypedDict, total=False):
@@ -229,13 +253,18 @@ class ExternalTextureBindingLayout(TypedDict, total=False):
 
 
 class BindGroupDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    layout: classes.GPUBindGroupLayout  #: (required)
-    entries: list[BindGroupEntry]  #: (required)
+    #: (default "")
+    label: str
+    #: (required)
+    layout: classes.GPUBindGroupLayout
+    #: (required)
+    entries: list[BindGroupEntry]
 
 
 class BindGroupEntry(TypedDict, total=False):
-    binding: int  #: (required)
+    #: (required)
+    binding: int
+    #: (required)
     resource: (
         classes.GPUBuffer
         | classes.GPUSampler
@@ -243,361 +272,446 @@ class BindGroupEntry(TypedDict, total=False):
         | classes.GPUTextureView
         | object
         | BufferBinding
-    )  #: (required)
+    )
 
 
 class BufferBinding(TypedDict, total=False):
-    buffer: classes.GPUBuffer  #: (required)
-    offset: int  #: (default 0)
-    size: int  #: (optional)
+    #: (required)
+    buffer: classes.GPUBuffer
+    #: (default 0)
+    offset: int
+    #: (optional)
+    size: int
 
 
 class PipelineLayoutDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    bind_group_layouts: list[classes.GPUBindGroupLayout]  #: (required)
+    #: (default "")
+    label: str
+    #: (required)
+    bind_group_layouts: list[classes.GPUBindGroupLayout]
 
 
 class ShaderModuleDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    code: str  #: (required)
-    compilation_hints: list[ShaderModuleCompilationHint]  #: (default [])
+    #: (default "")
+    label: str
+    #: (required)
+    code: str
+    #: (default [])
+    compilation_hints: list[ShaderModuleCompilationHint]
 
 
 class ShaderModuleCompilationHint(TypedDict, total=False):
-    entry_point: str  #: (required)
-    layout: (
-        classes.GPUPipelineLayout | enums.AutoLayoutModeEnum
-    )  #: classes.:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>` (optional)
+    #: (required)
+    entry_point: str
+    #: classes.:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>` (optional)
+    layout: classes.GPUPipelineLayout | enums.AutoLayoutModeEnum
 
 
 class PipelineErrorInit(TypedDict, total=False):
-    reason: (
-        enums.PipelineErrorReasonEnum
-    )  #: :obj:`enums.PipelineErrorReason <wgpu.enums.PipelineErrorReason>` (required)
+    #: :obj:`enums.PipelineErrorReason <wgpu.enums.PipelineErrorReason>` (required)
+    reason: enums.PipelineErrorReasonEnum
 
 
 class ProgrammableStage(TypedDict, total=False):
-    module: classes.GPUShaderModule  #: (required)
-    entry_point: str  #: (optional)
-    constants: dict[str, float]  #: (default {})
+    #: (required)
+    module: classes.GPUShaderModule
+    #: (optional)
+    entry_point: str
+    #: (default {})
+    constants: dict[str, float]
 
 
 class ComputePipelineDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    layout: (
-        classes.GPUPipelineLayout | enums.AutoLayoutModeEnum
-    )  #: classes.:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>` (required)
-    compute: ProgrammableStage  #: (required)
+    #: (default "")
+    label: str
+    #: classes.:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>` (required)
+    layout: classes.GPUPipelineLayout | enums.AutoLayoutModeEnum
+    #: (required)
+    compute: ProgrammableStage
 
 
 class RenderPipelineDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    layout: (
-        classes.GPUPipelineLayout | enums.AutoLayoutModeEnum
-    )  #: classes.:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>` (required)
-    vertex: VertexState  #: (required)
-    primitive: PrimitiveState  #: (default {})
-    depth_stencil: DepthStencilState  #: (optional)
-    multisample: MultisampleState  #: (default {})
-    fragment: FragmentState  #: (optional)
+    #: (default "")
+    label: str
+    #: classes.:class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>` (required)
+    layout: classes.GPUPipelineLayout | enums.AutoLayoutModeEnum
+    #: (required)
+    vertex: VertexState
+    #: (default {})
+    primitive: PrimitiveState
+    #: (optional)
+    depth_stencil: DepthStencilState
+    #: (default {})
+    multisample: MultisampleState
+    #: (optional)
+    fragment: FragmentState
 
 
 class PrimitiveState(TypedDict, total=False):
-    topology: enums.PrimitiveTopologyEnum  #: :obj:`enums.PrimitiveTopology <wgpu.enums.PrimitiveTopology>` (default "triangle-list")
-    strip_index_format: (
-        enums.IndexFormatEnum
-    )  #: :obj:`enums.IndexFormat <wgpu.enums.IndexFormat>` (optional)
-    front_face: (
-        enums.FrontFaceEnum
-    )  #: :obj:`enums.FrontFace <wgpu.enums.FrontFace>` (default "ccw")
-    cull_mode: (
-        enums.CullModeEnum
-    )  #: :obj:`enums.CullMode <wgpu.enums.CullMode>` (default "none")
-    unclipped_depth: bool  #: (default false)
+    #: :obj:`enums.PrimitiveTopology <wgpu.enums.PrimitiveTopology>` (default "triangle-list")
+    topology: enums.PrimitiveTopologyEnum
+    #: :obj:`enums.IndexFormat <wgpu.enums.IndexFormat>` (optional)
+    strip_index_format: enums.IndexFormatEnum
+    #: :obj:`enums.FrontFace <wgpu.enums.FrontFace>` (default "ccw")
+    front_face: enums.FrontFaceEnum
+    #: :obj:`enums.CullMode <wgpu.enums.CullMode>` (default "none")
+    cull_mode: enums.CullModeEnum
+    #: (default false)
+    unclipped_depth: bool
 
 
 class MultisampleState(TypedDict, total=False):
-    count: int  #: (default 1)
-    mask: int  #: (default 0xFFFFFFFF)
-    alpha_to_coverage_enabled: bool  #: (default false)
+    #: (default 1)
+    count: int
+    #: (default 0xFFFFFFFF)
+    mask: int
+    #: (default false)
+    alpha_to_coverage_enabled: bool
 
 
 class FragmentState(TypedDict, total=False):
-    module: classes.GPUShaderModule  #: (required)
-    entry_point: str  #: (optional)
-    constants: dict[str, float]  #: (default {})
-    targets: list[ColorTargetState]  #: (required)
+    #: (required)
+    module: classes.GPUShaderModule
+    #: (optional)
+    entry_point: str
+    #: (default {})
+    constants: dict[str, float]
+    #: (required)
+    targets: list[ColorTargetState]
 
 
 class ColorTargetState(TypedDict, total=False):
-    format: (
-        enums.TextureFormatEnum
-    )  #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
-    blend: BlendState  #: (optional)
-    write_mask: (
-        flags.ColorWriteFlags
-    )  #: :obj:`flags.ColorWrite <wgpu.flags.ColorWrite>` (default 0xF)
+    #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
+    format: enums.TextureFormatEnum
+    #: (optional)
+    blend: BlendState
+    #: :obj:`flags.ColorWrite <wgpu.flags.ColorWrite>` (default 0xF)
+    write_mask: flags.ColorWriteFlags
 
 
 class BlendState(TypedDict, total=False):
-    color: BlendComponent  #: (required)
-    alpha: BlendComponent  #: (required)
+    #: (required)
+    color: BlendComponent
+    #: (required)
+    alpha: BlendComponent
 
 
 class BlendComponent(TypedDict, total=False):
-    operation: (
-        enums.BlendOperationEnum
-    )  #: :obj:`enums.BlendOperation <wgpu.enums.BlendOperation>` (default "add")
-    src_factor: (
-        enums.BlendFactorEnum
-    )  #: :obj:`enums.BlendFactor <wgpu.enums.BlendFactor>` (default "one")
-    dst_factor: (
-        enums.BlendFactorEnum
-    )  #: :obj:`enums.BlendFactor <wgpu.enums.BlendFactor>` (default "zero")
+    #: :obj:`enums.BlendOperation <wgpu.enums.BlendOperation>` (default "add")
+    operation: enums.BlendOperationEnum
+    #: :obj:`enums.BlendFactor <wgpu.enums.BlendFactor>` (default "one")
+    src_factor: enums.BlendFactorEnum
+    #: :obj:`enums.BlendFactor <wgpu.enums.BlendFactor>` (default "zero")
+    dst_factor: enums.BlendFactorEnum
 
 
 class DepthStencilState(TypedDict, total=False):
-    format: (
-        enums.TextureFormatEnum
-    )  #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
-    depth_write_enabled: bool  #: (optional)
-    depth_compare: (
-        enums.CompareFunctionEnum
-    )  #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>` (optional)
-    stencil_front: StencilFaceState  #: (default {})
-    stencil_back: StencilFaceState  #: (default {})
-    stencil_read_mask: int  #: (default 0xFFFFFFFF)
-    stencil_write_mask: int  #: (default 0xFFFFFFFF)
-    depth_bias: int  #: (default 0)
-    depth_bias_slope_scale: float  #: (default 0)
-    depth_bias_clamp: float  #: (default 0)
+    #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
+    format: enums.TextureFormatEnum
+    #: (optional)
+    depth_write_enabled: bool
+    #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>` (optional)
+    depth_compare: enums.CompareFunctionEnum
+    #: (default {})
+    stencil_front: StencilFaceState
+    #: (default {})
+    stencil_back: StencilFaceState
+    #: (default 0xFFFFFFFF)
+    stencil_read_mask: int
+    #: (default 0xFFFFFFFF)
+    stencil_write_mask: int
+    #: (default 0)
+    depth_bias: int
+    #: (default 0)
+    depth_bias_slope_scale: float
+    #: (default 0)
+    depth_bias_clamp: float
 
 
 class StencilFaceState(TypedDict, total=False):
-    compare: (
-        enums.CompareFunctionEnum
-    )  #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>` (default "always")
-    fail_op: (
-        enums.StencilOperationEnum
-    )  #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>` (default "keep")
-    depth_fail_op: (
-        enums.StencilOperationEnum
-    )  #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>` (default "keep")
-    pass_op: (
-        enums.StencilOperationEnum
-    )  #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>` (default "keep")
+    #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>` (default "always")
+    compare: enums.CompareFunctionEnum
+    #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>` (default "keep")
+    fail_op: enums.StencilOperationEnum
+    #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>` (default "keep")
+    depth_fail_op: enums.StencilOperationEnum
+    #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>` (default "keep")
+    pass_op: enums.StencilOperationEnum
 
 
 class VertexState(TypedDict, total=False):
-    module: classes.GPUShaderModule  #: (required)
-    entry_point: str  #: (optional)
-    constants: dict[str, float]  #: (default {})
-    buffers: list[VertexBufferLayout]  #: (default [])
+    #: (required)
+    module: classes.GPUShaderModule
+    #: (optional)
+    entry_point: str
+    #: (default {})
+    constants: dict[str, float]
+    #: (default [])
+    buffers: list[VertexBufferLayout]
 
 
 class VertexBufferLayout(TypedDict, total=False):
-    array_stride: int  #: (required)
-    step_mode: (
-        enums.VertexStepModeEnum
-    )  #: :obj:`enums.VertexStepMode <wgpu.enums.VertexStepMode>` (default "vertex")
-    attributes: list[VertexAttribute]  #: (required)
+    #: (required)
+    array_stride: int
+    #: :obj:`enums.VertexStepMode <wgpu.enums.VertexStepMode>` (default "vertex")
+    step_mode: enums.VertexStepModeEnum
+    #: (required)
+    attributes: list[VertexAttribute]
 
 
 class VertexAttribute(TypedDict, total=False):
-    format: (
-        enums.VertexFormatEnum
-    )  #: :obj:`enums.VertexFormat <wgpu.enums.VertexFormat>` (required)
-    offset: int  #: (required)
-    shader_location: int  #: (required)
+    #: :obj:`enums.VertexFormat <wgpu.enums.VertexFormat>` (required)
+    format: enums.VertexFormatEnum
+    #: (required)
+    offset: int
+    #: (required)
+    shader_location: int
 
 
 class TexelCopyBufferLayout(TypedDict, total=False):
-    offset: int  #: (default 0)
-    bytes_per_row: int  #: (optional)
-    rows_per_image: int  #: (optional)
+    #: (default 0)
+    offset: int
+    #: (optional)
+    bytes_per_row: int
+    #: (optional)
+    rows_per_image: int
 
 
 class TexelCopyBufferInfo(TypedDict, total=False):
-    offset: int  #: (default 0)
-    bytes_per_row: int  #: (optional)
-    rows_per_image: int  #: (optional)
-    buffer: classes.GPUBuffer  #: (required)
+    #: (default 0)
+    offset: int
+    #: (optional)
+    bytes_per_row: int
+    #: (optional)
+    rows_per_image: int
+    #: (required)
+    buffer: classes.GPUBuffer
 
 
 class TexelCopyTextureInfo(TypedDict, total=False):
-    texture: classes.GPUTexture  #: (required)
-    mip_level: int  #: (default 0)
-    origin: tuple[int, int, int] | Origin3D  #: (default {})
-    aspect: (
-        enums.TextureAspectEnum
-    )  #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` (default "all")
+    #: (required)
+    texture: classes.GPUTexture
+    #: (default 0)
+    mip_level: int
+    #: (default {})
+    origin: tuple[int, int, int] | Origin3D
+    #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` (default "all")
+    aspect: enums.TextureAspectEnum
 
 
 class CopyExternalImageDestInfo(TypedDict, total=False):
-    texture: classes.GPUTexture  #: (required)
-    mip_level: int  #: (default 0)
-    origin: tuple[int, int, int] | Origin3D  #: (default {})
-    aspect: (
-        enums.TextureAspectEnum
-    )  #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` (default "all")
-    color_space: str  #: (default "srgb")
-    premultiplied_alpha: bool  #: (default false)
+    #: (required)
+    texture: classes.GPUTexture
+    #: (default 0)
+    mip_level: int
+    #: (default {})
+    origin: tuple[int, int, int] | Origin3D
+    #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` (default "all")
+    aspect: enums.TextureAspectEnum
+    #: (default "srgb")
+    color_space: str
+    #: (default false)
+    premultiplied_alpha: bool
 
 
 class CopyExternalImageSourceInfo(TypedDict, total=False):
-    source: ArrayLike | CanvasLike | object  #: (required)
-    origin: tuple[int, int] | Origin2D  #: (default {})
-    flip_y: bool  #: (default false)
+    #: (required)
+    source: ArrayLike | CanvasLike | object
+    #: (default {})
+    origin: tuple[int, int] | Origin2D
+    #: (default false)
+    flip_y: bool
 
 
 class CommandBufferDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
+    #: (default "")
+    label: str
 
 
 class CommandEncoderDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
+    #: (default "")
+    label: str
 
 
 class ComputePassTimestampWrites(TypedDict, total=False):
-    query_set: classes.GPUQuerySet  #: (required)
-    beginning_of_pass_write_index: int  #: (optional)
-    end_of_pass_write_index: int  #: (optional)
+    #: (required)
+    query_set: classes.GPUQuerySet
+    #: (optional)
+    beginning_of_pass_write_index: int
+    #: (optional)
+    end_of_pass_write_index: int
 
 
 class ComputePassDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    timestamp_writes: ComputePassTimestampWrites  #: (optional)
+    #: (default "")
+    label: str
+    #: (optional)
+    timestamp_writes: ComputePassTimestampWrites
 
 
 class RenderPassTimestampWrites(TypedDict, total=False):
-    query_set: classes.GPUQuerySet  #: (required)
-    beginning_of_pass_write_index: int  #: (optional)
-    end_of_pass_write_index: int  #: (optional)
+    #: (required)
+    query_set: classes.GPUQuerySet
+    #: (optional)
+    beginning_of_pass_write_index: int
+    #: (optional)
+    end_of_pass_write_index: int
 
 
 class RenderPassDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    color_attachments: list[RenderPassColorAttachment]  #: (required)
-    depth_stencil_attachment: RenderPassDepthStencilAttachment  #: (optional)
-    occlusion_query_set: classes.GPUQuerySet  #: (optional)
-    timestamp_writes: RenderPassTimestampWrites  #: (optional)
-    max_draw_count: int  #: (default 50000000)
+    #: (default "")
+    label: str
+    #: (required)
+    color_attachments: list[RenderPassColorAttachment]
+    #: (optional)
+    depth_stencil_attachment: RenderPassDepthStencilAttachment
+    #: (optional)
+    occlusion_query_set: classes.GPUQuerySet
+    #: (optional)
+    timestamp_writes: RenderPassTimestampWrites
+    #: (default 50000000)
+    max_draw_count: int
 
 
 class RenderPassColorAttachment(TypedDict, total=False):
-    view: classes.GPUTexture | classes.GPUTextureView  #: (required)
-    depth_slice: int  #: (optional)
-    resolve_target: classes.GPUTexture | classes.GPUTextureView  #: (optional)
-    clear_value: tuple[float, float, float, float] | Color  #: (optional)
-    load_op: enums.LoadOpEnum  #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>` (required)
-    store_op: enums.StoreOpEnum  #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>` (required)
+    #: (required)
+    view: classes.GPUTexture | classes.GPUTextureView
+    #: (optional)
+    depth_slice: int
+    #: (optional)
+    resolve_target: classes.GPUTexture | classes.GPUTextureView
+    #: (optional)
+    clear_value: tuple[float, float, float, float] | Color
+    #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>` (required)
+    load_op: enums.LoadOpEnum
+    #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>` (required)
+    store_op: enums.StoreOpEnum
 
 
 class RenderPassDepthStencilAttachment(TypedDict, total=False):
-    view: classes.GPUTexture | classes.GPUTextureView  #: (required)
-    depth_clear_value: float  #: (optional)
-    depth_load_op: (
-        enums.LoadOpEnum
-    )  #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>` (optional)
-    depth_store_op: (
-        enums.StoreOpEnum
-    )  #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>` (optional)
-    depth_read_only: bool  #: (default false)
-    stencil_clear_value: int  #: (default 0)
-    stencil_load_op: (
-        enums.LoadOpEnum
-    )  #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>` (optional)
-    stencil_store_op: (
-        enums.StoreOpEnum
-    )  #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>` (optional)
-    stencil_read_only: bool  #: (default false)
+    #: (required)
+    view: classes.GPUTexture | classes.GPUTextureView
+    #: (optional)
+    depth_clear_value: float
+    #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>` (optional)
+    depth_load_op: enums.LoadOpEnum
+    #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>` (optional)
+    depth_store_op: enums.StoreOpEnum
+    #: (default false)
+    depth_read_only: bool
+    #: (default 0)
+    stencil_clear_value: int
+    #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>` (optional)
+    stencil_load_op: enums.LoadOpEnum
+    #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>` (optional)
+    stencil_store_op: enums.StoreOpEnum
+    #: (default false)
+    stencil_read_only: bool
 
 
 class RenderPassLayout(TypedDict, total=False):
-    label: str  #: (default "")
-    color_formats: list[
-        enums.TextureFormatEnum
-    ]  #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`] (required)
-    depth_stencil_format: (
-        enums.TextureFormatEnum
-    )  #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (optional)
-    sample_count: int  #: (default 1)
+    #: (default "")
+    label: str
+    #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`] (required)
+    color_formats: list[enums.TextureFormatEnum]
+    #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (optional)
+    depth_stencil_format: enums.TextureFormatEnum
+    #: (default 1)
+    sample_count: int
 
 
 class RenderBundleDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
+    #: (default "")
+    label: str
 
 
 class RenderBundleEncoderDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    color_formats: list[
-        enums.TextureFormatEnum
-    ]  #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`] (required)
-    depth_stencil_format: (
-        enums.TextureFormatEnum
-    )  #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (optional)
-    sample_count: int  #: (default 1)
-    depth_read_only: bool  #: (default false)
-    stencil_read_only: bool  #: (default false)
+    #: (default "")
+    label: str
+    #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`] (required)
+    color_formats: list[enums.TextureFormatEnum]
+    #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (optional)
+    depth_stencil_format: enums.TextureFormatEnum
+    #: (default 1)
+    sample_count: int
+    #: (default false)
+    depth_read_only: bool
+    #: (default false)
+    stencil_read_only: bool
 
 
 class QueueDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
+    #: (default "")
+    label: str
 
 
 class QuerySetDescriptor(TypedDict, total=False):
-    label: str  #: (default "")
-    type: (
-        enums.QueryTypeEnum
-    )  #: :obj:`enums.QueryType <wgpu.enums.QueryType>` (required)
-    count: int  #: (required)
+    #: (default "")
+    label: str
+    #: :obj:`enums.QueryType <wgpu.enums.QueryType>` (required)
+    type: enums.QueryTypeEnum
+    #: (required)
+    count: int
 
 
 class CanvasToneMapping(TypedDict, total=False):
-    mode: enums.CanvasToneMappingModeEnum  #: :obj:`enums.CanvasToneMappingMode <wgpu.enums.CanvasToneMappingMode>` (default "standard")
+    #: :obj:`enums.CanvasToneMappingMode <wgpu.enums.CanvasToneMappingMode>` (default "standard")
+    mode: enums.CanvasToneMappingModeEnum
 
 
 class CanvasConfiguration(TypedDict, total=False):
-    device: classes.GPUDevice  #: (required)
-    format: (
-        enums.TextureFormatEnum
-    )  #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
-    usage: (
-        flags.TextureUsageFlags
-    )  #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>` (default 0x10)
-    view_formats: list[
-        enums.TextureFormatEnum
-    ]  #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`] (default [])
-    color_space: str  #: (default "srgb")
-    tone_mapping: CanvasToneMapping  #: (default {})
-    alpha_mode: (
-        enums.CanvasAlphaModeEnum
-    )  #: :obj:`enums.CanvasAlphaMode <wgpu.enums.CanvasAlphaMode>` (default "opaque")
+    #: (required)
+    device: classes.GPUDevice
+    #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>` (required)
+    format: enums.TextureFormatEnum
+    #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>` (default 0x10)
+    usage: flags.TextureUsageFlags
+    #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`] (default [])
+    view_formats: list[enums.TextureFormatEnum]
+    #: (default "srgb")
+    color_space: str
+    #: (default {})
+    tone_mapping: CanvasToneMapping
+    #: :obj:`enums.CanvasAlphaMode <wgpu.enums.CanvasAlphaMode>` (default "opaque")
+    alpha_mode: enums.CanvasAlphaModeEnum
 
 
 class UncapturedErrorEventInit(TypedDict, total=False):
-    error: classes.GPUError  #: (required)
+    #: (required)
+    error: classes.GPUError
 
 
 class Color(TypedDict, total=False):
-    r: float  #: (required)
-    g: float  #: (required)
-    b: float  #: (required)
-    a: float  #: (required)
+    #: (required)
+    r: float
+    #: (required)
+    g: float
+    #: (required)
+    b: float
+    #: (required)
+    a: float
 
 
 class Origin2D(TypedDict, total=False):
-    x: int  #: (default 0)
-    y: int  #: (default 0)
+    #: (default 0)
+    x: int
+    #: (default 0)
+    y: int
 
 
 class Origin3D(TypedDict, total=False):
-    x: int  #: (default 0)
-    y: int  #: (default 0)
-    z: int  #: (default 0)
+    #: (default 0)
+    x: int
+    #: (default 0)
+    y: int
+    #: (default 0)
+    z: int
 
 
 class Extent3D(TypedDict, total=False):
-    width: int  #: (required)
-    height: int  #: (default 1)
-    depth_or_array_layers: int  #: (default 1)
+    #: (required)
+    width: int
+    #: (default 1)
+    height: int
+    #: (default 1)
+    depth_or_array_layers: int

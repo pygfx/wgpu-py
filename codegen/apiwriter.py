@@ -141,7 +141,7 @@ def write_structs():
                 doc += "(optional) "
             else:
                 doc += "(required) "
-            pylines.append(f"    {key}: {code_type}  #: {doc}")
+            pylines.append(f"    #: {doc}\n    {key}: {code_type}")
         if len(d) == 0:
             pylines.append("    pass")
         pylines.append("\n")
