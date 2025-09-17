@@ -909,7 +909,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        size: list[int] | structs.Extent3D,
+        size: tuple[int, int, int] | structs.Extent3D,
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: enums.TextureDimensionEnum = "2d",
@@ -2051,7 +2051,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self,
         source: structs.TexelCopyBufferInfo,
         destination: structs.TexelCopyTextureInfo,
-        copy_size: list[int] | structs.Extent3D,
+        copy_size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         """Copy the contents of a buffer to a texture (view).
 
@@ -2069,7 +2069,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyBufferInfo,
-        copy_size: list[int] | structs.Extent3D,
+        copy_size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         """Copy the contents of a texture (view) to a buffer.
 
@@ -2087,7 +2087,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyTextureInfo,
-        copy_size: list[int] | structs.Extent3D,
+        copy_size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         """Copy the contents of a texture (view) to another texture (view).
 
@@ -2233,7 +2233,9 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined setBlendConstant(GPUColor color);
-    def set_blend_constant(self, color: list[float] | structs.Color) -> None:
+    def set_blend_constant(
+        self, color: tuple[float, float, float, float] | structs.Color
+    ) -> None:
         """Set the blend color for the render pass.
 
         Arguments:
@@ -2381,7 +2383,7 @@ class GPUQueue(GPUObjectBase):
         destination: structs.TexelCopyTextureInfo,
         data: ArrayLike,
         data_layout: structs.TexelCopyBufferLayout,
-        size: list[int] | structs.Extent3D,
+        size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         """Takes the data contents and schedules a write operation of
         these contents to the destination texture in the queue. A
@@ -2430,7 +2432,7 @@ class GPUQueue(GPUObjectBase):
         self,
         source: structs.CopyExternalImageSourceInfo,
         destination: structs.CopyExternalImageDestInfo,
-        copy_size: list[int] | structs.Extent3D,
+        copy_size: tuple[int, int, int] | structs.Extent3D,
     ) -> None:
         raise NotImplementedError()
 
