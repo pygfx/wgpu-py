@@ -39,12 +39,14 @@ class Attribute:
         self.line = line.strip().strip(",;").strip()
 
         default = None  # None means 'no default' and "None" kinda means "auto".
+        required = False
         arg = self.line
         if "=" in arg:
             arg, default = arg.rsplit("=", 1)
             arg, default = arg.strip(), default.strip()
         arg_type, arg_name = arg.strip().rsplit(" ", 1)
         if arg_type.startswith("required "):
+            required = True
             arg_type = arg_type.split(" ", 1)[1]
             # required args should not have a default
             assert default is None
@@ -55,6 +57,7 @@ class Attribute:
         self.name = arg_name
         self.typename = arg_type
         self.default = default
+        self.required = required
 
     def __repr__(self):
         return f"<Attribute '{self.typename} {self.name}'>"
@@ -245,6 +248,19 @@ class IdlParser:
             names = sorted(set(names))
             if len(names) == 1:
                 return names[0]
+            if (
+                len(names) == 2
+                and names[0] in ("list[int]", "list[float]")
+                and names[1].startswith(
+                    ("structs.Origin", "structs.Extent", "structs.Color")
+                )
+            ):
+                if names[1].endswith("Color"):
+                    names[0] = "tuple[float, float, float, float]"
+                elif names[1].endswith("2D"):
+                    names[0] = "tuple[int, int]"
+                elif names[1].endswith("3D"):
+                    names[0] = "tuple[int, int, int]"
             return " | ".join(names)
         if name.startswith("Promise<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")

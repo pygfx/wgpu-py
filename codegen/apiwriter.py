@@ -118,28 +118,27 @@ def write_structs():
     for name, d in idl.structs.items():
         if name in ignore:
             continue
-        # Object-docstring as a comment
-        for field in d.values():
-            tp = idl.resolve_type(field.typename).strip("'")
-            if tp.endswith("Flags"):
-                tp = tp[:-5]
-            elif tp.endswith("Enum"):
-                tp = tp[:-4]
-            if field.default:
-                pylines.append(
-                    resolve_crossrefs(f"#: * {field.name} :: {tp} = {field.default}")
-                )
-            else:
-                pylines.append(resolve_crossrefs(f"#: * {field.name} :: {tp}"))
-        # Generate Code
-        pylines.append(f'{name} = Struct(\n    "{name}",')
+        pylines.append(f"class {name}(TypedDict, total=False):")
         for field in d.values():
             key = to_snake_case(field.name)
-            val = idl.resolve_type(field.typename)
-            if not val.startswith(("'", '"')):
-                val = f"'{val}'"
-            pylines.append(f"    {key}={val},")
-        pylines.append(")\n")
+            # Get type to include in code
+            code_type = idl.resolve_type(field.typename).strip("'")
+            code_type = code_type.replace("GPU", "classes.GPU").replace("structs.", "")
+            # if field.default or not field.required:  # py3.10; let's use later
+            #     code_type = f"NotRequired[{code_type}]"
+            # Get type to include in docs
+            docs_type = None
+            if "flags." in code_type or "enums" in code_type:
+                docs_type = code_type.replace("Flags", "").replace("Enum", "")
+                docs_type = resolve_crossrefs(f" {docs_type} ")
+            # Build docs
+            doc = ""
+            if docs_type:
+                doc += f"{docs_type.strip()} "
+            pylines.append(f"    {key}: {code_type}  #: {doc}")
+        if len(d) == 0:
+            pylines.append("    pass")
+        pylines.append("\n")
 
     # Write
     code = format_code("\n".join(pylines))
