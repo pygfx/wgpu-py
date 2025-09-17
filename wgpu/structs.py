@@ -172,12 +172,12 @@ TextureViewDescriptor = Struct(
 )
 
 #: * label :: str = ""
-#: * source :: memoryview | object
+#: * source :: ArrayLike | object
 #: * colorSpace :: str = "srgb"
 ExternalTextureDescriptor = Struct(
     "ExternalTextureDescriptor",
     label="str",
-    source="memoryview | object",
+    source="ArrayLike | object",
     color_space="str",
 )
 
@@ -553,12 +553,12 @@ CopyExternalImageDestInfo = Struct(
     premultiplied_alpha="bool",
 )
 
-#: * source :: memoryview | object
+#: * source :: ArrayLike | object
 #: * origin :: List[int] | :obj:`structs.Origin2D <Origin2D>` = {}
 #: * flipY :: bool = false
 CopyExternalImageSourceInfo = Struct(
     "CopyExternalImageSourceInfo",
-    source="memoryview | object",
+    source="ArrayLike | object",
     origin="List[int] | structs.Origin2D",
     flip_y="bool",
 )

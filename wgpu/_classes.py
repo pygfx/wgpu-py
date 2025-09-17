@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import weakref
 import logging
-from typing import List, Dict, Union, Optional
+from typing import List, Dict
 
-from ._coreutils import ApiDiff, str_flag_to_int
+from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -1351,7 +1351,7 @@ class GPUDevice(GPUObjectBase):
     # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor); -> USVString label = "", required (HTMLVideoElement or VideoFrame) source, PredefinedColorSpace colorSpace = "srgb"
     @apidiff.hide("Specific to browsers")
     def import_external_texture(
-        self, *, label: str = "", source: memoryview | object, color_space: str = "srgb"
+        self, *, label: str = "", source: ArrayLike | object, color_space: str = "srgb"
     ) -> object:
         """For browsers only."""
         raise NotImplementedError()
@@ -1516,7 +1516,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size);
     @apidiff.hide
-    def get_mapped_range(self, offset: int = 0, size: int | None = None) -> memoryview:
+    def get_mapped_range(self, offset: int = 0, size: int | None = None) -> ArrayLike:
         raise NotImplementedError("The Python API differs from WebGPU here")
 
     # IDL: undefined destroy();
@@ -2327,7 +2327,7 @@ class GPUQueue(GPUObjectBase):
         self,
         buffer: GPUBuffer,
         buffer_offset: int,
-        data: memoryview,
+        data: ArrayLike,
         data_offset: int = 0,
         size: int | None = None,
     ) -> None:
@@ -2376,7 +2376,7 @@ class GPUQueue(GPUObjectBase):
     def write_texture(
         self,
         destination: structs.TexelCopyTextureInfo,
-        data: memoryview,
+        data: ArrayLike,
         data_layout: structs.TexelCopyBufferLayout,
         size: List[int] | structs.Extent3D,
     ) -> None:

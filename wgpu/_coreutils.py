@@ -17,6 +17,11 @@ from pathlib import Path
 _resource_files = ExitStack()
 atexit.register(_resource_files.close)
 
+# A stub type to annotate args that can be array-like (anything that can be cast to a memoryview)
+# Note that we don't depend on numpy, otherwise we could use np.typing.ArrayLike.
+# VSCode just shows "ArrayLike" in the user-facing hints. The type checker allows anything, I guess.
+ArrayLike = memoryview | object
+
 
 def get_header_filename(name):
     """Get the filename to a wgpu related header resource."""

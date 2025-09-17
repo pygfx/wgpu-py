@@ -21,10 +21,10 @@ import os
 import time
 import logging
 from weakref import WeakKeyDictionary
-from typing import List, Dict, NoReturn, Union, Optional
+from typing import List, Dict, NoReturn
 
 from ... import classes, flags, enums, structs
-from ..._coreutils import str_flag_to_int
+from ..._coreutils import str_flag_to_int, ArrayLike
 
 from ._ffi import ffi, lib
 from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
@@ -1912,7 +1912,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def _create_compute_pipeline_descriptor(
         self,
         label: str,
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         compute: structs.ProgrammableStage,
     ):
         check_struct("ProgrammableStage", compute)
@@ -2024,7 +2024,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def _create_render_pipeline_descriptor(
         self,
         label: str,
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutMode],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState,
         depth_stencil: structs.DepthStencilState,
@@ -3731,7 +3731,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self,
         buffer: GPUBuffer,
         buffer_offset: int,
-        data: memoryview,
+        data: ArrayLike,
         data_offset: int = 0,
         size: int | None = None,
     ) -> None:
@@ -3805,7 +3805,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     def write_texture(
         self,
         destination: structs.TexelCopyTextureInfo,
-        data: memoryview,
+        data: ArrayLike,
         data_layout: structs.TexelCopyBufferLayout,
         size: List[int] | structs.Extent3D,
     ) -> None:

@@ -211,14 +211,14 @@ class IdlParser:
             "double": "float",
             "boolean": "bool",
             "object": "dict",
-            "ImageBitmap": "memoryview",
-            "ImageData": "memoryview",
-            "VideoFrame": "memoryview",
-            "AllowSharedBufferSource": "memoryview",
+            "ImageBitmap": "ArrayLike",
+            "ImageData": "ArrayLike",
+            "VideoFrame": "ArrayLike",
+            "AllowSharedBufferSource": "ArrayLike",
             "GPUPipelineConstantValue": "float",
             "GPUExternalTexture": "object",
             "undefined": "None",
-            "ArrayBuffer": "memoryview",
+            "ArrayBuffer": "ArrayLike",
             "WGSLLanguageFeatures": "set",
             "GPUSupportedFeatures": "set",
             "GPUSupportedLimits": "dict",
@@ -252,6 +252,8 @@ class IdlParser:
         # Triage
         if name in __builtins__:
             return name  # ok
+        elif name in ["ArrayLike"]:
+            return name  # virtual types
         elif name in self.classes:
             return name
         elif name.startswith("HTML"):
