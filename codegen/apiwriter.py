@@ -135,6 +135,12 @@ def write_structs():
             doc = ""
             if docs_type:
                 doc += f"{docs_type.strip()} "
+            if field.default:
+                doc += f"(default {field.default}) "
+            elif not field.required:
+                doc += "(optional) "
+            else:
+                doc += "(required) "
             pylines.append(f"    {key}: {code_type}  #: {doc}")
         if len(d) == 0:
             pylines.append("    pass")
