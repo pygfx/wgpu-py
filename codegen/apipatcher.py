@@ -506,10 +506,9 @@ class IdlPatcherMixin:
             d = "optional"
         if t:
             # If default is None, the type won't match, so we need to mark it optional
+            result += f": {t}"
             if d == "None":
-                result += f": Optional[{t}]"
-            else:
-                result += f": {t}"
+                result += " | None"
         if d:
             d = {"false": "False", "true": "True"}.get(d, d)
             result += f"={d}"

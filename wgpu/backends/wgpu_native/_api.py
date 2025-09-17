@@ -1071,7 +1071,7 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label: str = "",
         required_features: List[enums.FeatureNameEnum] = [],
-        required_limits: Dict[str, Union[None, int]] = {},
+        required_limits: Dict[str, None | int] = {},
         default_queue: structs.QueueDescriptor = {},
     ) -> GPUDevice:
         check_can_use_sync_variants()
@@ -1087,7 +1087,7 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label: str = "",
         required_features: List[enums.FeatureNameEnum] = [],
-        required_limits: Dict[str, Union[None, int]] = {},
+        required_limits: Dict[str, None | int] = {},
         default_queue: structs.QueueDescriptor = {},
     ) -> GPUDevice:
         if default_queue:
@@ -1422,7 +1422,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        size: Union[List[int], structs.Extent3D],
+        size: List[int] | structs.Extent3D,
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: enums.TextureDimensionEnum = "2d",
@@ -1851,7 +1851,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         compute: structs.ProgrammableStage,
     ) -> GPUComputePipeline:
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
@@ -1863,7 +1863,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         compute: structs.ProgrammableStage,
     ) -> GPUComputePipeline:
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
@@ -1950,7 +1950,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
@@ -1968,7 +1968,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        layout: Union[GPUPipelineLayout, enums.AutoLayoutModeEnum],
+        layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexState,
         primitive: structs.PrimitiveState = {},
         depth_stencil: structs.DepthStencilState = optional,
@@ -2387,14 +2387,14 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         return offset, size
 
     def map_sync(
-        self, mode: flags.MapModeFlags, offset: int = 0, size: Optional[int] = None
+        self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> None:
         check_can_use_sync_variants()
         awaitable = self._map(mode, offset, size)
         return awaitable.sync_wait()
 
     async def map_async(
-        self, mode: flags.MapModeFlags, offset: int = 0, size: Optional[int] = None
+        self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> None:
         awaitable = self._map(mode, offset, size)  # for now
         return await awaitable
@@ -2911,7 +2911,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         buffer: GPUBuffer,
         index_format: enums.IndexFormatEnum,
         offset: int = 0,
-        size: Optional[int] = None,
+        size: int | None = None,
     ) -> None:
         self._maybe_keep_alive(buffer)
         if not size:
@@ -2925,7 +2925,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         )
 
     def set_vertex_buffer(
-        self, slot: int, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
+        self, slot: int, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
         self._maybe_keep_alive(buffer)
         if not size:
@@ -3190,7 +3190,7 @@ class GPUCommandEncoder(
         return c_depth_stencil_attachment
 
     def clear_buffer(
-        self, buffer: GPUBuffer, offset: int = 0, size: Optional[int] = None
+        self, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
         offset = int(offset)
         if offset % 4 != 0:  # pragma: no cover
@@ -3219,7 +3219,7 @@ class GPUCommandEncoder(
         source_offset: int,
         destination: GPUBuffer,
         destination_offset: int,
-        size: Optional[int] = None,
+        size: int | None = None,
     ) -> None:
         if source_offset % 4 != 0:  # pragma: no cover
             raise ValueError("source_offset must be a multiple of 4")
@@ -3248,7 +3248,7 @@ class GPUCommandEncoder(
         self,
         source: structs.TexelCopyBufferInfo,
         destination: structs.TexelCopyTextureInfo,
-        copy_size: Union[List[int], structs.Extent3D],
+        copy_size: List[int] | structs.Extent3D,
     ) -> None:
         check_struct("TexelCopyBufferInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
@@ -3314,7 +3314,7 @@ class GPUCommandEncoder(
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyBufferInfo,
-        copy_size: Union[List[int], structs.Extent3D],
+        copy_size: List[int] | structs.Extent3D,
     ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyBufferInfo", destination)
@@ -3380,7 +3380,7 @@ class GPUCommandEncoder(
         self,
         source: structs.TexelCopyTextureInfo,
         destination: structs.TexelCopyTextureInfo,
-        copy_size: Union[List[int], structs.Extent3D],
+        copy_size: List[int] | structs.Extent3D,
     ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
@@ -3585,7 +3585,7 @@ class GPURenderPassEncoder(
             self._internal, int(x), int(y), int(width), int(height)
         )
 
-    def set_blend_constant(self, color: Union[List[float], structs.Color]) -> None:
+    def set_blend_constant(self, color: List[float] | structs.Color) -> None:
         if isinstance(color, dict):
             check_struct("Color", color)
             color = _tuple_from_color(color)
@@ -3733,7 +3733,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         buffer_offset: int,
         data: memoryview,
         data_offset: int = 0,
-        size: Optional[int] = None,
+        size: int | None = None,
     ) -> None:
         # We support anything that memoryview supports, i.e. anything
         # that implements the buffer protocol, including, bytes,
@@ -3807,7 +3807,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         destination: structs.TexelCopyTextureInfo,
         data: memoryview,
         data_layout: structs.TexelCopyBufferLayout,
-        size: Union[List[int], structs.Extent3D],
+        size: List[int] | structs.Extent3D,
     ) -> None:
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.

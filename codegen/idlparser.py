@@ -243,7 +243,7 @@ class IdlParser:
             names = sorted(set(names))
             if len(names) == 1:
                 return names[0]
-            return f"Union[{', '.join(names)}]"
+            return " | ".join(names)
         if name.startswith("Promise<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             # recursive call if there are any of the above situations?
