@@ -232,11 +232,11 @@ class IdlParser:
         ) and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             name = self.resolve_type(name).strip("'")
-            return f"List[{name}]"
+            return f"list[{name}]"
         elif name.startswith("record<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             names = [self.resolve_type(t).strip("'") for t in name.split(",")]
-            return f"Dict[{', '.join(names)}]"
+            return f"dict[{', '.join(names)}]"
         elif " or " in name:
             name = name.strip("()")
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]

@@ -106,14 +106,14 @@ RequestAdapterOptions = Struct(
 )
 
 #: * label :: str = ""
-#: * requiredFeatures :: List[:obj:`enums.FeatureNameEnum <wgpu.enums.FeatureNameEnum>`] = []
-#: * requiredLimits :: Dict[str, None | int] = {}
+#: * requiredFeatures :: list[:obj:`enums.FeatureNameEnum <wgpu.enums.FeatureNameEnum>`] = []
+#: * requiredLimits :: dict[str, None | int] = {}
 #: * defaultQueue :: :obj:`structs.QueueDescriptor <QueueDescriptor>` = {}
 DeviceDescriptor = Struct(
     "DeviceDescriptor",
     label="str",
-    required_features="List[enums.FeatureNameEnum]",
-    required_limits="Dict[str, None | int]",
+    required_features="list[enums.FeatureNameEnum]",
+    required_limits="dict[str, None | int]",
     default_queue="structs.QueueDescriptor",
 )
 
@@ -130,23 +130,23 @@ BufferDescriptor = Struct(
 )
 
 #: * label :: str = ""
-#: * size :: List[int] | :obj:`structs.Extent3D <Extent3D>`
+#: * size :: list[int] | :obj:`structs.Extent3D <Extent3D>`
 #: * mipLevelCount :: int = 1
 #: * sampleCount :: int = 1
 #: * dimension :: :obj:`enums.TextureDimension <wgpu.enums.TextureDimension>` = "2d"
 #: * format :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
 #: * usage :: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>`
-#: * viewFormats :: List[:obj:`enums.TextureFormatEnum <wgpu.enums.TextureFormatEnum>`] = []
+#: * viewFormats :: list[:obj:`enums.TextureFormatEnum <wgpu.enums.TextureFormatEnum>`] = []
 TextureDescriptor = Struct(
     "TextureDescriptor",
     label="str",
-    size="List[int] | structs.Extent3D",
+    size="list[int] | structs.Extent3D",
     mip_level_count="int",
     sample_count="int",
     dimension="enums.TextureDimensionEnum",
     format="enums.TextureFormatEnum",
     usage="flags.TextureUsageFlags",
-    view_formats="List[enums.TextureFormatEnum]",
+    view_formats="list[enums.TextureFormatEnum]",
 )
 
 #: * label :: str = ""
@@ -208,11 +208,11 @@ SamplerDescriptor = Struct(
 )
 
 #: * label :: str = ""
-#: * entries :: List[:obj:`structs.BindGroupLayoutEntry <BindGroupLayoutEntry>`]
+#: * entries :: list[:obj:`structs.BindGroupLayoutEntry <BindGroupLayoutEntry>`]
 BindGroupLayoutDescriptor = Struct(
     "BindGroupLayoutDescriptor",
     label="str",
-    entries="List[structs.BindGroupLayoutEntry]",
+    entries="list[structs.BindGroupLayoutEntry]",
 )
 
 #: * binding :: int
@@ -275,12 +275,12 @@ ExternalTextureBindingLayout = Struct(
 
 #: * label :: str = ""
 #: * layout :: :class:`GPUBindGroupLayout <wgpu.GPUBindGroupLayout>`
-#: * entries :: List[:obj:`structs.BindGroupEntry <BindGroupEntry>`]
+#: * entries :: list[:obj:`structs.BindGroupEntry <BindGroupEntry>`]
 BindGroupDescriptor = Struct(
     "BindGroupDescriptor",
     label="str",
     layout="GPUBindGroupLayout",
-    entries="List[structs.BindGroupEntry]",
+    entries="list[structs.BindGroupEntry]",
 )
 
 #: * binding :: int
@@ -302,21 +302,21 @@ BufferBinding = Struct(
 )
 
 #: * label :: str = ""
-#: * bindGroupLayouts :: List[:class:`GPUBindGroupLayout <wgpu.GPUBindGroupLayout>`]
+#: * bindGroupLayouts :: list[:class:`GPUBindGroupLayout <wgpu.GPUBindGroupLayout>`]
 PipelineLayoutDescriptor = Struct(
     "PipelineLayoutDescriptor",
     label="str",
-    bind_group_layouts="List[GPUBindGroupLayout]",
+    bind_group_layouts="list[GPUBindGroupLayout]",
 )
 
 #: * label :: str = ""
 #: * code :: str
-#: * compilationHints :: List[:obj:`structs.ShaderModuleCompilationHint <ShaderModuleCompilationHint>`] = []
+#: * compilationHints :: list[:obj:`structs.ShaderModuleCompilationHint <ShaderModuleCompilationHint>`] = []
 ShaderModuleDescriptor = Struct(
     "ShaderModuleDescriptor",
     label="str",
     code="str",
-    compilation_hints="List[structs.ShaderModuleCompilationHint]",
+    compilation_hints="list[structs.ShaderModuleCompilationHint]",
 )
 
 #: * entryPoint :: str
@@ -335,12 +335,12 @@ PipelineErrorInit = Struct(
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
 #: * entryPoint :: str
-#: * constants :: Dict[str, float] = {}
+#: * constants :: dict[str, float] = {}
 ProgrammableStage = Struct(
     "ProgrammableStage",
     module="GPUShaderModule",
     entry_point="str",
-    constants="Dict[str, float]",
+    constants="dict[str, float]",
 )
 
 #: * label :: str = ""
@@ -397,14 +397,14 @@ MultisampleState = Struct(
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
 #: * entryPoint :: str
-#: * constants :: Dict[str, float] = {}
-#: * targets :: List[:obj:`structs.ColorTargetState <ColorTargetState>`]
+#: * constants :: dict[str, float] = {}
+#: * targets :: list[:obj:`structs.ColorTargetState <ColorTargetState>`]
 FragmentState = Struct(
     "FragmentState",
     module="GPUShaderModule",
     entry_point="str",
-    constants="Dict[str, float]",
-    targets="List[structs.ColorTargetState]",
+    constants="dict[str, float]",
+    targets="list[structs.ColorTargetState]",
 )
 
 #: * format :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
@@ -473,24 +473,24 @@ StencilFaceState = Struct(
 
 #: * module :: :class:`GPUShaderModule <wgpu.GPUShaderModule>`
 #: * entryPoint :: str
-#: * constants :: Dict[str, float] = {}
-#: * buffers :: List[:obj:`structs.VertexBufferLayout <VertexBufferLayout>`] = []
+#: * constants :: dict[str, float] = {}
+#: * buffers :: list[:obj:`structs.VertexBufferLayout <VertexBufferLayout>`] = []
 VertexState = Struct(
     "VertexState",
     module="GPUShaderModule",
     entry_point="str",
-    constants="Dict[str, float]",
-    buffers="List[structs.VertexBufferLayout]",
+    constants="dict[str, float]",
+    buffers="list[structs.VertexBufferLayout]",
 )
 
 #: * arrayStride :: int
 #: * stepMode :: :obj:`enums.VertexStepMode <wgpu.enums.VertexStepMode>` = "vertex"
-#: * attributes :: List[:obj:`structs.VertexAttribute <VertexAttribute>`]
+#: * attributes :: list[:obj:`structs.VertexAttribute <VertexAttribute>`]
 VertexBufferLayout = Struct(
     "VertexBufferLayout",
     array_stride="int",
     step_mode="enums.VertexStepModeEnum",
-    attributes="List[structs.VertexAttribute]",
+    attributes="list[structs.VertexAttribute]",
 )
 
 #: * format :: :obj:`enums.VertexFormat <wgpu.enums.VertexFormat>`
@@ -527,19 +527,19 @@ TexelCopyBufferInfo = Struct(
 
 #: * texture :: :class:`GPUTexture <wgpu.GPUTexture>`
 #: * mipLevel :: int = 0
-#: * origin :: List[int] | :obj:`structs.Origin3D <Origin3D>` = {}
+#: * origin :: list[int] | :obj:`structs.Origin3D <Origin3D>` = {}
 #: * aspect :: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` = "all"
 TexelCopyTextureInfo = Struct(
     "TexelCopyTextureInfo",
     texture="GPUTexture",
     mip_level="int",
-    origin="List[int] | structs.Origin3D",
+    origin="list[int] | structs.Origin3D",
     aspect="enums.TextureAspectEnum",
 )
 
 #: * texture :: :class:`GPUTexture <wgpu.GPUTexture>`
 #: * mipLevel :: int = 0
-#: * origin :: List[int] | :obj:`structs.Origin3D <Origin3D>` = {}
+#: * origin :: list[int] | :obj:`structs.Origin3D <Origin3D>` = {}
 #: * aspect :: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>` = "all"
 #: * colorSpace :: str = "srgb"
 #: * premultipliedAlpha :: bool = false
@@ -547,19 +547,19 @@ CopyExternalImageDestInfo = Struct(
     "CopyExternalImageDestInfo",
     texture="GPUTexture",
     mip_level="int",
-    origin="List[int] | structs.Origin3D",
+    origin="list[int] | structs.Origin3D",
     aspect="enums.TextureAspectEnum",
     color_space="str",
     premultiplied_alpha="bool",
 )
 
 #: * source :: ArrayLike | object
-#: * origin :: List[int] | :obj:`structs.Origin2D <Origin2D>` = {}
+#: * origin :: list[int] | :obj:`structs.Origin2D <Origin2D>` = {}
 #: * flipY :: bool = false
 CopyExternalImageSourceInfo = Struct(
     "CopyExternalImageSourceInfo",
     source="ArrayLike | object",
-    origin="List[int] | structs.Origin2D",
+    origin="list[int] | structs.Origin2D",
     flip_y="bool",
 )
 
@@ -604,7 +604,7 @@ RenderPassTimestampWrites = Struct(
 )
 
 #: * label :: str = ""
-#: * colorAttachments :: List[:obj:`structs.RenderPassColorAttachment <RenderPassColorAttachment>`]
+#: * colorAttachments :: list[:obj:`structs.RenderPassColorAttachment <RenderPassColorAttachment>`]
 #: * depthStencilAttachment :: :obj:`structs.RenderPassDepthStencilAttachment <RenderPassDepthStencilAttachment>`
 #: * occlusionQuerySet :: :class:`GPUQuerySet <wgpu.GPUQuerySet>`
 #: * timestampWrites :: :obj:`structs.RenderPassTimestampWrites <RenderPassTimestampWrites>`
@@ -612,7 +612,7 @@ RenderPassTimestampWrites = Struct(
 RenderPassDescriptor = Struct(
     "RenderPassDescriptor",
     label="str",
-    color_attachments="List[structs.RenderPassColorAttachment]",
+    color_attachments="list[structs.RenderPassColorAttachment]",
     depth_stencil_attachment="structs.RenderPassDepthStencilAttachment",
     occlusion_query_set="GPUQuerySet",
     timestamp_writes="structs.RenderPassTimestampWrites",
@@ -622,7 +622,7 @@ RenderPassDescriptor = Struct(
 #: * view :: :class:`GPUTexture <wgpu.GPUTexture>` | :class:`GPUTextureView <wgpu.GPUTextureView>`
 #: * depthSlice :: int
 #: * resolveTarget :: :class:`GPUTexture <wgpu.GPUTexture>` | :class:`GPUTextureView <wgpu.GPUTextureView>`
-#: * clearValue :: List[float] | :obj:`structs.Color <Color>`
+#: * clearValue :: list[float] | :obj:`structs.Color <Color>`
 #: * loadOp :: :obj:`enums.LoadOp <wgpu.enums.LoadOp>`
 #: * storeOp :: :obj:`enums.StoreOp <wgpu.enums.StoreOp>`
 RenderPassColorAttachment = Struct(
@@ -630,7 +630,7 @@ RenderPassColorAttachment = Struct(
     view="GPUTexture | GPUTextureView",
     depth_slice="int",
     resolve_target="GPUTexture | GPUTextureView",
-    clear_value="List[float] | structs.Color",
+    clear_value="list[float] | structs.Color",
     load_op="enums.LoadOpEnum",
     store_op="enums.StoreOpEnum",
 )
@@ -658,13 +658,13 @@ RenderPassDepthStencilAttachment = Struct(
 )
 
 #: * label :: str = ""
-#: * colorFormats :: List[:obj:`enums.TextureFormatEnum <wgpu.enums.TextureFormatEnum>`]
+#: * colorFormats :: list[:obj:`enums.TextureFormatEnum <wgpu.enums.TextureFormatEnum>`]
 #: * depthStencilFormat :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
 #: * sampleCount :: int = 1
 RenderPassLayout = Struct(
     "RenderPassLayout",
     label="str",
-    color_formats="List[enums.TextureFormatEnum]",
+    color_formats="list[enums.TextureFormatEnum]",
     depth_stencil_format="enums.TextureFormatEnum",
     sample_count="int",
 )
@@ -676,7 +676,7 @@ RenderBundleDescriptor = Struct(
 )
 
 #: * label :: str = ""
-#: * colorFormats :: List[:obj:`enums.TextureFormatEnum <wgpu.enums.TextureFormatEnum>`]
+#: * colorFormats :: list[:obj:`enums.TextureFormatEnum <wgpu.enums.TextureFormatEnum>`]
 #: * depthStencilFormat :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
 #: * sampleCount :: int = 1
 #: * depthReadOnly :: bool = false
@@ -684,7 +684,7 @@ RenderBundleDescriptor = Struct(
 RenderBundleEncoderDescriptor = Struct(
     "RenderBundleEncoderDescriptor",
     label="str",
-    color_formats="List[enums.TextureFormatEnum]",
+    color_formats="list[enums.TextureFormatEnum]",
     depth_stencil_format="enums.TextureFormatEnum",
     sample_count="int",
     depth_read_only="bool",
@@ -716,7 +716,7 @@ CanvasToneMapping = Struct(
 #: * device :: :class:`GPUDevice <wgpu.GPUDevice>`
 #: * format :: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
 #: * usage :: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>` = 0x10
-#: * viewFormats :: List[:obj:`enums.TextureFormatEnum <wgpu.enums.TextureFormatEnum>`] = []
+#: * viewFormats :: list[:obj:`enums.TextureFormatEnum <wgpu.enums.TextureFormatEnum>`] = []
 #: * colorSpace :: str = "srgb"
 #: * toneMapping :: :obj:`structs.CanvasToneMapping <CanvasToneMapping>` = {}
 #: * alphaMode :: :obj:`enums.CanvasAlphaMode <wgpu.enums.CanvasAlphaMode>` = "opaque"
@@ -725,7 +725,7 @@ CanvasConfiguration = Struct(
     device="GPUDevice",
     format="enums.TextureFormatEnum",
     usage="flags.TextureUsageFlags",
-    view_formats="List[enums.TextureFormatEnum]",
+    view_formats="list[enums.TextureFormatEnum]",
     color_space="str",
     tone_mapping="structs.CanvasToneMapping",
     alpha_mode="enums.CanvasAlphaModeEnum",
