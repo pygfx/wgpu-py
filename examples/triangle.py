@@ -17,15 +17,16 @@ as a script will use the auto-backend.
 
 """
 
-import wgpu
+from typing import Callable
 
+import wgpu
 
 # %% Entrypoints (sync and async)
 
 
 def setup_drawing_sync(
-    canvas, power_preference="high-performance", limits=None, format=None
-):
+    canvas, power_preference="high-performance", limits={}, format=None
+) -> Callable:
     """Setup to draw a triangle on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -42,7 +43,7 @@ def setup_drawing_sync(
     return get_draw_function(canvas, device, render_pipeline, asynchronous=False)
 
 
-async def setup_drawing_async(canvas, limits=None, format=None):
+async def setup_drawing_async(canvas, limits={}, format=None) -> Callable:
     """Setup to async-draw a triangle on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -62,7 +63,7 @@ async def setup_drawing_async(canvas, limits=None, format=None):
 # %% Functions to create wgpu objects
 
 
-def get_render_pipeline_kwargs(canvas, device, render_texture_format):
+def get_render_pipeline_kwargs(canvas, device, render_texture_format) -> dict:
     context = canvas.get_context("wgpu")
     if render_texture_format is None:
         render_texture_format = context.get_preferred_format(device.adapter)
@@ -95,7 +96,7 @@ def get_render_pipeline_kwargs(canvas, device, render_texture_format):
     )
 
 
-def get_draw_function(canvas, device, render_pipeline, *, asynchronous):
+def get_draw_function(canvas, device, render_pipeline, *, asynchronous) -> Callable:
     def draw_frame_sync():
         current_texture = canvas.get_context("wgpu").get_current_texture()
         command_encoder = device.create_command_encoder()
