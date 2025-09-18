@@ -1072,8 +1072,8 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label: str = "",
         required_features: list[enums.FeatureNameEnum] = [],
-        required_limits: dict[str, None | int] = {},
-        default_queue: structs.QueueDescriptor = {},
+        required_limits: dict[str, int | None] = {},
+        default_queue: structs.QueueDescriptorStruct = {},
     ) -> GPUDevice:
         check_can_use_sync_variants()
         if default_queue:
@@ -1088,8 +1088,8 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label: str = "",
         required_features: list[enums.FeatureNameEnum] = [],
-        required_limits: dict[str, None | int] = {},
-        default_queue: structs.QueueDescriptor = {},
+        required_limits: dict[str, int | None] = {},
+        default_queue: structs.QueueDescriptorStruct = {},
     ) -> GPUDevice:
         if default_queue:
             check_struct("QueueDescriptor", default_queue)
@@ -1423,7 +1423,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        size: tuple[int, int, int] | structs.Extent3D,
+        size: tuple[int, int, int] | structs.Extent3DStruct,
         mip_level_count: int = 1,
         sample_count: int = 1,
         dimension: enums.TextureDimensionEnum = "2d",
@@ -1530,7 +1530,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPUSampler(label, id, self)
 
     def create_bind_group_layout(
-        self, *, label: str = "", entries: list[structs.BindGroupLayoutEntry]
+        self, *, label: str = "", entries: list[structs.BindGroupLayoutEntryStruct]
     ) -> GPUBindGroupLayout:
         c_entries_list = []
         for entry in entries:
@@ -1640,7 +1640,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         layout: GPUBindGroupLayout,
-        entries: list[structs.BindGroupEntry],
+        entries: list[structs.BindGroupEntryStruct],
     ) -> GPUBindGroup:
         c_entries_list = []
         for entry in entries:
@@ -1757,7 +1757,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         code: str,
-        compilation_hints: list[structs.ShaderModuleCompilationHint] = [],
+        compilation_hints: list[structs.ShaderModuleCompilationHintStruct] = [],
     ) -> GPUShaderModule:
         if False:
             # Trick the check_struct check in the codegen.
@@ -1853,7 +1853,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
-        compute: structs.ProgrammableStage,
+        compute: structs.ProgrammableStageStruct,
     ) -> GPUComputePipeline:
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
         # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
@@ -1865,7 +1865,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
-        compute: structs.ProgrammableStage,
+        compute: structs.ProgrammableStageStruct,
     ) -> GPUComputePipeline:
         descriptor = self._create_compute_pipeline_descriptor(label, layout, compute)
 
@@ -1952,11 +1952,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
-        vertex: structs.VertexState,
-        primitive: structs.PrimitiveState = {},
-        depth_stencil: structs.DepthStencilState = optional,
-        multisample: structs.MultisampleState = {},
-        fragment: structs.FragmentState = optional,
+        vertex: structs.VertexStateStruct,
+        primitive: structs.PrimitiveStateStruct = {},
+        depth_stencil: structs.DepthStencilStateStruct = optional,
+        multisample: structs.MultisampleStateStruct = {},
+        fragment: structs.FragmentStateStruct = optional,
     ) -> GPURenderPipeline:
         descriptor = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
@@ -1970,11 +1970,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
-        vertex: structs.VertexState,
-        primitive: structs.PrimitiveState = {},
-        depth_stencil: structs.DepthStencilState = optional,
-        multisample: structs.MultisampleState = {},
-        fragment: structs.FragmentState = optional,
+        vertex: structs.VertexStateStruct,
+        primitive: structs.PrimitiveStateStruct = {},
+        depth_stencil: structs.DepthStencilStateStruct = optional,
+        multisample: structs.MultisampleStateStruct = {},
+        fragment: structs.FragmentStateStruct = optional,
     ) -> GPURenderPipeline:
         # TODO: wgpuDeviceCreateRenderPipelineAsync is not yet implemented in wgpu-native
         descriptor = self._create_render_pipeline_descriptor(
@@ -3005,7 +3005,7 @@ class GPUCommandEncoder(
         self,
         *,
         label: str = "",
-        timestamp_writes: structs.ComputePassTimestampWrites = optional,
+        timestamp_writes: structs.ComputePassTimestampWritesStruct = optional,
     ) -> GPUComputePassEncoder:
         c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
@@ -3037,10 +3037,10 @@ class GPUCommandEncoder(
         self,
         *,
         label: str = "",
-        color_attachments: list[structs.RenderPassColorAttachment],
-        depth_stencil_attachment: structs.RenderPassDepthStencilAttachment = optional,
+        color_attachments: list[structs.RenderPassColorAttachmentStruct],
+        depth_stencil_attachment: structs.RenderPassDepthStencilAttachmentStruct = optional,
         occlusion_query_set: GPUQuerySet = optional,
-        timestamp_writes: structs.RenderPassTimestampWrites = optional,
+        timestamp_writes: structs.RenderPassTimestampWritesStruct = optional,
         max_draw_count: int = 50000000,
     ) -> GPURenderPassEncoder:
         c_timestamp_writes_struct = ffi.NULL
@@ -3247,9 +3247,9 @@ class GPUCommandEncoder(
 
     def copy_buffer_to_texture(
         self,
-        source: structs.TexelCopyBufferInfo,
-        destination: structs.TexelCopyTextureInfo,
-        copy_size: tuple[int, int, int] | structs.Extent3D,
+        source: structs.TexelCopyBufferInfoStruct,
+        destination: structs.TexelCopyTextureInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         check_struct("TexelCopyBufferInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
@@ -3313,9 +3313,9 @@ class GPUCommandEncoder(
 
     def copy_texture_to_buffer(
         self,
-        source: structs.TexelCopyTextureInfo,
-        destination: structs.TexelCopyBufferInfo,
-        copy_size: tuple[int, int, int] | structs.Extent3D,
+        source: structs.TexelCopyTextureInfoStruct,
+        destination: structs.TexelCopyBufferInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyBufferInfo", destination)
@@ -3379,9 +3379,9 @@ class GPUCommandEncoder(
 
     def copy_texture_to_texture(
         self,
-        source: structs.TexelCopyTextureInfo,
-        destination: structs.TexelCopyTextureInfo,
-        copy_size: tuple[int, int, int] | structs.Extent3D,
+        source: structs.TexelCopyTextureInfoStruct,
+        destination: structs.TexelCopyTextureInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
@@ -3587,7 +3587,7 @@ class GPURenderPassEncoder(
         )
 
     def set_blend_constant(
-        self, color: tuple[float, float, float, float] | structs.Color
+        self, color: tuple[float, float, float, float] | structs.ColorStruct
     ) -> None:
         if isinstance(color, dict):
             check_struct("Color", color)
@@ -3809,10 +3809,10 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     def write_texture(
         self,
-        destination: structs.TexelCopyTextureInfo,
+        destination: structs.TexelCopyTextureInfoStruct,
         data: ArrayLike,
-        data_layout: structs.TexelCopyBufferLayout,
-        size: tuple[int, int, int] | structs.Extent3D,
+        data_layout: structs.TexelCopyBufferLayoutStruct,
+        size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
