@@ -125,7 +125,9 @@ def new_struct(ctype, **kwargs):
 def _new_struct_p(ctype, **kwargs):
     struct_p = ffi.new(ctype)
     for key, val in kwargs.items():
-        if isinstance(val, str) and isinstance(getattr(struct_p, key), int):
+        if val is None:
+            pass  # None means not-given / null in C
+        elif isinstance(val, str) and isinstance(getattr(struct_p, key), int):
             # An enum - these are ints in C, but str in our public API
             if key in _cstructfield2enum_alt:
                 structname = _cstructfield2enum_alt[key]
@@ -309,11 +311,16 @@ def feature_flag_to_feature_names(flag):
 
 def check_struct(struct_name, d):
     """Check that all keys in the given dict exist in the corresponding struct."""
-    typed_dict = getattr(structs, struct_name)
-    valid_keys = set(typed_dict.__annotations__.keys())
-    invalid_keys = set(d.keys()).difference(valid_keys)
-    if invalid_keys:
-        raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
+    struct_class = getattr(structs, struct_name)
+    if isinstance(d, struct_class):
+        pass  # nice job using a dataclass!
+    elif isinstance(d, dict):
+        valid_keys = set(struct_class.__annotations__.keys())
+        invalid_keys = set(d.keys()).difference(valid_keys)
+        if invalid_keys:
+            raise ValueError(f"Invalid keys in {struct_name}: {invalid_keys}")
+    else:
+        raise TypeError(f"Expecting {struct_name} or dict, but got {d!r}")
 
 
 def _get_limits(id: int, device: bool = False, adapter: bool = False):
