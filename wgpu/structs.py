@@ -1,9 +1,9 @@
 """
-These structs are defined in ``wgpu.structs``.
+These structs are defined in ``wgpu.structs``, but are also available from the root wgpu namespace.
 
 The classes below are dataclasses; they are used for typing, (static and
 dynamic) autocompletion, and docs. The recommended way to use wgpu structs is to
-instantiate these classes, since that results in a code that is more readable
+instantiate these classes, since that results in a code that is readable
 and type-checkable. However, structs can also be defined using plain Python
 dicts. Their fields are checked at runtime.
 """
