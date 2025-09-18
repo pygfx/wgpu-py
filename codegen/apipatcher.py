@@ -701,6 +701,8 @@ class StructValidationChecker(Patcher):
         assert len(all_structs) > 10
 
     def _get_sub_structs(self, idl, structname):
+        if structname.endswith("Struct"):
+            structname = structname[:-6]
         structnames = {structname}
         for attribute in idl.structs[structname].values():
             structname2 = attribute.typename[3:]  # remove "GPU"

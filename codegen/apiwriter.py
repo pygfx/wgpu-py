@@ -118,33 +118,38 @@ def write_structs():
     for name, d in idl.structs.items():
         if name in ignore:
             continue
-        pylines.append(f"class {name}(TypedDict, total=False):")
+        pylines.append(f"@dataclass(kw_only=True)\nclass {name}(Struct):")
         for field in d.values():
             key = to_snake_case(field.name)
             # Get type to include in code
-            code_type = idl.resolve_type(field.typename).strip("'")
-            code_type = code_type.replace("GPU", "classes.GPU").replace("structs.", "")
-            # if field.default or not field.required:  # py3.10; let's use later
-            #     code_type = f"NotRequired[{code_type}]"
+            raw_type = idl.resolve_type(field.typename).strip("'")
+            code_type = raw_type.replace("GPU", "classes.GPU").replace("structs.", "")
             # Get type to include in docs
             docs_type = None
-            if "flags." in code_type or "enums" in code_type:
-                docs_type = code_type.replace("Flags", "").replace("Enum", "")
+            if "flags." in raw_type or "enums" in raw_type:
+                docs_type = raw_type.replace("Flags", "").replace("Enum", "")
                 docs_type = resolve_crossrefs(f" {docs_type} ")
+            # Get default
+            default = field.default
+            if default in ["{}", "[]"]:
+                default = "None"  # no mutable defaults
+                code_type += " | None"
+            elif not default and not field.required:
+                default = "None"
+                if "None" not in code_type:
+                    code_type += " | None"
             # Build docs
             doc = ""
             if docs_type:
                 doc += f"{docs_type.strip()} "
-            if field.default:
-                doc += f"(default {field.default}) "
-            elif not field.required:
-                doc += "(optional) "
+            if default:
+                pylines.append(f"    #: {doc}\n    {key}: {code_type} = {default}")
             else:
-                doc += "(required) "
-            pylines.append(f"    #: {doc}\n    {key}: {code_type}")
+                pylines.append(f"    #: {doc}\n    {key}: {code_type}")
         if len(d) == 0:
             pylines.append("    pass")
         pylines.append("\n")
+        pylines.append(f"{name}Struct = {name} | dict")
 
     # Write
     code = format_code("\n".join(pylines))
