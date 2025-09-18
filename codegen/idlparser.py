@@ -39,12 +39,14 @@ class Attribute:
         self.line = line.strip().strip(",;").strip()
 
         default = None  # None means 'no default' and "None" kinda means "auto".
+        required = False
         arg = self.line
         if "=" in arg:
             arg, default = arg.rsplit("=", 1)
             arg, default = arg.strip(), default.strip()
         arg_type, arg_name = arg.strip().rsplit(" ", 1)
         if arg_type.startswith("required "):
+            required = True
             arg_type = arg_type.split(" ", 1)[1]
             # required args should not have a default
             assert default is None
@@ -52,9 +54,14 @@ class Attribute:
             arg_type = arg_type.split(" ", 1)[1]
             default = default or "None"
 
+        if default:
+            if default in ["false", "true"]:
+                default = default.capitalize()
+
         self.name = arg_name
         self.typename = arg_type
         self.default = default
+        self.required = required
 
     def __repr__(self):
         return f"<Attribute '{self.typename} {self.name}'>"
@@ -240,11 +247,32 @@ class IdlParser:
             names = [self.resolve_type(t).strip("'") for t in name.split(",")]
             return f"dict[{', '.join(names)}]"
         elif " or " in name:
+            # Clean
             name = name.strip("()")
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
-            names = sorted(set(names))
+            names = set(names)  # de-dupe
+            has_none = "None" in names
+            names.discard("None")
+            names = sorted(names)
+            if has_none:
+                names.append("None")
+            # Triage
             if len(names) == 1:
                 return names[0]
+            if (
+                len(names) == 2
+                and names[0] in ("list[int]", "list[float]")
+                and names[1].endswith("Struct")
+                and names[1].startswith(
+                    ("structs.Origin", "structs.Extent", "structs.Color")
+                )
+            ):
+                if names[1].endswith("ColorStruct"):
+                    names[0] = "tuple[float, float, float, float]"
+                elif names[1].endswith("2DStruct"):
+                    names[0] = "tuple[int, int]"
+                elif names[1].endswith("3DStruct"):
+                    names[0] = "tuple[int, int, int]"
             return " | ".join(names)
         if name.startswith("Promise<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
@@ -271,7 +299,7 @@ class IdlParser:
             elif name in self.enums:
                 return f"enums.{name}Enum"
             elif name in self.structs:
-                return f"structs.{name}"
+                return f"structs.{name}Struct"
             else:
                 # When this happens, update the code above or the pythonmap
                 raise RuntimeError("Encountered unknown IDL type: ", name)
