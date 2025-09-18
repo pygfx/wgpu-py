@@ -21,6 +21,8 @@ from . import enums
 
 
 class Struct(Mapping):
+    # By inherting from Mapping, these structs can be used as kwargs, e.g. ``some_method(**struct)``.
+
     def __getitem__(self, key):
         return self.__dict__[key]
 
