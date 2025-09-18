@@ -1542,9 +1542,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         c_entries_list = []
         for entry in entries:
             check_struct("BindGroupLayoutEntry", entry)
-            buffer = sampler = texture = storage_texture = ()
-            if "buffer" in entry:  # Note, it might be an empty dictionary
-                info = entry["buffer"]
+            buffer = entry.get("buffer")
+            sampler = entry.get("sampler")
+            texture = entry.get("texture")
+            storage_texture = entry.get("storage_texture")
+            if buffer is not None:  # Note, it might be an empty dictionary
+                info = buffer
+                sampler = texture = storage_texture = ()
                 check_struct("BufferBindingLayout", info)
                 min_binding_size = info.get("min_binding_size", None)
                 if min_binding_size is None:
@@ -1557,8 +1561,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     hasDynamicOffset=info.get("has_dynamic_offset", False),
                     minBindingSize=min_binding_size,
                 )
-            elif "sampler" in entry:  # It may be an empty dictionary
-                info = entry["sampler"]
+            elif sampler is not None:  # It may be an empty dictionary
+                info = sampler
+                buffer = texture = storage_texture = ()
                 check_struct("SamplerBindingLayout", info)
                 # H: nextInChain: WGPUChainedStruct *, type: WGPUSamplerBindingType
                 sampler = new_struct(
@@ -1566,8 +1571,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     # not used: nextInChain
                     type=info.get("type", "filtering"),
                 )
-            elif "texture" in entry:  # It may be an empty dictionary
-                info = entry["texture"]
+            elif texture is not None:  # It may be an empty dictionary
+                info = texture
+                buffer = sampler = storage_texture = ()
                 check_struct("TextureBindingLayout", info)
                 view_dimension = info.get("view_dimension", "2d")
                 if not isinstance(view_dimension, str):
@@ -1582,8 +1588,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     viewDimension=view_dimension,
                     multisampled=info.get("multisampled", False),
                 )
-            elif "storage_texture" in entry:  # format is required, so not empty
-                info = entry["storage_texture"]
+            elif storage_texture is not None:  # format is required, so not empty
+                info = storage_texture
+                buffer = sampler = texture = ()
                 check_struct("StorageTextureBindingLayout", info)
                 view_dimension = info.get("view_dimension", "2d")
                 if not isinstance(view_dimension, str):
@@ -1678,7 +1685,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     sampler=ffi.NULL,
                     textureView=resource._internal,
                 )
-            elif isinstance(resource, dict):  # Buffer binding
+            elif isinstance(resource, (structs.BufferBinding, dict)):
                 # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
                 c_entry = new_struct(
                     "WGPUBindGroupEntry",
