@@ -25,9 +25,7 @@ ARGS_TO_MAKE_OPTIONAL = {
     ("begin_render_pass", "timestamp_writes"),
     ("begin_render_pass", "depth_stencil_attachment"),
     ("begin_render_pass", "occlusion_query_set"),
-    ("create_render_pipeline", "depth_stencil"),
     ("create_render_pipeline", "fragment"),
-    ("create_render_pipeline_async", "depth_stencil"),
     ("create_render_pipeline_async", "fragment"),
     ("create_render_bundle_encoder", "depth_stencil_format"),
 }
@@ -502,12 +500,14 @@ class IdlPatcherMixin:
         d = attribute.default
         t = self.idl.resolve_type(attribute.typename)
         result = name
-        if (force_optional or optional_in_py) and not d:
+        if not d and not attribute.required:
+            d = "None"
+        elif (force_optional or optional_in_py) and not d:
             d = "optional"
         if t:
             # If default is None, the type won't match, so we need to mark it optional
             result += f": {t}"
-            if d == "None":
+            if d in ("None", "optional"):
                 result += " | None"
         if d:
             d = {"false": "False", "true": "True"}.get(d, d)
