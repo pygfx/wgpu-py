@@ -3199,7 +3199,7 @@ class GPUCommandEncoder(
             *(("stencil_load_op", "stencil_store_op") if not stencil_keys_okay else ()),
         ]
         for key in unexpected_keys:
-            if key in ds_attachment:
+            if ds_attachment.get(key) is not None:
                 if not getattr(self._device, f"warned_about_{key}", False):
                     from wgpu import logger
 
