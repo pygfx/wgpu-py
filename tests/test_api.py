@@ -89,6 +89,12 @@ def test_enums_and_flags_and_structs():
     for field in fields(wgpu.structs.DeviceDescriptor):
         assert field.name in repr(instance)
 
+    # Structs have nice repr
+    r = repr(instance)
+    assert "DeviceDescriptor" in r
+    assert "label" in r
+    assert "required_features: list[enums.FeatureNameEnum] | None = None" in r
+
 
 def test_base_wgpu_api():
     # Fake a device and an adapter

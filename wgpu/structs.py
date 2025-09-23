@@ -23,6 +23,24 @@ from . import enums
 class Struct(Mapping):
     # By inherting from Mapping, these structs can be used as kwargs, e.g. ``some_method(**struct)``.
 
+    def __repr__(self):
+        return self._repr()
+
+    def _repr(self, indent=""):
+        new_indent = indent + "    "
+        lines = [f"wgpu.{self.__class__.__name__}("]
+        for name, type in self.__annotations__.items():
+            if type.startswith(("flags.", "enums.")):
+                type = type.split(".")[-1]
+            val = self[name]
+            if isinstance(val, Struct):
+                valr = val._repr(new_indent)
+            else:
+                valr = repr(val)
+            lines.append(f"{new_indent}{name}: {type} = {valr}")
+        lines.append(f"{indent})")
+        return "\n".join(lines)
+
     def __getitem__(self, key):
         return self.__dict__[key]
 
@@ -111,7 +129,7 @@ __all__ = [
 ]
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RequestAdapterOptions(Struct):
     #:
     feature_level: str = "core"
@@ -126,7 +144,7 @@ class RequestAdapterOptions(Struct):
 RequestAdapterOptionsStruct = RequestAdapterOptions | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class DeviceDescriptor(Struct):
     #:
     label: str = ""
@@ -141,7 +159,7 @@ class DeviceDescriptor(Struct):
 DeviceDescriptorStruct = DeviceDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BufferDescriptor(Struct):
     #:
     label: str = ""
@@ -156,7 +174,7 @@ class BufferDescriptor(Struct):
 BufferDescriptorStruct = BufferDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class TextureDescriptor(Struct):
     #:
     label: str = ""
@@ -179,7 +197,7 @@ class TextureDescriptor(Struct):
 TextureDescriptorStruct = TextureDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class TextureViewDescriptor(Struct):
     #:
     label: str = ""
@@ -204,7 +222,7 @@ class TextureViewDescriptor(Struct):
 TextureViewDescriptorStruct = TextureViewDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ExternalTextureDescriptor(Struct):
     #:
     label: str = ""
@@ -217,7 +235,7 @@ class ExternalTextureDescriptor(Struct):
 ExternalTextureDescriptorStruct = ExternalTextureDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class SamplerDescriptor(Struct):
     #:
     label: str = ""
@@ -246,7 +264,7 @@ class SamplerDescriptor(Struct):
 SamplerDescriptorStruct = SamplerDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BindGroupLayoutDescriptor(Struct):
     #:
     label: str = ""
@@ -257,7 +275,7 @@ class BindGroupLayoutDescriptor(Struct):
 BindGroupLayoutDescriptorStruct = BindGroupLayoutDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BindGroupLayoutEntry(Struct):
     #:
     binding: int
@@ -278,7 +296,7 @@ class BindGroupLayoutEntry(Struct):
 BindGroupLayoutEntryStruct = BindGroupLayoutEntry | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BufferBindingLayout(Struct):
     #: :obj:`enums.BufferBindingType <wgpu.enums.BufferBindingType>`
     type: enums.BufferBindingTypeEnum = "uniform"
@@ -291,7 +309,7 @@ class BufferBindingLayout(Struct):
 BufferBindingLayoutStruct = BufferBindingLayout | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class SamplerBindingLayout(Struct):
     #: :obj:`enums.SamplerBindingType <wgpu.enums.SamplerBindingType>`
     type: enums.SamplerBindingTypeEnum = "filtering"
@@ -300,7 +318,7 @@ class SamplerBindingLayout(Struct):
 SamplerBindingLayoutStruct = SamplerBindingLayout | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class TextureBindingLayout(Struct):
     #: :obj:`enums.TextureSampleType <wgpu.enums.TextureSampleType>`
     sample_type: enums.TextureSampleTypeEnum = "float"
@@ -313,7 +331,7 @@ class TextureBindingLayout(Struct):
 TextureBindingLayoutStruct = TextureBindingLayout | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class StorageTextureBindingLayout(Struct):
     #: :obj:`enums.StorageTextureAccess <wgpu.enums.StorageTextureAccess>`
     access: enums.StorageTextureAccessEnum = "write-only"
@@ -326,7 +344,7 @@ class StorageTextureBindingLayout(Struct):
 StorageTextureBindingLayoutStruct = StorageTextureBindingLayout | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ExternalTextureBindingLayout(Struct):
     pass
 
@@ -334,7 +352,7 @@ class ExternalTextureBindingLayout(Struct):
 ExternalTextureBindingLayoutStruct = ExternalTextureBindingLayout | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BindGroupDescriptor(Struct):
     #:
     label: str = ""
@@ -347,7 +365,7 @@ class BindGroupDescriptor(Struct):
 BindGroupDescriptorStruct = BindGroupDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BindGroupEntry(Struct):
     #:
     binding: int
@@ -365,7 +383,7 @@ class BindGroupEntry(Struct):
 BindGroupEntryStruct = BindGroupEntry | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BufferBinding(Struct):
     #:
     buffer: classes.GPUBuffer
@@ -378,7 +396,7 @@ class BufferBinding(Struct):
 BufferBindingStruct = BufferBinding | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class PipelineLayoutDescriptor(Struct):
     #:
     label: str = ""
@@ -389,7 +407,7 @@ class PipelineLayoutDescriptor(Struct):
 PipelineLayoutDescriptorStruct = PipelineLayoutDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ShaderModuleDescriptor(Struct):
     #:
     label: str = ""
@@ -402,7 +420,7 @@ class ShaderModuleDescriptor(Struct):
 ShaderModuleDescriptorStruct = ShaderModuleDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ShaderModuleCompilationHint(Struct):
     #:
     entry_point: str
@@ -413,7 +431,7 @@ class ShaderModuleCompilationHint(Struct):
 ShaderModuleCompilationHintStruct = ShaderModuleCompilationHint | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class PipelineErrorInit(Struct):
     #: :obj:`enums.PipelineErrorReason <wgpu.enums.PipelineErrorReason>`
     reason: enums.PipelineErrorReasonEnum
@@ -422,7 +440,7 @@ class PipelineErrorInit(Struct):
 PipelineErrorInitStruct = PipelineErrorInit | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ProgrammableStage(Struct):
     #:
     module: classes.GPUShaderModule
@@ -435,7 +453,7 @@ class ProgrammableStage(Struct):
 ProgrammableStageStruct = ProgrammableStage | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ComputePipelineDescriptor(Struct):
     #:
     label: str = ""
@@ -448,7 +466,7 @@ class ComputePipelineDescriptor(Struct):
 ComputePipelineDescriptorStruct = ComputePipelineDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RenderPipelineDescriptor(Struct):
     #:
     label: str = ""
@@ -469,7 +487,7 @@ class RenderPipelineDescriptor(Struct):
 RenderPipelineDescriptorStruct = RenderPipelineDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class PrimitiveState(Struct):
     #: :obj:`enums.PrimitiveTopology <wgpu.enums.PrimitiveTopology>`
     topology: enums.PrimitiveTopologyEnum = "triangle-list"
@@ -486,7 +504,7 @@ class PrimitiveState(Struct):
 PrimitiveStateStruct = PrimitiveState | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class MultisampleState(Struct):
     #:
     count: int = 1
@@ -499,7 +517,7 @@ class MultisampleState(Struct):
 MultisampleStateStruct = MultisampleState | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class FragmentState(Struct):
     #:
     module: classes.GPUShaderModule
@@ -514,7 +532,7 @@ class FragmentState(Struct):
 FragmentStateStruct = FragmentState | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ColorTargetState(Struct):
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     format: enums.TextureFormatEnum
@@ -527,7 +545,7 @@ class ColorTargetState(Struct):
 ColorTargetStateStruct = ColorTargetState | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BlendState(Struct):
     #:
     color: BlendComponentStruct
@@ -538,7 +556,7 @@ class BlendState(Struct):
 BlendStateStruct = BlendState | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class BlendComponent(Struct):
     #: :obj:`enums.BlendOperation <wgpu.enums.BlendOperation>`
     operation: enums.BlendOperationEnum = "add"
@@ -551,7 +569,7 @@ class BlendComponent(Struct):
 BlendComponentStruct = BlendComponent | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class DepthStencilState(Struct):
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     format: enums.TextureFormatEnum
@@ -578,7 +596,7 @@ class DepthStencilState(Struct):
 DepthStencilStateStruct = DepthStencilState | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class StencilFaceState(Struct):
     #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>`
     compare: enums.CompareFunctionEnum = "always"
@@ -593,7 +611,7 @@ class StencilFaceState(Struct):
 StencilFaceStateStruct = StencilFaceState | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class VertexState(Struct):
     #:
     module: classes.GPUShaderModule
@@ -608,7 +626,7 @@ class VertexState(Struct):
 VertexStateStruct = VertexState | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class VertexBufferLayout(Struct):
     #:
     array_stride: int
@@ -621,7 +639,7 @@ class VertexBufferLayout(Struct):
 VertexBufferLayoutStruct = VertexBufferLayout | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class VertexAttribute(Struct):
     #: :obj:`enums.VertexFormat <wgpu.enums.VertexFormat>`
     format: enums.VertexFormatEnum
@@ -634,7 +652,7 @@ class VertexAttribute(Struct):
 VertexAttributeStruct = VertexAttribute | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class TexelCopyBufferLayout(Struct):
     #:
     offset: int = 0
@@ -647,7 +665,7 @@ class TexelCopyBufferLayout(Struct):
 TexelCopyBufferLayoutStruct = TexelCopyBufferLayout | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class TexelCopyBufferInfo(Struct):
     #:
     offset: int = 0
@@ -662,7 +680,7 @@ class TexelCopyBufferInfo(Struct):
 TexelCopyBufferInfoStruct = TexelCopyBufferInfo | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class TexelCopyTextureInfo(Struct):
     #:
     texture: classes.GPUTexture
@@ -677,7 +695,7 @@ class TexelCopyTextureInfo(Struct):
 TexelCopyTextureInfoStruct = TexelCopyTextureInfo | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class CopyExternalImageDestInfo(Struct):
     #:
     texture: classes.GPUTexture
@@ -696,7 +714,7 @@ class CopyExternalImageDestInfo(Struct):
 CopyExternalImageDestInfoStruct = CopyExternalImageDestInfo | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class CopyExternalImageSourceInfo(Struct):
     #:
     source: ArrayLike | CanvasLike | object
@@ -709,7 +727,7 @@ class CopyExternalImageSourceInfo(Struct):
 CopyExternalImageSourceInfoStruct = CopyExternalImageSourceInfo | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class CommandBufferDescriptor(Struct):
     #:
     label: str = ""
@@ -718,7 +736,7 @@ class CommandBufferDescriptor(Struct):
 CommandBufferDescriptorStruct = CommandBufferDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class CommandEncoderDescriptor(Struct):
     #:
     label: str = ""
@@ -727,7 +745,7 @@ class CommandEncoderDescriptor(Struct):
 CommandEncoderDescriptorStruct = CommandEncoderDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ComputePassTimestampWrites(Struct):
     #:
     query_set: classes.GPUQuerySet
@@ -740,7 +758,7 @@ class ComputePassTimestampWrites(Struct):
 ComputePassTimestampWritesStruct = ComputePassTimestampWrites | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class ComputePassDescriptor(Struct):
     #:
     label: str = ""
@@ -751,7 +769,7 @@ class ComputePassDescriptor(Struct):
 ComputePassDescriptorStruct = ComputePassDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RenderPassTimestampWrites(Struct):
     #:
     query_set: classes.GPUQuerySet
@@ -764,7 +782,7 @@ class RenderPassTimestampWrites(Struct):
 RenderPassTimestampWritesStruct = RenderPassTimestampWrites | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RenderPassDescriptor(Struct):
     #:
     label: str = ""
@@ -783,7 +801,7 @@ class RenderPassDescriptor(Struct):
 RenderPassDescriptorStruct = RenderPassDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RenderPassColorAttachment(Struct):
     #:
     view: classes.GPUTexture | classes.GPUTextureView
@@ -802,7 +820,7 @@ class RenderPassColorAttachment(Struct):
 RenderPassColorAttachmentStruct = RenderPassColorAttachment | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RenderPassDepthStencilAttachment(Struct):
     #:
     view: classes.GPUTexture | classes.GPUTextureView
@@ -827,7 +845,7 @@ class RenderPassDepthStencilAttachment(Struct):
 RenderPassDepthStencilAttachmentStruct = RenderPassDepthStencilAttachment | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RenderPassLayout(Struct):
     #:
     label: str = ""
@@ -842,7 +860,7 @@ class RenderPassLayout(Struct):
 RenderPassLayoutStruct = RenderPassLayout | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RenderBundleDescriptor(Struct):
     #:
     label: str = ""
@@ -851,7 +869,7 @@ class RenderBundleDescriptor(Struct):
 RenderBundleDescriptorStruct = RenderBundleDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class RenderBundleEncoderDescriptor(Struct):
     #:
     label: str = ""
@@ -870,7 +888,7 @@ class RenderBundleEncoderDescriptor(Struct):
 RenderBundleEncoderDescriptorStruct = RenderBundleEncoderDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class QueueDescriptor(Struct):
     #:
     label: str = ""
@@ -879,7 +897,7 @@ class QueueDescriptor(Struct):
 QueueDescriptorStruct = QueueDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class QuerySetDescriptor(Struct):
     #:
     label: str = ""
@@ -892,7 +910,7 @@ class QuerySetDescriptor(Struct):
 QuerySetDescriptorStruct = QuerySetDescriptor | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class CanvasToneMapping(Struct):
     #: :obj:`enums.CanvasToneMappingMode <wgpu.enums.CanvasToneMappingMode>`
     mode: enums.CanvasToneMappingModeEnum = "standard"
@@ -901,7 +919,7 @@ class CanvasToneMapping(Struct):
 CanvasToneMappingStruct = CanvasToneMapping | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class CanvasConfiguration(Struct):
     #:
     device: classes.GPUDevice
@@ -922,7 +940,7 @@ class CanvasConfiguration(Struct):
 CanvasConfigurationStruct = CanvasConfiguration | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class UncapturedErrorEventInit(Struct):
     #:
     error: classes.GPUError
@@ -931,7 +949,7 @@ class UncapturedErrorEventInit(Struct):
 UncapturedErrorEventInitStruct = UncapturedErrorEventInit | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class Color(Struct):
     #:
     r: float
@@ -946,7 +964,7 @@ class Color(Struct):
 ColorStruct = Color | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class Origin2D(Struct):
     #:
     x: int = 0
@@ -957,7 +975,7 @@ class Origin2D(Struct):
 Origin2DStruct = Origin2D | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class Origin3D(Struct):
     #:
     x: int = 0
@@ -970,7 +988,7 @@ class Origin3D(Struct):
 Origin3DStruct = Origin3D | dict
 
 
-@dataclass(kw_only=True)
+@dataclass(kw_only=True, repr=False)
 class Extent3D(Struct):
     #:
     width: int

@@ -118,7 +118,7 @@ def write_structs():
     for name, d in idl.structs.items():
         if name in ignore:
             continue
-        pylines.append(f"@dataclass(kw_only=True)\nclass {name}(Struct):")
+        pylines.append(f"@dataclass(kw_only=True, repr=False)\nclass {name}(Struct):")
         for field in d.values():
             key = to_snake_case(field.name)
             # Get type to include in code
