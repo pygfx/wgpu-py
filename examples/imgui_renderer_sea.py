@@ -304,7 +304,6 @@ app_state = {
 
 
 def gui(app_state):
-    imgui.new_frame()
     imgui.set_next_window_pos((0, 0), imgui.Cond_.appearing)
     imgui.set_next_window_size((400, 0), imgui.Cond_.appearing)
     imgui.begin("Shader parameters", None)
@@ -333,9 +332,6 @@ def gui(app_state):
     )
 
     imgui.end()
-    imgui.end_frame()
-    imgui.render()
-    return imgui.get_draw_data()
 
 
 global_time = time.perf_counter()

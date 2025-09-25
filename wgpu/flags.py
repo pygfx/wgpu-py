@@ -1,9 +1,8 @@
 """
 These flags are defined in ``wgpu.flags``, but are also available from the root wgpu namespace.
 
-Flags are bitmasks; zero or multiple fields can be set at the same time.
-Flags are integer bitmasks, but can also be passed as strings, so instead of
-``wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST``,
+Flags are integer bitmasks; zero or multiple fields can be set at the same time.
+They can also be passed as strings, so instead of ``wgpu.BufferUsage.MAP_READ | wgpu.BufferUsage.COPY_DST``,
 one can also write ``"MAP_READ|COPY_DIST"``.
 """
 
@@ -30,6 +29,9 @@ __all__ = [
 ]
 
 
+BufferUsageFlags = int | str
+
+
 class BufferUsage(Flags):
     MAP_READ = 1
     MAP_WRITE = 2
@@ -43,9 +45,15 @@ class BufferUsage(Flags):
     QUERY_RESOLVE = 512
 
 
+MapModeFlags = int | str
+
+
 class MapMode(Flags):
     READ = 1
     WRITE = 2
+
+
+TextureUsageFlags = int | str
 
 
 class TextureUsage(Flags):
@@ -56,10 +64,16 @@ class TextureUsage(Flags):
     RENDER_ATTACHMENT = 16
 
 
+ShaderStageFlags = int | str
+
+
 class ShaderStage(Flags):
     VERTEX = 1
     FRAGMENT = 2
     COMPUTE = 4
+
+
+ColorWriteFlags = int | str
 
 
 class ColorWrite(Flags):

@@ -175,7 +175,7 @@ class IdlParser:
                     lines.append(line)
         return "\n".join(lines)
 
-    def resolve_type(self, typename):
+    def resolve_type(self, typename) -> str:
         """Resolve a type to a suitable name that is also valid so that the linter
         won't complain when this is used as a type annotation.
         """
@@ -211,18 +211,20 @@ class IdlParser:
             "double": "float",
             "boolean": "bool",
             "object": "dict",
-            "ImageBitmap": "memoryview",
-            "ImageData": "memoryview",
-            "VideoFrame": "memoryview",
-            "AllowSharedBufferSource": "memoryview",
+            "ImageBitmap": "ArrayLike",
+            "ImageData": "ArrayLike",
+            "VideoFrame": "ArrayLike",
+            "AllowSharedBufferSource": "ArrayLike",
             "GPUPipelineConstantValue": "float",
             "GPUExternalTexture": "object",
             "undefined": "None",
-            "ArrayBuffer": "memoryview",
+            "ArrayBuffer": "ArrayLike",
             "WGSLLanguageFeatures": "set",
             "GPUSupportedFeatures": "set",
             "GPUSupportedLimits": "dict",
             "EventHandler": "None",
+            "HTMLCanvasElement": "CanvasLike",
+            "OffscreenCanvas": "CanvasLike",
         }
         name = pythonmap.get(name, name)
 
@@ -232,18 +234,18 @@ class IdlParser:
         ) and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             name = self.resolve_type(name).strip("'")
-            return f"List[{name}]"
+            return f"list[{name}]"
         elif name.startswith("record<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             names = [self.resolve_type(t).strip("'") for t in name.split(",")]
-            return f"Dict[{', '.join(names)}]"
+            return f"dict[{', '.join(names)}]"
         elif " or " in name:
             name = name.strip("()")
             names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
             names = sorted(set(names))
             if len(names) == 1:
                 return names[0]
-            return f"Union[{', '.join(names)}]"
+            return " | ".join(names)
         if name.startswith("Promise<") and name.endswith(">"):
             name = name.split("<")[-1].rstrip(">")
             # recursive call if there are any of the above situations?
@@ -252,12 +254,12 @@ class IdlParser:
         # Triage
         if name in __builtins__:
             return name  # ok
+        elif name in ["ArrayLike", "CanvasLike"]:
+            return name  # virtual types
         elif name in self.classes:
             return name
         elif name.startswith("HTML"):
             return "object"  # anything, we ignore this stuff anyway
-        elif name in ["OffscreenCanvas"]:
-            return "object"
         elif name in ["PredefinedColorSpace"]:
             return "str"
         else:
@@ -265,9 +267,9 @@ class IdlParser:
             name = name[3:]
             name = name[:-4] if name.endswith("Dict") else name
             if name in self.flags:
-                return f"flags.{name}"
+                return f"flags.{name}Flags"
             elif name in self.enums:
-                return f"enums.{name}"
+                return f"enums.{name}Enum"
             elif name in self.structs:
                 return f"structs.{name}"
             else:

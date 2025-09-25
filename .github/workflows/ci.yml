@@ -73,12 +73,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
     - name: Test imports
-      env:
-        WGPU_FORCE_OFFSCREEN: true
       run: |
           python -c "print('wgpu'); import wgpu; print(wgpu)"
           python -c "print('wgpu.backends.wgpu_native'); import wgpu.backends.wgpu_native"
-          python -c "print('wgpu.gui.offscreen'); import wgpu.gui.offscreen"
           python -c "print('wgpu.utils'); import wgpu.utils"
 
   docs-build:
@@ -144,7 +141,7 @@ jobs:
       run: |
           python -m pip install --upgrade pip
           pip install -U .
-          pip install -U pytest numpy psutil pyinstaller glfw
+          pip install -U pytest numpy psutil pyinstaller
     - name: Test PyInstaller
       run: |
           pushd $HOME
@@ -159,9 +156,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Test Linux py39
-            os: ubuntu-latest
-            pyversion: '3.9'
           - name: Test Linux py310
             os: ubuntu-latest
             pyversion: '3.10'

@@ -38,16 +38,19 @@ def test_release_canvas_context(n):
     # Texture and a TextureView), but these are released in present(),
     # so we don't see them in the counts.
 
-    from wgpu.gui.glfw import WgpuCanvas, poll_glfw_briefly
+    from rendercanvas.glfw import RenderCanvas, poll_glfw_briefly
 
     yield {
+        "expected_counts_after_create": {
+            "CanvasContext": (n, 0),
+        },
         "ignore": {"CommandBuffer"},
     }
 
     canvases = weakref.WeakSet()
 
     for i in range(n):
-        c = WgpuCanvas()
+        c = RenderCanvas()
         canvases.add(c)
         c.request_draw(make_draw_func_for_canvas(c))
         loop.run_until_complete(stub_event_loop())

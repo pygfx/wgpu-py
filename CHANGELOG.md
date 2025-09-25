@@ -17,6 +17,46 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.24.0] - 15-09-2025
+
+Changed:
+
+* Backwards incomatible changes to the imgui version and adapter:
+  * Update imgui to v1.92 by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/725.
+  * Fix ImguiRenderer and simplify gui callback function by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/730
+
+Deprecated:
+
+* Remove wgpu.gui canvases by @almarklein in https://github.com/pygfx/wgpu-py/pull/735
+  * For now, the ``from wgpu.gui.auto import WgpuCavas`` is still supported, but returns a ``rendercanvas.RenderCanvas``.
+
+Other:
+
+* Bump wgpu native to 25.0.2.2 by @Vipitis in https://github.com/pygfx/wgpu-py/pull/740
+* Remove additional call to `._release` by @Vipitis in https://github.com/pygfx/wgpu-py/pull/732
+* Update _version.py by @almarklein in https://github.com/pygfx/wgpu-py/pull/733
+* Switch to trusted publishing for PyPI publish in CI by @EpicWink in https://github.com/pygfx/wgpu-py/pull/738
+
+
+### [v0.23.0] - 11-07-2025
+
+Added:
+
+* New `wgpu.backends.wgpu_native.extra.set_instance_extras()` function to enable additional debug features and using Dxc
+
+Changed:
+
+* Updated to wgpu-native v25.0.2.1
+
+Fixed:
+
+* Some native only features with Dx12 backend no longer crash, but can still produce incorrect numbers for push constants and indirect draws. Other backends work as expected, fixes are expected in v26 upstream.
+
+Other:
+
+* Examples are updated to use `rendercanvas`.
+
+
 ### [v0.22.2] - 16-05-2025
 
 Added:

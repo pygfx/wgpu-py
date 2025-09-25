@@ -1,15 +1,14 @@
 script = """
 # The script part
 import sys
-import wgpu
 import importlib
+import wgpu
 
 # The test part
 if "is_test" in sys.argv:
     included_modules = [
         "wgpu.backends.auto",
         "wgpu.backends.wgpu_native",
-        "wgpu.gui.glfw",
     ]
     excluded_modules = [
         "PySide6",

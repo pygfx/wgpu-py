@@ -34,14 +34,14 @@ mappings_preamble = '''
 def compare_flags():
     """For each flag in WebGPU:
 
-    * Verify that there is a corresponding flag in wgpu.h
+    * Verify that there is a corresponding flag in webgpu.h/wgpu.h
     * Verify that all fields are present too.
     * Verify that the (integer) value is equal.
 
     """
 
     idl = get_idl_parser()
-    hp = get_h_parser()
+    hp = get_h_parser()  # gets both headerfiles!
 
     name_map = {
         "ColorWrite": "ColorWriteMask",
@@ -50,13 +50,13 @@ def compare_flags():
     for name, flag in idl.flags.items():
         name = name_map.get(name, name)
         if name not in hp.flags:
-            print(f"Flag {name} missing in wgpu.h")
+            print(f"Flag {name} missing in webgpu.h/wgpu.h")
         else:
             for key, val in flag.items():
                 key = key.title().replace("_", "")  # MAP_READ -> MapRead
                 key = name_map.get(f"{name}.{key}") or key
                 if key not in hp.flags[name]:
-                    print(f"Flag field {name}.{key} missing in wgpu.h")
+                    print(f"Flag field {name}.{key} missing in webgpu.h/wgpu.h")
                 elif val != hp.flags[name][key]:
                     print(f"Warning: Flag field {name}.{key} have different values.")
 
@@ -70,6 +70,7 @@ def write_mappings():
     idl = get_idl_parser()
     hp = get_h_parser()
 
+    # These maps are empty and thus not used, since no name mapping is (currently) necessary.
     name_map = {}
     name_map_i = {v: k for k, v in name_map.items()}
 
@@ -82,7 +83,7 @@ def write_mappings():
     for name in idl.enums:
         hname = name_map.get(name, name)
         if hname not in hp.enums:
-            print(f"Enum {hname} missing in wgpu.h")
+            print(f"Enum {hname} missing in webgpu.h/wgpu.h")
             continue
         hp_enum = {key.lower(): val for key, val in hp.enums[hname].items()}
         for ikey in idl.enums[name].values():
@@ -91,7 +92,7 @@ def write_mappings():
             if hkey in hp_enum:
                 enummap[name + "." + ikey] = hp_enum[hkey]
             else:
-                print(f"Enum field {name}.{ikey} missing in wgpu.h")
+                print(f"Enum field {name}.{ikey} missing in webgpu.h/wgpu.h")
 
     # Write enummap
     pylines.append(f"# There are {len(enummap)} enum mappings\n")
@@ -126,6 +127,7 @@ def write_mappings():
         ("BackendType", False),
         ("NativeFeature", True),
         ("PipelineStatisticName", True),
+        ("Dx12Compiler", False),
     ):
         pylines.append(f'    "{name}":' + " {")
         for key, val in hp.enums[name].items():
@@ -167,6 +169,20 @@ def write_mappings():
             pylines.append(f'        {val}: "{enum_val}",')
         pylines.append("    },")
     pylines.append("}")
+    pylines.append("")
+
+    # Write a few native-only flags
+    pylines.append("native_flags = {")
+    for name in [
+        "InstanceBackend",
+        "InstanceFlag",
+    ]:
+        for key, val in hp.flags[name].items():
+            if key == "Force32":
+                continue
+            pylines.append(f'    "{name}.{key}": {val},')
+    pylines.append("}")
+    pylines.append("")
 
     # Wrap up
     code = format_code("\n".join(pylines))
@@ -182,8 +198,8 @@ def patch_wgpu_native_backend(code):
 
     For functions:
 
-    * Verify that the function exists in wgpu.h. If not, add a fixme comment.
-    * Add a comment showing corresponding signature from wgpu.h.
+    * Verify that the function exists in webgpu.h/wgpu.h. If not, add a fixme comment.
+    * Add a comment showing corresponding signature from webgpu.h/wgpu.h.
 
     For structs:
 

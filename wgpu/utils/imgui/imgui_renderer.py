@@ -64,9 +64,7 @@ class ImguiRenderer:
             "Meta": imgui.Key.im_gui_mod_super,
         }
 
-    def __init__(
-        self, device, canvas: wgpu.gui.WgpuCanvasBase, render_target_format=None
-    ):
+    def __init__(self, device, canvas, render_target_format=None):
         # Prepare present context
         self._canvas_context = canvas.get_context("wgpu")
 
@@ -115,8 +113,7 @@ class ImguiRenderer:
         Arguments
         ---------
         gui_updater: callable
-            GUI update function, must return imgui.ImDrawData: the draw data to
-            render, this is usually obtained by calling ``imgui.get_draw_data()``
+            GUI update function.
 
         Returns
         -------
@@ -146,7 +143,6 @@ class ImguiRenderer:
             )
 
         imgui.set_current_context(self.imgui_context)
-        draw_data = self._update_gui_function()
 
         pixel_ratio = self._canvas_context.canvas.get_pixel_ratio()
         lsize = self._canvas_context.canvas.get_logical_size()
@@ -166,6 +162,14 @@ class ImguiRenderer:
                 }
             ],
         )
+
+        imgui.new_frame()
+        try:
+            self._update_gui_function()
+        finally:
+            imgui.render()
+        draw_data = imgui.get_draw_data()
+
         self._backend.render(draw_data, render_pass)
         render_pass.end()
         self._backend._device.queue.submit([command_encoder.finish()])

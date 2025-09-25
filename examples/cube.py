@@ -11,9 +11,11 @@ as a script will use the auto-backend.
 # test_example = true
 
 import time
+from typing import Callable
 
 import wgpu
 import numpy as np
+
 
 from rendercanvas.auto import RenderCanvas, loop
 
@@ -21,7 +23,9 @@ from rendercanvas.auto import RenderCanvas, loop
 # %% Entrypoints (sync and async)
 
 
-def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+def setup_drawing_sync(
+    canvas, power_preference="high-performance", limits: dict = {}
+) -> Callable:
     """Setup to draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -41,7 +45,7 @@ def setup_drawing_sync(canvas, power_preference="high-performance", limits=None)
     )
 
 
-async def setup_drawing_async(canvas, limits=None):
+async def setup_drawing_async(canvas, limits: dict = {}):
     """Setup to async-draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -64,7 +68,9 @@ async def setup_drawing_async(canvas, limits=None):
 # %% Functions to create wgpu objects
 
 
-def get_render_pipeline_kwargs(canvas, device, pipeline_layout):
+def get_render_pipeline_kwargs(
+    canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
+) -> dict:
     context = canvas.get_context("wgpu")
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
@@ -118,7 +124,7 @@ def get_render_pipeline_kwargs(canvas, device, pipeline_layout):
     )
 
 
-def create_pipeline_layout(device):
+def create_pipeline_layout(device: wgpu.GPUDevice):
     # Create uniform buffer - data is uploaded each frame
     uniform_buffer = device.create_buffer(
         size=uniform_data.nbytes,
@@ -204,7 +210,9 @@ def create_pipeline_layout(device):
     bind_group_layouts = []
     bind_groups = []
 
-    for entries, layout_entries in zip(bind_groups_entries, bind_groups_layout_entries):
+    for entries, layout_entries in zip(
+        bind_groups_entries, bind_groups_layout_entries, strict=False
+    ):
         bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
         bind_group_layouts.append(bind_group_layout)
         bind_groups.append(
@@ -219,7 +227,13 @@ def create_pipeline_layout(device):
 
 
 def get_draw_function(
-    canvas, device, render_pipeline, uniform_buffer, bind_groups, *, asynchronous
+    canvas,
+    device: wgpu.GPUDevice,
+    render_pipeline: wgpu.GPURenderPipeline,
+    uniform_buffer: wgpu.GPUBuffer,
+    bind_groups,
+    *,
+    asynchronous,
 ):
     # Create vertex buffer, and upload data
     vertex_buffer = device.create_buffer_with_data(
@@ -453,7 +467,6 @@ texture_size = texture_data.shape[1], texture_data.shape[0], 1
 # Use numpy to create a struct for the uniform
 uniform_dtype = [("transform", "float32", (4, 4))]
 uniform_data = np.zeros((), dtype=uniform_dtype)
-
 
 print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():
