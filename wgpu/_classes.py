@@ -311,7 +311,7 @@ class GPUCanvasContext:
         usage: flags.TextureUsageFlags = 0x10,
         view_formats: list[enums.TextureFormatEnum] = [],
         color_space: str = "srgb",
-        tone_mapping: structs.CanvasToneMappingStruct = {},
+        tone_mapping: structs.CanvasToneMappingStruct | None = None,
         alpha_mode: enums.CanvasAlphaModeEnum = "opaque",
     ) -> None:
         """Configures the presentation context for the associated canvas.
@@ -657,8 +657,8 @@ class GPUAdapter:
         *,
         label: str = "",
         required_features: list[enums.FeatureNameEnum] = [],
-        required_limits: dict[str, int | None] = {},
-        default_queue: structs.QueueDescriptorStruct = {},
+        required_limits: dict[str, int | None] | None = None,
+        default_queue: structs.QueueDescriptorStruct | None = None,
     ) -> GPUDevice:
         """Sync version of `request_device_async()`.
 
@@ -672,8 +672,8 @@ class GPUAdapter:
         *,
         label: str = "",
         required_features: list[enums.FeatureNameEnum] = [],
-        required_limits: dict[str, int | None] = {},
-        default_queue: structs.QueueDescriptorStruct = {},
+        required_limits: dict[str, int | None] | None = None,
+        default_queue: structs.QueueDescriptorStruct | None = None,
     ) -> GPUDevice:
         """Request a `GPUDevice` from the adapter.
 
@@ -1132,9 +1132,9 @@ class GPUDevice(GPUObjectBase):
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexStateStruct,
-        primitive: structs.PrimitiveStateStruct = {},
+        primitive: structs.PrimitiveStateStruct | None = None,
         depth_stencil: structs.DepthStencilStateStruct | None = None,
-        multisample: structs.MultisampleStateStruct = {},
+        multisample: structs.MultisampleStateStruct | None = None,
         fragment: structs.FragmentStateStruct | None = None,
     ) -> GPURenderPipeline:
         """Create a `GPURenderPipeline` object.
@@ -1276,9 +1276,9 @@ class GPUDevice(GPUObjectBase):
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexStateStruct,
-        primitive: structs.PrimitiveStateStruct = {},
+        primitive: structs.PrimitiveStateStruct | None = None,
         depth_stencil: structs.DepthStencilStateStruct | None = None,
-        multisample: structs.MultisampleStateStruct = {},
+        multisample: structs.MultisampleStateStruct | None = None,
         fragment: structs.FragmentStateStruct | None = None,
     ) -> GPURenderPipeline:
         """Async version of `create_render_pipeline()`.

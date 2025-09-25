@@ -504,6 +504,8 @@ class IdlPatcherMixin:
             d = "None"
         elif (force_optional or optional_in_py) and not d:
             d = "optional"
+        elif d == "{}":
+            d = "None"
         if t:
             # If default is None, the type won't match, so we need to mark it optional
             result += f": {t}"

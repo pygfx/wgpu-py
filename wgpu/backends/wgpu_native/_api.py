@@ -1079,12 +1079,15 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label: str = "",
         required_features: list[enums.FeatureNameEnum] = [],
-        required_limits: dict[str, int | None] = {},
-        default_queue: structs.QueueDescriptorStruct = {},
+        required_limits: dict[str, int | None] | None = None,
+        default_queue: structs.QueueDescriptorStruct | None = None,
     ) -> GPUDevice:
         check_can_use_sync_variants()
+        required_limits = {} if required_limits is None else required_limits
         if default_queue:
             check_struct("QueueDescriptor", default_queue)
+        else:
+            default_queue = {}
         awaitable = self._request_device(
             label, required_features, required_limits, default_queue, ""
         )
@@ -1095,9 +1098,10 @@ class GPUAdapter(classes.GPUAdapter):
         *,
         label: str = "",
         required_features: list[enums.FeatureNameEnum] = [],
-        required_limits: dict[str, int | None] = {},
-        default_queue: structs.QueueDescriptorStruct = {},
+        required_limits: dict[str, int | None] | None = None,
+        default_queue: structs.QueueDescriptorStruct | None = None,
     ) -> GPUDevice:
+        required_limits = {} if required_limits is None else required_limits
         if default_queue:
             check_struct("QueueDescriptor", default_queue)
         awaitable = self._request_device(
@@ -1967,11 +1971,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexStateStruct,
-        primitive: structs.PrimitiveStateStruct = {},
+        primitive: structs.PrimitiveStateStruct | None = None,
         depth_stencil: structs.DepthStencilStateStruct | None = None,
-        multisample: structs.MultisampleStateStruct = {},
+        multisample: structs.MultisampleStateStruct | None = None,
         fragment: structs.FragmentStateStruct | None = None,
     ) -> GPURenderPipeline:
+        primitive = {} if primitive is None else primitive
+        multisample = {} if multisample is None else multisample
         descriptor = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
@@ -1985,11 +1991,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexStateStruct,
-        primitive: structs.PrimitiveStateStruct = {},
+        primitive: structs.PrimitiveStateStruct | None = None,
         depth_stencil: structs.DepthStencilStateStruct | None = None,
-        multisample: structs.MultisampleStateStruct = {},
+        multisample: structs.MultisampleStateStruct | None = None,
         fragment: structs.FragmentStateStruct | None = None,
     ) -> GPURenderPipeline:
+        primitive = {} if primitive is None else primitive
+        multisample = {} if multisample is None else multisample
         # TODO: wgpuDeviceCreateRenderPipelineAsync is not yet implemented in wgpu-native
         descriptor = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
