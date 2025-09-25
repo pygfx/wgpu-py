@@ -93,7 +93,7 @@ def test_enums_and_flags_and_structs():
     r = repr(instance)
     assert "DeviceDescriptor" in r
     assert "label" in r
-    assert "required_features: list[enums.FeatureNameEnum] | None = None" in r
+    assert "required_features: Sequence[enums.FeatureNameEnum] | None = None" in r
 
 
 def test_base_wgpu_api():

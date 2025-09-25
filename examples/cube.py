@@ -24,7 +24,7 @@ from rendercanvas.auto import RenderCanvas, loop
 
 
 def setup_drawing_sync(
-    canvas, power_preference="high-performance", limits: dict = {}
+    canvas, power_preference="high-performance", limits=None
 ) -> Callable:
     """Setup to draw a rotating cube on the given canvas.
 
@@ -45,7 +45,7 @@ def setup_drawing_sync(
     )
 
 
-async def setup_drawing_async(canvas, limits: dict = {}):
+async def setup_drawing_async(canvas, limits=None):
     """Setup to async-draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.

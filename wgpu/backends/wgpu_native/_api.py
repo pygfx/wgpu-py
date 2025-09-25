@@ -21,7 +21,7 @@ import os
 import time
 import logging
 from weakref import WeakKeyDictionary
-from typing import NoReturn
+from typing import NoReturn, Sequence
 
 from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
@@ -1078,7 +1078,7 @@ class GPUAdapter(classes.GPUAdapter):
         self,
         *,
         label: str = "",
-        required_features: list[enums.FeatureNameEnum] = [],
+        required_features: Sequence[enums.FeatureNameEnum] = (),
         required_limits: dict[str, int | None] | None = None,
         default_queue: structs.QueueDescriptorStruct | None = None,
     ) -> GPUDevice:
@@ -1097,7 +1097,7 @@ class GPUAdapter(classes.GPUAdapter):
         self,
         *,
         label: str = "",
-        required_features: list[enums.FeatureNameEnum] = [],
+        required_features: Sequence[enums.FeatureNameEnum] = (),
         required_limits: dict[str, int | None] | None = None,
         default_queue: structs.QueueDescriptorStruct | None = None,
     ) -> GPUDevice:
@@ -1114,9 +1114,9 @@ class GPUAdapter(classes.GPUAdapter):
     def _request_device(
         self,
         label: str,
-        required_features: list[enums.FeatureNameEnum],
+        required_features: Sequence[enums.FeatureNameEnum],
         required_limits: dict[str, int],
-        default_queue: structs.QueueDescriptor,
+        default_queue: structs.QueueDescriptorStruct,
         trace_path: str,
     ):
         # ---- Handle features
@@ -1440,7 +1440,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         dimension: enums.TextureDimensionEnum = "2d",
         format: enums.TextureFormatEnum,
         usage: flags.TextureUsageFlags,
-        view_formats: list[enums.TextureFormatEnum] = [],
+        view_formats: Sequence[enums.TextureFormatEnum] = (),
     ) -> GPUTexture:
         if isinstance(usage, str):
             usage = str_flag_to_int(flags.TextureUsage, usage)
@@ -1541,7 +1541,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPUSampler(label, id, self)
 
     def create_bind_group_layout(
-        self, *, label: str = "", entries: list[structs.BindGroupLayoutEntryStruct]
+        self, *, label: str = "", entries: Sequence[structs.BindGroupLayoutEntryStruct]
     ) -> GPUBindGroupLayout:
         c_entries_list = []
         for entry in entries:
@@ -1658,7 +1658,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         layout: GPUBindGroupLayout,
-        entries: list[structs.BindGroupEntryStruct],
+        entries: Sequence[structs.BindGroupEntryStruct],
     ) -> GPUBindGroup:
         c_entries_list = []
         for entry in entries:
@@ -1720,14 +1720,14 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPUBindGroup(label, id, self)
 
     def create_pipeline_layout(
-        self, *, label: str = "", bind_group_layouts: list[GPUBindGroupLayout]
+        self, *, label: str = "", bind_group_layouts: Sequence[GPUBindGroupLayout]
     ) -> GPUPipelineLayout:
         return self._create_pipeline_layout(label, bind_group_layouts, [])
 
     def _create_pipeline_layout(
         self,
         label: str,
-        bind_group_layouts: list[GPUBindGroupLayout],
+        bind_group_layouts: Sequence[GPUBindGroupLayout],
         push_constant_layouts,
     ):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
@@ -1775,7 +1775,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         *,
         label: str = "",
         code: str,
-        compilation_hints: list[structs.ShaderModuleCompilationHintStruct] = [],
+        compilation_hints: Sequence[structs.ShaderModuleCompilationHintStruct] = (),
     ) -> GPUShaderModule:
         if False:
             # Trick the check_struct check in the codegen.
@@ -2265,7 +2265,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         self,
         *,
         label: str = "",
-        color_formats: list[enums.TextureFormatEnum],
+        color_formats: Sequence[enums.TextureFormatEnum],
         depth_stencil_format: enums.TextureFormatEnum | None = None,
         sample_count: int = 1,
         depth_read_only: bool = False,
@@ -2793,7 +2793,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         self,
         index: int,
         bind_group: GPUBindGroup,
-        dynamic_offsets_data: list[int] = [],
+        dynamic_offsets_data: Sequence[int] = (),
         dynamic_offsets_data_start: int | None = None,
         dynamic_offsets_data_length: int | None = None,
     ) -> None:
@@ -3075,7 +3075,7 @@ class GPUCommandEncoder(
         self,
         *,
         label: str = "",
-        color_attachments: list[structs.RenderPassColorAttachmentStruct],
+        color_attachments: Sequence[structs.RenderPassColorAttachmentStruct],
         depth_stencil_attachment: structs.RenderPassDepthStencilAttachmentStruct
         | None = None,
         occlusion_query_set: GPUQuerySet | None = None,
@@ -3659,7 +3659,7 @@ class GPURenderPassEncoder(
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
 
-    def execute_bundles(self, bundles: list[GPURenderBundle] | None = None) -> None:
+    def execute_bundles(self, bundles: Sequence[GPURenderBundle] | None = None) -> None:
         bundle_ids = [bundle._internal for bundle in bundles]
         c_bundle_info = new_array("WGPURenderBundle[]", bundle_ids)
         # H: void f(WGPURenderPassEncoder renderPassEncoder, size_t bundleCount, WGPURenderBundle const * bundles)
@@ -3772,7 +3772,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuQueueRelease
 
-    def submit(self, command_buffers: list[GPUCommandBuffer] | None = None) -> None:
+    def submit(self, command_buffers: Sequence[GPUCommandBuffer] | None = None) -> None:
         command_buffer_ids = [cb._internal for cb in command_buffers]
         c_command_buffers = new_array("WGPUCommandBuffer[]", command_buffer_ids)
         # H: void f(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands)
