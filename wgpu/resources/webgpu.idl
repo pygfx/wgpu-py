@@ -134,7 +134,6 @@ enum GPUFeatureName {
     "clip-distances",
     "dual-source-blending",
     "subgroups",
-    "texture-adapter-specific-format-features",
 };
 
 [Exposed=(Window, Worker), SecureContext]
@@ -1215,7 +1214,6 @@ interface GPUCanvasContext {
 enum GPUCanvasAlphaMode {
     "opaque",
     "premultiplied",
-    "unpremultiplied",
 };
 
 enum GPUCanvasToneMappingMode {

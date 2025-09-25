@@ -23,7 +23,6 @@
 * Validated 37 classes, 124 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.subgroups missing in wgpu.h
-* Enum field FeatureName.texture-adapter-specific-format-features missing in wgpu.h
 * Enum PipelineErrorReason missing in wgpu.h
 * Enum AutoLayoutMode missing in wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in wgpu.h

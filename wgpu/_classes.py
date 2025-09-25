@@ -347,7 +347,10 @@ class GPUCanvasContext:
         color_space  # noqa - not really supported, just assume srgb for now
         tone_mapping  # noqa - not supported yet
 
-        if alpha_mode not in enums.CanvasAlphaMode:
+        # Allow more than the IDL modes, see https://github.com/pygfx/wgpu-py/pull/719
+        extra_alpha_modes = ["auto", "unpremultiplied", "inherit"]  # from webgpu.h
+        all_alpha_modes = [*enums.CanvasAlphaMode, *extra_alpha_modes]
+        if alpha_mode not in all_alpha_modes:
             raise ValueError(
                 f"Configure: alpha_mode {alpha_mode} not in {enums.CanvasAlphaMode}"
             )
