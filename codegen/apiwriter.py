@@ -124,6 +124,7 @@ def write_structs():
             # Get type to include in code
             raw_type = idl.resolve_type(field.typename).strip("'")
             code_type = raw_type.replace("GPU", "classes.GPU").replace("structs.", "")
+            code_type = code_type.replace("list[", "Sequence[")
             # Get type to include in docs
             docs_type = None
             if "flags." in raw_type or "enums" in raw_type:
@@ -131,7 +132,9 @@ def write_structs():
                 docs_type = resolve_crossrefs(f" {docs_type} ")
             # Get default
             default = field.default
-            if default in ["{}", "[]"]:
+            if default == "[]":
+                default = "()"
+            elif default == "{}":
                 default = "None"  # no mutable defaults
                 code_type += " | None"
             elif not default and not field.required:

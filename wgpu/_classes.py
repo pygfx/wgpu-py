@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import weakref
 import logging
+from typing import Sequence
 
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
@@ -309,9 +310,9 @@ class GPUCanvasContext:
         device: GPUDevice,
         format: enums.TextureFormatEnum,
         usage: flags.TextureUsageFlags = 0x10,
-        view_formats: list[enums.TextureFormatEnum] = [],
+        view_formats: Sequence[enums.TextureFormatEnum] = (),
         color_space: str = "srgb",
-        tone_mapping: structs.CanvasToneMappingStruct = {},
+        tone_mapping: structs.CanvasToneMappingStruct | None = None,
         alpha_mode: enums.CanvasAlphaModeEnum = "opaque",
     ) -> None:
         """Configures the presentation context for the associated canvas.
@@ -324,7 +325,7 @@ class GPUCanvasContext:
                 ``get_current_texture()`` will have. Must be one of the supported context
                 formats. Can be ``None`` to use the canvas' preferred format.
             usage (flags.TextureUsage): Default ``TextureUsage.OUTPUT_ATTACHMENT``.
-            view_formats (List[enums.TextureFormat]): The formats that views created
+            view_formats (list[enums.TextureFormat]): The formats that views created
                 from textures returned by ``get_current_texture()`` may use.
             color_space (PredefinedColorSpace): The color space that values written
                 into textures returned by ``get_current_texture()`` should be displayed with.
@@ -656,9 +657,9 @@ class GPUAdapter:
         self,
         *,
         label: str = "",
-        required_features: list[enums.FeatureNameEnum] = [],
-        required_limits: dict[str, int | None] = {},
-        default_queue: structs.QueueDescriptorStruct = {},
+        required_features: Sequence[enums.FeatureNameEnum] = (),
+        required_limits: dict[str, int | None] | None = None,
+        default_queue: structs.QueueDescriptorStruct | None = None,
     ) -> GPUDevice:
         """Sync version of `request_device_async()`.
 
@@ -671,9 +672,9 @@ class GPUAdapter:
         self,
         *,
         label: str = "",
-        required_features: list[enums.FeatureNameEnum] = [],
-        required_limits: dict[str, int | None] = {},
-        default_queue: structs.QueueDescriptorStruct = {},
+        required_features: Sequence[enums.FeatureNameEnum] = (),
+        required_limits: dict[str, int | None] | None = None,
+        default_queue: structs.QueueDescriptorStruct | None = None,
     ) -> GPUDevice:
         """Request a `GPUDevice` from the adapter.
 
@@ -918,7 +919,7 @@ class GPUDevice(GPUObjectBase):
         dimension: enums.TextureDimensionEnum = "2d",
         format: enums.TextureFormatEnum,
         usage: flags.TextureUsageFlags,
-        view_formats: list[enums.TextureFormatEnum] = [],
+        view_formats: Sequence[enums.TextureFormatEnum] = (),
     ) -> GPUTexture:
         """Create a `GPUTexture` object.
 
@@ -980,7 +981,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayoutEntry> entries
     def create_bind_group_layout(
-        self, *, label: str = "", entries: list[structs.BindGroupLayoutEntryStruct]
+        self, *, label: str = "", entries: Sequence[structs.BindGroupLayoutEntryStruct]
     ) -> GPUBindGroupLayout:
         """Create a `GPUBindGroupLayout` object. One or more
         such objects are passed to `create_pipeline_layout()` to
@@ -1021,7 +1022,7 @@ class GPUDevice(GPUObjectBase):
         *,
         label: str = "",
         layout: GPUBindGroupLayout,
-        entries: list[structs.BindGroupEntryStruct],
+        entries: Sequence[structs.BindGroupEntryStruct],
     ) -> GPUBindGroup:
         """Create a `GPUBindGroup` object, which can be used in
         `pass.set_bind_group()` to attach a group of resources.
@@ -1061,7 +1062,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayout?> bindGroupLayouts
     def create_pipeline_layout(
-        self, *, label: str = "", bind_group_layouts: list[GPUBindGroupLayout]
+        self, *, label: str = "", bind_group_layouts: Sequence[GPUBindGroupLayout]
     ) -> GPUPipelineLayout:
         """Create a `GPUPipelineLayout` object, which can be
         used in `create_render_pipeline()` or `create_compute_pipeline()`.
@@ -1078,7 +1079,7 @@ class GPUDevice(GPUObjectBase):
         *,
         label: str = "",
         code: str,
-        compilation_hints: list[structs.ShaderModuleCompilationHintStruct] = [],
+        compilation_hints: Sequence[structs.ShaderModuleCompilationHintStruct] = (),
     ) -> GPUShaderModule:
         """Create a `GPUShaderModule` object from shader source.
 
@@ -1132,9 +1133,9 @@ class GPUDevice(GPUObjectBase):
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexStateStruct,
-        primitive: structs.PrimitiveStateStruct = {},
+        primitive: structs.PrimitiveStateStruct | None = None,
         depth_stencil: structs.DepthStencilStateStruct | None = None,
-        multisample: structs.MultisampleStateStruct = {},
+        multisample: structs.MultisampleStateStruct | None = None,
         fragment: structs.FragmentStateStruct | None = None,
     ) -> GPURenderPipeline:
         """Create a `GPURenderPipeline` object.
@@ -1276,9 +1277,9 @@ class GPUDevice(GPUObjectBase):
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         vertex: structs.VertexStateStruct,
-        primitive: structs.PrimitiveStateStruct = {},
+        primitive: structs.PrimitiveStateStruct | None = None,
         depth_stencil: structs.DepthStencilStateStruct | None = None,
-        multisample: structs.MultisampleStateStruct = {},
+        multisample: structs.MultisampleStateStruct | None = None,
         fragment: structs.FragmentStateStruct | None = None,
     ) -> GPURenderPipeline:
         """Async version of `create_render_pipeline()`.
@@ -1302,7 +1303,7 @@ class GPUDevice(GPUObjectBase):
         self,
         *,
         label: str = "",
-        color_formats: list[enums.TextureFormatEnum],
+        color_formats: Sequence[enums.TextureFormatEnum],
         depth_stencil_format: enums.TextureFormatEnum | None = None,
         sample_count: int = 1,
         depth_read_only: bool = False,
@@ -1819,7 +1820,7 @@ class GPUBindingCommandsMixin:
         self,
         index: int,
         bind_group: GPUBindGroup,
-        dynamic_offsets_data: list[int] = [],
+        dynamic_offsets_data: Sequence[int] = (),
         dynamic_offsets_data_start: int | None = None,
         dynamic_offsets_data_length: int | None = None,
     ) -> None:
@@ -2010,7 +2011,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         self,
         *,
         label: str = "",
-        color_attachments: list[structs.RenderPassColorAttachmentStruct],
+        color_attachments: Sequence[structs.RenderPassColorAttachmentStruct],
         depth_stencil_attachment: structs.RenderPassDepthStencilAttachmentStruct
         | None = None,
         occlusion_query_set: GPUQuerySet | None = None,
@@ -2282,7 +2283,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined executeBundles(sequence<GPURenderBundle> bundles);
-    def execute_bundles(self, bundles: list[GPURenderBundle] | None = None) -> None:
+    def execute_bundles(self, bundles: Sequence[GPURenderBundle] | None = None) -> None:
         """Executes commands previously recorded into the render bundles
           as part of this render pass.
 
@@ -2346,7 +2347,7 @@ class GPUQueue(GPUObjectBase):
     """
 
     # IDL: undefined submit(sequence<GPUCommandBuffer> commandBuffers);
-    def submit(self, command_buffers: list[GPUCommandBuffer] | None = None) -> None:
+    def submit(self, command_buffers: Sequence[GPUCommandBuffer] | None = None) -> None:
         """Submit a `GPUCommandBuffer` to the queue.
 
         Arguments:

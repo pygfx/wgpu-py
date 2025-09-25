@@ -25,7 +25,7 @@ import wgpu
 
 
 def setup_drawing_sync(
-    canvas, power_preference="high-performance", limits={}, format=None
+    canvas, power_preference="high-performance", limits=None, format=None
 ) -> Callable:
     """Setup to draw a triangle on the given canvas.
 
@@ -43,7 +43,7 @@ def setup_drawing_sync(
     return get_draw_function(canvas, device, render_pipeline, asynchronous=False)
 
 
-async def setup_drawing_async(canvas, limits={}, format=None) -> Callable:
+async def setup_drawing_async(canvas, limits=None, format=None) -> Callable:
     """Setup to async-draw a triangle on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.

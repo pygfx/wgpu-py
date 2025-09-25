@@ -1,4 +1,5 @@
 import os
+from typing import Sequence
 
 from . import (
     GPUAdapter,
@@ -46,13 +47,15 @@ def request_device_sync(
     trace_path: str,
     *,
     label: str = "",
-    required_features: list[enums.FeatureName] = [],
-    required_limits: dict[str, int] = {},
-    default_queue: structs.QueueDescriptor = {},
+    required_features: Sequence[enums.FeatureName] = (),
+    required_limits: dict[str, int] | None = None,
+    default_queue: structs.QueueDescriptorStruct | None = None,
 ) -> GPUDevice:
     """Write a trace of all commands to a file so it can be reproduced
     elsewhere. The trace is cross-platform!
     """
+    required_limits = {} if required_limits is None else required_limits
+    default_queue = {} if default_queue is None else default_queue
     if not os.path.isdir(trace_path):
         os.makedirs(trace_path, exist_ok=True)
     elif os.listdir(trace_path):
@@ -74,8 +77,8 @@ def create_pipeline_layout(
     device: GPUDevice,
     *,
     label: str = "",
-    bind_group_layouts: list[GPUBindGroupLayout],
-    push_constant_layouts: list[dict] = [],
+    bind_group_layouts: Sequence[GPUBindGroupLayout],
+    push_constant_layouts: Sequence[dict] = (),
 ) -> GPUPipelineLayout:
     return device._create_pipeline_layout(
         label, bind_group_layouts, push_constant_layouts
@@ -223,8 +226,8 @@ def write_timestamp(
 
 
 def set_instance_extras(
-    backends: list[str] = ["All"],
-    flags: list[str] = ["Default"],
+    backends: Sequence[str] = ("All",),
+    flags: Sequence[str] = ("Default",),
     dx12_compiler="fxc",
     gles3_minor_version="Atomic",
     fence_behavior="Normal",
