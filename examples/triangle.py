@@ -63,7 +63,9 @@ async def setup_drawing_async(canvas, limits={}, format=None) -> Callable:
 # %% Functions to create wgpu objects
 
 
-def get_render_pipeline_kwargs(canvas, device, render_texture_format) -> dict:
+def get_render_pipeline_kwargs(
+    canvas, device, render_texture_format
+) -> wgpu.RenderPipelineDescriptor:
     context = canvas.get_context("wgpu")
     if render_texture_format is None:
         render_texture_format = context.get_preferred_format(device.adapter)
@@ -72,44 +74,47 @@ def get_render_pipeline_kwargs(canvas, device, render_texture_format) -> dict:
     shader = device.create_shader_module(code=shader_source)
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
-    return dict(
+    return wgpu.RenderPipelineDescriptor(
         layout=pipeline_layout,
-        vertex={
-            "module": shader,
-            "entry_point": "vs_main",
-        },
+        vertex=wgpu.VertexState(
+            module=shader,
+            entry_point="vs_main",
+        ),
         depth_stencil=None,
         multisample=None,
-        fragment={
-            "module": shader,
-            "entry_point": "fs_main",
-            "targets": [
-                {
-                    "format": render_texture_format,
-                    "blend": {
-                        "color": {},
-                        "alpha": {},
-                    },
-                },
+        fragment=wgpu.FragmentState(
+            module=shader,
+            entry_point="fs_main",
+            targets=[
+                wgpu.ColorTargetState(
+                    format=render_texture_format,
+                    blend={"color": {}, "alpha": {}},
+                )
             ],
-        },
+        ),
     )
 
 
-def get_draw_function(canvas, device, render_pipeline, *, asynchronous) -> Callable:
+def get_draw_function(
+    canvas,
+    device: wgpu.GPUDevice,
+    render_pipeline: wgpu.GPURenderPipeline,
+    *,
+    asynchronous: bool,
+) -> Callable:
     def draw_frame_sync():
         current_texture = canvas.get_context("wgpu").get_current_texture()
         command_encoder = device.create_command_encoder()
 
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
-                {
-                    "view": current_texture.create_view(),
-                    "resolve_target": None,
-                    "clear_value": (0, 0, 0, 1),
-                    "load_op": wgpu.LoadOp.clear,
-                    "store_op": wgpu.StoreOp.store,
-                }
+                wgpu.RenderPassColorAttachment(
+                    view=current_texture.create_view(),
+                    resolve_target=None,
+                    clear_value=(0, 0, 0, 1),
+                    load_op="clear",
+                    store_op="store",
+                )
             ],
         )
 

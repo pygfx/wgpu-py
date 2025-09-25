@@ -9,6 +9,7 @@ from ._version import __version__, version_info
 from ._diagnostics import diagnostics, DiagnosticsBase
 from .flags import *
 from .enums import *
+from .structs import *
 from .classes import *
 from . import utils
 from . import backends

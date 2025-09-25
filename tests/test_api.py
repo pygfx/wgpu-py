@@ -1,6 +1,7 @@
 import sys
 import logging
 import subprocess
+from dataclasses import fields
 
 import wgpu
 
@@ -78,14 +79,21 @@ def test_enums_and_flags_and_structs():
     # Flag groups show their field names (in uppercase)
     assert "STORAGE" in repr(wgpu.BufferUsage)
 
-    # Structs are dict-like, their values str
-    assert isinstance(wgpu.structs.DeviceDescriptor, wgpu.structs.Struct)
+    # Structs are dataclasses
+    assert issubclass(wgpu.structs.DeviceDescriptor, wgpu.structs.Struct)
     assert isinstance(wgpu.structs.DeviceDescriptor.label, str)
-    assert isinstance(wgpu.structs.DeviceDescriptor.required_features, str)
+    assert wgpu.structs.DeviceDescriptor.required_features is None
 
-    # Structs show their field names
-    for key in wgpu.structs.DeviceDescriptor:
-        assert key in repr(wgpu.structs.DeviceDescriptor)
+    # Structs show their field names ... in the instance
+    instance = wgpu.structs.DeviceDescriptor()
+    for field in fields(wgpu.structs.DeviceDescriptor):
+        assert field.name in repr(instance)
+
+    # Structs have nice repr
+    r = repr(instance)
+    assert "DeviceDescriptor" in r
+    assert "label" in r
+    assert "required_features: list[enums.FeatureNameEnum] | None = None" in r
 
 
 def test_base_wgpu_api():
