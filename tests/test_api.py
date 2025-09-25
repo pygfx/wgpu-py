@@ -82,7 +82,7 @@ def test_enums_and_flags_and_structs():
     # Structs are dataclasses
     assert issubclass(wgpu.structs.DeviceDescriptor, wgpu.structs.Struct)
     assert isinstance(wgpu.structs.DeviceDescriptor.label, str)
-    assert wgpu.structs.DeviceDescriptor.required_features is None
+    assert wgpu.structs.DeviceDescriptor.required_features == ()
 
     # Structs show their field names ... in the instance
     instance = wgpu.structs.DeviceDescriptor()
@@ -93,7 +93,7 @@ def test_enums_and_flags_and_structs():
     r = repr(instance)
     assert "DeviceDescriptor" in r
     assert "label" in r
-    assert "required_features: Sequence[enums.FeatureNameEnum] | None = None" in r
+    assert "required_features: Sequence[enums.FeatureNameEnum] = ()" in r
 
 
 def test_base_wgpu_api():

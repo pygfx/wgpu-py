@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from collections.abc import Mapping
+from typing import Sequence
 
 from ._coreutils import ArrayLike, CanvasLike
 from . import _classes as classes
@@ -149,7 +150,7 @@ class DeviceDescriptor(Struct):
     #:
     label: str = ""
     #: list[:obj:`enums.FeatureName <wgpu.enums.FeatureName>`]
-    required_features: list[enums.FeatureNameEnum] | None = None
+    required_features: Sequence[enums.FeatureNameEnum] = ()
     #:
     required_limits: dict[str, int | None] | None = None
     #:
@@ -191,7 +192,7 @@ class TextureDescriptor(Struct):
     #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>`
     usage: flags.TextureUsageFlags
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
-    view_formats: list[enums.TextureFormatEnum] | None = None
+    view_formats: Sequence[enums.TextureFormatEnum] = ()
 
 
 TextureDescriptorStruct = TextureDescriptor | dict
@@ -269,7 +270,7 @@ class BindGroupLayoutDescriptor(Struct):
     #:
     label: str = ""
     #:
-    entries: list[BindGroupLayoutEntryStruct]
+    entries: Sequence[BindGroupLayoutEntryStruct]
 
 
 BindGroupLayoutDescriptorStruct = BindGroupLayoutDescriptor | dict
@@ -359,7 +360,7 @@ class BindGroupDescriptor(Struct):
     #:
     layout: classes.GPUBindGroupLayout
     #:
-    entries: list[BindGroupEntryStruct]
+    entries: Sequence[BindGroupEntryStruct]
 
 
 BindGroupDescriptorStruct = BindGroupDescriptor | dict
@@ -401,7 +402,7 @@ class PipelineLayoutDescriptor(Struct):
     #:
     label: str = ""
     #:
-    bind_group_layouts: list[classes.GPUBindGroupLayout]
+    bind_group_layouts: Sequence[classes.GPUBindGroupLayout]
 
 
 PipelineLayoutDescriptorStruct = PipelineLayoutDescriptor | dict
@@ -414,7 +415,7 @@ class ShaderModuleDescriptor(Struct):
     #:
     code: str
     #:
-    compilation_hints: list[ShaderModuleCompilationHintStruct] | None = None
+    compilation_hints: Sequence[ShaderModuleCompilationHintStruct] = ()
 
 
 ShaderModuleDescriptorStruct = ShaderModuleDescriptor | dict
@@ -526,7 +527,7 @@ class FragmentState(Struct):
     #:
     constants: dict[str, float] | None = None
     #:
-    targets: list[ColorTargetStateStruct]
+    targets: Sequence[ColorTargetStateStruct]
 
 
 FragmentStateStruct = FragmentState | dict
@@ -620,7 +621,7 @@ class VertexState(Struct):
     #:
     constants: dict[str, float] | None = None
     #:
-    buffers: list[VertexBufferLayoutStruct] | None = None
+    buffers: Sequence[VertexBufferLayoutStruct] = ()
 
 
 VertexStateStruct = VertexState | dict
@@ -633,7 +634,7 @@ class VertexBufferLayout(Struct):
     #: :obj:`enums.VertexStepMode <wgpu.enums.VertexStepMode>`
     step_mode: enums.VertexStepModeEnum = "vertex"
     #:
-    attributes: list[VertexAttributeStruct]
+    attributes: Sequence[VertexAttributeStruct]
 
 
 VertexBufferLayoutStruct = VertexBufferLayout | dict
@@ -787,7 +788,7 @@ class RenderPassDescriptor(Struct):
     #:
     label: str = ""
     #:
-    color_attachments: list[RenderPassColorAttachmentStruct]
+    color_attachments: Sequence[RenderPassColorAttachmentStruct]
     #:
     depth_stencil_attachment: RenderPassDepthStencilAttachmentStruct | None = None
     #:
@@ -850,7 +851,7 @@ class RenderPassLayout(Struct):
     #:
     label: str = ""
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
-    color_formats: list[enums.TextureFormatEnum]
+    color_formats: Sequence[enums.TextureFormatEnum]
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     depth_stencil_format: enums.TextureFormatEnum | None = None
     #:
@@ -874,7 +875,7 @@ class RenderBundleEncoderDescriptor(Struct):
     #:
     label: str = ""
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
-    color_formats: list[enums.TextureFormatEnum]
+    color_formats: Sequence[enums.TextureFormatEnum]
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     depth_stencil_format: enums.TextureFormatEnum | None = None
     #:
@@ -928,7 +929,7 @@ class CanvasConfiguration(Struct):
     #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>`
     usage: flags.TextureUsageFlags = 0x10
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
-    view_formats: list[enums.TextureFormatEnum] | None = None
+    view_formats: Sequence[enums.TextureFormatEnum] = ()
     #:
     color_space: str = "srgb"
     #:
