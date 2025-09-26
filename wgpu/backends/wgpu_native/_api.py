@@ -53,11 +53,6 @@ __all__ = classes.__all__.copy()
 optional = None
 
 
-def check_can_use_sync_variants():
-    if False:  # placeholder, let's implement a little wgpu config thingy
-        raise RuntimeError("Disallowed use of '_sync' API.")
-
-
 # Object to be able to bind the lifetime of objects to other objects
 _refs_per_struct = WeakKeyDictionary()
 
@@ -439,27 +434,6 @@ libf = SafeLibCalls(lib, error_handler)
 
 
 class GPU(classes.GPU):
-    def request_adapter_sync(
-        self,
-        *,
-        feature_level: str = "core",
-        power_preference: enums.PowerPreferenceEnum | None = None,
-        force_fallback_adapter: bool = False,
-        canvas: CanvasLike = None,
-    ) -> GPUAdapter:
-        """Sync version of ``request_adapter_async()``.
-        This is the implementation based on wgpu-native.
-        """
-        check_can_use_sync_variants()
-        awaitable = self._request_adapter(
-            feature_level=feature_level,
-            power_preference=power_preference,
-            force_fallback_adapter=force_fallback_adapter,
-            canvas=canvas,
-        )
-
-        return awaitable.sync_wait()
-
     def request_adapter_async(
         self,
         *,
@@ -583,13 +557,6 @@ class GPU(classes.GPU):
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback_info)
 
         return awaitable
-
-    def enumerate_adapters_sync(self) -> list[GPUAdapter]:
-        """Sync version of ``enumerate_adapters_async()``.
-        This is the implementation based on wgpu-native.
-        """
-        check_can_use_sync_variants()
-        return self._enumerate_adapters().sync_wait()
 
     def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
@@ -1141,25 +1108,6 @@ class GPUAdapterInfo(classes.GPUAdapterInfo):
 
 
 class GPUAdapter(classes.GPUAdapter):
-    def request_device_sync(
-        self,
-        *,
-        label: str = "",
-        required_features: Sequence[enums.FeatureNameEnum] = (),
-        required_limits: dict[str, int | None] | None = None,
-        default_queue: structs.QueueDescriptorStruct | None = None,
-    ) -> GPUDevice:
-        check_can_use_sync_variants()
-        required_limits = {} if required_limits is None else required_limits
-        if default_queue:
-            check_struct("QueueDescriptor", default_queue)
-        else:
-            default_queue = {}
-        awaitable = self._request_device(
-            label, required_features, required_limits, default_queue, ""
-        )
-        return awaitable.sync_wait()
-
     def request_device_async(
         self,
         *,
@@ -2416,10 +2364,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         query_id = libf.wgpuDeviceCreateQuerySet(self._internal, query_set_descriptor)
         return GPUQuerySet(label, query_id, self, type, count)
 
-    def _get_lost_sync(self) -> GPUDeviceLostInfo:
-        check_can_use_sync_variants()
-        raise NotImplementedError()
-
     def _get_lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
         raise NotImplementedError()
 
@@ -2480,16 +2424,6 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         if offset + size > self.size:
             raise ValueError("Mapped range must not extend beyond total buffer size.")
         return offset, size
-
-    def map_sync(
-        self,
-        mode: flags.MapModeFlags | None = None,
-        offset: int = 0,
-        size: int | None = None,
-    ) -> None:
-        check_can_use_sync_variants()
-        awaitable = self._map(mode, offset, size)
-        return awaitable.sync_wait()
 
     def map_async(
         self,
@@ -2785,10 +2719,6 @@ class GPUPipelineLayout(classes.GPUPipelineLayout, GPUObjectBase):
 class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuShaderModuleRelease
-
-    def get_compilation_info_sync(self) -> GPUCompilationInfo:
-        check_can_use_sync_variants()
-        return self._get_compilation_info()
 
     def get_compilation_info_async(self) -> GPUPromise[GPUCompilationInfo]:
         result = self._get_compilation_info()
@@ -4094,11 +4024,6 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         copy_buffer.unmap()
 
         return data
-
-    def on_submitted_work_done_sync(self) -> None:
-        check_can_use_sync_variants()
-        awaitable = self._on_submitted_work_done()
-        return awaitable.sync_wait()
 
     def on_submitted_work_done_async(self) -> GPUPromise[None]:
         return self._on_submitted_work_done()

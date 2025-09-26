@@ -102,15 +102,13 @@ class GPU:
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu
-
-        return gpu.request_adapter_sync(
+        promise = gpu.request_adapter_async(
             feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
         )
+        return promise.sync_wait()
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> DOMString featureLevel = "core", GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false, boolean xrCompatible = false
     @apidiff.change("arguments include canvas")
@@ -152,11 +150,8 @@ class GPU:
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-
-        # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu
-
-        return gpu.enumerate_adapters_sync()
+        promise = gpu.enumerate_adapters_async()
+        return promise.sync_wait()
 
     @apidiff.add("Method useful for multi-gpu environments")
     def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
@@ -789,7 +784,13 @@ class GPUAdapter:
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.request_device_async(
+            label=label,
+            required_features=required_features,
+            required_limits=required_limits,
+            default_queue=default_queue,
+        )
+        return promise.sync_wait()
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {}); -> USVString label = "", sequence<GPUFeatureName> requiredFeatures = [], record<DOMString, (GPUSize64 or undefined)> requiredLimits = {}, GPUQueueDescriptor defaultQueue = {}
     def request_device_async(
@@ -929,7 +930,8 @@ class GPUDevice(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        return self._get_lost_sync()
+        promise = self.lost_async
+        return promise.sync_wait()
 
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @apidiff.hide("Not a Pythonic API")
@@ -938,9 +940,6 @@ class GPUDevice(GPUObjectBase):
         """Resolves to GPUDeviceLostInfo, providing information about why the device is lost."""
         # Properties don't get repeated at _api.py, so we use a proxy method.
         return self._get_lost_async()
-
-    def _get_lost_sync(self) -> GPUDeviceLostInfo:
-        raise NotImplementedError()
 
     def _get_lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
         raise NotImplementedError()
@@ -1465,7 +1464,8 @@ class GPUDevice(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.pop_error_scope_async()
+        return promise.sync_wait()
 
     # IDL: Promise<GPUError?> popErrorScope();
     @apidiff.hide
@@ -1550,7 +1550,8 @@ class GPUBuffer(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.map_async(mode=mode, offset=offset, size=size)
+        return promise.sync_wait()
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def map_async(
@@ -1873,7 +1874,8 @@ class GPUShaderModule(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.get_compilation_info_async()
+        return promise.sync_wait()
 
     # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
     def get_compilation_info_async(self) -> GPUPromise[GPUCompilationInfo]:
@@ -2592,7 +2594,8 @@ class GPUQueue(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.on_submitted_work_done_async()
+        return promise.sync_wait()
 
     # IDL: Promise<undefined> onSubmittedWorkDone();
     def on_submitted_work_done_async(self) -> GPUPromise[None]:

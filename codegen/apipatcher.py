@@ -612,6 +612,8 @@ class BackendApiPatcher(AbstractApiPatcher):
                 pre_lines = "\n".join(p1.lines[j1 - 3 : j1])
                 if "@apidiff.hide" in pre_lines:
                     continue  # method (currently) not part of our API
+                if methodname.endswith("_sync"):
+                    continue  # the base class implements _sync versions (using promise.sync_wait())
                 body = "\n".join(p1.lines[j1 + 1 : j2 + 1])
                 must_overload = "raise NotImplementedError()" in body
                 methods[methodname] = p1.lines[j1], must_overload
