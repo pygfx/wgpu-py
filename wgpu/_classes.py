@@ -337,6 +337,7 @@ class GPUCanvasContext:
                 when read, displayed, or used as an image source. Default "opaque".
         """
         # Check types
+        tone_mapping = {} if tone_mapping is None else tone_mapping
 
         if not isinstance(device, GPUDevice):
             raise TypeError("Given device is not a device.")
