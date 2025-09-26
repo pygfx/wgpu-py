@@ -45,20 +45,22 @@ def simple_js_accessor(value, convert, cache):
     if hasattr(value, "js"):
         value = value.js
         # print("converted to js", value)
+    # todo convert snake_case back to camel_case?
     return convert(value)
 
 # TODO: can we implement our own variant of JsProxy and PyProxy, to_js and to_py? to work with pyodide and not around it?
 # https://pyodide.org/en/stable/usage/type-conversions.html#type-translations
 
 class GPU(classes.GPU):
+    def __init__(self):
+        self.js = window.navigator.gpu  # noqa: F821
+
     def request_adapter_sync(self, **parameters):
         return run_sync(self.request_adapter_async(**parameters))
         # raise NotImplementedError("Cannot use sync API functions in JS.")
 
     async def request_adapter_async(self, **parameters):
-        gpu = window.navigator.gpu  # noqa: F821
-        self.js = gpu
-        adapter = await gpu.requestAdapter(**parameters)
+        adapter = await self.js.requestAdapter(**parameters)
         # print(dir(adapter))
         # print(type(adapter.requestDevice))
         # adapter = translate_python_methods(adapter)
@@ -67,9 +69,20 @@ class GPU(classes.GPU):
         # print(py_adapter, dir(py_adapter))
         return py_adapter
 
+    # api diff not really useful, but needed for compatibility I guess?
+    def enumerate_adapters_sync(self):
+        return run_sync(self.enumerate_adapters_async())
+
+    async def enumerate_adapters_async(self):
+        # bodge here: it blocks but we should await instead.
+        return [self.request_adapter_sync()]
+
     @property
     def wgsl_language_features(self):
         return set()
+
+
+
 
 class GPUAdapter(classes.GPUAdapter):
     def __init__(self, js_adapter):
@@ -83,6 +96,15 @@ class GPUAdapter(classes.GPUAdapter):
         device = await self.js.requestDevice(**parameters)
         # device = translate_python_methods(device)
         return GPUDevice(device)
+    
+    # api diff just for overview gives adaper info for now
+    @property
+    def summary(self):
+        return self.adapter_info
+    
+    @property
+    def adapter_info(self):
+        return self.js.info
 
 class GPUDevice(classes.GPUDevice):
     def __init__(self, js_device):
@@ -108,7 +130,7 @@ class GPUDevice(classes.GPUDevice):
         data = kwargs.get("data")
         data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
         kwargs["size"] = data_size
-        print(data_size)
+        # print(data_size)
         kwargs["label"] = "input buffer"
         js_buf = self.js.createBuffer(*args, **kwargs)
         # TODO: dtype?
@@ -143,10 +165,20 @@ class GPUDevice(classes.GPUDevice):
         return GPUCommandEncoder(js_ce)
 
     def create_pipeline_layout(self, *args, **kwargs):
+        print("create_pipeline_layout", args, kwargs)
+        # translate the key to camelCase manually here!
+        kwargs["bindGroupLayouts"] = kwargs.get("bind_group_layouts", [])
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        print(js_args, js_kwargs)
         js_pl = self.js.createPipelineLayout(*js_args, **js_kwargs)
         return GPUPipelineLayout(js_pl)
+
+    def create_texture(self, *args, **kwargs):
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        js_tex = self.js.createTexture(*args, **js_kwargs)
+        return GPUTexture(js_tex)
+
 
 class GPUShaderModule(classes.GPUShaderModule):
     def __init__(self, js_sm):
@@ -263,9 +295,30 @@ class GPUQueue(classes.GPUQueue):
         temp_buffer.unmap()
         return res.to_py() # should give a memoryview?
 
+    def write_texture(self, *args, **kwargs):
+        print("GPUQueue.write_texture called with", args, kwargs)
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        print("Converted to JS args", js_args, js_kwargs)
+        self.js.writeTexture(*js_args, **js_kwargs)
+
 class GPUPipelineLayout(classes.GPUPipelineLayout):
     def __init__(self, js_pl):
         self.js = js_pl
 
+class GPUTexture(classes.GPUTexture):
+    def __init__(self, js_tex):
+        self.js = js_tex
+
+    def create_view(self, *args, **kwargs):
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        js_view = self.js.createView(*args, **js_kwargs)
+        return GPUTextureView(js_view)
+
+class GPUTextureView(classes.GPUTextureView):
+    def __init__(self, js_view):
+        self.js = js_view
+
+# finally register the backend
 gpu = GPU()
 _register_backend(gpu)

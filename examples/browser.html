@@ -14,7 +14,9 @@ some text below the canvas!
         // fetch the file locally for easier scripting
         // --allow-file-access-from-files or local webserver
         // TODO: replace the actual code here (unless you have the module)
-        pythonCode = await (await fetch("compute_noop.py")).text();
+        // pythonCode = await (await fetch("compute_noop.py")).text();
+        // pythonCode = await (await fetch("compute_matmul.py")).text();
+        pythonCode = await (await fetch("cube.py")).text();
         
 
         // Load Pyodide
@@ -24,7 +26,7 @@ some text below the canvas!
         const micropip = pyodide.pyimport("micropip");
         await micropip.install('numpy');
         // await micropip.install('rendercanvas');
-        // await micropip.install('../dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
+        await micropip.install('../../../../../../../projects/pygfx-repos/rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
         await micropip.install('../dist/wgpu-0.24.0-py3-none-any.whl'); // from PyPI
 
         // Run the Python code async because some calls are async it seems.
