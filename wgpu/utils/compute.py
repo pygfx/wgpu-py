@@ -135,7 +135,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, constants=None, n=
 
     # Create bindings and binding layouts
     bindings = []
-    binding_layouts = []
+    # binding_layouts = []
     for index, buffer in buffers.items():
         bindings.append(
             {
@@ -143,27 +143,26 @@ def compute_with_buffers(input_arrays, output_arrays, shader, constants=None, n=
                 "resource": {"buffer": buffer, "offset": 0, "size": buffer.size},
             }
         )
-        storage_types = (
-            wgpu.BufferBindingType.read_only_storage,
-            wgpu.BufferBindingType.storage,
-        )
-        binding_layouts.append(
-            {
-                "binding": index,
-                "visibility": wgpu.ShaderStage.COMPUTE,
-                "buffer": {
-                    "type": storage_types[index in output_infos],
-                    "has_dynamic_offset": False,
-                },
-            }
-        )
+        # storage_types = (
+        #     wgpu.BufferBindingType.read_only_storage,
+        #     wgpu.BufferBindingType.storage,
+        # )
+        # binding_layouts.append(
+        #     {
+        #         "binding": index,
+        #         "visibility": wgpu.ShaderStage.COMPUTE,
+        #         "buffer": {
+        #             "type": storage_types[index in output_infos],
+        #             "has_dynamic_offset": False,
+        #         },
+        #     }
+        # )
 
     # Put buffers together
-    bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout]
-    )
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
+    # bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
+    # pipeline_layout = device.create_pipeline_layout(
+    #     bind_group_layouts=[bind_group_layout]
+    # )
 
     compute = {
         "module": cshader,
@@ -175,9 +174,10 @@ def compute_with_buffers(input_arrays, output_arrays, shader, constants=None, n=
 
     # Create a pipeline and "run it"
     compute_pipeline = device.create_compute_pipeline(
-        layout=pipeline_layout,
+        layout="auto",
         compute=compute,
     )
+    bind_group = device.create_bind_group(layout=compute_pipeline.get_bind_group_layout(0), entries=bindings)
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
     compute_pass.set_pipeline(compute_pipeline)
