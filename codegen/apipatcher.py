@@ -432,14 +432,15 @@ class IdlPatcherMixin:
             print(f"Error resolving type for {classname}.{propname}: {err}")
             prop_type = None
 
+        if prop_type and propname.endswith("_async"):
+            prop_type = f"GPUPromise[{prop_type}]"
+
         line = (
             "def "
             + to_snake_case(propname)
             + "(self)"
             + f"{f' -> {prop_type}' if prop_type else ''}:"
         )
-        if propname.endswith("_async"):
-            line = "async " + line
         return "    " + line
 
     def get_method_def(self, classname, methodname) -> str:
@@ -449,8 +450,6 @@ class IdlPatcherMixin:
 
         # Construct preamble
         preamble = "def " + to_snake_case(methodname) + "("
-        if methodname.endswith("_async"):
-            preamble = "async " + preamble
 
         # Get arg names and types
         idl_line = functions[name_idl]
@@ -465,6 +464,8 @@ class IdlPatcherMixin:
             return_type = None
         if return_type:
             return_type = self.idl.resolve_type(return_type)
+            if methodname.endswith("_async"):
+                return_type = f"GPUPromise[{return_type}]"
 
         # If one arg that is a dict, flatten dict to kwargs
         if len(args) == 1 and args[0].typename.endswith(

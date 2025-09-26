@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import weakref
 import logging
-from typing import Sequence, Callable, Any
+from typing import Sequence, Callable, Awaitable, Generic, TypeVar
 
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
@@ -121,7 +121,7 @@ class GPU:
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas: CanvasLike = None,
-    ) -> GPUAdapter:
+    ) -> GPUPromise[GPUAdapter]:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 
@@ -159,7 +159,7 @@ class GPU:
         return gpu.enumerate_adapters_sync()
 
     @apidiff.add("Method useful for multi-gpu environments")
-    async def enumerate_adapters_async(self) -> list[GPUAdapter]:
+    def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using its summary), and a device
@@ -186,7 +186,7 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
 
-        return await gpu.enumerate_adapters_async()
+        return gpu.enumerate_adapters_async()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
@@ -580,8 +580,11 @@ class GPUCanvasContext:
 # future.get_loop()
 
 
+AwaitedType = TypeVar("AwaitedType")
+
+
 @apidiff.add("Add a GPU-specific Future")
-class GPUPromise:
+class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     """A GPUPromise represents the eventual result of an asynchronous wgpu operation.
 
     A ``GPUPromise`` is a bit like an ``asyncio.Future``, but specific for wgpu, and with
@@ -645,7 +648,7 @@ class GPUPromise:
             # Reset attrs to prevent potential memory leaks
             self._finalizer = self._result_or_error = self._callback = None
 
-    def sync_wait(self) -> Any:
+    def sync_wait(self) -> AwaitedType:
         """Synchronously wait for the future to resolve and return the result.
 
         Note that this method should be avoided in event callbacks, since it can
@@ -658,7 +661,7 @@ class GPUPromise:
         # TODO: allow calling multiple times
         raise NotImplementedError()
 
-    def then(self, callback: Callable[Any, None]):
+    def then(self, callback: Callable[[AwaitedType], None]):
         """Set a callback that will be called when the future resolves.
 
         The callback will receive one argument: the result of the future.
@@ -789,14 +792,14 @@ class GPUAdapter:
         raise NotImplementedError()
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {}); -> USVString label = "", sequence<GPUFeatureName> requiredFeatures = [], record<DOMString, (GPUSize64 or undefined)> requiredLimits = {}, GPUQueueDescriptor defaultQueue = {}
-    async def request_device_async(
+    def request_device_async(
         self,
         *,
         label: str = "",
         required_features: Sequence[enums.FeatureNameEnum] = (),
         required_limits: dict[str, int | None] | None = None,
         default_queue: structs.QueueDescriptorStruct | None = None,
-    ) -> GPUDevice:
+    ) -> GPUPromise[GPUDevice]:
         """Request a `GPUDevice` from the adapter.
 
         Arguments:
@@ -931,19 +934,15 @@ class GPUDevice(GPUObjectBase):
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @apidiff.hide("Not a Pythonic API")
     @property
-    async def lost_async(self) -> GPUDeviceLostInfo:
-        """Provides information about why the device is lost."""
-        # In JS you can device.lost.then ... to handle lost devices.
-        # We may want to eventually support something similar async-like?
-        # at some point
-
+    def lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
+        """Resolves to GPUDeviceLostInfo, providing information about why the device is lost."""
         # Properties don't get repeated at _api.py, so we use a proxy method.
-        return await self._get_lost_async()
+        return self._get_lost_async()
 
-    def _get_lost_sync(self):
+    def _get_lost_sync(self) -> GPUDeviceLostInfo:
         raise NotImplementedError()
 
-    async def _get_lost_async(self):
+    def _get_lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
         raise NotImplementedError()
 
     # IDL: attribute EventHandler onuncapturederror;
@@ -1235,13 +1234,13 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: Promise<GPUComputePipeline> createComputePipelineAsync(GPUComputePipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUProgrammableStage compute
-    async def create_compute_pipeline_async(
+    def create_compute_pipeline_async(
         self,
         *,
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         compute: structs.ProgrammableStageStruct,
-    ) -> GPUComputePipeline:
+    ) -> GPUPromise[GPUComputePipeline]:
         """Async version of `create_compute_pipeline()`.
 
         Both versions are compatible with WebGPU."""
@@ -1392,7 +1391,7 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: Promise<GPURenderPipeline> createRenderPipelineAsync(GPURenderPipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUVertexState vertex, GPUPrimitiveState primitive = {}, GPUDepthStencilState depthStencil, GPUMultisampleState multisample = {}, GPUFragmentState fragment
-    async def create_render_pipeline_async(
+    def create_render_pipeline_async(
         self,
         *,
         label: str = "",
@@ -1402,7 +1401,7 @@ class GPUDevice(GPUObjectBase):
         depth_stencil: structs.DepthStencilStateStruct | None = None,
         multisample: structs.MultisampleStateStruct | None = None,
         fragment: structs.FragmentStateStruct | None = None,
-    ) -> GPURenderPipeline:
+    ) -> GPUPromise[GPURenderPipeline]:
         """Async version of `create_render_pipeline()`.
 
         Both versions are compatible with WebGPU."""
@@ -1470,7 +1469,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: Promise<GPUError?> popErrorScope();
     @apidiff.hide
-    async def pop_error_scope_async(self) -> GPUError:
+    def pop_error_scope_async(self) -> GPUPromise[GPUError]:
         """Pops a GPU error scope from the stack."""
         raise NotImplementedError()
 
@@ -1554,12 +1553,12 @@ class GPUBuffer(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    async def map_async(
+    def map_async(
         self,
         mode: flags.MapModeFlags | None = None,
         offset: int = 0,
         size: int | None = None,
-    ) -> None:
+    ) -> GPUPromise[None]:
         """Maps the given range of the GPUBuffer.
 
         When this call returns, the buffer content is ready to be
@@ -1877,8 +1876,8 @@ class GPUShaderModule(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
-    async def get_compilation_info_async(self) -> GPUCompilationInfo:
-        """Get shader compilation info. Always returns empty list at the moment."""
+    def get_compilation_info_async(self) -> GPUPromise[GPUCompilationInfo]:
+        """Get shader compilation info. Always resolves to an empty list at the moment."""
         # How can this return shader errors if one cannot create a
         # shader module when the shader source has errors?
         raise NotImplementedError()
@@ -2596,7 +2595,7 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: Promise<undefined> onSubmittedWorkDone();
-    async def on_submitted_work_done_async(self) -> None:
+    def on_submitted_work_done_async(self) -> GPUPromise[None]:
         """TODO"""
         raise NotImplementedError()
 
