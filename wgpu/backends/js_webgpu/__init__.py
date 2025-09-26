@@ -108,6 +108,8 @@ class GPUDevice(classes.GPUDevice):
         data = kwargs.get("data")
         data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
         kwargs["size"] = data_size
+        print(data_size)
+        kwargs["label"] = "input buffer"
         js_buf = self.js.createBuffer(*args, **kwargs)
         # TODO: dtype?
         Uint32Array.new(js_buf.getMappedRange()).set(kwargs["data"])
@@ -140,6 +142,12 @@ class GPUDevice(classes.GPUDevice):
         js_ce = self.js.createCommandEncoder(*args, **js_kwargs)
         return GPUCommandEncoder(js_ce)
 
+    def create_pipeline_layout(self, *args, **kwargs):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        js_pl = self.js.createPipelineLayout(*js_args, **js_kwargs)
+        return GPUPipelineLayout(js_pl)
+
 class GPUShaderModule(classes.GPUShaderModule):
     def __init__(self, js_sm):
         self.js = js_sm
@@ -155,6 +163,7 @@ class GPUBuffer(classes.GPUBuffer):
     # TODO: idl attributes round trip -.-
     @property
     def _size(self):
+        # print("getting size", dir(self.js), self.js.size)
         return self.js.size
 
 class GPUBindGroupLayout(classes.GPUBindGroupLayout):
@@ -230,7 +239,7 @@ class GPUQueue(classes.GPUQueue):
     # TODO: api diff
     def read_buffer(self, buffer: GPUBuffer, buffer_offset: int=0, size: int | None = None) -> memoryview:
         # largely copied from wgpu-native/_api.py
-        print(dir(self))
+        # print(dir(self))
         device = self._device
 
         if not size:
@@ -253,6 +262,10 @@ class GPUQueue(classes.GPUQueue):
         res = res.slice(0)
         temp_buffer.unmap()
         return res.to_py() # should give a memoryview?
+
+class GPUPipelineLayout(classes.GPUPipelineLayout):
+    def __init__(self, js_pl):
+        self.js = js_pl
 
 gpu = GPU()
 _register_backend(gpu)
