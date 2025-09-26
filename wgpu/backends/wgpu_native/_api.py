@@ -454,16 +454,7 @@ class GPU(classes.GPU):
             canvas : The canvas that the adapter should be able to render to. This can typically
                 be left to None. If given, the object must implement ``WgpuCanvasInterface``.
         """
-        return self._request_adapter(
-            feature_level=feature_level,
-            power_preference=power_preference,
-            force_fallback_adapter=force_fallback_adapter,
-            canvas=canvas,
-        )  # no-cover
 
-    def _request_adapter(
-        self, *, feature_level, power_preference, force_fallback_adapter, canvas
-    ) -> GPUPromise[GPUAdapter]:
         # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
         # It seems that the environment variables are only respected in their
         # testing environments maybe????
@@ -562,9 +553,14 @@ class GPU(classes.GPU):
         """Get a list of adapter objects available on the current system.
         This is the implementation based on wgpu-native.
         """
-        return self._enumerate_adapters()
+        result = self._enumerate_adapters()
+        # We already have the result, so we return a resolved promise.
+        # The reason this is async is to allow this to work on backends where we cannot actually enumerate adapters.
+        awaitable = GPUPromise("enumerate_adapters", lambda x: x, None, None)
+        awaitable._wgpu_set_result(result)
+        return awaitable
 
-    def _enumerate_adapters(self):
+    def _enumerate_adapters(self) -> list[GPUAdapter]:
         # The first call is to get the number of adapters, and the second call
         # is to get the actual adapters. Note that the second arg (now NULL) can
         # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
@@ -574,13 +570,7 @@ class GPU(classes.GPU):
         adapters = new_array("WGPUAdapter[]", count)
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, adapters)
-        result = [self._create_adapter(adapter) for adapter in adapters]
-
-        # We already have the result, so we return a resolved promise.
-        # The reason this is async is to allow this to work on backends where we cannot actually enumerate adapters.
-        awaitable = GPUPromise("enumerate_adapters", lambda x: x, None, None)
-        awaitable._wgpu_set_result(result)
-        return awaitable
+        return [self._create_adapter(adapter) for adapter in adapters]
 
     def _create_adapter(self, adapter_id):
         # ----- Get adapter info
@@ -1133,6 +1123,8 @@ class GPUAdapter(classes.GPUAdapter):
         default_queue: structs.QueueDescriptorStruct,
         trace_path: str,
     ) -> GPUPromise[GPUDevice]:
+        # Note that this method is used in extras.py
+
         # ---- Handle features
 
         assert isinstance(required_features, (tuple, list, set))
@@ -2431,9 +2423,6 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         offset: int = 0,
         size: int | None = None,
     ) -> GPUPromise[None]:
-        return self._map(mode, offset, size)  # for now
-
-    def _map(self, mode, offset=0, size=None):
         sync_on_read = True
 
         # Check mode
@@ -2721,12 +2710,6 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
     _release_function = libf.wgpuShaderModuleRelease
 
     def get_compilation_info_async(self) -> GPUPromise[GPUCompilationInfo]:
-        result = self._get_compilation_info()
-        promise = GPUPromise("get_compilation_info", lambda x: x, None, None)
-        promise._wgpu_set_result(result)
-        return promise
-
-    def _get_compilation_info(self):
         # Here's a little setup to implement this method. Unfortunately,
         # this is not yet implemented in wgpu-native. Another problem
         # is that if there is an error in the shader source, we raise
@@ -2755,7 +2738,12 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         #
         #  ... and then turn these WGPUCompilationInfoRequestStatus objects into Python objects ...
 
-        return []
+        result = []
+
+        # Return a resolved promise
+        promise = GPUPromise("get_compilation_info", lambda x: x, None, None)
+        promise._wgpu_set_result(result)
+        return promise
 
 
 class GPUPipelineBase(classes.GPUPipelineBase):
@@ -3851,7 +3839,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self.submit([command_buffer])
 
         # Download from mappable buffer
-        tmp_buffer._map("READ_NOSYNC").sync_wait()
+        tmp_buffer.map_async("READ_NOSYNC").sync_wait()
         data = tmp_buffer.read_mapped()
 
         # Explicit drop.
@@ -3985,7 +3973,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         command_buffer = encoder.finish()
         self.submit([command_buffer])
 
-        awaitable = copy_buffer._map("READ_NOSYNC", 0, data_length)
+        awaitable = copy_buffer.map_async("READ_NOSYNC", 0, data_length)
 
         # Download from mappable buffer
         # Because we use `copy=False``, we *must* copy the data.
@@ -4026,9 +4014,6 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         return data
 
     def on_submitted_work_done_async(self) -> GPUPromise[None]:
-        return self._on_submitted_work_done()
-
-    def _on_submitted_work_done(self):
         @ffi.callback("void(WGPUQueueWorkDoneStatus, void *, void *)")
         def work_done_callback(status, _userdata1, _userdata2):
             if status == lib.WGPUQueueWorkDoneStatus_Success:
