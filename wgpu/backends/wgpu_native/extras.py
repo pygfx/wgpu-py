@@ -60,7 +60,7 @@ def request_device_sync(
         os.makedirs(trace_path, exist_ok=True)
     elif os.listdir(trace_path):
         logger.warning(f"Trace directory not empty: {trace_path}")
-    promise = adapter._request_device(
+    promise = adapter._request_device_async(
         label, required_features, required_limits, default_queue, trace_path
     )
     return promise.sync_wait()

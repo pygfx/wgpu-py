@@ -1111,11 +1111,11 @@ class GPUAdapter(classes.GPUAdapter):
             check_struct("QueueDescriptor", default_queue)
         # Note that although we claim this function is async, the callback always
         # happens inside the call to libf.wgpuAdapterRequestDevice
-        return self._request_device(
+        return self._request_device_async(
             label, required_features, required_limits, default_queue, ""
         )
 
-    def _request_device(
+    def _request_device_async(
         self,
         label: str,
         required_features: Sequence[enums.FeatureNameEnum],
