@@ -15,37 +15,25 @@ from pyodide.ffi import run_sync, JsProxy, to_js
 
 from js import window, Uint32Array, ArrayBuffer
 
-def translate_python_methods(js_obj):
-    # print("Translating methods for", js_obj)
-    method_map = {}
-    for attr in dir(js_obj):
-        if "_" in attr:
-            continue
-        # print("attr", attr, type(attr))
-        # print("attr value", getattr(js_obj, attr), type(getattr(js_obj, attr)))
-        if isinstance(getattr(js_obj, attr), JsProxy):
-            # print("maybe method", attr)
-            #assume that is like a method?
-            target = getattr(js_obj, attr)
-            py_name = ''.join(['_' + c.lower() if c.isupper() else c for c in attr]).lstrip('_')
-            method_map[py_name] = target
-            py_name_async = py_name + '_async'
-            method_map[py_name_async] = target
-            py_name_sync = py_name + '_sync'
-            method_map[py_name_sync] = lambda *args, target=target: run_sync(target(*args))
+def to_camel_case(snake_str):
+    components = snake_str.split('_')
+    return components[0] + ''.join(x.title() for x in components[1:])
 
-    for name, target in method_map.items():
-        js_obj.name = target
-        # setattr(js_obj, name, target)
-
-    return js_obj
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
 def simple_js_accessor(value, convert, cache):
     if hasattr(value, "js"):
         value = value.js
         # print("converted to js", value)
-    # todo convert snake_case back to camel_case?
+    elif isinstance(value, structs.Struct):
+        value = value.__dict__ # as dict?
+        value = {to_camel_case(k):v for k,v in value.items()}
+    # recursion limit???
+    # elif isinstance(value, dict):
+    #     # convert keys to camelCase
+    #     value = {to_camel_case(k):v for k,v in value.items()}
+
+    # TODO: array like might need special handling like do not unpack yourself...
     return convert(value)
 
 # TODO: can we implement our own variant of JsProxy and PyProxy, to_js and to_py? to work with pyodide and not around it?
@@ -95,33 +83,41 @@ class GPUAdapter(classes.GPUAdapter):
     async def request_device_async(self, **parameters):
         device = await self.js.requestDevice(**parameters)
         # device = translate_python_methods(device)
-        return GPUDevice(device)
-    
+        return GPUDevice(device, adapter=self)
+
     # api diff just for overview gives adaper info for now
     @property
     def summary(self):
         return self.adapter_info
-    
+
     @property
     def adapter_info(self):
         return self.js.info
 
 class GPUDevice(classes.GPUDevice):
-    def __init__(self, js_device):
+    def __init__(self, js_device, adapter):
         self.js = js_device
+        self._adapter = adapter
 
     @property
     def queue(self):
-        # TODO: maybe needs a class...
         return GPUQueue(self.js.queue, self)
 
+    # API diff: useful to have?
+    @property
+    def adapter(self):
+        return self._adapter
+
     def create_shader_module(self, *args, **kwargs):
-        # print("create_shader_module", args, kwargs)
-        js_sm = self.js.createShaderModule(*args, **kwargs)
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        js_sm = self.js.createShaderModule(*js_args, **js_kwargs)
         return GPUShaderModule(js_sm)
 
     def create_buffer(self, *args, **kwargs):
-        js_buf = self.js.createBuffer(*args, **kwargs)
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        js_buf = self.js.createBuffer(*js_args, **js_kwargs)
         return GPUBuffer(js_buf)
 
     # TODO: apidiff
@@ -140,8 +136,9 @@ class GPUDevice(classes.GPUDevice):
         return GPUBuffer(js_buf)
 
     def create_bind_group_layout(self, *args, **kwargs):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_bgl = self.js.createBindGroupLayout(*args, **js_kwargs)
+        js_bgl = self.js.createBindGroupLayout(*js_args, **js_kwargs)
         return GPUBindGroupLayout(js_bgl)
 
     def create_compute_pipeline(self, *args, **kwargs):
@@ -155,8 +152,13 @@ class GPUDevice(classes.GPUDevice):
         return GPUComputePipeline(js_cp)
 
     def create_bind_group(self, *args, **kwargs):
+        print("create_bind_group", args, kwargs)
+        kwargs = {to_camel_case(k):v for k,v in kwargs.items()}
+        print("converted kwargs", kwargs)
+        js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_bg = self.js.createBindGroup(*args, **js_kwargs)
+        print("js args", js_args, js_kwargs)
+        js_bg = self.js.createBindGroup(*js_args, **js_kwargs)
         return GPUBindGroup(js_bg)
 
     def create_command_encoder(self, *args, **kwargs):
@@ -165,12 +167,9 @@ class GPUDevice(classes.GPUDevice):
         return GPUCommandEncoder(js_ce)
 
     def create_pipeline_layout(self, *args, **kwargs):
-        print("create_pipeline_layout", args, kwargs)
-        # translate the key to camelCase manually here!
-        kwargs["bindGroupLayouts"] = kwargs.get("bind_group_layouts", [])
+        kwargs = {to_camel_case(k):v for k,v in kwargs.items()}
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        print(js_args, js_kwargs)
         js_pl = self.js.createPipelineLayout(*js_args, **js_kwargs)
         return GPUPipelineLayout(js_pl)
 
@@ -179,10 +178,29 @@ class GPUDevice(classes.GPUDevice):
         js_tex = self.js.createTexture(*args, **js_kwargs)
         return GPUTexture(js_tex)
 
+    def create_sampler(self, *args, **kwargs):
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        js_samp = self.js.createSampler(*args, **js_kwargs)
+        return GPUSampler(js_samp)
+
+    def create_render_pipeline(self, *args, **kwargs):
+        print("create_render_pipeline", args, kwargs)
+        kwargs = {to_camel_case(k):v for k,v in kwargs.items()}
+        print("converted kwargs", kwargs)
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        print("js args", js_args, js_kwargs)
+        js_rp = self.js.createRenderPipeline(*js_args, **js_kwargs)
+        return GPURenderPipeline(js_rp)
 
 class GPUShaderModule(classes.GPUShaderModule):
     def __init__(self, js_sm):
         self.js = js_sm
+
+    # part of base object because we never call super().__init__() on ours
+    @property
+    def _label(self):
+        return self.js.label
 
 class GPUBuffer(classes.GPUBuffer):
     def __init__(self, js_buf):
@@ -295,12 +313,23 @@ class GPUQueue(classes.GPUQueue):
         temp_buffer.unmap()
         return res.to_py() # should give a memoryview?
 
-    def write_texture(self, *args, **kwargs):
-        print("GPUQueue.write_texture called with", args, kwargs)
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        print("Converted to JS args", js_args, js_kwargs)
-        self.js.writeTexture(*js_args, **js_kwargs)
+    # this one misbehaves with args or kwargs, like it seems the data gets unpacked?
+    def write_texture(self, destination, data, data_layout, size):
+        # print("GPUQueue.write_texture called with", destination, data, data_layout, size)
+        js_destination = to_js(destination, eager_converter=simple_js_accessor)
+        js_data = ArrayBuffer.new(data.nbytes) # does this actually hold any data?
+        # js_data = Uint32Array.new(js_data).set(data) # maybe like this????
+        # print("data js type", type(js_data))
+        # print(js_data)
+        js_data_layout = to_js(data_layout, eager_converter=simple_js_accessor)
+        js_size = to_js(size, eager_converter=simple_js_accessor)
+        self.js.writeTexture(js_destination, js_data, js_data_layout, js_size)
+
+    # def write_texture(self, *args, **kwargs):
+    #     js_args = to_js(args, eager_converter=simple_js_accessor)
+    #     js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+    #     self.js.writeTexture(*js_args, **js_kwargs)
+
 
 class GPUPipelineLayout(classes.GPUPipelineLayout):
     def __init__(self, js_pl):
@@ -318,6 +347,34 @@ class GPUTexture(classes.GPUTexture):
 class GPUTextureView(classes.GPUTextureView):
     def __init__(self, js_view):
         self.js = js_view
+
+class GPUSampler(classes.GPUSampler):
+    def __init__(self, js_samp):
+        self.js = js_samp
+
+class GPUCanvasContext(classes.GPUCanvasContext):
+    # TODO update rendercanvas.html get_context to work here?
+    def __init__(self, canvas, present_methods):
+        # the super init also does this... maybe we can call it?
+        super().__init__(canvas, present_methods)
+
+
+    @property
+    def js(self) -> JsProxy:
+        return self.canvas.html_context
+
+    # undo the api diff
+    def get_preferred_format(self, adapter: GPUAdapter | None) -> enums.TextureFormat:
+        return gpu.js.getPreferredCanvasFormat()
+
+    def configure(self, *args, **kwargs):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        self.js.configure(*js_args, **js_kwargs)
+
+class GPURenderPipeline(classes.GPURenderPipeline):
+    def __init__(self, js_rp):
+        self.js = js_rp
 
 # finally register the backend
 gpu = GPU()

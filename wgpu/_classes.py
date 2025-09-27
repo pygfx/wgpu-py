@@ -349,7 +349,7 @@ class GPUCanvasContext:
             usage = str_flag_to_int(flags.TextureUsage, usage)
 
         color_space  # noqa - not really supported, just assume srgb for now
-        tone_mapping  # noqa - not supported yet
+        tone_mapping = {} if tone_mapping is None else tone_mapping
 
         # Allow more than the IDL modes, see https://github.com/pygfx/wgpu-py/pull/719
         extra_alpha_modes = ["auto", "unpremultiplied", "inherit"]  # from webgpu.h

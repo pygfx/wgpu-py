@@ -72,7 +72,9 @@ def get_render_pipeline_kwargs(
     canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
 ) -> wgpu.RenderPipelineDescriptor:
     context = canvas.get_context("wgpu")
+    print("context:", context)
     render_texture_format = context.get_preferred_format(device.adapter)
+    print("render_texture_format:", render_texture_format)
     context.configure(device=device, format=render_texture_format)
 
     shader = device.create_shader_module(code=shader_source)
@@ -463,7 +465,7 @@ texture_data = np.array(
 )
 texture_data = np.repeat(texture_data, 64, 0)
 texture_data = np.repeat(texture_data, 64, 1)
-texture_size = texture_data.shape[1], texture_data.shape[0], 1
+texture_size = (texture_data.shape[1], texture_data.shape[0], 1)
 
 # Use numpy to create a struct for the uniform
 uniform_dtype = [("transform", "float32", (4, 4))]
