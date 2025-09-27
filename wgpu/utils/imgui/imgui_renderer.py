@@ -176,6 +176,9 @@ class ImguiRenderer:
 
     def _on_resize(self, event):
         self._backend.io.display_size = (event["width"], event["height"])
+        scale = event.get('pixel_ratio', None)
+        if scale is not None:
+            self._backend.io.display_framebuffer_scale = (scale, scale)
 
     def _on_mouse_move(self, event):
         self._backend.io.add_mouse_pos_event(event["x"], event["y"])
