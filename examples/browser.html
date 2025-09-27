@@ -21,6 +21,7 @@ some text below the canvas!
 
         // Load Pyodide
         let pyodide = await loadPyodide();
+        pyodide.setDebug(true);
 
         await pyodide.loadPackage("micropip");
         const micropip = pyodide.pyimport("micropip");
