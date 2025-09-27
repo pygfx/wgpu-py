@@ -71,19 +71,20 @@ def get_render_pipeline_kwargs(
         render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
-    shader = device.create_shader_module(code=shader_source)
+    vert_shader = device.create_shader_module(code=shader_source)
+    frag_shader = device.create_shader_module(code=shader_source)
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     return wgpu.RenderPipelineDescriptor(
         layout=pipeline_layout,
         vertex=wgpu.VertexState(
-            module=shader,
+            module=vert_shader,
             entry_point="vs_main",
         ),
         depth_stencil=None,
         multisample=None,
         fragment=wgpu.FragmentState(
-            module=shader,
+            module=frag_shader,
             entry_point="fs_main",
             targets=[
                 wgpu.ColorTargetState(
@@ -175,7 +176,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 if __name__ == "__main__":
     from rendercanvas.auto import RenderCanvas, loop
 
-    canvas = RenderCanvas(size=(640, 480), title="wgpu triangle example")
+    canvas = RenderCanvas(size=(640, 480), title="wgpu triangle example", update_mode="continuous")
     draw_frame = setup_drawing_sync(canvas)
     canvas.request_draw(draw_frame)
     loop.run()

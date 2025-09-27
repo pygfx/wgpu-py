@@ -2,12 +2,12 @@
 <!doctype html>
 <html>
 <head>
-    RenderCanvas HTML canvas via Pyodide:<br>
+    wgpu-py on the HTML RenderCanvas canvas with Pyodide:<br>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
 </head>
 <body>
 <canvas id="canvas" width="640" height="480" style="background-color: lightgrey;"></canvas><br>
-some text below the canvas!
+pixels got drawn!
 <script type="text/javascript">
     async function main(){
 
@@ -16,7 +16,9 @@ some text below the canvas!
         // TODO: replace the actual code here (unless you have the module)
         // pythonCode = await (await fetch("compute_noop.py")).text();
         // pythonCode = await (await fetch("compute_matmul.py")).text();
-        pythonCode = await (await fetch("cube.py")).text();
+        // pythonCode = await (await fetch("cube.py")).text();
+        pythonCode = await (await fetch("triangle.py")).text();
+        // pythonCode = await (await fetch("triangle_glsl.py")).text();
         
 
         // Load Pyodide

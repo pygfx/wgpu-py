@@ -77,13 +77,14 @@ def get_render_pipeline_kwargs(
     print(render_texture_format)
     context.configure(device=device, format=render_texture_format)
 
-    shader = device.create_shader_module(code=shader_source)
+    vert_shader = device.create_shader_module(code=shader_source)
+    frag_shader = device.create_shader_module(code=shader_source)
 
     # wgpu.RenderPipelineDescriptor
     return wgpu.RenderPipelineDescriptor(
         layout="auto",
         vertex=wgpu.VertexState(
-            module=shader,
+            module=vert_shader,
             entry_point="vs_main",
             buffers=[
                 wgpu.VertexBufferLayout(
@@ -110,7 +111,7 @@ def get_render_pipeline_kwargs(
             cull_mode="back",
         ),
         fragment=wgpu.FragmentState(
-            module=shader,
+            module=frag_shader,
             entry_point="fs_main",
             targets=[
                 wgpu.ColorTargetState(
@@ -217,17 +218,17 @@ def create_pipeline_layout(device: wgpu.GPUDevice, pipeline: wgpu.GPURenderPipel
     for entries, layout_entries in zip(
         bind_groups_entries, bind_groups_layout_entries, strict=False
     ):
-        bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
-        bind_group_layouts.append(bind_group_layout)
+        # bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
+        # bind_group_layouts.append(bind_group_layout)
         bind_groups.append(
             device.create_bind_group(layout=pipeline.get_bind_group_layout(0), entries=entries)
         )
 
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=bind_group_layouts
-    )
+    # pipeline_layout = device.create_pipeline_layout(
+    #     bind_group_layouts=bind_group_layouts
+    # )
 
-    return pipeline_layout, uniform_buffer, bind_groups
+    return None, uniform_buffer, bind_groups
 
 
 def get_draw_function(
