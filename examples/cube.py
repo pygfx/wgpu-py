@@ -77,14 +77,13 @@ def get_render_pipeline_kwargs(
     print(render_texture_format)
     context.configure(device=device, format=render_texture_format)
 
-    vert_shader = device.create_shader_module(code=shader_source)
-    frag_shader = device.create_shader_module(code=shader_source)
+    shader = device.create_shader_module(code=shader_source)
 
     # wgpu.RenderPipelineDescriptor
     return wgpu.RenderPipelineDescriptor(
         layout="auto",
         vertex=wgpu.VertexState(
-            module=vert_shader,
+            module=shader,
             entry_point="vs_main",
             buffers=[
                 wgpu.VertexBufferLayout(
@@ -111,7 +110,7 @@ def get_render_pipeline_kwargs(
             cull_mode="back",
         ),
         fragment=wgpu.FragmentState(
-            module=frag_shader,
+            module=shader,
             entry_point="fs_main",
             targets=[
                 wgpu.ColorTargetState(

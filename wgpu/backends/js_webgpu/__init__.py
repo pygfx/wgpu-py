@@ -7,13 +7,12 @@ generated.
 """
 
 # NOTE: this is just a stub for now!!
-
 from .. import _register_backend
 from ... import classes, structs, enums, flags
 
 from pyodide.ffi import run_sync, JsProxy, to_js
+from js import window, Uint32Array, ArrayBuffer, Float32Array, Uint8Array, BigInt
 
-from js import window, Uint32Array, ArrayBuffer, Float32Array
 
 def to_camel_case(snake_str):
     components = snake_str.split('_')
@@ -23,13 +22,16 @@ def to_camel_case(snake_str):
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
 # you have to do the recursion yourself...
 def simple_js_accessor(value, convert, cache):
+    # print("simple_js_accessor", value, type(value), dir(value))
     if isinstance(value, classes.GPUObjectBase):
-        return value._internal
-        # print("converted to js", value)
+        # print("GPUObjectBase detected", value)
+        return value._internal # type : JsProxy
     elif isinstance(value, structs.Struct):
+        # print("struct detected", value, "\n")
         result = {}
         # cache(value, result)
-        for k, v in value.__dict__.items():
+        for k, v in value.items():
+            # print("struct item", k, v, type(v))
             camel_key = to_camel_case(k)
             result[camel_key] = convert(v)
         return result
@@ -46,7 +48,7 @@ def simple_js_accessor(value, convert, cache):
         for v in value:
             result.append(convert(v))
         return result
-
+    # is this a default conversation?
     return convert(value)
 
 # TODO: can we implement our own variant of JsProxy and PyProxy, to_js and to_py? to work with pyodide and not around it?
@@ -147,28 +149,42 @@ class GPUDevice(classes.GPUDevice):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_sm = self._internal.createShaderModule(*js_args, js_kwargs)
-        return GPUShaderModule(js_sm)
+        label = kwargs.get("label", "")
+        # we only need to implement the class if we implement the methods I guess?
+        return classes.GPUShaderModule(label, js_sm, self)
 
     def create_buffer(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
+        # js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_buf = self._internal.createBuffer(*js_args, js_kwargs)
-        return GPUBuffer(js_buf)
+        js_buf = self._internal.createBuffer(js_kwargs)
 
-    # TODO: apidiff
+        label = kwargs.get("label", "")
+        size = kwargs.get("size")
+        usage = kwargs.get("usage")
+        map_state = (
+            enums.BufferMapState.mapped
+            if kwargs.get("mapped_at_creation", False)
+            else enums.BufferMapState.unmapped
+        )
+        return GPUBuffer(label, js_buf, self, size, usage, map_state)
+
+    # TODO: apidiff rewritten so we avoid the buggy mess in map_write for a bit.
     def create_buffer_with_data(self, *args, **kwargs):
         kwargs["mappedAtCreation"] = True
         data = kwargs.get("data")
         data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
         kwargs["size"] = data_size
         # print(data_size)
-        kwargs["label"] = "input buffer"
         js_buf = self._internal.createBuffer(*args, **kwargs)
-        # TODO: dtype?
+        # TODO: dtype? (always cast to Uint32 I guess, only bytes should matter...)
         Uint32Array.new(js_buf.getMappedRange()).set(kwargs["data"])
         js_buf.unmap()
         # print(dir(js_buf))
-        return GPUBuffer(js_buf)
+
+        label = kwargs.get("label", "")
+        usage = kwargs.get("usage")
+
+        return GPUBuffer(label, js_buf, self, data_size, usage, enums.BufferMapState.unmapped)
 
     # because there is no default and it has to be one of the binding group layouts this might need a custom check -.-
     def create_bind_group_layout(self, *args, **kwargs):
@@ -177,7 +193,9 @@ class GPUDevice(classes.GPUDevice):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         # print("JS create_bind_group_layout", js_args, js_kwargs, type(js_kwargs["entries"]))
         js_bgl = self._internal.createBindGroupLayout(*js_args, js_kwargs)
-        return GPUBindGroupLayout(js_bgl)
+
+        label = kwargs.get("label", "")
+        return classes.GPUBindGroupLayout(label, js_bgl, self)
 
     def create_compute_pipeline(self, *args, **kwargs):
         # TODO: can we automatically get the js object when it's called somehwere? maybe by implementing _to_js?
@@ -187,132 +205,140 @@ class GPUDevice(classes.GPUDevice):
         # print("create_compute_pipeline", args, js_kwargs)
         # print(dir(js_kwargs))
         js_cp = self._internal.createComputePipeline(*args, js_kwargs)
-        return GPUComputePipeline(js_cp)
+
+        label = kwargs.get("label", "")
+        return GPUComputePipeline(label, js_cp, self)
 
     def create_bind_group(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_bg = self._internal.createBindGroup(*js_args, js_kwargs)
-        return GPUBindGroup(js_bg)
+
+        label = kwargs.get("label", "")
+        return classes.GPUBindGroup(label, js_bg, self)
 
     def create_command_encoder(self, *args, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_ce = self._internal.createCommandEncoder(*args, js_kwargs)
-        return GPUCommandEncoder(js_ce)
+
+        label = kwargs.get("label", "")
+        return GPUCommandEncoder(label, js_ce, self)
 
     def create_pipeline_layout(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_pl = self._internal.createPipelineLayout(*js_args, js_kwargs)
-        return GPUPipelineLayout(js_pl)
+
+        label = kwargs.get("label", "")
+        return classes.GPUPipelineLayout(label, js_pl, self)
 
     def create_texture(self, *args, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_tex = self._internal.createTexture(*args, js_kwargs)
-        return GPUTexture(js_tex)
 
-    def create_sampler(self, *args, **kwargs):
+        label = kwargs.get("label", "")
+        tex_info = {
+            "size": kwargs.get("size"),
+            "mip_level_count": kwargs.get("mip_level_count", 1),
+            "sample_count": kwargs.get("sample_count", 1),
+            "dimension": kwargs.get("dimension", "2d"),
+            "format": kwargs.get("format"),
+            "usage": kwargs.get("usage"),
+        }
+
+        return GPUTexture(label, js_tex, self, tex_info)
+
+    def create_sampler(self, *args, **kwargs) -> classes.GPUSampler:
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_samp = self._internal.createSampler(*args, js_kwargs)
-        return GPUSampler(js_samp)
+
+        label = kwargs.get("label", "")
+        return classes.GPUSampler(label, js_samp, self)
 
     # breaks because we access the same module twice and might be losing it to GC or something -.-
     def create_render_pipeline(self, *args, **kwargs):
-        # print("create_render_pipeline", args, kwargs)
+        # let's try to call to_js multiple times to maybe avoid caching,
+        # vertex is a required argument, so can we just take it out like this?
+        # maybe we can use a depth limit or something...
+        kwargs["vertex"] = to_js(kwargs["vertex"], eager_converter=simple_js_accessor)
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        # print("JS create_render_pipeline", js_args, js_kwargs)
         js_rp = self._internal.createRenderPipeline(*js_args, js_kwargs)
-        return GPURenderPipeline(js_rp)
 
-class GPUShaderModule(classes.GPUShaderModule):
-    def __init__(self, js_sm):
-        self._js = js_sm
-
-    @property
-    def js(self):
-        return self._js  # hope we don't lose the reference after one access?
-
-    # part of base object because we never call super().__init__() on ours
-    @property
-    def _label(self):
-        return self._internal.label
+        label = kwargs.get("label", "")
+        return GPURenderPipeline(label, js_rp, self)
 
 class GPUBuffer(classes.GPUBuffer):
-    def __init__(self, js_buf):
-        self._internal = js_buf
+
+    # since we actually got the real one:
+    @property
+    def map_state(self):
+        return self._internal.mapState
 
     # TODO apidiff
     def write_mapped(self, data, buffer_offset: int | None = None):
         # TODO: get dtype
-        js_buffer_array = Float32Array.new(data.nbytes)
-        Float32Array.new(self._internal.getMappedRange(buffer_offset)).set(data)
+        if self.map_state != enums.BufferMapState.mapped:
+            raise RuntimeError(f"Can only write to a buffer if its mapped: {self.map_state=}")
+        # GPUSIze64 type
+        if buffer_offset is None:
+            buffer_offset = 0
+        js_offset = BigInt(buffer_offset)
+        js_size = BigInt(data.nbytes)
 
-    def map_sync(self, mode, offset=0, size=None):
+        # TODO: try to make theses args work in the first place -.-
+        array_buf = self._internal.getMappedRange()
+        Uint32Array.new(array_buf).set(data)
+
+    def map_sync(self, mode=None, offset=0, size=None):
         return run_sync(self.map_async(mode, offset, size))
 
-    async def map_async(self, mode, offset: int = 0, size: int | None = None):
-        js_mode = to_js(mode, eager_converter=simple_js_accessor)
-        res = await self._internal.mapAsync(js_mode, offset, size)
+    async def map_async(self, mode: flags.MapModeFlags | None, offset: int = 0, size: int | None = None):
+        res = await self._internal.mapAsync(mode, offset, size)
         return res
 
     def unmap(self):
         self._internal.unmap()
 
-    # TODO: idl attributes round trip -.-
-    @property
-    def _size(self):
-        # print("getting size", dir(self._internal), self._internal.size)
-        return self._internal.size
-
-class GPUBindGroupLayout(classes.GPUBindGroupLayout):
-    def __init__(self, js_bgl):
-        self._internal = js_bgl
-
 # TODO: mixin class
 class GPUComputePipeline(classes.GPUComputePipeline):
-    def __init__(self, js_cp):
-        self._internal = js_cp
-
     def get_bind_group_layout(self, *args, **kwargs):
         js_bgl = self._internal.getBindGroupLayout(*args, **kwargs)
-        return GPUBindGroupLayout(js_bgl)
 
-class GPUBindGroup(classes.GPUBindGroup):
-    def __init__(self, js_bg):
-        self._internal = js_bg
+        label = kwargs.get("label", "")
+        return classes.GPUBindGroupLayout(label, js_bgl, self._device)
 
 class GPUCommandEncoder(classes.GPUCommandEncoder):
-    def __init__(self, js_ce):
-        self._internal = js_ce
-
     def begin_compute_pass(self, *args, **kwargs):
         # TODO: no args, should be empty maybe?
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_cp = self._internal.beginComputePass(*args, js_kwargs)
-        return GPUComputePassEncoder(js_cp)
-    
+
+        label = kwargs.get("label", "")
+        return GPUComputePassEncoder(label, js_cp, self._device)
+
     def begin_render_pass(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_rp = self._internal.beginRenderPass(*js_args, js_kwargs)
-        return GPURenderPassEncoder(js_rp)
+
+        label = kwargs.get("label", "")
+        return GPURenderPassEncoder(label, js_rp, self._device)
 
     def finish(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_cmd_buf = self._internal.finish(*js_args, js_kwargs)
-        return GPUCommandBuffer(js_cmd_buf)
-    
+
+        label = kwargs.get("label", "")
+        return classes.GPUCommandBuffer(label, js_cmd_buf, self._device)
+
     def copy_buffer_to_buffer(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         self._internal.copyBufferToBuffer(*js_args, js_kwargs)
 
 class GPUComputePassEncoder(classes.GPUComputePassEncoder):
-    def __init__(self, js_cp):
-        self._internal = js_cp
-
     def set_pipeline(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
@@ -332,18 +358,8 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoder):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         self._internal.end(*args, js_kwargs)
 
-class GPUCommandBuffer(classes.GPUCommandBuffer):
-    def __init__(self, js_cb):
-        self._internal = js_cb
-
 class GPUQueue(classes.GPUQueue):
-    # should be part of the base class init actually...
-    # def __init__(self, label:str, js_queue:JsProxy, device: GPUDevice):
-    #     super().__init__(label, internal=js_queue, device=device)
-    #     self._internal = js_queue
-    #     self._device = device #needed for the read_buffer api diff I guess
-
-    def submit(self, command_buffers: list[GPUCommandBuffer]):
+    def submit(self, command_buffers: list[classes.GPUCommandBuffer]):
         self._internal.submit([cb._internal for cb in command_buffers])
 
     # TODO: api diff
@@ -391,26 +407,13 @@ class GPUQueue(classes.GPUQueue):
     #     self._internal.writeTexture(*js_args, js_kwargs)
 
 
-class GPUPipelineLayout(classes.GPUPipelineLayout):
-    def __init__(self, js_pl):
-        self._internal = js_pl
-
 class GPUTexture(classes.GPUTexture):
-    def __init__(self, js_tex):
-        self._internal = js_tex
-
     def create_view(self, *args, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_view = self._internal.createView(*args, js_kwargs)
-        return GPUTextureView(js_view)
 
-class GPUTextureView(classes.GPUTextureView):
-    def __init__(self, js_view):
-        self._internal = js_view
-
-class GPUSampler(classes.GPUSampler):
-    def __init__(self, js_samp):
-        self._internal = js_samp
+        label = kwargs.get("label", "")
+        return classes.GPUTextureView(label, js_view, self._device, self, self.size)
 
 class GPUCanvasContext(classes.GPUCanvasContext):
     # TODO update rendercanvas.html get_context to work here?
@@ -430,37 +433,65 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         self._internal.configure(*js_args, js_kwargs)
+        self._config = {
+            "device": kwargs.get("device"),
+            "format": kwargs.get("format"),
+            "usage": kwargs.get("usage", 0x10),
+            "view_formats": kwargs.get("view_formats", ()),
+            "color_space": kwargs.get("color_space", "srgb"),
+            "tone_mapping": kwargs.get("tone_mapping", None),
+            "alpha_mode": kwargs.get("alpha_mode", "opaque"),
+        }
 
     def get_current_texture(self):
         js_texture = self._internal.getCurrentTexture()
-        return GPUTexture(js_texture)
+
+        label = "" # always empty?
+        device = self._config["device"]
+        text_info = {
+            "size": (js_texture.width, js_texture.height, js_texture.depthOrArrayLayers),
+            "mip_level_count": js_texture.mipLevelCount,
+            "sample_count": js_texture.sampleCount,
+            "dimension": js_texture.dimension,
+            "format": js_texture.format,
+            "usage": js_texture.usage,
+        }
+        return GPUTexture(label, js_texture, device, text_info)
 
 class GPURenderPipeline(classes.GPURenderPipeline):
-    def __init__(self, js_rp):
-        self._internal = js_rp
-
-    def get_bind_group_layout(self, index: int) -> GPUBindGroupLayout:
-        return GPUBindGroupLayout(self._internal.getBindGroupLayout(index))
+    def get_bind_group_layout(self, index: int | None = None) -> classes.GPUBindGroupLayout:
+        return classes.GPUBindGroupLayout("", self._internal.getBindGroupLayout(index), self._device)
 
 class GPURenderPassEncoder(classes.GPURenderPassEncoder):
-    def __init__(self, js_rp):
-        self._internal = js_rp
-
     def set_pipeline(self, pipeline: GPURenderPipeline):
         self._internal.setPipeline(pipeline._internal)
+
+    def set_index_buffer(self, *args, **kwargs):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        self._internal.setIndexBuffer(*js_args, js_kwargs)
+
+    def set_vertex_buffer(self, *args, **kwargs):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        self._internal.setVertexBuffer(*js_args, js_kwargs)
 
     def set_bind_group(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         self._internal.setBindGroup(*js_args, js_kwargs)
 
+    def draw_indexed(self, *args, **kwargs):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        self._internal.drawIndexed(*js_args, js_kwargs)
+
     # maybe it needs to be way simpler?
     def draw(self, *args, **kwargs):
         self._internal.draw(*args)
 
-    def end(self, *args, **kwargs):
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        self._internal.end(*args, js_kwargs)
+    def end(self):
+        self._internal.end()
 
 # finally register the backend
 gpu = GPU()
