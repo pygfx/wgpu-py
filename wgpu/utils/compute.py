@@ -158,6 +158,10 @@ def compute_with_buffers(input_arrays, output_arrays, shader, constants=None, n=
             }
         )
 
+    print(binding_layouts[0]["buffer"]["type"])
+    print(type(binding_layouts[0]["buffer"]["type"]))
+    print(isinstance(binding_layouts[0]["buffer"]["type"], wgpu.BufferBindingType))
+
     # Put buffers together
     bind_group_layout = device.create_bind_group_layout(entries=binding_layouts)
     pipeline_layout = device.create_pipeline_layout(

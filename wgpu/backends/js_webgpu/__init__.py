@@ -11,12 +11,17 @@ from .. import _register_backend
 from ... import classes, structs, enums, flags
 
 from pyodide.ffi import run_sync, JsProxy, to_js
-from js import window, Uint32Array, ArrayBuffer, Float32Array, Uint8Array, BigInt
+from js import window, Uint32Array, ArrayBuffer, Float32Array, Uint8Array, BigInt, Object, undefined
 
 
 def to_camel_case(snake_str):
     components = snake_str.split('_')
-    return components[0] + ''.join(x.title() for x in components[1:])
+    res = components[0] + ''.join(x.title() for x in components[1:])
+    # maybe keywords are a problem? 
+    # https://pyodide.org/en/stable/usage/faq.html#how-can-i-access-javascript-objects-attributes-in-python-if-their-names-are-python-keywords
+    # if res in ["type", "format"]:
+    #     res += "_"
+    return res
 
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
@@ -35,20 +40,17 @@ def simple_js_accessor(value, convert, cache):
             camel_key = to_camel_case(k)
             result[camel_key] = convert(v)
         return result
+    # this might recursively call itself...
+    # maybe use a map? or do a dict_converted?
     elif isinstance(value, dict):
         result = {}
         # cache(value, result)
         for k, v in value.items():
             camel_key = to_camel_case(k) if isinstance(k, str) else k
             result[camel_key] = convert(v)
+        if len(result) == 0:
+            return undefined # or Object.new() ?
         return result
-    elif isinstance(value, (tuple, list)):
-        result = []
-        # cache(value, result)
-        for v in value:
-            result.append(convert(v))
-        return result
-    # is this a default conversation?
     return convert(value)
 
 # TODO: can we implement our own variant of JsProxy and PyProxy, to_js and to_py? to work with pyodide and not around it?
@@ -186,33 +188,83 @@ class GPUDevice(classes.GPUDevice):
 
         return GPUBuffer(label, js_buf, self, data_size, usage, enums.BufferMapState.unmapped)
 
-    # because there is no default and it has to be one of the binding group layouts this might need a custom check -.-
-    def create_bind_group_layout(self, *args, **kwargs):
-        # print("create_bind_group_layout", args, kwargs)
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        # print("JS create_bind_group_layout", js_args, js_kwargs, type(js_kwargs["entries"]))
-        js_bgl = self._internal.createBindGroupLayout(*js_args, js_kwargs)
+    # or here???
+    def create_bind_group_layout(self, *, label: str = "", entries: list[structs.BindGroupLayoutEntryStruct]) -> classes.GPUBindGroupLayout:
+        empty_value = undefined # figure out what pyodide is happy with
+        js_entries = []
+        for entry in entries:
+            # we need exactly one of them needs to exist:
+            # https://www.w3.org/TR/webgpu/#dictdef-gpubindgrouplayoutentry
+            buffer = entry.get("buffer")
+            sampler = entry.get("sampler")
+            texture = entry.get("texture")
+            storage_texture = entry.get("storage_texture")
+            external_texture = entry.get("external_texture") # not sure if exists in wgpu-native, but let's have it anyway.
 
-        label = kwargs.get("label", "")
+            if buffer is not None:
+                sampler = texture = storage_texture = external_texture = empty_value
+                # or struct.BufferBindingLayout?
+                buffer = {
+                    "type": buffer.get("type", enums.BufferBindingType.uniform),
+                    "hasDynamicOffset": buffer.get("has_dynamic_offset", False),
+                    "minBindingSize": buffer.get("min_binding_size", 0)
+                }
+                buffer = to_js(buffer, depth=1)
+            elif sampler is not None:
+                buffer = texture = storage_texture = external_texture = empty_value
+                sampler = {
+                    "type": sampler.get("type", enums.SamplerBindingType.filtering),
+                }
+            elif texture is not None:
+                buffer = sampler = storage_texture = external_texture = empty_value
+                texture = {
+                    "sampleType": texture.get("sample_type", enums.TextureSampleType.float),
+                    "viewDimension": texture.get("view_dimension", enums.TextureViewDimension.d2),
+                    "multisampled": texture.get("multisampled", False),
+                }
+            elif storage_texture is not None:
+                buffer = sampler = texture = external_texture = empty_value
+                storage_texture = {
+                    "access": storage_texture.get("access", enums.StorageTextureAccess.write_only),
+                    "format": storage_texture.get("format"),
+                    "viewDimension": storage_texture.get("view_dimension", enums.TextureViewDimension.d2),
+                }
+            elif external_texture is not None:
+                buffer = sampler = texture = storage_texture = empty_value
+                external_texture = {
+                    # https://www.w3.org/TR/webgpu/#dictdef-gpuexternaltexturebindinglayout
+                    # there is nothing here... which makes this an empty dict/set?
+                }
+            else:
+                raise ValueError(
+                    "BindGroupLayoutEntry must have exactly one of buffer, sampler, texture, storage_texture, external_texture set. Got none."
+                    )
+            js_entry = {
+                "binding": entry.get("binding"),
+                "visibility": entry.get("visibility"),
+                "buffer": buffer,
+                "sampler": sampler,
+                "texture": texture,
+                "storage_texture": storage_texture,
+                "external_texture": external_texture,
+            }
+            js_entries.append(js_entry)
+
+        js_bgl = self._internal.createBindGroupLayout(label=label, entries=js_entries)
         return classes.GPUBindGroupLayout(label, js_bgl, self)
 
     def create_compute_pipeline(self, *args, **kwargs):
-        # TODO: can we automatically get the js object when it's called somehwere? maybe by implementing _to_js?
-        # print("create_compute_pipeline", args, kwargs)
-        # kwargs["compute"]["module"] = kwargs["compute"]["module"].to_js()
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        # print("create_compute_pipeline", args, js_kwargs)
-        # print(dir(js_kwargs))
         js_cp = self._internal.createComputePipeline(*args, js_kwargs)
 
         label = kwargs.get("label", "")
         return GPUComputePipeline(label, js_cp, self)
 
-    def create_bind_group(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
+    # I think the entries arg gers unpacked with a single dict inside, so trying to do the list around that manually
+    def create_bind_group(self, **kwargs) -> classes.GPUBindGroup:
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_bg = self._internal.createBindGroup(*js_args, js_kwargs)
+        js_kwargs = to_js(js_kwargs) # to get the actual map?
+        js_bg = self._internal.createBindGroup(js_kwargs)
 
         label = kwargs.get("label", "")
         return classes.GPUBindGroup(label, js_bg, self)
@@ -224,12 +276,11 @@ class GPUDevice(classes.GPUDevice):
         label = kwargs.get("label", "")
         return GPUCommandEncoder(label, js_ce, self)
 
-    def create_pipeline_layout(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_pl = self._internal.createPipelineLayout(*js_args, js_kwargs)
+    # or was it here?
+    def create_pipeline_layout(self, *, label="", bind_group_layouts: list[classes.GPUBindGroupLayout]) -> classes.GPUPipelineLayout:
+        js_bind_group_layouts = [to_js(bgl, eager_converter=simple_js_accessor) for bgl in bind_group_layouts]
+        js_pl = self._internal.createPipelineLayout(label=label, bindGroupLayouts=js_bind_group_layouts)
 
-        label = kwargs.get("label", "")
         return classes.GPUPipelineLayout(label, js_pl, self)
 
     def create_texture(self, *args, **kwargs):

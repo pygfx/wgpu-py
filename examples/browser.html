@@ -3,7 +3,7 @@
 <html>
 <head>
     wgpu-py on the HTML RenderCanvas canvas with Pyodide:<br>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.28.2/full/pyodide.js"></script>
 </head>
 <body>
 <canvas id="canvas" width="640" height="480" style="background-color: lightgrey;"></canvas><br>
@@ -14,15 +14,17 @@ pixels got drawn!
         // fetch the file locally for easier scripting
         // --allow-file-access-from-files or local webserver
         // TODO: replace the actual code here (unless you have the module)
-        // pythonCode = await (await fetch("compute_noop.py")).text();
+        pythonCode = await (await fetch("compute_noop.py")).text();
         // pythonCode = await (await fetch("compute_matmul.py")).text();
         // pythonCode = await (await fetch("cube.py")).text();
-        pythonCode = await (await fetch("triangle.py")).text();
+        // pythonCode = await (await fetch("triangle.py")).text();
         // pythonCode = await (await fetch("triangle_glsl.py")).text();
         
 
         // Load Pyodide
+        console.log("Loading pyodide...");
         let pyodide = await loadPyodide();
+        console.log("Pyodide awaiting");
         pyodide.setDebug(true);
 
         await pyodide.loadPackage("micropip");
