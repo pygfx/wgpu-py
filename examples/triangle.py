@@ -117,11 +117,10 @@ def get_draw_function(
                 )
             ],
         )
-
-        render_pass.set_pipeline(render_pipeline)
-        # render_pass.set_bind_group(0, no_bind_group)
-        render_pass.draw(3, 1, 0, 0)
-        render_pass.end()
+        with render_pass:
+            render_pass.set_pipeline(render_pipeline)
+            # render_pass.set_bind_group(0, no_bind_group)
+            render_pass.draw(3, 1, 0, 0)
         device.queue.submit([command_encoder.finish()])
 
     async def draw_frame_async():

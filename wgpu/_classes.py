@@ -2159,6 +2159,12 @@ class GPUComputePassEncoder(
     Create a compute pass encoder using `GPUCommandEncoder.begin_compute_pass()`.
     """
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end()
+
     # IDL: undefined setPipeline(GPUComputePipeline pipeline);
     def set_pipeline(self, pipeline: GPUComputePipeline | None = None) -> None:
         """Set the pipeline for this compute pass.
@@ -2215,6 +2221,12 @@ class GPURenderPassEncoder(
 
     Create a render pass encoder using `GPUCommandEncoder.begin_render_pass`.
     """
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end()
 
     # IDL: undefined setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
     def set_viewport(
