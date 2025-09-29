@@ -211,6 +211,7 @@ class GPUDevice(classes.GPUDevice):
                 sampler = {
                     "type": sampler.get("type", enums.SamplerBindingType.filtering),
                 }
+                sampler = to_js(sampler, depth=1)
             elif texture is not None:
                 buffer = sampler = storage_texture = external_texture = empty_value
                 texture = {
@@ -218,6 +219,7 @@ class GPUDevice(classes.GPUDevice):
                     "viewDimension": texture.get("view_dimension", enums.TextureViewDimension.d2),
                     "multisampled": texture.get("multisampled", False),
                 }
+                texture = to_js(texture, depth=1)
             elif storage_texture is not None:
                 buffer = sampler = texture = external_texture = empty_value
                 storage_texture = {
@@ -225,6 +227,7 @@ class GPUDevice(classes.GPUDevice):
                     "format": storage_texture.get("format"),
                     "viewDimension": storage_texture.get("view_dimension", enums.TextureViewDimension.d2),
                 }
+                storage_texture = to_js(storage_texture, depth=1)
             elif external_texture is not None:
                 buffer = sampler = texture = storage_texture = empty_value
                 external_texture = {
@@ -470,10 +473,27 @@ class GPUQueue(classes.GPUQueue):
 
         self._internal.writeTexture(js_destination, js_data, js_data_layout, js_size)
 
-    # def write_texture(self, *args, **kwargs):
-    #     js_args = to_js(args, eager_converter=simple_js_accessor)
-    #     js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-    #     self._internal.writeTexture(*js_args, js_kwargs)
+    def write_buffer(
+        self,
+        buffer: GPUBuffer | None = None,
+        buffer_offset: int | None = None,
+        data: memoryview | None = None,
+        data_offset: int = 0,
+        size: int | None = None,
+    ):
+        data = memoryview(data).cast("B")
+        if size is None:
+            size = data.nbytes - data_offset
+        size = (size + 3) & ~3  # align to 4 bytes
+
+        if buffer_offset is None:
+            buffer_offset = 0
+
+        js_data = Uint8Array.new(size)
+        js_data.assign(data[data_offset:data_offset+size])
+
+        self._internal.writeBuffer(buffer._internal, BigInt(buffer_offset), js_data, 0, size)
+
 
 
 class GPUTexture(classes.GPUTexture):
@@ -531,6 +551,7 @@ class GPURenderPipeline(classes.GPURenderPipeline):
     def get_bind_group_layout(self, index: int | None = None) -> classes.GPUBindGroupLayout:
         return classes.GPUBindGroupLayout("", self._internal.getBindGroupLayout(index), self._device)
 
+# TODO: abstract to mixin
 class GPURenderPassEncoder(classes.GPURenderPassEncoder):
     def set_pipeline(self, pipeline: GPURenderPipeline):
         self._internal.setPipeline(pipeline._internal)
@@ -563,6 +584,17 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder):
             ) -> None:
 
         self._internal.setBindGroup(index, bind_group._internal, dynamic_offsets_data)
+
+    def set_viewport(self, *args):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        self._internal.setViewport(*js_args)
+
+    def set_blend_constant(self, color = None):
+        self._internal.setBlendConstant(color)
+
+    def set_scissor_rect(self, *args):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        self._internal.setScissorRect(*js_args)
 
     def draw_indexed(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
