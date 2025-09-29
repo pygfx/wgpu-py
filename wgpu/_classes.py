@@ -990,24 +990,24 @@ class GPUDevice(GPUObjectBase):
 
         Arguments:
             label (str): A human-readable label. Optional.
-            entries (list): A list of `structs.BindGroupLayoutEntry` dicts.
+            entries (list): A list of `structs.BindGroupLayoutEntry`s.
                 Each contains either a `structs.BufferBindingLayout`,
                 `structs.SamplerBindingLayout`, `structs.TextureBindingLayout`,
                 or `structs.StorageTextureBindingLayout`.
 
-        Example with `structs.BufferBindingLayout`:
+        Example with buffer binding:
 
         .. code-block:: py
 
-            {
-                "binding": 0,
-                "visibility": wgpu.ShaderStage.COMPUTE,
-                "buffer": {
-                    "type": wgpu.BufferBindingType.storage_buffer,
-                    "has_dynamic_offset": False,  # optional
-                    "min_binding_size": 0  # optional
-                }
-            },
+            wgpu.BindGroupLayoutEntry(
+                binding=0,
+                visibility=wgpu.ShaderStage.COMPUTE,
+                buffer=wgpu.BufferBindingLayout(
+                    type="storage",
+                    has_dynamic_offset=False,  # optional
+                    min_binding_size=0,  # optional
+                ),
+            )
 
         Note on ``has_dynamic_offset``: For uniform-buffer, storage-buffer, and
         readonly-storage-buffer bindings, it indicates whether the binding has a
@@ -1031,7 +1031,7 @@ class GPUDevice(GPUObjectBase):
             label (str): A human-readable label. Optional.
             layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
-            entries (list): A list of `structs.BindGroupEntry` dicts. The ``resource`` field
+            entries (list): A list of `structs.BindGroupEntry`s. The ``resource`` field
                 is either `GPUSampler`, `GPUTextureView` or `structs.BufferBinding`.
 
         Example entry dicts:
@@ -1039,24 +1039,24 @@ class GPUDevice(GPUObjectBase):
         .. code-block:: py
 
             # For a sampler
-            {
-                "binding" : 0,  # slot
-                "resource": a_sampler,
-            }
+            wgpu.BindGroupEntry(
+                binding=0,
+                resource=a_sampler,
+            )
             # For a texture view
-            {
-                "binding" : 0,  # slot
-                "resource": a_texture_view,
-            }
+            wgpu.BindGroupEntry(
+                binding=1,
+                resource=a_texture_view,
+            )
             # For a buffer
-            {
-                "binding" : 0,  # slot
-                "resource": {
-                    "buffer": a_buffer,
-                    "offset": 0,
-                    "size": 812,
-                }
-            }
+            wgpu.BindGroupEntry(
+                binding=2,
+                resource=wgpu.BufferBinding(
+                    buffer=a_buffer,
+                    offset=0.
+                    size=812,
+                )
+            )
         """
         raise NotImplementedError()
 
@@ -1163,109 +1163,107 @@ class GPUDevice(GPUObjectBase):
                 the vertex position output. The depth testing and stencil
                 operations can still be used.
 
-        In the example dicts below, the values that are marked as optional,
+        In the examples below, the values that are marked as optional,
         the shown value is the default.
 
-        Example vertex (structs.VertexState) dict:
+        Example vertex (structs.VertexState):
 
         .. code-block:: py
 
-            {
-                "module": shader_module,
-                "entry_point": "main",
-                "buffers": [
-                    {
-                        "array_stride": 8,
-                        "step_mode": wgpu.VertexStepMode.vertex,  # optional
-                        "attributes": [
-                            {
-                                "format": wgpu.VertexFormat.float2,
-                                "offset": 0,
-                                "shader_location": 0,
-                            },
-                            ...
+            wgpu.VertexState(
+                module=a_shader_module,
+                entry_point="main",
+                buffers=[
+                    wgpu.VertexBufferLayout(
+                        array_stride=8,
+                        step_mode="vertex",  # optional
+                        attributes=[
+                            wgpu.VertexAttribute(
+                                format="floar32",
+                                offset=0,
+                                shader_location=0,
+                            ),
+                            # ...
                         ],
-                    },
-                    ...
-                ]
-            }
+                    ),
+                ],
+            )
 
-        Example primitive (structs.PrimitiveState) dict:
-
-        .. code-block:: py
-
-            {
-                "topology": wgpu.PrimitiveTopology.triangle_list, # optional
-                "strip_index_format": wgpu.IndexFormat.uint32,  # see note
-                "front_face": wgpu.FrontFace.ccw,  # optional
-                "cull_mode": wgpu.CullMode.none,  # optional
-            }
-
-        Example depth_stencil (structs.DepthStencilState) dict:
+        Example primitive (structs.PrimitiveState):
 
         .. code-block:: py
 
-            {
-                "format": wgpu.TextureFormat.depth24plus_stencil8,
-                "depth_write_enabled": False,  # optional
-                "depth_compare": wgpu.CompareFunction.always,  # optional
-                "stencil_front": {  # optional
-                    "compare": wgpu.CompareFunction.equal,
-                    "fail_op": wgpu.StencilOperation.keep,
-                    "depth_fail_op": wgpu.StencilOperation.keep,
-                    "pass_op": wgpu.StencilOperation.keep,
-                },
-                "stencil_back": {  # optional
-                    "compare": wgpu.CompareFunction.equal,
-                    "fail_op": wgpu.StencilOperation.keep,
-                    "depth_fail_op": wgpu.StencilOperation.keep,
-                    "pass_op": wgpu.StencilOperation.keep,
-                },
-                "stencil_read_mask": 0xFFFFFFFF,  # optional
-                "stencil_write_mask": 0xFFFFFFFF,  # optional
-                "depth_bias": 0,  # optional
-                "depth_bias_slope_scale": 0.0,  # optional
-                "depth_bias_clamp": 0.0,  # optional
-            }
+            wgpu.PrimitiveState(
+                topology="triangle-list", # optional
+                strip_index_format="uint32",  # see note
+                front_face="ccw",  # optional
+                cull_mode="none",  # optional
+            )
 
-        Example multisample (structs.MultisampleState) dict:
+        Example depth_stencil (structs.DepthStencilState):
 
         .. code-block:: py
 
-            {
-                "count": 1,  # optional
-                "mask": 0xFFFFFFFF,  # optional
-                "alpha_to_coverage_enabled": False  # optional
-            }
+            wgpu.DepthStencilState(
+                format="depth24plus-stencil8",
+                depth_write_enabled=False,  # optional
+                depth_compare="less",  # optional
+                stencil_front=wgpu.StencilFaceState(  # optional
+                    compare="equal",
+                    fail_op="keep",
+                    depth_fail_op="keep",
+                    pass_op="keep",
+                ),
+                stencil_back=wgpu.StencilFaceState(  # optional
+                    compare="equal",
+                    fail_op="keep",
+                    depth_fail_op="keep",
+                    pass_op="keep",
+                ),
+                stencil_read_mask=0xFFFFFFFF,  # optional
+                stencil_write_mask=0xFFFFFFFF,  # optional
+                depth_bias=0,  # optional
+                depth_bias_clamp=0.0,  # optional
+                depth_bias_slope_scale=0.0,  # optional
+            )
 
-        Example fragment (structs.FragmentState) dict. The `blend` parameter can be None
+        Example multisample (structs.MultisampleState):
+
+        .. code-block:: py
+
+            wgpu.MultisampleState(
+                count=1,  # optional
+                mask=0xFFFFFFFF,  # optional
+                alpha_to_coverage_enabled=False,  # optional
+            )
+
+        Example fragment (structs.FragmentState). The `blend` parameter can be None
         to disable blending (not all texture formats support blending).
 
         .. code-block:: py
 
-            {
-                "module": shader_module,
-                "entry_point": "main",
-                "targets": [
-                    {
-                        "format": wgpu.TextureFormat.bgra8unorm_srgb,
-                        "blend": {
-                            "color": {
-                                "src_target": wgpu.BlendFactor.one,  # optional
-                                "dst_target": wgpu.BlendFactor.zero,  # optional
-                                "operation": gpu.BlendOperation.add, # optional
-                            },
-                            "alpha": {
-                                "src_target": wgpu.BlendFactor.one, # optional
-                                "dst_target": wgpu.BlendFactor.zero, # optional
-                                "operation": wgpu.BlendOperation.add, # optional
-                            },
-                        }
-                        "write_mask": wgpu.ColorWrite.ALL  # optional
-                    },
-                    ...
-                ]
-            }
+            wgpu.FragmentState(
+                module=a_shader_module,
+                entry_point="main",
+                targets=[
+                    wgpu.ColorTargetState(
+                        format="bgra8unorm-srgb",
+                        blend=wgpu.BlendState(
+                            color=wgpu.BlendComponent(
+                                operation="add",
+                                src_factor="one",
+                                dst_factor="zero",
+                            ),
+                            alpha=wgpu.BlendComponent(
+                                operation="add",
+                                src_factor="one",
+                                dst_factor="zero",
+                            ),
+                        ),
+                    ),
+                    # ...
+                ],
+            )
 
         """
         raise NotImplementedError()
