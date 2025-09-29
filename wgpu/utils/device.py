@@ -13,5 +13,6 @@ def get_default_device():
         import wgpu.backends.auto
 
         adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
+        print(adapter, dir(adapter))
         _default_device = adapter.request_device_sync()
     return _default_device

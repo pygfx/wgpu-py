@@ -35,10 +35,10 @@ def setup_drawing_sync(
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(required_limits=limits)
 
-    pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
-
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, None)
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
+    _, uniform_buffer, bind_groups = create_pipeline_layout(device, render_pipeline)
+
 
     return get_draw_function(
         canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=False
@@ -55,10 +55,10 @@ async def setup_drawing_async(canvas, limits=None):
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async(required_limits=limits)
 
-    pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
-
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, None)
     render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
+    _, uniform_buffer, bind_groups = create_pipeline_layout(device, render_pipeline)
+
 
     return get_draw_function(
         canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=True
@@ -72,14 +72,16 @@ def get_render_pipeline_kwargs(
     canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
 ) -> wgpu.RenderPipelineDescriptor:
     context = canvas.get_context("wgpu")
+    print("context:", context)
     render_texture_format = context.get_preferred_format(device.adapter)
+    print(render_texture_format)
     context.configure(device=device, format=render_texture_format)
 
     shader = device.create_shader_module(code=shader_source)
 
     # wgpu.RenderPipelineDescriptor
     return wgpu.RenderPipelineDescriptor(
-        layout=pipeline_layout,
+        layout="auto",
         vertex=wgpu.VertexState(
             module=shader,
             entry_point="vs_main",
@@ -120,7 +122,7 @@ def get_render_pipeline_kwargs(
     )
 
 
-def create_pipeline_layout(device: wgpu.GPUDevice):
+def create_pipeline_layout(device: wgpu.GPUDevice, pipeline: wgpu.GPURenderPipeline):
     # Create uniform buffer - data is uploaded each frame
     uniform_buffer = device.create_buffer(
         size=uniform_data.nbytes,
@@ -178,7 +180,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
         wgpu.BindGroupLayoutEntry(
             binding=0,
             visibility=wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-            buffer={},
+            buffer=wgpu.BufferBindingLayout(),
         )
     )
 
@@ -192,7 +194,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
         wgpu.BindGroupLayoutEntry(
             binding=1,
             visibility=wgpu.ShaderStage.FRAGMENT,
-            texture={},
+            texture=wgpu.TextureBindingLayout(),
         )
     )
 
@@ -204,7 +206,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     )
     bind_groups_layout_entries[0].append(
         wgpu.BindGroupLayoutEntry(
-            binding=2, visibility=wgpu.ShaderStage.FRAGMENT, sampler={}
+            binding=2, visibility=wgpu.ShaderStage.FRAGMENT, sampler=wgpu.SamplerBindingLayout()
         )
     )
 
@@ -215,17 +217,17 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     for entries, layout_entries in zip(
         bind_groups_entries, bind_groups_layout_entries, strict=False
     ):
-        bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
-        bind_group_layouts.append(bind_group_layout)
+        # bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
+        # bind_group_layouts.append(bind_group_layout)
         bind_groups.append(
-            device.create_bind_group(layout=bind_group_layout, entries=entries)
+            device.create_bind_group(layout=pipeline.get_bind_group_layout(0), entries=entries)
         )
 
-    pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=bind_group_layouts
-    )
+    # pipeline_layout = device.create_pipeline_layout(
+    #     bind_group_layouts=bind_group_layouts
+    # )
 
-    return pipeline_layout, uniform_buffer, bind_groups
+    return None, uniform_buffer, bind_groups
 
 
 def get_draw_function(
@@ -463,7 +465,7 @@ texture_data = np.array(
 )
 texture_data = np.repeat(texture_data, 64, 0)
 texture_data = np.repeat(texture_data, 64, 1)
-texture_size = texture_data.shape[1], texture_data.shape[0], 1
+texture_size = (texture_data.shape[1], texture_data.shape[0], 1)
 
 # Use numpy to create a struct for the uniform
 uniform_dtype = [("transform", "float32", (4, 4))]
