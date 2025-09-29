@@ -1885,7 +1885,7 @@ class GPURenderCommandsMixin:
                 call to `GPUDevice.create_render_pipeline()`, it must match.
             offset (int): The byte offset in the buffer. Default 0.
             size (int): The number of bytes to use. If zero, the remaining size
-                (after offset) of the buffer is used. Default 0.
+                (after offset) of the buffer is used.
         """
         raise NotImplementedError()
 

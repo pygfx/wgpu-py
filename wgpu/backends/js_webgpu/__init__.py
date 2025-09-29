@@ -49,7 +49,7 @@ def simple_js_accessor(value, convert, cache):
             camel_key = to_camel_case(k) if isinstance(k, str) else k
             result[camel_key] = convert(v)
         if len(result) == 0:
-            return undefined # or Object.new() ?
+            return Object.new() # maybe this?
         return result
     return convert(value)
 
@@ -171,21 +171,17 @@ class GPUDevice(classes.GPUDevice):
         return GPUBuffer(label, js_buf, self, size, usage, map_state)
 
     # TODO: apidiff rewritten so we avoid the buggy mess in map_write for a bit.
-    def create_buffer_with_data(self, *args, **kwargs):
-        kwargs["mappedAtCreation"] = True
-        data = kwargs.get("data")
+    def create_buffer_with_data(self, *, label="", data, usage: flags.BufferUsageFlags) -> classes.GPUBuffer:
+
+        data = memoryview(data).cast("B") # unit8
         data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
-        kwargs["size"] = data_size
-        # print(data_size)
-        js_buf = self._internal.createBuffer(*args, **kwargs)
-        # TODO: dtype? (always cast to Uint32 I guess, only bytes should matter...)
-        Uint32Array.new(js_buf.getMappedRange()).set(kwargs["data"])
+        size = BigInt(data_size)
+
+        # if it's a Descriptor you need the keywords
+        js_buf = self._internal.createBuffer(label=label, size=size, usage=usage, mappedAtCreation=True)
+        mapping_buffer = Uint8Array.new(js_buf.getMappedRange(BigInt(0), size))
+        mapping_buffer.assign(data) #.set only works with JS array I think...
         js_buf.unmap()
-        # print(dir(js_buf))
-
-        label = kwargs.get("label", "")
-        usage = kwargs.get("usage")
-
         return GPUBuffer(label, js_buf, self, data_size, usage, enums.BufferMapState.unmapped)
 
     # or here???
@@ -263,7 +259,7 @@ class GPUDevice(classes.GPUDevice):
     # I think the entries arg gers unpacked with a single dict inside, so trying to do the list around that manually
     def create_bind_group(self, **kwargs) -> classes.GPUBindGroup:
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(js_kwargs) # to get the actual map?
+        js_kwargs = to_js(js_kwargs) # to get the actual map? (should happen on the function call anyways...)
         js_bg = self._internal.createBindGroup(js_kwargs)
 
         label = kwargs.get("label", "")
@@ -314,6 +310,8 @@ class GPUDevice(classes.GPUDevice):
         kwargs["vertex"] = to_js(kwargs["vertex"], eager_converter=simple_js_accessor)
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+
+        # js_kwargs = to_js(js_kwargs) # to get the actual map?
         js_rp = self._internal.createRenderPipeline(*js_args, js_kwargs)
 
         label = kwargs.get("label", "")
@@ -331,15 +329,20 @@ class GPUBuffer(classes.GPUBuffer):
         # TODO: get dtype
         if self.map_state != enums.BufferMapState.mapped:
             raise RuntimeError(f"Can only write to a buffer if its mapped: {self.map_state=}")
+
+        # make sure it's in a known datatype???
+        data = memoryview(data).cast("B")
+        size = (data.nbytes + 3) & ~3
+
         # GPUSIze64 type
         if buffer_offset is None:
             buffer_offset = 0
         js_offset = BigInt(buffer_offset)
-        js_size = BigInt(data.nbytes)
+        js_size = BigInt(size)
 
-        # TODO: try to make theses args work in the first place -.-
-        array_buf = self._internal.getMappedRange()
-        Uint32Array.new(array_buf).set(data)
+        # these can't be passed as keyword arguments I guess...
+        array_buf = self._internal.getMappedRange(js_offset, js_size)
+        Uint8Array.new(array_buf).assign(data)
 
     def map_sync(self, mode=None, offset=0, size=None):
         return run_sync(self.map_async(mode, offset, size))
@@ -395,10 +398,17 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoder):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         self._internal.setPipeline(*js_args, js_kwargs)
 
-    def set_bind_group(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        self._internal.setBindGroup(*js_args, js_kwargs)
+    # function has overloads!
+    def set_bind_group(
+            self,
+            index:int,
+            bind_group: classes.GPUBindGroup,
+            dynamic_offsets_data: list[int] = (),
+            dynamic_offsets_data_start = None,
+            dynamic_offsets_data_length = None
+            ) -> None:
+
+        self._internal.setBindGroup(index, bind_group._internal, dynamic_offsets_data)
 
     def dispatch_workgroups(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
@@ -441,15 +451,23 @@ class GPUQueue(classes.GPUQueue):
         return res.to_py() # should give a memoryview?
 
     # this one misbehaves with args or kwargs, like it seems the data gets unpacked?
-    def write_texture(self, destination, data, data_layout, size):
-        # print("GPUQueue.write_texture called with", destination, data, data_layout, size)
+    def write_texture(self,
+        destination: structs.TexelCopyTextureInfoStruct | None = None,
+        data: memoryview | None = None,
+        data_layout: structs.TexelCopyBufferLayoutStruct | None = None,
+        size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+    ) -> None:
         js_destination = to_js(destination, eager_converter=simple_js_accessor)
-        js_data = ArrayBuffer.new(data.nbytes) # does this actually hold any data?
-        # js_data = Uint32Array.new(js_data).set(data) # maybe like this????
-        # print("data js type", type(js_data))
-        # print(js_data)
+
+        data = memoryview(data).cast("B")
+        data_size = (data.nbytes + 3) & ~3  # align to
+        js_data = Uint8Array.new(data_size)
+        js_data.assign(data)
+
+
         js_data_layout = to_js(data_layout, eager_converter=simple_js_accessor)
         js_size = to_js(size, eager_converter=simple_js_accessor)
+
         self._internal.writeTexture(js_destination, js_data, js_data_layout, js_size)
 
     # def write_texture(self, *args, **kwargs):
@@ -517,20 +535,34 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder):
     def set_pipeline(self, pipeline: GPURenderPipeline):
         self._internal.setPipeline(pipeline._internal)
 
-    def set_index_buffer(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        self._internal.setIndexBuffer(*js_args, js_kwargs)
+    def set_index_buffer(self, buffer: GPUBuffer, format: enums.IndexFormat, offset: int = 0, size: int | None= None):
+        # for GPUSize64 you can't pass them as kwargs, as they get converted to something else...
+        # they need to be position args and then it works.
+        js_buffer = buffer._internal
+        js_format = to_js(format)
+        js_offset = BigInt(offset)
+        js_size = BigInt(size) if size is not None else js_buffer.size
 
-    def set_vertex_buffer(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        self._internal.setVertexBuffer(*js_args, js_kwargs)
+        self._internal.setIndexBuffer(js_buffer, js_format, js_offset, js_size)
 
-    def set_bind_group(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        self._internal.setBindGroup(*js_args, js_kwargs)
+    def set_vertex_buffer(self, slot, buffer: GPUBuffer, offset=0, size: int | None = None):
+        # slot is a GPUsize32 so that works, but the others don't
+        js_offset = BigInt(offset)
+        js_size = BigInt(size) if size is not None else buffer.size
+
+        self._internal.setVertexBuffer(slot, buffer._internal, js_offset, js_size)
+
+    # function has overloads!
+    def set_bind_group(
+            self,
+            index:int,
+            bind_group: classes.GPUBindGroup,
+            dynamic_offsets_data: list[int] = (),
+            dynamic_offsets_data_start = None,
+            dynamic_offsets_data_length = None
+            ) -> None:
+
+        self._internal.setBindGroup(index, bind_group._internal, dynamic_offsets_data)
 
     def draw_indexed(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
