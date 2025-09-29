@@ -1131,6 +1131,8 @@ class GPUAdapter(classes.GPUAdapter):
                 i = enummap.get(f"FeatureName.{f}", None)
                 if i is None:
                     i = enum_str2int["NativeFeature"].get(f, None)
+                if i is None and f == "subgroups":  # Temporary fix, see #721
+                    i = enum_str2int["NativeFeature"].get("subgroup", None)
                 if i is None:
                     raise KeyError(f"Unknown feature: '{f}'")
                 c_features.add(i)
