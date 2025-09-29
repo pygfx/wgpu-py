@@ -196,7 +196,6 @@ class ImguiWgpuBackend:
 
             self._textures.pop(tex.tex_id, None)
             self._texture_views.pop(tex.tex_id, None)
-            self._texture_bind_groups.pop(tex.tex_id, None)
 
     def _create_device_objects(self):
         vertex_shader_program = self._device.create_shader_module(
