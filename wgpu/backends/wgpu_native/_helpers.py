@@ -246,6 +246,15 @@ async def async_sleep(delay):
     await sleep(delay)
 
 
+class AsyncEvent:
+    """Generic async event object using sniffio. Works with trio, asyncio and rendercanvas-native."""
+
+    def __new__(cls):
+        libname = sniffio.current_async_library()
+        Event = sys.modules[libname].Event  # noqa
+        return Event()
+
+
 class ErrorSlot:
     __slot__ = ["name", "type", "message"]
 

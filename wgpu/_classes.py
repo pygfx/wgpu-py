@@ -15,7 +15,7 @@ import weakref
 import logging
 from typing import Sequence, Callable, Awaitable, Generic, TypeVar
 
-from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
+from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike, AsyncEvent
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -578,6 +578,11 @@ class GPUCanvasContext:
 AwaitedType = TypeVar("AwaitedType")
 
 
+class LoopInterface:
+    def call_soon(self, callbacl: Callable, *args: object):
+        raise NotImplementedError()
+
+
 @apidiff.add("Add a GPU-specific Future")
 class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     """A GPUPromise represents the eventual result of an asynchronous wgpu operation.
@@ -602,46 +607,120 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     * rejected: meaning that the operation failed.
     """
 
-    def __init__(self, title: str, finalizer: Callable | None, *args):
-        self._title = title
+    def __init__(
+        self, title: str, loop: LoopInterface, finalizer: Callable | None, *args
+    ):
+        self._title = str(title)
+        self._loop = loop
         self._finalizer = finalizer  # function to finish the result
-        self._result_or_error = None
-        self._callback = None
+        self._value_flag = 0  # 0: pending, 1: error, 2: raw_result, 3: result
+        self._value = None
+        self._is_resolved = False
+        self._event = AsyncEvent()
+        self._done_callbacks = []
+        self._error_callbacks = []
 
     def __repr__(self):
-        state = "pending"
+        state = "unknown"
         value_repr = ""
-        if self._result_or_error is not None:
-            if self._result_or_error[0] is not None:
-                state = "fulfilled"
-                value_repr = repr(self._result_or_error[0]).split("\n", 1)[0]
-                if len(value_repr) > 30:
-                    value_repr = value_repr[:29] + "…"
-                value_repr = f"'{value_repr}'"
-            else:
-                state = "rejected"
+        if self._value_flag == 0:
+            state = "pending"
+        elif self._value_flag == 1:
+            state = "rejected"
+        elif self._value_flag == 2:
+            state = "fulfilled"
+        elif self._value_flag == 3:
+            state = "fulfilled"
+            value_repr = repr(self._value).split("\n", 1)[0]
+            if len(value_repr) > 30:
+                value_repr = value_repr[:29] + "…"
+            value_repr = f"'{value_repr}'"
         return f"<GPUPromise {state} {value_repr} at {hex(id(self))}>"
 
-    def _wgpu_set_result(self, result):
-        self._result_or_error = result, None
+    def _wgpu_set_raw_result(self, result: object) -> None:
+        """Set the raw result, that will be passed through the finalizer to get the actual result."""
+        self._is_resolved = False  # should not set result/error more than once, but if it does let's handle it
+        self._value_flag = 2
+        self._value = result
+        self._event.set()
+        self._loop.call_soon(self._resolve_callback)
 
-    def _wgpu_set_error(self, error):
-        self._result_or_error = None, error
+    def _wgpu_set_error(self, error: Exception) -> None:
+        """Set the error, in case the promise could not be fulfilled."""
+        self._is_resolved = False  # should not set result/error more than once, but if it does let's handle it
+        if not isinstance(error, Exception):
+            error = Exception(error)
+        self._value_flag = 1
+        self._value = error
+        self._event.set()
+        self._loop.call_soon(self._resolve_callback)
 
-    def _finish(self):
-        try:
-            result, error = self._result_or_error
-            if error:
-                raise RuntimeError(error)
+    def _resolve_callback(self):
+        if self._is_resolved:  # can be resolved by sync_wait
+            return
+        self._resolve()
+
+    def _resolve(self):
+        """Finalize the promise."""
+        # Finalize the value
+        if self._value_flag == 0:
+            self._value_flag = 1
+            self._value = Exception(
+                "Internal error: Promise_resolve called while _value_flag is still zero."
+            )
+        elif self._value_flag == 2:
+            if self._finalizer is None:
+                self._value_flag = 3
             else:
-                result = self._finalizer(result)
-                if self._callback is not None:
-                    # TODO: wrap in a try-except, or a log_exception thingy?
-                    self._callback(result)
-                return result
-        finally:
-            # Reset attrs to prevent potential memory leaks
-            self._finalizer = self._result_or_error = self._callback = None
+                try:
+                    self._value = self._finalizer(self._value)
+                    self._value_flag = 3
+                except Exception as err:
+                    self._value_flag = 1
+                    self._value = err
+                finally:
+                    self._finalizer = None
+        # Schedule the callbacks
+        if self._value_flag == 1:
+            error = self._value
+            for cb in self._error_callbacks:
+                self._loop.call_soon(cb, error)
+        elif self._value_flag == 3:
+            result = self._value
+            for cb in self._done_callbacks:
+                self._loop.call_soon(cb, result)
+        # Clean up
+        self._is_resolved = True
+        self._clean()
+        # Resolve to the caller
+        if self._value_flag == 1:
+            raise self._value  # type:ignore
+        else:
+            return self._value
+
+    def _clean(self):
+        # TODO: clean stuff like loop and more?
+        self._done_callbacks = []
+        self._error_callbacks = []
+
+    def _get_result(self):
+        assert self._value_flag > 0
+        if self._value_flag == 1:
+            error = self._value
+            for cb in self._error_callbacks:
+                cb(error)
+            raise RuntimeError(error)
+        if self._value_flag == 2:
+            if self._finalizer is not None:
+                self._value = self._finalizer(self._value)
+                self._value_flag = 3
+                self._finalizer = None
+        if self._value_flag == 3:
+            result = self._value
+            for cb in self._done_callbacks:
+                # TODO: wrap in a try-except, or a log_exception thingy?
+                cb(result)
+            return result
 
     def sync_wait(self) -> AwaitedType:
         """Synchronously wait for the future to resolve and return the result.
@@ -661,9 +740,6 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         The callback will receive one argument: the result of the future.
         """
-        # TODO: allow calling multiple times
-        # TODO: allow calling after being resolved -> tests!
-        # TODO: return another promise, so we can do chaining? Or maybe not interesting for this use-case...
         if callable(callback):
             self._callback = callback
         else:
@@ -671,8 +747,28 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
                 f"GPUPromise.then() got a callback that is not callable: {callback!r}"
             )
 
+        if self._value_flag == 0:
+            # Still pending, store callback
+            self._done_callbacks.append(callback)
+        elif self._value_flag == 1:
+            # Error, so this callback should not be called
+            pass
+        elif self._value_flag == 2:
+            # Set, but resolve is on the way
+            self._done_callbacks.append(callback)
+        elif self._value_flag == 3:
+            # Fully resolved, we can just schedule the callback
+            self._loop.call_soon(callback, self._value)
+
+        # TODO: allow calling multiple times
+        # TODO: allow calling after being resolved -> tests!
+        # TODO: return another promise, so we can do chaining? Or maybe not interesting for this use-case...
+
     def __await__(self):
-        raise NotImplementedError()
+        async def wrapper():
+            await self._event.wait()
+
+        return (yield from wrapper().__await__())
 
 
 class GPUAdapterInfo(dict):

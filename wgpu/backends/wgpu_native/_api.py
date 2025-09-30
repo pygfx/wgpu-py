@@ -25,7 +25,7 @@ from typing import NoReturn, Sequence, Generator, Callable
 
 from ... import classes, flags, enums, structs
 from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
-from ..._classes import AwaitedType
+from ..._classes import LoopInterface, AwaitedType
 
 from ._ffi import ffi, lib
 from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
@@ -38,6 +38,7 @@ from ._helpers import (
     ErrorHandler,
     SafeLibCalls,
     async_sleep,
+    AsyncEvent,
 )
 
 logger = logging.getLogger("wgpu")
@@ -1029,37 +1030,43 @@ class GPUObjectBase(classes.GPUObjectBase):
 
 
 class GPUPromise(classes.GPUPromise):
-    def __init__(self, title: str, finalizer: Callable | None, *args):
+    def __init__(
+        self, title: str, loop: LoopInterface, finalizer: Callable | None, *args
+    ):
         wgpu_callback, poll_function = args
-        super().__init__(title, finalizer)
+        super().__init__(title, loop, finalizer)
         self._wgpu_callback = wgpu_callback  # only used to prevent it from being gc'd
         self._poll_function = poll_function  # call this to poll wgpu
 
-    def _finish(self):
-        result = super()._finish()
+    def _clean(self):
+        super()._clean()
         self._wgpu_callback = self._poll_function = None
-        return result
 
     def sync_wait(self) -> AwaitedType:
-        if self._result_or_error is not None:
-            pass
-        elif self._poll_function is None:
-            raise RuntimeError("Expected callback to have already happened")
-        else:
+        # TODO: move this to base GPUPromise?
+        if self._value_flag == 0:
+            if self._poll_function is None:
+                raise RuntimeError("Expected callback to have already happened")
             backoff_time_generator = self._get_backoff_time_generator()
             while True:
                 self._poll_function()
-                if self._result_or_error is not None:
+                if self._value_flag > 0:
                     break
                 time.sleep(next(backoff_time_generator))
-                # We check the result after sleeping just in case another thread
-                # causes the callback to happen
-                if self._result_or_error is not None:
-                    break
 
-        return self._finish()
+        return self._resolve()
 
     def __await__(self):
+        # What __await__ should return is not standardized and differes between asyncio/trio/etc.
+        # So we wrap in a co-routine and iterate from that.
+        self._event = AsyncEvent()  # uses sniffio to have async-lib-specific event
+
+        async def wrapper():
+            await self._event.wait()
+
+        return (yield from wrapper().__await__())
+
+    def old__await__(self):
         # There is no documentation on what __await__() is supposed to return, but we
         # can certainly copy from a function that *does* know what to return.
         # It would also be nice if wait_for_callback and sync_wait() could be merged,

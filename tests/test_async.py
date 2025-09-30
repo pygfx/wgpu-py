@@ -17,7 +17,7 @@ async def test_awaitable_async(use_async):
         return i * i
 
     def callback(i):
-        awaitable._wgpu_set_result(i)
+        awaitable._wgpu_set_raw_result(i)
 
     def poll_function():
         nonlocal count
