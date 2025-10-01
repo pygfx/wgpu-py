@@ -11,6 +11,7 @@ information.
 # Allow using class names in type annotations, without Ruff triggering F821
 from __future__ import annotations
 
+import time
 import weakref
 import logging
 import threading
@@ -614,13 +615,22 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     _UNRESOLVED = set()
 
     def __init__(
-        self, title: str, loop: LoopInterface, finalizer: Callable | None, *args
+        self,
+        title: str,
+        loop: LoopInterface | None,
+        finalizer: Callable | None,
+        *,
+        poller: Callable | None = None,
+        keepalive: object = None,
     ):
         self._title = str(title)  # title for debugging
+        self._loop = loop  # Event loop instance, can be None
         self._finalizer = finalizer  # function to finish the result
+        self._poller = poller  # call to poll (process events)
+        self._keepalive = keepalive  # just to keep something alive
+
         self._state = "pending"  # "pending", "pending-rejected", "pending-fulfilled", "rejected", "fulfilled"
         self._value = None  # The incoming value, final value, or error
-        self._loop = loop  # Event loop instance, can be None
         self._event = None  # AsyncEvent for __await__
         self._lock = threading.RLock()  # Allow threads to set the value
         self._done_callbacks = []
@@ -709,8 +719,6 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             except Exception as err:
                 self._state = "rejected"
                 self._value = err
-            finally:
-                self._finalizer = None
         # Schedule the callbacks
         if self._state.endswith("rejected"):
             error = self._value
@@ -720,10 +728,14 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             result = self._value
             for cb in self._done_callbacks:
                 self._loop.call_soon(cb, result)
+        # New state
+        self._state = self._state.replace("pending-", "")
         # Clean up
         self._error_callbacks = []
         self._done_callbacks = []
-        self._state = self._state.replace("pending-", "")
+        self._finalizer = None
+        self._poller = None
+        self._keepalive = None
         # Resolve to the caller
         if self._state == "rejected":
             raise self._value  # type:ignore
@@ -740,8 +752,15 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         upcoming JavaScript/Pyodide one), and using it will make your code less
         portable.
         """
-        # TODO: allow calling multiple times
-        raise NotImplementedError()
+        if self._state == "pending":
+            if self._poller is None:
+                raise RuntimeError("Expected callback to have already happened")
+            self._poller()
+            while self._state == "pending":
+                time.sleep(0)
+                self._poller()
+
+        return self._resolve()  # returns result if fulfilled or raise error if rejected
 
     def then(self, callback: Callable[[AwaitedType], None]):
         """Set a callback that will be called when the future resolves.
@@ -759,7 +778,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         # Create proxy promise
         title = self._title + " -> " + str(callback)
-        new_promise = GPUPromise(title, self._loop, callback)
+        new_promise = GPUPromise(title, self._loop, callback, poller=self._poller)
 
         with self._lock:
             self._done_callbacks.append(new_promise._set_raw_result)

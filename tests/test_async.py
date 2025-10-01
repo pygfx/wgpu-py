@@ -25,7 +25,9 @@ async def test_awaitable_async(use_async):
         if count >= 3:
             callback(10)
 
-    awaitable = GPUPromise("test", finalizer, callback, poll_function)
+    awaitable = GPUPromise(
+        "test", None, finalizer, poller=poll_function, keepalive=callable
+    )
 
     if use_async:
         result = await awaitable
