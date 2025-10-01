@@ -45,23 +45,32 @@ def setup_drawing_sync(
     )
 
 
-async def setup_drawing_async(canvas, limits=None):
+async def setup_drawing_async(canvas, loop, limits=None):
     """Setup to async-draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
     Returns the draw function.
     """
+    # TODO: with async api, the loop should be required, I think.
+    adapter = await wgpu.gpu.request_adapter_async(
+        loop=loop, power_preference="high-performance"
+    )
 
-    adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async(required_limits=limits)
 
     pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
     render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
+    # render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=True
+        canvas,
+        device,
+        render_pipeline,
+        uniform_buffer,
+        bind_groups,
+        asynchronous=True,
     )
 
 
@@ -294,16 +303,19 @@ def get_draw_function(
         )
         device.queue.submit([command_encoder.finish()])
 
-    async def upload_uniform_buffer_async():
+    def upload_uniform_buffer_async():
         tmp_buffer = uniform_buffer.copy_buffer
-        await tmp_buffer.map_async(wgpu.MapMode.WRITE)
-        tmp_buffer.write_mapped(uniform_data)
-        tmp_buffer.unmap()
-        command_encoder = device.create_command_encoder()
-        command_encoder.copy_buffer_to_buffer(
-            tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
-        )
-        device.queue.submit([command_encoder.finish()])
+        promise = tmp_buffer.map_async(wgpu.MapMode.WRITE)
+
+        @promise.then
+        def upload_buffer(_):
+            tmp_buffer.write_mapped(uniform_data)
+            tmp_buffer.unmap()
+            command_encoder = device.create_command_encoder()
+            command_encoder.copy_buffer_to_buffer(
+                tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
+            )
+            device.queue.submit([command_encoder.finish()])
 
     def draw_frame():
         current_texture_view: wgpu.GPUTextureView = (
@@ -336,9 +348,9 @@ def get_draw_function(
         upload_uniform_buffer_sync()
         draw_frame()
 
-    async def draw_frame_async():
+    def draw_frame_async():
         update_transform()
-        await upload_uniform_buffer_async()
+        upload_uniform_buffer_async()
         draw_frame()
 
     if asynchronous:
@@ -474,6 +486,21 @@ for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
 
 
+async def main(canvas, loop):
+    draw_frame = await setup_drawing_async(canvas, loop)
+    canvas.request_draw(draw_frame)
+
+
+from asyncio import sleep
+
+
+async def poller():
+    instance = wgpu.backends.wgpu_native.extras.get_wgpu_instance()
+    while True:
+        wgpu.backends.wgpu_native.lib.wgpuInstanceProcessEvents(instance)
+        await sleep(0)
+
+
 if __name__ == "__main__":
     canvas = RenderCanvas(
         size=(640, 480),
@@ -482,6 +509,8 @@ if __name__ == "__main__":
         max_fps=60,
         vsync=True,
     )
-    draw_frame = setup_drawing_sync(canvas)
-    canvas.request_draw(draw_frame)
+    # draw_frame = setup_drawing_sync(canvas)
+    # canvas.request_draw(draw_frame)
+    loop.add_task(main, canvas, loop)
+    loop.add_task(poller)
     loop.run()

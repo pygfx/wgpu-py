@@ -22,8 +22,10 @@ def test_basic_api():
 
     code1 = wgpu.GPU.request_adapter_sync.__code__
     code2 = wgpu.GPU.request_adapter_async.__code__
+    varnames1 = set(code1.co_varnames) - {"gpu", "promise"}
+    varnames2 = set(code2.co_varnames) - {"gpu", "promise"}
     # nargs1 = code1.co_argcount + code1.co_kwonlyargcount
-    assert code1.co_varnames == code2.co_varnames
+    assert varnames1 == varnames2
 
     assert repr(wgpu.classes.GPU()).startswith(
         "<wgpu.GPU "
