@@ -328,11 +328,15 @@ def get_draw_function(
             ],
         )
 
+        # debug groups and markers can optionally added to help debugging.
+        render_pass.push_debug_group("Cube Example debug group")
         render_pass.set_pipeline(render_pipeline)
         render_pass.set_index_buffer(index_buffer, "uint32")
         render_pass.set_vertex_buffer(0, vertex_buffer)
         render_pass.set_bind_group(0, bind_group)
+        render_pass.insert_debug_marker("Cube Example draw call here!")
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
+        render_pass.pop_debug_group()
         render_pass.end()
 
         device.queue.submit([command_encoder.finish(label="Cube Example render pass command buffer")])
