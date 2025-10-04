@@ -24,7 +24,7 @@ from rendercanvas.auto import RenderCanvas, loop
 
 
 def setup_drawing_sync(
-    canvas, power_preference="high-performance", limits: dict = {}
+    canvas, power_preference="high-performance", limits=None
 ) -> Callable:
     """Setup to draw a rotating cube on the given canvas.
 
@@ -33,21 +33,19 @@ def setup_drawing_sync(
     """
 
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
-    device = adapter.request_device_sync(
-        required_limits=limits, label="Cube Example device"
-    )
+    device = adapter.request_device_sync(required_limits=limits)
 
-    pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
+    pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=False
+        canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=False
     )
 
 
-async def setup_drawing_async(canvas, limits: dict = {}):
+async def setup_drawing_async(canvas, limits=None):
     """Setup to async-draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -55,17 +53,15 @@ async def setup_drawing_async(canvas, limits: dict = {}):
     """
 
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
-    device = await adapter.request_device_async(
-        required_limits=limits, label="Cube Example async device"
-    )
+    device = await adapter.request_device_async(required_limits=limits)
 
-    pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
+    pipeline_layout, uniform_buffer, bind_groups = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
     render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=True
+        canvas, device, render_pipeline, uniform_buffer, bind_groups, asynchronous=True
     )
 
 
@@ -74,60 +70,53 @@ async def setup_drawing_async(canvas, limits: dict = {}):
 
 def get_render_pipeline_kwargs(
     canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
-) -> dict:
+) -> wgpu.RenderPipelineDescriptor:
     context = canvas.get_context("wgpu")
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
-    shader = device.create_shader_module(
-        code=shader_source, label="Cube Example shader module"
-    )
+    shader = device.create_shader_module(code=shader_source)
 
-    return dict(
-        label="Cube Example render pipeline",
+    # wgpu.RenderPipelineDescriptor
+    return wgpu.RenderPipelineDescriptor(
         layout=pipeline_layout,
-        vertex={
-            "module": shader,
-            "entry_point": "vs_main",
-            "buffers": [
-                {
-                    "array_stride": 4 * 6,
-                    "step_mode": wgpu.VertexStepMode.vertex,
-                    "attributes": [
-                        {
-                            "format": wgpu.VertexFormat.float32x4,
-                            "offset": 0,
-                            "shader_location": 0,
-                        },
-                        {
-                            "format": wgpu.VertexFormat.float32x2,
-                            "offset": 4 * 4,
-                            "shader_location": 1,
-                        },
+        vertex=wgpu.VertexState(
+            module=shader,
+            entry_point="vs_main",
+            buffers=[
+                wgpu.VertexBufferLayout(
+                    array_stride=4 * 6,
+                    step_mode="vertex",
+                    attributes=[
+                        wgpu.VertexAttribute(
+                            format="float32x4",
+                            offset=0,
+                            shader_location=0,
+                        ),
+                        wgpu.VertexAttribute(
+                            format="float32x2",
+                            offset=4 * 4,
+                            shader_location=1,
+                        ),
                     ],
-                },
+                ),
             ],
-        },
-        primitive={
-            "topology": wgpu.PrimitiveTopology.triangle_list,
-            "front_face": wgpu.FrontFace.ccw,
-            "cull_mode": wgpu.CullMode.back,
-        },
-        depth_stencil=None,
-        multisample=None,
-        fragment={
-            "module": shader,
-            "entry_point": "fs_main",
-            "targets": [
-                {
-                    "format": render_texture_format,
-                    "blend": {
-                        "alpha": {},
-                        "color": {},
-                    },
-                }
+        ),
+        primitive=wgpu.PrimitiveState(
+            topology="triangle-list",
+            front_face="ccw",
+            cull_mode="back",
+        ),
+        fragment=wgpu.FragmentState(
+            module=shader,
+            entry_point="fs_main",
+            targets=[
+                wgpu.ColorTargetState(
+                    format=render_texture_format,
+                    blend={"alpha": {}, "color": {}},
+                )
             ],
-        },
+        ),
     )
 
 
@@ -136,102 +125,107 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     uniform_buffer = device.create_buffer(
         size=uniform_data.nbytes,
         usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST,
-        label="Cube Example uniform buffer",
     )
 
     # Create another buffer to copy data to it (by mapping it and then copying the data)
     uniform_buffer.copy_buffer = device.create_buffer(
         size=uniform_data.nbytes,
         usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC,
-        label="Cube Example uniform buffer copy buffer",
     )
 
     # Create texture, and upload data
     texture = device.create_texture(
         size=texture_size,
         usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.r8unorm,
+        dimension="2d",
+        format="r8unorm",
         mip_level_count=1,
         sample_count=1,
-        label="Cube Example texture",
     )
-    texture_view = texture.create_view(label="Cube Example texture view")
+    texture_view = texture.create_view()
 
     device.queue.write_texture(
-        {
-            "texture": texture,
-            "mip_level": 0,
-            "origin": (0, 0, 0),
-        },
+        wgpu.TexelCopyTextureInfo(
+            texture=texture,
+            mip_level=0,
+            origin=(0, 0, 0),
+        ),
         texture_data,
-        {
-            "offset": 0,
-            "bytes_per_row": texture_data.strides[0],
-        },
+        wgpu.TexelCopyBufferLayout(
+            offset=0,
+            bytes_per_row=texture_data.strides[0],
+        ),
         texture_size,
     )
 
     # Create a sampler
-    sampler = device.create_sampler(label="Cube Example sampler")
+    sampler = device.create_sampler()
 
-    # Create bind group layouts for our resources
-    # We will use a single bind group with three resources
-    bind_group_entries = []
-    bind_group_layout_entries = []
+    # We always have two bind groups, so we can play distributing our
+    # resources over these two groups in different configurations.
+    bind_groups_entries = [[]]
+    bind_groups_layout_entries = [[]]
 
-    bind_group_entries.append(
-        {
-            "binding": 0,
-            "resource": {
-                "buffer": uniform_buffer,
-                "offset": 0,
-                "size": uniform_buffer.size,
-            },
-        }
+    bind_groups_entries[0].append(
+        wgpu.BindGroupEntry(
+            binding=0,
+            resource=wgpu.BufferBinding(
+                buffer=uniform_buffer, offset=0, size=uniform_buffer.size
+            ),
+        )
     )
-    bind_group_layout_entries.append(
-        {
-            "binding": 0,
-            "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-            "buffer": {},
-        }
+    bind_groups_layout_entries[0].append(
+        wgpu.BindGroupLayoutEntry(
+            binding=0,
+            visibility=wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
+            buffer={},
+        )
     )
 
-    bind_group_entries.append({"binding": 1, "resource": texture_view})
-    bind_group_layout_entries.append(
-        {
-            "binding": 1,
-            "visibility": wgpu.ShaderStage.FRAGMENT,
-            "texture": {},
-        }
+    bind_groups_entries[0].append(
+        wgpu.BindGroupEntry(
+            binding=1,
+            resource=texture_view,
+        )
+    )
+    bind_groups_layout_entries[0].append(
+        wgpu.BindGroupLayoutEntry(
+            binding=1,
+            visibility=wgpu.ShaderStage.FRAGMENT,
+            texture={},
+        )
     )
 
-    bind_group_entries.append({"binding": 2, "resource": sampler})
-    bind_group_layout_entries.append(
-        {
-            "binding": 2,
-            "visibility": wgpu.ShaderStage.FRAGMENT,
-            "sampler": {},
-        }
+    bind_groups_entries[0].append(
+        wgpu.BindGroupEntry(
+            binding=2,
+            resource=sampler,
+        )
+    )
+    bind_groups_layout_entries[0].append(
+        wgpu.BindGroupLayoutEntry(
+            binding=2, visibility=wgpu.ShaderStage.FRAGMENT, sampler={}
+        )
     )
 
     # Create the wgpu binding objects
-    bind_group_layout = device.create_bind_group_layout(
-        entries=bind_group_layout_entries,
-        label="Cube Example bind group layout",
-    )
-    bind_group = device.create_bind_group(
-        layout=bind_group_layout,
-        entries=bind_group_entries,
-        label="Cube Example bind group",
-    )
+    bind_group_layouts = []
+    bind_groups = []
+
+    for entries, layout_entries in zip(
+        bind_groups_entries, bind_groups_layout_entries, strict=False
+    ):
+        bind_group_layout = device.create_bind_group_layout(entries=layout_entries)
+        bind_group_layouts.append(bind_group_layout)
+        bind_groups.append(
+            device.create_bind_group(layout=bind_group_layout, entries=entries)
+        )
 
     pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=[bind_group_layout], label="Cube Example pipeline layout"
+        bind_group_layouts=bind_group_layouts
     )
 
-    return pipeline_layout, uniform_buffer, bind_group
+    return pipeline_layout, uniform_buffer, bind_groups
 
 
 def get_draw_function(
@@ -239,20 +233,18 @@ def get_draw_function(
     device: wgpu.GPUDevice,
     render_pipeline: wgpu.GPURenderPipeline,
     uniform_buffer: wgpu.GPUBuffer,
-    bind_group: wgpu.GPUBindGroup,
+    bind_groups,
     *,
-    asynchronous: bool,
+    asynchronous,
 ):
     # Create vertex buffer, and upload data
     vertex_buffer = device.create_buffer_with_data(
-        data=vertex_data,
-        usage=wgpu.BufferUsage.VERTEX,
-        label="Cube Example vertex buffer",
+        data=vertex_data, usage=wgpu.BufferUsage.VERTEX
     )
 
     # Create index buffer, and upload data
     index_buffer = device.create_buffer_with_data(
-        data=index_data, usage=wgpu.BufferUsage.INDEX, label="Cube Example index buffer"
+        data=index_data, usage=wgpu.BufferUsage.INDEX
     )
 
     def update_transform():
@@ -296,75 +288,48 @@ def get_draw_function(
             tmp_buffer = device.create_buffer_with_data(
                 data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
             )
-        command_encoder = device.create_command_encoder(
-            label="Cube Example uniform buffer upload command encoder"
-        )
+        command_encoder = device.create_command_encoder()
         command_encoder.copy_buffer_to_buffer(
             tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
         )
-        device.queue.submit(
-            [
-                command_encoder.finish(
-                    label="Cube Example uniform buffer upload command buffer"
-                )
-            ]
-        )
+        device.queue.submit([command_encoder.finish()])
 
     async def upload_uniform_buffer_async():
         tmp_buffer = uniform_buffer.copy_buffer
         await tmp_buffer.map_async(wgpu.MapMode.WRITE)
         tmp_buffer.write_mapped(uniform_data)
         tmp_buffer.unmap()
-        command_encoder = device.create_command_encoder(
-            label="Cube Example uniform buffer upload async command encoder"
-        )
+        command_encoder = device.create_command_encoder()
         command_encoder.copy_buffer_to_buffer(
             tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
         )
-        device.queue.submit(
-            [
-                command_encoder.finish(
-                    label="Cube Example uniform buffer upload async command buffer"
-                )
-            ]
-        )
+        device.queue.submit([command_encoder.finish()])
 
     def draw_frame():
-        current_texture_view = (
-            canvas.get_context("wgpu")
-            .get_current_texture()
-            .create_view(label="Cube Example current surface texture view")
+        current_texture_view: wgpu.GPUTextureView = (
+            canvas.get_context("wgpu").get_current_texture().create_view()
         )
-        command_encoder = device.create_command_encoder(
-            label="Cube Example render pass command encoder"
-        )
+        command_encoder = device.create_command_encoder()
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
-                {
-                    "view": current_texture_view,
-                    "resolve_target": None,
-                    "clear_value": (0, 0, 0, 1),
-                    "load_op": wgpu.LoadOp.clear,
-                    "store_op": wgpu.StoreOp.store,
-                }
+                wgpu.RenderPassColorAttachment(
+                    view=current_texture_view,
+                    clear_value=(0, 0, 0, 1),
+                    load_op="clear",
+                    store_op="store",
+                )
             ],
-            label="Cube Example render pass",
         )
 
-        # debug groups and markers can optionally be added to help debugging.
-        render_pass.push_debug_group("Cube Example Debug Group")
         render_pass.set_pipeline(render_pipeline)
-        render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
+        render_pass.set_index_buffer(index_buffer, "uint32")
         render_pass.set_vertex_buffer(0, vertex_buffer)
-        render_pass.set_bind_group(0, bind_group)
-        render_pass.insert_debug_marker("Cube Example draw call here!")
+        for bind_group_id, bind_group in enumerate(bind_groups):
+            render_pass.set_bind_group(bind_group_id, bind_group)
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
-        render_pass.pop_debug_group()
         render_pass.end()
 
-        device.queue.submit(
-            [command_encoder.finish(label="Cube Example render pass command buffer")]
-        )
+        device.queue.submit([command_encoder.finish()])
 
     def draw_frame_sync():
         update_transform()
@@ -507,6 +472,7 @@ uniform_data = np.zeros((), dtype=uniform_dtype)
 print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
+
 
 if __name__ == "__main__":
     canvas = RenderCanvas(
