@@ -17,6 +17,38 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.25.0] - 29-09-2025
+
+This release is marked with many improvements to types and structs, making it much easier to write wgpu-code in an IDE.
+
+Added:
+
+* Better typing for enums and flags by @almarklein in https://github.com/pygfx/wgpu-py/pull/736
+* More type improvements by @almarklein in https://github.com/pygfx/wgpu-py/pull/745
+* Better support for descriptors by using dataclasses  by @almarklein in https://github.com/pygfx/wgpu-py/pull/748
+* Update to latest IDL (adds features and texture formats) by @almarklein in https://github.com/pygfx/wgpu-py/pull/743
+* Add unregister texture method to imgui backend by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/749 and https://github.com/pygfx/wgpu-py/pull/757
+
+Changed:
+
+* Remove mutable defaults by @almarklein in https://github.com/pygfx/wgpu-py/pull/751 and https://github.com/pygfx/wgpu-py/pull/755
+* Allow canvas alpha_modes other than specified by the strict spec by @almarklein in https://github.com/pygfx/wgpu-py/pull/750
+
+Fixes:
+
+* Handle pixel ratio in resize event for imgui adapter by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/752
+* Fix name inconsistency for subgroups feature by @almarklein in https://github.com/pygfx/wgpu-py/pull/756
+
+Removed:
+
+* Drop support for Python 3.9 by @almarklein in https://github.com/pygfx/wgpu-py/pull/737
+
+
+Other:
+
+* Cleanup examples (remove most gui-specific ones) by @almarklein in https://github.com/pygfx/wgpu-py/pull/744
+
+
 ### [v0.24.0] - 15-09-2025
 
 Changed:

@@ -11,6 +11,7 @@ as a script will use the auto-backend.
 # test_example = true
 
 import time
+from typing import Callable
 
 import wgpu
 import numpy as np
@@ -22,7 +23,9 @@ from rendercanvas.auto import RenderCanvas, loop
 # %% Entrypoints (sync and async)
 
 
-def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+def setup_drawing_sync(
+    canvas, power_preference="high-performance", limits=None
+) -> Callable:
     """Setup to draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -37,9 +40,7 @@ def setup_drawing_sync(canvas, power_preference="high-performance", limits=None)
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
-    render_pipeline = device.create_render_pipeline(
-        **pipeline_kwargs, label="Cube Example render pipeline"
-    )
+    render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
         canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=False
@@ -61,9 +62,7 @@ async def setup_drawing_async(canvas, limits=None):
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
-    render_pipeline = await device.create_render_pipeline_async(
-        **pipeline_kwargs, label="Cube Example async render pipeline"
-    )
+    render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
 
     return get_draw_function(
         canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=True
@@ -74,11 +73,9 @@ async def setup_drawing_async(canvas, limits=None):
 
 
 def get_render_pipeline_kwargs(
-    canvas,
-    device: wgpu.GPUDevice,
-    pipeline_layout: wgpu.GPUPipelineLayout,
-) -> dict:
-    context: wgpu.GPUCanvasContext = canvas.get_context("wgpu")
+    canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
+) -> wgpu.RenderPipelineDescriptor:
+    context = canvas.get_context("wgpu")
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
@@ -86,50 +83,47 @@ def get_render_pipeline_kwargs(
         code=shader_source, label="Cube Example shader module"
     )
 
-    return dict(
+    # wgpu.RenderPipelineDescriptor
+    return wgpu.RenderPipelineDescriptor(
+        label= "Cube Example render pipeline",
         layout=pipeline_layout,
-        vertex={
-            "module": shader,
-            "entry_point": "vs_main",
-            "buffers": [
-                {
-                    "array_stride": 4 * 6,
-                    "step_mode": wgpu.VertexStepMode.vertex,
-                    "attributes": [
-                        {
-                            "format": wgpu.VertexFormat.float32x4,
-                            "offset": 0,
-                            "shader_location": 0,
-                        },
-                        {
-                            "format": wgpu.VertexFormat.float32x2,
-                            "offset": 4 * 4,
-                            "shader_location": 1,
-                        },
+        vertex=wgpu.VertexState(
+            module=shader,
+            entry_point="vs_main",
+            buffers=[
+                wgpu.VertexBufferLayout(
+                    array_stride=4 * 6,
+                    step_mode="vertex",
+                    attributes=[
+                        wgpu.VertexAttribute(
+                            format="float32x4",
+                            offset=0,
+                            shader_location=0,
+                        ),
+                        wgpu.VertexAttribute(
+                            format="float32x2",
+                            offset=4 * 4,
+                            shader_location=1,
+                        ),
                     ],
-                },
+                ),
             ],
-        },
-        primitive={
-            "topology": wgpu.PrimitiveTopology.triangle_list,
-            "front_face": wgpu.FrontFace.ccw,
-            "cull_mode": wgpu.CullMode.back,
-        },
-        depth_stencil=None,
-        multisample=None,
-        fragment={
-            "module": shader,
-            "entry_point": "fs_main",
-            "targets": [
-                {
-                    "format": render_texture_format,
-                    "blend": {
-                        "alpha": {},
-                        "color": {},
-                    },
-                }
+        ),
+        primitive=wgpu.PrimitiveState(
+            topology="triangle-list",
+            front_face="ccw",
+            cull_mode="back",
+        ),
+        fragment=wgpu.FragmentState(
+            module=shader,
+            entry_point="fs_main",
+            targets=[
+                wgpu.ColorTargetState(
+                    format=render_texture_format,
+                    blend={"alpha": {}, "color": {}},
+                )
             ],
-        },
+        ),
     )
 
 
@@ -152,8 +146,8 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     texture = device.create_texture(
         size=texture_size,
         usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
-        dimension=wgpu.TextureDimension.d2,
-        format=wgpu.TextureFormat.r8unorm,
+        dimension="2d",
+        format="r8unorm",
         mip_level_count=1,
         sample_count=1,
         label="Cube Example texture",
@@ -161,16 +155,16 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     texture_view = texture.create_view(label="Cube Example texture view")
 
     device.queue.write_texture(
-        {
-            "texture": texture,
-            "mip_level": 0,
-            "origin": (0, 0, 0),
-        },
+        wgpu.TexelCopyTextureInfo(
+            texture=texture,
+            mip_level=0,
+            origin=(0, 0, 0),
+        ),
         texture_data,
-        {
-            "offset": 0,
-            "bytes_per_row": texture_data.strides[0],
-        },
+        wgpu.TexelCopyBufferLayout(
+            offset=0,
+            bytes_per_row=texture_data.strides[0],
+        ),
         texture_size,
     )
 
@@ -183,39 +177,45 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     bind_group_layout_entries = []
 
     bind_group_entries.append(
-        {
-            "binding": 0,
-            "resource": {
-                "buffer": uniform_buffer,
-                "offset": 0,
-                "size": uniform_buffer.size,
-            },
-        }
+        wgpu.BindGroupEntry(
+            binding=0,
+            resource=wgpu.BufferBinding(
+                buffer=uniform_buffer, offset=0, size=uniform_buffer.size
+            ),
+        )
     )
     bind_group_layout_entries.append(
-        {
-            "binding": 0,
-            "visibility": wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
-            "buffer": {},
-        }
+        wgpu.BindGroupLayoutEntry(
+            binding=0,
+            visibility=wgpu.ShaderStage.VERTEX | wgpu.ShaderStage.FRAGMENT,
+            buffer={},
+        )
     )
 
-    bind_group_entries.append({"binding": 1, "resource": texture_view})
+    bind_group_entries.append(
+        wgpu.BindGroupEntry(
+            binding=1,
+            resource=texture_view,
+        )
+    )
     bind_group_layout_entries.append(
-        {
-            "binding": 1,
-            "visibility": wgpu.ShaderStage.FRAGMENT,
-            "texture": {},
-        }
+        wgpu.BindGroupLayoutEntry(
+            binding=1,
+            visibility=wgpu.ShaderStage.FRAGMENT,
+            texture={},
+        )
     )
 
-    bind_group_entries.append({"binding": 2, "resource": sampler})
+    bind_group_entries.append(
+        wgpu.BindGroupEntry(
+            binding=2,
+            resource=sampler,
+        )
+    )
     bind_group_layout_entries.append(
-        {
-            "binding": 2,
-            "visibility": wgpu.ShaderStage.FRAGMENT,
-            "sampler": {},
-        }
+        wgpu.BindGroupLayoutEntry(
+            binding=2, visibility=wgpu.ShaderStage.FRAGMENT, sampler={}
+        )
     )
 
     # Create the wgpu binding objects
@@ -332,7 +332,7 @@ def get_draw_function(
         )
 
     def draw_frame():
-        current_texture_view = (
+        current_texture_view: wgpu.GPUTextureView = (
             canvas.get_context("wgpu")
             .get_current_texture()
             .create_view(label="Cube Example current surface texture view")
@@ -342,13 +342,12 @@ def get_draw_function(
         )
         render_pass = command_encoder.begin_render_pass(
             color_attachments=[
-                {
-                    "view": current_texture_view,
-                    "resolve_target": None,
-                    "clear_value": (0, 0, 0, 1),
-                    "load_op": wgpu.LoadOp.clear,
-                    "store_op": wgpu.StoreOp.store,
-                }
+                wgpu.RenderPassColorAttachment(
+                    view=current_texture_view,
+                    clear_value=(0, 0, 0, 1),
+                    load_op="clear",
+                    store_op="store",
+                )
             ],
             label="Cube Example render pass",
         )
@@ -356,10 +355,10 @@ def get_draw_function(
         # debug groups and markers can optionally be added to help debugging.
         render_pass.push_debug_group("Cube Example Debug Group")
         render_pass.set_pipeline(render_pipeline)
-        render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
+        render_pass.set_index_buffer(index_buffer, "uint32")
         render_pass.set_vertex_buffer(0, vertex_buffer)
         render_pass.set_bind_group(0, bind_group)
-        render_pass.insert_debug_marker("Cube Example bind group set")
+        render_pass.insert_debug_marker("Cube Example draw call")
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
         render_pass.pop_debug_group()
         render_pass.end()

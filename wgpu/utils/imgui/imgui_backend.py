@@ -89,7 +89,6 @@ class ImguiWgpuBackend:
         # Texture management
         self._textures = {}
         self._texture_views = {}
-        self._texture_bind_groups = {}
 
         self.io = imgui.get_io()
         self.io.set_ini_filename("")
@@ -101,6 +100,8 @@ class ImguiWgpuBackend:
 
         self._create_device_objects()
 
+        self._pending_cleanup_textures = []
+
     def register_texture(self, texture_view: wgpu.GPUTextureView) -> imgui.ImTextureRef:
         """Register a custom wgpu.GPUTextureView (which you want to render using Imgui)
         with backend and return a texture reference in Imgui format.
@@ -111,6 +112,10 @@ class ImguiWgpuBackend:
         self._texture_views[id_texture] = texture_view
 
         return imgui.ImTextureRef(id_texture)
+
+    def unregister_texture(self, texture_ref: imgui.ImTextureRef):
+        """Unregister a previously registered texture reference."""
+        self._pending_cleanup_textures.append(texture_ref)
 
     def _update_texture(self, tex: imgui.ImTextureData):
         if tex.status == imgui.ImTextureStatus.want_create:
@@ -191,7 +196,6 @@ class ImguiWgpuBackend:
 
             self._textures.pop(tex.tex_id, None)
             self._texture_views.pop(tex.tex_id, None)
-            self._texture_bind_groups.pop(tex.tex_id, None)
 
     def _create_device_objects(self):
         vertex_shader_program = self._device.create_shader_module(
@@ -431,6 +435,9 @@ class ImguiWgpuBackend:
         render_pass : wgpu.GPURenderPassEncoder
             The render pass to render the imgui draw data with
         """
+
+        self._clear_pending_textures()
+
         if draw_data is None:
             return
 
@@ -485,8 +492,11 @@ class ImguiWgpuBackend:
                 # todo command.user_callback
                 tex_id = command.tex_ref.get_tex_id()
 
-                if tex_id not in self._texture_bind_groups:
-                    tex_view = self._texture_views[tex_id]
+                tex_view = self._texture_views[tex_id]
+
+                texture_bind_group = getattr(tex_view, "__imgui_bind_group", None)
+
+                if texture_bind_group is None:
                     texture_bind_group = self._device.create_bind_group(
                         layout=self._texture_bind_group_layout,
                         entries=[
@@ -497,9 +507,9 @@ class ImguiWgpuBackend:
                         ],
                     )
                     # cache the bind group
-                    self._texture_bind_groups[tex_id] = texture_bind_group
+                    tex_view.__imgui_bind_group = texture_bind_group
 
-                render_pass.set_bind_group(1, self._texture_bind_groups[tex_id])
+                render_pass.set_bind_group(1, texture_bind_group)
 
                 clip_rect = command.clip_rect
                 clip_min = [
@@ -539,3 +549,10 @@ class ImguiWgpuBackend:
 
             global_vtx_offset += commands.vtx_buffer.size()
             global_idx_offset += commands.idx_buffer.size()
+
+    def _clear_pending_textures(self):
+        for tex_ref in self._pending_cleanup_textures:
+            tex_id = tex_ref.get_tex_id()
+            self._texture_views.pop(tex_id, None)
+            self._textures.pop(tex_id, None)
+        self._pending_cleanup_textures.clear()
