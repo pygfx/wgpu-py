@@ -85,7 +85,7 @@ def get_render_pipeline_kwargs(
 
     # wgpu.RenderPipelineDescriptor
     return wgpu.RenderPipelineDescriptor(
-        label= "Cube Example render pipeline",
+        label="Cube Example render pipeline",
         layout=pipeline_layout,
         vertex=wgpu.VertexState(
             module=shader,
