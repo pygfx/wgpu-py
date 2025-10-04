@@ -11,6 +11,7 @@ as a script will use the auto-backend.
 # test_example = true
 
 import time
+from typing import Callable
 
 import wgpu
 import numpy as np
@@ -22,7 +23,9 @@ from rendercanvas.auto import RenderCanvas, loop
 # %% Entrypoints (sync and async)
 
 
-def setup_drawing_sync(canvas, power_preference="high-performance", limits=None):
+def setup_drawing_sync(
+    canvas, power_preference="high-performance", limits: dict = {}
+) -> Callable:
     """Setup to draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -37,16 +40,14 @@ def setup_drawing_sync(canvas, power_preference="high-performance", limits=None)
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
-    render_pipeline = device.create_render_pipeline(
-        **pipeline_kwargs, label="Cube Example render pipeline"
-    )
+    render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
         canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=False
     )
 
 
-async def setup_drawing_async(canvas, limits=None):
+async def setup_drawing_async(canvas, limits: dict = {}):
     """Setup to async-draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
@@ -61,9 +62,7 @@ async def setup_drawing_async(canvas, limits=None):
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
-    render_pipeline = await device.create_render_pipeline_async(
-        **pipeline_kwargs, label="Cube Example async render pipeline"
-    )
+    render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
 
     return get_draw_function(
         canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=True
@@ -74,11 +73,9 @@ async def setup_drawing_async(canvas, limits=None):
 
 
 def get_render_pipeline_kwargs(
-    canvas,
-    device: wgpu.GPUDevice,
-    pipeline_layout: wgpu.GPUPipelineLayout,
+    canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
 ) -> dict:
-    context: wgpu.GPUCanvasContext = canvas.get_context("wgpu")
+    context = canvas.get_context("wgpu")
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
@@ -87,6 +84,7 @@ def get_render_pipeline_kwargs(
     )
 
     return dict(
+        label="Cube Example render pipeline",
         layout=pipeline_layout,
         vertex={
             "module": shader,
@@ -359,7 +357,7 @@ def get_draw_function(
         render_pass.set_index_buffer(index_buffer, wgpu.IndexFormat.uint32)
         render_pass.set_vertex_buffer(0, vertex_buffer)
         render_pass.set_bind_group(0, bind_group)
-        render_pass.insert_debug_marker("Cube Example bind group set")
+        render_pass.insert_debug_marker("Cube Example draw call here!")
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
         render_pass.pop_debug_group()
         render_pass.end()
