@@ -33,7 +33,7 @@ def setup_drawing_sync(
     """
 
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
-    device = adapter.request_device_sync(required_limits=limits)
+    device = adapter.request_device_sync(required_limits=limits, label="Cube Example sync device")
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
@@ -53,7 +53,7 @@ async def setup_drawing_async(canvas, limits=None):
     """
 
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
-    device = await adapter.request_device_async(required_limits=limits)
+    device = await adapter.request_device_async(required_limits=limits, label="Cube Example async device")
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
@@ -79,6 +79,7 @@ def get_render_pipeline_kwargs(
 
     # wgpu.RenderPipelineDescriptor
     return wgpu.RenderPipelineDescriptor(
+        label="Cube Example render pipeline",
         layout=pipeline_layout,
         vertex=wgpu.VertexState(
             module=shader,
@@ -125,12 +126,14 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     uniform_buffer = device.create_buffer(
         size=uniform_data.nbytes,
         usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST,
+        label="Cube Example uniform buffer"
     )
 
     # Create another buffer to copy data to it (by mapping it and then copying the data)
     uniform_buffer.copy_buffer = device.create_buffer(
         size=uniform_data.nbytes,
         usage=wgpu.BufferUsage.MAP_WRITE | wgpu.BufferUsage.COPY_SRC,
+        label="Cube Example uniform buffer copy buffer"
     )
 
     # Create texture, and upload data
@@ -141,8 +144,9 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
         format="r8unorm",
         mip_level_count=1,
         sample_count=1,
+        label="Cube Example texture",
     )
-    texture_view = texture.create_view()
+    texture_view = texture.create_view(label="Cube Example texture view")
 
     device.queue.write_texture(
         wgpu.TexelCopyTextureInfo(
@@ -159,7 +163,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     )
 
     # Create a sampler
-    sampler = device.create_sampler()
+    sampler = device.create_sampler(label="Cube Example sampler")
 
     # Create bind group layouts for our resources
     # We will use a single bind group with three resources
@@ -212,14 +216,17 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
 
     # Create the wgpu binding objects
     bind_group_layout = device.create_bind_group_layout(
-        entries=bind_group_layout_entries
+        entries=bind_group_layout_entries,
+        label="Cube Example bind group layout",
     )
     bind_group = device.create_bind_group(
-        layout=bind_group_layout, entries=bind_group_entries
+        layout=bind_group_layout, entries=bind_group_entries,
+        label="Cube Example bind group"
     )
 
     pipeline_layout = device.create_pipeline_layout(
-        bind_group_layouts=bind_group_layout
+        bind_group_layouts=bind_group_layout,
+        label="Cube Example pipeline layout"
     )
 
     return pipeline_layout, uniform_buffer, bind_group
@@ -236,12 +243,14 @@ def get_draw_function(
 ):
     # Create vertex buffer, and upload data
     vertex_buffer = device.create_buffer_with_data(
-        data=vertex_data, usage=wgpu.BufferUsage.VERTEX
+        data=vertex_data, usage=wgpu.BufferUsage.VERTEX,
+        label="Cube Example vertex buffer"
     )
 
     # Create index buffer, and upload data
     index_buffer = device.create_buffer_with_data(
-        data=index_data, usage=wgpu.BufferUsage.INDEX
+        data=index_data, usage=wgpu.BufferUsage.INDEX,
+        label="Cube Example index buffer"
     )
 
     def update_transform():
@@ -285,29 +294,30 @@ def get_draw_function(
             tmp_buffer = device.create_buffer_with_data(
                 data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
             )
-        command_encoder = device.create_command_encoder()
+        command_encoder = device.create_command_encoder(label="Cube Example uniform buffer upload sync command encoder")
         command_encoder.copy_buffer_to_buffer(
             tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
         )
-        device.queue.submit([command_encoder.finish()])
+        device.queue.submit([command_encoder.finish(label="Cube Example uniform buffer upload sync command buffer")])
 
     async def upload_uniform_buffer_async():
         tmp_buffer = uniform_buffer.copy_buffer
         await tmp_buffer.map_async(wgpu.MapMode.WRITE)
         tmp_buffer.write_mapped(uniform_data)
         tmp_buffer.unmap()
-        command_encoder = device.create_command_encoder()
+        command_encoder = device.create_command_encoder(label="Cube Example uniform buffer upload async command encoder")
         command_encoder.copy_buffer_to_buffer(
             tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
         )
-        device.queue.submit([command_encoder.finish()])
+        device.queue.submit([command_encoder.finish(label="Cube Example uniform buffer upload async command buffer")])
 
     def draw_frame():
         current_texture_view: wgpu.GPUTextureView = (
-            canvas.get_context("wgpu").get_current_texture().create_view()
+            canvas.get_context("wgpu").get_current_texture().create_view(label="Cube Example current surface texture view")
         )
-        command_encoder = device.create_command_encoder()
+        command_encoder = device.create_command_encoder(label="Cube Example render pass command encoder")
         render_pass = command_encoder.begin_render_pass(
+            label="Cube Example render pass",
             color_attachments=[
                 wgpu.RenderPassColorAttachment(
                     view=current_texture_view,
@@ -325,7 +335,7 @@ def get_draw_function(
         render_pass.draw_indexed(index_data.size, 1, 0, 0, 0)
         render_pass.end()
 
-        device.queue.submit([command_encoder.finish()])
+        device.queue.submit([command_encoder.finish(label="Cube Example render pass command buffer")])
 
     def draw_frame_sync():
         update_transform()
