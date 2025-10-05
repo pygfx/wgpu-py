@@ -330,7 +330,6 @@ enum_str2int = {
     "NativeFeature": {
         "push-constants": 196609,
         "texture-adapter-specific-format-features": 196610,
-        "multi-draw-indirect": 196611,
         "multi-draw-indirect-count": 196612,
         "vertex-writable-storage": 196613,
         "texture-binding-array": 196614,
@@ -349,7 +348,6 @@ enum_str2int = {
         "spirv-shader-passthrough": 196631,
         "vertex-attribute64bit": 196633,
         "texture-format-nv12": 196634,
-        "ray-tracing-acceleration-structure": 196635,
         "ray-query": 196636,
         "shader-f64": 196637,
         "shader-i16": 196638,
