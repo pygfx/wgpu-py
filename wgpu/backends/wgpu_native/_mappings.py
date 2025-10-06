@@ -330,7 +330,6 @@ enum_str2int = {
     "NativeFeature": {
         "push-constants": 196609,
         "texture-adapter-specific-format-features": 196610,
-        "multi-draw-indirect": 196611,
         "multi-draw-indirect-count": 196612,
         "vertex-writable-storage": 196613,
         "texture-binding-array": 196614,
@@ -343,10 +342,12 @@ enum_str2int = {
         "mappable-primary-buffers": 196622,
         "buffer-binding-array": 196623,
         "uniform-buffer-and-storage-texture-array-non-uniform-indexing": 196624,
+        "polygon-mode-line": 196627,
+        "polygon-mode-point": 196628,
+        "conservative-rasterization": 196629,
         "spirv-shader-passthrough": 196631,
         "vertex-attribute64bit": 196633,
         "texture-format-nv12": 196634,
-        "ray-tracing-acceleration-structure": 196635,
         "ray-query": 196636,
         "shader-f64": 196637,
         "shader-i16": 196638,
@@ -370,6 +371,11 @@ enum_str2int = {
         "Undefined": 0,
         "Fxc": 1,
         "Dxc": 2,
+    },
+    "PolygonMode": {
+        "Fill": 0,
+        "Line": 1,
+        "Point": 2,
     },
 }
 

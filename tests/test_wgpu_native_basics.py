@@ -414,8 +414,8 @@ def are_features_wgpu_legal(features):
 def test_features_are_legal():
     # A standard feature.  Probably exists
     assert are_features_wgpu_legal(["shader-f16"])
-    # Two common extension features
-    assert are_features_wgpu_legal(["multi-draw-indirect", "vertex-writable-storage"])
+    # A common extension feature
+    assert are_features_wgpu_legal(["vertex-writable-storage"])
     # An uncommon extension feature.  Certainly not on a mac.
     assert are_features_wgpu_legal(["pipeline-statistics-query"])
     assert are_features_wgpu_legal(
@@ -429,9 +429,7 @@ def test_features_are_legal():
 
 def test_features_are_illegal():
     # writable is misspelled
-    assert not are_features_wgpu_legal(
-        ["multi-draw-indirect", "vertex-writeable-storage"]
-    )
+    assert not are_features_wgpu_legal(["vertex-writeable-storage"])
     assert not are_features_wgpu_legal(["my-made-up-feature"])
 
 

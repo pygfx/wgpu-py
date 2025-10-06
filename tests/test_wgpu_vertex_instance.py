@@ -70,7 +70,7 @@ BIND_GROUP_ENTRIES = [
 
 class Runner:
     REQUIRED_FEATURES = ["indirect-first-instance"]
-    OPTIONAL_FEATURES = ["multi-draw-indirect", "multi-draw-indirect-count"]
+    OPTIONAL_FEATURES = ["multi-draw-indirect-count"]
 
     @classmethod
     def is_usable(cls):
@@ -263,9 +263,6 @@ def test_draw_mixed(runner):
 
 
 def test_multi_draw_indirect(runner):
-    if "multi-draw-indirect" not in runner.device.features:
-        pytest.skip("Must have 'multi-draw-indirect' to run")
-
     def draw(encoder):
         multi_draw_indirect(encoder, runner.draw_data_buffer, offset=8, count=2)
 
@@ -329,9 +326,6 @@ def test_draw_indexed_mixed(runner):
 
 
 def test_multi_draw_indexed_indirect(runner):
-    if "multi-draw-indirect" not in runner.device.features:
-        pytest.skip("Must have 'multi-draw-indirect' to run")
-
     def draw(encoder):
         multi_draw_indexed_indirect(
             encoder, runner.draw_data_buffer_indexed, offset=8, count=2
