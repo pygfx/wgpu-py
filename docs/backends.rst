@@ -45,6 +45,7 @@ It also works out of the box, because the wgpu-native DLL is shipped with wgpu-p
 The wgpu_native backend provides a few extra functionalities:
 
 .. py:function:: wgpu.backends.wgpu_native.request_device_sync(adapter, trace_path, *, label="", required_features, required_limits, default_queue)
+
     An alternative to :func:`wgpu.GPUAdapter.request_adapter`, that streams a trace
     of all low level calls to disk, so the visualization can be replayed (also on other systems),
     investigated, and debugged.
@@ -166,9 +167,9 @@ they reduce driver overhead on the CPU.
 
 The first two require that you enable the feature ``"multi-draw-indirect"``.
 
-.. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count):
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect(render_pass_encoder, buffer, *, offset=0, count)
 
-     Equivalent to::
+    Equivalent to::
         for i in range(count):
             render_pass_encoder.draw_indirect(buffer, offset + i * 16)
 
@@ -179,9 +180,9 @@ The first two require that you enable the feature ``"multi-draw-indirect"``.
                    Must be a multiple of 4.
     :param count: The number of draw operations to perform.
 
-.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count):
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect(render_pass_encoder, buffer, *, offset=0, count)
 
-     Equivalent to::
+    Equivalent to::
 
         for i in range(count):
             render_pass_encoder.draw_indexed_indirect(buffer, offset + i * 2-)
@@ -199,9 +200,9 @@ They are identical to the previous two, except that the ``count`` argument is re
 three arguments. The value at ``count_buffer_offset`` in ``count_buffer`` is treated as
 an unsigned 32-bit integer. The ``count`` is the minimum of this value and ``max_count``.
 
-.. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect_count(render_pass_encoder, buffer, *, offset=0, count_buffer, count_offset=0, max_count):
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indirect_count(render_pass_encoder, buffer, *, offset=0, count_buffer, count_offset=0, max_count)
 
-     Equivalent to::
+    Equivalent to::
 
         count = min(<u32 at count_buffer_offset in count_buffer>, max_count)
         for i in range(count):
@@ -217,9 +218,9 @@ an unsigned 32-bit integer. The ``count`` is the minimum of this value and ``max
                    Must be a multiple of 4.
     :param max_count: The maximum number of draw operations to perform.
 
-.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect_count(render_pass_encoder, buffer, *, offset=0, count_buffer, count_offset=0, max_count):
+.. py:function:: wgpu.backends.wgpu_native.multi_draw_indexed_indirect_count(render_pass_encoder, buffer, *, offset=0, count_buffer, count_offset=0, max_count)
 
-     Equivalent to::
+    Equivalent to::
 
         count = min(<u32 at count_buffer_offset in count_buffer>, max_count)
         for i in range(count):
@@ -246,13 +247,13 @@ both enabled.
 
 When ``write_timestamp`` is called with a render pass or compute pass as its first
 argument, a timestamp is written to the indicated query set at the indicated index at
-that point in thie queue. This usage requires
+that point in this queue. This usage requires
 that the features ``"timestamp-query"`` and ``"timestamp-query-inside-passes"`` are
 both enabled.
 
-.. py:function:: wgpu.backends.wgpu_native.write_timestamp(encoder, query_set, query_index):
+.. py:function:: wgpu.backends.wgpu_native.write_timestamp(encoder, query_set, query_index)
 
-     Writes a timestamp to the timestamp query set and the indicated index.
+    Writes a timestamp to the timestamp query set and the indicated index.
 
     :param encoder: The ComputePassEncoder, RenderPassEncoder, or CommandEncoder.
     :param query_set: The timestamp query set into which to save the result.
@@ -293,7 +294,7 @@ the number of statistics chosen.
 The statistics are always output to the query set in the order above, even if they are
 given in a different order in the list.
 
-.. py:function:: wgpu.backends.wgpu_native.create_statistics_query_set(device, count, statistics):
+.. py:function:: wgpu.backends.wgpu_native.create_statistics_query_set(device, count, statistics)
 
     Create a query set that could hold count entries for the specified statistics.
     The statistics are specified as a list of strings.
@@ -302,7 +303,7 @@ given in a different order in the list.
     :param count: Number of entries that go into the query set.
     :param statistics: A sequence of strings giving the desired statistics.
 
-.. py:function:: wgpu.backends.wgpu_native.begin_pipeline_statistics_query(encoder, query_set, index):
+.. py:function:: wgpu.backends.wgpu_native.begin_pipeline_statistics_query(encoder, query_set, index)
 
     Start collecting statistics.
 
@@ -310,12 +311,42 @@ given in a different order in the list.
     :param query_set: The query set into which to save the result.
     :param index: The index of the query set into which to write the result.
 
-.. py:function:: wgpu.backends.wgpu_native.begin_pipeline_statistics_query(encoder, query_set, index):
+.. py:function:: wgpu.backends.wgpu_native.end_pipeline_statistics_query(encoder, query_set, index)
 
     Stop collecting statistics and write them into the query set.
 
     :param encoder: The ComputePassEncoder or RenderPassEncoder.
 
+.. py:function:: wgpu.backends.wgpu_native.set_instance_extras(backends, flags, dx12_compiler, gles3_minor_version, fence_behavior, dxil_path, dxc_path, dxc_max_shader_model)
+
+    Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
+
+    :param backends: bitflags as list[str], which backends to enable on the instance level. Defaults to ``["All"]``. Can be any combination of ``["Vulkan", "GL", "Metal", "DX12", "BrowserWebGPU"]`` or the premade combinations ``["All", "Primary", "secondary"]``. Note that your device needs to support these backends, for detailed information see https://docs.rs/wgpu/latest/wgpu/struct.Backends.html
+    :param flags: bitflags as list[str], debug flags for the compiler. Defaults to ``["Default"]``, can be any combination of ``["Debug", "Validation", "DiscardHalLabels"]``.
+    :param dx12_compiler: enum/str, either "Fxc", "Dxc" or "Undefined". Defaults to "Fxc" same as "Undefined". Dxc requires additional library files.
+    :param gles3_minor_version: enum/int 0, 1 or 2. Defaults to "Atomic" (handled by driver).
+    :param fence_behavior: enum/int, "Normal" or "AutoFinish", Default to "Normal".
+    :param dxil_path: str, path to dxil.dll, defaults to ``None``. None looks in the resource directory.
+    :param dxc_path: str, path to dxcompiler.dll, defaults to ``None``. None looks in the resource directory.
+    :param dxc_max_shader_model: float between 6.0 and 6.7, Maximum shader model the given dll supports. Defaults to 6.5.
+
+Use like the following before the instance is created, which happens during request_adapter or enumerate_adapters.
+
+.. code-block:: py
+
+    import wgpu
+    from wgpu.backends.wgpu_native.extras import set_instance_extras
+    set_instance_extras(
+        backends=["Vulkan"],
+        flags=["Debug"],
+    )
+
+    # ...
+
+    for a in wgpu.gpu.enumerate_adapters_sync():
+        print(a.summary)
+
+For additional usage examples look at `extras_dxc.py` and `extras_debug.py` in the examples directory.
 
 The js_webgpu backend
 ---------------------
