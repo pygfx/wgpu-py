@@ -11,8 +11,6 @@ import importlib.resources
 from contextlib import ExitStack
 from pathlib import Path
 
-import sniffio
-
 
 # Our resources are most probably always on the file system. But in
 # case they don't we have a nice exit handler to remove temporary files.
@@ -102,15 +100,6 @@ def error_message_hash(message):
     # E.g. `<CommandBuffer- (12, 4, Metal)>`
     message = _re_wgpu_ob.sub("WGPU_OBJECT", message)
     return hash(message)
-
-
-class AsyncEvent:
-    """Generic async event object using sniffio. Works with trio, asyncio and rendercanvas-native."""
-
-    def __new__(cls):
-        libname = sniffio.current_async_library()
-        Event = sys.modules[libname].Event  # noqa
-        return Event()
 
 
 # We implement a custom enum class that's much simpler than Python's enum.Enum,

@@ -4,8 +4,7 @@ from pytest import mark
 
 import wgpu.utils
 from testutils import can_use_wgpu_lib, run_tests
-from wgpu import GPUDevice, MapMode, TextureFormat
-from wgpu.backends.wgpu_native import GPUPromise
+from wgpu import GPUDevice, MapMode, TextureFormat, GPUPromise
 
 
 @mark.anyio

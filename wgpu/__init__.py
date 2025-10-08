@@ -7,6 +7,7 @@ WebGPU for Python.
 from ._coreutils import logger
 from ._version import __version__, version_info
 from ._diagnostics import diagnostics, DiagnosticsBase
+from ._async import GPUPromise
 from .flags import *
 from .enums import *
 from .structs import *

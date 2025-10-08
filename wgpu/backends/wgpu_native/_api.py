@@ -24,6 +24,7 @@ from weakref import WeakKeyDictionary
 from typing import NoReturn, Sequence
 
 from ... import classes, flags, enums, structs
+from ..._async import GPUPromise
 from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
 
 from ._ffi import ffi, lib
@@ -1025,10 +1026,6 @@ class GPUObjectBase(classes.GPUObjectBase):
             # H: void wgpuQuerySetRelease(WGPUQuerySet querySet)
             function = type(self)._release_function
             function(internal)
-
-
-class GPUPromise(classes.GPUPromise):
-    pass
 
 
 class GPUAdapterInfo(classes.GPUAdapterInfo):
@@ -2397,7 +2394,9 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # Can we even map?
         if self._map_state != enums.BufferMapState.unmapped:
             promise = GPUPromise("buffer.map", self._device._loop, None)
-            err = RuntimeError(f"Can only map a buffer if its currently unmapped, not {self._map_state!r}")
+            err = RuntimeError(
+                f"Can only map a buffer if its currently unmapped, not {self._map_state!r}"
+            )
             promise._wgpu_set_error(err)
             return promise
 

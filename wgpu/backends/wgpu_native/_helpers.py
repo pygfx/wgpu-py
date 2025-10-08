@@ -7,8 +7,6 @@ import inspect
 import threading
 from queue import deque
 
-import sniffio
-
 from ._ffi import ffi, lib, lib_path
 from ..._diagnostics import DiagnosticsBase
 from ...classes import (
@@ -237,22 +235,6 @@ def to_camel_case(name):
     if name2.endswith(("1d", "2d", "3d")):
         name2 = name2[:-1] + "D"
     return name2
-
-
-async def async_sleep(delay):
-    """Async sleep that uses sniffio to be compatible with asyncio, trio, rendercanvas.utils.asyncadapter, and possibly more."""
-    libname = sniffio.current_async_library()
-    sleep = sys.modules[libname].sleep
-    await sleep(delay)
-
-
-class AsyncEvent:
-    """Generic async event object using sniffio. Works with trio, asyncio and rendercanvas-native."""
-
-    def __new__(cls):
-        libname = sniffio.current_async_library()
-        Event = sys.modules[libname].Event  # noqa
-        return Event()
 
 
 class ErrorSlot:

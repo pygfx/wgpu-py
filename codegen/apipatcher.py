@@ -38,7 +38,7 @@ def patch_base_api(code):
     idl = get_idl_parser()
 
     # Write __all__
-    extra_public_classes = ["GPUPromise"]
+    extra_public_classes = []  # not used
     all_public_classes = [*idl.classes.keys(), *extra_public_classes]
     part1, found_all, part2 = code.partition("\n__all__ =")
     if found_all:
