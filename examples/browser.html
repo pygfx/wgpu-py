@@ -3,9 +3,28 @@
 <html>
 <head>
     wgpu-py on the HTML RenderCanvas canvas with Pyodide:<br>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.28.2/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+    <style>
+        /* so the demo page can have interactive resizing */
+        #canvas {
+            position: absolute;
+            width: 90%;
+            height: 90%;
+        }
+    </style>
 </head>
 <body>
+<!-- WIP: make it more of a "Playground"? -->
+<select id="example-select">
+    <option value="cube.py">cube.py</option>
+    <option value="triangle.py">triangle.py</option>
+    <option value="compute_noop.py">compute_noop.py</option>
+    <option value="imgui_backend_sea.py">imgui_backend_sea.py</option>
+</select>
+<!-- maybe something like add example (to test spawning more canvases and also closing them?) -->
+<button id="reload-example">Reload example (TODO)</button>
+<button id="reload-page" style="background-color: orange;"onclick="location.reload();">Reload page</button>
+<br>
 <canvas id="canvas" width="640" height="480" style="background-color: lightgrey;"></canvas><br>
 pixels got drawn!
 <script type="text/javascript">
@@ -16,9 +35,9 @@ pixels got drawn!
         // TODO: replace the actual code here (unless you have the module)
         // pythonCode = await (await fetch("compute_noop.py")).text();
         // pythonCode = await (await fetch("compute_matmul.py")).text();
-        // pythonCode = await (await fetch("cube.py")).text();
+        pythonCode = await (await fetch("cube.py")).text();
         // pythonCode = await (await fetch("triangle.py")).text();
-        pythonCode = await (await fetch("imgui_backend_sea.py")).text();
+        // pythonCode = await (await fetch("imgui_backend_sea.py")).text();
         // pythonCode = await (await fetch("imgui_renderer_sea.py")).text();
         // pythonCode = await (await fetch("imgui_basic_example.py")).text();    
 
@@ -33,7 +52,10 @@ pixels got drawn!
         await micropip.install('numpy');
         await micropip.install('imgui-bundle');
         // await micropip.install('rendercanvas');
-        await micropip.install('../../../../../../../projects/pygfx-repos/rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
+        // await micropip.install('../../../../../../../projects/pygfx-repos/rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
+        await micropip.install('../../rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
+        // set WGPU_PY_BUILLD_NOARCH=1
+        // python -m build -nw
         await micropip.install('../dist/wgpu-0.24.0-py3-none-any.whl'); // also local, probably need to name the wheel differently.
 
         // Run the Python code async because some calls are async it seems.

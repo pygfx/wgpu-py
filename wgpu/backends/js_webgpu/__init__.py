@@ -175,11 +175,10 @@ class GPUDevice(classes.GPUDevice):
 
         data = memoryview(data).cast("B") # unit8
         data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
-        size = BigInt(data_size)
 
         # if it's a Descriptor you need the keywords
-        js_buf = self._internal.createBuffer(label=label, size=size, usage=usage, mappedAtCreation=True)
-        mapping_buffer = Uint8Array.new(js_buf.getMappedRange(BigInt(0), size))
+        js_buf = self._internal.createBuffer(label=label, size=data_size, usage=usage, mappedAtCreation=True)
+        mapping_buffer = Uint8Array.new(js_buf.getMappedRange(0, data_size))
         mapping_buffer.assign(data) #.set only works with JS array I think...
         js_buf.unmap()
         return GPUBuffer(label, js_buf, self, data_size, usage, enums.BufferMapState.unmapped)
@@ -337,14 +336,12 @@ class GPUBuffer(classes.GPUBuffer):
         data = memoryview(data).cast("B")
         size = (data.nbytes + 3) & ~3
 
-        # GPUSIze64 type
+        # GPUSIze64 type works as pyton int, can't we just make 0 a default?
         if buffer_offset is None:
             buffer_offset = 0
-        js_offset = BigInt(buffer_offset)
-        js_size = BigInt(size)
 
         # these can't be passed as keyword arguments I guess...
-        array_buf = self._internal.getMappedRange(js_offset, js_size)
+        array_buf = self._internal.getMappedRange(buffer_offset, size)
         Uint8Array.new(array_buf).assign(data)
 
     def map_sync(self, mode=None, offset=0, size=None):
@@ -492,7 +489,7 @@ class GPUQueue(classes.GPUQueue):
         js_data = Uint8Array.new(size)
         js_data.assign(data[data_offset:data_offset+size])
 
-        self._internal.writeBuffer(buffer._internal, BigInt(buffer_offset), js_data, 0, size)
+        self._internal.writeBuffer(buffer._internal, buffer_offset, js_data, 0, size)
 
 
 
@@ -561,17 +558,17 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder):
         # they need to be position args and then it works.
         js_buffer = buffer._internal
         js_format = to_js(format)
-        js_offset = BigInt(offset)
-        js_size = BigInt(size) if size is not None else js_buffer.size
+        if size is None:
+            size = buffer.size - offset
 
-        self._internal.setIndexBuffer(js_buffer, js_format, js_offset, js_size)
+        self._internal.setIndexBuffer(js_buffer, js_format, offset, size)
 
     def set_vertex_buffer(self, slot, buffer: GPUBuffer, offset=0, size: int | None = None):
         # slot is a GPUsize32 so that works, but the others don't
-        js_offset = BigInt(offset)
-        js_size = BigInt(size) if size is not None else buffer.size
+        if size is None:
+            size = buffer.size - offset
 
-        self._internal.setVertexBuffer(slot, buffer._internal, js_offset, js_size)
+        self._internal.setVertexBuffer(slot, buffer._internal, offset, size)
 
     # function has overloads!
     def set_bind_group(
