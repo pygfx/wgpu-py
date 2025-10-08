@@ -2396,7 +2396,10 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Can we even map?
         if self._map_state != enums.BufferMapState.unmapped:
-            raise RuntimeError("Can only map a buffer if its currently unmapped.")
+            promise = GPUPromise("buffer.map", self._device._loop, None)
+            err = RuntimeError(f"Can only map a buffer if its currently unmapped, not {self._map_state!r}")
+            promise._wgpu_set_error(err)
+            return promise
 
         # Sync up when reading, otherwise the memory may be all zeros.
         # See https://github.com/gfx-rs/wgpu-native/issues/305

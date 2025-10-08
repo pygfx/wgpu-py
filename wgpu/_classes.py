@@ -648,6 +648,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             f"<GPUPromise {self._title} {self._state} {value_repr} at {hex(id(self))}>"
         )
 
+    def __call__(self, callback):
+        return self.then(callback)
+
     def _wgpu_set_raw_result(self, result):
         """Set the raw result, that will be passed through the finalizer to get the actual result.
         This method may be called from a different thread, or in another 'unexpected' moment. It does
