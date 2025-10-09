@@ -126,15 +126,22 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         return self.then(callback)
 
     def _wgpu_set_input(self, result):
-        """Set the raw result, that will be passed through the handler to get the actual result.
+        """Set the raw result, that will be passed through the handler to get the result.
         This method may be called from a different thread, or in another 'unexpected' moment. It does
         the minimal thing, and schedules a call to further process the result.
         """
         self._set_input(result, resolve_now=False)
 
     def _set_input(self, result: object, *, resolve_now=True) -> None:
+        # Note that if resolve_now is True, it is assumed that this is the reference thread
+        # and that this is a good time to handle the promise and invoke callbacks.
+
+        # If the input is a promise, we need to wait for it, i.e. chain to self.
         if isinstance(result, GPUPromise):
-            result._chain(self)
+            if self._loop is None:
+                self._set_error("Cannot chain GPUPromise if loop is not set.")
+            else:
+                result._chain(self)
             return
 
         with self._lock:
@@ -145,16 +152,16 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
                 return
             self._state = "pending-fulfilled"
             self._value = result
-            self._set_raw_resolved(resolve_now=resolve_now)
+            self._set_pending_resolved(resolve_now=resolve_now)
 
-    def _wgpu_set_error(self, error: Exception) -> None:
+    def _wgpu_set_error(self, error: str | Exception) -> None:
         """Set the error, in case the promise could not be fulfilled.
         This method may be called from a different thread, or in another 'unexpected' moment. It does
         the minimal thing, and schedules a call to further process the result.
         """
         self._set_error(error, resolve_now=False)
 
-    def _set_error(self, error: Exception, *, resolve_now=True) -> None:
+    def _set_error(self, error: str | Exception, *, resolve_now=True) -> None:
         with self._lock:
             if self._state != "pending":
                 logger.warning(
@@ -165,10 +172,10 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
                 error = Exception(error)
             self._state = "pending-rejected"
             self._value = error
-            self._set_raw_resolved(resolve_now=resolve_now)
+            self._set_pending_resolved(resolve_now=resolve_now)
 
-    def _set_raw_resolved(self, *, resolve_now=False):
-        """The promise is fulfilled, but now we need to handle it, like call callbacks etc."""
+    def _set_pending_resolved(self, *, resolve_now=False):
+        """The promise received its input (or error), and now we need to handle it, then call callbacks etc."""
         # We can now drop the reference.
         GPUPromise._UNRESOLVED.discard(self)
         # Do or schedule a call to resolve.
@@ -188,7 +195,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             self._resolve()
 
     def _resolve(self):
-        """Finalize the promise."""
+        """Finalize the promise, by calling the handler to get the result, and then invoking callbacks."""
 
         # We assume that this is only called from the appropriate thread,
         # and after the _wgpu_set_xxx is done, which is a reasonable assumption.
@@ -219,7 +226,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._keepalive = None
         # Resolve to the caller
         if self._state == "rejected":
-            raise self._value  # type:ignore
+            exception_in_promise = self._value
+            raise exception_in_promise  # re-raising
         else:
             return self._value
 
@@ -244,6 +252,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         return self._resolve()  # returns result if fulfilled or raise error if rejected
 
     def _chain(self, to_promise: GPUPromise):
+        if self._loop is None:
+            raise RuntimeError("Cannot use GPUPromise.then() if loop is not set.")
         with self._lock:
             self._done_callbacks.append(to_promise._set_input)
             self._error_callbacks.append(to_promise._set_error)
