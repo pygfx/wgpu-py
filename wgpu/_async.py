@@ -284,15 +284,28 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
     def __await__(self):
         if self._loop is None:
-            raise RuntimeError("Cannot await a GPUPromise if loop is not set.")
-        with self._lock:
-            if self._event is None:
-                self._event = AsyncEvent()
-                if self._state != "pending":
-                    self._event.set()
+            # An async busy loop
+            async def awaiter():
+                if self._state == "pending":
+                    # backoff_time_generator = self._get_backoff_time_generator()
+                    if self._poller is None:
+                        raise RuntimeError("Expected callback to have already happened")
+                    self._poller()
+                    while self._state == "pending":
+                        await async_sleep(0)
+                        self._poller()
+                return self._resolve()
 
-        async def wrapper():
-            await self._event.wait()
-            return self._resolve()
+        else:
+            # Using a signal
+            with self._lock:
+                if self._event is None:
+                    self._event = AsyncEvent()
+                    if self._state != "pending":
+                        self._event.set()
 
-        return (yield from wrapper().__await__())
+            async def awaiter():
+                await self._event.wait()
+                return self._resolve()
+
+        return (yield from awaiter().__await__())

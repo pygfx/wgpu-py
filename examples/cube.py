@@ -17,10 +17,55 @@ import wgpu
 import numpy as np
 
 
-from rendercanvas.auto import RenderCanvas, loop
+from rendercanvas.pyside6 import RenderCanvas, loop
+# from rendercanvas.asyncio import loop
 
 
 # %% Entrypoints (sync and async)
+
+
+# class AsyncFrameDrawer:
+#
+#     def __init__(self, loop, power_preference="high-performance", limits=None, features=None):
+#         self._loop = loop
+#         self._init = False
+#
+#         promise = gpu.gpu.request_adapter_async(loop=loop, power_preference="high-performance")
+#         promise.then
+#
+#     async def
+
+
+def request_global_device1(loop):
+    limits = None
+
+    promise1 = wgpu.gpu.request_adapter_async(loop=loop)
+
+    promise = wgpu.GPUPromise("request_global_device", loop, None)
+
+    def get(adapter):
+        promise2 = adapter.request_device_async(
+            label="Cube Example async device", required_limits=limits
+        )
+        promise2.then(promise._wgpu_set_input)
+        # promise2.set_error
+
+    promise1.then(get)
+    return promise
+
+
+def request_global_device(loop):
+    limits = None
+
+    promise1 = wgpu.gpu.request_adapter_async(loop=loop)
+
+    def get(adapter):
+        print("starting device request")
+        return adapter.request_device_async(
+            label="Cube Example async device", required_limits=limits
+        )
+
+    return promise1.then(get)
 
 
 def setup_drawing_sync(
@@ -69,7 +114,19 @@ async def setup_drawing_async(canvas, loop, limits=None):
     # render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=True
+        canvas, device, render_pipeline, uniform_buffer, bind_group
+    )
+
+
+def get_drawing_func(canvas, device):
+    pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
+    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
+
+    render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
+    # render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
+
+    return get_draw_function(
+        canvas, device, render_pipeline, uniform_buffer, bind_group
     )
 
 
@@ -246,8 +303,6 @@ def get_draw_function(
     render_pipeline: wgpu.GPURenderPipeline,
     uniform_buffer: wgpu.GPUBuffer,
     bind_group: wgpu.GPUBindGroup,
-    *,
-    asynchronous: bool,
 ):
     # Create vertex buffer, and upload data
     vertex_buffer = device.create_buffer_with_data(
@@ -292,51 +347,8 @@ def get_draw_function(
         )
         uniform_data["transform"] = rot2 @ rot1 @ ortho
 
-    def upload_uniform_buffer_sync():
-        if True:
-            tmp_buffer = uniform_buffer.copy_buffer
-            tmp_buffer.map_sync(wgpu.MapMode.WRITE)
-            tmp_buffer.write_mapped(uniform_data)
-            tmp_buffer.unmap()
-        else:
-            tmp_buffer = device.create_buffer_with_data(
-                data=uniform_data, usage=wgpu.BufferUsage.COPY_SRC
-            )
-        command_encoder = device.create_command_encoder(
-            label="Cube Example uniform buffer upload command encoder"
-        )
-        command_encoder.copy_buffer_to_buffer(
-            tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
-        )
-        device.queue.submit(
-            [
-                command_encoder.finish(
-                    label="Cube Example uniform buffer upload command buffer"
-                )
-            ]
-        )
-
-    def upload_uniform_buffer_async():
-        tmp_buffer = uniform_buffer.copy_buffer
-        promise = tmp_buffer.map_async(wgpu.MapMode.WRITE)
-
-        @promise.then
-        def upload_buffer(_):
-            tmp_buffer.write_mapped(uniform_data)
-            tmp_buffer.unmap()
-            command_encoder = device.create_command_encoder(
-                label="Cube Example uniform buffer upload async command encoder"
-            )
-            command_encoder.copy_buffer_to_buffer(
-                tmp_buffer, 0, uniform_buffer, 0, uniform_data.nbytes
-            )
-            device.queue.submit(
-                [
-                    command_encoder.finish(
-                        label="Cube Example uniform buffer upload async command buffer"
-                    )
-                ]
-            )
+    def upload_uniform_buffer():
+        device.queue.write_buffer(uniform_buffer, 0, uniform_data)
 
     def draw_frame():
         current_texture_view: wgpu.GPUTextureView = (
@@ -374,20 +386,12 @@ def get_draw_function(
             [command_encoder.finish(label="Cube Example render pass command buffer")]
         )
 
-    def draw_frame_sync():
+    def draw_func():
         update_transform()
-        upload_uniform_buffer_sync()
+        upload_uniform_buffer()
         draw_frame()
 
-    def draw_frame_async():
-        update_transform()
-        upload_uniform_buffer_async()
-        draw_frame()
-
-    if asynchronous:
-        return draw_frame_async
-    else:
-        return draw_frame_sync
+    return draw_func
 
 
 # %% WGSL
@@ -518,11 +522,43 @@ for a in wgpu.gpu.enumerate_adapters_sync():
 
 
 async def main(canvas, loop):
-    draw_frame = await setup_drawing_async(canvas, loop)
+    draw_frame = await setup_drawing_async(canvas, loop=None)
     canvas.request_draw(draw_frame)
 
 
-from asyncio import sleep
+# Using explicit loop.add_task
+# We can register the loop somewhere so that request_adapter_async can pick it up
+# and fall back to asyncio.get_running_loop)
+# @loop.add_task
+# async def init():
+#     limits=None
+#     adapter = await wgpu.gpu.request_adapter_async(
+#         loop=loop, power_preference="high-performance"
+#     )
+#     device = await adapter.request_device_async(
+#         label="Cube Example async device", required_limits=limits
+#     )
+#
+#     draw_frame = get_drawing_func(canvas, device)
+#     canvas.request_draw(draw_frame)
+
+
+# This is nice, because we can collect wished from various places at import time.
+# It's also simple, familiar (looks like fastapi/flask) and no scary async.
+# Explicit loop --> someone needs to pass it
+# @request_global_device(loop)
+# def init(device):
+#     draw_frame = get_drawing_func(canvas, device)
+#     canvas.request_draw(draw_frame)
+
+
+# @wgpu.request_device(loop)
+# def init(device):
+#     draw_frame = get_drawing_func(canvas, device)
+#     canvas.request_draw(draw_frame)
+
+
+from rendercanvas.utils.asyncs import sleep
 
 
 async def poller():
@@ -537,6 +573,7 @@ if __name__ == "__main__":
         size=(640, 480),
         title="wgpu cube example at $fps using $backend",
         update_mode="continuous",
+        present_method="bitmap",
         max_fps=60,
         vsync=True,
     )
