@@ -637,6 +637,10 @@ class GPU(classes.GPU):
 gpu = GPU()
 
 
+class GPUPromise(classes.GPUPromise):
+    pass
+
+
 class GPUCanvasContext(classes.GPUCanvasContext):
     # The way this works, is that the context must first be configured.
     # Then a texture can be obtained, which can be written to, and then it
@@ -4065,10 +4069,6 @@ class GPUPipelineError(classes.GPUPipelineError):
 
 
 class GPUInternalError(classes.GPUInternalError, GPUError):
-    pass
-
-
-class GPUPromise(classes.GPUPromise):
     pass
 
 

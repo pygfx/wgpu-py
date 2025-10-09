@@ -15,7 +15,7 @@ import weakref
 import logging
 from typing import Sequence
 
-from ._async import BaseGPUPromise
+from ._async import GPUPromise as BaseGPUPromise
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
@@ -208,7 +208,7 @@ class GPU:
 gpu = GPU()
 
 
-@apidiff.add("Addef for async support")
+@apidiff.add("Added for async support")
 class GPUPromise(BaseGPUPromise):
     pass
 
@@ -2735,6 +2735,13 @@ def _set_compat_methods_for_async_methods():
                 )
 
 
+def _copy_docstrings():
+    for ob in [GPUPromise]:
+        base_cls = ob.mro()[1]
+        ob.__doc__ = base_cls.__doc__
+
+
 _seed_object_counts()
 _set_repr_methods()
 _set_compat_methods_for_async_methods()
+_copy_docstrings()

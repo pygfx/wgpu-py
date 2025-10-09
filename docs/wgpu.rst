@@ -247,6 +247,7 @@ List of GPU classes
     ~GPUPipelineBase
     ~GPUPipelineError
     ~GPUPipelineLayout
+    ~GPUPromise
     ~GPUQuerySet
     ~GPUQueue
     ~GPURenderBundle

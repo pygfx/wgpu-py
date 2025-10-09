@@ -36,7 +36,7 @@ class LoopInterface:
         raise NotImplementedError()
 
 
-class BaseGPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
+class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     """A GPUPromise represents the eventual result of an asynchronous wgpu operation.
 
     A ``GPUPromise`` is a bit like an ``asyncio.Future``, but specific for wgpu, and with
@@ -101,7 +101,7 @@ class BaseGPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._lock = threading.RLock()  # Allow threads to set the value
         self._done_callbacks = []
         self._error_callbacks = []
-        BaseGPUPromise._UNRESOLVED.add(self)
+        GPUPromise._UNRESOLVED.add(self)
 
     def __repr__(self):
         return f"<GPUPromise '{self._title}' {self._state} at {hex(id(self))}>"
@@ -239,7 +239,7 @@ class BaseGPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         return self._resolve()  # returns result if fulfilled or raise error if rejected
 
-    def _chain(self, to_promise: BaseGPUPromise):
+    def _chain(self, to_promise: GPUPromise):
         with self._lock:
             self._done_callbacks.append(to_promise._set_input)
             self._error_callbacks.append(to_promise._set_error)
@@ -252,7 +252,7 @@ class BaseGPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         error_callback: Callable[[Exception], None] | None = None,
         title: str | None = None,
     ):
-        """Set a callback that will be called when the future resolves.
+        """Set a callback that will be called when the future is fulfilled.
 
         The callback will receive one argument: the result of the future.
         """
@@ -287,6 +287,10 @@ class BaseGPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         return new_promise
 
     def catch(self, callback: Callable[[Exception], None] | None):
+        """Set a callback that will be called when the future is rejected.
+
+        The callback will receive one argument: the error object.
+        """
         if self._loop is None:
             raise RuntimeError("Cannot use GPUPromise.catch() if loop is not set.")
         if not callable(callback):
