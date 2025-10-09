@@ -36,7 +36,7 @@ class LoopInterface:
         raise NotImplementedError()
 
 
-class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
+class BaseGPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     """A GPUPromise represents the eventual result of an asynchronous wgpu operation.
 
     A ``GPUPromise`` is a bit like an ``asyncio.Future``, but specific for wgpu, and with
@@ -101,7 +101,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._lock = threading.RLock()  # Allow threads to set the value
         self._done_callbacks = []
         self._error_callbacks = []
-        GPUPromise._UNRESOLVED.add(self)
+        BaseGPUPromise._UNRESOLVED.add(self)
 
     def __repr__(self):
         return f"<GPUPromise '{self._title}' {self._state} at {hex(id(self))}>"
@@ -239,7 +239,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         return self._resolve()  # returns result if fulfilled or raise error if rejected
 
-    def _chain(self, to_promise: GPUPromise):
+    def _chain(self, to_promise: BaseGPUPromise):
         with self._lock:
             self._done_callbacks.append(to_promise._set_input)
             self._error_callbacks.append(to_promise._set_error)
@@ -274,7 +274,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             title = self._title + " -> " + callback_name
 
         # Create new promise
-        new_promise = GPUPromise(title, self._loop, callback, poller=self._poller)
+        new_promise = self.__class__(title, self._loop, callback, poller=self._poller)
         self._chain(new_promise)
 
         # TODO: allow calling multiple times
@@ -298,7 +298,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         title = "Catcher for " + self._title
 
         # Create new promise
-        new_promise = GPUPromise(title, self._loop, callback, poller=self._poller)
+        new_promise = self.__class__(title, self._loop, callback, poller=self._poller)
 
         # Custom chain
         with self._lock:

@@ -24,7 +24,6 @@ from weakref import WeakKeyDictionary
 from typing import NoReturn, Sequence
 
 from ... import classes, flags, enums, structs
-from ..._async import GPUPromise
 from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
 
 from ._ffi import ffi, lib
@@ -4066,6 +4065,10 @@ class GPUPipelineError(classes.GPUPipelineError):
 
 
 class GPUInternalError(classes.GPUInternalError, GPUError):
+    pass
+
+
+class GPUPromise(classes.GPUPromise):
     pass
 
 

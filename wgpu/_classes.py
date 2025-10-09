@@ -15,7 +15,7 @@ import weakref
 import logging
 from typing import Sequence
 
-from ._async import GPUPromise
+from ._async import BaseGPUPromise
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
@@ -47,6 +47,7 @@ __all__ = [
     "GPUPipelineBase",
     "GPUPipelineError",
     "GPUPipelineLayout",
+    "GPUPromise",
     "GPUQuerySet",
     "GPUQueue",
     "GPURenderBundle",
@@ -205,6 +206,11 @@ class GPU:
 
 # Instantiate API entrypoint
 gpu = GPU()
+
+
+@apidiff.add("Addef for async support")
+class GPUPromise(BaseGPUPromise):
+    pass
 
 
 class GPUCanvasContext:
