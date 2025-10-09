@@ -12,32 +12,6 @@ import sniffio
 logger = logging.getLogger("wgpu")
 
 
-# TODO: make a public module? wgpu.async
-
-# TODO: this module looks a lot like rendercanvas.asyncs. Say/do something about that.
-
-# TODO: GPUFuture or GPUPromise; Python API or JS?
-# Leaning towards the JS
-#
-# JS:
-# promise.then(lambda result: ...)
-# promise.then(handle_result, handle_exception)
-# promise.catch(handle_exception)
-# primise.finally()
-#
-# Python:
-# future.result()
-# future.set_result()
-# future.set_exception()
-# future.done()
-# future.cancelled()
-# future.add_done_callback(lambda future: ...)
-# future.remove_done_callback()
-# future.cancel()
-# future.exception()
-# future.get_loop()
-
-
 async def async_sleep(delay):
     """Async sleep that uses sniffio to be compatible with asyncio, trio, rendercanvas.utils.asyncadapter, and possibly more."""
     libname = sniffio.current_async_library()
@@ -266,15 +240,18 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         return self._resolve()  # returns result if fulfilled or raise error if rejected
 
     def _chain(self, to_promise: GPUPromise):
-        if self._loop is None:
-            raise RuntimeError("Cannot use GPUPromise.then() if loop is not set.")
         with self._lock:
             self._done_callbacks.append(to_promise._set_input)
             self._error_callbacks.append(to_promise._set_error)
             if not self._state.startswith("pending"):
                 self._resolve()
 
-    def then(self, callback: Callable[[AwaitedType], None], *, title=None):
+    def then(
+        self,
+        callback: Callable[[AwaitedType], None],
+        error_callback: Callable[[Exception], None] | None = None,
+        title: str | None = None,
+    ):
         """Set a callback that will be called when the future resolves.
 
         The callback will receive one argument: the result of the future.
@@ -303,6 +280,31 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         # TODO: allow calling multiple times
         # TODO: allow calling after being resolved -> tests!
         # TODO: return another promise, so we can do chaining? Or maybe not interesting for this use-case...
+
+        if error_callback is not None:
+            self.catch(error_callback)
+
+        return new_promise
+
+    def catch(self, callback: Callable[[Exception], None] | None):
+        if self._loop is None:
+            raise RuntimeError("Cannot use GPUPromise.catch() if loop is not set.")
+        if not callable(callback):
+            raise TypeError(
+                f"GPUPromise.catch() got a callback that is not callable: {callback!r}"
+            )
+
+        # Get title for the new promise
+        title = "Catcher for " + self._title
+
+        # Create new promise
+        new_promise = GPUPromise(title, self._loop, callback, poller=self._poller)
+
+        # Custom chain
+        with self._lock:
+            self._error_callbacks.append(new_promise._set_input)
+            if not self._state.startswith("pending"):
+                self._resolve()
 
         return new_promise
 
