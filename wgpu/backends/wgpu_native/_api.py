@@ -520,7 +520,9 @@ class GPU(classes.GPU):
         def request_adapter_callback(status, result, c_message, _userdata1, _userdata2):
             if status != lib.WGPURequestAdapterStatus_Success:
                 msg = from_c_string_view(c_message)
-                promise._wgpu_set_error(f"Request adapter failed ({status}): {msg}")
+                promise._wgpu_set_error(
+                    RuntimeError(f"Request adapter failed ({status}): {msg}")
+                )
             else:
                 promise._wgpu_set_input(result)
 
@@ -1288,7 +1290,9 @@ class GPUAdapter(classes.GPUAdapter):
         def request_device_callback(status, result, c_message, userdata1, userdata2):
             if status != lib.WGPURequestDeviceStatus_Success:
                 msg = from_c_string_view(c_message)
-                promise._wgpu_set_error(f"Request device failed ({status}): {msg}")
+                promise._wgpu_set_error(
+                    RuntimeError(f"Request device failed ({status}): {msg}")
+                )
             else:
                 promise._wgpu_set_input(result)
 
@@ -1874,7 +1878,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
                 promise._wgpu_set_error(
-                    f"create_compute_pipeline failed ({status}): {msg}"
+                    RuntimeError(f"create_compute_pipeline failed ({status}): {msg}")
                 )
             else:
                 promise._wgpu_set_input(result)
@@ -1999,7 +2003,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
                 promise._wgpu_set_error(
-                    f"Create renderPipeline failed ({status}): {msg}"
+                    RuntimeError(f"Create renderPipeline failed ({status}): {msg}")
                 )
             else:
                 promise._wgpu_set_input(result)
@@ -2417,10 +2421,11 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # Can we even map?
         if self._map_state != enums.BufferMapState.unmapped:
             promise = GPUPromise("buffer.map", None, loop=self._device._loop)
-            err = RuntimeError(
-                f"Can only map a buffer if its currently unmapped, not {self._map_state!r}"
+            promise._wgpu_set_error(
+                RuntimeError(
+                    f"Can only map a buffer if its currently unmapped, not {self._map_state!r}"
+                )
             )
-            promise._wgpu_set_error(err)
             return promise
 
         # Sync up when reading, otherwise the memory may be all zeros.
@@ -2437,7 +2442,9 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         def buffer_map_callback(status, c_message, _userdata1, _userdata2):
             if status != lib.WGPUMapAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
-                promise._wgpu_set_error(f"Could not map buffer ({status} : {msg}).")
+                promise._wgpu_set_error(
+                    RuntimeError(f"Could not map buffer ({status} : {msg}).")
+                )
             else:
                 promise._wgpu_set_input(status)
 
@@ -4011,7 +4018,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
                     lib.WGPUQueueWorkDoneStatus_Error: "Error",
                     lib.WGPUQueueWorkDoneStatus_Unknown: "Unknown",
                 }.get(status, "Other")
-                promise._wgpu_set_error(f"Queue work done status: {result}")
+                promise._wgpu_set_error(
+                    RuntimeError(f"Queue work done status: {result}")
+                )
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUQueueWorkDoneCallback, userdata1: void*, userdata2: void*
         work_done_callback_info = new_struct(
