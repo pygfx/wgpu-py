@@ -469,7 +469,7 @@ class GPU(classes.GPU):
             if not adapters_llvm:
                 raise ValueError(f"Adapter with name '{adapter_name}' not found.")
             awaitable = GPUPromise("llm adapter", loop, None)
-            awaitable._wgpu_set_raw_result(adapters_llvm[0])
+            awaitable._wgpu_set_input(adapters_llvm[0])
 
             return awaitable
         # ----- Surface ID
@@ -523,7 +523,7 @@ class GPU(classes.GPU):
                 msg = from_c_string_view(c_message)
                 awaitable._wgpu_set_error(f"Request adapter failed ({status}): {msg}")
             else:
-                awaitable._wgpu_set_raw_result(result)
+                awaitable._wgpu_set_input(result)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPURequestAdapterCallback, userdata1: void*, userdata2: void*
         callback_info = new_struct(
@@ -535,13 +535,13 @@ class GPU(classes.GPU):
             # not used: userdata2
         )
 
-        def finalizer(adapter_id):
+        def handler(adapter_id):
             return self._create_adapter(adapter_id, loop)
 
         # Note that although we claim this is an asynchronous method, the callback
         # happens within libf.wgpuInstanceRequestAdapter
         awaitable = GPUPromise(
-            "request_adapter", loop, finalizer, keepalive=request_adapter_callback
+            "request_adapter", loop, handler, keepalive=request_adapter_callback
         )
 
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
@@ -557,7 +557,7 @@ class GPU(classes.GPU):
         # We already have the result, so we return a resolved promise.
         # The reason this is async is to allow this to work on backends where we cannot actually enumerate adapters.
         awaitable = GPUPromise("enumerate_adapters", loop, None)
-        awaitable._wgpu_set_raw_result(result)
+        awaitable._wgpu_set_input(result)
         return awaitable
 
     def _enumerate_adapters(self, loop) -> list[GPUAdapter]:
@@ -1277,7 +1277,7 @@ class GPUAdapter(classes.GPUAdapter):
                 msg = from_c_string_view(c_message)
                 awaitable._wgpu_set_error(f"Request device failed ({status}): {msg}")
             else:
-                awaitable._wgpu_set_raw_result(result)
+                awaitable._wgpu_set_input(result)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPURequestDeviceCallback, userdata1: void*, userdata2: void*
         callback_info = new_struct(
@@ -1289,7 +1289,7 @@ class GPUAdapter(classes.GPUAdapter):
             # not used: userdata2
         )
 
-        def finalizer(device_id):
+        def handler(device_id):
             limits = _get_limits(device_id, device=True)
             features = _get_features(device_id, device=True)
             # H: WGPUQueue f(WGPUDevice device)
@@ -1305,7 +1305,7 @@ class GPUAdapter(classes.GPUAdapter):
             return device
 
         awaitable = GPUPromise(
-            "request_device", self._loop, finalizer, keepalive=request_device_callback
+            "request_device", self._loop, handler, keepalive=request_device_callback
         )
 
         # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
@@ -1839,7 +1839,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             promise = GPUPromise(
                 "create_compute_pipeline_async", self._device._loop, None
             )
-            promise._wgpu_set_raw_result(result)
+            promise._wgpu_set_input(result)
             return promise
 
         # This code is virtually identical to the code in create_render_pipeline_async.
@@ -1854,7 +1854,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     f"create_compute_pipeline failed ({status}): {msg}"
                 )
             else:
-                awaitable._wgpu_set_raw_result(result)
+                awaitable._wgpu_set_input(result)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUCreateComputePipelineAsyncCallback, userdata1: void*, userdata2: void*
         callback_info = new_struct(
@@ -1866,13 +1866,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # not used: userdata2
         )
 
-        def finalizer(id):
+        def handler(id):
             return GPUComputePipeline(label, id, self)
 
         awaitable = GPUPromise(
             "create_compute_pipeline",
             self._loop,
-            finalizer,
+            handler,
             poller=self._device._poll,
             keepalive=callback,
         )
@@ -1966,7 +1966,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             promise = GPUPromise(
                 "create_render_pipeline_async", self._device._loop, None
             )
-            promise._wgpu_set_raw_result(result)
+            promise._wgpu_set_input(result)
             return promise
 
         @ffi.callback(
@@ -1979,7 +1979,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     f"Create renderPipeline failed ({status}): {msg}"
                 )
             else:
-                awaitable._wgpu_set_raw_result(result)
+                awaitable._wgpu_set_input(result)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUCreateRenderPipelineAsyncCallback, userdata1: void*, userdata2: void*
         callback_info = new_struct(
@@ -1991,13 +1991,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # not used: userdata2
         )
 
-        def finalizer(id):
+        def handler(id):
             return GPURenderPipeline(label, id, self)
 
         awaitable = GPUPromise(
             "create_render_pipeline",
             self._loop,
-            finalizer,
+            handler,
             poller=self._device._poll,
             keepalive=callback,
         )
@@ -2416,7 +2416,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
                 msg = from_c_string_view(c_message)
                 awaitable._wgpu_set_error(f"Could not map buffer ({status} : {msg}).")
             else:
-                awaitable._wgpu_set_raw_result(status)
+                awaitable._wgpu_set_input(status)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUBufferMapCallback, userdata1: void*, userdata2: void*
         buffer_map_callback_info = new_struct(
@@ -2428,7 +2428,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             # not used: userdata2
         )
 
-        def finalizer(_status):
+        def handler(_status):
             self._map_state = enums.BufferMapState.mapped
             self._mapped_status = offset, offset + size, mode
             self._mapped_memoryviews = []
@@ -2436,7 +2436,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         awaitable = GPUPromise(
             "buffer.map",
             self._device._loop,
-            finalizer,
+            handler,
             poller=self._device._poll,
             keepalive=buffer_map_callback,
         )
@@ -2706,7 +2706,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
         # Return a resolved promise
         promise = GPUPromise("get_compilation_info", self._device._loop, None)
-        promise._wgpu_set_raw_result(result)
+        promise._wgpu_set_input(result)
         return promise
 
 
@@ -3981,7 +3981,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         @ffi.callback("void(WGPUQueueWorkDoneStatus, void *, void *)")
         def work_done_callback(status, _userdata1, _userdata2):
             if status == lib.WGPUQueueWorkDoneStatus_Success:
-                awaitable._wgpu_set_raw_result(True)
+                awaitable._wgpu_set_input(True)
             else:
                 result = {
                     lib.WGPUQueueWorkDoneStatus_InstanceDropped: "InstanceDropped",
@@ -4000,13 +4000,13 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             # not used: userdata2
         )
 
-        def finalizer(_value):
+        def handler(_value):
             return None
 
         awaitable = GPUPromise(
             "on_submitted_work_done",
             self._device._loop,
-            finalizer,
+            handler,
             poller=self._device._poll_wait,
             keepalive=work_done_callback,
         )

@@ -12,11 +12,11 @@ from wgpu import GPUDevice, MapMode, TextureFormat, GPUPromise
 async def test_awaitable_async(use_async):
     count = 0
 
-    def finalizer(i):
+    def handler(i):
         return i * i
 
     def callback(i):
-        awaitable._wgpu_set_raw_result(i)
+        awaitable._wgpu_set_input(i)
 
     def poll_function():
         nonlocal count
@@ -25,7 +25,7 @@ async def test_awaitable_async(use_async):
             callback(10)
 
     awaitable = GPUPromise(
-        "test", None, finalizer, poller=poll_function, keepalive=callable
+        "test", None, handler, poller=poll_function, keepalive=callable
     )
 
     if use_async:

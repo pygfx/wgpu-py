@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 import time
 import logging
@@ -90,14 +92,14 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self,
         title: str,
         loop: LoopInterface | None,
-        finalizer: Callable | None,
+        handler: Callable | None,
         *,
         poller: Callable | None = None,
         keepalive: object = None,
     ):
         self._title = str(title)  # title for debugging
         self._loop = loop  # Event loop instance, can be None
-        self._finalizer = finalizer  # function to finish the result
+        self._handler = handler  # function to turn input into the result
         self._poller = poller  # call to poll (process events)
         self._keepalive = keepalive  # just to keep something alive
 
@@ -123,18 +125,22 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     def __call__(self, callback):
         return self.then(callback)
 
-    def _wgpu_set_raw_result(self, result):
-        """Set the raw result, that will be passed through the finalizer to get the actual result.
+    def _wgpu_set_input(self, result):
+        """Set the raw result, that will be passed through the handler to get the actual result.
         This method may be called from a different thread, or in another 'unexpected' moment. It does
         the minimal thing, and schedules a call to further process the result.
         """
-        self._set_raw_result(result, resolve_now=False)
+        self._set_input(result, resolve_now=False)
 
-    def _set_raw_result(self, result: object, *, resolve_now=True) -> None:
+    def _set_input(self, result: object, *, resolve_now=True) -> None:
+        if isinstance(result, GPUPromise):
+            result._chain(self)
+            return
+
         with self._lock:
             if self._state != "pending":
                 logger.warning(
-                    "Ignoring call to GPUPromise._set_raw_result since promise state is {self._state!r}."
+                    "Ignoring call to GPUPromise._set_input since promise state is {self._state!r}."
                 )
                 return
             self._state = "pending-fulfilled"
@@ -188,9 +194,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         # and after the _wgpu_set_xxx is done, which is a reasonable assumption.
 
         # Finalize the value
-        if self._state == "pending-fulfilled" and self._finalizer is not None:
+        if self._state == "pending-fulfilled" and self._handler is not None:
             try:
-                self._value = self._finalizer(self._value)
+                self._value = self._handler(self._value)
             except Exception as err:
                 self._state = "rejected"
                 self._value = err
@@ -208,7 +214,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         # Clean up
         self._error_callbacks = []
         self._done_callbacks = []
-        self._finalizer = None
+        self._handler = None
         self._poller = None
         self._keepalive = None
         # Resolve to the caller
@@ -237,29 +243,38 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         return self._resolve()  # returns result if fulfilled or raise error if rejected
 
-    def then(self, callback: Callable[[AwaitedType], None]):
+    def _chain(self, to_promise: GPUPromise):
+        with self._lock:
+            self._done_callbacks.append(to_promise._set_input)
+            self._error_callbacks.append(to_promise._set_error)
+            if not self._state.startswith("pending"):
+                self._resolve()
+
+    def then(self, callback: Callable[[AwaitedType], None], title=None):
         """Set a callback that will be called when the future resolves.
 
         The callback will receive one argument: the result of the future.
         """
         if self._loop is None:
             raise RuntimeError("Cannot use GPUPromise.then() if loop is not set.")
-        if callable(callback):
-            self._callback = callback
-        else:
+        if not callable(callback):
             raise TypeError(
                 f"GPUPromise.then() got a callback that is not callable: {callback!r}"
             )
 
-        # Create proxy promise
-        title = self._title + " -> " + str(callback)
-        new_promise = GPUPromise(title, self._loop, callback, poller=self._poller)
+        # Get title for the new promise
+        if title is not None:
+            title = str(title)
+        else:
+            try:
+                callback_name = callback.__name__
+            except Exception:
+                callback_name = str(callback)
+            title = self._title + " -> " + callback_name
 
-        with self._lock:
-            self._done_callbacks.append(new_promise._set_raw_result)
-            self._error_callbacks.append(new_promise._set_error)
-            if not self._state.startswith("pending"):
-                self._resolve()
+        # Create new promise
+        new_promise = GPUPromise(title, self._loop, callback, poller=self._poller)
+        self._chain(new_promise)
 
         # TODO: allow calling multiple times
         # TODO: allow calling after being resolved -> tests!
