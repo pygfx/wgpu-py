@@ -467,10 +467,10 @@ class GPU(classes.GPU):
             adapters_llvm = [a for a in adapters if adapter_name in a.summary]
             if not adapters_llvm:
                 raise ValueError(f"Adapter with name '{adapter_name}' not found.")
-            awaitable = GPUPromise("llm adapter", None, loop=None)
-            awaitable._wgpu_set_input(adapters_llvm[0])
+            promise = GPUPromise("llm adapter", None, loop=loop)
+            promise._wgpu_set_input(adapters_llvm[0])
 
-            return awaitable
+            return promise
         # ----- Surface ID
 
         # Get surface id that the adapter must be compatible with. If we
@@ -520,9 +520,9 @@ class GPU(classes.GPU):
         def request_adapter_callback(status, result, c_message, _userdata1, _userdata2):
             if status != lib.WGPURequestAdapterStatus_Success:
                 msg = from_c_string_view(c_message)
-                awaitable._wgpu_set_error(f"Request adapter failed ({status}): {msg}")
+                promise._wgpu_set_error(f"Request adapter failed ({status}): {msg}")
             else:
-                awaitable._wgpu_set_input(result)
+                promise._wgpu_set_input(result)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPURequestAdapterCallback, userdata1: void*, userdata2: void*
         callback_info = new_struct(
@@ -537,16 +537,26 @@ class GPU(classes.GPU):
         def handler(adapter_id):
             return self._create_adapter(adapter_id, loop)
 
+        instance = get_wgpu_instance()
+
+        def poller():
+            # H: void f(WGPUInstance instance)
+            libf.wgpuInstanceProcessEvents(instance)
+
         # Note that although we claim this is an asynchronous method, the callback
         # happens within libf.wgpuInstanceRequestAdapter
-        awaitable = GPUPromise(
-            "request_adapter", handler, loop=loop, keepalive=request_adapter_callback
+        promise = GPUPromise(
+            "request_adapter",
+            handler,
+            loop=loop,
+            poller=poller,
+            keepalive=request_adapter_callback,
         )
 
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
         libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback_info)
 
-        return awaitable
+        return promise
 
     def enumerate_adapters_async(self, *, loop=None) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
@@ -555,9 +565,9 @@ class GPU(classes.GPU):
         result = self._enumerate_adapters(loop)
         # We already have the result, so we return a resolved promise.
         # The reason this is async is to allow this to work on backends where we cannot actually enumerate adapters.
-        awaitable = GPUPromise("enumerate_adapters", None, loop=loop)
-        awaitable._wgpu_set_input(result)
-        return awaitable
+        promise = GPUPromise("enumerate_adapters", None, loop=loop)
+        promise._wgpu_set_input(result)
+        return promise
 
     def _enumerate_adapters(self, loop) -> list[GPUAdapter]:
         # The first call is to get the number of adapters, and the second call
@@ -1278,9 +1288,9 @@ class GPUAdapter(classes.GPUAdapter):
         def request_device_callback(status, result, c_message, userdata1, userdata2):
             if status != lib.WGPURequestDeviceStatus_Success:
                 msg = from_c_string_view(c_message)
-                awaitable._wgpu_set_error(f"Request device failed ({status}): {msg}")
+                promise._wgpu_set_error(f"Request device failed ({status}): {msg}")
             else:
-                awaitable._wgpu_set_input(result)
+                promise._wgpu_set_input(result)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPURequestDeviceCallback, userdata1: void*, userdata2: void*
         callback_info = new_struct(
@@ -1307,17 +1317,24 @@ class GPUAdapter(classes.GPUAdapter):
 
             return device
 
-        awaitable = GPUPromise(
+        instance = get_wgpu_instance()
+
+        def poller():
+            # H: void f(WGPUInstance instance)
+            libf.wgpuInstanceProcessEvents(instance)
+
+        promise = GPUPromise(
             "request_device",
             handler,
             loop=self._loop,
+            poller=poller,
             keepalive=request_device_callback,
         )
 
         # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback_info)
 
-        return awaitable
+        return promise
 
     def _release(self):
         if self._internal is not None and libf is not None:
@@ -1856,11 +1873,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         def callback(status, result, c_message, _userdata1, _userdata2):
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
-                awaitable._wgpu_set_error(
+                promise._wgpu_set_error(
                     f"create_compute_pipeline failed ({status}): {msg}"
                 )
             else:
-                awaitable._wgpu_set_input(result)
+                promise._wgpu_set_input(result)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUCreateComputePipelineAsyncCallback, userdata1: void*, userdata2: void*
         callback_info = new_struct(
@@ -1875,7 +1892,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         def handler(id):
             return GPUComputePipeline(label, id, self)
 
-        awaitable = GPUPromise(
+        promise = GPUPromise(
             "create_compute_pipeline",
             handler,
             loop=self._loop,
@@ -1888,7 +1905,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             self._internal, descriptor, callback_info
         )
 
-        return awaitable
+        return promise
 
     def _create_compute_pipeline_descriptor(
         self,
@@ -1981,11 +1998,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         def callback(status, result, c_message, _userdata1, _userdata2):
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
-                awaitable._wgpu_set_error(
+                promise._wgpu_set_error(
                     f"Create renderPipeline failed ({status}): {msg}"
                 )
             else:
-                awaitable._wgpu_set_input(result)
+                promise._wgpu_set_input(result)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUCreateRenderPipelineAsyncCallback, userdata1: void*, userdata2: void*
         callback_info = new_struct(
@@ -2000,7 +2017,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         def handler(id):
             return GPURenderPipeline(label, id, self)
 
-        awaitable = GPUPromise(
+        promise = GPUPromise(
             "create_render_pipeline",
             handler,
             loop=self._loop,
@@ -2015,7 +2032,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             callback_info,
         )
 
-        return awaitable
+        return promise
 
     def _create_render_pipeline_descriptor(
         self,
@@ -2414,15 +2431,15 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
                 command_buffer = encoder.finish()
                 self._device.queue.submit([command_buffer])
 
-        # Setup awaitable
+        # Setup promise
 
         @ffi.callback("void(WGPUMapAsyncStatus, WGPUStringView, void *, void *)")
         def buffer_map_callback(status, c_message, _userdata1, _userdata2):
             if status != lib.WGPUMapAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
-                awaitable._wgpu_set_error(f"Could not map buffer ({status} : {msg}).")
+                promise._wgpu_set_error(f"Could not map buffer ({status} : {msg}).")
             else:
-                awaitable._wgpu_set_input(status)
+                promise._wgpu_set_input(status)
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUBufferMapCallback, userdata1: void*, userdata2: void*
         buffer_map_callback_info = new_struct(
@@ -2439,7 +2456,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._mapped_status = offset, offset + size, mode
             self._mapped_memoryviews = []
 
-        awaitable = GPUPromise(
+        promise = GPUPromise(
             "buffer.map",
             handler,
             loop=self._device._loop,
@@ -2458,7 +2475,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             buffer_map_callback_info,
         )
 
-        return awaitable
+        return promise
 
     def unmap(self) -> None:
         if self._map_state != enums.BufferMapState.mapped:
@@ -3943,12 +3960,12 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         command_buffer = encoder.finish()
         self.submit([command_buffer])
 
-        awaitable = copy_buffer.map_async("READ_NOSYNC", 0, data_length)
+        promise = copy_buffer.map_async("READ_NOSYNC", 0, data_length)
 
         # Download from mappable buffer
         # Because we use `copy=False``, we *must* copy the data.
         if copy_buffer.map_state == "pending":
-            awaitable.sync_wait()
+            promise.sync_wait()
         mapped_data = copy_buffer.read_mapped(copy=False)
 
         data_length2 = ori_stride * size[1] * size[2] + ori_offset
@@ -3987,14 +4004,14 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         @ffi.callback("void(WGPUQueueWorkDoneStatus, void *, void *)")
         def work_done_callback(status, _userdata1, _userdata2):
             if status == lib.WGPUQueueWorkDoneStatus_Success:
-                awaitable._wgpu_set_input(True)
+                promise._wgpu_set_input(True)
             else:
                 result = {
                     lib.WGPUQueueWorkDoneStatus_InstanceDropped: "InstanceDropped",
                     lib.WGPUQueueWorkDoneStatus_Error: "Error",
                     lib.WGPUQueueWorkDoneStatus_Unknown: "Unknown",
                 }.get(status, "Other")
-                awaitable._wgpu_set_error(f"Queue work done status: {result}")
+                promise._wgpu_set_error(f"Queue work done status: {result}")
 
         # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUQueueWorkDoneCallback, userdata1: void*, userdata2: void*
         work_done_callback_info = new_struct(
@@ -4009,7 +4026,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         def handler(_value):
             return None
 
-        awaitable = GPUPromise(
+        promise = GPUPromise(
             "on_submitted_work_done",
             handler,
             loop=self._device._loop,
@@ -4020,7 +4037,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # H: WGPUFuture f(WGPUQueue queue, WGPUQueueWorkDoneCallbackInfo callbackInfo)
         libf.wgpuQueueOnSubmittedWorkDone(self._internal, work_done_callback_info)
 
-        return awaitable
+        return promise
 
 
 class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):

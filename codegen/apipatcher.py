@@ -703,7 +703,7 @@ class StructValidationChecker(Patcher):
                 defer_func_name = "_" + methodname
                 defer_line_starts = (
                     f"return self.{defer_func_name[:-7]}",
-                    f"awaitable = self.{defer_func_name[:-7]}",
+                    f"promise = self.{defer_func_name[:-7]}",
                 )
                 this_method_defers = any(
                     line.strip().startswith(defer_line_starts)
