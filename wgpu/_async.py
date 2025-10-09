@@ -45,11 +45,11 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     Some methods of the wgpu API are asynchronous. They return a ``GPUPromise``,
     which provides a few different ways handle it:
 
-    * It can be awaited using ``await future``. This is the "cleanest" way, but
+    * It can be awaited using ``await promise``. This is the "cleanest" way, but
       can only be used from a co-routine (i.e. an async code path).
-    * A callback can be registered using ``future.then(callback)``, which will
-      be called when the future resolves. A new future is returned.
-    * You can sync-wait for it, using ``future.sync_wait()``. This is simple, but
+    * A callback can be registered using ``promise.then(callback)``, which will
+      be called when the promise resolves. A new promise is returned.
+    * You can sync-wait for it, using ``promise.sync_wait()``. This is simple, but
       makes code less portable and potentially slower.
 
     A ``GPUPromise`` is in one of these states:
@@ -216,7 +216,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             return self._value
 
     def sync_wait(self) -> AwaitedType:
-        """Synchronously wait for the future to resolve and return the result.
+        """Synchronously wait for the promise to resolve and return the result.
 
         Note that this method should be avoided in event callbacks, since it can
         make them slow.
@@ -250,9 +250,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         error_callback: Callable[[Exception], None] | None = None,
         title: str | None = None,
     ):
-        """Set a callback that will be called when the future is fulfilled.
+        """Set a callback that will be called when the promise is fulfilled.
 
-        The callback will receive one argument: the result of the future.
+        The callback will receive one argument: the result of the promise.
         """
         if self._loop is None:
             raise RuntimeError("Cannot use GPUPromise.then() if the loop is not set.")
@@ -283,7 +283,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         return new_promise
 
     def catch(self, callback: Callable[[Exception], None] | None):
-        """Set a callback that will be called when the future is rejected.
+        """Set a callback that will be called when the promise is rejected.
 
         The callback will receive one argument: the error object.
         """
