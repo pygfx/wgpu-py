@@ -67,23 +67,21 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     def __init__(
         self,
         title: str,
-        loop: LoopInterface | None,
         handler: Callable | None,
         *,
+        loop: LoopInterface | None = None,
         poller: Callable | None = None,
-        no_poller: str | None = None,
         keepalive: object = None,
     ):
         """
         Arguments:
             title (str): The title of this promise, mostly for debugging purposes.
-            loop (LoopInterface, optional): A loop object that at least has a ``call_soon()`` method.
-                If not given, this promise does not support .then() or pronise-chaining.
             handler (callable, optional): The function to turn promise input into the result. If None,
                 the result will simply be the input.
+            loop (LoopInterface, optional): A loop object that at least has a ``call_soon()`` method.
+                If not given, this promise does not support .then() or pronise-chaining.
             poller (callable, optional): A function to call on a regular interval to poll internal systems
                (most likely the wgpu backend).
-            no_poller (str, optional): An error message to be shown when polling is attempted with sync_wait.
             keepalive (object, optional): Pass any data via this arg who's lifetime must be bound to the
                 resolving of this prommise.
 
@@ -92,7 +90,6 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._loop = loop  # Event loop instance, can be None
         self._handler = handler  # function to turn input into the result
         self._poller = poller  # call to poll (process events)
-        self._no_poller = no_poller
         self._keepalive = keepalive  # just to keep something alive
 
         self._state = "pending"  # "pending", "pending-rejected", "pending-fulfilled", "rejected", "fulfilled"
@@ -101,7 +98,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._lock = threading.RLock()  # Allow threads to set the value
         self._done_callbacks = []
         self._error_callbacks = []
-        GPUPromise._UNRESOLVED.add(self)
+        self._UNRESOLVED.add(self)
 
     def __repr__(self):
         return f"<GPUPromise '{self._title}' {self._state} at {hex(id(self))}>"
@@ -126,7 +123,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         # If the input is a promise, we need to wait for it, i.e. chain to self.
         if isinstance(result, GPUPromise):
             if self._loop is None:
-                self._set_error("Cannot chain GPUPromise if loop is not set.")
+                self._set_error("Cannot chain GPUPromise if the loop is not set.")
             else:
                 result._chain(self)
             return
@@ -134,7 +131,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         with self._lock:
             if self._state != "pending":
                 logger.warning(
-                    "Ignoring call to GPUPromise._set_input since promise state is {self._state!r}."
+                    f"Ignoring call to GPUPromise._set_input since promise state is {self._state!r}."
                 )
                 return
             self._state = "pending-fulfilled"
@@ -152,7 +149,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         with self._lock:
             if self._state != "pending":
                 logger.warning(
-                    "Ignoring call to GPUPromise._wgpu_set_error since promise state is {self._state!r}."
+                    f"Ignoring call to GPUPromise._wgpu_set_error since promise state is {self._state!r}."
                 )
                 return
             if not isinstance(error, Exception):
@@ -164,7 +161,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     def _set_pending_resolved(self, *, resolve_now=False):
         """The promise received its input (or error), and now we need to handle it, then call callbacks etc."""
         # We can now drop the reference.
-        GPUPromise._UNRESOLVED.discard(self)
+        self._UNRESOLVED.discard(self)
         # Do or schedule a call to resolve.
         if resolve_now:
             self._resolve_callback()
@@ -230,8 +227,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         """
         if self._state == "pending":
             if self._poller is None:
-                msg = self._no_poller or "Polling function not available."
-                raise RuntimeError(msg)
+                raise RuntimeError(
+                    "Cannot GPUPromise.sync_wait(), if the polling function is not set."
+                )
             self._poller()
             while self._state == "pending":
                 time.sleep(0)
@@ -257,7 +255,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         The callback will receive one argument: the result of the future.
         """
         if self._loop is None:
-            raise RuntimeError("Cannot use GPUPromise.then() if loop is not set.")
+            raise RuntimeError("Cannot use GPUPromise.then() if the loop is not set.")
         if not callable(callback):
             raise TypeError(
                 f"GPUPromise.then() got a callback that is not callable: {callback!r}"
@@ -274,12 +272,10 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             title = self._title + " -> " + callback_name
 
         # Create new promise
-        new_promise = self.__class__(title, self._loop, callback, poller=self._poller)
+        new_promise = self.__class__(
+            title, callback, loop=self._loop, poller=self._poller
+        )
         self._chain(new_promise)
-
-        # TODO: allow calling multiple times
-        # TODO: allow calling after being resolved -> tests!
-        # TODO: return another promise, so we can do chaining? Or maybe not interesting for this use-case...
 
         if error_callback is not None:
             self.catch(error_callback)
@@ -292,7 +288,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         The callback will receive one argument: the error object.
         """
         if self._loop is None:
-            raise RuntimeError("Cannot use GPUPromise.catch() if loop is not set.")
+            raise RuntimeError("Cannot use GPUPromise.catch() if the loop is not set.")
         if not callable(callback):
             raise TypeError(
                 f"GPUPromise.catch() got a callback that is not callable: {callback!r}"
@@ -302,7 +298,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         title = "Catcher for " + self._title
 
         # Create new promise
-        new_promise = self.__class__(title, self._loop, callback, poller=self._poller)
+        new_promise = self.__class__(
+            title, callback, loop=self._loop, poller=self._poller
+        )
 
         # Custom chain
         with self._lock:
@@ -319,7 +317,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
                 if self._state == "pending":
                     # backoff_time_generator = self._get_backoff_time_generator()
                     if self._poller is None:
-                        raise RuntimeError("Expected callback to have already happened")
+                        raise RuntimeError(
+                            "Cannot await a GPUPromise if neither the loop nor the poller are set."
+                        )
                     self._poller()
                     while self._state == "pending":
                         await async_sleep(0)

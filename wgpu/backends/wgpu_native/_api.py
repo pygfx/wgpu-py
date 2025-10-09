@@ -467,7 +467,7 @@ class GPU(classes.GPU):
             adapters_llvm = [a for a in adapters if adapter_name in a.summary]
             if not adapters_llvm:
                 raise ValueError(f"Adapter with name '{adapter_name}' not found.")
-            awaitable = GPUPromise("llm adapter", loop, None)
+            awaitable = GPUPromise("llm adapter", None, loop=None)
             awaitable._wgpu_set_input(adapters_llvm[0])
 
             return awaitable
@@ -540,7 +540,7 @@ class GPU(classes.GPU):
         # Note that although we claim this is an asynchronous method, the callback
         # happens within libf.wgpuInstanceRequestAdapter
         awaitable = GPUPromise(
-            "request_adapter", loop, handler, keepalive=request_adapter_callback
+            "request_adapter", handler, loop=loop, keepalive=request_adapter_callback
         )
 
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
@@ -555,7 +555,7 @@ class GPU(classes.GPU):
         result = self._enumerate_adapters(loop)
         # We already have the result, so we return a resolved promise.
         # The reason this is async is to allow this to work on backends where we cannot actually enumerate adapters.
-        awaitable = GPUPromise("enumerate_adapters", loop, None)
+        awaitable = GPUPromise("enumerate_adapters", None, loop=loop)
         awaitable._wgpu_set_input(result)
         return awaitable
 
@@ -1308,7 +1308,10 @@ class GPUAdapter(classes.GPUAdapter):
             return device
 
         awaitable = GPUPromise(
-            "request_device", self._loop, handler, keepalive=request_device_callback
+            "request_device",
+            handler,
+            loop=self._loop,
+            keepalive=request_device_callback,
         )
 
         # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
@@ -1840,7 +1843,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             id = libf.wgpuDeviceCreateComputePipeline(self._internal, descriptor)
             result = GPUComputePipeline(label, id, self)
             promise = GPUPromise(
-                "create_compute_pipeline_async", self._device._loop, None
+                "create_compute_pipeline_async", None, loop=self._device._loop
             )
             promise._wgpu_set_input(result)
             return promise
@@ -1874,8 +1877,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         awaitable = GPUPromise(
             "create_compute_pipeline",
-            self._loop,
             handler,
+            loop=self._loop,
             poller=self._device._poll,
             keepalive=callback,
         )
@@ -1967,7 +1970,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             id = libf.wgpuDeviceCreateRenderPipeline(self._internal, descriptor)
             result = GPURenderPipeline(label, id, self)
             promise = GPUPromise(
-                "create_render_pipeline_async", self._device._loop, None
+                "create_render_pipeline_async", None, loop=self._device._loop
             )
             promise._wgpu_set_input(result)
             return promise
@@ -1999,8 +2002,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         awaitable = GPUPromise(
             "create_render_pipeline",
-            self._loop,
             handler,
+            loop=self._loop,
             poller=self._device._poll,
             keepalive=callback,
         )
@@ -2396,7 +2399,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Can we even map?
         if self._map_state != enums.BufferMapState.unmapped:
-            promise = GPUPromise("buffer.map", self._device._loop, None)
+            promise = GPUPromise("buffer.map", None, loop=self._device._loop)
             err = RuntimeError(
                 f"Can only map a buffer if its currently unmapped, not {self._map_state!r}"
             )
@@ -2438,8 +2441,8 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         awaitable = GPUPromise(
             "buffer.map",
-            self._device._loop,
             handler,
+            loop=self._device._loop,
             poller=self._device._poll,
             keepalive=buffer_map_callback,
         )
@@ -2708,7 +2711,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         result = []
 
         # Return a resolved promise
-        promise = GPUPromise("get_compilation_info", self._device._loop, None)
+        promise = GPUPromise("get_compilation_info", None, loop=self._device._loop)
         promise._wgpu_set_input(result)
         return promise
 
@@ -4008,8 +4011,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
         awaitable = GPUPromise(
             "on_submitted_work_done",
-            self._device._loop,
             handler,
+            loop=self._device._loop,
             poller=self._device._poll_wait,
             keepalive=work_done_callback,
         )
