@@ -11,7 +11,7 @@ from .. import _register_backend
 from ... import classes, structs, enums, flags
 
 from pyodide.ffi import run_sync, JsProxy, to_js
-from js import window, Uint32Array, ArrayBuffer, Float32Array, Uint8Array, BigInt, Object, undefined
+from js import window, Uint32Array, ArrayBuffer, Float32Array, Uint8Array, Object, undefined, Map
 
 
 def to_camel_case(snake_str):
@@ -22,6 +22,14 @@ def to_camel_case(snake_str):
     # if res in ["type", "format"]:
     #     res += "_"
     return res
+
+# camelCase the keys and use Object.fromEntries?
+def dict_converter(inp: dict):
+    temp = {}
+    for k, v in inp.items():
+        camel_key = to_camel_case(k)
+        temp[camel_key] = v
+    return to_js(temp, dict_converter=Object.fromEntries)
 
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
@@ -50,16 +58,25 @@ def simple_js_accessor(value, convert, cache):
             result[camel_key] = convert(v)
         if len(result) == 0:
             return Object.new() # maybe this?
-        return result
+        # let's hope this is only ever reached when all the contents are already converted.
+        # map = Map.new(result.items())
+        # return Object.fromEntries(map)
+        return to_js(result, depth=1)
     return convert(value)
 
 # TODO: can we implement our own variant of JsProxy and PyProxy, to_js and to_py? to work with pyodide and not around it?
 # https://pyodide.org/en/stable/usage/type-conversions.html#type-translations
 
+# can we overwrite this from classes? because we might not need object tracking or the ._device accessor?
+# likely breaks api use tho.
+# class GPUObjectBase(classes.GPUObjectBase):
+#     pass
+
 class GPU(classes.GPU):
     def __init__(self):
         self._internal = window.navigator.gpu  # noqa: F821
 
+    # maybe this structure could be done with a @decorator?
     def request_adapter_sync(self, **parameters):
         return run_sync(self.request_adapter_async(**parameters))
         # raise NotImplementedError("Cannot use sync API functions in JS.")
@@ -187,6 +204,10 @@ class GPUDevice(classes.GPUDevice):
     def create_bind_group_layout(self, *, label: str = "", entries: list[structs.BindGroupLayoutEntryStruct]) -> classes.GPUBindGroupLayout:
         empty_value = undefined # figure out what pyodide is happy with
         js_entries = []
+        # js_entries = to_js(entries, eager_converter=simple_js_accessor)
+        # entry = [] # let quickly skip this loop
+
+        # TODO: can we avoid the whole logic and do it in the struct instead?
         for entry in entries:
             # we need exactly one of them needs to exist:
             # https://www.w3.org/TR/webgpu/#dictdef-gpubindgrouplayoutentry
@@ -196,21 +217,18 @@ class GPUDevice(classes.GPUDevice):
             storage_texture = entry.get("storage_texture")
             external_texture = entry.get("external_texture") # not sure if exists in wgpu-native, but let's have it anyway.
 
+            # assert sum(x is not None for x in [buffer, sampler, texture, storage_texture, external_texture]) == 1
             if buffer is not None:
                 sampler = texture = storage_texture = external_texture = empty_value
                 # or struct.BufferBindingLayout?
-                buffer = {
-                    "type": buffer.get("type", enums.BufferBindingType.uniform),
-                    "hasDynamicOffset": buffer.get("has_dynamic_offset", False),
-                    "minBindingSize": buffer.get("min_binding_size", 0)
-                }
-                buffer = to_js(buffer, depth=1)
+                buffer = structs.BufferBindingLayout(**buffer)
+                # buffer = to_js(buffer, depth=1)
             elif sampler is not None:
                 buffer = texture = storage_texture = external_texture = empty_value
                 sampler = {
                     "type": sampler.get("type", enums.SamplerBindingType.filtering),
                 }
-                sampler = to_js(sampler, depth=1)
+                # sampler = to_js(sampler, depth=1)
             elif texture is not None:
                 buffer = sampler = storage_texture = external_texture = empty_value
                 texture = {

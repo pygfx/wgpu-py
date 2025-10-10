@@ -16,9 +16,9 @@
 <body>
 <!-- WIP: make it more of a "Playground"? -->
 <select id="example-select">
+    <option value="compute_noop.py">compute_noop.py</option>
     <option value="cube.py">cube.py</option>
     <option value="triangle.py">triangle.py</option>
-    <option value="compute_noop.py">compute_noop.py</option>
     <option value="imgui_backend_sea.py">imgui_backend_sea.py</option>
 </select>
 <!-- maybe something like add example (to test spawning more canvases and also closing them?) -->
@@ -35,7 +35,9 @@ pixels got drawn!
         // TODO: replace the actual code here (unless you have the module)
         // pythonCode = await (await fetch("compute_noop.py")).text();
         // pythonCode = await (await fetch("compute_matmul.py")).text();
-        pythonCode = await (await fetch("cube.py")).text();
+        let example_select = document.getElementById("example-select");
+        let reload_example_button = document.getElementById("reload-example");
+        pythonCode = await (await fetch(example_select.value)).text();
         // pythonCode = await (await fetch("triangle.py")).text();
         // pythonCode = await (await fetch("imgui_backend_sea.py")).text();
         // pythonCode = await (await fetch("imgui_renderer_sea.py")).text();
