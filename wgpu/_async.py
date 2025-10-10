@@ -6,7 +6,7 @@ import sys
 import time
 import logging
 import threading
-from typing import Callable, Awaitable, Generic, TypeVar
+from typing import Callable, Awaitable, Generator, Generic, TypeVar
 
 import sniffio
 
@@ -44,6 +44,16 @@ class LoopInterface:
 
     def call_soon(self, callback: Callable, *args: object):
         raise NotImplementedError()
+
+
+def get_backoff_time_generator() -> Generator[float, None, None]:
+    """Generates sleep-times, start at 0 then increasing to 100Hz and sticking there."""
+    for _ in range(5):
+        yield 0
+    for i in range(1, 20):
+        yield i / 2000.0  # ramp up from 0ms to 10ms
+    while True:
+        yield 0.01
 
 
 class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
@@ -241,9 +251,12 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
                 raise RuntimeError(
                     "Cannot GPUPromise.sync_wait(), if the polling function is not set."
                 )
+            # Do small incremental sync naps. Other threads can run.
+            # Note that time.sleep is accurate (does not suffer from the inaccuracy issue on Windows).
+            sleep_gen = get_backoff_time_generator()
             self._poller()
             while self._state == "pending":
-                time.sleep(0)
+                time.sleep(next(sleep_gen))
                 self._poller()
 
         return self._resolve()  # returns result if fulfilled or raise error if rejected
@@ -331,9 +344,12 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
                         raise RuntimeError(
                             "Cannot await a GPUPromise if neither the loop nor the poller are set."
                         )
+                    # Do small incremental async naps. Other tasks and threads can run.
+                    # Note that async sleep, with sleep_time > 0, is inaccurate on Windows.
+                    sleep_gen = get_backoff_time_generator()
                     self._poller()
                     while self._state == "pending":
-                        await async_sleep(0)
+                        await async_sleep(next(sleep_gen))
                         self._poller()
                 return self._resolve()
 
