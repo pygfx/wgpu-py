@@ -562,7 +562,7 @@ class GPU(classes.GPU):
         return promise
 
     def enumerate_adapters_async(
-        self, *, loop: CanvasLike | None = None
+        self, *, loop: LoopInterface | None = None
     ) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
         This is the implementation based on wgpu-native.
