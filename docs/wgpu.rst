@@ -69,7 +69,7 @@ The async methods return a :class:`GPUPromise`, which resolves to the actual res
 
 * In async code, use ``await promise``.
 * In sync code, use ``promise.then(callback)`` to register a callback that is executed when the promise resolves.
-* In sync code, you can use ``promise.sync_wait()``. This is simular to the ``_sync()`` flavour mentioned above (it makes your code less portable).
+* In sync code, you can use ``promise.sync_wait()``. This is similar to the ``_sync()`` flavour mentioned above (it makes your code less portable).
 
 
 Canvas API
