@@ -17,55 +17,10 @@ import wgpu
 import numpy as np
 
 
-from rendercanvas.pyside6 import RenderCanvas, loop
-# from rendercanvas.asyncio import loop
+from rendercanvas.auto import RenderCanvas, loop
 
 
 # %% Entrypoints (sync and async)
-
-
-# class AsyncFrameDrawer:
-#
-#     def __init__(self, loop, power_preference="high-performance", limits=None, features=None):
-#         self._loop = loop
-#         self._init = False
-#
-#         promise = gpu.gpu.request_adapter_async(loop=loop, power_preference="high-performance")
-#         promise.then
-#
-#     async def
-
-
-def request_global_device1(loop):
-    limits = None
-
-    promise1 = wgpu.gpu.request_adapter_async(loop=loop)
-
-    promise = wgpu.GPUPromise("request_global_device", loop, None)
-
-    def get(adapter):
-        promise2 = adapter.request_device_async(
-            label="Cube Example async device", required_limits=limits
-        )
-        promise2.then(promise._wgpu_set_input)
-        # promise2.set_error
-
-    promise1.then(get)
-    return promise
-
-
-def request_global_device(loop):
-    limits = None
-
-    promise1 = wgpu.gpu.request_adapter_async(loop=loop)
-
-    def get(adapter):
-        print("starting device request")
-        return adapter.request_device_async(
-            label="Cube Example async device", required_limits=limits
-        )
-
-    return promise1.then(get)
 
 
 def setup_drawing_sync(
@@ -79,7 +34,8 @@ def setup_drawing_sync(
 
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(
-        required_limits=limits, label="Cube Example device"
+        label="Cube Example device",
+        required_limits=limits,
     )
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
@@ -88,20 +44,17 @@ def setup_drawing_sync(
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_group, asynchronous=False
+        canvas, device, render_pipeline, uniform_buffer, bind_group
     )
 
 
-async def setup_drawing_async(canvas, loop, limits=None):
+async def setup_drawing_async(canvas, limits=None):
     """Setup to async-draw a rotating cube on the given canvas.
 
     The given canvas must implement WgpuCanvasInterface, but nothing more.
     Returns the draw function.
     """
-    # TODO: with async api, the loop should be required, I think.
-    adapter = await wgpu.gpu.request_adapter_async(
-        loop=loop, power_preference="high-performance"
-    )
+    adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
 
     device = await adapter.request_device_async(
         label="Cube Example async device", required_limits=limits
@@ -111,7 +64,6 @@ async def setup_drawing_async(canvas, loop, limits=None):
     pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
 
     render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
-    # render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
         canvas, device, render_pipeline, uniform_buffer, bind_group
@@ -521,53 +473,6 @@ for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
 
 
-async def main(canvas, loop):
-    draw_frame = await setup_drawing_async(canvas, loop=None)
-    canvas.request_draw(draw_frame)
-
-
-# Using explicit loop.add_task
-# We can register the loop somewhere so that request_adapter_async can pick it up
-# and fall back to asyncio.get_running_loop)
-# @loop.add_task
-# async def init():
-#     limits=None
-#     adapter = await wgpu.gpu.request_adapter_async(
-#         loop=loop, power_preference="high-performance"
-#     )
-#     device = await adapter.request_device_async(
-#         label="Cube Example async device", required_limits=limits
-#     )
-#
-#     draw_frame = get_drawing_func(canvas, device)
-#     canvas.request_draw(draw_frame)
-
-
-# This is nice, because we can collect wished from various places at import time.
-# It's also simple, familiar (looks like fastapi/flask) and no scary async.
-# Explicit loop --> someone needs to pass it
-# @request_global_device(loop)
-# def init(device):
-#     draw_frame = get_drawing_func(canvas, device)
-#     canvas.request_draw(draw_frame)
-
-
-# @wgpu.request_device(loop)
-# def init(device):
-#     draw_frame = get_drawing_func(canvas, device)
-#     canvas.request_draw(draw_frame)
-
-
-from rendercanvas.utils.asyncs import sleep
-
-
-async def poller():
-    instance = wgpu.backends.wgpu_native.extras.get_wgpu_instance()
-    while True:
-        wgpu.backends.wgpu_native.lib.wgpuInstanceProcessEvents(instance)
-        await sleep(0)
-
-
 if __name__ == "__main__":
     canvas = RenderCanvas(
         size=(640, 480),
@@ -577,8 +482,19 @@ if __name__ == "__main__":
         max_fps=60,
         vsync=True,
     )
-    # draw_frame = setup_drawing_sync(canvas)
-    # canvas.request_draw(draw_frame)
-    loop.add_task(main, canvas, loop)
-    loop.add_task(poller)
+
+    # Pick one
+
+    if True:
+        # Async
+        @loop.add_task
+        async def init():
+            draw_frame = await setup_drawing_async(canvas)
+            canvas.request_draw(draw_frame)
+    else:
+        # Sync
+        draw_frame = setup_drawing_sync(canvas)
+        canvas.request_draw(draw_frame)
+
+    # loop.add_task(poller)
     loop.run()
