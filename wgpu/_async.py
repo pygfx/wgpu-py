@@ -1,3 +1,5 @@
+"""This module implements the core for the async support in wgpu."""
+
 from __future__ import annotations
 
 import sys
@@ -10,6 +12,9 @@ import sniffio
 
 
 logger = logging.getLogger("wgpu")
+
+
+# The async_sleep and AsyncEvent are a copy of the implementation in rendercanvas.asyncs
 
 
 async def async_sleep(delay):
@@ -32,7 +37,12 @@ AwaitedType = TypeVar("AwaitedType")
 
 
 class LoopInterface:
-    def call_soon(self, callbacl: Callable, *args: object):
+    """A loop object must have (at least) this API.
+
+    Rendercanvas loop objects do, asyncio.loop does too.
+    """
+
+    def call_soon(self, callback: Callable, *args: object):
         raise NotImplementedError()
 
 
@@ -50,7 +60,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     * A callback can be registered using ``promise.then(callback)``, which will
       be called when the promise resolves. A new promise is returned.
     * You can sync-wait for it, using ``promise.sync_wait()``. This is simple, but
-      makes code less portable and potentially slower.
+      makes code less portable (does not work on Pyodide backend) and potentially slower.
 
     A ``GPUPromise`` is in one of these states:
 
@@ -87,8 +97,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         """
         self._title = str(title)  # title for debugging
-        self._loop = loop  # Event loop instance, can be None
         self._handler = handler  # function to turn input into the result
+
+        self._loop = loop  # Event loop instance, can be None
         self._poller = poller  # call to poll (process events)
         self._keepalive = keepalive  # just to keep something alive
 

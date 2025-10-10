@@ -116,11 +116,11 @@ class GPU:
     def request_adapter_async(
         self,
         *,
-        loop=None,
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas: CanvasLike = None,
+        loop=None,
     ) -> GPUPromise[GPUAdapter]:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -133,6 +133,8 @@ class GPU:
                 fallback adapter.
             canvas : The canvas that the adapter should be able to render to. This can typically
                  be left to None. If given, the object must implement ``WgpuCanvasInterface``.
+            loop : the loop object for async support. Must have at least ``call_soon(f, *args)``.
+                The loop object is required for asynchrouns use with ``promise.then()``.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
