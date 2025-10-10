@@ -15,7 +15,7 @@ import weakref
 import logging
 from typing import Sequence
 
-from ._async import GPUPromise as BaseGPUPromise
+from ._async import GPUPromise as BaseGPUPromise, LoopInterface
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
@@ -119,8 +119,8 @@ class GPU:
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas: CanvasLike = None,
-        loop=None,
+        canvas: CanvasLike | None = None,
+        loop: LoopInterface | None = None,
     ) -> GPUPromise[GPUAdapter]:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -134,7 +134,7 @@ class GPU:
             canvas : The canvas that the adapter should be able to render to. This can typically
                  be left to None. If given, the object must implement ``WgpuCanvasInterface``.
             loop : the loop object for async support. Must have at least ``call_soon(f, *args)``.
-                The loop object is required for asynchrouns use with ``promise.then()``.
+                The loop object is required for asynchrouns use with ``promise.then()``. EXPERIMENTAL.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
@@ -142,11 +142,11 @@ class GPU:
         # note, feature_level current' does nothing: # not used currently: https://gpuweb.github.io/gpuweb/#dom-gpurequestadapteroptions-featurelevel
 
         return gpu.request_adapter_async(
-            loop=loop,
             feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
+            loop=loop,
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
@@ -159,7 +159,9 @@ class GPU:
         return promise.sync_wait()
 
     @apidiff.add("Method useful for multi-gpu environments")
-    def enumerate_adapters_async(self, *, loop=None) -> GPUPromise[list[GPUAdapter]]:
+    def enumerate_adapters_async(
+        self, *, loop: CanvasLike | None = None
+    ) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using its summary), and a device
