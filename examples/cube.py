@@ -478,7 +478,6 @@ if __name__ == "__main__":
         size=(640, 480),
         title="wgpu cube example at $fps using $backend",
         update_mode="continuous",
-        present_method="bitmap",
         max_fps=60,
         vsync=True,
     )
