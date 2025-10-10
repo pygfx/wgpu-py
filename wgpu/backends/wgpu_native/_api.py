@@ -23,8 +23,9 @@ import logging
 from weakref import WeakKeyDictionary
 from typing import NoReturn, Sequence
 
-from ... import classes, flags, enums, structs
+from ..._async import LoopInterface
 from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
+from ... import classes, flags, enums, structs
 
 from ._ffi import ffi, lib
 from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
@@ -435,11 +436,11 @@ class GPU(classes.GPU):
     def request_adapter_async(
         self,
         *,
-        loop=None,
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas: CanvasLike = None,
+        canvas: CanvasLike | None = None,
+        loop: LoopInterface | None = None,
     ) -> GPUPromise[GPUAdapter]:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -560,7 +561,9 @@ class GPU(classes.GPU):
 
         return promise
 
-    def enumerate_adapters_async(self, *, loop=None) -> GPUPromise[list[GPUAdapter]]:
+    def enumerate_adapters_async(
+        self, *, loop: CanvasLike | None = None
+    ) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
         This is the implementation based on wgpu-native.
         """
