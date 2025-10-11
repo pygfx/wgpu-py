@@ -34,11 +34,12 @@ def test_destroy_device(n):
 
 @create_and_release
 def test_destroy_query_set(n):
-    yield {}
+    yield {
+        "expected_counts_after_create": {"QuerySet": (n, 0)},
+    }
     for i in range(n):
         qs = DEVICE.create_query_set(type=wgpu.QueryType.occlusion, count=2)
         qs.destroy()
-        # NOTE: destroy is not yet implemented in wgpu-native - this does not actually do anything yet
         yield qs
 
 

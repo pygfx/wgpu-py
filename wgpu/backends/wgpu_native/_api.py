@@ -4100,11 +4100,15 @@ class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
     _release_function = libf.wgpuQuerySetRelease
 
     def destroy(self) -> None:
-        # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
+        # destroy now is implemented correctly https://github.com/gfx-rs/wgpu-native/pull/509#discussion_r2403822550
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUQuerySet querySet)
             libf.wgpuQuerySetDestroy(internal)
+            # if we call del objects during our tests on the "destroyed" object, we get a panic
+            # by setting this to none, the __del__ call via _release skips it.
+            # might mean we retain memory tho?
+            self._internal = None
 
 
 # %% Subclasses that don't need anything else
