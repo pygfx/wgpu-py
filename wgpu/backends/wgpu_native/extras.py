@@ -295,8 +295,16 @@ def set_instance_extras(
     c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
     # https://docs.rs/wgpu/latest/wgpu/struct.MemoryBudgetThresholds.html
-    c_budget_creation = ffi.new("uint8_t *", budget_for_device_creation) if budget_for_device_creation is not None else ffi.NULL
-    c_budget_loss = ffi.new("uint8_t *", budget_for_device_loss) if budget_for_device_loss is not None else ffi.NULL
+    c_budget_creation = (
+        ffi.new("uint8_t *", budget_for_device_creation)
+        if budget_for_device_creation is not None
+        else ffi.NULL
+    )
+    c_budget_loss = (
+        ffi.new("uint8_t *", budget_for_device_loss)
+        if budget_for_device_loss is not None
+        else ffi.NULL
+    )
 
     # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
     c_extras = new_struct_p(
@@ -310,7 +318,7 @@ def set_instance_extras(
         dxcPath=to_c_string_view(dxc_path),
         dxcMaxShaderModel=c_max_shader_model,
         budgetForDeviceCreation=c_budget_creation,
-        budgetForDeviceLoss=c_budget_loss
+        budgetForDeviceLoss=c_budget_loss,
     )
 
     c_extras.chain.sType = lib.WGPUSType_InstanceExtras

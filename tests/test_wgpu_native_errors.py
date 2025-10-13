@@ -141,7 +141,7 @@ def test_parse_shader_error4(caplog):
         device.create_shader_module(code=code)
 
     error = err.value.message
-    error = error.rstrip("\n") # seems to have tailing newlines sometimes?
+    error = error.rstrip("\n")  # seems to have tailing newlines sometimes?
     assert error == expected, f"Expected:\n\n{expected}"
 
 
