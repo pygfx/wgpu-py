@@ -24,7 +24,7 @@ from ._api import (
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
 from ..._coreutils import get_library_filename, ArrayLike
-from ._ffi import lib
+from ._ffi import lib, ffi
 from ._mappings import native_flags
 
 
@@ -233,6 +233,8 @@ def set_instance_extras(
     fence_behavior="Normal",
     dxc_path: Union[os.PathLike, None] = None,
     dxc_max_shader_model: float = 6.5,
+    budget_for_device_creation: Union[int, None] = None,
+    budget_for_device_loss: Union[int, None] = None,
 ):
     """
     Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
@@ -292,6 +294,10 @@ def set_instance_extras(
     # hack as only version 6.0..6.7 are supported and enum mapping fits.
     c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
+    # https://docs.rs/wgpu/latest/wgpu/struct.MemoryBudgetThresholds.html
+    c_budget_creation = ffi.new("uint8_t *", budget_for_device_creation) if budget_for_device_creation is not None else ffi.NULL
+    c_budget_loss = ffi.new("uint8_t *", budget_for_device_loss) if budget_for_device_loss is not None else ffi.NULL
+
     # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
     c_extras = new_struct_p(
         "WGPUInstanceExtras *",
@@ -303,6 +309,8 @@ def set_instance_extras(
         glFenceBehaviour=fence_behavior,
         dxcPath=to_c_string_view(dxc_path),
         dxcMaxShaderModel=c_max_shader_model,
+        budgetForDeviceCreation=c_budget_creation,
+        budgetForDeviceLoss=c_budget_loss
     )
 
     c_extras.chain.sType = lib.WGPUSType_InstanceExtras

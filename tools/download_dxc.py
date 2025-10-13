@@ -59,11 +59,8 @@ def main(version=None):
     print(f"Downloading {url}")
     download_file(url, zip_filename)
     compiler_file = "dxcompiler.dll"
-    signing_file = "dxil.dll"  # in v26 this won't be needed anymore
     print(f"Extracting {compiler_file} to {RESOURCE_DIR}")
     extract_file(zip_filename, compiler_file, RESOURCE_DIR)
-    print(f"Extracting {signing_file} to {RESOURCE_DIR}")
-    extract_file(zip_filename, signing_file, RESOURCE_DIR)
 
     # cleanup of tempfile?
     # os.remove(zip_filename)
