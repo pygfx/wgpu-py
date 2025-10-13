@@ -238,6 +238,7 @@ def set_instance_extras(
 ):
     """
     Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
+    Most of these options are for specific backends, and might not create an instance or crash when used in the wrong combinations.
     Args:
         backends: bitflags as list[str], which backends to enable on the instance level. Defaults to ``["All"]``.
         flags: bitflags as list[str], for debugging the instance and compiler. Defaults to ``["Default"]``.
@@ -246,6 +247,8 @@ def set_instance_extras(
         fence_behavior: enum/int, "Normal" or "AutoFinish". Defaults to "Normal".
         dxc_path: Path to the dxcompiler.dll file, if not provided or `None`, will try to load from wgpu/resources.
         dxc_max_shader_model: float between 6.0 and 6.7, the maximum shader model to use with DXC. Defaults to 6.5.
+        budget_for_device_creation: Optional[int], between 0 and 100, to specify memory budget threshold for when creating resources (buffer, textures...) will fail. Defaults to None.
+        budget_for_device_loss: Optional[int], between 0 and 100, to specify memory budget threshold when the device will be lost. Defaults to None.
     """
     # TODO document and explain, add examples
 
@@ -306,7 +309,7 @@ def set_instance_extras(
         else ffi.NULL
     )
 
-    # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
+    # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel, const uint8_t* budgetForDeviceCreation, const uint8_t* budgetForDeviceLoss
     c_extras = new_struct_p(
         "WGPUInstanceExtras *",
         # not used: chain

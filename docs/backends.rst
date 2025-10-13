@@ -317,18 +317,20 @@ given in a different order in the list.
 
     :param encoder: The ComputePassEncoder or RenderPassEncoder.
 
-.. py:function:: wgpu.backends.wgpu_native.set_instance_extras(backends, flags, dx12_compiler, gles3_minor_version, fence_behavior, dxil_path, dxc_path, dxc_max_shader_model)
+.. py:function:: wgpu.backends.wgpu_native.set_instance_extras(backends, flags, dx12_compiler, gles3_minor_version, fence_behavior, dxc_path, dxc_max_shader_model, budget_for_device_creation, budget_for_device_loss)
 
     Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
+    Most of these options are for specific backends, and might not create an instance or crash when used in the wrong combinations. 
 
     :param backends: bitflags as list[str], which backends to enable on the instance level. Defaults to ``["All"]``. Can be any combination of ``["Vulkan", "GL", "Metal", "DX12", "BrowserWebGPU"]`` or the premade combinations ``["All", "Primary", "secondary"]``. Note that your device needs to support these backends, for detailed information see https://docs.rs/wgpu/latest/wgpu/struct.Backends.html
     :param flags: bitflags as list[str], debug flags for the compiler. Defaults to ``["Default"]``, can be any combination of ``["Debug", "Validation", "DiscardHalLabels"]``.
     :param dx12_compiler: enum/str, either "Fxc", "Dxc" or "Undefined". Defaults to "Fxc" same as "Undefined". Dxc requires additional library files.
     :param gles3_minor_version: enum/int 0, 1 or 2. Defaults to "Atomic" (handled by driver).
     :param fence_behavior: enum/int, "Normal" or "AutoFinish", Default to "Normal".
-    :param dxil_path: str, path to dxil.dll, defaults to ``None``. None looks in the resource directory.
     :param dxc_path: str, path to dxcompiler.dll, defaults to ``None``. None looks in the resource directory.
     :param dxc_max_shader_model: float between 6.0 and 6.7, Maximum shader model the given dll supports. Defaults to 6.5.
+    :param budget_for_device_creation: Optional[int], between 0 and 100, to specify memory budget threshold for when creating resources (buffer, textures...) will fail. Defaults to None.
+    :param budget_for_device_loss: Optional[int], between 0 and 100, to specify memory budget threshold when the device will be lost. Defaults to None.
 
 Use like the following before the instance is created, which happens during request_adapter or enumerate_adapters.
 
