@@ -2061,8 +2061,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         primitive = primitive or {}
         # remove the extras so the struct can still be checked
         primitive_extras = {}
-        primitive_extras["polygon_mode"] = primitive.pop("polygon_mode", "Fill")
-        primitive_extras["conservative"] = primitive.pop("conservative", False)
+        if isinstance(primitive, dict):
+            # in case of extras, the struct isn't used but a dict... so we check for it here.
+            primitive_extras["polygon_mode"] = primitive.pop("polygon_mode", "Fill")
+            primitive_extras["conservative"] = primitive.pop("conservative", False)
         check_struct("VertexState", vertex)
         check_struct("DepthStencilState", depth_stencil)
         check_struct("MultisampleState", multisample)
@@ -4100,7 +4102,7 @@ class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
     _release_function = libf.wgpuQuerySetRelease
 
     def destroy(self) -> None:
-        # destroy now is implemented correctly https://github.com/gfx-rs/wgpu-native/pull/509#discussion_r2403822550
+        # destroy now is implemented incorrectly https://github.com/gfx-rs/wgpu-native/pull/509#discussion_r2403822550
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUQuerySet querySet)

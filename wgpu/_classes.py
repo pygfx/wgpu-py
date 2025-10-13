@@ -1151,7 +1151,9 @@ class GPUDevice(GPUObjectBase):
                 vertex index list is split into sub-lists using the maximum value of this
                 index format as a separator. Example: a list with values
                 `[1, 2, 65535, 4, 5, 6]` of type "uint16" will be split in sub-lists
-                `[1, 2]` and `[4, 5, 6]`.
+                `[1, 2]` and `[4, 5, 6]`. <br>
+                If the native-only features "polygon-mode-line" or "polygon-mode-point" are requested, an additional field in the primitive state
+                `polygon_mode` can be set to "line" or "point" respectively. However this requires the use of a dict and not `structs.PrimitiveState`.
             depth_stencil (structs.DepthStencilState): Describes the optional depth-stencil
                 properties, including the testing, operations, and bias. Optional.
             multisample (structs.MultisampleState): Describes the multi-sampling properties of the pipeline.
