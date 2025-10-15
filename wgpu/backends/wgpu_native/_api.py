@@ -2375,7 +2375,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         raise NotImplementedError()
 
     def destroy(self) -> None:
-        # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
+        # Therefore we must not set self._internal to None.
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUDevice device)
@@ -2632,9 +2633,8 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         return src_m
 
     def destroy(self) -> None:
-        # NOTE: destroy means that the wgpu-core object gets into a destroyed
-        # state. The wgpu-core object still exists. So destroying is quite
-        # different from releasing.
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
+        # Therefore we must not set self._internal to None.
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUBuffer buffer)
@@ -2703,6 +2703,8 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         return GPUTextureView(label, id, self._device, self, self.size)
 
     def destroy(self) -> None:
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
+        # Therefore we must not set self._internal to None.
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUTexture texture)
@@ -4102,7 +4104,20 @@ class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
     _release_function = libf.wgpuQuerySetRelease
 
     def destroy(self) -> None:
-        # destroy now is implemented incorrectly https://github.com/gfx-rs/wgpu-native/pull/509#discussion_r2403822550
+        # NOTE: wgpuQuerySetDestroy is currently not implemented incorrectly https://github.com/gfx-rs/wgpu-native/pull/509#discussion_r2403822550
+        # It calls `drop` instead, i.e. does the same as wgpuQuerySetRelease. This means that we must set self._internal to None.
+        # But this means that if we'd call wgpuQuerySetDestroy, and wgpu-native gets fixed, we get a leak :(
+        # So instead we make it explicitly do the same as release.
+        # TODO: remove this when wgpu-native actually uses destroy.
+        wgpu_native_uses_drop = True
+        if wgpu_native_uses_drop:
+            self._release()
+            return
+
+        # Below is the eventual code for this method:
+
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
+        # Therefore we must not set self._internal to None.
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUQuerySet querySet)
