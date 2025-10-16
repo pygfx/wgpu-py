@@ -11,7 +11,7 @@ from .. import _register_backend
 from ... import classes, structs, enums, flags
 
 from pyodide.ffi import run_sync, JsProxy, to_js, jsnull
-from js import window, Uint32Array, ArrayBuffer, Float32Array, Uint8Array, Object, undefined, Map
+from js import window, ArrayBuffer, Uint8Array, Object, undefined, Map
 
 
 def to_camel_case(snake_str):
@@ -222,16 +222,16 @@ class GPUDevice(classes.GPUDevice):
         return GPUBuffer(label, js_buf, self, size, usage, map_state)
 
     # TODO: apidiff rewritten so we avoid the buggy mess in map_write for a bit.
-    def create_buffer_with_data(self, *, label="", data, usage: flags.BufferUsageFlags) -> classes.GPUBuffer:
-        print("create_buffer_with_data", data.tolist())
+    def create_buffer_with_data_(self, *, label="", data, usage: flags.BufferUsageFlags) -> classes.GPUBuffer:
         data = memoryview(data).cast("B") # unit8
         data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
 
         # if it's a Descriptor you need the keywords
         js_buf = self._internal.createBuffer(label=label, size=data_size, usage=usage, mappedAtCreation=True)
         # print("created buffer", js_buf, dir(js_buf), js_buf.size)
-        mapping_buffer = Uint8Array.new(js_buf.getMappedRange(0, data_size))
-        mapping_buffer.assign(data) #.set only works with JS array I think...
+        array_buf = js_buf.getMappedRange(0, data_size)
+        Uint8Array.new(array_buf).assign(data)
+        # print(array_buf.to_py().tolist())
         js_buf.unmap()
         # print("created buffer", js_buf, dir(js_buf), js_buf.size)
         return GPUBuffer(label, js_buf, self, data_size, usage, enums.BufferMapState.unmapped)
@@ -518,14 +518,11 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUDebugCommandsMixin
 
         self._internal.setBindGroup(index, bind_group._internal, dynamic_offsets_data)
 
-    def dispatch_workgroups(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        self._internal.dispatchWorkgroups(*js_args, js_kwargs)
+    def dispatch_workgroups(self, workgroup_count_x: int, workgroup_count_y: int = 1, workgroup_count_z: int = 1):
+        self._internal.dispatchWorkgroups(workgroup_count_x, workgroup_count_y, workgroup_count_z)
 
-    def end(self, *args, **kwargs):
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        self._internal.end(*args, js_kwargs)
+    def end(self):
+        self._internal.end()
 
 class GPUQueue(classes.GPUQueue):
     def submit(self, command_buffers: list[classes.GPUCommandBuffer]):
@@ -547,16 +544,24 @@ class GPUQueue(classes.GPUQueue):
             raise ValueError("Invalid data_length")
         data_length = (data_length + 3) & ~3  # align to 4 bytes
 
-        temp_buffer = device._internal.createBuffer(
+        js_temp_buffer = device._internal.createBuffer(
             size=data_length,
             usage=flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ,
-            mappedAtCreation=True,
+            mappedAtCreation=False,
             label="output buffer temp"
         )
-        res = temp_buffer.getMappedRange()
-        res = res.slice(0)
-        temp_buffer.unmap()
-        return res.to_py() # should give a memoryview?
+
+        js_encoder = device._internal.createCommandEncoder()
+        # todo: somehow test if all the offset math is correct
+        js_encoder.copyBufferToBuffer(buffer._internal, buffer_offset, js_temp_buffer, buffer_offset, data_length)
+        self._internal.submit([js_encoder.finish()])
+
+        # best way to await the promise directly?
+        run_sync(js_temp_buffer.mapAsync(flags.MapMode.READ, 0, data_length))
+        array_buf = js_temp_buffer.getMappedRange()
+        res = array_buf.slice(0)
+        js_temp_buffer.unmap()
+        return res.to_py()
 
     # this one misbehaves with args or kwargs, like it seems the data gets unpacked?
     def write_texture(self,
