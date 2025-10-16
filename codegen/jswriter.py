@@ -8,13 +8,14 @@ from codegen.idlparser import get_idl_parser
 from textwrap import indent
 
 method_template = """
-def {py_method_name}(self, *args, **kwargs):
-    js_args = to_js(args)
-    js_kwargs = to_js(kwargs)
+def {py_method_name}(self, **kwargs):
+    # TODO: positional args???
+    descriptor = struct.{py_descriptor_name}(**kwargs)
+    js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
 
-    js_obj = self._{js_method_name}( *js_args, **js_kwargs )
+    js_obj = self._{js_method_name}(js_descriptor)
 
-    label = js_kwargs.pop("label", "")
+    label = kwargs.pop("label", "")
     return {class}(js_obj, label=label) # more kwargs? only for get_ and create_?
 """
 

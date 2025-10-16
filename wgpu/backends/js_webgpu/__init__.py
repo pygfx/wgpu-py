@@ -44,27 +44,44 @@ def from_entries_camel_case(inp: dict):
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
 # you have to do the recursion yourself...
-def simple_js_accessor(value, convert, cache):
+def simple_js_accessor(value, convert, cache=None):
     # print("simple_js_accessor", value, type(value), dir(value))
     if isinstance(value, classes.GPUObjectBase):
         # print("GPUObjectBase detected", value)
         return value._internal # type : JsProxy
     elif isinstance(value, structs.Struct):
         result = {}
-        # cache(value, result)
         for k, v in value.items():
             camel_key = to_camel_case(k)
             # if there is a dict further down... we still need to fix those keys
             if isinstance(v, dict):
+                if(k == "resource"): # this one is a more complex type.... https://www.w3.org/TR/webgpu/#typedefdef-gpubindingresource
+                    # print("struct with resource dict detected", k, v)
+                    v = structs.BufferBinding(**v)
+                    # print("RESOURCE AS A STRUCT:", v)
+                    result[camel_key] = to_js(v, eager_converter=simple_js_accessor)
+                    # print("called convert(v) on RESOURCE STRUCT", result[camel_key])
+                    continue
                 # print("struct with dict detected", value, k, v)
                 # print(dir(value))
-                v_struct_type_name = value.__annotations__[k].partition("Struct")[0]
+                v_struct_type_name = value.__annotations__[k].partition("Struct")[0] # will not work if there is more than two options -.-
                 # print("likely v struct type_name", v_struct_type_name)
                 v_struct_type = structs.__dict__[v_struct_type_name] # because the annotation is just a string... doesn't feel great
                 # print("likely v struct type", v_struct_type)
                 v = v_struct_type(**v)
                 # print("converted to struct", v)
-            result[camel_key] = convert(v)
+
+            # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...
+            elif isinstance(v, (list)): #maybe tuple too?
+                # print("struct with list detected", value, k, v)
+                v_struct_type_name = value.__annotations__[k].removeprefix("Sequence[").partition("Struct")[0]
+                # print("likely v struct type_name", v_struct_type_name)
+                v_struct_type = structs.__dict__[v_struct_type_name]
+                # print("likely v struct type", v_struct_type)
+                v = [v_struct_type(**item) for item in v]
+                # print("converted to list of struct", v)
+            result[camel_key] = to_js(v, eager_converter=simple_js_accessor)
+        # print("final result: ", type(result), result)
         return result
     # this might recursively call itself...
     # maybe use a map? or do a dict_converted?
@@ -79,7 +96,6 @@ def simple_js_accessor(value, convert, cache):
         # let's hope this is only ever reached when all the contents are already converted.
         # map = Map.new(result.items())
         # return Object.fromEntries(map)
-        return to_js(result, depth=1)
     return convert(value)
 
 # TODO: can we implement our own variant of JsProxy and PyProxy, to_js and to_py? to work with pyodide and not around it?
@@ -207,15 +223,17 @@ class GPUDevice(classes.GPUDevice):
 
     # TODO: apidiff rewritten so we avoid the buggy mess in map_write for a bit.
     def create_buffer_with_data(self, *, label="", data, usage: flags.BufferUsageFlags) -> classes.GPUBuffer:
-
+        print("create_buffer_with_data", data.tolist())
         data = memoryview(data).cast("B") # unit8
         data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
 
         # if it's a Descriptor you need the keywords
         js_buf = self._internal.createBuffer(label=label, size=data_size, usage=usage, mappedAtCreation=True)
+        # print("created buffer", js_buf, dir(js_buf), js_buf.size)
         mapping_buffer = Uint8Array.new(js_buf.getMappedRange(0, data_size))
         mapping_buffer.assign(data) #.set only works with JS array I think...
         js_buf.unmap()
+        # print("created buffer", js_buf, dir(js_buf), js_buf.size)
         return GPUBuffer(label, js_buf, self, data_size, usage, enums.BufferMapState.unmapped)
 
     # or here???
@@ -301,8 +319,11 @@ class GPUDevice(classes.GPUDevice):
 
     # I think the entries arg gets unpacked with a single dict inside, so trying to do the list around that manually
     def create_bind_group(self, **kwargs) -> classes.GPUBindGroup:
+        # print("create_bind_group", kwargs)
         descriptor = structs.BindGroupDescriptor(**kwargs)
+        # print("descriptor", descriptor)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        # print("js_descriptor", js_descriptor)
         js_bg = self._internal.createBindGroup(js_descriptor)
 
         label = kwargs.get("label", "")
@@ -368,6 +389,12 @@ class GPUBuffer(classes.GPUBuffer):
     def map_state(self):
         return self._internal.mapState
 
+    @property
+    def size(self):
+        js_size = self._internal.size
+        # print("GPUBuffer.size", js_size, type(js_size))
+        return js_size
+
     # TODO apidiff
     def write_mapped(self, data, buffer_offset: int | None = None):
         # TODO: get dtype
@@ -407,7 +434,27 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     def insert_debug_marker(self, marker_label: str) -> None:
         self._internal.insertDebugMarker(marker_label)
 
+class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
+    def set_pipeline(self, pipeline: "GPURenderPipeline"):
+        self._internal.setPipeline(pipeline._internal)
 
+    def set_index_buffer(self, buffer: GPUBuffer, format: enums.IndexFormat, offset: int = 0, size: int | None= None):
+        js_buffer = buffer._internal
+        if size is None:
+            size = buffer.size - offset
+
+        self._internal.setIndexBuffer(js_buffer, format, offset, size)
+
+    def set_vertex_buffer(self, slot, buffer: GPUBuffer, offset=0, size: int | None = None):
+        if size is None:
+            size = buffer.size - offset
+
+        self._internal.setVertexBuffer(slot, buffer._internal, offset, size)
+
+    def draw_indexed(self, *args, **kwargs):
+        js_args = to_js(args, eager_converter=simple_js_accessor)
+        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+        self._internal.drawIndexed(*js_args, js_kwargs)
 
 
 class GPUComputePipeline(classes.GPUComputePipeline):
@@ -418,15 +465,16 @@ class GPUComputePipeline(classes.GPUComputePipeline):
         return classes.GPUBindGroupLayout(label, js_bgl, self._device)
 
 class GPUCommandEncoder(classes.GPUCommandEncoder, GPUDebugCommandsMixin):
-    def begin_compute_pass(self, *args, **kwargs):
+    def begin_compute_pass(self, **kwargs):
         # TODO: no args, should be empty maybe?
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_cp = self._internal.beginComputePass(*args, js_kwargs)
+        descriptor = structs.ComputePassDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_cp = self._internal.beginComputePass(js_descriptor)
 
         label = kwargs.get("label", "")
         return GPUComputePassEncoder(label, js_cp, self._device)
 
-    def begin_render_pass(self,**kwargs):
+    def begin_render_pass(self, **kwargs):
         # this might solve all our issues...
         descriptor = structs.RenderPassDescriptor(**kwargs)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
@@ -549,7 +597,7 @@ class GPUQueue(classes.GPUQueue):
         js_data = Uint8Array.new(size)
         js_data.assign(data[data_offset:data_offset+size])
 
-        self._internal.writeBuffer(buffer._internal, buffer_offset, js_data, 0, size)
+        self._internal.writeBuffer(buffer._internal, buffer_offset, js_data, data_offset, size)
 
 
 
@@ -609,28 +657,7 @@ class GPURenderPipeline(classes.GPURenderPipeline):
     def get_bind_group_layout(self, index: int | None = None) -> classes.GPUBindGroupLayout:
         return classes.GPUBindGroupLayout("", self._internal.getBindGroupLayout(index), self._device)
 
-# TODO: abstract to mixin
-class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUDebugCommandsMixin):
-    def set_pipeline(self, pipeline: GPURenderPipeline):
-        self._internal.setPipeline(pipeline._internal)
-
-    def set_index_buffer(self, buffer: GPUBuffer, format: enums.IndexFormat, offset: int = 0, size: int | None= None):
-        # for GPUSize64 you can't pass them as kwargs, as they get converted to something else...
-        # they need to be position args and then it works.
-        js_buffer = buffer._internal
-        js_format = to_js(format)
-        if size is None:
-            size = buffer.size - offset
-
-        self._internal.setIndexBuffer(js_buffer, js_format, offset, size)
-
-    def set_vertex_buffer(self, slot, buffer: GPUBuffer, offset=0, size: int | None = None):
-        # slot is a GPUsize32 so that works, but the others don't
-        if size is None:
-            size = buffer.size - offset
-
-        self._internal.setVertexBuffer(slot, buffer._internal, offset, size)
-
+class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUDebugCommandsMixin, GPURenderCommandsMixin):
     # function has overloads!
     def set_bind_group(
             self,
@@ -653,11 +680,6 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUDebugCommandsMixin):
     def set_scissor_rect(self, *args):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         self._internal.setScissorRect(*js_args)
-
-    def draw_indexed(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        self._internal.drawIndexed(*js_args, js_kwargs)
 
     # maybe it needs to be way simpler?
     def draw(self, *args, **kwargs):
