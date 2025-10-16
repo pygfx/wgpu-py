@@ -10,7 +10,7 @@ generated.
 from .. import _register_backend
 from ... import classes, structs, enums, flags
 
-from pyodide.ffi import run_sync, JsProxy, to_js
+from pyodide.ffi import run_sync, JsProxy, to_js, jsnull
 from js import window, Uint32Array, ArrayBuffer, Float32Array, Uint8Array, Object, undefined, Map
 
 
@@ -23,13 +23,23 @@ def to_camel_case(snake_str):
     #     res += "_"
     return res
 
+JS_KEYWORDS = ["size", "type", "format"]
+
+
 # camelCase the keys and use Object.fromEntries?
-def dict_converter(inp: dict):
+def from_entries_camel_case(inp: dict):
     temp = {}
+    # js_map = Map.new()
     for k, v in inp.items():
+        # maybe this is a fix?
+        # if k in JS_KEYWORDS:
+        #     k += "_"
         camel_key = to_camel_case(k)
         temp[camel_key] = v
-    return to_js(temp, dict_converter=Object.fromEntries)
+    #     js_map.set(camel_key, v)
+    # return js_map
+    js_obj = Object.fromEntries(temp.items())
+    return js_obj
 
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
@@ -42,22 +52,24 @@ def simple_js_accessor(value, convert, cache):
     elif isinstance(value, structs.Struct):
         # print("struct detected", value, "\n")
         result = {}
+        # js_obj = Object.create(jsnull)
         # cache(value, result)
         for k, v in value.items():
             # print("struct item", k, v, type(v))
             camel_key = to_camel_case(k)
             result[camel_key] = convert(v)
+            # js_obj[camel_key] = v
         return result
     # this might recursively call itself...
     # maybe use a map? or do a dict_converted?
-    elif isinstance(value, dict):
-        result = {}
-        # cache(value, result)
-        for k, v in value.items():
-            camel_key = to_camel_case(k) if isinstance(k, str) else k
-            result[camel_key] = convert(v)
-        if len(result) == 0:
-            return Object.new() # maybe this?
+    # elif isinstance(value, dict):
+    #     result = {}
+    #     # cache(value, result)
+    #     for k, v in value.items():
+    #         camel_key = to_camel_case(k) if isinstance(k, str) else k
+    #         result[camel_key] = convert(v)
+    #     if len(result) == 0:
+    #         return Object.new() # maybe this?
         # let's hope this is only ever reached when all the contents are already converted.
         # map = Map.new(result.items())
         # return Object.fromEntries(map)
@@ -175,7 +187,7 @@ class GPUDevice(classes.GPUDevice):
     def create_buffer(self, *args, **kwargs):
         # js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_buf = self._internal.createBuffer(js_kwargs)
+        js_buf = self._internal.createBuffer(**js_kwargs)
 
         label = kwargs.get("label", "")
         size = kwargs.get("size")
@@ -221,14 +233,21 @@ class GPUDevice(classes.GPUDevice):
             if buffer is not None:
                 sampler = texture = storage_texture = external_texture = empty_value
                 # or struct.BufferBindingLayout?
+                print("inp", buffer)
                 buffer = structs.BufferBindingLayout(**buffer)
-                # buffer = to_js(buffer, depth=1)
+                print("struct", buffer)
+                buffer = to_js(buffer, eager_converter=simple_js_accessor)
+                # this returns a JsProxy, but looks like a dict... so subsequent calls to to_js do nothing...
+                print("struct, accessor", type(buffer), buffer)
+                # here we roundtrip and then end up with the Object Map....
+                buffer = to_js(buffer.to_py(), depth=1)
+                print("dict, to_js", buffer)
             elif sampler is not None:
                 buffer = texture = storage_texture = external_texture = empty_value
                 sampler = {
                     "type": sampler.get("type", enums.SamplerBindingType.filtering),
                 }
-                # sampler = to_js(sampler, depth=1)
+                sampler = to_js(sampler, depth=1)
             elif texture is not None:
                 buffer = sampler = storage_texture = external_texture = empty_value
                 texture = {
@@ -265,6 +284,8 @@ class GPUDevice(classes.GPUDevice):
                 "external_texture": external_texture,
             }
             js_entries.append(js_entry)
+            js_entries = to_js(js_entries, depth=1)
+            # print(js_entries)
 
         js_bgl = self._internal.createBindGroupLayout(label=label, entries=js_entries)
         return classes.GPUBindGroupLayout(label, js_bgl, self)
@@ -276,11 +297,11 @@ class GPUDevice(classes.GPUDevice):
         label = kwargs.get("label", "")
         return GPUComputePipeline(label, js_cp, self)
 
-    # I think the entries arg gers unpacked with a single dict inside, so trying to do the list around that manually
+    # I think the entries arg gets unpacked with a single dict inside, so trying to do the list around that manually
     def create_bind_group(self, **kwargs) -> classes.GPUBindGroup:
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(js_kwargs) # to get the actual map? (should happen on the function call anyways...)
-        js_bg = self._internal.createBindGroup(js_kwargs)
+        # js_kwargs = to_js(js_kwargs) # to get the actual map? (should happen on the function call anyways...)
+        js_bg = self._internal.createBindGroup(**js_kwargs)
 
         label = kwargs.get("label", "")
         return classes.GPUBindGroup(label, js_bg, self)
@@ -299,9 +320,14 @@ class GPUDevice(classes.GPUDevice):
 
         return classes.GPUPipelineLayout(label, js_pl, self)
 
-    def create_texture(self, *args, **kwargs):
+    def create_texture(self, **kwargs):
+        # maybe we need an extend3d constructor?
+        # print(kwargs)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_tex = self._internal.createTexture(*args, js_kwargs)
+        # print(js_kwargs, dir(js_kwargs))
+        # print(js_kwargs.size)
+        # print(js_kwargs["size"])
+        js_tex = self._internal.createTexture(**js_kwargs) # the jSProxy can be unpacked, while the Map can't?
 
         label = kwargs.get("label", "")
         tex_info = {
@@ -373,6 +399,19 @@ class GPUBuffer(classes.GPUBuffer):
         self._internal.unmap()
 
 # TODO: mixin class
+class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
+    def push_debug_group(self, group_label: str) -> None:
+        self._internal.pushDebugGroup(group_label)
+
+    def pop_debug_group(self) -> None:
+        self._internal.popDebugGroup()
+
+    def insert_debug_marker(self, marker_label: str) -> None:
+        self._internal.insertDebugMarker(marker_label)
+
+
+
+
 class GPUComputePipeline(classes.GPUComputePipeline):
     def get_bind_group_layout(self, *args, **kwargs):
         js_bgl = self._internal.getBindGroupLayout(*args, **kwargs)
@@ -380,7 +419,7 @@ class GPUComputePipeline(classes.GPUComputePipeline):
         label = kwargs.get("label", "")
         return classes.GPUBindGroupLayout(label, js_bgl, self._device)
 
-class GPUCommandEncoder(classes.GPUCommandEncoder):
+class GPUCommandEncoder(classes.GPUCommandEncoder, GPUDebugCommandsMixin):
     def begin_compute_pass(self, *args, **kwargs):
         # TODO: no args, should be empty maybe?
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
@@ -389,10 +428,15 @@ class GPUCommandEncoder(classes.GPUCommandEncoder):
         label = kwargs.get("label", "")
         return GPUComputePassEncoder(label, js_cp, self._device)
 
-    def begin_render_pass(self, *args, **kwargs):
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_rp = self._internal.beginRenderPass(*js_args, js_kwargs)
+    def begin_render_pass(self,**kwargs):
+        # this might solve all our issues...
+        descriptor = structs.RenderPassDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        # js_args = to_js(args, eager_converter=simple_js_accessor)
+        # print("begin_render_pass", kwargs)
+        # js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor, dict_converter=from_entries_camel_case)
+        js_rp = self._internal.beginRenderPass(js_descriptor)
+        # print("got js_rp", js_rp, dir(js_rp))
 
         label = kwargs.get("label", "")
         return GPURenderPassEncoder(label, js_rp, self._device)
@@ -410,7 +454,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         self._internal.copyBufferToBuffer(*js_args, js_kwargs)
 
-class GPUComputePassEncoder(classes.GPUComputePassEncoder):
+class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUDebugCommandsMixin):
     def set_pipeline(self, *args, **kwargs):
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
@@ -512,9 +556,9 @@ class GPUQueue(classes.GPUQueue):
 
 
 class GPUTexture(classes.GPUTexture):
-    def create_view(self, *args, **kwargs):
+    def create_view(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_view = self._internal.createView(*args, js_kwargs)
+        js_view = self._internal.createView(**js_kwargs)
 
         label = kwargs.get("label", "")
         return classes.GPUTextureView(label, js_view, self._device, self, self.size)
@@ -567,7 +611,7 @@ class GPURenderPipeline(classes.GPURenderPipeline):
         return classes.GPUBindGroupLayout("", self._internal.getBindGroupLayout(index), self._device)
 
 # TODO: abstract to mixin
-class GPURenderPassEncoder(classes.GPURenderPassEncoder):
+class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUDebugCommandsMixin):
     def set_pipeline(self, pipeline: GPURenderPipeline):
         self._internal.setPipeline(pipeline._internal)
 
