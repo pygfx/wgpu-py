@@ -17,7 +17,7 @@ from js import window, Uint32Array, ArrayBuffer, Float32Array, Uint8Array, Objec
 def to_camel_case(snake_str):
     components = snake_str.split('_')
     res = components[0] + ''.join(x.title() for x in components[1:])
-    # maybe keywords are a problem? 
+    # maybe keywords are a problem?
     # https://pyodide.org/en/stable/usage/faq.html#how-can-i-access-javascript-objects-attributes-in-python-if-their-names-are-python-keywords
     # if res in ["type", "format"]:
     #     res += "_"
@@ -50,15 +50,21 @@ def simple_js_accessor(value, convert, cache):
         # print("GPUObjectBase detected", value)
         return value._internal # type : JsProxy
     elif isinstance(value, structs.Struct):
-        # print("struct detected", value, "\n")
         result = {}
-        # js_obj = Object.create(jsnull)
         # cache(value, result)
         for k, v in value.items():
-            # print("struct item", k, v, type(v))
             camel_key = to_camel_case(k)
+            # if there is a dict further down... we still need to fix those keys
+            if isinstance(v, dict):
+                # print("struct with dict detected", value, k, v)
+                # print(dir(value))
+                v_struct_type_name = value.__annotations__[k].partition("Struct")[0]
+                # print("likely v struct type_name", v_struct_type_name)
+                v_struct_type = structs.__dict__[v_struct_type_name] # because the annotation is just a string... doesn't feel great
+                # print("likely v struct type", v_struct_type)
+                v = v_struct_type(**v)
+                # print("converted to struct", v)
             result[camel_key] = convert(v)
-            # js_obj[camel_key] = v
         return result
     # this might recursively call itself...
     # maybe use a map? or do a dict_converted?
@@ -185,9 +191,9 @@ class GPUDevice(classes.GPUDevice):
         return classes.GPUShaderModule(label, js_sm, self)
 
     def create_buffer(self, *args, **kwargs):
-        # js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_buf = self._internal.createBuffer(**js_kwargs)
+        descriptor = structs.BufferDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_buf = self._internal.createBuffer(js_descriptor)
 
         label = kwargs.get("label", "")
         size = kwargs.get("size")
@@ -196,7 +202,7 @@ class GPUDevice(classes.GPUDevice):
             enums.BufferMapState.mapped
             if kwargs.get("mapped_at_creation", False)
             else enums.BufferMapState.unmapped
-        )
+        ) # sorta useless as map_state is a js property anyways
         return GPUBuffer(label, js_buf, self, size, usage, map_state)
 
     # TODO: apidiff rewritten so we avoid the buggy mess in map_write for a bit.
@@ -233,15 +239,11 @@ class GPUDevice(classes.GPUDevice):
             if buffer is not None:
                 sampler = texture = storage_texture = external_texture = empty_value
                 # or struct.BufferBindingLayout?
-                print("inp", buffer)
                 buffer = structs.BufferBindingLayout(**buffer)
-                print("struct", buffer)
                 buffer = to_js(buffer, eager_converter=simple_js_accessor)
                 # this returns a JsProxy, but looks like a dict... so subsequent calls to to_js do nothing...
-                print("struct, accessor", type(buffer), buffer)
                 # here we roundtrip and then end up with the Object Map....
                 buffer = to_js(buffer.to_py(), depth=1)
-                print("dict, to_js", buffer)
             elif sampler is not None:
                 buffer = texture = storage_texture = external_texture = empty_value
                 sampler = {
@@ -299,9 +301,9 @@ class GPUDevice(classes.GPUDevice):
 
     # I think the entries arg gets unpacked with a single dict inside, so trying to do the list around that manually
     def create_bind_group(self, **kwargs) -> classes.GPUBindGroup:
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        # js_kwargs = to_js(js_kwargs) # to get the actual map? (should happen on the function call anyways...)
-        js_bg = self._internal.createBindGroup(**js_kwargs)
+        descriptor = structs.BindGroupDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_bg = self._internal.createBindGroup(js_descriptor)
 
         label = kwargs.get("label", "")
         return classes.GPUBindGroup(label, js_bg, self)
@@ -321,13 +323,9 @@ class GPUDevice(classes.GPUDevice):
         return classes.GPUPipelineLayout(label, js_pl, self)
 
     def create_texture(self, **kwargs):
-        # maybe we need an extend3d constructor?
-        # print(kwargs)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        # print(js_kwargs, dir(js_kwargs))
-        # print(js_kwargs.size)
-        # print(js_kwargs["size"])
-        js_tex = self._internal.createTexture(**js_kwargs) # the jSProxy can be unpacked, while the Map can't?
+        descriptor = structs.TextureDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_tex = self._internal.createTexture(js_descriptor)
 
         label = kwargs.get("label", "")
         tex_info = {
@@ -557,8 +555,9 @@ class GPUQueue(classes.GPUQueue):
 
 class GPUTexture(classes.GPUTexture):
     def create_view(self, **kwargs):
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_view = self._internal.createView(**js_kwargs)
+        descriptor = structs.TextureViewDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_view = self._internal.createView(js_descriptor)
 
         label = kwargs.get("label", "")
         return classes.GPUTextureView(label, js_view, self._device, self, self.size)
