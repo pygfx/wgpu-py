@@ -2054,6 +2054,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         depth_stencil = depth_stencil or {}
         multisample = multisample or {}
         primitive = primitive or {}
+        # remove the extras so the struct can still be checked
+        primitive_extras = {}
+        if isinstance(primitive, dict):
+            # in case of extras, the struct isn't used but a dict... so we check for it here.
+            primitive_extras["polygon_mode"] = primitive.pop("polygon_mode", "Fill")
+            primitive_extras["conservative"] = primitive.pop("conservative", False)
         check_struct("VertexState", vertex)
         check_struct("DepthStencilState", depth_stencil)
         check_struct("MultisampleState", multisample)
@@ -2079,10 +2085,25 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             buffers=c_vertex_buffer_descriptors_array,
         )
 
+        # explanations for extras: https://docs.rs/wgpu/latest/wgpu/struct.PrimitiveState.html
+        polygon_mode = enum_str2int["PolygonMode"].get(
+            primitive_extras.get("polygon_mode"), enum_str2int["PolygonMode"]["Fill"]
+        )
+
+        # H: chain: WGPUChainedStruct, polygonMode: WGPUPolygonMode, conservative: WGPUBool/int
+        c_primitive_state_extras = new_struct_p(
+            "WGPUPrimitiveStateExtras *",
+            # not used: chain
+            polygonMode=polygon_mode,
+            conservative=primitive_extras.get("conservative", False),
+        )
+        c_primitive_state_extras.chain.sType = lib.WGPUSType_PrimitiveStateExtras
+        next_in_chain = ffi.cast("WGPUChainedStruct *", c_primitive_state_extras)
+
         # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode, unclippedDepth: WGPUBool/int
         c_primitive_state = new_struct(
             "WGPUPrimitiveState",
-            # not used: nextInChain
+            nextInChain=next_in_chain,
             topology=primitive.get("topology", "triangle-list"),
             stripIndexFormat=primitive.get("strip_index_format", 0),
             frontFace=primitive.get("front_face", "ccw"),
@@ -2345,7 +2366,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         raise NotImplementedError()
 
     def destroy(self) -> None:
-        # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
+        # Therefore we must not set self._internal to None.
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUDevice device)
@@ -2600,9 +2622,8 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         return src_m
 
     def destroy(self) -> None:
-        # NOTE: destroy means that the wgpu-core object gets into a destroyed
-        # state. The wgpu-core object still exists. So destroying is quite
-        # different from releasing.
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
+        # Therefore we must not set self._internal to None.
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUBuffer buffer)
@@ -2671,6 +2692,8 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         return GPUTextureView(label, id, self._device, self, self.size)
 
     def destroy(self) -> None:
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
+        # Therefore we must not set self._internal to None.
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUTexture texture)
@@ -4062,11 +4085,28 @@ class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
     _release_function = libf.wgpuQuerySetRelease
 
     def destroy(self) -> None:
-        # Note: not yet implemented in wgpu-core, the wgpu-native func is a noop
+        # NOTE: wgpuQuerySetDestroy is currently not implemented incorrectly https://github.com/gfx-rs/wgpu-native/pull/509#discussion_r2403822550
+        # It calls `drop` instead, i.e. does the same as wgpuQuerySetRelease. This means that we must set self._internal to None.
+        # But this means that if we'd call wgpuQuerySetDestroy, and wgpu-native gets fixed, we get a leak :(
+        # So instead we make it explicitly do the same as release.
+        # TODO: remove this when wgpu-native actually uses destroy.
+        wgpu_native_uses_drop = True
+        if wgpu_native_uses_drop:
+            self._release()
+            return
+
+        # Below is the eventual code for this method:
+
+        # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
+        # Therefore we must not set self._internal to None.
         internal = self._internal
         if internal is not None:
             # H: void f(WGPUQuerySet querySet)
             libf.wgpuQuerySetDestroy(internal)
+            # if we call del objects during our tests on the "destroyed" object, we get a panic
+            # by setting this to none, the __del__ call via _release skips it.
+            # might mean we retain memory tho?
+            self._internal = None
 
 
 # %% Subclasses that don't need anything else

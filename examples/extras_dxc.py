@@ -17,8 +17,11 @@ set_instance_extras(
         "DX12"
     ],  # using the env var `WGPU_BACKEND_TYPE` happens later during request_device, so you can only select backends that are requested for the instance
     dx12_compiler="Dxc",  # request the Dxc compiler to be used
-    # dxil_path and dxc_path can be set for a custom Dxc location
+    # dxc_path can be set for a custom Dxc location
     dxc_max_shader_model=6.7,
+    # by setting these limits to percentages 0..100 you will get a Validation Error, should too much memory be requested.
+    budget_for_device_creation=99,
+    budget_for_device_loss=97,
 )
 
 

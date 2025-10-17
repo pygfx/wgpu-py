@@ -1157,12 +1157,14 @@ class GPUDevice(GPUObjectBase):
             vertex (structs.VertexState): Describes the vertex shader entry point of the
                 pipeline and its input buffer layouts.
             primitive (structs.PrimitiveState): Describes the primitive-related properties
-                of the pipeline. If `strip_index_format` is present (which means the
+                of the pipeline. If ``strip_index_format`` is present (which means the
                 primitive topology is a strip), and the drawCall is indexed, the
                 vertex index list is split into sub-lists using the maximum value of this
                 index format as a separator. Example: a list with values
-                `[1, 2, 65535, 4, 5, 6]` of type "uint16" will be split in sub-lists
-                `[1, 2]` and `[4, 5, 6]`.
+                ``[1, 2, 65535, 4, 5, 6]`` of type "uint16" will be split in sub-lists
+                ``[1, 2]`` and ``[4, 5, 6]``.
+                The primitive state supports an additional field ``polygon_mode`` that can be set to "line" or "point". To do so, the primitive state must be given as a dict,
+                and the the device must be requested with the native-only features "polygon-mode-line" or "polygon-mode-point".
             depth_stencil (structs.DepthStencilState): Describes the optional depth-stencil
                 properties, including the testing, operations, and bias. Optional.
             multisample (structs.MultisampleState): Describes the multi-sampling properties of the pipeline.

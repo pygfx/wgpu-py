@@ -3,7 +3,6 @@ import wgpu.utils
 from testutils import run_tests
 from pytest import raises
 
-
 dedent = lambda s: s.replace("\n        ", "\n").strip()
 
 
@@ -36,9 +35,6 @@ def test_parse_shader_error1(caplog):
           │
         9 │     out.invalid_attr = vec4<f32>(0.0, 0.0, 1.0);
           │         ^^^^^^^^^^^^ invalid accessor
-
-
-              invalid field accessor `invalid_attr`
     """
 
     code = dedent(code)
@@ -47,6 +43,7 @@ def test_parse_shader_error1(caplog):
         device.create_shader_module(code=code)
 
     error = err.value.message
+    error = error.rstrip("\n")
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -72,9 +69,6 @@ def test_parse_shader_error2(caplog):
           │
         2 │     @location(0) texcoord : vec2<f32>;
           │                                      ^ expected `,`
-
-
-              expected `,`, found ";"
     """
 
     code = dedent(code)
@@ -83,6 +77,7 @@ def test_parse_shader_error2(caplog):
         device.create_shader_module(code=code)
 
     error = err.value.message
+    error = error.rstrip("\n")
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -108,9 +103,6 @@ def test_parse_shader_error3(caplog):
           │
         3 │     @builtin(position) position: vec4<f3>,
           │                                       ^^ unknown type
-
-
-              unknown type: `f3`
     """
 
     code = dedent(code)
@@ -119,6 +111,7 @@ def test_parse_shader_error3(caplog):
         device.create_shader_module(code=code)
 
     error = err.value.message
+    error = error.rstrip("\n")
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -140,9 +133,6 @@ def test_parse_shader_error4(caplog):
           In wgpuDeviceCreateShaderModule
 
         Shader '' parsing error: Index 4 is out of bounds for expression [10]
-
-
-      Index 4 is out of bounds for expression [10]
     """
 
     code = dedent(code)
@@ -151,6 +141,7 @@ def test_parse_shader_error4(caplog):
         device.create_shader_module(code=code)
 
     error = err.value.message
+    error = error.rstrip("\n")  # seems to have tailing newlines sometimes?
     assert error == expected, f"Expected:\n\n{expected}"
 
 
@@ -191,9 +182,8 @@ def test_validate_shader_error1(caplog):
            = Operation Multiply can't work with [4] (of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }) and [6] (of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } })
 
 
-              Entry point vs_main at Vertex is invalid
-                Expression [7] is invalid
-                  Operation Multiply can't work with [4] (of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }) and [6] (of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } })
+              Expression [7] is invalid
+                Operation Multiply can't work with [4] (of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }) and [6] (of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } })
     """
 
     code = dedent(code)
@@ -227,7 +217,7 @@ def test_validate_shader_error2(caplog):
         }
     """
 
-    expected1 = """Returning Some(Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }) where Some(Vector { size: Quad, scalar: Scalar { kind: Float, width: 4 } }) is expected"""
+    expected1 = """Returning Some(Handle([3])) where Some([0]) is expected"""
     expected2 = """
         Validation Error
 
@@ -240,11 +230,10 @@ def test_validate_shader_error2(caplog):
         9 │         return vec3<f32>(1.0, 0.0, 1.0);
           │                ^^^^^^^^^^^^^^^^^^^^^^^^ naga::ir::Expression [8]
           │
-          = The `return` value Some([8]) does not match the function return value
+          = The `return` expression Some([8]) does not match the declared return type Some([0])
 
 
-              Entry point fs_main at Vertex is invalid
-                The `return` value Some([8]) does not match the function return value
+              The `return` expression Some([8]) does not match the declared return type Some([0])
     """
 
     code = dedent(code)
