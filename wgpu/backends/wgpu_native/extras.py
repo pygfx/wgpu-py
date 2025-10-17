@@ -1,5 +1,5 @@
 import os
-from typing import Sequence
+from typing import Sequence, Union
 
 from . import (
     GPUAdapter,
@@ -24,7 +24,7 @@ from ._api import (
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
 from ..._coreutils import get_library_filename, ArrayLike
-from ._ffi import lib
+from ._ffi import lib, ffi
 from ._mappings import native_flags
 
 
@@ -231,21 +231,24 @@ def set_instance_extras(
     dx12_compiler="fxc",
     gles3_minor_version="Atomic",
     fence_behavior="Normal",
-    dxil_path: os.PathLike | None = None,
-    dxc_path: os.PathLike | None = None,
+    dxc_path: Union[os.PathLike, None] = None,
     dxc_max_shader_model: float = 6.5,
+    budget_for_device_creation: Union[int, None] = None,
+    budget_for_device_loss: Union[int, None] = None,
 ):
     """
     Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
+    Most of these options are for specific backends, and might not create an instance or crash when used in the wrong combinations.
     Args:
         backends: bitflags as list[str], which backends to enable on the instance level. Defaults to ``["All"]``.
         flags: bitflags as list[str], for debugging the instance and compiler. Defaults to ``["Default"]``.
         dx12_compiler: enum/str, either "Fxc", "Dxc" or "Undefined". Defaults to "Fxc" same as "Undefined". Dxc requires additional library files.
         gles3_minor_version: enum/int, 0, 1 or 2. Defaults to "Atomic" (handled by driver).
         fence_behavior: enum/int, "Normal" or "AutoFinish". Defaults to "Normal".
-        dxil_path: Path to the dxil.dll file, if not provided or `None`, will try to load from wgpu/resources.
         dxc_path: Path to the dxcompiler.dll file, if not provided or `None`, will try to load from wgpu/resources.
         dxc_max_shader_model: float between 6.0 and 6.7, the maximum shader model to use with DXC. Defaults to 6.5.
+        budget_for_device_creation: Optional[int], between 0 and 100, to specify memory budget threshold for when creating resources (buffer, textures...) will fail. Defaults to None.
+        budget_for_device_loss: Optional[int], between 0 and 100, to specify memory budget threshold when the device will be lost. Defaults to None.
     """
     # TODO document and explain, add examples
 
@@ -262,14 +265,11 @@ def set_instance_extras(
         dx12_compiler.capitalize(), enum_str2int["Dx12Compiler"]["Undefined"]
     )
     # https://docs.rs/wgpu/latest/wgpu/enum.Dx12Compiler.html#variant.DynamicDxc #explains the idea, will improve in the future.
-    # https://github.com/gfx-rs/wgpu-native/blob/v25.0.2.1/src/conv.rs#L308-L349 handles the fxc fallback, most of the time...
     if (
-        c_dx12_compiler == enum_str2int["Dx12Compiler"]["Dxc"]
-        and not (dxil_path or dxc_path)
-    ):  # os.path.exists(dxil_path) or os.path.exists(dxc_path)): # this check errors with None as default. but we can't have empty strings.
+        c_dx12_compiler == enum_str2int["Dx12Compiler"]["Dxc"] and not dxc_path
+    ):  # or os.path.exists(dxc_path)): # this check errors with None as default. but we can't have empty strings.
         # if dxc is specified but no paths are provided, there will be a panic about static-dxc, so maybe we check against that.
         try:
-            dxil_path = get_library_filename("dxil.dll")
             dxc_path = get_library_filename("dxcompiler.dll")
         except RuntimeError as e:
             # here we couldn't load the libs from wgpu/resources... so we assume the user doesn't have them.
@@ -297,7 +297,19 @@ def set_instance_extras(
     # hack as only version 6.0..6.7 are supported and enum mapping fits.
     c_max_shader_model = int((dxc_max_shader_model - 6.0) * 1.0)
 
-    # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxilPath: WGPUStringView, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel
+    # https://docs.rs/wgpu/latest/wgpu/struct.MemoryBudgetThresholds.html
+    c_budget_creation = (
+        ffi.new("uint8_t *", budget_for_device_creation)
+        if budget_for_device_creation is not None
+        else ffi.NULL
+    )
+    c_budget_loss = (
+        ffi.new("uint8_t *", budget_for_device_loss)
+        if budget_for_device_loss is not None
+        else ffi.NULL
+    )
+
+    # H: chain: WGPUChainedStruct, backends: WGPUInstanceBackend/int, flags: WGPUInstanceFlag/int, dx12ShaderCompiler: WGPUDx12Compiler, gles3MinorVersion: WGPUGles3MinorVersion, glFenceBehaviour: WGPUGLFenceBehaviour, dxcPath: WGPUStringView, dxcMaxShaderModel: WGPUDxcMaxShaderModel, const uint8_t* budgetForDeviceCreation, const uint8_t* budgetForDeviceLoss
     c_extras = new_struct_p(
         "WGPUInstanceExtras *",
         # not used: chain
@@ -306,9 +318,10 @@ def set_instance_extras(
         dx12ShaderCompiler=c_dx12_compiler,
         gles3MinorVersion=gles3_minor_version,
         glFenceBehaviour=fence_behavior,
-        dxilPath=to_c_string_view(dxil_path),
         dxcPath=to_c_string_view(dxc_path),
         dxcMaxShaderModel=c_max_shader_model,
+        budgetForDeviceCreation=c_budget_creation,
+        budgetForDeviceLoss=c_budget_loss,
     )
 
     c_extras.chain.sType = lib.WGPUSType_InstanceExtras

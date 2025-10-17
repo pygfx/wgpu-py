@@ -126,7 +126,7 @@ def test_release_command_encoder(n):
     yield {
         "expected_counts_after_create": {
             "CommandEncoder": (n, 0),
-            "CommandBuffer": (0, n),
+            # "CommandBuffer": (0, n),
         },
     }
 

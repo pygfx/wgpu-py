@@ -28,17 +28,27 @@ def test_destroy_device(n):
     for i in range(n):
         d = adapter.request_device_sync()
         d.destroy()
-        # NOTE: destroy is not yet implemented in wgpu-native - this does not actually do anything yet
+        # d.destroy()  # fine to call multiple times
+
+        # Uncomment the following lines to see. These are commented because it makes wgpu-core create a buffer.
+        # error = None
+        # try:
+        #     d.create_buffer(size=128, usage=wgpu.BufferUsage.UNIFORM)
+        # except wgpu.GPUValidationError as err:
+        #     error = err
+        # assert error and "device is lost" in error.message.lower()
+
         yield d
 
 
 @create_and_release
 def test_destroy_query_set(n):
-    yield {}
+    yield {
+        "expected_counts_after_create": {"QuerySet": (n, 0)},
+    }
     for i in range(n):
         qs = DEVICE.create_query_set(type=wgpu.QueryType.occlusion, count=2)
         qs.destroy()
-        # NOTE: destroy is not yet implemented in wgpu-native - this does not actually do anything yet
         yield qs
 
 
@@ -56,11 +66,12 @@ def test_destroy_buffer(n):
         # can still be queries from wgpu-native, but it cannot be used.
 
         # Uncomment the following lines to see. These are commented because it makes wgpu-core create a command-buffer.
+        # error = None
         # try:
         #     b.map_sync("READ")
         # except wgpu.GPUValidationError as err:
         #     error = err
-        # assert "destroyed" in error.message.lower()
+        # assert error and "destroyed" in error.message.lower()
 
         yield b
 
@@ -77,11 +88,13 @@ def test_destroy_texture(n):
         t.destroy()
 
         # Uncomment the following lines to see. These are commented because the views are created at the native side, but we never store them, but we also don't release them.
+        # error = None
         # try:
         #     t.create_view()
         # except wgpu.GPUValidationError as err:
         #     error = err
-        # assert "destroyed" in error.message.lower()
+        # assert error and "destroyed" in error.message.lower()
+
         yield t
 
 
