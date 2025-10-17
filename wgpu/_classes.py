@@ -15,6 +15,7 @@ import weakref
 import logging
 from typing import Sequence
 
+from ._async import GPUPromise as BaseGPUPromise, LoopInterface
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
@@ -46,6 +47,7 @@ __all__ = [
     "GPUPipelineBase",
     "GPUPipelineError",
     "GPUPipelineLayout",
+    "GPUPromise",
     "GPUQuerySet",
     "GPUQueue",
     "GPURenderBundle",
@@ -101,26 +103,25 @@ class GPU:
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu
-
-        return gpu.request_adapter_sync(
+        promise = gpu.request_adapter_async(
             feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
         )
+        return promise.sync_wait()
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> DOMString featureLevel = "core", GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false, boolean xrCompatible = false
     @apidiff.change("arguments include canvas")
-    async def request_adapter_async(
+    def request_adapter_async(
         self,
         *,
         feature_level: str = "core",
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
-        canvas: CanvasLike = None,
-    ) -> GPUAdapter:
+        canvas: CanvasLike | None = None,
+        loop: LoopInterface | None = None,
+    ) -> GPUPromise[GPUAdapter]:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
 
@@ -132,17 +133,20 @@ class GPU:
                 fallback adapter.
             canvas : The canvas that the adapter should be able to render to. This can typically
                  be left to None. If given, the object must implement ``WgpuCanvasInterface``.
+            loop : the loop object for async support. Must have at least ``call_soon(f, *args)``.
+                The loop object is required for asynchrouns use with ``promise.then()``. EXPERIMENTAL.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
 
         # note, feature_level current' does nothing: # not used currently: https://gpuweb.github.io/gpuweb/#dom-gpurequestadapteroptions-featurelevel
 
-        return await gpu.request_adapter_async(
+        return gpu.request_adapter_async(
             feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
+            loop=loop,
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
@@ -151,14 +155,13 @@ class GPU:
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-
-        # If this method gets called, no backend has been loaded yet, let's do that now!
-        from .backends.auto import gpu
-
-        return gpu.enumerate_adapters_sync()
+        promise = gpu.enumerate_adapters_async()
+        return promise.sync_wait()
 
     @apidiff.add("Method useful for multi-gpu environments")
-    async def enumerate_adapters_async(self) -> list[GPUAdapter]:
+    def enumerate_adapters_async(
+        self, *, loop: LoopInterface | None = None
+    ) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using its summary), and a device
@@ -185,7 +188,7 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
 
-        return await gpu.enumerate_adapters_async()
+        return gpu.enumerate_adapters_async(loop=loop)
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
@@ -207,6 +210,11 @@ class GPU:
 
 # Instantiate API entrypoint
 gpu = GPU()
+
+
+@apidiff.add("Added for async support")
+class GPUPromise(BaseGPUPromise):
+    pass
 
 
 class GPUCanvasContext:
@@ -337,6 +345,7 @@ class GPUCanvasContext:
         """
         # Check types
         tone_mapping = {} if tone_mapping is None else tone_mapping
+
         if not isinstance(device, GPUDevice):
             raise TypeError("Given device is not a device.")
 
@@ -622,9 +631,10 @@ class GPUAdapter:
 
     _ot = object_tracker
 
-    def __init__(self, internal, features, limits, adapter_info):
+    def __init__(self, internal, features, limits, adapter_info, loop):
         self._ot.increase(self.__class__.__name__)
         self._internal = internal
+        self._loop = loop
 
         assert isinstance(features, set)
         assert isinstance(limits, dict)
@@ -665,17 +675,23 @@ class GPUAdapter:
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.request_device_async(
+            label=label,
+            required_features=required_features,
+            required_limits=required_limits,
+            default_queue=default_queue,
+        )
+        return promise.sync_wait()
 
     # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {}); -> USVString label = "", sequence<GPUFeatureName> requiredFeatures = [], record<DOMString, (GPUSize64 or undefined)> requiredLimits = {}, GPUQueueDescriptor defaultQueue = {}
-    async def request_device_async(
+    def request_device_async(
         self,
         *,
         label: str = "",
         required_features: Sequence[enums.FeatureNameEnum] = (),
         required_limits: dict[str, int | None] | None = None,
         default_queue: structs.QueueDescriptorStruct | None = None,
-    ) -> GPUDevice:
+    ) -> GPUPromise[GPUDevice]:
         """Request a `GPUDevice` from the adapter.
 
         Arguments:
@@ -764,6 +780,7 @@ class GPUDevice(GPUObjectBase):
         self._adapter = adapter
         self._features = features
         self._limits = limits
+        self._loop = adapter._loop
         self._queue = queue
         queue._device = self  # because it could not be set earlier
 
@@ -805,24 +822,18 @@ class GPUDevice(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        return self._get_lost_sync()
+        promise = self.lost_async
+        return promise.sync_wait()
 
     # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
     @apidiff.hide("Not a Pythonic API")
     @property
-    async def lost_async(self) -> GPUDeviceLostInfo:
-        """Provides information about why the device is lost."""
-        # In JS you can device.lost.then ... to handle lost devices.
-        # We may want to eventually support something similar async-like?
-        # at some point
-
+    def lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
+        """Resolves to GPUDeviceLostInfo, providing information about why the device is lost."""
         # Properties don't get repeated at _api.py, so we use a proxy method.
-        return await self._get_lost_async()
+        return self._get_lost_async()
 
-    def _get_lost_sync(self):
-        raise NotImplementedError()
-
-    async def _get_lost_async(self):
+    def _get_lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
         raise NotImplementedError()
 
     # IDL: attribute EventHandler onuncapturederror;
@@ -1114,13 +1125,13 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: Promise<GPUComputePipeline> createComputePipelineAsync(GPUComputePipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUProgrammableStage compute
-    async def create_compute_pipeline_async(
+    def create_compute_pipeline_async(
         self,
         *,
         label: str = "",
         layout: GPUPipelineLayout | enums.AutoLayoutModeEnum,
         compute: structs.ProgrammableStageStruct,
-    ) -> GPUComputePipeline:
+    ) -> GPUPromise[GPUComputePipeline]:
         """Async version of `create_compute_pipeline()`.
 
         Both versions are compatible with WebGPU."""
@@ -1271,7 +1282,7 @@ class GPUDevice(GPUObjectBase):
         raise NotImplementedError()
 
     # IDL: Promise<GPURenderPipeline> createRenderPipelineAsync(GPURenderPipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUVertexState vertex, GPUPrimitiveState primitive = {}, GPUDepthStencilState depthStencil, GPUMultisampleState multisample = {}, GPUFragmentState fragment
-    async def create_render_pipeline_async(
+    def create_render_pipeline_async(
         self,
         *,
         label: str = "",
@@ -1281,7 +1292,7 @@ class GPUDevice(GPUObjectBase):
         depth_stencil: structs.DepthStencilStateStruct | None = None,
         multisample: structs.MultisampleStateStruct | None = None,
         fragment: structs.FragmentStateStruct | None = None,
-    ) -> GPURenderPipeline:
+    ) -> GPUPromise[GPURenderPipeline]:
         """Async version of `create_render_pipeline()`.
 
         Both versions are compatible with WebGPU."""
@@ -1345,11 +1356,12 @@ class GPUDevice(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.pop_error_scope_async()
+        return promise.sync_wait()
 
     # IDL: Promise<GPUError?> popErrorScope();
     @apidiff.hide
-    async def pop_error_scope_async(self) -> GPUError:
+    def pop_error_scope_async(self) -> GPUPromise[GPUError]:
         """Pops a GPU error scope from the stack."""
         raise NotImplementedError()
 
@@ -1430,15 +1442,16 @@ class GPUBuffer(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.map_async(mode=mode, offset=offset, size=size)
+        return promise.sync_wait()
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
-    async def map_async(
+    def map_async(
         self,
         mode: flags.MapModeFlags | None = None,
         offset: int = 0,
         size: int | None = None,
-    ) -> None:
+    ) -> GPUPromise[None]:
         """Maps the given range of the GPUBuffer.
 
         When this call returns, the buffer content is ready to be
@@ -1753,11 +1766,12 @@ class GPUShaderModule(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.get_compilation_info_async()
+        return promise.sync_wait()
 
     # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
-    async def get_compilation_info_async(self) -> GPUCompilationInfo:
-        """Get shader compilation info. Always returns empty list at the moment."""
+    def get_compilation_info_async(self) -> GPUPromise[GPUCompilationInfo]:
+        """Get shader compilation info. Always resolves to an empty list at the moment."""
         # How can this return shader errors if one cannot create a
         # shader module when the shader source has errors?
         raise NotImplementedError()
@@ -2472,10 +2486,11 @@ class GPUQueue(GPUObjectBase):
 
         Provided by wgpu-py, but not compatible with WebGPU.
         """
-        raise NotImplementedError()
+        promise = self.on_submitted_work_done_async()
+        return promise.sync_wait()
 
     # IDL: Promise<undefined> onSubmittedWorkDone();
-    async def on_submitted_work_done_async(self) -> None:
+    def on_submitted_work_done_async(self) -> GPUPromise[None]:
         """TODO"""
         raise NotImplementedError()
 
@@ -2689,7 +2704,7 @@ def generic_repr(self):
 
 
 def _set_repr_methods():
-    exceptions = ["GPUAdapterInfo"]
+    exceptions = ["GPUAdapterInfo", "GPUPromise"]
     m = globals()
     for class_name in __all__:
         if class_name in exceptions:
@@ -2726,6 +2741,13 @@ def _set_compat_methods_for_async_methods():
                 )
 
 
+def _copy_docstrings():
+    for ob in [GPUPromise]:
+        base_cls = ob.mro()[1]
+        ob.__doc__ = base_cls.__doc__
+
+
 _seed_object_counts()
 _set_repr_methods()
 _set_compat_methods_for_async_methods()
+_copy_docstrings()
