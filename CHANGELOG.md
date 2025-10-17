@@ -17,6 +17,17 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.26.0] - 17-10-2025
+
+Changed:
+
+* Upgrade to wgpu-native v27.0.2.0 by @Vipitis in https://github.com/pygfx/wgpu-py/pull/741
+
+Added:
+
+* Add DXC and debug examples by @Vipitis in https://github.com/pygfx/wgpu-py/pull/760
+
+
 ### [v0.25.0] - 29-09-2025
 
 This release is marked with many improvements to types and structs, making it much easier to write wgpu-code in an IDE.
