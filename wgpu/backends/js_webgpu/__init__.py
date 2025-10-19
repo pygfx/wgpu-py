@@ -75,14 +75,17 @@ def simple_js_accessor(value, convert, cache=None):
 
             # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...
             elif isinstance(v, (list)): #maybe tuple too?
-                # print("struct with list detected", value, k, v)
-                v_struct_type_name = value.__annotations__[k].removeprefix("Sequence[").partition("Struct")[0]
-                # print("likely v struct type_name", v_struct_type_name)
-                v_struct_type = structs.__dict__[v_struct_type_name]
-                # print("likely v struct type", v_struct_type)
-                v = [v_struct_type(**item) for item in v]
-                # print("converted to list of struct", v)
-
+                if v and isinstance(v[0], dict): # assume all elements are the same type too and non empty?
+                    # print("struct with list detected", value, k, v)
+                    v_struct_type_name = value.__annotations__[k].removeprefix("Sequence[").partition("Struct")[0]
+                    # print("likely v struct type_name", v_struct_type_name)
+                    v_struct_type = structs.__dict__[v_struct_type_name]
+                    # print("likely v struct type", v_struct_type)
+                    v = [v_struct_type(**item) for item in v]
+                    # print("converted to list of struct", v)
+                else:
+                    # could be a list of other objects like GPUBindGroupLayout for example.
+                    pass
             down_convert = to_js(v, eager_converter=simple_js_accessor)
             down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
             result[camel_key] = down_convert
@@ -248,123 +251,44 @@ class GPUDevice(classes.GPUDevice):
 
     # or here???
     def create_bind_group_layout(self, **kwargs) -> classes.GPUBindGroupLayout:
-        empty_value = undefined # figure out what pyodide is happy with
         descriptor = structs.BindGroupLayoutDescriptor(**kwargs)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-        # js_descriptor = to_js(js_descriptor.to_py())
-        # print("js_descriptor", js_descriptor, type(js_descriptor), dir(js_descriptor))
-        # print(js_descriptor["entries"][0]["buffer"].get("size"))
         js_bgl = self._internal.createBindGroupLayout(js_descriptor)
 
         label = kwargs.get("label", "")
         return classes.GPUBindGroupLayout(label, js_bgl, self)
 
-        js_entries = []
-
-        js_entries = to_js(entries, eager_converter=simple_js_accessor)
-        print("js_entries simple", type(js_entries), js_entries)
-        js_entries = []
-
-        # entries = [] # let quickly skip this loop
-
-        # TODO: can we avoid the whole logic and do it in the struct instead?
-        for entry in entries:
-            # we need exactly one of them needs to exist:
-            # https://www.w3.org/TR/webgpu/#dictdef-gpubindgrouplayoutentry
-            buffer = entry.get("buffer")
-            sampler = entry.get("sampler")
-            texture = entry.get("texture")
-            storage_texture = entry.get("storage_texture")
-            external_texture = entry.get("external_texture") # not sure if exists in wgpu-native, but let's have it anyway.
-
-            # assert sum(x is not None for x in [buffer, sampler, texture, storage_texture, external_texture]) == 1
-            if buffer is not None:
-                sampler = texture = storage_texture = external_texture = empty_value
-                # or struct.BufferBindingLayout?
-                buffer = structs.BufferBindingLayout(**buffer)
-                buffer = to_js(buffer, eager_converter=simple_js_accessor)
-                # this returns a JsProxy, but looks like a dict... so subsequent calls to to_js do nothing...
-                # here we roundtrip and then end up with the Object Map....
-                buffer = to_js(buffer.to_py(), depth=1)
-            elif sampler is not None:
-                buffer = texture = storage_texture = external_texture = empty_value
-                sampler = {
-                    "type": sampler.get("type", enums.SamplerBindingType.filtering),
-                }
-                sampler = to_js(sampler, depth=1)
-            elif texture is not None:
-                buffer = sampler = storage_texture = external_texture = empty_value
-                texture = {
-                    "sampleType": texture.get("sample_type", enums.TextureSampleType.float),
-                    "viewDimension": texture.get("view_dimension", enums.TextureViewDimension.d2),
-                    "multisampled": texture.get("multisampled", False),
-                }
-                texture = to_js(texture, depth=1)
-            elif storage_texture is not None:
-                buffer = sampler = texture = external_texture = empty_value
-                storage_texture = {
-                    "access": storage_texture.get("access", enums.StorageTextureAccess.write_only),
-                    "format": storage_texture.get("format"),
-                    "viewDimension": storage_texture.get("view_dimension", enums.TextureViewDimension.d2),
-                }
-                storage_texture = to_js(storage_texture, depth=1)
-            elif external_texture is not None:
-                buffer = sampler = texture = storage_texture = empty_value
-                external_texture = {
-                    # https://www.w3.org/TR/webgpu/#dictdef-gpuexternaltexturebindinglayout
-                    # there is nothing here... which makes this an empty dict/set?
-                }
-            else:
-                raise ValueError(
-                    "BindGroupLayoutEntry must have exactly one of buffer, sampler, texture, storage_texture, external_texture set. Got none."
-                    )
-            js_entry = {
-                "binding": entry.get("binding"),
-                "visibility": entry.get("visibility"),
-                "buffer": buffer,
-                "sampler": sampler,
-                "texture": texture,
-                "storageTexture": storage_texture,
-                "externalTexture": external_texture,
-            }
-            js_entries.append(js_entry)
-        js_entries = to_js(js_entries, depth=1)
-        print("js_entries complex", type(js_entries), js_entries)
-
-        js_bgl = self._internal.createBindGroupLayout(label=label, entries=js_entries)
-        return classes.GPUBindGroupLayout(label, js_bgl, self)
-
-    def create_compute_pipeline(self, *args, **kwargs):
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_cp = self._internal.createComputePipeline(*args, js_kwargs)
+    def create_compute_pipeline(self, **kwargs):
+        descriptor = structs.ComputePipelineDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_cp = self._internal.createComputePipeline(js_descriptor)
 
         label = kwargs.get("label", "")
         return GPUComputePipeline(label, js_cp, self)
 
-    # I think the entries arg gets unpacked with a single dict inside, so trying to do the list around that manually
     def create_bind_group(self, **kwargs) -> classes.GPUBindGroup:
-        # print("create_bind_group", kwargs)
         descriptor = structs.BindGroupDescriptor(**kwargs)
-        # print("descriptor", descriptor)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-        # print("js_descriptor", js_descriptor)
         js_bg = self._internal.createBindGroup(js_descriptor)
 
         label = kwargs.get("label", "")
         return classes.GPUBindGroup(label, js_bg, self)
 
-    def create_command_encoder(self, *args, **kwargs):
+    def create_command_encoder(self, **kwargs):
+        # only really takes label as an optional empty descriptor...
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_ce = self._internal.createCommandEncoder(*args, js_kwargs)
+        js_ce = self._internal.createCommandEncoder(js_kwargs)
 
         label = kwargs.get("label", "")
         return GPUCommandEncoder(label, js_ce, self)
 
     # or was it here?
-    def create_pipeline_layout(self, *, label="", bind_group_layouts: list[classes.GPUBindGroupLayout]) -> classes.GPUPipelineLayout:
-        js_bind_group_layouts = [to_js(bgl, eager_converter=simple_js_accessor) for bgl in bind_group_layouts]
-        js_pl = self._internal.createPipelineLayout(label=label, bindGroupLayouts=js_bind_group_layouts)
+    def create_pipeline_layout(self, **kwargs) -> classes.GPUPipelineLayout:
+        descriptor = structs.PipelineLayoutDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_pl = self._internal.createPipelineLayout(js_descriptor)
 
+        label = kwargs.get("label", "")
         return classes.GPUPipelineLayout(label, js_pl, self)
 
     def create_texture(self, **kwargs):
@@ -384,24 +308,19 @@ class GPUDevice(classes.GPUDevice):
 
         return GPUTexture(label, js_tex, self, tex_info)
 
-    def create_sampler(self, *args, **kwargs) -> classes.GPUSampler:
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-        js_samp = self._internal.createSampler(*args, js_kwargs)
+    def create_sampler(self, **kwargs) -> classes.GPUSampler:
+        descriptor = structs.SamplerDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_samp = self._internal.createSampler(js_descriptor)
 
         label = kwargs.get("label", "")
         return classes.GPUSampler(label, js_samp, self)
 
     # breaks because we access the same module twice and might be losing it to GC or something -.-
-    def create_render_pipeline(self, *args, **kwargs):
-        # let's try to call to_js multiple times to maybe avoid caching,
-        # vertex is a required argument, so can we just take it out like this?
-        # maybe we can use a depth limit or something...
-        kwargs["vertex"] = to_js(kwargs["vertex"], eager_converter=simple_js_accessor)
-        js_args = to_js(args, eager_converter=simple_js_accessor)
-        js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
-
-        # js_kwargs = to_js(js_kwargs) # to get the actual map?
-        js_rp = self._internal.createRenderPipeline(*js_args, js_kwargs)
+    def create_render_pipeline(self, **kwargs):
+        descriptor = structs.RenderPipelineDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_rp = self._internal.createRenderPipeline(js_descriptor)
 
         label = kwargs.get("label", "")
         return GPURenderPipeline(label, js_rp, self)
@@ -594,15 +513,16 @@ class GPUQueue(classes.GPUQueue):
         data_layout: structs.TexelCopyBufferLayoutStruct | None = None,
         size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
     ) -> None:
-        js_destination = to_js(destination, eager_converter=simple_js_accessor)
+        destination_desc = structs.TexelCopyTextureInfo(**destination)
+        js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
 
         data = memoryview(data).cast("B")
         data_size = (data.nbytes + 3) & ~3  # align to
         js_data = Uint8Array.new(data_size)
         js_data.assign(data)
 
-
-        js_data_layout = to_js(data_layout, eager_converter=simple_js_accessor)
+        layout_desc = structs.TexelCopyBufferLayout(**data_layout)
+        js_data_layout = to_js(layout_desc, eager_converter=simple_js_accessor)
         js_size = to_js(size, eager_converter=simple_js_accessor)
 
         self._internal.writeTexture(js_destination, js_data, js_data_layout, js_size)

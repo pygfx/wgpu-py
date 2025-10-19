@@ -24,7 +24,7 @@
     <option value="imgui_backend_sea.py">imgui_backend_sea.py</option>
 </select>
 <!-- maybe something like add example (to test spawning more canvases and also closing them?) -->
-<button id="reload-example">Load example (only works once...)</button>
+<button id="reload-example">load example (NOT IMPLEMENTED)</button>
 <button id="reload-page" style="background-color: orange;"onclick="location.reload();">Reload page</button>
 <button id="reload-pyodide" style="background-color: yellow;">Reload pyodide (TODO)</button>
 <br>
@@ -47,43 +47,51 @@ pixels got drawn!
         // fetch the file locally for easier scripting
         // --allow-file-access-from-files or local webserver
         // TODO: replace the actual code here (unless you have the module)
-        // pythonCode = await (await fetch("compute_noop.py")).text();
-        // pythonCode = await (await fetch("compute_matmul.py")).text();
         let example_select = document.getElementById("example-select");
         let reload_example_button = document.getElementById("reload-example");
-        pythonCode = await (await fetch(example_select.value)).text();
-        // pythonCode = await (await fetch("triangle.py")).text();
-        // pythonCode = await (await fetch("imgui_backend_sea.py")).text();
-        // pythonCode = await (await fetch("imgui_renderer_sea.py")).text();
-        // pythonCode = await (await fetch("imgui_basic_example.py")).text();    
-
+        
         // Load Pyodide
         console.log("Loading pyodide...");
         let pyodide = await loadPyodide();
         console.log("Pyodide awaiting");
         pyodide.setDebug(true);
-
         await pyodide.loadPackage("micropip");
         const micropip = pyodide.pyimport("micropip");
-        await micropip.install('numpy');
-        // await micropip.install('imgui-bundle');
-        // await micropip.install('rendercanvas');
-        await micropip.install('../../../../../../../projects/pygfx-repos/rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
-        // await micropip.install('../../rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
+
+
+        // install wgpu and rendercanvas from local wheels
         // set WGPU_PY_BUILLD_NOARCH=1
         // python -m build -nw
-        await micropip.install('../dist/wgpu-0.24.0-py3-none-any.whl'); // also local, probably need to name the wheel differently.
+        let wgpu_location = document.getElementById("install-wgpu").value;
+        await micropip.install(wgpu_location);
+        
+        // build locally from the PR branch: https://github.com/pygfx/rendercanvas/pull/115
+        let rendercanvas_location = document.getElementById("install-rendercanvas").value;
+        // await micropip.install('../../rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
+        await micropip.install(rendercanvas_location);
+
+        // additional dependencies, alreay existing for pyodide - so we can get them from micropip
+        if (document.getElementById("install-numpy").checked) {
+            // not needed by the triangle.py example but everything else I think
+            await micropip.install('numpy');
+        }
+        if (document.getElementById("install-imgui").checked) {
+            // works with the imgui examples
+            await micropip.install('imgui-bundle');
+        }
+
 
 
         console.log("Pyodide ready");
-        // Run the Python code async because some calls are async it seems.
+        // load this one late so you can change before pyodide is ready!
+        pythonCode = await (await fetch(example_select.value)).text();        
+        pyodide.runPythonAsync(pythonCode);
+        
         reload_example_button.onclick = async function() {
-            console.log("Reloading example:", example_select.value);
-            pythonCode = await (await fetch(example_select.value)).text();
-            await pyodide.runPythonAsync(pythonCode);
+            console.log("we will need to implement pyodide as a webworker to interrupt running loops");
         };
-        // pyodide.runPythonAsync(pythonCode);
-        // pyodide.runPython(pythonCode);
+        
+        // TODO: automatically check imgui when an imgui item is selected?
     }
     main();
 </script>
