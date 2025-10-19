@@ -3,7 +3,8 @@
 <html>
 <head>
     wgpu-py on the HTML RenderCanvas canvas with Pyodide:<br>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/pyodide/dev/debug/pyodide.js"></script>
     <style>
         /* so the demo page can have interactive resizing */
         #canvas {
@@ -16,14 +17,27 @@
 <body>
 <!-- WIP: make it more of a "Playground"? -->
 <select id="example-select">
-    <option value="compute_noop.py">compute_noop.py</option>
     <option value="cube.py">cube.py</option>
+    <option value="compute_noop.py">compute_noop.py</option>
+    <option value="compute_matmul.py">compute_matmul.py</option>
     <option value="triangle.py">triangle.py</option>
     <option value="imgui_backend_sea.py">imgui_backend_sea.py</option>
 </select>
 <!-- maybe something like add example (to test spawning more canvases and also closing them?) -->
-<button id="reload-example">Reload example (TODO)</button>
+<button id="reload-example">Load example (only works once...)</button>
 <button id="reload-page" style="background-color: orange;"onclick="location.reload();">Reload page</button>
+<button id="reload-pyodide" style="background-color: yellow;">Reload pyodide (TODO)</button>
+<br>
+<!-- TODO: select the dependencies (pyodide doesn't find them automatically) -->
+<label for="install-wgpu">wgpu:</label>
+<input type="text" id="install-wgpu" name="wgpu" value="../dist/wgpu-0.24.0-py3-none-any.whl" size="30">
+<label for="install-rendercanvas">rendercanvas:</label>
+<input type="text" id="install-rendercanvas" name="rendercanvas" value="../../../../../../../projects/pygfx-repos/rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl" size="50">
+<!-- maybe <detaillist> for these two? -->
+<label for="install-numpy">numpy:</label>
+<input type="checkbox" id="install-numpy" name="numpy" checked>
+<label for="install-imgui">imgui-bundle:</label>
+<input type="checkbox" id="install-imgui" name="imgui-bundle">
 <br>
 <canvas id="canvas" width="640" height="480" style="background-color: lightgrey;"></canvas><br>
 pixels got drawn!
@@ -52,16 +66,23 @@ pixels got drawn!
         await pyodide.loadPackage("micropip");
         const micropip = pyodide.pyimport("micropip");
         await micropip.install('numpy');
-        await micropip.install('imgui-bundle');
+        // await micropip.install('imgui-bundle');
         // await micropip.install('rendercanvas');
-        // await micropip.install('../../../../../../../projects/pygfx-repos/rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
-        await micropip.install('../../rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
+        await micropip.install('../../../../../../../projects/pygfx-repos/rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
+        // await micropip.install('../../rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
         // set WGPU_PY_BUILLD_NOARCH=1
         // python -m build -nw
         await micropip.install('../dist/wgpu-0.24.0-py3-none-any.whl'); // also local, probably need to name the wheel differently.
 
+
+        console.log("Pyodide ready");
         // Run the Python code async because some calls are async it seems.
-        pyodide.runPythonAsync(pythonCode);
+        reload_example_button.onclick = async function() {
+            console.log("Reloading example:", example_select.value);
+            pythonCode = await (await fetch(example_select.value)).text();
+            await pyodide.runPythonAsync(pythonCode);
+        };
+        // pyodide.runPythonAsync(pythonCode);
         // pyodide.runPython(pythonCode);
     }
     main();

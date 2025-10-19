@@ -47,7 +47,7 @@ def from_entries_camel_case(inp: dict):
 def simple_js_accessor(value, convert, cache=None):
     # print("simple_js_accessor", value, type(value), dir(value))
     if isinstance(value, classes.GPUObjectBase):
-        print("GPUObjectBase detected", value)
+        # print("GPUObjectBase detected", value)
         return value._internal # type : JsProxy
     elif isinstance(value, structs.Struct):
         result = {}
@@ -56,15 +56,15 @@ def simple_js_accessor(value, convert, cache=None):
             # if there is a dict further down... we still need to fix those keys
             if isinstance(v, dict):
                 if(k == "resource"): # this one is a more complex type.... https://www.w3.org/TR/webgpu/#typedefdef-gpubindingresource
-                    print("struct with resource dict detected", k, v)
+                    # print("struct with resource dict detected", k, v)
                     v = structs.BufferBinding(**v)
                     # print("RESOURCE AS A STRUCT:", v)
                     down_convert = to_js(v, eager_converter=simple_js_accessor)
-                    js_object_map = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
-                    result[camel_key] = js_object_map
+                    down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
+                    result[camel_key] = down_convert
                     # print("called convert(v) on RESOURCE STRUCT", result[camel_key])
                     continue
-                print("struct with dict detected", value, k, v)
+                # print("struct with dict detected", value, k, v)
                 # print(dir(value))
                 v_struct_type_name = value.__annotations__[k].partition("Struct")[0] # will not work if there is more than two options -.-
                 # print("likely v struct type_name", v_struct_type_name)
@@ -75,7 +75,7 @@ def simple_js_accessor(value, convert, cache=None):
 
             # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...
             elif isinstance(v, (list)): #maybe tuple too?
-                print("struct with list detected", value, k, v)
+                # print("struct with list detected", value, k, v)
                 v_struct_type_name = value.__annotations__[k].removeprefix("Sequence[").partition("Struct")[0]
                 # print("likely v struct type_name", v_struct_type_name)
                 v_struct_type = structs.__dict__[v_struct_type_name]
@@ -84,14 +84,14 @@ def simple_js_accessor(value, convert, cache=None):
                 # print("converted to list of struct", v)
 
             down_convert = to_js(v, eager_converter=simple_js_accessor)
-            js_object_map = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
-            result[camel_key] = js_object_map
-        print("struct conversion result: ", type(result), result)
+            down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
+            result[camel_key] = down_convert
+        # print("struct conversion result: ", type(result), result)
         return result
 
     elif isinstance(value, (list, tuple)):
         result = [to_js(v, eager_converter=simple_js_accessor) for v in value]
-        return to_js(result, depth=1)
+        return to_js(result, depth=1) # to make sure it's like an ArrayList?
     # this might recursively call itself...
     # maybe use a map? or do a dict_converted?
     # elif isinstance(value, dict):
@@ -105,7 +105,7 @@ def simple_js_accessor(value, convert, cache=None):
         # let's hope this is only ever reached when all the contents are already converted.
         # map = Map.new(result.items())
         # return Object.fromEntries(map)
-    print("simple_js_accessor default", value, type(value))
+    # print("simple_js_accessor default", value, type(value))
     return convert(value)
 
 # TODO: can we implement our own variant of JsProxy and PyProxy, to_js and to_py? to work with pyodide and not around it?
@@ -252,7 +252,7 @@ class GPUDevice(classes.GPUDevice):
         descriptor = structs.BindGroupLayoutDescriptor(**kwargs)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         # js_descriptor = to_js(js_descriptor.to_py())
-        print("js_descriptor", js_descriptor, type(js_descriptor), dir(js_descriptor))
+        # print("js_descriptor", js_descriptor, type(js_descriptor), dir(js_descriptor))
         # print(js_descriptor["entries"][0]["buffer"].get("size"))
         js_bgl = self._internal.createBindGroupLayout(js_descriptor)
 
@@ -343,11 +343,11 @@ class GPUDevice(classes.GPUDevice):
 
     # I think the entries arg gets unpacked with a single dict inside, so trying to do the list around that manually
     def create_bind_group(self, **kwargs) -> classes.GPUBindGroup:
-        print("create_bind_group", kwargs)
+        # print("create_bind_group", kwargs)
         descriptor = structs.BindGroupDescriptor(**kwargs)
-        print("descriptor", descriptor)
+        # print("descriptor", descriptor)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-        print("js_descriptor", js_descriptor)
+        # print("js_descriptor", js_descriptor)
         js_bg = self._internal.createBindGroup(js_descriptor)
 
         label = kwargs.get("label", "")
