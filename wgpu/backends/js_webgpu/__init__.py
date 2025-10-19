@@ -574,6 +574,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         return gpu._internal.getPreferredCanvasFormat()
 
     def configure(self, *args, **kwargs):
+        #TODO: CanvasConfiguration could be used like a Descriptor
         js_args = to_js(args, eager_converter=simple_js_accessor)
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         self._internal.configure(*js_args, js_kwargs)

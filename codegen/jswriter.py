@@ -4,33 +4,82 @@ Codegen the JS webgpu backend, based on the parsed idl.
 write to the backends/js_webgpu/_api.py file.
 """
 
-from codegen.idlparser import get_idl_parser
+from codegen.idlparser import Attribute, get_idl_parser
+from codegen.apipatcher import IdlPatcherMixin, BaseApiPatcher
 from textwrap import indent
 
-method_template = """
+create_template = """
 def {py_method_name}(self, **kwargs):
-    # TODO: positional args???
     descriptor = struct.{py_descriptor_name}(**kwargs)
     js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-
     js_obj = self._{js_method_name}(js_descriptor)
 
     label = kwargs.pop("label", "")
-    return {class}(js_obj, label=label) # more kwargs? only for get_ and create_?
+    return {return_type}(js_obj, label=label)
+"""
+
+unary_template = """
+def {py_method_name}(self) -> None:
+    js_obj = self._{js_method_name}()
+"""
+
+# TODO: this is a bit more complex but doable.
+positional_args_template = """
+def {py_method_name}(self, *args):
+    # TODO: make structs for complex objects so we translate their keys all the way down
+    js_obj = self._{js_method_name}(*args)
+    label = kwargs.pop("label", "")
+    return {return_type}(js_obj, label=label)
 """
 
 
+
+# most likely copy and modify the code in apipatcher.py... because we hopefully need code that looks really similar to _classes.py
 idl = get_idl_parser()
+helper_patcher = BaseApiPatcher() # to get access to name2py_names function
 
 # todo import our to_js converter functions from elsewhere?
-
-for name, interface in idl.classes.items():
+for class_name, interface in idl.classes.items():
     # write idl line, header
     # write the to_js block
     # get label (where needed?)
     # return the constructor call to the base class maybe?
-    print(name)
-    for function in interface.functions:
-        print("  ", function, type(function))
-    # print(name, interface.functions)
-    
+    mixins = [c for c in interface.bases if c.endswith("Mixin")]
+    print(f"class {class_name}(classes.{class_name}{', '.join(mixins)}):")
+
+    # TODO: can we property some of the webgpu attributes to replace the existing private mappings
+
+    for function_name, idl_line in interface.functions.items():
+        return_type = idl_line.split(" ")[0] # on some parts this doesn't exist
+        if "constructor" in idl_line:
+            return_type = None
+            continue # skip constructors?
+
+        # based on apipatcher.IDlCommentINjector.get_method_comment
+        args = idl_line.split("(")[1].rsplit(")")[0].split(", ")
+        args = [Attribute(arg) for arg in args if arg.strip()]
+        # case 1: single argument as a descriptor (TODO: could be optional - but that should just work)
+        if len(args) == 1 and args[0].typename.endswith(
+                ("Option", "Descriptor", "Configuration")
+            ):
+            py_method_name = helper_patcher.name2py_names(class_name, function_name)
+            method_string = create_template.format(
+                py_method_name=py_method_name[0], # TODO: async workaround?
+                py_descriptor_name=args[0].typename.removeprefix("GPU"),
+                js_method_name=function_name,
+                return_type=return_type if return_type else "None",
+            )
+            print(method_string)
+
+        # case 2: no arguments (and nothing to return?)
+        elif (len(args) == 0 and return_type == "undefined"):
+            py_method_name = helper_patcher.name2py_names(class_name, function_name)
+            method_string = unary_template.format(
+                py_method_name=py_method_name[0], # TODO: async workaround?
+                js_method_name=function_name,
+            )
+            print(method_string)
+        else:
+            print(f"    # TODO: implement codegen for {function_name} with args {args} or return type {return_type}")
+
+    print()
