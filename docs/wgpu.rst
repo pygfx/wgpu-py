@@ -65,6 +65,12 @@ come in two flafours:
   not part of the WebGPU spec, and as a consequence, code that uses this method
   is less portable (to e.g. pyodide/pyscript).
 
+The async methods return a :class:`GPUPromise`, which resolves to the actual result. You can wait for it to resolve in three ways:
+
+* In async code, use ``await promise``.
+* In sync code, use ``promise.then(callback)`` to register a callback that is executed when the promise resolves.
+* In sync code, you can use ``promise.sync_wait()``. This is similar to the ``_sync()`` flavour mentioned above (it makes your code less portable).
+
 
 Canvas API
 ----------
@@ -241,6 +247,7 @@ List of GPU classes
     ~GPUPipelineBase
     ~GPUPipelineError
     ~GPUPipelineLayout
+    ~GPUPromise
     ~GPUQuerySet
     ~GPUQueue
     ~GPURenderBundle

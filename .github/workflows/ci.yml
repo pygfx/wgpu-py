@@ -170,7 +170,7 @@ jobs:
             pyversion: '3.13'
           - name: Test Linux pypy3
             os: ubuntu-latest
-            pyversion: 'pypy3.10'
+            pyversion: 'pypy3.11'
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.pyversion }}

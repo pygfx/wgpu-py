@@ -22,8 +22,10 @@ def test_basic_api():
 
     code1 = wgpu.GPU.request_adapter_sync.__code__
     code2 = wgpu.GPU.request_adapter_async.__code__
+    varnames1 = set(code1.co_varnames) - {"gpu", "promise", "loop"}
+    varnames2 = set(code2.co_varnames) - {"gpu", "promise", "loop"}
     # nargs1 = code1.co_argcount + code1.co_kwonlyargcount
-    assert code1.co_varnames == code2.co_varnames
+    assert varnames1 == varnames2
 
     assert repr(wgpu.classes.GPU()).startswith(
         "<wgpu.GPU "
@@ -98,7 +100,7 @@ def test_enums_and_flags_and_structs():
 
 def test_base_wgpu_api():
     # Fake a device and an adapter
-    adapter = wgpu.GPUAdapter(None, set(), {}, wgpu.GPUAdapterInfo({}))
+    adapter = wgpu.GPUAdapter(None, set(), {}, wgpu.GPUAdapterInfo({}), None)
     queue = wgpu.GPUQueue("", None, None)
     device = wgpu.GPUDevice("device08", -1, adapter, {42, 43}, {}, queue)
 

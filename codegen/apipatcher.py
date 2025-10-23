@@ -38,11 +38,13 @@ def patch_base_api(code):
     idl = get_idl_parser()
 
     # Write __all__
+    extra_public_classes = ["GPUPromise"]
+    all_public_classes = [*idl.classes.keys(), *extra_public_classes]
     part1, found_all, part2 = code.partition("\n__all__ =")
     if found_all:
         part2 = part2.split("]", 1)[-1]
         line = "\n__all__ = ["
-        line += ", ".join(f'"{name}"' for name in sorted(idl.classes.keys()))
+        line += ", ".join(f'"{name}"' for name in sorted(all_public_classes))
         line += "]"
         code = part1 + line + part2
 
@@ -158,7 +160,13 @@ class AbstractApiPatcher(Patcher):
         for classname, i1, i2 in self.iter_classes():
             seen_classes.add(classname)
             self._apidiffs = set()
+            pre_lines = "\n".join(self.lines[i1 - 3 : i1])
+            self._apidiffs_from_lines(pre_lines, classname)
             if self.class_is_known(classname):
+                if "@apidiff.add" in pre_lines:
+                    print(f"ERROR: apidiff.add for known {classname}")
+                elif "@apidiff.hide" in pre_lines:
+                    pass  # continue as normal
                 old_line = self.lines[i1]
                 new_line = self.get_class_def(classname)
                 if old_line != new_line:
@@ -166,6 +174,8 @@ class AbstractApiPatcher(Patcher):
                     self.replace_line(i1, f"{fixme_line}\n{new_line}")
                 self.patch_properties(classname, i1 + 1, i2)
                 self.patch_methods(classname, i1 + 1, i2)
+            elif "@apidiff.add" in pre_lines:
+                pass
             else:
                 msg = f"unknown api: class {classname}"
                 self.insert_line(i1, "# FIXME: " + msg)
@@ -422,14 +432,15 @@ class IdlPatcherMixin:
             print(f"Error resolving type for {classname}.{propname}: {err}")
             prop_type = None
 
+        if prop_type and propname.endswith("_async"):
+            prop_type = f"GPUPromise[{prop_type}]"
+
         line = (
             "def "
             + to_snake_case(propname)
             + "(self)"
             + f"{f' -> {prop_type}' if prop_type else ''}:"
         )
-        if propname.endswith("_async"):
-            line = "async " + line
         return "    " + line
 
     def get_method_def(self, classname, methodname) -> str:
@@ -439,8 +450,6 @@ class IdlPatcherMixin:
 
         # Construct preamble
         preamble = "def " + to_snake_case(methodname) + "("
-        if methodname.endswith("_async"):
-            preamble = "async " + preamble
 
         # Get arg names and types
         idl_line = functions[name_idl]
@@ -455,6 +464,8 @@ class IdlPatcherMixin:
             return_type = None
         if return_type:
             return_type = self.idl.resolve_type(return_type)
+            if methodname.endswith("_async"):
+                return_type = f"GPUPromise[{return_type}]"
 
         # If one arg that is a dict, flatten dict to kwargs
         if len(args) == 1 and args[0].typename.endswith(
@@ -601,6 +612,8 @@ class BackendApiPatcher(AbstractApiPatcher):
                 pre_lines = "\n".join(p1.lines[j1 - 3 : j1])
                 if "@apidiff.hide" in pre_lines:
                     continue  # method (currently) not part of our API
+                if methodname.endswith("_sync"):
+                    continue  # the base class implements _sync versions (using promise.sync_wait())
                 body = "\n".join(p1.lines[j1 + 1 : j2 + 1])
                 must_overload = "raise NotImplementedError()" in body
                 methods[methodname] = p1.lines[j1], must_overload
@@ -690,7 +703,7 @@ class StructValidationChecker(Patcher):
                 defer_func_name = "_" + methodname
                 defer_line_starts = (
                     f"return self.{defer_func_name[:-7]}",
-                    f"awaitable = self.{defer_func_name[:-7]}",
+                    f"promise = self.{defer_func_name[:-7]}",
                 )
                 this_method_defers = any(
                     line.strip().startswith(defer_line_starts)
