@@ -472,7 +472,6 @@ print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
 
-
 if __name__ == "__main__":
     canvas = RenderCanvas(
         size=(640, 480),
