@@ -136,11 +136,6 @@ class GPU(classes.GPU):
     def __init__(self):
         self._internal = window.navigator.gpu  # noqa: F821
 
-    def request_adapter_sync(self, **options):
-        promise = self.request_adapter_async(**options)
-        result = promise.sync_wait()
-        return result
-
     def request_adapter_async(self, loop=None, canvas=None, **options) -> GPUPromise["GPUAdapter"]:
         options = structs.RequestAdapterOptions(**options)
         js_options = to_js(options, eager_converter=simple_js_accessor)
@@ -160,6 +155,7 @@ class GPU(classes.GPU):
 
     # api diff not really useful, but needed for compatibility I guess?
     # because only the call to _async imports the auto module -> this method doesn't get overwritten... so nothing happens here.
+    # TODO: most likely remove
     def enumerate_adapters_sync(self) -> list["GPUAdapter"]:
         print("we are in the jswebgpu backend, but unreachable :'(")
 
@@ -215,17 +211,19 @@ class GPUAdapter(classes.GPUAdapter):
 
         super().__init__(internal=internal, features=features, limits=py_limits, adapter_info=adapter_info, loop=loop)
 
+    def request_device_async(self, **kwargs) -> GPUPromise["GPUDevice"]:
+        descriptor = structs.DeviceDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_device_promise = self._internal.requestDevice(js_descriptor)
 
+        label = kwargs.get("label", "")
+        def device_constructor(js_device):
+            # TODO: do we need to hand down a default_queue here?
+            return GPUDevice(label, js_device, adapter=self)
 
-    def request_device_sync(self, **parameters):
-        return run_sync(self.request_device_async(**parameters))
-        # raise NotImplementedError("Cannot use sync API functions in JS.")
-
-    async def request_device_async(self, **parameters):
-        label = parameters.get("label", "")
-        js_device = await self._internal.requestDevice(**parameters)
-        default_queue = parameters.get("default_queue", {})
-        return GPUDevice(label, js_device, adapter=self)
+        promise = GPUPromise("request_device", device_constructor, loop=self._loop)
+        js_device_promise.then(promise._set_input)
+        return promise
 
 
 class GPUDevice(classes.GPUDevice):
@@ -275,6 +273,7 @@ class GPUDevice(classes.GPUDevice):
         data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
 
         # if it's a Descriptor you need the keywords
+        # do we need to also need to modify the usages?
         js_buf = self._internal.createBuffer(label=label, size=data_size, usage=usage, mappedAtCreation=True)
         # print("created buffer", js_buf, dir(js_buf), js_buf.size)
         array_buf = js_buf.getMappedRange(0, data_size)
@@ -300,6 +299,20 @@ class GPUDevice(classes.GPUDevice):
 
         label = kwargs.get("label", "")
         return GPUComputePipeline(label, js_cp, self)
+
+    # TODO: no example tests this!
+    def create_compute_pipeline_async(self, **kwargs):
+        descriptor = structs.ComputePipelineDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_promise = self._internal.createComputePipelineAsync(js_descriptor)
+
+        label = kwargs.get("label", "")
+        def construct_compute_pipeline(js_cp):
+            return GPUComputePipeline(label, js_cp, self)
+        promise = GPUPromise("create_compute_pipeline", construct_compute_pipeline, loop=self._loop)
+        js_promise.then(promise._set_input)
+
+        return promise
 
     def create_bind_group(self, **kwargs) -> classes.GPUBindGroup:
         descriptor = structs.BindGroupDescriptor(**kwargs)
@@ -404,12 +417,12 @@ class GPUBuffer(classes.GPUBuffer):
         array_buf = self._internal.getMappedRange(buffer_offset, size)
         Uint8Array.new(array_buf).assign(data)
 
-    def map_sync(self, mode=None, offset=0, size=None):
-        return run_sync(self.map_async(mode, offset, size))
+    def map_async(self, mode: flags.MapModeFlags | None, offset: int = 0, size: int | None = None) -> GPUPromise[None]:
+        map_promise = self._internal.mapAsync(mode, offset, size)
 
-    async def map_async(self, mode: flags.MapModeFlags | None, offset: int = 0, size: int | None = None):
-        res = await self._internal.mapAsync(mode, offset, size)
-        return res
+        promise = GPUPromise("buffer.map_async", lambda _: None, loop=self._device._loop)
+        map_promise.then(promise._set_input) # presumably this signals via a none callback to nothing?
+        return promise
 
     def unmap(self):
         self._internal.unmap()
@@ -543,11 +556,12 @@ class GPUQueue(classes.GPUQueue):
         )
 
         js_encoder = device._internal.createCommandEncoder()
-        # todo: somehow test if all the offset math is correct
+        # TODO: somehow test if all the offset math is correct
         js_encoder.copyBufferToBuffer(buffer._internal, buffer_offset, js_temp_buffer, buffer_offset, data_length)
         self._internal.submit([js_encoder.finish()])
 
         # best way to await the promise directly?
+        # TODO: can we do more steps async before waiting?
         run_sync(js_temp_buffer.mapAsync(flags.MapMode.READ, 0, data_length))
         array_buf = js_temp_buffer.getMappedRange()
         res = array_buf.slice(0)
@@ -595,6 +609,10 @@ class GPUQueue(classes.GPUQueue):
         js_data.assign(data[data_offset:data_offset+size])
 
         self._internal.writeBuffer(buffer._internal, buffer_offset, js_data, data_offset, size)
+
+    def on_submitted_work_done_async(self):
+        # TODO: this could be interesting with promises now
+        raise NotImplementedError("hope for some examples to test this against first")
 
 
 
