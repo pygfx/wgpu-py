@@ -11,6 +11,7 @@ from .. import _register_backend
 from ... import classes, structs, enums, flags
 
 from pyodide.ffi import run_sync, JsProxy, to_js, jsnull
+from pyodide.webloop import PyodideFuture
 from js import window, ArrayBuffer, Uint8Array, Object, undefined, Map
 
 
@@ -119,30 +120,64 @@ def simple_js_accessor(value, convert, cache=None):
 # class GPUObjectBase(classes.GPUObjectBase):
 #     pass
 
+class GPUPromise(classes.GPUPromise):
+    # TODO: can we resolve the js promises and then call our constructors?
+    # maybe we can use the webloop.PyodideFuture here directly? https://pyodide.org/en/stable/usage/api/python-api/webloop.html#pyodide.webloop.PyodideFuture
+    # should loop be globally the webloop? or will rendercanvas give us that in the future?
+
+    def sync_wait(self):
+        # pyodide way that hopefully works?
+        # explanation: https://blog.pyodide.org/posts/jspi/
+        result = run_sync(self)
+        return result
+
+
 class GPU(classes.GPU):
     def __init__(self):
         self._internal = window.navigator.gpu  # noqa: F821
 
-    # maybe this structure could be done with a @decorator?
-    def request_adapter_sync(self, **parameters):
-        return run_sync(self.request_adapter_async(**parameters))
-        # raise NotImplementedError("Cannot use sync API functions in JS.")
+    def request_adapter_sync(self, **options):
+        promise = self.request_adapter_async(**options)
+        result = promise.sync_wait()
+        return result
 
-    async def request_adapter_async(self, **parameters):
-        js_adapter = await self._internal.requestAdapter(**parameters)
+    def request_adapter_async(self, loop=None, canvas=None, **options) -> GPUPromise["GPUAdapter"]:
+        options = structs.RequestAdapterOptions(**options)
+        js_options = to_js(options, eager_converter=simple_js_accessor)
+        js_adapter_promise = self._internal.requestAdapter(js_options)
 
+        if loop is None:
+            # can we use this instead?
+            webloop = js_adapter_promise.get_loop()
+            loop = webloop
 
-        return GPUAdapter(
-            js_adapter,
-        )
+        def adapter_constructor(js_adapter):
+            return GPUAdapter(js_adapter, loop=loop)
+        promise = GPUPromise("request_adapter", adapter_constructor, loop=loop)
+
+        js_adapter_promise.then(promise._set_input) # we chain the js resolution to our promise
+        return promise
 
     # api diff not really useful, but needed for compatibility I guess?
-    def enumerate_adapters_sync(self):
-        return run_sync(self.enumerate_adapters_async())
+    # because only the call to _async imports the auto module -> this method doesn't get overwritten... so nothing happens here.
+    def enumerate_adapters_sync(self) -> list["GPUAdapter"]:
+        print("we are in the jswebgpu backend, but unreachable :'(")
 
-    async def enumerate_adapters_async(self):
+        adapter_hp = self.request_adapter_sync(power_preference="high-performance")
+        adapter_lp = self.request_adapter_sync(power_preference="low-power")
+
+        return [adapter_hp, adapter_lp]
+
+    def enumerate_adapters_async(self, loop=None) -> GPUPromise[list["GPUAdapter"]]:
         # bodge here: it blocks but we should await instead.
-        return [self.request_adapter_sync()]
+        adapter_hp = self.request_adapter_sync(loop=loop, power_preference="high-performance")
+        adapter_lp = self.request_adapter_sync(loop=loop, power_preference="low-power")
+
+        promise = GPUPromise("enumerate_adapters", None, loop=loop)
+        promise._set_input([adapter_hp, adapter_lp])
+
+        # TODO: we can do a high-performance and low-power adapter
+        return promise
 
     @property
     def wgsl_language_features(self):
@@ -150,7 +185,7 @@ class GPU(classes.GPU):
 
 
 class GPUAdapter(classes.GPUAdapter):
-    def __init__(self, js_adapter):
+    def __init__(self, js_adapter, loop):
         internal = js_adapter
         # manually turn these into useful python objects
         features = set(js_adapter.features)
@@ -178,7 +213,7 @@ class GPUAdapter(classes.GPUAdapter):
 
         adapter_info = classes.GPUAdapterInfo(**py_adapter_info)
 
-        super().__init__(internal=internal, features=features, limits=py_limits, adapter_info=adapter_info)
+        super().__init__(internal=internal, features=features, limits=py_limits, adapter_info=adapter_info, loop=loop)
 
 
 
@@ -324,6 +359,19 @@ class GPUDevice(classes.GPUDevice):
 
         label = kwargs.get("label", "")
         return GPURenderPipeline(label, js_rp, self)
+
+    def create_render_pipeline_async(self, **kwargs):
+        descriptor = structs.RenderPipelineDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_promise = self._internal.createRenderPipelineAsync(js_descriptor)
+
+        label = kwargs.get("label", "")
+        def construct_render_pipeline(js_rp):
+            return GPURenderPipeline(label, js_rp, self)
+        promise = GPUPromise("create_render_pipeline", construct_render_pipeline, loop=self._loop)
+        js_promise.then(promise._set_input)
+
+        return promise
 
 class GPUBuffer(classes.GPUBuffer):
 
