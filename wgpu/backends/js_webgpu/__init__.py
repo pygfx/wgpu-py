@@ -166,8 +166,8 @@ class GPU(classes.GPU):
 
     def enumerate_adapters_async(self, loop=None) -> GPUPromise[list["GPUAdapter"]]:
         # bodge here: it blocks but we should await instead.
-        adapter_hp = self.request_adapter_sync(loop=loop, power_preference="high-performance")
-        adapter_lp = self.request_adapter_sync(loop=loop, power_preference="low-power")
+        adapter_hp = self.request_adapter_sync(power_preference="high-performance")
+        adapter_lp = self.request_adapter_sync(power_preference="low-power")
 
         promise = GPUPromise("enumerate_adapters", None, loop=loop)
         promise._set_input([adapter_hp, adapter_lp])
