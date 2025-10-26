@@ -76,7 +76,9 @@ def generate_js_webgpu_api() -> str:
 
 
     # todo import our to_js converter functions from elsewhere?
-    for class_name, interface in idl.classes.items():
+    # we need to have the mixins first!
+    ordered_classes = sorted(idl.classes.items(), key=lambda c: "Mixin" not in c[0]) # mixins first
+    for class_name, interface in ordered_classes:
         # write idl line, header
         # write the to_js block
         # get label (where needed?)
@@ -135,6 +137,9 @@ def generate_js_webgpu_api() -> str:
             elif (len(args) > 0):
 
                 header = helper_patcher.get_method_def(class_name, py_method_name).partition("):")[0].lstrip()
+                # put all potentially forward refrenced classes into quotes
+                header = " ".join(f'"{h}"' if h.startswith("GPU") else h for h in header.split(" "))
+
                 param_list = []
                 conversion_lines = []
                 js_arg_list = []

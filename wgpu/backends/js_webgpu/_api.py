@@ -11,6 +11,74 @@ from js import Uint8Array
 from ._helpers import simple_js_accessor
 
 
+class GPUCommandsMixin(classes.GPUCommandsMixin, ):
+    pass
+
+class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin, ):
+    def set_bind_group(self, index: int | None = None, bind_group: GPUBindGroup | None = None, dynamic_offsets_data: ArrayLike | None = None, dynamic_offsets_data_start: int | None = None, dynamic_offsets_data_length: int | None = None) -> None:
+        js_bindGroup = bind_group._internal
+    
+        data = memoryview(dynamic_offsets_data).cast("B")
+        data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+        js_data = Uint8Array.new(data_size)
+        js_data.assign(data)
+
+        js_obj = self._internal.setBindGroup(index, js_bindGroup, js_data, dynamic_offsets_data_start, dynamic_offsets_data_length)
+        return js_obj # TODO maybe instead? None
+
+
+class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin, ):
+    def push_debug_group(self, group_label: str | None = None) -> None:
+    
+        js_obj = self._internal.pushDebugGroup(group_label)
+        return js_obj # TODO maybe instead? None
+
+    def pop_debug_group(self) -> None:
+        js_obj = self._internal.popDebugGroup()
+
+    def insert_debug_marker(self, marker_label: str | None = None) -> None:
+    
+        js_obj = self._internal.insertDebugMarker(marker_label)
+        return js_obj # TODO maybe instead? None
+
+
+class GPURenderCommandsMixin(classes.GPURenderCommandsMixin, ):
+    def set_pipeline(self, pipeline: GPURenderPipeline | None = None) -> None:
+        js_pipeline = pipeline._internal
+        js_obj = self._internal.setPipeline(js_pipeline)
+        return js_obj # TODO maybe instead? None
+
+    def set_index_buffer(self, buffer: GPUBuffer | None = None, index_format: enums.IndexFormatEnum | None = None, offset: int = 0, size: int | None = None) -> None:
+        js_buffer = buffer._internal
+        js_obj = self._internal.setIndexBuffer(js_buffer, index_format, offset, size)
+        return js_obj # TODO maybe instead? None
+
+    def set_vertex_buffer(self, slot: int | None = None, buffer: GPUBuffer | None = None, offset: int = 0, size: int | None = None) -> None:
+        js_buffer = buffer._internal
+        js_obj = self._internal.setVertexBuffer(slot, js_buffer, offset, size)
+        return js_obj # TODO maybe instead? None
+
+    def draw(self, vertex_count: int | None = None, instance_count: int = 1, first_vertex: int = 0, first_instance: int = 0) -> None:
+    
+        js_obj = self._internal.draw(vertex_count, instance_count, first_vertex, first_instance)
+        return js_obj # TODO maybe instead? None
+
+    def draw_indexed(self, index_count: int | None = None, instance_count: int = 1, first_index: int = 0, base_vertex: int = 0, first_instance: int = 0) -> None:
+    
+        js_obj = self._internal.drawIndexed(index_count, instance_count, first_index, base_vertex, first_instance)
+        return js_obj # TODO maybe instead? None
+
+    def draw_indirect(self, indirect_buffer: GPUBuffer | None = None, indirect_offset: int | None = None) -> None:
+        js_indirectBuffer = indirect_buffer._internal
+        js_obj = self._internal.drawIndirect(js_indirectBuffer, indirect_offset)
+        return js_obj # TODO maybe instead? None
+
+    def draw_indexed_indirect(self, indirect_buffer: GPUBuffer | None = None, indirect_offset: int | None = None) -> None:
+        js_indirectBuffer = indirect_buffer._internal
+        js_obj = self._internal.drawIndexedIndirect(js_indirectBuffer, indirect_offset)
+        return js_obj # TODO maybe instead? None
+
+
 class GPUObjectBase(classes.GPUObjectBase, ):
     pass
 
@@ -244,9 +312,6 @@ class GPURenderPipeline(classes.GPURenderPipeline, ):
 class GPUCommandBuffer(classes.GPUCommandBuffer, ):
     pass
 
-class GPUCommandsMixin(classes.GPUCommandsMixin, ):
-    pass
-
 class GPUCommandEncoder(classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin):
     def begin_render_pass(self, **kwargs):
         descriptor = structs.RenderPassDescriptor(**kwargs)
@@ -320,34 +385,6 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCom
         return GPUCommandBuffer(js_obj, label=label, device=self)
 
 
-class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin, ):
-    def set_bind_group(self, index: int | None = None, bind_group: GPUBindGroup | None = None, dynamic_offsets_data: ArrayLike | None = None, dynamic_offsets_data_start: int | None = None, dynamic_offsets_data_length: int | None = None) -> None:
-        js_bindGroup = bind_group._internal
-    
-        data = memoryview(dynamic_offsets_data).cast("B")
-        data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
-        js_data = Uint8Array.new(data_size)
-        js_data.assign(data)
-
-        js_obj = self._internal.setBindGroup(index, js_bindGroup, js_data, dynamic_offsets_data_start, dynamic_offsets_data_length)
-        return js_obj # TODO maybe instead? None
-
-
-class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin, ):
-    def push_debug_group(self, group_label: str | None = None) -> None:
-    
-        js_obj = self._internal.pushDebugGroup(group_label)
-        return js_obj # TODO maybe instead? None
-
-    def pop_debug_group(self) -> None:
-        js_obj = self._internal.popDebugGroup()
-
-    def insert_debug_marker(self, marker_label: str | None = None) -> None:
-    
-        js_obj = self._internal.insertDebugMarker(marker_label)
-        return js_obj # TODO maybe instead? None
-
-
 class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin):
     def set_pipeline(self, pipeline: GPUComputePipeline | None = None) -> None:
         js_pipeline = pipeline._internal
@@ -405,43 +442,6 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUCommandsMixin, GPUDe
 
     def end(self) -> None:
         js_obj = self._internal.end()
-
-
-class GPURenderCommandsMixin(classes.GPURenderCommandsMixin, ):
-    def set_pipeline(self, pipeline: GPURenderPipeline | None = None) -> None:
-        js_pipeline = pipeline._internal
-        js_obj = self._internal.setPipeline(js_pipeline)
-        return js_obj # TODO maybe instead? None
-
-    def set_index_buffer(self, buffer: GPUBuffer | None = None, index_format: enums.IndexFormatEnum | None = None, offset: int = 0, size: int | None = None) -> None:
-        js_buffer = buffer._internal
-        js_obj = self._internal.setIndexBuffer(js_buffer, index_format, offset, size)
-        return js_obj # TODO maybe instead? None
-
-    def set_vertex_buffer(self, slot: int | None = None, buffer: GPUBuffer | None = None, offset: int = 0, size: int | None = None) -> None:
-        js_buffer = buffer._internal
-        js_obj = self._internal.setVertexBuffer(slot, js_buffer, offset, size)
-        return js_obj # TODO maybe instead? None
-
-    def draw(self, vertex_count: int | None = None, instance_count: int = 1, first_vertex: int = 0, first_instance: int = 0) -> None:
-    
-        js_obj = self._internal.draw(vertex_count, instance_count, first_vertex, first_instance)
-        return js_obj # TODO maybe instead? None
-
-    def draw_indexed(self, index_count: int | None = None, instance_count: int = 1, first_index: int = 0, base_vertex: int = 0, first_instance: int = 0) -> None:
-    
-        js_obj = self._internal.drawIndexed(index_count, instance_count, first_index, base_vertex, first_instance)
-        return js_obj # TODO maybe instead? None
-
-    def draw_indirect(self, indirect_buffer: GPUBuffer | None = None, indirect_offset: int | None = None) -> None:
-        js_indirectBuffer = indirect_buffer._internal
-        js_obj = self._internal.drawIndirect(js_indirectBuffer, indirect_offset)
-        return js_obj # TODO maybe instead? None
-
-    def draw_indexed_indirect(self, indirect_buffer: GPUBuffer | None = None, indirect_offset: int | None = None) -> None:
-        js_indirectBuffer = indirect_buffer._internal
-        js_obj = self._internal.drawIndexedIndirect(js_indirectBuffer, indirect_offset)
-        return js_obj # TODO maybe instead? None
 
 
 class GPURenderBundle(classes.GPURenderBundle, ):
