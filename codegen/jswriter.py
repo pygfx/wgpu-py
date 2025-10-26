@@ -40,12 +40,21 @@ def {py_method_name}(self) -> None:
 
 # TODO: this is a bit more complex but doable.
 # return needs to be optional and also resolve the promise?
+# TODO: with empty body looks odd :/
 positional_args_template = """
 def {py_method_name}(self, {args}):
     {body}
     js_obj = self._internal.{js_method_name}({js_args})
     return {return_type}
 """
+
+data_conversion = """
+    data = memoryview({py_data}).cast("B")
+    data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+    js_data = Uint8Array.new(data_size)
+    js_data.assign(data)
+"""
+
 
 # TODO: async template?
 
@@ -81,6 +90,7 @@ def generate_js_webgpu_api() -> str:
             return_type = idl_line.split(" ")[0] # on some parts this doesn't exist
             if "constructor" in idl_line:
                 return_type = None
+                # TODO: some classes need custom constructors!
                 continue # skip constructors?
 
             # based on apipatcher.IDlCommentINjector.get_method_comment
@@ -117,19 +127,26 @@ def generate_js_webgpu_api() -> str:
                     py_name = helper_patcher.name2py_names(class_name, arg.name)[0]
                     param_list.append(py_name)
                     # if it's a GPUObject kinda thing we most likely need to call ._internal to get the correct js object
-                    if arg.typename in idl.classes:
+                    if arg.typename.removesuffix("?") in idl.classes:
+                        # TODO: do we need to check against none for optionals?
                         conversion_lines.append(f"js_{arg.name} = {py_name}._internal")
                         js_arg_list.append(f"js_{arg.name}")
                     # TODO: sequence of complex type?
 
-                    # here we go via the struct (in idl.structs?)
-                    elif arg.typename.endswith(("Info", "Descriptor")):
-                        conversion_lines.append(f"{py_name}_desc = structs.{arg.typename.removeprefix('GPU')}(**{py_name})")
+                    elif arg.typename.removeprefix('GPU').removesuffix("?") in idl.structs:
+                        conversion_lines.append(f"{py_name}_desc = structs.{arg.typename.removeprefix('GPU').removesuffix('?')}(**{py_name})")
                         conversion_lines.append(f"js_{arg.name} = to_js({py_name}_desc, eager_converter=simple_js_accessor)")
                         js_arg_list.append(f"js_{arg.name}")
+                    elif py_name.endswith("data"): # maybe not an exhaustive check?
+                        conversion_lines.append(data_conversion.format(py_data=py_name))
+                        js_arg_list.append("js_data") #might be a problem if there is two!
                     else:
-                        # TODO: try idl.resolve_type(arg.typename) or in idl.enums?
-                        conversion_lines.append(f"# TODO: argument {py_name} of type {arg.typename} might need conversion")
+                        try:
+                            py_type = idl.resolve_type(arg.typename)
+                        except (RuntimeError, AssertionError) as e:
+                            py_type = "unimplemented_resolution?"
+                        if py_type not in __builtins__:
+                            conversion_lines.append(f"# TODO: argument {py_name} of JS type {arg.typename}, py type {py_type} might need conversion")
                         js_arg_list.append(py_name)
 
                 method_string = positional_args_template.format(

@@ -6,7 +6,7 @@ from ... import classes, structs, enums, flags
 from pyodide.ffi import run_sync, JsProxy, to_js
 from js import window, Uint8Array
 
-# TODO: move this to _helpers.py maybe?
+# TODO: move this to a new _helpers.py maybe?
 from .__init__ import simple_js_accessor
 
 
@@ -19,8 +19,9 @@ class GPUAdapterInfo(classes.GPUAdapterInfo):
 
 class GPU(classes.GPU):
     def request_adapter_sync(self, options):
-        # TODO: argument options of type GPURequestAdapterOptions might need conversion
-        js_obj = self._internal.requestAdapter(options)
+        options_desc = structs.RequestAdapterOptions(**options)
+        js_options = to_js(options_desc, eager_converter=simple_js_accessor)
+        js_obj = self._internal.requestAdapter(js_options)
         return Promise<GPUAdapter?>
 
     # TODO: implement codegen for getPreferredCanvasFormat with args [] or return type GPUTextureFormat
@@ -160,7 +161,7 @@ class GPUDevice(classes.GPUDevice):
         return GPUQuerySet(js_obj, label=label)
 
     def push_error_scope(self, filter):
-        # TODO: argument filter of type GPUErrorFilter might need conversion
+        # TODO: argument filter of JS type GPUErrorFilter, py type enums.ErrorFilterEnum might need conversion
         js_obj = self._internal.pushErrorScope(filter)
         return None
 
@@ -168,15 +169,12 @@ class GPUDevice(classes.GPUDevice):
 
 class GPUBuffer(classes.GPUBuffer):
     def map_sync(self, mode, offset, size):
-        # TODO: argument mode of type GPUMapModeFlags might need conversion
-        # TODO: argument offset of type GPUSize64 might need conversion
-        # TODO: argument size of type GPUSize64 might need conversion
+        # TODO: argument mode of JS type GPUMapModeFlags, py type flags.MapModeFlags might need conversion
         js_obj = self._internal.mapAsync(mode, offset, size)
         return Promise<undefined>
 
     def get_mapped_range(self, offset, size):
-        # TODO: argument offset of type GPUSize64 might need conversion
-        # TODO: argument size of type GPUSize64 might need conversion
+    
         js_obj = self._internal.getMappedRange(offset, size)
         return ArrayBuffer
 
@@ -230,7 +228,7 @@ class GPUPipelineError(classes.GPUPipelineError):
 
 class GPUPipelineBase(classes.GPUPipelineBase):
     def get_bind_group_layout(self, index):
-        # TODO: argument index of type unsigned long might need conversion
+    
         js_obj = self._internal.getBindGroupLayout(index)
         return [NewObject]
 
@@ -266,10 +264,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoderGPUCommandsMixin, GPUDebugComma
 
     def copy_buffer_to_buffer(self, source, source_offset, destination, destination_offset, size):
         js_source = source._internal
-        # TODO: argument source_offset of type GPUSize64 might need conversion
         js_destination = destination._internal
-        # TODO: argument destination_offset of type GPUSize64 might need conversion
-        # TODO: argument size of type GPUSize64 might need conversion
         js_obj = self._internal.copyBufferToBuffer(js_source, source_offset, js_destination, destination_offset, size)
         return None
 
@@ -278,8 +273,9 @@ class GPUCommandEncoder(classes.GPUCommandEncoderGPUCommandsMixin, GPUDebugComma
         js_source = to_js(source_desc, eager_converter=simple_js_accessor)
         destination_desc = structs.TexelCopyTextureInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
-        # TODO: argument copy_size of type GPUExtent3D might need conversion
-        js_obj = self._internal.copyBufferToTexture(js_source, js_destination, copy_size)
+        copy_size_desc = structs.Extent3D(**copy_size)
+        js_copySize = to_js(copy_size_desc, eager_converter=simple_js_accessor)
+        js_obj = self._internal.copyBufferToTexture(js_source, js_destination, js_copySize)
         return None
 
     def copy_texture_to_buffer(self, source, destination, copy_size):
@@ -287,8 +283,9 @@ class GPUCommandEncoder(classes.GPUCommandEncoderGPUCommandsMixin, GPUDebugComma
         js_source = to_js(source_desc, eager_converter=simple_js_accessor)
         destination_desc = structs.TexelCopyBufferInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
-        # TODO: argument copy_size of type GPUExtent3D might need conversion
-        js_obj = self._internal.copyTextureToBuffer(js_source, js_destination, copy_size)
+        copy_size_desc = structs.Extent3D(**copy_size)
+        js_copySize = to_js(copy_size_desc, eager_converter=simple_js_accessor)
+        js_obj = self._internal.copyTextureToBuffer(js_source, js_destination, js_copySize)
         return None
 
     def copy_texture_to_texture(self, source, destination, copy_size):
@@ -296,23 +293,19 @@ class GPUCommandEncoder(classes.GPUCommandEncoderGPUCommandsMixin, GPUDebugComma
         js_source = to_js(source_desc, eager_converter=simple_js_accessor)
         destination_desc = structs.TexelCopyTextureInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
-        # TODO: argument copy_size of type GPUExtent3D might need conversion
-        js_obj = self._internal.copyTextureToTexture(js_source, js_destination, copy_size)
+        copy_size_desc = structs.Extent3D(**copy_size)
+        js_copySize = to_js(copy_size_desc, eager_converter=simple_js_accessor)
+        js_obj = self._internal.copyTextureToTexture(js_source, js_destination, js_copySize)
         return None
 
     def clear_buffer(self, buffer, offset, size):
         js_buffer = buffer._internal
-        # TODO: argument offset of type GPUSize64 might need conversion
-        # TODO: argument size of type GPUSize64 might need conversion
         js_obj = self._internal.clearBuffer(js_buffer, offset, size)
         return None
 
     def resolve_query_set(self, query_set, first_query, query_count, destination, destination_offset):
         js_querySet = query_set._internal
-        # TODO: argument first_query of type GPUSize32 might need conversion
-        # TODO: argument query_count of type GPUSize32 might need conversion
         js_destination = destination._internal
-        # TODO: argument destination_offset of type GPUSize64 might need conversion
         js_obj = self._internal.resolveQuerySet(js_querySet, first_query, query_count, js_destination, destination_offset)
         return None
 
@@ -327,18 +320,20 @@ class GPUCommandEncoder(classes.GPUCommandEncoderGPUCommandsMixin, GPUDebugComma
 
 class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
     def set_bind_group(self, index, bind_group, dynamic_offsets_data, dynamic_offsets_data_start, dynamic_offsets_data_length):
-        # TODO: argument index of type GPUIndex32 might need conversion
-        # TODO: argument bind_group of type GPUBindGroup? might need conversion
-        # TODO: argument dynamic_offsets_data of type [AllowShared] Uint32Array might need conversion
-        # TODO: argument dynamic_offsets_data_start of type GPUSize64 might need conversion
-        # TODO: argument dynamic_offsets_data_length of type GPUSize32 might need conversion
-        js_obj = self._internal.setBindGroup(index, bind_group, dynamic_offsets_data, dynamic_offsets_data_start, dynamic_offsets_data_length)
+        js_bindGroup = bind_group._internal
+    
+        data = memoryview(dynamic_offsets_data).cast("B")
+        data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+        js_data = Uint8Array.new(data_size)
+        js_data.assign(data)
+
+        js_obj = self._internal.setBindGroup(index, js_bindGroup, js_data, dynamic_offsets_data_start, dynamic_offsets_data_length)
         return None
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     def push_debug_group(self, group_label):
-        # TODO: argument group_label of type USVString might need conversion
+    
         js_obj = self._internal.pushDebugGroup(group_label)
         return None
 
@@ -346,7 +341,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         js_obj = self._internal.popDebugGroup()
 
     def insert_debug_marker(self, marker_label):
-        # TODO: argument marker_label of type USVString might need conversion
+    
         js_obj = self._internal.insertDebugMarker(marker_label)
         return None
 
@@ -358,15 +353,12 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoderGPUCommandsMixin, GPUDe
         return None
 
     def dispatch_workgroups(self, workgroup_count_x, workgroup_count_y, workgroup_count_z):
-        # TODO: argument workgroup_count_x of type GPUSize32 might need conversion
-        # TODO: argument workgroup_count_y of type GPUSize32 might need conversion
-        # TODO: argument workgroup_count_z of type GPUSize32 might need conversion
+    
         js_obj = self._internal.dispatchWorkgroups(workgroup_count_x, workgroup_count_y, workgroup_count_z)
         return None
 
     def dispatch_workgroups_indirect(self, indirect_buffer, indirect_offset):
         js_indirectBuffer = indirect_buffer._internal
-        # TODO: argument indirect_offset of type GPUSize64 might need conversion
         js_obj = self._internal.dispatchWorkgroupsIndirect(js_indirectBuffer, indirect_offset)
         return None
 
@@ -376,35 +368,28 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoderGPUCommandsMixin, GPUDe
 
 class GPURenderPassEncoder(classes.GPURenderPassEncoderGPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPURenderCommandsMixin):
     def set_viewport(self, x, y, width, height, min_depth, max_depth):
-        # TODO: argument x of type float might need conversion
-        # TODO: argument y of type float might need conversion
-        # TODO: argument width of type float might need conversion
-        # TODO: argument height of type float might need conversion
-        # TODO: argument min_depth of type float might need conversion
-        # TODO: argument max_depth of type float might need conversion
+    
         js_obj = self._internal.setViewport(x, y, width, height, min_depth, max_depth)
         return None
 
     def set_scissor_rect(self, x, y, width, height):
-        # TODO: argument x of type GPUIntegerCoordinate might need conversion
-        # TODO: argument y of type GPUIntegerCoordinate might need conversion
-        # TODO: argument width of type GPUIntegerCoordinate might need conversion
-        # TODO: argument height of type GPUIntegerCoordinate might need conversion
+    
         js_obj = self._internal.setScissorRect(x, y, width, height)
         return None
 
     def set_blend_constant(self, color):
-        # TODO: argument color of type GPUColor might need conversion
-        js_obj = self._internal.setBlendConstant(color)
+        color_desc = structs.Color(**color)
+        js_color = to_js(color_desc, eager_converter=simple_js_accessor)
+        js_obj = self._internal.setBlendConstant(js_color)
         return None
 
     def set_stencil_reference(self, reference):
-        # TODO: argument reference of type GPUStencilValue might need conversion
+    
         js_obj = self._internal.setStencilReference(reference)
         return None
 
     def begin_occlusion_query(self, query_index):
-        # TODO: argument query_index of type GPUSize32 might need conversion
+    
         js_obj = self._internal.beginOcclusionQuery(query_index)
         return None
 
@@ -412,7 +397,7 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoderGPUCommandsMixin, GPUDebu
         js_obj = self._internal.endOcclusionQuery()
 
     def execute_bundles(self, bundles):
-        # TODO: argument bundles of type sequence<GPURenderBundle> might need conversion
+        # TODO: argument bundles of JS type sequence<GPURenderBundle>, py type list[GPURenderBundle] might need conversion
         js_obj = self._internal.executeBundles(bundles)
         return None
 
@@ -428,46 +413,32 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 
     def set_index_buffer(self, buffer, index_format, offset, size):
         js_buffer = buffer._internal
-        # TODO: argument index_format of type GPUIndexFormat might need conversion
-        # TODO: argument offset of type GPUSize64 might need conversion
-        # TODO: argument size of type GPUSize64 might need conversion
+        # TODO: argument index_format of JS type GPUIndexFormat, py type enums.IndexFormatEnum might need conversion
         js_obj = self._internal.setIndexBuffer(js_buffer, index_format, offset, size)
         return None
 
     def set_vertex_buffer(self, slot, buffer, offset, size):
-        # TODO: argument slot of type GPUIndex32 might need conversion
-        # TODO: argument buffer of type GPUBuffer? might need conversion
-        # TODO: argument offset of type GPUSize64 might need conversion
-        # TODO: argument size of type GPUSize64 might need conversion
-        js_obj = self._internal.setVertexBuffer(slot, buffer, offset, size)
+        js_buffer = buffer._internal
+        js_obj = self._internal.setVertexBuffer(slot, js_buffer, offset, size)
         return None
 
     def draw(self, vertex_count, instance_count, first_vertex, first_instance):
-        # TODO: argument vertex_count of type GPUSize32 might need conversion
-        # TODO: argument instance_count of type GPUSize32 might need conversion
-        # TODO: argument first_vertex of type GPUSize32 might need conversion
-        # TODO: argument first_instance of type GPUSize32 might need conversion
+    
         js_obj = self._internal.draw(vertex_count, instance_count, first_vertex, first_instance)
         return None
 
     def draw_indexed(self, index_count, instance_count, first_index, base_vertex, first_instance):
-        # TODO: argument index_count of type GPUSize32 might need conversion
-        # TODO: argument instance_count of type GPUSize32 might need conversion
-        # TODO: argument first_index of type GPUSize32 might need conversion
-        # TODO: argument base_vertex of type GPUSignedOffset32 might need conversion
-        # TODO: argument first_instance of type GPUSize32 might need conversion
+    
         js_obj = self._internal.drawIndexed(index_count, instance_count, first_index, base_vertex, first_instance)
         return None
 
     def draw_indirect(self, indirect_buffer, indirect_offset):
         js_indirectBuffer = indirect_buffer._internal
-        # TODO: argument indirect_offset of type GPUSize64 might need conversion
         js_obj = self._internal.drawIndirect(js_indirectBuffer, indirect_offset)
         return None
 
     def draw_indexed_indirect(self, indirect_buffer, indirect_offset):
         js_indirectBuffer = indirect_buffer._internal
-        # TODO: argument indirect_offset of type GPUSize64 might need conversion
         js_obj = self._internal.drawIndexedIndirect(js_indirectBuffer, indirect_offset)
         return None
 
@@ -487,27 +458,36 @@ class GPURenderBundleEncoder(classes.GPURenderBundleEncoderGPUCommandsMixin, GPU
 
 class GPUQueue(classes.GPUQueue):
     def submit(self, command_buffers):
-        # TODO: argument command_buffers of type sequence<GPUCommandBuffer> might need conversion
+        # TODO: argument command_buffers of JS type sequence<GPUCommandBuffer>, py type list[GPUCommandBuffer] might need conversion
         js_obj = self._internal.submit(command_buffers)
         return None
 
     # TODO: implement codegen for onSubmittedWorkDone with args [] or return type Promise<undefined>
     def write_buffer(self, buffer, buffer_offset, data, data_offset, size):
         js_buffer = buffer._internal
-        # TODO: argument buffer_offset of type GPUSize64 might need conversion
-        # TODO: argument data of type AllowSharedBufferSource might need conversion
-        # TODO: argument data_offset of type GPUSize64 might need conversion
-        # TODO: argument size of type GPUSize64 might need conversion
-        js_obj = self._internal.writeBuffer(js_buffer, buffer_offset, data, data_offset, size)
+    
+        data = memoryview(data).cast("B")
+        data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+        js_data = Uint8Array.new(data_size)
+        js_data.assign(data)
+
+        js_obj = self._internal.writeBuffer(js_buffer, buffer_offset, js_data, data_offset, size)
         return None
 
     def write_texture(self, destination, data, data_layout, size):
         destination_desc = structs.TexelCopyTextureInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
-        # TODO: argument data of type AllowSharedBufferSource might need conversion
-        # TODO: argument data_layout of type GPUTexelCopyBufferLayout might need conversion
-        # TODO: argument size of type GPUExtent3D might need conversion
-        js_obj = self._internal.writeTexture(js_destination, data, data_layout, size)
+    
+        data = memoryview(data).cast("B")
+        data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+        js_data = Uint8Array.new(data_size)
+        js_data.assign(data)
+
+        data_layout_desc = structs.TexelCopyBufferLayout(**data_layout)
+        js_dataLayout = to_js(data_layout_desc, eager_converter=simple_js_accessor)
+        size_desc = structs.Extent3D(**size)
+        js_size = to_js(size_desc, eager_converter=simple_js_accessor)
+        js_obj = self._internal.writeTexture(js_destination, js_data, js_dataLayout, js_size)
         return None
 
     def copy_external_image_to_texture(self, source, destination, copy_size):
@@ -515,8 +495,9 @@ class GPUQueue(classes.GPUQueue):
         js_source = to_js(source_desc, eager_converter=simple_js_accessor)
         destination_desc = structs.CopyExternalImageDestInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
-        # TODO: argument copy_size of type GPUExtent3D might need conversion
-        js_obj = self._internal.copyExternalImageToTexture(js_source, js_destination, copy_size)
+        copy_size_desc = structs.Extent3D(**copy_size)
+        js_copySize = to_js(copy_size_desc, eager_converter=simple_js_accessor)
+        js_obj = self._internal.copyExternalImageToTexture(js_source, js_destination, js_copySize)
         return None
 
 
