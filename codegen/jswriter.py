@@ -4,6 +4,7 @@ Codegen the JS webgpu backend, based on the parsed idl.
 write to the backends/js_webgpu/_api.py file.
 """
 
+import re
 from codegen.idlparser import Attribute, get_idl_parser
 from codegen.apipatcher import IdlPatcherMixin, BaseApiPatcher
 from textwrap import indent
@@ -14,6 +15,7 @@ file_preamble ="""
 
 from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
+from typing import Union
 
 from pyodide.ffi import to_js
 from js import Uint8Array
@@ -32,7 +34,7 @@ def {py_method_name}(self, **kwargs):
     js_obj = self._internal.{js_method_name}(js_descriptor)
 
     label = kwargs.pop("label", "")
-    return {return_type}(js_obj, label=label, device=self)
+    return {return_type}(label, js_obj, device=self)
 """
 
 unary_template = """
@@ -112,6 +114,11 @@ def generate_js_webgpu_api() -> str:
             if return_type and return_type.startswith("Promise<") and return_type.endswith(">"):
                 return_type = return_type.split("<")[-1].rstrip(">?")
 
+            # skip these for now as they are more troublesome -.-
+            if py_method_name.endswith("_sync"):
+                class_lines.append(f"\n    # TODO: {function_name} sync variant likely taken from _classes.py directly!")
+                continue
+
             # case 1: single argument as a descriptor (TODO: could be optional - but that should just work)
             if len(args) == 1 and args[0].typename.endswith(
                     ("Options", "Descriptor", "Configuration")
@@ -138,7 +145,12 @@ def generate_js_webgpu_api() -> str:
 
                 header = helper_patcher.get_method_def(class_name, py_method_name).partition("):")[0].lstrip()
                 # put all potentially forward refrenced classes into quotes
-                header = " ".join(f'"{h}"' if h.startswith("GPU") else h for h in header.split(" "))
+                header = " ".join(f'"{h}"' if h.startswith("GPU") else h for h in header.split(" ")).replace(':"','":')
+                # turn all optional type hints into Union with None
+                # int | None -> Union[int, None]
+                exp = r":\s([\w\"]+)\s\| None"
+                header = re.sub(exp, lambda m: f": Union[{m.group(1)}, None]", header)
+                header = header.replace('Sequence[GPURenderBundle]", "Sequence["GPURenderBundle"]') # TODO: just a temporary bodge!
 
                 param_list = []
                 conversion_lines = []

@@ -3,6 +3,7 @@
 
 from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
+from typing import Union
 
 from pyodide.ffi import to_js
 from js import Uint8Array
@@ -15,7 +16,7 @@ class GPUCommandsMixin(classes.GPUCommandsMixin, ):
     pass
 
 class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin, ):
-    def set_bind_group(self, index: int | None = None, bind_group: GPUBindGroup | None = None, dynamic_offsets_data: ArrayLike | None = None, dynamic_offsets_data_start: int | None = None, dynamic_offsets_data_length: int | None = None) -> None:
+    def set_bind_group(self, index: Union[int, None] = None, bind_group: Union["GPUBindGroup", None] = None, dynamic_offsets_data: Union[ArrayLike, None] = None, dynamic_offsets_data_start: Union[int, None] = None, dynamic_offsets_data_length: Union[int, None] = None) -> None:
         js_bindGroup = bind_group._internal
     
         data = memoryview(dynamic_offsets_data).cast("B")
@@ -28,7 +29,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin, ):
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin, ):
-    def push_debug_group(self, group_label: str | None = None) -> None:
+    def push_debug_group(self, group_label: Union[str, None] = None) -> None:
     
         js_obj = self._internal.pushDebugGroup(group_label)
         return js_obj # TODO maybe instead? None
@@ -36,44 +37,44 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin, ):
     def pop_debug_group(self) -> None:
         js_obj = self._internal.popDebugGroup()
 
-    def insert_debug_marker(self, marker_label: str | None = None) -> None:
+    def insert_debug_marker(self, marker_label: Union[str, None] = None) -> None:
     
         js_obj = self._internal.insertDebugMarker(marker_label)
         return js_obj # TODO maybe instead? None
 
 
 class GPURenderCommandsMixin(classes.GPURenderCommandsMixin, ):
-    def set_pipeline(self, pipeline: GPURenderPipeline | None = None) -> None:
+    def set_pipeline(self, pipeline: Union["GPURenderPipeline", None] = None) -> None:
         js_pipeline = pipeline._internal
         js_obj = self._internal.setPipeline(js_pipeline)
         return js_obj # TODO maybe instead? None
 
-    def set_index_buffer(self, buffer: GPUBuffer | None = None, index_format: enums.IndexFormatEnum | None = None, offset: int = 0, size: int | None = None) -> None:
+    def set_index_buffer(self, buffer: Union["GPUBuffer", None] = None, index_format: enums.IndexFormatEnum | None = None, offset: int = 0, size: Union[int, None] = None) -> None:
         js_buffer = buffer._internal
         js_obj = self._internal.setIndexBuffer(js_buffer, index_format, offset, size)
         return js_obj # TODO maybe instead? None
 
-    def set_vertex_buffer(self, slot: int | None = None, buffer: GPUBuffer | None = None, offset: int = 0, size: int | None = None) -> None:
+    def set_vertex_buffer(self, slot: Union[int, None] = None, buffer: Union["GPUBuffer", None] = None, offset: int = 0, size: Union[int, None] = None) -> None:
         js_buffer = buffer._internal
         js_obj = self._internal.setVertexBuffer(slot, js_buffer, offset, size)
         return js_obj # TODO maybe instead? None
 
-    def draw(self, vertex_count: int | None = None, instance_count: int = 1, first_vertex: int = 0, first_instance: int = 0) -> None:
+    def draw(self, vertex_count: Union[int, None] = None, instance_count: int = 1, first_vertex: int = 0, first_instance: int = 0) -> None:
     
         js_obj = self._internal.draw(vertex_count, instance_count, first_vertex, first_instance)
         return js_obj # TODO maybe instead? None
 
-    def draw_indexed(self, index_count: int | None = None, instance_count: int = 1, first_index: int = 0, base_vertex: int = 0, first_instance: int = 0) -> None:
+    def draw_indexed(self, index_count: Union[int, None] = None, instance_count: int = 1, first_index: int = 0, base_vertex: int = 0, first_instance: int = 0) -> None:
     
         js_obj = self._internal.drawIndexed(index_count, instance_count, first_index, base_vertex, first_instance)
         return js_obj # TODO maybe instead? None
 
-    def draw_indirect(self, indirect_buffer: GPUBuffer | None = None, indirect_offset: int | None = None) -> None:
+    def draw_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
         js_indirectBuffer = indirect_buffer._internal
         js_obj = self._internal.drawIndirect(js_indirectBuffer, indirect_offset)
         return js_obj # TODO maybe instead? None
 
-    def draw_indexed_indirect(self, indirect_buffer: GPUBuffer | None = None, indirect_offset: int | None = None) -> None:
+    def draw_indexed_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
         js_indirectBuffer = indirect_buffer._internal
         js_obj = self._internal.drawIndexedIndirect(js_indirectBuffer, indirect_offset)
         return js_obj # TODO maybe instead? None
@@ -86,25 +87,13 @@ class GPUAdapterInfo(classes.GPUAdapterInfo, ):
     pass
 
 class GPU(classes.GPU, ):
-    def request_adapter_sync(self, **kwargs):
-        descriptor = structs.RequestAdapterOptions(**kwargs)
-        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-        js_obj = self._internal.requestAdapter(js_descriptor)
-
-        label = kwargs.pop("label", "")
-        return GPUAdapter(js_obj, label=label, device=self)
-
+        # TODO: requestAdapter sync variant likely taken from _classes.py directly!
     # TODO: implement codegen for getPreferredCanvasFormat with args [] or return type GPUTextureFormat
+    pass
 
 class GPUAdapter(classes.GPUAdapter, ):
-    def request_device_sync(self, **kwargs):
-        descriptor = structs.DeviceDescriptor(**kwargs)
-        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-        js_obj = self._internal.requestDevice(js_descriptor)
-
-        label = kwargs.pop("label", "")
-        return GPUDevice(js_obj, label=label, device=self)
-
+        # TODO: requestDevice sync variant likely taken from _classes.py directly!
+    pass
 
 class GPUDevice(classes.GPUDevice, ):
     def destroy(self) -> None:
@@ -116,7 +105,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createBuffer(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUBuffer(js_obj, label=label, device=self)
+        return GPUBuffer(label, js_obj, device=self)
 
     def create_texture(self, **kwargs):
         descriptor = structs.TextureDescriptor(**kwargs)
@@ -124,7 +113,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createTexture(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUTexture(js_obj, label=label, device=self)
+        return GPUTexture(label, js_obj, device=self)
 
     def create_sampler(self, **kwargs):
         descriptor = structs.SamplerDescriptor(**kwargs)
@@ -132,7 +121,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createSampler(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUSampler(js_obj, label=label, device=self)
+        return GPUSampler(label, js_obj, device=self)
 
     def import_external_texture(self, **kwargs):
         descriptor = structs.ExternalTextureDescriptor(**kwargs)
@@ -140,7 +129,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.importExternalTexture(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUExternalTexture(js_obj, label=label, device=self)
+        return GPUExternalTexture(label, js_obj, device=self)
 
     def create_bind_group_layout(self, **kwargs):
         descriptor = structs.BindGroupLayoutDescriptor(**kwargs)
@@ -148,7 +137,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createBindGroupLayout(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUBindGroupLayout(js_obj, label=label, device=self)
+        return GPUBindGroupLayout(label, js_obj, device=self)
 
     def create_pipeline_layout(self, **kwargs):
         descriptor = structs.PipelineLayoutDescriptor(**kwargs)
@@ -156,7 +145,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createPipelineLayout(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUPipelineLayout(js_obj, label=label, device=self)
+        return GPUPipelineLayout(label, js_obj, device=self)
 
     def create_bind_group(self, **kwargs):
         descriptor = structs.BindGroupDescriptor(**kwargs)
@@ -164,7 +153,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createBindGroup(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUBindGroup(js_obj, label=label, device=self)
+        return GPUBindGroup(label, js_obj, device=self)
 
     def create_shader_module(self, **kwargs):
         descriptor = structs.ShaderModuleDescriptor(**kwargs)
@@ -172,7 +161,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createShaderModule(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUShaderModule(js_obj, label=label, device=self)
+        return GPUShaderModule(label, js_obj, device=self)
 
     def create_compute_pipeline(self, **kwargs):
         descriptor = structs.ComputePipelineDescriptor(**kwargs)
@@ -180,7 +169,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createComputePipeline(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUComputePipeline(js_obj, label=label, device=self)
+        return GPUComputePipeline(label, js_obj, device=self)
 
     def create_render_pipeline(self, **kwargs):
         descriptor = structs.RenderPipelineDescriptor(**kwargs)
@@ -188,7 +177,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createRenderPipeline(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPURenderPipeline(js_obj, label=label, device=self)
+        return GPURenderPipeline(label, js_obj, device=self)
 
     def create_compute_pipeline(self, **kwargs):
         descriptor = structs.ComputePipelineDescriptor(**kwargs)
@@ -196,7 +185,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createComputePipelineAsync(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUComputePipeline(js_obj, label=label, device=self)
+        return GPUComputePipeline(label, js_obj, device=self)
 
     def create_render_pipeline(self, **kwargs):
         descriptor = structs.RenderPipelineDescriptor(**kwargs)
@@ -204,7 +193,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createRenderPipelineAsync(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPURenderPipeline(js_obj, label=label, device=self)
+        return GPURenderPipeline(label, js_obj, device=self)
 
     def create_command_encoder(self, **kwargs):
         descriptor = structs.CommandEncoderDescriptor(**kwargs)
@@ -212,7 +201,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createCommandEncoder(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUCommandEncoder(js_obj, label=label, device=self)
+        return GPUCommandEncoder(label, js_obj, device=self)
 
     def create_render_bundle_encoder(self, **kwargs):
         descriptor = structs.RenderBundleEncoderDescriptor(**kwargs)
@@ -220,7 +209,7 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createRenderBundleEncoder(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPURenderBundleEncoder(js_obj, label=label, device=self)
+        return GPURenderBundleEncoder(label, js_obj, device=self)
 
     def create_query_set(self, **kwargs):
         descriptor = structs.QuerySetDescriptor(**kwargs)
@@ -228,22 +217,18 @@ class GPUDevice(classes.GPUDevice, ):
         js_obj = self._internal.createQuerySet(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUQuerySet(js_obj, label=label, device=self)
+        return GPUQuerySet(label, js_obj, device=self)
 
     def push_error_scope(self, filter: enums.ErrorFilterEnum | None = None) -> None:
     
         js_obj = self._internal.pushErrorScope(filter)
         return js_obj # TODO maybe instead? None
 
-    # TODO: implement codegen for popErrorScope with args [] or return type GPUError
+        # TODO: popErrorScope sync variant likely taken from _classes.py directly!
 
 class GPUBuffer(classes.GPUBuffer, ):
-    def map_sync(self, mode: flags.MapModeFlags | None = None, offset: int = 0, size: int | None = None) -> None:
-    
-        js_obj = self._internal.mapAsync(mode, offset, size)
-        return js_obj # TODO maybe instead? None
-
-    def get_mapped_range(self, offset: int = 0, size: int | None = None) -> ArrayLike:
+        # TODO: mapAsync sync variant likely taken from _classes.py directly!
+    def get_mapped_range(self, offset: int = 0, size: Union[int, None] = None) -> ArrayLike:
     
         js_obj = self._internal.getMappedRange(offset, size)
         return js_obj # TODO maybe instead? ArrayBuffer
@@ -262,7 +247,7 @@ class GPUTexture(classes.GPUTexture, ):
         js_obj = self._internal.createView(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUTextureView(js_obj, label=label, device=self)
+        return GPUTextureView(label, js_obj, device=self)
 
     def destroy(self) -> None:
         js_obj = self._internal.destroy()
@@ -284,7 +269,7 @@ class GPUPipelineLayout(classes.GPUPipelineLayout, ):
     pass
 
 class GPUShaderModule(classes.GPUShaderModule, ):
-    # TODO: implement codegen for getCompilationInfo with args [] or return type GPUCompilationInfo
+        # TODO: getCompilationInfo sync variant likely taken from _classes.py directly!
     pass
 
 class GPUCompilationMessage(classes.GPUCompilationMessage, ):
@@ -297,7 +282,7 @@ class GPUPipelineError(classes.GPUPipelineError, ):
     pass
 
 class GPUPipelineBase(classes.GPUPipelineBase, ):
-    def get_bind_group_layout(self, index: int | None = None) -> GPUBindGroupLayout:
+    def get_bind_group_layout(self, index: Union[int, None] = None) -> "GPUBindGroupLayout":
     
         js_obj = self._internal.getBindGroupLayout(index)
         return js_obj # TODO maybe instead? [NewObject]
@@ -319,7 +304,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCom
         js_obj = self._internal.beginRenderPass(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPURenderPassEncoder(js_obj, label=label, device=self)
+        return GPURenderPassEncoder(label, js_obj, device=self)
 
     def begin_compute_pass(self, **kwargs):
         descriptor = structs.ComputePassDescriptor(**kwargs)
@@ -327,9 +312,9 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCom
         js_obj = self._internal.beginComputePass(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUComputePassEncoder(js_obj, label=label, device=self)
+        return GPUComputePassEncoder(label, js_obj, device=self)
 
-    def copy_buffer_to_buffer(self, source: GPUBuffer | None = None, source_offset: int | None = None, destination: GPUBuffer | None = None, destination_offset: int | None = None, size: int | None = None) -> None:
+    def copy_buffer_to_buffer(self, source: Union["GPUBuffer", None] = None, source_offset: Union[int, None] = None, destination: Union["GPUBuffer", None] = None, destination_offset: Union[int, None] = None, size: Union[int, None] = None) -> None:
         js_source = source._internal
         js_destination = destination._internal
         js_obj = self._internal.copyBufferToBuffer(js_source, source_offset, js_destination, destination_offset, size)
@@ -365,12 +350,12 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCom
         js_obj = self._internal.copyTextureToTexture(js_source, js_destination, js_copySize)
         return js_obj # TODO maybe instead? None
 
-    def clear_buffer(self, buffer: GPUBuffer | None = None, offset: int = 0, size: int | None = None) -> None:
+    def clear_buffer(self, buffer: Union["GPUBuffer", None] = None, offset: int = 0, size: Union[int, None] = None) -> None:
         js_buffer = buffer._internal
         js_obj = self._internal.clearBuffer(js_buffer, offset, size)
         return js_obj # TODO maybe instead? None
 
-    def resolve_query_set(self, query_set: GPUQuerySet | None = None, first_query: int | None = None, query_count: int | None = None, destination: GPUBuffer | None = None, destination_offset: int | None = None) -> None:
+    def resolve_query_set(self, query_set: Union["GPUQuerySet", None] = None, first_query: Union[int, None] = None, query_count: Union[int, None] = None, destination: Union["GPUBuffer", None] = None, destination_offset: Union[int, None] = None) -> None:
         js_querySet = query_set._internal
         js_destination = destination._internal
         js_obj = self._internal.resolveQuerySet(js_querySet, first_query, query_count, js_destination, destination_offset)
@@ -382,21 +367,21 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCom
         js_obj = self._internal.finish(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPUCommandBuffer(js_obj, label=label, device=self)
+        return GPUCommandBuffer(label, js_obj, device=self)
 
 
 class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin):
-    def set_pipeline(self, pipeline: GPUComputePipeline | None = None) -> None:
+    def set_pipeline(self, pipeline: Union["GPUComputePipeline", None] = None) -> None:
         js_pipeline = pipeline._internal
         js_obj = self._internal.setPipeline(js_pipeline)
         return js_obj # TODO maybe instead? None
 
-    def dispatch_workgroups(self, workgroup_count_x: int | None = None, workgroup_count_y: int = 1, workgroup_count_z: int = 1) -> None:
+    def dispatch_workgroups(self, workgroup_count_x: Union[int, None] = None, workgroup_count_y: int = 1, workgroup_count_z: int = 1) -> None:
     
         js_obj = self._internal.dispatchWorkgroups(workgroup_count_x, workgroup_count_y, workgroup_count_z)
         return js_obj # TODO maybe instead? None
 
-    def dispatch_workgroups_indirect(self, indirect_buffer: GPUBuffer | None = None, indirect_offset: int | None = None) -> None:
+    def dispatch_workgroups_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
         js_indirectBuffer = indirect_buffer._internal
         js_obj = self._internal.dispatchWorkgroupsIndirect(js_indirectBuffer, indirect_offset)
         return js_obj # TODO maybe instead? None
@@ -406,12 +391,12 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUCommandsMixin, GPU
 
 
 class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPURenderCommandsMixin):
-    def set_viewport(self, x: float | None = None, y: float | None = None, width: float | None = None, height: float | None = None, min_depth: float | None = None, max_depth: float | None = None) -> None:
+    def set_viewport(self, x: Union[float, None] = None, y: Union[float, None] = None, width: Union[float, None] = None, height: Union[float, None] = None, min_depth: Union[float, None] = None, max_depth: Union[float, None] = None) -> None:
     
         js_obj = self._internal.setViewport(x, y, width, height, min_depth, max_depth)
         return js_obj # TODO maybe instead? None
 
-    def set_scissor_rect(self, x: int | None = None, y: int | None = None, width: int | None = None, height: int | None = None) -> None:
+    def set_scissor_rect(self, x: Union[int, None] = None, y: Union[int, None] = None, width: Union[int, None] = None, height: Union[int, None] = None) -> None:
     
         js_obj = self._internal.setScissorRect(x, y, width, height)
         return js_obj # TODO maybe instead? None
@@ -422,12 +407,12 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUCommandsMixin, GPUDe
         js_obj = self._internal.setBlendConstant(js_color)
         return js_obj # TODO maybe instead? None
 
-    def set_stencil_reference(self, reference: int | None = None) -> None:
+    def set_stencil_reference(self, reference: Union[int, None] = None) -> None:
     
         js_obj = self._internal.setStencilReference(reference)
         return js_obj # TODO maybe instead? None
 
-    def begin_occlusion_query(self, query_index: int | None = None) -> None:
+    def begin_occlusion_query(self, query_index: Union[int, None] = None) -> None:
     
         js_obj = self._internal.beginOcclusionQuery(query_index)
         return js_obj # TODO maybe instead? None
@@ -435,7 +420,7 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUCommandsMixin, GPUDe
     def end_occlusion_query(self) -> None:
         js_obj = self._internal.endOcclusionQuery()
 
-    def execute_bundles(self, bundles: Sequence[GPURenderBundle] | None = None) -> None:
+    def execute_bundles(self, bundles: Sequence["GPURenderBundle"] | None = None) -> None:
         # TODO: argument bundles of JS type sequence<GPURenderBundle>, py type list[GPURenderBundle] might need conversion
         js_obj = self._internal.executeBundles(bundles)
         return js_obj # TODO maybe instead? None
@@ -454,7 +439,7 @@ class GPURenderBundleEncoder(classes.GPURenderBundleEncoder, GPUCommandsMixin, G
         js_obj = self._internal.finish(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return GPURenderBundle(js_obj, label=label, device=self)
+        return GPURenderBundle(label, js_obj, device=self)
 
 
 class GPUQueue(classes.GPUQueue, ):
@@ -463,10 +448,8 @@ class GPUQueue(classes.GPUQueue, ):
         js_obj = self._internal.submit(command_buffers)
         return js_obj # TODO maybe instead? None
 
-    def on_submitted_work_done_sync(self) -> None:
-        js_obj = self._internal.onSubmittedWorkDone()
-
-    def write_buffer(self, buffer: GPUBuffer | None = None, buffer_offset: int | None = None, data: ArrayLike | None = None, data_offset: int = 0, size: int | None = None) -> None:
+        # TODO: onSubmittedWorkDone sync variant likely taken from _classes.py directly!
+    def write_buffer(self, buffer: Union["GPUBuffer", None] = None, buffer_offset: Union[int, None] = None, data: Union[ArrayLike, None] = None, data_offset: int = 0, size: Union[int, None] = None) -> None:
         js_buffer = buffer._internal
     
         data = memoryview(data).cast("B")
@@ -477,7 +460,7 @@ class GPUQueue(classes.GPUQueue, ):
         js_obj = self._internal.writeBuffer(js_buffer, buffer_offset, js_data, data_offset, size)
         return js_obj # TODO maybe instead? None
 
-    def write_texture(self, destination: structs.TexelCopyTextureInfoStruct | None = None, data: ArrayLike | None = None, data_layout: structs.TexelCopyBufferLayoutStruct | None = None, size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
+    def write_texture(self, destination: structs.TexelCopyTextureInfoStruct | None = None, data: Union[ArrayLike, None] = None, data_layout: structs.TexelCopyBufferLayoutStruct | None = None, size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
         destination_desc = structs.TexelCopyTextureInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
     
@@ -516,7 +499,7 @@ class GPUCanvasContext(classes.GPUCanvasContext, ):
         js_obj = self._internal.configure(js_descriptor)
 
         label = kwargs.pop("label", "")
-        return undefined(js_obj, label=label, device=self)
+        return undefined(label, js_obj, device=self)
 
     def unconfigure(self) -> None:
         js_obj = self._internal.unconfigure()

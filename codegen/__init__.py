@@ -13,8 +13,8 @@ def main():
     with PrintToFile(log):
         print("# Code generation report")
         prepare()
-        update_api()
-        update_wgpu_native()
+        # update_api()
+        # update_wgpu_native()
         update_js()
         file_cache.write("resources/codegen_report.md", log.getvalue())
 

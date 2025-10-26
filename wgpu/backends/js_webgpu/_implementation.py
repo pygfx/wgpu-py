@@ -174,6 +174,23 @@ class GPUDevice(GPUDevice):
 
         return promise
 
+    # exactly the same but we reroute the constructor... # TODO: figure out something better!
+    def create_buffer(self, **kwargs):
+        descriptor = structs.BufferDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_obj = self._internal.createBuffer(js_descriptor)
+
+        label = kwargs.pop("label", "")
+        return GPUBuffer(label, js_obj, device=self)
+
+    def create_texture(self, **kwargs):
+        descriptor = structs.TextureDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_obj = self._internal.createTexture(js_descriptor)
+
+        label = kwargs.pop("label", "")
+        return GPUTexture(label, js_obj, device=self)
+
 class GPUBuffer(GPUBuffer):
     # TODO: remove label from the constructors!
     def __init__(self, label, internal, device):
@@ -181,19 +198,29 @@ class GPUBuffer(GPUBuffer):
         super().__init__(internal.label, internal, device, internal.size, internal.usage, internal.mapState)
 
     # this overwrites properties in ._classes
+    # and ignore the setters there too.
     @property
     def _map_state(self) -> enums.BufferMapState:
         return self._internal.mapState
+    @_map_state.setter
+    def _map_state(self, value: enums.BufferMapState):
+        pass
 
     @property
     def _size(self) -> int:
         js_size = self._internal.size
         # print("GPUBuffer.size", js_size, type(js_size))
         return js_size
+    @_size.setter
+    def _size(self, value: int):
+        pass
 
     @property
     def _usage(self) -> flags.BufferUsageFlags:
         return self._internal.usage
+    @_usage.setter
+    def _usage(self, value: flags.BufferUsageFlags):
+        pass
 
 
     # TODO apidiff
@@ -275,13 +302,22 @@ class GPUTexture(GPUTexture):
 
         tex_info = {
             "size": (internal.width, internal.height, internal.depthOrArrayLayers),
-            "mip_level_count": internal.mapLevelCount,
+            "mip_level_count": internal.mipLevelCount,
             "sample_count": internal.sampleCount,
             "dimension": internal.dimension,
             "format": internal.format,
             "usage": internal.usage,
         }
         super().__init__(internal.label, internal, device, tex_info)
+
+    # has a more complex constructor...
+    def create_view(self, **kwargs):
+        descriptor = structs.TextureViewDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_obj = self._internal.createView(js_descriptor)
+
+        label = kwargs.pop("label", "")
+        return GPUTextureView(label, js_obj, device=self._device, texture=self, size=self._tex_info["size"])
 
 class GPUCanvasContext(GPUCanvasContext):
     # provide the private attributes for _classes.py
