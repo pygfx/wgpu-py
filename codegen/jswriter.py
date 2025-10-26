@@ -15,15 +15,16 @@ file_preamble ="""
 from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
 
-from pyodide.ffi import run_sync, JsProxy, to_js
-from js import window, Uint8Array
+from pyodide.ffi import to_js
+from js import Uint8Array
 
 # TODO: move this to a new _helpers.py maybe?
-from .__init__ import simple_js_accessor
-
+from ._helpers import simple_js_accessor
 """
+# maybe we should also generate a __all__ list to just import the defined classes?
 
 # TODO: the constructor often needs more args, like device hands down self
+# maybe label can be done via the property?
 create_template = """
 def {py_method_name}(self, **kwargs):
     descriptor = structs.{py_descriptor_name}(**kwargs)
@@ -46,7 +47,7 @@ positional_args_template = """
 {header}
     {body}
     js_obj = self._internal.{js_method_name}({js_args})
-    return {return_type}
+    return js_obj # TODO maybe instead? {return_type}
 """
 
 # might require size to be calculated if None? (offset etc)
@@ -83,12 +84,14 @@ def generate_js_webgpu_api() -> str:
 
 
         mixins = [c for c in interface.bases if c.endswith("Mixin")]
-        class_header = f"class {class_name}(classes.{class_name}{', '.join(mixins)}):"
+        class_header = f"class {class_name}(classes.{class_name}, {', '.join(mixins)}):"
 
         class_lines = []
         # TODO: can we property some of the webgpu attributes to replace the existing private mappings
 
         for function_name, idl_line in interface.functions.items():
+            # TODO: mixin classes seem to cause double methods? should we skip them?
+
             return_type = idl_line.split(" ")[0] # on some parts this doesn't exist
             if "constructor" in idl_line:
                 return_type = None
