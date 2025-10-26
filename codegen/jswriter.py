@@ -13,6 +13,7 @@ file_preamble ="""
 # Auto-generated API for the JS WebGPU backend, based on the IDL.
 
 from ... import classes, structs, enums, flags
+from ...structs import ArrayLike, Sequence # for typing hints
 
 from pyodide.ffi import run_sync, JsProxy, to_js
 from js import window, Uint8Array
@@ -30,7 +31,7 @@ def {py_method_name}(self, **kwargs):
     js_obj = self._internal.{js_method_name}(js_descriptor)
 
     label = kwargs.pop("label", "")
-    return {return_type}(js_obj, label=label)
+    return {return_type}(js_obj, label=label, device=self)
 """
 
 unary_template = """
@@ -42,12 +43,13 @@ def {py_method_name}(self) -> None:
 # return needs to be optional and also resolve the promise?
 # TODO: with empty body looks odd :/
 positional_args_template = """
-def {py_method_name}(self, {args}):
+{header}
     {body}
     js_obj = self._internal.{js_method_name}({js_args})
     return {return_type}
 """
 
+# might require size to be calculated if None? (offset etc)
 data_conversion = """
     data = memoryview({py_data}).cast("B")
     data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
@@ -93,16 +95,24 @@ def generate_js_webgpu_api() -> str:
                 # TODO: some classes need custom constructors!
                 continue # skip constructors?
 
+
             # based on apipatcher.IDlCommentINjector.get_method_comment
             args = idl_line.split("(")[1].rsplit(")")[0].split(", ")
             args = [Attribute(arg) for arg in args if arg.strip()]
             py_method_name = helper_patcher.name2py_names(class_name, function_name)
+
+            # since we only do sync variants anyways
+            py_method_name = py_method_name[0] # TODO: async always special case?
+            # TODO: the create_x_pipeline_async methods become the sync variant without suffix!
+            if return_type and return_type.startswith("Promise<") and return_type.endswith(">"):
+                return_type = return_type.split("<")[-1].rstrip(">?")
+
             # case 1: single argument as a descriptor (TODO: could be optional - but that should just work)
             if len(args) == 1 and args[0].typename.endswith(
-                    ("Option", "Descriptor", "Configuration")
+                    ("Options", "Descriptor", "Configuration")
                 ):
                 method_string = create_template.format(
-                    py_method_name=py_method_name[0], # TODO: async workaround?
+                    py_method_name=py_method_name,
                     py_descriptor_name=args[0].typename.removeprefix("GPU"),
                     js_method_name=function_name,
                     return_type=return_type if return_type else "None",
@@ -112,7 +122,7 @@ def generate_js_webgpu_api() -> str:
             # case 2: no arguments (and nothing to return?)
             elif (len(args) == 0 and return_type == "undefined"):
                 method_string = unary_template.format(
-                    py_method_name=py_method_name[0], # TODO: async workaround?
+                    py_method_name=py_method_name,
                     js_method_name=function_name,
                 )
                 class_lines.append(method_string)
@@ -120,6 +130,8 @@ def generate_js_webgpu_api() -> str:
 
             # case 3: positional arguments, some of which might need ._internal lookup or struct->to_js conversion... but not all.
             elif (len(args) > 0):
+
+                header = helper_patcher.get_method_def(class_name, py_method_name).partition("):")[0].lstrip()
                 param_list = []
                 conversion_lines = []
                 js_arg_list = []
@@ -129,6 +141,7 @@ def generate_js_webgpu_api() -> str:
                     # if it's a GPUObject kinda thing we most likely need to call ._internal to get the correct js object
                     if arg.typename.removesuffix("?") in idl.classes:
                         # TODO: do we need to check against none for optionals?
+                        # technically the our js_accessor does this lookup too?
                         conversion_lines.append(f"js_{arg.name} = {py_name}._internal")
                         js_arg_list.append(f"js_{arg.name}")
                     # TODO: sequence of complex type?
@@ -141,17 +154,13 @@ def generate_js_webgpu_api() -> str:
                         conversion_lines.append(data_conversion.format(py_data=py_name))
                         js_arg_list.append("js_data") #might be a problem if there is two!
                     else:
-                        try:
-                            py_type = idl.resolve_type(arg.typename)
-                        except (RuntimeError, AssertionError) as e:
-                            py_type = "unimplemented_resolution?"
+                        py_type = idl.resolve_type(arg.typename)
                         if py_type not in __builtins__ and not py_type.startswith(("enums.", "flags.")):
                             conversion_lines.append(f"# TODO: argument {py_name} of JS type {arg.typename}, py type {py_type} might need conversion")
                         js_arg_list.append(py_name)
 
                 method_string = positional_args_template.format(
-                    py_method_name=py_method_name[0], # TODO: async workaround?
-                    args=", ".join(param_list), # TODO: default/optional args
+                    header=header,
                     body=("\n    ".join(conversion_lines)),
                     js_method_name=function_name,
                     js_args=", ".join(js_arg_list),

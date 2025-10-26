@@ -223,6 +223,7 @@ class IdlParser:
             "ImageData": "ArrayLike",
             "VideoFrame": "ArrayLike",
             "AllowSharedBufferSource": "ArrayLike",
+            "[AllowShared] Uint32Array": "ArrayLike",
             "GPUPipelineConstantValue": "float",
             "GPUExternalTexture": "object",
             "undefined": "None",
