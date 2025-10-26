@@ -22,7 +22,7 @@ from .__init__ import simple_js_accessor
 
 """
 
-
+# TODO: the constructor often needs more args, like device hands down self
 create_template = """
 def {py_method_name}(self, **kwargs):
     descriptor = structs.{py_descriptor_name}(**kwargs)
@@ -145,7 +145,7 @@ def generate_js_webgpu_api() -> str:
                             py_type = idl.resolve_type(arg.typename)
                         except (RuntimeError, AssertionError) as e:
                             py_type = "unimplemented_resolution?"
-                        if py_type not in __builtins__:
+                        if py_type not in __builtins__ and not py_type.startswith(("enums.", "flags.")):
                             conversion_lines.append(f"# TODO: argument {py_name} of JS type {arg.typename}, py type {py_type} might need conversion")
                         js_arg_list.append(py_name)
 

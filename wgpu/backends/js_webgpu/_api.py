@@ -161,7 +161,7 @@ class GPUDevice(classes.GPUDevice):
         return GPUQuerySet(js_obj, label=label)
 
     def push_error_scope(self, filter):
-        # TODO: argument filter of JS type GPUErrorFilter, py type enums.ErrorFilterEnum might need conversion
+    
         js_obj = self._internal.pushErrorScope(filter)
         return None
 
@@ -169,7 +169,7 @@ class GPUDevice(classes.GPUDevice):
 
 class GPUBuffer(classes.GPUBuffer):
     def map_sync(self, mode, offset, size):
-        # TODO: argument mode of JS type GPUMapModeFlags, py type flags.MapModeFlags might need conversion
+    
         js_obj = self._internal.mapAsync(mode, offset, size)
         return Promise<undefined>
 
@@ -413,7 +413,6 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 
     def set_index_buffer(self, buffer, index_format, offset, size):
         js_buffer = buffer._internal
-        # TODO: argument index_format of JS type GPUIndexFormat, py type enums.IndexFormatEnum might need conversion
         js_obj = self._internal.setIndexBuffer(js_buffer, index_format, offset, size)
         return None
 
