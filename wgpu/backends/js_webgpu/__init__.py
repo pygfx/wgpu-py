@@ -24,24 +24,6 @@ def to_camel_case(snake_str):
     #     res += "_"
     return res
 
-JS_KEYWORDS = ["size", "type", "format"]
-
-
-# camelCase the keys and use Object.fromEntries?
-def from_entries_camel_case(inp: dict):
-    temp = {}
-    # js_map = Map.new()
-    for k, v in inp.items():
-        # maybe this is a fix?
-        # if k in JS_KEYWORDS:
-        #     k += "_"
-        camel_key = to_camel_case(k)
-        temp[camel_key] = v
-    #     js_map.set(camel_key, v)
-    # return js_map
-    js_obj = Object.fromEntries(temp.items())
-    return js_obj
-
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
 # you have to do the recursion yourself...
@@ -484,7 +466,6 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUDebugCommandsMixin):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         # js_args = to_js(args, eager_converter=simple_js_accessor)
         # print("begin_render_pass", kwargs)
-        # js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor, dict_converter=from_entries_camel_case)
         js_rp = self._internal.beginRenderPass(js_descriptor)
         # print("got js_rp", js_rp, dir(js_rp))
 
