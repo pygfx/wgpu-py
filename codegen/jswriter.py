@@ -18,10 +18,11 @@ from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
 from typing import Union
 
-from pyodide.ffi import to_js
-from js import Uint8Array
+from pyodide.ffi import to_js, run_sync
+from js import window, Uint8Array
 
 from ._helpers import simple_js_accessor
+from ._implementation import GPUPromise
 """
 # maybe we should also generate a __all__ list to just import the defined classes?
 
@@ -116,7 +117,7 @@ def generate_js_webgpu_api() -> str:
         custom_methods = {}
 
         if class_name in custom_classes:
-            class_line = custom_classes[class_name][0] + 1
+            class_line = custom_classes[class_name][0] +1
             for method_name, start_line, end_line in patcher.iter_methods(class_line):
                 # grab the actual contents ?
                 # maybe include a comment that is in the line prior from _implementation.py?
@@ -137,9 +138,10 @@ def generate_js_webgpu_api() -> str:
 
             if py_method_name in custom_methods:
                 # Case 2: custom implementation exists!
-                class_lines.append(f"# Custom implementation for {function_name} from _implementation.py:\n")
+                class_lines.append(f"\n# Custom implementation for {function_name} from _implementation.py:\n")
                 class_lines.append(dedent("\n".join(custom_methods[py_method_name])))
                 class_lines.append("\n") # for space I guess
+                custom_methods.pop(py_method_name) # remove ones we have added.
                 continue
 
             if py_method_name == "__init__":
@@ -235,6 +237,13 @@ def generate_js_webgpu_api() -> str:
             else:
                 class_lines.append(f"\n# TODO: implement codegen for {function_name} with args {args} or return type {return_type}")
 
+        # if there are some methods not part of the idl, we should write them too
+        if custom_methods:
+            class_lines.append("\n# Additional custom methods from _implementation.py:\n")
+            for method_name, method_lines in custom_methods.items():
+                class_lines.append(dedent("\n".join(method_lines)))
+                class_lines.append("\n\n")
+
         # do we need them in the first place?
         if all(line.lstrip().startswith("#") for line in class_lines if line.strip()):
             class_lines.append("\npass")
@@ -245,6 +254,10 @@ def generate_js_webgpu_api() -> str:
 
     # TODO: most likely better to return a structure like
     # dict(class: dict(method : code_lines))
+
+
+    # TODO: postamble:
+    output += "\ngpu = GPU()\n"
 
     return output
 

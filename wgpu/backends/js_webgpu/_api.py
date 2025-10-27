@@ -5,10 +5,11 @@ from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
 from typing import Union
 
-from pyodide.ffi import to_js
-from js import Uint8Array
+from pyodide.ffi import to_js, run_sync
+from js import window, Uint8Array
 
 from ._helpers import simple_js_accessor
+from ._implementation import GPUPromise
 
 
 class GPUCommandsMixin(classes.GPUCommandsMixin, ):
@@ -16,6 +17,7 @@ class GPUCommandsMixin(classes.GPUCommandsMixin, ):
     pass
 
 class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin, ):
+
     # Custom implementation for setBindGroup from _implementation.py:
     def set_bind_group(self, index: int, bind_group: classes.GPUBindGroup, dynamic_offsets_data: list[int] = (), dynamic_offsets_data_start=None, dynamic_offsets_data_length=None) -> None:
         self._internal.setBindGroup(index, bind_group._internal, dynamic_offsets_data)
@@ -78,12 +80,88 @@ class GPU(classes.GPU, ):
 
     # TODO: requestAdapter sync variant likely taken from _classes.py directly!
     # TODO: implement codegen for getPreferredCanvasFormat with args [] or return type GPUTextureFormat
-    pass
+    # Additional custom methods from _implementation.py:
+    def __init__(self):
+        self._internal = window.navigator.gpu  # noqa: F821
+
+    def request_adapter_async(self, loop=None, canvas=None, **options) -> GPUPromise["GPUAdapter"]:
+        options = structs.RequestAdapterOptions(**options)
+        js_options = to_js(options, eager_converter=simple_js_accessor)
+        js_adapter_promise = self._internal.requestAdapter(js_options)
+
+        if loop is None:
+            # can we use this instead?
+            webloop = js_adapter_promise.get_loop()
+            loop = webloop
+
+        def adapter_constructor(js_adapter):
+            return GPUAdapter(js_adapter, loop=loop)
+
+        promise = GPUPromise("request_adapter", adapter_constructor, loop=loop)
+
+        js_adapter_promise.then(promise._set_input)  # we chain the js resolution to our promise
+        return promise
+
+    def enumerate_adapters_async(self, loop=None) -> GPUPromise[list["GPUAdapter"]]:
+        adapter_hp = self.request_adapter_sync(power_preference="high-performance")
+        adapter_lp = self.request_adapter_sync(power_preference="low-power")
+
+        promise = GPUPromise("enumerate_adapters", None, loop=loop)
+        promise._set_input([adapter_hp, adapter_lp])
+        return promise
+
+
 
 class GPUAdapter(classes.GPUAdapter, ):
 
     # TODO: requestDevice sync variant likely taken from _classes.py directly!
-    pass
+    # Additional custom methods from _implementation.py:
+    def __init__(self, js_adapter, loop):
+        internal = js_adapter
+        # manually turn these into useful python objects
+        features = set(js_adapter.features)
+
+        # TODO: _get_limits()?
+        limits = js_adapter.limits
+        py_limits = {}
+        for limit in dir(limits):
+            # we don't have the GPUSupportedLimits as a struct or list any where in the code right now, maybe we un skip it in the codegen?
+            if isinstance(getattr(limits, limit), int) and "_" not in limit:
+                py_limits[limit] = getattr(limits, limit)
+
+        infos = ["vendor", "architecture", "device", "description", "subgroupMinSize", "subgroupMaxSize", "isFallbackAdapter"]
+        adapter_info = js_adapter.info
+        py_adapter_info = {}
+        for info in infos:
+            if hasattr(adapter_info, info):
+                py_adapter_info[info] = getattr(adapter_info, info)
+
+        # for compatibility, we fill the native-extra infos too:
+        py_adapter_info["vendor_id"] = 0
+        py_adapter_info["device_id"] = 0
+        py_adapter_info["adapter_type"] = "browser"
+        py_adapter_info["backend_type"] = "WebGPU"
+
+        adapter_info = classes.GPUAdapterInfo(**py_adapter_info)
+
+        super().__init__(internal=internal, features=features, limits=py_limits, adapter_info=adapter_info, loop=loop)
+
+    def request_device_async(self, **kwargs) -> GPUPromise["GPUDevice"]:
+        descriptor = structs.DeviceDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_device_promise = self._internal.requestDevice(js_descriptor)
+
+        label = kwargs.get("label", "")
+
+        def device_constructor(js_device):
+            # TODO: do we need to hand down a default_queue here?
+            return GPUDevice(label, js_device, adapter=self)
+
+        promise = GPUPromise("request_device", device_constructor, loop=self._loop)
+        js_device_promise.then(promise._set_input)
+        return promise
+
+
 
 class GPUDevice(classes.GPUDevice, ):
 
@@ -215,6 +293,65 @@ class GPUDevice(classes.GPUDevice, ):
         self._internal.pushErrorScope(filter)
 
     # TODO: popErrorScope sync variant likely taken from _classes.py directly!
+    # Additional custom methods from _implementation.py:
+    def __init__(self, label: str, js_device, adapter: GPUAdapter):
+        features = set(js_device.features)
+
+        js_limits = js_device.limits
+        limits = {}
+        for limit in dir(js_limits):
+            if isinstance(getattr(js_limits, limit), int) and "_" not in limit:
+                limits[limit] = getattr(js_limits, limit)
+
+        queue = GPUQueue(label="default queue", internal=js_device.queue, device=self)
+        super().__init__(label, internal=js_device, adapter=adapter, features=features, limits=limits, queue=queue)
+
+    def create_buffer_with_data_(self, *, label="", data, usage: flags.BufferUsageFlags) -> "GPUBuffer":
+        data = memoryview(data).cast("B")  # unit8
+        data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+
+        # if it's a Descriptor you need the keywords
+        # do we need to also need to modify the usages?
+        js_buf = self._internal.createBuffer(label=label, size=data_size, usage=usage, mappedAtCreation=True)
+        # print("created buffer", js_buf, dir(js_buf), js_buf.size)
+        array_buf = js_buf.getMappedRange(0, data_size)
+        Uint8Array.new(array_buf).assign(data)
+        # print(array_buf.to_py().tolist())
+        js_buf.unmap()
+        # print("created buffer", js_buf, dir(js_buf), js_buf.size)
+        return GPUBuffer(label, js_buf, self, data_size, usage, enums.BufferMapState.unmapped)
+
+    def create_compute_pipeline_async(self, **kwargs):
+        descriptor = structs.ComputePipelineDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_promise = self._internal.createComputePipelineAsync(js_descriptor)
+
+        label = kwargs.get("label", "")
+
+        def construct_compute_pipeline(js_cp):
+            return classes.GPUComputePipeline(label, js_cp, self)
+
+        promise = GPUPromise("create_compute_pipeline", construct_compute_pipeline, loop=self._loop)
+        js_promise.then(promise._set_input)
+
+        return promise
+
+    def create_render_pipeline_async(self, **kwargs):
+        descriptor = structs.RenderPipelineDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_promise = self._internal.createRenderPipelineAsync(js_descriptor)
+
+        label = kwargs.get("label", "")
+
+        def construct_render_pipeline(js_rp):
+            return classes.GPURenderPipeline(label, js_rp, self)
+
+        promise = GPUPromise("create_render_pipeline", construct_render_pipeline, loop=self._loop)
+        js_promise.then(promise._set_input)
+
+        return promise
+
+
 
 class GPUBuffer(classes.GPUBuffer, ):
 
@@ -229,8 +366,48 @@ class GPUBuffer(classes.GPUBuffer, ):
     def destroy(self) -> None:
         self._internal.destroy()
 
+    # Additional custom methods from _implementation.py:
+    def __init__(self, label, internal, device):
+        # can we just fill the _classes constructor with properties?
+        super().__init__(internal.label, internal, device, internal.size, internal.usage, internal.mapState)
+
+    def _map_state(self, value: enums.BufferMapState):
+        pass
+
+    def _size(self, value: int):
+        pass
+
+    def _usage(self, value: flags.BufferUsageFlags):
+        pass
+
+    def write_mapped(self, data, buffer_offset: int | None = None):
+        if self.map_state != enums.BufferMapState.mapped:
+            raise RuntimeError(f"Can only write to a buffer if its mapped: {self.map_state=}")
+
+        # make sure it's in a known datatype???
+        data = memoryview(data).cast("B")
+        size = (data.nbytes + 3) & ~3
+
+        # None default values become undefined in js, which should still work as the function can be overloaded.
+        # TODO: try without this line
+        if buffer_offset is None:
+            buffer_offset = 0
+
+        # these can't be passed as keyword arguments I guess...
+        array_buf = self._internal.getMappedRange(buffer_offset, size)
+        Uint8Array.new(array_buf).assign(data)
+
+    def map_async(self, mode: flags.MapModeFlags | None, offset: int = 0, size: int | None = None) -> GPUPromise[None]:
+        map_promise = self._internal.mapAsync(mode, offset, size)
+
+        promise = GPUPromise("buffer.map_async", None, loop=self._device._loop)
+        map_promise.then(promise._set_input)  # presumably this signals via a none callback to nothing?
+        return promise
+
+
 
 class GPUTexture(classes.GPUTexture, ):
+
     # Custom implementation for createView from _implementation.py:
     def create_view(self, **kwargs):
         descriptor = structs.TextureViewDescriptor(**kwargs)
@@ -242,6 +419,21 @@ class GPUTexture(classes.GPUTexture, ):
 
     def destroy(self) -> None:
         self._internal.destroy()
+
+    # Additional custom methods from _implementation.py:
+    def __init__(self, label: str, internal, device):
+        # here we create the cached _tex_info dict
+
+        tex_info = {
+            "size": (internal.width, internal.height, internal.depthOrArrayLayers),
+            "mip_level_count": internal.mipLevelCount,
+            "sample_count": internal.sampleCount,
+            "dimension": internal.dimension,
+            "format": internal.format,
+            "usage": internal.usage,
+        }
+        super().__init__(internal.label, internal, device, tex_info)
+
 
 
 class GPUTextureView(classes.GPUTextureView, ):
@@ -282,6 +474,7 @@ class GPUPipelineError(classes.GPUPipelineError, ):
     pass
 
 class GPUPipelineBase(classes.GPUPipelineBase, ):
+
     # Custom implementation for getBindGroupLayout from _implementation.py:
     def get_bind_group_layout(self, **kwargs) -> classes.GPUBindGroupLayout:
         res = super().get_bind_group_layout(**kwargs)
@@ -479,6 +672,38 @@ class GPUQueue(classes.GPUQueue, ):
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.copyExternalImageToTexture(js_source, js_destination, copy_size)
 
+    # Additional custom methods from _implementation.py:
+    def read_buffer(self, buffer: GPUBuffer, buffer_offset: int = 0, size: int | None = None) -> memoryview:
+        # largely copied from wgpu-native/_api.py
+        # print(dir(self))
+        device = self._device
+
+        if not size:
+            data_length = buffer.size - buffer_offset
+        else:
+            data_length = int(size)
+        if not (0 <= buffer_offset < buffer.size):  # pragma: no cover
+            raise ValueError("Invalid buffer_offset")
+        if not (data_length <= buffer.size - buffer_offset):  # pragma: no cover
+            raise ValueError("Invalid data_length")
+        data_length = (data_length + 3) & ~3  # align to 4 bytes
+
+        js_temp_buffer = device._internal.createBuffer(size=data_length, usage=flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ, mappedAtCreation=False, label="output buffer temp")
+
+        js_encoder = device._internal.createCommandEncoder()
+        # TODO: somehow test if all the offset math is correct
+        js_encoder.copyBufferToBuffer(buffer._internal, buffer_offset, js_temp_buffer, buffer_offset, data_length)
+        self._internal.submit([js_encoder.finish()])
+
+        # best way to await the promise directly?
+        # TODO: can we do more steps async before waiting?
+        run_sync(js_temp_buffer.mapAsync(flags.MapMode.READ, 0, data_length))
+        array_buf = js_temp_buffer.getMappedRange()
+        res = array_buf.slice(0)
+        js_temp_buffer.unmap()
+        return res.to_py()
+
+
 
 class GPUQuerySet(classes.GPUQuerySet, ):
 
@@ -487,6 +712,7 @@ class GPUQuerySet(classes.GPUQuerySet, ):
 
 
 class GPUCanvasContext(classes.GPUCanvasContext, ):
+
     # Custom implementation for configure from _implementation.py:
     def configure(self, **kwargs):
         descriptor = structs.CanvasConfiguration(**kwargs)
@@ -506,12 +732,18 @@ class GPUCanvasContext(classes.GPUCanvasContext, ):
     def unconfigure(self) -> None:
         self._internal.unconfigure()
 
-    # TODO: implement codegen for getConfiguration with args [] or return type GPUCanvasConfiguration?# Custom implementation for getCurrentTexture from _implementation.py:
+    # TODO: implement codegen for getConfiguration with args [] or return type GPUCanvasConfiguration?
+    # Custom implementation for getCurrentTexture from _implementation.py:
     def get_current_texture(self) -> GPUTexture:
         js_texture = self._internal.getCurrentTexture()
 
         label = ""  # always empty?
         return GPUTexture(label, js_texture, self._config["device"])
+
+    # Additional custom methods from _implementation.py:
+    def get_preferred_format(self, adapter: GPUAdapter | None) -> enums.TextureFormat:
+        return gpu._internal.getPreferredCanvasFormat()
+
 
 
 class GPUDeviceLostInfo(classes.GPUDeviceLostInfo, ):
@@ -534,3 +766,5 @@ class GPUInternalError(classes.GPUInternalError, ):
 
     pass
 
+
+gpu = GPU()
