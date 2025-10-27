@@ -229,8 +229,8 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
 class GPUPipelineBase(classes.GPUPipelineBase):
     # TODO: can we build some kind of "get_constructor" for the codegen instead?
-    def get_bind_group_layout(self, **kwargs) -> classes.GPUBindGroupLayout:
-        res = super().get_bind_group_layout(**kwargs)
+    def get_bind_group_layout(self, index: int) -> classes.GPUBindGroupLayout:
+        res = self._internal.getBindGroupLayout(index)
         # returns the js object... so we call the constructor here manually - for now.
         label = res.label
         return classes.GPUBindGroupLayout(label, res, self._device)

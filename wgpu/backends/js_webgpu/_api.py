@@ -167,7 +167,7 @@ class GPUAdapter(classes.GPUAdapter, ):
 
 
 
-class GPUDevice(classes.GPUDevice, ):
+class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
     def destroy(self) -> None:
         self._internal.destroy()
@@ -347,7 +347,7 @@ class GPUDevice(classes.GPUDevice, ):
 
 
 
-class GPUBuffer(classes.GPUBuffer, ):
+class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
     # TODO: mapAsync sync variant likely taken from _classes.py directly!
     def get_mapped_range(self, offset: int = 0, size: Union[int, None] = None) -> ArrayLike:
@@ -405,7 +405,7 @@ class GPUBuffer(classes.GPUBuffer, ):
 
 
 
-class GPUTexture(classes.GPUTexture, ):
+class GPUTexture(classes.GPUTexture, GPUObjectBase):
 
     # Custom implementation for createView from _implementation.py:
     def create_view(self, **kwargs):
@@ -435,27 +435,27 @@ class GPUTexture(classes.GPUTexture, ):
 
 
 
-class GPUTextureView(classes.GPUTextureView, ):
+class GPUTextureView(classes.GPUTextureView, GPUObjectBase):
 
     pass
 
-class GPUSampler(classes.GPUSampler, ):
+class GPUSampler(classes.GPUSampler, GPUObjectBase):
 
     pass
 
-class GPUBindGroupLayout(classes.GPUBindGroupLayout, ):
+class GPUBindGroupLayout(classes.GPUBindGroupLayout, GPUObjectBase):
 
     pass
 
-class GPUBindGroup(classes.GPUBindGroup, ):
+class GPUBindGroup(classes.GPUBindGroup, GPUObjectBase):
 
     pass
 
-class GPUPipelineLayout(classes.GPUPipelineLayout, ):
+class GPUPipelineLayout(classes.GPUPipelineLayout, GPUObjectBase):
 
     pass
 
-class GPUShaderModule(classes.GPUShaderModule, ):
+class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
     # TODO: getCompilationInfo sync variant likely taken from _classes.py directly!
     pass
@@ -475,26 +475,26 @@ class GPUPipelineError(classes.GPUPipelineError, ):
 class GPUPipelineBase(classes.GPUPipelineBase, ):
 
     # Custom implementation for getBindGroupLayout from _implementation.py:
-    def get_bind_group_layout(self, **kwargs) -> classes.GPUBindGroupLayout:
-        res = super().get_bind_group_layout(**kwargs)
+    def get_bind_group_layout(self, index: int) -> classes.GPUBindGroupLayout:
+        res = self._internal.getBindGroupLayout(index)
         # returns the js object... so we call the constructor here manually - for now.
         label = res.label
         return classes.GPUBindGroupLayout(label, res, self._device)
 
 
-class GPUComputePipeline(classes.GPUComputePipeline, ):
+class GPUComputePipeline(classes.GPUComputePipeline, GPUObjectBase, GPUPipelineBase):
 
     pass
 
-class GPURenderPipeline(classes.GPURenderPipeline, ):
+class GPURenderPipeline(classes.GPURenderPipeline, GPUObjectBase, GPUPipelineBase):
 
     pass
 
-class GPUCommandBuffer(classes.GPUCommandBuffer, ):
+class GPUCommandBuffer(classes.GPUCommandBuffer, GPUObjectBase):
 
     pass
 
-class GPUCommandEncoder(classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCommandsMixin):
+class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMixin, GPUDebugCommandsMixin):
 
     def begin_render_pass(self, **kwargs):
         descriptor = structs.RenderPassDescriptor(**kwargs)
@@ -559,7 +559,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUCommandsMixin, GPUDebugCom
         return GPUCommandBuffer(label, js_obj, device=self)
 
 
-class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin):
+class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUObjectBase, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin):
 
     def set_pipeline(self, pipeline: Union["GPUComputePipeline", None] = None) -> None:
         js_pipeline = pipeline._internal
@@ -577,7 +577,7 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUCommandsMixin, GPU
         self._internal.end()
 
 
-class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPURenderCommandsMixin):
+class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUObjectBase, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPURenderCommandsMixin):
 
     def set_viewport(self, x: Union[float, None] = None, y: Union[float, None] = None, width: Union[float, None] = None, height: Union[float, None] = None, min_depth: Union[float, None] = None, max_depth: Union[float, None] = None) -> None:
     
@@ -588,9 +588,8 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUCommandsMixin, GPUDe
         self._internal.setScissorRect(x, y, width, height)
 
     def set_blend_constant(self, color: tuple[float, float, float, float] | structs.ColorStruct | None = None) -> None:
-        color_desc = structs.Color(**color)
-        js_color = to_js(color_desc, eager_converter=simple_js_accessor)
-        self._internal.setBlendConstant(js_color)
+        # TODO: argument color of JS type GPUColor, py type tuple[float, float, float, float] | structs.ColorStruct might need conversion
+        self._internal.setBlendConstant(color)
 
     def set_stencil_reference(self, reference: Union[int, None] = None) -> None:
     
@@ -611,11 +610,11 @@ class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUCommandsMixin, GPUDe
         self._internal.end()
 
 
-class GPURenderBundle(classes.GPURenderBundle, ):
+class GPURenderBundle(classes.GPURenderBundle, GPUObjectBase):
 
     pass
 
-class GPURenderBundleEncoder(classes.GPURenderBundleEncoder, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPURenderCommandsMixin):
+class GPURenderBundleEncoder(classes.GPURenderBundleEncoder, GPUObjectBase, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPURenderCommandsMixin):
 
     def finish(self, **kwargs):
         descriptor = structs.RenderBundleDescriptor(**kwargs)
@@ -626,7 +625,7 @@ class GPURenderBundleEncoder(classes.GPURenderBundleEncoder, GPUCommandsMixin, G
         return GPURenderBundle(label, js_obj, device=self)
 
 
-class GPUQueue(classes.GPUQueue, ):
+class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     # Custom implementation for submit from _implementation.py:
     def submit(self, command_buffers: structs.Sequence["GPUCommandBuffer"]) -> None:
@@ -705,7 +704,7 @@ class GPUQueue(classes.GPUQueue, ):
 
 
 
-class GPUQuerySet(classes.GPUQuerySet, ):
+class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
 
     def destroy(self) -> None:
         self._internal.destroy()
@@ -758,15 +757,15 @@ class GPUError(classes.GPUError, ):
 
     pass
 
-class GPUValidationError(classes.GPUValidationError, ):
+class GPUValidationError(classes.GPUValidationError, GPUError):
 
     pass
 
-class GPUOutOfMemoryError(classes.GPUOutOfMemoryError, ):
+class GPUOutOfMemoryError(classes.GPUOutOfMemoryError, GPUError):
 
     pass
 
-class GPUInternalError(classes.GPUInternalError, ):
+class GPUInternalError(classes.GPUInternalError, GPUError):
 
     pass
 

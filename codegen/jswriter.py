@@ -129,7 +129,7 @@ def generate_js_webgpu_api() -> str:
                 prop_lines = patcher.lines[start_line-1:end_line+1]
                 custom_methods[prop_name] = prop_lines
 
-        mixins = [c for c in interface.bases if c.endswith("Mixin")]
+        mixins = [c for c in interface.bases if c not in ("DOMException", "EventTarget")] # skip some we skip
         class_header = f"class {class_name}(classes.{class_name}, {', '.join(mixins)}):"
 
         class_lines = ["\n"]
@@ -219,7 +219,7 @@ def generate_js_webgpu_api() -> str:
                         js_arg_list.append(f"js_{arg.name}")
                     # TODO: sequence of complex type?
 
-                    elif arg.typename.removeprefix('GPU').removesuffix("?") in idl.structs and not arg.typename == "GPUExtent3D":
+                    elif arg.typename.removeprefix('GPU').removesuffix("?") in idl.structs and arg.typename not in ("GPUExtent3D", "GPUColor"):
                         conversion_lines.append(f"{py_name}_desc = structs.{arg.typename.removeprefix('GPU').removesuffix('?')}(**{py_name})")
                         conversion_lines.append(f"js_{arg.name} = to_js({py_name}_desc, eager_converter=simple_js_accessor)")
                         js_arg_list.append(f"js_{arg.name}")
