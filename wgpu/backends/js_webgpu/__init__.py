@@ -7,8 +7,9 @@ generated.
 """
 
 from .. import _register_backend
-from ._implementation import *
+from ._api import * # includes gpu from _implementation?
 
-
-
+gpu = GPU()
 _register_backend(gpu)
+
+print(help(gpu))
