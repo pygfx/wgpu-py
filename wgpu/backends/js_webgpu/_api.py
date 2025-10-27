@@ -5,7 +5,7 @@ from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
 from typing import Union
 
-from pyodide.ffi import to_js, run_sync
+from pyodide.ffi import to_js, run_sync, JsProxy
 from js import window, Uint8Array
 
 from ._helpers import simple_js_accessor
@@ -109,6 +109,10 @@ class GPU(classes.GPU, ):
         promise = GPUPromise("enumerate_adapters", None, loop=loop)
         promise._set_input([adapter_hp, adapter_lp])
         return promise
+
+    @property
+    def wgsl_language_features(self):
+        return self._internal.wgslLanguageFeatures
 
 
 
@@ -248,22 +252,8 @@ class GPUDevice(classes.GPUDevice, ):
         label = kwargs.pop("label", "")
         return GPURenderPipeline(label, js_obj, device=self)
 
-    def create_compute_pipeline(self, **kwargs):
-        descriptor = structs.ComputePipelineDescriptor(**kwargs)
-        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-        js_obj = self._internal.createComputePipelineAsync(js_descriptor)
-
-        label = kwargs.pop("label", "")
-        return GPUComputePipeline(label, js_obj, device=self)
-
-    def create_render_pipeline(self, **kwargs):
-        descriptor = structs.RenderPipelineDescriptor(**kwargs)
-        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-        js_obj = self._internal.createRenderPipelineAsync(js_descriptor)
-
-        label = kwargs.pop("label", "")
-        return GPURenderPipeline(label, js_obj, device=self)
-
+    # TODO: was was there a redefinition for createComputePipelineAsync async variant?
+    # TODO: was was there a redefinition for createRenderPipelineAsync async variant?
     def create_command_encoder(self, **kwargs):
         descriptor = structs.CommandEncoderDescriptor(**kwargs)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
@@ -351,6 +341,10 @@ class GPUDevice(classes.GPUDevice, ):
 
         return promise
 
+    @property
+    def adapter(self) -> GPUAdapter:
+        return self._adapter
+
 
 
 class GPUBuffer(classes.GPUBuffer, ):
@@ -370,15 +364,6 @@ class GPUBuffer(classes.GPUBuffer, ):
     def __init__(self, label, internal, device):
         # can we just fill the _classes constructor with properties?
         super().__init__(internal.label, internal, device, internal.size, internal.usage, internal.mapState)
-
-    def _map_state(self, value: enums.BufferMapState):
-        pass
-
-    def _size(self, value: int):
-        pass
-
-    def _usage(self, value: flags.BufferUsageFlags):
-        pass
 
     def write_mapped(self, data, buffer_offset: int | None = None):
         if self.map_state != enums.BufferMapState.mapped:
@@ -403,6 +388,20 @@ class GPUBuffer(classes.GPUBuffer, ):
         promise = GPUPromise("buffer.map_async", None, loop=self._device._loop)
         map_promise.then(promise._set_input)  # presumably this signals via a none callback to nothing?
         return promise
+
+    @property
+    def map_state(self) -> enums.BufferMapState:
+        return self._internal.mapState
+
+    @property
+    def size(self) -> int:
+        js_size = self._internal.size
+        # print("GPUBuffer.size", js_size, type(js_size))
+        return js_size
+
+    @property
+    def usage(self) -> flags.BufferUsageFlags:
+        return self._internal.usage
 
 
 
@@ -629,9 +628,10 @@ class GPURenderBundleEncoder(classes.GPURenderBundleEncoder, GPUCommandsMixin, G
 
 class GPUQueue(classes.GPUQueue, ):
 
-    def submit(self, command_buffers: Sequence[GPUCommandBuffer] | None = None) -> None:
-        # TODO: argument command_buffers of JS type sequence<GPUCommandBuffer>, py type list[GPUCommandBuffer] might need conversion
-        self._internal.submit(command_buffers)
+    # Custom implementation for submit from _implementation.py:
+    def submit(self, command_buffers: structs.Sequence["GPUCommandBuffer"]) -> None:
+        js_command_buffers = [cb._internal for cb in command_buffers]
+        self._internal.submit(js_command_buffers)
 
     # TODO: onSubmittedWorkDone sync variant likely taken from _classes.py directly!
     def write_buffer(self, buffer: Union["GPUBuffer", None] = None, buffer_offset: Union[int, None] = None, data: Union[ArrayLike, None] = None, data_offset: int = 0, size: Union[int, None] = None) -> None:
@@ -743,6 +743,10 @@ class GPUCanvasContext(classes.GPUCanvasContext, ):
     # Additional custom methods from _implementation.py:
     def get_preferred_format(self, adapter: GPUAdapter | None) -> enums.TextureFormat:
         return gpu._internal.getPreferredCanvasFormat()
+
+    @property
+    def _internal(self) -> JsProxy:
+        return self.canvas.html_context
 
 
 

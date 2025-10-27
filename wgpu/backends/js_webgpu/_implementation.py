@@ -173,31 +173,19 @@ class GPUBuffer(classes.GPUBuffer):
         # can we just fill the _classes constructor with properties?
         super().__init__(internal.label, internal, device, internal.size, internal.usage, internal.mapState)
 
-    # this overwrites properties in ._classes
-    # and ignore the setters there too.
     @property
-    def _map_state(self) -> enums.BufferMapState:
+    def map_state(self) -> enums.BufferMapState:
         return self._internal.mapState
-    @_map_state.setter
-    def _map_state(self, value: enums.BufferMapState):
-        pass
 
     @property
-    def _size(self) -> int:
+    def size(self) -> int:
         js_size = self._internal.size
         # print("GPUBuffer.size", js_size, type(js_size))
         return js_size
-    @_size.setter
-    def _size(self, value: int):
-        pass
 
     @property
-    def _usage(self) -> flags.BufferUsageFlags:
+    def usage(self) -> flags.BufferUsageFlags:
         return self._internal.usage
-    @_usage.setter
-    def _usage(self, value: flags.BufferUsageFlags):
-        pass
-
 
     # TODO apidiff
     def write_mapped(self, data, buffer_offset: int | None = None):
@@ -249,6 +237,12 @@ class GPUPipelineBase(classes.GPUPipelineBase):
 
 
 class GPUQueue(classes.GPUQueue):
+
+    # TODO: fix the generation for sequence types!
+    def submit(self, command_buffers: structs.Sequence["GPUCommandBuffer"]) -> None:
+        js_command_buffers = [cb._internal for cb in command_buffers]
+        self._internal.submit(js_command_buffers)
+
     # API diff
     def read_buffer(self, buffer: GPUBuffer, buffer_offset: int=0, size: int | None = None) -> memoryview:
         # largely copied from wgpu-native/_api.py

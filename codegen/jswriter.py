@@ -18,7 +18,7 @@ from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
 from typing import Union
 
-from pyodide.ffi import to_js, run_sync
+from pyodide.ffi import to_js, run_sync, JsProxy
 from js import window, Uint8Array
 
 from ._helpers import simple_js_accessor
@@ -124,6 +124,11 @@ def generate_js_webgpu_api() -> str:
                 method_lines = patcher.lines[start_line:end_line+1]
                 custom_methods[method_name] = method_lines
 
+            # include custom properties too
+            for prop_name, start_line, end_line in patcher.iter_properties(class_line):
+                prop_lines = patcher.lines[start_line-1:end_line+1]
+                custom_methods[prop_name] = prop_lines
+
         mixins = [c for c in interface.bases if c.endswith("Mixin")]
         class_header = f"class {class_name}(classes.{class_name}, {', '.join(mixins)}):"
 
@@ -161,6 +166,10 @@ def generate_js_webgpu_api() -> str:
             # skip these for now as they are more troublesome -.-
             if py_method_name.endswith("_sync"):
                 class_lines.append(f"\n# TODO: {function_name} sync variant likely taken from _classes.py directly!")
+                continue
+
+            if function_name.endswith("Async"):
+                class_lines.append(f"\n# TODO: was was there a redefinition for {function_name} async variant?")
                 continue
 
             # case 1: single argument as a descriptor (TODO: could be optional - but that should just work)

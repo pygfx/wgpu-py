@@ -11,5 +11,3 @@ from ._api import * # includes gpu from _implementation?
 
 gpu = GPU()
 _register_backend(gpu)
-
-print(help(gpu))
