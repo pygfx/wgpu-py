@@ -232,9 +232,10 @@ class GPUCanvasContext:
     def __init__(self, present_methods):
         self._ot.increase(self.__class__.__name__)
 
-        # create a small dummy that provides
+        # create a small dummy purely for backward compatibility that provides
         # get_physical_size() and get_context() so existing backend code
         # that calls self._get_canvas().get_physical_size() continues to work.
+        # ideally though, wgpu-py does not require a canvas reference at all
         class _DummyCanvas:
             def __init__(self, ctx):
                 self._ctx = ctx
@@ -277,22 +278,17 @@ class GPUCanvasContext:
         """Getter method for internal use."""
         return self._dummy
 
-    # Application-facing: let caller set current framebuffer physical size
     def set_physical_size(self, size):
         """Set the current framebuffer physical size (width, height).
 
-        When the context was created without a real canvas, the application
-        must call this to keep the context informed about the window/framebuffer size.
+        The application must call this to keep the context informed about
+        the window/framebuffer size.
         """
         w, h = size
         self._explicit_size = int(w), int(h)
 
     def get_physical_size(self):
-        """Return current framebuffer physical size.
-
-        Delegates to the real canvas if present, otherwise returns the size
-        previously set with set_physical_size().
-        """
+        """Return current framebuffer physical size."""
         return self._explicit_size
 
     def _get_capabilities(self, adapter):
