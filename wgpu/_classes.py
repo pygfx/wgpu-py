@@ -232,7 +232,38 @@ class GPUCanvasContext:
 
     def __init__(self, canvas, present_methods):
         self._ot.increase(self.__class__.__name__)
-        self._canvas_ref = weakref.ref(canvas)
+        # allow None: if canvas is None, create a small dummy that provides
+        # get_physical_size() and get_context() so existing backend code
+        # that calls self._get_canvas().get_physical_size() continues to work.
+        if canvas is None:
+
+            class _DummyCanvas:
+                def __init__(self, ctx):
+                    self._ctx = ctx
+                    # keep an optional _vsync flag like real canvases may have
+                    self._vsync = True
+
+                def get_physical_size(self):
+                    size = self._ctx._explicit_size
+                    if size is None:
+                        raise RuntimeError(
+                            "Canvas physical size not set. Call GPUCanvasContext.set_physical_size((w,h))."
+                        )
+                    return size
+
+                def get_context(self, kind="wgpu"):
+                    # mimic real canvas.get_context("wgpu")
+                    if kind != "wgpu":
+                        return None
+                    return self._ctx
+
+            self._dummy = _DummyCanvas(self)
+            self._canvas_ref = None
+        else:
+            self._dummy = None
+            self._canvas_ref = weakref.ref(canvas)
+
+        self._explicit_size = None
 
         # Surface capabilities. Stored the first time it is obtained
         self._capabilities = None
@@ -249,13 +280,28 @@ class GPUCanvasContext:
 
     def _get_canvas(self):
         """Getter method for internal use."""
-        return self._canvas_ref()
+        return self._dummy or self._canvas_ref()
 
-    # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
-    @property
-    def canvas(self) -> CanvasLike:
-        """The associated canvas object."""
-        return self._canvas_ref()
+    # Application-facing: let caller set current framebuffer physical size
+    def set_physical_size(self, size):
+        """Set the current framebuffer physical size (width, height).
+
+        When the context was created without a real canvas, the application
+        must call this to keep the context informed about the window/framebuffer size.
+        """
+        w, h = size
+        self._explicit_size = int(w), int(h)
+
+    def get_physical_size(self):
+        """Return current framebuffer physical size.
+
+        Delegates to the real canvas if present, otherwise returns the size
+        previously set with set_physical_size().
+        """
+        if self._dummy:
+            return self._explicit_size
+        c = self._canvas_ref()
+        return c.get_physical_size()
 
     def _get_capabilities(self, adapter):
         """Get dict of capabilities and cache the result."""
@@ -1064,7 +1110,7 @@ class GPUDevice(GPUObjectBase):
                 binding=2,
                 resource=wgpu.BufferBinding(
                     buffer=a_buffer,
-                    offset=0.
+                    offset=0.,
                     size=812,
                 )
             )

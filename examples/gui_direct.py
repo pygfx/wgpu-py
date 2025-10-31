@@ -66,43 +66,42 @@ def get_glfw_present_methods(window):
 glfw.init()
 atexit.register(glfw.terminate)
 
+# disable automatic API selection, we are not using opengl
+glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
+glfw.window_hint(glfw.RESIZABLE, True)
 
-class MinimalGlfwCanvas:  # implements WgpuCanvasInterface
-    """Minimal canvas interface required by wgpu."""
 
-    def __init__(self, title):
-        # disable automatic API selection, we are not using opengl
-        glfw.window_hint(glfw.CLIENT_API, glfw.NO_API)
-        glfw.window_hint(glfw.RESIZABLE, True)
+title = "wgpu glfw direct"
+window = glfw.create_window(640, 480, title, None, None)
+present_methods = get_glfw_present_methods(window)
 
-        self.window = glfw.create_window(640, 480, title, None, None)
-        self.context = GPUCanvasContext(self, get_glfw_present_methods(self.window))
+# Create a GPUCanvasContext directly (no wrapper class needed).
+context = GPUCanvasContext(None, present_methods)
 
-    def get_physical_size(self):
-        """get framebuffer size in integer pixels"""
-        psize = glfw.get_framebuffer_size(self.window)
-        return int(psize[0]), int(psize[1])
-
-    def get_context(self, kind="wgpu"):
-        return self.context
+# Initialize physical size once. For robust apps update this on resize events.
+context.set_physical_size(glfw.get_framebuffer_size(window))
 
 
 def main():
-    # create canvas
-    canvas = MinimalGlfwCanvas("wgpu gui direct")
-    draw_frame = setup_drawing_sync(canvas)
+    # create canvas/context — setup_drawing_sync expects a "canvas" that can
+    # provide get_context/get_physical_size; GPUCanvasContext now implements those.
+    draw_frame = setup_drawing_sync(context)
 
     last_frame_time = time.perf_counter()
     frame_count = 0
 
     # render loop
-    while not glfw.window_should_close(canvas.window):
+    while not glfw.window_should_close(window):
         # process inputs
         glfw.poll_events()
+
+        # resize handling
+        context.set_physical_size(glfw.get_framebuffer_size(window))
+
         # draw a frame
         draw_frame()
         # present the frame to the screen
-        canvas.context.present()
+        context.present()
         # stats
         frame_count += 1
         etime = time.perf_counter() - last_frame_time
@@ -111,7 +110,7 @@ def main():
             last_frame_time, frame_count = time.perf_counter(), 0
 
     # dispose resources
-    glfw.destroy_window(canvas.window)
+    glfw.destroy_window(window)
 
     # allow proper cleanup (workaround for glfw bug)
     end_time = time.perf_counter() + 0.1
