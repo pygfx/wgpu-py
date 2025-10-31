@@ -75,8 +75,7 @@ title = "wgpu glfw direct"
 window = glfw.create_window(640, 480, title, None, None)
 present_methods = get_glfw_present_methods(window)
 
-# Create a GPUCanvasContext directly (no wrapper class needed).
-context = GPUCanvasContext(None, present_methods)
+context = GPUCanvasContext(present_methods)
 
 # Initialize physical size once. For robust apps update this on resize events.
 context.set_physical_size(glfw.get_framebuffer_size(window))

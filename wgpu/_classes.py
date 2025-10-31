@@ -11,7 +11,6 @@ information.
 # Allow using class names in type annotations, without Ruff triggering F821
 from __future__ import annotations
 
-import weakref
 import logging
 from typing import Sequence
 
@@ -230,39 +229,35 @@ class GPUCanvasContext:
 
     _ot = object_tracker
 
-    def __init__(self, canvas, present_methods):
+    def __init__(self, present_methods):
         self._ot.increase(self.__class__.__name__)
-        # allow None: if canvas is None, create a small dummy that provides
+
+        # create a small dummy that provides
         # get_physical_size() and get_context() so existing backend code
         # that calls self._get_canvas().get_physical_size() continues to work.
-        if canvas is None:
+        class _DummyCanvas:
+            def __init__(self, ctx):
+                self._ctx = ctx
+                # keep an optional _vsync flag like real canvases may have
+                self._vsync = True
 
-            class _DummyCanvas:
-                def __init__(self, ctx):
-                    self._ctx = ctx
-                    # keep an optional _vsync flag like real canvases may have
-                    self._vsync = True
+            def get_physical_size(self):
+                size = self._ctx._explicit_size
+                if size is None:
+                    raise RuntimeError(
+                        "Canvas physical size not set. Call GPUCanvasContext.set_physical_size((w,h))."
+                    )
+                return size
 
-                def get_physical_size(self):
-                    size = self._ctx._explicit_size
-                    if size is None:
-                        raise RuntimeError(
-                            "Canvas physical size not set. Call GPUCanvasContext.set_physical_size((w,h))."
-                        )
-                    return size
+            def get_context(self, kind="wgpu"):
+                # mimic real canvas.get_context("wgpu")
+                if kind != "wgpu":
+                    return None
+                return self._ctx
 
-                def get_context(self, kind="wgpu"):
-                    # mimic real canvas.get_context("wgpu")
-                    if kind != "wgpu":
-                        return None
-                    return self._ctx
+        self._dummy = _DummyCanvas(self)
 
-            self._dummy = _DummyCanvas(self)
-            self._canvas_ref = None
-        else:
-            self._dummy = None
-            self._canvas_ref = weakref.ref(canvas)
-
+        # Framebuffer size
         self._explicit_size = None
 
         # Surface capabilities. Stored the first time it is obtained
@@ -280,7 +275,7 @@ class GPUCanvasContext:
 
     def _get_canvas(self):
         """Getter method for internal use."""
-        return self._dummy or self._canvas_ref()
+        return self._dummy
 
     # Application-facing: let caller set current framebuffer physical size
     def set_physical_size(self, size):
@@ -298,10 +293,7 @@ class GPUCanvasContext:
         Delegates to the real canvas if present, otherwise returns the size
         previously set with set_physical_size().
         """
-        if self._dummy:
-            return self._explicit_size
-        c = self._canvas_ref()
-        return c.get_physical_size()
+        return self._explicit_size
 
     def _get_capabilities(self, adapter):
         """Get dict of capabilities and cache the result."""
