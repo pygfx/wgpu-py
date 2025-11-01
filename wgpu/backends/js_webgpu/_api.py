@@ -739,13 +739,21 @@ class GPUCanvasContext(classes.GPUCanvasContext, ):
         label = ""  # always empty?
         return GPUTexture(label, js_texture, self._config["device"])
 
-    # Additional custom methods from _implementation.py:
+    def __init__(self, canvas, present_methods):
+        super().__init__(canvas, present_methods)
+        if self._present_method == "screen":
+            # rendercanvas.pyodide provides exactly this. Maybe we can also take a HTML canvas directly?
+            # for potential interop with webgpu applications that already run in the browser.
+            assert present_methods["screen"]["platform"] == "browser"
+            canvas_attribute = present_methods["screen"]["native_canvas_attribute"]
+        else:
+            # likely bitmap... but this could still work... might just try it
+            raise NotImplementedError(f"Unsupported present method: {self._present_method}")
+
+        self._internal = getattr(canvas, canvas_attribute).getContext("webgpu")
+
     def get_preferred_format(self, adapter: GPUAdapter | None) -> enums.TextureFormat:
         return gpu._internal.getPreferredCanvasFormat()
-
-    @property
-    def _internal(self) -> JsProxy:
-        return self.canvas.html_context
 
 
 
