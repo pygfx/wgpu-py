@@ -232,34 +232,9 @@ class GPUCanvasContext:
     def __init__(self, present_methods):
         self._ot.increase(self.__class__.__name__)
 
-        # create a small dummy purely for backward compatibility that provides
-        # get_physical_size() and get_context() so existing backend code
-        # that calls self._get_canvas().get_physical_size() continues to work.
-        # ideally though, wgpu-py does not require a canvas reference at all
-        class _DummyCanvas:
-            def __init__(self, ctx):
-                self._ctx = ctx
-                # keep an optional _vsync flag like real canvases may have
-                self._vsync = True
-
-            def get_physical_size(self):
-                size = self._ctx._explicit_size
-                if size is None:
-                    raise RuntimeError(
-                        "Canvas physical size not set. Call GPUCanvasContext.set_physical_size((w,h))."
-                    )
-                return size
-
-            def get_context(self, kind="wgpu"):
-                # mimic real canvas.get_context("wgpu")
-                if kind != "wgpu":
-                    return None
-                return self._ctx
-
-        self._dummy = _DummyCanvas(self)
-
-        # Framebuffer size
-        self._explicit_size = None
+        # Buffer to hold new physical size
+        # will be applied when the context reconfigures
+        self._new_physical_size = None
 
         # Surface capabilities. Stored the first time it is obtained
         self._capabilities = None
@@ -285,11 +260,7 @@ class GPUCanvasContext:
         the window/framebuffer size.
         """
         w, h = size
-        self._explicit_size = int(w), int(h)
-
-    def get_physical_size(self):
-        """Return current framebuffer physical size."""
-        return self._explicit_size
+        self._new_physical_size = int(w), int(h)
 
     def _get_capabilities(self, adapter):
         """Get dict of capabilities and cache the result."""
@@ -356,6 +327,7 @@ class GPUCanvasContext:
         color_space: str = "srgb",
         tone_mapping: structs.CanvasToneMappingStruct | None = None,
         alpha_mode: enums.CanvasAlphaModeEnum = "opaque",
+        size: tuple[int, int] = (320, 240),
     ) -> None:
         """Configures the presentation context for the associated canvas.
         Destroys any textures produced with a previous configuration.
@@ -376,6 +348,7 @@ class GPUCanvasContext:
             alpha_mode (structs.CanvasAlphaMode): Determines the effect that alpha values
                 will have on the content of textures returned by ``get_current_texture()``
                 when read, displayed, or used as an image source. Default "opaque".
+            size (tuple[int, int]): The physical size of the canvas in pixels.
         """
         # Check types
         tone_mapping = {} if tone_mapping is None else tone_mapping
@@ -390,6 +363,11 @@ class GPUCanvasContext:
 
         if not isinstance(usage, int):
             usage = str_flag_to_int(flags.TextureUsage, usage)
+
+        if not isinstance(size, tuple) or len(size) != 2:
+            raise TypeError("Configure: size must be a tuple (width, height).")
+        if not size[0] > 0 or not size[1] > 0:
+            raise ValueError("Configure: size values must be positive.")
 
         color_space  # noqa - not really supported, just assume srgb for now
         tone_mapping  # noqa - not supported yet
@@ -437,6 +415,7 @@ class GPUCanvasContext:
             "color_space": color_space,
             "tone_mapping": tone_mapping,
             "alpha_mode": alpha_mode,
+            "size": size,
         }
 
         if self._present_method == "screen":
@@ -452,6 +431,7 @@ class GPUCanvasContext:
         color_space,
         tone_mapping,
         alpha_mode,
+        size,
     ):
         raise NotImplementedError()
 
@@ -491,8 +471,7 @@ class GPUCanvasContext:
         return self._texture
 
     def _create_texture_bitmap(self):
-        canvas = self._get_canvas()
-        width, height = canvas.get_physical_size()
+        width, height = (self._wgpu_config.width, self._wgpu_config.height)
         width, height = max(width, 1), max(height, 1)
 
         # Note that the label 'present' is used by read_texture() to determine

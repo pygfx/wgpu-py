@@ -769,6 +769,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         color_space,
         tone_mapping,
         alpha_mode,
+        size,
     ):
         capabilities = self._get_capabilities(device.adapter)
 
@@ -799,7 +800,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # benchmark something and get the highest FPS possible. Note
         # that we've observed rate limiting regardless of setting this
         # to Immediate, depending on OS or being on battery power.
-        if getattr(self._get_canvas(), "_vsync", True):
+        if getattr(self._present_methods[self._present_method], "vsync", True):
             present_mode_pref = ["fifo", "mailbox"]
         else:
             present_mode_pref = ["immediate", "mailbox", "fifo"]
@@ -811,7 +812,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         c_present_mode = getattr(lib, f"WGPUPresentMode_{present_mode.capitalize()}")
 
         # Prepare config object
-        width, height = self._get_canvas().get_physical_size()
 
         # H: nextInChain: WGPUChainedStruct *, device: WGPUDevice, format: WGPUTextureFormat, usage: WGPUTextureUsage/int, width: int, height: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *, alphaMode: WGPUCompositeAlphaMode, presentMode: WGPUPresentMode
         self._wgpu_config = new_struct_p(
@@ -824,8 +824,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             viewFormats=c_view_formats,
             alphaMode=c_alpha_mode,
             presentMode=c_present_mode,
-            width=width,  # overriden elsewhere in this class
-            height=height,  # overriden elsewhere in this class
+            width=size[0],  # overriden elsewhere in this class
+            height=size[1],  # overriden elsewhere in this class
         )
 
         # Configure now (if possible)
@@ -873,17 +873,20 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         #   that by providing a dummy texture, and warn when this happens too often in succession.
 
         # Get size info
-        old_size = (self._wgpu_config.width, self._wgpu_config.height)
-        new_size = tuple(self._get_canvas().get_physical_size())
-        if new_size[0] <= 0 or new_size[1] <= 0:
-            # It's the responsibility of the drawing /scheduling logic to prevent this case.
-            raise RuntimeError("Cannot get texture for a canvas with zero pixels.")
+        if (new_size := self._new_physical_size) is not None:
+            old_size = (self._wgpu_config.width, self._wgpu_config.height)
+            if new_size[0] <= 0 or new_size[1] <= 0:
+                # It's the responsibility of the drawing /scheduling logic to prevent this case.
+                raise RuntimeError("Cannot get texture for a canvas with zero pixels.")
 
-        # Re-configure when the size has changed.
-        if new_size != old_size:
-            self._wgpu_config.width = new_size[0]
-            self._wgpu_config.height = new_size[1]
-            self._configure_screen_real()
+            # Re-configure when the size has changed.
+            if new_size != old_size:
+                self._wgpu_config.width = new_size[0]
+                self._wgpu_config.height = new_size[1]
+                self._configure_screen_real()
+            
+            # Clear buffer, so we only have to perform these checks when set_physical_size has been called.
+            self._new_physical_size = None
 
         # Prepare for obtaining a texture.
         status_str_map = enum_int2str["SurfaceGetCurrentTextureStatus"]

@@ -32,6 +32,7 @@ def get_glfw_present_methods(window):
             "screen": {
                 "platform": "windows",
                 "window": int(glfw.get_win32_window(window)),
+                "vsync": True,
             }
         }
     elif sys.platform.startswith("darwin"):
@@ -39,6 +40,7 @@ def get_glfw_present_methods(window):
             "screen": {
                 "platform": "cocoa",
                 "window": int(glfw.get_cocoa_window(window)),
+                "vsync": True,
             }
         }
     elif sys.platform.startswith("linux"):
@@ -48,6 +50,7 @@ def get_glfw_present_methods(window):
                     "platform": "wayland",
                     "window": int(glfw.get_wayland_window(window)),
                     "display": int(glfw.get_wayland_display()),
+                    "vsync": True,
                 }
             }
         else:
@@ -56,6 +59,7 @@ def get_glfw_present_methods(window):
                     "platform": "x11",
                     "window": int(glfw.get_x11_window(window)),
                     "display": int(glfw.get_x11_display()),
+                    "vsync": True,
                 }
             }
     else:

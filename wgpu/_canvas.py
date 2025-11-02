@@ -13,10 +13,6 @@ class WgpuCanvasInterface:
 
     _canvas_context = None
 
-    def get_physical_size(self) -> tuple[int, int]:
-        """Get the physical size of the canvas in integer pixels."""
-        return (640, 480)
-
     def get_context(self, context_type: str = "wgpu") -> wgpu.GPUCanvasContext:
         """Get the ``GPUCanvasContext`` object corresponding to this canvas.
 
