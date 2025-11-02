@@ -7,7 +7,7 @@
     <!-- <script src="https://cdn.jsdelivr.net/pyodide/dev/debug/pyodide.js"></script> -->
     <style>
         /* so the demo page can have interactive resizing */
-        #rendercanvas {
+        #canvas {
             position: absolute;
             width: 90%;
             height: 90%;
@@ -39,7 +39,7 @@
 <label for="install-imgui">imgui-bundle:</label>
 <input type="checkbox" id="install-imgui" name="imgui-bundle">
 <br>
-<canvas id="rendercanvas" width="640" height="480" style="background-color: lightgrey;"></canvas><br>
+<canvas id="canvas" width="640" height="480" style="background-color: lightgrey;"></canvas><br>
 pixels got drawn!
 <script type="text/javascript">
     async function main(){
@@ -79,8 +79,6 @@ pixels got drawn!
             // works with the imgui examples
             await micropip.install('imgui-bundle');
         }
-
-
 
         console.log("Pyodide ready");
         // load this one late so you can change before pyodide is ready!
