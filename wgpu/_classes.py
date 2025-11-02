@@ -249,10 +249,6 @@ class GPUCanvasContext:
         self._present_methods = present_methods
         self._present_method = "screen" if "screen" in present_methods else "bitmap"
 
-    def _get_canvas(self):
-        """Getter method for internal use."""
-        return self._dummy
-
     def set_physical_size(self, size):
         """Set the current framebuffer physical size (width, height).
 
@@ -260,6 +256,8 @@ class GPUCanvasContext:
         the window/framebuffer size.
         """
         w, h = size
+        if w <= 0 or h <= 0:
+            raise ValueError("Physical size values must be positive.")
         self._new_physical_size = int(w), int(h)
 
     def _get_capabilities(self, adapter):
