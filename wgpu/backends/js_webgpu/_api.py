@@ -6,7 +6,7 @@ from ...structs import ArrayLike, Sequence # for typing hints
 from typing import Union
 
 from pyodide.ffi import to_js, run_sync, JsProxy
-from js import window, Uint8Array
+from js import window, Uint8Array, Object
 
 from ._helpers import simple_js_accessor
 from ._implementation import GPUPromise
@@ -270,13 +270,26 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         label = kwargs.pop("label", "")
         return GPURenderBundleEncoder(label, js_obj, device=self)
 
+    # Custom implementation for createQuerySet from _implementation.py:
     def create_query_set(self, **kwargs):
+        print(set(self._internal.features)) # timestamp-query is here!
+        print("GPUDevice.create_query_set", kwargs)
         descriptor = structs.QuerySetDescriptor(**kwargs)
+        print("  descriptor:", descriptor)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        # js_descriptor = to_js(descriptor, dict_converter=Object.fromEntries)  # hoping to get Object now? (wrong object or nested structure)?
+        print("  js_descriptor:", js_descriptor) # -> still a dict?
         js_obj = self._internal.createQuerySet(js_descriptor)
 
+
+        # I am getting a type error... which could mean that the feature isn't requested correctly?
+        # https://www.w3.org/TR/webgpu/#queryset-creation
+        # likely not is, since the occlusion type throws the same error... it's the structure.
+
         label = kwargs.pop("label", "")
-        return GPUQuerySet(label, js_obj, device=self)
+        type = descriptor.get("type")
+        count = descriptor.get("count")
+        return GPUQuerySet(label, js_obj, device=self, type=type, count=count)
 
     def push_error_scope(self, filter: enums.ErrorFilterEnum | None = None) -> None:
     
@@ -739,6 +752,7 @@ class GPUCanvasContext(classes.GPUCanvasContext, ):
         label = ""  # always empty?
         return GPUTexture(label, js_texture, self._config["device"])
 
+    # Additional custom methods from _implementation.py:
     def __init__(self, canvas, present_methods):
         super().__init__(canvas, present_methods)
         if self._present_method == "screen":

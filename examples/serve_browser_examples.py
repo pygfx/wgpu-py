@@ -24,6 +24,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import flit
 import wgpu
+from codegen import update_js, file_cache
+
 
 #examples that don't require a canvas, we will capture the output to a div
 compute_examples = {
@@ -31,14 +33,14 @@ compute_examples = {
     "compute_noop.py": [], # no deps
     "compute_matmul.py": ["numpy"],
     # "compute_textures.py": ["numpy", "imageio"], #imageio doesn't work in pyodide right now (fetch?)
-    "compute_timestamps.py": [], # this one crashes because the constructor for timestamp query needs to be fixed!
+    "compute_timestamps.py": [], # this one still crashes as the descriptor doesn't get converted into an object...
 }
 
 # these need rendercanvas too, so we will patch in the local wheel untill there is a rendercanvas release on pypi
 graphics_examples = {
     "triangle.py":[], # no deps
     "cube.py": ["numpy"],
-    "offscreen_hdr.py": ["numpy", "pypng"],
+    "offscreen_hdr.py": ["numpy", "pypng"], # pyscript says it doesn't work in pyodide.
     # "triangle_glsl.py": # we can't use GLSL in the browser... I am looking into maybe using wasm compiled naga manually - at a later date.
     "imgui_backend_sea.py": ["numpy", "imgui-bundle"],
     "imgui_basic_example.py": ["imgui-bundle"], # might even work without wgpu as imgui already works in pyodide...
@@ -136,8 +138,8 @@ pyodide_compute_template = """
     <p>
     {docstring}
     </p>
-    <div id="output" style="white-space: pre-wrap; background:#eee; padding:10px; margin:10px; border:1px solid #ccc;">
-        <h2>Output:</h2>
+    <div id="output" style="white-space: pre-wrap; background:#eee; padding:4px; margin:4px; border:1px solid #ccc;">
+        <p>Output:</p>
     </div>
     <script type="text/javascript">
         async function main() {{
@@ -150,7 +152,7 @@ pyodide_compute_template = """
                 pyodide.setStdout({{
                     batched: (s) => {{
                         // TODO: newline?
-                        document.getElementById("output").innerText += s;
+                        document.getElementById("output").innerHTML += "<br>" + s;
                     }}
                 }});
                 await pyodide.loadPackage("micropip");
@@ -191,6 +193,10 @@ def copy_rendercanvas_wheel():
 
 def build_wheel():
     # TODO: run the codegen for js_webgpu backend!
+    file_cache.reset()
+    update_js()
+    # (doesn't work right now :/)
+
     # TODO: can we use the existing hatch build system?
     os.environ["WGPU_PY_BUILD_NOARCH"] = "1"
     toml_filename = os.path.join(root, "pyproject.toml")
@@ -227,6 +233,8 @@ class MyHandler(BaseHTTPRequestHandler):
         if self.path == "/":
             self.respond(200, html_index, "text/html")
         elif self.path == "/build":
+            # TODO: add progress instead of blocking before load?
+            # also seems like this might get called multiple times?
             try:
                 build_wheel()
             except Exception as err:
@@ -246,15 +254,16 @@ class MyHandler(BaseHTTPRequestHandler):
             name = self.path.strip("/")
             pyname = name.replace(".html", ".py")
             if pyname in graphics_examples:
-                deps = graphics_examples[pyname]
-                deps.append(f"./{wheel_name}")
+                deps = graphics_examples[pyname].copy() # don't modify them multiple times!
                 deps.append(f"./{rendercanvas_wheel}")
+                deps.append(f"./{wheel_name}")
+                # sometimes sniffio is missing, other times it's not?
                 doc = get_docstring_from_py_file(pyname)
                 html = pyscript_graphics_template.format(docstring=doc, example_script=pyname, dependencies=", ".join([f'"{d}"' for d in deps]))
                 self.respond(200, html, "text/html")
             elif pyname in compute_examples:
                 doc = get_docstring_from_py_file(pyname)
-                deps = compute_examples[pyname]
+                deps = compute_examples[pyname].copy()
                 deps.append(f"./{wheel_name}")
                 html = pyodide_compute_template.format(docstring=doc, example_script=pyname, dependencies="\n".join([f"await micropip.install({dep!r});" for dep in deps]))
                 self.respond(200, html, "text/html")

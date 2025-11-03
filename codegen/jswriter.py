@@ -4,6 +4,7 @@ Codegen the JS webgpu backend, based on the parsed idl.
 write to the backends/js_webgpu/_api.py file.
 """
 
+import os
 import re
 from codegen.idlparser import Attribute, get_idl_parser, Interface
 from codegen.apipatcher import IdlPatcherMixin, BaseApiPatcher
@@ -71,7 +72,8 @@ helper_patcher = BaseApiPatcher() # to get access to name2py_names function
 
 # can't use importlib because pyodide isn't available -.-
 # maybe use ast?
-custom_implementations = open("./wgpu/backends/js_webgpu/_implementation.py").read()
+root = os.path.abspath(os.path.join(__file__, "..", ".."))
+custom_implementations = open(os.path.join(root, "wgpu", "backends", "js_webgpu", "_implementation.py")).read()
 
 class JsPatcher(Patcher):
     # TODO: we can put custom methods here!

@@ -62,8 +62,11 @@ def simple_js_accessor(value, convert, cache=None):
                 else:
                     # could be a list of other objects like GPUBindGroupLayout for example.
                     pass
+            # print("initial call to down_convert", v)
             down_convert = to_js(v, eager_converter=simple_js_accessor)
+            # print("first result of down_convert", down_convert, dir(down_convert))
             down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
+            # print("final result of down_convert", down_convert)
             result[camel_key] = down_convert
         # print("struct conversion result: ", type(result), result)
         return result
@@ -85,7 +88,7 @@ def simple_js_accessor(value, convert, cache=None):
         # map = Map.new(result.items())
         # return Object.fromEntries(map)
     # print("simple_js_accessor default", value, type(value))
-    return convert(value)
+    return convert(value) # or to_js(value)?
 
 # TODO: can we implement our own variant of JsProxy and PyProxy, to_js and to_py? to work with pyodide and not around it?
 # https://pyodide.org/en/stable/usage/type-conversions.html#type-translations

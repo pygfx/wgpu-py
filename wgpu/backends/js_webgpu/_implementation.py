@@ -167,6 +167,17 @@ class GPUDevice(classes.GPUDevice):
 
         return promise
 
+    # this one needs additional parameters in the constructor
+    def create_query_set(self, **kwargs):
+        descriptor = structs.QuerySetDescriptor(**kwargs)
+        js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
+        js_obj = self._internal.createQuerySet(js_descriptor)
+
+        label = kwargs.pop("label", "")
+        type = descriptor.get("type")
+        count = descriptor.get("count")
+        return GPUQuerySet(label, js_obj, device=self, type=type, count=count)
+
 class GPUBuffer(classes.GPUBuffer):
     # TODO: remove label from the constructors!
     def __init__(self, label, internal, device):
