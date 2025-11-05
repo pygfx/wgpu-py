@@ -17,6 +17,19 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+### [v0.27.0] - 05-11-2025
+
+Fixed:
+
+* Fix that memory for struct data was released before wgpu-native consumed it by @almarklein in https://github.com/pygfx/wgpu-py/pull/765
+  * This fixes that wgpu would segfault.
+
+Changed:
+
+* Promise / Future API with .then() by @almarklein in https://github.com/pygfx/wgpu-py/pull/739
+  * The async methods now return a promise-like object which has `.sync_wait()`, `.then()`, and be we awaited.
+
+
 ### [v0.26.0] - 17-10-2025
 
 Changed:
