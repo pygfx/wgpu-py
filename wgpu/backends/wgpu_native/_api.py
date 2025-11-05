@@ -334,10 +334,14 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         # not used: maxPushConstantSize
         # not used: maxNonSamplerBindings
     )
+
+    # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+    c_limit_next_in_chain = ffi.addressof(c_limits_native, "chain")
+
     # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
     c_limits = new_struct_p(
         "WGPULimits *",
-        nextInChain=ffi.addressof(c_limits_native, "chain"),
+        nextInChain=c_limit_next_in_chain,
         # not used: maxTextureDimension1D
         # not used: maxTextureDimension2D
         # not used: maxTextureDimension3D
@@ -1214,12 +1218,15 @@ class GPUAdapter(classes.GPUAdapter):
         c_trace_path = to_c_string_view(trace_path if trace_path else None)
 
         # H: chain: WGPUChainedStruct, tracePath: WGPUStringView
-        extras = new_struct_p(
+        c_device_extras = new_struct_p(
             "WGPUDeviceExtras *",
             tracePath=c_trace_path,
             # not used: chain
         )
-        extras.chain.sType = lib.WGPUSType_DeviceExtras
+        c_device_extras.chain.sType = lib.WGPUSType_DeviceExtras
+
+        # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+        c_device_next_in_chain = ffi.cast("WGPUChainedStruct * ", c_device_extras)
 
         # ----- Device lost
 
@@ -1277,7 +1284,7 @@ class GPUAdapter(classes.GPUAdapter):
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPULimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallbackInfo: WGPUDeviceLostCallbackInfo, uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
-            nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
+            nextInChain=c_device_next_in_chain,
             label=to_c_string_view(label),
             requiredFeatureCount=len(c_features),
             requiredFeatures=new_array("WGPUFeatureName[]", c_features),
@@ -1708,7 +1715,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
         c_layout_array = new_array("WGPUBindGroupLayout[]", bind_group_layouts_ids)
 
-        next_in_chain = ffi.NULL
+        c_pipeline_layout_next_in_chain = ffi.NULL
         if push_constant_layouts:
             count = len(push_constant_layouts)
             c_push_constant_ranges = new_array("WGPUPushConstantRange[]", count)
@@ -1730,12 +1737,15 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # not used: chain
             )
             c_pipeline_layout_extras.chain.sType = lib.WGPUSType_PipelineLayoutExtras
-            next_in_chain = ffi.cast("WGPUChainedStruct *", c_pipeline_layout_extras)
+            # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+            c_pipeline_layout_next_in_chain = ffi.cast(
+                "WGPUChainedStruct *", c_pipeline_layout_extras
+            )
 
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, bindGroupLayoutCount: int, bindGroupLayouts: WGPUBindGroupLayout *
         struct = new_struct_p(
             "WGPUPipelineLayoutDescriptor *",
-            nextInChain=next_in_chain,
+            nextInChain=c_pipeline_layout_next_in_chain,
             label=to_c_string_view(label),
             bindGroupLayouts=c_layout_array,
             bindGroupLayoutCount=len(bind_group_layouts),
@@ -1829,10 +1839,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 "Shader code must be str for WGSL or GLSL, or bytes for SpirV."
             )
 
+        # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+        c_shader_module_next_in_chain = ffi.cast("WGPUChainedStruct *", source_struct)
+
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPUShaderModuleDescriptor *",
-            nextInChain=ffi.cast("WGPUChainedStruct *", source_struct),
+            nextInChain=c_shader_module_next_in_chain,
             label=to_c_string_view(label),
         )
         # H: WGPUShaderModule f(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor)
@@ -1964,7 +1977,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     ) -> GPURenderPipeline:
         primitive = {} if primitive is None else primitive
         multisample = {} if multisample is None else multisample
-        descriptor = self._create_render_pipeline_descriptor(
+        descriptor, _keep_alive = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
         # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
@@ -1985,7 +1998,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         primitive = {} if primitive is None else primitive
         multisample = {} if multisample is None else multisample
         # TODO: wgpuDeviceCreateRenderPipelineAsync is not yet implemented in wgpu-native
-        descriptor = self._create_render_pipeline_descriptor(
+        descriptor, _keep_alive = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
 
@@ -2051,6 +2064,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         multisample: structs.MultisampleState,
         fragment: structs.FragmentState,
     ):
+        # We need to keep some objects alive until the struct is consumed by wgpu-native
+        keep_alive = []
+
         depth_stencil = depth_stencil or {}
         multisample = multisample or {}
         primitive = primitive or {}
@@ -2098,12 +2114,17 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             conservative=primitive_extras.get("conservative", False),
         )
         c_primitive_state_extras.chain.sType = lib.WGPUSType_PrimitiveStateExtras
-        next_in_chain = ffi.cast("WGPUChainedStruct *", c_primitive_state_extras)
+
+        # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+        c_primitive_state_next_in_chain = ffi.cast(
+            "WGPUChainedStruct *", c_primitive_state_extras
+        )
+        keep_alive.append(c_primitive_state_extras)
 
         # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode, unclippedDepth: WGPUBool/int
         c_primitive_state = new_struct(
             "WGPUPrimitiveState",
-            nextInChain=next_in_chain,
+            nextInChain=c_primitive_state_next_in_chain,
             topology=primitive.get("topology", "triangle-list"),
             stripIndexFormat=primitive.get("strip_index_format", 0),
             frontFace=primitive.get("front_face", "ccw"),
@@ -2170,7 +2191,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             multisample=c_multisample_state,
             fragment=c_fragment_state,
         )
-        return struct
+        return struct, keep_alive
 
     def _create_color_target_state(self, target):
         if not target.get("blend", None):
@@ -2332,11 +2353,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         )
 
     def _create_query_set(self, label, type, count, statistics):
-        next_in_chain = ffi.NULL
+        c_query_set_next_in_chain = ffi.NULL
         if statistics:
             c_statistics = new_array("WGPUPipelineStatisticName[]", statistics)
             # H: chain: WGPUChainedStruct, pipelineStatistics: WGPUPipelineStatisticName *, pipelineStatisticCount: int
-            query_set_descriptor_extras = new_struct_p(
+            c_query_set_descriptor_extras = new_struct_p(
                 "WGPUQuerySetDescriptorExtras *",
                 pipelineStatisticCount=len(statistics),
                 pipelineStatistics=ffi.cast(
@@ -2344,15 +2365,18 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 ),
                 # not used: chain
             )
-            query_set_descriptor_extras.chain.sType = (
+            c_query_set_descriptor_extras.chain.sType = (
                 lib.WGPUSType_QuerySetDescriptorExtras
             )
-            next_in_chain = ffi.cast("WGPUChainedStruct *", query_set_descriptor_extras)
+            # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+            c_query_set_next_in_chain = ffi.cast(
+                "WGPUChainedStruct *", c_query_set_descriptor_extras
+            )
 
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, type: WGPUQueryType, count: int
         query_set_descriptor = new_struct_p(
             "WGPUQuerySetDescriptor *",
-            nextInChain=next_in_chain,
+            nextInChain=c_query_set_next_in_chain,
             label=to_c_string_view(label),
             type=type,
             count=count,
