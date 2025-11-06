@@ -26,41 +26,33 @@ if sys.platform.startswith("linux") and system_is_wayland:
         api_is_wayland = True
 
 
-def get_glfw_present_methods(window):
+def get_glfw_present_info(window):
     if sys.platform.startswith("win"):
         return {
-            "screen": {
-                "platform": "windows",
-                "window": int(glfw.get_win32_window(window)),
-                "vsync": True,
-            }
+            "platform": "windows",
+            "window": int(glfw.get_win32_window(window)),
+            "vsync": True,
         }
     elif sys.platform.startswith("darwin"):
         return {
-            "screen": {
-                "platform": "cocoa",
-                "window": int(glfw.get_cocoa_window(window)),
-                "vsync": True,
-            }
+            "platform": "cocoa",
+            "window": int(glfw.get_cocoa_window(window)),
+            "vsync": True,
         }
     elif sys.platform.startswith("linux"):
         if api_is_wayland:
             return {
-                "screen": {
-                    "platform": "wayland",
-                    "window": int(glfw.get_wayland_window(window)),
-                    "display": int(glfw.get_wayland_display()),
-                    "vsync": True,
-                }
+                "platform": "wayland",
+                "window": int(glfw.get_wayland_window(window)),
+                "display": int(glfw.get_wayland_display()),
+                "vsync": True,
             }
         else:
             return {
-                "screen": {
-                    "platform": "x11",
-                    "window": int(glfw.get_x11_window(window)),
-                    "display": int(glfw.get_x11_display()),
-                    "vsync": True,
-                }
+                "platform": "x11",
+                "window": int(glfw.get_x11_window(window)),
+                "display": int(glfw.get_x11_display()),
+                "vsync": True,
             }
     else:
         raise RuntimeError(f"Cannot get GLFW surface info on {sys.platform}.")
@@ -77,12 +69,12 @@ glfw.window_hint(glfw.RESIZABLE, True)
 
 title = "wgpu glfw direct"
 window = glfw.create_window(640, 480, title, None, None)
-present_methods = get_glfw_present_methods(window)
+present_info = get_glfw_present_info(window)
 
-context = GPUCanvasContext(present_methods)
+context = GPUCanvasContext(present_info)
 
 # Initialize physical size once. For robust apps update this on resize events.
-context.set_physical_size(glfw.get_framebuffer_size(window))
+context.set_physical_size(*glfw.get_framebuffer_size(window))
 
 
 def main():
@@ -99,7 +91,7 @@ def main():
         glfw.poll_events()
 
         # resize handling
-        context.set_physical_size(glfw.get_framebuffer_size(window))
+        context.set_physical_size(*glfw.get_framebuffer_size(window))
 
         # draw a frame
         draw_frame()

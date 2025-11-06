@@ -94,7 +94,7 @@ def test_custom_canvas():
     class CustomCanvas:  # implements wgpu.WgpuCanvasInterface
         def __init__(self):
             self._canvas_context = None
-            self._present_methods = {
+            self._present_methods = {  # TODO: remove, or move test to rendercanvas?
                 "bitmap": {
                     "formats": ["rgba-u8"],
                 }

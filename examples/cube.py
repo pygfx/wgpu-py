@@ -491,7 +491,7 @@ if __name__ == "__main__":
             canvas.request_draw(draw_frame)
     else:
         # Sync
-        draw_frame = setup_drawing_sync(canvas.get_context("wgpu"))
+        draw_frame = setup_drawing_sync(canvas.get_wgpu_context())
         canvas.request_draw(draw_frame)
 
     # loop.add_task(poller)

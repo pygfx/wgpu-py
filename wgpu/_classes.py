@@ -219,22 +219,34 @@ class GPUPromise(BaseGPUPromise):
 class GPUCanvasContext:
     """Represents a context to configure a canvas and render to it.
 
-    Can be obtained via `canvas.get_context("wgpu")`.
+    Can be obtained via .... TODO
 
-    The canvas-context plays a crucial role in connecting the wgpu API to the
-    GUI layer, in a way that allows the GUI to be agnostic about wgpu. It
-    combines (and checks) the user's preferences with the capabilities and
-    preferences of the canvas.
+    When ``rendercanvas`` is used, it will automatically wrap a
+    ``GPUCanvasContext`` if necessary. From the p.o.v. of ``rendercanvas``, this
+    implements present_method 'screen'.
+
+    The purpose of the canvas-context is to connecting the wgpu API to the
+    GUI/window/canvas layer, in a way that allows the GUI to be agnostic about
+    wgpu, and wgpu to remain agnostic about a canvas. It combines (and checks)
+    the user's preferences with the capabilities and preferences of the canvas.
+
+    The ``present_info`` dict should have a ``window``
+    field containing the window id. On Linux there should also be ``platform``
+    field to distinguish between "wayland" and "x11", and a ``display`` field
+    for the display id. For the Pyodide backend, the dict must have the info so
+    the canvas or wgpu context can be retrieved. This dict is an interface between
+    ``rendercanvas`` and ``wgpu-py``.
     """
 
     _ot = object_tracker
 
-    def __init__(self, present_methods):
+    def __init__(self, present_info: dict):
         self._ot.increase(self.__class__.__name__)
+        self._present_info = present_info
 
-        # Buffer to hold new physical size
-        # will be applied when the context reconfigures
-        self._new_physical_size = None
+        # Buffer to hold new physical size, will be applied when the context reconfigures
+        self._physical_size = 0, 0
+        self._has_new_size = False
 
         # Surface capabilities. Stored the first time it is obtained
         self._capabilities = None
@@ -245,53 +257,23 @@ class GPUCanvasContext:
         # The last used texture
         self._texture = None
 
-        # Determine the present method
-        self._present_methods = present_methods
-        self._present_method = "screen" if "screen" in present_methods else "bitmap"
-
-    def set_physical_size(self, size):
-        """Set the current framebuffer physical size (width, height).
+    def set_physical_size(self, width: int, height: int) -> None:
+        """Set the current framebuffer physical size.
 
         The application must call this to keep the context informed about
         the window/framebuffer size.
         """
-        w, h = size
-        if w <= 0 or h <= 0:
+        if width <= 0 or height <= 0:
             raise ValueError("Physical size values must be positive.")
-        self._new_physical_size = int(w), int(h)
+        self._physical_size = int(width), int(height)
+        self._has_new_size = True
 
     def _get_capabilities(self, adapter):
         """Get dict of capabilities and cache the result."""
         if self._capabilities is None:
             self._capabilities = {}
-            if self._present_method == "screen":
-                # Query capabilities from the surface
-                self._capabilities.update(self._get_capabilities_screen(adapter))
-            else:
-                # Query format capabilities from the info provided by the canvas
-                formats = []
-                for format in self._present_methods["bitmap"]["formats"]:
-                    channels, _, fmt = format.partition("-")
-                    channels = {"i": "r", "ia": "rg"}.get(channels, channels)
-                    fmt = {
-                        "u8": "8unorm",
-                        "u16": "16uint",
-                        "f16": "16float",
-                        "f32": "32float",
-                    }.get(fmt, fmt)
-                    wgpu_format = channels + fmt
-                    wgpu_format_srgb = wgpu_format + "-srgb"
-                    if wgpu_format_srgb in enums.TextureFormat:
-                        formats.append(wgpu_format_srgb)
-                    formats.append(wgpu_format)
-                # Assume alpha modes for now
-                alpha_modes = [enums.CanvasAlphaMode.opaque]
-                # Build capabilitied dict
-                self._capabilities = {
-                    "formats": formats,
-                    "usages": 0xFF,
-                    "alpha_modes": alpha_modes,
-                }
+            # Query capabilities from the surface
+            self._capabilities.update(self._get_capabilities_screen(adapter))
             # Derived defaults
             if "view_formats" not in self._capabilities:
                 self._capabilities["view_formats"] = self._capabilities["formats"]
@@ -325,7 +307,6 @@ class GPUCanvasContext:
         color_space: str = "srgb",
         tone_mapping: structs.CanvasToneMappingStruct | None = None,
         alpha_mode: enums.CanvasAlphaModeEnum = "opaque",
-        size: tuple[int, int] = (320, 240),
     ) -> None:
         """Configures the presentation context for the associated canvas.
         Destroys any textures produced with a previous configuration.
@@ -346,7 +327,6 @@ class GPUCanvasContext:
             alpha_mode (structs.CanvasAlphaMode): Determines the effect that alpha values
                 will have on the content of textures returned by ``get_current_texture()``
                 when read, displayed, or used as an image source. Default "opaque".
-            size (tuple[int, int]): The physical size of the canvas in pixels.
         """
         # Check types
         tone_mapping = {} if tone_mapping is None else tone_mapping
@@ -361,11 +341,6 @@ class GPUCanvasContext:
 
         if not isinstance(usage, int):
             usage = str_flag_to_int(flags.TextureUsage, usage)
-
-        if not isinstance(size, tuple) or len(size) != 2:
-            raise TypeError("Configure: size must be a tuple (width, height).")
-        if not size[0] > 0 or not size[1] > 0:
-            raise ValueError("Configure: size values must be positive.")
 
         color_space  # noqa - not really supported, just assume srgb for now
         tone_mapping  # noqa - not supported yet
@@ -413,11 +388,9 @@ class GPUCanvasContext:
             "color_space": color_space,
             "tone_mapping": tone_mapping,
             "alpha_mode": alpha_mode,
-            "size": size,
         }
 
-        if self._present_method == "screen":
-            self._configure_screen(**self._config)
+        self._configure_screen(**self._config)
 
     def _configure_screen(
         self,
@@ -438,8 +411,7 @@ class GPUCanvasContext:
         """Removes the presentation context configuration.
         Destroys any textures produced while configured.
         """
-        if self._present_method == "screen":
-            self._unconfigure_screen()
+        self._unconfigure_screen()
         self._config = None
         self._drop_texture()
 
@@ -453,34 +425,10 @@ class GPUCanvasContext:
             raise RuntimeError(
                 "Canvas context must be configured before calling get_current_texture()."
             )
-
-        # When the texture is active right now, we could either:
-        # * return the existing texture
-        # * warn about it, and create a new one
-        # * raise an error
-        # Right now we return the existing texture, so user can retrieve it in different render passes that write to the same frame.
-
         if self._texture is None:
-            if self._present_method == "screen":
-                self._texture = self._create_texture_screen()
-            else:
-                self._texture = self._create_texture_bitmap()
+            self._texture = self._create_texture_screen()
 
         return self._texture
-
-    def _create_texture_bitmap(self):
-        width, height = (self._wgpu_config.width, self._wgpu_config.height)
-        width, height = max(width, 1), max(height, 1)
-
-        # Note that the label 'present' is used by read_texture() to determine
-        # that it can use a shared copy buffer.
-        device = self._config["device"]
-        return device.create_texture(
-            label="present",
-            size=(width, height, 1),
-            format=self._config["format"],
-            usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
-        )
 
     def _create_texture_screen(self):
         raise NotImplementedError()
@@ -497,73 +445,9 @@ class GPUCanvasContext:
         Present what has been drawn to the current texture, by compositing it to the
         canvas. Don't call this yourself; this is called automatically by the canvas.
         """
-
-        if not self._texture:
-            result = {"method": "skip"}
-        elif self._present_method == "screen":
+        if self._texture:
             self._present_screen()
-            result = {"method": "screen"}
-        elif self._present_method == "bitmap":
-            bitmap = self._present_bitmap()
-            result = {"method": "bitmap", "format": "rgba-u8", "data": bitmap}
-        else:
-            result = {"method": "fail", "message": "incompatible present methods"}
-
-        self._drop_texture()
-        return result
-
-    def _present_bitmap(self):
-        texture = self._texture
-        device = texture._device
-
-        size = texture.size
-        format = texture.format
-        nchannels = 4  # we expect rgba or bgra
-        if not format.startswith(("rgba", "bgra")):
-            raise RuntimeError(f"Image present unsupported texture format {format}.")
-        if "8" in format:
-            bytes_per_pixel = nchannels
-        elif "16" in format:
-            bytes_per_pixel = nchannels * 2
-        elif "32" in format:
-            bytes_per_pixel = nchannels * 4
-        else:
-            raise RuntimeError(
-                f"Image present unsupported texture format bitdepth {format}."
-            )
-
-        data = device.queue.read_texture(
-            {
-                "texture": texture,
-                "mip_level": 0,
-                "origin": (0, 0, 0),
-            },
-            {
-                "offset": 0,
-                "bytes_per_row": bytes_per_pixel * size[0],
-                "rows_per_image": size[1],
-            },
-            size,
-        )
-
-        # Derive struct dtype from wgpu texture format
-        memoryview_type = "B"
-        if "float" in format:
-            memoryview_type = "e" if "16" in format else "f"
-        else:
-            if "32" in format:
-                memoryview_type = "I"
-            elif "16" in format:
-                memoryview_type = "H"
-            else:
-                memoryview_type = "B"
-            if "sint" in format:
-                memoryview_type = memoryview_type.lower()
-
-        # Represent as memory object to avoid numpy dependency
-        # Equivalent: np.frombuffer(data, np.uint8).reshape(size[1], size[0], nchannels)
-
-        return data.cast(memoryview_type, (size[1], size[0], nchannels))
+            self._drop_texture()
 
     def _present_screen(self):
         raise NotImplementedError()

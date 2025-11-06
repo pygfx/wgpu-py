@@ -668,15 +668,12 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     _wgpu_config = None
     _skip_present_screen = False
 
-    def __init__(self, present_methods):
-        super().__init__(present_methods)
+    def __init__(self, present_info: dict):
+        super().__init__(present_info)
 
         # Obtain the surface id. The lifetime is of the surface is bound
         # to the lifetime of this context object.
-        if self._present_method == "screen":
-            self._surface_id = get_surface_id_from_info(self._present_methods["screen"])
-        else:  # method == "bitmap"
-            self._surface_id = ffi.NULL
+        self._surface_id = get_surface_id_from_info(present_info)
 
         # A stat for get_current_texture
         self._number_of_successive_unsuccesful_textures = 0
@@ -769,7 +766,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         color_space,
         tone_mapping,
         alpha_mode,
-        size,
     ):
         capabilities = self._get_capabilities(device.adapter)
 
@@ -800,7 +796,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # benchmark something and get the highest FPS possible. Note
         # that we've observed rate limiting regardless of setting this
         # to Immediate, depending on OS or being on battery power.
-        if getattr(self._present_methods[self._present_method], "vsync", True):
+        if self._present_info.get("vsync", True):
             present_mode_pref = ["fifo", "mailbox"]
         else:
             present_mode_pref = ["immediate", "mailbox", "fifo"]
@@ -824,8 +820,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             viewFormats=c_view_formats,
             alphaMode=c_alpha_mode,
             presentMode=c_present_mode,
-            width=size[0],  # overriden elsewhere in this class
-            height=size[1],  # overriden elsewhere in this class
+            width=self._physical_size[0],  # overriden elsewhere in this class
+            height=self._physical_size[1],  # overriden elsewhere in this class
         )
 
         # Configure now (if possible)
@@ -873,7 +869,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         #   that by providing a dummy texture, and warn when this happens too often in succession.
 
         # Get size info
-        if (new_size := self._new_physical_size) is not None:
+        if self._has_new_size:
+            self._has_new_size = False
+            new_size = self._physical_size
             old_size = (self._wgpu_config.width, self._wgpu_config.height)
             if new_size[0] <= 0 or new_size[1] <= 0:
                 # It's the responsibility of the drawing /scheduling logic to prevent this case.
@@ -884,7 +882,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                 self._wgpu_config.width = new_size[0]
                 self._wgpu_config.height = new_size[1]
                 self._configure_screen_real()
-            
+
             # Clear buffer, so we only have to perform these checks when set_physical_size has been called.
             self._new_physical_size = None
 
