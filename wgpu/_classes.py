@@ -206,6 +206,13 @@ class GPU:
         # Looks like at the time of writing there are no definitions for extensions yet
         return set()
 
+    @apidiff.add("Provide a low-level way to let wgpu render to screen")
+    def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
+        """Get the GPUCanvasContext object for the appropriate backend."""
+        from .backends.auto import gpu
+
+        return gpu.get_canvas_context(present_info)
+
 
 # Instantiate API entrypoint
 gpu = GPU()

@@ -647,6 +647,10 @@ class GPU(classes.GPU):
         # ----- Done
         return GPUAdapter(adapter_id, features, limits, adapter_info, loop)
 
+    def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
+        """Get the GPUCanvasContext object for the appropriate backend."""
+        return GPUCanvasContext(present_info)
+
 
 # Instantiate API entrypoint
 gpu = GPU()
