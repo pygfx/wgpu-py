@@ -95,11 +95,13 @@ def get_wgpu_instance(extras=None):
         raise RuntimeError(
             "Instance already exists. Please call `set_instance_extras` before the instance is created (calls to `request_adapter` or `enumerate_adapters`)"
         )
+
     if _the_instance is None:
         # H: nextInChain: WGPUChainedStruct *
         struct = ffi.new("WGPUInstanceDescriptor *")
         if extras is not None:
-            struct.nextInChain = ffi.cast("WGPUChainedStruct *", extras)
+            c_instance_next_in_chain = ffi.cast("WGPUChainedStruct *", extras)
+            struct.nextInChain = c_instance_next_in_chain
         _the_instance = lib.wgpuCreateInstance(struct)
     return _the_instance
 
