@@ -429,6 +429,23 @@ error_handler = ErrorHandler(logger)
 libf = SafeLibCalls(lib, error_handler)
 
 
+def find_surface_id_from_canvas(canvas_or_context):
+    """Try to get the surface_id from a RenderCanvas, rendercanvas context, or GPUCanvasContect."""
+    ob = canvas_or_context
+    surface_id = None
+    # Try get context first, e.g. from rendercanvas
+    if hasattr(ob, "get_context"):
+        ob = ob.get_context("wgpu")
+    # Now get native GPUCanvasContext, only assuming rendercanvas, but we're using knowledge of a private attr here :/
+    for attr in ["_wgpu_context"]:
+        if hasattr(ob, attr):
+            ob = getattr(ob, attr)
+    # Finally, get the surface id
+    if hasattr(ob, "_surface_id"):
+        surface_id = ob._surface_id
+    return surface_id
+
+
 # %% The API
 
 
@@ -451,8 +468,8 @@ class GPU(classes.GPU):
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
-            canvas : The canvas that the adapter should be able to render to. This can typically
-                be left to None. If given, the object must implement ``WgpuCanvasInterface``.
+            canvas : The canvas or context that the adapter should be able to render to. This can typically
+                be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
         """
 
         # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
@@ -472,6 +489,7 @@ class GPU(classes.GPU):
             promise._wgpu_set_input(adapters_llvm[0])
 
             return promise
+
         # ----- Surface ID
 
         # Get surface id that the adapter must be compatible with. If we
@@ -479,7 +497,9 @@ class GPU(classes.GPU):
         # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
-            surface_id = canvas.get_context("wgpu")._surface_id  # can still be NULL
+            surface_id = find_surface_id_from_canvas(canvas)
+            if surface_id is None:
+                surface_id = ffi.NULL
 
         # ----- Select backend
 

@@ -1,12 +1,9 @@
 """Test that wgpu works together with rendercanvas."""
 
-import sys
-
 import wgpu
 
 # from rendercanvas import BaseRenderCanvas
 from rendercanvas.offscreen import RenderCanvas
-from wgpu._canvas import WgpuCanvasInterface
 
 from pytest import skip
 from testutils import run_tests, can_use_wgpu_lib
@@ -40,7 +37,7 @@ def test_rendercanvas():
     canvas = RenderCanvas(size=(640, 480))
 
     device = wgpu.utils.get_default_device()
-    draw_frame1 = _get_draw_function(device, canvas)
+    draw_frame1 = _get_draw_function(device, canvas.get_wgpu_context())
 
     frame_counter = 0
 
@@ -67,76 +64,12 @@ def test_rendercanvas():
     assert m.shape == (200, 300, 4)
 
 
-def test_canvas_interface():
-    """Render an orange square ... using the WgpuCanvasInterface."""
-    canvas = WgpuCanvasInterface()
-
-    device = wgpu.utils.get_default_device()
-    draw_frame = _get_draw_function(device, canvas)
-
-    def draw():
-        draw_frame()
-        info = canvas.get_context().present()
-        return info["data"]
-
-    m = draw()
-    assert isinstance(m, memoryview)
-    assert m.shape == (480, 640, 4)
-
-
-def test_custom_canvas():
-    """Render an orange square ... in a custom offscreen canvas.
-
-    This helps make sure that WgpuCanvasInterface is indeed
-    the minimal required canvas API.
-    """
-
-    class CustomCanvas:  # implements wgpu.WgpuCanvasInterface
-        def __init__(self):
-            self._canvas_context = None
-            self._present_methods = {  # TODO: remove, or move test to rendercanvas?
-                "bitmap": {
-                    "formats": ["rgba-u8"],
-                }
-            }
-
-        def get_physical_size(self):
-            return 300, 200
-
-        def get_context(self, context_type="wgpu"):
-            assert context_type == "wgpu"
-            if self._canvas_context is None:
-                backend_module = sys.modules["wgpu"].gpu.__module__
-                CC = sys.modules[backend_module].GPUCanvasContext  # noqa N806
-                self._canvas_context = CC(self, self._present_methods)
-            return self._canvas_context
-
-    canvas = CustomCanvas()
-
-    # Also pass canvas here, to touch that code somewhere
-    adapter = wgpu.gpu.request_adapter_sync(
-        canvas=canvas, power_preference="high-performance"
-    )
-    device = adapter.request_device_sync()
-    draw_frame = _get_draw_function(device, canvas)
-
-    def draw():
-        draw_frame()
-        info = canvas.get_context().present()
-        return info["data"]
-
-    m = draw()
-    assert isinstance(m, memoryview)
-    assert m.shape == (200, 300, 4)
-
-
-def _get_draw_function(device, canvas):
+def _get_draw_function(device, present_context):
     # Bindings and layout
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     shader = device.create_shader_module(code=shader_source)
 
-    present_context = canvas.get_context("wgpu")
     render_texture_format = present_context.get_preferred_format(device.adapter)
     present_context.configure(device=device, format=render_texture_format)
 

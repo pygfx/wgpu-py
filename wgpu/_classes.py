@@ -130,8 +130,8 @@ class GPU:
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
-            canvas : The canvas that the adapter should be able to render to. This can typically
-                 be left to None. If given, the object must implement ``WgpuCanvasInterface``.
+            canvas : The canvas or context that the adapter should be able to render to. This can typically
+                 be left to None. If given, it must be a GPUCanvasContext or RenderCanvas.
             loop : the loop object for async support. Must have at least ``call_soon(f, *args)``.
                 The loop object is required for asynchrouns use with ``promise.then()``. EXPERIMENTAL.
         """

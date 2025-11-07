@@ -29,7 +29,6 @@ def setup_drawing_sync(
 ) -> Callable:
     """Setup to draw a triangle on the given canvas.
 
-    The given canvas must implement WgpuCanvasInterface, but nothing more.
     Returns the draw function.
     """
 
@@ -46,7 +45,6 @@ def setup_drawing_sync(
 async def setup_drawing_async(canvas, limits=None, format=None) -> Callable:
     """Setup to async-draw a triangle on the given canvas.
 
-    The given canvas must implement WgpuCanvasInterface, but nothing more.
     Returns the draw function.
     """
 
