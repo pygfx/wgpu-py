@@ -267,6 +267,13 @@ class GPUCanvasContext:
         # The last used texture
         self._texture = None
 
+    # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
+    @apidiff.hide("No unified concept of a canvas in Python, and avoid circular refs")
+    @property
+    def canvas(self) -> CanvasLike:
+        return None
+
+    @apidiff.add("External code needs to set the framebuffer size")
     def set_physical_size(self, width: int, height: int) -> None:
         """Set the current framebuffer physical size.
 
@@ -319,6 +326,7 @@ class GPUCanvasContext:
         alpha_mode: enums.CanvasAlphaModeEnum = "opaque",
     ) -> None:
         """Configures the presentation context for the associated canvas.
+
         Destroys any textures produced with a previous configuration.
         This clears the drawing buffer to transparent black.
 
@@ -412,7 +420,6 @@ class GPUCanvasContext:
         color_space,
         tone_mapping,
         alpha_mode,
-        size,
     ):
         raise NotImplementedError()
 
@@ -421,9 +428,9 @@ class GPUCanvasContext:
         """Removes the presentation context configuration.
         Destroys any textures produced while configured.
         """
-        self._unconfigure_screen()
         self._config = None
         self._drop_texture()
+        self._unconfigure_screen()
 
     def _unconfigure_screen(self):
         raise NotImplementedError()
@@ -448,13 +455,9 @@ class GPUCanvasContext:
             self._texture._release()  # not destroy, because it may be in use.
             self._texture = None
 
-    @apidiff.add("The present method is used by the canvas")
+    @apidiff.add("External code needs to invoke presenting at the appropriate time")
     def present(self) -> None:
-        """Hook for the canvas to present the rendered result.
-
-        Present what has been drawn to the current texture, by compositing it to the
-        canvas. Don't call this yourself; this is called automatically by the canvas.
-        """
+        """Present what has been drawn to the current texture, by compositing it to the canvas."""
         if self._texture:
             self._present_screen()
             self._drop_texture()

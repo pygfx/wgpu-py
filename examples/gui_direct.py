@@ -103,6 +103,7 @@ def main():
             last_frame_time, frame_count = time.perf_counter(), 0
 
     # dispose resources
+    context.unconfigure()
     glfw.destroy_window(window)
 
     # allow proper cleanup (workaround for glfw bug)
