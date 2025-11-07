@@ -13,7 +13,7 @@ example in other languages / API's:
   https://github.com/realitix/vulkan/blob/master/example/contribs/example_glfw.py
 
 This example is set up so it can be run with any canvas. Running this file
-as a script will use the auto-backend.
+as a script will rendercanvas with the auto-backend.
 
 """
 
@@ -25,9 +25,9 @@ import wgpu
 
 
 def setup_drawing_sync(
-    canvas, power_preference="high-performance", limits=None, format=None
+    context, power_preference="high-performance", limits=None, format=None
 ) -> Callable:
-    """Setup to draw a triangle on the given canvas.
+    """Setup to draw a triangle on the given context.
 
     Returns the draw function.
     """
@@ -35,15 +35,15 @@ def setup_drawing_sync(
     adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
     device = adapter.request_device_sync(required_limits=limits)
 
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, format)
+    pipeline_kwargs = get_render_pipeline_kwargs(context, device, format)
 
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
-    return get_draw_function(canvas, device, render_pipeline, asynchronous=False)
+    return get_draw_function(context, device, render_pipeline, asynchronous=False)
 
 
-async def setup_drawing_async(canvas, limits=None, format=None) -> Callable:
-    """Setup to async-draw a triangle on the given canvas.
+async def setup_drawing_async(context, limits=None, format=None) -> Callable:
+    """Setup to async-draw a triangle on the given context.
 
     Returns the draw function.
     """
@@ -51,20 +51,19 @@ async def setup_drawing_async(canvas, limits=None, format=None) -> Callable:
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
     device = await adapter.request_device_async(required_limits=limits)
 
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, format)
+    pipeline_kwargs = get_render_pipeline_kwargs(context, device, format)
 
     render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
 
-    return get_draw_function(canvas, device, render_pipeline, asynchronous=True)
+    return get_draw_function(context, device, render_pipeline, asynchronous=True)
 
 
 # %% Functions to create wgpu objects
 
 
 def get_render_pipeline_kwargs(
-    canvas, device, render_texture_format
+    context, device, render_texture_format
 ) -> wgpu.RenderPipelineDescriptor:
-    context = canvas.get_wgpu_context()
     if render_texture_format is None:
         render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
@@ -94,14 +93,14 @@ def get_render_pipeline_kwargs(
 
 
 def get_draw_function(
-    canvas,
+    context,
     device: wgpu.GPUDevice,
     render_pipeline: wgpu.GPURenderPipeline,
     *,
     asynchronous: bool,
 ) -> Callable:
     def draw_frame_sync():
-        current_texture = canvas.get_wgpu_context().get_current_texture()
+        current_texture = context.get_current_texture()
         command_encoder = device.create_command_encoder()
 
         render_pass = command_encoder.begin_render_pass(
@@ -174,6 +173,8 @@ if __name__ == "__main__":
     from rendercanvas.auto import RenderCanvas, loop
 
     canvas = RenderCanvas(size=(640, 480), title="wgpu triangle example")
-    draw_frame = setup_drawing_sync(canvas)
+    context = canvas.get_wgpu_context()
+
+    draw_frame = setup_drawing_sync(context)
     canvas.request_draw(draw_frame)
     loop.run()

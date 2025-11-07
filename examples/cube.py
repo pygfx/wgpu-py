@@ -5,7 +5,7 @@ This example is a bit more interesting (and larger) than the triangle,
 because it adds buffers and textures.
 
 This example is set up so it can be run with any canvas. Running this file
-as a script will use the auto-backend.
+as a script will rendercanvas with the auto-backend.
 """
 
 # test_example = true
@@ -28,7 +28,6 @@ def setup_drawing_sync(
 ) -> Callable:
     """Setup to draw a rotating cube on the given context.
 
-    The given context must implement ..., but nothing more.
     Returns the draw function.
     """
 
@@ -51,7 +50,6 @@ def setup_drawing_sync(
 async def setup_drawing_async(context, limits=None):
     """Setup to async-draw a rotating cube on the given context.
 
-    The given context must implement ..., but nothing more.
     Returns the draw function.
     """
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
@@ -480,6 +478,7 @@ if __name__ == "__main__":
         max_fps=60,
         vsync=True,
     )
+    context = canvas.get_wgpu_context()
 
     # Pick one
 
@@ -487,11 +486,11 @@ if __name__ == "__main__":
         # Async
         @loop.add_task
         async def init():
-            draw_frame = await setup_drawing_async(canvas.get_wgpu_context())
+            draw_frame = await setup_drawing_async(context)
             canvas.request_draw(draw_frame)
     else:
         # Sync
-        draw_frame = setup_drawing_sync(canvas.get_wgpu_context())
+        draw_frame = setup_drawing_sync(context)
         canvas.request_draw(draw_frame)
 
     # loop.add_task(poller)
