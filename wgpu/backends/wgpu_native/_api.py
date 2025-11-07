@@ -983,7 +983,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                     libf.wgpuTextureRelease(texture_id)
                     texture_id = 0
                 self._skip_present_screen = True
-                return self._create_texture_bitmap()
+                return self._create_plain_texture()
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
                 # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
@@ -1035,6 +1035,21 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         }
         device = self._config["device"]
         return GPUTexture(label, texture_id, device, tex_info)
+
+    def _create_plain_texture(self):
+        # To have a dummy texture in case we have a size mismatch and must drop frames
+        width, height = self._physical_size
+        width, height = max(width, 1), max(height, 1)
+
+        # Note that the label 'present' is used by read_texture() to determine
+        # that it can use a shared copy buffer.
+        device = self._config["device"]
+        return device.create_texture(
+            label="present",
+            size=(width, height, 1),
+            format=self._config["format"],
+            usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
+        )
 
     def _present_screen(self):
         if self._skip_present_screen:
