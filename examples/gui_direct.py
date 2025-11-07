@@ -13,7 +13,7 @@ import time
 import atexit
 
 import glfw
-from wgpu.backends.wgpu_native import GPUCanvasContext
+import wgpu
 
 # from triangle import setup_drawing_sync
 from cube import setup_drawing_sync
@@ -71,7 +71,7 @@ title = "wgpu glfw direct"
 window = glfw.create_window(640, 480, title, None, None)
 present_info = get_glfw_present_info(window)
 
-context = GPUCanvasContext(present_info)
+context = wgpu.gpu.get_canvas_context(present_info)
 
 # Initialize physical size once. For robust apps update this on resize events.
 context.set_physical_size(*glfw.get_framebuffer_size(window))

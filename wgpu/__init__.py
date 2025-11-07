@@ -19,7 +19,7 @@ from . import resources
 gpu = GPU()  # noqa: F405
 
 
-def rendercanvas_context_hook(canvas, present_methods):
+def rendercanvas_context_hook(canvas, _):
     raise RuntimeError(
-        "The rendercanvas_context_hook is deprecated. If you're using rendercanvas, please update to the latest version. Otherwise, use TODO"
+        "The rendercanvas_context_hook is deprecated. If you're using rendercanvas, please update to the latest version. Otherwise, use wgpu.gpu.get_canvas_context()"
     )

@@ -131,7 +131,7 @@ class GPU:
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
             canvas : The canvas or context that the adapter should be able to render to. This can typically
-                 be left to None. If given, it must be a GPUCanvasContext or RenderCanvas.
+                 be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
             loop : the loop object for async support. Must have at least ``call_soon(f, *args)``.
                 The loop object is required for asynchrouns use with ``promise.then()``. EXPERIMENTAL.
         """
@@ -208,7 +208,17 @@ class GPU:
 
     @apidiff.add("Provide a low-level way to let wgpu render to screen")
     def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
-        """Get the GPUCanvasContext object for the appropriate backend."""
+        """Get the GPUCanvasContext object for the appropriate backend.
+
+        Note that the recommended way to get a context is to instead use the ``rendercanvas`` library.
+
+        The ``present_info`` dict should have a ``window`` field containing the
+        window id. On Linux there should also be ``platform`` field to
+        distinguish between "wayland" and "x11", and a ``display`` field for the
+        display id. For the Pyodide backend, the dict must have the info so the
+        canvas or wgpu context can be retrieved. This dict is an interface
+        between ``rendercanvas`` and ``wgpu-py``.
+        """
         from .backends.auto import gpu
 
         return gpu.get_canvas_context(present_info)
@@ -226,23 +236,16 @@ class GPUPromise(BaseGPUPromise):
 class GPUCanvasContext:
     """Represents a context to configure a canvas and render to it.
 
-    Can be obtained via .... TODO
+    Can be obtained with ``wgpu.gpu.get_canvas_context()``.
 
     When ``rendercanvas`` is used, it will automatically wrap a
-    ``GPUCanvasContext`` if necessary. From the p.o.v. of ``rendercanvas``, this
-    implements present_method 'screen'.
+    ``GPUCanvasContext`` if necessary. From the perspective of ``rendercanvas``, this
+    implements the 'screen' present method.
 
     The purpose of the canvas-context is to connecting the wgpu API to the
     GUI/window/canvas layer, in a way that allows the GUI to be agnostic about
     wgpu, and wgpu to remain agnostic about a canvas. It combines (and checks)
     the user's preferences with the capabilities and preferences of the canvas.
-
-    The ``present_info`` dict should have a ``window``
-    field containing the window id. On Linux there should also be ``platform``
-    field to distinguish between "wayland" and "x11", and a ``display`` field
-    for the display id. For the Pyodide backend, the dict must have the info so
-    the canvas or wgpu context can be retrieved. This dict is an interface between
-    ``rendercanvas`` and ``wgpu-py``.
     """
 
     _ot = object_tracker

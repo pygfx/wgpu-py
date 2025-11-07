@@ -435,7 +435,7 @@ def find_surface_id_from_canvas(canvas_or_context):
     surface_id = None
     # Try get context first, e.g. from rendercanvas
     if hasattr(ob, "get_context"):
-        ob = ob.get_wgpu_context()
+        ob = ob.get_context("wgpu")
     # Now get native GPUCanvasContext, only assuming rendercanvas, but we're using knowledge of a private attr here :/
     for attr in ["_wgpu_context"]:
         if hasattr(ob, attr):
@@ -668,7 +668,17 @@ class GPU(classes.GPU):
         return GPUAdapter(adapter_id, features, limits, adapter_info, loop)
 
     def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
-        """Get the GPUCanvasContext object for the appropriate backend."""
+        """Get the GPUCanvasContext object for the appropriate backend.
+
+        Note that the recommended way to get a context is to instead use the ``rendercanvas`` library.
+
+        The ``present_info`` dict should have a ``window`` field containing the
+        window id. On Linux there should also be ``platform`` field to
+        distinguish between "wayland" and "x11", and a ``display`` field for the
+        display id. For the Pyodide backend, the dict must have the info so the
+        canvas or wgpu context can be retrieved. This dict is an interface
+        between ``rendercanvas`` and ``wgpu-py``.
+        """
         return GPUCanvasContext(present_info)
 
 
