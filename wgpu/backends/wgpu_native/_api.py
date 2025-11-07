@@ -435,7 +435,7 @@ def find_surface_id_from_canvas(canvas_or_context):
     surface_id = None
     # Try get context first, e.g. from rendercanvas
     if hasattr(ob, "get_context"):
-        ob = ob.get_context("wgpu")
+        ob = ob.get_wgpu_context()
     # Now get native GPUCanvasContext, only assuming rendercanvas, but we're using knowledge of a private attr here :/
     for attr in ["_wgpu_context"]:
         if hasattr(ob, attr):

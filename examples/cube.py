@@ -487,7 +487,7 @@ if __name__ == "__main__":
         # Async
         @loop.add_task
         async def init():
-            draw_frame = await setup_drawing_async(canvas.get_context("wgpu"))
+            draw_frame = await setup_drawing_async(canvas.get_wgpu_context())
             canvas.request_draw(draw_frame)
     else:
         # Sync

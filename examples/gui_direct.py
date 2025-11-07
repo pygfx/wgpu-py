@@ -78,8 +78,6 @@ context.set_physical_size(*glfw.get_framebuffer_size(window))
 
 
 def main():
-    # create canvas/context — setup_drawing_sync expects a "canvas" that can
-    # provide get_context/get_physical_size; GPUCanvasContext now implements those.
     draw_frame = setup_drawing_sync(context)
 
     last_frame_time = time.perf_counter()

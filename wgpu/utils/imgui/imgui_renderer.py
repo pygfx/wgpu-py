@@ -66,7 +66,7 @@ class ImguiRenderer:
 
     def __init__(self, device, canvas, render_target_format=None):
         # Prepare present context
-        self._canvas_context = canvas.get_context("wgpu")
+        self._canvas_context = canvas.get_wgpu_context()
 
         # if the canvas is not configured, we configure it self.
         if self._canvas_context._config is None:

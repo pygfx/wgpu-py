@@ -64,7 +64,7 @@ async def setup_drawing_async(canvas, limits=None, format=None) -> Callable:
 def get_render_pipeline_kwargs(
     canvas, device, render_texture_format
 ) -> wgpu.RenderPipelineDescriptor:
-    context = canvas.get_context("wgpu")
+    context = canvas.get_wgpu_context()
     if render_texture_format is None:
         render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
@@ -101,7 +101,7 @@ def get_draw_function(
     asynchronous: bool,
 ) -> Callable:
     def draw_frame_sync():
-        current_texture = canvas.get_context("wgpu").get_current_texture()
+        current_texture = canvas.get_wgpu_context().get_current_texture()
         command_encoder = device.create_command_encoder()
 
         render_pass = command_encoder.begin_render_pass(
