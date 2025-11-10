@@ -32,7 +32,7 @@ tests = [
     "trio",
     "rendercanvas>=2.4.0",
 ]
-examples = ["pypng", "rendercanvas", "glfw"]
+examples = ["pypng", "rendercanvas", "glfw", "imgui_bundle"]
 docs = ["sphinx>7.2", "sphinx_rtd_theme"]
 dev = ["wgpu[build,codegen,lint,tests,examples,docs]"]
 
