@@ -433,6 +433,23 @@ error_handler = ErrorHandler(logger)
 libf = SafeLibCalls(lib, error_handler)
 
 
+def find_surface_id_from_canvas(canvas_or_context):
+    """Try to get the surface_id from a RenderCanvas, rendercanvas context, or GPUCanvasContect."""
+    ob = canvas_or_context
+    surface_id = None
+    # Try get context first, e.g. from rendercanvas
+    if hasattr(ob, "get_context"):
+        ob = ob.get_context("wgpu")
+    # Now get native GPUCanvasContext, only assuming rendercanvas, but we're using knowledge of a private attr here :/
+    for attr in ["_wgpu_context"]:
+        if hasattr(ob, attr):
+            ob = getattr(ob, attr)
+    # Finally, get the surface id
+    if hasattr(ob, "_surface_id"):
+        surface_id = ob._surface_id
+    return surface_id
+
+
 # %% The API
 
 
@@ -455,8 +472,8 @@ class GPU(classes.GPU):
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
-            canvas : The canvas that the adapter should be able to render to. This can typically
-                be left to None. If given, the object must implement ``WgpuCanvasInterface``.
+            canvas : The canvas or context that the adapter should be able to render to. This can typically
+                be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
         """
 
         # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
@@ -476,6 +493,7 @@ class GPU(classes.GPU):
             promise._wgpu_set_input(adapters_llvm[0])
 
             return promise
+
         # ----- Surface ID
 
         # Get surface id that the adapter must be compatible with. If we
@@ -483,7 +501,9 @@ class GPU(classes.GPU):
         # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
-            surface_id = canvas.get_context("wgpu")._surface_id  # can still be NULL
+            surface_id = find_surface_id_from_canvas(canvas)
+            if surface_id is None:
+                surface_id = ffi.NULL
 
         # ----- Select backend
 
@@ -651,6 +671,19 @@ class GPU(classes.GPU):
         # ----- Done
         return GPUAdapter(adapter_id, features, limits, adapter_info, loop)
 
+    def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
+        """Get the GPUCanvasContext object for the appropriate backend.
+
+        Note that the recommended way to get a context is to instead use the ``rendercanvas`` library.
+
+        The ``present_info`` dict should have a ``window`` field containing the
+        window id. On Linux there should also be ``platform`` field to
+        distinguish between "wayland" and "x11", and a ``display`` field for the
+        display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object.
+        This dict is an interface between ``rendercanvas`` and ``wgpu-py``.
+        """
+        return GPUCanvasContext(present_info)
+
 
 # Instantiate API entrypoint
 gpu = GPU()
@@ -672,15 +705,12 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     _wgpu_config = None
     _skip_present_screen = False
 
-    def __init__(self, canvas, present_methods):
-        super().__init__(canvas, present_methods)
+    def __init__(self, present_info: dict):
+        super().__init__(present_info)
 
         # Obtain the surface id. The lifetime is of the surface is bound
         # to the lifetime of this context object.
-        if self._present_method == "screen":
-            self._surface_id = get_surface_id_from_info(self._present_methods["screen"])
-        else:  # method == "bitmap"
-            self._surface_id = ffi.NULL
+        self._surface_id = get_surface_id_from_info(present_info)
 
         # A stat for get_current_texture
         self._number_of_successive_unsuccesful_textures = 0
@@ -803,7 +833,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # benchmark something and get the highest FPS possible. Note
         # that we've observed rate limiting regardless of setting this
         # to Immediate, depending on OS or being on battery power.
-        if getattr(self._get_canvas(), "_vsync", True):
+        if self._present_info.get("vsync", True):
             present_mode_pref = ["fifo", "mailbox"]
         else:
             present_mode_pref = ["immediate", "mailbox", "fifo"]
@@ -815,7 +845,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         c_present_mode = getattr(lib, f"WGPUPresentMode_{present_mode.capitalize()}")
 
         # Prepare config object
-        width, height = self._get_canvas().get_physical_size()
 
         # H: nextInChain: WGPUChainedStruct *, device: WGPUDevice, format: WGPUTextureFormat, usage: WGPUTextureUsage/int, width: int, height: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *, alphaMode: WGPUCompositeAlphaMode, presentMode: WGPUPresentMode
         self._wgpu_config = new_struct_p(
@@ -828,8 +857,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             viewFormats=c_view_formats,
             alphaMode=c_alpha_mode,
             presentMode=c_present_mode,
-            width=width,  # overriden elsewhere in this class
-            height=height,  # overriden elsewhere in this class
+            width=self._physical_size[0],  # overriden elsewhere in this class
+            height=self._physical_size[1],  # overriden elsewhere in this class
         )
 
         # Configure now (if possible)
@@ -877,17 +906,22 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         #   that by providing a dummy texture, and warn when this happens too often in succession.
 
         # Get size info
-        old_size = (self._wgpu_config.width, self._wgpu_config.height)
-        new_size = tuple(self._get_canvas().get_physical_size())
-        if new_size[0] <= 0 or new_size[1] <= 0:
-            # It's the responsibility of the drawing /scheduling logic to prevent this case.
-            raise RuntimeError("Cannot get texture for a canvas with zero pixels.")
+        if self._has_new_size:
+            self._has_new_size = False
+            new_size = self._physical_size
+            old_size = (self._wgpu_config.width, self._wgpu_config.height)
+            if new_size[0] <= 0 or new_size[1] <= 0:
+                # It's the responsibility of the drawing /scheduling logic to prevent this case.
+                raise RuntimeError("Cannot get texture for a canvas with zero pixels.")
 
-        # Re-configure when the size has changed.
-        if new_size != old_size:
-            self._wgpu_config.width = new_size[0]
-            self._wgpu_config.height = new_size[1]
-            self._configure_screen_real()
+            # Re-configure when the size has changed.
+            if new_size != old_size:
+                self._wgpu_config.width = new_size[0]
+                self._wgpu_config.height = new_size[1]
+                self._configure_screen_real()
+
+            # Clear buffer, so we only have to perform these checks when set_physical_size has been called.
+            self._new_physical_size = None
 
         # Prepare for obtaining a texture.
         status_str_map = enum_int2str["SurfaceGetCurrentTextureStatus"]
@@ -952,7 +986,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                     libf.wgpuTextureRelease(texture_id)
                     texture_id = 0
                 self._skip_present_screen = True
-                return self._create_texture_bitmap()
+                return self._create_plain_texture()
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
                 # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
@@ -1004,6 +1038,21 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         }
         device = self._config["device"]
         return GPUTexture(label, texture_id, device, tex_info)
+
+    def _create_plain_texture(self):
+        # To have a dummy texture in case we have a size mismatch and must drop frames
+        width, height = self._physical_size
+        width, height = max(width, 1), max(height, 1)
+
+        # Note that the label 'present' is used by read_texture() to determine
+        # that it can use a shared copy buffer.
+        device = self._config["device"]
+        return device.create_texture(
+            label="present",
+            size=(width, height, 1),
+            format=self._config["format"],
+            usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
+        )
 
     def _present_screen(self):
         if self._skip_present_screen:

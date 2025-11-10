@@ -72,16 +72,14 @@ The async methods return a :class:`GPUPromise`, which resolves to the actual res
 * In sync code, you can use ``promise.sync_wait()``. This is similar to the ``_sync()`` flavour mentioned above (it makes your code less portable).
 
 
-Canvas API
-----------
+Rendering to a canvas
+---------------------
 
-In order for wgpu to render to a canvas (which can be on screen, inside a GUI, offscreen, etc.),
-a canvas object is needed. We recommend using the `rendercanvas <https://github.com/pygfx/rendercanvas>`_ library to get a wide variety of canvases.
+In order for wgpu to render to a canvas (which can be on screen, inside a GUI,
+offscreen, etc.), we highly recommend using the `rendercanvas <https://github.com/pygfx/rendercanvas>`_ library.
+One can then use ``canvas.get_wgpu_context()`` to get a `WgpuContext <https://rendercanvas.readthedocs.io/stable/contexts.html#rendercanvas.contexts.WgpuContext>`_.
 
-That said, the canvas object can be any object, as long as it adheres to the
-``WgpuCanvasInterface``, see https://github.com/pygfx/wgpu-py/blob/main/wgpu/_canvas.py for details.
-
-
+For more low-level control, use ```wgpu.gpu.get_canvas_context()`` to get a :class:`GPUCanvasContext` object for drawing directly to a window on screen.
 
 
 Overview

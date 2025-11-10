@@ -22,7 +22,7 @@ adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
 device = adapter.request_device_sync()
 
 # Prepare present context
-present_context = canvas.get_context("wgpu")
+present_context = canvas.get_wgpu_context()
 render_texture_format = wgpu.TextureFormat.bgra8unorm
 present_context.configure(device=device, format=render_texture_format)
 

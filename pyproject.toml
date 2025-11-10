@@ -13,6 +13,7 @@ dependencies = [
     "cffi>=1.15.0",
     "rubicon-objc>=0.4.1; sys_platform == 'darwin'",
     "sniffio",
+    "rendercanvas >=2.4",                            # Temporarily depend on rendercanvas because we re-aligned apis. Remove in a few months
 ]
 
 [project.optional-dependencies]

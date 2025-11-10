@@ -113,7 +113,7 @@ def setup_demo():
         from cube import setup_drawing_sync
 
     canvas = RenderCanvas(title="Cube example with debug symbols")
-    draw_frame = setup_drawing_sync(canvas)
+    draw_frame = setup_drawing_sync(canvas.get_wgpu_context())
 
     # we set the auto capture on frame 50, so after 100 frames gui should exit
     # this will lead to RenderDoc automatically opening the capture!

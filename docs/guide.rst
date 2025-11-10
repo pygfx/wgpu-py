@@ -28,7 +28,7 @@ Next, we can setup the render context, which we will need later on.
 
 .. code-block:: py
 
-    present_context = canvas.get_context("wgpu")
+    present_context = canvas.get_wgpu_context()
     render_texture_format = present_context.get_preferred_format(device.adapter)
     present_context.configure(device=device, format=render_texture_format)
 
