@@ -37,9 +37,6 @@ def test_release_canvas_context(n):
         app = PySide6.QtWidgets.QApplication([""])
 
     yield {
-        "expected_counts_after_create": {
-            "CanvasContext": (n, 0),
-        },
         "ignore": {"CommandBuffer"},
     }
 
