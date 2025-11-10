@@ -144,8 +144,8 @@ class ImguiRenderer:
 
         imgui.set_current_context(self.imgui_context)
 
-        pixel_ratio = self._canvas_context.canvas.get_pixel_ratio()
-        lsize = self._canvas_context.canvas.get_logical_size()
+        pixel_ratio = self._canvas_context.pixel_ratio
+        lsize = self._canvas_context.logical_size
         self._backend.io.display_framebuffer_scale = (pixel_ratio, pixel_ratio)
         self._backend.io.display_size = lsize
 
