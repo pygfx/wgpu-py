@@ -184,7 +184,9 @@ def build_wheel():
     # TODO: run the codegen for js_webgpu backend!
     file_cache.reset()
     update_js()
-    # (doesn't work right now :/)
+    file_cache.write_changed_files_to_disk()
+    # doesn't work right now :/
+    # maybe now? not 100% sure
 
     # TODO: can we use the existing hatch build system?
     os.environ["WGPU_PY_BUILD_NOARCH"] = "1"

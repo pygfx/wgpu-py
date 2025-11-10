@@ -56,6 +56,11 @@ class GPU(classes.GPU):
         return self._internal.wgslLanguageFeatures
 
 
+    # apidiff for low level context access
+    def get_canvas_context(self, present_info: dict) -> "GPUCanvasContext":
+        return GPUCanvasContext(present_info)
+
+
 class GPUAdapter(classes.GPUAdapter):
     def __init__(self, js_adapter, loop):
         internal = js_adapter
@@ -315,18 +320,10 @@ class GPUTexture(classes.GPUTexture):
         return classes.GPUTextureView(label, js_obj, device=self._device, texture=self, size=self._tex_info["size"])
 
 class GPUCanvasContext(classes.GPUCanvasContext):
-    def __init__(self, canvas, present_methods):
-        super().__init__(canvas, present_methods)
-        if self._present_method == "screen":
-            # rendercanvas.pyodide provides exactly this. Maybe we can also take a HTML canvas directly?
-            # for potential interop with webgpu applications that already run in the browser.
-            assert present_methods["screen"]["platform"] == "browser"
-            canvas_attribute = present_methods["screen"]["native_canvas_attribute"]
-        else:
-            # likely bitmap... but this could still work... might just try it
-            raise NotImplementedError(f"Unsupported present method: {self._present_method}")
-
-        self._internal = getattr(canvas, canvas_attribute).getContext("webgpu")
+    def __init__(self, present_info: dict):
+        super().__init__(present_info)
+        canvas_element = present_info["window"]
+        self._internal = canvas_element.getContext("webgpu")
 
     # we can't really replace ._config by getConfiguration() because the device constructor is so complex?
     def configure(self, **kwargs):

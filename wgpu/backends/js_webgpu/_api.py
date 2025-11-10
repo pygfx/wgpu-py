@@ -6,7 +6,7 @@ from ...structs import ArrayLike, Sequence # for typing hints
 from typing import Union
 
 from pyodide.ffi import to_js, run_sync, JsProxy
-from js import window, Uint8Array, Object
+from js import window, Uint8Array
 
 from ._helpers import simple_js_accessor
 from ._implementation import GPUPromise
@@ -109,6 +109,9 @@ class GPU(classes.GPU, ):
         promise = GPUPromise("enumerate_adapters", None, loop=loop)
         promise._set_input([adapter_hp, adapter_lp])
         return promise
+
+    def get_canvas_context(self, present_info: dict) -> "GPUCanvasContext":
+        return GPUCanvasContext(present_info)
 
     @property
     def wgsl_language_features(self):
@@ -272,19 +275,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
     # Custom implementation for createQuerySet from _implementation.py:
     def create_query_set(self, **kwargs):
-        print(set(self._internal.features)) # timestamp-query is here!
-        print("GPUDevice.create_query_set", kwargs)
         descriptor = structs.QuerySetDescriptor(**kwargs)
-        print("  descriptor:", descriptor)
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-        # js_descriptor = to_js(descriptor, dict_converter=Object.fromEntries)  # hoping to get Object now? (wrong object or nested structure)?
-        print("  js_descriptor:", js_descriptor) # -> still a dict?
         js_obj = self._internal.createQuerySet(js_descriptor)
-
-
-        # I am getting a type error... which could mean that the feature isn't requested correctly?
-        # https://www.w3.org/TR/webgpu/#queryset-creation
-        # likely not is, since the occlusion type throws the same error... it's the structure.
 
         label = kwargs.pop("label", "")
         type = descriptor.get("type")
@@ -753,18 +746,10 @@ class GPUCanvasContext(classes.GPUCanvasContext, ):
         return GPUTexture(label, js_texture, self._config["device"])
 
     # Additional custom methods from _implementation.py:
-    def __init__(self, canvas, present_methods):
-        super().__init__(canvas, present_methods)
-        if self._present_method == "screen":
-            # rendercanvas.pyodide provides exactly this. Maybe we can also take a HTML canvas directly?
-            # for potential interop with webgpu applications that already run in the browser.
-            assert present_methods["screen"]["platform"] == "browser"
-            canvas_attribute = present_methods["screen"]["native_canvas_attribute"]
-        else:
-            # likely bitmap... but this could still work... might just try it
-            raise NotImplementedError(f"Unsupported present method: {self._present_method}")
-
-        self._internal = getattr(canvas, canvas_attribute).getContext("webgpu")
+    def __init__(self, present_info: dict):
+        super().__init__(present_info)
+        canvas_element = present_info["window"]
+        self._internal = canvas_element.getContext("webgpu")
 
     def get_preferred_format(self, adapter: GPUAdapter | None) -> enums.TextureFormat:
         return gpu._internal.getPreferredCanvasFormat()
