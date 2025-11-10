@@ -7,56 +7,15 @@ Demonstration for hardcore users that need total low-level control.
 
 # run_example = false
 
-import os
-import sys
 import time
 import atexit
 
 import glfw
 import wgpu
+from wgpu.utils.glfw_present_info import get_glfw_present_info
 
 # from triangle import setup_drawing_sync
 from cube import setup_drawing_sync
-
-
-system_is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-api_is_wayland = False
-if sys.platform.startswith("linux") and system_is_wayland:
-    if not hasattr(glfw, "get_x11_window"):
-        api_is_wayland = True
-
-
-def get_glfw_present_info(window):
-    if sys.platform.startswith("win"):
-        return {
-            "platform": "windows",
-            "window": int(glfw.get_win32_window(window)),
-            "vsync": True,
-        }
-    elif sys.platform.startswith("darwin"):
-        return {
-            "platform": "cocoa",
-            "window": int(glfw.get_cocoa_window(window)),
-            "vsync": True,
-        }
-    elif sys.platform.startswith("linux"):
-        if api_is_wayland:
-            return {
-                "platform": "wayland",
-                "window": int(glfw.get_wayland_window(window)),
-                "display": int(glfw.get_wayland_display()),
-                "vsync": True,
-            }
-        else:
-            return {
-                "platform": "x11",
-                "window": int(glfw.get_x11_window(window)),
-                "display": int(glfw.get_x11_display()),
-                "vsync": True,
-            }
-    else:
-        raise RuntimeError(f"Cannot get GLFW surface info on {sys.platform}.")
-
 
 # Setup glfw
 glfw.init()

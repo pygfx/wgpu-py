@@ -342,11 +342,8 @@ def gui(app_state):
 # init imgui backend
 imgui.create_context()
 imgui_backend = ImguiWgpuBackend(device, render_texture_format)
-imgui_backend.io.display_size = canvas.get_logical_size()
-imgui_backend.io.display_framebuffer_scale = (
-    canvas.get_pixel_ratio(),
-    canvas.get_pixel_ratio(),
-)
+imgui_backend.io.display_size = present_context.logical_size
+imgui_backend.io.display_framebuffer_scale = (present_context.pixel_ratio,) * 2
 
 
 # register event handlers
