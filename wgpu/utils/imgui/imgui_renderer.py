@@ -91,8 +91,8 @@ class ImguiRenderer:
 
         self._backend = ImguiWgpuBackend(device, render_target_format)
 
-        self._backend.io.display_size = canvas.get_logical_size()
-        scale = canvas.get_pixel_ratio()
+        self._backend.io.display_size = self._canvas_context.logical_size
+        scale = self._canvas_context.pixel_ratio
         self._backend.io.display_framebuffer_scale = (scale, scale)
 
         canvas.add_event_handler(self._on_resize, "resize")
