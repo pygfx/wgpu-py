@@ -285,6 +285,11 @@ class GPUCanvasContext:
         self._physical_size = int(width), int(height)
         self._has_new_size = True
 
+    @apidiff.add("Allow code that uses a context to get the physical size")
+    def physical_size(self) -> tuple[int, int]:
+        """The physical size of the underlying surface in integer pixels."""
+        return self._physical_size
+
     def _get_capabilities(self, adapter):
         """Get dict of capabilities and cache the result."""
         if self._capabilities is None:
