@@ -66,3 +66,13 @@ Compute with buffers
 
 .. autofunction:: wgpu.utils.compute.compute_with_buffers
 
+
+
+Helper for using glfw directly (not via rendercanvas)
+-----------------------------------------------------
+
+.. code-block:: py
+
+    from wgpu.utils.glfw_present_info import get_glfw_present_info
+
+.. autofunction:: wgpu.utils.glfw_present_info.get_glfw_present_info
