@@ -679,9 +679,8 @@ class GPU(classes.GPU):
         The ``present_info`` dict should have a ``window`` field containing the
         window id. On Linux there should also be ``platform`` field to
         distinguish between "wayland" and "x11", and a ``display`` field for the
-        display id. For the Pyodide backend, the dict must have the info so the
-        canvas or wgpu context can be retrieved. This dict is an interface
-        between ``rendercanvas`` and ``wgpu-py``.
+        display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object.
+        This dict is an interface between ``rendercanvas`` and ``wgpu-py``.
         """
         return GPUCanvasContext(present_info)
 
