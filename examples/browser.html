@@ -31,8 +31,6 @@
 <!-- TODO: select the dependencies (pyodide doesn't find them automatically) -->
 <label for="install-wgpu">wgpu:</label>
 <input type="text" id="install-wgpu" name="wgpu" value="../dist/wgpu-0.26.0-py3-none-any.whl" size="30">
-<label for="install-rendercanvas">rendercanvas:</label>
-<input type="text" id="install-rendercanvas" name="rendercanvas" value="../../rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl" size="50">
 <!-- maybe <detaillist> for these two? -->
 <label for="install-numpy">numpy:</label>
 <input type="checkbox" id="install-numpy" name="numpy" checked>
@@ -65,11 +63,6 @@ pixels got drawn!
         let wgpu_location = document.getElementById("install-wgpu").value;
         await micropip.install(wgpu_location);
         
-        // build locally from the PR branch: https://github.com/pygfx/rendercanvas/pull/115
-        let rendercanvas_location = document.getElementById("install-rendercanvas").value;
-        // await micropip.install('../../rendercanvas/dist/rendercanvas-2.2.1-py3-none-any.whl'); // local wheel for auto testing
-        await micropip.install(rendercanvas_location);
-
         // additional dependencies, alreay existing for pyodide - so we can get them from micropip
         if (document.getElementById("install-numpy").checked) {
             // not needed by the triangle.py example but everything else I think

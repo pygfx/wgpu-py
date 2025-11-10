@@ -18,7 +18,6 @@ and just update examples, update wgpu and build the wheel, etc.
 
 import os
 import sys
-import shutil
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -36,7 +35,7 @@ compute_examples = {
     "compute_timestamps.py": [], # this one still crashes as the descriptor doesn't get converted into an object...
 }
 
-# these need rendercanvas too, so we will patch in the local wheel untill there is a rendercanvas release on pypi
+# these need rendercanvas too for now. but might run with just a canvas (no events) in the near future.
 graphics_examples = {
     "triangle.py":[], # no deps
     "cube.py": ["numpy"],
@@ -65,7 +64,7 @@ def get_html_index():
     <head>
         <meta name="viewport" content="width=device-width,initial-scale=1.0">
         <title>wgpu PyScript examples</title>
-        <script type="module" src="https://pyscript.net/releases/2025.10.3/core.js"></script>
+        <script type="module" src="https://pyscript.net/releases/2025.11.1/core.js"></script>
     </head>
     <body>
 
@@ -92,7 +91,7 @@ pyscript_graphics_template = """
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>{example_script} via PyScript</title>
-    <script type="module" src="https://pyscript.net/releases/2025.10.3/core.js"></script>
+    <script type="module" src="https://pyscript.net/releases/2025.11.1/core.js"></script>
 </head>
 
 <body>
@@ -180,16 +179,6 @@ if not (
 ):
     raise RuntimeError("This script must run in a checkout repo of wgpu-py.")
 
-rendercanvas_wheel = "rendercanvas-2.2.1-py3-none-any.whl"
-def copy_rendercanvas_wheel():
-    """
-    copies a local rendercanvas wheel into the wgpu dist folder, so the webserver can serve it.
-    expects that rendercanvas is a repo with the wheel build, in a dir next to the wgpu-py repo.
-    """
-    src = os.path.join(root, "..", "rendercanvas", "dist", rendercanvas_wheel)
-    dst = os.path.join(root, "dist", rendercanvas_wheel)
-    shutil.copyfile(src, dst)
-
 
 def build_wheel():
     # TODO: run the codegen for js_webgpu backend!
@@ -255,7 +244,7 @@ class MyHandler(BaseHTTPRequestHandler):
             pyname = name.replace(".html", ".py")
             if pyname in graphics_examples:
                 deps = graphics_examples[pyname].copy() # don't modify them multiple times!
-                deps.append(f"./{rendercanvas_wheel}")
+                deps.append("rendercanvas")
                 deps.append(f"./{wheel_name}")
                 # sometimes sniffio is missing, other times it's not?
                 doc = get_docstring_from_py_file(pyname)
@@ -297,7 +286,6 @@ if __name__ == "__main__":
         except ValueError:
             pass
 
-    copy_rendercanvas_wheel()
     build_wheel()
     print("Opening page in web browser ...")
     webbrowser.open(f"http://localhost:{port}/")
