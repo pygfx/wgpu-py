@@ -1,21 +1,21 @@
 import os
 import sys
 
-import glfw
-
-
-system_is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
-api_is_wayland = False
-if sys.platform.startswith("linux") and system_is_wayland:
-    if not hasattr(glfw, "get_x11_window"):
-        api_is_wayland = True
-
 
 def get_glfw_present_info(window, vsync=True) -> dict:
     """Get the ``present_info`` dict required to instantiate a ``GPUCanvasContext``.
 
     Given a glfw window handle, return a dict that can be passed to ``wgpu.gpu.get_canvas_context()`` to create a ``GPUCanvasContext``.
     """
+
+    # Lazy import, so the docs can be build without needing glfw
+    import glfw
+
+    system_is_wayland = "wayland" in os.getenv("XDG_SESSION_TYPE", "").lower()
+    api_is_wayland = False
+    if sys.platform.startswith("linux") and system_is_wayland:
+        if not hasattr(glfw, "get_x11_window"):
+            api_is_wayland = True
 
     if sys.platform.startswith("win"):
         return {
