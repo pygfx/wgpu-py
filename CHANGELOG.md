@@ -17,6 +17,26 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## [v0.28.0] - 10-11-2025
+
+We moved the implementation of the contexts to `rendercanvas` and made `GPUCanvasContext` lighter (and more low-level).
+We made sure that the new `rendercanvas` (v2.4) was compatible with both the old and new wgpu.
+However, code that uses the imgui adapter will break with `rendercanvas` v2.4 and requires this release of wgpu-py to fix it.
+
+Added:
+
+* Add util to get glfw present_info by @almarklein in https://github.com/pygfx/wgpu-py/pull/767
+
+Changed:
+
+* Canvas/context inversion of control by @Korijn in https://github.com/pygfx/wgpu-py/pull/764
+
+Fixed:
+
+* Fix compatibility with rendercanvas 2.4.0 by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/768
+* Also run example-tests with imgui by @almarklein in https://github.com/pygfx/wgpu-py/pull/769
+
+
 ### [v0.27.0] - 05-11-2025
 
 Fixed:
