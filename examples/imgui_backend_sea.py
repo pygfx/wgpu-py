@@ -1,8 +1,9 @@
 """
 An example demonstrating a wgpu app with imgui backend.
 
-# run_example = false
 """
+
+# run_example = true
 
 from rendercanvas.auto import RenderCanvas, loop
 import wgpu
@@ -23,7 +24,7 @@ device = adapter.request_device_sync()
 
 # Prepare present context
 present_context = canvas.get_wgpu_context()
-render_texture_format = wgpu.TextureFormat.bgra8unorm
+render_texture_format = present_context.get_preferred_format(adapter)
 present_context.configure(device=device, format=render_texture_format)
 
 module = device.create_shader_module(

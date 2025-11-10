@@ -11,6 +11,7 @@ import numpy as np
 from imgui_bundle import imgui
 from wgpu.utils.imgui import ImguiRenderer, Stats
 
+
 # Create a canvas to render to, the framerate is unlocked by using the "fastest" update mode and disabling vsync
 canvas = RenderCanvas(
     title="imgui_sea", size=(800, 450), update_mode="fastest", vsync=False

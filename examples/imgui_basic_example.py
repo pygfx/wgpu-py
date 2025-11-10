@@ -1,8 +1,9 @@
 """
 An example demonstrating a wgpu app with basic imgui usage and events.
 
-# run_example = false
 """
+
+# run_example = true
 
 import wgpu
 import sys
