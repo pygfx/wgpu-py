@@ -5,7 +5,7 @@ This example is a bit more interesting (and larger) than the triangle,
 because it adds buffers and textures.
 
 This example is set up so it can be run with any canvas. Running this file
-as a script will rendercanvas with the auto-backend.
+as a script will use rendercanvas with the auto-backend.
 """
 
 # test_example = true

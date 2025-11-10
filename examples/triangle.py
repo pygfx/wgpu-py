@@ -13,7 +13,7 @@ example in other languages / API's:
   https://github.com/realitix/vulkan/blob/master/example/contribs/example_glfw.py
 
 This example is set up so it can be run with any canvas. Running this file
-as a script will rendercanvas with the auto-backend.
+as a script will use rendercanvas with the auto-backend.
 
 """
 
