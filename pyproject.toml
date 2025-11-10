@@ -13,6 +13,7 @@ dependencies = [
     "cffi>=1.15.0",
     "rubicon-objc>=0.4.1; sys_platform == 'darwin'",
     "sniffio",
+    "rendercanvas >=2.4",                            # Temporarily depend on rendercanvas because we re-aligned apis. Remove in a few months
 ]
 
 [project.optional-dependencies]
@@ -29,9 +30,9 @@ tests = [
     "imageio",
     "anyio",
     "trio",
-    "rendercanvas",
+    "rendercanvas>=2.4.0",
 ]
-examples = ["pypng", "rendercanvas", "glfw"]
+examples = ["pypng", "rendercanvas", "glfw", "imgui_bundle"]
 docs = ["sphinx>7.2", "sphinx_rtd_theme"]
 dev = ["wgpu[build,codegen,lint,tests,examples,docs]"]
 

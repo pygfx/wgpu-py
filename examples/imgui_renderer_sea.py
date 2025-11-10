@@ -11,6 +11,7 @@ import numpy as np
 from imgui_bundle import imgui
 from wgpu.utils.imgui import ImguiRenderer, Stats
 
+
 # Create a canvas to render to, the framerate is unlocked by using the "fastest" update mode and disabling vsync
 canvas = RenderCanvas(
     title="imgui_sea", size=(800, 450), update_mode="fastest", vsync=False
@@ -22,7 +23,7 @@ adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
 device = adapter.request_device_sync()
 
 # Prepare present context
-present_context = canvas.get_context("wgpu")
+present_context = canvas.get_wgpu_context()
 render_texture_format = wgpu.TextureFormat.bgra8unorm
 present_context.configure(device=device, format=render_texture_format)
 

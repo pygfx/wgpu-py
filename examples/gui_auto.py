@@ -22,7 +22,7 @@ except ImportError:
     from triangle import setup_drawing_sync
 
 canvas = RenderCanvas(title="Cube example on $backend")
-draw_frame = setup_drawing_sync(canvas)
+draw_frame = setup_drawing_sync(canvas.get_wgpu_context())
 
 
 @canvas.request_draw

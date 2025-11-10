@@ -334,10 +334,14 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
         # not used: maxPushConstantSize
         # not used: maxNonSamplerBindings
     )
+
+    # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+    c_limit_next_in_chain = ffi.addressof(c_limits_native, "chain")
+
     # H: nextInChain: WGPUChainedStructOut *, maxTextureDimension1D: int, maxTextureDimension2D: int, maxTextureDimension3D: int, maxTextureArrayLayers: int, maxBindGroups: int, maxBindGroupsPlusVertexBuffers: int, maxBindingsPerBindGroup: int, maxDynamicUniformBuffersPerPipelineLayout: int, maxDynamicStorageBuffersPerPipelineLayout: int, maxSampledTexturesPerShaderStage: int, maxSamplersPerShaderStage: int, maxStorageBuffersPerShaderStage: int, maxStorageTexturesPerShaderStage: int, maxUniformBuffersPerShaderStage: int, maxUniformBufferBindingSize: int, maxStorageBufferBindingSize: int, minUniformBufferOffsetAlignment: int, minStorageBufferOffsetAlignment: int, maxVertexBuffers: int, maxBufferSize: int, maxVertexAttributes: int, maxVertexBufferArrayStride: int, maxInterStageShaderVariables: int, maxColorAttachments: int, maxColorAttachmentBytesPerSample: int, maxComputeWorkgroupStorageSize: int, maxComputeInvocationsPerWorkgroup: int, maxComputeWorkgroupSizeX: int, maxComputeWorkgroupSizeY: int, maxComputeWorkgroupSizeZ: int, maxComputeWorkgroupsPerDimension: int
     c_limits = new_struct_p(
         "WGPULimits *",
-        nextInChain=ffi.addressof(c_limits_native, "chain"),
+        nextInChain=c_limit_next_in_chain,
         # not used: maxTextureDimension1D
         # not used: maxTextureDimension2D
         # not used: maxTextureDimension3D
@@ -429,6 +433,23 @@ error_handler = ErrorHandler(logger)
 libf = SafeLibCalls(lib, error_handler)
 
 
+def find_surface_id_from_canvas(canvas_or_context):
+    """Try to get the surface_id from a RenderCanvas, rendercanvas context, or GPUCanvasContect."""
+    ob = canvas_or_context
+    surface_id = None
+    # Try get context first, e.g. from rendercanvas
+    if hasattr(ob, "get_context"):
+        ob = ob.get_context("wgpu")
+    # Now get native GPUCanvasContext, only assuming rendercanvas, but we're using knowledge of a private attr here :/
+    for attr in ["_wgpu_context"]:
+        if hasattr(ob, attr):
+            ob = getattr(ob, attr)
+    # Finally, get the surface id
+    if hasattr(ob, "_surface_id"):
+        surface_id = ob._surface_id
+    return surface_id
+
+
 # %% The API
 
 
@@ -451,8 +472,8 @@ class GPU(classes.GPU):
             power_preference (PowerPreference): "high-performance" or "low-power".
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
-            canvas : The canvas that the adapter should be able to render to. This can typically
-                be left to None. If given, the object must implement ``WgpuCanvasInterface``.
+            canvas : The canvas or context that the adapter should be able to render to. This can typically
+                be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
         """
 
         # Similar to https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
@@ -472,6 +493,7 @@ class GPU(classes.GPU):
             promise._wgpu_set_input(adapters_llvm[0])
 
             return promise
+
         # ----- Surface ID
 
         # Get surface id that the adapter must be compatible with. If we
@@ -479,7 +501,9 @@ class GPU(classes.GPU):
         # able to create a surface texture for it (from this adapter).
         surface_id = ffi.NULL
         if canvas is not None:
-            surface_id = canvas.get_context("wgpu")._surface_id  # can still be NULL
+            surface_id = find_surface_id_from_canvas(canvas)
+            if surface_id is None:
+                surface_id = ffi.NULL
 
         # ----- Select backend
 
@@ -647,6 +671,19 @@ class GPU(classes.GPU):
         # ----- Done
         return GPUAdapter(adapter_id, features, limits, adapter_info, loop)
 
+    def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
+        """Get the GPUCanvasContext object for the appropriate backend.
+
+        Note that the recommended way to get a context is to instead use the ``rendercanvas`` library.
+
+        The ``present_info`` dict should have a ``window`` field containing the
+        window id. On Linux there should also be ``platform`` field to
+        distinguish between "wayland" and "x11", and a ``display`` field for the
+        display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object.
+        This dict is an interface between ``rendercanvas`` and ``wgpu-py``.
+        """
+        return GPUCanvasContext(present_info)
+
 
 # Instantiate API entrypoint
 gpu = GPU()
@@ -668,15 +705,12 @@ class GPUCanvasContext(classes.GPUCanvasContext):
     _wgpu_config = None
     _skip_present_screen = False
 
-    def __init__(self, canvas, present_methods):
-        super().__init__(canvas, present_methods)
+    def __init__(self, present_info: dict):
+        super().__init__(present_info)
 
         # Obtain the surface id. The lifetime is of the surface is bound
         # to the lifetime of this context object.
-        if self._present_method == "screen":
-            self._surface_id = get_surface_id_from_info(self._present_methods["screen"])
-        else:  # method == "bitmap"
-            self._surface_id = ffi.NULL
+        self._surface_id = get_surface_id_from_info(present_info)
 
         # A stat for get_current_texture
         self._number_of_successive_unsuccesful_textures = 0
@@ -799,7 +833,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # benchmark something and get the highest FPS possible. Note
         # that we've observed rate limiting regardless of setting this
         # to Immediate, depending on OS or being on battery power.
-        if getattr(self._get_canvas(), "_vsync", True):
+        if self._present_info.get("vsync", True):
             present_mode_pref = ["fifo", "mailbox"]
         else:
             present_mode_pref = ["immediate", "mailbox", "fifo"]
@@ -811,7 +845,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         c_present_mode = getattr(lib, f"WGPUPresentMode_{present_mode.capitalize()}")
 
         # Prepare config object
-        width, height = self._get_canvas().get_physical_size()
 
         # H: nextInChain: WGPUChainedStruct *, device: WGPUDevice, format: WGPUTextureFormat, usage: WGPUTextureUsage/int, width: int, height: int, viewFormatCount: int, viewFormats: WGPUTextureFormat *, alphaMode: WGPUCompositeAlphaMode, presentMode: WGPUPresentMode
         self._wgpu_config = new_struct_p(
@@ -824,8 +857,8 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             viewFormats=c_view_formats,
             alphaMode=c_alpha_mode,
             presentMode=c_present_mode,
-            width=width,  # overriden elsewhere in this class
-            height=height,  # overriden elsewhere in this class
+            width=self._physical_size[0],  # overriden elsewhere in this class
+            height=self._physical_size[1],  # overriden elsewhere in this class
         )
 
         # Configure now (if possible)
@@ -873,17 +906,22 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         #   that by providing a dummy texture, and warn when this happens too often in succession.
 
         # Get size info
-        old_size = (self._wgpu_config.width, self._wgpu_config.height)
-        new_size = tuple(self._get_canvas().get_physical_size())
-        if new_size[0] <= 0 or new_size[1] <= 0:
-            # It's the responsibility of the drawing /scheduling logic to prevent this case.
-            raise RuntimeError("Cannot get texture for a canvas with zero pixels.")
+        if self._has_new_size:
+            self._has_new_size = False
+            new_size = self._physical_size
+            old_size = (self._wgpu_config.width, self._wgpu_config.height)
+            if new_size[0] <= 0 or new_size[1] <= 0:
+                # It's the responsibility of the drawing /scheduling logic to prevent this case.
+                raise RuntimeError("Cannot get texture for a canvas with zero pixels.")
 
-        # Re-configure when the size has changed.
-        if new_size != old_size:
-            self._wgpu_config.width = new_size[0]
-            self._wgpu_config.height = new_size[1]
-            self._configure_screen_real()
+            # Re-configure when the size has changed.
+            if new_size != old_size:
+                self._wgpu_config.width = new_size[0]
+                self._wgpu_config.height = new_size[1]
+                self._configure_screen_real()
+
+            # Clear buffer, so we only have to perform these checks when set_physical_size has been called.
+            self._new_physical_size = None
 
         # Prepare for obtaining a texture.
         status_str_map = enum_int2str["SurfaceGetCurrentTextureStatus"]
@@ -948,7 +986,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
                     libf.wgpuTextureRelease(texture_id)
                     texture_id = 0
                 self._skip_present_screen = True
-                return self._create_texture_bitmap()
+                return self._create_plain_texture()
             else:
                 # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
                 # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
@@ -1000,6 +1038,21 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         }
         device = self._config["device"]
         return GPUTexture(label, texture_id, device, tex_info)
+
+    def _create_plain_texture(self):
+        # To have a dummy texture in case we have a size mismatch and must drop frames
+        width, height = self._physical_size
+        width, height = max(width, 1), max(height, 1)
+
+        # Note that the label 'present' is used by read_texture() to determine
+        # that it can use a shared copy buffer.
+        device = self._config["device"]
+        return device.create_texture(
+            label="present",
+            size=(width, height, 1),
+            format=self._config["format"],
+            usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
+        )
 
     def _present_screen(self):
         if self._skip_present_screen:
@@ -1214,12 +1267,15 @@ class GPUAdapter(classes.GPUAdapter):
         c_trace_path = to_c_string_view(trace_path if trace_path else None)
 
         # H: chain: WGPUChainedStruct, tracePath: WGPUStringView
-        extras = new_struct_p(
+        c_device_extras = new_struct_p(
             "WGPUDeviceExtras *",
             tracePath=c_trace_path,
             # not used: chain
         )
-        extras.chain.sType = lib.WGPUSType_DeviceExtras
+        c_device_extras.chain.sType = lib.WGPUSType_DeviceExtras
+
+        # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+        c_device_next_in_chain = ffi.cast("WGPUChainedStruct * ", c_device_extras)
 
         # ----- Device lost
 
@@ -1277,7 +1333,7 @@ class GPUAdapter(classes.GPUAdapter):
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, requiredFeatureCount: int, requiredFeatures: WGPUFeatureName *, requiredLimits: WGPULimits *, defaultQueue: WGPUQueueDescriptor, deviceLostCallbackInfo: WGPUDeviceLostCallbackInfo, uncapturedErrorCallbackInfo: WGPUUncapturedErrorCallbackInfo
         struct = new_struct_p(
             "WGPUDeviceDescriptor *",
-            nextInChain=ffi.cast("WGPUChainedStruct * ", extras),
+            nextInChain=c_device_next_in_chain,
             label=to_c_string_view(label),
             requiredFeatureCount=len(c_features),
             requiredFeatures=new_array("WGPUFeatureName[]", c_features),
@@ -1708,7 +1764,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
         c_layout_array = new_array("WGPUBindGroupLayout[]", bind_group_layouts_ids)
 
-        next_in_chain = ffi.NULL
+        c_pipeline_layout_next_in_chain = ffi.NULL
         if push_constant_layouts:
             count = len(push_constant_layouts)
             c_push_constant_ranges = new_array("WGPUPushConstantRange[]", count)
@@ -1730,12 +1786,15 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 # not used: chain
             )
             c_pipeline_layout_extras.chain.sType = lib.WGPUSType_PipelineLayoutExtras
-            next_in_chain = ffi.cast("WGPUChainedStruct *", c_pipeline_layout_extras)
+            # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+            c_pipeline_layout_next_in_chain = ffi.cast(
+                "WGPUChainedStruct *", c_pipeline_layout_extras
+            )
 
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, bindGroupLayoutCount: int, bindGroupLayouts: WGPUBindGroupLayout *
         struct = new_struct_p(
             "WGPUPipelineLayoutDescriptor *",
-            nextInChain=next_in_chain,
+            nextInChain=c_pipeline_layout_next_in_chain,
             label=to_c_string_view(label),
             bindGroupLayouts=c_layout_array,
             bindGroupLayoutCount=len(bind_group_layouts),
@@ -1829,10 +1888,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 "Shader code must be str for WGSL or GLSL, or bytes for SpirV."
             )
 
+        # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+        c_shader_module_next_in_chain = ffi.cast("WGPUChainedStruct *", source_struct)
+
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView
         struct = new_struct_p(
             "WGPUShaderModuleDescriptor *",
-            nextInChain=ffi.cast("WGPUChainedStruct *", source_struct),
+            nextInChain=c_shader_module_next_in_chain,
             label=to_c_string_view(label),
         )
         # H: WGPUShaderModule f(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor)
@@ -1964,7 +2026,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     ) -> GPURenderPipeline:
         primitive = {} if primitive is None else primitive
         multisample = {} if multisample is None else multisample
-        descriptor = self._create_render_pipeline_descriptor(
+        descriptor, _keep_alive = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
         # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
@@ -1985,7 +2047,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         primitive = {} if primitive is None else primitive
         multisample = {} if multisample is None else multisample
         # TODO: wgpuDeviceCreateRenderPipelineAsync is not yet implemented in wgpu-native
-        descriptor = self._create_render_pipeline_descriptor(
+        descriptor, _keep_alive = self._create_render_pipeline_descriptor(
             label, layout, vertex, primitive, depth_stencil, multisample, fragment
         )
 
@@ -2051,6 +2113,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         multisample: structs.MultisampleState,
         fragment: structs.FragmentState,
     ):
+        # We need to keep some objects alive until the struct is consumed by wgpu-native
+        keep_alive = []
+
         depth_stencil = depth_stencil or {}
         multisample = multisample or {}
         primitive = primitive or {}
@@ -2098,12 +2163,17 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             conservative=primitive_extras.get("conservative", False),
         )
         c_primitive_state_extras.chain.sType = lib.WGPUSType_PrimitiveStateExtras
-        next_in_chain = ffi.cast("WGPUChainedStruct *", c_primitive_state_extras)
+
+        # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+        c_primitive_state_next_in_chain = ffi.cast(
+            "WGPUChainedStruct *", c_primitive_state_extras
+        )
+        keep_alive.append(c_primitive_state_extras)
 
         # H: nextInChain: WGPUChainedStruct *, topology: WGPUPrimitiveTopology, stripIndexFormat: WGPUIndexFormat, frontFace: WGPUFrontFace, cullMode: WGPUCullMode, unclippedDepth: WGPUBool/int
         c_primitive_state = new_struct(
             "WGPUPrimitiveState",
-            nextInChain=next_in_chain,
+            nextInChain=c_primitive_state_next_in_chain,
             topology=primitive.get("topology", "triangle-list"),
             stripIndexFormat=primitive.get("strip_index_format", 0),
             frontFace=primitive.get("front_face", "ccw"),
@@ -2170,7 +2240,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             multisample=c_multisample_state,
             fragment=c_fragment_state,
         )
-        return struct
+        return struct, keep_alive
 
     def _create_color_target_state(self, target):
         if not target.get("blend", None):
@@ -2332,11 +2402,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         )
 
     def _create_query_set(self, label, type, count, statistics):
-        next_in_chain = ffi.NULL
+        c_query_set_next_in_chain = ffi.NULL
         if statistics:
             c_statistics = new_array("WGPUPipelineStatisticName[]", statistics)
             # H: chain: WGPUChainedStruct, pipelineStatistics: WGPUPipelineStatisticName *, pipelineStatisticCount: int
-            query_set_descriptor_extras = new_struct_p(
+            c_query_set_descriptor_extras = new_struct_p(
                 "WGPUQuerySetDescriptorExtras *",
                 pipelineStatisticCount=len(statistics),
                 pipelineStatistics=ffi.cast(
@@ -2344,15 +2414,18 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 ),
                 # not used: chain
             )
-            query_set_descriptor_extras.chain.sType = (
+            c_query_set_descriptor_extras.chain.sType = (
                 lib.WGPUSType_QuerySetDescriptorExtras
             )
-            next_in_chain = ffi.cast("WGPUChainedStruct *", query_set_descriptor_extras)
+            # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
+            c_query_set_next_in_chain = ffi.cast(
+                "WGPUChainedStruct *", c_query_set_descriptor_extras
+            )
 
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, type: WGPUQueryType, count: int
         query_set_descriptor = new_struct_p(
             "WGPUQuerySetDescriptor *",
-            nextInChain=next_in_chain,
+            nextInChain=c_query_set_next_in_chain,
             label=to_c_string_view(label),
             type=type,
             count=count,

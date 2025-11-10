@@ -1,8 +1,9 @@
 """
 An example demonstrating a wgpu app with imgui backend.
 
-# run_example = false
 """
+
+# run_example = true
 
 from rendercanvas.auto import RenderCanvas, loop
 import wgpu
@@ -22,8 +23,8 @@ adapter = wgpu.gpu.request_adapter_sync(power_preference="high-performance")
 device = adapter.request_device_sync()
 
 # Prepare present context
-present_context = canvas.get_context("wgpu")
-render_texture_format = wgpu.TextureFormat.bgra8unorm
+present_context = canvas.get_wgpu_context()
+render_texture_format = present_context.get_preferred_format(adapter)
 present_context.configure(device=device, format=render_texture_format)
 
 module = device.create_shader_module(
@@ -341,11 +342,8 @@ def gui(app_state):
 # init imgui backend
 imgui.create_context()
 imgui_backend = ImguiWgpuBackend(device, render_texture_format)
-imgui_backend.io.display_size = canvas.get_logical_size()
-imgui_backend.io.display_framebuffer_scale = (
-    canvas.get_pixel_ratio(),
-    canvas.get_pixel_ratio(),
-)
+imgui_backend.io.display_size = present_context.logical_size
+imgui_backend.io.display_framebuffer_scale = (present_context.pixel_ratio,) * 2
 
 
 # register event handlers

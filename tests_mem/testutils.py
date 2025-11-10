@@ -224,7 +224,8 @@ def create_and_release(create_objects_func):
                 )
 
             # Test that class matches function name (should prevent a group of copy-paste errors)
-            assert ob_name == cls.__name__[3:]
+            if not ob_name.startswith("CanvasContext"):
+                assert ob_name == cls.__name__[3:]
 
             # Give wgpu some slack to clean up temporary resources
             clear_mem()
@@ -236,7 +237,8 @@ def create_and_release(create_objects_func):
                 print("  more after create:", more2)
 
             # Make sure the actual object has increased
-            assert more2  # not empty
+            if options["expected_counts_after_create"]:
+                assert more2  # not empty
             assert more2 == options["expected_counts_after_create"], (
                 f"Expected:\n{options['expected_counts_after_create']}\nGot:\n{more2}"
             )

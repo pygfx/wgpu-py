@@ -9,9 +9,9 @@
 * Wrote 34 enums to enums.py
 * Wrote 60 structs to structs.py
 ### Patching API for _classes.py
-* Diffs for GPU: add enumerate_adapters_async, add enumerate_adapters_sync, change get_preferred_canvas_format, change request_adapter_async, change request_adapter_sync
+* Diffs for GPU: add enumerate_adapters_async, add enumerate_adapters_sync, add get_canvas_context, change get_preferred_canvas_format, change request_adapter_async, change request_adapter_sync
 * Diffs for GPUPromise: add GPUPromise
-* Diffs for GPUCanvasContext: add get_preferred_format, add present
+* Diffs for GPUCanvasContext: add get_preferred_format, add physical_size, add present, add set_physical_size, hide canvas
 * Diffs for GPUAdapter: add summary
 * Diffs for GPUDevice: add adapter, add create_buffer_with_data, hide import_external_texture, hide lost_async, hide lost_sync, hide onuncapturederror, hide pop_error_scope_async, hide pop_error_scope_sync, hide push_error_scope
 * Diffs for GPUBuffer: add read_mapped, add write_mapped, hide get_mapped_range
@@ -19,9 +19,9 @@
 * Diffs for GPUTextureView: add size, add texture
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
-* Validated 38 classes, 121 methods, 49 properties
+* Validated 38 classes, 120 methods, 50 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 38 classes, 113 methods, 0 properties
+* Validated 38 classes, 115 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.core-features-and-limits missing in webgpu.h/wgpu.h
 * Enum field FeatureName.subgroups missing in webgpu.h/wgpu.h
