@@ -25,7 +25,7 @@ os.environ["RENDERCANVAS_FORCE_OFFSCREEN"] = "true"
 # Load wgpu so autodoc can query docstrings
 import wgpu  # noqa: E402
 import wgpu.utils.compute  # noqa: E402
-import wgpu.glfw_present_info  # noqa: E402
+import wgpu.utils.glfw_present_info  # noqa: E402
 
 
 # -- Tests -------------------------------------------------------------------
