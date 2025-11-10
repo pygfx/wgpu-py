@@ -86,7 +86,7 @@ class ExampleWidget(QtWidgets.QWidget):
 app = QtWidgets.QApplication([])
 example = ExampleWidget()
 
-draw_frame = setup_drawing_sync(example.canvas)
+draw_frame = setup_drawing_sync(example.canvas.get_wgpu_context())
 example.canvas.request_draw(draw_frame)
 
 # Enter Qt event loop (compatible with qt5/qt6)

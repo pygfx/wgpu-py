@@ -5,7 +5,7 @@ This example is a bit more interesting (and larger) than the triangle,
 because it adds buffers and textures.
 
 This example is set up so it can be run with any canvas. Running this file
-as a script will use the auto-backend.
+as a script will use rendercanvas with the auto-backend.
 """
 
 # test_example = true
@@ -24,11 +24,10 @@ from rendercanvas.auto import RenderCanvas, loop
 
 
 def setup_drawing_sync(
-    canvas, power_preference="high-performance", limits=None
+    context, power_preference="high-performance", limits=None
 ) -> Callable:
-    """Setup to draw a rotating cube on the given canvas.
+    """Setup to draw a rotating cube on the given context.
 
-    The given canvas must implement WgpuCanvasInterface, but nothing more.
     Returns the draw function.
     """
 
@@ -39,19 +38,18 @@ def setup_drawing_sync(
     )
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
+    pipeline_kwargs = get_render_pipeline_kwargs(context, device, pipeline_layout)
 
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_group
+        context, device, render_pipeline, uniform_buffer, bind_group
     )
 
 
-async def setup_drawing_async(canvas, limits=None):
-    """Setup to async-draw a rotating cube on the given canvas.
+async def setup_drawing_async(context, limits=None):
+    """Setup to async-draw a rotating cube on the given context.
 
-    The given canvas must implement WgpuCanvasInterface, but nothing more.
     Returns the draw function.
     """
     adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
@@ -61,24 +59,24 @@ async def setup_drawing_async(canvas, limits=None):
     )
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
+    pipeline_kwargs = get_render_pipeline_kwargs(context, device, pipeline_layout)
 
     render_pipeline = await device.create_render_pipeline_async(**pipeline_kwargs)
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_group
+        context, device, render_pipeline, uniform_buffer, bind_group
     )
 
 
-def get_drawing_func(canvas, device):
+def get_drawing_func(context, device):
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
-    pipeline_kwargs = get_render_pipeline_kwargs(canvas, device, pipeline_layout)
+    pipeline_kwargs = get_render_pipeline_kwargs(context, device, pipeline_layout)
 
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
     # render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
     return get_draw_function(
-        canvas, device, render_pipeline, uniform_buffer, bind_group
+        context, device, render_pipeline, uniform_buffer, bind_group
     )
 
 
@@ -86,9 +84,8 @@ def get_drawing_func(canvas, device):
 
 
 def get_render_pipeline_kwargs(
-    canvas, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
+    context, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
 ) -> wgpu.RenderPipelineDescriptor:
-    context = canvas.get_context("wgpu")
     render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
@@ -250,7 +247,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
 
 
 def get_draw_function(
-    canvas,
+    context,
     device: wgpu.GPUDevice,
     render_pipeline: wgpu.GPURenderPipeline,
     uniform_buffer: wgpu.GPUBuffer,
@@ -304,9 +301,9 @@ def get_draw_function(
 
     def draw_frame():
         current_texture_view: wgpu.GPUTextureView = (
-            canvas.get_context("wgpu")
-            .get_current_texture()
-            .create_view(label="Cube Example current surface texture view")
+            context.get_current_texture().create_view(
+                label="Cube Example current surface texture view"
+            )
         )
         command_encoder = device.create_command_encoder(
             label="Cube Example render pass command encoder"
@@ -481,6 +478,7 @@ if __name__ == "__main__":
         max_fps=60,
         vsync=True,
     )
+    context = canvas.get_wgpu_context()
 
     # Pick one
 
@@ -488,11 +486,11 @@ if __name__ == "__main__":
         # Async
         @loop.add_task
         async def init():
-            draw_frame = await setup_drawing_async(canvas)
+            draw_frame = await setup_drawing_async(context)
             canvas.request_draw(draw_frame)
     else:
         # Sync
-        draw_frame = setup_drawing_sync(canvas)
+        draw_frame = setup_drawing_sync(context)
         canvas.request_draw(draw_frame)
 
     # loop.add_task(poller)

@@ -58,9 +58,7 @@ def test_release_canvas_context(n):
     from rendercanvas.offscreen import RenderCanvas
 
     yield {
-        "expected_counts_after_create": {
-            "CanvasContext": (n, 0),
-        },
+        "expected_counts_after_create": {},
         "ignore": {"CommandBuffer", "Buffer"},
     }
 
