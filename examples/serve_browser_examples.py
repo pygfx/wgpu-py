@@ -14,6 +14,8 @@ Files are loaded from disk on each request, so you can leave the server running
 and just update examples, update wgpu and build the wheel, etc.
 """
 
+# run_example = false
+
 # this is adapted from the rendercanvas version
 
 import os
