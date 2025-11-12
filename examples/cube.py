@@ -1,4 +1,6 @@
 """
+Cube
+----
 Example that renders a textured rotating cube.
 
 This example is a bit more interesting (and larger) than the triangle,

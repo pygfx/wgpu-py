@@ -1,4 +1,7 @@
 """
+Compute Noop
+------------
+
 Example compute shader that does ... nothing but copy a value from one
 buffer into another.
 """
