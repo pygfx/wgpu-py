@@ -1,4 +1,8 @@
 """
+Triangle GLSL
+-------------
+
+
 The triangle example, using GLSL shaders.
 
 """

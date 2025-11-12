@@ -1,4 +1,7 @@
 """
+Compute Timestamps
+------------------
+
 A simple example to profile a compute pass using ComputePassTimestampWrites.
 """
 

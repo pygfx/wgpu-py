@@ -1,6 +1,7 @@
 """
-Imgui Renderer Sea
+ImGui Renderer Sea
 ------------------
+
 An example demonstrating a wgpu app with imgui renderer
 """
 

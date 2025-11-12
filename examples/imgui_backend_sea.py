@@ -1,5 +1,5 @@
 """
-Imgui Backend Sea
+ImGui Backend Sea
 -----------------
 
 An example demonstrating a wgpu app with imgui backend.

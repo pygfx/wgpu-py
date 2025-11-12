@@ -1,4 +1,7 @@
 """
+Compute Textures
+----------------
+
 Example that shows how to use textures in a compute shader to convert an RGBA image to YCbCr.
 
 The shader uses workgroups to processes non-overlapping 8x8 blocks of the input rgba texture.
