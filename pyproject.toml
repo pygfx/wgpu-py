@@ -33,7 +33,7 @@ tests = [
     "rendercanvas>=2.4.0",
 ]
 examples = ["pypng", "rendercanvas", "glfw", "imgui_bundle"]
-docs = ["sphinx>7.2", "sphinx_rtd_theme", "sphinx-gallery"]
+docs = ["wgpu[examples]", "flit", "sphinx>7.2", "sphinx_rtd_theme", "sphinx-gallery"]
 dev = ["wgpu[build,codegen,lint,tests,examples,docs]"]
 
 [project.entry-points."pyinstaller40"]
