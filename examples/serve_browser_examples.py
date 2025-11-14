@@ -22,8 +22,8 @@ import os
 import sys
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import subprocess
 
-import flit
 import wgpu
 from codegen import update_js, file_cache
 
@@ -190,10 +190,9 @@ def build_wheel():
     # doesn't work right now :/
     # maybe now? not 100% sure
 
-    # TODO: can we use the existing hatch build system?
-    os.environ["WGPU_PY_BUILD_NOARCH"] = "1"
-    toml_filename = os.path.join(root, "pyproject.toml")
-    flit.main(["-f", toml_filename, "build", "--no-use-vcs", "--format", "wheel"])
+    # TODO: can we use the existing hatch build system? (via build yes, not via flit it seems)
+    os.environ["WGPU_BUILD_PLATFORM_INFO"] = " ".join(("pyodide_wasm", "any"))
+    subprocess.run([sys.executable, "-m", "build", "-n", "-w"], cwd=root)
     wheel_filename = os.path.join(root, "dist", wheel_name)
     assert os.path.isfile(wheel_filename), f"{wheel_name} does not exist"
 

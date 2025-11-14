@@ -14,8 +14,8 @@ import re
 import os
 import sys
 import shutil
+import subprocess
 
-import flit
 
 ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, ROOT_DIR)
@@ -178,9 +178,8 @@ short_version = ".".join(str(i) for i in wgpu.version_info[:3])
 wheel_name = f"wgpu-{short_version}-py3-none-any.whl"
 
 # Build the wheel
-toml_filename = os.path.join(ROOT_DIR, "pyproject.toml")
-os.environ["WGPU_PY_BUILD_NOARCH"] = "1"
-flit.main(["-f", toml_filename, "build", "--no-use-vcs", "--format", "wheel"])
+os.environ["WGPU_BUILD_PLATFORM_INFO"] = " ".join(["pyodide_wasm", "any"])
+subprocess.run([sys.executable, "-m", "build", "-nw"], cwd=ROOT_DIR)
 wheel_filename = os.path.join(ROOT_DIR, "dist", wheel_name)
 assert os.path.isfile(wheel_filename), f"{wheel_name} does not exist"
 
