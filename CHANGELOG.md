@@ -17,6 +17,13 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## [v0.28.1] - 14-11-2025
+
+Fixed:
+
+* The imgui adapter can deal with both variations of the char event by @almarklein in https://github.com/pygfx/wgpu-py/pull/772
+
+
 ## [v0.28.0] - 10-11-2025
 
 We moved the implementation of the contexts to `rendercanvas` and made `GPUCanvasContext` lighter (and more low-level).
