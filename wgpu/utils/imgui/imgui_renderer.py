@@ -229,7 +229,10 @@ class ImguiRenderer:
             event["stop_propagation"] = True
 
     def _on_char_input(self, event):
-        self._backend.io.add_input_characters_utf8(event["char_str"])
+        # There is an inconsistency in the keys of the char event between different rendercanvas backends.
+        # For the time being, we just consume both keys.
+        text = event.get("data", "") or event.get("char_str", "") or ""
+        self._backend.io.add_input_characters_utf8(text)
 
         if self._backend.io.want_text_input:
             event["stop_propagation"] = True
