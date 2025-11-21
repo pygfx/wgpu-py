@@ -189,9 +189,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     bind_group_entries.append(
         wgpu.BindGroupEntry(
             binding=0,
-            resource=wgpu.BufferBinding(
-                buffer=uniform_buffer, offset=0, size=uniform_buffer.size
-            ),
+            resource=uniform_buffer,
         )
     )
     bind_group_layout_entries.append(
