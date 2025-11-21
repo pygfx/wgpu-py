@@ -1,3 +1,6 @@
+import time
+import threading
+
 import anyio
 
 from pytest import mark, raises
@@ -18,7 +21,7 @@ class SillyLoop:
         self._pending_calls = []
         self.errors = []
 
-    def call_soon(self, f, *args):
+    def call_soon_threadsafe(self, f, *args):
         self._pending_calls.append((f, args))
 
     def process_events(self):
@@ -73,23 +76,18 @@ def test_promise_basics():
 # %%%%% Promise using sync_wait
 
 
-def test_promise_sync_need_poll():
-    promise = GPUPromise("test", None)
-
-    with raises(RuntimeError):  # cannot poll without poll function
-        promise.sync_wait()
+def run_in_thread(callable):
+    t = threading.Thread(target=callable)
+    t.start()
 
 
 def test_promise_sync_simple():
-    count = 0
-
+    @run_in_thread
     def poller():
-        nonlocal count
-        count += 1
-        if count > 5:
-            promise._wgpu_set_input(42)
+        time.sleep(0.1)
+        promise._wgpu_set_input(42)
 
-    promise = GPUPromise("test", None, poller=poller)
+    promise = GPUPromise("test", None)
 
     result = promise.sync_wait()
     assert result == 42
@@ -99,15 +97,12 @@ def test_promise_sync_normal():
     def handler(input):
         return input * 2
 
-    count = 0
-
+    @run_in_thread
     def poller():
-        nonlocal count
-        count += 1
-        if count > 5:
-            promise._wgpu_set_input(42)
+        time.sleep(0.1)
+        promise._wgpu_set_input(42)
 
-    promise = GPUPromise("test", handler, poller=poller)
+    promise = GPUPromise("test", handler)
 
     result = promise.sync_wait()
     assert result == 84
@@ -117,15 +112,12 @@ def test_promise_sync_fail1():
     def handler(input):
         return input * 2
 
-    count = 0
-
+    @run_in_thread
     def poller():
-        nonlocal count
-        count += 1
-        if count > 5:
-            promise._wgpu_set_error(ZeroDivisionError())
+        time.sleep(0.1)
+        promise._wgpu_set_error(ZeroDivisionError())
 
-    promise = GPUPromise("test", handler, poller=poller)
+    promise = GPUPromise("test", handler)
 
     with raises(ZeroDivisionError):
         promise.sync_wait()
@@ -135,15 +127,12 @@ def test_promise_sync_fail2():
     def handler(input):
         return input / 0
 
-    count = 0
-
+    @run_in_thread
     def poller():
-        nonlocal count
-        count += 1
-        if count > 5:
-            promise._wgpu_set_input(42)
+        time.sleep(0.1)
+        promise._wgpu_set_input(42)
 
-    promise = GPUPromise("test", handler, poller=poller)
+    promise = GPUPromise("test", handler)
 
     with raises(ZeroDivisionError):
         promise.sync_wait()
@@ -162,15 +151,12 @@ async def test_promise_async_need_poll_or_loop():
 
 @mark.anyio
 async def test_promise_async_poll_simple():
-    count = 0
-
+    @run_in_thread
     def poller():
-        nonlocal count
-        count += 1
-        if count > 5:
-            promise._wgpu_set_input(42)
+        time.sleep(0.1)
+        promise._wgpu_set_input(42)
 
-    promise = GPUPromise("test", None, poller=poller)
+    promise = GPUPromise("test", None)
 
     result = await promise
     assert result == 42
@@ -181,15 +167,12 @@ async def test_promise_async_poll_normal():
     def handler(input):
         return input * 2
 
-    count = 0
-
+    @run_in_thread
     def poller():
-        nonlocal count
-        count += 1
-        if count > 5:
-            promise._wgpu_set_input(42)
+        time.sleep(0.1)
+        promise._wgpu_set_input(42)
 
-    promise = GPUPromise("test", handler, poller=poller)
+    promise = GPUPromise("test", handler)
 
     result = await promise
     assert result == 84
@@ -200,15 +183,12 @@ async def test_promise_async_poll_fail1():
     def handler(input):
         return input * 2
 
-    count = 0
-
+    @run_in_thread
     def poller():
-        nonlocal count
-        count += 1
-        if count > 5:
-            promise._wgpu_set_error(ZeroDivisionError())
+        time.sleep(0.1)
+        promise._wgpu_set_error(ZeroDivisionError())
 
-    promise = GPUPromise("test", handler, poller=poller)
+    promise = GPUPromise("test", handler)
 
     with raises(ZeroDivisionError):
         await promise
@@ -219,15 +199,12 @@ async def test_promise_async_poll_fail2():
     def handler(input):
         return input / 0
 
-    count = 0
-
+    @run_in_thread
     def poller():
-        nonlocal count
-        count += 1
-        if count > 5:
-            promise._wgpu_set_input(42)
+        time.sleep(0.1)
+        promise._wgpu_set_input(42)
 
-    promise = GPUPromise("test", handler, poller=poller)
+    promise = GPUPromise("test", handler)
 
     with raises(ZeroDivisionError):
         await promise
