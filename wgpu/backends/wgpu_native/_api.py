@@ -1429,7 +1429,15 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         # promises in other devices. This is probably why a per-device thread is
         # mentioned as a possible improvement in the PR that adds a similar
         # mechanic to the Servo browser. I
-        self._poller = PollThread(self._poll)
+
+        internal = self._internal  # just an int
+
+        def poll_func(block):
+            # This function has no direct nor indirect refs to the device object; avoid circular loops
+            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * submissionIndex)
+            libf.wgpuDevicePoll(internal, block, ffi.NULL)
+
+        self._poller = PollThread(poll_func)
         self._poller.start()
 
     def _poll(self, block=False):

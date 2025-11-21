@@ -2,10 +2,11 @@ import gc
 import time
 import queue
 
+import wgpu
 from wgpu.backends.wgpu_native._poller import PollThread, PollToken
 
-
-from testutils import run_tests
+from testutils import can_use_wgpu_lib, run_tests
+from pytest import mark
 
 
 def test_poll_thread():
@@ -154,6 +155,29 @@ def test_poll_thread():
 
     t.stop()
     time.sleep(0.1)
+    assert not t.is_alive()
+
+
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_poller_stops_when_device_gone():
+    device = wgpu.gpu.request_adapter_sync().request_device_sync()
+
+    t = device._poller
+    assert t.is_alive()
+    device.__del__()
+    time.sleep(0.1)
+
+    assert not t.is_alive()
+
+    device = wgpu.gpu.request_adapter_sync().request_device_sync()
+
+    t = device._poller
+    assert t.is_alive()
+    del device
+    gc.collect()
+    gc.collect()
+    time.sleep(0.1)
+
     assert not t.is_alive()
 
 

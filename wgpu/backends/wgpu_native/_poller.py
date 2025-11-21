@@ -46,6 +46,7 @@ class PollThread(threading.Thread):
         self._token_id_lock = threading.Lock()
         self._event = threading.Event()
         self._shutdown = False
+        self.daemon = True  # don't let this thread prevent shutdown
 
     def get_token(self):
         """Awake the poll thread and get a PollToken.
