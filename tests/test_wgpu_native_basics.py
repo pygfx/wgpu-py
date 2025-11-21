@@ -364,6 +364,24 @@ def test_adapter_destroy():
     assert adapter._internal is None
 
 
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_adapter_by_name():
+    ori = os.environ.get("WGPUPY_WGPU_ADAPTER_NAME", None)
+    try:
+        os.environ["WGPUPY_WGPU_ADAPTER_NAME"] = " "
+
+        promise = wgpu.gpu.request_adapter_async()
+        adapter = promise.sync_wait()
+        assert adapter
+        assert promise._title == "adapter by name"
+
+    finally:
+        if ori is None:
+            os.environ.pop("WGPUPY_WGPU_ADAPTER_NAME")
+        else:
+            os.environ["WGPUPY_WGPU_ADAPTER_NAME"] = ori
+
+
 def test_get_memoryview_and_address():
     get_memoryview_and_address = (
         wgpu.backends.wgpu_native._helpers.get_memoryview_and_address

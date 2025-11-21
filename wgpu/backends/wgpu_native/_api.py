@@ -486,12 +486,12 @@ class GPU(classes.GPU):
         # We chose the variable name WGPUPY_WGPU_ADAPTER_NAME instead WGPU_ADAPTER_NAME
         # to avoid a clash
         if adapter_name := os.getenv(("WGPUPY_WGPU_ADAPTER_NAME")):
-            adapters = self._enumerate_adapters()
-            adapters_llvm = [a for a in adapters if adapter_name in a.summary]
-            if not adapters_llvm:
+            adapters = self._enumerate_adapters(loop)
+            adapters = [a for a in adapters if adapter_name in a.summary]
+            if not adapters:
                 raise ValueError(f"Adapter with name '{adapter_name}' not found.")
-            promise = GPUPromise("llm adapter", None, loop=loop)
-            promise._wgpu_set_input(adapters_llvm[0])
+            promise = GPUPromise("adapter by name", None, loop=loop)
+            promise._wgpu_set_input(adapters[0])
 
             return promise
 
