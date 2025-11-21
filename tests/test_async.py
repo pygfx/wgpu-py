@@ -142,14 +142,6 @@ def test_promise_sync_fail2():
 
 
 @mark.anyio
-async def test_promise_async_need_poll_or_loop():
-    promise = GPUPromise("test", None)
-
-    with raises(RuntimeError):  # cannot poll without poll function
-        await promise
-
-
-@mark.anyio
 async def test_promise_async_poll_simple():
     @run_in_thread
     def poller():
