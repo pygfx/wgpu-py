@@ -43,6 +43,8 @@ class CustomBuildHook(BuildHookInterface):
         # If this is an sdist build, or a wheel build from an sdist,
         # we go pure-Python mode, and expect the user to set WGPU_LIB_PATH.
         # We also allow building an arch-agnostic wheel explicitly, using an env var.
+        print(build_data)
+        print(self.build_config)
 
         if os.getenv("WGPU_PY_BUILD_NOARCH", "").lower() in ("1", "true"):
             pass  # Explicitly disable including the lib
@@ -61,7 +63,17 @@ class CustomBuildHook(BuildHookInterface):
                 wgpu_native_tag, wheel_tag = platform_info.split()
                 opsys, arch = wgpu_native_tag.split("_", 1)
                 build_data["tag"] = "py3-none-" + wheel_tag
-                download_lib(None, opsys, arch)
+                if opsys == "pyodide":
+                    # special pure python wheel without the resource folder for browser use
+                    # in the future we might have an actual wasm build, so this might need changes again!
+                    build_data["pure_python"] = True
+                    build_data["exclude"] = ["wgpu/resources", "wgpu/resources/*"]
+                    build_data["artifacts"] = []
+                    # TODO: find the hatchling api that actually excludes files
+                    # then remove the wgpu-native code, so the wheel is as small as possible
+                    # do we need to redownload the lib for the developer?
+                else:
+                    download_lib(None, opsys, arch)
             else:
                 # A build for this platform, e.g. ``pip install -e .``
                 build_data["infer_tag"] = True
@@ -72,7 +84,8 @@ class CustomBuildHook(BuildHookInterface):
 
 
 def is_git_repo():
-    return os.path.isdir(os.path.join(root_dir, ".git"))
+    # detect repo (.git is a dir) and submodule (.git is a file)
+    return os.path.exists(os.path.join(root_dir, ".git"))
 
 
 def check_git_status():
