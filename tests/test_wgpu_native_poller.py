@@ -5,7 +5,7 @@ import queue
 import wgpu
 from wgpu.backends.wgpu_native._poller import PollThread, PollToken
 
-from testutils import can_use_wgpu_lib, run_tests
+from testutils import can_use_wgpu_lib, run_tests, is_pypy
 from pytest import mark
 
 
@@ -176,6 +176,9 @@ def test_poller_stops_when_device_gone():
     del device
     gc.collect()
     gc.collect()
+    if is_pypy:
+        gc.collect()
+        gc.collect()
     time.sleep(0.1)
 
     assert not t.is_alive()
