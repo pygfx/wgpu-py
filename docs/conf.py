@@ -222,7 +222,7 @@ def add_pyodide_to_examples(app):
             continue
         with open(filename, "rb") as f:
             py = f.read().decode()
-        if fname in ["cube.py", "triangle.py", "imgui_backend_sea.py", "compute_noop.py", "imgui_renderer_sea.py", "imgui_basic_example.py"]:
+        if fname:# in ["cube.py", "triangle.py", "imgui_backend_sea.py", "compute_noop.py", "imgui_renderer_sea.py", "imgui_basic_example.py"]: # just try to run all examples to see how they fail!
             # todo: later we detect by using a special comment in the py file
             print("Adding Pyodide example to", fname)
             fname_rst = fname.replace(".py", ".rst")
