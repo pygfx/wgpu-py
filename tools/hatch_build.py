@@ -43,8 +43,6 @@ class CustomBuildHook(BuildHookInterface):
         # If this is an sdist build, or a wheel build from an sdist,
         # we go pure-Python mode, and expect the user to set WGPU_LIB_PATH.
         # We also allow building an arch-agnostic wheel explicitly, using an env var.
-        print(build_data)
-        print(self.build_config)
 
         if os.getenv("WGPU_PY_BUILD_NOARCH", "").lower() in ("1", "true"):
             pass  # Explicitly disable including the lib
@@ -67,7 +65,7 @@ class CustomBuildHook(BuildHookInterface):
                     # special pure python wheel without the resource folder for browser use
                     # in the future we might have an actual wasm build, so this might need changes again!
                     build_data["pure_python"] = True
-                    build_data["exclude"] = ["wgpu/resources", "wgpu/resources/*"]
+                    build_data["exclude"] = ["wgpu/resources", "wgpu/resources/*"] # TODO: can we exclude exclude the whole wgpu_native folder without it breaking the auto backend import?
                     build_data["artifacts"] = []
                     # TODO: find the hatchling api that actually excludes files
                     # then remove the wgpu-native code, so the wheel is as small as possible

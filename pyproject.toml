@@ -10,7 +10,7 @@ authors = [{ name = "Almar Klein" }, { name = "Korijn van Golen" }]
 keywords = ["webgpu", "wgpu", "vulkan", "metal", "DX12", "opengl"]
 requires-python = ">= 3.10"
 dependencies = [
-    "cffi>=1.15.0",
+    "cffi>=1.15.0; sys_platform != 'emscripten'",
     "rubicon-objc>=0.4.1; sys_platform == 'darwin'",
     "sniffio",
     "rendercanvas >=2.4",                            # Temporarily depend on rendercanvas because we re-aligned apis. Remove in a few months
