@@ -21,7 +21,7 @@
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
 * Validated 38 classes, 120 methods, 50 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 38 classes, 116 methods, 0 properties
+* Validated 38 classes, 117 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum field FeatureName.core-features-and-limits missing in webgpu.h/wgpu.h
 * Enum field FeatureName.subgroups missing in webgpu.h/wgpu.h
