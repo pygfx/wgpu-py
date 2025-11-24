@@ -692,7 +692,10 @@ gpu = GPU()
 
 
 class GPUPromise(classes.GPUPromise):
-    _ASSUME_POLL_BY_THREAD = True
+    def _sync_wait(self):
+        # In the wgpu-native backend, we do the polling in a per-device thread.
+        # The base class already sets a threading.Event, we can just use that here.
+        self._thread_event.wait()
 
 
 class GPUCanvasContext(classes.GPUCanvasContext):

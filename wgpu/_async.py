@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import time
 import logging
 import threading
 from typing import Callable, Awaitable, Generator, Generic, TypeVar
@@ -83,8 +82,6 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
     # We keep a set of unresolved promises, because with using .then, nothing else holds a ref to the promise
     _UNRESOLVED = set()
-
-    _ASSUME_POLL_BY_THREAD = False
 
     def __init__(
         self,
@@ -180,6 +177,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
     def _set_pending_resolved(self, *, resolve_now=False):
         """The promise received its input (or error), and now we need to handle it, then call callbacks etc."""
+        # This may be called from a different thread. If resolve_now is True, it should be the main/reference thread.
+
         # We can now drop the reference.
         self._UNRESOLVED.discard(self)
         # Mark as not pending for threads
@@ -193,6 +192,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             self._loop.call_soon_threadsafe(self._resolve_callback)
 
     def _resolve_callback(self):
+        # This should only be called in the main/reference thread.
+
         # Allow tasks that await this promise to continue.
         if self._async_event is not None:
             self._async_event.set()
@@ -251,15 +252,11 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         return self._resolve()  # returns result if fulfilled or raise error if rejected
 
     def _sync_wait(self):
-        if self._ASSUME_POLL_BY_THREAD:
-            # If the polling happens form a separate thread, we don't have to busy-wait.
-            self._thread_event.wait()
-        else:
-            # Do small incremental sync naps. Other threads can run.
-            # Note that time.sleep is accurate (does not suffer from the inaccuracy issue on Windows).
-            sleep_gen = get_backoff_time_generator()
-            while self._state == "pending":
-                time.sleep(next(sleep_gen))
+        # Each subclass may implement this in its own way. E.g. it may wait for
+        # the _thread_event, it may poll the device in a loop while checking the
+        # status, and Pyodide may use its special logic to sync wait the JS
+        # promise.
+        raise NotImplementedError()
 
     def _chain(self, to_promise: GPUPromise):
         with self._lock:
@@ -343,7 +340,10 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
                 return self._resolve()
 
         else:
-            # Using an Event
+            # Using an async Event.
+            # When using a thread to poll, that thread will wake as soon as the GPU is done,
+            # and will then (via a call_soon_threadsafe) set the event; this is a very fast
+            # path with no busy-looping whatsoever.
             with self._lock:
                 if self._async_event is None:
                     self._async_event = AsyncEvent()

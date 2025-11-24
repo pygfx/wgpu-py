@@ -15,6 +15,12 @@ class GPUPromise(BaseGPUPromise):
     # Subclass with each own set of unresolved promise instances
     _UNRESOLVED = set()
 
+    def _sync_wait(self):
+        # Same implementation as the wgpu_native backend.
+        # If we have a test that has not polling thread, and sync_wait() is called
+        # when the promise is still pending, this will hang.
+        self._thread_event.wait()
+
 
 class SillyLoop:
     def __init__(self):
