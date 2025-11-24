@@ -5,6 +5,9 @@ wgpu/resources/*.so
 wgpu/resources/*.dylib
 wgpu/resources/commit-sha
 examples/screenshots/diffs
+docs/gallery/
+docs/_static/*.whl
+docs/sg_execution_times.rst
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

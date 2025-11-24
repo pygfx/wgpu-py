@@ -42,4 +42,4 @@
 * Wrote 255 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
 * Validated 154 C function calls
 * Not using 68 C functions
-* Validated 96 C structs
+* Validated 97 C structs

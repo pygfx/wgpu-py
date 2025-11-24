@@ -1722,9 +1722,21 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         c_entries_list = []
         for entry in entries:
             check_struct("BindGroupEntry", entry)
-            # The resource can be a sampler, texture view, or buffer descriptor
+            # The resource can be a buffer, sampler, texture view, or buffer descriptor
             resource = entry["resource"]
-            if isinstance(resource, GPUSampler):
+            if isinstance(resource, GPUBuffer):
+                # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
+                c_entry = new_struct(
+                    "WGPUBindGroupEntry",
+                    # not used: nextInChain
+                    binding=int(entry["binding"]),
+                    buffer=resource._internal,
+                    offset=0,
+                    size=resource.size,
+                    sampler=ffi.NULL,
+                    textureView=ffi.NULL,
+                )
+            elif isinstance(resource, GPUSampler):
                 # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
                 c_entry = new_struct(
                     "WGPUBindGroupEntry",
