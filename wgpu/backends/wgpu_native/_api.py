@@ -29,6 +29,7 @@ from ... import classes, flags, enums, structs
 
 from ._ffi import ffi, lib
 from ._mappings import cstructfield2enum, enummap, enum_str2int, enum_int2str
+from ._poller import PollThread
 from ._helpers import (
     get_wgpu_instance,
     get_surface_id_from_info,
@@ -564,24 +565,25 @@ class GPU(classes.GPU):
         def handler(adapter_id):
             return self._create_adapter(adapter_id, loop)
 
-        instance = get_wgpu_instance()
-
-        def poller():
-            # H: void f(WGPUInstance instance)
-            libf.wgpuInstanceProcessEvents(instance)
-
-        # Note that although we claim this is an asynchronous method, the callback
-        # happens within libf.wgpuInstanceRequestAdapter
         promise = GPUPromise(
             "request_adapter",
             handler,
             loop=loop,
-            poller=poller,
             keepalive=request_adapter_callback,
         )
 
+        instance = get_wgpu_instance()
+
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
-        libf.wgpuInstanceRequestAdapter(get_wgpu_instance(), struct, callback_info)
+        libf.wgpuInstanceRequestAdapter(instance, struct, callback_info)
+
+        # Note that although we claim this is an asynchronous method, the callback
+        # happens within libf.wgpuInstanceRequestAdapter.
+        # To be sure though, we tickle the instance and double-check that the promise is set.
+
+        # H: void f(WGPUInstance instance)
+        libf.wgpuInstanceProcessEvents(instance)
+        assert promise._state != "pending"
 
         return promise
 
@@ -690,7 +692,10 @@ gpu = GPU()
 
 
 class GPUPromise(classes.GPUPromise):
-    pass
+    def _sync_wait(self):
+        # In the wgpu-native backend, we do the polling in a per-device thread.
+        # The base class already sets a threading.Event, we can just use that here.
+        self._thread_event.wait()
 
 
 class GPUCanvasContext(classes.GPUCanvasContext):
@@ -1380,22 +1385,23 @@ class GPUAdapter(classes.GPUAdapter):
 
             return device
 
-        instance = get_wgpu_instance()
-
-        def poller():
-            # H: void f(WGPUInstance instance)
-            libf.wgpuInstanceProcessEvents(instance)
-
         promise = GPUPromise(
             "request_device",
             handler,
             loop=self._loop,
-            poller=poller,
             keepalive=request_device_callback,
         )
 
         # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
         libf.wgpuAdapterRequestDevice(self._internal, struct, callback_info)
+
+        # Note that although we claim this is an asynchronous method, the callback
+        # happens within libf.wgpuAdapterRequestDevice.
+        # To be sure though, we tickle the instance and double-check that the promise is set.
+
+        # H: void f(WGPUInstance instance)
+        libf.wgpuInstanceProcessEvents(get_wgpu_instance())
+        assert promise._state != "pending"
 
         return promise
 
@@ -1415,11 +1421,33 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     # they now exist in the header, but are still unimplemented: https://github.com/gfx-rs/wgpu-native/blob/f29ebee88362934f8f9fab530f3ccb7fde2d49a9/src/unimplemented.rs#L66-L82
     _CREATE_PIPELINE_ASYNC_IS_IMPLEMENTED = False
 
-    def _poll(self):
+    def __init__(self, label, internal, adapter, features, limits, queue):
+        super().__init__(label, internal, adapter, features, limits, queue)
+
+        # Create a polling thread for this device. An alternative would be to
+        # have a single global thread for the instance, but this is currently
+        # not feasible because wgpuInstanceProcessEvents() has no arg to make it
+        # blocking. A per-device thread is also likely better, otherwise a
+        # long-running GPU task in one device can prevent the resolving of
+        # promises in other devices. This is probably why a per-device thread is
+        # mentioned as a possible improvement in the PR that adds a similar
+        # mechanic to the Servo browser. I
+
+        internal = self._internal  # just an int
+
+        def poll_func(block):
+            # This function has no direct nor indirect refs to the device object; avoid circular loops
+            # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * submissionIndex)
+            libf.wgpuDevicePoll(internal, block, ffi.NULL)
+
+        self._poller = PollThread(poll_func)
+        self._poller.start()
+
+    def _poll(self, block=False):
         # Internal function
         if self._internal:
             # H: WGPUBool f(WGPUDevice device, WGPUBool wait, WGPUSubmissionIndex const * submissionIndex)
-            libf.wgpuDevicePoll(self._internal, False, ffi.NULL)
+            libf.wgpuDevicePoll(self._internal, block, ffi.NULL)
 
     def _poll_wait(self):
         if self._internal:
@@ -1940,6 +1968,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "void(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline, char *, void *, void *)"
         )
         def callback(status, result, c_message, _userdata1, _userdata2):
+            token.set_done()
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
                 promise._wgpu_set_error(
@@ -1965,9 +1994,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "create_compute_pipeline",
             handler,
             loop=self._loop,
-            poller=self._device._poll,
             keepalive=callback,
         )
+
+        token = self._device._poller.get_token()
 
         # H: WGPUFuture f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor, WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo)
         libf.wgpuDeviceCreateComputePipelineAsync(
@@ -2065,6 +2095,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "void(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline, WGPUStringView, void *, void *)"
         )
         def callback(status, result, c_message, _userdata1, _userdata2):
+            token.set_done()
             if status != lib.WGPUCreatePipelineAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
                 promise._wgpu_set_error(
@@ -2090,9 +2121,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "create_render_pipeline",
             handler,
             loop=self._loop,
-            poller=self._device._poll,
             keepalive=callback,
         )
+
+        token = self._device._poller.get_token()
 
         # H: WGPUFuture f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUCreateRenderPipelineAsyncCallbackInfo callbackInfo)
         libf.wgpuDeviceCreateRenderPipelineAsync(
@@ -2450,6 +2482,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         if self._queue is not None:
             queue, self._queue = self._queue, None
             queue._release()
+        if self._poller is not None:
+            self._poller.stop()
+            self._poller = None
         super()._release()
 
 
@@ -2538,6 +2573,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         @ffi.callback("void(WGPUMapAsyncStatus, WGPUStringView, void *, void *)")
         def buffer_map_callback(status, c_message, _userdata1, _userdata2):
+            token.set_done()
             if status != lib.WGPUMapAsyncStatus_Success:
                 msg = from_c_string_view(c_message)
                 promise._wgpu_set_error(
@@ -2565,9 +2601,10 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             "buffer.map",
             handler,
             loop=self._device._loop,
-            poller=self._device._poll,
             keepalive=buffer_map_callback,
         )
+
+        token = self._device._poller.get_token()
 
         # Map it
         self._map_state = enums.BufferMapState.pending
@@ -4109,6 +4146,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     def on_submitted_work_done_async(self) -> GPUPromise[None]:
         @ffi.callback("void(WGPUQueueWorkDoneStatus, void *, void *)")
         def work_done_callback(status, _userdata1, _userdata2):
+            token.set_done()
             if status == lib.WGPUQueueWorkDoneStatus_Success:
                 promise._wgpu_set_input(True)
             else:
@@ -4138,9 +4176,10 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             "on_submitted_work_done",
             handler,
             loop=self._device._loop,
-            poller=self._device._poll_wait,
             keepalive=work_done_callback,
         )
+
+        token = self._device._poller.get_token()
 
         # H: WGPUFuture f(WGPUQueue queue, WGPUQueueWorkDoneCallbackInfo callbackInfo)
         libf.wgpuQueueOnSubmittedWorkDone(self._internal, work_done_callback_info)

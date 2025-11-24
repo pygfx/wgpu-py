@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import time
 import logging
 import threading
 from typing import Callable, Awaitable, Generator, Generic, TypeVar
@@ -81,7 +80,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
     * "rejected": meaning that the operation failed.
     """
 
-    # We keep a set of unresolved promises, because whith using .then, noone else holds a ref to the promise
+    # We keep a set of unresolved promises, because with using .then, nothing else holds a ref to the promise
     _UNRESOLVED = set()
 
     def __init__(
@@ -90,7 +89,6 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         handler: Callable | None,
         *,
         loop: LoopInterface | None = None,
-        poller: Callable | None = None,
         keepalive: object = None,
     ):
         """
@@ -99,24 +97,22 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             handler (callable, optional): The function to turn promise input into the result. If None,
                 the result will simply be the input.
             loop (LoopInterface, optional): A loop object that at least has a ``call_soon()`` method.
-                If not given, this promise does not support .then() or pronise-chaining.
-            poller (callable, optional): A function to call on a regular interval to poll internal systems
-               (most likely the wgpu backend).
+                If not given, this promise does not support .then() or promise-chaining.
             keepalive (object, optional): Pass any data via this arg who's lifetime must be bound to the
-                resolving of this prommise.
+                resolving of this promise.
 
         """
         self._title = str(title)  # title for debugging
         self._handler = handler  # function to turn input into the result
 
         self._loop = loop  # Event loop instance, can be None
-        self._poller = poller  # call to poll (process events)
         self._keepalive = keepalive  # just to keep something alive
 
         self._state = "pending"  # "pending", "pending-rejected", "pending-fulfilled", "rejected", "fulfilled"
         self._value = None  # The incoming value, final value, or error
-        self._event = None  # AsyncEvent for __await__
         self._lock = threading.RLock()  # Allow threads to set the value
+        self._async_event = None  # AsyncEvent for __await__
+        self._thread_event = threading.Event()
         self._done_callbacks = []
         self._error_callbacks = []
         self._UNRESOLVED.add(self)
@@ -181,20 +177,26 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
     def _set_pending_resolved(self, *, resolve_now=False):
         """The promise received its input (or error), and now we need to handle it, then call callbacks etc."""
+        # This may be called from a different thread. If resolve_now is True, it should be the main/reference thread.
+
         # We can now drop the reference.
         self._UNRESOLVED.discard(self)
+        # Mark as not pending for threads
+        self._thread_event.set()
         # Do or schedule a call to resolve.
         if resolve_now:
             self._resolve_callback()
+            if self._async_event is not None:
+                self._async_event.set()
         elif self._loop is not None:
-            self._loop.call_soon(self._resolve_callback)
-        # Allow tasks that await this promise to continue. Do this last, since
-        # it allows any waiting tasks to continue. These taks are assumed to be
-        # on the 'reference' thread, but *this* may be a different thread.
-        if self._event is not None:
-            self._event.set()
+            self._loop.call_soon_threadsafe(self._resolve_callback)
 
     def _resolve_callback(self):
+        # This should only be called in the main/reference thread.
+
+        # Allow tasks that await this promise to continue.
+        if self._async_event is not None:
+            self._async_event.set()
         # The callback may already be resolved
         if self._state.startswith("pending-"):
             self._resolve()
@@ -216,18 +218,17 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         if self._state.endswith("rejected"):
             error = self._value
             for cb in self._error_callbacks:
-                self._loop.call_soon(cb, error)
+                self._loop.call_soon_threadsafe(cb, error)
         elif self._state.endswith("fulfilled"):
             result = self._value
             for cb in self._done_callbacks:
-                self._loop.call_soon(cb, result)
+                self._loop.call_soon_threadsafe(cb, result)
         # New state
         self._state = self._state.replace("pending-", "")
         # Clean up
         self._error_callbacks = []
         self._done_callbacks = []
         self._handler = None
-        self._poller = None
         self._keepalive = None
         # Resolve to the caller
         if self._state == "rejected":
@@ -247,19 +248,15 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         portable.
         """
         if self._state == "pending":
-            if self._poller is None:
-                raise RuntimeError(
-                    "Cannot GPUPromise.sync_wait(), if the polling function is not set."
-                )
-            # Do small incremental sync naps. Other threads can run.
-            # Note that time.sleep is accurate (does not suffer from the inaccuracy issue on Windows).
-            sleep_gen = get_backoff_time_generator()
-            self._poller()
-            while self._state == "pending":
-                time.sleep(next(sleep_gen))
-                self._poller()
-
+            self._sync_wait()
         return self._resolve()  # returns result if fulfilled or raise error if rejected
+
+    def _sync_wait(self):
+        # Each subclass may implement this in its own way. E.g. it may wait for
+        # the _thread_event, it may poll the device in a loop while checking the
+        # status, and Pyodide may use its special logic to sync wait the JS
+        # promise.
+        raise NotImplementedError()
 
     def _chain(self, to_promise: GPUPromise):
         with self._lock:
@@ -296,9 +293,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             title = self._title + " -> " + callback_name
 
         # Create new promise
-        new_promise = self.__class__(
-            title, callback, loop=self._loop, poller=self._poller
-        )
+        new_promise = self.__class__(title, callback, loop=self._loop)
         self._chain(new_promise)
 
         if error_callback is not None:
@@ -322,9 +317,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         title = "Catcher for " + self._title
 
         # Create new promise
-        new_promise = self.__class__(
-            title, callback, loop=self._loop, poller=self._poller
-        )
+        new_promise = self.__class__(title, callback, loop=self._loop)
 
         # Custom chain
         with self._lock:
@@ -339,30 +332,26 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             # An async busy loop
             async def awaiter():
                 if self._state == "pending":
-                    # backoff_time_generator = self._get_backoff_time_generator()
-                    if self._poller is None:
-                        raise RuntimeError(
-                            "Cannot await a GPUPromise if neither the loop nor the poller are set."
-                        )
                     # Do small incremental async naps. Other tasks and threads can run.
                     # Note that async sleep, with sleep_time > 0, is inaccurate on Windows.
                     sleep_gen = get_backoff_time_generator()
-                    self._poller()
                     while self._state == "pending":
                         await async_sleep(next(sleep_gen))
-                        self._poller()
                 return self._resolve()
 
         else:
-            # Using a signal
+            # Using an async Event.
+            # When using a thread to poll, that thread will wake as soon as the GPU is done,
+            # and will then (via a call_soon_threadsafe) set the event; this is a very fast
+            # path with no busy-looping whatsoever.
             with self._lock:
-                if self._event is None:
-                    self._event = AsyncEvent()
+                if self._async_event is None:
+                    self._async_event = AsyncEvent()
                     if self._state != "pending":
-                        self._event.set()
+                        self._async_event.set()
 
             async def awaiter():
-                await self._event.wait()
+                await self._async_event.wait()
                 return self._resolve()
 
         return (yield from awaiter().__await__())
