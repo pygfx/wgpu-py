@@ -13,6 +13,33 @@ import sniffio
 logger = logging.getLogger("wgpu")
 
 
+def get_call_soon_threadsafe():
+    """Get the call_soon_threadsafe() function for the currently running event loop.
+
+    Sniffio is used for this, and it supports asyncio, trio, and rendercanvas.utils.asyncadapter.
+    If this function returns None, it means that the GPUPromise will not support ``await`` and ``.then()``.
+
+    It's relatively easy to register a custom loop to sniffio so that this code works on it.
+    """
+
+    try:
+        name = sniffio.current_async_library()
+    except sniffio.AsyncLibraryNotFoundError:
+        return None
+
+    if name == "trio":
+        trio = sys.modules[name]
+        token = trio.lowlevel.current_trio_token()
+        return token.run_sync_soon
+    else:  # asyncio, rendercanvas.utils.asyncadapter, and easy to mimic for custom loops
+        try:
+            mod = sys.modules[name]
+            loop = mod.get_running_loop()
+            return loop.call_soon_threadsafe
+        except Exception:
+            return None
+
+
 # The async_sleep and AsyncEvent are a copy of the implementation in rendercanvas.asyncs
 
 
@@ -45,14 +72,14 @@ class LoopInterface:
         raise NotImplementedError()
 
 
-def get_backoff_time_generator() -> Generator[float, None, None]:
-    """Generates sleep-times, start at 0 then increasing to 100Hz and sticking there."""
-    for _ in range(5):
-        yield 0
-    for i in range(1, 20):
-        yield i / 2000.0  # ramp up from 0ms to 10ms
-    while True:
-        yield 0.01
+# def get_backoff_time_generator() -> Generator[float, None, None]:
+#     """Generates sleep-times, start at 0 then increasing to 100Hz and sticking there."""
+#     for _ in range(5):
+#         yield 0
+#     for i in range(1, 20):
+#         yield i / 2000.0  # ramp up from 0ms to 10ms
+#     while True:
+#         yield 0.01
 
 
 class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
@@ -88,24 +115,21 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         title: str,
         handler: Callable | None,
         *,
-        loop: LoopInterface | None = None,
+        loop=None,
         keepalive: object = None,
+        _call_soon_threadsafe: Callable | None = None,  # passed internally
     ):
         """
         Arguments:
             title (str): The title of this promise, mostly for debugging purposes.
             handler (callable, optional): The function to turn promise input into the result. If None,
                 the result will simply be the input.
-            loop (LoopInterface, optional): A loop object that at least has a ``call_soon()`` method.
-                If not given, this promise does not support .then() or promise-chaining.
             keepalive (object, optional): Pass any data via this arg who's lifetime must be bound to the
                 resolving of this promise.
 
         """
         self._title = str(title)  # title for debugging
         self._handler = handler  # function to turn input into the result
-
-        self._loop = loop  # Event loop instance, can be None
         self._keepalive = keepalive  # just to keep something alive
 
         self._state = "pending"  # "pending", "pending-rejected", "pending-fulfilled", "rejected", "fulfilled"
@@ -116,6 +140,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._done_callbacks = []
         self._error_callbacks = []
         self._UNRESOLVED.add(self)
+
+        self._call_soon_threadsafe = _call_soon_threadsafe or get_call_soon_threadsafe()
 
     def __repr__(self):
         return f"<GPUPromise '{self._title}' {self._state} at {hex(id(self))}>"
@@ -139,8 +165,10 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         # If the input is a promise, we need to wait for it, i.e. chain to self.
         if isinstance(result, GPUPromise):
-            if self._loop is None:
-                self._set_error("Cannot chain GPUPromise if the loop is not set.")
+            if self._call_soon_threadsafe is None:
+                self._set_error(
+                    "Cannot chain GPUPromise because no running loop could be detected."
+                )
             else:
                 result._chain(self)
             return
@@ -188,8 +216,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             self._resolve_callback()
             if self._async_event is not None:
                 self._async_event.set()
-        elif self._loop is not None:
-            self._loop.call_soon_threadsafe(self._resolve_callback)
+        elif self._call_soon_threadsafe is not None:
+            self._call_soon_threadsafe(self._resolve_callback)
 
     def _resolve_callback(self):
         # This should only be called in the main/reference thread.
@@ -218,11 +246,11 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         if self._state.endswith("rejected"):
             error = self._value
             for cb in self._error_callbacks:
-                self._loop.call_soon_threadsafe(cb, error)
+                self._call_soon_threadsafe(cb, error)
         elif self._state.endswith("fulfilled"):
             result = self._value
             for cb in self._done_callbacks:
-                self._loop.call_soon_threadsafe(cb, result)
+                self._call_soon_threadsafe(cb, result)
         # New state
         self._state = self._state.replace("pending-", "")
         # Clean up
@@ -253,7 +281,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
     def _sync_wait(self):
         # Each subclass may implement this in its own way. E.g. it may wait for
-        # the _thread_event, it may poll the device in a loop while checking the
+        # the _thread_event, it may poll the device in a while-loop while checking the
         # status, and Pyodide may use its special logic to sync wait the JS
         # promise.
         raise NotImplementedError()
@@ -275,8 +303,10 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         The callback will receive one argument: the result of the promise.
         """
-        if self._loop is None:
-            raise RuntimeError("Cannot use GPUPromise.then() if the loop is not set.")
+        if self._call_soon_threadsafe is None:
+            raise RuntimeError(
+                "Cannot use GPUPromise.then() because no running loop could be detected."
+            )
         if not callable(callback):
             raise TypeError(
                 f"GPUPromise.then() got a callback that is not callable: {callback!r}"
@@ -293,7 +323,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             title = self._title + " -> " + callback_name
 
         # Create new promise
-        new_promise = self.__class__(title, callback, loop=self._loop)
+        new_promise = self.__class__(
+            title, callback, _call_soon_threadsafe=self._call_soon_threadsafe
+        )
         self._chain(new_promise)
 
         if error_callback is not None:
@@ -306,8 +338,10 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         The callback will receive one argument: the error object.
         """
-        if self._loop is None:
-            raise RuntimeError("Cannot use GPUPromise.catch() if the loop is not set.")
+        if self._call_soon_threadsafe is None:
+            raise RuntimeError(
+                "Cannot use GPUPromise.catch() because not running loop could be detected."
+            )
         if not callable(callback):
             raise TypeError(
                 f"GPUPromise.catch() got a callback that is not callable: {callback!r}"
@@ -317,7 +351,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         title = "Catcher for " + self._title
 
         # Create new promise
-        new_promise = self.__class__(title, callback, loop=self._loop)
+        new_promise = self.__class__(
+            title, callback, _call_soon_threadsafe=self._call_soon_threadsafe
+        )
 
         # Custom chain
         with self._lock:
@@ -328,16 +364,19 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         return new_promise
 
     def __await__(self):
-        if self._loop is None:
-            # An async busy loop
-            async def awaiter():
-                if self._state == "pending":
-                    # Do small incremental async naps. Other tasks and threads can run.
-                    # Note that async sleep, with sleep_time > 0, is inaccurate on Windows.
-                    sleep_gen = get_backoff_time_generator()
-                    while self._state == "pending":
-                        await async_sleep(next(sleep_gen))
-                return self._resolve()
+        if self._call_soon_threadsafe is None:
+            raise RuntimeError(
+                "Cannot await GPUPromise because no running loop could be detected."
+            )
+            # # An async busy loop
+            # async def awaiter():
+            #     if self._state == "pending":
+            #         # Do small incremental async naps. Other tasks and threads can run.
+            #         # Note that async sleep, with sleep_time > 0, is inaccurate on Windows.
+            #         sleep_gen = get_backoff_time_generator()
+            #         while self._state == "pending":
+            #             await async_sleep(next(sleep_gen))
+            #     return self._resolve()
 
         else:
             # Using an async Event.
