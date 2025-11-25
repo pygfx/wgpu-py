@@ -44,7 +44,7 @@ def get_running_loop():
         try:
             mod = sys.modules[name]
             loop = mod.get_running_loop()
-            loop.call_soon_threadsafe  # noqa: access to make sure it exists
+            loop.call_soon_threadsafe  # noqa: B018 - access to make sure it exists
             return loop
         except Exception:
             return None
@@ -227,7 +227,10 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             self._async_event.set()
         # The callback may already be resolved
         if self._state.startswith("pending-"):
-            self._resolve()
+            try:
+                self._resolve()
+            except Exception:
+                pass
 
     def _resolve(self):
         """Finalize the promise, by calling the handler to get the result, and then invoking callbacks."""
