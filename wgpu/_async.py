@@ -14,8 +14,12 @@ logger = logging.getLogger("wgpu")
 
 
 class StubLoop:
-    def __init__(self, call_soon_threadsafe):
+    def __init__(self, name, call_soon_threadsafe):
+        self.name = name
         self.call_soon_threadsafe = call_soon_threadsafe
+
+    def __repr__(self):
+        return f"<StubLoop for {self.name} at {hex(id(self))}>"
 
 
 def get_running_loop():
@@ -35,7 +39,7 @@ def get_running_loop():
     if name == "trio":
         trio = sys.modules[name]
         token = trio.lowlevel.current_trio_token()
-        return StubLoop(token.run_sync_soon)
+        return StubLoop("trio", token.run_sync_soon)
     else:  # asyncio, rendercanvas.utils.asyncadapter, and easy to mimic for custom loops
         try:
             mod = sys.modules[name]
