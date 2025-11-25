@@ -72,14 +72,14 @@ class AsyncEvent:
 AwaitedType = TypeVar("AwaitedType")
 
 
-# def get_backoff_time_generator() -> Generator[float, None, None]:
-#     """Generates sleep-times, start at 0 then increasing to 100Hz and sticking there."""
-#     for _ in range(5):
-#         yield 0
-#     for i in range(1, 20):
-#         yield i / 2000.0  # ramp up from 0ms to 10ms
-#     while True:
-#         yield 0.01
+def get_backoff_time_generator() -> Generator[float, None, None]:
+    """Generates sleep-times, start at 0 then increasing to 100Hz and sticking there."""
+    for _ in range(5):
+        yield 0
+    for i in range(1, 20):
+        yield i / 2000.0  # ramp up from 0ms to 10ms
+    while True:
+        yield 0.01
 
 
 class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
@@ -364,18 +364,16 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
     def __await__(self):
         if self._loop is None:
-            raise RuntimeError(
-                "Cannot await GPUPromise because no running loop could be detected."
-            )
-            # # An async busy loop
-            # async def awaiter():
-            #     if self._state == "pending":
-            #         # Do small incremental async naps. Other tasks and threads can run.
-            #         # Note that async sleep, with sleep_time > 0, is inaccurate on Windows.
-            #         sleep_gen = get_backoff_time_generator()
-            #         while self._state == "pending":
-            #             await async_sleep(next(sleep_gen))
-            #     return self._resolve()
+            # An async busy loop. In theory we should be able to remove this code, but it helps make the transition
+            # simpler, since then we depend less on https://github.com/pygfx/rendercanvas/pull/151
+            async def awaiter():
+                if self._state == "pending":
+                    # Do small incremental async naps. Other tasks and threads can run.
+                    # Note that async sleep, with sleep_time > 0, is inaccurate on Windows.
+                    sleep_gen = get_backoff_time_generator()
+                    while self._state == "pending":
+                        await async_sleep(next(sleep_gen))
+                return self._resolve()
 
         else:
             # Using an async Event.
