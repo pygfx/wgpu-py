@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 from typing import Sequence
 
-from ._async import GPUPromise as BaseGPUPromise, LoopInterface
+from ._async import GPUPromise as BaseGPUPromise
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
@@ -119,7 +119,6 @@ class GPU:
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas: CanvasLike | None = None,
-        loop: LoopInterface | None = None,
     ) -> GPUPromise[GPUAdapter]:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -132,8 +131,6 @@ class GPU:
                 fallback adapter.
             canvas : The canvas or context that the adapter should be able to render to. This can typically
                  be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
-            loop : the loop object for async support. Must have at least ``call_soon(f, *args)``.
-                The loop object is required for asynchrouns use with ``promise.then()``. EXPERIMENTAL.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
@@ -145,7 +142,6 @@ class GPU:
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
-            loop=loop,
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
@@ -158,9 +154,7 @@ class GPU:
         return promise.sync_wait()
 
     @apidiff.add("Method useful for multi-gpu environments")
-    def enumerate_adapters_async(
-        self, *, loop: LoopInterface | None = None
-    ) -> GPUPromise[list[GPUAdapter]]:
+    def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using its summary), and a device
@@ -187,7 +181,7 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
 
-        return gpu.enumerate_adapters_async(loop=loop)
+        return gpu.enumerate_adapters_async()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
@@ -544,10 +538,9 @@ class GPUAdapter:
 
     _ot = object_tracker
 
-    def __init__(self, internal, features, limits, adapter_info, loop):
+    def __init__(self, internal, features, limits, adapter_info):
         self._ot.increase(self.__class__.__name__)
         self._internal = internal
-        self._loop = loop
 
         assert isinstance(features, set)
         assert isinstance(limits, dict)
@@ -693,7 +686,6 @@ class GPUDevice(GPUObjectBase):
         self._adapter = adapter
         self._features = features
         self._limits = limits
-        self._loop = adapter._loop
         self._queue = queue
         queue._device = self  # because it could not be set earlier
 
