@@ -225,7 +225,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         # Allow tasks that await this promise to continue.
         if self._async_event is not None:
             self._async_event.set()
-        # The callback may already be resolved
+        # If the value is set, let's resolve it so the handlers get called. But swallow the promise's value/failure.
         if self._state.startswith("pending-"):
             try:
                 self._resolve()
