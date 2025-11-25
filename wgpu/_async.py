@@ -13,8 +13,13 @@ import sniffio
 logger = logging.getLogger("wgpu")
 
 
-def get_call_soon_threadsafe():
-    """Get the call_soon_threadsafe() function for the currently running event loop.
+class StubLoop:
+    def __init__(self, call_soon_threadsafe):
+        self.call_soon_threadsafe = call_soon_threadsafe
+
+
+def get_running_loop():
+    """Get an object with a call_soon_threadsafe() method.
 
     Sniffio is used for this, and it supports asyncio, trio, and rendercanvas.utils.asyncadapter.
     If this function returns None, it means that the GPUPromise will not support ``await`` and ``.then()``.
@@ -30,12 +35,13 @@ def get_call_soon_threadsafe():
     if name == "trio":
         trio = sys.modules[name]
         token = trio.lowlevel.current_trio_token()
-        return token.run_sync_soon
+        return StubLoop(token.run_sync_soon)
     else:  # asyncio, rendercanvas.utils.asyncadapter, and easy to mimic for custom loops
         try:
             mod = sys.modules[name]
             loop = mod.get_running_loop()
-            return loop.call_soon_threadsafe
+            loop.call_soon_threadsafe  # noqa: access to make sure it exists
+            return loop
         except Exception:
             return None
 
@@ -60,16 +66,6 @@ class AsyncEvent:
 
 
 AwaitedType = TypeVar("AwaitedType")
-
-
-class LoopInterface:
-    """A loop object must have (at least) this API.
-
-    Rendercanvas loop objects do, asyncio.loop does too.
-    """
-
-    def call_soon(self, callback: Callable, *args: object):
-        raise NotImplementedError()
 
 
 # def get_backoff_time_generator() -> Generator[float, None, None]:
@@ -115,9 +111,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         title: str,
         handler: Callable | None,
         *,
-        loop=None,
         keepalive: object = None,
-        _call_soon_threadsafe: Callable | None = None,  # passed internally
+        _loop: object = None,  # for testing and chaining
     ):
         """
         Arguments:
@@ -141,7 +136,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._error_callbacks = []
         self._UNRESOLVED.add(self)
 
-        self._call_soon_threadsafe = _call_soon_threadsafe or get_call_soon_threadsafe()
+        # we only care about call_soon_threadsafe, but clearer to just have a loop object
+        self._loop = _loop or get_running_loop()
 
     def __repr__(self):
         return f"<GPUPromise '{self._title}' {self._state} at {hex(id(self))}>"
@@ -165,7 +161,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         # If the input is a promise, we need to wait for it, i.e. chain to self.
         if isinstance(result, GPUPromise):
-            if self._call_soon_threadsafe is None:
+            if self._loop is None:
                 self._set_error(
                     "Cannot chain GPUPromise because no running loop could be detected."
                 )
@@ -216,8 +212,8 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             self._resolve_callback()
             if self._async_event is not None:
                 self._async_event.set()
-        elif self._call_soon_threadsafe is not None:
-            self._call_soon_threadsafe(self._resolve_callback)
+        elif self._loop is not None:
+            self._loop.call_soon_threadsafe(self._resolve_callback)
 
     def _resolve_callback(self):
         # This should only be called in the main/reference thread.
@@ -246,11 +242,11 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         if self._state.endswith("rejected"):
             error = self._value
             for cb in self._error_callbacks:
-                self._call_soon_threadsafe(cb, error)
+                self._loop.call_soon_threadsafe(cb, error)
         elif self._state.endswith("fulfilled"):
             result = self._value
             for cb in self._done_callbacks:
-                self._call_soon_threadsafe(cb, result)
+                self._loop.call_soon_threadsafe(cb, result)
         # New state
         self._state = self._state.replace("pending-", "")
         # Clean up
@@ -303,7 +299,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         The callback will receive one argument: the result of the promise.
         """
-        if self._call_soon_threadsafe is None:
+        if self._loop is None:
             raise RuntimeError(
                 "Cannot use GPUPromise.then() because no running loop could be detected."
             )
@@ -323,9 +319,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
             title = self._title + " -> " + callback_name
 
         # Create new promise
-        new_promise = self.__class__(
-            title, callback, _call_soon_threadsafe=self._call_soon_threadsafe
-        )
+        new_promise = self.__class__(title, callback, _loop=self._loop)
         self._chain(new_promise)
 
         if error_callback is not None:
@@ -338,7 +332,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
 
         The callback will receive one argument: the error object.
         """
-        if self._call_soon_threadsafe is None:
+        if self._loop is None:
             raise RuntimeError(
                 "Cannot use GPUPromise.catch() because not running loop could be detected."
             )
@@ -351,9 +345,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         title = "Catcher for " + self._title
 
         # Create new promise
-        new_promise = self.__class__(
-            title, callback, _call_soon_threadsafe=self._call_soon_threadsafe
-        )
+        new_promise = self.__class__(title, callback, _loop=self._loop)
 
         # Custom chain
         with self._lock:
@@ -364,7 +356,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         return new_promise
 
     def __await__(self):
-        if self._call_soon_threadsafe is None:
+        if self._loop is None:
             raise RuntimeError(
                 "Cannot await GPUPromise because no running loop could be detected."
             )
