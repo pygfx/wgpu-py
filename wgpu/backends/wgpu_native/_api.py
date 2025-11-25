@@ -23,7 +23,6 @@ import logging
 from weakref import WeakKeyDictionary
 from typing import NoReturn, Sequence
 
-from ..._async import LoopInterface
 from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
 from ... import classes, flags, enums, structs
 
@@ -462,7 +461,6 @@ class GPU(classes.GPU):
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas: CanvasLike | None = None,
-        loop: LoopInterface | None = None,
     ) -> GPUPromise[GPUAdapter]:
         """Create a `GPUAdapter`, the object that represents an abstract wgpu
         implementation, from which one can request a `GPUDevice`.
@@ -486,11 +484,11 @@ class GPU(classes.GPU):
         # We chose the variable name WGPUPY_WGPU_ADAPTER_NAME instead WGPU_ADAPTER_NAME
         # to avoid a clash
         if adapter_name := os.getenv(("WGPUPY_WGPU_ADAPTER_NAME")):
-            adapters = self._enumerate_adapters(loop)
+            adapters = self._enumerate_adapters()
             adapters = [a for a in adapters if adapter_name in a.summary]
             if not adapters:
                 raise ValueError(f"Adapter with name '{adapter_name}' not found.")
-            promise = GPUPromise("adapter by name", None, loop=loop)
+            promise = GPUPromise("adapter by name", None)
             promise._wgpu_set_input(adapters[0])
 
             return promise
@@ -563,13 +561,10 @@ class GPU(classes.GPU):
         )
 
         def handler(adapter_id):
-            return self._create_adapter(adapter_id, loop)
+            return self._create_adapter(adapter_id)
 
         promise = GPUPromise(
-            "request_adapter",
-            handler,
-            loop=loop,
-            keepalive=request_adapter_callback,
+            "request_adapter", handler, keepalive=request_adapter_callback
         )
 
         instance = get_wgpu_instance()
@@ -587,20 +582,18 @@ class GPU(classes.GPU):
 
         return promise
 
-    def enumerate_adapters_async(
-        self, *, loop: LoopInterface | None = None
-    ) -> GPUPromise[list[GPUAdapter]]:
+    def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
         This is the implementation based on wgpu-native.
         """
-        result = self._enumerate_adapters(loop)
+        result = self._enumerate_adapters()
         # We already have the result, so we return a resolved promise.
         # The reason this is async is to allow this to work on backends where we cannot actually enumerate adapters.
-        promise = GPUPromise("enumerate_adapters", None, loop=loop)
+        promise = GPUPromise("enumerate_adapters", None)
         promise._wgpu_set_input(result)
         return promise
 
-    def _enumerate_adapters(self, loop) -> list[GPUAdapter]:
+    def _enumerate_adapters(self) -> list[GPUAdapter]:
         # The first call is to get the number of adapters, and the second call
         # is to get the actual adapters. Note that the second arg (now NULL) can
         # be a `WGPUInstanceEnumerateAdapterOptions` to filter by backend.
@@ -610,9 +603,9 @@ class GPU(classes.GPU):
         adapters = new_array("WGPUAdapter[]", count)
         # H: size_t f(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const * options, WGPUAdapter * adapters)
         libf.wgpuInstanceEnumerateAdapters(instance, ffi.NULL, adapters)
-        return [self._create_adapter(adapter, loop) for adapter in adapters]
+        return [self._create_adapter(adapter) for adapter in adapters]
 
-    def _create_adapter(self, adapter_id, loop):
+    def _create_adapter(self, adapter_id):
         # ----- Get adapter info
 
         # H: nextInChain: WGPUChainedStructOut *, vendor: WGPUStringView, architecture: WGPUStringView, device: WGPUStringView, description: WGPUStringView, backendType: WGPUBackendType, adapterType: WGPUAdapterType, vendorID: int, deviceID: int
@@ -671,7 +664,7 @@ class GPU(classes.GPU):
         features = _get_features(adapter_id, adapter=True)
 
         # ----- Done
-        return GPUAdapter(adapter_id, features, limits, adapter_info, loop)
+        return GPUAdapter(adapter_id, features, limits, adapter_info)
 
     def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
         """Get the GPUCanvasContext object for the appropriate backend.
@@ -1386,10 +1379,7 @@ class GPUAdapter(classes.GPUAdapter):
             return device
 
         promise = GPUPromise(
-            "request_device",
-            handler,
-            loop=self._loop,
-            keepalive=request_device_callback,
+            "request_device", handler, keepalive=request_device_callback
         )
 
         # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
@@ -1968,9 +1958,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # H: WGPUComputePipeline f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor)
             id = libf.wgpuDeviceCreateComputePipeline(self._internal, descriptor)
             result = GPUComputePipeline(label, id, self)
-            promise = GPUPromise(
-                "create_compute_pipeline_async", None, loop=self._device._loop
-            )
+            promise = GPUPromise("create_compute_pipeline_async", None)
             promise._wgpu_set_input(result)
             return promise
 
@@ -2002,12 +1990,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         def handler(id):
             return GPUComputePipeline(label, id, self)
 
-        promise = GPUPromise(
-            "create_compute_pipeline",
-            handler,
-            loop=self._loop,
-            keepalive=callback,
-        )
+        promise = GPUPromise("create_compute_pipeline", handler, keepalive=callback)
 
         token = self._device._poller.get_token()
 
@@ -2097,9 +2080,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # H: WGPURenderPipeline f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor)
             id = libf.wgpuDeviceCreateRenderPipeline(self._internal, descriptor)
             result = GPURenderPipeline(label, id, self)
-            promise = GPUPromise(
-                "create_render_pipeline_async", None, loop=self._device._loop
-            )
+            promise = GPUPromise("create_render_pipeline_async", None)
             promise._wgpu_set_input(result)
             return promise
 
@@ -2129,12 +2110,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         def handler(id):
             return GPURenderPipeline(label, id, self)
 
-        promise = GPUPromise(
-            "create_render_pipeline",
-            handler,
-            loop=self._loop,
-            keepalive=callback,
-        )
+        promise = GPUPromise("create_render_pipeline", handler, keepalive=callback)
 
         token = self._device._poller.get_token()
 
@@ -2565,7 +2541,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # Can we even map?
         if self._map_state != enums.BufferMapState.unmapped:
-            promise = GPUPromise("buffer.map", None, loop=self._device._loop)
+            promise = GPUPromise("buffer.map", None)
             promise._wgpu_set_error(
                 RuntimeError(
                     f"Can only map a buffer if its currently unmapped, not {self._map_state!r}"
@@ -2609,12 +2585,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._mapped_status = offset, offset + size, mode
             self._mapped_memoryviews = []
 
-        promise = GPUPromise(
-            "buffer.map",
-            handler,
-            loop=self._device._loop,
-            keepalive=buffer_map_callback,
-        )
+        promise = GPUPromise("buffer.map", handler, keepalive=buffer_map_callback)
 
         token = self._device._poller.get_token()
 
@@ -2883,7 +2854,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         result = []
 
         # Return a resolved promise
-        promise = GPUPromise("get_compilation_info", None, loop=self._device._loop)
+        promise = GPUPromise("get_compilation_info", None)
         promise._wgpu_set_input(result)
         return promise
 
@@ -4185,10 +4156,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             return None
 
         promise = GPUPromise(
-            "on_submitted_work_done",
-            handler,
-            loop=self._device._loop,
-            keepalive=work_done_callback,
+            "on_submitted_work_done", handler, keepalive=work_done_callback
         )
 
         token = self._device._poller.get_token()
