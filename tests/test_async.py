@@ -14,7 +14,7 @@ from testutils import can_use_wgpu_lib, run_tests
 from wgpu import GPUDevice, MapMode, TextureFormat
 from wgpu._async import (
     GPUPromise as BaseGPUPromise,
-    detect_current_loops_call_soon_threadsafe,
+    detect_current_call_soon_threadsafe,
     detect_current_async_lib,
 )
 
@@ -94,7 +94,7 @@ def test_async_low_level_none():
     flag = []
 
     flag.append(detect_current_async_lib())
-    flag.append(detect_current_loops_call_soon_threadsafe())
+    flag.append(detect_current_call_soon_threadsafe())
 
     assert flag[0] is None
     assert flag[1] is None
@@ -108,7 +108,7 @@ def test_async_low_level_rendercanvas_asyncadapter():
     async def task():
         # Our methods
         flag.append(detect_current_async_lib())
-        flag.append(detect_current_loops_call_soon_threadsafe())
+        flag.append(detect_current_call_soon_threadsafe())
         # Test that the fast-path works
         flag.append(sys.get_asyncgen_hooks()[0].__self__.call_soon_threadsafe)
         loop.stop()
@@ -128,7 +128,7 @@ def test_async_low_level_asyncio():
     async def task():
         # Our methods
         flag.append(detect_current_async_lib())
-        flag.append(detect_current_loops_call_soon_threadsafe())
+        flag.append(detect_current_call_soon_threadsafe())
         # Test that the fast-path works
         flag.append(sys.get_asyncgen_hooks()[0].__self__.call_soon_threadsafe)
 
@@ -145,7 +145,7 @@ def test_async_low_level_trio():
 
     async def task():
         flag.append(detect_current_async_lib())
-        flag.append(detect_current_loops_call_soon_threadsafe())
+        flag.append(detect_current_call_soon_threadsafe())
 
     trio.run(task)
 
@@ -176,7 +176,7 @@ def test_async_low_level_custom1():
 
     try:
         flag.append(detect_current_async_lib())
-        flag.append(detect_current_loops_call_soon_threadsafe())
+        flag.append(detect_current_call_soon_threadsafe())
     finally:
         sys.set_asyncgen_hooks(*old_hooks)
 
@@ -209,7 +209,7 @@ def test_async_low_level_custom2():
 
     try:
         flag.append(detect_current_async_lib())
-        flag.append(detect_current_loops_call_soon_threadsafe())
+        flag.append(detect_current_call_soon_threadsafe())
     finally:
         sys.set_asyncgen_hooks(*old_hooks)
 
@@ -244,7 +244,7 @@ def test_async_low_level_custom3():
 
     try:
         flag.append(detect_current_async_lib())
-        flag.append(detect_current_loops_call_soon_threadsafe())
+        flag.append(detect_current_call_soon_threadsafe())
     finally:
         sys.set_asyncgen_hooks(*old_hooks)
 

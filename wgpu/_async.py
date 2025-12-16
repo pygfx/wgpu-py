@@ -11,15 +11,6 @@ from typing import Callable, Awaitable, Generator, Generic, TypeVar
 logger = logging.getLogger("wgpu")
 
 
-class StubLoop:
-    def __init__(self, name, call_soon_threadsafe):
-        self.name = name
-        self.call_soon_threadsafe = call_soon_threadsafe
-
-    def __repr__(self):
-        return f"<StubLoop for {self.name} at {hex(id(self))}>"
-
-
 def detect_current_async_lib():
     """Get the lib name of the currently active async lib, or None."""
     ob = sys.get_asyncgen_hooks()[0]
@@ -35,15 +26,17 @@ def detect_current_async_lib():
         return libname
 
 
-def detect_current_loops_call_soon_threadsafe():
-    """Get a loop object (that has call_soon_threadsafe) or None"""
+def detect_current_call_soon_threadsafe():
+    """Get the current applicable call_soon_threadsafe function, or None"""
 
     # Get asyncgen hook func, return fast when no async loop active
     ob = sys.get_asyncgen_hooks()[0]
     if ob is None:
         return None
 
-    # For asyncio and rendercanvas's asyncadapter, this works and is super-fast
+    # Super-fast path that works for loop objects that have call_soon_threadsafe()
+    # and use sys.set_asyncgen_hooks() on a method of the same loop object.
+    # Works with asyncio, rendercanvas' asyncadapter, and also custom (direct) loops.
     try:
         return ob.__self__.call_soon_threadsafe
     except AttributeError:
@@ -63,6 +56,8 @@ def detect_current_loops_call_soon_threadsafe():
     else:
         # Ok, it looks like there is an async loop, try to get the func.
         # This is also a fallback for asyncio (in case the ob.__self__ stops working)
+        # Note: we have a unit test for the asyncio fast-path, so we will know when we need to update,
+        # but the code below makes sure that it keeps working regardless (just a tiiiny bit slower).
         if libname == "pyodide":
             libname = "asyncio"
         mod = sys.modules.get(libname, None)
@@ -167,9 +162,9 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._error_callbacks = []
         self._UNRESOLVED.add(self)
 
-        # we only care about call_soon_threadsafe, but clearer to just have a loop object
+        # Set call_soon_threadsafe function, may be None, in which case we cannot do then() or await.
         self._call_soon_threadsafe = (
-            _call_soon_threadsafe or detect_current_loops_call_soon_threadsafe()
+            _call_soon_threadsafe or detect_current_call_soon_threadsafe()
         )
 
     def __repr__(self):
