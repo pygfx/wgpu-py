@@ -1,14 +1,22 @@
+import sys
 import time
+import types
+import asyncio
 import threading
 
+import trio
 import anyio
-
 from pytest import mark, raises
 
+from rendercanvas.raw import RawLoop
 import wgpu.utils
 from testutils import can_use_wgpu_lib, run_tests
 from wgpu import GPUDevice, MapMode, TextureFormat
-from wgpu._async import GPUPromise as BaseGPUPromise
+from wgpu._async import (
+    GPUPromise as BaseGPUPromise,
+    detect_current_loops_call_soon_threadsafe,
+    detect_current_async_lib,
+)
 
 
 class GPUPromise(BaseGPUPromise):
@@ -77,6 +85,171 @@ def test_promise_basics():
     assert "pending" not in repr(promise)
     assert "fulfilled" not in repr(promise)
     assert "rejected" in repr(promise)
+
+
+# %%%%% Low level
+
+
+def test_async_low_level_none():
+    flag = []
+
+    flag.append(detect_current_async_lib())
+    flag.append(detect_current_loops_call_soon_threadsafe())
+
+    assert flag[0] is None
+    assert flag[1] is None
+
+
+def test_async_low_level_rendercanvas_asyncadapter():
+    loop = RawLoop()
+
+    flag = []
+
+    async def task():
+        # Our methods
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_loops_call_soon_threadsafe())
+        # Test that the fast-path works
+        flag.append(sys.get_asyncgen_hooks()[0].__self__.call_soon_threadsafe)
+        loop.stop()
+
+    loop.add_task(task)
+    loop.run()
+
+    assert flag[0] == "rendercanvas.utils.asyncadapter"
+    assert callable(flag[1])
+    assert flag[1].__name__ == "call_soon_threadsafe"
+    assert flag[1].__func__ is flag[2].__func__
+
+
+def test_async_low_level_asyncio():
+    flag = []
+
+    async def task():
+        # Our methods
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_loops_call_soon_threadsafe())
+        # Test that the fast-path works
+        flag.append(sys.get_asyncgen_hooks()[0].__self__.call_soon_threadsafe)
+
+    asyncio.run(task())
+
+    assert flag[0] == "asyncio"
+    assert callable(flag[1])
+    assert flag[1].__name__ == "call_soon_threadsafe"
+    assert flag[1].__func__ is flag[2].__func__
+
+
+def test_async_low_level_trio():
+    flag = []
+
+    async def task():
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_loops_call_soon_threadsafe())
+
+    trio.run(task)
+
+    assert flag[0] == "trio"
+    assert callable(flag[1])
+    assert flag[1].__name__ == "run_sync_soon"
+
+
+def test_async_low_level_custom1():
+    # Simplest custom approach. Detection at module level.
+
+    mod = types.ModuleType("wgpu_async_test_module")
+    sys.modules[mod.__name__] = mod
+    code = """if True:
+
+    def call_soon_threadsafe(callbacl):
+        pass
+
+    def fake_asyncgen_hook(agen):
+        pass
+    """
+    exec(code, mod.__dict__)
+
+    flag = []
+
+    old_hooks = sys.get_asyncgen_hooks()
+    sys.set_asyncgen_hooks(mod.fake_asyncgen_hook)
+
+    try:
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_loops_call_soon_threadsafe())
+    finally:
+        sys.set_asyncgen_hooks(*old_hooks)
+
+    assert flag[0] == mod.__name__
+    assert flag[1] is mod.call_soon_threadsafe
+
+
+def test_async_low_level_custom2():
+    # Even better, call_soon_threadsafe is attr of the same object that asyncgen hook is a method of.
+    # This takes the fast path!
+
+    mod = types.ModuleType("wgpu_async_test_module")
+    sys.modules[mod.__name__] = mod
+    code = """if True:
+
+    class Loop:
+        def call_soon_threadsafe(callbacl):
+            pass
+
+        def fake_asyncgen_hook(agen):
+            pass
+    loop = Loop()
+    """
+    exec(code, mod.__dict__)
+
+    flag = []
+
+    old_hooks = sys.get_asyncgen_hooks()
+    sys.set_asyncgen_hooks(mod.loop.fake_asyncgen_hook)
+
+    try:
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_loops_call_soon_threadsafe())
+    finally:
+        sys.set_asyncgen_hooks(*old_hooks)
+
+    assert flag[0] == mod.__name__
+    assert flag[1].__func__ is mod.loop.call_soon_threadsafe.__func__
+
+
+def test_async_low_level_custom3():
+    # The somewhat longer route. This is also the fallback for asyncio,
+    # in case they change something that kills the fast-path for asyncio.
+    # (the fast path being sys.get_asyncgen_hooks()[0].__self__.call_soon_threadsafe)
+
+    mod = types.ModuleType("wgpu_async_test_module")
+    sys.modules[mod.__name__] = mod
+    code = """if True:
+
+    def fake_asyncgen_hook(agen):
+        pass
+    def get_running_loop():
+        return loop
+    class Loop:
+        def call_soon_threadsafe(callbacl):
+            pass
+    loop = Loop()
+    """
+    exec(code, mod.__dict__)
+
+    flag = []
+
+    old_hooks = sys.get_asyncgen_hooks()
+    sys.set_asyncgen_hooks(mod.fake_asyncgen_hook)
+
+    try:
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_loops_call_soon_threadsafe())
+    finally:
+        sys.set_asyncgen_hooks(*old_hooks)
+
+    assert flag[0] == mod.__name__
+    assert flag[1].__func__ is mod.loop.call_soon_threadsafe.__func__
 
 
 # %%%%% Promise using sync_wait
@@ -323,7 +496,7 @@ def test_promise_then_fail2():
     assert isinstance(error, ZeroDivisionError)
 
 
-# %%%%% Chainging
+# %%%%% Chaining
 
 
 def test_promise_chaining_basic():

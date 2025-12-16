@@ -45,7 +45,7 @@ def detect_current_loops_call_soon_threadsafe():
 
     # For asyncio and rendercanvas's asyncadapter, this works and is super-fast
     try:
-        return ob.__self__.call_soon_thread_safe
+        return ob.__self__.call_soon_threadsafe
     except AttributeError:
         pass
 
