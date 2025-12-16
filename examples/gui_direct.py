@@ -7,6 +7,7 @@ Demonstration for hardcore users that need total low-level control.
 
 # run_example = false
 
+import sys
 import time
 import atexit
 
@@ -36,6 +37,15 @@ context = wgpu.gpu.get_canvas_context(present_info)
 context.set_physical_size(*glfw.get_framebuffer_size(window))
 
 
+# Setup async callbacks. This is optional, but it enables code using promise.then().
+# The asyncgen hook is a stub for the system to detect the call_soon_threadsafe function.
+# This works if both are defined on the same class or in the same module.
+to_call_soon = []
+call_soon_threadsafe = to_call_soon.append
+stub_asynchen_hook = lambda agen: None
+sys.set_asyncgen_hooks(stub_asynchen_hook)
+
+
 def main():
     draw_frame = setup_drawing_sync(context)
 
@@ -49,6 +59,15 @@ def main():
 
         # resize handling
         context.set_physical_size(*glfw.get_framebuffer_size(window))
+
+        # Call async callbacks (optional, see above)
+        callbacks = to_call_soon.copy()
+        to_call_soon.clear()
+        for cb in callbacks:
+            try:
+                cb()
+            except Exception as err:
+                print(err)
 
         # draw a frame
         draw_frame()
