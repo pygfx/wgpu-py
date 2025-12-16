@@ -7,8 +7,6 @@ import logging
 import threading
 from typing import Callable, Awaitable, Generator, Generic, TypeVar
 
-import sniffio
-
 
 logger = logging.getLogger("wgpu")
 
@@ -22,49 +20,72 @@ class StubLoop:
         return f"<StubLoop for {self.name} at {hex(id(self))}>"
 
 
-def get_running_loop():
-    """Get an object with a call_soon_threadsafe() method.
-
-    Sniffio is used for this, and it supports asyncio, trio, and rendercanvas.utils.asyncadapter.
-    If this function returns None, it means that the GPUPromise will not support ``await`` and ``.then()``.
-
-    It's relatively easy to register a custom loop to sniffio so that this code works on it.
-    """
-
-    try:
-        name = sniffio.current_async_library()
-    except sniffio.AsyncLibraryNotFoundError:
-        return None
-
-    if name == "trio":
-        trio = sys.modules[name]
-        token = trio.lowlevel.current_trio_token()
-        return StubLoop("trio", token.run_sync_soon)
-    else:  # asyncio, rendercanvas.utils.asyncadapter, and easy to mimic for custom loops
+def detect_current_async_lib():
+    """Get the lib name of the currently active async lib, or None."""
+    ob = sys.get_asyncgen_hooks()[0]
+    if ob is not None:
         try:
-            mod = sys.modules[name]
-            loop = mod.get_running_loop()
-            loop.call_soon_threadsafe  # noqa: B018 - access to make sure it exists
-            return loop
-        except Exception:
+            libname = ob.__module__.partition(".")[0]
+        except AttributeError:
             return None
+        if libname == "rendercanvas":
+            libname = "rendercanvas.utils.asyncadapter"
+        elif libname == "pyodide":
+            libname = "asyncio"
+        return libname
 
 
-# The async_sleep and AsyncEvent are a copy of the implementation in rendercanvas.asyncs
+def detect_current_async_loop():
+    """Get a loop object (that has call_soon_threadsafe) or None"""
+    ob = sys.get_asyncgen_hooks()[0]
+    loop = None
+    if ob is not None:
+        try:
+            loop = ob.__self__
+            _ = loop.call_soon_thread_safe
+        except AttributeError:
+            loop = None
+        if loop is None:
+            try:
+                libname = ob.__module__.partition(".")[0]
+            except AttributeError:
+                libname = None
+
+            if libname is None:
+                pass
+            elif libname == "trio":
+                trio = sys.modules[libname]
+                token = trio.lowlevel.current_trio_token()
+                loop = StubLoop("trio", token.run_sync_soon)
+            elif libname == "pyodide" or libname == "asyncio":
+                # Backup - asyncio has ob.__self__
+                mod = sys.modules["asyncio"]
+                loop = mod._get_running_loop()
+            else:
+                # Generic try, maybe we get lucky
+                try:
+                    mod = sys.modules[libname]
+                    loop = mod.get_running_loop()
+                    _ = loop.call_soon_threadsafe
+                except Exception:
+                    loop = None
+        return loop
 
 
 async def async_sleep(delay):
-    """Async sleep that uses sniffio to be compatible with asyncio, trio, rendercanvas.utils.asyncadapter, and possibly more."""
-    libname = sniffio.current_async_library()
+    """Async sleep that works with asyncio, trio, and rendercanvas' asyncadapter."""
+    # Note that we get the regular lib's sleep(), not the high-precision sleep from rendercanvas.asyncs.sleep
+    # Anyway, we can remove this once we can assume we have rendercanvas with https://github.com/pygfx/rendercanvas/pull/151
+    libname = detect_current_async_lib()
     sleep = sys.modules[libname].sleep
     await sleep(delay)
 
 
 class AsyncEvent:
-    """Generic async event object using sniffio. Works with trio, asyncio and rendercanvas-native."""
+    """Async Event object that works with asyncio, trio, and rendercanvas' asyncadapter."""
 
     def __new__(cls):
-        libname = sniffio.current_async_library()
+        libname = detect_current_async_lib()
         Event = sys.modules[libname].Event  # noqa
         return Event()
 
@@ -141,7 +162,7 @@ class GPUPromise(Awaitable[AwaitedType], Generic[AwaitedType]):
         self._UNRESOLVED.add(self)
 
         # we only care about call_soon_threadsafe, but clearer to just have a loop object
-        self._loop = _loop or get_running_loop()
+        self._loop = _loop or detect_current_async_loop()
 
     def __repr__(self):
         return f"<GPUPromise '{self._title}' {self._state} at {hex(id(self))}>"
