@@ -770,7 +770,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             capabilities["formats"] = formats = []
             for i in range(c_capabilities.formatCount):
                 int_val = c_capabilities.formats[i]
-                formats.append(enum_int2str["TextureFormat"][int_val])
+                str_val = enum_int2str["TextureFormat"].get(int_val, None)
+                if str_val:
+                    formats.append(str_val)
 
         else:
             capabilities["formats"] = minimal_capabilities["formats"]
@@ -779,8 +781,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             capabilities["alpha_modes"] = alpha_modes = []
             for i in range(c_capabilities.alphaModeCount):
                 int_val = c_capabilities.alphaModes[i]
-                str_val = enum_int2str["CompositeAlphaMode"][int_val]
-                alpha_modes.append(str_val.lower())
+                str_val = enum_int2str["CompositeAlphaMode"].get(int_val, None)
+                if str_val:
+                    alpha_modes.append(str_val.lower())
         else:
             capabilities["alpha_modes"] = minimal_capabilities["alpha_modes"]
 
@@ -788,8 +791,9 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             capabilities["present_modes"] = present_modes = []
             for i in range(c_capabilities.presentModeCount):
                 int_val = c_capabilities.presentModes[i]
-                str_val = enum_int2str["PresentMode"][int_val]
-                present_modes.append(str_val.lower())
+                str_val = enum_int2str["PresentMode"].get(int_val, None)
+                if str_val:
+                    present_modes.append(str_val.lower())
         else:
             capabilities["present_modes"] = minimal_capabilities["present_modes"]
 
