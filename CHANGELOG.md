@@ -17,6 +17,26 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## [v0.29.0] - 17-12-2025
+
+Fixed:
+
+* Fix that using WGPUPY_WGPU_ADAPTER_NAME fails by @almarklein in https://github.com/pygfx/wgpu-py/pull/779
+* Support GPUBuffer as resource in BindGroupEntry by @Vipitis in https://github.com/pygfx/wgpu-py/pull/774
+* Fix cd to use new intel image by @almarklein in https://github.com/pygfx/wgpu-py/pull/784
+* Fix keyerror in querying capabilities (reported for AMD hardware) by @almarklein in https://github.com/pygfx/wgpu-py/pull/785
+
+Changed:
+
+* Use a polling thread per device by @almarklein in https://github.com/pygfx/wgpu-py/pull/778
+* Detect loop from asyncgen_hooks by @almarklein in https://github.com/pygfx/wgpu-py/pull/780
+  * The experimental `loop` parameter in `request_adapter_xx()` is removed; it is now detected automatically.
+
+Removed:
+
+* Remove (the already deprecated) gui subpackage by @almarklein in https://github.com/pygfx/wgpu-py/pull/773
+
+
 ## [v0.28.1] - 14-11-2025
 
 Fixed:
