@@ -54,7 +54,7 @@ def detect_current_call_soon_threadsafe():
         token = trio.lowlevel.current_trio_token()
         return token.run_sync_soon
     else:
-        # Ok, it looks like there is an async loop, try to get the func.
+        # Ok, it looks like there is an async loop that we don't know. Try harder to get the func.
         # This is also a fallback for asyncio (in case the ob.__self__ stops working)
         # Note: we have a unit test for the asyncio fast-path, so we will know when we need to update,
         # but the code below makes sure that it keeps working regardless (just a tiiiny bit slower).
