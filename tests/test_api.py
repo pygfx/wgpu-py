@@ -100,7 +100,7 @@ def test_enums_and_flags_and_structs():
 
 def test_base_wgpu_api():
     # Fake a device and an adapter
-    adapter = wgpu.GPUAdapter(None, set(), {}, wgpu.GPUAdapterInfo({}), None)
+    adapter = wgpu.GPUAdapter(None, set(), {}, wgpu.GPUAdapterInfo({}))
     queue = wgpu.GPUQueue("", None, None)
     device = wgpu.GPUDevice("device08", -1, adapter, {42, 43}, {}, queue)
 

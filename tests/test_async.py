@@ -1,14 +1,22 @@
+import sys
 import time
+import types
+import asyncio
 import threading
 
+import trio
 import anyio
-
 from pytest import mark, raises
 
+from rendercanvas.raw import RawLoop
 import wgpu.utils
 from testutils import can_use_wgpu_lib, run_tests
 from wgpu import GPUDevice, MapMode, TextureFormat
-from wgpu._async import GPUPromise as BaseGPUPromise
+from wgpu._async import (
+    GPUPromise as BaseGPUPromise,
+    detect_current_call_soon_threadsafe,
+    detect_current_async_lib,
+)
 
 
 class GPUPromise(BaseGPUPromise):
@@ -27,7 +35,7 @@ class SillyLoop:
         self._pending_calls = []
         self.errors = []
 
-    def call_soon_threadsafe(self, f, *args):
+    def call_soon(self, f, *args):  # and its threadsafe
         self._pending_calls.append((f, args))
 
     def process_events(self):
@@ -77,6 +85,171 @@ def test_promise_basics():
     assert "pending" not in repr(promise)
     assert "fulfilled" not in repr(promise)
     assert "rejected" in repr(promise)
+
+
+# %%%%% Low level
+
+
+def test_async_low_level_none():
+    flag = []
+
+    flag.append(detect_current_async_lib())
+    flag.append(detect_current_call_soon_threadsafe())
+
+    assert flag[0] is None
+    assert flag[1] is None
+
+
+def test_async_low_level_rendercanvas_asyncadapter():
+    loop = RawLoop()
+
+    flag = []
+
+    async def task():
+        # Our methods
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_call_soon_threadsafe())
+        # Test that the fast-path works
+        flag.append(sys.get_asyncgen_hooks()[0].__self__.call_soon_threadsafe)
+        loop.stop()
+
+    loop.add_task(task)
+    loop.run()
+
+    assert flag[0] == "rendercanvas.utils.asyncadapter"
+    assert callable(flag[1])
+    assert flag[1].__name__ == "call_soon_threadsafe"
+    assert flag[1].__func__ is flag[2].__func__
+
+
+def test_async_low_level_asyncio():
+    flag = []
+
+    async def task():
+        # Our methods
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_call_soon_threadsafe())
+        # Test that the fast-path works
+        flag.append(sys.get_asyncgen_hooks()[0].__self__.call_soon_threadsafe)
+
+    asyncio.run(task())
+
+    assert flag[0] == "asyncio"
+    assert callable(flag[1])
+    assert flag[1].__name__ == "call_soon_threadsafe"
+    assert flag[1].__func__ is flag[2].__func__
+
+
+def test_async_low_level_trio():
+    flag = []
+
+    async def task():
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_call_soon_threadsafe())
+
+    trio.run(task)
+
+    assert flag[0] == "trio"
+    assert callable(flag[1])
+    assert flag[1].__name__ == "run_sync_soon"
+
+
+def test_async_low_level_custom1():
+    # Simplest custom approach. Detection at module level.
+
+    mod = types.ModuleType("wgpu_async_test_module")
+    sys.modules[mod.__name__] = mod
+    code = """if True:
+
+    def call_soon_threadsafe(callbacl):
+        pass
+
+    def fake_asyncgen_hook(agen):
+        pass
+    """
+    exec(code, mod.__dict__)
+
+    flag = []
+
+    old_hooks = sys.get_asyncgen_hooks()
+    sys.set_asyncgen_hooks(mod.fake_asyncgen_hook)
+
+    try:
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_call_soon_threadsafe())
+    finally:
+        sys.set_asyncgen_hooks(*old_hooks)
+
+    assert flag[0] == mod.__name__
+    assert flag[1] is mod.call_soon_threadsafe
+
+
+def test_async_low_level_custom2():
+    # Even better, call_soon_threadsafe is attr of the same object that asyncgen hook is a method of.
+    # This takes the fast path!
+
+    mod = types.ModuleType("wgpu_async_test_module")
+    sys.modules[mod.__name__] = mod
+    code = """if True:
+
+    class Loop:
+        def call_soon_threadsafe(callbacl):
+            pass
+
+        def fake_asyncgen_hook(agen):
+            pass
+    loop = Loop()
+    """
+    exec(code, mod.__dict__)
+
+    flag = []
+
+    old_hooks = sys.get_asyncgen_hooks()
+    sys.set_asyncgen_hooks(mod.loop.fake_asyncgen_hook)
+
+    try:
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_call_soon_threadsafe())
+    finally:
+        sys.set_asyncgen_hooks(*old_hooks)
+
+    assert flag[0] == mod.__name__
+    assert flag[1].__func__ is mod.loop.call_soon_threadsafe.__func__
+
+
+def test_async_low_level_custom3():
+    # The somewhat longer route. This is also the fallback for asyncio,
+    # in case they change something that kills the fast-path for asyncio.
+    # (the fast path being sys.get_asyncgen_hooks()[0].__self__.call_soon_threadsafe)
+
+    mod = types.ModuleType("wgpu_async_test_module")
+    sys.modules[mod.__name__] = mod
+    code = """if True:
+
+    def fake_asyncgen_hook(agen):
+        pass
+    def get_running_loop():
+        return loop
+    class Loop:
+        def call_soon_threadsafe(callbacl):
+            pass
+    loop = Loop()
+    """
+    exec(code, mod.__dict__)
+
+    flag = []
+
+    old_hooks = sys.get_asyncgen_hooks()
+    sys.set_asyncgen_hooks(mod.fake_asyncgen_hook)
+
+    try:
+        flag.append(detect_current_async_lib())
+        flag.append(detect_current_call_soon_threadsafe())
+    finally:
+        sys.set_asyncgen_hooks(*old_hooks)
+
+    assert flag[0] == mod.__name__
+    assert flag[1].__func__ is mod.loop.call_soon_threadsafe.__func__
 
 
 # %%%%% Promise using sync_wait
@@ -212,7 +385,7 @@ async def test_promise_async_poll_fail2():
 async def test_promise_async_loop_simple():
     loop = SillyLoop()
 
-    promise = GPUPromise("test", None, loop=loop)
+    promise = GPUPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     loop.process_events()
     result = await promise
@@ -226,7 +399,7 @@ async def test_promise_async_loop_normal():
     def handler(input):
         return input * 2
 
-    promise = GPUPromise("test", handler, loop=loop)
+    promise = GPUPromise("test", handler, _call_soon_threadsafe=loop.call_soon)
 
     loop.process_events()
     result = await promise
@@ -240,7 +413,7 @@ async def test_promise_async_loop_fail2():
     def handler(input):
         return input / 0
 
-    promise = GPUPromise("test", handler, loop=loop)
+    promise = GPUPromise("test", handler, _call_soon_threadsafe=loop.call_soon)
 
     loop.process_events()
     with raises(ZeroDivisionError):
@@ -272,7 +445,7 @@ def test_promise_then_simple():
         nonlocal result
         result = r
 
-    promise = GPUPromise("test", None, loop=loop)
+    promise = GPUPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     promise.then(callback)
     loop.process_events()
@@ -291,7 +464,7 @@ def test_promise_then_normal():
     def handler(input):
         return input * 2
 
-    promise = GPUPromise("test", handler, loop=loop)
+    promise = GPUPromise("test", handler, _call_soon_threadsafe=loop.call_soon)
 
     promise.then(callback)
     loop.process_events()
@@ -315,7 +488,7 @@ def test_promise_then_fail2():
     def handler(input):
         return input / 0
 
-    promise = GPUPromise("test", handler, loop=loop)
+    promise = GPUPromise("test", handler, _call_soon_threadsafe=loop.call_soon)
 
     promise.then(callback, err_callback)
     loop.process_events()
@@ -323,7 +496,7 @@ def test_promise_then_fail2():
     assert isinstance(error, ZeroDivisionError)
 
 
-# %%%%% Chainging
+# %%%%% Chaining
 
 
 def test_promise_chaining_basic():
@@ -338,7 +511,7 @@ def test_promise_chaining_basic():
         nonlocal result
         result = r
 
-    promise = MyPromise("test", None, loop=loop)
+    promise = MyPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     p = promise.then(callback1)
     loop.process_events()
@@ -371,7 +544,7 @@ def test_promise_chaining_simple():
         nonlocal result
         result = r
 
-    promise = GPUPromise("test", None, loop=loop)
+    promise = GPUPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     p = promise.then(callback1).then(callback2).then(callback3)
     assert isinstance(p, GPUPromise)
@@ -400,7 +573,7 @@ def test_promise_chaining_fail1():
         nonlocal error
         error = e
 
-    promise = GPUPromise("test", None, loop=loop)
+    promise = GPUPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     p = promise.then(callback1).then(callback2).then(callback3, err_callback)
     assert isinstance(p, GPUPromise)
@@ -430,7 +603,7 @@ def test_promise_chaining_fail2():
         nonlocal error
         error = e
 
-    promise = GPUPromise("test", None, loop=loop)
+    promise = GPUPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     p = promise.then(callback1).then(callback2).then(callback3, err_callback)
     assert isinstance(p, GPUPromise)
@@ -454,7 +627,7 @@ def test_promise_chaining_multi():
     def callback3(r):
         results.append(r * 3)
 
-    promise = GPUPromise("test", None, loop=loop)
+    promise = GPUPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     promise.then(callback1)
     promise.then(callback2)
@@ -473,7 +646,7 @@ def test_promise_chaining_after_resolve():
     def callback1(r):
         results.append(r)
 
-    promise = GPUPromise("test", None, loop=loop)
+    promise = GPUPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     # Adding handler has no result, because promise is not yet resolved.
     promise.then(callback1)
@@ -503,16 +676,16 @@ def test_promise_chaining_with_promises():
     result = None
 
     def callback1(r):
-        return GPUPromise("test", lambda _: r * 3, loop=loop)
+        return GPUPromise("test", lambda _: r * 3, _call_soon_threadsafe=loop.call_soon)
 
     def callback2(r):
-        return GPUPromise("test", lambda _: r + 2, loop=loop)
+        return GPUPromise("test", lambda _: r + 2, _call_soon_threadsafe=loop.call_soon)
 
     def callback3(r):
         nonlocal result
         result = r
 
-    promise = GPUPromise("test", None, loop=loop)
+    promise = GPUPromise("test", None, _call_soon_threadsafe=loop.call_soon)
 
     p = promise.then(callback1).then(callback2).then(callback3)
     assert isinstance(p, GPUPromise)
@@ -535,7 +708,7 @@ def test_promise_decorator():
     def handler(input):
         return input * 2
 
-    promise = GPUPromise("test", handler, loop=loop)
+    promise = GPUPromise("test", handler, _call_soon_threadsafe=loop.call_soon)
 
     @promise
     def decorated(r):
