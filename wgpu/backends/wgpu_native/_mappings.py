@@ -372,6 +372,11 @@ enum_str2int = {
         "Fxc": 1,
         "Dxc": 2,
     },
+    "Dx12PresentationSystem": {
+        "Undefined": 0,
+        "Hwnd": 1,
+        "Visual": 2,
+    },
     "PolygonMode": {
         "Fill": 0,
         "Line": 1,
