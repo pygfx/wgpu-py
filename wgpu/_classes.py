@@ -273,8 +273,8 @@ class GPUCanvasContext:
         The application must call this to keep the context informed about
         the window/framebuffer size.
         """
-        if width <= 0 or height <= 0:
-            raise ValueError("Physical size values must be positive.")
+        if width < 0 or height < 0:
+            raise ValueError("Physical size values must be non-negative.")
         self._physical_size = int(width), int(height)
         self._has_new_size = True
 
