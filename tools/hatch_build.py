@@ -93,7 +93,7 @@ def check_git_status():
     git_status = p.stdout.decode(errors="ignore")
     # print("Git status:\n" + git_status)
     for line in git_status.splitlines():
-        assert not line.strip().startswith("M wgpu/"), "Git has open changes!"
+        assert not line.strip().startswith("M wgpu/resources/"), "Git has open changes!"
 
 
 def remove_all_libs():

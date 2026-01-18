@@ -27,14 +27,22 @@ import subprocess
 import wgpu
 from codegen import update_js, file_cache
 
+# from here: https://github.com/harfbuzz/uharfbuzz/pull/275
+uharfbuzz_wheel = "uharfbuzz-0.1.dev1+ga19185453-cp310-abi3-pyodide_2025_0_wasm32.whl"
+pygfx_wheel = "pygfx-0.15.3-py3-none-any.whl"
+pygfx_deps = [uharfbuzz_wheel, "hsluv", "pylinalg", "jinja2", pygfx_wheel]
+# pygfx_wheel = "pygfx"
 
 #examples that don't require a canvas, we will capture the output to a div
 compute_examples = {
     # "compute_int64.py", # this one requires native only features, so won't work in the browser for now
     "compute_noop.py": [], # no deps
     "compute_matmul.py": ["numpy"],
-    # "compute_textures.py": ["numpy", "imageio"], #imageio doesn't work in pyodide right now (fetch?)
+    "compute_textures.py": ["numpy", "imageio"], #imageio doesn't work in pyodide right now (fetch?)
     "compute_timestamps.py": [], # this one still crashes as the descriptor doesn't get converted into an object...
+    # try these two up here too to make sure it's not the canvas. (having them twice is a problem because only one .html variant exsits)
+    "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"], # currnetly hangs... so I digging down on that
+    "fpl_example.py": [*pygfx_deps, "fastplotlib"], #also hangs but I eventually want to get to this.
 }
 
 # these need rendercanvas too for now. but might run with just a canvas (no events) in the near future.
@@ -46,6 +54,11 @@ graphics_examples = {
     "imgui_backend_sea.py": ["numpy", "imgui-bundle"],
     "imgui_basic_example.py": ["imgui-bundle"], # might even work without wgpu as imgui already works in pyodide...
     "imgui_renderer_sea.py": ["numpy", "imgui-bundle"],
+    # pygfx example
+    # "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"],
+    # "fpl_example.py": [*pygfx_deps, "fastplotlib"],
+    # theoretically WGSL shadertoys work (with a couple tweaks... needs a new release soonish)
+    "shadertoy_blink.py": ["numpy", "sniffio", "requests", "wgpu_shadertoy-0.2.0-py3-none-any.whl"],
 }
 
 
@@ -66,14 +79,14 @@ def get_html_index():
     <head>
         <meta name="viewport" content="width=device-width,initial-scale=1.0">
         <title>wgpu PyScript examples</title>
-        <script type="module" src="https://pyscript.net/releases/2025.11.1/core.js"></script>
+        <script type="module" src="https://pyscript.net/releases/2025.11.2/core.js"></script>
     </head>
     <body>
 
     <a href='/build'>Rebuild the wheel</a><br><br>
     """
 
-    html += "List of compute examples that run in PyScript:\n"
+    html += "List of compute examples that run in Pyodide:\n"
     html += f"<ul>{''.join(compute_examples_list)}</ul><br>\n\n"
 
     html += "List of graphics examples that run in PyScript:\n"
@@ -93,7 +106,7 @@ pyscript_graphics_template = """
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>{example_script} via PyScript</title>
-    <script type="module" src="https://pyscript.net/releases/2025.11.1/core.js"></script>
+    <script type="module" src="https://pyscript.net/releases/2025.11.2/core.js"></script>
 </head>
 
 <body>
@@ -128,7 +141,7 @@ pyodide_compute_template = """
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>{example_script} via Pyodide</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.29.0/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/dev/full/pyodide.js"></script>
 </head>
 
 <dialog id="loading" style='outline: none; border: none; background: transparent;'>
@@ -142,6 +155,7 @@ pyodide_compute_template = """
     <div id="output" style="white-space: pre-wrap; background:#eee; padding:4px; margin:4px; border:1px solid #ccc;">
         <p>Output:</p>
     </div>
+    <canvas id='canvas' style='width:calc(100% - 20px); height: 450px; background-color: #ddd;'></canvas>
     <script type="text/javascript">
         async function main() {{
             let loading = document.getElementById('loading');
@@ -152,12 +166,13 @@ pyodide_compute_template = """
                 let pyodide = await loadPyodide();
                 pyodide.setStdout({{
                     batched: (s) => {{
-                        // TODO: newline?
-                        document.getElementById("output").innerHTML += "<br>" + s;
+                        // TODO: newline, scrollable, echo to console?
+                        document.getElementById("output").innerHTML += "<br>" + s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
                     }}
                 }});
                 await pyodide.loadPackage("micropip");
                 const micropip = pyodide.pyimport("micropip");
+                // TODO: maybe use https://pyodide.org/en/stable/usage/api/js-api.html#pyodide.loadPackagesFromImports
                 {dependencies}
                 pyodide.runPythonAsync(pythonCode);
                 loading.close();
@@ -202,8 +217,8 @@ def get_docstring_from_py_file(fname):
     docstate = 0
     doc = ""
     with open(filename, "rb") as f:
-        while True:
-            line = f.readline().decode()
+        for line in f:
+            line = line.decode()
             if docstate == 0:
                 if line.lstrip().startswith('"""'):
                     docstate = 1
@@ -256,7 +271,9 @@ class MyHandler(BaseHTTPRequestHandler):
             elif pyname in compute_examples:
                 doc = get_docstring_from_py_file(pyname)
                 deps = compute_examples[pyname].copy()
-                deps.append(f"./{wheel_name}")
+                # deps.append(f"./{wheel_name}") # putting this at the end might not always be the correct way...
+                deps = [f"/{wheel_name}", *deps]
+                deps.append("rendercanvas")
                 html = pyodide_compute_template.format(docstring=doc, example_script=pyname, dependencies="\n".join([f"await micropip.install({dep!r});" for dep in deps]))
                 self.respond(200, html, "text/html")
             else:
