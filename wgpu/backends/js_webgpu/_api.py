@@ -84,29 +84,24 @@ class GPU(classes.GPU, ):
     def __init__(self):
         self._internal = window.navigator.gpu  # noqa: F821
 
-    def request_adapter_async(self, loop=None, canvas=None, **options) -> GPUPromise["GPUAdapter"]:
+    def request_adapter_async(self, canvas=None, **options) -> GPUPromise["GPUAdapter"]:
         options = structs.RequestAdapterOptions(**options)
         js_options = to_js(options, eager_converter=simple_js_accessor)
         js_adapter_promise = self._internal.requestAdapter(js_options)
 
-        if loop is None:
-            # can we use this instead?
-            webloop = js_adapter_promise.get_loop()
-            loop = webloop
-
         def adapter_constructor(js_adapter):
-            return GPUAdapter(js_adapter, loop=loop)
+            return GPUAdapter(js_adapter)
 
-        promise = GPUPromise("request_adapter", adapter_constructor, loop=loop)
+        promise = GPUPromise("request_adapter", adapter_constructor)
 
         js_adapter_promise.then(promise._set_input)  # we chain the js resolution to our promise
         return promise
 
-    def enumerate_adapters_async(self, loop=None) -> GPUPromise[list["GPUAdapter"]]:
+    def enumerate_adapters_async(self) -> GPUPromise[list["GPUAdapter"]]:
         adapter_hp = self.request_adapter_sync(power_preference="high-performance")
         adapter_lp = self.request_adapter_sync(power_preference="low-power")
 
-        promise = GPUPromise("enumerate_adapters", None, loop=loop)
+        promise = GPUPromise("enumerate_adapters", None)
         promise._set_input([adapter_hp, adapter_lp])
         return promise
 
@@ -123,7 +118,7 @@ class GPUAdapter(classes.GPUAdapter, ):
 
     # TODO: requestDevice sync variant likely taken from _classes.py directly!
     # Additional custom methods from _implementation.py:
-    def __init__(self, js_adapter, loop):
+    def __init__(self, js_adapter):
         internal = js_adapter
         # manually turn these into useful python objects
         features = set(js_adapter.features)
@@ -151,7 +146,7 @@ class GPUAdapter(classes.GPUAdapter, ):
 
         adapter_info = classes.GPUAdapterInfo(**py_adapter_info)
 
-        super().__init__(internal=internal, features=features, limits=py_limits, adapter_info=adapter_info, loop=loop)
+        super().__init__(internal=internal, features=features, limits=py_limits, adapter_info=adapter_info)
 
     def request_device_async(self, **kwargs) -> GPUPromise["GPUDevice"]:
         descriptor = structs.DeviceDescriptor(**kwargs)
@@ -164,7 +159,7 @@ class GPUAdapter(classes.GPUAdapter, ):
             # TODO: do we need to hand down a default_queue here?
             return GPUDevice(label, js_device, adapter=self)
 
-        promise = GPUPromise("request_device", device_constructor, loop=self._loop)
+        promise = GPUPromise("request_device", device_constructor)
         js_device_promise.then(promise._set_input)
         return promise
 
@@ -327,7 +322,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         def construct_compute_pipeline(js_cp):
             return classes.GPUComputePipeline(label, js_cp, self)
 
-        promise = GPUPromise("create_compute_pipeline", construct_compute_pipeline, loop=self._loop)
+        promise = GPUPromise("create_compute_pipeline", construct_compute_pipeline)
         js_promise.then(promise._set_input)
 
         return promise
@@ -342,7 +337,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         def construct_render_pipeline(js_rp):
             return classes.GPURenderPipeline(label, js_rp, self)
 
-        promise = GPUPromise("create_render_pipeline", construct_render_pipeline, loop=self._loop)
+        promise = GPUPromise("create_render_pipeline", construct_render_pipeline)
         js_promise.then(promise._set_input)
 
         return promise
@@ -391,7 +386,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
     def map_async(self, mode: flags.MapModeFlags | None, offset: int = 0, size: int | None = None) -> GPUPromise[None]:
         map_promise = self._internal.mapAsync(mode, offset, size)
 
-        promise = GPUPromise("buffer.map_async", None, loop=self._device._loop)
+        promise = GPUPromise("buffer.map_async", None)
         map_promise.then(promise._set_input)  # presumably this signals via a none callback to nothing?
         return promise
 
