@@ -24,6 +24,7 @@ def detect_current_async_lib():
         elif libname == "pyodide":
             libname = "asyncio"
         return libname
+    return "asyncio" # fallback to asyncio inside a pyodide async stack switch... understand this: https://github.com/pyodide/pyodide/issues/6077
 
 
 def detect_current_call_soon_threadsafe():

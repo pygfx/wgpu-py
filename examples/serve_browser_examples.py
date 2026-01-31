@@ -31,6 +31,7 @@ from codegen import update_js, file_cache
 uharfbuzz_wheel = "uharfbuzz-0.1.dev1+ga19185453-cp310-abi3-pyodide_2025_0_wasm32.whl"
 pygfx_wheel = "pygfx-0.15.3-py3-none-any.whl"
 pygfx_deps = [uharfbuzz_wheel, "hsluv", "pylinalg", "jinja2", pygfx_wheel]
+rendercanvas_deps = ["sniffio", "rendercanvas-2.4.2-py3-none-any.whl"]
 # pygfx_wheel = "pygfx"
 
 #examples that don't require a canvas, we will capture the output to a div
@@ -55,7 +56,7 @@ graphics_examples = {
     "imgui_basic_example.py": ["imgui-bundle"], # might even work without wgpu as imgui already works in pyodide...
     "imgui_renderer_sea.py": ["numpy", "imgui-bundle"],
     # pygfx example
-    # "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"],
+    "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"],
     # "fpl_example.py": [*pygfx_deps, "fastplotlib"],
     # theoretically WGSL shadertoys work (with a couple tweaks... needs a new release soonish)
     "shadertoy_blink.py": ["numpy", "sniffio", "requests", "wgpu_shadertoy-0.2.0-py3-none-any.whl"],
@@ -141,7 +142,7 @@ pyodide_compute_template = """
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>{example_script} via Pyodide</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/dev/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
 </head>
 
 <dialog id="loading" style='outline: none; border: none; background: transparent;'>
@@ -174,7 +175,9 @@ pyodide_compute_template = """
                 const micropip = pyodide.pyimport("micropip");
                 // TODO: maybe use https://pyodide.org/en/stable/usage/api/js-api.html#pyodide.loadPackagesFromImports
                 {dependencies}
-                pyodide.runPythonAsync(pythonCode);
+                // pyodide.setDebug(true);
+                let ret = await pyodide.runPythonAsync(pythonCode);
+                console.log("Example finished:", ret);
                 loading.close();
             }} catch (err) {{
                 loading.innerHTML = "Failed to load: " + err;
@@ -243,6 +246,7 @@ class MyHandler(BaseHTTPRequestHandler):
             # TODO: add progress instead of blocking before load?
             # also seems like this might get called multiple times?
             try:
+                # this doesn't seem to work correctly. works on startup but not upon visiting this page.
                 build_wheel()
             except Exception as err:
                 self.respond(500, str(err), "text/plain")
@@ -262,7 +266,7 @@ class MyHandler(BaseHTTPRequestHandler):
             pyname = name.replace(".html", ".py")
             if pyname in graphics_examples:
                 deps = graphics_examples[pyname].copy() # don't modify them multiple times!
-                deps.append("rendercanvas")
+                deps.extend(rendercanvas_deps)
                 deps.append(f"./{wheel_name}")
                 # sometimes sniffio is missing, other times it's not?
                 doc = get_docstring_from_py_file(pyname)
@@ -273,7 +277,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 deps = compute_examples[pyname].copy()
                 # deps.append(f"./{wheel_name}") # putting this at the end might not always be the correct way...
                 deps = [f"/{wheel_name}", *deps]
-                deps.append("rendercanvas")
+                deps.extend(rendercanvas_deps)
                 html = pyodide_compute_template.format(docstring=doc, example_script=pyname, dependencies="\n".join([f"await micropip.install({dep!r});" for dep in deps]))
                 self.respond(200, html, "text/html")
             else:

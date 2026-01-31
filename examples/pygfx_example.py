@@ -1,23 +1,20 @@
 """
 Pygfx Example
 =============
-Placeholder for just trying something simple, right now this is from hellow_triangle.py
+Placeholder for just trying something simple, right now this is from hello_triangle.py
 """
 
 
-import os
-os.environ["PYGFX_DISABLE_SYSTEM_FONTS"] = "1"
+# import os
+# os.environ["PYGFX_DISABLE_SYSTEM_FONTS"] = "1"
 
 from rendercanvas.auto import RenderCanvas, loop
 import pygfx as gfx
 
 
 canvas = RenderCanvas()
-print(f"{canvas=}")
-renderer = gfx.WgpuRenderer(canvas)
-print(f"{renderer=}")
+renderer = gfx.WgpuRenderer(canvas, ppaa="none")
 camera = gfx.NDCCamera()
-print(f"{camera=}")
 
 triangle = gfx.Mesh(
     gfx.Geometry(
@@ -27,7 +24,6 @@ triangle = gfx.Mesh(
     ),
     gfx.MeshBasicMaterial(color_mode="vertex"),
 )
-print(triangle)
 
 
 if __name__ == "__main__":

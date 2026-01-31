@@ -31,6 +31,9 @@ def simple_js_accessor(value, convert, cache=None):
             camel_key = to_camel_case(k)
             # if there is a dict further down... we still need to fix those keys
             if isinstance(v, dict):
+                if len(v) == 0:
+                    result[camel_key] = to_js(v, depth=1) # empty dicts need special treatment?
+                    continue
                 if(k == "resource"): # this one is a more complex type.... https://www.w3.org/TR/webgpu/#typedefdef-gpubindingresource
                     # print("struct with resource dict detected", k, v)
                     v = structs.BufferBinding(**v)
