@@ -1,31 +1,59 @@
 """
 Pygfx Example
 =============
-Placeholder for just trying something simple, right now this is from hello_triangle.py
+Placeholder for just trying something simple, right now this is from lights_basic.py
 """
 
-
-# import os
-# os.environ["PYGFX_DISABLE_SYSTEM_FONTS"] = "1"
+import time
+import numpy as np
 
 from rendercanvas.auto import RenderCanvas, loop
 import pygfx as gfx
+import pylinalg as la
 
+renderer = gfx.renderers.WgpuRenderer(RenderCanvas())
+scene = gfx.Scene()
 
-canvas = RenderCanvas()
-renderer = gfx.WgpuRenderer(canvas, ppaa="none")
-camera = gfx.NDCCamera()
-
-triangle = gfx.Mesh(
-    gfx.Geometry(
-        indices=[(0, 1, 2)],
-        positions=[(0.0, -0.5, 0), (0.5, 0.5, 0), (-0.5, 0.75, 0)],
-        colors=[(1, 1, 0, 1), (1, 0, 1, 1), (0, 1, 1, 1)],
-    ),
-    gfx.MeshBasicMaterial(color_mode="vertex"),
+cube = gfx.Mesh(
+    gfx.box_geometry(20, 20, 20),
+    gfx.MeshPhongMaterial(),
 )
+cube.local.rotation = la.quat_from_euler((np.pi / 6, np.pi / 6), order="XY")
+scene.add(cube)
+
+light = gfx.DirectionalLight("#0040ff", 3)
+light.local.x = 15
+light.local.y = 20
+
+scene.add(light.add(gfx.DirectionalLightHelper(10)))
+
+light2 = gfx.PointLight("#ffaa00", 300, decay=2)  # 300 candela
+light2.local.x = -15
+light2.local.y = 20
+
+scene.add(light2.add(gfx.PointLightHelper()))
+
+scene.add(gfx.AmbientLight("#fff", 0.2))
+
+camera = gfx.PerspectiveCamera(70, 16 / 9)
+camera.show_object(cube, scale=1.5)
+controller = gfx.OrbitController(camera, register_events=renderer)
+
+
+def animate():
+    t = time.time() * 0.1
+    scale = 30
+
+    light2.local.position = (
+        np.cos(t) * np.cos(3 * t) * scale,
+        np.cos(3 * t) * np.sin(t) * scale,
+        np.sin(3 * t) * scale,
+    )
+
+    renderer.render(scene, camera)
+    renderer.request_draw()
 
 
 if __name__ == "__main__":
-    canvas.request_draw(lambda: renderer.render(triangle, camera))
+    renderer.request_draw(animate)
     loop.run()

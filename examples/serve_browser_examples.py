@@ -56,7 +56,7 @@ graphics_examples = {
     "imgui_basic_example.py": ["imgui-bundle"], # might even work without wgpu as imgui already works in pyodide...
     "imgui_renderer_sea.py": ["numpy", "imgui-bundle"],
     # pygfx example
-    "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"],
+    # "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"],
     # "fpl_example.py": [*pygfx_deps, "fastplotlib"],
     # theoretically WGSL shadertoys work (with a couple tweaks... needs a new release soonish)
     "shadertoy_blink.py": ["numpy", "sniffio", "requests", "wgpu_shadertoy-0.2.0-py3-none-any.whl"],
@@ -164,7 +164,8 @@ pyodide_compute_template = """
             try {{
                 let example_name = {example_script!r};
                 pythonCode = await (await fetch(example_name)).text();
-                let pyodide = await loadPyodide();
+                // this env var is really only used for the pygfx examples - so maybe we make a script for that gallery instead?
+                let pyodide = await loadPyodide({{env: {{'PYGFX_DEFAULT_PPAA': 'none' }}}});
                 pyodide.setStdout({{
                     batched: (s) => {{
                         // TODO: newline, scrollable, echo to console?
@@ -175,7 +176,7 @@ pyodide_compute_template = """
                 const micropip = pyodide.pyimport("micropip");
                 // TODO: maybe use https://pyodide.org/en/stable/usage/api/js-api.html#pyodide.loadPackagesFromImports
                 {dependencies}
-                // pyodide.setDebug(true);
+                pyodide.setDebug(true);
                 let ret = await pyodide.runPythonAsync(pythonCode);
                 console.log("Example finished:", ret);
                 loading.close();

@@ -17,6 +17,7 @@ file_preamble ="""
 
 from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
+from ..._coreutils import str_flag_to_int
 from typing import Union
 
 from pyodide.ffi import to_js, run_sync, JsProxy

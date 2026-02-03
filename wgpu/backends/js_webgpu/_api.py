@@ -3,6 +3,7 @@
 
 from ... import classes, structs, enums, flags
 from ...structs import ArrayLike, Sequence # for typing hints
+from ..._coreutils import str_flag_to_int
 from typing import Union
 
 from pyodide.ffi import to_js, run_sync, JsProxy
@@ -384,11 +385,19 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         Uint8Array.new(array_buf).assign(data)
 
     def map_async(self, mode: flags.MapModeFlags | None, offset: int = 0, size: int | None = None) -> GPUPromise[None]:
+        if isinstance(mode, str):
+            mode = str_flag_to_int(flags.MapMode, mode)
         map_promise = self._internal.mapAsync(mode, offset, size)
 
         promise = GPUPromise("buffer.map_async", None)
         map_promise.then(promise._set_input)  # presumably this signals via a none callback to nothing?
         return promise
+
+    def read_mapped(self, buffer_offset: int | None = None, size: int | None = None, *, copy: bool = True):
+        # TODO: check the values and then maybe rewrite read_buffer to call these functions intead?
+        array_buf = self._internal.getMappedRange(buffer_offset, size)
+        res = array_buf.slice(0)
+        return res.to_py()
 
     @property
     def map_state(self) -> enums.BufferMapState:
