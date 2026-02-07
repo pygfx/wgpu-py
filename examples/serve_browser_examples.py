@@ -41,7 +41,7 @@ compute_examples = {
     "compute_textures.py": ["numpy", "imageio"], #imageio doesn't work in pyodide right now (fetch?)
     "compute_timestamps.py": [], # this one still crashes as the descriptor doesn't get converted into an object...
     # try these two up here too to make sure it's not the canvas. (having them twice is a problem because only one .html variant exsits)
-    "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"], # currnetly hangs... so I digging down on that
+    "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio", "imgui-bundle"], # currnetly hangs... so I digging down on that
     "fpl_example.py": [*pygfx_deps, "fastplotlib"], #also hangs but I eventually want to get to this.
 }
 
@@ -266,7 +266,7 @@ class MyHandler(BaseHTTPRequestHandler):
             pyname = name.replace(".html", ".py")
             if pyname in graphics_examples:
                 deps = graphics_examples[pyname].copy() # don't modify them multiple times!
-                deps.extend(rendercanvas_deps)
+                deps = [*rendercanvas_deps, *deps] # so the rendercanvas deps aren't overwritten by rendercanvas being a dependency of pygfx... surely there is a better way.
                 deps.append(f"./{wheel_name}")
                 # sometimes sniffio is missing, other times it's not?
                 doc = get_docstring_from_py_file(pyname)
@@ -277,7 +277,7 @@ class MyHandler(BaseHTTPRequestHandler):
                 deps = compute_examples[pyname].copy()
                 # deps.append(f"./{wheel_name}") # putting this at the end might not always be the correct way...
                 deps = [f"/{wheel_name}", *deps]
-                deps.extend(rendercanvas_deps)
+                deps = [*rendercanvas_deps, *deps] # there actually is a better way for pyodide. you can put multiple deps in the install call: https://micropip.pyodide.org/en/stable/project/api.html#micropip.install
                 html = pyodide_compute_template.format(docstring=doc, example_script=pyname, dependencies="\n".join([f"await micropip.install({dep!r});" for dep in deps]))
                 self.respond(200, html, "text/html")
             else:

@@ -47,7 +47,7 @@ def simple_js_accessor(value, convert, cache=None):
                 # print(dir(value))
                 v_struct_type_name = value.__annotations__[k].partition("Struct")[0] # will not work if there is more than two options -.-
                 # print("likely v struct type_name", v_struct_type_name)
-                v_struct_type = structs.__dict__[v_struct_type_name] # because the annotation is just a string... doesn't feel great
+                v_struct_type = structs.__dict__.get(v_struct_type_name, dict) # because the annotation is just a string... doesn't feel great
                 # print("likely v struct type", v_struct_type)
                 v = v_struct_type(**v)
                 # print("converted to struct", v)
@@ -58,7 +58,7 @@ def simple_js_accessor(value, convert, cache=None):
                     # print("struct with list detected", value, k, v)
                     v_struct_type_name = value.__annotations__[k].removeprefix("Sequence[").partition("Struct")[0]
                     # print("likely v struct type_name", v_struct_type_name)
-                    v_struct_type = structs.__dict__[v_struct_type_name]
+                    v_struct_type = structs.__dict__.get(v_struct_type_name, dict)
                     # print("likely v struct type", v_struct_type)
                     v = [v_struct_type(**item) for item in v]
                     # print("converted to list of struct", v)
