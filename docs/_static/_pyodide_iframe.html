@@ -25,7 +25,8 @@
                 await pyodide.loadPackage("micropip");
                 const micropip = pyodide.pyimport("micropip");
                 // we don't always need all of these... but to avoid more templating, let's have them all for now...
-                await micropip.install('rendercanvas');
+                await micropip.install('sniffio');
+                await micropip.install('rendercanvas==2.4.2');
                 await micropip.install('numpy');
                 await micropip.install('imgui-bundle');
                 // The below loads wgpu from pypi. But we will replace it with the name of the wheel,
