@@ -38,7 +38,7 @@ compute_examples = {
     # "compute_int64.py", # this one requires native only features, so won't work in the browser for now
     "compute_noop.py": [], # no deps
     "compute_matmul.py": ["numpy"],
-    "compute_textures.py": ["numpy", "imageio"], #imageio doesn't work in pyodide right now (fetch?)
+    "compute_textures.py": [], #["numpy", "imageio"], #imageio doesn't work in pyodide right now (fetch?)
     "compute_timestamps.py": [], # this one still crashes as the descriptor doesn't get converted into an object...
     # try these two up here too to make sure it's not the canvas. (having them twice is a problem because only one .html variant exsits)
     "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio", "imgui-bundle"], # currnetly hangs... so I digging down on that
@@ -176,6 +176,7 @@ pyodide_compute_template = """
                 const micropip = pyodide.pyimport("micropip");
                 // TODO: maybe use https://pyodide.org/en/stable/usage/api/js-api.html#pyodide.loadPackagesFromImports
                 {dependencies}
+                await pyodide.loadPackagesFromImports(pythonCode);
                 pyodide.setDebug(true);
                 let ret = await pyodide.runPythonAsync(pythonCode);
                 console.log("Example finished:", ret);

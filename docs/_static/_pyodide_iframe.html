@@ -27,9 +27,8 @@
                 // we don't always need all of these... but to avoid more templating, let's have them all for now...
                 await micropip.install('sniffio');
                 await micropip.install('rendercanvas==2.4.2');
-                await micropip.install('numpy');
-                await micropip.install('imgui-bundle');
-                // The below loads wgpu from pypi. But we will replace it with the name of the wheel,
+                await pyodide.loadPackagesFromImports(pythonCode); // load all the packages that an example imports... but not from pypi?
+                // The below loads wgpu from pypi. But we will replace it with the name of the wheel, Maybe it's better to use constraints and a static url: https://micropip.pyodide.org/en/stable/project/usage.html#constraining-indirect-dependencies
                 // so that it's loaded from the docs (in _static).
                 await micropip.install("wgpu");
                 // Run the Python code async because some calls are async it seems.
