@@ -528,25 +528,25 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
         self._internal.copyBufferToBuffer(js_source, source_offset, js_destination, destination_offset, size)
 
     def copy_buffer_to_texture(self, source: structs.TexelCopyBufferInfoStruct | None = None, destination: structs.TexelCopyTextureInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
-        source_desc = structs.TexelCopyBufferInfo(**source)
+        source_desc = source if isinstance(source, structs.Struct) else structs.TexelCopyBufferInfo(**source)
         js_source = to_js(source_desc, eager_converter=simple_js_accessor)
-        destination_desc = structs.TexelCopyTextureInfo(**destination)
+        destination_desc = destination if isinstance(destination, structs.Struct) else structs.TexelCopyTextureInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.copyBufferToTexture(js_source, js_destination, copy_size)
 
     def copy_texture_to_buffer(self, source: structs.TexelCopyTextureInfoStruct | None = None, destination: structs.TexelCopyBufferInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
-        source_desc = structs.TexelCopyTextureInfo(**source)
+        source_desc = source if isinstance(source, structs.Struct) else structs.TexelCopyTextureInfo(**source)
         js_source = to_js(source_desc, eager_converter=simple_js_accessor)
-        destination_desc = structs.TexelCopyBufferInfo(**destination)
+        destination_desc = destination if isinstance(destination, structs.Struct) else structs.TexelCopyBufferInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.copyTextureToBuffer(js_source, js_destination, copy_size)
 
     def copy_texture_to_texture(self, source: structs.TexelCopyTextureInfoStruct | None = None, destination: structs.TexelCopyTextureInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
-        source_desc = structs.TexelCopyTextureInfo(**source)
+        source_desc = source if isinstance(source, structs.Struct) else structs.TexelCopyTextureInfo(**source)
         js_source = to_js(source_desc, eager_converter=simple_js_accessor)
-        destination_desc = structs.TexelCopyTextureInfo(**destination)
+        destination_desc = destination if isinstance(destination, structs.Struct) else structs.TexelCopyTextureInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.copyTextureToTexture(js_source, js_destination, copy_size)
@@ -657,7 +657,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self._internal.writeBuffer(js_buffer, buffer_offset, js_data, data_offset, size)
 
     def write_texture(self, destination: structs.TexelCopyTextureInfoStruct | None = None, data: Union[ArrayLike, None] = None, data_layout: structs.TexelCopyBufferLayoutStruct | None = None, size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
-        destination_desc = structs.TexelCopyTextureInfo(**destination)
+        destination_desc = destination if isinstance(destination, structs.Struct) else structs.TexelCopyTextureInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
     
         if data is not None:
@@ -668,15 +668,15 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         else:
             js_data = None
 
-        data_layout_desc = structs.TexelCopyBufferLayout(**data_layout)
+        data_layout_desc = data_layout if isinstance(data_layout, structs.Struct) else structs.TexelCopyBufferLayout(**data_layout)
         js_dataLayout = to_js(data_layout_desc, eager_converter=simple_js_accessor)
         # TODO: argument size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.writeTexture(js_destination, js_data, js_dataLayout, size)
 
     def copy_external_image_to_texture(self, source: structs.CopyExternalImageSourceInfoStruct | None = None, destination: structs.CopyExternalImageDestInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
-        source_desc = structs.CopyExternalImageSourceInfo(**source)
+        source_desc = source if isinstance(source, structs.Struct) else structs.CopyExternalImageSourceInfo(**source)
         js_source = to_js(source_desc, eager_converter=simple_js_accessor)
-        destination_desc = structs.CopyExternalImageDestInfo(**destination)
+        destination_desc = destination if isinstance(destination, structs.Struct) else structs.CopyExternalImageDestInfo(**destination)
         js_destination = to_js(destination_desc, eager_converter=simple_js_accessor)
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.copyExternalImageToTexture(js_source, js_destination, copy_size)
@@ -710,6 +710,44 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         array_buf = js_temp_buffer.getMappedRange()
         res = array_buf.slice(0)
         js_temp_buffer.unmap()
+        return res.to_py()
+
+    def read_texture(self, source: dict | structs.TexelCopyTextureInfoStruct, data_layout: dict | structs.TexelCopyBufferLayoutStruct, size: tuple[int, int, int]):  # pyodide doesn't like memoryview[int] as as a return type hint?
+        # normalize into struct objects
+        source = structs.TexelCopyTextureInfo(**source)
+        data_layout = structs.TexelCopyBufferLayout(**data_layout)
+
+        device: GPUDevice = source.texture._device
+        lazy_size = source.texture._nbytes
+
+        # can't do it in js directly because we mix it with the layout for the info struct...
+        temp_buffer = device.create_buffer(
+            label="texture read temp buffer",
+            size=lazy_size,  # TODO: needs to actually calculate the number including offset etc
+            usage=flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ,
+            mapped_at_creation=False,
+        )
+
+        destination = structs.TexelCopyBufferInfo(
+            offset=0,
+            bytes_per_row=data_layout.bytes_per_row,
+            rows_per_image=data_layout.rows_per_image,
+            buffer=temp_buffer,
+        )
+
+        encoder = device.create_command_encoder(label="texture read encoder")
+        encoder.copy_texture_to_buffer(
+            source=source,
+            destination=destination,
+            copy_size=size,
+        )
+
+        self.submit([encoder.finish()])
+        # TODO: this all could be replaced with read_buffer? but maybe that adds another temp buffer we don't want
+        temp_buffer.map_sync(flags.MapMode.READ, 0, lazy_size)
+        array_buf = temp_buffer._internal.getMappedRange(0, lazy_size)
+        res = array_buf.slice(0)
+        temp_buffer._internal.unmap()
         return res.to_py()
 
 

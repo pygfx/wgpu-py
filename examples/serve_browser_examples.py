@@ -169,6 +169,7 @@ pyodide_compute_template = """
                     batched: (s) => {{
                         // TODO: newline, scrollable, echo to console?
                         document.getElementById("output").innerHTML += "<br>" + s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        console.log(s); // so we also have it formatted
                     }}
                 }});
                 await pyodide.loadPackage("micropip");
@@ -180,7 +181,9 @@ pyodide_compute_template = """
                 console.log("Example finished:", ret);
                 loading.close();
             }} catch (err) {{
+                // TODO: this could be formatted better as this overlaps and is unreadable...
                 loading.innerHTML = "Failed to load: " + err;
+                console.error(err); // so we have it here too
             }}
         }}
         main();
@@ -247,6 +250,7 @@ class MyHandler(BaseHTTPRequestHandler):
             # also seems like this might get called multiple times?
             try:
                 # this doesn't seem to work correctly. works on startup but not upon visiting this page.
+                # I think it doesn't see updates to jswriter.py while the server is running.
                 build_wheel()
             except Exception as err:
                 self.respond(500, str(err), "text/plain")

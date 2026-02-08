@@ -222,8 +222,10 @@ def generate_js_webgpu_api() -> str:
                         js_arg_list.append(f"js_{arg.name}")
                     # TODO: sequence of complex type?
 
+                    # TODO: can we use a walrus operator for struct_name here?
                     elif arg.typename.removeprefix('GPU').removesuffix("?") in idl.structs and arg.typename not in ("GPUExtent3D", "GPUColor"):
-                        conversion_lines.append(f"{py_name}_desc = structs.{arg.typename.removeprefix('GPU').removesuffix('?')}(**{py_name})")
+                        # maybe we can skip the round trip to structs?
+                        conversion_lines.append(f"{py_name}_desc = {py_name} if isinstance({py_name}, structs.Struct) else structs.{arg.typename.removeprefix('GPU').removesuffix('?')}(**{py_name})")
                         conversion_lines.append(f"js_{arg.name} = to_js({py_name}_desc, eager_converter=simple_js_accessor)")
                         js_arg_list.append(f"js_{arg.name}")
                     elif py_name.endswith("data"): # maybe not an exhaustive check?
