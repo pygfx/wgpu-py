@@ -117,6 +117,9 @@ def test_base_wgpu_api():
     assert hex(id(device)) in repr(device)
     assert device.label in repr(device)
 
+    # Check ids (assuming no other thread is creating ids)
+    assert device.uid == queue.uid + 1
+
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 def test_backend_is_selected_automatically():
