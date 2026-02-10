@@ -297,7 +297,10 @@ def test_render_timestamps_inside_passes():
     runner.run_write_timestamp_inside_passes_test(render=True)
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Known to currently fail (and sometimes hang) on MacOS")
+@pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="Known to currently fail (and sometimes hang) on MacOS",
+)
 def test_render_timestamps_inside_encoder():
     runner = Runner()
     if "timestamp-query-inside-encoders" not in runner.device.features:
