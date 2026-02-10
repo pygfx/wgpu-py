@@ -6,6 +6,7 @@ from io import StringIO
 
 import wgpu
 from wgpu.utils import get_default_device  # noqa: F401 - imported by tests
+import pytest
 
 
 class LogCaptureHandler(logging.StreamHandler):
@@ -37,17 +38,20 @@ def run_tests(scope):
         if callable(func) and func.__name__.startswith("test_"):
             nargs = func.__code__.co_argcount
             argnames = [func.__code__.co_varnames[i] for i in range(nargs)]
-            if not argnames:
-                print(f"Running {func.__name__} ...")
-                func()
-            elif argnames == ["caplog"]:
-                print(f"Running {func.__name__} ...")
-                logging.root.addHandler(caplog)
-                caplog.reset()
-                func(caplog)
-                logging.root.removeHandler(caplog)
-            else:
-                print(f"SKIPPING {func.__name__} because it needs args")
+            try:
+                if not argnames:
+                    print(f"Running {func.__name__} ...")
+                    func()
+                elif argnames == ["caplog"]:
+                    print(f"Running {func.__name__} ...")
+                    logging.root.addHandler(caplog)
+                    caplog.reset()
+                    func(caplog)
+                    logging.root.removeHandler(caplog)
+                else:
+                    print(f"SKIPPING {func.__name__} because it needs args")
+            except pytest.skip.Exception:
+                print(f"SKIPPING {func.__name__} by pytest skip")
     print("Done")
 
 

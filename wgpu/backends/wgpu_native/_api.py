@@ -2463,6 +2463,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         raise NotImplementedError()
 
     def destroy(self) -> None:
+        if self._poller is not None:
+            self._poller.stop()
+            self._poller = None
         # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
         # Therefore we must not set self._internal to None.
         internal = self._internal
@@ -2471,12 +2474,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             libf.wgpuDeviceDestroy(internal)
 
     def _release(self):
-        if self._queue is not None:
-            queue, self._queue = self._queue, None
-            queue._release()
         if self._poller is not None:
             self._poller.stop()
             self._poller = None
+        if self._queue is not None:
+            queue, self._queue = self._queue, None
+            queue._release()
         super()._release()
 
 
