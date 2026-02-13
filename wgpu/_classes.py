@@ -140,8 +140,6 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
 
-        # note, feature_level current' does nothing: # not used currently: https://gpuweb.github.io/gpuweb/#dom-gpurequestadapteroptions-featurelevel
-
         return gpu.request_adapter_async(
             feature_level=feature_level,
             power_preference=power_preference,
