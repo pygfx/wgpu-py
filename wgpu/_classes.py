@@ -125,8 +125,7 @@ class GPU:
         force_fallback_adapter: bool = False,
         canvas: CanvasLike | None = None,
     ) -> GPUPromise[GPUAdapter]:
-        """Create a `GPUAdapter`, the object that represents an abstract wgpu
-        implementation, from which one can request a `GPUDevice`.
+        """Create a `GPUAdapter`, the object that represents an abstract wgpu implementation, from which one can request a `GPUDevice`.
 
         Arguments:
             feature_level (str): The feature level "core" (default) or "compatibility".
@@ -135,7 +134,7 @@ class GPU:
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
             canvas : The canvas or context that the adapter should be able to render to. This can typically
-                 be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
+                be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
@@ -913,10 +912,11 @@ class GPUDevice(GPUObjectBase):
     def create_bind_group_layout(
         self, *, label: str = "", entries: Sequence[structs.BindGroupLayoutEntryStruct]
     ) -> GPUBindGroupLayout:
-        """Create a `GPUBindGroupLayout` object. One or more
-        such objects are passed to `create_pipeline_layout()` to
-        specify the (abstract) pipeline layout for resources. See the
-        docs on bind groups for details.
+        """Create a `GPUBindGroupLayout` object.
+
+        One or more such objects are passed to `create_pipeline_layout()` to
+        specify the (abstract) pipeline layout for resources. See the docs on
+        bind groups for details.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -954,8 +954,7 @@ class GPUDevice(GPUObjectBase):
         layout: GPUBindGroupLayout,
         entries: Sequence[structs.BindGroupEntryStruct],
     ) -> GPUBindGroup:
-        """Create a `GPUBindGroup` object, which can be used in
-        `pass.set_bind_group()` to attach a group of resources.
+        """Create a `GPUBindGroup` object, which can be used in `pass.set_bind_group()` to attach a group of resources.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -994,8 +993,7 @@ class GPUDevice(GPUObjectBase):
     def create_pipeline_layout(
         self, *, label: str = "", bind_group_layouts: Sequence[GPUBindGroupLayout]
     ) -> GPUPipelineLayout:
-        """Create a `GPUPipelineLayout` object, which can be
-        used in `create_render_pipeline()` or `create_compute_pipeline()`.
+        """Create a `GPUPipelineLayout` object, which can be used in `create_render_pipeline()` or `create_compute_pipeline()`.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -1219,9 +1217,9 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {}); -> USVString label = ""
     def create_command_encoder(self, *, label: str = "") -> GPUCommandEncoder:
-        """Create a `GPUCommandEncoder` object. A command
-        encoder is used to record commands, which can then be submitted
-        at once to the GPU.
+        """Create a `GPUCommandEncoder` object.
+
+        A command encoder is used to record commands, which can then be submitted at once to the GPU.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -1930,8 +1928,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         label: str = "",
         timestamp_writes: structs.ComputePassTimestampWritesStruct | None = None,
     ) -> GPUComputePassEncoder:
-        """Record the beginning of a compute pass. Returns a
-        `GPUComputePassEncoder` object.
+        """Record the beginning of a compute pass. Returns a `GPUComputePassEncoder` object.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -1951,8 +1948,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         timestamp_writes: structs.RenderPassTimestampWritesStruct | None = None,
         max_draw_count: int = 50000000,
     ) -> GPURenderPassEncoder:
-        """Record the beginning of a render pass. Returns a
-        `GPURenderPassEncoder` object.
+        """Record the beginning of a render pass. Returns a `GPURenderPassEncoder` object.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -2054,8 +2050,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 
     # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {}); -> USVString label = ""
     def finish(self, *, label: str = "") -> GPUCommandBuffer:
-        """Finish recording. Returns a `GPUCommandBuffer` to
-        submit to a `GPUQueue`.
+        """Finish recording. Returns a `GPUCommandBuffer` to submit to a `GPUQueue`.
 
         Arguments:
             label (str): A human-readable label. Optional.
