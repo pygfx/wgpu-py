@@ -1,0 +1,272 @@
+import asyncio
+
+import wgpu
+from testutils import run_tests
+from wgpu.utils.device import DefaultDeviceHelper
+import pytest
+
+
+# %%%%% Is the same
+
+
+def test_default_device_is_same():
+    helper = DefaultDeviceHelper()
+
+    device1 = helper.get_default_device()
+    device2 = helper.get_default_device()
+    device3 = helper.get_default_device()
+
+    assert isinstance(device1, wgpu.GPUDevice)
+    assert device1 is device2
+    assert device1 is device3
+
+
+def test_default_device_async():
+    helper = DefaultDeviceHelper()
+
+    async def main():
+        device1 = await helper.request_default_device()
+        device2 = await helper.request_default_device()
+        device3 = await helper.request_default_device()
+
+        assert isinstance(device1, wgpu.GPUDevice)
+        assert device1 is device2
+        assert device1 is device3
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(main())
+
+
+def test_default_device_async_mix1():
+    helper = DefaultDeviceHelper()
+
+    async def main():
+        device1 = await helper.request_default_device()
+        device2 = helper.get_default_device()
+
+        assert isinstance(device1, wgpu.GPUDevice)
+        assert device1 is device2
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(main())
+
+
+def test_default_device_async_mix2():
+    helper = DefaultDeviceHelper()
+
+    async def main():
+        device2 = helper.get_default_device()
+        device1 = await helper.request_default_device()
+
+        assert isinstance(device1, wgpu.GPUDevice)
+        assert device1 is device2
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(main())
+
+
+def test_default_device_async_mix3():
+    helper = DefaultDeviceHelper()
+
+    async def main():
+        p = helper.request_default_device()
+        device2 = helper.get_default_device()
+        device1 = await p
+
+        assert isinstance(device1, wgpu.GPUDevice)
+        assert device1 is device2
+
+    loop = asyncio.new_event_loop()
+    loop.run_until_complete(main())
+
+
+# %%%%% Args
+
+
+helper = DefaultDeviceHelper()
+
+
+def test_default_device_configure_feature_level():
+    helper = DefaultDeviceHelper()
+
+    # Configure
+
+    helper.preconfigure_default_device("test", feature_level="core")
+    assert helper._adapter_kwargs["feature_level"] == "core"
+
+    helper.preconfigure_default_device("test", feature_level="compatibility")
+    assert helper._adapter_kwargs["feature_level"] == "compatibility"
+
+    with pytest.raises(TypeError):
+        helper.preconfigure_default_device("test", feature_level=42)
+    with pytest.raises(ValueError):
+        helper.preconfigure_default_device("test", feature_level="shazzbot")
+
+    assert helper._adapter_kwargs["feature_level"] == "compatibility"
+
+
+def test_default_device_configure_power_preference():
+    helper = DefaultDeviceHelper()
+
+    # Configure
+
+    helper.preconfigure_default_device("test", power_preference="low-power")
+    assert helper._adapter_kwargs["power_preference"] == "low-power"
+
+    helper.preconfigure_default_device("test", power_preference="high-performance")
+    assert helper._adapter_kwargs["power_preference"] == "high-performance"
+
+    with pytest.raises(TypeError):
+        helper.preconfigure_default_device("test", power_preference=42)
+    with pytest.raises(ValueError):
+        helper.preconfigure_default_device("test", power_preference="shazzbot")
+
+    assert helper._adapter_kwargs["power_preference"] == "high-performance"
+
+
+def test_default_device_configure_force_fallback_adapter():
+    helper = DefaultDeviceHelper()
+
+    # Configure
+
+    helper.preconfigure_default_device("test", force_fallback_adapter=True)
+    assert helper._adapter_kwargs["force_fallback_adapter"] == True  # noqa
+
+    with pytest.raises(TypeError):
+        helper.preconfigure_default_device("test", force_fallback_adapter="yes")
+
+
+def test_default_device_configure_canvas():
+    # Canvases are ducktyped, so they can be str, which don't match the interface, in which case they are ignored
+    canvas1 = object()
+    canvas2 = object()
+
+    helper = DefaultDeviceHelper()
+
+    # Configure
+
+    helper.preconfigure_default_device("test", canvas=canvas1)  # ok
+    assert helper._adapter_kwargs["canvas"] is canvas1
+    helper.preconfigure_default_device("test", canvas=canvas2)  # override + warn
+    assert helper._adapter_kwargs["canvas"] is canvas2
+
+    # Get device
+
+    _device = helper.get_default_device()
+
+    # kwargs get cleared, to avoid lingering refs
+    assert helper._adapter_kwargs == {}
+
+    with pytest.raises(RuntimeError):
+        helper.preconfigure_default_device("test", canvas=canvas1)  # ok
+
+
+def test_default_device_configure_label():
+    helper = DefaultDeviceHelper()
+
+    # Configure
+
+    helper.preconfigure_default_device("test", label="foobar")  # ok
+    helper.preconfigure_default_device("test", label="spam")  # override + warn
+
+    assert helper._device_kwargs["label"] == "spam"
+
+    with pytest.raises(TypeError):
+        helper.preconfigure_default_device("test", label=42)
+
+    # Get device
+
+    device1 = helper.get_default_device()
+
+    assert device1.label == "spam"
+
+    # kwargs get cleared, to avoid lingering refs
+    assert helper._device_kwargs == {}
+
+    with pytest.raises(RuntimeError):
+        helper.preconfigure_default_device("test", label="too_late")
+
+
+def test_default_device_configure_required_features():
+    helper = DefaultDeviceHelper()
+
+    # Configure
+
+    helper.preconfigure_default_device(
+        "test",
+        required_features={
+            "timestamp-query",
+            "float32-filterable",
+        },
+    )
+    helper.preconfigure_default_device("test", required_features=["shader-f16"])
+    helper.preconfigure_default_device("test", required_features={"float32-filterable"})
+
+    # For features, the union operator is applied
+    assert helper._device_kwargs["required_features"] == {
+        "timestamp-query",
+        "float32-filterable",
+        "shader-f16",
+    }
+
+    with pytest.raises(TypeError):
+        helper.preconfigure_default_device("test", required_features=42)
+    with pytest.raises(ValueError):
+        helper.preconfigure_default_device(
+            "test",
+            required_features={"foobar"},
+        )
+
+    # Get device
+
+    device1 = helper.get_default_device()
+
+    assert device1.features == {"timestamp-query", "float32-filterable", "shader-f16"}
+
+    with pytest.raises(RuntimeError):
+        helper.preconfigure_default_device("test", required_features={"shader-f16"})
+
+
+def test_default_device_configure_required_limits():
+    helper = DefaultDeviceHelper()
+
+    # Configure
+
+    helper.preconfigure_default_device(
+        "test", required_limits={"max-bind-groups": 8, "max-buffer-size": 10000}
+    )
+    helper.preconfigure_default_device(
+        "test", required_limits={"max-bindings-per-bind-group": 20000}
+    )
+
+    helper.preconfigure_default_device(
+        "test",
+        required_limits={
+            "max-buffer-size": 20000,
+            "max-bindings-per-bind-group": 10000,
+        },
+    )
+
+    # For the limits the min() operator is applied per key
+    ref = {
+        "max-bind-groups": 8,
+        "max-buffer-size": 10000,
+        "max-bindings-per-bind-group": 10000,
+    }
+    assert helper._device_kwargs["required_limits"] == ref
+
+    with pytest.raises(TypeError):
+        helper.preconfigure_default_device("test", required_limits=42)
+    with pytest.raises(TypeError):
+        helper.preconfigure_default_device("test", required_limits=set())
+
+    # Get device
+
+    device1 = helper.get_default_device()
+
+    limits_subset = {key: val for key, val in device1.limits.items() if key in ref}
+    assert limits_subset == ref
+
+
+if __name__ == "__main__":
+    run_tests(globals())
