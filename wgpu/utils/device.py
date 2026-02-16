@@ -88,7 +88,7 @@ class DefaultDeviceHelper:
 
         Arguments:
             context (str): A very brief description for the code that calls
-                this, or the reason for calling it, e.g. a library name.
+                this, or the reason for calling it, e.g. a library name. For debugging only.
             feature_level (str): The feature level "core" (default) or "compatibility".
                 This provides a way to opt into additional validation restrictions.
             power_preference (PowerPreference): "high-performance" or "low-power".
