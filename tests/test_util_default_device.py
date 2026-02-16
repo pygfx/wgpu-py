@@ -233,25 +233,25 @@ def test_default_device_configure_required_limits():
     # Configure
 
     helper.preconfigure_default_device(
-        "test", required_limits={"max-bind-groups": 8, "max-buffer-size": 10000}
+        "test", required_limits={"max-bind-groups": 8, "max-buffer-size": 100}
     )
     helper.preconfigure_default_device(
-        "test", required_limits={"max-bindings-per-bind-group": 20000}
+        "test", required_limits={"max-bindings-per-bind-group": 200}
     )
 
     helper.preconfigure_default_device(
         "test",
         required_limits={
-            "max-buffer-size": 20000,
-            "max-bindings-per-bind-group": 10000,
+            "max-buffer-size": 200,
+            "max-bindings-per-bind-group": 100,
         },
     )
 
     # For the limits the min() operator is applied per key
     ref = {
         "max-bind-groups": 8,
-        "max-buffer-size": 10000,
-        "max-bindings-per-bind-group": 10000,
+        "max-buffer-size": 100,
+        "max-bindings-per-bind-group": 100,
     }
     assert helper._device_kwargs["required_limits"] == ref
 
