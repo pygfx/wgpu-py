@@ -648,7 +648,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     
         if data is not None:
             data = memoryview(data).cast("B")
-            data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+            # data_size = (data.nbytes + 3) & ~3  # align to 4 bytes (maybe not needed...)
+            data_size = data.nbytes
             js_data = Uint8Array.new(data_size)
             js_data.assign(data)
         else:
@@ -662,7 +663,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     
         if data is not None:
             data = memoryview(data).cast("B")
-            data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+            # data_size = (data.nbytes + 3) & ~3  # align to 4 bytes (maybe not needed...)
+            data_size = data.nbytes
             js_data = Uint8Array.new(data_size)
             js_data.assign(data)
         else:

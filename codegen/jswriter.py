@@ -60,7 +60,8 @@ positional_args_template = """
 data_conversion = """
     if {py_data} is not None:
         data = memoryview({py_data}).cast("B")
-        data_size = (data.nbytes + 3) & ~3  # align to 4 bytes
+        # data_size = (data.nbytes + 3) & ~3  # align to 4 bytes (maybe not needed...)
+        data_size = data.nbytes
         js_data = Uint8Array.new(data_size)
         js_data.assign(data)
     else:
