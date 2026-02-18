@@ -1,4 +1,8 @@
 """
+ImGui cmap picker
+-----------------
+
+
 Imgui example that shows how to create a colormap picker menu
 
 Uses the cmap library: https://github.com/tlambert03/cmap
