@@ -152,10 +152,10 @@ pyodide_compute_template = """
     <p>
     {docstring}
     </p>
-    <div id="output" style="white-space: pre-wrap; background:#eee; padding:4px; margin:4px; border:1px solid #ccc;">
+    <canvas id='canvas' style='width:calc(90% - 40px); height:640px; background-color: #ddd;'></canvas>
+    <div id="output" style="white-space: per-line; overflow-y: auto; height:300px; background:#eee; padding:4px; margin:4px; border:1px solid #ccc;">
         <p>Output:</p>
     </div>
-    <canvas id='canvas' style='width:calc(100% - 20px); height: 450px; background-color: #ddd;'></canvas>
     <script type="text/javascript">
         async function main() {{
             let loading = document.getElementById('loading');
@@ -168,13 +168,14 @@ pyodide_compute_template = """
                 pyodide.setStdout({{
                     batched: (s) => {{
                         // TODO: newline, scrollable, echo to console?
-                        document.getElementById("output").innerHTML += "<br>" + s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        el = document.getElementById("output");
+                        el.innerHTML += "<br>" + s.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                        el.scrollTop = el.scrollHeight;  // scroll to bottom
                         console.log(s); // so we also have it formatted
                     }}
                 }});
                 await pyodide.loadPackage("micropip");
                 const micropip = pyodide.pyimport("micropip");
-                // TODO: maybe use https://pyodide.org/en/stable/usage/api/js-api.html#pyodide.loadPackagesFromImports
                 {dependencies}
                 await pyodide.loadPackagesFromImports(pythonCode);
                 pyodide.setDebug(true);
