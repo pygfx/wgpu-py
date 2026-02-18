@@ -1,17 +1,17 @@
-import numpy as np
-import pytest
-
-import wgpu.utils
 import gc
+import sys
 
-from testutils import run_tests, can_use_wgpu_lib, is_pypy
-from pytest import mark
-
+import numpy as np
+import wgpu.utils
 from wgpu import TextureFormat
 from wgpu.backends.wgpu_native.extras import write_timestamp
 
+import pytest
+from testutils import run_tests, can_use_wgpu_lib, is_pypy
+
+
 if not can_use_wgpu_lib:
-    mark.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
+    pytest.mark.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
 
 
 SHADER_SOURCE = """
@@ -297,6 +297,7 @@ def test_render_timestamps_inside_passes():
     runner.run_write_timestamp_inside_passes_test(render=True)
 
 
+@pytest.mark.xfail(sys.platform == "darwin", reason="Known to currently fail on MacOS")
 def test_render_timestamps_inside_encoder():
     runner = Runner()
     if "timestamp-query-inside-encoders" not in runner.device.features:

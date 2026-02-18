@@ -12,6 +12,7 @@ information.
 from __future__ import annotations
 
 import logging
+import itertools
 from typing import Sequence
 
 from ._async import GPUPromise as BaseGPUPromise
@@ -72,6 +73,10 @@ apidiff = ApiDiff()
 # the module attributes are None-ified, and the destructors would
 # therefore fail and produce warnings.
 object_tracker = diagnostics.object_counts.tracker
+
+# To assign unique id's to the objects.
+object_id_counter = itertools.count()
+next(object_id_counter)  # start at 1
 
 # The 'optional' value is used as the default value for optional arguments in the following two cases:
 # * The method accepts a descriptor that is optional, so we make all arguments (i.e. descriptor fields) optional, and this one does not have a default value.
@@ -634,11 +639,22 @@ class GPUObjectBase:
     _nbytes = 0
 
     def __init__(self, label, internal, device):
+        # next() is a single bytecode, so thread-safe in not-free-threading env
+        self._uid = next(object_id_counter)
         self._ot.increase(self.__class__.__name__, self._nbytes)
         self._label = label
         self._internal = internal  # The native/raw/real GPU object
         self._device = device
         logger.info(f"Creating {self.__class__.__name__} {label}")
+
+    @apidiff.add("Useful in caching strategies")
+    @property
+    def uid(self) -> int:
+        """A unique id (integer).
+
+        The value is unique to the process; in contrast to ``id(ob)``, the numbers are never reused.
+        """
+        return self._uid
 
     # IDL: attribute USVString label;
     @property
@@ -648,9 +664,9 @@ class GPUObjectBase:
 
     def __str__(self):
         if self._label:
-            return f'<{self.__class__.__name__} "{self._label}">'
+            return f'<{self.__class__.__name__} "{self._label}" ({self._uid})>'
         else:
-            return f"<{self.__class__.__name__} {id(self)}>"
+            return f"<{self.__class__.__name__} ({id(self._uid)})>"
 
     def _release(self):
         """Subclasses can implement this to clean up."""

@@ -10,9 +10,15 @@ from typing import Callable, Awaitable, Generator, Generic, TypeVar
 
 logger = logging.getLogger("wgpu")
 
+IS_PYODIDE = sys.platform == "emscripten"
+
 
 def detect_current_async_lib():
     """Get the lib name of the currently active async lib, or None."""
+
+    if IS_PYODIDE:
+        return "asyncio"
+
     ob = sys.get_asyncgen_hooks()[0]
     if ob is not None:
         try:
@@ -29,6 +35,10 @@ def detect_current_async_lib():
 
 def detect_current_call_soon_threadsafe():
     """Get the current applicable call_soon_threadsafe function, or None"""
+
+    # Pyodide always runs asyncio (which wraps the JS native event loop)
+    if IS_PYODIDE:
+        return sys.modules["asyncio"].get_running_loop().call_soon_threadsafe
 
     # Get asyncgen hook func, return fast when no async loop active
     ob = sys.get_asyncgen_hooks()[0]
