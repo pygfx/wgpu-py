@@ -31,7 +31,7 @@ from codegen import update_js, file_cache
 uharfbuzz_wheel = "uharfbuzz-0.1.dev1+ga19185453-cp310-abi3-pyodide_2025_0_wasm32.whl"
 pygfx_wheel = "pygfx-0.15.3-py3-none-any.whl"
 pygfx_deps = [uharfbuzz_wheel, "hsluv", "pylinalg", "jinja2", pygfx_wheel]
-rendercanvas_deps = ["sniffio", "rendercanvas==2.4.2"] # later rendercanvas or not having sniffio casues a hang in run_sync: "https://github.com/pyodide/pyodide/issues/6077
+rendercanvas_deps = ["rendercanvas==2.6.1"] # maybe put it in the pyproject.toml directly? but that might drop in the future.
 
 #examples that don't require a canvas, we will capture the output to a div
 compute_examples = {

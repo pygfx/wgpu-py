@@ -266,7 +266,7 @@ CbCr = np.frombuffer(buffer_cbcr, dtype=np.float32).reshape(*image[::2, ::2, :2]
 # quick rendercanvas based result visualization (round trip to bitmap instead of using existing texture...)
 from rendercanvas.auto import RenderCanvas
 
-channels = [Y, CbCr[..., 0], CbCr[..., 1],]
+channels = [Y, CbCr[..., 0], CbCr[..., 1], image_rgba/255]
 channel_idx = 0
 canvas = RenderCanvas(present_method="bitmap")
 context = canvas.get_bitmap_context()
