@@ -1,12 +1,7 @@
-import asyncio
-
 import wgpu
 from testutils import run_tests
 from wgpu.utils.device import DefaultDeviceHelper
 import pytest
-
-
-# %%%%% Is the same
 
 
 def test_default_device_is_same():
@@ -19,71 +14,6 @@ def test_default_device_is_same():
     assert isinstance(device1, wgpu.GPUDevice)
     assert device1 is device2
     assert device1 is device3
-
-
-def test_default_device_async():
-    helper = DefaultDeviceHelper()
-
-    async def main():
-        device1 = await helper.request_default_device()
-        device2 = await helper.request_default_device()
-        device3 = await helper.request_default_device()
-
-        assert isinstance(device1, wgpu.GPUDevice)
-        assert device1 is device2
-        assert device1 is device3
-
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(main())
-
-
-def test_default_device_async_mix1():
-    helper = DefaultDeviceHelper()
-
-    async def main():
-        device1 = await helper.request_default_device()
-        device2 = helper.get_default_device()
-
-        assert isinstance(device1, wgpu.GPUDevice)
-        assert device1 is device2
-
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(main())
-
-
-def test_default_device_async_mix2():
-    helper = DefaultDeviceHelper()
-
-    async def main():
-        device2 = helper.get_default_device()
-        device1 = await helper.request_default_device()
-
-        assert isinstance(device1, wgpu.GPUDevice)
-        assert device1 is device2
-
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(main())
-
-
-def test_default_device_async_mix3():
-    helper = DefaultDeviceHelper()
-
-    async def main():
-        p = helper.request_default_device()
-        device2 = helper.get_default_device()
-        device1 = await p
-
-        assert isinstance(device1, wgpu.GPUDevice)
-        assert device1 is device2
-
-    loop = asyncio.new_event_loop()
-    loop.run_until_complete(main())
-
-
-# %%%%% Args
-
-
-helper = DefaultDeviceHelper()
 
 
 def test_default_device_configure_feature_level():
@@ -105,16 +35,24 @@ def test_default_device_configure_feature_level():
     assert helper._adapter_kwargs["feature_level"] == "compatibility"
 
 
-def test_default_device_configure_power_preference():
+def test_default_device_configure_power_preference(caplog):
     helper = DefaultDeviceHelper()
 
     # Configure
 
-    helper.preconfigure_default_device("test", power_preference="low-power")
+    helper.preconfigure_default_device("test1", power_preference="low-power")
     assert helper._adapter_kwargs["power_preference"] == "low-power"
+    assert len(caplog.records) == 0
 
-    helper.preconfigure_default_device("test", power_preference="high-performance")
+    helper.preconfigure_default_device("test2", power_preference="high-performance")
     assert helper._adapter_kwargs["power_preference"] == "high-performance"
+
+    assert len(caplog.records) == 1
+    assert "by 'test1" in caplog.records[0].message
+
+    helper.preconfigure_default_device("test2", power_preference="high-performance")
+    assert helper._adapter_kwargs["power_preference"] == "high-performance"
+    assert len(caplog.records) == 1  # no new logs
 
     with pytest.raises(TypeError):
         helper.preconfigure_default_device("test", power_preference=42)
@@ -159,6 +97,42 @@ def test_default_device_configure_canvas():
 
     with pytest.raises(RuntimeError):
         helper.preconfigure_default_device("test", canvas=canvas1)  # ok
+
+
+def test_default_device_configure_adapter(caplog):
+
+    adapter1 = wgpu.gpu.request_adapter_sync()
+    adapter2 = wgpu.gpu.request_adapter_sync()
+
+    helper = DefaultDeviceHelper()
+
+    # Configure
+
+    helper.preconfigure_default_device("test1", power_preference="low-power")
+    assert len(caplog.records) == 0
+
+    helper.preconfigure_default_device("test2", adapter=adapter1)
+    assert len(caplog.records) == 1
+    msg = caplog.records[-1].message
+    assert "setting adapter overrides power_preference" in msg
+
+    helper.preconfigure_default_device("test3", power_preference="low-power")
+    assert len(caplog.records) == 2
+    msg = caplog.records[-1].message
+    assert "setting power_preference is ignored because adapter" in msg
+
+    helper.preconfigure_default_device("test4", adapter=adapter1)
+    assert len(caplog.records) == 2
+
+    helper.preconfigure_default_device("test5", adapter=adapter2)
+    assert len(caplog.records) == 3
+    msg = caplog.records[-1].message
+    assert "overrides earlier set " in msg and "test4" in msg
+
+    # Get device
+
+    device = helper.get_default_device()
+    assert device.adapter is adapter2
 
 
 def test_default_device_configure_label():

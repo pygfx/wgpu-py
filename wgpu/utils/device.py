@@ -1,17 +1,15 @@
-import sys
 import logging
 from typing import Literal
 
 import wgpu
 from wgpu import enums
 from wgpu._coreutils import CanvasLike
-from wgpu import GPUPromise, GPUAdapter, GPUDevice
+from wgpu import GPUAdapter, GPUDevice
 
 
 __all__ = [
     "get_default_device",
     "preconfigure_default_device",
-    "request_default_device",
 ]
 
 logger = logging.getLogger("wgpu")
@@ -21,53 +19,21 @@ class DefaultDeviceHelper:
     """Helper class to create a default device."""
 
     def __init__(self):
+        self._caller_infos: dict = {}  # arg_name -> list of caller_info's.
         self._adapter_kwargs: dict = {}
         self._device_kwargs: dict = {}
-        self._adapter_promise: GPUPromise | None = None
-        self._device_promise: GPUPromise | None = None
-        self._the_promise: GPUPromise | None = None
         self._the_device: GPUDevice | None = None
-
-    def _create_the_promise(self) -> GPUPromise:
-        if self._the_promise is None:
-            from wgpu.backends.auto import gpu
-
-            module = sys.modules[gpu.__module__]
-            self._the_promise = module.GPUPromise("default_device", None)
-
-        return self._the_promise
-
-    def _request_adapter(self) -> GPUPromise:
-        if self._adapter_promise is None:
-            self._adapter_promise = wgpu.gpu.request_adapter_async(
-                **self._adapter_kwargs
-            )
-            self._adapter_kwargs.clear()
-
-        return self._adapter_promise
-
-    def _request_device(self, adapter: GPUAdapter) -> GPUPromise:
-        if self._device_promise is None:
-            self._device_promise = adapter.request_device_async(**self._device_kwargs)
-            self._device_kwargs.clear()
-
-        return self._device_promise
-
-    def _set_the_device(self, device: GPUDevice) -> None:
-        if self._the_device is None:
-            self._create_the_promise()
-            self._the_promise._wgpu_set_input(device)
-            self._the_device = device
 
     def preconfigure_default_device(
         self,
-        context: str,
+        caller_info: str,
         *,
         # Adapter arguments
         feature_level: Literal["core", "compatibility", None] = None,
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool | None = None,
         canvas: CanvasLike | None = None,
+        adapter: GPUAdapter | None = None,
         # Device arguments
         label: str | None = None,
         required_features: set[enums.FeatureNameEnum] | None = None,
@@ -87,7 +53,7 @@ class DefaultDeviceHelper:
         used, and a warning is logged when a value is overriden.
 
         Arguments:
-            context (str): A very brief description for the code that calls
+            caller_info (str): A very brief description of the code that calls
                 this, or the reason for calling it, e.g. a library name. For debugging only.
             feature_level (str): The feature level "core" (default) or "compatibility".
                 This provides a way to opt into additional validation restrictions.
@@ -95,20 +61,24 @@ class DefaultDeviceHelper:
             force_fallback_adapter (bool): whether to use a (probably CPU-based) fallback adapter.
             canvas : The canvas or context that the adapter should be able to render to. This can typically
                 be left to None. If given, it should be a ``GPUCanvasContext`` or ``RenderCanvas``.
+            adapter (GPUAdapter): the adapter object to use to create the default device.
+                This can be useful to target a specific GPU in a multi-GPU setting.
+                Setting the adapter overrules all other adapter settings
+                (feature_level, power_preference, force_fallback_adapter, canvas).
             label (str): A human-readable label for the device.
             required_features (list of str): the features (extensions) that you need.
             required_limits (dict): the various limits that you want to apply.
 
         """
 
-        if not isinstance(context, str):
+        if not isinstance(caller_info, str):
             raise TypeError(
-                f"preconfigure_default_device context must be str, not {context.__class__.__name__}"
+                f"preconfigure_default_device caller_info must be str, not {caller_info.__class__.__name__}"
             )
 
-        if self._the_promise is not None:
+        if self._the_device is not None:
             raise RuntimeError(
-                f"preconfigure_default_device ({context}): default device cannot be configured after it is requested/created; only call this at import-time."
+                f"preconfigure_default_device ({caller_info}): default device cannot be configured after it is created; only call this at import-time."
             )
 
         # We want to do a good job validating inputs here, because the global device
@@ -126,83 +96,89 @@ class DefaultDeviceHelper:
             (ak, "power_preference", power_preference, str, enums.PowerPreference),
             (ak, "force_fallback_adapter", force_fallback_adapter, bool, None),
             (ak, "canvas", canvas, None, None),
+            (ak, "adapter", adapter, GPUAdapter, None),
             (dk, "label", label, str, None),
             (dk, "required_features", required_features, set, enums.FeatureName),
             (dk, "required_limits", required_limits, dict, None),
         ]:
-            if arg_value is not None:
-                if arg_type is not None:
-                    if not isinstance(arg_value, arg_type):
-                        raise TypeError(
-                            f"preconfigure_default_device ({context}): {arg_name} must be a {arg_type.__name__}, but got {arg_value.__class__.__name__}."
-                        )
-                if arg_values is not None:
-                    if isinstance(arg_value, (set, dict)):
-                        what, values = f"{arg_name} items", list(arg_value)
-                    else:
-                        what, values = arg_name, [arg_value]
-                    for value in values:
-                        if value not in arg_values:
-                            raise ValueError(
-                                f"preconfigure_default_device ({context}): {what} must be a one of {set(arg_values)}, but got {value!r}."
-                            )
-                if isinstance(arg_value, set):
-                    cur_value = arg_dict.setdefault(arg_name, set())
-                    cur_value.update(arg_value)
-                elif isinstance(arg_value, dict):
-                    cur_value = arg_dict.setdefault(arg_name, dict())
-                    for key, val in arg_value.items():
-                        cur_value[key] = min(val, cur_value.get(key, val))
+            if arg_value is None:
+                continue
+
+            if arg_type is not None:
+                if not isinstance(arg_value, arg_type):
+                    raise TypeError(
+                        f"preconfigure_default_device ({caller_info}): {arg_name} must be a {arg_type.__name__}, but got {arg_value.__class__.__name__}."
+                    )
+            if arg_values is not None:
+                if isinstance(arg_value, (set, dict)):
+                    what, values = f"{arg_name} items", list(arg_value)
                 else:
-                    cur_value = arg_dict.get(arg_name, None)
-                    if cur_value is not None and cur_value != arg_value:
-                        logger.warning(
-                            f"preconfigure_default_device ({context}): {arg_name} overrides earlier set {cur_value!r} with {arg_value!r}."
+                    what, values = arg_name, [arg_value]
+                for value in values:
+                    if value not in arg_values:
+                        raise ValueError(
+                            f"preconfigure_default_device ({caller_info}): {what} must be a one of {set(arg_values)}, but got {value!r}."
                         )
-                    arg_dict[arg_name] = arg_value
+            if isinstance(arg_value, set):
+                cur_value = arg_dict.setdefault(arg_name, set())
+                cur_value.update(arg_value)
+            elif isinstance(arg_value, dict):
+                cur_value = arg_dict.setdefault(arg_name, dict())
+                for key, val in arg_value.items():
+                    cur_value[key] = min(val, cur_value.get(key, val))
+            else:
+                cur_value = arg_dict.get(arg_name)
+                if cur_value is not None and cur_value != arg_value:
+                    caller_stack = self._caller_infos.get(arg_name, [])
+                    prev_caller = caller_stack[-1] if caller_stack else "unknown"
+                    logger.warning(
+                        f"preconfigure_default_device ({caller_info}): {arg_name} set to {arg_value!r} overrides earlier set {cur_value!r} by {prev_caller!r}."
+                    )
+                arg_dict[arg_name] = arg_value
 
-    def request_default_device(self) -> GPUPromise[GPUDevice]:
-        """Request the default ``GPUDevice`` instance, returns a promise.
+            # Register caller for this arg
+            self._caller_infos.setdefault(arg_name, []).append(caller_info)
 
-        The default device is a global/shared device that is generally recommended;
-        Different parts of a running program that use the same device and share
-        objects like textures and buffers.
-
-        The default device can be configured at import time using ``preconfigure_default_device()``.
-        """
-
-        if self._the_promise is None:
-            self._create_the_promise()
-            adapter_promise = self._request_adapter()
-            device_promise = adapter_promise.then(self._request_device)
-            device_promise.then(self._set_the_device)
-
-        return self._the_promise
+            # Handle that adapter overrides other adapter args.
+            if arg_name == "adapter":
+                for key, cur_value in list(arg_dict.items()):
+                    if key != "adapter":
+                        caller_stack = self._caller_infos.get(key, [])
+                        prev_caller = caller_stack[-1] if caller_stack else "unknown"
+                        logger.warning(
+                            f"preconfigure_default_device ({caller_info}): setting adapter overrides {key}={cur_value!r} set by {prev_caller!r}."
+                        )
+                        arg_dict.pop(key, None)
+            elif arg_dict.get("adapter") is not None:
+                caller_stack = self._caller_infos.get("adapter", [])
+                prev_caller = caller_stack[-1] if caller_stack else "unknown"
+                logger.warning(
+                    f"preconfigure_default_device ({caller_info}): setting {arg_name} is ignored because adapter is set by {prev_caller!r}."
+                )
+                arg_dict.pop(arg_name, None)
 
     def get_default_device(self) -> GPUDevice:
         """Get the default ``GPUDevice`` instance.
 
-        This is a sync version of ``request_default_device``.
-        It is nice and simple, but if you want your code to run in the browser (on Pyodide/PyScript)
-        you should consider ``request_default_device`` instead.
+        The default device is a global/shared device. It is generally
+        recommended to use this device; different parts of a running program can
+        only share objects like textures and buffers when they use the same
+        device.
 
-        The default device can be configured at import time using ``preconfigure_default_device()``.
+        The default device can be configured at import-time using ``preconfigure_default_device()``.
         """
         if self._the_device is None:
-            self._create_the_promise()
-            adapter_promise = self._request_adapter()
-            adapter = adapter_promise.sync_wait()
-            device_promise = self._request_device(adapter)
-            device = device_promise.sync_wait()
-            self._set_the_device(device)
-
+            adapter: GPUAdapter = self._adapter_kwargs.pop("adapter", None)
+            if adapter is None:
+                adapter = wgpu.gpu.request_adapter_sync(**self._adapter_kwargs)
+            self._the_device = adapter.request_device_sync(**self._device_kwargs)
+            self._adapter_kwargs.clear()
+            self._device_kwargs.clear()
         return self._the_device
 
 
-# The helper is an implementation detail, intended to keep code clean and allow unit tests.
 helper = DefaultDeviceHelper()
 
 # Public API functions
 preconfigure_default_device = helper.preconfigure_default_device
-request_default_device = helper.request_default_device
 get_default_device = helper.get_default_device
