@@ -253,6 +253,7 @@ class MyHandler(BaseHTTPRequestHandler):
             try:
                 # this doesn't seem to work correctly. works on startup but not upon visiting this page.
                 # I think it doesn't see updates to jswriter.py while the server is running.
+                self.respond(200, "Building wheel...<br>", "text/html")
                 build_wheel()
             except Exception as err:
                 self.respond(500, str(err), "text/plain")

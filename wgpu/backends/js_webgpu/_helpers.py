@@ -58,9 +58,10 @@ def simple_js_accessor(value, convert, cache=None):
                 v_struct_type = structs.__dict__.get(v_struct_type_name, dict) # because the annotation is just a string... doesn't feel great
                 # print("likely v struct type", v_struct_type)
                 v = v_struct_type(**v)
-                if type(v) is dict:
+                if type(v) is dict and "limits" in k.lower():
                     # if it's just a dict like limits, we still need to convert the keys to camelCase.
                     v = {to_camel_case(key): value for key, value in v.items()}
+                    # however stuff like constants and likely other dicts shouldn't be converted... so maybe we pull this logic outside from here and into the request_* functions directly.
                 # print("converted to struct", v)
 
             # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...

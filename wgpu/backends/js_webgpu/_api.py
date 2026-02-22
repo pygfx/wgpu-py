@@ -384,13 +384,13 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         array_buf = self._internal.getMappedRange(buffer_offset, size)
         Uint8Array.new(array_buf).assign(data)
 
-    def map_async(self, mode: flags.MapModeFlags | None, offset: int = 0, size: int | None = None) -> GPUPromise[None]:
+    def map_async(self, mode: flags.MapMode | str | None, offset: int = 0, size: int | None = None):
         if isinstance(mode, str):
             mode = str_flag_to_int(flags.MapMode, mode.removesuffix("_NOSYNC"))
-        map_promise = self._internal.mapAsync(mode, offset, size)
+        js_mapping_promise = self._internal.mapAsync(mode, offset, size)  # this errors when awaited on in the rendercanas offscreen backend...
 
         promise = GPUPromise("buffer.map_async", None)
-        map_promise.then(promise._set_input)  # presumably this signals via a none callback to nothing?
+        js_mapping_promise.then(promise._set_input)  # presumably this signals via a none callback to nothing?
         return promise
 
     def read_mapped(self, buffer_offset: int | None = None, size: int | None = None, *, copy: bool = True):
@@ -726,15 +726,16 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # copied form the wgpu-native implementation... adjusted for structs
         ori_offset = data_layout.offset
         ori_stride = data_layout.bytes_per_row  # surely isn't none... right?
-        print("original stride", ori_stride)
-        extra_stride = (256 - (ori_stride % 256)) % 256
+        # print("original stride", ori_stride)
+        extra_stride = (256 - (ori_stride % 256)) % 256  # docstring says this isn't needed? but i think for the web it is!
         full_stride = ori_stride + extra_stride
-        print("full stride", full_stride)
-        print("pre size", size)
-        size = (size[0], size[1], size[2])  # make sure it's a tuple
-        print("post size", size)
+        # print("full stride", full_stride)
+        # print("pre size", size)
+        size = (size[0], size[1], size[2])  # make sure it's a tuple -> might be wrong?
+        # print("post size", size)
         data_length = full_stride * size[1] * size[2]
-        print("data length", data_length)
+        # print("padded data length", data_length)
+        # print("actual texture size", source.texture._nbytes) # todo: needs to include the source offset too?
 
         # can't do it in js directly because we mix it with the layout for the info struct...
         buffer_size = data_length
@@ -765,9 +766,11 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         run_sync(temp_buffer._internal.mapAsync(flags.MapMode.READ, 0, data_length))  # this crashes... at times?
         array_buf = temp_buffer._internal.getMappedRange(0, data_length)
         # TODO: maybe complex padding undo operation here?
-        res = array_buf.slice(start=0)
+        # NOTE: js methods don't take keywork arguments... has to be positional!
+        res = array_buf.slice(0, source.texture._nbytes)  # undo the padding again, but we might be able to do it fruther up even.
         temp_buffer._internal.unmap()
-        return res.to_py()
+        py_buf = res.to_py()  # get a memoryview: https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.JsBuffer.to_memoryview
+        return py_buf
 
 
 
