@@ -23,7 +23,7 @@ from typing import Union
 from pyodide.ffi import to_js, run_sync, JsProxy
 from js import window, Uint8Array
 
-from ._helpers import simple_js_accessor
+from ._helpers import simple_js_accessor, to_snake_case
 from ._implementation import GPUPromise
 """
 # maybe we should also generate a __all__ list to just import the defined classes?

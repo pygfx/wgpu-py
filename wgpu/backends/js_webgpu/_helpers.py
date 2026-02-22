@@ -15,8 +15,15 @@ def to_camel_case(snake_str):
     #     res += "_"
     return res
 
+def to_snake_case(camel_str):
+    snake_str = camel_str[0].lower()
+    for char in camel_str[1:]:
+        if char.isupper():
+            snake_str += "_"
+        snake_str += char.lower()
+    return snake_str
 
-# TODO: clean this up before reading for merge!
+# TODO: clean this up before readying for merge!
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
 # you have to do the recursion yourself...
@@ -29,6 +36,7 @@ def simple_js_accessor(value, convert, cache=None):
         result = {}
         for k, v in value.items():
             camel_key = to_camel_case(k)
+            # print("struct item detected", k, v, "converted key:", camel_key)
             # if there is a dict further down... we still need to fix those keys
             if isinstance(v, dict):
                 if len(v) == 0:
@@ -50,6 +58,9 @@ def simple_js_accessor(value, convert, cache=None):
                 v_struct_type = structs.__dict__.get(v_struct_type_name, dict) # because the annotation is just a string... doesn't feel great
                 # print("likely v struct type", v_struct_type)
                 v = v_struct_type(**v)
+                if type(v) is dict:
+                    # if it's just a dict like limits, we still need to convert the keys to camelCase.
+                    v = {to_camel_case(key): value for key, value in v.items()}
                 # print("converted to struct", v)
 
             # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...

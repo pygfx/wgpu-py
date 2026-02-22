@@ -5,7 +5,7 @@ Constructors and Methods defined here are picked over auto generated methods for
 
 from ... import classes, structs, flags, enums
 from ..._coreutils import str_flag_to_int
-from ._helpers import simple_js_accessor
+from ._helpers import simple_js_accessor, to_snake_case
 
 from pyodide.ffi import to_js, run_sync, JsProxy
 from js import window, Uint8Array
@@ -69,7 +69,7 @@ class GPUAdapter(classes.GPUAdapter):
         for limit in dir(limits):
             # we don't have the GPUSupportedLimits as a struct or list any where in the code right now, maybe we un skip it in the codegen?
             if isinstance(getattr(limits, limit), int) and "_" not in limit:
-                py_limits[limit] = getattr(limits, limit)
+                py_limits[to_snake_case(limit)] = getattr(limits, limit)
 
         infos = ["vendor", "architecture", "device", "description", "subgroupMinSize", "subgroupMaxSize", "isFallbackAdapter"]
         adapter_info = js_adapter.info
@@ -112,7 +112,7 @@ class GPUDevice(classes.GPUDevice):
         limits = {}
         for limit in dir(js_limits):
             if isinstance(getattr(js_limits, limit), int) and "_" not in limit:
-                limits[limit] = getattr(js_limits, limit)
+                limits[to_snake_case(limit)] = getattr(js_limits, limit)
 
         queue = GPUQueue(label="default queue", internal=js_device.queue, device=self)
         super().__init__(label, internal=js_device, adapter=adapter, features=features, limits=limits, queue=queue)
@@ -219,7 +219,7 @@ class GPUBuffer(classes.GPUBuffer):
 
     def map_async(self, mode: flags.MapModeFlags | None, offset: int = 0, size: int | None = None) -> GPUPromise[None]:
         if isinstance(mode, str):
-            mode = str_flag_to_int(flags.MapMode, mode)
+            mode = str_flag_to_int(flags.MapMode, mode.removesuffix("_NOSYNC"))
         map_promise = self._internal.mapAsync(mode, offset, size)
 
         promise = GPUPromise("buffer.map_async", None)
@@ -279,6 +279,7 @@ class GPUQueue(classes.GPUQueue):
             raise ValueError("Invalid data_length")
         data_length = (data_length + 3) & ~3  # align to 4 bytes
 
+        # TODO: if the buffer already has the usages we need, can we skip the temp buffer?
         js_temp_buffer = device._internal.createBuffer(
             size=data_length,
             usage=flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ,
@@ -288,7 +289,12 @@ class GPUQueue(classes.GPUQueue):
 
         js_encoder = device._internal.createCommandEncoder()
         # TODO: somehow test if all the offset math is correct
-        js_encoder.copyBufferToBuffer(buffer._internal, buffer_offset, js_temp_buffer, buffer_offset, data_length)
+        js_encoder.copyBufferToBuffer(
+            source=buffer._internal,
+            sourceOffset=buffer_offset,
+            destination=js_temp_buffer,
+            destinationOffset=buffer_offset,
+            size=data_length)
         self._internal.submit([js_encoder.finish()])
 
         # best way to await the promise directly?
@@ -312,20 +318,36 @@ class GPUQueue(classes.GPUQueue):
         data_layout = structs.TexelCopyBufferLayout(**data_layout)
 
         device: GPUDevice = source.texture._device
-        lazy_size = source.texture._nbytes
+        print("we even called read_texture!")
+
+        # copied form the wgpu-native implementation... adjusted for structs
+        ori_offset = data_layout.offset
+        ori_stride = data_layout.bytes_per_row # surely isn't none... right?
+        print("original stride", ori_stride)
+        extra_stride = (256 - (ori_stride % 256)) % 256
+        full_stride = ori_stride + extra_stride
+        print("full stride", full_stride)
+        print("pre size", size)
+        size = (size[0], size[1], size[2]) # make sure it's a tuple -> might be wrong?
+        print("post size", size)
+        data_length = full_stride * size[1] * size[2]
+        print("data length", data_length)
+
 
         # can't do it in js directly because we mix it with the layout for the info struct...
+        buffer_size = data_length
+        buffer_size += (4096 - (buffer_size % 4096)) % 4096
         temp_buffer = device.create_buffer(
             label="texture read temp buffer",
-            size=lazy_size,  # TODO: needs to actually calculate the number including offset etc
+            size=buffer_size,
             usage=flags.BufferUsage.COPY_DST | flags.BufferUsage.MAP_READ,
             mapped_at_creation=False,
         )
 
         destination = structs.TexelCopyBufferInfo(
             offset=0,
-            bytes_per_row=data_layout.bytes_per_row,
-            rows_per_image=data_layout.rows_per_image,
+            bytes_per_row=full_stride,
+            rows_per_image=data_layout.rows_per_image or size[1],
             buffer=temp_buffer,
         )
 
@@ -337,10 +359,11 @@ class GPUQueue(classes.GPUQueue):
         )
 
         self.submit([encoder.finish()])
-        # TODO: this all could be replaced with read_buffer? but maybe that adds another temp buffer we don't want
-        temp_buffer.map_sync(flags.MapMode.READ, 0, lazy_size)
-        array_buf = temp_buffer._internal.getMappedRange(0, lazy_size)
-        res = array_buf.slice(0)
+        # TODO: this all could be replaced with read_buffer? but maybe that adds another temp buffer we don't want -> likely not becuase the buffer needs to support COPY_SRC which conflicts with MAP_READ... plus that is doing another buffer copy internally too.
+        run_sync(temp_buffer._internal.mapAsync(flags.MapMode.READ, 0, data_length)) #this crashes... at times?
+        array_buf = temp_buffer._internal.getMappedRange(0, data_length)
+        # TODO: maybe complex padding undo operation here?
+        res = array_buf.slice(start=0)
         temp_buffer._internal.unmap()
         return res.to_py()
 
