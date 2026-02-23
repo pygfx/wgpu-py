@@ -24,6 +24,14 @@ class DefaultDeviceHelper:
         self._device_kwargs: dict = {}
         self._the_device: GPUDevice | None = None
 
+    def _split_set_in_on_and_off(self, names: set) -> tuple[set, set]:
+        names_off = {f for f in names if f.startswith("!")}
+        names_on = names - names_off
+        # Case and dash insensitive
+        names_on = {name.lower().replace("_", "-") for name in names_on}
+        names_off = {name.lower().replace("_", "-").lstrip("!") for name in names_off}
+        return names_on, names_off
+
     def preconfigure_default_device(
         self,
         caller_info: str,
@@ -67,8 +75,10 @@ class DefaultDeviceHelper:
                 (feature_level, power_preference, force_fallback_adapter, canvas).
             label (str): A human-readable label for the device.
             required_features (list of str): the features (extensions) that you need.
+                Features can also be discarded by prefixing them with '!'. This is not recommended
+                unless for testing and very specific use-cases.
             required_limits (dict): the various limits that you want to apply.
-
+                Limits can also be discarded by setting their value to None.
         """
 
         if not isinstance(caller_info, str):
@@ -115,17 +125,34 @@ class DefaultDeviceHelper:
                 else:
                     what, values = arg_name, [arg_value]
                 for value in values:
+                    value = value.lstrip("!")
                     if value not in arg_values:
                         raise ValueError(
                             f"preconfigure_default_device ({caller_info}): {what} must be a one of {set(arg_values)}, but got {value!r}."
                         )
             if isinstance(arg_value, set):
                 cur_value = arg_dict.setdefault(arg_name, set())
-                cur_value.update(arg_value)
+                names_on, names_off = self._split_set_in_on_and_off(arg_value)
+                removed_names = cur_value & names_off
+                cur_value.difference_update(names_off)
+                cur_value.update(names_on)
+                if removed_names:
+                    logger.warning(
+                        f"preconfigure_default_device ({caller_info}): {arg_name} set to {arg_value!r} removes earlier set {removed_names!r} from the set."
+                    )
             elif isinstance(arg_value, dict):
                 cur_value = arg_dict.setdefault(arg_name, dict())
+                removed_names = set()
                 for key, val in arg_value.items():
-                    cur_value[key] = min(val, cur_value.get(key, val))
+                    if val is None:
+                        cur_value.pop(key, None)
+                        removed_names.add(key)
+                    else:
+                        cur_value[key] = min(val, cur_value.get(key, val))
+                if removed_names:
+                    logger.warning(
+                        f"preconfigure_default_device ({caller_info}): {arg_name} set to {arg_value!r} removes earlier set {removed_names!r} from the dict."
+                    )
             else:
                 cur_value = arg_dict.get(arg_name)
                 if cur_value is not None and cur_value != arg_value:

@@ -11,10 +11,10 @@ from .flags import *
 from .enums import *
 from .structs import *
 from .classes import *
+from .utils.device import *
 from . import utils
 from . import backends
 from . import resources
-from .utils.device import *
 
 
 # The API entrypoint, from wgpu.classes - gets replaced when a backend loads.

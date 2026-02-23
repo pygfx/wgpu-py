@@ -161,7 +161,7 @@ def test_default_device_configure_label():
         helper.preconfigure_default_device("test", label="too_late")
 
 
-def test_default_device_configure_required_features():
+def test_default_device_configure_required_features(caplog):
     helper = DefaultDeviceHelper()
 
     # Configure
@@ -183,6 +183,19 @@ def test_default_device_configure_required_features():
         "shader-f16",
     }
 
+    # Can also remove features
+    helper.preconfigure_default_device(
+        "test", required_features={"!float32-filterable"}
+    )
+    assert len(caplog.records) == 1
+    msg = caplog.records[0].message
+    assert "removes earlier set {'float32-filterable'} from the set" in msg
+
+    assert helper._device_kwargs["required_features"] == {
+        "timestamp-query",
+        "shader-f16",
+    }
+
     with pytest.raises(TypeError):
         helper.preconfigure_default_device("test", required_features=42)
     with pytest.raises(ValueError):
@@ -195,13 +208,13 @@ def test_default_device_configure_required_features():
 
     device1 = helper.get_default_device()
 
-    assert device1.features == {"timestamp-query", "float32-filterable", "shader-f16"}
+    assert device1.features == {"timestamp-query", "shader-f16"}
 
     with pytest.raises(RuntimeError):
         helper.preconfigure_default_device("test", required_features={"shader-f16"})
 
 
-def test_default_device_configure_required_limits():
+def test_default_device_configure_required_limits(caplog):
     helper = DefaultDeviceHelper()
 
     # Configure
@@ -222,12 +235,25 @@ def test_default_device_configure_required_limits():
     )
 
     # For the limits the min() operator is applied per key
-    ref = {
+    ref1 = {
         "max-bind-groups": 8,
         "max-buffer-size": 100,
         "max-bindings-per-bind-group": 100,
     }
-    assert helper._device_kwargs["required_limits"] == ref
+    ref2 = {
+        "max-bind-groups": 8,
+        "max-buffer-size": 100,
+    }
+    assert helper._device_kwargs["required_limits"] == ref1
+
+    # Can also remove a limit
+    helper.preconfigure_default_device(
+        "test", required_limits={"max-bindings-per-bind-group": None}
+    )
+    assert len(caplog.records) == 1
+    msg = caplog.records[0].message
+    assert "removes earlier set {'max-bindings-per-bind-group'} from the dict" in msg
+    assert helper._device_kwargs["required_limits"] == ref2
 
     with pytest.raises(TypeError):
         helper.preconfigure_default_device("test", required_limits=42)
@@ -238,8 +264,8 @@ def test_default_device_configure_required_limits():
 
     device1 = helper.get_default_device()
 
-    limits_subset = {key: val for key, val in device1.limits.items() if key in ref}
-    assert limits_subset == ref
+    limits_subset = {key: val for key, val in device1.limits.items() if key in ref2}
+    assert limits_subset == ref2
 
 
 if __name__ == "__main__":
