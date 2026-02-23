@@ -1,4 +1,7 @@
 """
+Compute MatMul
+--------------
+
 Simple compute example that performs basic matrix multiplication.
 
 Uses linear arrays in storage buffers to represent matrices of arbitrary size since

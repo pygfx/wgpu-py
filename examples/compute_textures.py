@@ -1,4 +1,7 @@
 """
+Compute Textures
+----------------
+
 Example that shows how to use textures in a compute shader to convert an RGBA image to YCbCr.
 
 The shader uses workgroups to processes non-overlapping 8x8 blocks of the input rgba texture.
@@ -38,7 +41,14 @@ def size_from_array(data, dim):
 
 
 # get example image, add alpha channel of all ones
-image = iio.imread("imageio:astronaut.png")
+# image = iio.imread("imageio:astronaut.png")
+# for pyodide compatibility right now.
+from pyodide.http import pyfetch
+from io import BytesIO
+response = await pyfetch("https://raw.githubusercontent.com/imageio/imageio-binaries/master/images/astronaut.png")
+
+image = iio.imread(BytesIO(await response.bytes()))
+
 image_rgba = np.zeros((*image.shape[:-1], 4), dtype=np.uint8)
 image_rgba[..., :-1] = image
 image_rgba[..., -1] = 255
@@ -262,6 +272,24 @@ buffer_cbcr = device.queue.read_texture(
 # create numpy arrays
 Y = np.frombuffer(buffer_y, dtype=np.float32).reshape(image.shape[:2])
 CbCr = np.frombuffer(buffer_cbcr, dtype=np.float32).reshape(*image[::2, ::2, :2].shape)
+
+# quick rendercanvas based result visualization (round trip to bitmap instead of using existing texture...)
+from rendercanvas.auto import RenderCanvas
+
+channels = [Y, CbCr[..., 0], CbCr[..., 1], image_rgba/255]
+channel_idx = 0
+canvas = RenderCanvas(present_method="bitmap")
+context = canvas.get_bitmap_context()
+context.set_bitmap((channels[channel_idx]*255).astype(np.uint8))
+canvas.request_draw()
+
+@canvas.add_event_handler("pointer_down")
+def on_pointer_down(event):
+    global channel_idx
+    channel_idx = (channel_idx + 1) % len(channels)
+    context.set_bitmap((channels[channel_idx]*255).astype(np.uint8))
+    canvas.request_draw()
+
 
 # view result with fastplotlib ImageWidget
 # import fastplotlib as fpl

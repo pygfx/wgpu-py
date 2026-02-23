@@ -35,6 +35,7 @@ class FileCache:
         "structs.py",
         "backends/wgpu_native/_api.py",
         "backends/wgpu_native/_mappings.py",
+        "backends/js_webgpu/_api.py", # TODO: maybe this file should be more like _mappings
         "resources/codegen_report.md",
     ]
 

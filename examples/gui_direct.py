@@ -1,4 +1,7 @@
 """
+GUI Direct
+----------
+
 Direct integration of glfw and wgpu-py without using the RenderCanvas library.
 
 Demonstration for hardcore users that need total low-level control.

@@ -6,26 +6,8 @@ descriptors are arguments, this API can probably be fully automatically
 generated.
 """
 
-# NOTE: this is just a stub for now!!
-
 from .. import _register_backend
-
-
-class GPU:
-    def request_adapter_sync(self, **parameters):
-        raise NotImplementedError("Cannot use sync API functions in JS.")
-
-    async def request_adapter_async(self, **parameters):
-        gpu = window.navigator.gpu  # noqa: F821
-        return await gpu.request_adapter(**parameters)
-
-    def get_preferred_canvas_format(self):
-        raise NotImplementedError()
-
-    @property
-    def wgsl_language_features(self):
-        return set()
-
+from ._api import * # includes gpu from _implementation?
 
 gpu = GPU()
 _register_backend(gpu)
