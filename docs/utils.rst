@@ -55,8 +55,6 @@ Get default device
 
 .. autofunction:: wgpu.utils.preconfigure_default_device
 
-.. autofunction:: wgpu.utils.request_default_device
-
 .. autofunction:: wgpu.utils.get_default_device
 
 
