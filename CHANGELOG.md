@@ -17,6 +17,15 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## [v0.30.0] - 23-02-2026
+
+* Fix error when the window is minimized by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/788
+* Fix tests by @almarklein in https://github.com/pygfx/wgpu-py/pull/791
+* Add GPUObjectBase.uid by @almarklein in https://github.com/pygfx/wgpu-py/pull/793
+* Detect Pyodide to avoid get_asyncgen_hooks by @almarklein in https://github.com/pygfx/wgpu-py/pull/795
+* Implement support for a shared device by @almarklein in https://github.com/pygfx/wgpu-py/pull/794
+
+
 ## [v0.29.0] - 17-12-2025
 
 Fixed:
