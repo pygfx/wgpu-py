@@ -230,6 +230,7 @@ def set_instance_extras(
     backends: Sequence[str] = ("All",),
     flags: Sequence[str] = ("Default",),
     dx12_compiler="fxc",
+    dx12_presentation_system="Hwnd",
     gles3_minor_version="Atomic",
     fence_behavior="Normal",
     dxc_path: Union[os.PathLike, None] = None,
@@ -280,6 +281,11 @@ def set_instance_extras(
             )
             c_dx12_compiler = enum_str2int["Dx12Compiler"]["Fxc"]
 
+    c_dx_presentation_system = enum_str2int["Dx12PresentationSystem"].get(
+        dx12_presentation_system.capitalize(),
+        enum_str2int["Dx12PresentationSystem"]["Undefined"],
+    )
+
     # https://docs.rs/wgpu/latest/wgpu/enum.Gles3MinorVersion.html
     if gles3_minor_version[-1].isdigit():
         gles3_minor_version = (
@@ -321,6 +327,7 @@ def set_instance_extras(
         glFenceBehaviour=fence_behavior,
         dxcPath=to_c_string_view(dxc_path),
         dxcMaxShaderModel=c_max_shader_model,
+        dx12PresentationSystem=c_dx_presentation_system,
         budgetForDeviceCreation=c_budget_creation,
         budgetForDeviceLoss=c_budget_loss,
     )
