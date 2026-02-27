@@ -189,6 +189,9 @@ jobs:
           python -c "import wgpu; print(wgpu.__version__)"
     - name: Unit tests
       run: |
+          python -c "import wgpu; print(wgpu.get_default_device)"
+          python -c "import wgpu; wgpu.get_default_device(); print('ok')"
+          python -c "print('foo')"
           pytest -v tests
     - name: Memory tests
       run: |
