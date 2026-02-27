@@ -75,7 +75,7 @@ class PollThread(threading.Thread):
         self._poll_func = lambda _: None
         self._token_ids.clear()
         self._event.set()
-        self.join()
+        # self.join()
 
     def run(self):
         """The thread logic."""
