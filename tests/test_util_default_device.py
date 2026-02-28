@@ -1,3 +1,6 @@
+import sys
+import subprocess
+
 import wgpu
 from testutils import run_tests
 from wgpu.utils.device import DefaultDeviceHelper
@@ -266,6 +269,32 @@ def test_default_device_configure_required_limits(caplog):
 
     limits_subset = {key: val for key, val in device1.limits.items() if key in ref2}
     assert limits_subset == ref2
+
+
+def test_default_device_and_exit_should_not_hang():
+    # See https://github.com/pygfx/wgpu-py/pull/797
+
+    code = "import wgpu; wgpu.get_default_device(); print('ok')"
+    timedout = False
+    try:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                code,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
+            timeout=5
+        )
+    except subprocess.TimeoutExpired:
+        timedout = True
+
+    assert not timedout
+    assert result.stdout.strip().endswith("ok")
+    assert "traceback" not in result.stderr.lower()
+
 
 
 if __name__ == "__main__":
