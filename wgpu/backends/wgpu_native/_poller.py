@@ -85,8 +85,9 @@ class PollThread(threading.Thread):
         self._poll_func = lambda _: None
         self._token_ids.clear()
         self._event.set()
+        # Python 3.13 can hang when joining this when shutting down. Python 3.14 doesn't even allow it.
         if not is_shutting_down:
-            self.join()
+            self.join(timeout=1)
 
     def run(self):
         """The thread logic."""
