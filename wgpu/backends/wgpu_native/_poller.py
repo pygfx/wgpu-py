@@ -1,4 +1,14 @@
+import atexit
 import threading
+
+
+is_shutting_down = False
+
+
+@atexit.register
+def mark_shutdown():
+    global is_shutting_down
+    is_shutting_down = True
 
 
 class PollToken:
@@ -75,7 +85,8 @@ class PollThread(threading.Thread):
         self._poll_func = lambda _: None
         self._token_ids.clear()
         self._event.set()
-        self.join()
+        if not is_shutting_down:
+            self.join()
 
     def run(self):
         """The thread logic."""
