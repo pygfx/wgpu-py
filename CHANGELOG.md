@@ -17,6 +17,11 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## [v0.30.1] - 29-02-2026
+
+* Fix that closing a process could hang because of joining the device poll thread by @almarklein in https://github.com/pygfx/wgpu-py/pull/797
+
+
 ## [v0.30.0] - 23-02-2026
 
 * Fix error when the window is minimized by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/788
