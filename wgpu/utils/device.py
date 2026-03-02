@@ -96,7 +96,7 @@ class DefaultDeviceHelper:
         # one of these, and we use it to request the adapter, it's hard to establish
         # where the invalid arg was set from.
 
-        if required_features is not None:
+        if isinstance(required_features, (tuple, list)):
             required_features = set(required_features)
 
         ak, dk = self._adapter_kwargs, self._device_kwargs
