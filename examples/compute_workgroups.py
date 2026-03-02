@@ -95,7 +95,8 @@ raw = device.queue.read_buffer(output_buffer)
 values = np.frombuffer(raw, dtype=np.uint32)
 
 print(
-    f"Dispatched {workgroups} workgroup(s) of {workgroup_size} thread(s) each {total_threads} threads total.\n"
+    f"Dispatched {workgroups} workgroup(s) of {workgroup_size} thread(s) each "
+    f"({total_threads} threads total).\n"
 )
 
 print(f"{'Thread':>6}  {'global_id':>9}  {'local_id':>8}  {'workgroup_id':>12} ")
