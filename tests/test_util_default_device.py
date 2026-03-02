@@ -178,6 +178,12 @@ def test_default_device_configure_required_features(caplog):
     helper.preconfigure_default_device("test", required_features=["shader-f16"])
     helper.preconfigure_default_device("test", required_features={"float32-filterable"})
 
+    # Common mistake
+    with pytest.raises(TypeError):
+        helper.preconfigure_default_device(
+            "test", required_features="float32-filterable"
+        )
+
     # For features, the union operator is applied
     assert helper._device_kwargs["required_features"] == {
         "timestamp-query",
