@@ -17,6 +17,12 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## [v0.31.0] - 02-03-2026
+
+* Update to wgpu-native v27.0.4.0 by @almarklein in https://github.com/pygfx/wgpu-py/pull/787
+* Small improvement in error for preconfigure_default_device by @almarklein in https://github.com/pygfx/wgpu-py/pull/798
+
+
 ## [v0.30.1] - 29-02-2026
 
 * Fix that closing a process could hang because of joining the device poll thread by @almarklein in https://github.com/pygfx/wgpu-py/pull/797
