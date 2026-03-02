@@ -4,6 +4,16 @@ Example that shows how to use textures in a compute shader to convert an RGBA im
 The shader uses workgroups to processes non-overlapping 8x8 blocks of the input rgba texture.
 """
 
+# run_example = false
+#
+# Note: This example segfaults on CI (as of 08-02-2026 or so) even though it has
+# worked before. It seems to be due to a regression in Lavapipe. Investigation
+# showed that the segfault happened in queue.submit() for the part where the
+# compute shader is run. The compute shader does not seem to have any anomalies.
+# It writes to two textures. When the writing to either one is disabled
+# (commenting the respective for-loop) and the corresponding texture removed
+# from the bind group, the example runs fine.
+
 import numpy as np
 import wgpu
 import imageio.v3 as iio

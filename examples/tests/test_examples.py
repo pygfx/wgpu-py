@@ -79,7 +79,8 @@ def test_examples_screenshots(
     def unload_module():
         del sys.modules[module_name]
 
-    request.addfinalizer(unload_module)
+    if request:
+        request.addfinalizer(unload_module)
 
     if not hasattr(example, "canvas"):
         # some examples we screenshot test don't have a canvas as a global variable when imported,
@@ -188,4 +189,4 @@ if __name__ == "__main__":
     os.environ["RENDERCANVAS_FORCE_OFFSCREEN"] = "true"
     pytest.getoption = lambda x: False
     is_lavapipe = True
-    test_examples_screenshots("validate_volume", pytest, None, None)
+    test_examples_screenshots("cube", pytest, mock_time, None, None)

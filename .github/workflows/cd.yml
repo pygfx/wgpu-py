@@ -54,7 +54,7 @@ jobs:
           - name: macos arm64
             os: macos-latest
           - name: macos x86_64
-            os: macos-13  # last Intel MacOS
+            os: macos-15-intel  # planned as the last supported image based on Intel CPU
           - name: linux amd64
             os: ubuntu-latest
     steps:

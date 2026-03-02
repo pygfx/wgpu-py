@@ -100,7 +100,7 @@ def test_enums_and_flags_and_structs():
 
 def test_base_wgpu_api():
     # Fake a device and an adapter
-    adapter = wgpu.GPUAdapter(None, set(), {}, wgpu.GPUAdapterInfo({}), None)
+    adapter = wgpu.GPUAdapter(None, set(), {}, wgpu.GPUAdapterInfo({}))
     queue = wgpu.GPUQueue("", None, None)
     device = wgpu.GPUDevice("device08", -1, adapter, {42, 43}, {}, queue)
 
@@ -116,6 +116,9 @@ def test_base_wgpu_api():
     assert device.features == {42, 43}
     assert hex(id(device)) in repr(device)
     assert device.label in repr(device)
+
+    # Check ids (assuming no other thread is creating ids)
+    assert device.uid == queue.uid + 1
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -178,7 +181,7 @@ def test_do_not_import_utils_submodules():
     code = "import wgpu; print(wgpu.utils.get_default_device)"
     out = get_output_from_subprocess(code)
     assert "Error" not in out
-    assert "function get_default_device" in out
+    assert "get_default_device" in out
 
     # Also, no numpy
     code = "import sys, wgpu.utils; print('numpy' in sys.modules)"

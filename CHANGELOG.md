@@ -17,6 +17,40 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## [v0.30.1] - 29-02-2026
+
+* Fix that closing a process could hang because of joining the device poll thread by @almarklein in https://github.com/pygfx/wgpu-py/pull/797
+
+
+## [v0.30.0] - 23-02-2026
+
+* Fix error when the window is minimized by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/788
+* Fix tests by @almarklein in https://github.com/pygfx/wgpu-py/pull/791
+* Add GPUObjectBase.uid by @almarklein in https://github.com/pygfx/wgpu-py/pull/793
+* Detect Pyodide to avoid get_asyncgen_hooks by @almarklein in https://github.com/pygfx/wgpu-py/pull/795
+* Implement support for a shared device by @almarklein in https://github.com/pygfx/wgpu-py/pull/794
+
+
+## [v0.29.0] - 17-12-2025
+
+Fixed:
+
+* Fix that using WGPUPY_WGPU_ADAPTER_NAME fails by @almarklein in https://github.com/pygfx/wgpu-py/pull/779
+* Support GPUBuffer as resource in BindGroupEntry by @Vipitis in https://github.com/pygfx/wgpu-py/pull/774
+* Fix cd to use new intel image by @almarklein in https://github.com/pygfx/wgpu-py/pull/784
+* Fix keyerror in querying capabilities (reported for AMD hardware) by @almarklein in https://github.com/pygfx/wgpu-py/pull/785
+
+Changed:
+
+* Use a polling thread per device by @almarklein in https://github.com/pygfx/wgpu-py/pull/778
+* Detect loop from asyncgen_hooks by @almarklein in https://github.com/pygfx/wgpu-py/pull/780
+  * The experimental `loop` parameter in `request_adapter_xx()` is removed; it is now detected automatically.
+
+Removed:
+
+* Remove (the already deprecated) gui subpackage by @almarklein in https://github.com/pygfx/wgpu-py/pull/773
+
+
 ## [v0.28.1] - 14-11-2025
 
 Fixed:

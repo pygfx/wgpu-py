@@ -12,9 +12,10 @@ information.
 from __future__ import annotations
 
 import logging
+import itertools
 from typing import Sequence
 
-from ._async import GPUPromise as BaseGPUPromise, LoopInterface
+from ._async import GPUPromise as BaseGPUPromise
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
@@ -73,6 +74,10 @@ apidiff = ApiDiff()
 # therefore fail and produce warnings.
 object_tracker = diagnostics.object_counts.tracker
 
+# To assign unique id's to the objects.
+object_id_counter = itertools.count()
+next(object_id_counter)  # start at 1
+
 # The 'optional' value is used as the default value for optional arguments in the following two cases:
 # * The method accepts a descriptor that is optional, so we make all arguments (i.e. descriptor fields) optional, and this one does not have a default value.
 # * In wgpu-py we decided that this argument should be optional, even though it's currently not according to the WebGPU spec.
@@ -119,10 +124,8 @@ class GPU:
         power_preference: enums.PowerPreferenceEnum | None = None,
         force_fallback_adapter: bool = False,
         canvas: CanvasLike | None = None,
-        loop: LoopInterface | None = None,
     ) -> GPUPromise[GPUAdapter]:
-        """Create a `GPUAdapter`, the object that represents an abstract wgpu
-        implementation, from which one can request a `GPUDevice`.
+        """Create a `GPUAdapter`, the object that represents an abstract wgpu implementation, from which one can request a `GPUDevice`.
 
         Arguments:
             feature_level (str): The feature level "core" (default) or "compatibility".
@@ -131,21 +134,16 @@ class GPU:
             force_fallback_adapter (bool): whether to use a (probably CPU-based)
                 fallback adapter.
             canvas : The canvas or context that the adapter should be able to render to. This can typically
-                 be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
-            loop : the loop object for async support. Must have at least ``call_soon(f, *args)``.
-                The loop object is required for asynchrouns use with ``promise.then()``. EXPERIMENTAL.
+                be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
         """
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
-
-        # note, feature_level current' does nothing: # not used currently: https://gpuweb.github.io/gpuweb/#dom-gpurequestadapteroptions-featurelevel
 
         return gpu.request_adapter_async(
             feature_level=feature_level,
             power_preference=power_preference,
             force_fallback_adapter=force_fallback_adapter,
             canvas=canvas,
-            loop=loop,
         )
 
     @apidiff.add("Method useful for multi-gpu environments")
@@ -158,9 +156,7 @@ class GPU:
         return promise.sync_wait()
 
     @apidiff.add("Method useful for multi-gpu environments")
-    def enumerate_adapters_async(
-        self, *, loop: LoopInterface | None = None
-    ) -> GPUPromise[list[GPUAdapter]]:
+    def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
 
         An adapter can then be selected (e.g. using its summary), and a device
@@ -187,7 +183,7 @@ class GPU:
         # If this method gets called, no backend has been loaded yet, let's do that now!
         from .backends.auto import gpu
 
-        return gpu.enumerate_adapters_async(loop=loop)
+        return gpu.enumerate_adapters_async()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
     @apidiff.change("Disabled because we put it on the canvas context")
@@ -279,8 +275,8 @@ class GPUCanvasContext:
         The application must call this to keep the context informed about
         the window/framebuffer size.
         """
-        if width <= 0 or height <= 0:
-            raise ValueError("Physical size values must be positive.")
+        if width < 0 or height < 0:
+            raise ValueError("Physical size values must be non-negative.")
         self._physical_size = int(width), int(height)
         self._has_new_size = True
 
@@ -544,10 +540,9 @@ class GPUAdapter:
 
     _ot = object_tracker
 
-    def __init__(self, internal, features, limits, adapter_info, loop):
+    def __init__(self, internal, features, limits, adapter_info):
         self._ot.increase(self.__class__.__name__)
         self._internal = internal
-        self._loop = loop
 
         assert isinstance(features, set)
         assert isinstance(limits, dict)
@@ -641,11 +636,22 @@ class GPUObjectBase:
     _nbytes = 0
 
     def __init__(self, label, internal, device):
+        # next() is a single bytecode, so thread-safe in not-free-threading env
+        self._uid = next(object_id_counter)
         self._ot.increase(self.__class__.__name__, self._nbytes)
         self._label = label
         self._internal = internal  # The native/raw/real GPU object
         self._device = device
         logger.info(f"Creating {self.__class__.__name__} {label}")
+
+    @apidiff.add("Useful in caching strategies")
+    @property
+    def uid(self) -> int:
+        """A unique id (integer).
+
+        The value is unique to the process; in contrast to ``id(ob)``, the numbers are never reused.
+        """
+        return self._uid
 
     # IDL: attribute USVString label;
     @property
@@ -655,9 +661,9 @@ class GPUObjectBase:
 
     def __str__(self):
         if self._label:
-            return f'<{self.__class__.__name__} "{self._label}">'
+            return f'<{self.__class__.__name__} "{self._label}" ({self._uid})>'
         else:
-            return f"<{self.__class__.__name__} {id(self)}>"
+            return f"<{self.__class__.__name__} ({id(self._uid)})>"
 
     def _release(self):
         """Subclasses can implement this to clean up."""
@@ -693,7 +699,6 @@ class GPUDevice(GPUObjectBase):
         self._adapter = adapter
         self._features = features
         self._limits = limits
-        self._loop = adapter._loop
         self._queue = queue
         queue._device = self  # because it could not be set earlier
 
@@ -907,10 +912,11 @@ class GPUDevice(GPUObjectBase):
     def create_bind_group_layout(
         self, *, label: str = "", entries: Sequence[structs.BindGroupLayoutEntryStruct]
     ) -> GPUBindGroupLayout:
-        """Create a `GPUBindGroupLayout` object. One or more
-        such objects are passed to `create_pipeline_layout()` to
-        specify the (abstract) pipeline layout for resources. See the
-        docs on bind groups for details.
+        """Create a `GPUBindGroupLayout` object.
+
+        One or more such objects are passed to `create_pipeline_layout()` to
+        specify the (abstract) pipeline layout for resources. See the docs on
+        bind groups for details.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -948,8 +954,7 @@ class GPUDevice(GPUObjectBase):
         layout: GPUBindGroupLayout,
         entries: Sequence[structs.BindGroupEntryStruct],
     ) -> GPUBindGroup:
-        """Create a `GPUBindGroup` object, which can be used in
-        `pass.set_bind_group()` to attach a group of resources.
+        """Create a `GPUBindGroup` object, which can be used in `pass.set_bind_group()` to attach a group of resources.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -988,8 +993,7 @@ class GPUDevice(GPUObjectBase):
     def create_pipeline_layout(
         self, *, label: str = "", bind_group_layouts: Sequence[GPUBindGroupLayout]
     ) -> GPUPipelineLayout:
-        """Create a `GPUPipelineLayout` object, which can be
-        used in `create_render_pipeline()` or `create_compute_pipeline()`.
+        """Create a `GPUPipelineLayout` object, which can be used in `create_render_pipeline()` or `create_compute_pipeline()`.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -1213,9 +1217,9 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {}); -> USVString label = ""
     def create_command_encoder(self, *, label: str = "") -> GPUCommandEncoder:
-        """Create a `GPUCommandEncoder` object. A command
-        encoder is used to record commands, which can then be submitted
-        at once to the GPU.
+        """Create a `GPUCommandEncoder` object.
+
+        A command encoder is used to record commands, which can then be submitted at once to the GPU.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -1924,8 +1928,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         label: str = "",
         timestamp_writes: structs.ComputePassTimestampWritesStruct | None = None,
     ) -> GPUComputePassEncoder:
-        """Record the beginning of a compute pass. Returns a
-        `GPUComputePassEncoder` object.
+        """Record the beginning of a compute pass. Returns a `GPUComputePassEncoder` object.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -1945,8 +1948,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         timestamp_writes: structs.RenderPassTimestampWritesStruct | None = None,
         max_draw_count: int = 50000000,
     ) -> GPURenderPassEncoder:
-        """Record the beginning of a render pass. Returns a
-        `GPURenderPassEncoder` object.
+        """Record the beginning of a render pass. Returns a `GPURenderPassEncoder` object.
 
         Arguments:
             label (str): A human-readable label. Optional.
@@ -2048,8 +2050,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 
     # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {}); -> USVString label = ""
     def finish(self, *, label: str = "") -> GPUCommandBuffer:
-        """Finish recording. Returns a `GPUCommandBuffer` to
-        submit to a `GPUQueue`.
+        """Finish recording. Returns a `GPUCommandBuffer` to submit to a `GPUQueue`.
 
         Arguments:
             label (str): A human-readable label. Optional.

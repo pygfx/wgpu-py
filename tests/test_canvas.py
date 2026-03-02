@@ -1,6 +1,7 @@
 """Test that wgpu works together with rendercanvas."""
 
 import wgpu
+import numpy as np
 
 # from rendercanvas import BaseRenderCanvas
 from rendercanvas.offscreen import RenderCanvas
@@ -49,7 +50,7 @@ def test_rendercanvas():
     canvas.request_draw(draw_frame2)
 
     m = canvas.draw()
-    assert isinstance(m, memoryview)
+    assert isinstance(m, (memoryview, np.ndarray))
     assert m.shape == (480, 640, 4)
     assert frame_counter == 1
 
