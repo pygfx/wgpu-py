@@ -164,7 +164,7 @@ pyodide_compute_template = """
                 let example_name = {example_script!r};
                 pythonCode = await (await fetch(example_name)).text();
                 // this env var is really only used for the pygfx examples - so maybe we make a script for that gallery instead?
-                let pyodide = await loadPyodide({{env: {{'PYGFX_DEFAULT_PPAA': 'none' }}}});
+                let pyodide = await loadPyodide();
                 pyodide.setStdout({{
                     batched: (s) => {{
                         // TODO: newline, scrollable, echo to console?

@@ -391,6 +391,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         promise = GPUPromise("buffer.map_async", None)
         js_mapping_promise.then(promise._set_input)  # presumably this signals via a none callback to nothing?
+        # it works with the picking info buffer for pygfx. so what is the difference?
         return promise
 
     def read_mapped(self, buffer_offset: int | None = None, size: int | None = None, *, copy: bool = True):

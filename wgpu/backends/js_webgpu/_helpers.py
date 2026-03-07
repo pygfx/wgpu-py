@@ -24,6 +24,10 @@ def to_snake_case(camel_str):
     return snake_str
 
 # TODO: clean this up before readying for merge!
+# 1. break it into smaller functions
+# 2. check if the js to python roundtrip is needed
+# 3. maybe use `from typing import get_type_hints`
+# 4. either try the built in cache argument, or use @cache or something... memory is slower than math tho - so maybe if we have a benchmark to compare it to.
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
 # you have to do the recursion yourself...
