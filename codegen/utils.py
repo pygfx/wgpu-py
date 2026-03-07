@@ -349,7 +349,7 @@ class Patcher:
 
     def iter_properties(self, start_line=0):
         """Generator to iterate over the properties.
-        Each iteration yields (classname, linenr_first, linenr_last),
+        Each iteration yields (propertyname, linenr_first, linenr_last),
         where linenr_first is the line that startswith `def`,
         and linenr_last is the last line of code.
         """
@@ -357,7 +357,7 @@ class Patcher:
 
     def iter_methods(self, start_line=0):
         """Generator to iterate over the methods.
-        Each iteration yields (classname, linenr_first, linenr_last)
+        Each iteration yields (methodname, linenr_first, linenr_last)
         where linenr_first is the line that startswith `def`,
         and linenr_last is the last line of code.
         """

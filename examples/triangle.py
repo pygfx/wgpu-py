@@ -1,4 +1,6 @@
 """
+Triangle
+--------
 Example use of the wgpu API to draw a triangle.
 
 The triangle is a classic example representing the simplest possible
@@ -68,19 +70,20 @@ def get_render_pipeline_kwargs(
         render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
-    shader = device.create_shader_module(code=shader_source)
+    vert_shader = device.create_shader_module(code=shader_source)
+    frag_shader = device.create_shader_module(code=shader_source)
     pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
 
     return wgpu.RenderPipelineDescriptor(
         layout=pipeline_layout,
         vertex=wgpu.VertexState(
-            module=shader,
+            module=vert_shader,
             entry_point="vs_main",
         ),
         depth_stencil=None,
         multisample=None,
         fragment=wgpu.FragmentState(
-            module=shader,
+            module=frag_shader,
             entry_point="fs_main",
             targets=[
                 wgpu.ColorTargetState(

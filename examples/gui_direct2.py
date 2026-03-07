@@ -1,10 +1,13 @@
 """
+GUI Direct 2
+------------
+
 Direct integration of glfw and wgpu-py without using the RenderCanvas library.
 
 Demonstration for hardcore users that need total low-level control.
 
 This version is a bit more elaborate, using a loop object, and allowing
-async code that uses`promose.then()`. For this to work, wgpu needs
+async code that uses `promise.then()`. For this to work, wgpu needs
 access to the running loop. In particular, it needs a
 run_soon_threadsafe() function, allowing wgpu to resolve a promise from
 its internal thread.

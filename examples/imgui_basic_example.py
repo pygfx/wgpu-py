@@ -1,4 +1,7 @@
 """
+ImGui Basic Example
+-------------------
+
 An example demonstrating a wgpu app with basic imgui usage and events.
 
 """

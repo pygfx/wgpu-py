@@ -15,5 +15,6 @@ from codegen import main, file_cache
 
 
 if __name__ == "__main__":
+    # maybe have args here to just run the js writer?
     main()
     file_cache.write_changed_files_to_disk()
