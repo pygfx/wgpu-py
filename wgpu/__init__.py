@@ -11,9 +11,11 @@ from .flags import *
 from .enums import *
 from .structs import *
 from .classes import *
+from .utils.device import *
 from . import utils
 from . import backends
 from . import resources
+
 
 # The API entrypoint, from wgpu.classes - gets replaced when a backend loads.
 gpu = GPU()  # noqa: F405
