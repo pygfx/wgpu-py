@@ -293,11 +293,11 @@ class GPUQueue(classes.GPUQueue):
         js_encoder = device._internal.createCommandEncoder()
         # TODO: somehow test if all the offset math is correct
         js_encoder.copyBufferToBuffer(
-            source=buffer._internal,
-            sourceOffset=buffer_offset,
-            destination=js_temp_buffer,
-            destinationOffset=buffer_offset,
-            size=data_length)
+            buffer._internal,
+            buffer_offset,
+            js_temp_buffer,
+            buffer_offset,
+            data_length)
         self._internal.submit([js_encoder.finish()])
 
         # best way to await the promise directly?
