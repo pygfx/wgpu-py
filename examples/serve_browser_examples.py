@@ -43,11 +43,12 @@ compute_examples = {
     # try these two up here too to make sure it's not the canvas. (having them twice is a problem because only one .html variant exsits)
     "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio", "imgui-bundle"], # currnetly hangs... so I digging down on that
     "fpl_example.py": [*pygfx_deps, "fastplotlib"], #also hangs but I eventually want to get to this.
+    "triangle.py": [], # no deps
 }
 
 # these need rendercanvas too for now. but might run with just a canvas (no events) in the near future.
 graphics_examples = {
-    "triangle.py":[], # no deps
+    # "triangle.py":[], # no deps
     "cube.py": ["numpy"],
     "offscreen_hdr.py": ["numpy", "pypng"], # pyscript says it doesn't work in pyodide.
     # "triangle_glsl.py": # we can't use GLSL in the browser... I am looking into maybe using wasm compiled naga manually - at a later date.
@@ -79,7 +80,7 @@ def get_html_index():
     <head>
         <meta name="viewport" content="width=device-width,initial-scale=1.0">
         <title>wgpu PyScript examples</title>
-        <script type="module" src="https://pyscript.net/releases/2025.11.2/core.js"></script>
+        <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
     </head>
     <body>
 
@@ -106,7 +107,7 @@ pyscript_graphics_template = """
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>{example_script} via PyScript</title>
-    <script type="module" src="https://pyscript.net/releases/2025.11.2/core.js"></script>
+    <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
 </head>
 
 <body>
@@ -258,7 +259,7 @@ class MyHandler(BaseHTTPRequestHandler):
             except Exception as err:
                 self.respond(500, str(err), "text/plain")
             else:
-                html = f"Wheel build: {wheel_name}<br><br><a href='/'>Back to list</a>"
+                html = f"<br>Wheel build: {wheel_name}<br><br><a href='/'>Back to list</a>"
                 self.respond(200, html, "text/html")
         elif self.path.endswith(".whl"):
             filename = os.path.join(root, "dist", self.path.strip("/"))

@@ -3,7 +3,8 @@ Helper functions for dealing with pyodide for the js webgpu backend.
 """
 
 from ... import classes, structs
-from pyodide.ffi import to_js
+from pyodide.ffi import to_js, JsProxy, JsArray
+from typing import get_type_hints
 
 
 def to_camel_case(snake_str):
@@ -28,6 +29,20 @@ def to_snake_case(camel_str):
 # 2. check if the js to python roundtrip is needed
 # 3. maybe use `from typing import get_type_hints`
 # 4. either try the built in cache argument, or use @cache or something... memory is slower than math tho - so maybe if we have a benchmark to compare it to.
+
+def _convert_struct(struct_to_convert:structs.Struct) -> JsProxy:
+    """
+    convert a `wgpu.structs.Struct` into it's js equivalent descriptor
+    """
+    converted_struct = {} # maybe should be a JsProxy Object, or map?
+    for k, v in struct_to_convert.items():
+        camel_key = to_camel_case(k)
+        value_type = get_type_hints(type(struct_to_convert)).get(k, None)
+        # can only do a recursion here if we also cast the target type? this means we can't use the pyodide.ffi.to_js structure alone.
+        converted_value = to_js(v, eager_converter=simple_js_accessor)
+        converted_struct[camel_key] = value_type(**converted_value)
+    return converted_struct
+
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
 # you have to do the recursion yourself...

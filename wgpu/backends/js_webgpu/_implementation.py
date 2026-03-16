@@ -18,7 +18,11 @@ class GPUPromise(classes.GPUPromise):
     def sync_wait(self):
         # pyodide way that hopefully works?
         # explanation: https://blog.pyodide.org/posts/jspi/
+        # print("waiting for promise", self)
+        # if we set a promise._set_error we should maybe get this?
+        self.catch(lambda err: print(f"promise {self} rejected with error: {err}"))
         result = run_sync(self)
+        # print(f"resolved into {result}")
         return result
 
 
@@ -185,6 +189,36 @@ class GPUBuffer(classes.GPUBuffer):
     def __init__(self, label, internal, device):
         # can we just fill the _classes constructor with properties?
         super().__init__(internal.label, internal, device, internal.size, internal.usage, internal.mapState)
+        # to handle the bounds of mapped_read I guess?
+        self._mapped_status = 0, 0, 0 #offset, size, mapMode
+
+    # copied from wgpu-native/_api.py
+    def _check_range(self, offset, size):
+        # Apply defaults
+        if offset is None:
+            offset = 0
+            if self._mapped_status[2] != 0:
+                offset = self._mapped_status[0]
+        else:
+            offset = int(offset)
+        if size is None:
+            size = self.size - offset
+            if self._mapped_status[2] != 0:
+                size = self._mapped_status[1] - offset
+        else:
+            size = int(size)
+        # Checks
+        if offset < 0:
+            raise ValueError("Mapped offset must not be smaller than zero.")
+        if offset % 8:
+            raise ValueError("Mapped offset must be a multiple of 8.")
+        if size < 1:
+            raise ValueError("Mapped size must be larger than zero.")
+        if size % 4:
+            raise ValueError("Mapped size must be a multiple of 4.")
+        if offset + size > self.size:
+            raise ValueError("Mapped range must not extend beyond total buffer size.")
+        return offset, size
 
     @property
     def map_state(self) -> enums.BufferMapState:
@@ -208,6 +242,13 @@ class GPUBuffer(classes.GPUBuffer):
         # make sure it's in a known datatype???
         data = memoryview(data).cast("B")
         size = (data.nbytes + 3) & ~3
+        offset, size = self._check_range(buffer_offset, size)
+        if offset < self._mapped_status[0] or (offset + size) > self._mapped_status[1]:
+            raise ValueError(
+                "The range for buffer reading is not contained in the currently mapped range." \
+                f"mapped: {self._mapped_status[0]} offset, {self._mapped_status[1]} size " \
+                f"requested: {offset} offset, {size} size"
+            )
 
         # None default values become undefined in js, which should still work as the function can be overloaded.
         # TODO: try without this line
@@ -219,20 +260,47 @@ class GPUBuffer(classes.GPUBuffer):
         Uint8Array.new(array_buf).assign(data)
 
     def map_async(self, mode: flags.MapMode | str | None, offset: int = 0, size: int | None = None):
+        # print(f"calling map_async on {self}({self.label=}) with {mode}, {offset}, {size} (our {self.size=}) but it's currently {self.map_state=}. WE have the usages {self.usage}")
         if isinstance(mode, str):
             mode = str_flag_to_int(flags.MapMode, mode.removesuffix("_NOSYNC"))
-        js_mapping_promise = self._internal.mapAsync(mode, offset, size) # this errors when awaited on in the rendercanas offscreen backend...
 
-        promise = GPUPromise("buffer.map_async", None)
-        js_mapping_promise.then(promise._set_input) # presumably this signals via a none callback to nothing?
+        # Check offset and size
+        offset, size = self._check_range(offset, size)
+
+        js_mapping_promise = self._internal.mapAsync(mode, offset, size) # this errors when awaited on in the rendercanas offscreen backend...
+        # print(f"mapping requested:{js_mapping_promise}, we are still {self.map_state=}")
+
+        def buffer_map_success(js_result):
+            # print(f"buffer mapped successfully with {self.map_state=}: {js_result}")
+            self._mapped_status = offset, offset + size, mode
+            return js_result # should be None
+
+        promise = GPUPromise("buffer.map_async", buffer_map_success)
+
+        # print(f"created {promise=}, still in {self.map_state=}")
+        js_mapping_promise.then(promise._wgpu_set_input, promise._set_error) # presumably this signals via a none callback to nothing?
         # it works with the picking info buffer for pygfx. so what is the difference?
         return promise
 
-
     def read_mapped(self, buffer_offset: int | None = None, size: int | None = None, *, copy: bool = True):
         # TODO: check the values and then maybe rewrite read_buffer to call these functions intead?
-        array_buf = self._internal.getMappedRange(buffer_offset, size)
+        # print(f"trying to read_mapped {self} wit {buffer_offset=} and {size=} and we are {self.map_state=}")
+
+        offset, size = self._check_range(buffer_offset, size)
+        if offset < self._mapped_status[0] or (offset + size) > self._mapped_status[1]:
+            raise ValueError(
+                "The range for buffer reading is not contained in the currently mapped range." \
+                f"mapped: {self._mapped_status[0]} offset, {self._mapped_status[1]} size" \
+                f"requested: {offset} offset, {size} size"
+            )
+
+        if self.map_state != enums.BufferMapState.mapped:
+            raise RuntimeError(f"Can only read from a buffer if its mapped. It's {self.map_state=}")
+        array_buf = self._internal.getMappedRange(offset, size)
+
+        # TODO: copy = false?
         res = array_buf.slice(0)
+        # print(f"read_mapped res size {res.byteLength=}")
         return res.to_py()
 
 # TODO: we can't overwrite mixins already inhereted from....
@@ -277,9 +345,9 @@ class GPUQueue(classes.GPUQueue):
         else:
             data_length = int(size)
         if not (0 <= buffer_offset < buffer.size):  # pragma: no cover
-            raise ValueError("Invalid buffer_offset")
+            raise ValueError(f"Invalid {buffer_offset=}")
         if not (data_length <= buffer.size - buffer_offset):  # pragma: no cover
-            raise ValueError("Invalid data_length")
+            raise ValueError(f"Invalid {data_length=}")
         data_length = (data_length + 3) & ~3  # align to 4 bytes
 
         # TODO: if the buffer already has the usages we need, can we skip the temp buffer?
