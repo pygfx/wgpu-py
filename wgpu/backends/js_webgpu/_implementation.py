@@ -191,6 +191,9 @@ class GPUBuffer(classes.GPUBuffer):
         super().__init__(internal.label, internal, device, internal.size, internal.usage, internal.mapState)
         # to handle the bounds of mapped_read I guess?
         self._mapped_status = 0, 0, 0 #offset, size, mapMode
+        # If mapped at creation, set to write mode (no point in reading zeros)
+        if self._map_state == enums.BufferMapState.mapped:
+            self._mapped_status = 0, self.size, flags.MapMode.WRITE
 
     # copied from wgpu-native/_api.py
     def _check_range(self, offset, size):
@@ -245,7 +248,7 @@ class GPUBuffer(classes.GPUBuffer):
         offset, size = self._check_range(buffer_offset, size)
         if offset < self._mapped_status[0] or (offset + size) > self._mapped_status[1]:
             raise ValueError(
-                "The range for buffer reading is not contained in the currently mapped range." \
+                "The range for buffer reading is not contained in the currently mapped range. " \
                 f"mapped: {self._mapped_status[0]} offset, {self._mapped_status[1]} size " \
                 f"requested: {offset} offset, {size} size"
             )

@@ -368,6 +368,9 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         super().__init__(internal.label, internal, device, internal.size, internal.usage, internal.mapState)
         # to handle the bounds of mapped_read I guess?
         self._mapped_status = 0, 0, 0  # offset, size, mapMode
+        # If mapped at creation, set to write mode (no point in reading zeros)
+        if self._map_state == enums.BufferMapState.mapped:
+            self._mapped_status = 0, self.size, flags.MapMode.WRITE
 
     def _check_range(self, offset, size):
         # Apply defaults
@@ -405,7 +408,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         size = (data.nbytes + 3) & ~3
         offset, size = self._check_range(buffer_offset, size)
         if offset < self._mapped_status[0] or (offset + size) > self._mapped_status[1]:
-            raise ValueError(f"The range for buffer reading is not contained in the currently mapped range.mapped: {self._mapped_status[0]} offset, {self._mapped_status[1]} size requested: {offset} offset, {size} size")
+            raise ValueError(f"The range for buffer reading is not contained in the currently mapped range. mapped: {self._mapped_status[0]} offset, {self._mapped_status[1]} size requested: {offset} offset, {size} size")
 
         # None default values become undefined in js, which should still work as the function can be overloaded.
         # TODO: try without this line
