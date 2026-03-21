@@ -4,7 +4,8 @@ Helper functions for dealing with pyodide for the js webgpu backend.
 
 from ... import classes, structs
 from pyodide.ffi import to_js, JsProxy, JsArray
-from typing import get_type_hints
+import js
+from typing import Callable, get_type_hints
 
 
 def to_camel_case(snake_str):
@@ -30,18 +31,64 @@ def to_snake_case(camel_str):
 # 3. maybe use `from typing import get_type_hints`
 # 4. either try the built in cache argument, or use @cache or something... memory is slower than math tho - so maybe if we have a benchmark to compare it to.
 
-def _convert_struct(struct_to_convert:structs.Struct) -> JsProxy:
+def _convert_struct(struct_to_convert:structs.Struct, convert:Callable, cache:dict|None) -> JsProxy:
     """
     convert a `wgpu.structs.Struct` into it's js equivalent descriptor
     """
-    converted_struct = {} # maybe should be a JsProxy Object, or map?
-    for k, v in struct_to_convert.items():
-        camel_key = to_camel_case(k)
-        value_type = get_type_hints(type(struct_to_convert)).get(k, None)
-        # can only do a recursion here if we also cast the target type? this means we can't use the pyodide.ffi.to_js structure alone.
-        converted_value = to_js(v, eager_converter=simple_js_accessor)
-        converted_struct[camel_key] = value_type(**converted_value)
-    return converted_struct
+    result = {}
+    for struct_key, struct_member in struct_to_convert.items():
+        camel_key = to_camel_case(struct_key)
+        # if there is a dict further down... we still need to fix those keys
+        if isinstance(struct_member, dict):
+            if len(struct_member) == 0:
+                result[camel_key] = to_js(struct_member, depth=1) # empty dicts need special treatment?
+                continue
+            if(struct_key == "resource"): # this one is a more complex type.... https://www.w3.org/TR/webgpu/#typedefdef-gpubindingresource
+                # print("struct with resource dict detected", k, v)
+                struct_member = structs.BufferBinding(**struct_member)
+                # print("RESOURCE AS A STRUCT:", v)
+                down_convert = to_js(struct_member, eager_converter=simple_js_accessor)
+                down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
+                result[camel_key] = down_convert
+                # print("called convert(v) on RESOURCE STRUCT", result[camel_key])
+                continue
+            # print("struct with dict detected", struct_to_convert, k, v)
+            # print(dir(struct_to_convert))
+            v_struct_type_name = struct_to_convert.__annotations__[struct_key].partition("Struct")[0] # will not work if there is more than two options -.-
+            # print("likely v struct type_name", v_struct_type_name)
+            v_struct_type = structs.__dict__.get(v_struct_type_name, dict) # because the annotation is just a string... doesn't feel great
+            # print("likely v struct type", v_struct_type)
+            struct_member = v_struct_type(**struct_member)
+            if type(struct_member) is dict and "limits" in struct_key.lower():
+                # if it's just a dict like limits, we still need to convert the keys to camelCase.
+                struct_member = {to_camel_case(key): struct_to_convert for key, struct_to_convert in struct_member.items()}
+                # however stuff like constants and likely other dicts shouldn't be converted... so maybe we pull this logic outside from here and into the request_* functions directly.
+            # print("converted to struct", v)
+
+        # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...
+        elif isinstance(struct_member, (list)): #maybe tuple too?
+            if struct_member and isinstance(struct_member[0], dict): # assume all elements are the same type too and non empty?
+                # print("struct with list detected", struct_to_convert, k, v)
+                v_struct_type_name = struct_to_convert.__annotations__[struct_key].removeprefix("Sequence[").partition("Struct")[0]
+                # print("likely v struct type_name", v_struct_type_name)
+                v_struct_type = structs.__dict__.get(v_struct_type_name, dict)
+                # print("likely v struct type", v_struct_type)
+                struct_member = [v_struct_type(**item) for item in struct_member]
+                # print("converted to list of struct", v)
+            else:
+                # could be a list of other objects like GPUBindGroupLayout for example.
+                print(f"passing {struct_member} conversion of a sequence that is not of complex type")
+                pass
+        # print("initial call to down_convert", v)
+        down_convert = to_js(struct_member, eager_converter=simple_js_accessor)
+        # print("first result of down_convert", down_convert, dir(down_convert))
+        # TODO: can we avoid this round trip because: failed to read 'type' property from GPUBufferBindingLayout: value 'dict' is not a valid enum -> it reads the .type property and not the field...
+        down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
+        # print("final result of down_convert", down_convert)
+        result[camel_key] = down_convert
+    # print("struct conversion result: ", type(result), result)
+    return result
+
 
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
@@ -52,59 +99,7 @@ def simple_js_accessor(value, convert, cache=None):
         # print("GPUObjectBase detected", value)
         return value._internal # type : JsProxy
     elif isinstance(value, structs.Struct):
-        result = {}
-        for k, v in value.items():
-            camel_key = to_camel_case(k)
-            # print("struct item detected", k, v, "converted key:", camel_key)
-            # if there is a dict further down... we still need to fix those keys
-            if isinstance(v, dict):
-                if len(v) == 0:
-                    result[camel_key] = to_js(v, depth=1) # empty dicts need special treatment?
-                    continue
-                if(k == "resource"): # this one is a more complex type.... https://www.w3.org/TR/webgpu/#typedefdef-gpubindingresource
-                    # print("struct with resource dict detected", k, v)
-                    v = structs.BufferBinding(**v)
-                    # print("RESOURCE AS A STRUCT:", v)
-                    down_convert = to_js(v, eager_converter=simple_js_accessor)
-                    down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
-                    result[camel_key] = down_convert
-                    # print("called convert(v) on RESOURCE STRUCT", result[camel_key])
-                    continue
-                # print("struct with dict detected", value, k, v)
-                # print(dir(value))
-                v_struct_type_name = value.__annotations__[k].partition("Struct")[0] # will not work if there is more than two options -.-
-                # print("likely v struct type_name", v_struct_type_name)
-                v_struct_type = structs.__dict__.get(v_struct_type_name, dict) # because the annotation is just a string... doesn't feel great
-                # print("likely v struct type", v_struct_type)
-                v = v_struct_type(**v)
-                if type(v) is dict and "limits" in k.lower():
-                    # if it's just a dict like limits, we still need to convert the keys to camelCase.
-                    v = {to_camel_case(key): value for key, value in v.items()}
-                    # however stuff like constants and likely other dicts shouldn't be converted... so maybe we pull this logic outside from here and into the request_* functions directly.
-                # print("converted to struct", v)
-
-            # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...
-            elif isinstance(v, (list)): #maybe tuple too?
-                if v and isinstance(v[0], dict): # assume all elements are the same type too and non empty?
-                    # print("struct with list detected", value, k, v)
-                    v_struct_type_name = value.__annotations__[k].removeprefix("Sequence[").partition("Struct")[0]
-                    # print("likely v struct type_name", v_struct_type_name)
-                    v_struct_type = structs.__dict__.get(v_struct_type_name, dict)
-                    # print("likely v struct type", v_struct_type)
-                    v = [v_struct_type(**item) for item in v]
-                    # print("converted to list of struct", v)
-                else:
-                    # could be a list of other objects like GPUBindGroupLayout for example.
-                    pass
-            # print("initial call to down_convert", v)
-            down_convert = to_js(v, eager_converter=simple_js_accessor)
-            # print("first result of down_convert", down_convert, dir(down_convert))
-            down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
-            # print("final result of down_convert", down_convert)
-            result[camel_key] = down_convert
-        # print("struct conversion result: ", type(result), result)
-        return result
-
+        return _convert_struct(value, convert, cache)
     elif isinstance(value, (list, tuple)):
         result = [to_js(v, eager_converter=simple_js_accessor) for v in value]
         return to_js(result, depth=1) # to make sure it's like an ArrayList?

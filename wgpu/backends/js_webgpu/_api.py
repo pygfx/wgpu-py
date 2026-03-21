@@ -21,6 +21,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin, ):
 
     # Custom implementation for setBindGroup from _implementation.py:
     def set_bind_group(self, index: int, bind_group: classes.GPUBindGroup, dynamic_offsets_data: list[int] = (), dynamic_offsets_data_start=None, dynamic_offsets_data_length=None) -> None:
+
         self._internal.setBindGroup(index, bind_group._internal, dynamic_offsets_data)
 
 
@@ -501,7 +502,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             "format": internal.format,
             "usage": internal.usage,
         }
-        super().__init__(internal.label, internal, device, tex_info)
+        super().__init__(label or internal.label, internal, device, tex_info)
 
 
 
@@ -848,15 +849,7 @@ class GPUCanvasContext(classes.GPUCanvasContext, ):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
 
         self._internal.configure(js_descriptor)
-        self._config = {
-            "device": kwargs.get("device"),
-            "format": kwargs.get("format"),
-            "usage": kwargs.get("usage", 0x10),
-            "view_formats": kwargs.get("view_formats", ()),
-            "color_space": kwargs.get("color_space", "srgb"),
-            "tone_mapping": kwargs.get("tone_mapping", None),
-            "alpha_mode": kwargs.get("alpha_mode", "opaque"),
-        }
+        self._config = descriptor.__dict__  # why aren't we using this struct in the first place?
 
     def unconfigure(self) -> None:
         self._internal.unconfigure()

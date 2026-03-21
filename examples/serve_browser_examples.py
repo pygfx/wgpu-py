@@ -23,9 +23,10 @@ import sys
 import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import subprocess
+import importlib
 
 import wgpu
-from codegen import update_js, file_cache
+from codegen import jswriter, update_js, file_cache
 
 # from here: https://github.com/harfbuzz/uharfbuzz/pull/275
 uharfbuzz_wheel = "uharfbuzz-0.1.dev1+ga19185453-cp310-abi3-pyodide_2025_0_wasm32.whl"
@@ -208,11 +209,10 @@ if not (
 
 def build_wheel():
     # TODO: run the codegen for js_webgpu backend!
+    importlib.reload(jswriter) # there is a custom_implementations in the jswriter namespace that doesn't get updated
     file_cache.reset()
     update_js()
     file_cache.write_changed_files_to_disk()
-    # doesn't work right now :/
-    # maybe now? not 100% sure
 
     # TODO: can we use the existing hatch build system? (via build yes, not via flit it seems)
     os.environ["WGPU_BUILD_PLATFORM_INFO"] = " ".join(("pyodide_wasm", "any"))

@@ -100,6 +100,7 @@ class GPUAdapter(classes.GPUAdapter):
         js_device_promise = self._internal.requestDevice(js_descriptor)
 
         label = kwargs.get("label", "")
+        # TODO: maybe we can use https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.create_once_callable as an optimization?
         def device_constructor(js_device):
             # TODO: do we need to hand down a default_queue here?
             return GPUDevice(label, js_device, adapter=self)
@@ -456,7 +457,7 @@ class GPUTexture(classes.GPUTexture):
             "format": internal.format,
             "usage": internal.usage,
         }
-        super().__init__(internal.label, internal, device, tex_info)
+        super().__init__(label or internal.label, internal, device, tex_info)
 
     # has a more complex constructor...
     def create_view(self, **kwargs):
@@ -479,15 +480,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
 
         self._internal.configure(js_descriptor)
-        self._config = {
-            "device": kwargs.get("device"),
-            "format": kwargs.get("format"),
-            "usage": kwargs.get("usage", 0x10),
-            "view_formats": kwargs.get("view_formats", ()),
-            "color_space": kwargs.get("color_space", "srgb"),
-            "tone_mapping": kwargs.get("tone_mapping", None),
-            "alpha_mode": kwargs.get("alpha_mode", "opaque"),
-        }
+        self._config = descriptor.__dict__ # why aren't we using this struct in the first place?
 
     def get_current_texture(self) -> GPUTexture:
         js_texture = self._internal.getCurrentTexture()
