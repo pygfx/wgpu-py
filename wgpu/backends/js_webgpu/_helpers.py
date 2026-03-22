@@ -35,7 +35,6 @@ def _convert_struct(struct_to_convert:structs.Struct, convert:Callable, cache:di
     """
     result = {}
     for struct_key, struct_member in struct_to_convert.items():
-        _needs_rountrip = False
         camel_key = to_camel_case(struct_key)
         if type(struct_member) is dict and "limits" in struct_key.lower():
             # if it's just a dict like limits, we still need to convert the keys to camelCase.
@@ -72,8 +71,6 @@ def _convert_struct(struct_to_convert:structs.Struct, convert:Callable, cache:di
 
             # we do recursive call (and round trip) with the original varible name at the bottom, so let's hand this down
             struct_member = member_as_struct
-            _needs_rountrip = "type" in struct_member.__dict__.keys()
-            # print(f"we broke out of the candidates, member is {struct_member=} now!")
 
         # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...
         elif isinstance(struct_member, (list)): #maybe tuple too?
@@ -90,10 +87,9 @@ def _convert_struct(struct_to_convert:structs.Struct, convert:Callable, cache:di
         # print("first result of down_convert", down_convert)
         # TODO: can we avoid this round trip because: failed to read 'type' property from GPUBufferBindingLayout: value 'dict' is not a valid enum -> it reads the .type property and not the field...
         # I tried different dict_converter... but I think they don't matter for the eager converter...
-        if _needs_rountrip or True: # just bypass this for testing -> is seemingly required even above the dict that contains "type" as a key...
-            # print(f"round trip needed for {struct_member} -> {down_convert}")
-            down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
-            # print("final result of down_convert:", down_convert)
+        # print(f"round trip needed for {struct_member} -> {down_convert}")
+        down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
+        # print("final result of down_convert:", down_convert)
         result[camel_key] = down_convert
     # print(f"struct conversion result: {struct_to_convert} -->>> {result}")
     return result
