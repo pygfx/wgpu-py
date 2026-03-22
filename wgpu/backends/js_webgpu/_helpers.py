@@ -88,13 +88,16 @@ def _convert_struct(struct_to_convert:structs.Struct, convert:Callable, cache:di
         # TODO: can we avoid this round trip because: failed to read 'type' property from GPUBufferBindingLayout: value 'dict' is not a valid enum -> it reads the .type property and not the field...
         # I tried different dict_converter... but I think they don't matter for the eager converter...
         # print(f"round trip needed for {struct_member} -> {down_convert}")
-        down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
+        # down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
         # print("final result of down_convert:", down_convert)
         result[camel_key] = down_convert
     # print(f"struct conversion result: {struct_to_convert} -->>> {result}")
-    return result
+    return to_js(result) # to make it an Object and not a JsProxy
 
-
+# this one liner almost works... but we can't have undefined values I think... so maybe we can translate those into something else
+def _dict_keys_to_camel_case(in_dict) -> dict:
+    skip_keys = ("constants", )
+    return {to_camel_case(k): to_js(v, eager_converter=simple_js_accessor) if k not in skip_keys else to_js(v) for k, v in in_dict.items()}
 
 # for use in to_js() https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.ToJsConverter
 # you have to do the recursion yourself...
@@ -104,9 +107,13 @@ def simple_js_accessor(value, convert, cache=None):
         # print("GPUObjectBase detected", value)
         return value._internal # type : JsProxy
     elif isinstance(value, structs.Struct):
-        return _convert_struct(value, convert, cache)
+        return to_js(value.__dict__, eager_converter=simple_js_accessor)
+    elif isinstance(value, dict):
+        return to_js(_dict_keys_to_camel_case(value), depth=1)
     elif isinstance(value, (list, tuple)):
+        # print("list detected", value, len(value))
         result = [to_js(v, eager_converter=simple_js_accessor) for v in value]
+        # print("list conversion result", result)
         return to_js(result, depth=1) # to make sure it's like an ArrayList?
     # this might recursively call itself...
     # maybe use a map? or do a dict_converted?
