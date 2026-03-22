@@ -2496,6 +2496,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         if self._map_state == enums.BufferMapState.mapped:
             self._mapped_status = 0, self.size, flags.MapMode.WRITE
 
+    # this name seems incorrect?
     def _get_size(self):
         # H: WGPUBufferUsage f(WGPUBuffer buffer)
         return libf.wgpuBufferGetUsage(self._internal)

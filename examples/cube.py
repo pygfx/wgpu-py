@@ -1,4 +1,6 @@
 """
+Cube
+----
 Example that renders a textured rotating cube.
 
 This example is a bit more interesting (and larger) than the triangle,
@@ -466,7 +468,6 @@ uniform_data = np.zeros((), dtype=uniform_dtype)
 print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
-
 
 if __name__ == "__main__":
     canvas = RenderCanvas(

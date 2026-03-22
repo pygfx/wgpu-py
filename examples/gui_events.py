@@ -1,4 +1,7 @@
 """
+GUI Events
+----------
+
 A simple example to demonstrate events (no rendering).
 """
 
