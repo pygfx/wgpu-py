@@ -157,6 +157,7 @@ class GPUAdapter(classes.GPUAdapter, ):
 
         label = kwargs.get("label", "")
 
+        # TODO: maybe we can use https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.create_once_callable as an optimization?
         def device_constructor(js_device):
             # TODO: do we need to hand down a default_queue here?
             return GPUDevice(label, js_device, adapter=self)
@@ -177,7 +178,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createBuffer(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUBuffer(label, js_obj, device=self)
 
     def create_texture(self, **kwargs):
@@ -185,7 +186,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createTexture(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUTexture(label, js_obj, device=self)
 
     def create_sampler(self, **kwargs):
@@ -193,7 +194,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createSampler(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUSampler(label, js_obj, device=self)
 
     def import_external_texture(self, **kwargs):
@@ -201,7 +202,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.importExternalTexture(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUExternalTexture(label, js_obj, device=self)
 
     def create_bind_group_layout(self, **kwargs):
@@ -209,7 +210,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createBindGroupLayout(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUBindGroupLayout(label, js_obj, device=self)
 
     def create_pipeline_layout(self, **kwargs):
@@ -217,7 +218,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createPipelineLayout(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUPipelineLayout(label, js_obj, device=self)
 
     def create_bind_group(self, **kwargs):
@@ -225,7 +226,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createBindGroup(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUBindGroup(label, js_obj, device=self)
 
     def create_shader_module(self, **kwargs):
@@ -233,7 +234,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createShaderModule(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUShaderModule(label, js_obj, device=self)
 
     def create_compute_pipeline(self, **kwargs):
@@ -241,7 +242,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createComputePipeline(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUComputePipeline(label, js_obj, device=self)
 
     def create_render_pipeline(self, **kwargs):
@@ -249,7 +250,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createRenderPipeline(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPURenderPipeline(label, js_obj, device=self)
 
     # TODO: was was there a redefinition for createComputePipelineAsync async variant?
@@ -259,7 +260,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createCommandEncoder(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUCommandEncoder(label, js_obj, device=self)
 
     def create_render_bundle_encoder(self, **kwargs):
@@ -267,7 +268,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createRenderBundleEncoder(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPURenderBundleEncoder(label, js_obj, device=self)
 
     # Custom implementation for createQuerySet from _implementation.py:
@@ -572,7 +573,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.beginRenderPass(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPURenderPassEncoder(label, js_obj, device=self)
 
     def begin_compute_pass(self, **kwargs):
@@ -580,7 +581,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.beginComputePass(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUComputePassEncoder(label, js_obj, device=self)
 
     def copy_buffer_to_buffer(self, source: Union["GPUBuffer", None] = None, source_offset: Union[int, None] = None, destination: Union["GPUBuffer", None] = None, destination_offset: Union[int, None] = None, size: Union[int, None] = None) -> None:
@@ -626,7 +627,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.finish(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPUCommandBuffer(label, js_obj, device=self)
 
 
@@ -692,7 +693,7 @@ class GPURenderBundleEncoder(classes.GPURenderBundleEncoder, GPUObjectBase, GPUC
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.finish(js_descriptor)
 
-        label = kwargs.pop("label", "")
+        label = kwargs.get("label", "")
         return GPURenderBundle(label, js_obj, device=self)
 
 

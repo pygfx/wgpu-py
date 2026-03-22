@@ -36,7 +36,7 @@ def {py_method_name}(self, **kwargs):
     js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
     js_obj = self._internal.{js_method_name}(js_descriptor)
 
-    label = kwargs.pop("label", "")
+    label = kwargs.get("label", "")
     return {return_type}(label, js_obj, device=self)
 """
 

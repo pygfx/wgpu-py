@@ -3,7 +3,7 @@ Helper functions for dealing with pyodide for the js webgpu backend.
 """
 
 from ... import classes, structs
-from pyodide.ffi import to_js, JsProxy, JsArray
+from pyodide.ffi import to_js, JsProxy, JsArray, jsnull
 import js
 from typing import Callable, get_type_hints
 
@@ -26,9 +26,7 @@ def to_snake_case(camel_str):
     return snake_str
 
 # TODO: clean this up before readying for merge!
-# 1. break it into smaller functions
 # 2. check if the js to python roundtrip is needed
-# 3. maybe use `from typing import get_type_hints`
 # 4. either try the built in cache argument, or use @cache or something... memory is slower than math tho - so maybe if we have a benchmark to compare it to.
 
 def _convert_struct(struct_to_convert:structs.Struct, convert:Callable, cache:dict|None) -> JsProxy:
@@ -37,56 +35,67 @@ def _convert_struct(struct_to_convert:structs.Struct, convert:Callable, cache:di
     """
     result = {}
     for struct_key, struct_member in struct_to_convert.items():
+        _needs_rountrip = False
         camel_key = to_camel_case(struct_key)
-        # if there is a dict further down... we still need to fix those keys
-        if isinstance(struct_member, dict):
+        if type(struct_member) is dict and "limits" in struct_key.lower():
+            # if it's just a dict like limits, we still need to convert the keys to camelCase.
+            # limits aren't literals but record<DOMString>, and we don't enumerate them in any python files.
+            struct_member = {to_camel_case(limit_key): limit_value for limit_key, limit_value in struct_member.items()}
+            # however stuff like constants keys are USVString which don't need the camel case conversion... I don't think we keep track of that either.
+
+        # if there is a dict further down... we still need to fix those keys (if only strcut creation were recursive...)
+        elif isinstance(struct_member, dict):
+            _struct_types = get_type_hints(type(struct_to_convert)) # not always needed, so we could move this up or lazy load it.
             if len(struct_member) == 0:
-                result[camel_key] = to_js(struct_member, depth=1) # empty dicts need special treatment?
-                continue
-            if(struct_key == "resource"): # this one is a more complex type.... https://www.w3.org/TR/webgpu/#typedefdef-gpubindingresource
-                # print("struct with resource dict detected", k, v)
-                struct_member = structs.BufferBinding(**struct_member)
-                # print("RESOURCE AS A STRUCT:", v)
-                down_convert = to_js(struct_member, eager_converter=simple_js_accessor)
-                down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
-                result[camel_key] = down_convert
-                # print("called convert(v) on RESOURCE STRUCT", result[camel_key])
-                continue
-            # print("struct with dict detected", struct_to_convert, k, v)
-            # print(dir(struct_to_convert))
-            v_struct_type_name = struct_to_convert.__annotations__[struct_key].partition("Struct")[0] # will not work if there is more than two options -.-
-            # print("likely v struct type_name", v_struct_type_name)
-            v_struct_type = structs.__dict__.get(v_struct_type_name, dict) # because the annotation is just a string... doesn't feel great
-            # print("likely v struct type", v_struct_type)
-            struct_member = v_struct_type(**struct_member)
-            if type(struct_member) is dict and "limits" in struct_key.lower():
-                # if it's just a dict like limits, we still need to convert the keys to camelCase.
-                struct_member = {to_camel_case(key): struct_to_convert for key, struct_to_convert in struct_member.items()}
-                # however stuff like constants and likely other dicts shouldn't be converted... so maybe we pull this logic outside from here and into the request_* functions directly.
-            # print("converted to struct", v)
+                # I think because of the round trip below, None and {} don't get converted as expected... js.Object.new() seems to also work.
+                result[camel_key] = js.Object.new() # jsnull is problematic for empty constants?
+                continue # actually skip the back translation?
+
+            # this should hopefully work on the first attempt, there is a 2nd attempt with dict that might work as a fallback
+            # if object is included we should avoid that too.
+            # this is slow on the BufferBinding entry as this has to fail up to 6 time before going through. I want to compare the numbers.
+            member_types = _struct_types.get(struct_key).__args__
+            for candidate_type in member_types:
+                # alternatively, we could load the type hints of the candidate and check if keys are the same?
+                # but troublsome with optionals. unless all() might do it.
+                try:
+                    member_as_struct = candidate_type(**struct_member)
+                    # print(f"struct cast successful {struct_member} --> {member_as_struct}")
+                    break # on success we should exit the candidate loop and continue with other struct members
+                except TypeError as te: # type error is too generic I feel, I want "unexpected keyword argument"
+                    # print(te, f" in {struct_to_convert.__class__.__name__}.{struct_key} tried to convert {struct_member=} into {candidate_type}")
+                    # bascially try again (for GPUBindingResource mostly)
+                    continue
+            else:
+                # this this freakishly not get reached because the break is in a try/except?
+                print(f"failed to convert {struct_member=} into any of the candidate types {member_types} for {struct_to_convert.__class__.__name__}.{struct_key}")
+
+            # we do recursive call (and round trip) with the original varible name at the bottom, so let's hand this down
+            struct_member = member_as_struct
+            _needs_rountrip = "type" in struct_member.__dict__.keys()
+            # print(f"we broke out of the candidates, member is {struct_member=} now!")
 
         # if there is a list of dicts... it will still call the the default sequence converter and then dict converter...
         elif isinstance(struct_member, (list)): #maybe tuple too?
-            if struct_member and isinstance(struct_member[0], dict): # assume all elements are the same type too and non empty?
-                # print("struct with list detected", struct_to_convert, k, v)
-                v_struct_type_name = struct_to_convert.__annotations__[struct_key].removeprefix("Sequence[").partition("Struct")[0]
-                # print("likely v struct type_name", v_struct_type_name)
-                v_struct_type = structs.__dict__.get(v_struct_type_name, dict)
-                # print("likely v struct type", v_struct_type)
-                struct_member = [v_struct_type(**item) for item in struct_member]
-                # print("converted to list of struct", v)
+            if struct_member and isinstance(struct_member[0], dict): # assume all elements are the same type
+                member_type = get_type_hints(type(struct_to_convert)).get(struct_key).__args__[0].__args__[0] # -> sequence of union struct|dict
+                struct_member = [member_type(**item) for item in struct_member]
+                # the recursion is handled by the caller...
             else:
-                # could be a list of other objects like GPUBindGroupLayout for example.
-                print(f"passing {struct_member} conversion of a sequence that is not of complex type")
+                # could be a list of other objects like GPUBindGroupLayout for example also RenderPassColorAttachment
                 pass
-        # print("initial call to down_convert", v)
-        down_convert = to_js(struct_member, eager_converter=simple_js_accessor)
-        # print("first result of down_convert", down_convert, dir(down_convert))
+
+        # print("initial call to down_convert", struct_member)
+        down_convert = to_js(struct_member, eager_converter=simple_js_accessor) # recursive call for all trivial members, "base case"?
+        # print("first result of down_convert", down_convert)
         # TODO: can we avoid this round trip because: failed to read 'type' property from GPUBufferBindingLayout: value 'dict' is not a valid enum -> it reads the .type property and not the field...
-        down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
-        # print("final result of down_convert", down_convert)
+        # I tried different dict_converter... but I think they don't matter for the eager converter...
+        if _needs_rountrip or True: # just bypass this for testing -> is seemingly required even above the dict that contains "type" as a key...
+            # print(f"round trip needed for {struct_member} -> {down_convert}")
+            down_convert = to_js(down_convert.to_py(depth=1), depth=1) if hasattr(down_convert, "to_py") else down_convert
+            # print("final result of down_convert:", down_convert)
         result[camel_key] = down_convert
-    # print("struct conversion result: ", type(result), result)
+    # print(f"struct conversion result: {struct_to_convert} -->>> {result}")
     return result
 
 
