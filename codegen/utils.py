@@ -6,6 +6,7 @@ import os
 import sys
 import tempfile
 import subprocess
+from typing import Generator
 
 
 def to_snake_case(name, separator="_"):
@@ -110,7 +111,7 @@ class FormatError(Exception):
     pass
 
 
-def format_code(src, singleline=False):
+def format_code(src, singleline=False) -> str:
     """Format the given src string. If singleline is True, all function
     signatures become single-line, so they can be parsed and updated.
     """
@@ -326,7 +327,7 @@ class Patcher:
             line = self.lines[i]
             yield line, i
 
-    def iter_classes(self, start_line=0):
+    def iter_classes(self, start_line: int = 0) -> Generator[list[str|int], None, None]:
         """Generator to iterate over the classes.
         Each iteration yields (classname, linenr_start, linenr_end),
         where linenr_end is the last line of code.
@@ -347,7 +348,7 @@ class Patcher:
         if current_class:
             yield current_class
 
-    def iter_properties(self, start_line=0):
+    def iter_properties(self, start_line: int = 0):
         """Generator to iterate over the properties.
         Each iteration yields (propertyname, linenr_first, linenr_last),
         where linenr_first is the line that startswith `def`,
@@ -363,7 +364,7 @@ class Patcher:
         """
         return self._iter_props_and_methods(start_line, False)
 
-    def _iter_props_and_methods(self, start_line, find_props):
+    def _iter_props_and_methods(self, start_line: int, find_props: bool) -> Generator[tuple[str, int, int], None, None]:
         prop_mark = None
         current_def = None
         for i in range(start_line, len(self.lines)):

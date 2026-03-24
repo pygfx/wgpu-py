@@ -56,6 +56,7 @@ positional_args_template = """
 
 
 # might require size to be calculated if None? (offset etc)
+# could this be part of the to_js conversion with it's own private function we call there?
 data_conversion = """
     if {py_data} is not None:
         data = memoryview({py_data}).cast("B")
@@ -225,8 +226,8 @@ def generate_js_webgpu_api() -> str:
                     # TODO: can we use a walrus operator for struct_name here?
                     elif arg.typename.removeprefix('GPU').removesuffix("?") in idl.structs and arg.typename not in ("GPUExtent3D", "GPUColor"):
                         # maybe we can skip the round trip to structs?
-                        conversion_lines.append(f"{py_name}_desc = {py_name} if isinstance({py_name}, structs.Struct) else structs.{arg.typename.removeprefix('GPU').removesuffix('?')}(**{py_name})")
-                        conversion_lines.append(f"js_{arg.name} = to_js({py_name}_desc, eager_converter=simple_js_accessor)")
+                        # conversion_lines.append(f"{py_name}_desc = {py_name} if isinstance({py_name}, structs.Struct) else structs.{arg.typename.removeprefix('GPU').removesuffix('?')}(**{py_name})")
+                        conversion_lines.append(f"js_{arg.name} = to_js({py_name}, eager_converter=simple_js_accessor)")
                         js_arg_list.append(f"js_{arg.name}")
                     elif py_name.endswith("data"): # maybe not an exhaustive check?
                         conversion_lines.append(data_conversion.format(py_data=py_name))
