@@ -362,7 +362,7 @@ class GPUCanvasContext:
             usage = str_flag_to_int(flags.TextureUsage, usage)
 
         color_space  # noqa - not really supported, just assume srgb for now
-        tone_mapping  # noqa - not supported yet
+        tone_mapping = {} if tone_mapping is None else tone_mapping
 
         # Allow more than the IDL modes, see https://github.com/pygfx/wgpu-py/pull/719
         extra_alpha_modes = ["auto", "unpremultiplied", "inherit"]  # from webgpu.h
@@ -1021,7 +1021,7 @@ class GPUDevice(GPUObjectBase):
                 'comp', 'vert' or 'frag'. For SpirV the code must be bytes.
             compilation_hints: currently unused.
         """
-        # Noe: compilation_hints has been removed: https://github.com/webgpu-native/webgpu-headers/pull/337
+        # Note: compilation_hints has been removed: https://github.com/webgpu-native/webgpu-headers/pull/337
         raise NotImplementedError()
 
     # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUProgrammableStage compute
@@ -1816,7 +1816,7 @@ class GPURenderCommandsMixin:
                 call to `GPUDevice.create_render_pipeline()`, it must match.
             offset (int): The byte offset in the buffer. Default 0.
             size (int): The number of bytes to use. If zero, the remaining size
-                (after offset) of the buffer is used. Default 0.
+                (after offset) of the buffer is used.
         """
         raise NotImplementedError()
 
