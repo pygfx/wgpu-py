@@ -60,7 +60,7 @@ graphics_examples = {
     # "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"],
     # "fpl_example.py": [*pygfx_deps, "fastplotlib"],
     # theoretically WGSL shadertoys work (with a couple tweaks... needs a new release soonish)
-    "shadertoy_blink.py": ["numpy", "sniffio", "requests", "wgpu_shadertoy-0.2.0-py3-none-any.whl"],
+    "shadertoy_blink.py": ["Pillow", "numpy", "sniffio", "requests", "wgpu_shadertoy-0.2.0-py3-none-any.whl"],
 }
 
 

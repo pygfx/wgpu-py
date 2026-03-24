@@ -32,9 +32,8 @@ from ._implementation import GPUPromise
 # maybe label can be done via the property?
 create_template = """
 def {py_method_name}(self, **kwargs):
-    descriptor = structs.{py_descriptor_name}(**kwargs)
-    js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
-    js_obj = self._internal.{js_method_name}(js_descriptor)
+    js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
+    js_obj = self._internal.{js_method_name}(js_kwargs)
 
     label = kwargs.get("label", "")
     return {return_type}(label, js_obj, device=self)
@@ -118,7 +117,7 @@ def generate_js_webgpu_api() -> str:
         # get label (where needed?)
         # return the constructor call to the base class maybe?
 
-        custom_methods = {}
+        custom_methods: dict[str, list[str]] = {}
 
         if class_name in custom_classes:
             class_line = custom_classes[class_name][0] +1
@@ -182,7 +181,7 @@ def generate_js_webgpu_api() -> str:
                 ):
                 method_string = create_template.format(
                     py_method_name=py_method_name,
-                    py_descriptor_name=args[0].typename.removeprefix("GPU"),
+                    # py_descriptor_name=args[0].typename.removeprefix("GPU"),
                     js_method_name=function_name,
                     return_type=return_type if return_type else "None",
                 )

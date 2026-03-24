@@ -32,7 +32,7 @@ class GPU(classes.GPU):
 
     # TODO: maybe autogenerate async?
     def request_adapter_async(self, canvas=None, **options) -> GPUPromise["GPUAdapter"]:
-        options = structs.RequestAdapterOptions(**options)
+        # options = structs.RequestAdapterOptions(**options)
         js_options = to_js(options, eager_converter=simple_js_accessor)
         js_adapter_promise = self._internal.requestAdapter(js_options)
 
