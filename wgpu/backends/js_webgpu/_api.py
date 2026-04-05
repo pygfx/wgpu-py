@@ -101,7 +101,7 @@ class GPU(classes.GPU, ):
 
         promise = GPUPromise("request_adapter", adapter_constructor)
 
-        js_adapter_promise.then(promise._set_input)  # we chain the js resolution to our promise
+        js_adapter_promise.then(promise._set_input, promise._set_error)  # we chain the js resolution to our promise
         return promise
 
     def enumerate_adapters_async(self) -> GPUPromise[list["GPUAdapter"]]:
@@ -166,7 +166,7 @@ class GPUAdapter(classes.GPUAdapter, ):
             return GPUDevice("", js_device, adapter=self)
 
         promise = GPUPromise("request_device", device_constructor)
-        js_device_promise.then(promise._set_input)
+        js_device_promise.then(promise._set_input, promise._set_error)
         return promise
 
 
@@ -302,7 +302,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             return classes.GPUComputePipeline("", js_cp, self)
 
         promise = GPUPromise("create_compute_pipeline", construct_compute_pipeline)
-        js_promise.then(promise._set_input)
+        js_promise.then(promise._set_input, promise._set_error)
 
         return promise
 
@@ -315,7 +315,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             return classes.GPURenderPipeline("", js_rp, self)
 
         promise = GPUPromise("create_render_pipeline", construct_render_pipeline)
-        js_promise.then(promise._set_input)
+        js_promise.then(promise._set_input, promise._set_error)
 
         return promise
 
@@ -414,7 +414,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         promise = GPUPromise("buffer.map_async", buffer_map_success)
 
         # print(f"created {promise=}, still in {self.map_state=}")
-        js_mapping_promise.then(promise._wgpu_set_input, promise._set_error)  # presumably this signals via a none callback to nothing?
+        js_mapping_promise.then(promise._set_input, promise._set_error)  # presumably this signals via a none callback to nothing?
         # it works with the picking info buffer for pygfx. so what is the difference?
         return promise
 
