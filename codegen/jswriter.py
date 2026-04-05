@@ -29,14 +29,13 @@ from ._implementation import GPUPromise
 # maybe we should also generate a __all__ list to just import the defined classes?
 
 # TODO: the constructor often needs more args, like device hands down self
-# maybe label can be done via the property?
+# maybe label can be done via the property? -> label can likely be done in the Base class init/constructor... but we still include it in all our constructors...
 create_template = """
 def {py_method_name}(self, **kwargs):
     js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
     js_obj = self._internal.{js_method_name}(js_kwargs)
 
-    label = kwargs.get("label", "")
-    return {return_type}(label, js_obj, device=self)
+    return {return_type}(label="", internal=js_obj, device=self)
 """
 
 unary_template = """
@@ -198,6 +197,9 @@ def generate_js_webgpu_api() -> str:
                 # TODO: return values, could be simple or complex... so might need a constructor or not at all?
 
             # case 3: positional arguments, some of which might need ._internal lookup or struct->to_js conversion... but not all.
+            # some of the default values could be a problem... but I feel like this could be a to_js(*args) situation?
+            # it can't be kwargs as positional arguments need to stay positional.
+            # another problem might be overloaded functions with fewer or more positional args. do we trust the user to only call valid combinations?
             elif (len(args) > 0):
 
                 header = helper_patcher.get_method_def(class_name, py_method_name).partition("):")[0].lstrip()

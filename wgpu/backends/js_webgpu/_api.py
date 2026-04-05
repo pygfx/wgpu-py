@@ -72,7 +72,12 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin, ):
 
 class GPUObjectBase(classes.GPUObjectBase, ):
 
-    pass
+    # Additional custom methods from _implementation.py:
+    def __init__(self, label: str, internal, device=None):
+        label = label or getattr(internal, "label", "")  # I am not sure which one should take precedence
+        super().__init__(label=label, internal=internal, device=device)
+
+
 
 class GPUAdapterInfo(classes.GPUAdapterInfo, ):
 
@@ -155,12 +160,10 @@ class GPUAdapter(classes.GPUAdapter, ):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_device_promise = self._internal.requestDevice(js_descriptor)
 
-        label = kwargs.get("label", "")
-
         # TODO: maybe we can use https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.create_once_callable as an optimization?
         def device_constructor(js_device):
             # TODO: do we need to hand down a default_queue here?
-            return GPUDevice(label, js_device, adapter=self)
+            return GPUDevice("", js_device, adapter=self)
 
         promise = GPUPromise("request_device", device_constructor)
         js_device_promise.then(promise._set_input)
@@ -177,71 +180,61 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createBuffer(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUBuffer(label, js_obj, device=self)
+        return GPUBuffer(label="", internal=js_obj, device=self)
 
     def create_texture(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createTexture(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUTexture(label, js_obj, device=self)
+        return GPUTexture(label="", internal=js_obj, device=self)
 
     def create_sampler(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createSampler(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUSampler(label, js_obj, device=self)
+        return GPUSampler(label="", internal=js_obj, device=self)
 
     def import_external_texture(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.importExternalTexture(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUExternalTexture(label, js_obj, device=self)
+        return GPUExternalTexture(label="", internal=js_obj, device=self)
 
     def create_bind_group_layout(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createBindGroupLayout(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUBindGroupLayout(label, js_obj, device=self)
+        return GPUBindGroupLayout(label="", internal=js_obj, device=self)
 
     def create_pipeline_layout(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createPipelineLayout(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUPipelineLayout(label, js_obj, device=self)
+        return GPUPipelineLayout(label="", internal=js_obj, device=self)
 
     def create_bind_group(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createBindGroup(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUBindGroup(label, js_obj, device=self)
+        return GPUBindGroup(label="", internal=js_obj, device=self)
 
     def create_shader_module(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createShaderModule(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUShaderModule(label, js_obj, device=self)
+        return GPUShaderModule(label="", internal=js_obj, device=self)
 
     def create_compute_pipeline(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createComputePipeline(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUComputePipeline(label, js_obj, device=self)
+        return GPUComputePipeline(label="", internal=js_obj, device=self)
 
     def create_render_pipeline(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createRenderPipeline(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPURenderPipeline(label, js_obj, device=self)
+        return GPURenderPipeline(label="", internal=js_obj, device=self)
 
     # TODO: was was there a redefinition for createComputePipelineAsync async variant?
     # TODO: was was there a redefinition for createRenderPipelineAsync async variant?
@@ -249,15 +242,13 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createCommandEncoder(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUCommandEncoder(label, js_obj, device=self)
+        return GPUCommandEncoder(label="", internal=js_obj, device=self)
 
     def create_render_bundle_encoder(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.createRenderBundleEncoder(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPURenderBundleEncoder(label, js_obj, device=self)
+        return GPURenderBundleEncoder(label="", internal=js_obj, device=self)
 
     # Custom implementation for createQuerySet from _implementation.py:
     def create_query_set(self, **kwargs):
@@ -265,10 +256,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createQuerySet(js_descriptor)
 
-        label = kwargs.pop("label", "")
         type = descriptor.get("type")
         count = descriptor.get("count")
-        return GPUQuerySet(label, js_obj, device=self, type=type, count=count)
+        return GPUQuerySet("", js_obj, device=self, type=type, count=count)
 
     def push_error_scope(self, filter: enums.ErrorFilterEnum | None = None) -> None:
     
@@ -308,10 +298,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_promise = self._internal.createComputePipelineAsync(js_descriptor)
 
-        label = kwargs.get("label", "")
-
         def construct_compute_pipeline(js_cp):
-            return classes.GPUComputePipeline(label, js_cp, self)
+            return classes.GPUComputePipeline("", js_cp, self)
 
         promise = GPUPromise("create_compute_pipeline", construct_compute_pipeline)
         js_promise.then(promise._set_input)
@@ -323,10 +311,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_promise = self._internal.createRenderPipelineAsync(js_descriptor)
 
-        label = kwargs.get("label", "")
-
         def construct_render_pipeline(js_rp):
-            return classes.GPURenderPipeline(label, js_rp, self)
+            return classes.GPURenderPipeline("", js_rp, self)
 
         promise = GPUPromise("create_render_pipeline", construct_render_pipeline)
         js_promise.then(promise._set_input)
@@ -473,8 +459,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createView(js_descriptor)
 
-        label = kwargs.pop("label", "")
-        return classes.GPUTextureView(label, js_obj, device=self._device, texture=self, size=self._tex_info["size"])
+        return classes.GPUTextureView("", js_obj, device=self._device, texture=self, size=self._tex_info["size"])
 
     def destroy(self) -> None:
         self._internal.destroy()
@@ -491,7 +476,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
             "format": internal.format,
             "usage": internal.usage,
         }
-        super().__init__(label or internal.label, internal, device, tex_info)
+        super().__init__(label, internal, device, tex_info)
 
 
 
@@ -538,8 +523,7 @@ class GPUPipelineBase(classes.GPUPipelineBase, ):
     def get_bind_group_layout(self, index: int) -> classes.GPUBindGroupLayout:
         res = self._internal.getBindGroupLayout(index)
         # returns the js object... so we call the constructor here manually - for now.
-        label = res.label
-        return classes.GPUBindGroupLayout(label, res, self._device)
+        return classes.GPUBindGroupLayout("", res, self._device)
 
 
 class GPUComputePipeline(classes.GPUComputePipeline, GPUObjectBase, GPUPipelineBase):
@@ -560,15 +544,13 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.beginRenderPass(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPURenderPassEncoder(label, js_obj, device=self)
+        return GPURenderPassEncoder(label="", internal=js_obj, device=self)
 
     def begin_compute_pass(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.beginComputePass(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUComputePassEncoder(label, js_obj, device=self)
+        return GPUComputePassEncoder(label="", internal=js_obj, device=self)
 
     def copy_buffer_to_buffer(self, source: Union["GPUBuffer", None] = None, source_offset: Union[int, None] = None, destination: Union["GPUBuffer", None] = None, destination_offset: Union[int, None] = None, size: Union[int, None] = None) -> None:
         js_source = source._internal
@@ -606,8 +588,7 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.finish(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPUCommandBuffer(label, js_obj, device=self)
+        return GPUCommandBuffer(label="", internal=js_obj, device=self)
 
 
 class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUObjectBase, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin):
@@ -671,8 +652,7 @@ class GPURenderBundleEncoder(classes.GPURenderBundleEncoder, GPUObjectBase, GPUC
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
         js_obj = self._internal.finish(js_kwargs)
 
-        label = kwargs.get("label", "")
-        return GPURenderBundle(label, js_obj, device=self)
+        return GPURenderBundle(label="", internal=js_obj, device=self)
 
 
 class GPUQueue(classes.GPUQueue, GPUObjectBase):
@@ -833,9 +813,7 @@ class GPUCanvasContext(classes.GPUCanvasContext, ):
     # Custom implementation for getCurrentTexture from _implementation.py:
     def get_current_texture(self) -> GPUTexture:
         js_texture = self._internal.getCurrentTexture()
-
-        label = ""  # always empty?
-        return GPUTexture(label, js_texture, self._config["device"])
+        return GPUTexture("", js_texture, self._config["device"])
 
     # Additional custom methods from _implementation.py:
     def __init__(self, present_info: dict):

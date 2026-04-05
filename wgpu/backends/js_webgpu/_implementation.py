@@ -26,6 +26,12 @@ class GPUPromise(classes.GPUPromise):
         return result
 
 
+class GPUObjectBase(classes.GPUObjectBase):
+    def __init__(self, label:str, internal, device=None):
+        label = label or getattr(internal, "label", "") # I am not sure which one should take precedence
+        super().__init__(label=label, internal=internal, device=device)
+
+
 class GPU(classes.GPU):
     def __init__(self):
         self._internal = window.navigator.gpu  # noqa: F821
@@ -55,7 +61,6 @@ class GPU(classes.GPU):
     @property
     def wgsl_language_features(self):
         return self._internal.wgslLanguageFeatures
-
 
     # apidiff for low level context access
     def get_canvas_context(self, present_info: dict) -> "GPUCanvasContext":
@@ -99,11 +104,10 @@ class GPUAdapter(classes.GPUAdapter):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_device_promise = self._internal.requestDevice(js_descriptor)
 
-        label = kwargs.get("label", "")
         # TODO: maybe we can use https://pyodide.org/en/stable/usage/api/python-api/ffi.html#pyodide.ffi.create_once_callable as an optimization?
         def device_constructor(js_device):
             # TODO: do we need to hand down a default_queue here?
-            return GPUDevice(label, js_device, adapter=self)
+            return GPUDevice("", js_device, adapter=self)
 
         promise = GPUPromise("request_device", device_constructor)
         js_device_promise.then(promise._set_input)
@@ -152,9 +156,8 @@ class GPUDevice(classes.GPUDevice):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_promise = self._internal.createComputePipelineAsync(js_descriptor)
 
-        label = kwargs.get("label", "")
         def construct_compute_pipeline(js_cp):
-            return classes.GPUComputePipeline(label, js_cp, self)
+            return classes.GPUComputePipeline("", js_cp, self)
         promise = GPUPromise("create_compute_pipeline", construct_compute_pipeline)
         js_promise.then(promise._set_input)
 
@@ -166,9 +169,8 @@ class GPUDevice(classes.GPUDevice):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_promise = self._internal.createRenderPipelineAsync(js_descriptor)
 
-        label = kwargs.get("label", "")
         def construct_render_pipeline(js_rp):
-            return classes.GPURenderPipeline(label, js_rp, self)
+            return classes.GPURenderPipeline("", js_rp, self)
         promise = GPUPromise("create_render_pipeline", construct_render_pipeline)
         js_promise.then(promise._set_input)
 
@@ -180,10 +182,9 @@ class GPUDevice(classes.GPUDevice):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createQuerySet(js_descriptor)
 
-        label = kwargs.pop("label", "")
         type = descriptor.get("type")
         count = descriptor.get("count")
-        return GPUQuerySet(label, js_obj, device=self, type=type, count=count)
+        return GPUQuerySet("", js_obj, device=self, type=type, count=count)
 
 class GPUBuffer(classes.GPUBuffer):
     # TODO: remove label from the constructors!
@@ -327,8 +328,7 @@ class GPUPipelineBase(classes.GPUPipelineBase):
     def get_bind_group_layout(self, index: int) -> classes.GPUBindGroupLayout:
         res = self._internal.getBindGroupLayout(index)
         # returns the js object... so we call the constructor here manually - for now.
-        label = res.label
-        return classes.GPUBindGroupLayout(label, res, self._device)
+        return classes.GPUBindGroupLayout("", res, self._device)
 
 
 class GPUQueue(classes.GPUQueue):
@@ -457,7 +457,7 @@ class GPUTexture(classes.GPUTexture):
             "format": internal.format,
             "usage": internal.usage,
         }
-        super().__init__(label or internal.label, internal, device, tex_info)
+        super().__init__(label, internal, device, tex_info)
 
     # has a more complex constructor...
     def create_view(self, **kwargs):
@@ -465,8 +465,7 @@ class GPUTexture(classes.GPUTexture):
         js_descriptor = to_js(descriptor, eager_converter=simple_js_accessor)
         js_obj = self._internal.createView(js_descriptor)
 
-        label = kwargs.pop("label", "")
-        return classes.GPUTextureView(label, js_obj, device=self._device, texture=self, size=self._tex_info["size"])
+        return classes.GPUTextureView("", js_obj, device=self._device, texture=self, size=self._tex_info["size"])
 
 class GPUCanvasContext(classes.GPUCanvasContext):
     def __init__(self, present_info: dict):
@@ -484,9 +483,7 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     def get_current_texture(self) -> GPUTexture:
         js_texture = self._internal.getCurrentTexture()
-
-        label = "" # always empty?
-        return GPUTexture(label, js_texture, self._config["device"])
+        return GPUTexture("", js_texture, self._config["device"])
 
     # undo the api diff
     def get_preferred_format(self, adapter: GPUAdapter | None) -> enums.TextureFormat:
