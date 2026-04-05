@@ -221,16 +221,16 @@ def generate_js_webgpu_api() -> str:
                     if arg.typename.removesuffix("?") in idl.classes:
                         # TODO: do we need to check against none for optionals?
                         # technically the our js_accessor does this lookup too?
-                        conversion_lines.append(f"js_{arg.name} = {py_name}._internal")
-                        js_arg_list.append(f"js_{arg.name}")
+                        conversion_lines.append(f"js_{py_name} = {py_name}._internal")
+                        js_arg_list.append(f"js_{py_name}")
                     # TODO: sequence of complex type?
 
                     # TODO: can we use a walrus operator for struct_name here?
                     elif arg.typename.removeprefix('GPU').removesuffix("?") in idl.structs and arg.typename not in ("GPUExtent3D", "GPUColor"):
                         # maybe we can skip the round trip to structs?
                         # conversion_lines.append(f"{py_name}_desc = {py_name} if isinstance({py_name}, structs.Struct) else structs.{arg.typename.removeprefix('GPU').removesuffix('?')}(**{py_name})")
-                        conversion_lines.append(f"js_{arg.name} = to_js({py_name}, eager_converter=simple_js_accessor)")
-                        js_arg_list.append(f"js_{arg.name}")
+                        conversion_lines.append(f"js_{py_name} = to_js({py_name}, eager_converter=simple_js_accessor)")
+                        js_arg_list.append(f"js_{py_name}")
                     elif py_name.endswith("data"): # maybe not an exhaustive check?
                         conversion_lines.append(data_conversion.format(py_data=py_name))
                         js_arg_list.append("js_data") #might be a problem if there is two!

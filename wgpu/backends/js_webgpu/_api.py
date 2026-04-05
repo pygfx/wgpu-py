@@ -62,18 +62,18 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin, ):
         self._internal.drawIndexed(index_count, instance_count, first_index, base_vertex, first_instance)
 
     def draw_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
-        js_indirectBuffer = indirect_buffer._internal
-        self._internal.drawIndirect(js_indirectBuffer, indirect_offset)
+        js_indirect_buffer = indirect_buffer._internal
+        self._internal.drawIndirect(js_indirect_buffer, indirect_offset)
 
     def draw_indexed_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
-        js_indirectBuffer = indirect_buffer._internal
-        self._internal.drawIndexedIndirect(js_indirectBuffer, indirect_offset)
+        js_indirect_buffer = indirect_buffer._internal
+        self._internal.drawIndexedIndirect(js_indirect_buffer, indirect_offset)
 
 
 class GPUObjectBase(classes.GPUObjectBase, ):
 
     # Additional custom methods from _implementation.py:
-    def __init__(self, label: str, internal, device=None):
+    def __init__(self, label: str, internal: JsProxy, device=None):
         label = label or getattr(internal, "label", "")  # I am not sure which one should take precedence
         super().__init__(label=label, internal=internal, device=device)
 
@@ -580,9 +580,9 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
         self._internal.clearBuffer(js_buffer, offset, size)
 
     def resolve_query_set(self, query_set: Union["GPUQuerySet", None] = None, first_query: Union[int, None] = None, query_count: Union[int, None] = None, destination: Union["GPUBuffer", None] = None, destination_offset: Union[int, None] = None) -> None:
-        js_querySet = query_set._internal
+        js_query_set = query_set._internal
         js_destination = destination._internal
-        self._internal.resolveQuerySet(js_querySet, first_query, query_count, js_destination, destination_offset)
+        self._internal.resolveQuerySet(js_query_set, first_query, query_count, js_destination, destination_offset)
 
     def finish(self, **kwargs):
         js_kwargs = to_js(kwargs, eager_converter=simple_js_accessor)
@@ -602,8 +602,8 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUObjectBase, GPUCom
         self._internal.dispatchWorkgroups(workgroup_count_x, workgroup_count_y, workgroup_count_z)
 
     def dispatch_workgroups_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
-        js_indirectBuffer = indirect_buffer._internal
-        self._internal.dispatchWorkgroupsIndirect(js_indirectBuffer, indirect_offset)
+        js_indirect_buffer = indirect_buffer._internal
+        self._internal.dispatchWorkgroupsIndirect(js_indirect_buffer, indirect_offset)
 
     def end(self) -> None:
         self._internal.end()
@@ -689,9 +689,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         else:
             js_data = None
 
-        js_dataLayout = to_js(data_layout, eager_converter=simple_js_accessor)
+        js_data_layout = to_js(data_layout, eager_converter=simple_js_accessor)
         # TODO: argument size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
-        self._internal.writeTexture(js_destination, js_data, js_dataLayout, size)
+        self._internal.writeTexture(js_destination, js_data, js_data_layout, size)
 
     def copy_external_image_to_texture(self, source: structs.CopyExternalImageSourceInfoStruct | None = None, destination: structs.CopyExternalImageDestInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
         js_source = to_js(source, eager_converter=simple_js_accessor)
