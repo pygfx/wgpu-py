@@ -35,11 +35,11 @@ def get_idl_parser(*, allow_cache=True):
 class Attribute:
     """A little object to hold a function argument or struct field."""
 
-    def __init__(self, line: str, struct:bool=True):
+    def __init__(self, line: str, struct: bool = True):
         self.line = line.strip().strip(",;").strip()
 
         default = None  # None means 'no default' and "None" kinda means "auto".
-        required = False # as opposed to optional, https://webidl.spec.whatwg.org/#required-dictionary-member but struct members?
+        required = False  # as opposed to optional, https://webidl.spec.whatwg.org/#required-dictionary-member but struct members?
         # function args can be optional https://webidl.spec.whatwg.org/#dfn-optional-argument and a required if not
         arg = self.line
         if "=" in arg:

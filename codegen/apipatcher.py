@@ -474,7 +474,7 @@ class IdlPatcherMixin:
             if not args[0].required:
                 args[0].typename = args[0].typename.removeprefix("optional ")
             assert args[0].typename.startswith("GPU")
-            des_is_optional = bool(args[0].default) # part of the logic above?
+            des_is_optional = bool(args[0].default)  # part of the logic above?
             attributes = self.idl.structs[args[0].typename[3:]].values()
             py_args = [
                 self._arg_from_attribute(methodname, attr, des_is_optional)
