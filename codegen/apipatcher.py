@@ -454,7 +454,7 @@ class IdlPatcherMixin:
         # Get arg names and types
         idl_line = functions[name_idl]
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-        args = [Attribute(arg) for arg in args if arg.strip()]
+        args = [Attribute(arg, struct=False) for arg in args if arg.strip()]
         return_type = idl_line.split()[0]
         if return_type.startswith("[NewObject]"):
             # [NewObject] can be skipped: https://webidl.spec.whatwg.org/#NewObject
@@ -471,8 +471,10 @@ class IdlPatcherMixin:
         if len(args) == 1 and args[0].typename.endswith(
             ("Options", "Descriptor", "Configuration")
         ):
+            if not args[0].required:
+                args[0].typename = args[0].typename.removeprefix("optional ")
             assert args[0].typename.startswith("GPU")
-            des_is_optional = bool(args[0].default)
+            des_is_optional = bool(args[0].default)  # part of the logic above?
             attributes = self.idl.structs[args[0].typename[3:]].values()
             py_args = [
                 self._arg_from_attribute(methodname, attr, des_is_optional)
@@ -583,7 +585,7 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
             idl_line = functions[name_idl]
 
             args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-            args = [Attribute(arg) for arg in args if arg.strip()]
+            args = [Attribute(arg, struct=False) for arg in args if arg.strip()]
 
             # If one arg that is a dict, flatten dict to kwargs
             if len(args) == 1 and args[0].typename.endswith(

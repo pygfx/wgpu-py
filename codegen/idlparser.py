@@ -35,24 +35,33 @@ def get_idl_parser(*, allow_cache=True):
 class Attribute:
     """A little object to hold a function argument or struct field."""
 
-    def __init__(self, line):
+    def __init__(self, line: str, struct: bool = True):
         self.line = line.strip().strip(",;").strip()
 
         default = None  # None means 'no default' and "None" kinda means "auto".
-        required = False
+        required = False  # as opposed to optional, https://webidl.spec.whatwg.org/#required-dictionary-member but struct members?
+        # function args can be optional https://webidl.spec.whatwg.org/#dfn-optional-argument and a required if not
         arg = self.line
         if "=" in arg:
             arg, default = arg.rsplit("=", 1)
             arg, default = arg.strip(), default.strip()
         arg_type, arg_name = arg.strip().rsplit(" ", 1)
-        if arg_type.startswith("required "):
-            required = True
-            arg_type = arg_type.split(" ", 1)[1]
-            # required args should not have a default
-            assert default is None
-        elif arg_type.startswith("optional "):
-            arg_type = arg_type.split(" ", 1)[1]
-            default = default or "None"
+        if struct:
+            # some struct members might be required
+            if arg_type.startswith("required "):
+                required = True
+                arg_type = arg_type.split(" ", 1)[1]
+                # required args should not have a default
+                assert default is None
+        else:
+            # some function args might be optional
+            if arg_type.startswith("optional "):
+                required = False
+                arg_type = arg_type.split(" ", 1)[1]
+                default = default or "None"
+            else:
+                # but otherwise they are reuired
+                required = True
 
         if default:
             if default in ["false", "true"]:
@@ -66,7 +75,7 @@ class Attribute:
     def __repr__(self):
         return f"<Attribute '{self.typename} {self.name}'>"
 
-    def to_str(self):
+    def to_str(self) -> str:
         return self.line
 
 
