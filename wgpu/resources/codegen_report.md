@@ -2,8 +2,8 @@
 ## Preparing
 * The webgpu.idl defines 37 classes with 76 functions
 * The webgpu.idl defines 5 flags, 34 enums, 60 structs
-* webgpu.h/wgpu.h define 212 functions
-* webgpu.h/wgpu.h define 7 flags, 62 enums, 103 structs
+* webgpu.h/wgpu.h define 226 functions
+* webgpu.h/wgpu.h define 7 flags, 68 enums, 114 structs
 ## Updating API
 * Wrote 5 flags to flags.py
 * Wrote 34 enums to enums.py
@@ -24,23 +24,24 @@
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 38 classes, 117 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
-* Enum field FeatureName.core-features-and-limits missing in webgpu.h/wgpu.h
-* Enum field FeatureName.subgroups missing in webgpu.h/wgpu.h
-* Enum field FeatureName.texture-formats-tier1 missing in webgpu.h/wgpu.h
-* Enum field FeatureName.texture-formats-tier2 missing in webgpu.h/wgpu.h
-* Enum field FeatureName.primitive-index missing in webgpu.h/wgpu.h
-* Enum field TextureFormat.r16unorm missing in webgpu.h/wgpu.h
-* Enum field TextureFormat.r16snorm missing in webgpu.h/wgpu.h
-* Enum field TextureFormat.rg16unorm missing in webgpu.h/wgpu.h
-* Enum field TextureFormat.rg16snorm missing in webgpu.h/wgpu.h
-* Enum field TextureFormat.rgba16unorm missing in webgpu.h/wgpu.h
-* Enum field TextureFormat.rgba16snorm missing in webgpu.h/wgpu.h
 * Enum PipelineErrorReason missing in webgpu.h/wgpu.h
 * Enum AutoLayoutMode missing in webgpu.h/wgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in webgpu.h/wgpu.h
 * Enum CanvasAlphaMode missing in webgpu.h/wgpu.h
 * Enum CanvasToneMappingMode missing in webgpu.h/wgpu.h
-* Wrote 255 enum mappings and 47 struct-field mappings to wgpu_native/_mappings.py
-* Validated 154 C function calls
-* Not using 69 C functions
+* Wrote 266 enum mappings and 48 struct-field mappings to wgpu_native/_mappings.py
+* ERROR: unknown C function wgpuComputePassEncoderSetPushConstants
+* ERROR: unknown C function wgpuRenderPassEncoderSetPushConstants
+* ERROR: unknown C function wgpuRenderBundleEncoderSetPushConstants
+* ERROR: There are no assignments to class field _set_push_constants_function
+* Validated 151 C function calls
+* Not using 86 C functions
+* ERROR: unknown C struct field WGPUNativeLimits.maxPushConstantSize
+* ERROR: unknown C struct WGPUChainedStructOut
+* ERROR: unknown C struct field WGPUNativeLimits.maxPushConstantSize
+* ERROR: unknown C struct field WGPUPipelineLayoutExtras.pushConstantRangeCount
+* ERROR: unknown C struct field WGPUPipelineLayoutExtras.pushConstantRanges
+* ERROR: unknown C struct WGPUProgrammableStageDescriptor
+* ERROR: unknown C struct WGPUComputePassTimestampWrites
+* ERROR: unknown C struct WGPURenderPassTimestampWrites
 * Validated 97 C structs
