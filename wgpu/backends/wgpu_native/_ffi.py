@@ -28,7 +28,7 @@ def get_wgpu_header():
     )
 
 # TODO: can we avoid doing this every single time the lib is loaded? I feel like we should provide a cleaned header file to ship instead?
-# TODO 2: I don't think this exact function is used by codegen.
+# TODO 2: I don't think this exact function is used by codegen/hparser.py but an outdated copy.
 def _get_wgpu_header(*filenames):
     """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py"""
     # Read files
@@ -76,7 +76,7 @@ def _get_wgpu_header(*filenames):
                 # print("Dropping line from header:", line.strip())
                 continue
             line = line.replace("(", "").replace(")", "")
-        elif line.startswith("#"):# or line.startswith(" *"):
+        elif line.startswith("#"):
             continue
         for define_to_drop in [
             "WGPU_EXPORT ",
