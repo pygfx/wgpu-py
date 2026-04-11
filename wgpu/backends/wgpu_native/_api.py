@@ -3152,10 +3152,10 @@ class GPUCommandEncoder(
     ) -> GPUComputePassEncoder:
         c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
+            # dual to RenderPassTimestampWrites, but the structs are identical?
             check_struct("ComputePassTimestampWrites", timestamp_writes)
-            # FIXME: unknown C struct WGPUComputePassTimestampWrites
             c_timestamp_writes_struct = new_struct_p(
-                "WGPUComputePassTimestampWrites *",
+                "WGPUPassTimestampWrites *",
                 querySet=timestamp_writes["query_set"]._internal,
                 beginningOfPassWriteIndex=timestamp_writes.get(
                     "beginning_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED
@@ -3189,10 +3189,10 @@ class GPUCommandEncoder(
     ) -> GPURenderPassEncoder:
         c_timestamp_writes_struct = ffi.NULL
         if timestamp_writes is not None:
+            # The WebGPU spec and idl have RenderPassTimestampWrites ... but the .h and function uses the PassTimestampWrites struct
             check_struct("RenderPassTimestampWrites", timestamp_writes)
-            # FIXME: unknown C struct WGPURenderPassTimestampWrites
             c_timestamp_writes_struct = new_struct_p(
-                "WGPURenderPassTimestampWrites *",
+                "WGPUPassTimestampWrites *",
                 querySet=timestamp_writes["query_set"]._internal,
                 beginningOfPassWriteIndex=timestamp_writes.get(
                     "beginning_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED
