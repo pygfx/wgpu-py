@@ -2010,9 +2010,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     ):
         check_struct("ProgrammableStage", compute)
         c_constants, c_constant_entries = _get_override_constant_entries(compute)
-        # FIXME: unknown C struct WGPUProgrammableStageDescriptor
         c_compute_stage = new_struct(
-            "WGPUProgrammableStageDescriptor",
+            "WGPUComputeState",
             # not used: nextInChain
             module=compute["module"]._internal,
             entryPoint=to_c_string_view(compute.get("entry_point")),
