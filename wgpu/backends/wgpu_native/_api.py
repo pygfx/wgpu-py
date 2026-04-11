@@ -322,19 +322,18 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
 
+    # NOTE: this will get even simpler in the near future: https://github.com/gfx-rs/wgpu-native/pull/575 as maxImmediateSize shouldn't exist in both
+
     # H: chain: WGPUChainedStruct, maxImmediateSize: int, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int
     c_limits_native = new_struct(
         "WGPUNativeLimits",
-        # FIXME: unknown C struct WGPUChainedStructOut
         chain=new_struct(
-            "WGPUChainedStructOut",
+            "WGPUChainedStruct",
             # not used: next
             sType=lib.WGPUSType_NativeLimits,
         ),
-        # FIXME: unknown C struct field WGPUNativeLimits.maxPushConstantSize
-        # not used: maxPushConstantSize
-        # not used: maxNonSamplerBindings
         # not used: maxImmediateSize
+        # not used: maxNonSamplerBindings
         # not used: maxBindingArrayElementsPerShaderStage
     )
 
@@ -1229,7 +1228,7 @@ class GPUAdapter(classes.GPUAdapter):
             # Skip the  pointers
             if snake_key in (
                 "next-in-chain",
-                "max-push-constant-size",
+                "max-immediate-size",
                 "max-non-sampler-bindings",
             ):
                 # Skip the chain and the native limits as they are handled in their own
@@ -1245,15 +1244,13 @@ class GPUAdapter(classes.GPUAdapter):
         # H: chain: WGPUChainedStruct, maxImmediateSize: int, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int
         c_required_limits_native = new_struct_p(
             "WGPUNativeLimits *",
-            # FIXME: unknown C struct field WGPUNativeLimits.maxPushConstantSize
-            maxPushConstantSize=required_limits.get(
-                "max-push-constant-size", self._limits["max-push-constant-size"]
+            maxImmediateSize=required_limits.get(
+                "max-immediate-size", self._limits["max-immediate-size"]
             ),
             maxNonSamplerBindings=required_limits.get(
                 "max-non-sampler-bindings", self._limits["max-non-sampler-bindings"]
             ),
             # not used: chain
-            # not used: maxImmediateSize
             # not used: maxBindingArrayElementsPerShaderStage
         )
         c_required_limits_native.chain.next = ffi.NULL
@@ -1798,40 +1795,24 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def create_pipeline_layout(
         self, *, label: str = "", bind_group_layouts: Sequence[GPUBindGroupLayout]
     ) -> GPUPipelineLayout:
-        return self._create_pipeline_layout(label, bind_group_layouts, [])
+        return self._create_pipeline_layout(label, bind_group_layouts, 0)
 
     def _create_pipeline_layout(
         self,
         label: str,
         bind_group_layouts: Sequence[GPUBindGroupLayout],
-        push_constant_layouts,
+        immediate_size: int,
     ):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
         c_layout_array = new_array("WGPUBindGroupLayout[]", bind_group_layouts_ids)
 
         c_pipeline_layout_next_in_chain = ffi.NULL
-        if push_constant_layouts:
-            count = len(push_constant_layouts)
-            c_push_constant_ranges = new_array("WGPUPushConstantRange[]", count)
-            for layout, c_push_constant_range in zip(
-                push_constant_layouts, c_push_constant_ranges, strict=False
-            ):
-                visibility = layout["visibility"]
-                if isinstance(visibility, str):
-                    visibility = str_flag_to_int(flags.ShaderStage, visibility)
-                c_push_constant_range.stages = visibility
-                c_push_constant_range.start = layout["start"]
-                c_push_constant_range.end = layout["end"]
-
+        if immediate_size:
             # H: chain: WGPUChainedStruct, immediateDataSize: int
             c_pipeline_layout_extras = new_struct_p(
                 "WGPUPipelineLayoutExtras *",
-                # FIXME: unknown C struct field WGPUPipelineLayoutExtras.pushConstantRangeCount
-                pushConstantRangeCount=count,
-                # FIXME: unknown C struct field WGPUPipelineLayoutExtras.pushConstantRanges
-                pushConstantRanges=c_push_constant_ranges,
                 # not used: chain
-                # not used: immediateDataSize
+                immediateDataSize=immediate_size,
             )
             c_pipeline_layout_extras.chain.sType = lib.WGPUSType_PipelineLayoutExtras
             # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
@@ -1839,6 +1820,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 "WGPUChainedStruct *", c_pipeline_layout_extras
             )
 
+        # TODO: there is an immediateSize field in this struct too. so do we even need the extras?
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, bindGroupLayoutCount: int, bindGroupLayouts: WGPUBindGroupLayout *, immediateSize: int
         struct = new_struct_p(
             "WGPUPipelineLayoutDescriptor *",
@@ -2959,12 +2941,12 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
     ##
     # It is unfortunate that there is no common Mixin that includes just
     # GPUComputePassEncoder and GPURenderPassEncodeer, but not GPURenderBundleEncoder.
-    # We put set_push_constants, and XX_pipeline_statistics_query here because they
+    # We put set_immediates, and XX_pipeline_statistics_query here because they
     # don't really fit anywhere else.
     #
 
-    def _set_push_constants(self, visibility, offset, size_in_bytes, data, data_offset):
-        # Implementation of set_push_constant. The public API is in extras.py since
+    def _set_immediates(self, offset, size_in_bytes, data, data_offset):
+        # Implementation of set_immediates. The public API is in extras.py since
         # this is a wgpu extension.
 
         # We support anything that memoryview supports, i.e. anything
@@ -2976,8 +2958,6 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         offset = int(offset)
         data_offset = int(data_offset)
         size = int(size_in_bytes)
-        if isinstance(visibility, str):
-            visibility = str_flag_to_int(flags.ShaderStage, visibility)
 
         if not (0 <= size_in_bytes <= m.nbytes):
             raise ValueError("Invalid size_in_bytes")
@@ -2987,11 +2967,10 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             raise ValueError("size_in_bytes + data_offset is too large")
 
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
-        # FIXME: There are no assignments to class field _set_push_constants_function
-        function = type(self)._set_push_constants_function
+        function = type(self)._set_immediates_function
         if function is None:
-            self._not_implemented("set_push_constants")
-        function(self._internal, int(visibility), offset, size, c_data + data_offset)
+            self._not_implemented("set_immediates")
+        function(self._internal, offset, size, c_data + data_offset)
 
     def _begin_pipeline_statistics_query(self, query_set, query_index):
         # H: void wgpuComputePassEncoderBeginPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
@@ -3657,8 +3636,7 @@ class GPUComputePassEncoder(
     _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
     _begin_pipeline_statistics_query_function = libf.wgpuComputePassEncoderBeginPipelineStatisticsQuery  # fmt: skip
     _end_pipeline_statistics_query_function = libf.wgpuComputePassEncoderEndPipelineStatisticsQuery  # fmt: skip
-    # FIXME: unknown C function wgpuComputePassEncoderSetPushConstants
-    _set_push_constants_function = libf.wgpuComputePassEncoderSetPushConstants
+    _set_immediates_function = libf.wgpuComputePassEncoderSetImmediates
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePassEncoderRelease
@@ -3714,8 +3692,7 @@ class GPURenderPassEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuRenderPassEncoderSetBindGroup
-    # FIXME: unknown C function wgpuRenderPassEncoderSetPushConstants
-    _set_push_constants_function = libf.wgpuRenderPassEncoderSetPushConstants
+    _set_immediates_function = libf.wgpuRenderPassEncoderSetImmediates
     _begin_pipeline_statistics_query_function = libf.wgpuRenderPassEncoderBeginPipelineStatisticsQuery  # fmt: skip
     _end_pipeline_statistics_query_function = libf.wgpuRenderPassEncoderEndPipelineStatisticsQuery  # fmt: skip
 
@@ -3862,8 +3839,7 @@ class GPURenderBundleEncoder(
 
     # GPUBindingCommandsMixin
     _set_bind_group_function = libf.wgpuRenderBundleEncoderSetBindGroup
-    # FIXME: unknown C function wgpuRenderBundleEncoderSetPushConstants
-    _set_push_constants_function = libf.wgpuRenderBundleEncoderSetPushConstants
+    _set_immediates_function = libf.wgpuRenderBundleEncoderSetImmediates
     _begin_pipeline_statistics_query_function = None  # not implemented
     _end_pipeline_statistics_query_function = None  # not implemented
     _write_timestamp_function = None  # not implemented
