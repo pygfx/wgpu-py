@@ -327,6 +327,7 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     # H: chain: WGPUChainedStruct, maxImmediateSize: int, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int
     c_limits_native = new_struct(
         "WGPUNativeLimits",
+        # H: next: WGPUChainedStruct *, sType: WGPUSType
         chain=new_struct(
             "WGPUChainedStruct",
             # not used: next
@@ -2010,6 +2011,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     ):
         check_struct("ProgrammableStage", compute)
         c_constants, c_constant_entries = _get_override_constant_entries(compute)
+        # H: nextInChain: WGPUChainedStruct *, module: WGPUShaderModule, entryPoint: WGPUStringView, constantCount: int, constants: WGPUConstantEntry *
         c_compute_stage = new_struct(
             "WGPUComputeState",
             # not used: nextInChain
@@ -2966,6 +2968,9 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             raise ValueError("size_in_bytes + data_offset is too large")
 
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
+        # H: void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
+        # H: void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
+        # H: void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
         function = type(self)._set_immediates_function
         if function is None:
             self._not_implemented("set_immediates")
@@ -3154,8 +3159,10 @@ class GPUCommandEncoder(
         if timestamp_writes is not None:
             # dual to RenderPassTimestampWrites, but the structs are identical?
             check_struct("ComputePassTimestampWrites", timestamp_writes)
+            # H: nextInChain: WGPUChainedStruct *, querySet: WGPUQuerySet, beginningOfPassWriteIndex: int, endOfPassWriteIndex: int
             c_timestamp_writes_struct = new_struct_p(
                 "WGPUPassTimestampWrites *",
+                # not used: nextInChain
                 querySet=timestamp_writes["query_set"]._internal,
                 beginningOfPassWriteIndex=timestamp_writes.get(
                     "beginning_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED
@@ -3191,8 +3198,10 @@ class GPUCommandEncoder(
         if timestamp_writes is not None:
             # The WebGPU spec and idl have RenderPassTimestampWrites ... but the .h and function uses the PassTimestampWrites struct
             check_struct("RenderPassTimestampWrites", timestamp_writes)
+            # H: nextInChain: WGPUChainedStruct *, querySet: WGPUQuerySet, beginningOfPassWriteIndex: int, endOfPassWriteIndex: int
             c_timestamp_writes_struct = new_struct_p(
                 "WGPUPassTimestampWrites *",
+                # not used: nextInChain
                 querySet=timestamp_writes["query_set"]._internal,
                 beginningOfPassWriteIndex=timestamp_writes.get(
                     "beginning_of_pass_write_index", lib.WGPU_QUERY_SET_INDEX_UNDEFINED

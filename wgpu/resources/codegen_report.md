@@ -30,18 +30,6 @@
 * Enum CanvasAlphaMode missing in webgpu.h/wgpu.h
 * Enum CanvasToneMappingMode missing in webgpu.h/wgpu.h
 * Wrote 266 enum mappings and 48 struct-field mappings to wgpu_native/_mappings.py
-* ERROR: unknown C function wgpuComputePassEncoderSetPushConstants
-* ERROR: unknown C function wgpuRenderPassEncoderSetPushConstants
-* ERROR: unknown C function wgpuRenderBundleEncoderSetPushConstants
-* ERROR: There are no assignments to class field _set_push_constants_function
-* Validated 151 C function calls
-* Not using 86 C functions
-* ERROR: unknown C struct field WGPUNativeLimits.maxPushConstantSize
-* ERROR: unknown C struct WGPUChainedStructOut
-* ERROR: unknown C struct field WGPUNativeLimits.maxPushConstantSize
-* ERROR: unknown C struct field WGPUPipelineLayoutExtras.pushConstantRangeCount
-* ERROR: unknown C struct field WGPUPipelineLayoutExtras.pushConstantRanges
-* ERROR: unknown C struct WGPUProgrammableStageDescriptor
-* ERROR: unknown C struct WGPUComputePassTimestampWrites
-* ERROR: unknown C struct WGPURenderPassTimestampWrites
+* Validated 154 C function calls
+* Not using 83 C functions
 * Validated 97 C structs
