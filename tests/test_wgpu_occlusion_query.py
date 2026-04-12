@@ -28,7 +28,7 @@ struct Uniform {
     reverse: u32,  // Actually a bool
 }
 
-@group(0) @binding(0) var<uniform> uniform : Uniform;
+@group(0) @binding(0) var<uniform> uniform_data : Uniform;
 
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4<f32> {
@@ -39,11 +39,11 @@ fn vs_main(@builtin(vertex_index) vertex_index : u32) -> @builtin(position) vec4
         vec2f( 0.05,  0.05),
     );
     var p = positions[vertex_index];
-    if bool(uniform.reverse) {
+    if bool(uniform_data.reverse) {
         // Swapping x and y will cause the coordinates to be cw instead of ccw
         p = vec2f(p.y, p.x);
     }
-    return vec4f(p, 0.0, 1.0) + vec4f(uniform.center, 0);
+    return vec4f(p, 0.0, 1.0) + vec4f(uniform_data.center, 0);
 }
 """
 

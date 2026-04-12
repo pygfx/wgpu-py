@@ -27,7 +27,8 @@ def get_wgpu_header():
         get_header_filename("wgpu.h"),
     )
 
-
+# TODO: can we avoid doing this every single time the lib is loaded? I feel like we should provide a cleaned header file to ship instead?
+# TODO 2: I don't think this exact function is used by codegen/hparser.py but an outdated copy.
 def _get_wgpu_header(*filenames):
     """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py"""
     # Read files
@@ -44,7 +45,17 @@ def _get_wgpu_header(*filenames):
     # Deal with pre-processor commands, because cffi cannot handle them.
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
+    is_ifdef = False
     for line in lines1:
+        # skip #ifdef blocks, which cffi doesn't support. In both headers they are used for `#ifdef __cplusplus` which we were skipping anyway.
+        if line.startswith("#ifdef "):
+            is_ifdef = True
+            continue
+        if line.startswith("#endif"):
+            is_ifdef = False
+            continue
+        if is_ifdef:
+            continue
         if (
             line.startswith("#define ")
             and len(line.split()) > 2
@@ -60,10 +71,12 @@ def _get_wgpu_header(*filenames):
                 .replace("UINT32_MAX", max_32)
                 .replace("UINT64_MAX", max_64)
             )
+            # cffi seems to struggle with these macros, so we can just skip them I hope, the idl spec alreay contains defaults.
+            if line.startswith("#define") and "_INIT" in line:
+                # print("Dropping line from header:", line.strip())
+                continue
             line = line.replace("(", "").replace(")", "")
         elif line.startswith("#"):
-            continue
-        elif 'extern "C"' in line:
             continue
         for define_to_drop in [
             "WGPU_EXPORT ",

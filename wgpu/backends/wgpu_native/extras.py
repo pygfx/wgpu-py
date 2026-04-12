@@ -79,32 +79,30 @@ def create_pipeline_layout(
     *,
     label: str = "",
     bind_group_layouts: Sequence[GPUBindGroupLayout],
-    push_constant_layouts: Sequence[dict] = (),
+    immediate_size: int,
 ) -> GPUPipelineLayout:
     return device._create_pipeline_layout(
-        label, bind_group_layouts, push_constant_layouts
+        label, bind_group_layouts, immediate_size
     )
 
 
-def set_push_constants(
+def set_immediates(
     render_pass_encoder: GPURenderPassEncoder,
-    visibility: flags.ShaderStageFlags,
     offset: int,
     size_in_bytes: int,
     data: ArrayLike,
     data_offset: int = 0,
 ):
     """
-    Set push-constant data for subsequent draw calls.
+    Set immediate data for subsequent draw calls.
 
-    Writes the first size_in_bytes bytes of data to push-constant storage,
-    starting at the specified offset. These bytes are visible to the pipeline
-    stages indicated by the visibility argument.
+    Writes the first size_in_bytes bytes of data to immediate storage,
+    starting at the specified offset. These bytes are visible to all stages.
     """
 
     # Actual implementation is hidden in _api.py
-    render_pass_encoder._set_push_constants(
-        visibility, offset, size_in_bytes, data, data_offset
+    render_pass_encoder._set_immediates(
+        offset, size_in_bytes, data, data_offset
     )
 
 

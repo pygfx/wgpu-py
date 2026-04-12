@@ -1,27 +1,64 @@
 from cffi import FFI
+from cffi.cparser import _preprocess
 
 from codegen.utils import print, remove_c_comments
 from codegen.files import read_file
 
+from wgpu._coreutils import get_header_filename
 
+# from wgpu.backends.wgpu_native._ffi import _get_wgpu_header # turns out this import has plenty of side effects -.-
 _parser = None
 
-
-def _get_wgpu_header():
+# TODO: likely remove this duplicated code as the import above is the smarter way to stay in sync
+def _get_wgpu_header(*filenames):
     """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py"""
     # Read files
+    # TODO: maybe this should be per file instead of concat at the beginning? so it's a bit easier to debug step just wgpu.h for exmaple
     lines1 = []
-    lines1.extend(read_file("resources", "webgpu.h").splitlines())
-    lines1.extend(read_file("resources", "wgpu.h").splitlines())
+    for filename in filenames:
+        with open(filename, "rb") as f:
+            lines1.extend(
+                f.read()
+                .decode()
+                .replace("\r\n", "\n")
+                .replace("\\\n", "")
+                .splitlines(True)
+            )
     # Deal with pre-processor commands, because cffi cannot handle them.
     # Just removing them, plus a few extra lines, seems to do the trick.
     lines2 = []
+    in_ifdef = False
     for line in lines1:
-        if line.startswith("#define ") and len(line.split()) > 2 and "0x" in line:
+        # skip #ifdef blocks, which cffi doesn't support. In both headers they are used for `#ifdef __cplusplus` which we were skipping anyway.
+        if line.startswith("#ifdef "):
+            in_ifdef = True
+            continue
+        if line.startswith("#endif"):
+            in_ifdef = False
+            continue
+        if in_ifdef:
+            continue
+        if (
+            line.startswith("#define ")
+            and len(line.split()) > 2
+            and ("0x" in line or "_MAX" in line)
+        ):
+            # pattern to find: #define WGPU_CONSTANT (0x1234)
+            # we use ffi.sizeof() to hopefully get the correct max sizes per platform
+            max_size = hex((1 << 1 * 8) - 1)
+            max_32 = hex((1 << 4 * 8) - 1)
+            max_64 = hex((1 << 8 * 8) - 1)
+            line = (
+                line.replace("SIZE_MAX", max_size)
+                .replace("UINT32_MAX", max_32)
+                .replace("UINT64_MAX", max_64)
+            )
+            # cffi seems to struggle with these macros, so we can just skip them I hope, the idl spec alreay contains defaults.
+            if line.startswith("#define") and "_INIT" in line:
+                # print("Dropping line from header:", line.strip())
+                continue
             line = line.replace("(", "").replace(")", "")
         elif line.startswith("#"):
-            continue
-        elif 'extern "C"' in line:
             continue
         for define_to_drop in [
             "WGPU_EXPORT ",
@@ -44,7 +81,10 @@ def get_h_parser(*, allow_cache=True):
     if _parser and allow_cache:
         return _parser
 
-    source = _get_wgpu_header()
+    source = _get_wgpu_header(
+        get_header_filename("webgpu.h"),
+        get_header_filename("wgpu.h"),
+    )
 
     # Create parser
     hp = HParser(source)
@@ -74,8 +114,10 @@ class HParser:
             stats = ", ".join(f"{len(getattr(self, key))} {key}" for key in keys)
             print("webgpu.h/wgpu.h define " + stats)
 
+    # TODO: maybe we should use pycparser as it's used by cffi anyway and we have that.
     def _parse_from_h(self):
         code = self.source
+        code, _ = _preprocess(code) # private method from _cffi, even the pycparser cffi uses relies on an external preprocessor to remove comments
 
         # Collect enums and flags. This is easy.
         # Note that flags are first defined as enums and then redefined as flags later.
@@ -91,7 +133,7 @@ class HParser:
             # Decompose "typedef enum XX {...} XX;"
             name1 = code[i1 + 13 : i2].strip()
             name2 = code[i3 + 1 : i4].strip()
-            assert name1 == name2
+            assert name1 == name2, f"mismatch in enum name: {name1} vs {name2}"
             assert name1.startswith("WGPU")
             name = name1[4:]
             self.enums[name] = enum = {}
