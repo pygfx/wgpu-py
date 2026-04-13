@@ -454,7 +454,7 @@ class IdlPatcherMixin:
         # Get arg names and types
         idl_line = functions[name_idl]
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-        args = [Attribute(arg, struct=False) for arg in args if arg.strip()]
+        args = [Attribute(arg, "param") for arg in args if arg.strip()]
         return_type = idl_line.split()[0]
         if return_type.startswith("[NewObject]"):
             # [NewObject] can be skipped: https://webidl.spec.whatwg.org/#NewObject
@@ -585,7 +585,7 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
             idl_line = functions[name_idl]
 
             args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-            args = [Attribute(arg, struct=False) for arg in args if arg.strip()]
+            args = [Attribute(arg, "param") for arg in args if arg.strip()]
 
             # If one arg that is a dict, flatten dict to kwargs
             if len(args) == 1 and args[0].typename.endswith(
