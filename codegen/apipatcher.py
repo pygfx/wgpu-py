@@ -471,14 +471,10 @@ class IdlPatcherMixin:
         if len(args) == 1 and args[0].typename.endswith(
             ("Options", "Descriptor", "Configuration")
         ):
-            if not args[0].required:
-                args[0].typename = args[0].typename.removeprefix("optional ")
             assert args[0].typename.startswith("GPU")
-            des_is_optional = bool(args[0].default)  # part of the logic above?
             attributes = self.idl.structs[args[0].typename[3:]].values()
             py_args = [
-                self._arg_from_attribute(methodname, attr, des_is_optional)
-                for attr in attributes
+                self._arg_from_attribute(methodname, attr) for attr in attributes
             ]
             if py_args[0].startswith("label: str"):
                 py_args[0] = 'label: str=""'
@@ -507,7 +503,7 @@ class IdlPatcherMixin:
         )
         return "    " + line
 
-    def _arg_from_attribute(self, methodname, attribute, force_optional=False):
+    def _arg_from_attribute(self, methodname, attribute):
         name = to_snake_case(attribute.name)
         optional_in_py = (methodname, name) in ARGS_TO_MAKE_OPTIONAL
         d = attribute.default
@@ -515,7 +511,7 @@ class IdlPatcherMixin:
         result = name
         if not d and not attribute.required:
             d = "None"
-        elif (force_optional or optional_in_py) and not d:
+        elif optional_in_py and not d:
             d = "optional"
         elif d == "{}":
             d = "None"
