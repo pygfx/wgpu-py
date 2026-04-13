@@ -164,8 +164,9 @@ def test_validate_shader_error1(caplog):
         }
     """
 
-    expected1 = """Left: Load { pointer: [2] } of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }"""
-    expected2 = """Right: Load { pointer: [5] } of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }"""
+    # not sure if these exist, but commenting out for ruff check
+    # expected1 = """Left: Load { pointer: [2] } of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }"""
+    # expected2 = """Right: Load { pointer: [5] } of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }"""
     expected3 = """
         Validation Error
 

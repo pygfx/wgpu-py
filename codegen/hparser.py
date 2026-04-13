@@ -2,12 +2,12 @@ from cffi import FFI
 from cffi.cparser import _preprocess
 
 from codegen.utils import print, remove_c_comments
-from codegen.files import read_file
 
 from wgpu._coreutils import get_header_filename
 
 # from wgpu.backends.wgpu_native._ffi import _get_wgpu_header # turns out this import has plenty of side effects -.-
 _parser = None
+
 
 # TODO: likely remove this duplicated code as the import above is the smarter way to stay in sync
 def _get_wgpu_header(*filenames):
@@ -46,9 +46,9 @@ def _get_wgpu_header(*filenames):
             # pattern to find: #define WGPU_CONSTANT (0x1234)
             # we use ffi.sizeof() to hopefully get the correct max sizes per platform
             # we don't have ffi in this namespace, so I just put the hardcoded values for now, we could use ctypes.sizeof(ctypes.c_size_t)
-            max_size = hex((1 << (8*8)) - 1) # sizeof(size_t)
-            max_32 = hex((1 << (4*8)) - 1) # sizeof(uint32_t)
-            max_64 = hex((1 << (8*8)) - 1) # sizeof(uint64_t)
+            max_size = hex((1 << (8 * 8)) - 1)  # sizeof(size_t)
+            max_32 = hex((1 << (4 * 8)) - 1)  # sizeof(uint32_t)
+            max_64 = hex((1 << (8 * 8)) - 1)  # sizeof(uint64_t)
             line = (
                 line.replace("SIZE_MAX", max_size)
                 .replace("UINT32_MAX", max_32)
@@ -91,8 +91,12 @@ def get_h_parser(*, allow_cache=True):
     # just simply implementation to test the idea.
 
     cleaned_source, macros = _preprocess(source)
-    cleaned_source += "\n".join(f"#define {k} {v}" for k, v in macros.items()) # add them back?
-    cleaned_source = "\n".join(line.strip() for line in cleaned_source.splitlines() if line.strip())
+    cleaned_source += "\n".join(
+        f"#define {k} {v}" for k, v in macros.items()
+    )  # add them back?
+    cleaned_source = "\n".join(
+        line.strip() for line in cleaned_source.splitlines() if line.strip()
+    )
     combined_header_file = get_header_filename("combined_header.h")
     with open(combined_header_file, "w") as f:
         f.write(cleaned_source)

@@ -16,7 +16,6 @@ from ._api import (
     enums,
     logger,
     structs,
-    flags,
     new_struct_p,
     to_c_string_view,
     enum_str2int,
@@ -81,9 +80,7 @@ def create_pipeline_layout(
     bind_group_layouts: Sequence[GPUBindGroupLayout],
     immediate_size: int,
 ) -> GPUPipelineLayout:
-    return device._create_pipeline_layout(
-        label, bind_group_layouts, immediate_size
-    )
+    return device._create_pipeline_layout(label, bind_group_layouts, immediate_size)
 
 
 def set_immediates(
@@ -101,9 +98,7 @@ def set_immediates(
     """
 
     # Actual implementation is hidden in _api.py
-    render_pass_encoder._set_immediates(
-        offset, size_in_bytes, data, data_offset
-    )
+    render_pass_encoder._set_immediates(offset, size_in_bytes, data, data_offset)
 
 
 def multi_draw_indirect(
