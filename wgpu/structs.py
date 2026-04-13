@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from collections.abc import Mapping
-from typing import Sequence, Optional
+from typing import Sequence
 
 from ._coreutils import ArrayLike, CanvasLike
 from . import _classes as classes
@@ -133,13 +133,13 @@ __all__ = [
 @dataclass(kw_only=True, repr=False)
 class RequestAdapterOptions(Struct):
     #:
-    feature_level: Optional[str] = "core"
+    feature_level: str = "core"
     #: :obj:`enums.PowerPreference <wgpu.enums.PowerPreference>`
-    power_preference: Optional[enums.PowerPreferenceEnum]
+    power_preference: enums.PowerPreferenceEnum | None = None
     #:
-    force_fallback_adapter: Optional[bool] = False
+    force_fallback_adapter: bool = False
     #:
-    xr_compatible: Optional[bool] = False
+    xr_compatible: bool = False
 
 
 RequestAdapterOptionsStruct = RequestAdapterOptions | dict
@@ -148,13 +148,13 @@ RequestAdapterOptionsStruct = RequestAdapterOptions | dict
 @dataclass(kw_only=True, repr=False)
 class DeviceDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #: list[:obj:`enums.FeatureName <wgpu.enums.FeatureName>`]
-    required_features: Optional[Sequence[enums.FeatureNameEnum]] = ()
+    required_features: Sequence[enums.FeatureNameEnum] = ()
     #:
-    required_limits: Optional[dict[str, int | None] | None] = None
+    required_limits: dict[str, int | None] | None = None
     #:
-    default_queue: Optional[QueueDescriptorStruct | None] = None
+    default_queue: QueueDescriptorStruct | None = None
 
 
 DeviceDescriptorStruct = DeviceDescriptor | dict
@@ -163,13 +163,13 @@ DeviceDescriptorStruct = DeviceDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class BufferDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
     size: int
     #: :obj:`flags.BufferUsage <wgpu.flags.BufferUsage>`
     usage: flags.BufferUsageFlags
     #:
-    mapped_at_creation: Optional[bool] = False
+    mapped_at_creation: bool = False
 
 
 BufferDescriptorStruct = BufferDescriptor | dict
@@ -178,21 +178,21 @@ BufferDescriptorStruct = BufferDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class TextureDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
     size: tuple[int, int, int] | Extent3DStruct
     #:
-    mip_level_count: Optional[int] = 1
+    mip_level_count: int = 1
     #:
-    sample_count: Optional[int] = 1
+    sample_count: int = 1
     #: :obj:`enums.TextureDimension <wgpu.enums.TextureDimension>`
-    dimension: Optional[enums.TextureDimensionEnum] = "2d"
+    dimension: enums.TextureDimensionEnum = "2d"
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     format: enums.TextureFormatEnum
     #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>`
     usage: flags.TextureUsageFlags
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
-    view_formats: Optional[Sequence[enums.TextureFormatEnum]] = ()
+    view_formats: Sequence[enums.TextureFormatEnum] = ()
 
 
 TextureDescriptorStruct = TextureDescriptor | dict
@@ -201,23 +201,23 @@ TextureDescriptorStruct = TextureDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class TextureViewDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
-    format: Optional[enums.TextureFormatEnum]
+    format: enums.TextureFormatEnum | None = None
     #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>`
-    dimension: Optional[enums.TextureViewDimensionEnum]
+    dimension: enums.TextureViewDimensionEnum | None = None
     #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>`
-    usage: Optional[flags.TextureUsageFlags] = 0
+    usage: flags.TextureUsageFlags = 0
     #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>`
-    aspect: Optional[enums.TextureAspectEnum] = "all"
+    aspect: enums.TextureAspectEnum = "all"
     #:
-    base_mip_level: Optional[int] = 0
+    base_mip_level: int = 0
     #:
-    mip_level_count: Optional[int]
+    mip_level_count: int | None = None
     #:
-    base_array_layer: Optional[int] = 0
+    base_array_layer: int = 0
     #:
-    array_layer_count: Optional[int]
+    array_layer_count: int | None = None
 
 
 TextureViewDescriptorStruct = TextureViewDescriptor | dict
@@ -226,11 +226,11 @@ TextureViewDescriptorStruct = TextureViewDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class ExternalTextureDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
     source: ArrayLike | object
     #:
-    color_space: Optional[str] = "srgb"
+    color_space: str = "srgb"
 
 
 ExternalTextureDescriptorStruct = ExternalTextureDescriptor | dict
@@ -239,27 +239,27 @@ ExternalTextureDescriptorStruct = ExternalTextureDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class SamplerDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>`
-    address_mode_u: Optional[enums.AddressModeEnum] = "clamp-to-edge"
+    address_mode_u: enums.AddressModeEnum = "clamp-to-edge"
     #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>`
-    address_mode_v: Optional[enums.AddressModeEnum] = "clamp-to-edge"
+    address_mode_v: enums.AddressModeEnum = "clamp-to-edge"
     #: :obj:`enums.AddressMode <wgpu.enums.AddressMode>`
-    address_mode_w: Optional[enums.AddressModeEnum] = "clamp-to-edge"
+    address_mode_w: enums.AddressModeEnum = "clamp-to-edge"
     #: :obj:`enums.FilterMode <wgpu.enums.FilterMode>`
-    mag_filter: Optional[enums.FilterModeEnum] = "nearest"
+    mag_filter: enums.FilterModeEnum = "nearest"
     #: :obj:`enums.FilterMode <wgpu.enums.FilterMode>`
-    min_filter: Optional[enums.FilterModeEnum] = "nearest"
+    min_filter: enums.FilterModeEnum = "nearest"
     #: :obj:`enums.MipmapFilterMode <wgpu.enums.MipmapFilterMode>`
-    mipmap_filter: Optional[enums.MipmapFilterModeEnum] = "nearest"
+    mipmap_filter: enums.MipmapFilterModeEnum = "nearest"
     #:
-    lod_min_clamp: Optional[float] = 0
+    lod_min_clamp: float = 0
     #:
-    lod_max_clamp: Optional[float] = 32
+    lod_max_clamp: float = 32
     #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>`
-    compare: Optional[enums.CompareFunctionEnum]
+    compare: enums.CompareFunctionEnum | None = None
     #:
-    max_anisotropy: Optional[int] = 1
+    max_anisotropy: int = 1
 
 
 SamplerDescriptorStruct = SamplerDescriptor | dict
@@ -268,7 +268,7 @@ SamplerDescriptorStruct = SamplerDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class BindGroupLayoutDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
     entries: Sequence[BindGroupLayoutEntryStruct]
 
@@ -283,15 +283,15 @@ class BindGroupLayoutEntry(Struct):
     #: :obj:`flags.ShaderStage <wgpu.flags.ShaderStage>`
     visibility: flags.ShaderStageFlags
     #:
-    buffer: Optional[BufferBindingLayoutStruct]
+    buffer: BufferBindingLayoutStruct | None = None
     #:
-    sampler: Optional[SamplerBindingLayoutStruct]
+    sampler: SamplerBindingLayoutStruct | None = None
     #:
-    texture: Optional[TextureBindingLayoutStruct]
+    texture: TextureBindingLayoutStruct | None = None
     #:
-    storage_texture: Optional[StorageTextureBindingLayoutStruct]
+    storage_texture: StorageTextureBindingLayoutStruct | None = None
     #:
-    external_texture: Optional[ExternalTextureBindingLayoutStruct]
+    external_texture: ExternalTextureBindingLayoutStruct | None = None
 
 
 BindGroupLayoutEntryStruct = BindGroupLayoutEntry | dict
@@ -300,11 +300,11 @@ BindGroupLayoutEntryStruct = BindGroupLayoutEntry | dict
 @dataclass(kw_only=True, repr=False)
 class BufferBindingLayout(Struct):
     #: :obj:`enums.BufferBindingType <wgpu.enums.BufferBindingType>`
-    type: Optional[enums.BufferBindingTypeEnum] = "uniform"
+    type: enums.BufferBindingTypeEnum = "uniform"
     #:
-    has_dynamic_offset: Optional[bool] = False
+    has_dynamic_offset: bool = False
     #:
-    min_binding_size: Optional[int] = 0
+    min_binding_size: int = 0
 
 
 BufferBindingLayoutStruct = BufferBindingLayout | dict
@@ -313,7 +313,7 @@ BufferBindingLayoutStruct = BufferBindingLayout | dict
 @dataclass(kw_only=True, repr=False)
 class SamplerBindingLayout(Struct):
     #: :obj:`enums.SamplerBindingType <wgpu.enums.SamplerBindingType>`
-    type: Optional[enums.SamplerBindingTypeEnum] = "filtering"
+    type: enums.SamplerBindingTypeEnum = "filtering"
 
 
 SamplerBindingLayoutStruct = SamplerBindingLayout | dict
@@ -322,11 +322,11 @@ SamplerBindingLayoutStruct = SamplerBindingLayout | dict
 @dataclass(kw_only=True, repr=False)
 class TextureBindingLayout(Struct):
     #: :obj:`enums.TextureSampleType <wgpu.enums.TextureSampleType>`
-    sample_type: Optional[enums.TextureSampleTypeEnum] = "float"
+    sample_type: enums.TextureSampleTypeEnum = "float"
     #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>`
-    view_dimension: Optional[enums.TextureViewDimensionEnum] = "2d"
+    view_dimension: enums.TextureViewDimensionEnum = "2d"
     #:
-    multisampled: Optional[bool] = False
+    multisampled: bool = False
 
 
 TextureBindingLayoutStruct = TextureBindingLayout | dict
@@ -335,11 +335,11 @@ TextureBindingLayoutStruct = TextureBindingLayout | dict
 @dataclass(kw_only=True, repr=False)
 class StorageTextureBindingLayout(Struct):
     #: :obj:`enums.StorageTextureAccess <wgpu.enums.StorageTextureAccess>`
-    access: Optional[enums.StorageTextureAccessEnum] = "write-only"
+    access: enums.StorageTextureAccessEnum = "write-only"
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     format: enums.TextureFormatEnum
     #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>`
-    view_dimension: Optional[enums.TextureViewDimensionEnum] = "2d"
+    view_dimension: enums.TextureViewDimensionEnum = "2d"
 
 
 StorageTextureBindingLayoutStruct = StorageTextureBindingLayout | dict
@@ -356,7 +356,7 @@ ExternalTextureBindingLayoutStruct = ExternalTextureBindingLayout | dict
 @dataclass(kw_only=True, repr=False)
 class BindGroupDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
     layout: classes.GPUBindGroupLayout
     #:
@@ -389,9 +389,9 @@ class BufferBinding(Struct):
     #:
     buffer: classes.GPUBuffer
     #:
-    offset: Optional[int] = 0
+    offset: int = 0
     #:
-    size: Optional[int]
+    size: int | None = None
 
 
 BufferBindingStruct = BufferBinding | dict
@@ -400,7 +400,7 @@ BufferBindingStruct = BufferBinding | dict
 @dataclass(kw_only=True, repr=False)
 class PipelineLayoutDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
     bind_group_layouts: Sequence[classes.GPUBindGroupLayout]
 
@@ -411,11 +411,11 @@ PipelineLayoutDescriptorStruct = PipelineLayoutDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class ShaderModuleDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
     code: str
     #:
-    compilation_hints: Optional[Sequence[ShaderModuleCompilationHintStruct]] = ()
+    compilation_hints: Sequence[ShaderModuleCompilationHintStruct] = ()
 
 
 ShaderModuleDescriptorStruct = ShaderModuleDescriptor | dict
@@ -426,7 +426,7 @@ class ShaderModuleCompilationHint(Struct):
     #:
     entry_point: str
     #: :class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>`
-    layout: Optional[classes.GPUPipelineLayout | enums.AutoLayoutModeEnum]
+    layout: classes.GPUPipelineLayout | enums.AutoLayoutModeEnum | None = None
 
 
 ShaderModuleCompilationHintStruct = ShaderModuleCompilationHint | dict
@@ -446,9 +446,9 @@ class ProgrammableStage(Struct):
     #:
     module: classes.GPUShaderModule
     #:
-    entry_point: Optional[str]
+    entry_point: str | None = None
     #:
-    constants: Optional[dict[str, float] | None] = None
+    constants: dict[str, float] | None = None
 
 
 ProgrammableStageStruct = ProgrammableStage | dict
@@ -457,7 +457,7 @@ ProgrammableStageStruct = ProgrammableStage | dict
 @dataclass(kw_only=True, repr=False)
 class ComputePipelineDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #: :class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>`
     layout: classes.GPUPipelineLayout | enums.AutoLayoutModeEnum
     #:
@@ -470,19 +470,19 @@ ComputePipelineDescriptorStruct = ComputePipelineDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class RenderPipelineDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #: :class:`GPUPipelineLayout <wgpu.GPUPipelineLayout>` | :obj:`enums.AutoLayoutMode <wgpu.enums.AutoLayoutMode>`
     layout: classes.GPUPipelineLayout | enums.AutoLayoutModeEnum
     #:
     vertex: VertexStateStruct
     #:
-    primitive: Optional[PrimitiveStateStruct | None] = None
+    primitive: PrimitiveStateStruct | None = None
     #:
-    depth_stencil: Optional[DepthStencilStateStruct]
+    depth_stencil: DepthStencilStateStruct | None = None
     #:
-    multisample: Optional[MultisampleStateStruct | None] = None
+    multisample: MultisampleStateStruct | None = None
     #:
-    fragment: Optional[FragmentStateStruct]
+    fragment: FragmentStateStruct | None = None
 
 
 RenderPipelineDescriptorStruct = RenderPipelineDescriptor | dict
@@ -491,15 +491,15 @@ RenderPipelineDescriptorStruct = RenderPipelineDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class PrimitiveState(Struct):
     #: :obj:`enums.PrimitiveTopology <wgpu.enums.PrimitiveTopology>`
-    topology: Optional[enums.PrimitiveTopologyEnum] = "triangle-list"
+    topology: enums.PrimitiveTopologyEnum = "triangle-list"
     #: :obj:`enums.IndexFormat <wgpu.enums.IndexFormat>`
-    strip_index_format: Optional[enums.IndexFormatEnum]
+    strip_index_format: enums.IndexFormatEnum | None = None
     #: :obj:`enums.FrontFace <wgpu.enums.FrontFace>`
-    front_face: Optional[enums.FrontFaceEnum] = "ccw"
+    front_face: enums.FrontFaceEnum = "ccw"
     #: :obj:`enums.CullMode <wgpu.enums.CullMode>`
-    cull_mode: Optional[enums.CullModeEnum] = "none"
+    cull_mode: enums.CullModeEnum = "none"
     #:
-    unclipped_depth: Optional[bool] = False
+    unclipped_depth: bool = False
 
 
 PrimitiveStateStruct = PrimitiveState | dict
@@ -508,11 +508,11 @@ PrimitiveStateStruct = PrimitiveState | dict
 @dataclass(kw_only=True, repr=False)
 class MultisampleState(Struct):
     #:
-    count: Optional[int] = 1
+    count: int = 1
     #:
-    mask: Optional[int] = 0xFFFFFFFF
+    mask: int = 0xFFFFFFFF
     #:
-    alpha_to_coverage_enabled: Optional[bool] = False
+    alpha_to_coverage_enabled: bool = False
 
 
 MultisampleStateStruct = MultisampleState | dict
@@ -523,9 +523,9 @@ class FragmentState(Struct):
     #:
     module: classes.GPUShaderModule
     #:
-    entry_point: Optional[str]
+    entry_point: str | None = None
     #:
-    constants: Optional[dict[str, float] | None] = None
+    constants: dict[str, float] | None = None
     #:
     targets: Sequence[ColorTargetStateStruct]
 
@@ -538,9 +538,9 @@ class ColorTargetState(Struct):
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     format: enums.TextureFormatEnum
     #:
-    blend: Optional[BlendStateStruct]
+    blend: BlendStateStruct | None = None
     #: :obj:`flags.ColorWrite <wgpu.flags.ColorWrite>`
-    write_mask: Optional[flags.ColorWriteFlags] = 0xF
+    write_mask: flags.ColorWriteFlags = 0xF
 
 
 ColorTargetStateStruct = ColorTargetState | dict
@@ -560,11 +560,11 @@ BlendStateStruct = BlendState | dict
 @dataclass(kw_only=True, repr=False)
 class BlendComponent(Struct):
     #: :obj:`enums.BlendOperation <wgpu.enums.BlendOperation>`
-    operation: Optional[enums.BlendOperationEnum] = "add"
+    operation: enums.BlendOperationEnum = "add"
     #: :obj:`enums.BlendFactor <wgpu.enums.BlendFactor>`
-    src_factor: Optional[enums.BlendFactorEnum] = "one"
+    src_factor: enums.BlendFactorEnum = "one"
     #: :obj:`enums.BlendFactor <wgpu.enums.BlendFactor>`
-    dst_factor: Optional[enums.BlendFactorEnum] = "zero"
+    dst_factor: enums.BlendFactorEnum = "zero"
 
 
 BlendComponentStruct = BlendComponent | dict
@@ -575,23 +575,23 @@ class DepthStencilState(Struct):
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     format: enums.TextureFormatEnum
     #:
-    depth_write_enabled: Optional[bool]
+    depth_write_enabled: bool | None = None
     #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>`
-    depth_compare: Optional[enums.CompareFunctionEnum]
+    depth_compare: enums.CompareFunctionEnum | None = None
     #:
-    stencil_front: Optional[StencilFaceStateStruct | None] = None
+    stencil_front: StencilFaceStateStruct | None = None
     #:
-    stencil_back: Optional[StencilFaceStateStruct | None] = None
+    stencil_back: StencilFaceStateStruct | None = None
     #:
-    stencil_read_mask: Optional[int] = 0xFFFFFFFF
+    stencil_read_mask: int = 0xFFFFFFFF
     #:
-    stencil_write_mask: Optional[int] = 0xFFFFFFFF
+    stencil_write_mask: int = 0xFFFFFFFF
     #:
-    depth_bias: Optional[int] = 0
+    depth_bias: int = 0
     #:
-    depth_bias_slope_scale: Optional[float] = 0
+    depth_bias_slope_scale: float = 0
     #:
-    depth_bias_clamp: Optional[float] = 0
+    depth_bias_clamp: float = 0
 
 
 DepthStencilStateStruct = DepthStencilState | dict
@@ -600,13 +600,13 @@ DepthStencilStateStruct = DepthStencilState | dict
 @dataclass(kw_only=True, repr=False)
 class StencilFaceState(Struct):
     #: :obj:`enums.CompareFunction <wgpu.enums.CompareFunction>`
-    compare: Optional[enums.CompareFunctionEnum] = "always"
+    compare: enums.CompareFunctionEnum = "always"
     #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>`
-    fail_op: Optional[enums.StencilOperationEnum] = "keep"
+    fail_op: enums.StencilOperationEnum = "keep"
     #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>`
-    depth_fail_op: Optional[enums.StencilOperationEnum] = "keep"
+    depth_fail_op: enums.StencilOperationEnum = "keep"
     #: :obj:`enums.StencilOperation <wgpu.enums.StencilOperation>`
-    pass_op: Optional[enums.StencilOperationEnum] = "keep"
+    pass_op: enums.StencilOperationEnum = "keep"
 
 
 StencilFaceStateStruct = StencilFaceState | dict
@@ -617,11 +617,11 @@ class VertexState(Struct):
     #:
     module: classes.GPUShaderModule
     #:
-    entry_point: Optional[str]
+    entry_point: str | None = None
     #:
-    constants: Optional[dict[str, float] | None] = None
+    constants: dict[str, float] | None = None
     #:
-    buffers: Optional[Sequence[VertexBufferLayoutStruct]] = ()
+    buffers: Sequence[VertexBufferLayoutStruct] = ()
 
 
 VertexStateStruct = VertexState | dict
@@ -632,7 +632,7 @@ class VertexBufferLayout(Struct):
     #:
     array_stride: int
     #: :obj:`enums.VertexStepMode <wgpu.enums.VertexStepMode>`
-    step_mode: Optional[enums.VertexStepModeEnum] = "vertex"
+    step_mode: enums.VertexStepModeEnum = "vertex"
     #:
     attributes: Sequence[VertexAttributeStruct]
 
@@ -656,11 +656,11 @@ VertexAttributeStruct = VertexAttribute | dict
 @dataclass(kw_only=True, repr=False)
 class TexelCopyBufferLayout(Struct):
     #:
-    offset: Optional[int] = 0
+    offset: int = 0
     #:
-    bytes_per_row: Optional[int]
+    bytes_per_row: int | None = None
     #:
-    rows_per_image: Optional[int]
+    rows_per_image: int | None = None
 
 
 TexelCopyBufferLayoutStruct = TexelCopyBufferLayout | dict
@@ -669,11 +669,11 @@ TexelCopyBufferLayoutStruct = TexelCopyBufferLayout | dict
 @dataclass(kw_only=True, repr=False)
 class TexelCopyBufferInfo(Struct):
     #:
-    offset: Optional[int] = 0
+    offset: int = 0
     #:
-    bytes_per_row: Optional[int]
+    bytes_per_row: int | None = None
     #:
-    rows_per_image: Optional[int]
+    rows_per_image: int | None = None
     #:
     buffer: classes.GPUBuffer
 
@@ -686,11 +686,11 @@ class TexelCopyTextureInfo(Struct):
     #:
     texture: classes.GPUTexture
     #:
-    mip_level: Optional[int] = 0
+    mip_level: int = 0
     #:
-    origin: Optional[tuple[int, int, int] | Origin3DStruct | None] = None
+    origin: tuple[int, int, int] | Origin3DStruct | None = None
     #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>`
-    aspect: Optional[enums.TextureAspectEnum] = "all"
+    aspect: enums.TextureAspectEnum = "all"
 
 
 TexelCopyTextureInfoStruct = TexelCopyTextureInfo | dict
@@ -701,15 +701,15 @@ class CopyExternalImageDestInfo(Struct):
     #:
     texture: classes.GPUTexture
     #:
-    mip_level: Optional[int] = 0
+    mip_level: int = 0
     #:
-    origin: Optional[tuple[int, int, int] | Origin3DStruct | None] = None
+    origin: tuple[int, int, int] | Origin3DStruct | None = None
     #: :obj:`enums.TextureAspect <wgpu.enums.TextureAspect>`
-    aspect: Optional[enums.TextureAspectEnum] = "all"
+    aspect: enums.TextureAspectEnum = "all"
     #:
-    color_space: Optional[str] = "srgb"
+    color_space: str = "srgb"
     #:
-    premultiplied_alpha: Optional[bool] = False
+    premultiplied_alpha: bool = False
 
 
 CopyExternalImageDestInfoStruct = CopyExternalImageDestInfo | dict
@@ -720,9 +720,9 @@ class CopyExternalImageSourceInfo(Struct):
     #:
     source: ArrayLike | CanvasLike | object
     #:
-    origin: Optional[tuple[int, int] | Origin2DStruct | None] = None
+    origin: tuple[int, int] | Origin2DStruct | None = None
     #:
-    flip_y: Optional[bool] = False
+    flip_y: bool = False
 
 
 CopyExternalImageSourceInfoStruct = CopyExternalImageSourceInfo | dict
@@ -731,7 +731,7 @@ CopyExternalImageSourceInfoStruct = CopyExternalImageSourceInfo | dict
 @dataclass(kw_only=True, repr=False)
 class CommandBufferDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
 
 
 CommandBufferDescriptorStruct = CommandBufferDescriptor | dict
@@ -740,7 +740,7 @@ CommandBufferDescriptorStruct = CommandBufferDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class CommandEncoderDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
 
 
 CommandEncoderDescriptorStruct = CommandEncoderDescriptor | dict
@@ -751,9 +751,9 @@ class ComputePassTimestampWrites(Struct):
     #:
     query_set: classes.GPUQuerySet
     #:
-    beginning_of_pass_write_index: Optional[int]
+    beginning_of_pass_write_index: int | None = None
     #:
-    end_of_pass_write_index: Optional[int]
+    end_of_pass_write_index: int | None = None
 
 
 ComputePassTimestampWritesStruct = ComputePassTimestampWrites | dict
@@ -762,9 +762,9 @@ ComputePassTimestampWritesStruct = ComputePassTimestampWrites | dict
 @dataclass(kw_only=True, repr=False)
 class ComputePassDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
-    timestamp_writes: Optional[ComputePassTimestampWritesStruct]
+    timestamp_writes: ComputePassTimestampWritesStruct | None = None
 
 
 ComputePassDescriptorStruct = ComputePassDescriptor | dict
@@ -775,9 +775,9 @@ class RenderPassTimestampWrites(Struct):
     #:
     query_set: classes.GPUQuerySet
     #:
-    beginning_of_pass_write_index: Optional[int]
+    beginning_of_pass_write_index: int | None = None
     #:
-    end_of_pass_write_index: Optional[int]
+    end_of_pass_write_index: int | None = None
 
 
 RenderPassTimestampWritesStruct = RenderPassTimestampWrites | dict
@@ -786,17 +786,17 @@ RenderPassTimestampWritesStruct = RenderPassTimestampWrites | dict
 @dataclass(kw_only=True, repr=False)
 class RenderPassDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #:
     color_attachments: Sequence[RenderPassColorAttachmentStruct]
     #:
-    depth_stencil_attachment: Optional[RenderPassDepthStencilAttachmentStruct]
+    depth_stencil_attachment: RenderPassDepthStencilAttachmentStruct | None = None
     #:
-    occlusion_query_set: Optional[classes.GPUQuerySet]
+    occlusion_query_set: classes.GPUQuerySet | None = None
     #:
-    timestamp_writes: Optional[RenderPassTimestampWritesStruct]
+    timestamp_writes: RenderPassTimestampWritesStruct | None = None
     #:
-    max_draw_count: Optional[int] = 50000000
+    max_draw_count: int = 50000000
 
 
 RenderPassDescriptorStruct = RenderPassDescriptor | dict
@@ -807,11 +807,11 @@ class RenderPassColorAttachment(Struct):
     #:
     view: classes.GPUTexture | classes.GPUTextureView
     #:
-    depth_slice: Optional[int]
+    depth_slice: int | None = None
     #:
-    resolve_target: Optional[classes.GPUTexture | classes.GPUTextureView]
+    resolve_target: classes.GPUTexture | classes.GPUTextureView | None = None
     #:
-    clear_value: Optional[tuple[float, float, float, float] | ColorStruct]
+    clear_value: tuple[float, float, float, float] | ColorStruct | None = None
     #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>`
     load_op: enums.LoadOpEnum
     #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>`
@@ -826,21 +826,21 @@ class RenderPassDepthStencilAttachment(Struct):
     #:
     view: classes.GPUTexture | classes.GPUTextureView
     #:
-    depth_clear_value: Optional[float]
+    depth_clear_value: float | None = None
     #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>`
-    depth_load_op: Optional[enums.LoadOpEnum]
+    depth_load_op: enums.LoadOpEnum | None = None
     #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>`
-    depth_store_op: Optional[enums.StoreOpEnum]
+    depth_store_op: enums.StoreOpEnum | None = None
     #:
-    depth_read_only: Optional[bool] = False
+    depth_read_only: bool = False
     #:
-    stencil_clear_value: Optional[int] = 0
+    stencil_clear_value: int = 0
     #: :obj:`enums.LoadOp <wgpu.enums.LoadOp>`
-    stencil_load_op: Optional[enums.LoadOpEnum]
+    stencil_load_op: enums.LoadOpEnum | None = None
     #: :obj:`enums.StoreOp <wgpu.enums.StoreOp>`
-    stencil_store_op: Optional[enums.StoreOpEnum]
+    stencil_store_op: enums.StoreOpEnum | None = None
     #:
-    stencil_read_only: Optional[bool] = False
+    stencil_read_only: bool = False
 
 
 RenderPassDepthStencilAttachmentStruct = RenderPassDepthStencilAttachment | dict
@@ -849,13 +849,13 @@ RenderPassDepthStencilAttachmentStruct = RenderPassDepthStencilAttachment | dict
 @dataclass(kw_only=True, repr=False)
 class RenderPassLayout(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
     color_formats: Sequence[enums.TextureFormatEnum]
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
-    depth_stencil_format: Optional[enums.TextureFormatEnum]
+    depth_stencil_format: enums.TextureFormatEnum | None = None
     #:
-    sample_count: Optional[int] = 1
+    sample_count: int = 1
 
 
 RenderPassLayoutStruct = RenderPassLayout | dict
@@ -864,7 +864,7 @@ RenderPassLayoutStruct = RenderPassLayout | dict
 @dataclass(kw_only=True, repr=False)
 class RenderBundleDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
 
 
 RenderBundleDescriptorStruct = RenderBundleDescriptor | dict
@@ -873,17 +873,17 @@ RenderBundleDescriptorStruct = RenderBundleDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class RenderBundleEncoderDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
     color_formats: Sequence[enums.TextureFormatEnum]
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
-    depth_stencil_format: Optional[enums.TextureFormatEnum]
+    depth_stencil_format: enums.TextureFormatEnum | None = None
     #:
-    sample_count: Optional[int] = 1
+    sample_count: int = 1
     #:
-    depth_read_only: Optional[bool] = False
+    depth_read_only: bool = False
     #:
-    stencil_read_only: Optional[bool] = False
+    stencil_read_only: bool = False
 
 
 RenderBundleEncoderDescriptorStruct = RenderBundleEncoderDescriptor | dict
@@ -892,7 +892,7 @@ RenderBundleEncoderDescriptorStruct = RenderBundleEncoderDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class QueueDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
 
 
 QueueDescriptorStruct = QueueDescriptor | dict
@@ -901,7 +901,7 @@ QueueDescriptorStruct = QueueDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class QuerySetDescriptor(Struct):
     #:
-    label: Optional[str] = ""
+    label: str = ""
     #: :obj:`enums.QueryType <wgpu.enums.QueryType>`
     type: enums.QueryTypeEnum
     #:
@@ -914,7 +914,7 @@ QuerySetDescriptorStruct = QuerySetDescriptor | dict
 @dataclass(kw_only=True, repr=False)
 class CanvasToneMapping(Struct):
     #: :obj:`enums.CanvasToneMappingMode <wgpu.enums.CanvasToneMappingMode>`
-    mode: Optional[enums.CanvasToneMappingModeEnum] = "standard"
+    mode: enums.CanvasToneMappingModeEnum = "standard"
 
 
 CanvasToneMappingStruct = CanvasToneMapping | dict
@@ -927,15 +927,15 @@ class CanvasConfiguration(Struct):
     #: :obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`
     format: enums.TextureFormatEnum
     #: :obj:`flags.TextureUsage <wgpu.flags.TextureUsage>`
-    usage: Optional[flags.TextureUsageFlags] = 0x10
+    usage: flags.TextureUsageFlags = 0x10
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
-    view_formats: Optional[Sequence[enums.TextureFormatEnum]] = ()
+    view_formats: Sequence[enums.TextureFormatEnum] = ()
     #:
-    color_space: Optional[str] = "srgb"
+    color_space: str = "srgb"
     #:
-    tone_mapping: Optional[CanvasToneMappingStruct | None] = None
+    tone_mapping: CanvasToneMappingStruct | None = None
     #: :obj:`enums.CanvasAlphaMode <wgpu.enums.CanvasAlphaMode>`
-    alpha_mode: Optional[enums.CanvasAlphaModeEnum] = "opaque"
+    alpha_mode: enums.CanvasAlphaModeEnum = "opaque"
 
 
 CanvasConfigurationStruct = CanvasConfiguration | dict
@@ -968,9 +968,9 @@ ColorStruct = Color | dict
 @dataclass(kw_only=True, repr=False)
 class Origin2D(Struct):
     #:
-    x: Optional[int] = 0
+    x: int = 0
     #:
-    y: Optional[int] = 0
+    y: int = 0
 
 
 Origin2DStruct = Origin2D | dict
@@ -979,11 +979,11 @@ Origin2DStruct = Origin2D | dict
 @dataclass(kw_only=True, repr=False)
 class Origin3D(Struct):
     #:
-    x: Optional[int] = 0
+    x: int = 0
     #:
-    y: Optional[int] = 0
+    y: int = 0
     #:
-    z: Optional[int] = 0
+    z: int = 0
 
 
 Origin3DStruct = Origin3D | dict
@@ -994,9 +994,9 @@ class Extent3D(Struct):
     #:
     width: int
     #:
-    height: Optional[int] = 1
+    height: int = 1
     #:
-    depth_or_array_layers: Optional[int] = 1
+    depth_or_array_layers: int = 1
 
 
 Extent3DStruct = Extent3D | dict
