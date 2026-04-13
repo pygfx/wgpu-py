@@ -137,10 +137,8 @@ def write_structs():
             elif default == "{}":
                 default = "None"  # no mutable defaults
                 code_type += " | None"
-            elif not default and not field.required:
-                default = "None"
-                if "None" not in code_type:
-                    code_type += " | None"
+            if not field.required:
+                code_type = f"Optional[{code_type}]"
             # Build docs
             doc = ""
             if docs_type:

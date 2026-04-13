@@ -60,7 +60,7 @@ class Attribute:
                 assert default is None
             else:
                 required = False
-                # default = default or "None"
+                # default could still be None, i.e. struct field can be omitted
         elif source == "param":
             if arg_type.startswith("optional "):
                 required = False
