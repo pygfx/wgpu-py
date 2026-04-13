@@ -7,6 +7,8 @@ It would be good to occasionally check the coverage of this module to
 identify and remove code paths that are no longer used.
 """
 
+from typing import Literal
+
 from codegen.utils import print
 from codegen.files import read_file
 
