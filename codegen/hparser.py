@@ -45,9 +45,10 @@ def _get_wgpu_header(*filenames):
         ):
             # pattern to find: #define WGPU_CONSTANT (0x1234)
             # we use ffi.sizeof() to hopefully get the correct max sizes per platform
-            max_size = hex((1 << 1 * 8) - 1)
-            max_32 = hex((1 << 4 * 8) - 1)
-            max_64 = hex((1 << 8 * 8) - 1)
+            # we don't have ffi in this namespace, so I just put the hardcoded values for now, we could use ctypes.sizeof(ctypes.c_size_t)
+            max_size = hex((1 << (8*8)) - 1) # sizeof(size_t)
+            max_32 = hex((1 << (4*8)) - 1) # sizeof(uint32_t)
+            max_64 = hex((1 << (8*8)) - 1) # sizeof(uint64_t)
             line = (
                 line.replace("SIZE_MAX", max_size)
                 .replace("UINT32_MAX", max_32)
@@ -86,8 +87,18 @@ def get_h_parser(*, allow_cache=True):
         get_header_filename("wgpu.h"),
     )
 
+    # TODO: we have file management utils, so perhaps we can just use them.
+    # just simply implementation to test the idea.
+
+    cleaned_source, macros = _preprocess(source)
+    cleaned_source += "\n".join(f"#define {k} {v}" for k, v in macros.items()) # add them back?
+    cleaned_source = "\n".join(line.strip() for line in cleaned_source.splitlines() if line.strip())
+    combined_header_file = get_header_filename("combined_header.h")
+    with open(combined_header_file, "w") as f:
+        f.write(cleaned_source)
+
     # Create parser
-    hp = HParser(source)
+    hp = HParser(cleaned_source)
     hp.parse()
     _parser = hp
     return hp
@@ -117,7 +128,7 @@ class HParser:
     # TODO: maybe we should use pycparser as it's used by cffi anyway and we have that.
     def _parse_from_h(self):
         code = self.source
-        code, _ = _preprocess(code) # private method from _cffi, even the pycparser cffi uses relies on an external preprocessor to remove comments
+        # code, _ = _preprocess(code) # private method from _cffi, even the pycparser cffi uses relies on an external preprocessor to remove comments
 
         # Collect enums and flags. This is easy.
         # Note that flags are first defined as enums and then redefined as flags later.
