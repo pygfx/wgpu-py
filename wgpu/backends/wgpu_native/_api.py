@@ -2528,10 +2528,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         return offset, size
 
     def map_async(
-        self,
-        mode: flags.MapModeFlags | None = None,
-        offset: int = 0,
-        size: int | None = None,
+        self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> GPUPromise[None]:
         sync_on_read = True
 
@@ -2867,7 +2864,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
 
 
 class GPUPipelineBase(classes.GPUPipelineBase):
-    def get_bind_group_layout(self, index: int | None = None) -> GPUBindGroupLayout:
+    def get_bind_group_layout(self, index: int) -> GPUBindGroupLayout:
         # H: WGPUBindGroupLayout wgpuComputePipelineGetBindGroupLayout(WGPUComputePipeline computePipeline, uint32_t groupIndex)
         # H: WGPUBindGroupLayout wgpuRenderPipelineGetBindGroupLayout(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
         function = type(self)._get_bind_group_layout_function
@@ -3000,7 +2997,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
-    def push_debug_group(self, group_label: str | None = None) -> None:
+    def push_debug_group(self, group_label: str) -> None:
         c_group_label = to_c_string_view(group_label)
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, WGPUStringView groupLabel)
         # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, WGPUStringView groupLabel)
@@ -3017,7 +3014,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         function = type(self)._pop_debug_group_function
         function(self._internal)
 
-    def insert_debug_marker(self, marker_label: str | None = None) -> None:
+    def insert_debug_marker(self, marker_label: str) -> None:
         c_marker_label = to_c_string_view(marker_label)
         # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, WGPUStringView markerLabel)
         # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, WGPUStringView markerLabel)
@@ -3039,7 +3036,7 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
 
 
 class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
-    def set_pipeline(self, pipeline: GPURenderPipeline | None = None) -> None:
+    def set_pipeline(self, pipeline: GPURenderPipeline) -> None:
         self._maybe_keep_alive(pipeline)
         pipeline_id = pipeline._internal
         # H: void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
@@ -3049,8 +3046,8 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 
     def set_index_buffer(
         self,
-        buffer: GPUBuffer | None = None,
-        index_format: enums.IndexFormatEnum | None = None,
+        buffer: GPUBuffer,
+        index_format: enums.IndexFormatEnum,
         offset: int = 0,
         size: int | None = None,
     ) -> None:
@@ -3066,11 +3063,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         )
 
     def set_vertex_buffer(
-        self,
-        slot: int | None = None,
-        buffer: GPUBuffer | None = None,
-        offset: int = 0,
-        size: int | None = None,
+        self, slot: int, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
         self._maybe_keep_alive(buffer)
         if not size:
@@ -3082,7 +3075,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 
     def draw(
         self,
-        vertex_count: int | None = None,
+        vertex_count: int,
         instance_count: int = 1,
         first_vertex: int = 0,
         first_instance: int = 0,
@@ -3094,11 +3087,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
 
-    def draw_indirect(
-        self,
-        indirect_buffer: GPUBuffer | None = None,
-        indirect_offset: int | None = None,
-    ) -> None:
+    def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int) -> None:
         # self._maybe_keep_alive(indirect_buffer)
         buffer_id = indirect_buffer._internal
         # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
@@ -3108,7 +3097,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
 
     def draw_indexed(
         self,
-        index_count: int | None = None,
+        index_count: int,
         instance_count: int = 1,
         first_index: int = 0,
         base_vertex: int = 0,
@@ -3127,9 +3116,7 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         )
 
     def draw_indexed_indirect(
-        self,
-        indirect_buffer: GPUBuffer | None = None,
-        indirect_offset: int | None = None,
+        self, indirect_buffer: GPUBuffer, indirect_offset: int
     ) -> None:
         self._maybe_keep_alive(indirect_buffer)
         buffer_id = indirect_buffer._internal
@@ -3342,7 +3329,7 @@ class GPUCommandEncoder(
         return c_depth_stencil_attachment
 
     def clear_buffer(
-        self, buffer: GPUBuffer | None = None, offset: int = 0, size: int | None = None
+        self, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
         offset = int(offset)
         if offset % 4 != 0:  # pragma: no cover
@@ -3367,10 +3354,10 @@ class GPUCommandEncoder(
 
     def copy_buffer_to_buffer(
         self,
-        source: GPUBuffer | None = None,
-        source_offset: int | None = None,
-        destination: GPUBuffer | None = None,
-        destination_offset: int | None = None,
+        source: GPUBuffer,
+        source_offset: int,
+        destination: GPUBuffer,
+        destination_offset: int,
         size: int | None = None,
     ) -> None:
         if source_offset % 4 != 0:  # pragma: no cover
@@ -3398,9 +3385,9 @@ class GPUCommandEncoder(
 
     def copy_buffer_to_texture(
         self,
-        source: structs.TexelCopyBufferInfoStruct | None = None,
-        destination: structs.TexelCopyTextureInfoStruct | None = None,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        source: structs.TexelCopyBufferInfoStruct,
+        destination: structs.TexelCopyTextureInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         check_struct("TexelCopyBufferInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
@@ -3464,9 +3451,9 @@ class GPUCommandEncoder(
 
     def copy_texture_to_buffer(
         self,
-        source: structs.TexelCopyTextureInfoStruct | None = None,
-        destination: structs.TexelCopyBufferInfoStruct | None = None,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        source: structs.TexelCopyTextureInfoStruct,
+        destination: structs.TexelCopyBufferInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyBufferInfo", destination)
@@ -3530,9 +3517,9 @@ class GPUCommandEncoder(
 
     def copy_texture_to_texture(
         self,
-        source: structs.TexelCopyTextureInfoStruct | None = None,
-        destination: structs.TexelCopyTextureInfoStruct | None = None,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        source: structs.TexelCopyTextureInfoStruct,
+        destination: structs.TexelCopyTextureInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyTextureInfo", destination)
@@ -3607,11 +3594,11 @@ class GPUCommandEncoder(
 
     def resolve_query_set(
         self,
-        query_set: GPUQuerySet | None = None,
-        first_query: int | None = None,
-        query_count: int | None = None,
-        destination: GPUBuffer | None = None,
-        destination_offset: int | None = None,
+        query_set: GPUQuerySet,
+        first_query: int,
+        query_count: int,
+        destination: GPUBuffer,
+        destination_offset: int,
     ) -> None:
         # H: void f(WGPUCommandEncoder commandEncoder, WGPUQuerySet querySet, uint32_t firstQuery, uint32_t queryCount, WGPUBuffer destination, uint64_t destinationOffset)
         libf.wgpuCommandEncoderResolveQuerySet(
@@ -3646,14 +3633,14 @@ class GPUComputePassEncoder(
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePassEncoderRelease
 
-    def set_pipeline(self, pipeline: GPUComputePipeline | None = None) -> None:
+    def set_pipeline(self, pipeline: GPUComputePipeline) -> None:
         pipeline_id = pipeline._internal
         # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)
         libf.wgpuComputePassEncoderSetPipeline(self._internal, pipeline_id)
 
     def dispatch_workgroups(
         self,
-        workgroup_count_x: int | None = None,
+        workgroup_count_x: int,
         workgroup_count_y: int = 1,
         workgroup_count_z: int = 1,
     ) -> None:
@@ -3663,9 +3650,7 @@ class GPUComputePassEncoder(
         )
 
     def dispatch_workgroups_indirect(
-        self,
-        indirect_buffer: GPUBuffer | None = None,
-        indirect_offset: int | None = None,
+        self, indirect_buffer: GPUBuffer, indirect_offset: int
     ) -> None:
         buffer_id = indirect_buffer._internal
         # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
@@ -3715,12 +3700,12 @@ class GPURenderPassEncoder(
 
     def set_viewport(
         self,
-        x: float | None = None,
-        y: float | None = None,
-        width: float | None = None,
-        height: float | None = None,
-        min_depth: float | None = None,
-        max_depth: float | None = None,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        min_depth: float,
+        max_depth: float,
     ) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth)
         libf.wgpuRenderPassEncoderSetViewport(
@@ -3733,21 +3718,14 @@ class GPURenderPassEncoder(
             float(max_depth),
         )
 
-    def set_scissor_rect(
-        self,
-        x: int | None = None,
-        y: int | None = None,
-        width: int | None = None,
-        height: int | None = None,
-    ) -> None:
+    def set_scissor_rect(self, x: int, y: int, width: int, height: int) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
         libf.wgpuRenderPassEncoderSetScissorRect(
             self._internal, int(x), int(y), int(width), int(height)
         )
 
     def set_blend_constant(
-        self,
-        color: tuple[float, float, float, float] | structs.ColorStruct | None = None,
+        self, color: tuple[float, float, float, float] | structs.ColorStruct
     ) -> None:
         if isinstance(color, dict):
             check_struct("Color", color)
@@ -3763,7 +3741,7 @@ class GPURenderPassEncoder(
         # H: void f(WGPURenderPassEncoder renderPassEncoder, WGPUColor const * color)
         libf.wgpuRenderPassEncoderSetBlendConstant(self._internal, c_color)
 
-    def set_stencil_reference(self, reference: int | None = None) -> None:
+    def set_stencil_reference(self, reference: int) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t reference)
         libf.wgpuRenderPassEncoderSetStencilReference(self._internal, int(reference))
 
@@ -3771,7 +3749,7 @@ class GPURenderPassEncoder(
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
         libf.wgpuRenderPassEncoderEnd(self._internal)
 
-    def execute_bundles(self, bundles: Sequence[GPURenderBundle] | None = None) -> None:
+    def execute_bundles(self, bundles: Sequence[GPURenderBundle]) -> None:
         bundle_ids = [bundle._internal for bundle in bundles]
         c_bundle_info = new_array("WGPURenderBundle[]", bundle_ids)
         # H: void f(WGPURenderPassEncoder renderPassEncoder, size_t bundleCount, WGPURenderBundle const * bundles)
@@ -3779,7 +3757,7 @@ class GPURenderPassEncoder(
             self._internal, len(bundles), c_bundle_info
         )
 
-    def begin_occlusion_query(self, query_index: int | None = None) -> None:
+    def begin_occlusion_query(self, query_index: int) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t queryIndex)
         libf.wgpuRenderPassEncoderBeginOcclusionQuery(self._internal, int(query_index))
 
@@ -3884,7 +3862,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     # GPUObjectBaseMixin
     _release_function = libf.wgpuQueueRelease
 
-    def submit(self, command_buffers: Sequence[GPUCommandBuffer] | None = None) -> None:
+    def submit(self, command_buffers: Sequence[GPUCommandBuffer]) -> None:
         command_buffer_ids = [cb._internal for cb in command_buffers]
         c_command_buffers = new_array("WGPUCommandBuffer[]", command_buffer_ids)
         # H: void f(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const * commands)
@@ -3892,9 +3870,9 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     def write_buffer(
         self,
-        buffer: GPUBuffer | None = None,
-        buffer_offset: int | None = None,
-        data: ArrayLike | None = None,
+        buffer: GPUBuffer,
+        buffer_offset: int,
+        data: ArrayLike,
         data_offset: int = 0,
         size: int | None = None,
     ) -> None:
@@ -3969,10 +3947,10 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     def write_texture(
         self,
-        destination: structs.TexelCopyTextureInfoStruct | None = None,
-        data: ArrayLike | None = None,
-        data_layout: structs.TexelCopyBufferLayoutStruct | None = None,
-        size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        destination: structs.TexelCopyTextureInfoStruct,
+        data: ArrayLike,
+        data_layout: structs.TexelCopyBufferLayoutStruct,
+        size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         # Note that the bytes_per_row restriction does not apply for
         # this function; wgpu-native deals with it.
