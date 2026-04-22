@@ -89,7 +89,7 @@ Overestimating is okay::
 
 Creating a immediate data struct in your shader code is similar to the way you would create
 a uniform buffer.
-The same data can be accessed across all shader stages: vertex, fragment and compute.
+The same data can be accessed across all shader stages: vertex, fragment and compute::
 
     struct Immediates {
         vertex_transform: vec4x4f,
@@ -126,7 +126,7 @@ Finally, you set the value of the immediates by using
     These immediates are a buffer of bytes available to all shader stages.
 
     :param render_pass_encoder: The render pass encoder to which we are providing immediates.
-    :param offset: The offset into the immedaite data at which the bytes are to be written
+    :param offset: The offset into the immediate data at which the bytes are to be written
     :param size_in_bytes: The number of bytes to copy from the data
     :param data: The data to copy to the buffer
     :param data_offset: The starting offset in the data at which to begin copying.
@@ -322,6 +322,7 @@ Use like the following before the instance is created, which happens during requ
         print(a.summary)
 
 For additional usage examples look at `extras_dxc.py` and `extras_debug.py` in the examples directory.
+Limited documentation on instance extras can be found in `wgpu.h`.
 
 The js_webgpu backend
 ---------------------
