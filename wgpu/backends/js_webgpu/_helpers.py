@@ -14,15 +14,23 @@ def to_camel_case(snake_str):
     #     res += "_"
     return res
 
-def to_snake_case(camel_str):
-    snake_str = camel_str[0].lower()
-    for char in camel_str[1:]:
-        if char.isupper():
-            snake_str += "_"
-        snake_str += char.lower()
-    # don't split 2D and 3D tho... very much a hack... but should work for now. Similar logic in wgpu-native/_helpers.py
-    snake_str = snake_str.replace("1_d", "_1d").replace("2_d", "_2d").replace("3_d", "_3d")
-    return snake_str
+
+# The function below is copied from codegen/utils.py - let's keep it in sync! (hopefully)
+def to_snake_case(name, separator="_"):
+    """Convert a name from camelCase to snake_case. Names that already are
+    snake_case remain the same.
+    """
+    name2 = ""
+    for c in name:
+        c2 = c.lower()
+        if c2 != c and len(name2) > 0:
+            prev = name2[-1]
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
+                name2 += separator
+        name2 += c2
+    return name2
 
 
 # this one liner actually does the trick

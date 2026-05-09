@@ -136,7 +136,7 @@ class GPUAdapter(classes.GPUAdapter, ):
         for limit in dir(limits):
             # we don't have the GPUSupportedLimits as a struct or list any where in the code right now, maybe we un skip it in the codegen?
             if isinstance(getattr(limits, limit), int) and "_" not in limit:
-                py_limits[to_snake_case(limit)] = getattr(limits, limit)
+                py_limits[to_snake_case(limit, "-")] = getattr(limits, limit)
 
         infos = ["vendor", "architecture", "device", "description", "subgroupMinSize", "subgroupMaxSize", "isFallbackAdapter"]
         adapter_info = js_adapter.info
@@ -273,7 +273,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         limits = {}
         for limit in dir(js_limits):
             if isinstance(getattr(js_limits, limit), int) and "_" not in limit:
-                limits[to_snake_case(limit)] = getattr(js_limits, limit)
+                limits[to_snake_case(limit, "-")] = getattr(js_limits, limit)
 
         queue = GPUQueue(label="default queue", internal=js_device.queue, device=self)
         super().__init__(label, internal=js_device, adapter=adapter, features=features, limits=limits, queue=queue)
