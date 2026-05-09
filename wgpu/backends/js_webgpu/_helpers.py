@@ -20,6 +20,8 @@ def to_snake_case(camel_str):
         if char.isupper():
             snake_str += "_"
         snake_str += char.lower()
+    # don't split 2D and 3D tho... very much a hack... but should work for now. Similar logic in wgpu-native/_helpers.py
+    snake_str = snake_str.replace("1_d", "_1d").replace("2_d", "_2d").replace("3_d", "_3d")
     return snake_str
 
 
