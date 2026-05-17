@@ -5,7 +5,7 @@ from . import apiwriter, apipatcher, wgpu_native_patcher, idlparser, hparser, js
 from .files import file_cache
 
 
-def main():
+def main(do_api=True, do_wgpu_native=True, do_js=False):
     """Codegen entry point. This will populate the file cache with the
     new code, but not write it to disk."""
 
@@ -13,9 +13,12 @@ def main():
     with PrintToFile(log):
         print("# Code generation report")
         prepare()
-        update_api()
-        update_wgpu_native()
-        update_js()
+        if do_api:
+            update_api()
+        if do_wgpu_native:
+            update_wgpu_native()
+        if do_js:
+            update_js()
         file_cache.write("resources/codegen_report.md", log.getvalue())
 
 
