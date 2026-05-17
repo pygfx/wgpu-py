@@ -158,9 +158,9 @@ def generate_js_webgpu_api() -> str:
 
             # TODO: mixin classes seem to cause double methods? should we skip them?
 
-            # based on apipatcher.IDlCommentINjector.get_method_comment
+            # based on apipatcher.IDlCommentInjector.get_method_comment
             args = idl_line.split("(")[1].rsplit(")")[0].split(", ")
-            args = [Attribute(arg) for arg in args if arg.strip()]
+            args = [Attribute(arg, "param") for arg in args if arg.strip()]
 
             # TODO: the create_x_pipeline_async methods become the sync variant without suffix!
             if return_type and return_type.startswith("Promise<") and return_type.endswith(">"):
@@ -203,12 +203,16 @@ def generate_js_webgpu_api() -> str:
             elif (len(args) > 0):
 
                 header = helper_patcher.get_method_def(class_name, py_method_name).partition("):")[0].lstrip()
-                # put all potentially forward refrenced classes into quotes
-                header = " ".join(f'"{h}"' if h.startswith("GPU") else h for h in header.split(" ")).replace(':"','":')
+                # put all potentially forward refrenced classes into quotes. needs a better solution than this jank.
+                # maybe we could get a tokenized version from the method above instead? or use the python ast to build it.
+                # perhaps it's also an idea to define all the classes in the correct order and avoid forward references altogether?
+                # or maybe they should always be in quotation marks?
+                header = " ".join(f'"{h}"' if h.startswith("GPU") else h for h in header.replace(',', ' ,').replace(')', ' )').split(" ")).replace(':"','":').replace(' ,', ',').replace(' )', ')')
                 # turn all optional type hints into Union with None
                 # int | None -> Union[int, None]
-                exp = r":\s([\w\"]+)\s\| None"
-                header = re.sub(exp, lambda m: f": Union[{m.group(1)}, None]", header)
+                # looks like this isn't required anymore?
+                # exp = r":\s([\w\"]+)\s\| None"
+                # header = re.sub(exp, lambda m: f": Union[{m.group(1)}, None]", header)
                 header = header.replace('Sequence[GPURenderBundle]', 'Sequence["GPURenderBundle"]') # TODO: just a temporary bodge!
 
                 param_list = []

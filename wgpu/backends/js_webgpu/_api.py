@@ -27,45 +27,45 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin, ):
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin, ):
 
-    def push_debug_group(self, group_label: Union[str, None] = None) -> None:
+    def push_debug_group(self, group_label: str) -> None:
     
         self._internal.pushDebugGroup(group_label)
 
     def pop_debug_group(self) -> None:
         self._internal.popDebugGroup()
 
-    def insert_debug_marker(self, marker_label: Union[str, None] = None) -> None:
+    def insert_debug_marker(self, marker_label: str) -> None:
     
         self._internal.insertDebugMarker(marker_label)
 
 
 class GPURenderCommandsMixin(classes.GPURenderCommandsMixin, ):
 
-    def set_pipeline(self, pipeline: Union["GPURenderPipeline", None] = None) -> None:
+    def set_pipeline(self, pipeline: "GPURenderPipeline") -> None:
         js_pipeline = pipeline._internal
         self._internal.setPipeline(js_pipeline)
 
-    def set_index_buffer(self, buffer: Union["GPUBuffer", None] = None, index_format: enums.IndexFormatEnum | None = None, offset: int = 0, size: Union[int, None] = None) -> None:
+    def set_index_buffer(self, buffer: "GPUBuffer", index_format: enums.IndexFormatEnum, offset: int = 0, size: int | None = None) -> None:
         js_buffer = buffer._internal
         self._internal.setIndexBuffer(js_buffer, index_format, offset, size)
 
-    def set_vertex_buffer(self, slot: Union[int, None] = None, buffer: Union["GPUBuffer", None] = None, offset: int = 0, size: Union[int, None] = None) -> None:
+    def set_vertex_buffer(self, slot: int, buffer: "GPUBuffer", offset: int = 0, size: int | None = None) -> None:
         js_buffer = buffer._internal
         self._internal.setVertexBuffer(slot, js_buffer, offset, size)
 
-    def draw(self, vertex_count: Union[int, None] = None, instance_count: int = 1, first_vertex: int = 0, first_instance: int = 0) -> None:
+    def draw(self, vertex_count: int, instance_count: int = 1, first_vertex: int = 0, first_instance: int = 0) -> None:
     
         self._internal.draw(vertex_count, instance_count, first_vertex, first_instance)
 
-    def draw_indexed(self, index_count: Union[int, None] = None, instance_count: int = 1, first_index: int = 0, base_vertex: int = 0, first_instance: int = 0) -> None:
+    def draw_indexed(self, index_count: int, instance_count: int = 1, first_index: int = 0, base_vertex: int = 0, first_instance: int = 0) -> None:
     
         self._internal.drawIndexed(index_count, instance_count, first_index, base_vertex, first_instance)
 
-    def draw_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
+    def draw_indirect(self, indirect_buffer: "GPUBuffer", indirect_offset: int) -> None:
         js_indirect_buffer = indirect_buffer._internal
         self._internal.drawIndirect(js_indirect_buffer, indirect_offset)
 
-    def draw_indexed_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
+    def draw_indexed_indirect(self, indirect_buffer: "GPUBuffer", indirect_offset: int) -> None:
         js_indirect_buffer = indirect_buffer._internal
         self._internal.drawIndexedIndirect(js_indirect_buffer, indirect_offset)
 
@@ -260,7 +260,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         count = descriptor.get("count")
         return GPUQuerySet("", js_obj, device=self, type=type, count=count)
 
-    def push_error_scope(self, filter: enums.ErrorFilterEnum | None = None) -> None:
+    def push_error_scope(self, filter: enums.ErrorFilterEnum) -> None:
     
         self._internal.pushErrorScope(filter)
 
@@ -328,7 +328,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
     # TODO: mapAsync sync variant likely taken from _classes.py directly!
-    def get_mapped_range(self, offset: int = 0, size: Union[int, None] = None) -> ArrayLike:
+    def get_mapped_range(self, offset: int = 0, size: int | None = None) -> ArrayLike:
     
         self._internal.getMappedRange(offset, size)
 
@@ -552,34 +552,34 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
 
         return GPUComputePassEncoder(label="", internal=js_obj, device=self)
 
-    def copy_buffer_to_buffer(self, source: Union["GPUBuffer", None] = None, source_offset: Union[int, None] = None, destination: Union["GPUBuffer", None] = None, destination_offset: Union[int, None] = None, size: Union[int, None] = None) -> None:
+    def copy_buffer_to_buffer(self, source: "GPUBuffer", source_offset: int, destination: "GPUBuffer", destination_offset: int, size: int | None = None) -> None:
         js_source = source._internal
         js_destination = destination._internal
         self._internal.copyBufferToBuffer(js_source, source_offset, js_destination, destination_offset, size)
 
-    def copy_buffer_to_texture(self, source: structs.TexelCopyBufferInfoStruct | None = None, destination: structs.TexelCopyTextureInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
+    def copy_buffer_to_texture(self, source: structs.TexelCopyBufferInfoStruct, destination: structs.TexelCopyTextureInfoStruct, copy_size: tuple[int, int, int] | structs.Extent3DStruct) -> None:
         js_source = to_js(source, eager_converter=simple_js_accessor)
         js_destination = to_js(destination, eager_converter=simple_js_accessor)
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.copyBufferToTexture(js_source, js_destination, copy_size)
 
-    def copy_texture_to_buffer(self, source: structs.TexelCopyTextureInfoStruct | None = None, destination: structs.TexelCopyBufferInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
+    def copy_texture_to_buffer(self, source: structs.TexelCopyTextureInfoStruct, destination: structs.TexelCopyBufferInfoStruct, copy_size: tuple[int, int, int] | structs.Extent3DStruct) -> None:
         js_source = to_js(source, eager_converter=simple_js_accessor)
         js_destination = to_js(destination, eager_converter=simple_js_accessor)
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.copyTextureToBuffer(js_source, js_destination, copy_size)
 
-    def copy_texture_to_texture(self, source: structs.TexelCopyTextureInfoStruct | None = None, destination: structs.TexelCopyTextureInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
+    def copy_texture_to_texture(self, source: structs.TexelCopyTextureInfoStruct, destination: structs.TexelCopyTextureInfoStruct, copy_size: tuple[int, int, int] | structs.Extent3DStruct) -> None:
         js_source = to_js(source, eager_converter=simple_js_accessor)
         js_destination = to_js(destination, eager_converter=simple_js_accessor)
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.copyTextureToTexture(js_source, js_destination, copy_size)
 
-    def clear_buffer(self, buffer: Union["GPUBuffer", None] = None, offset: int = 0, size: Union[int, None] = None) -> None:
+    def clear_buffer(self, buffer: "GPUBuffer", offset: int = 0, size: int | None = None) -> None:
         js_buffer = buffer._internal
         self._internal.clearBuffer(js_buffer, offset, size)
 
-    def resolve_query_set(self, query_set: Union["GPUQuerySet", None] = None, first_query: Union[int, None] = None, query_count: Union[int, None] = None, destination: Union["GPUBuffer", None] = None, destination_offset: Union[int, None] = None) -> None:
+    def resolve_query_set(self, query_set: "GPUQuerySet", first_query: int, query_count: int, destination: "GPUBuffer", destination_offset: int) -> None:
         js_query_set = query_set._internal
         js_destination = destination._internal
         self._internal.resolveQuerySet(js_query_set, first_query, query_count, js_destination, destination_offset)
@@ -593,15 +593,15 @@ class GPUCommandEncoder(classes.GPUCommandEncoder, GPUObjectBase, GPUCommandsMix
 
 class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUObjectBase, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin):
 
-    def set_pipeline(self, pipeline: Union["GPUComputePipeline", None] = None) -> None:
+    def set_pipeline(self, pipeline: "GPUComputePipeline") -> None:
         js_pipeline = pipeline._internal
         self._internal.setPipeline(js_pipeline)
 
-    def dispatch_workgroups(self, workgroup_count_x: Union[int, None] = None, workgroup_count_y: int = 1, workgroup_count_z: int = 1) -> None:
+    def dispatch_workgroups(self, workgroup_count_x: int, workgroup_count_y: int = 1, workgroup_count_z: int = 1) -> None:
     
         self._internal.dispatchWorkgroups(workgroup_count_x, workgroup_count_y, workgroup_count_z)
 
-    def dispatch_workgroups_indirect(self, indirect_buffer: Union["GPUBuffer", None] = None, indirect_offset: Union[int, None] = None) -> None:
+    def dispatch_workgroups_indirect(self, indirect_buffer: "GPUBuffer", indirect_offset: int) -> None:
         js_indirect_buffer = indirect_buffer._internal
         self._internal.dispatchWorkgroupsIndirect(js_indirect_buffer, indirect_offset)
 
@@ -611,30 +611,30 @@ class GPUComputePassEncoder(classes.GPUComputePassEncoder, GPUObjectBase, GPUCom
 
 class GPURenderPassEncoder(classes.GPURenderPassEncoder, GPUObjectBase, GPUCommandsMixin, GPUDebugCommandsMixin, GPUBindingCommandsMixin, GPURenderCommandsMixin):
 
-    def set_viewport(self, x: Union[float, None] = None, y: Union[float, None] = None, width: Union[float, None] = None, height: Union[float, None] = None, min_depth: Union[float, None] = None, max_depth: Union[float, None] = None) -> None:
+    def set_viewport(self, x: float, y: float, width: float, height: float, min_depth: float, max_depth: float) -> None:
     
         self._internal.setViewport(x, y, width, height, min_depth, max_depth)
 
-    def set_scissor_rect(self, x: Union[int, None] = None, y: Union[int, None] = None, width: Union[int, None] = None, height: Union[int, None] = None) -> None:
+    def set_scissor_rect(self, x: int, y: int, width: int, height: int) -> None:
     
         self._internal.setScissorRect(x, y, width, height)
 
-    def set_blend_constant(self, color: tuple[float, float, float, float] | structs.ColorStruct | None = None) -> None:
+    def set_blend_constant(self, color: tuple[float, float, float, float] | structs.ColorStruct) -> None:
         # TODO: argument color of JS type GPUColor, py type tuple[float, float, float, float] | structs.ColorStruct might need conversion
         self._internal.setBlendConstant(color)
 
-    def set_stencil_reference(self, reference: Union[int, None] = None) -> None:
+    def set_stencil_reference(self, reference: int) -> None:
     
         self._internal.setStencilReference(reference)
 
-    def begin_occlusion_query(self, query_index: Union[int, None] = None) -> None:
+    def begin_occlusion_query(self, query_index: int) -> None:
     
         self._internal.beginOcclusionQuery(query_index)
 
     def end_occlusion_query(self) -> None:
         self._internal.endOcclusionQuery()
 
-    def execute_bundles(self, bundles: Sequence["GPURenderBundle"] | None = None) -> None:
+    def execute_bundles(self, bundles: Sequence["GPURenderBundle"]) -> None:
         # TODO: argument bundles of JS type sequence<GPURenderBundle>, py type list[GPURenderBundle] might need conversion
         self._internal.executeBundles(bundles)
 
@@ -663,7 +663,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         self._internal.submit(js_command_buffers)
 
     # TODO: onSubmittedWorkDone sync variant likely taken from _classes.py directly!
-    def write_buffer(self, buffer: Union["GPUBuffer", None] = None, buffer_offset: Union[int, None] = None, data: Union[ArrayLike, None] = None, data_offset: int = 0, size: Union[int, None] = None) -> None:
+    def write_buffer(self, buffer: "GPUBuffer", buffer_offset: int, data: ArrayLike, data_offset: int = 0, size: int | None = None) -> None:
         js_buffer = buffer._internal
     
         if data is not None:
@@ -677,7 +677,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
         self._internal.writeBuffer(js_buffer, buffer_offset, js_data, data_offset, size)
 
-    def write_texture(self, destination: structs.TexelCopyTextureInfoStruct | None = None, data: Union[ArrayLike, None] = None, data_layout: structs.TexelCopyBufferLayoutStruct | None = None, size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
+    def write_texture(self, destination: structs.TexelCopyTextureInfoStruct, data: ArrayLike, data_layout: structs.TexelCopyBufferLayoutStruct, size: tuple[int, int, int] | structs.Extent3DStruct) -> None:
         js_destination = to_js(destination, eager_converter=simple_js_accessor)
     
         if data is not None:
@@ -693,7 +693,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # TODO: argument size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
         self._internal.writeTexture(js_destination, js_data, js_data_layout, size)
 
-    def copy_external_image_to_texture(self, source: structs.CopyExternalImageSourceInfoStruct | None = None, destination: structs.CopyExternalImageDestInfoStruct | None = None, copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None) -> None:
+    def copy_external_image_to_texture(self, source: structs.CopyExternalImageSourceInfoStruct, destination: structs.CopyExternalImageDestInfoStruct, copy_size: tuple[int, int, int] | structs.Extent3DStruct) -> None:
         js_source = to_js(source, eager_converter=simple_js_accessor)
         js_destination = to_js(destination, eager_converter=simple_js_accessor)
         # TODO: argument copy_size of JS type GPUExtent3D, py type tuple[int, int, int] | structs.Extent3DStruct might need conversion
