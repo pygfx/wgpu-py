@@ -454,7 +454,7 @@ class IdlPatcherMixin:
         # Get arg names and types
         idl_line = functions[name_idl]
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-        args = [Attribute(arg) for arg in args if arg.strip()]
+        args = [Attribute(arg, "param") for arg in args if arg.strip()]
         return_type = idl_line.split()[0]
         if return_type.startswith("[NewObject]"):
             # [NewObject] can be skipped: https://webidl.spec.whatwg.org/#NewObject
@@ -472,11 +472,9 @@ class IdlPatcherMixin:
             ("Options", "Descriptor", "Configuration")
         ):
             assert args[0].typename.startswith("GPU")
-            des_is_optional = bool(args[0].default)
             attributes = self.idl.structs[args[0].typename[3:]].values()
             py_args = [
-                self._arg_from_attribute(methodname, attr, des_is_optional)
-                for attr in attributes
+                self._arg_from_attribute(methodname, attr) for attr in attributes
             ]
             if py_args[0].startswith("label: str"):
                 py_args[0] = 'label: str=""'
@@ -505,7 +503,7 @@ class IdlPatcherMixin:
         )
         return "    " + line
 
-    def _arg_from_attribute(self, methodname, attribute, force_optional=False):
+    def _arg_from_attribute(self, methodname, attribute):
         name = to_snake_case(attribute.name)
         optional_in_py = (methodname, name) in ARGS_TO_MAKE_OPTIONAL
         d = attribute.default
@@ -513,7 +511,7 @@ class IdlPatcherMixin:
         result = name
         if not d and not attribute.required:
             d = "None"
-        elif (force_optional or optional_in_py) and not d:
+        elif optional_in_py and not d:
             d = "optional"
         elif d == "{}":
             d = "None"
@@ -583,7 +581,7 @@ class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
             idl_line = functions[name_idl]
 
             args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-            args = [Attribute(arg) for arg in args if arg.strip()]
+            args = [Attribute(arg, "param") for arg in args if arg.strip()]
 
             # If one arg that is a dict, flatten dict to kwargs
             if len(args) == 1 and args[0].typename.endswith(

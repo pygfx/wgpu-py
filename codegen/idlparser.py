@@ -7,7 +7,7 @@ It would be good to occasionally check the coverage of this module to
 identify and remove code paths that are no longer used.
 """
 
-from typing import Dict
+from typing import Dict, Literal
 from codegen.utils import print
 from codegen.files import read_file
 
@@ -36,28 +36,43 @@ def get_idl_parser(*, allow_cache=True):
 class Attribute:
     """A little object to hold a function argument or struct field."""
 
-    def __init__(self, line):
+    def __init__(self, line: str, source: Literal["struct", "param"]):
         self.line = line.strip().strip(",;").strip()
+        self.source = source
 
-        default = None  # None means 'no default' and "None" kinda means "auto".
-        required = False
+        # Detect default value
+        default = None
         arg = self.line
         if "=" in arg:
             arg, default = arg.rsplit("=", 1)
             arg, default = arg.strip(), default.strip()
+        if default and default in ["false", "true"]:
+            default = default.capitalize()
         arg_type, arg_name = arg.strip().rsplit(" ", 1)
-        if arg_type.startswith("required "):
-            required = True
-            arg_type = arg_type.split(" ", 1)[1]
-            # required args should not have a default
-            assert default is None
-        elif arg_type.startswith("optional "):
-            arg_type = arg_type.split(" ", 1)[1]
-            default = default or "None"
 
-        if default:
-            if default in ["false", "true"]:
-                default = default.capitalize()
+        # Handling required vs optional differs between structs fields and function params.
+        # Struct fields are optional unless marked as required, see https://webidl.spec.whatwg.org/#required-dictionary-member
+        # Function params are required unless marked as optional, see https://webidl.spec.whatwg.org/#dfn-optional-argument
+        if source == "struct":
+            if arg_type.startswith("required "):
+                required = True
+                arg_type = arg_type.split(" ", 1)[1]
+                # required args should not have a default
+                assert default is None
+            else:
+                required = False
+                # default could still be None, i.e. struct field can be omitted
+        elif source == "param":
+            if arg_type.startswith("optional "):
+                required = False
+                arg_type = arg_type.split(" ", 1)[1]
+                default = default or "None"
+            else:
+                # but otherwise they are required
+                required = True
+                assert default is None
+        else:
+            raise RuntimeError(f"Invalid Attribute source: {source!r}")
 
         self.name = arg_name
         self.typename = arg_type
@@ -65,9 +80,9 @@ class Attribute:
         self.required = required
 
     def __repr__(self):
-        return f"<Attribute '{self.typename} {self.name}'>"
+        return f"<Attribute from {self.source} '{self.typename} {self.name}'>"
 
-    def to_str(self):
+    def to_str(self) -> str:
         return self.line
 
 
@@ -436,7 +451,7 @@ class IdlParser:
                         continue
                     assert line.endswith(";")
 
-                    attribute = Attribute(line)
+                    attribute = Attribute(line, "struct")
                     d[attribute.name] = attribute
                 self.structs[name] = d
             elif line.startswith(("[Exposed=", "[Serializable]")):

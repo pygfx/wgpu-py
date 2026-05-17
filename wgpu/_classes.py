@@ -1262,7 +1262,7 @@ class GPUDevice(GPUObjectBase):
 
     # IDL: undefined pushErrorScope(GPUErrorFilter filter);
     @apidiff.hide
-    def push_error_scope(self, filter: enums.ErrorFilterEnum | None = None) -> None:
+    def push_error_scope(self, filter: enums.ErrorFilterEnum) -> None:
         """Pushes a new GPU error scope onto the stack."""
         raise NotImplementedError()
 
@@ -1350,10 +1350,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def map_sync(
-        self,
-        mode: flags.MapModeFlags | None = None,
-        offset: int = 0,
-        size: int | None = None,
+        self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> None:
         """Sync version of `map_async()`.
 
@@ -1364,10 +1361,7 @@ class GPUBuffer(GPUObjectBase):
 
     # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def map_async(
-        self,
-        mode: flags.MapModeFlags | None = None,
-        offset: int = 0,
-        size: int | None = None,
+        self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> GPUPromise[None]:
         """Maps the given range of the GPUBuffer.
 
@@ -1698,7 +1692,7 @@ class GPUPipelineBase:
     """A mixin class for render and compute pipelines."""
 
     # IDL: [NewObject] GPUBindGroupLayout getBindGroupLayout(unsigned long index);
-    def get_bind_group_layout(self, index: int | None = None) -> GPUBindGroupLayout:
+    def get_bind_group_layout(self, index: int) -> GPUBindGroupLayout:
         """Get the bind group layout at the given index."""
         raise NotImplementedError()
 
@@ -1772,7 +1766,7 @@ class GPUDebugCommandsMixin:
     """Mixin for classes that support debug groups and markers."""
 
     # IDL: undefined pushDebugGroup(USVString groupLabel);
-    def push_debug_group(self, group_label: str | None = None) -> None:
+    def push_debug_group(self, group_label: str) -> None:
         """Push a named debug group into the command stream."""
         raise NotImplementedError()
 
@@ -1782,7 +1776,7 @@ class GPUDebugCommandsMixin:
         raise NotImplementedError()
 
     # IDL: undefined insertDebugMarker(USVString markerLabel);
-    def insert_debug_marker(self, marker_label: str | None = None) -> None:
+    def insert_debug_marker(self, marker_label: str) -> None:
         """Insert the given message into the debug message queue."""
         raise NotImplementedError()
 
@@ -1791,7 +1785,7 @@ class GPURenderCommandsMixin:
     """Mixin for classes that provide rendering commands."""
 
     # IDL: undefined setPipeline(GPURenderPipeline pipeline);
-    def set_pipeline(self, pipeline: GPURenderPipeline | None = None) -> None:
+    def set_pipeline(self, pipeline: GPURenderPipeline) -> None:
         """Set the pipeline for this render pass.
 
         Arguments:
@@ -1802,8 +1796,8 @@ class GPURenderCommandsMixin:
     # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def set_index_buffer(
         self,
-        buffer: GPUBuffer | None = None,
-        index_format: enums.IndexFormatEnum | None = None,
+        buffer: GPUBuffer,
+        index_format: enums.IndexFormatEnum,
         offset: int = 0,
         size: int | None = None,
     ) -> None:
@@ -1822,11 +1816,7 @@ class GPURenderCommandsMixin:
 
     # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer? buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def set_vertex_buffer(
-        self,
-        slot: int | None = None,
-        buffer: GPUBuffer | None = None,
-        offset: int = 0,
-        size: int | None = None,
+        self, slot: int, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
         """Associate a vertex buffer with a bind slot.
 
@@ -1844,7 +1834,7 @@ class GPURenderCommandsMixin:
     # IDL: undefined draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1, optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
     def draw(
         self,
-        vertex_count: int | None = None,
+        vertex_count: int,
         instance_count: int = 1,
         first_vertex: int = 0,
         first_instance: int = 0,
@@ -1860,11 +1850,7 @@ class GPURenderCommandsMixin:
         raise NotImplementedError()
 
     # IDL: undefined drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
-    def draw_indirect(
-        self,
-        indirect_buffer: GPUBuffer | None = None,
-        indirect_offset: int | None = None,
-    ) -> None:
+    def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int) -> None:
         """Like `draw()`, but the function arguments are in a buffer.
 
         Arguments:
@@ -1878,7 +1864,7 @@ class GPURenderCommandsMixin:
     # IDL: undefined drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1, optional GPUSize32 firstIndex = 0, optional GPUSignedOffset32 baseVertex = 0, optional GPUSize32 firstInstance = 0);
     def draw_indexed(
         self,
-        index_count: int | None = None,
+        index_count: int,
         instance_count: int = 1,
         first_index: int = 0,
         base_vertex: int = 0,
@@ -1899,9 +1885,7 @@ class GPURenderCommandsMixin:
 
     # IDL: undefined drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indexed_indirect(
-        self,
-        indirect_buffer: GPUBuffer | None = None,
-        indirect_offset: int | None = None,
+        self, indirect_buffer: GPUBuffer, indirect_offset: int
     ) -> None:
         """
         Like `draw_indexed()`, but the function arguments are in a buffer.
@@ -1961,7 +1945,7 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
 
     # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def clear_buffer(
-        self, buffer: GPUBuffer | None = None, offset: int = 0, size: int | None = None
+        self, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
         """Set (part of) the given buffer to zeros.
 
@@ -1977,10 +1961,10 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     # IDL: undefined copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, optional GPUSize64 size);
     def copy_buffer_to_buffer(
         self,
-        source: GPUBuffer | None = None,
-        source_offset: int | None = None,
-        destination: GPUBuffer | None = None,
-        destination_offset: int | None = None,
+        source: GPUBuffer,
+        source_offset: int,
+        destination: GPUBuffer,
+        destination_offset: int,
         size: int | None = None,
     ) -> None:
         """Copy the contents of a buffer to another buffer.
@@ -1999,9 +1983,9 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     # IDL: undefined copyBufferToTexture( GPUTexelCopyBufferInfo source, GPUTexelCopyTextureInfo destination, GPUExtent3D copySize);
     def copy_buffer_to_texture(
         self,
-        source: structs.TexelCopyBufferInfoStruct | None = None,
-        destination: structs.TexelCopyTextureInfoStruct | None = None,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        source: structs.TexelCopyBufferInfoStruct,
+        destination: structs.TexelCopyTextureInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         """Copy the contents of a buffer to a texture (view).
 
@@ -2017,9 +2001,9 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     # IDL: undefined copyTextureToBuffer( GPUTexelCopyTextureInfo source, GPUTexelCopyBufferInfo destination, GPUExtent3D copySize);
     def copy_texture_to_buffer(
         self,
-        source: structs.TexelCopyTextureInfoStruct | None = None,
-        destination: structs.TexelCopyBufferInfoStruct | None = None,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        source: structs.TexelCopyTextureInfoStruct,
+        destination: structs.TexelCopyBufferInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         """Copy the contents of a texture (view) to a buffer.
 
@@ -2035,9 +2019,9 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     # IDL: undefined copyTextureToTexture( GPUTexelCopyTextureInfo source, GPUTexelCopyTextureInfo destination, GPUExtent3D copySize);
     def copy_texture_to_texture(
         self,
-        source: structs.TexelCopyTextureInfoStruct | None = None,
-        destination: structs.TexelCopyTextureInfoStruct | None = None,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        source: structs.TexelCopyTextureInfoStruct,
+        destination: structs.TexelCopyTextureInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         """Copy the contents of a texture (view) to another texture (view).
 
@@ -2060,11 +2044,11 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     # IDL: undefined resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
     def resolve_query_set(
         self,
-        query_set: GPUQuerySet | None = None,
-        first_query: int | None = None,
-        query_count: int | None = None,
-        destination: GPUBuffer | None = None,
-        destination_offset: int | None = None,
+        query_set: GPUQuerySet,
+        first_query: int,
+        query_count: int,
+        destination: GPUBuffer,
+        destination_offset: int,
     ) -> None:
         """
         Resolves query results from a ``GPUQuerySet`` out into a range of a ``GPUBuffer``.
@@ -2090,7 +2074,7 @@ class GPUComputePassEncoder(
     """
 
     # IDL: undefined setPipeline(GPUComputePipeline pipeline);
-    def set_pipeline(self, pipeline: GPUComputePipeline | None = None) -> None:
+    def set_pipeline(self, pipeline: GPUComputePipeline) -> None:
         """Set the pipeline for this compute pass.
 
         Arguments:
@@ -2101,7 +2085,7 @@ class GPUComputePassEncoder(
     # IDL: undefined dispatchWorkgroups(GPUSize32 workgroupCountX, optional GPUSize32 workgroupCountY = 1, optional GPUSize32 workgroupCountZ = 1);
     def dispatch_workgroups(
         self,
-        workgroup_count_x: int | None = None,
+        workgroup_count_x: int,
         workgroup_count_y: int = 1,
         workgroup_count_z: int = 1,
     ) -> None:
@@ -2116,9 +2100,7 @@ class GPUComputePassEncoder(
 
     # IDL: undefined dispatchWorkgroupsIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def dispatch_workgroups_indirect(
-        self,
-        indirect_buffer: GPUBuffer | None = None,
-        indirect_offset: int | None = None,
+        self, indirect_buffer: GPUBuffer, indirect_offset: int
     ) -> None:
         """Like `dispatch_workgroups()`, but the function arguments are in a buffer.
 
@@ -2149,12 +2131,12 @@ class GPURenderPassEncoder(
     # IDL: undefined setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
     def set_viewport(
         self,
-        x: float | None = None,
-        y: float | None = None,
-        width: float | None = None,
-        height: float | None = None,
-        min_depth: float | None = None,
-        max_depth: float | None = None,
+        x: float,
+        y: float,
+        width: float,
+        height: float,
+        min_depth: float,
+        max_depth: float,
     ) -> None:
         """Set the viewport for this render pass. The whole scene is rendered
         to this sub-rectangle.
@@ -2171,13 +2153,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined setScissorRect(GPUIntegerCoordinate x, GPUIntegerCoordinate y,  GPUIntegerCoordinate width, GPUIntegerCoordinate height);
-    def set_scissor_rect(
-        self,
-        x: int | None = None,
-        y: int | None = None,
-        width: int | None = None,
-        height: int | None = None,
-    ) -> None:
+    def set_scissor_rect(self, x: int, y: int, width: int, height: int) -> None:
         """Set the scissor rectangle for this render pass. The scene
         is rendered as usual, but is only applied to this sub-rectangle.
 
@@ -2191,8 +2167,7 @@ class GPURenderPassEncoder(
 
     # IDL: undefined setBlendConstant(GPUColor color);
     def set_blend_constant(
-        self,
-        color: tuple[float, float, float, float] | structs.ColorStruct | None = None,
+        self, color: tuple[float, float, float, float] | structs.ColorStruct
     ) -> None:
         """Set the blend color for the render pass.
 
@@ -2202,7 +2177,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined setStencilReference(GPUStencilValue reference);
-    def set_stencil_reference(self, reference: int | None = None) -> None:
+    def set_stencil_reference(self, reference: int) -> None:
         """Set the reference stencil value for this render pass.
 
         Arguments:
@@ -2211,7 +2186,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined executeBundles(sequence<GPURenderBundle> bundles);
-    def execute_bundles(self, bundles: Sequence[GPURenderBundle] | None = None) -> None:
+    def execute_bundles(self, bundles: Sequence[GPURenderBundle]) -> None:
         """Executes commands previously recorded into the render bundles
           as part of this render pass.
 
@@ -2226,7 +2201,7 @@ class GPURenderPassEncoder(
         raise NotImplementedError()
 
     # IDL: undefined beginOcclusionQuery(GPUSize32 queryIndex);
-    def begin_occlusion_query(self, query_index: int | None = None) -> None:
+    def begin_occlusion_query(self, query_index: int) -> None:
         """Begins an occlusion query.
 
         Arguments:
@@ -2275,7 +2250,7 @@ class GPUQueue(GPUObjectBase):
     """
 
     # IDL: undefined submit(sequence<GPUCommandBuffer> commandBuffers);
-    def submit(self, command_buffers: Sequence[GPUCommandBuffer] | None = None) -> None:
+    def submit(self, command_buffers: Sequence[GPUCommandBuffer]) -> None:
         """Submit a `GPUCommandBuffer` to the queue.
 
         Arguments:
@@ -2286,9 +2261,9 @@ class GPUQueue(GPUObjectBase):
     # IDL: undefined writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, AllowSharedBufferSource data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
     def write_buffer(
         self,
-        buffer: GPUBuffer | None = None,
-        buffer_offset: int | None = None,
-        data: ArrayLike | None = None,
+        buffer: GPUBuffer,
+        buffer_offset: int,
+        data: ArrayLike,
         data_offset: int = 0,
         size: int | None = None,
     ) -> None:
@@ -2338,10 +2313,10 @@ class GPUQueue(GPUObjectBase):
     # IDL: undefined writeTexture( GPUTexelCopyTextureInfo destination, AllowSharedBufferSource data, GPUTexelCopyBufferLayout dataLayout, GPUExtent3D size);
     def write_texture(
         self,
-        destination: structs.TexelCopyTextureInfoStruct | None = None,
-        data: ArrayLike | None = None,
-        data_layout: structs.TexelCopyBufferLayoutStruct | None = None,
-        size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        destination: structs.TexelCopyTextureInfoStruct,
+        data: ArrayLike,
+        data_layout: structs.TexelCopyBufferLayoutStruct,
+        size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         """Takes the data contents and schedules a write operation of
         these contents to the destination texture in the queue. A
@@ -2388,9 +2363,9 @@ class GPUQueue(GPUObjectBase):
     @apidiff.hide("Specific to browsers")
     def copy_external_image_to_texture(
         self,
-        source: structs.CopyExternalImageSourceInfoStruct | None = None,
-        destination: structs.CopyExternalImageDestInfoStruct | None = None,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct | None = None,
+        source: structs.CopyExternalImageSourceInfoStruct,
+        destination: structs.CopyExternalImageDestInfoStruct,
+        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
     ) -> None:
         raise NotImplementedError()
 
@@ -2451,7 +2426,7 @@ class GPUOutOfMemoryError(GPUError, MemoryError):
     """An error raised when the GPU is out of memory."""
 
     # IDL: constructor(DOMString message);
-    def __init__(self, message: str | None = None):
+    def __init__(self, message: str):
         super().__init__(message or "GPU is out of memory.")
 
 
@@ -2459,7 +2434,7 @@ class GPUValidationError(GPUError):
     """An error raised when the pipeline could not be validated."""
 
     # IDL: constructor(DOMString message);
-    def __init__(self, message: str | None = None):
+    def __init__(self, message: str):
         super().__init__(message)
 
 
@@ -2467,9 +2442,7 @@ class GPUPipelineError(Exception):
     """An error raised when a pipeline could not be created."""
 
     # IDL: constructor(optional DOMString message = "", GPUPipelineErrorInit options);
-    def __init__(
-        self, message: str = "", options: structs.PipelineErrorInitStruct | None = None
-    ):
+    def __init__(self, message: str, options: structs.PipelineErrorInitStruct):
         super().__init__(message or "")
         self._options = options
 
@@ -2488,7 +2461,7 @@ class GPUInternalError(GPUError):
     """
 
     # IDL: constructor(DOMString message);
-    def __init__(self, message: str | None = None):
+    def __init__(self, message: str):
         super().__init__(message)
 
 

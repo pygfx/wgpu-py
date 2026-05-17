@@ -137,7 +137,7 @@ def write_structs():
             elif default == "{}":
                 default = "None"  # no mutable defaults
                 code_type += " | None"
-            elif not default and not field.required:
+            if not default and not field.required:
                 default = "None"
                 if "None" not in code_type:
                     code_type += " | None"
