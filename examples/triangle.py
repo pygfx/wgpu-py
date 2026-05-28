@@ -24,7 +24,7 @@ from rendercanvas.auto import RenderCanvas, loop
 
 # the shader code is provided as a string literal for protability
 # TODO: maybe simplify in several ways, or make it the red triangle.
-shader_source = """
+wgsl_shader_source = """
 struct VertexOutput {
     @location(0) color : vec4f,
     @builtin(position) pos: vec4f,
@@ -68,30 +68,31 @@ render_texture_format = context.get_preferred_format(device.adapter)
 context.configure(device=device, format=render_texture_format)
 
 # creating the shader module compiles the shader code for your GPU.
-shader = device.create_shader_module(code=shader_source)
+shader = device.create_shader_module(code=wgsl_shader_source)
 
-render_pipeline = device.create_render_pipeline(**wgpu.RenderPipelineDescriptor(
-    layout=wgpu.AutoLayoutMode.auto,
-    vertex=wgpu.VertexState(module=shader),
-    depth_stencil=None,
-    multisample=None,
-    fragment=wgpu.FragmentState(
-        module=shader,
-        targets=[
-            wgpu.ColorTargetState(format=render_texture_format)
-        ],
-    ),
-))
+render_pipeline = device.create_render_pipeline(
+    **wgpu.RenderPipelineDescriptor(
+        layout=wgpu.AutoLayoutMode.auto,
+        vertex=wgpu.VertexState(module=shader),
+        depth_stencil=None,
+        multisample=None,
+        fragment=wgpu.FragmentState(
+            module=shader,
+            targets=[wgpu.ColorTargetState(format=render_texture_format)],
+        ),
+    )
+)
+
 
 def drawing_function():
     command_encoder = device.create_command_encoder()
-    current_texture_view: wgpu.GPUTextureView = context.get_current_texture().create_view() #TODO: there is no type hint for GPUTexture from the rendercanvas side.
+    current_texture_view = context.get_current_texture().create_view()
 
     render_pass = command_encoder.begin_render_pass(
         color_attachments=[
             wgpu.RenderPassColorAttachment(
                 view=current_texture_view,
-                clear_value=(0, 1, 0, 1), # a green background
+                clear_value=(0, 1, 0, 1),  # a green background
                 load_op=wgpu.LoadOp.clear,
                 store_op=wgpu.StoreOp.store,
             )
@@ -101,6 +102,7 @@ def drawing_function():
     render_pass.draw(3)
     render_pass.end()
     device.queue.submit([command_encoder.finish()])
+
 
 if __name__ == "__main__":
     canvas.request_draw(drawing_function)
