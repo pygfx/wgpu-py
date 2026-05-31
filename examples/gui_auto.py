@@ -12,8 +12,6 @@ with various GUI's and event loops.
 
 """
 
-# test_example = true
-
 from rendercanvas.auto import RenderCanvas, loop
 
 try:
