@@ -70,6 +70,8 @@ context.configure(device=device, format=render_texture_format)
 # creating the shader module compiles the shader code for your GPU.
 shader = device.create_shader_module(code=wgsl_shader_source)
 
+# in wgpu-py, methods that take descriptors will take the keyword arguments instead.
+# descriptors and other structs can still be accessed via wgpu.structs or top level wgpu.
 render_pipeline = device.create_render_pipeline(
     **wgpu.RenderPipelineDescriptor(
         layout=wgpu.AutoLayoutMode.auto,
