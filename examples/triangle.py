@@ -23,7 +23,6 @@ from rendercanvas.auto import RenderCanvas, loop
 
 
 # the shader code is provided as a string literal for protability
-# TODO: maybe simplify in several ways, or make it the red triangle.
 wgsl_shader_source = """
 struct VertexOutput {
     @location(0) color : vec4f,
@@ -58,6 +57,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
 
 # adapter provides allows us to create a single device, which is the general entrypoint to create most wgpu objects.
+# for convenience and interoperability `wgpu.utils.get_default_device()` and associated configuration are provided.
 adapter = wgpu.gpu.request_adapter_sync()
 device = adapter.request_device_sync()
 
@@ -83,7 +83,7 @@ render_pipeline = device.create_render_pipeline(
     )
 )
 
-
+# this function gets called for every frame. It ends with submitting a buffer of work onto the GPU queue.
 def drawing_function():
     command_encoder = device.create_command_encoder()
     current_texture_view = context.get_current_texture().create_view()
