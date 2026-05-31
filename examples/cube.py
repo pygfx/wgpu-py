@@ -38,7 +38,9 @@ def setup_drawing_sync(
     )
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
-    pipeline_kwargs = get_render_pipeline_kwargs(context, device, pipeline_layout, render_texture_format=format)
+    pipeline_kwargs = get_render_pipeline_kwargs(
+        context, device, pipeline_layout, render_texture_format=format
+    )
 
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
@@ -84,7 +86,10 @@ def get_drawing_func(context, device):
 
 
 def get_render_pipeline_kwargs(
-    context, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout, render_texture_format: wgpu.TextureFormat|None = None
+    context,
+    device: wgpu.GPUDevice,
+    pipeline_layout: wgpu.GPUPipelineLayout,
+    render_texture_format: wgpu.TextureFormat | None = None,
 ) -> wgpu.RenderPipelineDescriptor:
     if render_texture_format is None:
         render_texture_format = context.get_preferred_format(device.adapter)

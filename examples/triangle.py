@@ -85,6 +85,7 @@ render_pipeline = device.create_render_pipeline(
     )
 )
 
+
 # this function gets called for every frame. It ends with submitting a buffer of work onto the GPU queue.
 def drawing_function():
     command_encoder = device.create_command_encoder()
