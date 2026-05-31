@@ -16,9 +16,9 @@ import png  # provided by the pypng package
 from rendercanvas.offscreen import RenderCanvas
 
 try:
-    from .triangle import setup_drawing_sync
+    from .cube import setup_drawing_sync
 except ImportError:
-    from triangle import setup_drawing_sync
+    from cube import setup_drawing_sync
 
 
 canvas = RenderCanvas(size=(640, 480), pixel_ratio=2)

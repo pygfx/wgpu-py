@@ -24,7 +24,7 @@ from rendercanvas.auto import RenderCanvas, loop
 
 
 def setup_drawing_sync(
-    context, power_preference="high-performance", limits=None
+    context, power_preference="high-performance", limits=None, format=None
 ) -> Callable:
     """Setup to draw a rotating cube on the given context.
 
@@ -38,7 +38,7 @@ def setup_drawing_sync(
     )
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
-    pipeline_kwargs = get_render_pipeline_kwargs(context, device, pipeline_layout)
+    pipeline_kwargs = get_render_pipeline_kwargs(context, device, pipeline_layout, render_texture_format=format)
 
     render_pipeline = device.create_render_pipeline(**pipeline_kwargs)
 
@@ -84,9 +84,10 @@ def get_drawing_func(context, device):
 
 
 def get_render_pipeline_kwargs(
-    context, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout
+    context, device: wgpu.GPUDevice, pipeline_layout: wgpu.GPUPipelineLayout, render_texture_format: wgpu.TextureFormat|None = None
 ) -> wgpu.RenderPipelineDescriptor:
-    render_texture_format = context.get_preferred_format(device.adapter)
+    if render_texture_format is None:
+        render_texture_format = context.get_preferred_format(device.adapter)
     context.configure(device=device, format=render_texture_format)
 
     shader = device.create_shader_module(
