@@ -24,6 +24,7 @@ from weakref import WeakKeyDictionary
 from typing import NoReturn, Sequence
 
 from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
+from ..._async import AwaitedType
 from ... import classes, flags, enums, structs
 
 from ._ffi import ffi, lib
@@ -684,7 +685,7 @@ class GPU(classes.GPU):
 gpu = GPU()
 
 
-class GPUPromise(classes.GPUPromise):
+class GPUPromise(classes.GPUPromise[AwaitedType]):
     def _sync_wait(self):
         # In the wgpu-native backend, we do the polling in a per-device thread.
         # The base class already sets a threading.Event, we can just use that here.

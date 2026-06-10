@@ -15,7 +15,7 @@ import logging
 import itertools
 from typing import Sequence
 
-from ._async import GPUPromise as BaseGPUPromise
+from ._async import GPUPromise as BaseGPUPromise, AwaitedType
 from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
@@ -224,7 +224,7 @@ gpu = GPU()
 
 
 @apidiff.add("Added for async support")
-class GPUPromise(BaseGPUPromise):
+class GPUPromise(BaseGPUPromise[AwaitedType]):
     pass
 
 
