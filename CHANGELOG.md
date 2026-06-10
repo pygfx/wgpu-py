@@ -23,7 +23,7 @@ Possible sections in each release:
 * update wgpu-native to [29.0.0.0](https://github.com/gfx-rs/wgpu-native/blob/v29.0.0.0/CHANGELOG.md#changed) by @Vipitis in https://github.com/pygfx/wgpu-py/pull/805
   * updates the `webgpu.h` header to a more recent version
   * new texture formats for 16-bit uint/sint across r, rg and rgba variants
-  * new features: `texture-formats-tier1`, `texture-formats-tier2`
+  * Updated features to be in spec: `shader-primitive-index` -> `primitive-index`
   * push-constants are now closer to spec and called `immediates`:
     * required feature `push-constants` -> `immediates`
     * required limit `max-push-constants-size` -> `max-immediate-size`
