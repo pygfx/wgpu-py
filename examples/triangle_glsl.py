@@ -1,12 +1,9 @@
 """
 The triangle example, using GLSL shaders.
-
 """
 
 import wgpu
-
-
-# %% Shaders
+from rendercanvas.auto import RenderCanvas, loop
 
 
 vertex_shader = """
@@ -41,93 +38,58 @@ void main()
 }
 """
 
+# adapter provides allows us to create a single device, which is the general entrypoint to create most wgpu objects.
+# for convenience and interoperability `wgpu.utils.get_default_device()` and associated configuration are provided.
+adapter = wgpu.gpu.request_adapter_sync()
+device = adapter.request_device_sync()
 
-# %% The wgpu calls
+# setting up a canvas, so we can see what we draw
+canvas = RenderCanvas(size=(640, 480), title="wgpu triangle example")
+context = canvas.get_wgpu_context()
+render_texture_format = context.get_preferred_format(device.adapter)
+context.configure(device=device, format=render_texture_format)
 
+# creating the shader module compiles the shader code for your GPU.
+vert_shader = device.create_shader_module(label="triangle_vert", code=vertex_shader)
+frag_shader = device.create_shader_module(label="triangle_frag", code=fragment_shader)
 
-def setup_drawing_sync(context, power_preference="high-performance", limits=None):
-    """Regular function to set up a viz on the given context."""
-
-    adapter = wgpu.gpu.request_adapter_sync(power_preference=power_preference)
-    device = adapter.request_device_sync(required_limits=limits)
-
-    render_pipeline = get_render_pipeline(context, device)
-    return get_draw_function(context, device, render_pipeline)
-
-
-def get_render_pipeline(context, device):
-    vert_shader = device.create_shader_module(label="triangle_vert", code=vertex_shader)
-    frag_shader = device.create_shader_module(
-        label="triangle_frag", code=fragment_shader
-    )
-
-    # No bind group and layout, we should not create empty ones.
-    pipeline_layout = device.create_pipeline_layout(bind_group_layouts=[])
-
-    render_texture_format = context.get_preferred_format(device.adapter)
-    context.configure(device=device, format=render_texture_format)
-
-    return device.create_render_pipeline(
-        layout=pipeline_layout,
-        vertex={
-            "module": vert_shader,
-            "entry_point": "main",
-        },
-        primitive={
-            "topology": wgpu.PrimitiveTopology.triangle_list,
-            "front_face": wgpu.FrontFace.ccw,
-            "cull_mode": wgpu.CullMode.none,
-        },
+# in wgpu-py, methods that take descriptors will take the keyword arguments instead.
+# descriptors and other structs can still be accessed via wgpu.structs or top level wgpu.
+render_pipeline = device.create_render_pipeline(
+    **wgpu.RenderPipelineDescriptor(
+        layout=wgpu.AutoLayoutMode.auto,
+        vertex=wgpu.VertexState(module=vert_shader),
         depth_stencil=None,
         multisample=None,
-        fragment={
-            "module": frag_shader,
-            "entry_point": "main",
-            "targets": [
-                {
-                    "format": render_texture_format,
-                    "blend": {
-                        "color": {},
-                        "alpha": {},
-                    },
-                },
-            ],
-        },
+        fragment=wgpu.FragmentState(
+            module=frag_shader,
+            targets=[wgpu.ColorTargetState(format=render_texture_format)],
+        ),
     )
+)
 
 
-def get_draw_function(context, device, render_pipeline):
-    def draw_frame():
-        current_texture = context.get_current_texture()
-        command_encoder = device.create_command_encoder()
+# this function gets called for every frame. It ends with submitting a buffer of work onto the GPU queue.
+def drawing_function():
+    command_encoder = device.create_command_encoder()
+    current_texture_view = context.get_current_texture().create_view()
 
-        render_pass = command_encoder.begin_render_pass(
-            color_attachments=[
-                {
-                    "view": current_texture.create_view(),
-                    "resolve_target": None,
-                    "clear_value": (0, 0, 0, 1),
-                    "load_op": wgpu.LoadOp.clear,
-                    "store_op": wgpu.StoreOp.store,
-                }
-            ],
-        )
-
-        render_pass.set_pipeline(render_pipeline)
-        # render_pass.set_bind_group(0, no_bind_group)
-        render_pass.draw(3, 1, 0, 0)
-        render_pass.end()
-        device.queue.submit([command_encoder.finish()])
-
-    return draw_frame
+    render_pass = command_encoder.begin_render_pass(
+        color_attachments=[
+            wgpu.RenderPassColorAttachment(
+                view=current_texture_view,
+                clear_value=(0, 1, 0, 1),  # a green background
+                load_op=wgpu.LoadOp.clear,
+                store_op=wgpu.StoreOp.store,
+            )
+        ],
+    )
+    render_pass.set_pipeline(render_pipeline)
+    render_pass.draw(3)
+    render_pass.end()
+    device.queue.submit([command_encoder.finish()])
 
 
 if __name__ == "__main__":
-    from rendercanvas.auto import RenderCanvas, loop
-
-    canvas = RenderCanvas(size=(640, 480), title="wgpu triangle glsl example")
-    context = canvas.get_wgpu_context()
-
-    draw_frame = setup_drawing_sync(context)
-    canvas.request_draw(draw_frame)
+    canvas.request_draw(drawing_function)
     loop.run()

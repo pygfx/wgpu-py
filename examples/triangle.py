@@ -22,7 +22,7 @@ import wgpu
 from rendercanvas.auto import RenderCanvas, loop
 
 
-# the shader code is provided as a string literal for protability
+# the shader code is provided as a string literal for portability
 wgsl_shader_source = """
 struct VertexOutput {
     @location(0) color : vec4f,
