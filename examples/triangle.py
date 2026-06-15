@@ -107,7 +107,8 @@ def drawing_function():
     render_pass.end()
     device.queue.submit([command_encoder.finish()])
 
+canvas.request_draw(drawing_function)
+
 
 if __name__ == "__main__":
-    canvas.request_draw(drawing_function)
     loop.run()
