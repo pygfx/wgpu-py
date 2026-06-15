@@ -56,7 +56,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 """
 
 
-# adapter provides allows us to create a single device, which is the general entrypoint to create most wgpu objects.
+# adapter is required to create the device object, which is the general entry point to create most wgpu objects.
 # for convenience and interoperability `wgpu.utils.get_default_device()` and associated configuration are provided.
 adapter = wgpu.gpu.request_adapter_sync()
 device = adapter.request_device_sync()
