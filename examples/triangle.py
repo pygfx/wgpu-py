@@ -95,7 +95,7 @@ def drawing_function():
         color_attachments=[
             wgpu.RenderPassColorAttachment(
                 view=current_texture_view,
-                clear_value=(0, 1, 0, 1),  # a green background
+                clear_value=(0, 0.2, 0, 1),  # a green background
                 load_op=wgpu.LoadOp.clear,
                 store_op=wgpu.StoreOp.store,
             )

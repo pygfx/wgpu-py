@@ -25,8 +25,8 @@ canvas = RenderCanvas(size=(640, 480), pixel_ratio=2)
 draw_frame = setup_drawing_sync(canvas.get_wgpu_context(), format="rgba16float")
 canvas.request_draw(draw_frame)
 
+# Draw, and download image
 image = canvas.draw()
-image = np.asarray(image)
 
 # Convert to RGB
 image = image[:, :, :3]

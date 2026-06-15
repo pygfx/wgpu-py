@@ -38,7 +38,7 @@ void main()
 }
 """
 
-# adapter provides allows us to create a single device, which is the general entrypoint to create most wgpu objects.
+# adapter is required to create the device object, which is the general entry point to create most wgpu objects.
 # for convenience and interoperability `wgpu.utils.get_default_device()` and associated configuration are provided.
 adapter = wgpu.gpu.request_adapter_sync()
 device = adapter.request_device_sync()
@@ -78,7 +78,7 @@ def drawing_function():
         color_attachments=[
             wgpu.RenderPassColorAttachment(
                 view=current_texture_view,
-                clear_value=(0, 1, 0, 1),  # a green background
+                clear_value=(0, 0.2, 0, 1),  # a green background
                 load_op=wgpu.LoadOp.clear,
                 store_op=wgpu.StoreOp.store,
             )
