@@ -16,6 +16,7 @@ example in other languages / API's:
 
 This example is meant as a standalone starting point. And is therefore as minimal as possible.
 """
+# test_example = true
 
 import wgpu
 
