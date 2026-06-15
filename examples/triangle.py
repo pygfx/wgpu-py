@@ -107,6 +107,7 @@ def drawing_function():
     render_pass.end()
     device.queue.submit([command_encoder.finish()])
 
+
 canvas.request_draw(drawing_function)
 
 
