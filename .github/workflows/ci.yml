@@ -156,9 +156,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Test Linux py310
-            os: ubuntu-latest
-            pyversion: '3.10'
           - name: Test Linux py311
             os: ubuntu-latest
             pyversion: '3.11'
