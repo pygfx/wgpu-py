@@ -1,3 +1,14 @@
+// Cleaned version of webgpu.h ------------------------------------------------
+#define WGPU_ARRAY_LAYER_COUNT_UNDEFINED 0xffffffff
+#define WGPU_COPY_STRIDE_UNDEFINED 0xffffffff
+#define WGPU_DEPTH_SLICE_UNDEFINED 0xffffffff
+#define WGPU_LIMIT_U32_UNDEFINED 0xffffffff
+#define WGPU_LIMIT_U64_UNDEFINED 0xffffffffffffffff
+#define WGPU_MIP_LEVEL_COUNT_UNDEFINED 0xffffffff
+#define WGPU_QUERY_SET_INDEX_UNDEFINED 0xffffffff
+#define WGPU_STRLEN 0xffffffffffffffff
+#define WGPU_WHOLE_MAP_SIZE 0xffffffffffffffff
+#define WGPU_WHOLE_SIZE 0xffffffffffffffff
 typedef struct WGPUStringView {
 char const * data;
 size_t length;
@@ -1743,6 +1754,9 @@ void wgpuTextureRelease(WGPUTexture texture);
 void wgpuTextureViewSetLabel(WGPUTextureView textureView, WGPUStringView label);
 void wgpuTextureViewAddRef(WGPUTextureView textureView);
 void wgpuTextureViewRelease(WGPUTextureView textureView);
+
+
+// Cleaned version of wgpu.h --------------------------------------------------
 typedef enum WGPUNativeSType
 {
 WGPUSType_DeviceExtras = 0x00030001,
@@ -2088,13 +2102,3 @@ void wgpuComputePassEncoderWriteTimestamp(WGPUComputePassEncoder computePassEnco
 void wgpuRenderPassEncoderWriteTimestamp(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex);
 WGPUBool wgpuDeviceStartGraphicsDebuggerCapture(WGPUDevice device);
 void wgpuDeviceStopGraphicsDebuggerCapture(WGPUDevice device);
-#define WGPU_ARRAY_LAYER_COUNT_UNDEFINED 0xffffffff
-#define WGPU_COPY_STRIDE_UNDEFINED 0xffffffff
-#define WGPU_DEPTH_SLICE_UNDEFINED 0xffffffff
-#define WGPU_LIMIT_U32_UNDEFINED 0xffffffff
-#define WGPU_LIMIT_U64_UNDEFINED 0xffffffffffffffff
-#define WGPU_MIP_LEVEL_COUNT_UNDEFINED 0xffffffff
-#define WGPU_QUERY_SET_INDEX_UNDEFINED 0xffffffff
-#define WGPU_STRLEN 0xffffffffffffffff
-#define WGPU_WHOLE_MAP_SIZE 0xffffffffffffffff
-#define WGPU_WHOLE_SIZE 0xffffffffffffffff
