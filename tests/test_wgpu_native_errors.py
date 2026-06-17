@@ -164,9 +164,6 @@ def test_validate_shader_error1(caplog):
         }
     """
 
-    # not sure if these exist, but commenting out for ruff check
-    # expected1 = """Left: Load { pointer: [2] } of type Matrix { columns: Quad, rows: Quad, scalar: Scalar { kind: Float, width: 4 } }"""
-    # expected2 = """Right: Load { pointer: [5] } of type Vector { size: Tri, scalar: Scalar { kind: Float, width: 4 } }"""
     expected3 = """
         Validation Error
 
@@ -193,9 +190,6 @@ def test_validate_shader_error1(caplog):
         device.create_shader_module(code=code)
 
     # skip error info
-    # TODO: not sure why these are empty... perhaps they are no longer reported like this?
-    # assert caplog.records[0].msg == expected1
-    # assert caplog.records[1].msg == expected2
     assert err.value.message.strip() == expected3, f"Expected:\n\n{expected3}"
 
 
