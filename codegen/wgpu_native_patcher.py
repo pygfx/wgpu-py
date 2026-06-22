@@ -79,20 +79,32 @@ def write_mappings():
 
     # Create enummap, which allows the wgpu-native backend to resolve enum field names
     # to the corresponding integer value.
+    # We only include enums and enum fields that are defined in webgpu.h, so any
+    # code written against wgpu-py is maximally compatible.
     enummap = {}
     for name in idl.enums:
         hname = name_map.get(name, name)
+        native_name = "Native" + hname
         if hname not in hp.enums:
-            print(f"Enum {hname} missing in webgpu.h/wgpu.h")
+            print(f"Enum {hname} missing in webgpu.h")
             continue
         hp_enum = {key.lower(): val for key, val in hp.enums[hname].items()}
+        # When a value is present *also* in wgpu.h, it overrides the value, whereby we
+        # assume that's the value wgpu-native will most likely accept. This was introduced
+        # to cover 16-norm TextureFormats, ref https://github.com/pygfx/wgpu-py/pull/805.
+        if native_name in hp.enums:
+            for key, val in hp.enums[native_name].items():
+                key = key.lower()
+                if key in hp_enum:
+                    print(f"Enum field {name}.{key} overridden by wgpu.h")
+                    hp_enum[key] = val
         for ikey in idl.enums[name].values():
             hkey = ikey.lower().replace("-", "")
             hkey = name_map.get(f"{name}.{hkey}") or hkey
             if hkey in hp_enum:
                 enummap[name + "." + ikey] = hp_enum[hkey]
             else:
-                print(f"Enum field {name}.{ikey} missing in webgpu.h/wgpu.h")
+                print(f"Enum field {name}.{ikey} missing in webgpu.h")
 
     # Write enummap
     pylines.append(f"# There are {len(enummap)} enum mappings\n")
