@@ -8,11 +8,9 @@ from . import (
     GPUCommandEncoder,
     GPUComputePassEncoder,
     GPURenderPassEncoder,
-    GPUPipelineLayout,
     GPUQuerySet,
 )
 from ._api import (
-    GPUBindGroupLayout,
     enums,
     logger,
     structs,
@@ -22,7 +20,7 @@ from ._api import (
 )
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
-from ..._coreutils import get_library_filename, ArrayLike
+from ..._coreutils import get_library_filename
 from ._ffi import lib, ffi
 from ._mappings import native_flags
 
