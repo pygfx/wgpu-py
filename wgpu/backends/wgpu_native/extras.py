@@ -80,11 +80,12 @@ def create_pipeline_layout(
     bind_group_layouts: Sequence[GPUBindGroupLayout],
     immediate_size: int,
 ) -> GPUPipelineLayout:
-    return device._create_pipeline_layout(label, bind_group_layouts, immediate_size)
+    return device.create_pipeline_layout(label, bind_group_layouts, immediate_size)
 
 
 def set_immediates(
     render_pass_encoder: GPURenderPassEncoder,
+    visibility: flags.ShaderStageFlags,
     offset: int,
     size_in_bytes: int,
     data: ArrayLike,
@@ -96,9 +97,12 @@ def set_immediates(
     Writes the first size_in_bytes bytes of data to immediate storage,
     starting at the specified offset. These bytes are visible to all stages.
     """
-
-    # Actual implementation is hidden in _api.py
-    render_pass_encoder._set_immediates(offset, size_in_bytes, data, data_offset)
+    _not_used = visibility
+    logger.warning(
+        "wgpu.backends.wgpu_native.set_immediates() is deprecated, use ``encoder.set_immediates(range_offset, data, data_offset, data_size)`` instead."
+    )
+    # Actual implementation is public in _api.py
+    return render_pass_encoder.set_immediates(offset, data, data_offset, size_in_bytes)
 
 
 def multi_draw_indirect(

@@ -837,7 +837,8 @@ class GPUDevice(GPUObjectBase):
         buf.unmap()
         return buf
 
-    # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor); -> USVString label = "", required GPUExtent3D size, GPUIntegerCoordinate mipLevelCount = 1, GPUSize32 sampleCount = 1, GPUTextureDimension dimension = "2d", required GPUTextureFormat format, required GPUTextureUsageFlags usage, sequence<GPUTextureFormat> viewFormats = []
+    # view_formats: Sequence[enums.TextureFormatEnum] = ()) -> GPUTexture:
+    # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor); -> USVString label = "", required GPUExtent3D size, GPUIntegerCoordinate mipLevelCount = 1, GPUSize32 sampleCount = 1, GPUTextureDimension dimension = "2d", required GPUTextureFormat format, required GPUTextureUsageFlags usage, sequence<GPUTextureFormat> viewFormats = [], GPUTextureViewDimension textureBindingViewDimension
     def create_texture(
         self,
         *,
@@ -849,6 +850,7 @@ class GPUDevice(GPUObjectBase):
         format: enums.TextureFormatEnum,
         usage: flags.TextureUsageFlags,
         view_formats: Sequence[enums.TextureFormatEnum] = (),
+        texture_binding_view_dimension: enums.TextureViewDimensionEnum | None = None,
     ) -> GPUTexture:
         """Create a `GPUTexture` object.
 
@@ -863,6 +865,8 @@ class GPUDevice(GPUObjectBase):
             view_formats (optional): A list of formats that views are allowed to have
               in addition to the texture's own view. Using these formats may have
               a performance penalty.
+            texture_binding_view_dimension (enums.TextureDimension): The required texture binding
+              for views, when in compatibility mode.
 
         See https://gpuweb.github.io/gpuweb/#texture-format-caps for a
         list of available texture formats. Note that fewer formats are
@@ -989,15 +993,20 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayout?> bindGroupLayouts
+    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayout?> bindGroupLayouts, GPUSize32 immediateSize = 0
     def create_pipeline_layout(
-        self, *, label: str = "", bind_group_layouts: Sequence[GPUBindGroupLayout]
+        self,
+        *,
+        label: str = "",
+        bind_group_layouts: Sequence[GPUBindGroupLayout],
+        immediate_size: int = 0,
     ) -> GPUPipelineLayout:
         """Create a `GPUPipelineLayout` object, which can be used in `create_render_pipeline()` or `create_compute_pipeline()`.
 
         Arguments:
             label (str): A human-readable label. Optional.
             bind_group_layouts (list): A list of `GPUBindGroupLayout` objects.
+            immediate_size (int): The size, in bytes, of the immediate data range used by the pipeline.
         """
         raise NotImplementedError()
 
@@ -1553,7 +1562,18 @@ class GPUTexture(GPUObjectBase):
         """The allowed usages for this texture."""
         return self._tex_info["usage"]
 
-    # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {}); -> USVString label = "", GPUTextureFormat format, GPUTextureViewDimension dimension, GPUTextureUsageFlags usage = 0, GPUTextureAspect aspect = "all", GPUIntegerCoordinate baseMipLevel = 0, GPUIntegerCoordinate mipLevelCount, GPUIntegerCoordinate baseArrayLayer = 0, GPUIntegerCoordinate arrayLayerCount
+    # IDL: readonly attribute (GPUTextureViewDimension or undefined) textureBindingViewDimension;
+    @property
+    def texture_binding_view_dimension(self) -> enums.TextureViewDimensionEnum | None:
+        """The required texture binding for views, when in compatibility mode.
+
+        On devices without the "core-features-and-limits" feature (i.e. compatibility mode),
+        views created from this texture must have this as their dimension.
+        On 'normal' devices, this is None, and there is no such restriction.
+        """
+        return self._tex_info["texture_binding_view_dimension"]
+
+    # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {}); -> USVString label = "", GPUTextureFormat format, GPUTextureViewDimension dimension, GPUTextureUsageFlags usage = 0, GPUTextureAspect aspect = "all", GPUIntegerCoordinate baseMipLevel = 0, GPUIntegerCoordinate mipLevelCount, GPUIntegerCoordinate baseArrayLayer = 0, GPUIntegerCoordinate arrayLayerCount, DOMString swizzle = "rgba"
     def create_view(
         self,
         *,
@@ -1566,6 +1586,7 @@ class GPUTexture(GPUObjectBase):
         mip_level_count: int | None = None,
         base_array_layer: int = 0,
         array_layer_count: int | None = None,
+        swizzle: str = "rgba",
     ) -> GPUTextureView:
         """Create a `GPUTextureView` object.
 
@@ -1585,6 +1606,9 @@ class GPUTexture(GPUObjectBase):
             mip_level_count (int): The number of mip levels. Default None.
             base_array_layer (int): The starting array layer. Default 0.
             array_layer_count (int): The number of array layers. Default None.
+            swizzle (str): A string of length four, with each character mapping to the texture view's
+              red/green/blue/alpha channels, respectively. Requires the "texture-component-swizzle"
+              feature to be enabled. Currently not implemented in wgpu-native.
         """
         raise NotImplementedError()
 
@@ -1758,6 +1782,21 @@ class GPUBindingCommandsMixin:
             dynamic_offsets_data (list of int): A list of offsets (one for each entry in bind group marked as ``buffer.has_dynamic_offset``). Default ``[]``.
             dynamic_offsets_data_start (int): Offset in elements into dynamic_offsets_data where the buffer offset data begins. Default None.
             dynamic_offsets_data_length (int): Number of buffer offsets to read from dynamic_offsets_data. Default None.
+        """
+        raise NotImplementedError()
+
+    # IDL: undefined setImmediates(GPUSize32 rangeOffset, AllowSharedBufferSource data, optional GPUSize64 dataOffset = 0, optional GPUSize64 dataSize);
+    def set_immediates(
+        self,
+        range_offset: int,
+        data: ArrayLike,
+        data_offset: int = 0,
+        data_size: int | None = None,
+    ) -> None:
+        """Set immediate data for subsequent draw calls.
+
+        Writes ``data_size`` bytes from ``data`` to immediate storage,
+        starting at the specified offset. These bytes are visible to all stages.
         """
         raise NotImplementedError()
 

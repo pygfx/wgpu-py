@@ -1502,6 +1502,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         format: enums.TextureFormatEnum,
         usage: flags.TextureUsageFlags,
         view_formats: Sequence[enums.TextureFormatEnum] = (),
+        texture_binding_view_dimension: enums.TextureViewDimensionEnum | None = None,
     ) -> GPUTexture:
         if isinstance(usage, str):
             usage = str_flag_to_int(flags.TextureUsage, usage)
@@ -1562,6 +1563,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             "dimension": dimension,
             "format": format,
             "usage": usage,
+            "texture_binding_view_dimension": texture_binding_view_dimension,
         }
         return GPUTexture(label, id, self, tex_info)
 
@@ -1794,16 +1796,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPUBindGroup(label, id, self)
 
     def create_pipeline_layout(
-        self, *, label: str = "", bind_group_layouts: Sequence[GPUBindGroupLayout]
-    ) -> GPUPipelineLayout:
-        return self._create_pipeline_layout(label, bind_group_layouts, 0)
-
-    def _create_pipeline_layout(
         self,
-        label: str,
+        *,
+        label: str = "",
         bind_group_layouts: Sequence[GPUBindGroupLayout],
-        immediate_size: int,
-    ):
+        immediate_size: int = 0,
+    ) -> GPUPipelineLayout:
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
         c_layout_array = new_array("WGPUBindGroupLayout[]", bind_group_layouts_ids)
 
@@ -2747,6 +2745,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
         mip_level_count: int | None = None,
         base_array_layer: int = 0,
         array_layer_count: int | None = None,
+        swizzle: str = "rgba",
     ) -> GPUTextureView:
         # Resolve defaults
         if not format:
@@ -2768,6 +2767,8 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
                 array_layer_count = 6
             elif dimension in ("2d-array", "cube-array"):
                 array_layer_count = self._tex_info["size"][2] - base_array_layer
+
+        _not_used = swizzle
 
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, format: WGPUTextureFormat, dimension: WGPUTextureViewDimension, baseMipLevel: int, mipLevelCount: int, baseArrayLayer: int, arrayLayerCount: int, aspect: WGPUTextureAspect, usage: WGPUTextureUsage/int
         struct = new_struct_p(
@@ -2943,36 +2944,6 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
     # don't really fit anywhere else.
     #
 
-    def _set_immediates(self, offset, size_in_bytes, data, data_offset):
-        # Implementation of set_immediates. The public API is in extras.py since
-        # this is a wgpu extension.
-
-        # We support anything that memoryview supports, i.e. anything
-        # that implements the buffer protocol, including, bytes,
-        # bytearray, ctypes arrays, numpy arrays, etc.
-        m, address = get_memoryview_and_address(data)
-
-        # Deal with offset and size
-        offset = int(offset)
-        data_offset = int(data_offset)
-        size = int(size_in_bytes)
-
-        if not (0 <= size_in_bytes <= m.nbytes):
-            raise ValueError("Invalid size_in_bytes")
-        if not (0 <= size_in_bytes <= m.nbytes):
-            raise ValueError("Invalid data_offset")
-        if size_in_bytes + data_offset > m.nbytes:
-            raise ValueError("size_in_bytes + data_offset is too large")
-
-        c_data = ffi.cast("void *", address)  # do we want to add data_offset?
-        # H: void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
-        # H: void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
-        # H: void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
-        function = type(self)._set_immediates_function
-        if function is None:
-            self._not_implemented("set_immediates")
-        function(self._internal, offset, size, c_data + data_offset)
-
     def _begin_pipeline_statistics_query(self, query_set, query_index):
         # H: void wgpuComputePassEncoderBeginPipelineStatisticsQuery(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         # H: void wgpuRenderPassEncoderBeginPipelineStatisticsQuery(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
@@ -2991,6 +2962,41 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
 
     def _not_implemented(self, name) -> NoReturn:
         raise RuntimeError(f"{type(self).__name__} does not implement {name}")
+
+    def set_immediates(
+        self,
+        range_offset: int,
+        data: ArrayLike,
+        data_offset: int = 0,
+        data_size: int | None = None,
+    ) -> None:
+        # Note that the earlier signature was: def _set_immediates(self, offset, size_in_bytes, data, data_offset)
+
+        # We support anything that memoryview supports, i.e. anything
+        # that implements the buffer protocol, including, bytes,
+        # bytearray, ctypes arrays, numpy arrays, etc.
+        m, address = get_memoryview_and_address(data)
+
+        # Deal with offset and size
+        range_offset = int(range_offset)
+        data_offset = int(data_offset)
+        size = int(data_size)
+
+        if not (0 <= data_size <= m.nbytes):
+            raise ValueError("Invalid data_size")
+        if not (0 <= data_size <= m.nbytes):
+            raise ValueError("Invalid data_offset")
+        if data_size + data_offset > m.nbytes:
+            raise ValueError("data_size + data_offset is too large")
+
+        c_data = ffi.cast("void *", address)  # do we want to add data_offset?
+        # H: void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
+        # H: void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
+        # H: void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
+        function = type(self)._set_immediates_function
+        if function is None:
+            self._not_implemented("set_immediates")
+        function(self._internal, range_offset, size, c_data + data_offset)
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
