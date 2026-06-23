@@ -193,6 +193,8 @@ class TextureDescriptor(Struct):
     usage: flags.TextureUsageFlags
     #: list[:obj:`enums.TextureFormat <wgpu.enums.TextureFormat>`]
     view_formats: Sequence[enums.TextureFormatEnum] = ()
+    #: :obj:`enums.TextureViewDimension <wgpu.enums.TextureViewDimension>`
+    texture_binding_view_dimension: enums.TextureViewDimensionEnum | None = None
 
 
 TextureDescriptorStruct = TextureDescriptor | dict
@@ -218,6 +220,8 @@ class TextureViewDescriptor(Struct):
     base_array_layer: int = 0
     #:
     array_layer_count: int | None = None
+    #:
+    swizzle: str = "rgba"
 
 
 TextureViewDescriptorStruct = TextureViewDescriptor | dict
@@ -403,6 +407,8 @@ class PipelineLayoutDescriptor(Struct):
     label: str = ""
     #:
     bind_group_layouts: Sequence[classes.GPUBindGroupLayout]
+    #:
+    immediate_size: int = 0
 
 
 PipelineLayoutDescriptorStruct = PipelineLayoutDescriptor | dict

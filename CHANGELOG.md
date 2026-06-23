@@ -26,10 +26,19 @@ Possible sections in each release:
   * push-constants are now closer to spec and called `immediates`:
     * required feature `push-constants` -> `immediates`
     * required limit `max-push-constants-size` -> `max-immediate-size`
-    * no more `push_constant_layouts` in create_pipeline_layout, just `immediate_size`
-    * `set_push_constants` -> `set_immediates` (removed stages parameter)
+    * `wgpu.backends.wgpu_native.extras.create_pipeline_layout(..., push_constant_layouts)` -> `device.create_pipeline_layout(..., immediate_size)`
+    * `wgpu.backends.wgpu_native.extras.set_push_constants()` -> `encoder.set_immediates()` (and different signature)
     * in wgsl `var<push_constant>` -> `var<immediate>`
 
+
+
+## [v0.31.1] - 23-06-2026
+
+* Add compute_workgroups example by @mrinalchaturvedi27 in https://github.com/pygfx/wgpu-py/pull/801
+* Fix required positional args by @Vipitis in https://github.com/pygfx/wgpu-py/pull/804
+* fix GPUPromise type annotation by @Vipitis in https://github.com/pygfx/wgpu-py/pull/812
+* Require python 3.11+ by @almarklein in https://github.com/pygfx/wgpu-py/pull/813
+* Make the triangle example simpler by @Vipitis in https://github.com/pygfx/wgpu-py/pull/810
 
 
 ## [v0.31.0] - 02-03-2026

@@ -91,6 +91,7 @@ FeatureNameEnum = (
         "texture-formats-tier1",
         "texture-formats-tier2",
         "primitive-index",
+        "texture-component-swizzle",
     ]
     | str
 )
@@ -118,6 +119,7 @@ class FeatureName(Enum):
     texture_formats_tier1 = "texture-formats-tier1"
     texture_formats_tier2 = "texture-formats-tier2"
     primitive_index = "primitive-index"
+    texture_component_swizzle = "texture-component-swizzle"
 
 
 BufferMapStateEnum = Literal["unmapped", "pending", "mapped"] | str

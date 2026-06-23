@@ -4,7 +4,6 @@ import pytest
 import wgpu.utils
 from testutils import can_use_wgpu_lib, run_tests
 from wgpu import TextureFormat
-from wgpu.backends.wgpu_native.extras import create_pipeline_layout, set_immediates
 
 if not can_use_wgpu_lib:
     pytest.skip("Skipping tests that need the wgpu lib", allow_module_level=True)
@@ -79,8 +78,7 @@ def setup_pipeline():
     )
     shader = device.create_shader_module(code=SHADER_SOURCE)
     bind_group_layout = device.create_bind_group_layout(entries=BIND_GROUP_ENTRIES)
-    render_pipeline_layout = create_pipeline_layout(
-        device,
+    render_pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout],
         immediate_size=COUNT * 4 * 2,
     )
@@ -129,8 +127,8 @@ def test_normal_immediates():
     this_pass.set_bind_group(0, bind_group)
 
     buffer = np.random.randint(0, 1_000_000, size=(2 * COUNT), dtype=np.uint32)
-    set_immediates(this_pass, 0, COUNT * 4, buffer)
-    set_immediates(this_pass, COUNT * 4, COUNT * 4, buffer, COUNT * 4)
+    this_pass.set_immediates(0, buffer, 0, COUNT * 4)
+    this_pass.set_immediates(COUNT * 4, buffer, COUNT * 4, COUNT * 4)
     this_pass.draw(COUNT)
     this_pass.end()
     device.queue.submit([encoder.finish()])
@@ -155,8 +153,8 @@ def test_render_bundle_immediates():
     bundle_encoder.set_pipeline(pipeline)
     bundle_encoder.set_bind_group(0, bind_group)
     buffer = np.random.randint(0, 1_000_000, size=(2 * COUNT), dtype=np.uint32)
-    set_immediates(bundle_encoder, 0, COUNT * 4, buffer)
-    set_immediates(bundle_encoder, COUNT * 4, COUNT * 4, buffer, COUNT * 4)
+    bundle_encoder.set_immediates(0, buffer, 0, COUNT * 4)
+    bundle_encoder.set_immediates(COUNT * 4, buffer, COUNT * 4, COUNT * 4)
     bundle_encoder.draw(COUNT)
     render_bundle = bundle_encoder.finish()
 
@@ -183,11 +181,11 @@ def test_bad_set_immediates():
 
     with pytest.raises(ValueError):
         # Buffer is too short
-        set_immediates(this_pass, 0, COUNT * 4, zeros(COUNT - 1))
+        this_pass.set_immediates(0, zeros(COUNT - 1), 0, COUNT * 4)
 
     with pytest.raises(ValueError):
         # Buffer is too short
-        set_immediates(this_pass, 0, COUNT * 4, zeros(COUNT + 1), 8)
+        this_pass.set_immediates(0, zeros(COUNT + 1), 8, COUNT * 4)
 
 
 if __name__ == "__main__":
