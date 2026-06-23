@@ -27,7 +27,7 @@ Overestimating is okay::
         required_limits={"max-immediate-size": 256},
     )
 
-Creating a immediate data struct in your shader code is similar to the way you would create
+Creating an immediate data struct in your shader code is similar to the way you would create
 a uniform buffer.
 The same data can be accessed across all shader stages: vertex, fragment and compute::
 
