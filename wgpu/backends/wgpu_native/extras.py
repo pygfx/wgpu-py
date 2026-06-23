@@ -85,7 +85,7 @@ def create_pipeline_layout(
 
 def set_immediates(
     render_pass_encoder: GPURenderPassEncoder,
-    visibility: flags.ShaderStageFlags,
+    visibility,
     offset: int,
     size_in_bytes: int,
     data: ArrayLike,
