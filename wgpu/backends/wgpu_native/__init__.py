@@ -11,8 +11,8 @@ from .. import _register_backend
 
 
 # The wgpu-native version that we target/expect
-__version__ = "29.0.0.0"
-__commit_sha__ = "d2e3330ade4ae1bb238d76b485926f067e7ee64c"
+__version__ = "29.0.1.1"
+__commit_sha__ = "6aed50955d934ac36049ba8d002034841633ae02"
 version_info = tuple(map(int, __version__.split(".")))  # noqa: RUF048
 _check_expected_version(version_info)  # produces a warning on mismatch
 
