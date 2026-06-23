@@ -325,7 +325,7 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
 
     # NOTE: this will get even simpler in the near future: https://github.com/gfx-rs/wgpu-native/pull/575 as maxImmediateSize shouldn't exist in both
 
-    # H: chain: WGPUChainedStruct, maxImmediateSize: int, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int
+    # H: chain: WGPUChainedStruct, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int, maxBindingArraySamplerElementsPerShaderStage: int, maxMultiviewViewCount: int
     c_limits_native = new_struct(
         "WGPUNativeLimits",
         # H: next: WGPUChainedStruct *, sType: WGPUSType
@@ -334,9 +334,12 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
             # not used: next
             sType=lib.WGPUSType_NativeLimits,
         ),
+        # FIXME: unknown C struct field WGPUNativeLimits.maxImmediateSize
         # not used: maxImmediateSize
         # not used: maxNonSamplerBindings
         # not used: maxBindingArrayElementsPerShaderStage
+        # not used: maxBindingArraySamplerElementsPerShaderStage
+        # not used: maxMultiviewViewCount
     )
 
     # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
@@ -1242,9 +1245,10 @@ class GPUAdapter(classes.GPUAdapter):
             setattr(c_required_limits, key, value)
 
         #  the native only limits are passed in via the next-in-chain struct
-        # H: chain: WGPUChainedStruct, maxImmediateSize: int, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int
+        # H: chain: WGPUChainedStruct, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int, maxBindingArraySamplerElementsPerShaderStage: int, maxMultiviewViewCount: int
         c_required_limits_native = new_struct_p(
             "WGPUNativeLimits *",
+            # FIXME: unknown C struct field WGPUNativeLimits.maxImmediateSize
             maxImmediateSize=required_limits.get(
                 "max-immediate-size", self._limits["max-immediate-size"]
             ),
@@ -1253,6 +1257,8 @@ class GPUAdapter(classes.GPUAdapter):
             ),
             # not used: chain
             # not used: maxBindingArrayElementsPerShaderStage
+            # not used: maxBindingArraySamplerElementsPerShaderStage
+            # not used: maxMultiviewViewCount
         )
         c_required_limits_native.chain.next = ffi.NULL
         c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits
@@ -1807,7 +1813,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         c_pipeline_layout_next_in_chain = ffi.NULL
         if immediate_size:
-            # H: chain: WGPUChainedStruct, immediateDataSize: int
+            # FIXME: unknown C struct WGPUPipelineLayoutExtras
             c_pipeline_layout_extras = new_struct_p(
                 "WGPUPipelineLayoutExtras *",
                 # not used: chain
@@ -2990,9 +2996,9 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             raise ValueError("data_size + data_offset is too large")
 
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
-        # H: void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
-        # H: void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
-        # H: void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
+        # H: void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder computePassEncoder, uint32_t offset, void const * data, size_t size)
+        # H: void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder renderPassEncoder, uint32_t offset, void const * data, size_t size)
+        # H: void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder renderBundleEncoder, uint32_t offset, void const * data, size_t size)
         function = type(self)._set_immediates_function
         if function is None:
             self._not_implemented("set_immediates")
