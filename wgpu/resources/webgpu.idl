@@ -1,4 +1,4 @@
-// Copyright (C) [2025] World Wide Web Consortium,
+// Copyright (C) [2026] World Wide Web Consortium,
 // (Massachusetts Institute of Technology, European Research Consortium for
 // Informatics and Mathematics, Keio University, Beihang).
 // All Rights Reserved.
@@ -27,13 +27,18 @@ interface GPUSupportedLimits {
     readonly attribute unsigned long maxTextureArrayLayers;
     readonly attribute unsigned long maxBindGroups;
     readonly attribute unsigned long maxBindGroupsPlusVertexBuffers;
+    readonly attribute unsigned long maxImmediateSize;
     readonly attribute unsigned long maxBindingsPerBindGroup;
     readonly attribute unsigned long maxDynamicUniformBuffersPerPipelineLayout;
     readonly attribute unsigned long maxDynamicStorageBuffersPerPipelineLayout;
     readonly attribute unsigned long maxSampledTexturesPerShaderStage;
     readonly attribute unsigned long maxSamplersPerShaderStage;
     readonly attribute unsigned long maxStorageBuffersPerShaderStage;
+    readonly attribute unsigned long maxStorageBuffersInVertexStage;
+    readonly attribute unsigned long maxStorageBuffersInFragmentStage;
     readonly attribute unsigned long maxStorageTexturesPerShaderStage;
+    readonly attribute unsigned long maxStorageTexturesInVertexStage;
+    readonly attribute unsigned long maxStorageTexturesInFragmentStage;
     readonly attribute unsigned long maxUniformBuffersPerShaderStage;
     readonly attribute unsigned long long maxUniformBufferBindingSize;
     readonly attribute unsigned long long maxStorageBufferBindingSize;
@@ -138,6 +143,7 @@ enum GPUFeatureName {
     "texture-formats-tier1",
     "texture-formats-tier2",
     "primitive-index",
+    "texture-component-swizzle",
 };
 
 [Exposed=(Window, Worker), SecureContext]
@@ -236,6 +242,7 @@ interface GPUTexture {
     readonly attribute GPUTextureDimension dimension;
     readonly attribute GPUTextureFormat format;
     readonly attribute GPUFlagsConstant usage;
+    readonly attribute (GPUTextureViewDimension or undefined) textureBindingViewDimension;
 };
 GPUTexture includes GPUObjectBase;
 
@@ -248,6 +255,7 @@ dictionary GPUTextureDescriptor
     required GPUTextureFormat format;
     required GPUTextureUsageFlags usage;
     sequence<GPUTextureFormat> viewFormats = [];
+    GPUTextureViewDimension textureBindingViewDimension;
 };
 
 enum GPUTextureDimension {
@@ -259,11 +267,12 @@ enum GPUTextureDimension {
 typedef [EnforceRange] unsigned long GPUTextureUsageFlags;
 [Exposed=(Window, Worker), SecureContext]
 namespace GPUTextureUsage {
-    const GPUFlagsConstant COPY_SRC          = 0x01;
-    const GPUFlagsConstant COPY_DST          = 0x02;
-    const GPUFlagsConstant TEXTURE_BINDING   = 0x04;
-    const GPUFlagsConstant STORAGE_BINDING   = 0x08;
-    const GPUFlagsConstant RENDER_ATTACHMENT = 0x10;
+    const GPUFlagsConstant COPY_SRC             = 0x01;
+    const GPUFlagsConstant COPY_DST             = 0x02;
+    const GPUFlagsConstant TEXTURE_BINDING      = 0x04;
+    const GPUFlagsConstant STORAGE_BINDING      = 0x08;
+    const GPUFlagsConstant RENDER_ATTACHMENT    = 0x10;
+    const GPUFlagsConstant TRANSIENT_ATTACHMENT = 0x20;
 };
 
 [Exposed=(Window, Worker), SecureContext]
@@ -281,6 +290,9 @@ dictionary GPUTextureViewDescriptor
     GPUIntegerCoordinate mipLevelCount;
     GPUIntegerCoordinate baseArrayLayer = 0;
     GPUIntegerCoordinate arrayLayerCount;
+
+    // Requires "texture-component-swizzle" feature.
+    DOMString swizzle = "rgba";
 };
 
 enum GPUTextureViewDimension {
@@ -599,6 +611,7 @@ GPUPipelineLayout includes GPUObjectBase;
 dictionary GPUPipelineLayoutDescriptor
          : GPUObjectDescriptorBase {
     required sequence<GPUBindGroupLayout?> bindGroupLayouts;
+    GPUSize32 immediateSize = 0;
 };
 
 [Exposed=(Window, Worker), SecureContext]
@@ -1015,6 +1028,9 @@ interface mixin GPUBindingCommandsMixin {
         [AllowShared] Uint32Array dynamicOffsetsData,
         GPUSize64 dynamicOffsetsDataStart,
         GPUSize32 dynamicOffsetsDataLength);
+
+    undefined setImmediates(GPUSize32 rangeOffset, AllowSharedBufferSource data,
+        optional GPUSize64 dataOffset = 0, optional GPUSize64 dataSize);
 };
 
 interface mixin GPUDebugCommandsMixin {
