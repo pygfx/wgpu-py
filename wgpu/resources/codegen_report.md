@@ -34,7 +34,4 @@
 * Wrote 267 enum mappings and 49 struct-field mappings to wgpu_native/_mappings.py
 * Validated 154 C function calls
 * Not using 85 C functions
-* ERROR: unknown C struct field WGPUNativeLimits.maxImmediateSize
-* ERROR: unknown C struct field WGPUNativeLimits.maxImmediateSize
-* ERROR: unknown C struct WGPUPipelineLayoutExtras
-* Validated 97 C structs
+* Validated 96 C structs
