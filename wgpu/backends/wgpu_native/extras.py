@@ -73,38 +73,6 @@ def request_device(*args, **kwargs):
     return request_device_sync(*args, **kwargs)
 
 
-def create_pipeline_layout(
-    device: GPUDevice,
-    *,
-    label: str = "",
-    bind_group_layouts: Sequence[GPUBindGroupLayout],
-    immediate_size: int,
-) -> GPUPipelineLayout:
-    return device.create_pipeline_layout(label, bind_group_layouts, immediate_size)
-
-
-def set_immediates(
-    render_pass_encoder: GPURenderPassEncoder,
-    visibility,
-    offset: int,
-    size_in_bytes: int,
-    data: ArrayLike,
-    data_offset: int = 0,
-):
-    """
-    Set immediate data for subsequent draw calls.
-
-    Writes the first size_in_bytes bytes of data to immediate storage,
-    starting at the specified offset. These bytes are visible to all stages.
-    """
-    _not_used = visibility
-    logger.warning(
-        "wgpu.backends.wgpu_native.set_immediates() is deprecated, use ``encoder.set_immediates(range_offset, data, data_offset, data_size)`` instead."
-    )
-    # Actual implementation is public in _api.py
-    return render_pass_encoder.set_immediates(offset, data, data_offset, size_in_bytes)
-
-
 def multi_draw_indirect(
     render_pass_encoder: GPURenderPassEncoder,
     buffer: GPUBuffer,

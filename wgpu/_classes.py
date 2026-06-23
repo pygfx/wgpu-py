@@ -837,7 +837,6 @@ class GPUDevice(GPUObjectBase):
         buf.unmap()
         return buf
 
-    # view_formats: Sequence[enums.TextureFormatEnum] = ()) -> GPUTexture:
     # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor); -> USVString label = "", required GPUExtent3D size, GPUIntegerCoordinate mipLevelCount = 1, GPUSize32 sampleCount = 1, GPUTextureDimension dimension = "2d", required GPUTextureFormat format, required GPUTextureUsageFlags usage, sequence<GPUTextureFormat> viewFormats = [], GPUTextureViewDimension textureBindingViewDimension
     def create_texture(
         self,

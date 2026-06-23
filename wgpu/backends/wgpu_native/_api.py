@@ -2982,10 +2982,10 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         data_offset = int(data_offset)
         size = int(data_size)
 
+        if not (0 <= data_offset < m.nbytes):
+            raise ValueError("Invalid data_offset")
         if not (0 <= data_size <= m.nbytes):
             raise ValueError("Invalid data_size")
-        if not (0 <= data_size <= m.nbytes):
-            raise ValueError("Invalid data_offset")
         if data_size + data_offset > m.nbytes:
             raise ValueError("data_size + data_offset is too large")
 
