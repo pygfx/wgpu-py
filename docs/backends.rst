@@ -61,100 +61,73 @@ The wgpu_native backend provides a few extra functionalities:
     :return: Device
     :rtype: wgpu.GPUDevice
 
-The wgpu_native backend provides support for push constants.
-Since WebGPU does not support this feature, documentation on its use is hard to find.
-A full explanation of push constants and its use in Vulkan can be found
-`here <https://vkguide.dev/docs/chapter-3/push_constants/>`_.
-Using push constants in WGPU closely follows the Vulkan model.
+The wgpu_native backend provides support for immediates.
+Immediates are not yet part of the WebGPU spec, but the headers for native webgpu have converged officially.
 
-The advantage of push constants is that they are typically faster to update than uniform buffers.
-Modifications to push constants are included in the command encoder; updating a uniform
-buffer involves sending a separate command to the GPU.
-The disadvantage of push constants is that their size limit is much smaller. The limit
-is guaranteed to be at least 128 bytes, and 256 bytes is typical.
+Immediates offer a way to set send a small amount of data to the GPU in the command encoder directly, no need for uniform buffer uploads.
+They are restricted to rather small sizes, usually 128 or 265 bytes.
 
-Given an adapter, first determine if it supports push constants::
+Given an adapter, first determine if it supports immediates::
 
-    >> "push-constants" in adapter.features
+    >> "immediates" in adapter.features
     True
 
-If push constants are supported, determine the maximum number of bytes that can
-be allocated for push constants::
+If immediates are supported, determine the maximum number of bytes that can
+be allocated for immediates::
 
-    >> adapter.limits["max-push-constant-size"]
+    >> adapter.limits["max-immediate-size"]
     256
 
-You must tell the adapter to create a device that supports push constants,
-and you must tell it the number of bytes of push constants that you are using.
+You must tell the adapter to create a device that supports immediates,
+and you must tell it the number of bytes of immediates that you are using.
 Overestimating is okay::
 
     device = adapter.request_device_sync(
-        required_features=["push-constants"],
-        required_limits={"max-push-constant-size": 256},
+        required_features=["immediates"],
+        required_limits={"max-immediate-size": 256},
     )
 
-Creating a push constant in your shader code is similar to the way you would create
+Creating a immediate data struct in your shader code is similar to the way you would create
 a uniform buffer.
-The fields that are only used in the ``@vertex`` shader should be separated from the fields
-that are only used in the ``@fragment`` shader which should be separated from the fields
-used in both shaders::
+The same data can be accessed across all shader stages: vertex, fragment and compute::
 
-    struct PushConstants {
-        // vertex shader
+    struct Immediates {
         vertex_transform: vec4x4f,
-        // fragment shader
-        fragment_transform: vec4x4f,
-        // used in both
-        generic_transform: vec4x4f,
+        fragment_color: vec4f,
+        pick_position: vec2f,
+        frame_counter: u32,
     }
-    var<push_constant> push_constants: PushConstants;
+    var<immediate> immediate_data: Immediates;
 
 To the pipeline layout for this shader, use
 ``wgpu.backends.wpgu_native.create_pipeline_layout`` instead of
-``device.create_pipelinelayout``.  It takes an additional argument,
-``push_constant_layouts``, describing
-the layout of the push constants.  For example, in the above example::
+``device.create_pipeline_layout``.  It takes an additional argument,
+``immediate_size`` simply the number of bytes of immediate data you are using.
 
-    push_constant_layouts = [
-        {"visibility": ShaderState.VERTEX, "start": 0, "end": 64},
-        {"visibility": ShaderStage.FRAGMENT, "start": 64, "end": 128},
-        {"visibility": ShaderState.VERTEX + ShaderStage.FRAGMENT , "start": 128, "end": 192},
-    ],
+Finally, you set the value of the immediates by using
+``wgpu.backends.wpgu_native.set_immediates``::
 
-Finally, you set the value of the push constant by using
-``wgpu.backends.wpgu_native.set_push_constants``::
+    set_immediates(pass_encoder, offset=0, size_in_bytes=64, data=<64 bytes>, data_offset=0)
 
-    set_push_constants(this_pass, ShaderStage.VERTEX, 0, 64, <64 bytes>)
-    set_push_constants(this_pass, ShaderStage.FRAGMENT, 64, 128, <64 bytes>)
-    set_push_constants(this_pass, ShaderStage.VERTEX + ShaderStage.FRAGMENT, 128, 192, <64 bytes>)
-
-Bytes must be set separately for each of the three shader stages.  If the push constant has
-already been set, on the next use you only need to call ``set_push_constants`` on those
-bytes you wish to change.
-
-.. py:function:: wgpu.backends.wpgu_native.create_pipeline_layout(device, *, label="", bind_group_layouts, push_constant_layouts=[])
+.. py:function:: wgpu.backends.wpgu_native.create_pipeline_layout(device, *, label="", bind_group_layouts, immediate_size=0)
 
    This method provides the same functionality as :func:`wgpu.GPUDevice.create_pipeline_layout`,
-   but provides an extra `push_constant_layouts` argument.
-   When using push constants, this argument is a list of dictionaries, where each item
-   in the dictionary has three fields: `visibility`, `start`, and `end`.
+   but provides an extra `immediate_size` argument.
+   When using immediates, this argument is the number of bytes of immediate data you are using.
 
     :param device: The device on which we are creating the pipeline layout
     :param label: An optional label
-    :param bind_group_layouts:
-    :param push_constant_layouts: Described above.
+    :param bind_group_layouts: 
+    :param immediate_size: number of bytes for immediates data.
 
-.. py:function:: wgpu.backends.wgpu_native.set_push_constants(render_pass_encoder, visibility, offset, size_in_bytes, data, data_offset=0)
+.. py:function:: wgpu.backends.wgpu_native.set_immediates(render_pass_encoder,offset, size_in_bytes, data, data_offset=0)
 
-    This function requires that the underlying GPU implement `push_constants`.
-    These push constants are a buffer of bytes available to the `fragment` and `vertex`
-    shaders. They are similar to a bound buffer, but the buffer is set using this
-    function call.
+    This function requires that the underlying GPU implement `immediates`.
+    These immediates are a buffer of bytes available to all shader stages.
 
-    :param render_pass_encoder: The render pass encoder to which we are pushing constants.
-    :param visibility: The stages (vertex, fragment, or both) to which these constants are visible
-    :param offset: The offset into the push constants at which the bytes are to be written
-    :param size_in_bytes: The number of bytes to copy from the ata
+    :param render_pass_encoder: The render pass encoder to which we are providing immediates.
+    :param offset: The offset into the immediate data at which the bytes are to be written
+    :param size_in_bytes: The number of bytes to copy from the data
     :param data: The data to copy to the buffer
     :param data_offset: The starting offset in the data at which to begin copying.
 
@@ -349,6 +322,7 @@ Use like the following before the instance is created, which happens during requ
         print(a.summary)
 
 For additional usage examples look at `extras_dxc.py` and `extras_debug.py` in the examples directory.
+Limited documentation on instance extras can be found in `wgpu.h`.
 
 The js_webgpu backend
 ---------------------

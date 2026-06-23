@@ -437,12 +437,12 @@ def test_features_are_legal():
     # An uncommon extension feature.  Certainly not on a mac.
     assert are_features_wgpu_legal(["pipeline-statistics-query"])
     assert are_features_wgpu_legal(
-        ["push-constants", "vertex-writable-storage", "depth-clip-control"]
+        ["immediates", "vertex-writable-storage", "depth-clip-control"]
     )
     # We can also use underscore
-    assert are_features_wgpu_legal(["push_constants", "vertex_writable_storage"])
+    assert are_features_wgpu_legal(["immediates", "vertex_writable_storage"])
     # We can also use camel case
-    assert are_features_wgpu_legal(["PushConstants", "VertexWritableStorage"])
+    assert are_features_wgpu_legal(["Immediates", "VertexWritableStorage"])
 
 
 def test_features_are_illegal():
@@ -470,11 +470,11 @@ def test_limits_are_legal():
     # A standard feature.  Probably exists
     assert are_limits_wgpu_legal({"max-bind-groups": 8})
     # Two common extension features
-    assert are_limits_wgpu_legal({"max-push-constant-size": 128})
+    assert are_limits_wgpu_legal({"max-immediate-size": 128})
     # We can also use underscore
-    assert are_limits_wgpu_legal({"max_bind_groups": 8, "max_push_constant_size": 128})
+    assert are_limits_wgpu_legal({"max_bind_groups": 8, "max_immediate_size": 128})
     # We can also use camel case
-    assert are_limits_wgpu_legal({"maxBindGroups": 8, "maxPushConstantSize": 128})
+    assert are_limits_wgpu_legal({"maxBindGroups": 8, "maxImmediateSize": 128})
 
 
 def test_limits_are_not_legal():
