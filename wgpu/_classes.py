@@ -1797,6 +1797,8 @@ class GPUBindingCommandsMixin:
 
         Writes ``data_size`` bytes from ``data`` to immediate storage,
         starting at the specified offset. These bytes are visible to all stages.
+
+        Requires the "immediates" feature to be enabled.
         """
         raise NotImplementedError()
 

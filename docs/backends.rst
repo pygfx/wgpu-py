@@ -61,76 +61,6 @@ The wgpu_native backend provides a few extra functionalities:
     :return: Device
     :rtype: wgpu.GPUDevice
 
-The wgpu_native backend provides support for immediates.
-Immediates are not yet part of the WebGPU spec, but the headers for native webgpu have converged officially.
-
-Immediates offer a way to set send a small amount of data to the GPU in the command encoder directly, no need for uniform buffer uploads.
-They are restricted to rather small sizes, usually 128 or 265 bytes.
-
-Given an adapter, first determine if it supports immediates::
-
-    >> "immediates" in adapter.features
-    True
-
-If immediates are supported, determine the maximum number of bytes that can
-be allocated for immediates::
-
-    >> adapter.limits["max-immediate-size"]
-    256
-
-You must tell the adapter to create a device that supports immediates,
-and you must tell it the number of bytes of immediates that you are using.
-Overestimating is okay::
-
-    device = adapter.request_device_sync(
-        required_features=["immediates"],
-        required_limits={"max-immediate-size": 256},
-    )
-
-Creating a immediate data struct in your shader code is similar to the way you would create
-a uniform buffer.
-The same data can be accessed across all shader stages: vertex, fragment and compute::
-
-    struct Immediates {
-        vertex_transform: vec4x4f,
-        fragment_color: vec4f,
-        pick_position: vec2f,
-        frame_counter: u32,
-    }
-    var<immediate> immediate_data: Immediates;
-
-To the pipeline layout for this shader, use
-``wgpu.backends.wpgu_native.create_pipeline_layout`` instead of
-``device.create_pipeline_layout``.  It takes an additional argument,
-``immediate_size`` simply the number of bytes of immediate data you are using.
-
-Finally, you set the value of the immediates by using
-``wgpu.backends.wpgu_native.set_immediates``::
-
-    set_immediates(pass_encoder, offset=0, size_in_bytes=64, data=<64 bytes>, data_offset=0)
-
-.. py:function:: wgpu.backends.wpgu_native.create_pipeline_layout(device, *, label="", bind_group_layouts, immediate_size=0)
-
-   This method provides the same functionality as :func:`wgpu.GPUDevice.create_pipeline_layout`,
-   but provides an extra `immediate_size` argument.
-   When using immediates, this argument is the number of bytes of immediate data you are using.
-
-    :param device: The device on which we are creating the pipeline layout
-    :param label: An optional label
-    :param bind_group_layouts: 
-    :param immediate_size: number of bytes for immediates data.
-
-.. py:function:: wgpu.backends.wgpu_native.set_immediates(render_pass_encoder,offset, size_in_bytes, data, data_offset=0)
-
-    This function requires that the underlying GPU implement `immediates`.
-    These immediates are a buffer of bytes available to all shader stages.
-
-    :param render_pass_encoder: The render pass encoder to which we are providing immediates.
-    :param offset: The offset into the immediate data at which the bytes are to be written
-    :param size_in_bytes: The number of bytes to copy from the data
-    :param data: The data to copy to the buffer
-    :param data_offset: The starting offset in the data at which to begin copying.
-
 
 There are four functions that allow you to perform multiple draw calls at once.
 Two take the number of draws to perform as an argument; two have this value in a buffer.
@@ -293,7 +223,7 @@ given in a different order in the list.
 .. py:function:: wgpu.backends.wgpu_native.set_instance_extras(backends, flags, dx12_compiler, gles3_minor_version, fence_behavior, dxc_path, dxc_max_shader_model, budget_for_device_creation, budget_for_device_loss)
 
     Sets the global instance with extras. Needs to be called before instance is created (in enumerate_adapters or request_adapter).
-    Most of these options are for specific backends, and might not create an instance or crash when used in the wrong combinations. 
+    Most of these options are for specific backends, and might not create an instance or crash when used in the wrong combinations.
 
     :param backends: bitflags as list[str], which backends to enable on the instance level. Defaults to ``["All"]``. Can be any combination of ``["Vulkan", "GL", "Metal", "DX12", "BrowserWebGPU"]`` or the premade combinations ``["All", "Primary", "secondary"]``. Note that your device needs to support these backends, for detailed information see https://docs.rs/wgpu/latest/wgpu/struct.Backends.html
     :param flags: bitflags as list[str], debug flags for the compiler. Defaults to ``["Default"]``, can be any combination of ``["Debug", "Validation", "DiscardHalLabels"]``.
