@@ -222,6 +222,58 @@ def test_default_device_configure_required_features(caplog):
         helper.preconfigure_default_device("test", required_features={"shader-f16"})
 
 
+def test_default_device_configure_preferred_features(caplog):
+
+    # This is normal
+
+    helper = DefaultDeviceHelper()
+    helper.preconfigure_default_device("test", required_features={"float32-filterable"})
+    device = helper.get_default_device()
+    assert device.features == {"float32-filterable"}
+
+    # This does not work; not a standard feature
+
+    helper = DefaultDeviceHelper()
+    with pytest.raises(ValueError):
+        helper.preconfigure_default_device(
+            "test", required_features={"texture-format16bit-norm"}
+        )
+
+    # preferred features to the rescue
+
+    helper = DefaultDeviceHelper()
+    helper.preconfigure_default_device(
+        "test", preferred_features={"texture-format16bit-norm"}
+    )
+    device = helper.get_default_device()
+    assert device.features == {"texture-format16bit-norm"}
+
+    # Another variant
+
+    helper = DefaultDeviceHelper()
+    helper.preconfigure_default_device(
+        "test",
+        preferred_features={
+            "float32-filterable",
+            "texture-format16bit-norm",
+            "not-actuallt-a-feature",
+        },
+    )
+    device = helper.get_default_device()
+    assert device.features == {"float32-filterable", "texture-format16bit-norm"}
+
+    # A pattern for pygfx
+    helper = DefaultDeviceHelper()
+    helper.preconfigure_default_device(
+        "test", preferred_features={"texture-formats-tier1", "texture-format16bit-norm"}
+    )
+    device = helper.get_default_device()
+    # At least one should be active
+    assert device.features & {"texture-formats-tier1", "texture-format16bit-norm"}
+    # Its currently this one, but this will likely change, see https://github.com/gfx-rs/wgpu/issues/8122
+    assert device.features == {"texture-format16bit-norm"}
+
+
 def test_default_device_configure_required_limits(caplog):
     helper = DefaultDeviceHelper()
 
