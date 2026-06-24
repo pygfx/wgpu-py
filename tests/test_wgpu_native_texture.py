@@ -286,13 +286,13 @@ def test_16bit_norm():
     Test creating, writing and making a view wiht a 16bit norm texture formats, if the native only feature is available.
     """
     # can't use the default device because this need an additional feature
-    FEATURE_16_BIT = "texture-format16bit-norm"  # in the future it will be tier1
+    feature_16bit_norm = "texture-format16bit-norm"  # in the future it will be tier1
     adapter = wgpu.gpu.request_adapter_sync()
-    if FEATURE_16_BIT not in adapter.features:
+    if feature_16bit_norm not in adapter.features:
         skip(
-            f"{adapter.summary} does not support {FEATURE_16_BIT}, skipping test for 16bit norm textures"
+            f"{adapter.summary} does not support {feature_16bit_norm}, skipping test for 16bit norm textures"
         )
-    device = adapter.request_device_sync(required_features=[FEATURE_16_BIT])
+    device = adapter.request_device_sync(required_features=[feature_16bit_norm])
 
     shape = (64, 64, 1)  # 1 channel should do it
 
