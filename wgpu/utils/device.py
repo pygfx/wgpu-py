@@ -208,8 +208,7 @@ class DefaultDeviceHelper:
             # Handle preferred features
             kwargs = self._device_kwargs.copy()
             required_features = kwargs.get("required_features", set())
-            extra_features = kwargs.pop("preferred_features", set())
-            extra_features = {f for f in extra_features if f in adapter.features}
+            extra_features = kwargs.pop("preferred_features", set()) & adapter.features
             kwargs["required_features"] = required_features | extra_features
             # Create device
             self._the_device = adapter.request_device_sync(**kwargs)
