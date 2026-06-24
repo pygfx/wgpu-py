@@ -95,7 +95,7 @@ def write_mappings():
         if native_name in hp.enums:
             for key, val in hp.enums[native_name].items():
                 key = key.lower()
-                if key in hp_enum:
+                if key in hp_enum and val != hp_enum.get(key):
                     print(f"Enum field {name}.{key} overridden by wgpu.h")
                     hp_enum[key] = val
         for ikey in idl.enums[name].values():
