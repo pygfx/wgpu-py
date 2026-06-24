@@ -40,4 +40,3 @@
 * Validated 154 C function calls
 * Not using 83 C functions
 * Validated 97 C structs
-## Writing backends/js_webgpu/_api.py
