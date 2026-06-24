@@ -8,22 +8,19 @@ from . import (
     GPUCommandEncoder,
     GPUComputePassEncoder,
     GPURenderPassEncoder,
-    GPUPipelineLayout,
     GPUQuerySet,
 )
 from ._api import (
-    GPUBindGroupLayout,
     enums,
     logger,
     structs,
-    flags,
     new_struct_p,
     to_c_string_view,
     enum_str2int,
 )
 from ...enums import Enum
 from ._helpers import get_wgpu_instance
-from ..._coreutils import get_library_filename, ArrayLike
+from ..._coreutils import get_library_filename
 from ._ffi import lib, ffi
 from ._mappings import native_flags
 
@@ -72,40 +69,6 @@ def request_device(*args, **kwargs):
         "WGPU: wgpu.backends.wgpu_native.request_device() is deprecated, use request_device_sync() instead."
     )
     return request_device_sync(*args, **kwargs)
-
-
-def create_pipeline_layout(
-    device: GPUDevice,
-    *,
-    label: str = "",
-    bind_group_layouts: Sequence[GPUBindGroupLayout],
-    push_constant_layouts: Sequence[dict] = (),
-) -> GPUPipelineLayout:
-    return device._create_pipeline_layout(
-        label, bind_group_layouts, push_constant_layouts
-    )
-
-
-def set_push_constants(
-    render_pass_encoder: GPURenderPassEncoder,
-    visibility: flags.ShaderStageFlags,
-    offset: int,
-    size_in_bytes: int,
-    data: ArrayLike,
-    data_offset: int = 0,
-):
-    """
-    Set push-constant data for subsequent draw calls.
-
-    Writes the first size_in_bytes bytes of data to push-constant storage,
-    starting at the specified offset. These bytes are visible to the pipeline
-    stages indicated by the visibility argument.
-    """
-
-    # Actual implementation is hidden in _api.py
-    render_pass_encoder._set_push_constants(
-        visibility, offset, size_in_bytes, data, data_offset
-    )
 
 
 def multi_draw_indirect(

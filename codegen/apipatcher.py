@@ -624,6 +624,10 @@ class BackendApiPatcher(AbstractApiPatcher):
     def get_class_def(self, classname):
         line, _ = self.classes[classname]
 
+        if line.startswith("class GPUPromise"):
+            # otherwise the else block below strips the typevar.
+            return "class GPUPromise(classes.GPUPromise[AwaitedType]):"
+
         if "):" not in line:
             return line.replace(":", f"(classes.{classname}):")
         else:

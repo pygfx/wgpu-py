@@ -17,6 +17,30 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## [unreleased]
+
+### Changed:
+* update wgpu-native to [29.0.0.0](https://github.com/gfx-rs/wgpu-native/blob/v29.0.0.0/CHANGELOG.md#changed) by @Vipitis in https://github.com/pygfx/wgpu-py/pull/805
+  * updates the `webgpu.h` header to a more recent version
+  * Updated features to be in spec: `shader-primitive-index` -> `primitive-index`
+  * push-constants are now closer to spec and called `immediates`:
+    * required feature `push-constants` -> `immediates`
+    * required limit `max-push-constants-size` -> `max-immediate-size`
+    * `wgpu.backends.wgpu_native.extras.create_pipeline_layout(..., push_constant_layouts)` -> `device.create_pipeline_layout(..., immediate_size)`
+    * `wgpu.backends.wgpu_native.extras.set_push_constants()` -> `encoder.set_immediates()` (and different signature)
+    * in wgsl `var<push_constant>` -> `var<immediate>`
+
+
+
+## [v0.31.1] - 23-06-2026
+
+* Add compute_workgroups example by @mrinalchaturvedi27 in https://github.com/pygfx/wgpu-py/pull/801
+* Fix required positional args by @Vipitis in https://github.com/pygfx/wgpu-py/pull/804
+* fix GPUPromise type annotation by @Vipitis in https://github.com/pygfx/wgpu-py/pull/812
+* Require python 3.11+ by @almarklein in https://github.com/pygfx/wgpu-py/pull/813
+* Make the triangle example simpler by @Vipitis in https://github.com/pygfx/wgpu-py/pull/810
+
+
 ## [v0.31.0] - 02-03-2026
 
 * Update to wgpu-native v27.0.4.0 by @almarklein in https://github.com/pygfx/wgpu-py/pull/787

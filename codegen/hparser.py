@@ -1,39 +1,88 @@
+import os
 from cffi import FFI
+from cffi.cparser import _preprocess as cffi_preprocess
 
 from codegen.utils import print, remove_c_comments
-from codegen.files import read_file
 
+from wgpu._coreutils import get_header_filename
 
 _parser = None
 
 
-def _get_wgpu_header():
+def _get_wgpu_header(*filenames):
     """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py"""
-    # Read files
-    lines1 = []
-    lines1.extend(read_file("resources", "webgpu.h").splitlines())
-    lines1.extend(read_file("resources", "wgpu.h").splitlines())
-    # Deal with pre-processor commands, because cffi cannot handle them.
-    # Just removing them, plus a few extra lines, seems to do the trick.
-    lines2 = []
-    for line in lines1:
-        if line.startswith("#define ") and len(line.split()) > 2 and "0x" in line:
-            line = line.replace("(", "").replace(")", "")
-        elif line.startswith("#"):
-            continue
-        elif 'extern "C"' in line:
-            continue
-        for define_to_drop in [
-            "WGPU_EXPORT ",
-            "WGPU_NULLABLE ",
-            " WGPU_OBJECT_ATTRIBUTE",
-            " WGPU_ENUM_ATTRIBUTE",
-            " WGPU_FUNCTION_ATTRIBUTE",
-            " WGPU_STRUCTURE_ATTRIBUTE",
-        ]:
-            line = line.replace(define_to_drop, "")
-        lines2.append(line)
-    return "\n".join(lines2)
+
+    cleaned_contents = []  # one for each filename
+
+    for filename in filenames:
+        # Read the code
+        with open(filename, "rb") as f:
+            source = f.read().decode().replace("\r\n", "\n").replace("\\\n", "")
+
+        # Use a cffi preprocessor to e.g. remove comments, then remove empty lines.
+        # Yeah, that's a private func from cffi, but this is not runtime code so we can fix it when it changes.
+        lines1 = []
+        cleaned_source, macros = cffi_preprocess(source)
+        lines1 += [f"#define {k} {v}" for k, v in macros.items()]  # restore macros
+        lines1 += [line.strip() for line in cleaned_source.splitlines() if line.strip()]
+
+        # Deal with pre-processor commands, because cffi cannot handle them.
+        # Just removing them, plus a few extra lines, seems to do the trick.
+        lines2 = [f"// Cleaned version of {os.path.basename(filename)} ".ljust(79, "-")]
+        in_ifdef = False
+        for line in lines1:
+            # skip #ifdef blocks, which cffi doesn't support. In both headers they are used for `#ifdef __cplusplus` which we were skipping anyway.
+            if line.startswith("#ifdef "):
+                in_ifdef = True
+                continue
+            if in_ifdef and line.startswith("#endif"):
+                in_ifdef = False
+                continue
+            if in_ifdef:
+                continue
+            if (
+                line.startswith("#define ")
+                and len(line.split()) > 2
+                and ("0x" in line or "_MAX" in line)
+            ):
+                # pattern to find: #define WGPU_CONSTANT (0x1234)
+                # we use ffi.sizeof() to hopefully get the correct max sizes per platform
+                # we don't have ffi in this namespace, so I just put the hardcoded values for now, we could use ctypes.sizeof(ctypes.c_size_t)
+                max_size = hex((1 << (8 * 8)) - 1)  # sizeof(size_t)
+                max_32 = hex((1 << (4 * 8)) - 1)  # sizeof(uint32_t)
+                max_64 = hex((1 << (8 * 8)) - 1)  # sizeof(uint64_t)
+                line = (
+                    line.replace("SIZE_MAX", max_size)
+                    .replace("UINT32_MAX", max_32)
+                    .replace("UINT64_MAX", max_64)
+                )
+                # cffi seems to struggle with these macros, so we can just skip them I hope, the idl spec already contains defaults.
+                if line.startswith("#define") and "_INIT" in line:
+                    continue
+                line = line.replace("(", "").replace(")", "")
+            elif line.startswith("#"):
+                continue
+            for define_to_drop in [
+                "WGPU_EXPORT ",
+                "WGPU_NULLABLE ",
+                " WGPU_OBJECT_ATTRIBUTE",
+                " WGPU_ENUM_ATTRIBUTE",
+                " WGPU_FUNCTION_ATTRIBUTE",
+                " WGPU_STRUCTURE_ATTRIBUTE",
+            ]:
+                line = line.replace(define_to_drop, "")
+            lines2.append(line)
+
+        lines2.append("")
+        cleaned_contents.append("\n".join(lines2))
+
+    # Write the combined source, which is what will be loaded at wgpu import time
+    combined_source = "\n\n".join(cleaned_contents)
+    combined_header_file = get_header_filename("combined_header.h")
+    with open(combined_header_file, "wb") as f:
+        f.write(combined_source.encode())
+
+    return combined_source
 
 
 def get_h_parser(*, allow_cache=True):
@@ -44,7 +93,9 @@ def get_h_parser(*, allow_cache=True):
     if _parser and allow_cache:
         return _parser
 
-    source = _get_wgpu_header()
+    source = _get_wgpu_header(
+        get_header_filename("webgpu.h"), get_header_filename("wgpu.h")
+    )
 
     # Create parser
     hp = HParser(source)
@@ -74,6 +125,7 @@ class HParser:
             stats = ", ".join(f"{len(getattr(self, key))} {key}" for key in keys)
             print("webgpu.h/wgpu.h define " + stats)
 
+    # NOTE: we could use pycparser as it's used by cffi anyway and we have that.
     def _parse_from_h(self):
         code = self.source
 
@@ -91,7 +143,7 @@ class HParser:
             # Decompose "typedef enum XX {...} XX;"
             name1 = code[i1 + 13 : i2].strip()
             name2 = code[i3 + 1 : i4].strip()
-            assert name1 == name2
+            assert name1 == name2, f"mismatch in enum name: {name1} vs {name2}"
             assert name1.startswith("WGPU")
             name = name1[4:]
             self.enums[name] = enum = {}

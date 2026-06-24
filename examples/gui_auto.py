@@ -3,7 +3,7 @@ GUI Auto
 --------
 
 
-Run the triangle example in an automatically selected GUI backend.
+Run the cube example in an automatically selected GUI backend.
 
 The rendercanvas automatically selects one of its available
 GUI backends. E.g. running this in a notebook will use the
@@ -16,14 +16,12 @@ with various GUI's and event loops.
 
 """
 
-# test_example = true
-
 from rendercanvas.auto import RenderCanvas, loop
 
 try:
-    from .triangle import setup_drawing_sync
+    from .cube import setup_drawing_sync
 except ImportError:
-    from triangle import setup_drawing_sync
+    from cube import setup_drawing_sync
 
 canvas = RenderCanvas(title="Cube example on $backend")
 draw_frame = setup_drawing_sync(canvas.get_wgpu_context())

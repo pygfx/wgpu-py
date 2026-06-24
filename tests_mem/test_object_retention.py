@@ -91,7 +91,7 @@ def test_object_retention_in_render(use_render_bundle, capsys):
                 "targets": [{"format": output_texture_format}],
             },
             depth_stencil={"format": depth_texture_format},
-            primitive={"topology": "triangle-strip"},
+            primitive={"topology": "triangle-strip", "strip_index_format": "uint32"},
         )
         del pipeline_layout
 
