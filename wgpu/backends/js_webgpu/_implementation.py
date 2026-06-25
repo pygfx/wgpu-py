@@ -4,7 +4,7 @@ Constructors and Methods defined here are picked over auto generated methods for
 """
 
 from ... import classes, structs, flags, enums
-from ..._coreutils import str_flag_to_int
+from ..._coreutils import str_flag_to_int, ArrayLike
 from ._helpers import simple_js_accessor, to_snake_case
 
 from pyodide.ffi import to_js, run_sync, JsProxy
@@ -321,6 +321,18 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             ) -> None:
 
         self._internal.setBindGroup(index, bind_group._internal, dynamic_offsets_data)
+
+    def set_immediates(self, range_offset: int, data: ArrayLike, data_offset: int = 0, data_size: int | None = None) -> None:
+        if data is not None:
+            data = memoryview(data).cast("B")
+            # data_size = (data.nbytes + 3) & ~3  # align to 4 bytes (maybe not needed...)
+            data_size = data.nbytes
+            js_data = Uint8Array.new(data_size)
+            js_data.assign(data)
+        else:
+            js_data = None
+
+        return self._internal.setImmediates(range_offset, js_data, data_offset, data_size)
 
 
 class GPUPipelineBase(classes.GPUPipelineBase):
