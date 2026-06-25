@@ -323,9 +323,7 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
     """Gets the limits for a device or an adapter"""
     assert device + adapter == 1  # exactly one is set
 
-    # NOTE: this will get even simpler in the near future: https://github.com/gfx-rs/wgpu-native/pull/575 as maxImmediateSize shouldn't exist in both
-
-    # H: chain: WGPUChainedStruct, maxImmediateSize: int, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int
+    # H: chain: WGPUChainedStruct, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int, maxBindingArraySamplerElementsPerShaderStage: int, maxMultiviewViewCount: int
     c_limits_native = new_struct(
         "WGPUNativeLimits",
         # H: next: WGPUChainedStruct *, sType: WGPUSType
@@ -334,9 +332,10 @@ def _get_limits(id: int, device: bool = False, adapter: bool = False):
             # not used: next
             sType=lib.WGPUSType_NativeLimits,
         ),
-        # not used: maxImmediateSize
         # not used: maxNonSamplerBindings
         # not used: maxBindingArrayElementsPerShaderStage
+        # not used: maxBindingArraySamplerElementsPerShaderStage
+        # not used: maxMultiviewViewCount
     )
 
     # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
@@ -1229,7 +1228,6 @@ class GPUAdapter(classes.GPUAdapter):
             # Skip the  pointers
             if snake_key in (
                 "next-in-chain",
-                "max-immediate-size",
                 "max-non-sampler-bindings",
             ):
                 # Skip the chain and the native limits as they are handled in their own
@@ -1241,18 +1239,18 @@ class GPUAdapter(classes.GPUAdapter):
                 value = self._limits[snake_key]
             setattr(c_required_limits, key, value)
 
+        # TODO: handle new native limits, or find a programmatic solution for it
         #  the native only limits are passed in via the next-in-chain struct
-        # H: chain: WGPUChainedStruct, maxImmediateSize: int, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int
+        # H: chain: WGPUChainedStruct, maxNonSamplerBindings: int, maxBindingArrayElementsPerShaderStage: int, maxBindingArraySamplerElementsPerShaderStage: int, maxMultiviewViewCount: int
         c_required_limits_native = new_struct_p(
             "WGPUNativeLimits *",
-            maxImmediateSize=required_limits.get(
-                "max-immediate-size", self._limits["max-immediate-size"]
-            ),
             maxNonSamplerBindings=required_limits.get(
                 "max-non-sampler-bindings", self._limits["max-non-sampler-bindings"]
             ),
             # not used: chain
             # not used: maxBindingArrayElementsPerShaderStage
+            # not used: maxBindingArraySamplerElementsPerShaderStage
+            # not used: maxMultiviewViewCount
         )
         c_required_limits_native.chain.next = ffi.NULL
         c_required_limits_native.chain.sType = lib.WGPUSType_NativeLimits
@@ -1805,29 +1803,14 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         bind_group_layouts_ids = [x._internal for x in bind_group_layouts]
         c_layout_array = new_array("WGPUBindGroupLayout[]", bind_group_layouts_ids)
 
-        c_pipeline_layout_next_in_chain = ffi.NULL
-        if immediate_size:
-            # H: chain: WGPUChainedStruct, immediateDataSize: int
-            c_pipeline_layout_extras = new_struct_p(
-                "WGPUPipelineLayoutExtras *",
-                # not used: chain
-                immediateDataSize=immediate_size,
-            )
-            c_pipeline_layout_extras.chain.sType = lib.WGPUSType_PipelineLayoutExtras
-            # Note that the object returned by ffi.cast() does not own the memory, so we must keep a ref to the uncast object, until wgpu-native has consumed it.
-            c_pipeline_layout_next_in_chain = ffi.cast(
-                "WGPUChainedStruct *", c_pipeline_layout_extras
-            )
-
-        # TODO: there is an immediateSize field in this struct too. so do we even need the extras?
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, bindGroupLayoutCount: int, bindGroupLayouts: WGPUBindGroupLayout *, immediateSize: int
         struct = new_struct_p(
             "WGPUPipelineLayoutDescriptor *",
-            nextInChain=c_pipeline_layout_next_in_chain,
             label=to_c_string_view(label),
             bindGroupLayouts=c_layout_array,
             bindGroupLayoutCount=len(bind_group_layouts),
-            # not used: immediateSize
+            immediateSize=immediate_size,
+            # not used: nextInChain
         )
 
         # H: WGPUPipelineLayout f(WGPUDevice device, WGPUPipelineLayoutDescriptor const * descriptor)
@@ -2990,13 +2973,13 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             raise ValueError("data_size + data_offset is too large")
 
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
-        # H: void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
-        # H: void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
-        # H: void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data)
+        # H: void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder computePassEncoder, uint32_t offset, void const * data, size_t size)
+        # H: void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder renderPassEncoder, uint32_t offset, void const * data, size_t size)
+        # H: void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder renderBundleEncoder, uint32_t offset, void const * data, size_t size)
         function = type(self)._set_immediates_function
         if function is None:
             self._not_implemented("set_immediates")
-        function(self._internal, range_offset, size, c_data + data_offset)
+        function(self._internal, range_offset, c_data + data_offset, size)
 
 
 class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
