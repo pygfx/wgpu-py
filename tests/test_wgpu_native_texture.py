@@ -5,7 +5,7 @@ import wgpu.utils
 import numpy as np
 
 from testutils import run_tests, can_use_wgpu_lib, iters_equal
-from pytest import mark, raises
+from pytest import mark, raises, skip
 
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
@@ -279,6 +279,49 @@ def test_write_texture2():
     data2 = data1.__class__.from_buffer(data2)
 
     assert iters_equal(data0, data2)
+
+
+def test_16bit_norm():
+    """
+    Test creating, writing and making a view wiht a 16bit norm texture formats, if the native only feature is available.
+    """
+    # can't use the default device because this need an additional feature
+    feature_16bit_norm = "texture-format16bit-norm"  # in the future it will be tier1
+    adapter = wgpu.gpu.request_adapter_sync()
+    if feature_16bit_norm not in adapter.features:
+        skip(
+            f"{adapter.summary} does not support {feature_16bit_norm}, skipping test for 16bit norm textures"
+        )
+    device = adapter.request_device_sync(required_features=[feature_16bit_norm])
+
+    shape = (64, 64, 1)  # 1 channel should do it
+
+    data = np.empty(
+        shape=shape, dtype=np.uint16
+    )  # TODO: maybe use actual data or rand ints?
+
+    texture = device.create_texture(
+        label="test 16bit norm texture",
+        size=shape,
+        format=wgpu.enums.TextureFormat.r16unorm,
+        usage=wgpu.flags.TextureUsage.COPY_DST,  # not yet possible: wgpu.TextureUsage.RENDER_ATTACHMENT
+    )
+
+    device.queue.write_texture(
+        destination=wgpu.structs.TexelCopyTextureInfo(
+            texture=texture,
+        ),
+        data=data,
+        data_layout=wgpu.structs.TexelCopyBufferLayout(
+            bytes_per_row=shape[0] * 2,
+            rows_per_image=shape[1],
+        ),
+        size=shape,
+    )
+
+    texture_view = texture.create_view(format=wgpu.enums.TextureFormat.r16unorm)
+    assert texture_view
+    assert "r16unorm" in texture.format
 
 
 if __name__ == "__main__":

@@ -2,8 +2,8 @@
 ## Preparing
 * The webgpu.idl defines 37 classes with 77 functions
 * The webgpu.idl defines 5 flags, 34 enums, 60 structs
-* webgpu.h/wgpu.h define 226 functions
-* webgpu.h/wgpu.h define 7 flags, 68 enums, 114 structs
+* webgpu.h/wgpu.h define 228 functions
+* webgpu.h/wgpu.h define 8 flags, 70 enums, 115 structs
 ## Updating API
 * Wrote 5 flags to flags.py
 * Wrote 34 enums to enums.py
@@ -24,19 +24,12 @@
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 38 classes, 116 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
-* Enum field TextureFormat.r16unorm overridden by wgpu.h
-* Enum field TextureFormat.r16snorm overridden by wgpu.h
-* Enum field TextureFormat.rg16unorm overridden by wgpu.h
-* Enum field TextureFormat.rg16snorm overridden by wgpu.h
-* Enum field TextureFormat.rgba16unorm overridden by wgpu.h
-* Enum field TextureFormat.rgba16snorm overridden by wgpu.h
 * Enum PipelineErrorReason missing in webgpu.h
 * Enum AutoLayoutMode missing in webgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in webgpu.h
-* Enum field QueryType.force32 overridden by wgpu.h
 * Enum CanvasAlphaMode missing in webgpu.h
 * Enum CanvasToneMappingMode missing in webgpu.h
-* Wrote 267 enum mappings and 48 struct-field mappings to wgpu_native/_mappings.py
+* Wrote 267 enum mappings and 49 struct-field mappings to wgpu_native/_mappings.py
 * Validated 154 C function calls
-* Not using 83 C functions
-* Validated 97 C structs
+* Not using 85 C functions
+* Validated 96 C structs

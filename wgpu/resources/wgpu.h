@@ -21,24 +21,24 @@ typedef enum WGPUNativeSType
     WGPUSType_DeviceExtras = 0x00030001,
     /** Identifies @ref WGPUNativeLimits. */
     WGPUSType_NativeLimits = 0x00030002,
-    /** Identifies @ref WGPUPipelineLayoutExtras. */
-    WGPUSType_PipelineLayoutExtras = 0x00030003,
     /** Identifies @ref WGPUShaderSourceGLSL. */
-    WGPUSType_ShaderSourceGLSL = 0x00030004,
+    WGPUSType_ShaderSourceGLSL = 0x00030003,
     /** Identifies @ref WGPUInstanceExtras. */
-    WGPUSType_InstanceExtras = 0x00030006,
+    WGPUSType_InstanceExtras = 0x00030004,
     /** Identifies @ref WGPUBindGroupEntryExtras. */
-    WGPUSType_BindGroupEntryExtras = 0x00030007,
+    WGPUSType_BindGroupEntryExtras = 0x00030005,
     /** Identifies @ref WGPUBindGroupLayoutEntryExtras. */
-    WGPUSType_BindGroupLayoutEntryExtras = 0x00030008,
+    WGPUSType_BindGroupLayoutEntryExtras = 0x00030006,
     /** Identifies @ref WGPUQuerySetDescriptorExtras. */
-    WGPUSType_QuerySetDescriptorExtras = 0x00030009,
+    WGPUSType_QuerySetDescriptorExtras = 0x00030007,
     /** Identifies @ref WGPUSurfaceConfigurationExtras. */
-    WGPUSType_SurfaceConfigurationExtras = 0x0003000A,
+    WGPUSType_SurfaceConfigurationExtras = 0x00030008,
     /** Identifies @ref WGPUSurfaceSourceSwapChainPanel. */
-    WGPUSType_SurfaceSourceSwapChainPanel = 0x0003000B,
+    WGPUSType_SurfaceSourceSwapChainPanel = 0x00030009,
     /** Identifies @ref WGPUPrimitiveStateExtras. */
-    WGPUSType_PrimitiveStateExtras = 0x0003000C,
+    WGPUSType_PrimitiveStateExtras = 0x0003000A,
+    /** Identifies @ref WGPUSamplerDescriptorExtras. */
+    WGPUSType_SamplerDescriptorExtras = 0x0003000B,
     WGPUNativeSType_Force32 = 0x7FFFFFFF
 } WGPUNativeSType;
 
@@ -96,8 +96,8 @@ typedef enum WGPUNativeFeature
      * Enables @ref wgpuRenderPassEncoderSetImmediates,
      * @ref wgpuComputePassEncoderSetImmediates,
      * @ref wgpuRenderBundleEncoderSetImmediates,
-     * non-zero @c immediateDataSize in @ref WGPUPipelineLayoutExtras,
-     * and non-zero @c maxImmediateSize in @ref WGPUNativeLimits.
+     * non-zero @c immediateSize in @ref WGPUPipelineLayout,
+     * and non-zero @c maxImmediateSize in @ref WGPULimits.
      *
      * A block of immediate data can be declared in WGSL with
      * @c var<immediate>:
@@ -261,9 +261,9 @@ typedef enum WGPUNativeFeature
     WGPUNativeFeature_PartiallyBoundBindingArray = 0x0003000A,
     /**
      * Enables normalized 16-bit texture formats:
-     * @ref WGPUNativeTextureFormat_R16Unorm, @ref WGPUNativeTextureFormat_R16Snorm,
-     * @ref WGPUNativeTextureFormat_Rg16Unorm, @ref WGPUNativeTextureFormat_Rg16Snorm,
-     * @ref WGPUNativeTextureFormat_Rgba16Unorm, @ref WGPUNativeTextureFormat_Rgba16Snorm.
+     * @ref WGPUTextureFormat_R16Unorm, @ref WGPUTextureFormat_R16Snorm,
+     * @ref WGPUTextureFormat_RG16Unorm, @ref WGPUTextureFormat_RG16Snorm,
+     * @ref WGPUTextureFormat_RGBA16Unorm, @ref WGPUTextureFormat_RGBA16Snorm.
      *
      * Supported platforms:
      * - Vulkan
@@ -329,15 +329,14 @@ typedef enum WGPUNativeFeature
      */
     WGPUNativeFeature_BufferBindingArray = 0x0003000F,
     /**
-     * Allows shaders to index uniform buffer and storage texture resource
+     * Allows shaders to index storage texture resource
      * arrays with dynamically non-uniform values.
      *
      * This is a native only feature.
      */
-    WGPUNativeFeature_UniformBufferAndStorageTextureArrayNonUniformIndexing = 0x00030010,
-    // TODO: requires wgpu.h api change
-    // WGPUNativeFeature_AddressModeClampToZero = 0x00030011,
-    // WGPUNativeFeature_AddressModeClampToBorder = 0x00030012,
+    WGPUNativeFeature_StorageTextureArrayNonUniformIndexing = 0x00030010,
+    WGPUNativeFeature_AddressModeClampToZero = 0x00030011,
+    WGPUNativeFeature_AddressModeClampToBorder = 0x00030012,
     /**
      * Allows the user to set @ref WGPUPolygonMode_Line in
      * @ref WGPUPrimitiveStateExtras::polygonMode.
@@ -379,24 +378,27 @@ typedef enum WGPUNativeFeature
      * This is a native only feature.
      */
     WGPUNativeFeature_ConservativeRasterization = 0x00030015,
-    // WGPUNativeFeature_ClearTexture = 0x00030016,
     /**
-     * Enables creating shader modules from pre-compiled SPIR-V binary via
-     * @ref wgpuDeviceCreateShaderModuleSpirV.
-     *
-     * Shader code isn't parsed or interpreted in any way. It is the caller's
-     * responsibility to ensure the code is correct.
+     * Enables clear to zero for textures.
      *
      * Supported platforms:
-     * - Vulkan
-     * - DX12
-     * - Metal
-     * - WebGPU
+     * - All
      *
      * This is a native only feature.
      */
-    WGPUNativeFeature_SpirvShaderPassthrough = 0x00030017,
-    // WGPUNativeFeature_Multiview = 0x00030018,
+    WGPUNativeFeature_ClearTexture = 0x00030016,
+    /**
+     * Enables multiview render passes and `builtin(view_index)` in vertex/mesh shaders.
+     * 
+     * Supported platforms:
+     * - Vulkan
+     * - Metal
+     * - DX12
+     * - OpenGL (web only)
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_Multiview = 0x00030018,
     /**
      * Enables using 64-bit types for vertex attributes.
      *
@@ -552,6 +554,203 @@ typedef enum WGPUNativeFeature
      * This is a native only feature.
      */
     WGPUNativeFeature_ShaderInt64 = 0x00030026,
+    /**
+     * Allows shaders to use f32 atomic load, store, add, sub, and exchange.
+     * 
+     * Supported platforms:
+     * - Metal (with MSL 3.0+ and Apple7+/Mac2)
+     * - Vulkan (with [VK_EXT_shader_atomic_float])
+     *  
+     * This is a native only feature.
+    */
+    WGPUNativeFeature_ShaderFloat32Atomic = 0x00030027,
+    /**
+     * Enables image atomic fetch add, and, xor, or, min, and max for R32Uint and R32Sint textures.
+     * 
+     * Supported platforms:
+     * - Vulkan
+     * - DX12
+     * - Metal (with MSL 3.1+)
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_TextureAtomic = 0x00030028,
+    /**
+     * Allows for creation of textures of format
+     * @ref WGPUNativeTextureFormat_P010.
+     *
+     * Supported platforms:
+     * - DX12
+     * - Vulkan
+     *
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_TextureFormatP010 = 0x00030029,
+    // TODO: requires wgpu.h api change
+    // WGPUNativeFeature_ExternalTexture = 0x0003002A,
+    /**
+     * Allows the use of pipeline cache objects
+     * 
+     * Supported platforms:
+     * - Vulkan
+     * 
+     * Unimplemented Platforms:
+     * - DX12
+     * - Metal
+     */
+    WGPUNativeFeature_PipelineCache = 0x0003002B,
+    /**
+     * Allows shaders to use i64 and u64 atomic min and max.
+     *
+     * Supported platforms:
+     * - Vulkan (with VK_KHR_shader_atomic_int64)
+     * - DX12 (with SM 6.6+)
+     * - Metal (with MSL 2.4+)
+     *
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_ShaderInt64AtomicMinMax = 0x0003002C,
+    /**
+     * Allows shaders to use all i64 and u64 atomic operations.
+     *
+     * Supported platforms:
+     * - Vulkan (with VK_KHR_shader_atomic_int64)
+     * - DX12 (with SM 6.6+)
+     *
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_ShaderInt64AtomicAllOps = 0x0003002D,
+    // TODO: requires wgpu.h api change
+    // WGPUNativeFeature_VulkanGoogleDisplayTiming = 0x0003002E,
+    // WGPUNativeFeature_VulkanExternalMemoryWin32 = 0x0003002F,
+    /**
+     * Enables R64Uint image atomic min and max.
+     * 
+     * Supported platforms:
+     * - Vulkan (with VK_EXT_shader_image_atomic_int64)
+     * - DX12 (with SM 6.6+)
+     * - Metal (with MSL 3.1+)
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_TextureInt64Atomic = 0x00030030,
+    // TODO: not implemented yet, see https://github.com/gfx-rs/wgpu/issues/7149
+    // WGPUNativeFeature_UniformBufferBindingArrays = 0x00030031,
+    // TODO: requires wgpu.h api change
+    // WGPUNativeFeature_MeshShader = 0x00030032,
+    // WGPUNativeFeature_RayHitVertexReturn = 0x00030033,
+    // WGPUNativeFeature_MeshShaderMultiview = 0x00030034,
+    // WGPUNativeFeature_ExtendedAccelerationStructureVertexFormats = 0x00030035,
+    // WGPUNativeFeature_PassthroughShaders = 0x00030036,
+    /**
+     * Enables shader barycentric coordinates.
+     * 
+     * Supported platforms:
+     * - Vulkan (with VK_KHR_fragment_shader_barycentric)
+     * - DX12 (with SM 6.1+)
+     * - Metal (with MSL 2.2+)
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_ShaderBarycentrics = 0x00030037,
+    /**
+     * Enables using multiview where not all texture array layers are rendered to in a single render pass/render pipeline. Making
+     * use of this feature also requires enabling `Features::MULTIVIEW`.
+     * 
+     * Supported platforms
+     * - Vulkan
+     * - DX12
+     * 
+     * While metal supports this in theory, the behavior of `view_index` differs from vulkan and dx12 so the feature isn't exposed.
+     */
+    WGPUNativeFeature_SelectiveMultiview = 0x00030038,
+    // TODO: requires wgpu.h api change
+    // WGPUNativeFeature_MeshShaderPoints = 0x00030039,
+    WGPUNativeFeature_MultisampleArray = 0x0003003A,
+    /**
+     * Enables cooperative matrix operations (also known as tensor cores on NVIDIA GPUs
+     * or simdgroup matrix operations on Apple GPUs).
+     * 
+     * Cooperative matrices allow a workgroup to collectively load, store, and perform
+     * matrix multiply-accumulate operations on small tiles of data, enabling
+     * hardware-accelerated matrix math.
+     *
+     * @b EXPERIMENTAL: Features enabled by this may have major bugs and are
+     * expected to be subject to breaking changes.
+     * 
+     * **Current limitations:** The implementation currently only supports 8x8 f32 matrices.
+     * On Vulkan, support is determined by querying `vkGetPhysicalDeviceCooperativeMatrixPropertiesKHR`
+     * for configurations matching 8x8x8 f32. Most Vulkan implementations (NVIDIA, AMD) primarily
+     * support f16 inputs at larger sizes (e.g., 16x16), so Vulkan support may be limited.
+     * 
+     * Supported platforms:
+     * - Metal (with MSL 2.3+ and Apple7+/Mac2+, using simdgroup matrix operations)
+     * - Vulkan (with [VK_KHR_cooperative_matrix](https://registry.khronos.org/vulkan/specs/latest/man/html/VK_KHR_cooperative_matrix.html), if 8x8 f32 is supported)
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_CooperativeMatrix = 0x0003003B,
+    /**
+     * Enables shader per-vertex attributes.
+     * 
+     * Supported platforms:
+     * - Vulkan (with VK_KHR_fragment_shader_barycentric)
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_ShaderPerVertex = 0x0003003C,
+    /**
+     * Enables shader `draw_index` builtin.
+     * 
+     * Supported platforms:
+     * - GLES
+     * - Vulkan
+     * 
+     * Potential platforms:
+     * - DX12
+     * - Metal
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_ShaderDrawIndex = 0x0003003D,
+    /**
+     * Allows the user to create arrays of acceleration structures in shaders:
+     * 
+     * ex.
+     * - `var tlas: binding_array<acceleration_structure, 10>` (WGSL)
+     * 
+     * This capability allows them to exist and to be indexed by dynamically uniform values.
+     * 
+     * Supported platforms:
+     * - DX12
+     * - Vulkan
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_AccelerationStructureBindingArray = 0x0003003E,
+    /**
+     * Enables the `@coherent` memory decoration on storage buffer variables.
+     * 
+     * Backend mapping:
+     * - Vulkan
+     * - DX12
+     * - Metal (3.2+)
+     * - GLES (ES 3.1+ / GL 4.3+)
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_MemoryDecorationCoherent = 0x0003003F,
+    /**
+     * Enables the `@volatile` memory decoration on storage buffer variables.
+     * 
+     * Backend mapping:
+     * - Vulkan
+     * - GLES (ES 3.1+ / GL 4.3+)
+     * 
+     * This is a native only feature.
+     */
+    WGPUNativeFeature_MemoryDecorationVolatile = 0x00030040,
+
     WGPUNativeFeature_Force32 = 0x7FFFFFFF
 } WGPUNativeFeature;
 
@@ -996,18 +1195,6 @@ typedef struct WGPUNativeLimits
     /** This struct chain is used as mutable in some places and immutable in others. */
     WGPUChainedStruct chain;
     /**
-     * Amount of storage available for immediate data, in bytes.
-     *
-     * Defaults to 0. A non-zero value requires
-     * @ref WGPUNativeFeature_Immediates. Expected maximum sizes vary by
-     * backend:
-     * - Vulkan: 128-256 bytes
-     * - DX12: 128 bytes
-     * - Metal: 4096 bytes
-     * - OpenGL: ~256 bytes (emulated with uniforms)
-     */
-    uint32_t maxImmediateSize;
-    /**
      * Maximum number of live non-sampler bindings.
      *
      * Default is 1,000,000. Only meaningful on D3D12.
@@ -1017,25 +1204,31 @@ typedef struct WGPUNativeLimits
      */
     uint32_t maxNonSamplerBindings;
     /**
-     * Maximum number of individual resources within binding arrays per
-     * shader stage.
+     * Maximum number of individual resources within binding arrays that can be accessed
+     * in a single shader stage. Applies to all types of bindings except samplers.
      */
     uint32_t maxBindingArrayElementsPerShaderStage;
+    /**
+     * Maximum number of individual samplers within binding arrays that
+     * can be accessed in a single shader stage.
+     */
+    uint32_t maxBindingArraySamplerElementsPerShaderStage;
+    /**
+     * The maximum number of views that can be used in multiview rendering.
+     */
+    uint32_t maxMultiviewViewCount;
 } WGPUNativeLimits;
 
-typedef struct WGPUPipelineLayoutExtras
-{
-    WGPUChainedStruct chain;
-    /**
-     * The number of bytes of immediate data allocated for use in shaders
-     * attached to this pipeline.
-     *
-     * The @c var<immediate> declarations in the shader must be equal or
-     * smaller than this size. If this value is non-zero,
-     * @ref WGPUNativeFeature_Immediates must be enabled.
-     */
-    uint32_t immediateDataSize;
-} WGPUPipelineLayoutExtras;
+#define WGPU_NATIVE_LIMITS_INIT _wgpu_MAKE_INIT_STRUCT(WGPUNativeLimits, { \
+    /*.chain=*/_wgpu_MAKE_INIT_STRUCT(WGPUChainedStruct, { \
+        /*.next=*/NULL _wgpu_COMMA \
+        /*.sType=*/(WGPUSType)WGPUSType_NativeLimits _wgpu_COMMA \
+    }) _wgpu_COMMA \
+    /*.maxNonSamplerBindings=*/WGPU_LIMIT_U32_UNDEFINED _wgpu_COMMA \
+    /*.maxBindingArrayElementsPerShaderStage=*/WGPU_LIMIT_U32_UNDEFINED _wgpu_COMMA \
+    /*.maxBindingArraySamplerElementsPerShaderStage=*/WGPU_LIMIT_U32_UNDEFINED _wgpu_COMMA \
+    /*.maxMultiviewViewCount=*/WGPU_LIMIT_U32_UNDEFINED _wgpu_COMMA \
+})
 
 /**
  * Identifier for a particular call to @ref wgpuQueueSubmitForIndex.
@@ -1208,38 +1401,6 @@ typedef void (*WGPULogCallback)(WGPULogLevel level, WGPUStringView message, void
 
 typedef enum WGPUNativeTextureFormat
 {
-    // From Features::TEXTURE_FORMAT_16BIT_NORM
-    WGPUNativeTextureFormat_R16Unorm = 0x00030001,
-    /**
-     * Red channel only. 16-bit signed integer per channel.
-     * [-32767, 32767] converted to/from float [-1, 1] in shader.
-     * Requires @ref WGPUNativeFeature_TextureFormat16bitNorm.
-     */
-    WGPUNativeTextureFormat_R16Snorm = 0x00030002,
-    /**
-     * Red and green channels. 16-bit unsigned integer per channel.
-     * [0, 65535] converted to/from float [0, 1] in shader.
-     * Requires @ref WGPUNativeFeature_TextureFormat16bitNorm.
-     */
-    WGPUNativeTextureFormat_Rg16Unorm = 0x00030003,
-    /**
-     * Red and green channels. 16-bit signed integer per channel.
-     * [-32767, 32767] converted to/from float [-1, 1] in shader.
-     * Requires @ref WGPUNativeFeature_TextureFormat16bitNorm.
-     */
-    WGPUNativeTextureFormat_Rg16Snorm = 0x00030004,
-    /**
-     * Red, green, blue, and alpha channels. 16-bit unsigned integer per channel.
-     * [0, 65535] converted to/from float [0, 1] in shader.
-     * Requires @ref WGPUNativeFeature_TextureFormat16bitNorm.
-     */
-    WGPUNativeTextureFormat_Rgba16Unorm = 0x00030005,
-    /**
-     * Red, green, blue, and alpha channels. 16-bit signed integer per channel.
-     * [-32767, 32767] converted to/from float [-1, 1] in shader.
-     * Requires @ref WGPUNativeFeature_TextureFormat16bitNorm.
-     */
-    WGPUNativeTextureFormat_Rgba16Snorm = 0x00030006,
     /**
      * YUV 4:2:0 chroma subsampled format (NV12).
      * Plane 0 contains R8Unorm luminance (Y), Plane 1 contains Rg8Unorm
@@ -1254,6 +1415,64 @@ typedef enum WGPUNativeTextureFormat
      */
     WGPUNativeTextureFormat_P010 = 0x00030008,
 } WGPUNativeTextureFormat;
+
+typedef struct WGPUImageSubresourceRange {
+    WGPUTextureAspect aspect;
+    uint32_t baseMipLevel;
+    uint32_t mipLevelCount;
+    uint32_t baseArrayLayer;
+    uint32_t arrayLayerCount;
+} WGPUImageSubresourceRange WGPU_STRUCTURE_ATTRIBUTE;
+
+/**
+ * Describes how shader bound checks should be performed.
+ */
+typedef WGPUFlags WGPUShaderRuntimeChecks;
+
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_None = 0x0000000000000000;
+/**
+ * Enforce bounds checks in shaders, even if the underlying driver doesn’t support doing so natively.
+ */
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_BoundsChecks = 0x0000000000000001;
+/**
+ * If not set, the caller MUST ensure that all passed shaders do not contain any infinite loops.
+ */
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_ForceLoopBounding = 0x0000000000000002;
+/**
+ * If not set, the caller MUST ensure that in all passed shaders every function operating on a ray
+ * query must obey these rules (functions using wgsl naming).
+ */
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_RayQueryInitializationTracking = 0x0000000000000004;
+/**
+ * If not set, task shaders will not validate that the mesh shader grid they dispatch is within legal limits.
+ */
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_TaskShaderDispatchTracking = 0x0000000000000008;
+/**
+ * If not set, mesh shaders won’t clamp the output primitives’ vertex indices, which can lead to
+ * undefined behavior and arbitrary memory access.
+ */
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_MeshShaderPrimitiveIndicesClamp = 0x0000000000000010;
+
+typedef enum WGPUNativeAddressMode
+{
+    WGPUNativeAddressMode_ClampToBorder = 0x00000004,
+    WGPUNativeAddressMode_Force32 = 0x7FFFFFFF
+} WGPUNativeAddressMode WGPU_ENUM_ATTRIBUTE;
+
+typedef enum WGPUSamplerBorderColor
+{
+    WGPUSamplerBorderColor_Undefined = 0x00000000,
+    WGPUSamplerBorderColor_TransparentBlack = 0x00000001,
+    WGPUSamplerBorderColor_OpaqueBlack = 0x00000002,
+    WGPUSamplerBorderColor_OpaqueWhite = 0x00000003,
+    WGPUSamplerBorderColor_Zero = 0x00000004,
+    WGPUSamplerBorderColor_Force32 = 0x7FFFFFFF
+} WGPUSamplerBorderColor;
+
+typedef struct WGPUSamplerDescriptorExtras {
+    WGPUChainedStruct chain;
+    WGPUSamplerBorderColor samplerBorderColor;
+} WGPUSamplerDescriptorExtras WGPU_STRUCTURE_ATTRIBUTE;
 
 #ifdef __cplusplus
 extern "C"
@@ -1303,10 +1522,6 @@ extern "C"
      */
     void *wgpuTextureGetNativeMetalTexture(WGPUTexture texture);
 
-    void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data);
-    void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data);
-    void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data);
-
     void wgpuRenderPassEncoderMultiDrawIndirect(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count);
     void wgpuRenderPassEncoderMultiDrawIndexedIndirect(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count);
 
@@ -1324,6 +1539,10 @@ extern "C"
     // Returns true if the capture was successfully started, or false if it failed to start or is not supported on the current platform.
     WGPUBool wgpuDeviceStartGraphicsDebuggerCapture(WGPUDevice device);
     void wgpuDeviceStopGraphicsDebuggerCapture(WGPUDevice device);
+
+    void wgpuCommandEncoderClearTexture(WGPUCommandEncoder commandEncoder, WGPUTexture texture, WGPUImageSubresourceRange const * range);
+
+    WGPUShaderModule wgpuDeviceCreateShaderModuleTrusted(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor, WGPUShaderRuntimeChecks runtimeChecks);
 
 #ifdef __cplusplus
 } // extern "C"
