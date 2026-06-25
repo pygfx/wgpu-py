@@ -1,0 +1,90 @@
+<!-- adapted from: https://traineq.org/imgui_bundle_online/projects/min_bundle_pyodide_app/demo_heart.source.txt -->
+<!doctype html>
+<html>
+<head>
+    wgpu-py on the HTML RenderCanvas canvas with Pyodide:<br>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.29.0/full/pyodide.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/pyodide/dev/debug/pyodide.js"></script> -->
+    <style>
+        /* so the demo page can have interactive resizing */
+        #canvas {
+            position: absolute;
+            width: 90%;
+            height: 90%;
+        }
+    </style>
+</head>
+<body>
+<!-- WIP: make it more of a "Playground"? -->
+<select id="example-select">
+    <option value="cube.py">cube.py</option>
+    <option value="compute_noop.py">compute_noop.py</option>
+    <option value="compute_matmul.py">compute_matmul.py</option>
+    <option value="triangle.py">triangle.py</option>
+    <option value="imgui_backend_sea.py">imgui_backend_sea.py</option>
+</select>
+<!-- maybe something like add example (to test spawning more canvases and also closing them?) -->
+<button id="reload-example">load example (NOT IMPLEMENTED)</button>
+<button id="reload-page" style="background-color: orange;"onclick="location.reload();">Reload page</button>
+<button id="reload-pyodide" style="background-color: yellow;">Reload pyodide (TODO)</button>
+<br>
+<!-- TODO: select the dependencies (pyodide doesn't find them automatically) -->
+<label for="install-wgpu">wgpu:</label>
+<input type="text" id="install-wgpu" name="wgpu" value="../dist/wgpu-0.26.0-py3-none-any.whl" size="30">
+<!-- maybe <detaillist> for these two? -->
+<label for="install-numpy">numpy:</label>
+<input type="checkbox" id="install-numpy" name="numpy" checked>
+<label for="install-imgui">imgui-bundle:</label>
+<input type="checkbox" id="install-imgui" name="imgui-bundle">
+<br>
+<canvas id="canvas" width="640" height="480" style="background-color: lightgrey;"></canvas><br>
+pixels got drawn!
+<script type="text/javascript">
+    async function main(){
+
+        // fetch the file locally for easier scripting
+        // --allow-file-access-from-files or local webserver
+        // TODO: replace the actual code here (unless you have the module)
+        let example_select = document.getElementById("example-select");
+        let reload_example_button = document.getElementById("reload-example");
+        
+        // Load Pyodide
+        console.log("Loading pyodide...");
+        let pyodide = await loadPyodide();
+        console.log("Pyodide awaiting");
+        pyodide.setDebug(true);
+        await pyodide.loadPackage("micropip");
+        const micropip = pyodide.pyimport("micropip");
+
+
+        // install wgpu and rendercanvas from local wheels
+        // set WGPU_PY_BUILLD_NOARCH=1
+        // python -m build -nw
+        let wgpu_location = document.getElementById("install-wgpu").value;
+        await micropip.install(wgpu_location);
+        
+        // additional dependencies, alreay existing for pyodide - so we can get them from micropip
+        if (document.getElementById("install-numpy").checked) {
+            // not needed by the triangle.py example but everything else I think
+            await micropip.install('numpy');
+        }
+        if (document.getElementById("install-imgui").checked) {
+            // works with the imgui examples
+            await micropip.install('imgui-bundle');
+        }
+
+        console.log("Pyodide ready");
+        // load this one late so you can change before pyodide is ready!
+        pythonCode = await (await fetch(example_select.value)).text();        
+        pyodide.runPythonAsync(pythonCode);
+        
+        reload_example_button.onclick = async function() {
+            console.log("we will need to implement pyodide as a webworker to interrupt running loops");
+        };
+        
+        // TODO: automatically check imgui when an imgui item is selected?
+    }
+    main();
+</script>
+</body>
+</html>

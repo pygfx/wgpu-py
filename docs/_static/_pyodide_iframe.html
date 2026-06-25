@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<!-- adapted from rendercanvas -->
+<head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Rendercanvas example.py in Pyodide</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
+</head>
+
+<body>
+    <dialog id="loading" style='outline: none; border: none; background: transparent;'>
+        <h1>Loading...</h1>
+    </dialog>
+    <canvas id='canvas' style='width:calc(100% - 20px); height: 450px; background-color: #ddd;'></canvas>
+    <script type="text/javascript">
+        async function main() {
+            let loading = document.getElementById('loading');
+            loading.showModal();
+            // TODO: end a "try in browser" button so this doesn't autoload.
+            // similar to numpy docs (using jupyter lite)
+            try {
+                let example_name = document.location.hash.slice(1);
+                pythonCode = await (await fetch(example_name)).text();
+                let pyodide = await loadPyodide();
+                await pyodide.loadPackage("micropip");
+                const micropip = pyodide.pyimport("micropip");
+                // we don't always need all of these... but to avoid more templating, let's have them all for now...
+                await micropip.install('sniffio');
+                await micropip.install('rendercanvas==2.4.2');
+                await pyodide.loadPackagesFromImports(pythonCode); // load all the packages that an example imports... but not from pypi?
+                // The below loads wgpu from pypi. But we will replace it with the name of the wheel, Maybe it's better to use constraints and a static url: https://micropip.pyodide.org/en/stable/project/usage.html#constraining-indirect-dependencies
+                // so that it's loaded from the docs (in _static).
+                await micropip.install("wgpu");
+                // Run the Python code async because some calls are async it seems.
+                pyodide.runPythonAsync(pythonCode);
+                loading.close();
+                // TODO: redirect stdout for compute examples
+            } catch (err) {
+                loading.innerHTML = "Failed to load: " + err;
+            }
+        }
+        main();
+    </script>
+</body>
+
+</html>

@@ -1,4 +1,6 @@
 """
+Triangle
+--------
 Example use of the wgpu API to draw a triangle.
 
 The triangle is a classic example representing the simplest possible

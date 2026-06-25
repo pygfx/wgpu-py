@@ -1,4 +1,7 @@
 """
+Extras DXC
+----------
+
 Simple example to show how the wgpu-native extras can be used to use dxc compiler for DX12.
 Since this will only work on Windows it's not meant for the test suite.
 You can run the download script using `python tools/download_dxc.py` to download the latest Dxc release from GitHub. And extract it to the resource directory.

@@ -1,4 +1,6 @@
 """
+Cube
+----
 Example that renders a textured rotating cube.
 
 This example is a bit more interesting (and larger) than the triangle,
@@ -54,11 +56,8 @@ async def setup_drawing_async(context, limits=None):
 
     Returns the draw function.
     """
-    adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
-
-    device = await adapter.request_device_async(
-        label="Cube Example async device", required_limits=limits
-    )
+    wgpu.utils.preconfigure_default_device("cube example", preferred_features={wgpu.FeatureName.texture_formats_tier1,"texture-format16bit-norm"})
+    device = wgpu.utils.device.get_default_device()
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(context, device, pipeline_layout)
@@ -163,7 +162,7 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
         size=texture_size,
         usage=wgpu.TextureUsage.COPY_DST | wgpu.TextureUsage.TEXTURE_BINDING,
         dimension="2d",
-        format="r8unorm",
+        format="r16unorm",
         mip_level_count=1,
         sample_count=1,
         label="Cube Example texture",
@@ -216,7 +215,9 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
         wgpu.BindGroupLayoutEntry(
             binding=1,
             visibility=wgpu.ShaderStage.FRAGMENT,
-            texture={},
+            texture=wgpu.TextureBindingLayout(
+                sample_type=wgpu.TextureSampleType.unfilterable_float
+            ),
         )
     )
 
@@ -228,7 +229,9 @@ def create_pipeline_layout(device: wgpu.GPUDevice):
     )
     bind_group_layout_entries.append(
         wgpu.BindGroupLayoutEntry(
-            binding=2, visibility=wgpu.ShaderStage.FRAGMENT, sampler={}
+            binding=2, visibility=wgpu.ShaderStage.FRAGMENT, sampler=wgpu.SamplerBindingLayout(
+                type=wgpu.SamplerBindingType.non_filtering
+            )
         )
     )
 
@@ -459,8 +462,8 @@ texture_data = np.array(
         [150, 200, 50, 100],
         [200, 50, 100, 150],
     ],
-    dtype=np.uint8,
-)
+    dtype=np.uint16,
+)*256
 texture_data = np.repeat(texture_data, 64, 0)
 texture_data = np.repeat(texture_data, 64, 1)
 texture_size = texture_data.shape[1], texture_data.shape[0], 1
@@ -472,7 +475,6 @@ uniform_data = np.zeros((), dtype=uniform_dtype)
 print("Available adapters on this system:")
 for a in wgpu.gpu.enumerate_adapters_sync():
     print(a.summary)
-
 
 if __name__ == "__main__":
     canvas = RenderCanvas(
