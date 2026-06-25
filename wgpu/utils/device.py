@@ -76,10 +76,11 @@ class DefaultDeviceHelper:
                 (feature_level, power_preference, force_fallback_adapter, canvas).
             label (str): A human-readable label for the device.
             preferred_features (list or str): the features (extensions) that you want but do not strictly need.
-                Check ``device.features`` for its success. Native features are allowed too.
+                Check ``device.features`` for its success. Backend-specific / native features are allowed too.
+                Preferred features can also be discarded by prefixing them with '!'.
             required_features (list of str): the features (extensions) that you need.
-                Features can also be discarded by prefixing them with '!'. This is not recommended
-                unless for testing and very specific use-cases.
+                Required features can also be discarded by prefixing them with '!'. This is not recommended
+                except for testing and very specific use-cases. Only official features (from ``wgpu.FeatureName``) are allowed.
             required_limits (dict): the various limits that you want to apply.
                 Limits can also be discarded by setting their value to None.
         """
@@ -133,8 +134,11 @@ class DefaultDeviceHelper:
                 for value in values:
                     value = value.lstrip("!")
                     if value not in arg_values:
+                        tip = ""
+                        if arg_name == "required_features":
+                            tip = f" If {value!r} is a native feature, use it in preferred_features instead."
                         raise ValueError(
-                            f"preconfigure_default_device ({caller_info}): {what} must be a one of {set(arg_values)}, but got {value!r}."
+                            f"preconfigure_default_device ({caller_info}): {what} must be a one of {arg_values}, but got {value!r}.{tip}"
                         )
             if isinstance(arg_value, set):
                 cur_value = arg_dict.setdefault(arg_name, set())

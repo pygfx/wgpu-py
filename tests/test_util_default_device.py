@@ -248,6 +248,18 @@ def test_default_device_configure_preferred_features(caplog):
     device = helper.get_default_device()
     assert device.features == {"texture-format16bit-norm"}
 
+    # Dropping also works
+
+    helper = DefaultDeviceHelper()
+    helper.preconfigure_default_device(
+        "test", preferred_features={"texture-format16bit-norm"}
+    )
+    helper.preconfigure_default_device(
+        "test", preferred_features={"!texture-format16bit-norm"}
+    )
+    device = helper.get_default_device()
+    assert device.features == set()
+
     # Another variant
 
     helper = DefaultDeviceHelper()
