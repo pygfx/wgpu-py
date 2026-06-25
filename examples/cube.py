@@ -56,11 +56,8 @@ async def setup_drawing_async(context, limits=None):
 
     Returns the draw function.
     """
-    adapter = await wgpu.gpu.request_adapter_async(power_preference="high-performance")
-
-    device = await adapter.request_device_async(
-        label="Cube Example async device", required_limits=limits, required_features=[wgpu.FeatureName.texture_formats_tier1]
-    )
+    wgpu.utils.preconfigure_default_device("cube example", preferred_features={wgpu.FeatureName.texture_formats_tier1,"texture-format16bit-norm"})
+    device = wgpu.utils.device.get_default_device()
 
     pipeline_layout, uniform_buffer, bind_group = create_pipeline_layout(device)
     pipeline_kwargs = get_render_pipeline_kwargs(context, device, pipeline_layout)
