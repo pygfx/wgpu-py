@@ -75,10 +75,10 @@ class DefaultDeviceHelper:
                 Setting the adapter overrules all other adapter settings
                 (feature_level, power_preference, force_fallback_adapter, canvas).
             label (str): A human-readable label for the device.
-            preferred_features (list or str): the features (extensions) that you want but do not strictly need.
+            preferred_features (set of str): the features (extensions) that you want but do not strictly need.
                 Check ``device.features`` for its success. Backend-specific / native features are allowed too.
                 Preferred features can also be discarded by prefixing them with '!'.
-            required_features (list of str): the features (extensions) that you need.
+            required_features (set of str): the features (extensions) that you need.
                 Required features can also be discarded by prefixing them with '!'. This is not recommended
                 except for testing and very specific use-cases. Only official features (from ``wgpu.FeatureName``) are allowed.
             required_limits (dict): the various limits that you want to apply.
