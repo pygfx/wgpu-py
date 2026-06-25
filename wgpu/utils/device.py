@@ -44,6 +44,7 @@ class DefaultDeviceHelper:
         adapter: GPUAdapter | None = None,
         # Device arguments
         label: str | None = None,
+        preferred_features: set[str] | None = None,
         required_features: set[enums.FeatureNameEnum] | None = None,
         required_limits: dict[str, int | None] | None = None,
         # default_queue: structs.QueueDescriptorStruct | None = None,
@@ -58,7 +59,7 @@ class DefaultDeviceHelper:
         use wgpu can each require the features they need. For required features
         the union of set features is used. For required limits the minimum of
         each set limit is used. For the other arguments, the last set value is
-        used, and a warning is logged when a value is overriden.
+        used, and a warning is logged when a value is overridden.
 
         Arguments:
             caller_info (str): A very brief description of the code that calls
@@ -74,9 +75,12 @@ class DefaultDeviceHelper:
                 Setting the adapter overrules all other adapter settings
                 (feature_level, power_preference, force_fallback_adapter, canvas).
             label (str): A human-readable label for the device.
-            required_features (list of str): the features (extensions) that you need.
-                Features can also be discarded by prefixing them with '!'. This is not recommended
-                unless for testing and very specific use-cases.
+            preferred_features (set of str): the features (extensions) that you want but do not strictly need.
+                Check ``device.features`` for its success. Backend-specific / native features are allowed too.
+                Preferred features can also be discarded by prefixing them with '!'.
+            required_features (set of str): the features (extensions) that you need.
+                Required features can also be discarded by prefixing them with '!'. This is not recommended
+                except for testing and very specific use-cases. Only official features (from ``wgpu.FeatureName``) are allowed.
             required_limits (dict): the various limits that you want to apply.
                 Limits can also be discarded by setting their value to None.
         """
@@ -98,6 +102,8 @@ class DefaultDeviceHelper:
 
         if isinstance(required_features, (tuple, list)):
             required_features = set(required_features)
+        if isinstance(preferred_features, (tuple, list)):
+            preferred_features = set(preferred_features)
 
         ak, dk = self._adapter_kwargs, self._device_kwargs
 
@@ -108,6 +114,7 @@ class DefaultDeviceHelper:
             (ak, "canvas", canvas, None, None),
             (ak, "adapter", adapter, GPUAdapter, None),
             (dk, "label", label, str, None),
+            (dk, "preferred_features", preferred_features, set, None),
             (dk, "required_features", required_features, set, enums.FeatureName),
             (dk, "required_limits", required_limits, dict, None),
         ]:
@@ -127,8 +134,11 @@ class DefaultDeviceHelper:
                 for value in values:
                     value = value.lstrip("!")
                     if value not in arg_values:
+                        tip = ""
+                        if arg_name == "required_features":
+                            tip = f" If {value!r} is a native feature, use it in preferred_features instead."
                         raise ValueError(
-                            f"preconfigure_default_device ({caller_info}): {what} must be a one of {set(arg_values)}, but got {value!r}."
+                            f"preconfigure_default_device ({caller_info}): {what} must be a one of {arg_values}, but got {value!r}.{tip}"
                         )
             if isinstance(arg_value, set):
                 cur_value = arg_dict.setdefault(arg_name, set())
@@ -195,12 +205,20 @@ class DefaultDeviceHelper:
         The default device can be configured at import-time using ``preconfigure_default_device()``.
         """
         if self._the_device is None:
+            # Get adapter
             adapter: GPUAdapter = self._adapter_kwargs.pop("adapter", None)
             if adapter is None:
                 adapter = wgpu.gpu.request_adapter_sync(**self._adapter_kwargs)
-            self._the_device = adapter.request_device_sync(**self._device_kwargs)
+            # Handle preferred features
+            kwargs = self._device_kwargs.copy()
+            required_features = kwargs.get("required_features", set())
+            extra_features = kwargs.pop("preferred_features", set()) & adapter.features
+            kwargs["required_features"] = required_features | extra_features
+            # Create device
+            self._the_device = adapter.request_device_sync(**kwargs)
             self._adapter_kwargs.clear()
             self._device_kwargs.clear()
+
         return self._the_device
 
 

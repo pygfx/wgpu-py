@@ -120,7 +120,7 @@ This code is distributed under the 2-clause BSD license.
 * Install devtools using `pip install -e .[dev]`.
 * Using `pip install -e .` will also download the upstream wgpu-native
   binaries.
-  * You can use `python tools/download_wgpu_native.py` when needed.
+  * You can use `python tools/download_wgpu_native.py` when needed. And run `python codegen` once to obtain the combined headerfile.
   * Or point the `WGPU_LIB_PATH` environment variable to a custom build of `wgpu-native`.
 * Use `ruff format` to apply autoformatting.
 * Use `ruff check` to check for linting errors.

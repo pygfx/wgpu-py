@@ -695,6 +695,7 @@ WGPUWGSLLanguageFeatureName_SubgroupId = 0x00000006,
 WGPUWGSLLanguageFeatureName_TextureAndSamplerLet = 0x00000007,
 WGPUWGSLLanguageFeatureName_SubgroupUniformity = 0x00000008,
 WGPUWGSLLanguageFeatureName_TextureFormatsTier1 = 0x00000009,
+WGPUWGSLLanguageFeatureName_LinearIndexing = 0x0000000A,
 WGPUWGSLLanguageFeatureName_Force32 = 0x7FFFFFFF
 } WGPUWGSLLanguageFeatureName;
 typedef WGPUFlags WGPUBufferUsage;
@@ -1414,6 +1415,7 @@ typedef void (*WGPUProcComputePassEncoderInsertDebugMarker)(WGPUComputePassEncod
 typedef void (*WGPUProcComputePassEncoderPopDebugGroup)(WGPUComputePassEncoder computePassEncoder);
 typedef void (*WGPUProcComputePassEncoderPushDebugGroup)(WGPUComputePassEncoder computePassEncoder, WGPUStringView groupLabel);
 typedef void (*WGPUProcComputePassEncoderSetBindGroup)(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets);
+typedef void (*WGPUProcComputePassEncoderSetImmediates)(WGPUComputePassEncoder computePassEncoder, uint32_t offset, void const * data, size_t size);
 typedef void (*WGPUProcComputePassEncoderSetLabel)(WGPUComputePassEncoder computePassEncoder, WGPUStringView label);
 typedef void (*WGPUProcComputePassEncoderSetPipeline)(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline);
 typedef void (*WGPUProcComputePassEncoderAddRef)(WGPUComputePassEncoder computePassEncoder);
@@ -1487,6 +1489,7 @@ typedef void (*WGPUProcRenderBundleEncoderInsertDebugMarker)(WGPURenderBundleEnc
 typedef void (*WGPUProcRenderBundleEncoderPopDebugGroup)(WGPURenderBundleEncoder renderBundleEncoder);
 typedef void (*WGPUProcRenderBundleEncoderPushDebugGroup)(WGPURenderBundleEncoder renderBundleEncoder, WGPUStringView groupLabel);
 typedef void (*WGPUProcRenderBundleEncoderSetBindGroup)(WGPURenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets);
+typedef void (*WGPUProcRenderBundleEncoderSetImmediates)(WGPURenderBundleEncoder renderBundleEncoder, uint32_t offset, void const * data, size_t size);
 typedef void (*WGPUProcRenderBundleEncoderSetIndexBuffer)(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size);
 typedef void (*WGPUProcRenderBundleEncoderSetLabel)(WGPURenderBundleEncoder renderBundleEncoder, WGPUStringView label);
 typedef void (*WGPUProcRenderBundleEncoderSetPipeline)(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderPipeline pipeline);
@@ -1506,6 +1509,7 @@ typedef void (*WGPUProcRenderPassEncoderPopDebugGroup)(WGPURenderPassEncoder ren
 typedef void (*WGPUProcRenderPassEncoderPushDebugGroup)(WGPURenderPassEncoder renderPassEncoder, WGPUStringView groupLabel);
 typedef void (*WGPUProcRenderPassEncoderSetBindGroup)(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets);
 typedef void (*WGPUProcRenderPassEncoderSetBlendConstant)(WGPURenderPassEncoder renderPassEncoder, WGPUColor const * color);
+typedef void (*WGPUProcRenderPassEncoderSetImmediates)(WGPURenderPassEncoder renderPassEncoder, uint32_t offset, void const * data, size_t size);
 typedef void (*WGPUProcRenderPassEncoderSetIndexBuffer)(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size);
 typedef void (*WGPUProcRenderPassEncoderSetLabel)(WGPURenderPassEncoder renderPassEncoder, WGPUStringView label);
 typedef void (*WGPUProcRenderPassEncoderSetPipeline)(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline);
@@ -1613,6 +1617,7 @@ void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassE
 void wgpuComputePassEncoderPopDebugGroup(WGPUComputePassEncoder computePassEncoder);
 void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, WGPUStringView groupLabel);
 void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets);
+void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder computePassEncoder, uint32_t offset, void const * data, size_t size);
 void wgpuComputePassEncoderSetLabel(WGPUComputePassEncoder computePassEncoder, WGPUStringView label);
 void wgpuComputePassEncoderSetPipeline(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline);
 void wgpuComputePassEncoderAddRef(WGPUComputePassEncoder computePassEncoder);
@@ -1686,6 +1691,7 @@ void wgpuRenderBundleEncoderInsertDebugMarker(WGPURenderBundleEncoder renderBund
 void wgpuRenderBundleEncoderPopDebugGroup(WGPURenderBundleEncoder renderBundleEncoder);
 void wgpuRenderBundleEncoderPushDebugGroup(WGPURenderBundleEncoder renderBundleEncoder, WGPUStringView groupLabel);
 void wgpuRenderBundleEncoderSetBindGroup(WGPURenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets);
+void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder renderBundleEncoder, uint32_t offset, void const * data, size_t size);
 void wgpuRenderBundleEncoderSetIndexBuffer(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size);
 void wgpuRenderBundleEncoderSetLabel(WGPURenderBundleEncoder renderBundleEncoder, WGPUStringView label);
 void wgpuRenderBundleEncoderSetPipeline(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderPipeline pipeline);
@@ -1705,6 +1711,7 @@ void wgpuRenderPassEncoderPopDebugGroup(WGPURenderPassEncoder renderPassEncoder)
 void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, WGPUStringView groupLabel);
 void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets);
 void wgpuRenderPassEncoderSetBlendConstant(WGPURenderPassEncoder renderPassEncoder, WGPUColor const * color);
+void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder renderPassEncoder, uint32_t offset, void const * data, size_t size);
 void wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size);
 void wgpuRenderPassEncoderSetLabel(WGPURenderPassEncoder renderPassEncoder, WGPUStringView label);
 void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline);
@@ -1761,15 +1768,15 @@ typedef enum WGPUNativeSType
 {
 WGPUSType_DeviceExtras = 0x00030001,
 WGPUSType_NativeLimits = 0x00030002,
-WGPUSType_PipelineLayoutExtras = 0x00030003,
-WGPUSType_ShaderSourceGLSL = 0x00030004,
-WGPUSType_InstanceExtras = 0x00030006,
-WGPUSType_BindGroupEntryExtras = 0x00030007,
-WGPUSType_BindGroupLayoutEntryExtras = 0x00030008,
-WGPUSType_QuerySetDescriptorExtras = 0x00030009,
-WGPUSType_SurfaceConfigurationExtras = 0x0003000A,
-WGPUSType_SurfaceSourceSwapChainPanel = 0x0003000B,
-WGPUSType_PrimitiveStateExtras = 0x0003000C,
+WGPUSType_ShaderSourceGLSL = 0x00030003,
+WGPUSType_InstanceExtras = 0x00030004,
+WGPUSType_BindGroupEntryExtras = 0x00030005,
+WGPUSType_BindGroupLayoutEntryExtras = 0x00030006,
+WGPUSType_QuerySetDescriptorExtras = 0x00030007,
+WGPUSType_SurfaceConfigurationExtras = 0x00030008,
+WGPUSType_SurfaceSourceSwapChainPanel = 0x00030009,
+WGPUSType_PrimitiveStateExtras = 0x0003000A,
+WGPUSType_SamplerDescriptorExtras = 0x0003000B,
 WGPUNativeSType_Force32 = 0x7FFFFFFF
 } WGPUNativeSType;
 typedef enum WGPUNativeSurfaceGetCurrentTextureStatus
@@ -1792,11 +1799,14 @@ WGPUNativeFeature_TextureFormat16bitNorm = 0x0003000B,
 WGPUNativeFeature_TextureCompressionAstcHdr = 0x0003000C,
 WGPUNativeFeature_MappablePrimaryBuffers = 0x0003000E,
 WGPUNativeFeature_BufferBindingArray = 0x0003000F,
-WGPUNativeFeature_UniformBufferAndStorageTextureArrayNonUniformIndexing = 0x00030010,
+WGPUNativeFeature_StorageTextureArrayNonUniformIndexing = 0x00030010,
+WGPUNativeFeature_AddressModeClampToZero = 0x00030011,
+WGPUNativeFeature_AddressModeClampToBorder = 0x00030012,
 WGPUNativeFeature_PolygonModeLine = 0x00030013,
 WGPUNativeFeature_PolygonModePoint = 0x00030014,
 WGPUNativeFeature_ConservativeRasterization = 0x00030015,
-WGPUNativeFeature_SpirvShaderPassthrough = 0x00030017,
+WGPUNativeFeature_ClearTexture = 0x00030016,
+WGPUNativeFeature_Multiview = 0x00030018,
 WGPUNativeFeature_VertexAttribute64bit = 0x00030019,
 WGPUNativeFeature_TextureFormatNv12 = 0x0003001A,
 WGPUNativeFeature_RayQuery = 0x0003001C,
@@ -1809,6 +1819,22 @@ WGPUNativeFeature_SubgroupBarrier = 0x00030023,
 WGPUNativeFeature_TimestampQueryInsideEncoders = 0x00030024,
 WGPUNativeFeature_TimestampQueryInsidePasses = 0x00030025,
 WGPUNativeFeature_ShaderInt64 = 0x00030026,
+WGPUNativeFeature_ShaderFloat32Atomic = 0x00030027,
+WGPUNativeFeature_TextureAtomic = 0x00030028,
+WGPUNativeFeature_TextureFormatP010 = 0x00030029,
+WGPUNativeFeature_PipelineCache = 0x0003002B,
+WGPUNativeFeature_ShaderInt64AtomicMinMax = 0x0003002C,
+WGPUNativeFeature_ShaderInt64AtomicAllOps = 0x0003002D,
+WGPUNativeFeature_TextureInt64Atomic = 0x00030030,
+WGPUNativeFeature_ShaderBarycentrics = 0x00030037,
+WGPUNativeFeature_SelectiveMultiview = 0x00030038,
+WGPUNativeFeature_MultisampleArray = 0x0003003A,
+WGPUNativeFeature_CooperativeMatrix = 0x0003003B,
+WGPUNativeFeature_ShaderPerVertex = 0x0003003C,
+WGPUNativeFeature_ShaderDrawIndex = 0x0003003D,
+WGPUNativeFeature_AccelerationStructureBindingArray = 0x0003003E,
+WGPUNativeFeature_MemoryDecorationCoherent = 0x0003003F,
+WGPUNativeFeature_MemoryDecorationVolatile = 0x00030040,
 WGPUNativeFeature_Force32 = 0x7FFFFFFF
 } WGPUNativeFeature;
 typedef enum WGPULogLevel
@@ -1954,15 +1980,11 @@ WGPUStringView tracePath;
 typedef struct WGPUNativeLimits
 {
 WGPUChainedStruct chain;
-uint32_t maxImmediateSize;
 uint32_t maxNonSamplerBindings;
 uint32_t maxBindingArrayElementsPerShaderStage;
+uint32_t maxBindingArraySamplerElementsPerShaderStage;
+uint32_t maxMultiviewViewCount;
 } WGPUNativeLimits;
-typedef struct WGPUPipelineLayoutExtras
-{
-WGPUChainedStruct chain;
-uint32_t immediateDataSize;
-} WGPUPipelineLayoutExtras;
 typedef uint64_t WGPUSubmissionIndex;
 typedef struct WGPUShaderDefine
 {
@@ -2066,15 +2088,41 @@ WGPUBool conservative;
 typedef void (*WGPULogCallback)(WGPULogLevel level, WGPUStringView message, void *userdata);
 typedef enum WGPUNativeTextureFormat
 {
-WGPUNativeTextureFormat_R16Unorm = 0x00030001,
-WGPUNativeTextureFormat_R16Snorm = 0x00030002,
-WGPUNativeTextureFormat_Rg16Unorm = 0x00030003,
-WGPUNativeTextureFormat_Rg16Snorm = 0x00030004,
-WGPUNativeTextureFormat_Rgba16Unorm = 0x00030005,
-WGPUNativeTextureFormat_Rgba16Snorm = 0x00030006,
 WGPUNativeTextureFormat_NV12 = 0x00030007,
 WGPUNativeTextureFormat_P010 = 0x00030008,
 } WGPUNativeTextureFormat;
+typedef struct WGPUImageSubresourceRange {
+WGPUTextureAspect aspect;
+uint32_t baseMipLevel;
+uint32_t mipLevelCount;
+uint32_t baseArrayLayer;
+uint32_t arrayLayerCount;
+} WGPUImageSubresourceRange;
+typedef WGPUFlags WGPUShaderRuntimeChecks;
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_None = 0x0000000000000000;
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_BoundsChecks = 0x0000000000000001;
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_ForceLoopBounding = 0x0000000000000002;
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_RayQueryInitializationTracking = 0x0000000000000004;
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_TaskShaderDispatchTracking = 0x0000000000000008;
+static const WGPUShaderRuntimeChecks WGPUShaderRuntimeChecks_MeshShaderPrimitiveIndicesClamp = 0x0000000000000010;
+typedef enum WGPUNativeAddressMode
+{
+WGPUNativeAddressMode_ClampToBorder = 0x00000004,
+WGPUNativeAddressMode_Force32 = 0x7FFFFFFF
+} WGPUNativeAddressMode;
+typedef enum WGPUSamplerBorderColor
+{
+WGPUSamplerBorderColor_Undefined = 0x00000000,
+WGPUSamplerBorderColor_TransparentBlack = 0x00000001,
+WGPUSamplerBorderColor_OpaqueBlack = 0x00000002,
+WGPUSamplerBorderColor_OpaqueWhite = 0x00000003,
+WGPUSamplerBorderColor_Zero = 0x00000004,
+WGPUSamplerBorderColor_Force32 = 0x7FFFFFFF
+} WGPUSamplerBorderColor;
+typedef struct WGPUSamplerDescriptorExtras {
+WGPUChainedStruct chain;
+WGPUSamplerBorderColor samplerBorderColor;
+} WGPUSamplerDescriptorExtras;
 void wgpuGenerateReport(WGPUInstance instance, WGPUGlobalReport *report);
 size_t wgpuInstanceEnumerateAdapters(WGPUInstance instance, WGPUInstanceEnumerateAdapterOptions const *options, WGPUAdapter *adapters);
 WGPUSubmissionIndex wgpuQueueSubmitForIndex(WGPUQueue queue, size_t commandCount, WGPUCommandBuffer const *commands);
@@ -2087,9 +2135,6 @@ uint32_t wgpuGetVersion(void);
 void *wgpuDeviceGetNativeMetalDevice(WGPUDevice device);
 void *wgpuQueueGetNativeMetalCommandQueue(WGPUQueue queue);
 void *wgpuTextureGetNativeMetalTexture(WGPUTexture texture);
-void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data);
-void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data);
-void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder encoder, uint32_t offset, uint32_t sizeBytes, void const *data);
 void wgpuRenderPassEncoderMultiDrawIndirect(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count);
 void wgpuRenderPassEncoderMultiDrawIndexedIndirect(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, uint32_t count);
 void wgpuRenderPassEncoderMultiDrawIndirectCount(WGPURenderPassEncoder encoder, WGPUBuffer buffer, uint64_t offset, WGPUBuffer count_buffer, uint64_t count_buffer_offset, uint32_t max_count);
@@ -2102,3 +2147,5 @@ void wgpuComputePassEncoderWriteTimestamp(WGPUComputePassEncoder computePassEnco
 void wgpuRenderPassEncoderWriteTimestamp(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex);
 WGPUBool wgpuDeviceStartGraphicsDebuggerCapture(WGPUDevice device);
 void wgpuDeviceStopGraphicsDebuggerCapture(WGPUDevice device);
+void wgpuCommandEncoderClearTexture(WGPUCommandEncoder commandEncoder, WGPUTexture texture, WGPUImageSubresourceRange const * range);
+WGPUShaderModule wgpuDeviceCreateShaderModuleTrusted(WGPUDevice device, WGPUShaderModuleDescriptor const * descriptor, WGPUShaderRuntimeChecks runtimeChecks);
