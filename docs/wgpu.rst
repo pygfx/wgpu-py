@@ -224,6 +224,7 @@ List of GPU classes
     :template: wgpu_class_layout.rst
 
     ~GPU
+    ~DrawCancelled
     ~GPUAdapterInfo
     ~GPUAdapter
     ~GPUBindGroup
