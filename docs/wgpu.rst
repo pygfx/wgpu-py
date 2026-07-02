@@ -56,7 +56,7 @@ Async code
 
 Some methods and properties in the WebGPU API are asynchronous. In wgpu-py, these methods
 are always suffixed with ``_async``. These method also have a synchronous variant, which
-come in two flafours:
+come in two flavours:
 
 * If the method has the plain method name (no suffix), the synchronous method is
   available in WebGPU as well. There's no problem to use this variant.
@@ -180,6 +180,9 @@ Error handling
 Errors in wgpu-native are raised as Python errors where possible. Uncaught errors
 and warnings are logged using the ``wgpu`` logger.
 
+A special :class:`DrawCancelled` exception is raised by ``context.get_current_texture()`` when no
+texture could be obtained (e.g. when the window is occluded) and the frame must be skipped.
+
 There are specific exceptions that can be raised:
 * :class:`GPUError` is the generic (base) error class.
 * :class:`GPUValidationError` is for wgpu validation errors. Shader errors also fall into this category.
@@ -221,6 +224,7 @@ List of GPU classes
     :template: wgpu_class_layout.rst
 
     ~GPU
+    ~DrawCancelled
     ~GPUAdapterInfo
     ~GPUAdapter
     ~GPUBindGroup
