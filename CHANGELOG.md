@@ -31,6 +31,7 @@ Possible sections in each release:
     * in wgsl `var<push_constant>` -> `var<immediate>`
 * ``context.get_current_texture()`` now raises ``wgpu.DrawCancelled`` when no texture could be obtained, e.g. when the window is occluded.
   Downstream code should capture that error and skip the frame, optionally invoking some sort of sleep to save energy.
+  See https://github.com/pygfx/wgpu-py/pull/820 for context.
 
 
 ## [v0.31.1] - 23-06-2026
