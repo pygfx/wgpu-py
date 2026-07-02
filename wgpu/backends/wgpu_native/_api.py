@@ -952,7 +952,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             raise classes.DrawCancelled("Occluded")
         elif status_int in [
             lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal,
-            # lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
             lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
             lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
         ]:
