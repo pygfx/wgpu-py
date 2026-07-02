@@ -23,7 +23,7 @@
 * Diffs for DrawCancelled: add DrawCancelled
 * Validated 39 classes, 121 methods, 52 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 39 classes, 116 methods, 0 properties
+* Validated 39 classes, 115 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum PipelineErrorReason missing in webgpu.h
 * Enum AutoLayoutMode missing in webgpu.h
