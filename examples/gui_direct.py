@@ -51,7 +51,11 @@ def main():
         context.set_physical_size(*glfw.get_framebuffer_size(window))
 
         # draw a frame
-        draw_frame()
+        try:
+            draw_frame()
+        except wgpu.DrawCancelled:  # window occluded
+            time.sleep(0.1)
+            continue
         # present the frame to the screen
         context.present()
         # stats

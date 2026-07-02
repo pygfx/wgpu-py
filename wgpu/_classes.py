@@ -22,6 +22,7 @@ from . import flags, enums, structs
 
 
 __all__ = [
+    "DrawCancelled",
     "GPU",
     "GPUAdapter",
     "GPUAdapterInfo",
@@ -2447,6 +2448,13 @@ class GPUDeviceLostInfo:
     def reason(self) -> enums.DeviceLostReasonEnum:
         """The reason (enums.GPUDeviceLostReason) for the device getting lost. Can be None."""
         return self._reason
+
+
+@apidiff.add("Added because Python deals with native windows")
+class DrawCancelled(Exception):
+    """An excepion raised to cancel a draw when the surface texture could not be obtained,
+    e.g. because the window is hidden or occluded.
+    """
 
 
 class GPUError(Exception):
