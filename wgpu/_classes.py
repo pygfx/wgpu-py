@@ -22,8 +22,8 @@ from . import flags, enums, structs
 
 
 __all__ = [
-    "DrawCancelled",
     "GPU",
+    "DrawCancelled",
     "GPUAdapter",
     "GPUAdapterInfo",
     "GPUBindGroup",

@@ -40,11 +40,14 @@ def patch_base_api(code):
     # Write __all__
     extra_public_classes = ["GPUPromise", "DrawCancelled"]
     all_public_classes = [*idl.classes.keys(), *extra_public_classes]
+    all_public_classes.sort()
+    all_public_classes.remove("GPU")
+    all_public_classes.insert(0, "GPU")  # ruff RUF022 wants it at the top
     part1, found_all, part2 = code.partition("\n__all__ =")
     if found_all:
         part2 = part2.split("]", 1)[-1]
         line = "\n__all__ = ["
-        line += ", ".join(f'"{name}"' for name in sorted(all_public_classes))
+        line += ", ".join(f'"{name}"' for name in all_public_classes)
         line += "]"
         code = part1 + line + part2
 
