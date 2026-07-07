@@ -114,6 +114,8 @@ ruff format
 ruff check
 ```
 
+Optionally, if you install [pre-commit](https://github.com/pre-commit/pre-commit/) hooks with `pre-commit install`, lint fixes and formatting will be automatically applied on `git commit`.
+
 
 ## Code generation, and updating to a later version of WebGPU or wgpu-native
 

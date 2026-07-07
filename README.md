@@ -122,13 +122,16 @@ See the [contribution guide](CONTRIBUTING.md).
 
 * Clone the repo.
 * Install devtools using `pip install -e .[dev]`.
-* Using `pip install -e .` will also download the upstream wgpu-native
-  binaries.
+* Using `pip install -e .` will also download the upstream wgpu-native binaries.
   * You can use `python tools/download_wgpu_native.py` when needed. And run `python codegen` once to obtain the combined headerfile.
   * Or point the `WGPU_LIB_PATH` environment variable to a custom build of `wgpu-native`.
+
+### Quick tips
+
 * Use `ruff format` to apply autoformatting.
 * Use `ruff check` to check for linting errors.
-* Optionally, if you install [pre-commit](https://github.com/pre-commit/pre-commit/) hooks with `pre-commit install`, lint fixes and formatting will be automatically applied on `git commit`.
+* Use `pytest -v tests` runs the unit tests.
+* Use `pytest -v examples` tests the examples.
 
 ### Code of Conduct
 
