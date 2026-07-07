@@ -114,94 +114,26 @@ This code is distributed under the 2-clause BSD license.
 * [xdsl](https://github.com/xdslproject/xdsl) - A Python Compiler Design Toolkit (optional wgpu interpreter)
 
 
-## Developers
+## Contributing
+
+See the [contribution guide](CONTRIBUTING.md).
+
+### Development install
 
 * Clone the repo.
 * Install devtools using `pip install -e .[dev]`.
-* Using `pip install -e .` will also download the upstream wgpu-native
-  binaries.
+* Using `pip install -e .` will also download the upstream wgpu-native binaries.
   * You can use `python tools/download_wgpu_native.py` when needed. And run `python codegen` once to obtain the combined headerfile.
   * Or point the `WGPU_LIB_PATH` environment variable to a custom build of `wgpu-native`.
+
+### Quick tips
+
 * Use `ruff format` to apply autoformatting.
 * Use `ruff check` to check for linting errors.
-* Optionally, if you install [pre-commit](https://github.com/pre-commit/pre-commit/) hooks with `pre-commit install`, lint fixes and formatting will be automatically applied on `git commit`.
+* Use `pytest -v tests` runs the unit tests.
+* Use `pytest -v examples` tests the examples.
 
+### Code of Conduct
 
-### Updating to a later version of WebGPU or wgpu-native
+This repository follows the [PyGfx Code of Conduct](https://github.com/pygfx/pygfx/blob/main/CODE_OF_CONDUCT.md)
 
-To update to upstream changes, we use a combination of automatic code
-generation and manual updating. See [the codegen utility](codegen/README.md)
-for more information.
-
-
-## Testing
-
-The test suite is divided into multiple parts:
-
-* `pytest -v tests` runs the unit tests.
-* `pytest -v examples` tests the examples.
-* `pytest -v wgpu/__pyinstaller` tests if wgpu is properly supported by pyinstaller.
-* `pytest -v codegen` tests the code that autogenerates the API.
-* `pytest -v tests_mem` tests against memoryleaks.
-
-There are two types of tests for examples included:
-
-### Type 1: Checking if examples can run
-
-When running the test suite, pytest will run every example in a subprocess, to
-see if it can run and exit cleanly. You can opt out of this mechanism by
-including the comment `# run_example = false` in the module.
-
-### Type 2: Checking if examples output an image
-
-You can also (independently) opt-in to output testing for examples, by including
-the comment `# test_example = true` in the module. Output testing means the test
-suite will attempt to import the `canvas` instance global from your example, and
-call it to see if an image is produced.
-
-To support this type of testing, ensure the following requirements are met:
-
-* The `RenderCanvas` class is imported from the `rendercanvas.auto` module.
-* The `canvas` instance is exposed as a global in the module.
-* A rendering callback has been registered with `canvas.request_draw(fn)`.
-
-Reference screenshots are stored in the `examples/screenshots` folder, the test
-suite will compare the rendered image with the reference.
-
-Note: this step will be skipped when not running on CI. Since images will have
-subtle differences depending on the system on which they are rendered, that
-would make the tests unreliable.
-
-For every test that fails on screenshot verification, diffs will be generated
-for the rgb and alpha channels and made available in the
-`examples/screenshots/diffs` folder. On CI, the `examples/screenshots` folder
-will be published as a build artifact so you can download and inspect the
-differences.
-
-If you want to update the reference screenshot for a given example, you can grab
-those from the build artifacts as well and commit them to your branch.
-
-### Testing Locally
-
-Testing locally is possible, however pixel perfect results will differ from
-those on the CIs due to discrepencies in hardware, and driver (we use llvmpipe)
-versions.
-
-On linux, it is possible to force the usage of LLVMPIPE in the test suite
-and compare the generated results of screenshots. Beware, the results on your machine
-may differ to those on the CI. We always include the CI screenshots in the test suite
-to improve the repeatability of the tests.
-
-If you have access to a linux machine with llvmpipe installed, you may run the
-example pixel comparison testing by setting the WGPUPY_WGPU_ADAPTER_NAME
-environment variable appropriately. For example
-
-
-```
-WGPUPY_WGPU_ADAPTER_NAME=llvmpipe pytest -v examples/
-```
-
-The `WGPUPY_WGPU_ADAPTER_NAME` variable is modeled after the
-https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
-and should only be used for testing the wgpu-py library itself.
-It is not part of the supported wgpu-py interface.
