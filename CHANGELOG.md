@@ -29,7 +29,9 @@ Possible sections in each release:
     * `wgpu.backends.wgpu_native.extras.create_pipeline_layout(..., push_constant_layouts)` -> `device.create_pipeline_layout(..., immediate_size)`
     * `wgpu.backends.wgpu_native.extras.set_push_constants()` -> `encoder.set_immediates()` (and different signature)
     * in wgsl `var<push_constant>` -> `var<immediate>`
-
+* ``context.get_current_texture()`` now raises ``wgpu.DrawCancelled`` when no texture could be obtained, e.g. when the window is occluded.
+  Downstream code should capture that error and skip the frame, optionally invoking some sort of sleep to save energy.
+  See https://github.com/pygfx/wgpu-py/pull/820 for context.
 
 
 ## [v0.31.1] - 23-06-2026

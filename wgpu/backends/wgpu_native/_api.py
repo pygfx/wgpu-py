@@ -706,7 +706,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
 
     _surface_id = ffi.NULL
     _wgpu_config = None
-    _skip_present_screen = False
 
     def __init__(self, present_info: dict):
         super().__init__(present_info)
@@ -930,8 +929,6 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             # Clear buffer, so we only have to perform these checks when set_physical_size has been called.
             self._new_physical_size = None
 
-        # Prepare for obtaining a texture.
-        status_str_map = enum_int2str["SurfaceGetCurrentTextureStatus"]
         # H: nextInChain: WGPUChainedStruct *, texture: WGPUTexture, status: WGPUSurfaceGetCurrentTextureStatus
         surface_texture = new_struct_p(
             "WGPUSurfaceTexture *",
@@ -944,64 +941,61 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # H: void f(WGPUSurface surface, WGPUSurfaceTexture * surfaceTexture)
         libf.wgpuSurfaceGetCurrentTexture(self._surface_id, surface_texture)
         status_int = surface_texture.status
-        status_str = status_str_map.get(status_int, "Unknown")
         texture_id = surface_texture.texture
 
         if status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
             # Yay! Everything is good and we can render this frame.
             self._number_of_successive_unsuccesful_textures = 0
+        elif status_int == lib.WGPUSurfaceGetCurrentTextureStatus_Occluded:
+            # Nothing is wrong, but this frame must be skipped
+            self._number_of_successive_unsuccesful_textures = 0
+            raise classes.DrawCancelled("Occluded")
         elif status_int in [
             lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal,
-            lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
             lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
             lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
         ]:
+            # We can try to re-configure in some cases
             if texture_id:
                 # H: void f(WGPUTexture texture)
                 libf.wgpuTextureRelease(texture_id)
                 texture_id = 0
-            # Try to re-configure, if we can
             self._configure_screen_real()
             # H: void f(WGPUSurface surface, WGPUSurfaceTexture * surfaceTexture)
             libf.wgpuSurfaceGetCurrentTexture(self._surface_id, surface_texture)
             status_int = surface_texture.status
-            status_str = status_str_map.get(status_int, "Unknown")
             texture_id = surface_texture.texture
 
         # If still not optimal, we need to make some decisions ...
         if status_int != lib.WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal:
             # It's ok if we miss a sporadic frame during resizing, but warn if it becomes too much.
+            status_str_map = enum_int2str["SurfaceGetCurrentTextureStatus"]
+            status_str = status_str_map.get(status_int, "Unknown")
             self._number_of_successive_unsuccesful_textures += 1
-            if self._number_of_successive_unsuccesful_textures > 5:
-                n = self._number_of_successive_unsuccesful_textures
-                self._number_of_successive_unsuccesful_textures = 0
+            n = self._number_of_successive_unsuccesful_textures
+            if (n % 100 == 0) or n in (5, 12, 25, 50):
                 logger.warning(
                     f"No succesful surface texture obtained for {n} frames: {status_str!r}"
                 )
+
             # Decide what to do
             if status_int == lib.WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal:
                 # Can still use the texture
                 pass
-            elif status_int in [
-                lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
-                lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
-                lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
-            ]:
-                # Use a dummy texture that we cannot present
+            else:
+                # lib.WGPUSurfaceGetCurrentTextureStatus_Timeout,
+                # lib.WGPUSurfaceGetCurrentTextureStatus_Outdated,
+                # lib.WGPUSurfaceGetCurrentTextureStatus_Lost,
+                # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
+                # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
+                # WGPUSurfaceGetCurrentTextureStatus_Error
+
+                # Skip the frame
                 if texture_id:
                     # H: void f(WGPUTexture texture)
                     libf.wgpuTextureRelease(texture_id)
                     texture_id = 0
-                self._skip_present_screen = True
-                return self._create_plain_texture()
-            else:
-                # WGPUSurfaceGetCurrentTextureStatus_OutOfMemory
-                # WGPUSurfaceGetCurrentTextureStatus_DeviceLost
-                # WGPUSurfaceGetCurrentTextureStatus_Error
-                # This is something we cannot recover from.
-                raise RuntimeError(
-                    f"Cannot get surface texture: {status_str} ({status_int})."
-                )
+                raise classes.DrawCancelled(f"{status_str} ({status_int})")
 
         # I don't expect this to happen, but let's check just in case.
         if not texture_id:
@@ -1046,29 +1040,11 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         device = self._config["device"]
         return GPUTexture(label, texture_id, device, tex_info)
 
-    def _create_plain_texture(self):
-        # To have a dummy texture in case we have a size mismatch and must drop frames
-        width, height = self._physical_size
-        width, height = max(width, 1), max(height, 1)
-
-        # Note that the label 'present' is used by read_texture() to determine
-        # that it can use a shared copy buffer.
-        device = self._config["device"]
-        return device.create_texture(
-            label="present",
-            size=(width, height, 1),
-            format=self._config["format"],
-            usage=self._config["usage"] | flags.TextureUsage.COPY_SRC,
-        )
-
     def _present_screen(self):
-        if self._skip_present_screen:
-            self._skip_present_screen = False
-        else:
-            # H: WGPUStatus f(WGPUSurface surface)
-            status = libf.wgpuSurfacePresent(self._surface_id)
-            if status != lib.WGPUStatus_Success:
-                logger.warning("wgpuSurfacePresent failed")
+        # H: WGPUStatus f(WGPUSurface surface)
+        status = libf.wgpuSurfacePresent(self._surface_id)
+        if status != lib.WGPUStatus_Success:
+            logger.warning("wgpuSurfacePresent failed")
 
     def _release(self):
         self._drop_texture()
@@ -4211,6 +4187,10 @@ class GPUPipelineError(classes.GPUPipelineError):
 
 
 class GPUInternalError(classes.GPUInternalError, GPUError):
+    pass
+
+
+class DrawCancelled(classes.DrawCancelled):
     pass
 
 
