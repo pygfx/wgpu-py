@@ -61,7 +61,17 @@ class CustomBuildHook(BuildHookInterface):
                 wgpu_native_tag, wheel_tag = platform_info.split()
                 opsys, arch = wgpu_native_tag.split("_", 1)
                 build_data["tag"] = "py3-none-" + wheel_tag
-                download_lib(None, opsys, arch)
+                if opsys == "pyodide":
+                    # special pure python wheel without the resource folder for browser use
+                    # in the future we might have an actual wasm build, so this might need changes again!
+                    build_data["pure_python"] = True
+                    build_data["exclude"] = ["wgpu/resources", "wgpu/resources/*"] # TODO: can we exclude exclude the whole wgpu_native folder without it breaking the auto backend import?
+                    build_data["artifacts"] = []
+                    # TODO: find the hatchling api that actually excludes files
+                    # then remove the wgpu-native code, so the wheel is as small as possible
+                    # do we need to redownload the lib for the developer?
+                else:
+                    download_lib(None, opsys, arch)
             else:
                 # A build for this platform, e.g. ``pip install -e .``
                 build_data["infer_tag"] = True
@@ -72,7 +82,8 @@ class CustomBuildHook(BuildHookInterface):
 
 
 def is_git_repo():
-    return os.path.isdir(os.path.join(root_dir, ".git"))
+    # detect repo (.git is a dir) and submodule (.git is a file)
+    return os.path.exists(os.path.join(root_dir, ".git"))
 
 
 def check_git_status():
@@ -82,7 +93,7 @@ def check_git_status():
     git_status = p.stdout.decode(errors="ignore")
     # print("Git status:\n" + git_status)
     for line in git_status.splitlines():
-        assert not line.strip().startswith("M wgpu/"), "Git has open changes!"
+        assert not line.strip().startswith("M wgpu/resources/"), "Git has open changes!"
 
 
 def remove_all_libs():

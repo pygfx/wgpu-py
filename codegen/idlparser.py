@@ -7,8 +7,7 @@ It would be good to occasionally check the coverage of this module to
 identify and remove code paths that are no longer used.
 """
 
-from typing import Literal
-
+from typing import Dict, Literal
 from codegen.utils import print
 from codegen.files import read_file
 
@@ -145,7 +144,7 @@ class IdlParser:
 
     def parse(self, verbose=True):
         self._interfaces = {}
-        self.classes = {}
+        self.classes:Dict[str, Interface] = {}
         self.structs = {}
         self.flags = {}
         self.enums = {}
@@ -239,6 +238,7 @@ class IdlParser:
             "ImageData": "ArrayLike",
             "VideoFrame": "ArrayLike",
             "AllowSharedBufferSource": "ArrayLike",
+            "[AllowShared] Uint32Array": "ArrayLike",
             "GPUPipelineConstantValue": "float",
             "GPUExternalTexture": "object",
             "undefined": "None",
