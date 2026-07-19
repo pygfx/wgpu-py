@@ -28,11 +28,9 @@ import importlib
 import wgpu
 from codegen import jswriter, update_js, file_cache
 
-# from here: https://github.com/harfbuzz/uharfbuzz/pull/275
-uharfbuzz_wheel = "uharfbuzz-0.1.dev1+ga19185453-cp310-abi3-pyodide_2025_0_wasm32.whl"
 pygfx_wheel = "pygfx-0.15.3-py3-none-any.whl"
-pygfx_deps = [uharfbuzz_wheel, "hsluv", "pylinalg", "jinja2", pygfx_wheel]
-rendercanvas_deps = ["rendercanvas==2.6.1"] # maybe put it in the pyproject.toml directly? but that might drop in the future.
+pygfx_deps = ["uharfbuzz", "hsluv", "pylinalg", "jinja2", pygfx_wheel]
+rendercanvas_deps = ["rendercanvas>=2.7"] # maybe put it in the pyproject.toml directly? but that might drop in the future.
 
 #examples that don't require a canvas, we will capture the output to a div
 compute_examples = {
@@ -81,7 +79,7 @@ def get_html_index():
     <head>
         <meta name="viewport" content="width=device-width,initial-scale=1.0">
         <title>wgpu PyScript examples</title>
-        <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
+        <script type="module" src="https://pyscript.net/releases/2026.7.2/core.js"></script>
     </head>
     <body>
 
@@ -108,7 +106,7 @@ pyscript_graphics_template = """
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>{example_script} via PyScript</title>
-    <script type="module" src="https://pyscript.net/releases/2026.3.1/core.js"></script>
+    <script type="module" src="https://pyscript.net/releases/2026.7.2/core.js"></script>
 </head>
 
 <body>
@@ -117,16 +115,10 @@ pyscript_graphics_template = """
     <p>
     {docstring}
     </p>
-    <dialog id="loading" style='outline: none; border: none; background: transparent;'>
-        <h1>Loading...</h1>
-    </dialog>
-    <script type="module">
-        const loading = document.getElementById('loading');
-        addEventListener('py:ready', () => loading.close());
-        loading.showModal();
-    </script>
+    <div id="canvas" class='renderview-wrapper is-resizable has-titlebar' style="width: 80%; height: 480px;">
+        <p style='width:100%; height:100%; background:#aaa; display: flex; justify-content: center; align-items: center; font-size:150%'>Loading ...</p>
+    </div>
 
-    <canvas id="canvas" style="background:#aaa; width: 90%; height: 480px;"></canvas>
     <script type="py" src="{example_script}",
         config='{{"packages": [{dependencies}]}}'>
     </script>
@@ -143,25 +135,21 @@ pyodide_compute_template = """
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>{example_script} via Pyodide</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/v0.29.3/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v314.0.2/full/pyodide.js"></script>
 </head>
 
-<dialog id="loading" style='outline: none; border: none; background: transparent;'>
-        <h1>Loading...</h1>
-    </dialog>
 <body>
     <a href="/">Back to list</a><br><br>
     <p>
     {docstring}
     </p>
-    <canvas id='canvas' style='width:calc(90% - 40px); height:640px; background-color: #ddd;'></canvas>
-    <div id="output" style="white-space: per-line; overflow-y: auto; height:300px; background:#eee; padding:4px; margin:4px; border:1px solid #ccc;">
-        <p>Output:</p>
+    <div id="canvas" class='renderview-wrapper is-resizable has-titlebar' style="width: 80%; height: 480px;">
+        <p id="loading"; style='width:100%; height:100%; background:#aaa; display: flex; justify-content: center; align-items: center; font-size:150%'>Loading ...</p>
+    </div><div id="output" style="white-space: per-line; overflow-y: auto; height:300px; background:#eee; padding:4px; margin:4px; border:1px solid #ccc;">
+    <p>Output:</p>
     </div>
     <script type="text/javascript">
         async function main() {{
-            let loading = document.getElementById('loading');
-            loading.showModal();
             try {{
                 let example_name = {example_script!r};
                 pythonCode = await (await fetch(example_name)).text();
@@ -183,7 +171,7 @@ pyodide_compute_template = """
                 pyodide.setDebug(true);
                 let ret = await pyodide.runPythonAsync(pythonCode);
                 console.log("Example finished:", ret);
-                loading.close();
+                //TODO: if example finishes without loading the canvas (like a compute example) -> can we still notify the user by writing into loading?
             }} catch (err) {{
                 // TODO: this could be formatted better as this overlaps and is unreadable...
                 loading.innerHTML = "Failed to load: " + err;
