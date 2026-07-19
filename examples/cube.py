@@ -479,7 +479,7 @@ for a in wgpu.gpu.enumerate_adapters_sync():
 if __name__ == "__main__":
     canvas = RenderCanvas(
         size=(640, 480),
-        title="wgpu cube example at $fps using $backend",
+        title="wgpu cube example at $fps fps using $backend",
         update_mode="continuous",
         max_fps=60,
         vsync=True,

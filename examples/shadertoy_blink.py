@@ -1,6 +1,6 @@
 """
 Shadertoy Example
-=================
+-----------------
 
 One wgpu_shadertoy example written in WGSL, I don't know if this is a port or original work.
 """
