@@ -4080,8 +4080,8 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         return data
 
     def on_submitted_work_done_async(self) -> GPUPromise[None]:
-        @ffi.callback("void(WGPUQueueWorkDoneStatus, void *, void *)")
-        def work_done_callback(status, _userdata1, _userdata2):
+        @ffi.callback("void(WGPUQueueWorkDoneStatus, WGPUStringView, void *, void *)")
+        def work_done_callback(status, _message, _userdata1, _userdata2):
             token.set_done()
             if status == lib.WGPUQueueWorkDoneStatus_Success:
                 promise._wgpu_set_input(True)

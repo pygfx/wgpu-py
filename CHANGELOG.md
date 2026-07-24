@@ -33,6 +33,13 @@ Possible sections in each release:
   Downstream code should capture that error and skip the frame, optionally invoking some sort of sleep to save energy.
   See https://github.com/pygfx/wgpu-py/pull/820 for context.
 
+### Fixed:
+* `GPUQueue.on_submitted_work_done_async()` no longer raises `TypeError` when
+  building its callback struct. The ffi callback was missing the
+  `WGPUStringView message` argument that the `WGPUQueueWorkDoneCallback` typedef
+  requires, so any call to it crashed. Also un-shadowed the test that covers
+  this path (it was named `make_pipeline_async` so pytest never collected it).
+
 
 ## [v0.31.1] - 23-06-2026
 
