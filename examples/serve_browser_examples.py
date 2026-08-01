@@ -145,8 +145,9 @@ pyodide_compute_template = """
     </p>
     <div id="canvas" class='renderview-wrapper is-resizable has-titlebar' style="width: 80%; height: 480px;">
         <p id="loading"; style='width:100%; height:100%; background:#aaa; display: flex; justify-content: center; align-items: center; font-size:150%'>Loading ...</p>
-    </div><div id="output" style="white-space: per-line; overflow-y: auto; height:300px; background:#eee; padding:4px; margin:4px; border:1px solid #ccc;">
-    <p>Output:</p>
+    </div>
+    <div id="output" style="white-space: per-line; overflow-y: auto; height:300px; background:#eee; padding:4px; margin:4px; border:1px solid #ccc;">
+        <p>Output:</p>
     </div>
     <script type="text/javascript">
         async function main() {{
