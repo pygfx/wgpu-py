@@ -1730,7 +1730,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                 )
             elif isinstance(resource, (GPUTextureView, GPUTexture)):
                 if type(resource) is GPUTexture:
-                    resource = resource.create_view() # also see https://github.com/pygfx/wgpu-py/issues/825
+                    # also see https://github.com/pygfx/wgpu-py/issues/825
+                    resource = resource.create_view()
                     _keep_alive.append(resource)
                 # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
                 c_entry = new_struct(
