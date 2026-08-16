@@ -1699,6 +1699,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         entries: Sequence[structs.BindGroupEntryStruct],
     ) -> GPUBindGroup:
         c_entries_list = []
+        _keep_alive = []
         for entry in entries:
             check_struct("BindGroupEntry", entry)
             # The resource can be a buffer, sampler, texture, texture view, or buffer descriptor
@@ -1728,8 +1729,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
                     textureView=ffi.NULL,
                 )
             elif isinstance(resource, (GPUTextureView, GPUTexture)):
-                if isinstance(resource, GPUTexture):
-                    resource = resource.create_view() # also see 
+                if type(resource) is GPUTexture:
+                    resource = resource.create_view() # also see https://github.com/pygfx/wgpu-py/issues/825
+                    _keep_alive.append(resource)
                 # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
                 c_entry = new_struct(
                     "WGPUBindGroupEntry",
@@ -1769,6 +1771,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
         # H: WGPUBindGroup f(WGPUDevice device, WGPUBindGroupDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateBindGroup(self._internal, struct)
+        del _keep_alive
         return GPUBindGroup(label, id, self)
 
     def create_pipeline_layout(
