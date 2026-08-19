@@ -445,7 +445,7 @@ class ImguiWgpuBackend:
         fb_width = int(display_width * draw_data.framebuffer_scale.x)
         fb_height = int(display_height * draw_data.framebuffer_scale.y)
 
-        if fb_width <= 0 or fb_height <= 0 or draw_data.cmd_lists_count == 0:
+        if fb_width <= 0 or fb_height <= 0 or len(draw_data.cmd_lists) == 0:
             return
 
         if draw_data.textures is not None:

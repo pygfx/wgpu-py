@@ -33,6 +33,10 @@ Possible sections in each release:
   Downstream code should capture that error and skip the frame, optionally invoking some sort of sleep to save energy.
   See https://github.com/pygfx/wgpu-py/pull/820 for context.
 
+### Fixed:
+* The imgui backend no longer uses ``ImDrawData.cmd_lists_count``, which was removed in imgui-bundle 1.92.900.
+  See https://github.com/pygfx/wgpu-py/issues/829.
+
 
 ## [v0.31.1] - 23-06-2026
 
