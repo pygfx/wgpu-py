@@ -1498,10 +1498,11 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             depthOrArrayLayers=size[2],
         )
 
-        if view_formats:
-            raise NotImplementedError(
-                "create_texture(.. view_formats is not yet supported."
-            )
+        # Formats that views of this texture may reinterpret it as. The main
+        # use is taking a non-srgb view of an srgb target (or the reverse) to
+        # read or write the raw bytes without the transfer function applied.
+        view_formats_list = [enummap["TextureFormat." + x] for x in view_formats]
+        c_view_formats = new_array("WGPUTextureFormat[]", view_formats_list)
 
         if not mip_level_count:
             mip_level_count = 1  # or lib.WGPU_MIP_LEVEL_COUNT_UNDEFINED ?
@@ -1522,8 +1523,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             dimension=dimension,
             format=format,
             usage=usage,
-            # not used: viewFormatCount
-            # not used: viewFormats
+            viewFormatCount=len(view_formats),
+            viewFormats=c_view_formats,
         )
         # H: WGPUTexture f(WGPUDevice device, WGPUTextureDescriptor const * descriptor)
         id = libf.wgpuDeviceCreateTexture(self._internal, struct)
