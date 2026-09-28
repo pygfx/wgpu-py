@@ -34,6 +34,11 @@ Possible sections in each release:
   See https://github.com/pygfx/wgpu-py/pull/820 for context.
 
 ### Fixed:
+* `GPUQueue.on_submitted_work_done_async()` no longer raises `TypeError` when
+  building its callback struct. The ffi callback was missing the
+  `WGPUStringView message` argument that the `WGPUQueueWorkDoneCallback` typedef
+  requires, so any call to it crashed. Also un-shadowed the test that covers
+  this path (it was named `make_pipeline_async` so pytest never collected it).
 * The imgui backend no longer uses ``ImDrawData.cmd_lists_count``, which was removed in imgui-bundle 1.92.900.
   See https://github.com/pygfx/wgpu-py/issues/829.
 * The imgui backend uploads the whole texture when it is created, instead of only its ``update_rect``.
