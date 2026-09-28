@@ -155,14 +155,11 @@ class ImguiWgpuBackend:
 
             # Get upload rect
             if tex.status == imgui.ImTextureStatus.want_create:
-                upload_x = 0
-                upload_y = 0
+                upload_x, upload_y = 0, 0
+                upload_w, upload_h = tex.width, tex.height
             else:
-                upload_x = tex.update_rect.x
-                upload_y = tex.update_rect.y
-
-            upload_w = tex.update_rect.w
-            upload_h = tex.update_rect.h
+                upload_x, upload_y = tex.update_rect.x, tex.update_rect.y
+                upload_w, upload_h = tex.update_rect.w, tex.update_rect.h
 
             # Update full texture or selected blocks
             full_data = tex.get_pixels_array()

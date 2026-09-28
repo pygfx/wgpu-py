@@ -36,6 +36,8 @@ Possible sections in each release:
 ### Fixed:
 * The imgui backend no longer uses ``ImDrawData.cmd_lists_count``, which was removed in imgui-bundle 1.92.900.
   See https://github.com/pygfx/wgpu-py/issues/829.
+* The imgui backend uploads the whole texture when it is created, instead of only its ``update_rect``.
+  See https://github.com/pygfx/wgpu-py/issues/811 and https://github.com/pygfx/wgpu-py/issues/836.
 
 
 ## [v0.31.1] - 23-06-2026
