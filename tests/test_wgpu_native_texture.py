@@ -324,5 +324,37 @@ def test_16bit_norm():
     assert "r16unorm" in texture.format
 
 
+@mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
+def test_view_formats():
+    # A view may reinterpret a texture as any format declared in view_formats,
+    # and only those. The srgb/non-srgb pair is the useful case: it reads the
+    # bytes that were written, without the transfer function.
+    device = wgpu.utils.get_default_device()
+
+    usage = wgpu.TextureUsage.RENDER_ATTACHMENT | wgpu.TextureUsage.TEXTURE_BINDING
+    tex = device.create_texture(
+        size=(64, 64, 1),
+        format=wgpu.TextureFormat.rgba8unorm_srgb,
+        usage=usage,
+        view_formats=[wgpu.TextureFormat.rgba8unorm],
+    )
+    view = tex.create_view(format=wgpu.TextureFormat.rgba8unorm)
+    assert view is not None
+
+    # The texture's own format is always viewable.
+    assert tex.create_view(format=wgpu.TextureFormat.rgba8unorm_srgb) is not None
+
+    # A format that was not declared is still rejected.
+    with raises(wgpu.GPUValidationError):
+        tex.create_view(format=wgpu.TextureFormat.rgba8snorm)
+
+    # And declaring none keeps the old behaviour.
+    plain = device.create_texture(
+        size=(64, 64, 1), format=wgpu.TextureFormat.rgba8unorm_srgb, usage=usage
+    )
+    with raises(wgpu.GPUValidationError):
+        plain.create_view(format=wgpu.TextureFormat.rgba8unorm)
+
+
 if __name__ == "__main__":
     run_tests(globals())
