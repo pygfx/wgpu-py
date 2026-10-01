@@ -80,6 +80,23 @@ def test_backend_is_dawn():
     assert "core-features-and-limits" in adapter.features or adapter.features
 
 
+def test_enumerate_adapters():
+    adapters = wgpu.gpu.enumerate_adapters_sync()
+    assert adapters
+    for adapter in adapters:
+        assert isinstance(adapter, dawn.GPUAdapter)
+        assert adapter.info["backend_type"] != "Null"
+        # Dawn's own (normalized) vendor name is kept
+        assert isinstance(adapter.info["vendor_name"], str)
+        # Adapters can be selected by name, like pygfx does with PYGFX_WGPU_ADAPTER_NAME
+        name = adapter.info["device"]
+        assert adapter in [a for a in adapters if name in a.summary]
+    # Like wgpu-native, the vendor of lavapipe is "llvmpipe" (the driver name)
+    for adapter in adapters:
+        if "llvmpipe" in adapter.summary and adapter.info["backend_type"] == "Vulkan":
+            assert adapter.info["vendor"] == "llvmpipe"
+
+
 def test_request_device_with_features_and_limits():
     adapter = wgpu.gpu.request_adapter_sync()
     features = [

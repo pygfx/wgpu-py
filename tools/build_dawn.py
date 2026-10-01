@@ -128,11 +128,21 @@ def get_native_extension(dawn_prefix, debug=False):
 
     if sys.platform.startswith("win"):
         extra_compile_args += ["/Od"] if debug else ["/O2"]
+        cpp_args = ["/std:c++20"]
     else:
         extra_compile_args += ["-O0", "-g"] if debug else ["-O2"]
         # Dawn's header has a few constructs that some compilers warn about
         extra_compile_args += ["-Wno-unused-function", "-Wno-unreachable-code"]
         extra_link_args += [f"-Wl,-rpath,{lib_dir}"]
+        cpp_args = ["-std=c++20"]
+
+    # Helpers that use Dawn's C++ API (e.g. to enumerate adapters), if available
+    cpp_sources = []
+    if os.path.isfile(os.path.join(include_dir, "dawn", "native", "DawnNative.h")):
+        define_macros.append(("WGPU_PY_HAVE_DAWN_NATIVE_EXTRAS", "1"))
+        cpp_sources.append(os.path.join(DAWN_DIR, "dawn_native_extras.cpp"))
+    else:
+        print("Dawn's C++ headers not found: building without dawn_native_extras.cpp")
 
     ext = Extension(
         "wgpu.backends.dawn._api",
@@ -145,8 +155,8 @@ def get_native_extension(dawn_prefix, debug=False):
         extra_link_args=extra_link_args,
         py_limited_api=py_limited_api,
     )
-    ext.cpp_sources = []
-    ext.cpp_args = []
+    ext.cpp_sources = cpp_sources
+    ext.cpp_args = extra_compile_args + cpp_args
     return ext
 
 

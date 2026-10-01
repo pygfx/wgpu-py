@@ -63,6 +63,14 @@ cdef extern from "Python.h":
 cdef extern from "emdawn_glue.h":
     int wgpu_dawn_install(const char* code)
 
+cdef extern from "dawn_native_extras.h":
+    size_t wgpupy_dawn_enumerate_adapters(
+        WGPUInstance instance,
+        const WGPURequestAdapterOptions* options,
+        WGPUAdapter* adapters,
+        size_t max_count,
+    )
+
 
 logger = logging.getLogger("wgpu")
 
@@ -255,7 +263,13 @@ cdef class _Buffer:
 
 
 cdef int _enum(str enum_name, object value) except? -1:
-    """Convert an enum string to its int value in Dawn."""
+    """Convert an enum string to its int value in Dawn.
+
+    Like the wgpu-native backend, an int is passed through as the raw webgpu.h
+    value (e.g. 0 for "undefined", i.e. the default).
+    """
+    if type(value) is int:
+        return value
     try:
         return enummap[enum_name + "." + value]
     except KeyError:
@@ -999,7 +1013,10 @@ class GPU(classes.GPU):
         """Get a list of adapter objects available on the current system.
         This is the implementation based on Dawn.
 
-        In the browser, it returns the one adapter that the browser provides.
+        Natively, this lists all adapters that Dawn finds, e.g. GPUs as well as
+        CPU adapters like lavapipe. Since webgpu.h cannot enumerate adapters,
+        this uses Dawn's C++ API (see dawn_native_extras.cpp). In the browser,
+        it returns the one adapter that the browser provides.
         """
         if _IS_EMSCRIPTEN:
             return self.request_adapter_async().then(
@@ -1011,8 +1028,30 @@ class GPU(classes.GPU):
         return promise
 
     def _enumerate_adapters(self):
-        # The webgpu.h API has no way to enumerate adapters, so we request an
-        # adapter for each backend and power preference, and de-duplicate.
+        cdef WGPUAdapter* c_adapters
+        cdef size_t i, n
+        cdef WGPUInstance instance = _get_instance()
+        if not _IS_EMSCRIPTEN:
+            # Use Dawn's C++ API to list all adapters (see dawn_native_extras.cpp)
+            n = wgpupy_dawn_enumerate_adapters(instance, NULL, NULL, 0)
+            if n != <size_t>-1:
+                c_adapters = <WGPUAdapter*>PyMem_Calloc(max(n, 1), sizeof(WGPUAdapter))
+                try:
+                    n = min(n, wgpupy_dawn_enumerate_adapters(instance, NULL, c_adapters, n))
+                    _check()
+                    ids = [<uintptr_t>c_adapters[i] for i in range(n)]
+                finally:
+                    PyMem_Free(c_adapters)
+                adapters = [self._create_adapter(adapter_id) for adapter_id in ids]
+                # Dawn's Null backend is for testing only
+                return [a for a in adapters if a.info["backend_type"] != "Null"]
+        return self._enumerate_adapters_by_requesting()
+
+    def _enumerate_adapters_by_requesting(self):
+        # Request an adapter for each combination of options, and de-duplicate.
+        # Dawn only returns a CPU adapter (e.g. lavapipe) if a fallback adapter
+        # is requested (or if it is the only one), and only exposes its OpenGL
+        # backends at the compatibility feature level.
         adapters = []
         seen = set()
         backend_names = [
@@ -1027,16 +1066,26 @@ class GPU(classes.GPU):
             backend = enum_str2int["BackendType"].get(name)
             if backend is None:
                 continue
-            for pref in ("high-performance", "low-power"):
-                try:
-                    promise = self._request_adapter("core", pref, False, None, backend)
-                    adapter = promise.sync_wait()
-                except Exception:
-                    continue
-                key = (adapter.summary, adapter.info["backend_type"])
-                if key not in seen:
-                    seen.add(key)
-                    adapters.append(adapter)
+            feature_level = "compatibility" if name.startswith("OpenGL") else "core"
+            for fallback in (False, True):
+                for pref in ("high-performance", "low-power"):
+                    try:
+                        promise = self._request_adapter(
+                            feature_level, pref, fallback, None, backend
+                        )
+                        adapter = promise.sync_wait()
+                    except Exception:
+                        continue
+                    info = adapter.info
+                    key = (
+                        info["vendor_id"],
+                        info["device_id"],
+                        info["device"],
+                        info["backend_type"],
+                    )
+                    if key not in seen:
+                        seen.add(key)
+                        adapters.append(adapter)
         return adapters
 
     def _create_adapter(self, adapter_id):
@@ -1066,6 +1115,7 @@ class GPU(classes.GPU):
             ),
         }
         wgpuAdapterInfoFreeMembers(c_info)
+        _align_adapter_info(adapter_info_data)
         adapter_info = GPUAdapterInfo(adapter_info_data)
 
         limits = _get_limits(adapter, False)
@@ -1091,6 +1141,23 @@ class GPU(classes.GPU):
             names.add(<int>c_features.features[i])
         wgpuSupportedWGSLLanguageFeaturesFreeMembers(c_features)
         return names
+
+
+def _align_adapter_info(d):
+    """Make the adapter info match that of the wgpu-native backend where Dawn differs.
+
+    Dawn reports a normalized vendor name (e.g. "intel", or "mesa" for
+    lavapipe), and for Vulkan the description is "<driver name>: <driver info>".
+    wgpu-native reports the driver name as the vendor (e.g. "llvmpipe") and the
+    driver info as the description. Code that identifies adapters (e.g. checks
+    for lavapipe with ``info["vendor"] == "llvmpipe"``) relies on the latter, so
+    we follow wgpu-native, and keep Dawn's vendor name as "vendor_name".
+    """
+    d["vendor_name"] = d["vendor"]
+    if d["backend_type"] == "Vulkan" and ": " in d["description"]:
+        driver_name, driver_info = d["description"].split(": ", 1)
+        d["vendor"] = driver_name
+        d["description"] = driver_info
 
 
 # Instantiate API entrypoint
