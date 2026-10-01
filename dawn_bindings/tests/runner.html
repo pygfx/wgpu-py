@@ -16,7 +16,9 @@ try {
   const { loadPyodide } = await import(params.get('pyodide') || './pyodide/pyodide.mjs');
   const py = await loadPyodide({ stdout: log, stderr: log });
   const testsUrl = params.get('tests');
-  await py.loadPackage(testsUrl ? ['cffi', 'numpy', 'pytest'] : ['cffi']);
+  await py.loadPackage(testsUrl ? ['cffi', 'numpy', 'pytest'] : ['cffi'], {
+    errorCallback: (msg) => { throw new Error(msg); },
+  });
   const sitePackages = py.runPython('import site; site.getsitepackages()[0]');
   for (const w of (params.get('wheels') || '').split(',').filter(Boolean)) {
     const data = new Uint8Array(await (await fetch(w)).arrayBuffer());

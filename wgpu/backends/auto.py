@@ -3,6 +3,7 @@
 # compiled wgpu_dawn package is available.
 import os
 import sys
+import importlib.util
 
 
 def _load_backend(backend_name):
@@ -27,12 +28,9 @@ def _auto_load_backend():
     if backend_name:
         return _load_backend(backend_name)
     elif sys.platform == "emscripten":
-        try:
-            import wgpu_dawn  # noqa: F401
-        except ImportError:
-            return _load_backend("js_webgpu")
-        else:
+        if importlib.util.find_spec("wgpu_dawn") is not None:
             return _load_backend("dawn")
+        return _load_backend("js_webgpu")
     else:
         return _load_backend("wgpu_native")
 

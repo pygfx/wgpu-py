@@ -119,24 +119,25 @@ jobs:
     - name: Prepare site
       run: |
         mkdir site
-        cp -r dawn_bindings/tests/node_modules/pyodide site/pyodide
         cp dawn_bindings/tests/runner.html dawn_bindings/tests/*.py dist/*.whl site/
         zip -qr site/tests.zip tests/*.py conftest.py
         echo "WHEELS=$(cd dist && ls *.whl | tr '\n' ',')" >> $GITHUB_ENV
+        # Pyodide itself (and its packages, like cffi) come from the CDN
+        echo "PYODIDE_URL=https://cdn.jsdelivr.net/pyodide/v${PYODIDE_VERSION}/full/pyodide.mjs" >> $GITHUB_ENV
         google-chrome --version
     - name: Run scripts
       run: |
         cd dawn_bindings/tests
-        node run_chrome.mjs ../../site "runner.html?wheels=${WHEELS}&script=compute_async.py"
-        node run_chrome.mjs ../../site "runner.html?wheels=${WHEELS}&script=compute_sync.py"
-        SCREENSHOT=../../triangle.png node run_chrome.mjs ../../site "runner.html?wheels=${WHEELS}&script=triangle.py&canvas=1"
+        node run_chrome.mjs ../../site "runner.html?pyodide=${PYODIDE_URL}&wheels=${WHEELS}&script=compute_async.py"
+        node run_chrome.mjs ../../site "runner.html?pyodide=${PYODIDE_URL}&wheels=${WHEELS}&script=compute_sync.py"
+        SCREENSHOT=../../triangle.png node run_chrome.mjs ../../site "runner.html?pyodide=${PYODIDE_URL}&wheels=${WHEELS}&script=triangle.py&canvas=1"
     - name: Run wgpu-py tests
       run: |
         # In the browser, validation errors arrive asynchronously (uncapturederror
         # event), so tests that expect an exception from the failing call are skipped.
         ARGS=$(echo ${PORTABLE_TESTS} | tr ' ' ',')
         cd dawn_bindings/tests
-        node run_chrome.mjs ../../site "runner.html?wheels=${WHEELS}&tests=tests.zip&pytest=${ARGS},-k,not spirv and not test_view_formats"
+        node run_chrome.mjs ../../site "runner.html?pyodide=${PYODIDE_URL}&wheels=${WHEELS}&tests=tests.zip&pytest=${ARGS},-k,not spirv and not test_view_formats"
     - uses: actions/upload-artifact@v4
       if: always()
       with:
