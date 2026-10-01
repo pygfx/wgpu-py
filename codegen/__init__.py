@@ -1,7 +1,14 @@
 import io
 
 from .utils import print, PrintToFile
-from . import apiwriter, apipatcher, wgpu_native_patcher, idlparser, hparser
+from . import (
+    apiwriter,
+    apipatcher,
+    wgpu_native_patcher,
+    dawn_patcher,
+    idlparser,
+    hparser,
+)
 from .files import file_cache
 
 
@@ -15,6 +22,7 @@ def main():
         prepare()
         update_api()
         update_wgpu_native()
+        update_dawn()
         file_cache.write("resources/codegen_report.md", log.getvalue())
 
 
@@ -43,7 +51,7 @@ def update_api():
     file_cache.write("_classes.py", code2)
 
     # Patch backend APIs: _classes.py -> API
-    for fname in ["backends/wgpu_native/_api.py"]:
+    for fname in ["backends/wgpu_native/_api.py", "backends/dawn/_api.py"]:
         code1 = file_cache.read(fname)
         print(f"### Patching API for {fname}")
         code2 = apipatcher.patch_backend_api(code1)
@@ -63,3 +71,16 @@ def update_wgpu_native():
     code1 = file_cache.read("backends/wgpu_native/_api.py")
     code2 = wgpu_native_patcher.patch_wgpu_native_backend(code1)
     file_cache.write("backends/wgpu_native/_api.py", code2)
+
+
+def update_dawn():
+    """Update and check the Dawn backend."""
+
+    print("## Validating backends/dawn/_api.py")
+
+    dawn_patcher.compare_flags()
+    dawn_patcher.write_mappings()
+
+    code1 = file_cache.read("backends/dawn/_api.py")
+    code2 = dawn_patcher.patch_dawn_backend(code1)
+    file_cache.write("backends/dawn/_api.py", code2)

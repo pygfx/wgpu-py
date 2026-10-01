@@ -24,6 +24,8 @@
 * Validated 39 classes, 121 methods, 52 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 39 classes, 115 methods, 0 properties
+### Patching API for backends/dawn/_api.py
+* Validated 39 classes, 113 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum PipelineErrorReason missing in webgpu.h
 * Enum AutoLayoutMode missing in webgpu.h
@@ -34,3 +36,12 @@
 * Validated 154 C function calls
 * Not using 85 C functions
 * Validated 96 C structs
+## Validating backends/dawn/_api.py
+* Enum PipelineErrorReason missing in Dawn's webgpu.h
+* Enum AutoLayoutMode missing in Dawn's webgpu.h
+* Enum CanvasAlphaMode missing in Dawn's webgpu.h
+* Enum CanvasToneMappingMode missing in Dawn's webgpu.h
+* Wrote 268 enum mappings and 48 struct-field mappings to dawn/_mappings.py
+* Validated 145 C function calls
+* Not using 69 C functions
+* Validated 88 C structs

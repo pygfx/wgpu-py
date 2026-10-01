@@ -35,6 +35,8 @@ class FileCache:
         "structs.py",
         "backends/wgpu_native/_api.py",
         "backends/wgpu_native/_mappings.py",
+        "backends/dawn/_api.py",
+        "backends/dawn/_mappings.py",
         "resources/codegen_report.md",
     ]
 
