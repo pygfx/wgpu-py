@@ -2711,7 +2711,7 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         cdef _Arena arena
         if p == NULL:
             _raise_released(self)
-        if dynamic_offsets_data:
+        if dynamic_offsets_data is not None and len(dynamic_offsets_data) > 0:
             if (
                 dynamic_offsets_data_start is not None
                 or dynamic_offsets_data_length is not None
@@ -3585,46 +3585,11 @@ class GPUQuerySet(classes.GPUQuerySet, GPUObjectBase):
 
 
 class GPUCompilationMessage(classes.GPUCompilationMessage):
-    def __init__(self, message, type, line_num, line_pos, offset, length):
-        self._message = message
-        self._type = type
-        self._line_num = line_num
-        self._line_pos = line_pos
-        self._offset = offset
-        self._length = length
-
-    @property
-    def message(self):
-        return self._message
-
-    @property
-    def type(self):
-        return self._type
-
-    @property
-    def line_num(self):
-        return self._line_num
-
-    @property
-    def line_pos(self):
-        return self._line_pos
-
-    @property
-    def offset(self):
-        return self._offset
-
-    @property
-    def length(self):
-        return self._length
+    pass
 
 
 class GPUCompilationInfo(classes.GPUCompilationInfo):
-    def __init__(self, messages):
-        self._messages = list(messages)
-
-    @property
-    def messages(self):
-        return self._messages
+    pass
 
 
 class GPUDeviceLostInfo(classes.GPUDeviceLostInfo):

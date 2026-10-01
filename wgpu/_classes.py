@@ -2519,51 +2519,62 @@ class GPUInternalError(GPUError):
 class GPUCompilationMessage:
     """An object that contains information about a problem with shader compilation."""
 
+    def __init__(self, message, type, line_num, line_pos, offset, length):
+        self._message = message
+        self._type = type
+        self._line_num = line_num
+        self._line_pos = line_pos
+        self._offset = offset
+        self._length = length
+
     # IDL: readonly attribute DOMString message;
     @property
     def message(self) -> str:
         """The warning/error message."""
-        raise NotImplementedError()
+        return self._message
 
     # IDL: readonly attribute GPUCompilationMessageType type;
     @property
     def type(self) -> enums.CompilationMessageTypeEnum:
         """The type of warning/problem."""
-        raise NotImplementedError()
+        return self._type
 
     # IDL: readonly attribute unsigned long long lineNum;
     @property
     def line_num(self) -> int:
         """The corresponding line number in the shader source."""
-        raise NotImplementedError()
+        return self._line_num
 
     # IDL: readonly attribute unsigned long long linePos;
     @property
     def line_pos(self) -> int:
         """The position on the line in the shader source."""
-        raise NotImplementedError()
+        return self._line_pos
 
     # IDL: readonly attribute unsigned long long offset;
     @property
     def offset(self) -> int:
-        """Offset of ..."""
-        raise NotImplementedError()
+        """The offset (in UTF-16 code units) in the shader source."""
+        return self._offset
 
     # IDL: readonly attribute unsigned long long length;
     @property
     def length(self) -> int:
-        """The length of the line?"""
-        raise NotImplementedError()
+        """The length (in UTF-16 code units) of the substring that the message refers to."""
+        return self._length
 
 
 class GPUCompilationInfo:
-    """TODO"""
+    """The result of `GPUShaderModule.get_compilation_info_async()`: a list of messages."""
+
+    def __init__(self, messages):
+        self._messages = list(messages)
 
     # IDL: readonly attribute FrozenArray<GPUCompilationMessage> messages;
     @property
     def messages(self) -> list[GPUCompilationMessage]:
         """A list of `GPUCompilationMessage` objects."""
-        raise NotImplementedError()
+        return self._messages
 
 
 class GPUQuerySet(GPUObjectBase):

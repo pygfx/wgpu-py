@@ -190,9 +190,15 @@ class AbstractApiPatcher(Patcher):
     def apply(self, code):
         self._init(code)
         self._counts = {"classes": 0, "methods": 0, "properties": 0}
+        self._missing_methods = []
         self.patch_classes()
         stats = ", ".join(f"{self._counts[key]} {key}" for key in self._counts)
         print("Validated " + stats)
+        if isinstance(self, BackendApiPatcher):
+            # Report the API methods that the backend does not (yet) implement
+            for name in self._missing_methods:
+                print(f"Not implemented: {name}")
+            print(f"Found {len(self._missing_methods)} methods not implemented")
 
     def patch_classes(self):
         seen_classes = set()
@@ -324,6 +330,7 @@ class AbstractApiPatcher(Patcher):
         lines = []
         for methodname in self.get_required_method_names(classname):
             if methodname not in seen_funcs:
+                self._missing_methods.append(f"{classname}.{methodname}")
                 lines.append("    # FIXME: new method to implement")
                 lines.append(self.get_method_def(classname, methodname))
                 lines.append("        raise NotImplementedError()\n")
@@ -711,7 +718,7 @@ class StructValidationChecker(Patcher):
         all_structs = set()
         ignore_structs = {"Extent3D", "Origin3D"}
 
-        structure_checks = self._get_structure_checks()
+        structure_checks = self._get_structure_checks(code)
 
         for classname, i1, i2 in self.iter_classes():
             if classname not in idl.classes:
@@ -772,7 +779,7 @@ class StructValidationChecker(Patcher):
         return structnames
 
     @staticmethod
-    def _get_structure_checks():
+    def _get_structure_checks(code):
         """
         Returns a map
             (class_name, method_name) -> <list of structure names>
@@ -782,7 +789,7 @@ class StructValidationChecker(Patcher):
         For now, the helper function must be methods within the same class.  This code
         does not yet deal with global functions or with methods in superclasses.
         """
-        module = ast.parse(file_cache.read("backends/wgpu_native/_api.py"))
+        module = ast.parse(code)
         # We only care about top-level classes and their top-level methods.
         top_level_methods = {
             # (class_name, method_name) -> method_ast

@@ -25,9 +25,10 @@
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
 * Diffs for DrawCancelled: add DrawCancelled
-* Validated 39 classes, 121 methods, 52 properties
+* Validated 39 classes, 123 methods, 52 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 39 classes, 115 methods, 0 properties
+* Found 0 methods not implemented
 ## Validating backends/wgpu_native/_api.py
 * Enum PipelineErrorReason missing in webgpu.h
 * Enum AutoLayoutMode missing in webgpu.h

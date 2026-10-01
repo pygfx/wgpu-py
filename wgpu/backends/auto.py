@@ -1,7 +1,7 @@
 # The default backend is wgpu-native, but this may change in the future.
 import os
 import sys
-import importlib.util
+import importlib.machinery
 
 
 def _load_backend(backend_name):
@@ -33,8 +33,11 @@ def _auto_load_backend():
         return _load_backend(backend_name)
 
     if sys.platform == "emscripten":
-        # In Pyodide, prefer the Dawn backend if its extension module is built
-        if importlib.util.find_spec("wgpu.backends.dawn._api") is not None:
+        # In Pyodide, prefer the Dawn backend if its extension module is built.
+        # Look for the file, because importing the package registers the backend.
+        dawn_dir = os.path.join(os.path.dirname(__file__), "dawn")
+        suffixes = importlib.machinery.EXTENSION_SUFFIXES
+        if any(os.path.isfile(os.path.join(dawn_dir, "_api" + s)) for s in suffixes):
             return _load_backend("dawn")
         return _load_backend("js_webgpu")
     else:
