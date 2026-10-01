@@ -1,0 +1,7 @@
+build/
+src/wgpu_dawn/emdawn_glue.js
+src/wgpu_dawn/*.so
+src/wgpu_dawn/_wgpu_dawn.c*
+*.egg-info/
+dist/
+.pyodide_build/

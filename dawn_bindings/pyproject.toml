@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=64", "cffi>=1.17"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wgpu-dawn"
+version = "0.1.0.dev0"
+description = "Compiled cffi bindings to Dawn's webgpu.h (native Dawn, or Emdawnwebgpu in Pyodide), used by wgpu.backends.dawn"
+license = { text = "BSD-2-Clause" }
+requires-python = ">=3.11"
+dependencies = ["cffi>=1.17"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+wgpu_dawn = ["*.h", "*.js"]
