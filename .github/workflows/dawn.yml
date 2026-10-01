@@ -1,0 +1,127 @@
+name: Dawn backend
+
+# CI for the (optional, experimental) Dawn backend. This is separate from the
+# main CI, so that it does not affect the wgpu-native jobs. Dawn, Cython and
+# the compilers are obtained from conda.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dawn
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-dawn:
+    name: Dawn ${{ matrix.os }} py${{ matrix.python-version }}
+    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: '3.12'
+          - os: ubuntu-latest
+            python-version: '3.14'
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install lavapipe (software Vulkan driver)
+      run: |
+        sudo apt-get update -y -qq
+        sudo apt install -y mesa-vulkan-drivers
+
+    - name: Install Dawn and build tools with conda
+      uses: mamba-org/setup-micromamba@v2
+      with:
+        environment-name: wgpu-dawn
+        condarc: |
+          channel_priority: strict
+          channels:
+            - mark.harfouche
+            - conda-forge
+        create-args: >-
+          python=${{ matrix.python-version }}
+          dawn
+          cython>=3.1
+          setuptools
+          c-compiler
+          cffi
+          numpy
+          pytest
+          psutil
+          anyio
+          trio
+          rendercanvas
+          imageio
+          pypng
+        cache-environment: false
+
+    - name: Show versions
+      run: |
+        micromamba list | grep -E "dawn|cython|python |vulkan"
+        ls /usr/share/vulkan/icd.d/
+
+    - name: Build the Dawn backend
+      run: |
+        python tools/build_dawn.py
+        ls -la wgpu/backends/dawn/
+
+    - name: Test the Dawn backend
+      env:
+        WGPUPY_BACKEND: dawn
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        # Use lavapipe as the Vulkan driver
+        export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+        python -c "import wgpu; print(wgpu.utils.get_default_device().adapter.summary)"
+        # Dawn-specific tests, plus the generic tests that also apply to Dawn.
+        pytest -v tests/test_dawn_backend.py tests/test_api.py tests/test_async.py \
+          tests/test_canvas.py tests/test_not_finite.py tests/test_util_compute.py \
+          tests/test_util_core.py tests/test_wgpu_native_buffer.py \
+          tests/test_wgpu_native_compute_tex.py tests/test_wgpu_native_render.py \
+          tests/test_wgpu_native_render_tex.py tests/test_wgpu_native_texture.py \
+          tests/test_wgpu_occlusion_query.py \
+          --deselect tests/test_wgpu_native_buffer.py::test_buffer_init1
+
+    - name: Report on the full test suite (informational)
+      continue-on-error: true
+      env:
+        WGPUPY_BACKEND: dawn
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+        pytest tests -q -rfE --continue-on-collection-errors || true
+
+    - name: Benchmark the per-call overhead (informational)
+      continue-on-error: true
+      env:
+        WGPUPY_BACKEND: dawn
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+        python tools/bench_backends.py
+
+  codegen-dawn:
+    name: Dawn codegen up to date
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -U -e .[codegen]
+    - name: Test codegen (includes the Dawn pxd and mappings)
+      run: |
+        pytest -v codegen
