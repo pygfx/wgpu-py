@@ -1,4 +1,4 @@
-name: Dawn
+name: Dawn (Pyodide + native)
 
 # Builds the wgpu_dawn bindings for Pyodide (Emdawnwebgpu) and natively (Dawn
 # from conda), and runs the same wgpu-py code and tests on both:

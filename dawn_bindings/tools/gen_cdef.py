@@ -12,7 +12,7 @@ compiler checks the cdef against the real header of each target at build time
 Usage::
 
     python gen_cdef.py cdef path/to/emdawnwebgpu_pkg/webgpu/include/webgpu/webgpu.h > ../src/wgpu_dawn/webgpu_cdef.h
-    python gen_cdef.py native-extra path/to/dawn/webgpu.h > ../src/wgpu_dawn/webgpu_native_extra_cdef.h
+    python gen_cdef.py native-extra path/to/dawn/webgpu.h path/to/emdawn/webgpu.h > ../src/wgpu_dawn/webgpu_native_extra_cdef.h
     python gen_cdef.py diff path/to/emdawn/webgpu.h path/to/dawn/webgpu.h
 """
 
@@ -56,18 +56,21 @@ NATIVE_EXTRA_STRUCTS = [
 ]
 
 
-def make_native_extra_cdef(native_header, cc="cc"):
+def make_native_extra_cdef(native_header, shared_header, cc="cc"):
     """Extra cdef for native builds only (not available in Emdawnwebgpu)."""
     text = make_cdef(native_header, cc)
+    shared = make_cdef(shared_header, cc)
     lines = []
     for name in NATIVE_EXTRA_STRUCTS:
         m = re.search(
             r"^typedef struct %s \{.*?^\} %s\s*;" % (name, name), text, re.M | re.S
         )
         lines.append(m.group(0))
-        # The sType value is a member of WGPUSType, which in the shared cdef only
-        # has the members of the Emdawnwebgpu header; declare it separately.
-        lines.append(f"static const int WGPUSType_{name[len('WGPU') :]};")
+        # The sType must be a member of WGPUSType, which in the shared cdef
+        # only has the members of the Emdawnwebgpu header.
+        stype = f"WGPUSType_{name[len('WGPU') :]}"
+        if not re.search(r"\b%s\b" % stype, shared):
+            lines.append(f"static const int {stype};")
     return "\n".join(lines) + "\n"
 
 
@@ -117,6 +120,6 @@ if __name__ == "__main__":
     if sys.argv[1] == "cdef":
         sys.stdout.write(make_cdef(sys.argv[2]))
     elif sys.argv[1] == "native-extra":
-        sys.stdout.write(make_native_extra_cdef(sys.argv[2]))
+        sys.stdout.write(make_native_extra_cdef(sys.argv[2], sys.argv[3]))
     elif sys.argv[1] == "diff":
         diff(sys.argv[2], sys.argv[3])

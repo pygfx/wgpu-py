@@ -34,7 +34,7 @@ cd dawn_bindings && pyodide build --exports pyinit
 The build downloads the pinned Emdawnwebgpu package (or set `EMDAWNWEBGPU_PKG`
 to an extracted `emdawnwebgpu_pkg`). `tests/` has runners for Pyodide in Node.js
 (with the `webgpu` npm package) and in headless Chrome; see
-`.github/workflows/dawn.yml`. `demo/` is a static page that runs on the
+`.github/workflows/dawn-pyodide.yml`. `demo/` is a static page that runs on the
 browser's GPU.
 
 ## How it works
