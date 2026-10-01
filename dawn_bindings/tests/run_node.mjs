@@ -4,6 +4,8 @@
 //   node run_node.mjs <wheel,wheel,...> script.py
 //   node run_node.mjs <wheel,wheel,...> --pytest <tests-dir> [pytest args...]
 //
+// A script runs as __main__; if it defines an async main(), that is awaited.
+//
 // Exits with a non-zero code if the script raises or pytest fails.
 import { loadPyodide } from 'pyodide';
 import { create, globals } from 'webgpu';
@@ -15,7 +17,7 @@ Object.defineProperty(globalThis.navigator, 'gpu', { value: create([]), configur
 
 const [wheels, ...rest] = process.argv.slice(2);
 const py = await loadPyodide();
-await py.loadPackage(rest[0] === '--pytest' ? ['cffi', 'numpy', 'pytest'] : ['cffi']);
+await py.loadPackage(rest[0] === '--pytest' ? ['cffi', 'numpy', 'pytest'] : ['cffi', 'numpy']);
 const sitePackages = py.runPython('import site; site.getsitepackages()[0]');
 for (const w of wheels.split(',').filter(Boolean)) {
   py.unpackArchive(new Uint8Array(fs.readFileSync(w)), 'wheel', { extractDir: sitePackages });
@@ -38,7 +40,7 @@ int(pytest.main(["-v", "-p", "no:cacheprovider", *pytest_args]))
   } else {
     const script = rest[0];
     await py.runPythonAsync(fs.readFileSync(script, 'utf8') +
-      '\nif "main" in globals():\n    await main()\n');
+      '\nimport inspect\nif inspect.iscoroutinefunction(globals().get("main")):\n    await main()\n');
   }
 } catch (e) {
   console.log(String(e));

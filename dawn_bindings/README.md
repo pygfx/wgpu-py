@@ -15,7 +15,8 @@ wgpu-py remains installable without it; the backend is used when selected
 
 ## Build
 
-Native (Dawn from conda, `mamba install -c mark.harfouche -c conda-forge dawn`):
+Native (Dawn from conda, `mamba install -c mark.harfouche -c conda-forge dawn`,
+plus a C++20 compiler, e.g. `cxx-compiler`):
 
 ```sh
 DAWN_PREFIX=$CONDA_PREFIX pip install --no-build-isolation ./dawn_bindings
@@ -62,6 +63,30 @@ numbers); the remaining overhead is mostly in the Python layer of the backend.
 **Callbacks** use cffi `extern "Python"` entry points, one per webgpu.h
 callback type, which dispatch on `userdata1` to the Python function.
 
+**Per-call overhead.** For cheap calls, most of the cost is in the Python layer
+and in cffi's generic call wrapper, not in Dawn:
+
+* `build_cffi.py` post-processes the C code that cffi generates, so that the
+  wrappers of pass and bundle encoder functions (`wgpuRenderPassEncoder*`,
+  `wgpuComputePassEncoder*`, `wgpuRenderBundleEncoder*`) do not release the GIL
+  (and do not save/restore `errno`). These calls are cheap, never block, and
+  never call back into Python. All other functions (waits, present, submit,
+  object creation, ...) still release the GIL. (The Cython backend makes the
+  same trade-off.)
+* In `wgpu/backends/dawn/_api.py`, the hot pass encoder methods call `lib`
+  directly (no error-checking wrapper, since Dawn defers encoder errors to
+  `finish()`), avoid per-call allocations, and don't keep objects alive from
+  Python (Dawn holds its own references).
+* Other calls go through a thin wrapper that raises a validation error that
+  Dawn reported during the call (via the uncaptured-error callback) as a
+  Python exception at the call site.
+
+**Adapter enumeration.** webgpu.h can only request the "best" adapter (so e.g.
+lavapipe is never returned on a machine with a GPU). Natively, `wgpu_dawn`
+includes a small C++ helper that uses Dawn's native API
+(`dawn::native::Instance::EnumerateAdapters`), so `enumerate_adapters_sync()`
+returns all adapters, for all backends.
+
 **Emdawnwebgpu in a Pyodide extension.** Pyodide extensions are Emscripten
 *side modules*, and side modules cannot contain Emscripten JS libraries, while
 half of Emdawnwebgpu is one (`library_webgpu.js`, the other half is
@@ -81,9 +106,12 @@ half of Emdawnwebgpu is one (`library_webgpu.js`, the other half is
 
 ## Async model
 
-* Native: callbacks use `WGPUCallbackMode_AllowProcessEvents`. `GPUPromise`
-  waits by polling `wgpuInstanceProcessEvents()` with a backoff, in the waiting
-  thread (sync) or as an async loop (await). No poll thread.
+* Native: callbacks use `WGPUCallbackMode_AllowProcessEvents`. A sync wait
+  blocks in `wgpuInstanceWaitAny()` (with the GIL released) on the promise's
+  future. `await` polls `wgpuInstanceProcessEvents()` with a backoff. For
+  `promise.then()`, a lightweight thread schedules `process_events()` in the
+  event loop (via `call_soon_threadsafe`) while promises are pending; Dawn is
+  never called from that thread.
 * Pyodide: callbacks use `WGPUCallbackMode_AllowSpontaneous`; they are called
   from the JS event loop when the browser's promise resolves, and resolve the
   `GPUPromise`. `await` is plain asyncio. The sync API (`*_sync`, `sync_wait`,
@@ -109,5 +137,8 @@ files that do not depend on wgpu-native specifics (compute, render, render to
 texture, textures and samplers, buffer mapping; see the workflow), plus the
 `<canvas>` in the browser. Not supported: wgpu-native specific extras (GLSL,
 pipeline statistics, polygon mode, native features/limits, reports); SPIR-V in
-the browser; in the browser, validation errors are reported asynchronously
-(logged), not raised from the failing call.
+the browser. In the browser, validation errors are usually reported
+asynchronously (logged), not raised from the failing call. Natively they are
+raised at the call site, and error scopes (`push_error_scope()`,
+`pop_error_scope_async()`), compilation info and the device-lost promise are
+supported.

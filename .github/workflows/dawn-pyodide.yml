@@ -8,6 +8,9 @@ name: Dawn (Pyodide + native)
 # * Pyodide in headless Chrome (SwiftShader, since CI has no GPU).
 # * Native Dawn on lavapipe.
 #
+# The per-call overhead benchmark (tools/bench_backends.py) runs natively and in
+# Pyodide (Node) as an informational step.
+#
 # On pushes to the fork, the demo page is deployed to GitHub Pages.
 
 on:
@@ -99,6 +102,12 @@ jobs:
         WHEELS=$(ls $PWD/dist/*.whl | tr '\n' ',')
         cd dawn_bindings/tests
         node run_node.mjs $WHEELS --pytest ../../tests ${PORTABLE_TESTS} -k "not spirv"
+    - name: Benchmark the per-call overhead (informational)
+      continue-on-error: true
+      run: |
+        WHEELS=$(ls $PWD/dist/*.whl | tr '\n' ',')
+        cd dawn_bindings/tests
+        node run_node.mjs $WHEELS ../../tools/bench_backends.py
 
   pyodide-chrome:
     name: Pyodide in headless Chrome
@@ -162,7 +171,7 @@ jobs:
         python-version: '3.13'
     - name: Install Dawn and build tools
       run: |
-        conda install -y dawn cffi setuptools pip c-compiler numpy pytest pytest-asyncio anyio trio psutil sniffio rendercanvas
+        conda install -y dawn cffi setuptools pip c-compiler cxx-compiler numpy pytest pytest-asyncio anyio trio psutil sniffio rendercanvas imageio pypng
         conda list dawn
     - name: Install lavapipe
       run: |
@@ -176,6 +185,8 @@ jobs:
       env:
         WGPUPY_BACKEND: dawn
       run: |
+        export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+        python -c "import wgpu; print([a.summary for a in wgpu.gpu.enumerate_adapters_sync()])"
         cd dawn_bindings/tests
         python compute_async.py
         python compute_sync.py
@@ -184,7 +195,28 @@ jobs:
       env:
         WGPUPY_BACKEND: dawn
       run: |
-        pytest -v tests/test_api.py tests/test_async.py tests/test_canvas.py ${PORTABLE_TESTS}
+        export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+        pytest -v tests/test_dawn_backend.py tests/test_dawn_cffi.py \
+          tests/test_api.py tests/test_async.py tests/test_canvas.py \
+          tests/test_wgpu_native_buffer.py tests/test_wgpu_occlusion_query.py \
+          ${PORTABLE_TESTS} \
+          --deselect tests/test_wgpu_native_buffer.py::test_buffer_init1
+    - name: Report on the full test suite (informational)
+      continue-on-error: true
+      env:
+        WGPUPY_BACKEND: dawn
+      run: |
+        # Some test shaders are rejected by Dawn's WGSL compiler (Tint), but
+        # accepted by naga; these are fixed separately in pygfx/wgpu-py#841.
+        export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+        pytest tests -q -rfE --continue-on-collection-errors || true
+    - name: Benchmark the per-call overhead (informational)
+      continue-on-error: true
+      env:
+        WGPUPY_BACKEND: dawn
+      run: |
+        export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
+        python tools/bench_backends.py
 
   pages:
     name: Deploy demo to GitHub Pages (fork only)
