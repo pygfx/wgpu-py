@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wgpu-py on Dawn (Cython) in Pyodide</title>
+<style>
+  :root { --bg: #ffffff; --fg: #1d1d1f; --muted: #5f6368; --panel: #f4f5f7; --accent: #2b6cb0; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111214; --fg: #e8e8ea; --muted: #a0a4ab; --panel: #1b1d21; --accent: #7fb2ff; }
+  }
+  body { background: var(--bg); color: var(--fg); font: 15px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 900px; padding: 16px; }
+  h1 { font-size: 1.4em; margin: 0.4em 0; }
+  p { color: var(--muted); }
+  a { color: var(--accent); }
+  canvas { width: 100%; max-width: 480px; aspect-ratio: 4 / 3; background: #000; border-radius: 6px; display: block; }
+  pre { background: var(--panel); padding: 12px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+  .status { font-weight: 600; }
+</style>
+</head>
+<body>
+<h1>wgpu-py on Dawn (Cython backend), in Pyodide, on your GPU</h1>
+<p>
+  This page loads <a href="https://pyodide.org">Pyodide</a> and installs a <code>wgpu</code> wheel that
+  contains the Dawn backend as a compiled Cython extension (built with <code>pyodide build</code> against Dawn's
+  <a href="https://dawn.googlesource.com/dawn/+/refs/heads/main/src/emdawnwebgpu/">Emdawnwebgpu</a>). It then runs
+  <a href="demo.py">demo.py</a>: a compute shader and a rendered triangle, through the browser's WebGPU
+  (hardware accelerated). The same backend code also runs natively on Dawn.
+  See <a href="https://github.com/pygfx/wgpu-py/pull/839">pygfx/wgpu-py#839</a> and
+  <a href="https://github.com/pygfx/wgpu-py/discussions/838">#838</a>.
+  The variant with cffi bindings (<a href="https://github.com/pygfx/wgpu-py/pull/840">#840</a>) is at
+  <a href="cffi/">cffi/</a>.
+</p>
+<p class="status" id="status">Loading…</p>
+<canvas id="canvas" width="640" height="480"></canvas>
+<pre id="out"></pre>
+<script type="module">
+const out = document.getElementById('out');
+const status = document.getElementById('status');
+const log = (t) => { console.log(t); out.textContent += t + '\n'; };
+try {
+  if (!navigator.gpu) throw new Error('WebGPU (navigator.gpu) is not available in this browser.');
+  const manifest = await (await fetch('wheels.json')).json();
+  log(`Pyodide ${manifest.pyodide}, Dawn/Emdawnwebgpu ${manifest.dawn}, commit ${manifest.commit}`);
+  const { loadPyodide } = await import(`https://cdn.jsdelivr.net/pyodide/v${manifest.pyodide}/full/pyodide.mjs`);
+  const py = await loadPyodide();
+  const sitePackages = py.runPython('import site; site.getsitepackages()[0]');
+  for (const w of manifest.wheels) {
+    py.unpackArchive(new Uint8Array(await (await fetch('wheels/' + w)).arrayBuffer()), 'wheel', { extractDir: sitePackages });
+  }
+  const code = await (await fetch('demo.py')).text();
+  py.globals.set('canvas', document.getElementById('canvas'));
+  py.globals.set('log', log);
+  status.textContent = 'Running…';
+  const ok = await py.runPythonAsync(code + '\nawait main(canvas, log)\n');
+  status.textContent = ok ? 'Done: the compute result is correct and the triangle is rendered with WebGPU (adapter info below).' : 'The compute result was wrong!';
+  console.log(ok ? 'ALL OK' : 'FAIL: compute result');
+} catch (e) {
+  status.textContent = 'Error';
+  log(String(e));
+  console.log('FAIL: ' + e);
+}
+</script>
+</body>
+</html>

@@ -10,6 +10,14 @@ name: Dawn backend
 #   WebGPU). Tested in Node.js (navigator.gpu from the `webgpu` npm package,
 #   which is Dawn, on lavapipe) and in headless Chrome (SwiftShader).
 #
+# The per-call overhead benchmark (tools/bench_backends.py) runs natively (Dawn
+# and wgpu-native), in Node.js and in Chrome, as informational steps.
+#
+# On pushes to the `dawn` branch of the fork, the demo page is deployed to
+# GitHub Pages, with the demo of the cffi variant (#840, branch dawn-pyodide)
+# built from that branch and put under /cffi/. Note: as long as the workflow of
+# dawn-pyodide also deploys (to the root), the last deployment wins.
+#
 # See tools/build_dawn.py and tools/dawn_pyodide.
 
 on:
@@ -48,6 +56,7 @@ env:
   CHROME_DESELECT: >-
     tests/test_dawn_backend.py::test_validation_error_raises_at_call_site
     tests/test_dawn_backend.py::test_shader_error_raises
+    tests/test_dawn_backend.py::test_encoder_errors_raise_at_finish
     tests/test_wgpu_native_buffer.py::test_buffer_init3
     tests/test_wgpu_native_texture.py::test_view_formats
 
@@ -100,6 +109,7 @@ jobs:
           rendercanvas
           imageio
           pypng
+          requests
         cache-environment: false
 
     - name: Show versions
@@ -149,14 +159,14 @@ jobs:
         export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
         pytest tests -q -rfE --continue-on-collection-errors || true
 
-    - name: Benchmark the per-call overhead (informational)
+    - name: Benchmark the per-call overhead, Dawn vs wgpu-native (informational)
       continue-on-error: true
       env:
-        WGPUPY_BACKEND: dawn
         PYTHONPATH: ${{ github.workspace }}
       run: |
         export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -1)
-        python tools/bench_backends.py
+        python tools/download_wgpu_native.py
+        python tools/bench_backends.py --all
 
   codegen-dawn:
     name: Dawn codegen up to date
@@ -301,3 +311,84 @@ jobs:
         path: |
           triangle.png
           site
+
+  pages:
+    name: Deploy the demo to GitHub Pages (fork only)
+    if: github.event_name != 'pull_request' && github.repository == 'hmaarrfk/wgpu-py' && github.ref == 'refs/heads/dawn'
+    needs: [pyodide-build, pyodide-node, pyodide-chrome]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    env:
+      PYODIDE_XBUILDENV_PATH: /home/runner/xbuildenv
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: pyodide-wheel
+        path: site/wheels
+    - name: Assemble the demo (this branch, Cython)
+      run: |
+        cp tools/dawn_pyodide/demo/index.html tools/dawn_pyodide/demo/demo.py site/
+        python3 - site "${GITHUB_SHA}" <<'EOF'
+        import json, os, sys
+        d, sha = sys.argv[1:]
+        json.dump({
+            "pyodide": os.environ["PYODIDE_VERSION"],
+            "dawn": "v20260929.200159",
+            "commit": sha[:10],
+            "wheels": sorted(os.listdir(os.path.join(d, "wheels"))),
+        }, open(os.path.join(d, "wheels.json"), "w"))
+        EOF
+    # The demo of the cffi variant (#840) is built from its branch, so that one
+    # workflow deploys the whole site. If that fails, the main demo still deploys.
+    - uses: actions/checkout@v4
+      with:
+        ref: dawn-pyodide
+        path: cffi-src
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.14'
+    - name: Build the demo of the cffi variant (#840) for /cffi/
+      id: cffi
+      continue-on-error: true
+      run: |
+        pip install pyodide-build==${PYODIDE_BUILD_VERSION} build hatchling
+        pyodide xbuildenv install ${PYODIDE_VERSION}
+        pyodide xbuildenv install-emscripten
+        source ${PYODIDE_XBUILDENV_PATH}/${PYODIDE_VERSION}/emsdk/emsdk_env.sh
+        mkdir -p site/cffi/wheels
+        (cd cffi-src/dawn_bindings && pyodide build --exports pyinit -o ../../site/cffi/wheels)
+        (cd cffi-src && WGPU_PY_BUILD_NOARCH=1 python -m build --wheel -o ../site/cffi/wheels)
+        cp cffi-src/dawn_bindings/demo/index.html cffi-src/dawn_bindings/demo/demo.py site/cffi/
+        python3 - site/cffi "$(git -C cffi-src rev-parse HEAD)" <<'EOF'
+        import json, os, sys
+        d, sha = sys.argv[1:]
+        json.dump({
+            "pyodide": os.environ["PYODIDE_VERSION"],
+            "dawn": "v20260929.200159",
+            "commit": sha[:10],
+            "wheels": sorted(os.listdir(os.path.join(d, "wheels"))),
+        }, open(os.path.join(d, "wheels.json"), "w"))
+        EOF
+    - name: Placeholder for /cffi/ if its build failed
+      if: steps.cffi.outcome != 'success'
+      run: |
+        rm -rf site/cffi && mkdir -p site/cffi
+        echo '<!doctype html><meta charset="utf-8"><title>cffi demo</title><p>The demo of the cffi variant (<a href="https://github.com/pygfx/wgpu-py/pull/840">#840</a>) failed to build in the last deploy. <a href="../">The Cython demo</a>.</p>' > site/cffi/index.html
+    - run: ls -R site
+    - uses: actions/configure-pages@v5
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: site
+    - id: deployment
+      uses: actions/deploy-pages@v4
