@@ -9,6 +9,7 @@ browser's WebGPU) in Pyodide.
 # ruff: noqa: F401, F403
 
 from ._api import *
+from ._api import process_events
 from ._ffi import ffi, lib, lib_path, lib_version_info, IS_WEB
 from .. import _register_backend
 

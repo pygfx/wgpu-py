@@ -23,7 +23,7 @@ import logging
 from weakref import WeakKeyDictionary
 from typing import NoReturn, Sequence
 
-from ..._coreutils import str_flag_to_int, ArrayLike, CanvasLike
+from ..._coreutils import str_flag_to_int, ApiDiff, ArrayLike, CanvasLike
 from ..._async import (
     AwaitedType,
     AsyncEvent,
@@ -41,10 +41,13 @@ from ._helpers import (
     get_memoryview_and_address,
     to_snake_case,
     ErrorHandler,
+    EventPump,
     SafeLibCalls,
+    ERROR_TYPES,
 )
 
 logger = logging.getLogger("wgpu")
+apidiff = ApiDiff()
 
 
 # The API is pretty well defined
@@ -415,6 +418,15 @@ _feature_int2str = {
 error_handler = ErrorHandler(logger)
 libf = SafeLibCalls(lib, error_handler)
 
+# Constants for hot paths. Note that _EMPTY is the same object as the ``()``
+# default value of set_bind_group(), so it can be tested by identity.
+_EMPTY = ()
+_NULL = ffi.NULL
+_WHOLE_SIZE = lib.WGPU_WHOLE_SIZE
+
+# Native only, see dawn_bindings/build_cffi.py
+_enumerate_adapters = getattr(lib, "wgpu_dawn_enumerate_adapters", None)
+
 
 def find_surface_id_from_canvas(canvas_or_context):
     """Try to get the surface_id from a RenderCanvas, rendercanvas context, or GPUCanvasContect."""
@@ -485,6 +497,18 @@ class GPU(classes.GPU):
             else:
                 logger.warning(f"Forcing backend: {force_backend} ({backend})")
 
+        return self._request_adapter(
+            feature_level, power_preference, force_fallback_adapter, surface_id, backend
+        )
+
+    def _request_adapter(
+        self,
+        feature_level,
+        power_preference,
+        force_fallback_adapter,
+        surface_id,
+        backend,
+    ):
         # ----- Request adapter
 
         c_feature_level = {
@@ -532,7 +556,8 @@ class GPU(classes.GPU):
         instance = get_wgpu_instance()
 
         # H: WGPUFuture f(WGPUInstance instance, WGPURequestAdapterOptions const * options, WGPURequestAdapterCallbackInfo callbackInfo)
-        libf.wgpuInstanceRequestAdapter(instance, struct, callback_info)
+        future = libf.wgpuInstanceRequestAdapter(instance, struct, callback_info)
+        promise._set_future(future)
 
         # Natively the callback is called on the next wgpuInstanceProcessEvents(),
         # in the browser when the JS promise resolves.
@@ -541,21 +566,51 @@ class GPU(classes.GPU):
     def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
 
-        webgpu.h has no adapter enumeration, so with Dawn this returns the
-        adapters for each power preference (which may be the same adapter).
+        webgpu.h has no adapter enumeration (requesting an adapter returns the
+        "best" one only). Natively, this uses Dawn's native C++ API to list all
+        adapters, for all backends (Vulkan, Metal, D3D12, OpenGL, ...),
+        including CPU adapters like lavapipe/llvmpipe. In the browser there is
+        only the adapter that the browser provides.
         """
         if IS_WEB:
             # The browser exposes one adapter at a time
             promise = self.request_adapter_async()
             return promise.then(lambda adapter: [adapter], title="enumerate_adapters")
+
         adapters = []
-        for pref in ("high-performance", "low-power"):
-            try:
-                adapter = self.request_adapter_sync(power_preference=pref)
-            except Exception:
+        if _enumerate_adapters is not None:
+            # Use Dawn's native adapter enumeration (compiled into wgpu_dawn)
+            instance = get_wgpu_instance()
+            count = _enumerate_adapters(instance, _NULL, 0)
+            c_adapters = ffi.new("WGPUAdapter[]", count)
+            count = min(count, _enumerate_adapters(instance, c_adapters, count))
+            adapters = [self._create_adapter(c_adapters[i]) for i in range(count)]
+        else:  # Fallback, should not happen natively
+            for pref in ("high-performance", "low-power"):
+                try:
+                    adapters.append(self.request_adapter_sync(power_preference=pref))
+                except Exception:
+                    pass
+
+        # Remove duplicates and Dawn's "Null" backend, and sort by backend type
+        backend_order = ["Vulkan", "Metal", "D3D12", "D3D11", "OpenGL", "OpenGLES"]
+        unique_adapters = {}
+        for adapter in adapters:
+            info = adapter.info
+            if info["backend_type"] not in backend_order:
                 continue
-            if adapter.info not in [a.info for a in adapters]:
-                adapters.append(adapter)
+            key = (
+                info["backend_type"],
+                info["vendor_id"],
+                info["device_id"],
+                info["device"],
+            )
+            unique_adapters.setdefault(key, adapter)
+        adapters = sorted(
+            unique_adapters.values(),
+            key=lambda a: backend_order.index(a.info["backend_type"]),
+        )
+
         promise = GPUPromise("enumerate_adapters", None)
         promise._wgpu_set_input(adapters)
         return promise
@@ -610,6 +665,16 @@ class GPU(classes.GPU):
                 c_info.backendType, "unknown"
             ),
         }
+        # Dawn reports a normalized vendor name (e.g. "intel" or "mesa"), and puts
+        # the driver name in the description (on Vulkan: "<driver name>: <driver
+        # info>"). The wgpu-native backend reports the driver name as the
+        # vendor. For consistency between the backends, and for code that relies
+        # on it (e.g. detecting lavapipe with ``info["vendor"] == "llvmpipe"``),
+        # we do the same on Vulkan.
+        if adapter_info_data["backend_type"] == "Vulkan":
+            driver_name, sep, _ = adapter_info_data["description"].partition(": ")
+            if sep and driver_name:
+                adapter_info_data["vendor"] = driver_name
         adapter_info = GPUAdapterInfo(adapter_info_data)
 
         # Allow Rust to release its string objects
@@ -647,17 +712,40 @@ def process_events():
     libf.wgpuInstanceProcessEvents(get_wgpu_instance())
 
 
+_WAIT_SUCCESS = lib.WGPUWaitStatus_Success
+_WAIT_TIMED_OUT = lib.WGPUWaitStatus_TimedOut
+
+
+def _process_events_safe():
+    try:
+        process_events()
+    except Exception as err:
+        error_handler.log_error(str(err))
+
+
+_event_pump = EventPump(_process_events_safe)
+
+
 class GPUPromise(classes.GPUPromise[AwaitedType]):
     """GPUPromise for the Dawn backend.
 
-    Natively, callbacks are delivered when we call wgpuInstanceProcessEvents(),
-    so waiting means polling (with a backoff), in the thread that waits.
+    Natively, callbacks are delivered when we call wgpuInstanceProcessEvents()
+    or wgpuInstanceWaitAny(). A sync wait blocks in wgpuInstanceWaitAny() (with
+    the GIL released) for the promise's future. Awaiting polls (with a backoff).
 
     In the browser, callbacks are delivered by the JS event loop. Awaiting is
     plain asyncio (no polling). A sync wait must let the JS event loop run
     while the Python call stack is suspended, which Pyodide supports via JSPI
     (``pyodide.ffi.run_sync``), when the code is run with e.g. ``runPythonAsync``.
     """
+
+    _wgpu_future_id = None  # set for promises that represent a WGPUFuture
+
+    def _set_future(self, future):
+        """Associate a WGPUFuture with this promise."""
+        if not IS_WEB:
+            self._wgpu_future_id = future.id
+            _event_pump.add(self)
 
     def _sync_wait(self):
         if IS_WEB:
@@ -668,6 +756,22 @@ class GPUPromise(classes.GPUPromise[AwaitedType]):
                     "Cannot sync-wait for a GPUPromise in Pyodide here: this needs JSPI support in the browser and code that is run via e.g. pyodide.runPythonAsync(). Use the async API (await) instead."
                 )
             run_sync(self._wait_web())
+        elif self._wgpu_future_id is not None:
+            # Block in Dawn (with the GIL released) until the future completes.
+            # This calls the callback, which resolves the promise.
+            wait_info = ffi.new("WGPUFutureWaitInfo *")
+            wait_info.future.id = self._wgpu_future_id
+            instance = get_wgpu_instance()
+            while self._state == "pending":
+                # Wait in chunks of 0.1 s, so that e.g. KeyboardInterrupt comes through
+                # H: WGPUWaitStatus f(WGPUInstance instance, size_t futureCount, WGPUFutureWaitInfo * futures, uint64_t timeoutNS)
+                status = libf.wgpuInstanceWaitAny(instance, 1, wait_info, 100_000_000)
+                if wait_info.completed:
+                    break
+                elif status not in (_WAIT_SUCCESS, _WAIT_TIMED_OUT):
+                    raise RuntimeError(
+                        f"Waiting for {self} failed with status {status}"
+                    )
         else:
             sleep_gen = get_backoff_time_generator()
             while self._state == "pending":
@@ -1076,7 +1180,6 @@ class GPUObjectBase(classes.GPUObjectBase):
     def _release(self):
         if self._internal is not None and libf is not None:
             self._internal, internal = None, self._internal
-            # FIXME: There are no assignments to class field _release_function
             # H: void wgpuDeviceRelease(WGPUDevice device)
             # H: void wgpuBufferRelease(WGPUBuffer buffer)
             # H: void wgpuTextureRelease(WGPUTexture texture)
@@ -1097,7 +1200,10 @@ class GPUObjectBase(classes.GPUObjectBase):
             # H: void wgpuRenderBundleRelease(WGPURenderBundle renderBundle)
             # H: void wgpuQuerySetRelease(WGPUQuerySet querySet)
             function = type(self)._release_function
-            function(internal)
+            try:
+                function(internal)
+            except Exception as err:  # Never raise from a release (e.g. in __del__)
+                error_handler.log_error(str(err))
 
 
 class GPUAdapterInfo(classes.GPUAdapterInfo):
@@ -1242,12 +1348,14 @@ class GPUAdapter(classes.GPUAdapter):
         )
 
         # ----- Device lost
+        lost_promise = GPUPromise("device.lost", None)
+
         def device_lost_callback(c_device, c_reason, c_message, userdata1, userdata2):
             reason = enum_int2str["DeviceLostReason"].get(c_reason, "Unknown")
+            msg = from_c_string_view(c_message)
+            lost_promise._wgpu_set_input(GPUDeviceLostInfo(reason, msg))
             if reason in ("destroyed", "CallbackCancelled"):
                 return  # Normal when the device is destroyed or released
-            logger.error("DEVICE LOST!")
-            msg = from_c_string_view(c_message)
             # This is afaik an error that cannot usually be attributed to a specific call,
             # so we cannot raise it as an error. We log it instead.
             # WebGPU provides (promise-based) API for user-code to handle the error.
@@ -1332,6 +1440,7 @@ class GPUAdapter(classes.GPUAdapter):
             # Bind some things to the lifetime of the device
             device._uncaptured_error_callback = uncaptured_error_callback
             device._device_lost_callback = device_lost_callback
+            device._lost_promise = lost_promise
 
             return device
 
@@ -1340,7 +1449,8 @@ class GPUAdapter(classes.GPUAdapter):
         )
 
         # H: WGPUFuture f(WGPUAdapter adapter, WGPUDeviceDescriptor const * descriptor, WGPURequestDeviceCallbackInfo callbackInfo)
-        libf.wgpuAdapterRequestDevice(self._internal, struct, callback_info)
+        future = libf.wgpuAdapterRequestDevice(self._internal, struct, callback_info)
+        promise._set_future(future)
 
         return promise
 
@@ -1637,62 +1747,30 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         layout: GPUBindGroupLayout,
         entries: Sequence[structs.BindGroupEntryStruct],
     ) -> GPUBindGroup:
-        c_entries_list = []
-        for entry in entries:
+        # The entries are written directly into a C array (rather than via
+        # new_struct()), to avoid per-entry allocations. The array only holds
+        # handles (pointers) of objects that the caller keeps alive.
+        n = len(entries)
+        c_entries = ffi.new("WGPUBindGroupEntry[]", n) if n else _NULL
+        for i, entry in enumerate(entries):
             check_struct("BindGroupEntry", entry)
+            c_entry = c_entries[i]
+            c_entry.binding = int(entry["binding"])
             # The resource can be a buffer, sampler, texture view, or buffer descriptor
             resource = entry["resource"]
             if isinstance(resource, GPUBuffer):
-                # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
-                c_entry = new_struct(
-                    "WGPUBindGroupEntry",
-                    # not used: nextInChain
-                    binding=int(entry["binding"]),
-                    buffer=resource._internal,
-                    offset=0,
-                    size=resource.size,
-                    sampler=ffi.NULL,
-                    textureView=ffi.NULL,
-                )
+                c_entry.buffer = resource._internal
+                c_entry.size = resource.size
             elif isinstance(resource, GPUSampler):
-                # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
-                c_entry = new_struct(
-                    "WGPUBindGroupEntry",
-                    # not used: nextInChain
-                    binding=int(entry["binding"]),
-                    buffer=ffi.NULL,
-                    offset=0,
-                    size=0,
-                    sampler=resource._internal,
-                    textureView=ffi.NULL,
-                )
+                c_entry.sampler = resource._internal
             elif isinstance(resource, GPUTextureView):
-                # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
-                c_entry = new_struct(
-                    "WGPUBindGroupEntry",
-                    # not used: nextInChain
-                    binding=int(entry["binding"]),
-                    buffer=ffi.NULL,
-                    offset=0,
-                    size=0,
-                    sampler=ffi.NULL,
-                    textureView=resource._internal,
-                )
+                c_entry.textureView = resource._internal
             elif isinstance(resource, (structs.BufferBinding, dict)):
-                # H: nextInChain: WGPUChainedStruct *, binding: int, buffer: WGPUBuffer, offset: int, size: int, sampler: WGPUSampler, textureView: WGPUTextureView
-                c_entry = new_struct(
-                    "WGPUBindGroupEntry",
-                    # not used: nextInChain
-                    binding=int(entry["binding"]),
-                    buffer=resource["buffer"]._internal,
-                    offset=resource.get("offset", 0),
-                    size=resource.get("size", lib.WGPU_WHOLE_SIZE),
-                    sampler=ffi.NULL,
-                    textureView=ffi.NULL,
-                )
+                c_entry.buffer = resource["buffer"]._internal
+                c_entry.offset = resource.get("offset", 0)
+                c_entry.size = resource.get("size", _WHOLE_SIZE)
             else:
                 raise TypeError(f"Unexpected resource type {type(resource)}")
-            c_entries_list.append(c_entry)
 
         # H: nextInChain: WGPUChainedStruct *, label: WGPUStringView, layout: WGPUBindGroupLayout, entryCount: int, entries: WGPUBindGroupEntry *
         struct = new_struct_p(
@@ -1700,8 +1778,8 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             # not used: nextInChain
             label=to_c_string_view(label),
             layout=layout._internal,
-            entries=new_array("WGPUBindGroupEntry[]", c_entries_list),
-            entryCount=len(c_entries_list),
+            entries=c_entries,
+            entryCount=n,
         )
 
         # H: WGPUBindGroup f(WGPUDevice device, WGPUBindGroupDescriptor const * descriptor)
@@ -1857,9 +1935,10 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         promise = GPUPromise("create_compute_pipeline", handler, keepalive=callback)
 
         # H: WGPUFuture f(WGPUDevice device, WGPUComputePipelineDescriptor const * descriptor, WGPUCreateComputePipelineAsyncCallbackInfo callbackInfo)
-        libf.wgpuDeviceCreateComputePipelineAsync(
+        future = libf.wgpuDeviceCreateComputePipelineAsync(
             self._internal, descriptor, callback_info
         )
+        promise._set_future(future)
 
         return promise
 
@@ -1971,11 +2050,12 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         promise = GPUPromise("create_render_pipeline", handler, keepalive=callback)
 
         # H: WGPUFuture f(WGPUDevice device, WGPURenderPipelineDescriptor const * descriptor, WGPUCreateRenderPipelineAsyncCallbackInfo callbackInfo)
-        libf.wgpuDeviceCreateRenderPipelineAsync(
+        future = libf.wgpuDeviceCreateRenderPipelineAsync(
             self._internal,
             descriptor,
             callback_info,
         )
+        promise._set_future(future)
 
         return promise
 
@@ -2238,7 +2318,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             label=to_c_string_view(label),
             colorFormatCount=color_formats_count,
             colorFormats=c_color_formats,
-            depthStencilFormat=depth_stencil_format or 0,
+            depthStencilFormat=enummap["TextureFormat." + depth_stencil_format]
+            if depth_stencil_format
+            else 0,
             sampleCount=sample_count,
             depthReadOnly=depth_read_only,
             stencilReadOnly=stencil_read_only,
@@ -2248,7 +2330,6 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             self._internal, render_bundle_encoder_descriptor
         )
         result = GPURenderBundleEncoder(label, render_bundle_encoder_id, self)
-        result._objects_to_keep_alive = set()
         return result
 
     def create_query_set(
@@ -2276,7 +2357,43 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         return GPUQuerySet(label, query_id, self, type, count)
 
     def _get_lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
-        raise NotImplementedError()
+        return self._lost_promise
+
+    @apidiff.add("Error scopes are supported by Dawn")
+    def push_error_scope(self, filter: enums.ErrorFilterEnum) -> None:
+        c_filter = enummap[f"ErrorFilter.{filter}"]
+        # H: void f(WGPUDevice device, WGPUErrorFilter filter)
+        libf.wgpuDevicePushErrorScope(self._internal, c_filter)
+
+    @apidiff.add("Error scopes are supported by Dawn")
+    def pop_error_scope_async(self) -> GPUPromise[GPUError]:
+        def pop_error_scope_callback(c_status, c_type, c_message, userdata1, userdata2):
+            if c_status != lib.WGPUPopErrorScopeStatus_Success:
+                msg = from_c_string_view(c_message)
+                promise._wgpu_set_error(RuntimeError(f"pop_error_scope failed: {msg}"))
+            elif c_type == lib.WGPUErrorType_NoError:
+                promise._wgpu_set_input(None)
+            else:
+                error_type = enum_int2str["ErrorType"].get(c_type, "Unknown")
+                cls = ERROR_TYPES.get(error_type, GPUError)
+                promise._wgpu_set_input(cls(from_c_string_view(c_message)))
+
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUPopErrorScopeCallback, userdata1: void*, userdata2: void*
+        callback_info = new_struct(
+            "WGPUPopErrorScopeCallbackInfo",
+            # not used: nextInChain
+            mode=CALLBACK_MODE,
+            callback=c_callback("WGPUPopErrorScopeCallback"),
+            userdata1=callbacks.register(pop_error_scope_callback),
+            # not used: userdata2
+        )
+        promise = GPUPromise(
+            "pop_error_scope", None, keepalive=pop_error_scope_callback
+        )
+        # H: WGPUFuture f(WGPUDevice device, WGPUPopErrorScopeCallbackInfo callbackInfo)
+        future = libf.wgpuDevicePopErrorScope(self._internal, callback_info)
+        promise._set_future(future)
+        return promise
 
     def destroy(self) -> None:
         # NOTE: destroy means that the wgpu-core object gets into a destroyed state. The wgpu-core object still exists.
@@ -2390,13 +2507,14 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # Map it
         self._map_state = enums.BufferMapState.pending
         # H: WGPUFuture f(WGPUBuffer buffer, WGPUMapMode mode, size_t offset, size_t size, WGPUBufferMapCallbackInfo callbackInfo)
-        libf.wgpuBufferMapAsync(
+        future = libf.wgpuBufferMapAsync(
             self._internal,
             map_mode,
             offset,
             size,
             buffer_map_callback_info,
         )
+        promise._set_future(future)
 
         return promise
 
@@ -2639,45 +2757,52 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
     _release_function = libf.wgpuShaderModuleRelease
 
     def get_compilation_info_async(self) -> GPUPromise[GPUCompilationInfo]:
-        # Here's a little setup to implement this method. Unfortunately,
-        # this is not yet implemented in wgpu-native. Another problem
-        # is that if there is an error in the shader source, we raise
-        # an exception, so the user never gets a GPUShaderModule object
-        # that can be used to call this method :/ So perhaps we should
-        # do this stuff in device.create_shader_module() and attach it
-        # to the exception that we raise?
+        def compilation_info_callback(c_status, c_info, userdata1, userdata2):
+            if c_status != lib.WGPUCompilationInfoRequestStatus_Success or not c_info:
+                promise._wgpu_set_error(
+                    RuntimeError(f"Could not get compilation info ({c_status}).")
+                )
+                return
+            messages = []
+            type_map = {
+                lib.WGPUCompilationMessageType_Error: "error",
+                lib.WGPUCompilationMessageType_Warning: "warning",
+                lib.WGPUCompilationMessageType_Info: "info",
+            }
+            for i in range(c_info.messageCount):
+                m = c_info.messages[i]
+                messages.append(
+                    GPUCompilationMessage(
+                        from_c_string_view(m.message),
+                        type_map.get(m.type, "info"),
+                        m.lineNum,
+                        m.linePos,
+                        m.offset,
+                        m.length,
+                    )
+                )
+            promise._wgpu_set_input(GPUCompilationInfo(messages))
 
-        # info = None
-        #
-        # @ffi.callback("void(WGPUCompilationInfoRequestStatus, WGPUCompilationInfo*, void*)")
-        # def callback(status_, info_, userdata):
-        #     if status_ == 0:
-        #         nonlocal info
-        #         info = info_
-        #     else:
-        #         pass
-        #
+        # H: nextInChain: WGPUChainedStruct *, mode: WGPUCallbackMode, callback: WGPUCompilationInfoCallback, userdata1: void*, userdata2: void*
+        callback_info = new_struct(
+            "WGPUCompilationInfoCallbackInfo",
+            # not used: nextInChain
+            mode=CALLBACK_MODE,
+            callback=c_callback("WGPUCompilationInfoCallback"),
+            userdata1=callbacks.register(compilation_info_callback),
+            # not used: userdata2
+        )
+        promise = GPUPromise(
+            "get_compilation_info", None, keepalive=compilation_info_callback
+        )
         # H: WGPUFuture f(WGPUShaderModule shaderModule, WGPUCompilationInfoCallbackInfo callbackInfo)
-        # libf.wgpuShaderModuleGetCompilationInfo(self._internal, callback, ffi.NULL)
-        #
-        # self._device._poll()
-        #
-        # if info is None:
-        #     raise RuntimeError("Could not obtain shader compilation info.")
-        #
-        #  ... and then turn these WGPUCompilationInfoRequestStatus objects into Python objects ...
-
-        result = []
-
-        # Return a resolved promise
-        promise = GPUPromise("get_compilation_info", None)
-        promise._wgpu_set_input(result)
+        future = libf.wgpuShaderModuleGetCompilationInfo(self._internal, callback_info)
+        promise._set_future(future)
         return promise
 
 
 class GPUPipelineBase(classes.GPUPipelineBase):
     def get_bind_group_layout(self, index: int) -> GPUBindGroupLayout:
-        # FIXME: There are no assignments to class field _get_bind_group_layout_function
         # H: WGPUBindGroupLayout wgpuComputePipelineGetBindGroupLayout(WGPUComputePipeline computePipeline, uint32_t groupIndex)
         # H: WGPUBindGroupLayout wgpuRenderPipelineGetBindGroupLayout(WGPURenderPipeline renderPipeline, uint32_t groupIndex)
         function = type(self)._get_bind_group_layout_function
@@ -2720,6 +2845,17 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
         dynamic_offsets_data_length: int | None = None,
     ) -> None:
         if (
+            dynamic_offsets_data is _EMPTY
+            and dynamic_offsets_data_start is None
+            and dynamic_offsets_data_length is None
+        ):
+            # Fast path: no dynamic offsets, no per-call allocations
+            type(self)._set_bind_group_function(
+                self._internal, index, bind_group._internal, 0, _NULL
+            )
+            return
+
+        if (
             dynamic_offsets_data_start is not None
             or dynamic_offsets_data_length is not None
         ):
@@ -2741,14 +2877,13 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             ]
 
         offsets = list(dynamic_offsets_data)
-        c_offsets = ffi.new("uint32_t []", offsets)
-        self._maybe_keep_alive(bind_group)
-        # FIXME: There are no assignments to class field _set_bind_group_function
+        c_offsets = ffi.new("uint32_t []", offsets) if offsets else _NULL
         # H: void wgpuComputePassEncoderSetBindGroup(WGPUComputePassEncoder computePassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
         # H: void wgpuRenderPassEncoderSetBindGroup(WGPURenderPassEncoder renderPassEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
         # H: void wgpuRenderBundleEncoderSetBindGroup(WGPURenderBundleEncoder renderBundleEncoder, uint32_t groupIndex, WGPUBindGroup group, size_t dynamicOffsetCount, uint32_t const * dynamicOffsets)
-        function = type(self)._set_bind_group_function
-        function(self._internal, index, bind_group._internal, len(offsets), c_offsets)
+        type(self)._set_bind_group_function(
+            self._internal, index, bind_group._internal, len(offsets), c_offsets
+        )
 
     ##
     # It is unfortunate that there is no common Mixin that includes just
@@ -2787,7 +2922,6 @@ class GPUBindingCommandsMixin(classes.GPUBindingCommandsMixin):
             raise ValueError("data_size + data_offset is too large")
 
         c_data = ffi.cast("void *", address)  # do we want to add data_offset?
-        # FIXME: There are no assignments to class field _set_immediates_function
         # H: void wgpuComputePassEncoderSetImmediates(WGPUComputePassEncoder computePassEncoder, uint32_t offset, void const * data, size_t size)
         # H: void wgpuRenderPassEncoderSetImmediates(WGPURenderPassEncoder renderPassEncoder, uint32_t offset, void const * data, size_t size)
         # H: void wgpuRenderBundleEncoderSetImmediates(WGPURenderBundleEncoder renderBundleEncoder, uint32_t offset, void const * data, size_t size)
@@ -2801,7 +2935,6 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
     # whole class is likely going to be solved better: https://github.com/pygfx/wgpu-py/pull/546
     def push_debug_group(self, group_label: str) -> None:
         c_group_label = to_c_string_view(group_label)
-        # FIXME: There are no assignments to class field _push_debug_group_function
         # H: void wgpuCommandEncoderPushDebugGroup(WGPUCommandEncoder commandEncoder, WGPUStringView groupLabel)
         # H: void wgpuComputePassEncoderPushDebugGroup(WGPUComputePassEncoder computePassEncoder, WGPUStringView groupLabel)
         # H: void wgpuRenderPassEncoderPushDebugGroup(WGPURenderPassEncoder renderPassEncoder, WGPUStringView groupLabel)
@@ -2810,7 +2943,6 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         function(self._internal, c_group_label)
 
     def pop_debug_group(self) -> None:
-        # FIXME: There are no assignments to class field _pop_debug_group_function
         # H: void wgpuCommandEncoderPopDebugGroup(WGPUCommandEncoder commandEncoder)
         # H: void wgpuComputePassEncoderPopDebugGroup(WGPUComputePassEncoder computePassEncoder)
         # H: void wgpuRenderPassEncoderPopDebugGroup(WGPURenderPassEncoder renderPassEncoder)
@@ -2820,7 +2952,6 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
 
     def insert_debug_marker(self, marker_label: str) -> None:
         c_marker_label = to_c_string_view(marker_label)
-        # FIXME: There are no assignments to class field _insert_debug_marker_function
         # H: void wgpuCommandEncoderInsertDebugMarker(WGPUCommandEncoder commandEncoder, WGPUStringView markerLabel)
         # H: void wgpuComputePassEncoderInsertDebugMarker(WGPUComputePassEncoder computePassEncoder, WGPUStringView markerLabel)
         # H: void wgpuRenderPassEncoderInsertDebugMarker(WGPURenderPassEncoder renderPassEncoder, WGPUStringView markerLabel)
@@ -2829,7 +2960,6 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
         function(self._internal, c_marker_label)
 
     def _write_timestamp(self, query_set, query_index):
-        # FIXME: There are no assignments to class field _write_timestamp_function
         # H: void wgpuCommandEncoderWriteTimestamp(WGPUCommandEncoder commandEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         # H: void wgpuComputePassEncoderWriteTimestamp(WGPUComputePassEncoder computePassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
         # H: void wgpuRenderPassEncoderWriteTimestamp(WGPURenderPassEncoder renderPassEncoder, WGPUQuerySet querySet, uint32_t queryIndex)
@@ -2842,14 +2972,14 @@ class GPUDebugCommandsMixin(classes.GPUDebugCommandsMixin):
 
 
 class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
+    # Note: these methods are on the hot path of rendering, so they are kept
+    # lean. Calls on pass/bundle encoders go to ``lib`` directly (not ``libf``),
+    # because Dawn defers their errors to the encoder's finish(). Dawn holds its
+    # own references to the objects used in a pass/bundle, so we don't need to
+    # keep them alive from Python.
+
     def set_pipeline(self, pipeline: GPURenderPipeline) -> None:
-        self._maybe_keep_alive(pipeline)
-        pipeline_id = pipeline._internal
-        # FIXME: There are no assignments to class field _set_pipeline_function
-        # H: void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
-        # H: void wgpuRenderBundleEncoderSetPipeline(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderPipeline pipeline)
-        function = type(self)._set_pipeline_function
-        function(self._internal, pipeline_id)
+        type(self)._set_pipeline_function(self._internal, pipeline._internal)
 
     def set_index_buffer(
         self,
@@ -2858,29 +2988,25 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         offset: int = 0,
         size: int | None = None,
     ) -> None:
-        self._maybe_keep_alive(buffer)
         if not size:
-            size = lib.WGPU_WHOLE_SIZE
+            size = _WHOLE_SIZE
         c_index_format = enummap[f"IndexFormat.{index_format}"]
-        # FIXME: There are no assignments to class field _set_index_buffer_function
         # H: void wgpuRenderPassEncoderSetIndexBuffer(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
         # H: void wgpuRenderBundleEncoderSetIndexBuffer(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer buffer, WGPUIndexFormat format, uint64_t offset, uint64_t size)
-        function = type(self)._set_index_buffer_function
-        function(
-            self._internal, buffer._internal, c_index_format, int(offset), int(size)
+        type(self)._set_index_buffer_function(
+            self._internal, buffer._internal, c_index_format, offset, size
         )
 
     def set_vertex_buffer(
         self, slot: int, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
-        self._maybe_keep_alive(buffer)
         if not size:
-            size = lib.WGPU_WHOLE_SIZE
-        # FIXME: There are no assignments to class field _set_vertex_buffer_function
+            size = _WHOLE_SIZE
         # H: void wgpuRenderPassEncoderSetVertexBuffer(WGPURenderPassEncoder renderPassEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
         # H: void wgpuRenderBundleEncoderSetVertexBuffer(WGPURenderBundleEncoder renderBundleEncoder, uint32_t slot, WGPUBuffer buffer, uint64_t offset, uint64_t size)
-        function = type(self)._set_vertex_buffer_function
-        function(self._internal, int(slot), buffer._internal, int(offset), int(size))
+        type(self)._set_vertex_buffer_function(
+            self._internal, slot, buffer._internal, offset, size
+        )
 
     def draw(
         self,
@@ -2889,22 +3015,18 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         first_vertex: int = 0,
         first_instance: int = 0,
     ) -> None:
-        # FIXME: There are no assignments to class field _draw_function
         # H: void wgpuRenderPassEncoderDraw(WGPURenderPassEncoder renderPassEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
         # H: void wgpuRenderBundleEncoderDraw(WGPURenderBundleEncoder renderBundleEncoder, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance)
-        function = type(self)._draw_function
-        function(
+        type(self)._draw_function(
             self._internal, vertex_count, instance_count, first_vertex, first_instance
         )
 
     def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int) -> None:
-        # self._maybe_keep_alive(indirect_buffer)
-        buffer_id = indirect_buffer._internal
-        # FIXME: There are no assignments to class field _draw_indirect_function
         # H: void wgpuRenderPassEncoderDrawIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         # H: void wgpuRenderBundleEncoderDrawIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        function = type(self)._draw_indirect_function
-        function(self._internal, buffer_id, int(indirect_offset))
+        type(self)._draw_indirect_function(
+            self._internal, indirect_buffer._internal, int(indirect_offset)
+        )
 
     def draw_indexed(
         self,
@@ -2914,11 +3036,9 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
         base_vertex: int = 0,
         first_instance: int = 0,
     ) -> None:
-        # FIXME: There are no assignments to class field _draw_indexed_function
         # H: void wgpuRenderPassEncoderDrawIndexed(WGPURenderPassEncoder renderPassEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
         # H: void wgpuRenderBundleEncoderDrawIndexed(WGPURenderBundleEncoder renderBundleEncoder, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t baseVertex, uint32_t firstInstance)
-        function = type(self)._draw_indexed_function
-        function(
+        type(self)._draw_indexed_function(
             self._internal,
             index_count,
             instance_count,
@@ -2930,13 +3050,11 @@ class GPURenderCommandsMixin(classes.GPURenderCommandsMixin):
     def draw_indexed_indirect(
         self, indirect_buffer: GPUBuffer, indirect_offset: int
     ) -> None:
-        self._maybe_keep_alive(indirect_buffer)
-        buffer_id = indirect_buffer._internal
-        # FIXME: There are no assignments to class field _draw_indexed_indirect_function
         # H: void wgpuRenderPassEncoderDrawIndexedIndirect(WGPURenderPassEncoder renderPassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
         # H: void wgpuRenderBundleEncoderDrawIndexedIndirect(WGPURenderBundleEncoder renderBundleEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        function = type(self)._draw_indexed_indirect_function
-        function(self._internal, buffer_id, int(indirect_offset))
+        type(self)._draw_indexed_indirect_function(
+            self._internal, indirect_buffer._internal, int(indirect_offset)
+        )
 
 
 class GPUCommandEncoder(
@@ -3437,22 +3555,30 @@ class GPUComputePassEncoder(
     GPUObjectBase,
 ):
     # GPUDebugCommandsMixin
-    _push_debug_group_function = libf.wgpuComputePassEncoderPushDebugGroup
-    _pop_debug_group_function = libf.wgpuComputePassEncoderPopDebugGroup
-    _insert_debug_marker_function = libf.wgpuComputePassEncoderInsertDebugMarker
-    _write_timestamp_function = libf.wgpuComputePassEncoderWriteTimestamp
+    _push_debug_group_function = lib.wgpuComputePassEncoderPushDebugGroup
+    _pop_debug_group_function = lib.wgpuComputePassEncoderPopDebugGroup
+    _insert_debug_marker_function = lib.wgpuComputePassEncoderInsertDebugMarker
+    _write_timestamp_function = lib.wgpuComputePassEncoderWriteTimestamp
 
     # GPUBindingCommandsMixin
-    _set_bind_group_function = libf.wgpuComputePassEncoderSetBindGroup
-    _set_immediates_function = libf.wgpuComputePassEncoderSetImmediates
+    _set_bind_group_function = lib.wgpuComputePassEncoderSetBindGroup
+    _set_immediates_function = lib.wgpuComputePassEncoderSetImmediates
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuComputePassEncoderRelease
 
+    # Hot-path calls (see GPURenderCommandsMixin)
+    _set_pipeline_function = lib.wgpuComputePassEncoderSetPipeline
+    _dispatch_workgroups_function = lib.wgpuComputePassEncoderDispatchWorkgroups
+    _dispatch_workgroups_indirect_function = (
+        lib.wgpuComputePassEncoderDispatchWorkgroupsIndirect
+    )
+
     def set_pipeline(self, pipeline: GPUComputePipeline) -> None:
-        pipeline_id = pipeline._internal
-        # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)
-        libf.wgpuComputePassEncoderSetPipeline(self._internal, pipeline_id)
+        # H: void wgpuComputePassEncoderSetPipeline(WGPUComputePassEncoder computePassEncoder, WGPUComputePipeline pipeline)
+        # H: void wgpuRenderPassEncoderSetPipeline(WGPURenderPassEncoder renderPassEncoder, WGPURenderPipeline pipeline)
+        # H: void wgpuRenderBundleEncoderSetPipeline(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderPipeline pipeline)
+        type(self)._set_pipeline_function(self._internal, pipeline._internal)
 
     def dispatch_workgroups(
         self,
@@ -3460,26 +3586,22 @@ class GPUComputePassEncoder(
         workgroup_count_y: int = 1,
         workgroup_count_z: int = 1,
     ) -> None:
-        # H: void f(WGPUComputePassEncoder computePassEncoder, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ)
-        libf.wgpuComputePassEncoderDispatchWorkgroups(
+        # H: void wgpuComputePassEncoderDispatchWorkgroups(WGPUComputePassEncoder computePassEncoder, uint32_t workgroupCountX, uint32_t workgroupCountY, uint32_t workgroupCountZ)
+        type(self)._dispatch_workgroups_function(
             self._internal, workgroup_count_x, workgroup_count_y, workgroup_count_z
         )
 
     def dispatch_workgroups_indirect(
         self, indirect_buffer: GPUBuffer, indirect_offset: int
     ) -> None:
-        buffer_id = indirect_buffer._internal
-        # H: void f(WGPUComputePassEncoder computePassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
-        libf.wgpuComputePassEncoderDispatchWorkgroupsIndirect(
-            self._internal, buffer_id, int(indirect_offset)
+        # H: void wgpuComputePassEncoderDispatchWorkgroupsIndirect(WGPUComputePassEncoder computePassEncoder, WGPUBuffer indirectBuffer, uint64_t indirectOffset)
+        type(self)._dispatch_workgroups_indirect_function(
+            self._internal, indirect_buffer._internal, int(indirect_offset)
         )
 
     def end(self) -> None:
         # H: void f(WGPUComputePassEncoder computePassEncoder)
         libf.wgpuComputePassEncoderEnd(self._internal)
-
-    def _maybe_keep_alive(self, object):
-        pass
 
 
 class GPURenderPassEncoder(
@@ -3491,26 +3613,31 @@ class GPURenderPassEncoder(
     GPUObjectBase,
 ):
     # GPUDebugCommandsMixin
-    _push_debug_group_function = libf.wgpuRenderPassEncoderPushDebugGroup
-    _pop_debug_group_function = libf.wgpuRenderPassEncoderPopDebugGroup
-    _insert_debug_marker_function = libf.wgpuRenderPassEncoderInsertDebugMarker
-    _write_timestamp_function = libf.wgpuRenderPassEncoderWriteTimestamp
+    _push_debug_group_function = lib.wgpuRenderPassEncoderPushDebugGroup
+    _pop_debug_group_function = lib.wgpuRenderPassEncoderPopDebugGroup
+    _insert_debug_marker_function = lib.wgpuRenderPassEncoderInsertDebugMarker
+    _write_timestamp_function = lib.wgpuRenderPassEncoderWriteTimestamp
 
     # GPUBindingCommandsMixin
-    _set_bind_group_function = libf.wgpuRenderPassEncoderSetBindGroup
-    _set_immediates_function = libf.wgpuRenderPassEncoderSetImmediates
+    _set_bind_group_function = lib.wgpuRenderPassEncoderSetBindGroup
+    _set_immediates_function = lib.wgpuRenderPassEncoderSetImmediates
 
     # GPURenderCommandsMixin
-    _set_pipeline_function = libf.wgpuRenderPassEncoderSetPipeline
-    _set_index_buffer_function = libf.wgpuRenderPassEncoderSetIndexBuffer
-    _set_vertex_buffer_function = libf.wgpuRenderPassEncoderSetVertexBuffer
-    _draw_function = libf.wgpuRenderPassEncoderDraw
-    _draw_indirect_function = libf.wgpuRenderPassEncoderDrawIndirect
-    _draw_indexed_function = libf.wgpuRenderPassEncoderDrawIndexed
-    _draw_indexed_indirect_function = libf.wgpuRenderPassEncoderDrawIndexedIndirect
+    _set_pipeline_function = lib.wgpuRenderPassEncoderSetPipeline
+    _set_index_buffer_function = lib.wgpuRenderPassEncoderSetIndexBuffer
+    _set_vertex_buffer_function = lib.wgpuRenderPassEncoderSetVertexBuffer
+    _draw_function = lib.wgpuRenderPassEncoderDraw
+    _draw_indirect_function = lib.wgpuRenderPassEncoderDrawIndirect
+    _draw_indexed_function = lib.wgpuRenderPassEncoderDrawIndexed
+    _draw_indexed_indirect_function = lib.wgpuRenderPassEncoderDrawIndexedIndirect
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuRenderPassEncoderRelease
+
+    # Hot-path calls (see GPURenderCommandsMixin)
+    _set_viewport_function = lib.wgpuRenderPassEncoderSetViewport
+    _set_scissor_rect_function = lib.wgpuRenderPassEncoderSetScissorRect
+    _set_stencil_reference_function = lib.wgpuRenderPassEncoderSetStencilReference
 
     def set_viewport(
         self,
@@ -3521,20 +3648,14 @@ class GPURenderPassEncoder(
         min_depth: float,
         max_depth: float,
     ) -> None:
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth)
-        libf.wgpuRenderPassEncoderSetViewport(
-            self._internal,
-            float(x),
-            float(y),
-            float(width),
-            float(height),
-            float(min_depth),
-            float(max_depth),
+        # H: void wgpuRenderPassEncoderSetViewport(WGPURenderPassEncoder renderPassEncoder, float x, float y, float width, float height, float minDepth, float maxDepth)
+        type(self)._set_viewport_function(
+            self._internal, x, y, width, height, min_depth, max_depth
         )
 
     def set_scissor_rect(self, x: int, y: int, width: int, height: int) -> None:
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
-        libf.wgpuRenderPassEncoderSetScissorRect(
+        # H: void wgpuRenderPassEncoderSetScissorRect(WGPURenderPassEncoder renderPassEncoder, uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+        type(self)._set_scissor_rect_function(
             self._internal, int(x), int(y), int(width), int(height)
         )
 
@@ -3556,8 +3677,8 @@ class GPURenderPassEncoder(
         libf.wgpuRenderPassEncoderSetBlendConstant(self._internal, c_color)
 
     def set_stencil_reference(self, reference: int) -> None:
-        # H: void f(WGPURenderPassEncoder renderPassEncoder, uint32_t reference)
-        libf.wgpuRenderPassEncoderSetStencilReference(self._internal, int(reference))
+        # H: void wgpuRenderPassEncoderSetStencilReference(WGPURenderPassEncoder renderPassEncoder, uint32_t reference)
+        type(self)._set_stencil_reference_function(self._internal, int(reference))
 
     def end(self) -> None:
         # H: void f(WGPURenderPassEncoder renderPassEncoder)
@@ -3619,9 +3740,6 @@ class GPURenderPassEncoder(
             int(count_buffer_offset),
         )
 
-    def _maybe_keep_alive(self, object):
-        pass
-
 
 class GPURenderBundleEncoder(
     classes.GPURenderBundleEncoder,
@@ -3632,25 +3750,25 @@ class GPURenderBundleEncoder(
     GPUObjectBase,
 ):
     # GPUDebugCommandsMixin
-    _push_debug_group_function = libf.wgpuRenderBundleEncoderPushDebugGroup
-    _pop_debug_group_function = libf.wgpuRenderBundleEncoderPopDebugGroup
-    _insert_debug_marker_function = libf.wgpuRenderBundleEncoderInsertDebugMarker
+    _push_debug_group_function = lib.wgpuRenderBundleEncoderPushDebugGroup
+    _pop_debug_group_function = lib.wgpuRenderBundleEncoderPopDebugGroup
+    _insert_debug_marker_function = lib.wgpuRenderBundleEncoderInsertDebugMarker
 
     # GPUBindingCommandsMixin
-    _set_bind_group_function = libf.wgpuRenderBundleEncoderSetBindGroup
-    _set_immediates_function = libf.wgpuRenderBundleEncoderSetImmediates
+    _set_bind_group_function = lib.wgpuRenderBundleEncoderSetBindGroup
+    _set_immediates_function = lib.wgpuRenderBundleEncoderSetImmediates
     _begin_pipeline_statistics_query_function = None  # not implemented
     _end_pipeline_statistics_query_function = None  # not implemented
     _write_timestamp_function = None  # not implemented
 
     # GPURenderCommandsMixin
-    _set_pipeline_function = libf.wgpuRenderBundleEncoderSetPipeline
-    _set_index_buffer_function = libf.wgpuRenderBundleEncoderSetIndexBuffer
-    _set_vertex_buffer_function = libf.wgpuRenderBundleEncoderSetVertexBuffer
-    _draw_function = libf.wgpuRenderBundleEncoderDraw
-    _draw_indirect_function = libf.wgpuRenderBundleEncoderDrawIndirect
-    _draw_indexed_function = libf.wgpuRenderBundleEncoderDrawIndexed
-    _draw_indexed_indirect_function = libf.wgpuRenderBundleEncoderDrawIndexedIndirect
+    _set_pipeline_function = lib.wgpuRenderBundleEncoderSetPipeline
+    _set_index_buffer_function = lib.wgpuRenderBundleEncoderSetIndexBuffer
+    _set_vertex_buffer_function = lib.wgpuRenderBundleEncoderSetVertexBuffer
+    _draw_function = lib.wgpuRenderBundleEncoderDraw
+    _draw_indirect_function = lib.wgpuRenderBundleEncoderDrawIndirect
+    _draw_indexed_function = lib.wgpuRenderBundleEncoderDrawIndexed
+    _draw_indexed_indirect_function = lib.wgpuRenderBundleEncoderDrawIndexedIndirect
 
     # GPUObjectBaseMixin
     _release_function = libf.wgpuRenderBundleEncoderRelease
@@ -3664,14 +3782,7 @@ class GPURenderBundleEncoder(
         )
         # H: WGPURenderBundle f(WGPURenderBundleEncoder renderBundleEncoder, WGPURenderBundleDescriptor const * descriptor)
         id = libf.wgpuRenderBundleEncoderFinish(self._internal, struct)
-        # The other encoders require that we call self._release() when
-        # we're done with it.  But that doesn't seem to be an issue here.
-        # We no longer need to keep these objects alive after the call to finish().
-        self._objects_to_keep_alive.clear()
         return GPURenderBundle(label, id, self._device)
-
-    def _maybe_keep_alive(self, object):
-        self._objects_to_keep_alive.add(object)
 
 
 class GPUQueue(classes.GPUQueue, GPUObjectBase):
@@ -3695,8 +3806,11 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         # We support anything that memoryview supports, i.e. anything
         # that implements the buffer protocol, including, bytes,
         # bytearray, ctypes arrays, numpy arrays, etc.
-        m, address = get_memoryview_and_address(data)
+        m = memoryview(data)
+        if not getattr(m, "contiguous", True):
+            raise ValueError("The given data is not contiguous")
         nbytes = m.nbytes
+        buffer_size = buffer._size
 
         # Deal with offset and size
         buffer_offset = int(buffer_offset)
@@ -3706,18 +3820,21 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         else:
             data_length = int(size)
 
-        if not (0 <= buffer_offset < buffer.size):  # pragma: no cover
+        if not (0 <= buffer_offset < buffer_size):  # pragma: no cover
             raise ValueError("Invalid buffer_offset")
         if not (0 <= data_offset < nbytes):  # pragma: no cover
             raise ValueError("Invalid data_offset")
         if not (0 <= data_length <= (nbytes - data_offset)):  # pragma: no cover
             raise ValueError("Invalid data_length")
-        if not (data_length <= buffer.size - buffer_offset):  # pragma: no cover
+        if not (data_length <= buffer_size - buffer_offset):  # pragma: no cover
             raise ValueError("Invalid data_length")
 
         # Make the call. Note that this call copies the data - it's ok
         # if we lose our reference to the data once we leave this function.
-        c_data = ffi.cast("uint8_t *", address + data_offset)
+        # ffi.from_buffer() also works for readonly data (e.g. bytes).
+        c_data = ffi.from_buffer(m)
+        if data_offset:
+            c_data = c_data + data_offset
         # H: void f(WGPUQueue queue, WGPUBuffer buffer, uint64_t bufferOffset, void const * data, size_t size)
         libf.wgpuQueueWriteBuffer(
             self._internal, buffer._internal, buffer_offset, c_data, data_length
@@ -3958,7 +4075,10 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         )
 
         # H: WGPUFuture f(WGPUQueue queue, WGPUQueueWorkDoneCallbackInfo callbackInfo)
-        libf.wgpuQueueOnSubmittedWorkDone(self._internal, work_done_callback_info)
+        future = libf.wgpuQueueOnSubmittedWorkDone(
+            self._internal, work_done_callback_info
+        )
+        promise._set_future(future)
 
         return promise
 

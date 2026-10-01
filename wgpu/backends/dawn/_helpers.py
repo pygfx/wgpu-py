@@ -1,13 +1,14 @@
 """Utilities used in the Dawn backend."""
 
 import sys
+import time
 import types
+import threading
 import ctypes
 import inspect
-import threading
-from queue import deque
 
 from ._ffi import ffi, lib, lib_path, IS_WEB
+from ..._async import get_backoff_time_generator
 from ...classes import (
     GPUError,
     GPUInternalError,
@@ -100,9 +101,13 @@ def get_wgpu_instance(extras=None):
             struct.nextInChain = c_instance_next_in_chain
         if not IS_WEB:
             # Allow SPIR-V shaders natively (not possible in the browser)
+            # and use wgpuInstanceWaitAny() with a timeout for sync waits.
             features = ffi.new(
                 "WGPUInstanceFeatureName[]",
-                [lib.WGPUInstanceFeatureName_ShaderSourceSPIRV],
+                [
+                    lib.WGPUInstanceFeatureName_ShaderSourceSPIRV,
+                    lib.WGPUInstanceFeatureName_TimedWaitAny,
+                ],
             )
             struct.requiredFeatureCount = len(features)
             struct.requiredFeatures = features
@@ -261,75 +266,65 @@ def to_camel_case(name):
     return name2
 
 
-class ErrorSlot:
-    __slot__ = ["name", "type", "message"]
-
-    def __init__(self, name):
-        self.name = name
-        self.type = type
-        self.message = None
-
-
 class ErrorHandler:
-    """Object that logs errors, with the option to collect incoming
-    errors elsewhere.
+    """Object that turns errors reported by Dawn into Python exceptions, or logs them.
+
+    Natively, Dawn reports a validation error synchronously via the
+    uncaptured-error callback, while the offending API call is running. The
+    callback stores the error, and the wrapper of that call (see
+    ``SafeLibCalls``) raises it as a Python exception at the call site. Checking
+    for a pending error after each call is a cheap list truthiness test.
+
+    In the browser (Pyodide), errors usually arrive asynchronously, from the JS
+    event loop, so they cannot be attributed to a call; these are logged. Some
+    WebGPU implementations (e.g. Dawn's Node.js bindings) do report errors
+    during the call; these are raised as well.
+
+    Calls on pass/bundle encoders are made without a check, because Dawn
+    defers errors in these to ``GPUCommandEncoder.finish()`` (or
+    ``GPURenderBundleEncoder.finish()``) anyway.
     """
 
     def __init__(self, logger):
         self._logger = logger
-        # threadlocal -> deque -> ErrorSlot
-        self._per_thread_data = threading.local()
-
-    def _get_proxy_stack(self):
-        try:
-            return self._per_thread_data.stack
-        except AttributeError:
-            stack = deque()
-            self._per_thread_data.stack = stack
-            self._per_thread_data.error_message_counts = {}
-            return stack
-
-    def capture(self, name):
-        """Capture incoming error messages instead of logging them directly."""
-        # This codepath must be as fast as it can be
-        self._get_proxy_stack().append(ErrorSlot(name))
-
-    def release(self, name):
-        """Release the given name, returning the last captured error."""
-        # This codepath, with matching name, must be as fast as it can be
-
-        proxy_stack = self._get_proxy_stack()
-        try:
-            error_slot = proxy_stack.pop()
-        except IndexError:
-            error_slot = ErrorSlot("notavalidname")
-
-        if error_slot.name == name:
-            if error_slot.message is None:
-                return None
-            else:
-                return error_slot.type, error_slot.message
-        else:
-            # This should never happen, but if it does, we want to know.
-            self._logger.error("ErrorHandler capture/release out of sync")
-            if error_slot.message:
-                self.log_error(error_slot.message)
-            while proxy_stack:
-                es = proxy_stack.pop()
-                if es.message:
-                    self.log_error(es.message)
-            return None
+        self._error_message_counts = {}
+        # A list, so that ``if pending:`` is as cheap as it can be
+        self.pending = []
+        # In the browser, the number of (checked) calls that are running
+        self.web_calls_running = 0
 
     def handle_error(self, error_type: str, message: str):
-        """Handle an error message."""
-        proxy_stack = self._get_proxy_stack()
-        if proxy_stack:
-            error_slot = proxy_stack[-1]
-            if error_slot.message:
-                self.log_error(error_slot.message)
-            error_slot.type = error_type
-            error_slot.message = message
+        """Handle an error message (called from the uncaptured-error callback)."""
+        if IS_WEB and not self.web_calls_running:
+            self.log_error(message)  # cannot attribute it to a call
         else:
+            self.pending.append((error_type, message))
+
+    def raise_pending(self, frame_depth=1):
+        """Raise the first pending error, and log any others."""
+        errors = self.pending[:]
+        self.pending.clear()
+        if not errors:
+            return
+        for _, message in errors[1:]:
+            self.log_error(message)
+        error_type, message = errors[0]
+        cls = ERROR_TYPES.get(error_type, GPUError)
+        wgpu_error = cls(message)
+        # Select the traceback object matching the call that raised the error. The
+        # traceback will still actually show the line where we raise below, but the
+        # bottommost line (which ppl look at first) will be correct.
+        f = inspect.currentframe()
+        for _ in range(frame_depth):
+            f = f.f_back if f.f_back is not None else f
+        tb = types.TracebackType(None, f, f.f_lasti, f.f_lineno)
+        raise wgpu_error.with_traceback(tb)
+
+    def log_pending(self):
+        """Log pending errors instead of raising them, e.g. during cleanup."""
+        errors = self.pending[:]
+        self.pending.clear()
+        for _, message in errors:
             self.log_error(message)
 
     def log_error(self, message):
@@ -338,8 +333,7 @@ class ErrorHandler:
         # digits in the message, because of id's getting renewed on
         # each draw.
         h = hash("".join(c for c in message if not c.isdigit()))
-        self._get_proxy_stack()  # make sure the error_message_counts attribute exists
-        error_message_counts = self._per_thread_data.error_message_counts
+        error_message_counts = self._error_message_counts
         count = error_message_counts.get(h, 0) + 1
         error_message_counts[h] = count
 
@@ -350,6 +344,49 @@ class ErrorHandler:
             self._logger.error(message.splitlines()[0] + f" ({count})")
         elif count == 10:
             self._logger.error(message.splitlines()[0] + " (hiding from now)")
+
+
+class EventPump:
+    """Calls ``process_events()`` on the event loop's thread while promises are pending (native only).
+
+    This makes ``promise.then()`` work natively, also when nothing awaits the
+    promise. Dawn objects are not thread-safe (unless the
+    ImplicitDeviceSynchronization feature is used), so we never call into Dawn
+    from a background thread. Instead, a lightweight thread periodically
+    schedules a call to ``process_events()`` in the event loop, using its
+    ``call_soon_threadsafe()``.
+    """
+
+    def __init__(self, process_events):
+        self._process_events = process_events
+        self._lock = threading.Lock()
+        self._promises = set()
+        self._thread = None
+
+    def add(self, promise):
+        if promise._call_soon_threadsafe is None:
+            return
+        with self._lock:
+            self._promises.add(promise)
+            if self._thread is None:
+                self._thread = threading.Thread(target=self._run, daemon=True)
+                self._thread.start()
+
+    def _run(self):
+        sleep_gen = get_backoff_time_generator()
+        while True:
+            with self._lock:
+                self._promises = {p for p in self._promises if p._state == "pending"}
+                if not self._promises:
+                    self._thread = None
+                    return
+                call_soons = {p._call_soon_threadsafe for p in self._promises}
+            for call_soon in call_soons:
+                try:
+                    call_soon(self._process_events)
+                except Exception:
+                    pass  # e.g. loop is closed
+            time.sleep(max(0.001, next(sleep_gen)))
 
 
 class SafeLibCalls:
@@ -370,29 +407,43 @@ class SafeLibCalls:
 
     def _make_proxy_func(self, name, ob):
         error_handler = self._error_handler
+        pending = error_handler.pending
+        raise_pending = error_handler.raise_pending
+
+        if IS_WEB:
+
+            def proxy_func(*args):
+                error_handler.web_calls_running += 1
+                try:
+                    result = ob(*args)
+                except TypeError:
+                    if any(arg is None for arg in args):
+                        raise RuntimeError(
+                            f"{name}() was called with a released object."
+                        ) from None
+                    raise
+                finally:
+                    error_handler.web_calls_running -= 1
+                if pending:
+                    raise_pending(2)
+                return result
+
+            proxy_func.__name__ = name
+            return proxy_func
 
         def proxy_func(*args):
-            # Make the call, with error capturing on
-            error_handler.capture(name)
             try:
                 result = ob(*args)
-            finally:
-                error_type_msg = error_handler.release(name)
-
-            # Handle the error.
-            if error_type_msg is not None:
-                error_type, message = error_type_msg
-                cls = ERROR_TYPES.get(error_type, GPUError)
-                wgpu_error = cls(message)
-                # Select the traceback object matching the call that raised the error. The
-                # traceback will still actually show the line where we raise below, but the
-                # bottommost line (which ppl look at first) will be correct.
-                f = inspect.currentframe()
-                f = f.f_back
-                tb = types.TracebackType(None, f, f.f_lasti, f.f_lineno)
-                # Raise message with alt traceback
-                wgpu_error = wgpu_error.with_traceback(tb)
-                raise wgpu_error
+            except TypeError:
+                # cffi raises TypeError for None, which is what _internal is
+                # set to when an object is released.
+                if any(arg is None for arg in args):
+                    raise RuntimeError(
+                        f"{name}() was called with a released object."
+                    ) from None
+                raise
+            if pending:
+                raise_pending(2)
             return result
 
         proxy_func.__name__ = name

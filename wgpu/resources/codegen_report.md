@@ -21,11 +21,14 @@
 * Diffs for GPUBindingCommandsMixin: change set_bind_group
 * Diffs for GPUQueue: add read_buffer, add read_texture, hide copy_external_image_to_texture
 * Diffs for DrawCancelled: add DrawCancelled
-* Validated 39 classes, 121 methods, 52 properties
+* Validated 39 classes, 123 methods, 52 properties
 ### Patching API for backends/wgpu_native/_api.py
 * Validated 39 classes, 115 methods, 0 properties
+* Found 0 methods not implemented
 ### Patching API for backends/dawn/_api.py
-* Validated 39 classes, 113 methods, 0 properties
+* Diffs for GPUDevice: add pop_error_scope_async, add push_error_scope
+* Validated 39 classes, 114 methods, 0 properties
+* Found 0 methods not implemented
 ## Validating backends/wgpu_native/_api.py
 * Enum PipelineErrorReason missing in webgpu.h
 * Enum AutoLayoutMode missing in webgpu.h
@@ -42,6 +45,6 @@
 * Enum CanvasAlphaMode missing in Dawn's webgpu.h
 * Enum CanvasToneMappingMode missing in Dawn's webgpu.h
 * Wrote 268 enum mappings and 48 struct-field mappings to dawn/_mappings.py
-* Validated 146 C function calls
-* Not using 69 C functions
-* Validated 88 C structs
+* Validated 149 C function calls
+* Not using 66 C functions
+* Validated 86 C structs
