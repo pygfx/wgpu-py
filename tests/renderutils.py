@@ -5,7 +5,7 @@ assumptions here.
 import ctypes
 import numpy as np
 
-import wgpu.backends.wgpu_native
+import wgpu
 
 
 def upload_to_texture(device, texture, data, nx, ny, nz):

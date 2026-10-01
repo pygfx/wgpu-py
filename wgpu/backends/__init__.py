@@ -29,8 +29,13 @@ def _register_backend(gpu):
             )
 
     # Only allow registering a backend once
-    if not isinstance(root_namespace["gpu"], _base_GPU):
+    current_gpu = root_namespace["gpu"]
+    if not isinstance(current_gpu, _base_GPU):
         raise RuntimeError("WGPU backend can only be set once.")
+    if type(current_gpu) is not _base_GPU and type(current_gpu) is not type(gpu):
+        raise RuntimeError(
+            f"WGPU backend can only be set once (already using {type(current_gpu).__module__})."
+        )
 
     # Apply
     root_namespace["gpu"] = gpu

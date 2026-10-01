@@ -1,7 +1,15 @@
 """Global configuration for pytest"""
 
+import os
+
 import numpy as np
 import pytest
+
+
+# Allow running the tests against a specific backend, e.g. WGPUPY_BACKEND=dawn.
+# The backend must be loaded before any test module imports another backend.
+if os.getenv("WGPUPY_BACKEND", "").strip():
+    import wgpu.backends.auto  # noqa: F401
 
 
 def pytest_addoption(parser):

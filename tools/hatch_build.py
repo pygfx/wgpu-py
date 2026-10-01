@@ -70,6 +70,17 @@ class CustomBuildHook(BuildHookInterface):
             # Make sure that the download did not bump the wgpu-native version
             check_git_status()
 
+        # Optionally build the (experimental) Dawn backend. This requires Dawn,
+        # Cython and a C compiler, see tools/build_dawn.py.
+        if self.target_name == "wheel" and os.getenv(
+            "WGPU_PY_BUILD_DAWN", ""
+        ).lower() in ("1", "true"):
+            from build_dawn import build as build_dawn
+
+            build_dawn()
+            build_data["pure_python"] = False
+            build_data["infer_tag"] = True
+
 
 def is_git_repo():
     return os.path.isdir(os.path.join(root_dir, ".git"))
