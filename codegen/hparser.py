@@ -109,29 +109,34 @@ def get_h_parser(*, allow_cache=True):
     return hp
 
 
-_dawn_parser = None
+_dawn_parsers = {}
 
 
-def get_dawn_h_parser(*, allow_cache=True):
-    """Get the global HParser object for Dawn's webgpu.h."""
+def get_dawn_h_parser(*, emdawn=False, allow_cache=True):
+    """Get the HParser object for Dawn's webgpu.h.
 
-    global _dawn_parser
-    if _dawn_parser and allow_cache:
-        return _dawn_parser
+    With ``emdawn=False`` this is Dawn's native header (``dawn_webgpu.h``),
+    with ``emdawn=True`` it is the header of Emdawnwebgpu (``emdawn_webgpu.h``),
+    Dawn's implementation of webgpu.h on top of the browser's WebGPU, which is
+    used in Pyodide. The latter is a subset of the former.
+    """
 
-    source = _get_wgpu_header(
-        get_header_filename("dawn_webgpu.h"), output_filename=None
-    )
-    # Dawn's header declares this unconditionally, but libwebgpu_dawn does not export it.
+    if allow_cache and emdawn in _dawn_parsers:
+        return _dawn_parsers[emdawn]
+
+    filename = "emdawn_webgpu.h" if emdawn else "dawn_webgpu.h"
+    source = _get_wgpu_header(get_header_filename(filename), output_filename=None)
+    # Dawn's header declares this unconditionally, but libwebgpu_dawn does not
+    # export it, and in Emdawnwebgpu it is deprecated.
     source = "\n".join(
         line
         for line in source.splitlines()
         if "emscripten_webgpu_get_device" not in line
     )
 
-    hp = HParser(source, "Dawn webgpu.h")
+    hp = HParser(source, "Emdawnwebgpu webgpu.h" if emdawn else "Dawn webgpu.h")
     hp.parse()
-    _dawn_parser = hp
+    _dawn_parsers[emdawn] = hp
     return hp
 
 

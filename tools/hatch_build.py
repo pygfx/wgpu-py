@@ -25,6 +25,7 @@ Hook for building wheels with the hatchling build backend.
 
 import os
 import sys
+import sysconfig
 from subprocess import run, PIPE
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
@@ -70,16 +71,54 @@ class CustomBuildHook(BuildHookInterface):
             # Make sure that the download did not bump the wgpu-native version
             check_git_status()
 
-        # Optionally build the (experimental) Dawn backend. This requires Dawn,
-        # Cython and a C compiler, see tools/build_dawn.py.
-        if self.target_name == "wheel" and os.getenv(
-            "WGPU_PY_BUILD_DAWN", ""
-        ).lower() in ("1", "true"):
-            from build_dawn import build as build_dawn
+        # Optionally build the (experimental) Dawn backend. This requires Dawn
+        # (or Emscripten, for Pyodide), Cython and a C compiler, see tools/build_dawn.py.
+        if self.target_name == "wheel" and build_dawn_enabled():
+            import build_dawn
 
-            build_dawn()
+            if build_dawn.is_emscripten():
+                check_no_native_binaries()
+            built = build_dawn.build()
             build_data["pure_python"] = False
-            build_data["infer_tag"] = True
+            for path in built:
+                if path.endswith((".so", ".dll", ".dylib")):
+                    continue  # already included as artifacts, see pyproject.toml
+                rel = os.path.relpath(path, root_dir).replace(os.sep, "/")
+                build_data["force_include"][path] = rel
+            if build_dawn.is_emscripten():
+                # Pyodide (pyodide build) retags the platform of the wheel
+                v = "cp{}{}".format(*sys.version_info[:2])
+                plat = sysconfig.get_platform().replace("-", "_").replace(".", "_")
+                build_data["tag"] = f"{v}-{v}-{plat}"
+            else:
+                build_data["infer_tag"] = True
+
+    def dependencies(self):
+        # Extra build dependencies, see https://hatch.pypa.io/latest/plugins/build-hook/reference/
+        if self.target_name == "wheel" and build_dawn_enabled():
+            return ["cython>=3.1", "setuptools>=64"]
+        return []
+
+
+def check_no_native_binaries():
+    """Binaries in the source tree end up in the wheel; avoid that for Pyodide wheels."""
+    found = []
+    for dirpath, _, filenames in os.walk(os.path.join(root_dir, "wgpu")):
+        for fname in filenames:
+            if (
+                fname.endswith((".so", ".dll", ".dylib", ".pyd"))
+                and "emscripten" not in fname
+            ):
+                found.append(os.path.relpath(os.path.join(dirpath, fname), root_dir))
+    if found:
+        raise RuntimeError(
+            "Building a Pyodide wheel, but the source tree has native binaries, "
+            f"which would be included in the wheel: {found}. Remove them first."
+        )
+
+
+def build_dawn_enabled():
+    return os.getenv("WGPU_PY_BUILD_DAWN", "").lower() in ("1", "true")
 
 
 def is_git_repo():

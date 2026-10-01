@@ -38,6 +38,7 @@ class FileCache:
         "backends/dawn/_api.pyx",
         "backends/dawn/_mappings.py",
         "backends/dawn/_webgpu.pxd",
+        "backends/dawn/dawn_native_only.h",
         "resources/codegen_report.md",
     ]
 

@@ -8,6 +8,7 @@ in that case.
 
 import gc
 import os
+import sys
 import asyncio
 
 import numpy as np
@@ -73,6 +74,7 @@ def test_backend_is_dawn():
         "OpenGL",
         "OpenGLES",
         "Null",
+        "WebGPU",  # Emdawnwebgpu, in Pyodide
     )
     assert adapter.limits["max-bind-groups"] >= 4
     assert "core-features-and-limits" in adapter.features or adapter.features
@@ -305,6 +307,9 @@ def test_released_objects(device):
     gc.collect()
 
 
+@pytest.mark.skipif(
+    sys.platform == "emscripten", reason="asyncio.run() is not possible in Pyodide"
+)
 def test_async_await(device):
     buf = device.create_buffer_with_data(
         data=np.arange(16, dtype=np.uint32), usage=wgpu.BufferUsage.COPY_SRC

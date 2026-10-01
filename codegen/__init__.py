@@ -27,6 +27,7 @@ def prepare():
     idlparser.get_idl_parser(allow_cache=False)
     hparser.get_h_parser(allow_cache=False)
     hparser.get_dawn_h_parser(allow_cache=False)
+    hparser.get_dawn_h_parser(emdawn=True, allow_cache=False)
 
 
 def update_api():

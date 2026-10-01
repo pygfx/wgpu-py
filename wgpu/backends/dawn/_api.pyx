@@ -18,6 +18,20 @@ pointer without any Python attribute lookups.
 
 The structure of this module deliberately mirrors that of the wgpu-native
 backend (``backends/wgpu_native/_api.py``).
+
+The same module also runs in Pyodide (``sys.platform == "emscripten"``). It is
+then compiled against Emdawnwebgpu, Dawn's implementation of ``webgpu.h`` on top
+of the browser's WebGPU (see ``tools/build_dawn.py``). The differences are
+small, and marked with ``_IS_EMSCRIPTEN``:
+
+* Callbacks are called by the browser's event loop (``AllowSpontaneous``)
+  instead of by ``wgpuInstanceProcessEvents()``.
+* The browser cannot block, so ``sync_wait()`` suspends the Python stack with
+  JSPI (``pyodide.ffi.run_sync``), which requires that the code is run via
+  e.g. ``pyodide.runPythonAsync()``. Awaiting works everywhere.
+* Validation errors arrive asynchronously, so they are logged instead of
+  raised at the call site.
+* The surface is a ``<canvas>`` element, and the browser presents it.
 """
 
 from libc.stdint cimport uint8_t, uint32_t, uint64_t, int32_t, uintptr_t
@@ -35,7 +49,7 @@ import logging
 import threading
 
 from ..._coreutils import str_flag_to_int
-from ..._async import get_backoff_time_generator, async_sleep
+from ..._async import get_backoff_time_generator, async_sleep, AsyncEvent
 from ... import classes, flags, enums, structs
 from ._mappings import enummap, enum_str2int, enum_int2str
 
@@ -46,8 +60,28 @@ cdef extern from "Python.h":
     int PyBUF_READ
     int PyBUF_WRITE
 
+cdef extern from "emdawn_glue.h":
+    int wgpu_dawn_install(const char* code)
+
 
 logger = logging.getLogger("wgpu")
+
+# Running in Pyodide, with Emdawnwebgpu
+cdef bint _IS_EMSCRIPTEN = sys.platform == "emscripten"
+IS_EMSCRIPTEN = _IS_EMSCRIPTEN
+
+# Natively, callbacks are called when we call wgpuInstanceProcessEvents(), so
+# that they always run in a thread we control. In the browser, they are called
+# from the JS event loop when the corresponding JS promise resolves.
+cdef WGPUCallbackMode _CALLBACK_MODE = (
+    WGPUCallbackMode_AllowSpontaneous if _IS_EMSCRIPTEN else WGPUCallbackMode_AllowProcessEvents
+)
+
+if _IS_EMSCRIPTEN:
+    # Install Emdawnwebgpu's JS code into the Pyodide runtime (see emdawn_glue.cpp)
+    with open(os.path.join(os.path.dirname(__file__), "emdawn_glue.js"), "rb") as _f:
+        wgpu_dawn_install(_f.read())
+    del _f
 
 # The API is pretty well defined
 __all__ = classes.__all__.copy()
@@ -312,6 +346,12 @@ def to_snake_case(name, separator="_"):
 # callback, while the offending API call is running. The callback stores the
 # error and sets a C flag; after each API call we check that flag (which costs
 # virtually nothing) and raise the error as a Python exception at the call site.
+#
+# In Pyodide, the same holds if the WebGPU implementation reports the error
+# during the call (as Dawn in Node.js does). In the browser, errors are reported
+# asynchronously (via the uncapturederror event), after the call that caused
+# them has returned. Therefore we also schedule a call (on the event loop) to
+# log errors that have not been raised by then.
 
 
 cdef bint _error_pending = False
@@ -333,8 +373,28 @@ cdef void _uncaptured_error_callback(
         msg = "\n".join(line.rstrip() for line in msg.splitlines())
         _pending_errors.append((error_type, msg))
         _error_pending = True
+        if _IS_EMSCRIPTEN:
+            _schedule_log_pending_errors()
     except BaseException:  # no-cover
         pass
+
+
+_log_scheduled = False
+
+
+def _schedule_log_pending_errors():
+    global _log_scheduled
+    if not _log_scheduled:
+        import asyncio
+
+        _log_scheduled = True
+        asyncio.get_event_loop().call_soon(_log_pending_errors_soon)
+
+
+def _log_pending_errors_soon():
+    global _log_scheduled
+    _log_scheduled = False
+    _log_pending_errors()
 
 
 def _log_error(message):
@@ -438,9 +498,10 @@ cdef WGPUInstance _get_instance() except NULL:
     cdef size_t n = 0
     if _instance == NULL:
         desc = WGPU_INSTANCE_DESCRIPTOR_INIT
-        # TimedWaitAny allows us to block on futures (sync_wait)
-        features[n] = WGPUInstanceFeatureName_TimedWaitAny
-        n += 1
+        # TimedWaitAny allows us to block on futures (sync_wait). Not in the browser.
+        if not _IS_EMSCRIPTEN:
+            features[n] = WGPUInstanceFeatureName_TimedWaitAny
+            n += 1
         if wgpuHasInstanceFeature(WGPUInstanceFeatureName_ShaderSourceSPIRV):
             features[n] = WGPUInstanceFeatureName_ShaderSourceSPIRV
             n += 1
@@ -458,7 +519,7 @@ def get_instance_address():
 
 
 cdef int _wait_future(uint64_t future_id) except -1:
-    """Block until the future completes, with the GIL released."""
+    """Block until the future completes, with the GIL released. Native only."""
     cdef WGPUFutureWaitInfo info
     cdef WGPUWaitStatus status
     cdef WGPUInstance instance = _get_instance()
@@ -481,7 +542,8 @@ def process_events():
     """Process pending Dawn events, which may resolve pending GPUPromises.
 
     This is called automatically when awaiting a promise, and by the
-    event pump when callbacks (via ``promise.then()``) are used.
+    event pump when callbacks (via ``promise.then()``) are used. In the browser
+    this is not needed, because callbacks are called by the JS event loop.
     """
     wgpuInstanceProcessEvents(_get_instance())
     _check()
@@ -540,25 +602,55 @@ _event_pump = _EventPump()
 class GPUPromise(classes.GPUPromise):
     """GPUPromise for Dawn futures.
 
-    ``sync_wait()`` blocks on the future via ``wgpuInstanceWaitAny`` (with the
-    GIL released). Awaiting polls ``wgpuInstanceProcessEvents``.
+    Natively, ``sync_wait()`` blocks on the future via ``wgpuInstanceWaitAny``
+    (with the GIL released), and awaiting polls ``wgpuInstanceProcessEvents``.
+
+    In the browser, the callbacks are called by the JS event loop, so awaiting is
+    plain asyncio. A sync wait must let the JS event loop run while the Python
+    stack is suspended, which Pyodide supports via JSPI (``pyodide.ffi.run_sync``)
+    when the code is run with e.g. ``pyodide.runPythonAsync()``.
     """
 
     _future_id = 0
 
     def _set_future(self, uint64_t future_id):
         self._future_id = future_id
-        _event_pump.add(self)
+        if not _IS_EMSCRIPTEN:
+            _event_pump.add(self)
 
     def _sync_wait(self):
-        if self._future_id:
+        if _IS_EMSCRIPTEN:
+            from pyodide.ffi import run_sync, can_run_sync
+
+            if not can_run_sync():
+                raise RuntimeError(
+                    "Cannot sync-wait for a GPUPromise in Pyodide here: this needs "
+                    "JSPI support and code that is run via e.g. pyodide.runPythonAsync(). "
+                    "Use the async API (await) instead."
+                )
+            run_sync(self._wait_web())
+        elif self._future_id:
             _wait_future(self._future_id)
         if self._state == "pending":
             # Should not happen, but avoid hanging forever
             raise RuntimeError(f"Promise {self._title!r} did not resolve.")
 
+    async def _wait_web(self):
+        # The callback is called from the JS event loop, and (via call_soon)
+        # sets the async event. Without a loop, poll the state instead.
+        if self._call_soon_threadsafe is not None:
+            with self._lock:
+                if self._async_event is None:
+                    self._async_event = AsyncEvent()
+                    if self._state != "pending":
+                        self._async_event.set()
+            await self._async_event.wait()
+        else:
+            while self._state == "pending":
+                await async_sleep(0.001)
+
     def __await__(self):
-        if self._state == "pending" and self._future_id:
+        if self._state == "pending" and self._future_id and not _IS_EMSCRIPTEN:
 
             async def awaiter():
                 sleep_gen = get_backoff_time_generator()
@@ -849,7 +941,8 @@ class GPU(classes.GPU):
             canvas : The canvas or context that the adapter should be able to render to. This can typically
                 be left to None. If given, it must be a ``GPUCanvasContext`` or ``RenderCanvas``.
         """
-        if adapter_name := os.getenv("WGPUPY_WGPU_ADAPTER_NAME"):
+        adapter_name = os.getenv("WGPUPY_WGPU_ADAPTER_NAME")
+        if adapter_name and not _IS_EMSCRIPTEN:
             adapters = self._enumerate_adapters()
             adapters = [a for a in adapters if adapter_name in a.summary]
             if not adapters:
@@ -889,21 +982,29 @@ class GPU(classes.GPU):
                 opts.compatibleSurface = <WGPUSurface><uintptr_t>surface_id
 
         promise = GPUPromise("request_adapter", self._create_adapter)
-        cb.mode = WGPUCallbackMode_AllowProcessEvents
+        cb.mode = _CALLBACK_MODE
         cb.callback = _request_adapter_callback
         cb.userdata1 = _promise_userdata(promise)
         future = wgpuInstanceRequestAdapter(instance, &opts, cb)
         _check()
         promise._set_future(future.id)
-        # Dawn resolves this (almost) immediately. Make it effectively sync,
-        # like the wgpu-native backend, so that sync and async code paths match.
-        _wait_future(future.id)
+        if not _IS_EMSCRIPTEN:
+            # Dawn resolves this (almost) immediately. Make it effectively sync,
+            # like the wgpu-native backend, so that sync and async code paths match.
+            # In the browser it resolves via the JS event loop.
+            _wait_future(future.id)
         return promise
 
     def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
         This is the implementation based on Dawn.
+
+        In the browser, it returns the one adapter that the browser provides.
         """
+        if _IS_EMSCRIPTEN:
+            return self.request_adapter_async().then(
+                lambda adapter: [adapter], title="enumerate_adapters"
+            )
         result = self._enumerate_adapters()
         promise = GPUPromise("enumerate_adapters", None)
         promise._wgpu_set_input(result)
@@ -1010,6 +1111,9 @@ def find_surface_id_from_canvas(canvas_or_context):
     return surface_id
 
 
+_canvas_count = 0
+
+
 def get_surface_id_from_info(present_info):
     """Get an id (address) representing the surface to render to. The way to
     obtain this id differs per platform and GUI toolkit.
@@ -1020,9 +1124,20 @@ def get_surface_id_from_info(present_info):
     cdef WGPUSurfaceSourceXCBWindow xcb = WGPU_SURFACE_SOURCE_XCB_WINDOW_INIT
     cdef WGPUSurfaceSourceWindowsHWND hwnd = WGPU_SURFACE_SOURCE_WINDOWS_HWND_INIT
     cdef WGPUSurfaceSourceMetalLayer metal = WGPU_SURFACE_SOURCE_METAL_LAYER_INIT
+    cdef WGPUEmscriptenSurfaceSourceCanvasHTMLSelector html_canvas = WGPU_EMSCRIPTEN_SURFACE_SOURCE_CANVAS_HTML_SELECTOR_INIT
     cdef WGPUSurface surface
 
-    if sys.platform.startswith("win"):  # no-cover
+    if _IS_EMSCRIPTEN:
+        # Emdawnwebgpu identifies the <canvas> element by a CSS selector
+        global _canvas_count
+        canvas = present_info["window"]
+        if not canvas.id:
+            _canvas_count += 1
+            canvas.id = f"wgpu-dawn-canvas-{_canvas_count}"
+        selector = f"#{canvas.id}".encode()
+        html_canvas.selector = _sv(selector)
+        desc.nextInChain = <WGPUChainedStruct*>&html_canvas
+    elif sys.platform.startswith("win"):  # no-cover
         import ctypes
 
         hwnd.hinstance = <void*><uintptr_t>ctypes.windll.kernel32.GetModuleHandleW(None)
@@ -1109,6 +1224,14 @@ class GPUCanvasContext(classes.GPUCanvasContext):
             raise RuntimeError("Error calling wgpuSurfaceGetCapabilities")
 
         capabilities = {"usages": c_caps.usages}
+        if not c_caps.usages and _IS_EMSCRIPTEN:
+            # Emdawnwebgpu does not report usages; a canvas supports these
+            capabilities["usages"] = (
+                flags.TextureUsage.RENDER_ATTACHMENT
+                | flags.TextureUsage.COPY_SRC
+                | flags.TextureUsage.COPY_DST
+                | flags.TextureUsage.TEXTURE_BINDING
+            )
         formats = []
         for i in range(c_caps.formatCount):
             str_val = enum_int2str["TextureFormat"].get(<int>c_caps.formats[i])
@@ -1290,7 +1413,12 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         return GPUTexture("", <uintptr_t>texture, device, tex_info)
 
     def _present_screen(self):
-        cdef WGPUStatus status = wgpuSurfacePresent(<WGPUSurface><uintptr_t>self._surface_id)
+        cdef WGPUStatus status
+        if _IS_EMSCRIPTEN:
+            # The browser presents the canvas when control returns to the event loop
+            _log_pending_errors()
+            return
+        status = wgpuSurfacePresent(<WGPUSurface><uintptr_t>self._surface_id)
         _log_pending_errors()
         if status != WGPUStatus_Success:
             logger.warning("wgpuSurfacePresent failed")
@@ -1399,20 +1527,22 @@ class GPUAdapter(classes.GPUAdapter, _Handle):
             return device
 
         promise = GPUPromise("request_device", handler)
-        cb.mode = WGPUCallbackMode_AllowProcessEvents
+        cb.mode = _CALLBACK_MODE
         cb.callback = _request_device_callback
         cb.userdata1 = _promise_userdata(promise)
         future = wgpuAdapterRequestDevice(<WGPUAdapter>_self_ptr(self), &desc, cb)
         _check()
         promise._set_future(future.id)
-        _wait_future(future.id)
+        if not _IS_EMSCRIPTEN:
+            _wait_future(future.id)  # see _request_adapter()
         return promise
 
     def _create_device(self, label, device_id):
         cdef WGPUDevice device = <WGPUDevice><uintptr_t>device_id
         cdef WGPULoggingCallbackInfo log_cb = WGPU_LOGGING_CALLBACK_INFO_INIT
-        log_cb.callback = _logging_callback
-        wgpuDeviceSetLoggingCallback(device, log_cb)
+        if not _IS_EMSCRIPTEN:  # The browser logs to the JS console
+            log_cb.callback = _logging_callback
+            wgpuDeviceSetLoggingCallback(device, log_cb)
         limits = _get_limits(device, True)
         features = _get_features(device, True)
         queue_id = <uintptr_t>wgpuDeviceGetQueue(device)
@@ -1433,8 +1563,9 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
     def _poll(self, block=False):
         # Internal function, for compatibility with the wgpu-native backend
         if (<_Handle>self)._ptr != NULL:
-            wgpuDeviceTick(<WGPUDevice>(<_Handle>self)._ptr)
-            process_events()
+            if not _IS_EMSCRIPTEN:  # in the browser, the event loop does this
+                wgpuDeviceTick(<WGPUDevice>(<_Handle>self)._ptr)
+                process_events()
             if block:
                 self.queue.on_submitted_work_done_sync()
 
@@ -1779,7 +1910,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             return GPUComputePipeline(label, pipeline_id, self)
 
         promise = GPUPromise("create_compute_pipeline", handler)
-        cb.mode = WGPUCallbackMode_AllowProcessEvents
+        cb.mode = _CALLBACK_MODE
         cb.callback = _create_compute_pipeline_callback
         cb.userdata1 = _promise_userdata(promise)
         future = wgpuDeviceCreateComputePipelineAsync(<WGPUDevice>_self_ptr(self), &desc, cb)
@@ -1831,7 +1962,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
             return GPURenderPipeline(label, pipeline_id, self)
 
         promise = GPUPromise("create_render_pipeline", handler)
-        cb.mode = WGPUCallbackMode_AllowProcessEvents
+        cb.mode = _CALLBACK_MODE
         cb.callback = _create_render_pipeline_callback
         cb.userdata1 = _promise_userdata(promise)
         future = wgpuDeviceCreateRenderPipelineAsync(<WGPUDevice>_self_ptr(self), &desc, cb)
@@ -1902,7 +2033,7 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
         cdef WGPUPopErrorScopeCallbackInfo cb = WGPU_POP_ERROR_SCOPE_CALLBACK_INFO_INIT
         cdef WGPUFuture future
         promise = GPUPromise("pop_error_scope", None)
-        cb.mode = WGPUCallbackMode_AllowProcessEvents
+        cb.mode = _CALLBACK_MODE
         cb.callback = _pop_error_scope_callback
         cb.userdata1 = _promise_userdata(promise)
         future = wgpuDevicePopErrorScope(<WGPUDevice>_self_ptr(self), cb)
@@ -2131,6 +2262,9 @@ cdef int _fill_render_pipeline_descriptor(
 
 
 class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
+    # In Pyodide: the address of the copy of the mapped range in the wasm heap
+    _web_mapped_ptr = 0
+
     def _release_ptr(self, ptr):
         wgpuBufferRelease(<WGPUBuffer><uintptr_t>ptr)
 
@@ -2190,9 +2324,10 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             self._map_state = enums.BufferMapState.mapped
             self._mapped_status = offset, offset + size, map_mode
             self._mapped_memoryviews = []
+            self._web_mapped_ptr = 0
 
         promise = GPUPromise("buffer.map", handler)
-        cb.mode = WGPUCallbackMode_AllowProcessEvents
+        cb.mode = _CALLBACK_MODE
         cb.callback = _buffer_map_callback
         cb.userdata1 = _promise_userdata(promise)
         self._map_state = enums.BufferMapState.pending
@@ -2215,6 +2350,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         _check()
         self._map_state = enums.BufferMapState.unmapped
         self._mapped_status = 0, 0, 0
+        self._web_mapped_ptr = 0  # freed by Emdawnwebgpu on unmap
 
     def _release_memoryviews(self):
         for m in self._mapped_memoryviews:
@@ -2224,8 +2360,33 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
                 pass
         self._mapped_memoryviews = []
 
+    def _get_web_mapped_ptr(self, offset):
+        """Get the address (in the wasm heap) for the given offset in the mapped range.
+
+        Emdawnwebgpu copies a mapped range between the JS ArrayBuffer and the
+        wasm heap each time it is accessed (and back on unmap, when writing),
+        and the browser does not allow overlapping ranges. So we obtain the
+        whole mapped range once, on first access.
+        """
+        cdef void* ptr
+        if not self._web_mapped_ptr:
+            start, end, mode = self._mapped_status
+            if mode & flags.MapMode.WRITE:
+                ptr = wgpuBufferGetMappedRange(<WGPUBuffer>_self_ptr(self), start, end - start)
+            else:
+                ptr = <void*>wgpuBufferGetConstMappedRange(
+                    <WGPUBuffer>_self_ptr(self), start, end - start
+                )
+            _check()
+            if ptr == NULL:
+                raise RuntimeError("Could not get mapped range.")
+            self._web_mapped_ptr = <uintptr_t>ptr
+        return self._web_mapped_ptr + offset - self._mapped_status[0]
+
     def read_mapped(self, buffer_offset: int | None = None, size: int | None = None, *, copy: bool = True):
         cdef const void* ptr
+        cdef WGPUStatus status
+        cdef char* dst
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only read from a buffer if its mapped.")
         elif not (self._mapped_status[2] & flags.MapMode.READ):
@@ -2235,20 +2396,34 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             raise ValueError(
                 "The range for buffer reading is not contained in the currently mapped range."
             )
+        if _IS_EMSCRIPTEN:
+            ptr = <const void*><uintptr_t>self._get_web_mapped_ptr(offset)
+            if copy:
+                return memoryview(PyByteArray_FromStringAndSize(<const char*>ptr, size)).cast("B")
+            data = PyMemoryView_FromMemory(<char*>ptr, size, PyBUF_READ)
+            self._mapped_memoryviews.append(data)
+            return data
+        if copy:
+            # Copy into a new bytearray (a single copy)
+            data = PyByteArray_FromStringAndSize(NULL, size)
+            dst = data
+            status = wgpuBufferReadMappedRange(<WGPUBuffer>_self_ptr(self), offset, dst, size)
+            _check()
+            if status != WGPUStatus_Success:
+                raise RuntimeError("Could not read mapped buffer.")
+            return memoryview(data).cast("B")
         ptr = wgpuBufferGetConstMappedRange(<WGPUBuffer>_self_ptr(self), offset, size)
         _check()
         if ptr == NULL:
             raise RuntimeError("Could not get mapped range.")
-        if copy:
-            return memoryview(PyByteArray_FromStringAndSize(<const char*>ptr, size)).cast("B")
-        else:
-            data = PyMemoryView_FromMemory(<char*>ptr, size, PyBUF_READ)
-            self._mapped_memoryviews.append(data)
-            return data
+        data = PyMemoryView_FromMemory(<char*>ptr, size, PyBUF_READ)
+        self._mapped_memoryviews.append(data)
+        return data
 
     def write_mapped(self, data, buffer_offset: int | None = None) -> None:
         cdef void* ptr
         cdef _Buffer buf
+        cdef WGPUStatus status
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only write to a buffer if its mapped.")
         elif not (self._mapped_status[2] & flags.MapMode.WRITE):
@@ -2261,6 +2436,20 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
             raise ValueError(
                 "The range for buffer writing is not contained in the currently mapped range."
             )
+        if _IS_EMSCRIPTEN:
+            ptr = <void*><uintptr_t>self._get_web_mapped_ptr(offset)
+            memcpy(ptr, buf.view.buf, nbytes)
+            return
+        if nbytes == size:
+            # A single copy
+            status = wgpuBufferWriteMappedRange(
+                <WGPUBuffer>_self_ptr(self), offset, buf.view.buf, size
+            )
+            _check()
+            if status != WGPUStatus_Success:
+                raise RuntimeError("Could not write mapped buffer.")
+            return
+        # Unaligned size: write into the (aligned) mapped range
         ptr = wgpuBufferGetMappedRange(<WGPUBuffer>_self_ptr(self), offset, size)
         _check()
         if ptr == NULL:
@@ -2275,10 +2464,13 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         if self._map_state != enums.BufferMapState.mapped:
             raise RuntimeError("Can only write to a buffer if its mapped.")
         offset, size = self._check_range(buffer_offset, size)
-        ptr = wgpuBufferGetMappedRange(<WGPUBuffer>_self_ptr(self), offset, size)
-        _check()
-        if ptr == NULL:
-            raise RuntimeError("Could not get mapped range.")
+        if _IS_EMSCRIPTEN:
+            ptr = <void*><uintptr_t>self._get_web_mapped_ptr(offset)
+        else:
+            ptr = wgpuBufferGetMappedRange(<WGPUBuffer>_self_ptr(self), offset, size)
+            _check()
+            if ptr == NULL:
+                raise RuntimeError("Could not get mapped range.")
         return PyMemoryView_FromMemory(<char*>ptr, size, PyBUF_WRITE)
 
     def destroy(self) -> None:
@@ -2389,7 +2581,7 @@ class GPUShaderModule(classes.GPUShaderModule, GPUObjectBase):
         cdef WGPUCompilationInfoCallbackInfo cb = WGPU_COMPILATION_INFO_CALLBACK_INFO_INIT
         cdef WGPUFuture future
         promise = GPUPromise("get_compilation_info", None)
-        cb.mode = WGPUCallbackMode_AllowProcessEvents
+        cb.mode = _CALLBACK_MODE
         cb.callback = _compilation_info_callback
         cb.userdata1 = _promise_userdata(promise)
         future = wgpuShaderModuleGetCompilationInfo(<WGPUShaderModule>_self_ptr(self), cb)
@@ -3298,7 +3490,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
         cdef WGPUQueueWorkDoneCallbackInfo cb = WGPU_QUEUE_WORK_DONE_CALLBACK_INFO_INIT
         cdef WGPUFuture future
         promise = GPUPromise("on_submitted_work_done", None)
-        cb.mode = WGPUCallbackMode_AllowProcessEvents
+        cb.mode = _CALLBACK_MODE
         cb.callback = _queue_work_done_callback
         cb.userdata1 = _promise_userdata(promise)
         future = wgpuQueueOnSubmittedWorkDone(<WGPUQueue>_self_ptr(self), cb)

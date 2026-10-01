@@ -6,6 +6,9 @@ Dawn is the WebGPU implementation of Chromium. This backend wraps Dawn's
 it must be built against an installed Dawn (e.g. ``conda install -c conda-forge dawn``)
 with ``python tools/build_dawn.py``.
 
+It can also be built for Pyodide (see ``tools/build_dawn.py``), where it is
+the default backend if installed.
+
 To use it, import it before anything else selects a backend::
 
     import wgpu.backends.dawn

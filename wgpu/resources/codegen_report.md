@@ -6,6 +6,8 @@
 * webgpu.h/wgpu.h define 8 flags, 70 enums, 115 structs
 * Dawn webgpu.h define 276 functions
 * Dawn webgpu.h define 6 flags, 65 enums, 197 structs
+* Emdawnwebgpu webgpu.h define 207 functions
+* Emdawnwebgpu webgpu.h define 5 flags, 55 enums, 92 structs
 ## Updating API
 * Wrote 5 flags to flags.py
 * Wrote 34 enums to enums.py
@@ -42,6 +44,6 @@
 * Enum CanvasAlphaMode missing in Dawn's webgpu.h
 * Enum CanvasToneMappingMode missing in Dawn's webgpu.h
 * Wrote 268 enum mappings to dawn/_mappings.py
-* Wrote _webgpu.pxd with 276 functions, 196 structs, 195 initializers
+* Wrote _webgpu.pxd with 207 + 2 (native-only) functions, 91 structs
 ### Checking API for backends/dawn/_api.pyx
 * Found 40 classes, 0 methods not implemented

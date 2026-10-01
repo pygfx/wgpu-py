@@ -1,0 +1,11 @@
+{
+  "name": "wgpu-py-dawn-pyodide",
+  "private": true,
+  "type": "module",
+  "description": "Run wgpu-py with the Dawn backend in Pyodide: in Node (webgpu npm = Dawn) and in headless Chrome. See .github/workflows/dawn.yml",
+  "dependencies": {
+    "pyodide": "314.0.7",
+    "webgpu": "0.6.1",
+    "puppeteer-core": "^24.0.0"
+  }
+}
