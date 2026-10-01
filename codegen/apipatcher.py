@@ -77,6 +77,44 @@ def patch_backend_api(code):
     return code
 
 
+def check_backend_api(code):
+    """Check a (Cython) backend against the base API, without modifying it.
+
+    Cython code cannot be formatted/patched like the Python backends, so
+    instead we report the classes and methods that are not (yet) implemented.
+    Methods that are not implemented raise NotImplementedError via the base class.
+    """
+    base_api_code = file_cache.read("_classes.py")
+    reference = BackendApiPatcher(base_api_code)
+
+    # Collect classes and methods with a simple line-based scan
+    implemented = {}
+    current = None
+    for line in code.splitlines():
+        if line.startswith("class "):
+            current = line[6:].split("(")[0].split(":")[0].strip()
+            implemented[current] = set()
+        elif line and not line[0].isspace() and not line.startswith(("#", "@", ")")):
+            current = None
+        elif current and line.startswith(("    def ", "    async def ")):
+            name = line.split("def ", 1)[1].split("(")[0].strip()
+            implemented[current].add(name)
+
+    n_missing = 0
+    for classname in reference.get_class_names():
+        required = reference.get_required_method_names(classname)
+        if classname not in implemented:
+            if required:
+                print(f"Missing class {classname}")
+            continue
+        missing = [m for m in required if m not in implemented[classname]]
+        for m in missing:
+            n_missing += 1
+            print(f"Not implemented: {classname}.{m}")
+    print(f"Found {len(implemented)} classes, {n_missing} methods not implemented")
+    return code
+
+
 class CommentRemover(Patcher):
     """A patcher that removes comments that we add in other parsers,
     to prevent accumulating comments.

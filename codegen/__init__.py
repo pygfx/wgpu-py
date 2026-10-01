@@ -2,6 +2,7 @@ import io
 
 from .utils import print, PrintToFile
 from . import apiwriter, apipatcher, wgpu_native_patcher, idlparser, hparser
+from . import dawn_patcher
 from .files import file_cache
 
 
@@ -15,6 +16,7 @@ def main():
         prepare()
         update_api()
         update_wgpu_native()
+        update_dawn()
         file_cache.write("resources/codegen_report.md", log.getvalue())
 
 
@@ -24,6 +26,7 @@ def prepare():
     file_cache.reset()
     idlparser.get_idl_parser(allow_cache=False)
     hparser.get_h_parser(allow_cache=False)
+    hparser.get_dawn_h_parser(allow_cache=False)
 
 
 def update_api():
@@ -63,3 +66,19 @@ def update_wgpu_native():
     code1 = file_cache.read("backends/wgpu_native/_api.py")
     code2 = wgpu_native_patcher.patch_wgpu_native_backend(code1)
     file_cache.write("backends/wgpu_native/_api.py", code2)
+
+
+def update_dawn():
+    """Update and check the Dawn backend."""
+
+    print("## Validating backends/dawn")
+
+    dawn_patcher.compare_flags()
+    dawn_patcher.write_dawn_mappings()
+    dawn_patcher.write_dawn_pxd()
+
+    # Check the API of the Cython backend against the base API (report only)
+    code = file_cache.read("backends/dawn/_api.pyx")
+    print("### Checking API for backends/dawn/_api.pyx")
+    code = apipatcher.check_backend_api(code)
+    file_cache.write("backends/dawn/_api.pyx", code)

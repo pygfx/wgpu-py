@@ -9,8 +9,12 @@ from wgpu._coreutils import get_header_filename
 _parser = None
 
 
-def _get_wgpu_header(*filenames):
-    """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py"""
+def _get_wgpu_header(*filenames, output_filename="combined_header.h"):
+    """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py
+
+    The cleaned (cffi-compatible) source is written to the resource
+    ``output_filename``, unless that is None.
+    """
 
     cleaned_contents = []  # one for each filename
 
@@ -78,9 +82,10 @@ def _get_wgpu_header(*filenames):
 
     # Write the combined source, which is what will be loaded at wgpu import time
     combined_source = "\n\n".join(cleaned_contents)
-    combined_header_file = get_header_filename("combined_header.h")
-    with open(combined_header_file, "wb") as f:
-        f.write(combined_source.encode())
+    if output_filename:
+        combined_header_file = get_header_filename(output_filename)
+        with open(combined_header_file, "wb") as f:
+            f.write(combined_source.encode())
 
     return combined_source
 
@@ -104,11 +109,38 @@ def get_h_parser(*, allow_cache=True):
     return hp
 
 
+_dawn_parser = None
+
+
+def get_dawn_h_parser(*, allow_cache=True):
+    """Get the global HParser object for Dawn's webgpu.h."""
+
+    global _dawn_parser
+    if _dawn_parser and allow_cache:
+        return _dawn_parser
+
+    source = _get_wgpu_header(
+        get_header_filename("dawn_webgpu.h"), output_filename=None
+    )
+    # Dawn's header declares this unconditionally, but libwebgpu_dawn does not export it.
+    source = "\n".join(
+        line
+        for line in source.splitlines()
+        if "emscripten_webgpu_get_device" not in line
+    )
+
+    hp = HParser(source, "Dawn webgpu.h")
+    hp.parse()
+    _dawn_parser = hp
+    return hp
+
+
 class HParser:
     """Object to parse the webgpu.h/wgpu.h header files, by letting cffi do the heavy lifting."""
 
-    def __init__(self, source):
+    def __init__(self, source, name="webgpu.h/wgpu.h"):
         self.source = source
+        self.name = name
 
     def parse(self, verbose=True):
         self.flags = {}
@@ -120,10 +152,10 @@ class HParser:
         self._parse_from_cffi()
 
         if verbose:
-            print(f"webgpu.h/wgpu.h define {len(self.functions)} functions")
+            print(f"{self.name} define {len(self.functions)} functions")
             keys = "flags", "enums", "structs"
             stats = ", ".join(f"{len(getattr(self, key))} {key}" for key in keys)
-            print("webgpu.h/wgpu.h define " + stats)
+            print(f"{self.name} define " + stats)
 
     # NOTE: we could use pycparser as it's used by cffi anyway and we have that.
     def _parse_from_h(self):
