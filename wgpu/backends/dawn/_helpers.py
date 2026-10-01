@@ -98,6 +98,14 @@ def get_wgpu_instance(extras=None):
         if extras is not None:
             c_instance_next_in_chain = ffi.cast("WGPUChainedStruct *", extras)
             struct.nextInChain = c_instance_next_in_chain
+        if not IS_WEB:
+            # Allow SPIR-V shaders natively (not possible in the browser)
+            features = ffi.new(
+                "WGPUInstanceFeatureName[]",
+                [lib.WGPUInstanceFeatureName_ShaderSourceSPIRV],
+            )
+            struct.requiredFeatureCount = len(features)
+            struct.requiredFeatures = features
         _the_instance = lib.wgpuCreateInstance(struct)
     return _the_instance
 

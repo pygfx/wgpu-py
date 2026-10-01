@@ -42,6 +42,6 @@
 * Enum CanvasAlphaMode missing in Dawn's webgpu.h
 * Enum CanvasToneMappingMode missing in Dawn's webgpu.h
 * Wrote 268 enum mappings and 48 struct-field mappings to dawn/_mappings.py
-* Validated 145 C function calls
+* Validated 146 C function calls
 * Not using 69 C functions
 * Validated 88 C structs

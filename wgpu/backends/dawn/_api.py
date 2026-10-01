@@ -2484,15 +2484,23 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
                 "The range for buffer writing is not contained in the currently mapped range."
             )
 
-        # Copy data (one copy; works for both native and Emdawnwebgpu)
         if not data.contiguous:
             data = memoryview(bytes(data))
-        # H: WGPUStatus f(WGPUBuffer buffer, size_t offset, void const * data, size_t size)
-        status = libf.wgpuBufferWriteMappedRange(
-            self._internal, offset, ffi.from_buffer(data), data.nbytes
-        )
-        if status != lib.WGPUStatus_Success:
-            raise RuntimeError("Could not write mapped buffer.")
+        if data.nbytes == size:
+            # Copy data (one copy; works for both native and Emdawnwebgpu)
+            # H: WGPUStatus f(WGPUBuffer buffer, size_t offset, void const * data, size_t size)
+            status = libf.wgpuBufferWriteMappedRange(
+                self._internal, offset, ffi.from_buffer(data), size
+            )
+            if status != lib.WGPUStatus_Success:
+                raise RuntimeError("Could not write mapped buffer.")
+        else:
+            # Unaligned size: write into the (aligned) mapped range
+            # H: void * f(WGPUBuffer buffer, size_t offset, size_t size)
+            dst_ptr = libf.wgpuBufferGetMappedRange(self._internal, offset, size)
+            if dst_ptr == ffi.NULL:
+                raise RuntimeError("Could not write mapped buffer.")
+            ffi.memmove(dst_ptr, data, data.nbytes)
 
     def _experimental_get_mapped_range(self, buffer_offset=None, size=None):
         """Undocumented and experimental. This API can change or be
