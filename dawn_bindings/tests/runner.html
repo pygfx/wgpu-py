@@ -1,0 +1,47 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>wgpu-py Dawn backend test runner</title></head>
+<body>
+<canvas id="canvas" width="320" height="240"></canvas>
+<pre id="out"></pre>
+<script type="module">
+// Test page for run_chrome.mjs. Query parameters:
+//   pyodide: URL of pyodide.mjs; wheels: comma-separated wheel URLs;
+//   script: Python script URL (its main() is awaited, with the canvas if canvas=1);
+//   tests: URL of a zip with test files, pytest: comma-separated pytest args.
+// Prints "ALL OK" or "FAIL: ..." at the end.
+const params = new URLSearchParams(location.search);
+const log = (t) => { console.log(t); document.getElementById('out').textContent += t + '\n'; };
+try {
+  const { loadPyodide } = await import(params.get('pyodide') || './pyodide/pyodide.mjs');
+  const py = await loadPyodide({ stdout: log, stderr: log });
+  const testsUrl = params.get('tests');
+  await py.loadPackage(testsUrl ? ['cffi', 'numpy', 'pytest'] : ['cffi']);
+  const sitePackages = py.runPython('import site; site.getsitepackages()[0]');
+  for (const w of (params.get('wheels') || '').split(',').filter(Boolean)) {
+    const data = new Uint8Array(await (await fetch(w)).arrayBuffer());
+    py.unpackArchive(data, 'wheel', { extractDir: sitePackages });
+  }
+  if (testsUrl) {
+    py.FS.mkdirTree('/work');
+    py.unpackArchive(new Uint8Array(await (await fetch(testsUrl)).arrayBuffer()), 'zip', { extractDir: '/work' });
+    py.globals.set('pytest_args', py.toPy((params.get('pytest') || '').split(',').filter(Boolean)));
+    const code = await py.runPythonAsync(`
+import os, sys, pytest
+os.chdir("/work")
+sys.path.insert(0, "/work/tests")
+int(pytest.main(["-v", "-p", "no:cacheprovider", *pytest_args]))
+`);
+    log(code === 0 ? 'ALL OK' : `FAIL: pytest exit code ${code}`);
+  } else {
+    const code = await (await fetch(params.get('script'))).text();
+    const call = params.get('canvas') ? 'await main(js.document.getElementById("canvas"))' : 'await main()';
+    await py.runPythonAsync(code + `\nimport js\nif "main" in globals():\n    ${call}\n`);
+    log('ALL OK');
+  }
+} catch (e) {
+  log('FAIL: ' + e);
+}
+</script>
+</body>
+</html>

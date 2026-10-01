@@ -5,3 +5,5 @@ src/wgpu_dawn/_wgpu_dawn.c*
 *.egg-info/
 dist/
 .pyodide_build/
+tests/node_modules/
+tests/package-lock.json

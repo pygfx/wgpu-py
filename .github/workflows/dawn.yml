@@ -1,0 +1,223 @@
+name: Dawn
+
+# Builds the wgpu_dawn bindings for Pyodide (Emdawnwebgpu) and natively (Dawn
+# from conda), and runs the same wgpu-py code and tests on both:
+#
+# * Pyodide in Node.js, with navigator.gpu from the `webgpu` npm package (Dawn),
+#   on lavapipe (software Vulkan, since CI has no GPU).
+# * Pyodide in headless Chrome (SwiftShader, since CI has no GPU).
+# * Native Dawn on lavapipe.
+#
+# On pushes to the fork, the demo page is deployed to GitHub Pages.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dawn-pyodide
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+env:
+  PYODIDE_VERSION: "314.0.7"
+  PYODIDE_BUILD_VERSION: "0.39.1"
+  # Test files that do not depend on wgpu-native specifics
+  PORTABLE_TESTS: >-
+    tests/test_util_compute.py tests/test_util_core.py tests/test_not_finite.py
+    tests/test_wgpu_native_compute_tex.py tests/test_wgpu_native_render.py
+    tests/test_wgpu_native_render_tex.py tests/test_wgpu_native_texture.py
+
+jobs:
+
+  pyodide-build:
+    name: Build Pyodide wheels
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PYODIDE_XBUILDENV_PATH: /home/runner/xbuildenv
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.14'
+    - name: Install pyodide-build
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyodide-build==${PYODIDE_BUILD_VERSION} build hatchling
+    - name: Install Pyodide cross-build environment and Emscripten
+      run: |
+        pyodide xbuildenv install ${PYODIDE_VERSION}
+        pyodide xbuildenv install-emscripten
+    - name: Build wgpu_dawn for Pyodide
+      run: |
+        source ${PYODIDE_XBUILDENV_PATH}/${PYODIDE_VERSION}/emsdk/emsdk_env.sh
+        emcc --version | head -1
+        cd dawn_bindings
+        pyodide build --exports pyinit -o ../dist
+    - name: Build wgpu (pure Python wheel)
+      run: |
+        WGPU_PY_BUILD_NOARCH=1 python -m build --wheel -o dist
+    - run: ls -l dist
+    - uses: actions/upload-artifact@v4
+      with:
+        name: pyodide-wheels
+        path: dist/*.whl
+
+  pyodide-node:
+    name: Pyodide in Node (webgpu npm, lavapipe)
+    needs: pyodide-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: pyodide-wheels
+        path: dist
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '26'
+    - name: Install lavapipe
+      run: |
+        sudo apt-get update -y -qq
+        sudo apt-get install -y mesa-vulkan-drivers libvulkan1
+    - name: Install npm packages
+      run: cd dawn_bindings/tests && npm install --no-audit --no-fund
+    - name: Run scripts
+      run: |
+        WHEELS=$(ls $PWD/dist/*.whl | tr '\n' ',')
+        cd dawn_bindings/tests
+        node run_node.mjs $WHEELS compute_async.py
+        node run_node.mjs $WHEELS compute_sync.py
+        node run_node.mjs $WHEELS triangle.py
+    - name: Run wgpu-py tests
+      run: |
+        WHEELS=$(ls $PWD/dist/*.whl | tr '\n' ',')
+        cd dawn_bindings/tests
+        node run_node.mjs $WHEELS --pytest ../../tests ${PORTABLE_TESTS} -k "not spirv"
+
+  pyodide-chrome:
+    name: Pyodide in headless Chrome
+    needs: pyodide-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: pyodide-wheels
+        path: dist
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '26'
+    - name: Install npm packages
+      run: cd dawn_bindings/tests && npm install --no-audit --no-fund
+    - name: Prepare site
+      run: |
+        mkdir site
+        cp -r dawn_bindings/tests/node_modules/pyodide site/pyodide
+        cp dawn_bindings/tests/runner.html dawn_bindings/tests/*.py dist/*.whl site/
+        zip -qr site/tests.zip tests/*.py conftest.py
+        echo "WHEELS=$(cd dist && ls *.whl | tr '\n' ',')" >> $GITHUB_ENV
+        google-chrome --version
+    - name: Run scripts
+      run: |
+        cd dawn_bindings/tests
+        node run_chrome.mjs ../../site "runner.html?wheels=${WHEELS}&script=compute_async.py"
+        node run_chrome.mjs ../../site "runner.html?wheels=${WHEELS}&script=compute_sync.py"
+        SCREENSHOT=../../triangle.png node run_chrome.mjs ../../site "runner.html?wheels=${WHEELS}&script=triangle.py&canvas=1"
+    - name: Run wgpu-py tests
+      run: |
+        # In the browser, validation errors arrive asynchronously (uncapturederror
+        # event), so tests that expect an exception from the failing call are skipped.
+        ARGS=$(echo ${PORTABLE_TESTS} | tr ' ' ',')
+        cd dawn_bindings/tests
+        node run_chrome.mjs ../../site "runner.html?wheels=${WHEELS}&tests=tests.zip&pytest=${ARGS},-k,not spirv and not test_view_formats"
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: chrome-triangle-screenshot
+        path: triangle.png
+
+  native:
+    name: Native Dawn (conda, lavapipe)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: conda-incubator/setup-miniconda@v3
+      with:
+        miniforge-version: latest
+        activate-environment: dawn
+        channels: mark.harfouche,conda-forge
+        channel-priority: strict
+        python-version: '3.13'
+    - name: Install Dawn and build tools
+      run: |
+        conda install -y dawn cffi setuptools pip c-compiler numpy pytest pytest-asyncio anyio trio psutil sniffio rendercanvas
+        conda list dawn
+    - name: Install lavapipe
+      run: |
+        sudo apt-get update -y -qq
+        sudo apt-get install -y mesa-vulkan-drivers libvulkan1
+    - name: Build wgpu_dawn against Dawn
+      run: |
+        DAWN_PREFIX=$CONDA_PREFIX pip install --no-build-isolation -v ./dawn_bindings
+        WGPU_PY_BUILD_NOARCH=1 pip install --no-deps .
+    - name: Run scripts
+      env:
+        WGPUPY_BACKEND: dawn
+      run: |
+        cd dawn_bindings/tests
+        python compute_async.py
+        python compute_sync.py
+        python triangle.py
+    - name: Run wgpu-py tests
+      env:
+        WGPUPY_BACKEND: dawn
+      run: |
+        pytest -v tests/test_api.py tests/test_async.py tests/test_canvas.py ${PORTABLE_TESTS}
+
+  pages:
+    name: Deploy demo to GitHub Pages (fork only)
+    if: github.event_name == 'push' && github.repository == 'hmaarrfk/wgpu-py'
+    needs: [pyodide-build, pyodide-node, pyodide-chrome, native]
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with:
+        name: pyodide-wheels
+        path: site/wheels
+    - name: Assemble site
+      run: |
+        cp dawn_bindings/demo/index.html dawn_bindings/demo/demo.py site/
+        python3 - <<EOF
+        import json, os
+        json.dump({
+            "pyodide": os.environ["PYODIDE_VERSION"],
+            "dawn": "v20260929.200159",
+            "commit": os.environ["GITHUB_SHA"][:10],
+            "wheels": sorted(os.listdir("site/wheels")),
+        }, open("site/wheels.json", "w"))
+        EOF
+        ls -R site
+    - uses: actions/configure-pages@v5
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: site
+    - id: deployment
+      uses: actions/deploy-pages@v4
