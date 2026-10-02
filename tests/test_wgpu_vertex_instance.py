@@ -39,7 +39,7 @@ SHADER_SOURCE = (
 
     struct VertexOutput {
         @builtin(position) position: vec4f,
-        @location(0) info: vec2u
+        @location(0) @interpolate(flat) info: vec2u
     }
 
     const POSITION: vec4f = vec4f(0, 0, 0, 1);
@@ -54,7 +54,7 @@ SHADER_SOURCE = (
     }
 
     @fragment
-    fn fragmentMain(@location(0) info: vec2u) -> @location(0) vec4f {
+    fn fragmentMain(@location(0) @interpolate(flat) info: vec2u) -> @location(0) vec4f {
         let index = atomicAdd(&counter, 1u);
         data[index % MAX_INFO] = info;
         return vec4f();

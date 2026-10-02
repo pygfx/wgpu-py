@@ -37,8 +37,8 @@ SHADER_SOURCE = (
     var<immediate> immediates: Immediates;
 
     struct VertexOutput {
-        @location(0) index: u32,
-        @location(1) value: u32,
+        @location(0) @interpolate(flat) index: u32,
+        @location(1) @interpolate(flat) value: u32,
         @builtin(position) position: vec4f,
     }
 
@@ -50,8 +50,8 @@ SHADER_SOURCE = (
     }
 
     @fragment
-    fn fragmentMain(@location(0) index: u32,
-                    @location(1) value: u32
+    fn fragmentMain(@location(0) @interpolate(flat) index: u32,
+                    @location(1) @interpolate(flat) value: u32
     ) -> @location(0) vec4f {
         data[index] = value + immediates.values2[index];
         return vec4f();
