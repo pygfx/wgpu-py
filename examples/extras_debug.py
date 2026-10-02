@@ -1,4 +1,7 @@
 """
+Extras Debug
+------------
+
 Basic example of how to use wgpu-native instance extras to enable debug symbols and labels in the shader compiler.
 As debugger we will use RenderDoc (https://renderdoc.org/) - other tools will require a similar setup.
 While RenderDoc doesn't fully support WebGPU - it can still be useful for inspecting the render pipeline.

@@ -13,6 +13,7 @@ Welcome to the wgpu-py docs!
     wgpu
     backends
     utils
+    Gallery <gallery/index.rst>
 
 
 

@@ -1,4 +1,8 @@
 """
+GUI Auto
+--------
+
+
 Run the cube example in an automatically selected GUI backend.
 
 The rendercanvas automatically selects one of its available

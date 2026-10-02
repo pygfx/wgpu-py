@@ -36,8 +36,9 @@ def detect_current_call_soon_threadsafe():
     """Get the current applicable call_soon_threadsafe function, or None"""
 
     # Pyodide always runs asyncio (which wraps the JS native event loop)
-    if IS_PYODIDE:
-        return sys.modules["asyncio"].get_running_loop().call_soon_threadsafe
+    # maybe we don#t need the special case here anymore... with 314.0.5 and 314.0.6 which had some fixes for stack switching and get async hooks.
+    # if IS_PYODIDE:
+    #     return sys.modules["asyncio"].get_running_loop().call_soon_threadsafe
 
     # Get asyncgen hook func, return fast when no async loop active
     ob = sys.get_asyncgen_hooks()[0]

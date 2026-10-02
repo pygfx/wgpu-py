@@ -1,4 +1,7 @@
 """
+Compute Workgroups
+------------------
+
 A simple compute example demonstrating GPU workgroups and invocation IDs.
 
 Each thread writes its global, local, and workgroup IDs into a storage buffer

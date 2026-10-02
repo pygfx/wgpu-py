@@ -49,7 +49,6 @@ class CustomBuildHook(BuildHookInterface):
         elif self.target_name == "wheel" and is_git_repo():
             # Prepare
             check_git_status()
-            remove_all_libs()
 
             # State that the wheel is not cross-platform
             build_data["pure_python"] = False
@@ -61,7 +60,21 @@ class CustomBuildHook(BuildHookInterface):
                 wgpu_native_tag, wheel_tag = platform_info.split()
                 opsys, arch = wgpu_native_tag.split("_", 1)
                 build_data["tag"] = "py3-none-" + wheel_tag
-                download_lib(None, opsys, arch)
+                if opsys == "pyodide":
+                    # special pure python wheel without the resource folder for browser use
+                    # in the future we might have an actual wasm build, so this might need changes again!
+                    build_data["pure_python"] = True
+
+                    # https://github.com/pypa/hatch/issues/1787 seems to not be an official api...
+                    build_config = self.build_config.build_config
+                    wheel_config = build_config.get("targets", {}).get("wheel", {})
+                    exclude_dirs = ["wgpu/resources/*", "!wgpu/resources/*.py", "wgpu/backends/wgpu_native/*"]
+                    wheel_config["exclude"] = exclude_dirs
+                    wheel_config["artifacts"] = []
+                else:
+                    # since pyodide excludes the whole resources directory it doesn't need to be cleaned.
+                    remove_all_libs()
+                    download_lib(None, opsys, arch)
             else:
                 # A build for this platform, e.g. ``pip install -e .``
                 build_data["infer_tag"] = True
@@ -72,7 +85,8 @@ class CustomBuildHook(BuildHookInterface):
 
 
 def is_git_repo():
-    return os.path.isdir(os.path.join(root_dir, ".git"))
+    # detect repo (.git is a dir) and submodule (.git is a file)
+    return os.path.exists(os.path.join(root_dir, ".git"))
 
 
 def check_git_status():
@@ -82,7 +96,7 @@ def check_git_status():
     git_status = p.stdout.decode(errors="ignore")
     # print("Git status:\n" + git_status)
     for line in git_status.splitlines():
-        assert not line.strip().startswith("M wgpu/"), "Git has open changes!"
+        assert not line.strip().startswith("M wgpu/resources/"), "Git has open changes!"
 
 
 def remove_all_libs():

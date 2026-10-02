@@ -163,7 +163,6 @@ def compute_with_buffers(input_arrays, output_arrays, shader, constants=None, n=
     pipeline_layout = device.create_pipeline_layout(
         bind_group_layouts=[bind_group_layout]
     )
-    bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
 
     compute = {
         "module": cshader,
@@ -178,6 +177,7 @@ def compute_with_buffers(input_arrays, output_arrays, shader, constants=None, n=
         layout=pipeline_layout,
         compute=compute,
     )
+    bind_group = device.create_bind_group(layout=bind_group_layout, entries=bindings)
     command_encoder = device.create_command_encoder()
     compute_pass = command_encoder.begin_compute_pass()
     compute_pass.set_pipeline(compute_pipeline)
