@@ -166,7 +166,6 @@ def begin_pipeline_statistics_query(
     query_set: GPUQuerySet,
     query_index: int,
 ):
-    print(encoder, type(encoder))
     assert isinstance(encoder, (GPURenderPassEncoder, GPUComputePassEncoder))
     encoder._begin_pipeline_statistics_query(query_set, query_index)
 
