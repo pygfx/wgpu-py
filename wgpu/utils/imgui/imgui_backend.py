@@ -203,6 +203,7 @@ class ImguiWgpuBackend:
         )
 
         self._uniform_buffer = self._device.create_buffer(
+            label="imgui backend _uniform buffer",
             size=self._uniform_data.nbytes,
             usage=wgpu.BufferUsage.UNIFORM | wgpu.BufferUsage.COPY_DST,
         )
@@ -366,6 +367,7 @@ class ImguiWgpuBackend:
             )  # add some extra space to avoid recreating the buffer too often
 
             self._vertex_buffer = self._device.create_buffer(
+                label="imgui backend _vertex_buffer",
                 size=self._vertex_buffer_size * imgui.VERTEX_SIZE,
                 usage=wgpu.BufferUsage.VERTEX | wgpu.BufferUsage.COPY_DST,
             )
@@ -380,6 +382,7 @@ class ImguiWgpuBackend:
             )  # add some extra space to avoid recreating the buffer too often
 
             self._index_buffer = self._device.create_buffer(
+                label="imgui backend _index_buffer",
                 size=self._index_buffer_size * imgui.INDEX_SIZE,
                 usage=wgpu.BufferUsage.INDEX | wgpu.BufferUsage.COPY_DST,
             )

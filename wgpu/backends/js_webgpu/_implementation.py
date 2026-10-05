@@ -272,6 +272,8 @@ class GPUBuffer(classes.GPUBuffer):
         # Check offset and size
         offset, size = self._check_range(offset, size)
 
+        # TODO if the buffer is already mapped, we can't map it.
+
         js_mapping_promise = self._internal.mapAsync(mode, offset, size) # this errors when awaited on in the rendercanas offscreen backend...
         # print(f"mapping requested:{js_mapping_promise}, we are still {self.map_state=}")
 

@@ -44,6 +44,9 @@ compute_examples = {
     "fpl_example.py": [*pygfx_deps, "fastplotlib"], #also hangs but I eventually want to get to this.
     "triangle.py": [], # no deps
     "cube.py": ["numpy"],
+    "imgui_backend_sea.py": ["numpy", "imgui-bundle"],
+    "imgui_basic_example.py": ["imgui-bundle"], # might even work without wgpu as imgui already works in pyodide...
+    "imgui_renderer_sea.py": ["numpy", "imgui-bundle"],
 }
 
 # these need rendercanvas too for now. but might run with just a canvas (no events) in the near future.
@@ -52,9 +55,6 @@ graphics_examples = {
     # "cube.py": ["numpy"], # currently pyscript doesn't have pyodide 314.0.6
     "offscreen_hdr.py": ["numpy", "pypng"], # pyscript says it doesn't work in pyodide.
     # "triangle_glsl.py": # we can't use GLSL in the browser... I am looking into maybe using wasm compiled naga manually - at a later date.
-    "imgui_backend_sea.py": ["numpy", "imgui-bundle"],
-    "imgui_basic_example.py": ["imgui-bundle"], # might even work without wgpu as imgui already works in pyodide...
-    "imgui_renderer_sea.py": ["numpy", "imgui-bundle"],
     # pygfx example
     # "pygfx_example.py": [*pygfx_deps, "sniffio", "imageio"],
     # "fpl_example.py": [*pygfx_deps, "fastplotlib"],
@@ -80,7 +80,7 @@ def get_html_index():
     <head>
         <meta name="viewport" content="width=device-width,initial-scale=1.0">
         <title>wgpu PyScript examples</title>
-        <script type="module" src="https://pyscript.net/releases/2026.7.2/core.js"></script>
+        <script type="module" src="https://pyscript.net/releases/2026.7.3/core.js"></script>
     </head>
     <body>
 
@@ -136,7 +136,7 @@ pyodide_compute_template = """
 <head>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>{example_script} via Pyodide</title>
-    <script src="https://cdn.jsdelivr.net/pyodide/v314.0.6/full/pyodide.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.js"></script>
 </head>
 
 <body>
