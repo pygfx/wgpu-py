@@ -358,7 +358,7 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # to handle the bounds of mapped_read I guess?
         self._mapped_status = 0, 0, 0  # offset, size, mapMode
         # If mapped at creation, set to write mode (no point in reading zeros)
-        if self._map_state == enums.BufferMapState.mapped:
+        if self.map_state == enums.BufferMapState.mapped:
             self._mapped_status = 0, self.size, flags.MapMode.WRITE
 
     def _check_range(self, offset, size):
@@ -418,12 +418,20 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
         # TODO if the buffer is already mapped, we can't map it.
 
+        if self.map_state != enums.BufferMapState.unmapped:
+            #  do we have to do this ourselves? -> https://www.w3.org/TR/webgpu/#dom-gpubuffer-mapasync
+            # maybe we can create the js promise with a proper raise so it gets handled by the try block in pygfx.
+            promise = GPUPromise("buffer.map_async", None)
+            promise._set_error(RuntimeError(f"Can only map a buffer if its currently unmapped, not {self.map_state!r}"))
+            return promise
+
         js_mapping_promise = self._internal.mapAsync(mode, offset, size)  # this errors when awaited on in the rendercanas offscreen backend...
         # print(f"mapping requested:{js_mapping_promise}, we are still {self.map_state=}")
 
         def buffer_map_success(js_result):
             # print(f"buffer mapped successfully with {self.map_state=}: {js_result}")
             self._mapped_status = offset, offset + size, mode
+            # js should set the self.map_state correctly via the property.
             return js_result  # should be None
 
         promise = GPUPromise("buffer.map_async", buffer_map_success)
