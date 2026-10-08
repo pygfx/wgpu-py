@@ -19,7 +19,7 @@ SHADER_SOURCE = """
     var<storage,read_write> data2: array<f32>;
 
     struct VertexOutput {
-        @location(0) index: u32,
+        @location(0) @interpolate(flat) index: u32,
         @builtin(position) position: vec4f,
     }
 
