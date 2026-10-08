@@ -23,7 +23,7 @@
 * Diffs for DrawCancelled: add DrawCancelled
 * Validated 39 classes, 121 methods, 52 properties
 ### Patching API for backends/wgpu_native/_api.py
-* Validated 39 classes, 115 methods, 0 properties
+* Validated 39 classes, 114 methods, 0 properties
 ## Validating backends/wgpu_native/_api.py
 * Enum PipelineErrorReason missing in webgpu.h
 * Enum AutoLayoutMode missing in webgpu.h
@@ -31,6 +31,6 @@
 * Enum CanvasAlphaMode missing in webgpu.h
 * Enum CanvasToneMappingMode missing in webgpu.h
 * Wrote 267 enum mappings and 49 struct-field mappings to wgpu_native/_mappings.py
-* Validated 154 C function calls
-* Not using 85 C functions
+* Validated 153 C function calls
+* Not using 86 C functions
 * Validated 96 C structs
