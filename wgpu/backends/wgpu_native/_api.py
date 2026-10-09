@@ -2460,10 +2460,6 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         if self._map_state == enums.BufferMapState.mapped:
             self._mapped_status = 0, self.size, flags.MapMode.WRITE
 
-    def _get_size(self):
-        # H: WGPUBufferUsage f(WGPUBuffer buffer)
-        return libf.wgpuBufferGetUsage(self._internal)
-
     def _check_range(self, offset, size):
         # Apply defaults
         if offset is None:
