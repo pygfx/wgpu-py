@@ -481,5 +481,82 @@ def test_limits_are_not_legal():
     assert not are_limits_wgpu_legal({"max-bind-group": 8})
 
 
+def test_bind_group_resources():
+    # make sure every resource type can be created in a bind group.
+    device = wgpu.utils.get_default_device()
+
+    sampler = device.create_sampler()
+    texture1 = device.create_texture(
+        label="texture1",
+        size=(8, 8, 1),
+        format=wgpu.TextureFormat.rgba8unorm,
+        usage=wgpu.TextureUsage.TEXTURE_BINDING | wgpu.TextureUsage.COPY_DST,
+    )
+    texture2 = device.create_texture(
+        label="texture2",
+        size=(8, 8, 1),
+        format=wgpu.TextureFormat.rgba8unorm,
+        usage=wgpu.TextureUsage.TEXTURE_BINDING | wgpu.TextureUsage.COPY_DST,
+    )
+    texture_view = texture2.create_view()
+
+    buffer = device.create_buffer(
+        size=256,
+        usage=wgpu.BufferUsage.UNIFORM,
+    )
+
+    entires = [
+        wgpu.structs.BindGroupEntry(binding=0, resource=sampler),
+        wgpu.structs.BindGroupEntry(binding=1, resource=texture1),
+        wgpu.structs.BindGroupEntry(binding=2, resource=texture_view),
+        wgpu.structs.BindGroupEntry(
+            binding=3,
+            resource=buffer,
+        ),
+        wgpu.structs.BindGroupEntry(
+            binding=4,
+            resource=wgpu.structs.BufferBinding(
+                buffer=buffer,
+            ),
+        ),
+        # maybe external texture one day
+    ]
+
+    # maybe we should write a bit of compute shader so we can use auto layout mode instead.
+    layout_entries = [
+        wgpu.BindGroupLayoutEntry(
+            binding=0,
+            visibility=wgpu.ShaderStage.COMPUTE,
+            sampler=wgpu.structs.SamplerBindingLayout(),
+        ),
+        wgpu.BindGroupLayoutEntry(
+            binding=1,
+            visibility=wgpu.ShaderStage.COMPUTE,
+            texture=wgpu.structs.TextureBindingLayout(),
+        ),
+        wgpu.BindGroupLayoutEntry(
+            binding=2,
+            visibility=wgpu.ShaderStage.COMPUTE,
+            texture=wgpu.structs.TextureBindingLayout(),
+        ),
+        wgpu.BindGroupLayoutEntry(
+            binding=3,
+            visibility=wgpu.ShaderStage.COMPUTE,
+            buffer=wgpu.structs.BufferBindingLayout(),
+        ),
+        wgpu.BindGroupLayoutEntry(
+            binding=4,
+            visibility=wgpu.ShaderStage.COMPUTE,
+            buffer=wgpu.structs.BufferBindingLayout(),
+        ),
+    ]
+
+    layout = device.create_bind_group_layout(entries=layout_entries)
+
+    bind_group = device.create_bind_group(layout=layout, entries=entires)
+
+    assert bind_group
+
+
 if __name__ == "__main__":
     run_tests(globals())

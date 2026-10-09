@@ -965,7 +965,7 @@ class GPUDevice(GPUObjectBase):
             layout (GPUBindGroupLayout): The layout (abstract representation)
                 for this bind group.
             entries (list): A list of `structs.BindGroupEntry`s. The ``resource`` field
-                is either `GPUSampler`, `GPUTextureView` or `structs.BufferBinding`.
+                is either `GPUBuffer`, `GPUSampler`, `GPUTexture`, `GPUTextureView` or `structs.BufferBinding`.
 
         Example entry dicts:
 
