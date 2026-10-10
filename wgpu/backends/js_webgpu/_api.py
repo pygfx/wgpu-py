@@ -340,13 +340,40 @@ class GPUDevice(classes.GPUDevice, GPUObjectBase):
 
 class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
 
-    # TODO: mapAsync sync variant likely taken from _classes.py directly!
+    # Custom implementation for mapAsync from _implementation.py:
+    def map_sync(self, mode: int | str, offset: int = 0, size: int | None = None) -> None:
+        # can we manually implement the method instead of relying on the promies object?
+        if isinstance(mode, str):
+            # needs to be a uint to work as flag
+            mode = str_flag_to_int(flags.MapMode, mode.removesuffix("_NOSYNC"))
+        # Check offset and size
+        # print(f"doing before _check_range: {mode=}, {offset=}, {size=}")
+        offset, size = self._check_range(offset, size)
+
+        if self.map_state != enums.BufferMapState.unmapped:
+            # raise directly, not looking for a promise here.
+            raise RuntimeError(f"Can only map buffer('{self.label}..{self.uid}') if its currently unmapped, not {self.map_state!r}")
+
+        # print(f"doing a map_sync manually with {mode=}, {offset=}, {size=}, {self.map_state=}")
+        js_promise = self._internal.mapAsync(mode, offset, size)
+        js_promise.catch(lambda err: print(f"managed to catch an error during map_sync: {err}"))  # so this actually triggers?
+        run_sync(js_promise)  # blocking?
+        self._mapped_status = offset, offset + size, mode  # we should keep track of this!
+        # print(f"buffer ({self.label}) should now be mapped (sync): {self.map_state}")
+
     def get_mapped_range(self, offset: int = 0, size: int | None = None) -> ArrayLike:
     
         self._internal.getMappedRange(offset, size)
 
+    # Custom implementation for unmap from _implementation.py:
     def unmap(self) -> None:
+        if self.map_state != enums.BufferMapState.mapped:
+            raise RuntimeError(f"Can only unmap buffer('{self.label}..{self.uid}') if its currently mapped. not {self.map_state!r}")
+        # H: void f(WGPUBuffer buffer)
         self._internal.unmap()
+        self._map_state = enums.BufferMapState.unmapped
+        self._mapped_status = 0, 0, 0  # we likely need this?
+        # print(f"buffer ({self.label}) should now be unmapped: {self.map_state}")
 
     def destroy(self) -> None:
         self._internal.destroy()
@@ -356,9 +383,9 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # can we just fill the _classes constructor with properties?
         super().__init__(internal.label, internal, device, internal.size, internal.usage, internal.mapState)
         # to handle the bounds of mapped_read I guess?
-        self._mapped_status = 0, 0, 0  # offset, size, mapMode
+        self._mapped_status = 0, 0, 0  # start (offset), end (offset+size), mapMode (start off 0 which is like uninitialized)
         # If mapped at creation, set to write mode (no point in reading zeros)
-        if self._map_state == enums.BufferMapState.mapped:
+        if self.map_state == enums.BufferMapState.mapped:
             self._mapped_status = 0, self.size, flags.MapMode.WRITE
 
     def _check_range(self, offset, size):
@@ -416,12 +443,23 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         # Check offset and size
         offset, size = self._check_range(offset, size)
 
+        # TODO if the buffer is already mapped, we can't map it.
+
+        if self.map_state != enums.BufferMapState.unmapped:
+            #  do we have to do this ourselves? -> https://www.w3.org/TR/webgpu/#dom-gpubuffer-mapasync
+            # maybe we can create the js promise with a proper raise so it gets handled by the try block in pygfx.
+            promise = GPUPromise("buffer.map_async", None)
+            promise._set_error(RuntimeError(f"Can only map a buffer if its currently unmapped, not {self.map_state!r}"))
+            return promise
+
         js_mapping_promise = self._internal.mapAsync(mode, offset, size)  # this errors when awaited on in the rendercanas offscreen backend...
         # print(f"mapping requested:{js_mapping_promise}, we are still {self.map_state=}")
 
         def buffer_map_success(js_result):
             # print(f"buffer mapped successfully with {self.map_state=}: {js_result}")
             self._mapped_status = offset, offset + size, mode
+            # js should set the self.map_state correctly via the property.
+            # print(f"buffer ({self.label}) should now be mapped (async): {self.map_state}")
             return js_result  # should be None
 
         promise = GPUPromise("buffer.map_async", buffer_map_success)

@@ -4,6 +4,7 @@ Test that the examples run without error.
 
 import os
 import importlib
+import logging
 import runpy
 import sys
 from unittest.mock import patch
@@ -177,11 +178,24 @@ def update_diffs(module, is_similar, img, stored_img, *, atol):
 
 
 @pytest.mark.parametrize("module", examples_to_run)
-def test_examples_run(module, force_offscreen):
+def test_examples_run(module, force_offscreen, caplog):
     """Run every example marked to see if they can run without error."""
-    # use runpy so the module is not actually imported (and can be gc'd)
-    # but also to be able to run the code in the __main__ block
-    runpy.run_module(f"examples.{module}", run_name="__main__")
+    with caplog.at_level(logging.ERROR, logger="rendercanvas"):
+        # use runpy so the module is not actually imported (and can be gc'd)
+        # but also to be able to run the code in the __main__ block
+        module_globals = runpy.run_module(f"examples.{module}", run_name="__main__")
+
+        # The main block only sets up the canvas and hands it a draw function;
+        # the offscreen canvas does not draw until asked. So ask, otherwise the
+        # draw function (the bulk of most examples) is never executed.
+        canvas = module_globals.get("canvas")
+        if canvas is not None:
+            canvas.draw()
+
+    # rendercanvas calls the draw function inside a log_exception() context, so
+    # errors in it do not propagate; they only show up in the log.
+    errors = [r for r in caplog.records if r.name == "rendercanvas"]
+    assert not errors, caplog.text
 
 
 if __name__ == "__main__":

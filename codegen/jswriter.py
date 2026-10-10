@@ -80,6 +80,11 @@ class JsPatcher(Patcher):
     # TODO: we can put custom methods here!
     pass
 
+    def iter_handwritten_classes(self):
+        # get all the classes written by hand, so we can generate the rest...?
+        pass
+
+
 patcher = JsPatcher(custom_implementations)
 
 def generate_method_code(class_name: str, function_name: str, idl_line: str) -> str:

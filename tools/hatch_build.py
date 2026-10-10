@@ -49,7 +49,6 @@ class CustomBuildHook(BuildHookInterface):
         elif self.target_name == "wheel" and is_git_repo():
             # Prepare
             check_git_status()
-            remove_all_libs()
 
             # State that the wheel is not cross-platform
             build_data["pure_python"] = False
@@ -65,12 +64,16 @@ class CustomBuildHook(BuildHookInterface):
                     # special pure python wheel without the resource folder for browser use
                     # in the future we might have an actual wasm build, so this might need changes again!
                     build_data["pure_python"] = True
-                    build_data["exclude"] = ["wgpu/resources", "wgpu/resources/*"] # TODO: can we exclude exclude the whole wgpu_native folder without it breaking the auto backend import?
-                    build_data["artifacts"] = []
-                    # TODO: find the hatchling api that actually excludes files
-                    # then remove the wgpu-native code, so the wheel is as small as possible
-                    # do we need to redownload the lib for the developer?
+
+                    # https://github.com/pypa/hatch/issues/1787 seems to not be an official api...
+                    build_config = self.build_config.build_config
+                    wheel_config = build_config.get("targets", {}).get("wheel", {})
+                    exclude_dirs = ["wgpu/resources/*", "!wgpu/resources/*.py", "wgpu/backends/wgpu_native/*"]
+                    wheel_config["exclude"] = exclude_dirs
+                    wheel_config["artifacts"] = []
                 else:
+                    # since pyodide excludes the whole resources directory it doesn't need to be cleaned.
+                    remove_all_libs()
                     download_lib(None, opsys, arch)
             else:
                 # A build for this platform, e.g. ``pip install -e .``

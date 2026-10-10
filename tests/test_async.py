@@ -769,7 +769,7 @@ async def test_buffer_map_async():
 
 @mark.skipif(not can_use_wgpu_lib, reason="Needs wgpu lib")
 @mark.anyio
-async def make_pipeline_async():
+async def test_pipeline_async():
     device = wgpu.utils.get_default_device()
 
     shader_source = """
@@ -799,7 +799,7 @@ async def make_pipeline_async():
                 vertex={
                     "module": shader,
                 },
-                depth_stencil={"format": TextureFormat.rgba8unorm},
+                depth_stencil={"format": TextureFormat.depth32float},
             )
 
         tg.start_soon(create_compute_pipeline)
