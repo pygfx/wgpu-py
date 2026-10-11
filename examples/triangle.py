@@ -22,8 +22,8 @@ This example is meant as a standalone starting point. And is therefore as minima
 
 import wgpu
 
-from rendercanvas.auto import RenderCanvas, loop
-
+from rendercanvas.auto import RenderCanvas#, loop
+from pyodide.ffi import can_run_sync
 
 # the shader code is provided as a string literal for portability
 wgsl_shader_source = """
@@ -91,6 +91,7 @@ render_pipeline = device.create_render_pipeline(
 
 # this function gets called for every frame. It ends with submitting a buffer of work onto the GPU queue.
 def drawing_function():
+    print(f"can run_sync in drawing_function: {can_run_sync()}")
     command_encoder = device.create_command_encoder()
     current_texture_view = context.get_current_texture().create_view()
 
@@ -114,4 +115,25 @@ canvas.request_draw(drawing_function)
 
 
 if __name__ == "__main__":
-    loop.run()
+    print(f"can run_sync in __main__ block: {can_run_sync()}")
+
+    print("force_draw()")
+    canvas.force_draw() # when we do a force draw it works?
+
+    print("_draw_and_present()")
+    canvas._draw_and_present(force_sync=True)
+
+    # print("_rc_force_paint()", f"{canvas._present_to_screen=}")
+    # canvas._rc_force_paint()
+
+    print("force_draw() after _draw_and_present()")
+    canvas.force_draw()
+
+    # print("another force_draw()")
+    # canvas.force_draw()
+
+
+    # print(f"starting loop", loop)
+    # loop.run() #so inside the loop doesn't work?
+
+    print("\n next print is from the interactive loop I think \n")
