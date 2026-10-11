@@ -20,7 +20,7 @@ class GPUPromise(classes.GPUPromise):
         # explanation: https://blog.pyodide.org/posts/jspi/
         # print("waiting for promise", self)
         # if we set a promise._set_error we should maybe get this?
-        self.catch(lambda err: print(f"promise {self} rejected with error: {err}")) # not a exception that is raised... maybe our problem?
+        # self.catch(lambda err: print(f"promise {self} rejected with error: {err}")) # not a exception that is raised... maybe our problem?
         result = run_sync(self)
         # print(f"resolved into {result}")
         return result
@@ -265,6 +265,7 @@ class GPUBuffer(classes.GPUBuffer):
         Uint8Array.new(array_buf).assign(data)
 
     def map_sync(self, mode: int | str, offset: int = 0, size: int | None = None) -> None:
+        # print(f"called map_sync on {self} with {mode=}, {offset=}, {size=}, {self.map_state=}")
         # can we manually implement the method instead of relying on the promies object?
         if isinstance(mode, str):
         # needs to be a uint to work as flag
@@ -277,11 +278,15 @@ class GPUBuffer(classes.GPUBuffer):
             # raise directly, not looking for a promise here.
             raise RuntimeError(f"Can only map buffer('{self.label}..{self.uid}') if its currently unmapped, not {self.map_state!r}")
 
-        # print(f"doing a map_sync manually with {mode=}, {offset=}, {size=}, {self.map_state=}")
+        # print(f"doing a map_sync manually with derived {mode=}, {offset=}, {size=}, {self.map_state=}")
         js_promise = self._internal.mapAsync(mode, offset, size)
-        js_promise.catch(lambda err: print(f"managed to catch an error during map_sync: {err}"))# so this actually triggers?
+        # js_promise.catch(lambda err: print(f"managed to catch an error during map_sync: {err}"))# so this actually triggers?
+        # print(f"waiting for mapAsync promise {js_promise=} to resolve... in map_sync: {self=}, {self.map_state=}")
+
         run_sync(js_promise) # blocking?
+        # print(f"map_sync should have be resolving to None now, we are {self.map_state=}")
         self._mapped_status = offset, offset + size, mode # we should keep track of this!
+        return # we can still return since it's mapped?
         # print(f"buffer ({self.label}) should now be mapped (sync): {self.map_state}")
 
     def unmap(self) -> None:
@@ -293,7 +298,7 @@ class GPUBuffer(classes.GPUBuffer):
         self._mapped_status = 0, 0, 0 # we likely need this?
         # print(f"buffer ({self.label}) should now be unmapped: {self.map_state}")
 
-    def map_async(self, mode: flags.MapMode | str | None, offset: int = 0, size: int | None = None):
+    def map_async(self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None):
         # print(f"calling map_async on {self}({self.label=}) with {mode}, {offset}, {size} (our {self.size=}) but it's currently {self.map_state=}. WE have the usages {self.usage}")
         if isinstance(mode, str):
             mode = str_flag_to_int(flags.MapMode, mode.removesuffix("_NOSYNC"))
@@ -309,11 +314,11 @@ class GPUBuffer(classes.GPUBuffer):
             promise = GPUPromise("buffer.map_async", None)
             promise._set_error(
                 RuntimeError(
-                    f"Can only map a buffer if its currently unmapped, not {self.map_state!r}"
+                    f"Can only map buffer '{self}' if its currently unmapped, not {self.map_state!r}"
                 )
             )
             return promise
-    
+
         js_mapping_promise = self._internal.mapAsync(mode, offset, size) # this errors when awaited on in the rendercanas offscreen backend...
         # print(f"mapping requested:{js_mapping_promise}, we are still {self.map_state=}")
 
@@ -338,8 +343,8 @@ class GPUBuffer(classes.GPUBuffer):
         offset, size = self._check_range(buffer_offset, size)
         if offset < self._mapped_status[0] or (offset + size) > self._mapped_status[1]:
             raise ValueError(
-                "The range for buffer reading is not contained in the currently mapped range." \
-                f"mapped: {self._mapped_status[0]} offset, {self._mapped_status[1]} size" \
+                "The range for buffer reading is not contained in the currently mapped range. " \
+                f"mapped: {self._mapped_status[0]} offset, {self._mapped_status[1]} size " \
                 f"requested: {offset} offset, {size} size"
             )
 
@@ -434,7 +439,7 @@ class GPUQueue(classes.GPUQueue):
         array_buf = js_temp_buffer.getMappedRange()
         res = array_buf.slice(0)
         js_temp_buffer.unmap()
-        return res.to_py()
+        return res.to_py().copy()
 
 
     # API diff again
