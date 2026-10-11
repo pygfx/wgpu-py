@@ -30,7 +30,7 @@ from codegen import jswriter, update_js, file_cache
 
 pygfx_wheel = "pygfx-0.15.3-py3-none-any.whl"
 pygfx_deps = ["uharfbuzz", "hsluv", "pylinalg", "jinja2", pygfx_wheel]
-rendercanvas_deps = ["rendercanvas>=2.7"] # maybe put it in the pyproject.toml directly? but that might drop in the future.
+rendercanvas_deps = ["rendercanvas-2.7.2-py3-none-any.whl"] # maybe put it in the pyproject.toml directly? but that might drop in the future.
 
 #examples that don't require a canvas, we will capture the output to a div
 compute_examples = {
@@ -156,7 +156,8 @@ pyodide_compute_template = """
                 let example_name = {example_script!r};
                 pythonCode = await (await fetch(example_name)).text();
                 // this env var is really only used for the pygfx examples - so maybe we make a script for that gallery instead?
-                let pyodide = await loadPyodide();
+                pyodide = await loadPyodide();
+                // pyodide.setDebug(true);  //... so this makes some error messages worse?
                 pyodide.setStdout({{
                     batched: (s) => {{
                         // TODO: newline, scrollable, echo to console?
@@ -170,7 +171,6 @@ pyodide_compute_template = """
                 const micropip = pyodide.pyimport("micropip");
                 {dependencies}
                 await pyodide.loadPackagesFromImports(pythonCode);
-                pyodide.setDebug(true);
                 let ret = await pyodide.runPythonAsync(pythonCode);
                 console.log("Example finished:", ret);
                 //TODO: if example finishes without loading the canvas (like a compute example) -> can we still notify the user by writing into loading?
@@ -180,6 +180,7 @@ pyodide_compute_template = """
                 console.error(err); // so we have it here too
             }}
         }}
+        let pyodide; // makes globals available for debugging (even when paused) -> pyodide.globals.get("py_val").toJs() // not everything needs the method
         main();
     </script>
 </body>
