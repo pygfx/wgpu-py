@@ -1,0 +1,15 @@
+# diff_base.toml
+#
+# Defines how our wgpu-py base API differs from the web-api (the one derived from webgpu.idl).
+# We mostly *remove* things that we cannot replicate on desktop. So that we can an API surface that is the
+# intersection of what we can use on desktop and web.
+
+# Remove things related to external textures
+[classes]
+GPUQueue.methods.copy_external_image_to_texture = {diff="REMOVE"}
+GPUDevice.methods.import_external_texture = {diff="REMOVE"}
+[structs]
+ExternalTextureBindingLayout = {diff="REMOVE"}
+CopyExternalImageDestInfo = {diff="REMOVE"}
+CopyExternalImageSourceInfo = {diff="REMOVE"}
+BindGroupLayoutEntry.fields.external_texture = {diff="REMOVE"}
