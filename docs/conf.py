@@ -10,11 +10,10 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 
-import re
 import os
-import sys
+import re
 import shutil
-
+import sys
 
 ROOT_DIR = os.path.abspath(os.path.join(__file__, "..", ".."))
 sys.path.insert(0, ROOT_DIR)
@@ -26,7 +25,6 @@ os.environ["RENDERCANVAS_FORCE_OFFSCREEN"] = "true"
 import wgpu  # noqa: E402
 import wgpu.utils.compute  # noqa: E402
 import wgpu.utils.glfw_present_info  # noqa: E402
-
 
 # -- Tests -------------------------------------------------------------------
 
@@ -57,6 +55,10 @@ ob_ref_pattern = re.compile(
 argtype_ref_pattern = re.compile(
     r"\(((GPU|gui\.Wgpu|flags\.|enums\.|structs\.)\w+?)\)", re.MULTILINE
 )
+
+
+# Set the default role, so that any crossref in a docstring that looks like "`.enums.SomeEnum`" becomes a link.
+default_role = "py:obj"
 
 
 def resolve_crossrefs(text):
