@@ -14,7 +14,13 @@
       "methods": {
         "import_external_texture": { "diff": "REMOVE" }
       }
-    }
+    },
+    "NavigatorGPU": { "diff": "REMOVE" },
+    "GPUExternalTexture": { "diff": "REMOVE" },
+    "GPUUncapturedErrorEvent": { "diff": "REMOVE" },
+    "GPUSupportedLimits": { "diff": "REMOVE" },
+    "GPUSupportedFeatures": { "diff": "REMOVE" },
+    "WGSLLanguageFeatures": { "diff": "REMOVE" }
   },
   "structs": {
     "ExternalTextureBindingLayout": { "diff": "REMOVE" },

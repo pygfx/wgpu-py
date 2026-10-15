@@ -20,7 +20,7 @@ def read_file(*fname):
         )
 
 
-def write_file(text:str, *fname):
+def write_file(text: str, *fname):
     """Write the given text to disk, using the relative filename. Line endings are matched to what's used for __init__.py."""
     filename = ROOT_DIR.joinpath(*fname)
     if not text.endswith("\n"):
@@ -44,7 +44,8 @@ def _get_line_endings(text):
     else:
         return "\r\n"
 
-LE = _get_line_endings((ROOT_DIR / 'apigen' / "__init__.py").read_bytes().decode())
+
+LE = _get_line_endings((ROOT_DIR / "apigen" / "__init__.py").read_bytes().decode())
 
 
 def to_snake_case(name, separator="_"):
@@ -64,14 +65,14 @@ def to_snake_case(name, separator="_"):
     return name2
 
 
-def dict_deep_merge(a:dict, b:dict, allow_add: bool=True) -> dict:
+def dict_deep_merge(a: dict, b: dict, allow_add: bool = True) -> dict:
     """Return a new dict: b merged into a, recursing into nested dicts."""
     result = dict(a)
     for key, val in b.items():
         if isinstance(val, dict):
             if key in result and isinstance(result[key], dict):
                 if "diff" in val:
-                    assert val['diff'] == "REMOVE"
+                    assert val["diff"] == "REMOVE"
                     result.pop(key, None)
                 else:
                     result[key] = dict_deep_merge(result[key], val, allow_add)
@@ -183,7 +184,7 @@ def read_definition_file(fname: str) -> dict:
     structure = json.loads(source)
 
     possible_default_types = (None.__class__, int, float, str, list, dict)
-    diff_actions = ("REMOVE", )
+    diff_actions = ("REMOVE",)
 
     assert (
         "meta" in structure
@@ -221,9 +222,11 @@ def read_definition_file(fname: str) -> dict:
                                 elif field_dict_key == "diff":
                                     assert field_dict_val in diff_actions
                                 elif field_dict_key == "value":
-                                     assert isinstance(field_dict_val, int)
+                                    assert isinstance(field_dict_val, int)
                                 else:
-                                    raise RuntimeError(f"Invalid flag field dict key {field_dict_key!r}")
+                                    raise RuntimeError(
+                                        f"Invalid flag field dict key {field_dict_key!r}"
+                                    )
                     else:
                         raise RuntimeError(f"Invalid flag attr {flag_attr_key!r}")
 
@@ -246,10 +249,14 @@ def read_definition_file(fname: str) -> dict:
                                 elif field_dict_key == "diff":
                                     assert field_dict_val in diff_actions
                                 elif field_dict_key == "value":
-                                     assert isinstance(field_dict_val, str)
-                                     assert field_dict_val == enum_name_to_value(field_name)
+                                    assert isinstance(field_dict_val, str)
+                                    assert field_dict_val == enum_name_to_value(
+                                        field_name
+                                    )
                                 else:
-                                    raise RuntimeError(f"Invalid enum field dict key {field_dict_key!r}")
+                                    raise RuntimeError(
+                                        f"Invalid enum field dict key {field_dict_key!r}"
+                                    )
                     else:
                         raise RuntimeError(f"Invalid enum attr {enum_attr_key!r}")
 
@@ -272,18 +279,19 @@ def read_definition_file(fname: str) -> dict:
                                 elif field_dict_key == "diff":
                                     assert field_dict_val in diff_actions
                                 elif field_dict_key == "type":
-                                     assert isinstance(field_dict_val, str)
+                                    assert isinstance(field_dict_val, str)
                                 elif field_dict_key == "default":
                                     assert isinstance(
                                         field_dict_val, possible_default_types
                                     )
                                 elif field_dict_key == "required":
-                                     assert isinstance(field_dict_val, bool)
+                                    assert isinstance(field_dict_val, bool)
                                 else:
-                                    raise RuntimeError(f"Invalid struct field dict key {field_dict_key!r}")
+                                    raise RuntimeError(
+                                        f"Invalid struct field dict key {field_dict_key!r}"
+                                    )
                     else:
                         raise RuntimeError(f"Invalid struct attr {struct_attr_key!r}")
-
 
         if section == "classes":
             for class_name, class_dict in structure[section].items():
@@ -294,8 +302,8 @@ def read_definition_file(fname: str) -> dict:
                     elif class_attr_key == "diff":
                         assert class_attr_value in diff_actions
                     elif class_attr_key == "bases":
-                         assert isinstance(class_attr_value, list)
-                         assert all(isinstance(x, str) for x in class_attr_value)
+                        assert isinstance(class_attr_value, list)
+                        assert all(isinstance(x, str) for x in class_attr_value)
                     elif class_attr_key == "properties":
                         assert isinstance(class_attr_value, dict)
                         for prop_name, prop_dict in class_attr_value.items():
@@ -307,9 +315,11 @@ def read_definition_file(fname: str) -> dict:
                                 elif prop_dict_key == "diff":
                                     assert prop_dict_val in diff_actions
                                 elif prop_dict_key == "type":
-                                     assert isinstance(prop_dict_val, str)
+                                    assert isinstance(prop_dict_val, str)
                                 else:
-                                    raise RuntimeError(f"Invalid property dict key {prop_dict_key!r}")
+                                    raise RuntimeError(
+                                        f"Invalid property dict key {prop_dict_key!r}"
+                                    )
                     elif class_attr_key == "methods":
                         assert isinstance(class_attr_value, dict)
                         for method_name, method_dict in class_attr_value.items():
@@ -322,19 +332,27 @@ def read_definition_file(fname: str) -> dict:
                                     assert method_dict_val in diff_actions
                                 elif method_dict_key == "returns":
                                     assert isinstance(method_dict_val, dict)
-                                    for return_dict_key, return_dict_val in method_dict_val.items():
+                                    for (
+                                        return_dict_key,
+                                        return_dict_val,
+                                    ) in method_dict_val.items():
                                         if return_dict_key == "doc":
                                             assert isinstance(return_dict_val, str)
                                         elif return_dict_key == "type":
                                             assert isinstance(return_dict_val, str)
                                         else:
-                                            raise RuntimeError(f"Invalid method returns dict key {return_dict_key!r}")
+                                            raise RuntimeError(
+                                                f"Invalid method returns dict key {return_dict_key!r}"
+                                            )
                                 elif method_dict_key == "args":
                                     assert isinstance(method_dict_val, dict)
                                     for arg_name, arg_dict in method_dict_val.items():
                                         assert arg_name.lower() == arg_name
                                         assert isinstance(arg_dict, dict)
-                                        for arg_dict_key, arg_dict_val in arg_dict.items():
+                                        for (
+                                            arg_dict_key,
+                                            arg_dict_val,
+                                        ) in arg_dict.items():
                                             if arg_dict_key == "doc":
                                                 assert isinstance(arg_dict_val, str)
                                             elif arg_dict_key == "diff":
@@ -348,9 +366,13 @@ def read_definition_file(fname: str) -> dict:
                                             elif arg_dict_key == "required":
                                                 assert isinstance(arg_dict_val, bool)
                                             else:
-                                                raise RuntimeError(f"Invalid method arg dict key {arg_dict_key!r}")
+                                                raise RuntimeError(
+                                                    f"Invalid method arg dict key {arg_dict_key!r}"
+                                                )
                                 else:
-                                    raise RuntimeError(f"Invalid method dict key {method_dict_key!r}")
+                                    raise RuntimeError(
+                                        f"Invalid method dict key {method_dict_key!r}"
+                                    )
                     else:
                         raise RuntimeError(f"Invalid class attr {class_attr_key!r}")
 

@@ -1,5 +1,4 @@
-""" Code to generate the wgpu-py API.
-"""
+"""Code to generate the wgpu-py API."""
 
 from download_idl import download_idl
 from extract_idl import extract_idl

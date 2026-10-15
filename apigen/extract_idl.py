@@ -403,18 +403,6 @@ class IdlParser:
         we do that here.
         """
 
-        # Drop some toplevel names
-        # TODO: drop in apidiff
-        for name in [
-            "NavigatorGPU",
-            "GPUSupportedLimits",
-            "GPUSupportedFeatures",
-            "WGSLLanguageFeatures",
-            "GPUUncapturedErrorEvent",
-            "GPUExternalTexture",
-        ]:
-            self._interfaces.pop(name, None)
-
         # Divide flags and class definitions
         for name, interface in self._interfaces.items():
             if interface.constants:
@@ -462,7 +450,7 @@ class IdlParser:
                     return_type = self.resolve_type(return_type)
                     if funcname.lower().endswith(
                         "async"
-                    ):  # TODO: doesn't the type handle this already?
+                    ):  # TODO: doesn't the type-resolving handle this already?
                         return_type = f"GPUPromise[{return_type}]"
                 for arg in args:
                     arg.py_name = to_snake_case(arg.name)

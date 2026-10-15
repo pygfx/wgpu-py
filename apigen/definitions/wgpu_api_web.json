@@ -947,6 +947,58 @@
       },
       "methods": {  }
     },
+    "GPUSupportedLimits": {
+      "bases": [  ],
+      "properties": {
+        "max_texture_dimension_1d": { "type": "int" },
+        "max_texture_dimension_2d": { "type": "int" },
+        "max_texture_dimension_3d": { "type": "int" },
+        "max_texture_array_layers": { "type": "int" },
+        "max_bind_groups": { "type": "int" },
+        "max_bind_groups_plus_vertex_buffers": { "type": "int" },
+        "max_immediate_size": { "type": "int" },
+        "max_bindings_per_bind_group": { "type": "int" },
+        "max_dynamic_uniform_buffers_per_pipeline_layout": { "type": "int" },
+        "max_dynamic_storage_buffers_per_pipeline_layout": { "type": "int" },
+        "max_sampled_textures_per_shader_stage": { "type": "int" },
+        "max_samplers_per_shader_stage": { "type": "int" },
+        "max_storage_buffers_per_shader_stage": { "type": "int" },
+        "max_storage_buffers_in_vertex_stage": { "type": "int" },
+        "max_storage_buffers_in_fragment_stage": { "type": "int" },
+        "max_storage_textures_per_shader_stage": { "type": "int" },
+        "max_storage_textures_in_vertex_stage": { "type": "int" },
+        "max_storage_textures_in_fragment_stage": { "type": "int" },
+        "max_uniform_buffers_per_shader_stage": { "type": "int" },
+        "max_uniform_buffer_binding_size": { "type": "int" },
+        "max_storage_buffer_binding_size": { "type": "int" },
+        "min_uniform_buffer_offset_alignment": { "type": "int" },
+        "min_storage_buffer_offset_alignment": { "type": "int" },
+        "max_vertex_buffers": { "type": "int" },
+        "max_buffer_size": { "type": "int" },
+        "max_vertex_attributes": { "type": "int" },
+        "max_vertex_buffer_array_stride": { "type": "int" },
+        "max_inter_stage_shader_variables": { "type": "int" },
+        "max_color_attachments": { "type": "int" },
+        "max_color_attachment_bytes_per_sample": { "type": "int" },
+        "max_compute_workgroup_storage_size": { "type": "int" },
+        "max_compute_invocations_per_workgroup": { "type": "int" },
+        "max_compute_workgroup_size_x": { "type": "int" },
+        "max_compute_workgroup_size_y": { "type": "int" },
+        "max_compute_workgroup_size_z": { "type": "int" },
+        "max_compute_workgroups_per_dimension": { "type": "int" }
+      },
+      "methods": {  }
+    },
+    "GPUSupportedFeatures": {
+      "bases": [  ],
+      "properties": {  },
+      "methods": {  }
+    },
+    "WGSLLanguageFeatures": {
+      "bases": [  ],
+      "properties": {  },
+      "methods": {  }
+    },
     "GPUAdapterInfo": {
       "bases": [  ],
       "properties": {
@@ -957,6 +1009,13 @@
         "subgroup_min_size": { "type": "int" },
         "subgroup_max_size": { "type": "int" },
         "is_fallback_adapter": { "type": "bool" }
+      },
+      "methods": {  }
+    },
+    "NavigatorGPU": {
+      "bases": [  ],
+      "properties": {
+        "gpu": { "type": "GPU" }
       },
       "methods": {  }
     },
@@ -1171,6 +1230,11 @@
       }
     },
     "GPUTextureView": {
+      "bases": [ "GPUObjectBase" ],
+      "properties": {  },
+      "methods": {  }
+    },
+    "GPUExternalTexture": {
       "bases": [ "GPUObjectBase" ],
       "properties": {  },
       "methods": {  }
@@ -1708,6 +1772,21 @@
           "returns": { "type": "None" },
           "args": {
             "message": { "type": "str", "default": null, "required": true }
+          }
+        }
+      }
+    },
+    "GPUUncapturedErrorEvent": {
+      "bases": [ "Event" ],
+      "properties": {
+        "error": { "type": "GPUError" }
+      },
+      "methods": {
+        "constructor": {
+          "returns": { "type": "None" },
+          "args": {
+            "type": { "type": "str", "default": null, "required": true },
+            "gpu_uncaptured_error_event_init_dict": { "type": "structs.UncapturedErrorEventInitStruct", "default": null, "required": true }
           }
         }
       }
