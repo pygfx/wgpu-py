@@ -1,4 +1,0 @@
-# diff_backend_pyodide.toml
-#
-# Defines how the Pyodide API differs from the base API.
-# We could use this to bring back e.g. external textures.

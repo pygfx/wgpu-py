@@ -1,12 +1,19 @@
-""" Parse the webgpu.idl to create wgpu_api_web.toml"""
-
 from typing import Literal
 
-from apigen_utils import read_file, read_definition_file, DEFINITIONS_DIR, to_snake_case
+from apigen_utils import (
+    read_definition_file,
+    read_file,
+    to_snake_case,
+    write_definition_file,
+)
+
+builtins = __builtins__
+if not isinstance(builtins, dict):
+    builtins = builtins.__dict__
 
 
-def parse_idl_to_toml():
-    """Parse the IDL specification to a structured form in toml."""
+def extract_idl():
+    """Parse the IDL specification to a structured form in json."""
 
     # TODO: handle ARGS_TO_MAKE_OPTIONAL, in apidiff structure
 
@@ -15,63 +22,53 @@ def parse_idl_to_toml():
     parser = IdlParser(source)
     parser.parse()
 
-    # Generate TOML
+    # Generate structure
 
-    fname = "wgpu_api_web.toml"
-    hline = "# " + '-' * 80
-    hline3 = "\n" + hline + "\n" + hline + "\n" + hline
-
-    toml_lines = [
-        f"# {fname}: Python-flavored WebGPU API, generated from 'webgpu.idl'.",
-        "# All types are converted to the Python equivalents.",
-        "# All names are made Pythonic snake_case.",
-        "# Methods that accept a single descriptor arg are *not* yet resolved to accept the descriptor args directly.",
-    ]
-    toml_lines.append(hline3)
-    toml_lines.append("[flags]")
+    fname = "wgpu_api_web.json"
+    s = {}
+    s["meta"] = {
+        "filename": fname,
+        "description": "Python-flavored WebGPU API, generated from 'webgpu.idl'.",
+        "notes": "All types are converted to the Python equivalents, all names are made Pythonic snake_case, methods that accept a single descriptor arg are *not* yet resolved to accept the descriptor args directly.",
+    }
+    flags_dict = s["flags"] = {}
     for flag_name, d in parser.flags.items():
-        toml_lines.append(f"\n[flags.{flag_name}]")
+        flag_dict = flags_dict[flag_name] = {}
+        flag_dict["fields"] = {}
         for k, v in d.items():
-            toml_lines.append(f"fields.{k} = {{ value = {v!r} }}")
+            flag_dict["fields"][k] = {"value": v}
 
-    toml_lines.append(hline3)
-    toml_lines.append("[enums]")
+    enums_dict = s["enums"] = {}
     for enum_name, d in parser.enums.items():
-        toml_lines.append(f"\n[enums.{enum_name}]")
+        enum_dict = enums_dict[enum_name] = {}
+        enum_dict["fields"] = {}
         for k, v in d.items():
-            toml_lines.append(f"fields.{k} = {{ value = {v!r} }}")
+            enum_dict["fields"][k] = {"value": v}
 
-    toml_lines.append(hline3)
-    toml_lines.append("[structs]")
+    structs_dict = s["structs"] = {}
     for struct_name, d in parser.structs.items():
-        toml_lines.append(f"\n[structs.{struct_name}]")
+        struct_dict = structs_dict[struct_name] = {}
+        struct_dict["fields"] = {}
         for att in d.values():
-            toml_lines.append(f"fields.{att.py_name} = {att.to_toml()}")
+            struct_dict["fields"][att.py_name] = att.to_dict()
 
-    toml_lines.append(hline3)
-    toml_lines.append("[classes]")
+    classes_dict = s["classes"] = {}
     for class_name, interface in parser.classes.items():
-        toml_lines.append(f"\n[classes.{class_name}]")
-        toml_lines.append(f"bases = {interface.bases!r}")
+        class_dict = classes_dict[class_name] = {}
+        class_dict["bases"] = interface.bases
+        class_dict["properties"] = {}
         for prop_name, attr_type in interface.properties.items():
-            toml_lines.append(f"properties.{prop_name} = {{ type = {attr_type!r} }}")
-        toml_lines.append(f"[classes.{class_name}.methods]")
+            class_dict["properties"][prop_name] = {"type": attr_type}  # str
+        class_dict["methods"] = {}
         for func in interface.methods.values():
-            toml_lines.append(f"[classes.{class_name}.methods.{func.py_name}]")
-            toml_lines.append(f"returns = {{ type = '{func.return_type}' }}")
+            method_dict = class_dict["methods"][func.py_name] = {}
+            method_dict["returns"] = {"type": func.return_type}
+            method_dict["args"] = {}
             for attribute in func.args:
-                toml_lines.append(f"args.{attribute.py_name} = {attribute.to_toml()}")
+                method_dict["args"][attribute.py_name] = attribute.to_dict()
 
-    # Write
-
-    toml_lines.append("")
-    toml = "\n".join(toml_lines)
-
-
-    with open(DEFINITIONS_DIR / fname, "wb") as f:
-        f.write(toml.encode())
-
-    # Check that file is correct toml and structure
+    # Write (and read back as a validation step)
+    write_definition_file(s, fname)
     read_definition_file(fname)
 
 
@@ -126,11 +123,12 @@ class Attribute:
     def __repr__(self):
         return f"<Attribute from {self.source} '{self.idl_type} {self.name}'>"
 
-    def to_str(self) -> str:
-        return self.line
-
-    def to_toml(self) -> str:
-        return f"{{ type = '{self.py_type}', default = '{self.default}', required = {repr(self.required).lower()} }}"
+    def to_dict(self) -> dict:
+        return {
+            "type": self.py_type,
+            "default": self.default,
+            "required": self.required,
+        }
 
 
 class Interface:
@@ -145,6 +143,7 @@ class Interface:
 
 class Function:
     """A function definition."""
+
     def __init__(self, name, line):
         self.name = name
         self.line = line
@@ -200,8 +199,7 @@ class IdlParser:
         return ""
 
     def parse(self, verbose=True):
-        """Parse the IDL file and build up an internal structure.
-        """
+        """Parse the IDL file and build up an internal structure."""
         self._interfaces = {}
         self.classes = {}
         self.structs = {}
@@ -451,20 +449,26 @@ class IdlParser:
         for classname, interface in self.classes.items():
             for idl_prop_name in list(interface.properties.keys()):
                 py_prop_name = to_snake_case(idl_prop_name)
-                interface.properties[py_prop_name] =  self.resolve_type(interface.properties.pop(idl_prop_name))
+                interface.properties[py_prop_name] = self.resolve_type(
+                    interface.properties.pop(idl_prop_name)
+                )
 
             for funcname in list(interface.methods.keys()):
                 func = interface.methods[funcname]
-                args, return_type =  self._resolve_signature(classname, funcname, func.line)
+                args, return_type = self._resolve_signature(
+                    classname, funcname, func.line
+                )
                 if return_type:
                     return_type = self.resolve_type(return_type)
-                    if funcname.lower().endswith("async"):  # TODO: doesn't the type handle this already?
+                    if funcname.lower().endswith(
+                        "async"
+                    ):  # TODO: doesn't the type handle this already?
                         return_type = f"GPUPromise[{return_type}]"
                 for arg in args:
                     arg.py_name = to_snake_case(arg.name)
                     arg.py_type = self.resolve_type(arg.idl_type)
                 func.py_name = to_snake_case(func.name)
-                func.return_type = return_type
+                func.return_type = return_type or "None"
                 func.args = args
 
     def resolve_type(self, typename) -> str:
@@ -566,7 +570,7 @@ class IdlParser:
             return self.resolve_type(name)
 
         # Triage
-        if name in __builtins__.__dict__:
+        if name in builtins:
             return name  # ok
         elif name in ["ArrayLike", "CanvasLike"]:
             return name  # virtual types
@@ -606,4 +610,4 @@ class IdlParser:
 
 
 if __name__ == "__main__":
-    parse_idl_to_toml()
+    extract_idl()

@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "filename": "diff_backend_pyodide.json",
+    "description": "Defines how the Pyodide API differs from the base API.",
+    "notes": "We could use this to bring back e.g. external textures."
+  }
+}

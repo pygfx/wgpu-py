@@ -1,8 +1,7 @@
-import sys
-import tomllib
+import json
 import subprocess
+import sys
 from pathlib import Path
-
 
 DEFINITIONS_DIR = Path(__file__).parent.absolute() / "definitions"
 ROOT_DIR = Path(__file__).parents[1].absolute()
@@ -136,20 +135,72 @@ def indent(text: str, indent=4) -> str:
     return "\n".join(lines)
 
 
+def write_definition_file(structure: dict, fname: str) -> None:
+    """Write an API definition to disk. The structure is serialized to json, indented, but with singular and small leaf nodes single-lined."""
+
+    def _is_leaf(obj):
+        values = obj.values() if isinstance(obj, dict) else obj
+        return not any(isinstance(v, (dict, list)) for v in values)
+
+    def dumps(obj, indent=2, level=0, max_len=100, **kw):
+        if not isinstance(obj, (dict, list)):
+            return json.dumps(obj, **kw)
+
+        if _is_leaf(obj):
+            flat = json.dumps(obj, **kw).strip("{}")
+            if len(obj) <= 1 or len(flat) < max_len:
+                if isinstance(obj, list):
+                    return "[ " + flat.strip("[]") + " ]"
+                else:
+                    return "{ " + flat.strip("{}") + " }"
+
+        pad = " " * (indent * (level + 1))
+        end = " " * (indent * level)
+        sub = dict(indent=indent, level=level + 1, max_len=max_len, **kw)
+
+        if isinstance(obj, dict):
+            if not obj:
+                return "{}"
+            body = ",\n".join(
+                f"{pad}{json.dumps(k, **kw)}: {dumps(v, **sub)}" for k, v in obj.items()
+            )
+            return "{\n" + body + "\n" + end + "}"
+        else:  # list
+            if not obj:
+                return "[]"
+            body = ",\n".join(pad + dumps(v, **sub) for v in obj)
+            return "[\n" + body + "\n" + end + "]"
+
+    text = dumps(structure)
+    write_file(text, "apigen", "definitions", fname)
+
+
 def read_definition_file(fname: str) -> dict:
-    """Read a TOML API definition file and check that the structure is correct.
+    """Read an API definition from disk and check that the structure is correct.
     Returns the structure as a dict.
     """
     source = read_file("apigen", "definitions", fname)
-    structure = tomllib.loads(source)
+    structure = json.loads(source)
 
+    possible_default_types = (None.__class__, int, float, str, list, dict)
     diff_actions = ("REMOVE", )
+
+    assert (
+        "meta" in structure
+        and "filename" in structure["meta"]
+        and fname == structure["meta"]["filename"]
+    )
 
     # The code below is just a tedious traversing of the structure that checks each leaf node.
 
     for section, section_dict in structure.items():
-        assert section in ("flags", "enums", "structs", "classes")
+        assert section in ("meta", "flags", "enums", "structs", "classes")
         assert isinstance(section_dict, dict)
+
+        if section == "meta":
+            for k, v in section_dict.items():
+                assert k in ("filename", "description", "notes")
+                assert isinstance(v, str)
 
         if section == "flags":
             for flag_name, flag_dict in structure[section].items():
@@ -223,7 +274,9 @@ def read_definition_file(fname: str) -> dict:
                                 elif field_dict_key == "type":
                                      assert isinstance(field_dict_val, str)
                                 elif field_dict_key == "default":
-                                     assert isinstance(field_dict_val, str)
+                                    assert isinstance(
+                                        field_dict_val, possible_default_types
+                                    )
                                 elif field_dict_key == "required":
                                      assert isinstance(field_dict_val, bool)
                                 else:
@@ -287,11 +340,13 @@ def read_definition_file(fname: str) -> dict:
                                             elif arg_dict_key == "diff":
                                                 assert arg_dict_val in diff_actions
                                             elif arg_dict_key == "type":
-                                                    assert isinstance(arg_dict_val, str)
+                                                assert isinstance(arg_dict_val, str)
                                             elif arg_dict_key == "default":
-                                                    assert isinstance(arg_dict_val, str)
+                                                assert isinstance(
+                                                    arg_dict_val, possible_default_types
+                                                )
                                             elif arg_dict_key == "required":
-                                                    assert isinstance(arg_dict_val, bool)
+                                                assert isinstance(arg_dict_val, bool)
                                             else:
                                                 raise RuntimeError(f"Invalid method arg dict key {arg_dict_key!r}")
                                 else:

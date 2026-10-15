@@ -7,34 +7,41 @@ import os
 import sys
 from argparse import ArgumentParser
 
+from apigen import actions
 
-parser = ArgumentParser(description="Run code generation and patching.")
+parser = ArgumentParser(description="apigen - run code generation and patching.")
 
+for func in actions:
+    parser.add_argument(
+        "--" + func.__name__.replace("_", "-"),
+        action="store_true",
+        dest=func.__name__,
+        help=func.__doc__,
+    )
 parser.add_argument(
-    "--download-idl",
+    "--all",
     action="store_true",
-    dest="download_idl",
-    help="Download the latest webgpu.idl",
+    dest="all",
+    help="Run all steps of the codegen (except download).",
 )
-
 
 # Little trick to allow running this file as a script
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 
 
-from apigen import download_idl
-
-
 if __name__ == "__main__":
     args = parser.parse_args()
-    if args.download_idl:
-        print("Hey")
-        download_idl()
-    elif False:
-        pass
-        # main(do_api=args.api, do_wgpu_native=args.wgpu_native, do_js=args.js)
-        # main()
-        # file_cache.write_changed_files_to_disk()
-    else:
+    enabled = [k for k, v in vars(args).items() if v is True]
+
+    if not enabled:
         parser.print_help()
-        sys.exit(0)
+    elif "all" in enabled:
+        for func in actions:
+            if func.__name__ == "download":
+                continue
+                func()
+    else:
+        for name in enabled:
+            for func in actions:
+                if name == func.__name__:
+                    func()

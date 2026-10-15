@@ -1,0 +1,69 @@
+{
+  "flags": {
+    "SomeFlag": {
+      "doc": "",
+      "fields": {
+        "SOME_FIELD": {
+          "doc": "",
+          "value": 1
+        }
+      }
+    }
+  },
+
+  "enums": {
+    "SomeEnum": {
+      "doc": "",
+      "fields": {
+        "some_field": {
+          "doc": "",
+          "value": "some-field"
+        }
+      }
+    }
+  },
+
+  "structs": {
+    "SomeStruct": {
+      "doc": "",
+      "fields": {
+        "some_field": {
+          "doc": "",
+          "type": "int",
+          "default": 0,
+          "required": false
+        }
+      }
+    }
+  },
+
+  "classes": {
+    "GPUSomeClass": {
+      "doc": "",
+      "bases": ["GPUObject"],
+      "properties": {
+        "some_prop": {
+          "doc": "",
+          "type": "int"
+        }
+      },
+      "methods": {
+        "some_method": {
+          "doc": "",
+          "returns": {
+            "doc": "",
+            "type": "None"
+          },
+          "args": {
+            "some_arg": {
+              "doc": "",
+              "type": "",
+              "default": "",
+              "required": true
+            }
+          }
+        }
+      }
+    }
+  }
+}
