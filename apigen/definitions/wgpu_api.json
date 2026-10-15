@@ -960,25 +960,21 @@
         "feature_level": {
           "type": "str",
           "default": "\"core\"",
-          "required": false,
           "doc": "The feature level to request: 'core' (default) or 'compatibility'. Core implies the default limits and enums.FeatureName.core_features_and_limits; compatibility has stricter, more widely supported defaults and no features. If the implementation cannot enforce the compatibility rules it treats the request as core. If the level is not supported, no adapter is returned."
         },
         "power_preference": {
           "type": "enums.PowerPreferenceEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "Hint for the kind of adapter to select, see enums.PowerPreference. It may influence which adapter is chosen (mainly in multi-GPU systems), but never whether an adapter is returned."
         },
         "force_fallback_adapter": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, only a fallback adapter may be returned (no adapter if unsupported). If false, a fallback adapter may still be returned; check the is_fallback_adapter property of GPUAdapterInfo to avoid it."
         },
         "xr_compatible": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, the adapter must be compatible with XR (virtual/augmented reality) sessions. Mostly relevant in browsers."
         }
       },
@@ -989,25 +985,21 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the device, used in debugging and error messages."
         },
         "required_features": {
           "type": "list[enums.FeatureNameEnum]",
           "default": "[]",
-          "required": false,
           "doc": "A list of enums.FeatureName that the device must support. The request fails if the adapter cannot provide them. Exactly this set of features, no more and no less, is allowed on the resulting device."
         },
         "required_limits": {
           "type": "dict[str, int | None]",
           "default": "{}",
-          "required": false,
           "doc": "A mapping of limit names to the values the device requires; the request fails if the adapter cannot provide them. Unspecified limits get their default value. Validation on the device uses these exact limits, not the (possibly higher) limits of the adapter."
         },
         "default_queue": {
           "type": "structs.QueueDescriptorStruct",
           "default": "{}",
-          "required": false,
           "doc": "A structs.QueueDescriptor with options for the default queue of the device."
         }
       },
@@ -1018,20 +1010,17 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the buffer, used in debugging and error messages."
         },
-        "size": { "type": "int", "default": null, "required": true, "doc": "The size of the buffer in bytes." },
+        "size": { "type": "int", "default": "", "doc": "The size of the buffer in bytes." },
         "usage": {
           "type": "flags.BufferUsageFlags",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The allowed usages of the buffer, a combination of flags.BufferUsage."
         },
         "mapped_at_creation": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, the buffer is created in a mapped state so GPUBuffer.get_mapped_range() can be called immediately, which is useful to set initial data. This is allowed even without flags.BufferUsage.MAP_READ or flags.BufferUsage.MAP_WRITE. The size must then be a multiple of 4."
         }
       },
@@ -1042,50 +1031,42 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the texture, used in debugging and error messages."
         },
         "size": {
           "type": "tuple[int, int, int] | structs.Extent3DStruct",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The size of the texture as a structs.Extent3D, or a tuple of (width, height, depth_or_array_layers). Height and depth default to 1."
         },
-        "mip_level_count": { "type": "int", "default": "1", "required": false, "doc": "The number of mip levels. Defaults to 1." },
+        "mip_level_count": { "type": "int", "default": "1", "doc": "The number of mip levels. Defaults to 1." },
         "sample_count": {
           "type": "int",
           "default": "1",
-          "required": false,
           "doc": "The number of samples per pixel, for multisampled textures. Must be 1 or 4. Defaults to 1."
         },
         "dimension": {
           "type": "enums.TextureDimensionEnum",
           "default": "\"2d\"",
-          "required": false,
           "doc": "The dimensionality of the texture, see enums.TextureDimension. Defaults to d2."
         },
         "format": {
           "type": "enums.TextureFormatEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The pixel format of the texture, see enums.TextureFormat."
         },
         "usage": {
           "type": "flags.TextureUsageFlags",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The allowed usages of the texture, a combination of flags.TextureUsage."
         },
         "view_formats": {
           "type": "list[enums.TextureFormatEnum]",
           "default": "[]",
-          "required": false,
           "doc": "Additional enums.TextureFormat values that views of this texture may use in GPUTexture.create_view(). They must be view-compatible with the texture format: equal, or (on devices with enums.FeatureName.core_features_and_limits) differing only in sRGB-ness. Adding formats can hurt performance on some systems, so only add what is needed."
         },
         "texture_binding_view_dimension": {
           "type": "enums.TextureViewDimensionEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "Compatibility mode only: on devices without enums.FeatureName.core_features_and_limits, views of this texture must have this enums.TextureViewDimension. A default is chosen if omitted. Ignored on core devices."
         }
       },
@@ -1096,61 +1077,47 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the texture view, used in debugging and error messages."
         },
         "format": {
           "type": "enums.TextureFormatEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The format of the view, see enums.TextureFormat. Must be the texture format or one of its view_formats. Defaults to the texture format."
         },
         "dimension": {
           "type": "enums.TextureViewDimensionEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The dimensionality of the view, see enums.TextureViewDimension. Defaults to a dimension matching the texture."
         },
         "usage": {
           "type": "flags.TextureUsageFlags",
           "default": "0",
-          "required": false,
           "doc": "The usages the view will be used for, a subset of the usage of the texture (see flags.TextureUsage). If 0 or omitted, defaults to all usages of the texture; this fails if the view format does not support all of them, in which case set it explicitly."
         },
         "aspect": {
           "type": "enums.TextureAspectEnum",
           "default": "\"all\"",
-          "required": false,
           "doc": "Which aspect of the texture the view refers to, see enums.TextureAspect. Defaults to all."
         },
-        "base_mip_level": {
-          "type": "int",
-          "default": "0",
-          "required": false,
-          "doc": "The first mip level accessible via the view. Defaults to 0."
-        },
+        "base_mip_level": { "type": "int", "default": "0", "doc": "The first mip level accessible via the view. Defaults to 0." },
         "mip_level_count": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The number of mip levels accessible via the view. Defaults to all levels from base_mip_level."
         },
         "base_array_layer": {
           "type": "int",
           "default": "0",
-          "required": false,
           "doc": "The first array layer accessible via the view. Defaults to 0."
         },
         "array_layer_count": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The number of array layers accessible via the view. Defaults to all layers from base_array_layer."
         },
         "swizzle": {
           "type": "str",
           "default": "\"rgba\"",
-          "required": false,
           "doc": "A string of four characters (default 'rgba') that defines how the components of the view are mapped, e.g. 'bgra'. Allowed characters are r, g, b, a, 0 and 1. Requires enums.FeatureName.texture_component_swizzle."
         }
       },
@@ -1161,19 +1128,16 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the external texture, used in debugging and error messages."
         },
         "source": {
           "type": "ArrayLike | object",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The source of the image data, e.g. a video element or video frame. Only meaningful in browser environments."
         },
         "color_space": {
           "type": "str",
           "default": "\"srgb\"",
-          "required": false,
           "doc": "The color space of the source image, e.g. 'srgb'. Defaults to 'srgb'."
         }
       },
@@ -1184,67 +1148,56 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the sampler, used in debugging and error messages."
         },
         "address_mode_u": {
           "type": "enums.AddressModeEnum",
           "default": "\"clamp-to-edge\"",
-          "required": false,
           "doc": "How to handle texture coordinates outside 0..1 along the u (x) axis, see enums.AddressMode. Defaults to clamp_to_edge."
         },
         "address_mode_v": {
           "type": "enums.AddressModeEnum",
           "default": "\"clamp-to-edge\"",
-          "required": false,
           "doc": "How to handle texture coordinates outside 0..1 along the v (y) axis, see enums.AddressMode. Defaults to clamp_to_edge."
         },
         "address_mode_w": {
           "type": "enums.AddressModeEnum",
           "default": "\"clamp-to-edge\"",
-          "required": false,
           "doc": "How to handle texture coordinates outside 0..1 along the w (z) axis, see enums.AddressMode. Defaults to clamp_to_edge."
         },
         "mag_filter": {
           "type": "enums.FilterModeEnum",
           "default": "\"nearest\"",
-          "required": false,
           "doc": "The filter used when the sampled area is smaller than or equal to one texel (magnification), see enums.FilterMode. Defaults to nearest."
         },
         "min_filter": {
           "type": "enums.FilterModeEnum",
           "default": "\"nearest\"",
-          "required": false,
           "doc": "The filter used when the sampled area is larger than one texel (minification), see enums.FilterMode. Defaults to nearest."
         },
         "mipmap_filter": {
           "type": "enums.MipmapFilterModeEnum",
           "default": "\"nearest\"",
-          "required": false,
           "doc": "How to filter between mip levels, see enums.MipmapFilterMode. Defaults to nearest."
         },
         "lod_min_clamp": {
           "type": "float",
           "default": "0",
-          "required": false,
           "doc": "The minimum level of detail used when sampling. Defaults to 0."
         },
         "lod_max_clamp": {
           "type": "float",
           "default": "32",
-          "required": false,
           "doc": "The maximum level of detail used when sampling. Defaults to 32."
         },
         "compare": {
           "type": "enums.CompareFunctionEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "If set, makes this a comparison sampler using this enums.CompareFunction. Used for sampling depth textures. Filtering results of comparison samplers are implementation-dependent."
         },
         "max_anisotropy": {
           "type": "int",
           "default": "1",
-          "required": false,
           "doc": "The maximum anisotropy for anisotropic filtering: 1 (default) disables it. Values above 1 require all filters to be linear. The value is clamped to the platform maximum (typically 16)."
         }
       },
@@ -1255,13 +1208,11 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the bind group layout, used in debugging and error messages."
         },
         "entries": {
           "type": "list[structs.BindGroupLayoutEntryStruct]",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A list of structs.BindGroupLayoutEntry describing the resources in the bind group."
         }
       },
@@ -1271,38 +1222,32 @@
       "fields": {
         "binding": {
           "type": "int",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The binding number, matching the @binding attribute in the shader."
         },
         "visibility": {
           "type": "flags.ShaderStageFlags",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The shader stages in which the resource is visible, a combination of flags.ShaderStage."
         },
         "buffer": {
           "type": "structs.BufferBindingLayoutStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "If set, a structs.BufferBindingLayout: the entry is a buffer binding."
         },
         "sampler": {
           "type": "structs.SamplerBindingLayoutStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "If set, a structs.SamplerBindingLayout: the entry is a sampler binding."
         },
         "texture": {
           "type": "structs.TextureBindingLayoutStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "If set, a structs.TextureBindingLayout: the entry is a sampled texture binding."
         },
         "storage_texture": {
           "type": "structs.StorageTextureBindingLayoutStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "If set, a structs.StorageTextureBindingLayout: the entry is a storage texture binding."
         }
       },
@@ -1313,19 +1258,16 @@
         "type": {
           "type": "enums.BufferBindingTypeEnum",
           "default": "\"uniform\"",
-          "required": false,
           "doc": "The type of buffer binding, see enums.BufferBindingType. Defaults to uniform."
         },
         "has_dynamic_offset": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, an offset can be given in GPUBindingCommandsMixin.set_bind_group() when binding. Defaults to false."
         },
         "min_binding_size": {
           "type": "int",
           "default": "0",
-          "required": false,
           "doc": "The minimum size in bytes of a buffer bound to this entry; bindings are always validated against it in GPUDevice.create_bind_group(). If non-zero, pipeline creation also checks it against the minimum binding size of the shader variable. If 0 (default), that check is skipped at pipeline creation and done at draw/dispatch time instead."
         }
       },
@@ -1336,7 +1278,6 @@
         "type": {
           "type": "enums.SamplerBindingTypeEnum",
           "default": "\"filtering\"",
-          "required": false,
           "doc": "The type of sampler binding, see enums.SamplerBindingType. Defaults to filtering."
         }
       },
@@ -1347,19 +1288,16 @@
         "sample_type": {
           "type": "enums.TextureSampleTypeEnum",
           "default": "\"float\"",
-          "required": false,
           "doc": "The type of values returned when sampling, see enums.TextureSampleType. Defaults to float."
         },
         "view_dimension": {
           "type": "enums.TextureViewDimensionEnum",
           "default": "\"2d\"",
-          "required": false,
           "doc": "The dimension of texture views that can be bound, see enums.TextureViewDimension. Defaults to d2."
         },
         "multisampled": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, the bound texture must be multisampled. Defaults to false."
         }
       },
@@ -1370,19 +1308,16 @@
         "access": {
           "type": "enums.StorageTextureAccessEnum",
           "default": "\"write-only\"",
-          "required": false,
           "doc": "How the shader can access the texture, see enums.StorageTextureAccess. Defaults to write_only."
         },
         "format": {
           "type": "enums.TextureFormatEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The enums.TextureFormat that the bound texture view must have."
         },
         "view_dimension": {
           "type": "enums.TextureViewDimensionEnum",
           "default": "\"2d\"",
-          "required": false,
           "doc": "The dimension of texture views that can be bound, see enums.TextureViewDimension. Defaults to d2."
         }
       },
@@ -1393,19 +1328,16 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the bind group, used in debugging and error messages."
         },
         "layout": {
           "type": "GPUBindGroupLayout",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUBindGroupLayout that this bind group conforms to."
         },
         "entries": {
           "type": "list[structs.BindGroupEntryStruct]",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A list of structs.BindGroupEntry with the resources to bind. Must match the layout."
         }
       },
@@ -1415,14 +1347,12 @@
       "fields": {
         "binding": {
           "type": "int",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The binding number, matching the binding field of the corresponding structs.BindGroupLayoutEntry."
         },
         "resource": {
           "type": "GPUBuffer | GPUSampler | GPUTexture | GPUTextureView | object | structs.BufferBindingStruct",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The resource to bind: a GPUSampler, GPUTexture (as its default view), GPUTextureView, GPUBuffer (the whole buffer), structs.BufferBinding, or GPUExternalTexture. Must match the type in the corresponding layout entry."
         }
       },
@@ -1430,17 +1360,15 @@
     },
     "BufferBinding": {
       "fields": {
-        "buffer": { "type": "GPUBuffer", "default": null, "required": true, "doc": "The GPUBuffer to bind." },
+        "buffer": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer to bind." },
         "offset": {
           "type": "int",
           "default": "0",
-          "required": false,
           "doc": "The offset in bytes into the buffer where the binding starts. Defaults to 0."
         },
         "size": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The size in bytes of the binding. Defaults to the remainder of the buffer after offset."
         }
       },
@@ -1451,19 +1379,16 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the pipeline layout, used in debugging and error messages."
         },
         "bind_group_layouts": {
           "type": "list[GPUBindGroupLayout]",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A list of GPUBindGroupLayout (or None for unused groups) used by the pipeline. The Nth element corresponds to @group(N) in the shader."
         },
         "immediate_size": {
           "type": "int",
           "default": "0",
-          "required": false,
           "doc": "The size in bytes of the immediate data (small data set with GPUBindingCommandsMixin.set_immediates()). Defaults to 0."
         }
       },
@@ -1474,14 +1399,12 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the shader module, used in debugging and error messages."
         },
-        "code": { "type": "str", "default": null, "required": true, "doc": "The shader source code, in WGSL." },
+        "code": { "type": "str", "default": "", "doc": "The shader source code, in WGSL." },
         "compilation_hints": {
           "type": "list[structs.ShaderModuleCompilationHintStruct]",
           "default": "[]",
-          "required": false,
           "doc": "An optional list of structs.ShaderModuleCompilationHint that may help the implementation compile early. Hints only affect performance, are not validated, and only apply to the entry points they name (there is no default entry point)."
         }
       },
@@ -1489,16 +1412,10 @@
     },
     "ShaderModuleCompilationHint": {
       "fields": {
-        "entry_point": {
-          "type": "str",
-          "default": null,
-          "required": true,
-          "doc": "The name of the shader entry point that the hint applies to."
-        },
+        "entry_point": { "type": "str", "default": "", "doc": "The name of the shader entry point that the hint applies to." },
         "layout": {
           "type": "GPUPipelineLayout | enums.AutoLayoutModeEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The GPUPipelineLayout that the entry point will be used with, or enums.AutoLayoutMode.auto (the default pipeline layout for that entry point)."
         }
       },
@@ -1508,8 +1425,7 @@
       "fields": {
         "reason": {
           "type": "enums.PipelineErrorReasonEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The reason for the error, see enums.PipelineErrorReason."
         }
       },
@@ -1517,22 +1433,15 @@
     },
     "ProgrammableStage": {
       "fields": {
-        "module": {
-          "type": "GPUShaderModule",
-          "default": null,
-          "required": true,
-          "doc": "The GPUShaderModule containing the shader code."
-        },
+        "module": { "type": "GPUShaderModule", "default": "", "doc": "The GPUShaderModule containing the shader code." },
         "entry_point": {
           "type": "str",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The name of the entry point function in the shader. Optional if the module has only one entry point for this stage."
         },
         "constants": {
           "type": "dict[str, float]",
           "default": "{}",
-          "required": false,
           "doc": "A mapping of the identifiers of pipeline-overridable constants in the shader to the values to use. A key is the numeric id (if the shader declares one) or the name of the constant. Values are converted to the WGSL type of the constant; a failed conversion is a validation error."
         }
       },
@@ -1543,19 +1452,16 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the pipeline, used in debugging and error messages."
         },
         "layout": {
           "type": "GPUPipelineLayout | enums.AutoLayoutModeEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUPipelineLayout for the pipeline, or enums.AutoLayoutMode.auto to derive it from the shader(s). With auto, the pipeline cannot share bind groups with other pipelines."
         },
         "compute": {
           "type": "structs.ProgrammableStageStruct",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A structs.ProgrammableStage describing the compute shader."
         }
       },
@@ -1566,43 +1472,36 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the pipeline, used in debugging and error messages."
         },
         "layout": {
           "type": "GPUPipelineLayout | enums.AutoLayoutModeEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUPipelineLayout for the pipeline, or enums.AutoLayoutMode.auto to derive it from the shader(s). With auto, the pipeline cannot share bind groups with other pipelines."
         },
         "vertex": {
           "type": "structs.VertexStateStruct",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A structs.VertexState describing the vertex shader and vertex buffers."
         },
         "primitive": {
           "type": "structs.PrimitiveStateStruct",
           "default": "{}",
-          "required": false,
           "doc": "A structs.PrimitiveState describing how primitives are assembled and rasterized."
         },
         "depth_stencil": {
           "type": "structs.DepthStencilStateStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "An optional structs.DepthStencilState. If omitted, the pipeline does not use a depth-stencil attachment."
         },
         "multisample": {
           "type": "structs.MultisampleStateStruct",
           "default": "{}",
-          "required": false,
           "doc": "A structs.MultisampleState describing multisampling."
         },
         "fragment": {
           "type": "structs.FragmentStateStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "An optional structs.FragmentState describing the fragment shader and render targets. If omitted, the pipeline has no color output (e.g. for depth-only passes)."
         }
       },
@@ -1613,31 +1512,26 @@
         "topology": {
           "type": "enums.PrimitiveTopologyEnum",
           "default": "\"triangle-list\"",
-          "required": false,
           "doc": "How vertices are assembled into primitives, see enums.PrimitiveTopology. Defaults to triangle_list."
         },
         "strip_index_format": {
           "type": "enums.IndexFormatEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The enums.IndexFormat of the index buffer, which sets the primitive restart value (0xFFFF for uint16, 0xFFFFFFFF for uint32). Only allowed for strip topologies, where it is required for indexed draws and must match the format given to GPURenderCommandsMixin.set_index_buffer()."
         },
         "front_face": {
           "type": "enums.FrontFaceEnum",
           "default": "\"ccw\"",
-          "required": false,
           "doc": "Which winding order is front-facing, see enums.FrontFace. Defaults to ccw."
         },
         "cull_mode": {
           "type": "enums.CullModeEnum",
           "default": "\"none\"",
-          "required": false,
           "doc": "Which faces to cull, see enums.CullMode. Defaults to none."
         },
         "unclipped_depth": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, primitives are not clipped by the near and far planes. Requires enums.FeatureName.depth_clip_control."
         }
       },
@@ -1648,19 +1542,16 @@
         "count": {
           "type": "int",
           "default": "1",
-          "required": false,
           "doc": "The number of samples per pixel. Must be 1 or 4. The pipeline is only compatible with attachments that have a matching sample count. Defaults to 1."
         },
         "mask": {
           "type": "int",
           "default": "0xFFFFFFFF",
-          "required": false,
           "doc": "A bitmask that determines which samples are written to. Defaults to 0xFFFFFFFF."
         },
         "alpha_to_coverage_enabled": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, the alpha output of the fragment shader is used to generate a coverage mask. Defaults to false."
         }
       },
@@ -1670,26 +1561,22 @@
       "fields": {
         "module": {
           "type": "GPUShaderModule",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUShaderModule containing the fragment shader code."
         },
         "entry_point": {
           "type": "str",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The name of the fragment entry point in the shader. Optional if the module has only one fragment entry point."
         },
         "constants": {
           "type": "dict[str, float]",
           "default": "{}",
-          "required": false,
           "doc": "A mapping of the identifiers of pipeline-overridable constants in the shader to the values to use. A key is the numeric id (if the shader declares one) or the name of the constant. Values are converted to the WGSL type of the constant; a failed conversion is a validation error."
         },
         "targets": {
           "type": "list[structs.ColorTargetStateStruct]",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A list of structs.ColorTargetState (or None for unused slots), one for each color attachment."
         }
       },
@@ -1699,20 +1586,17 @@
       "fields": {
         "format": {
           "type": "enums.TextureFormatEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The enums.TextureFormat of this color target. The pipeline is only compatible with render passes that use a view of this format in the corresponding color attachment."
         },
         "blend": {
           "type": "structs.BlendStateStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "An optional structs.BlendState. If omitted, blending is disabled and the fragment output replaces the target."
         },
         "write_mask": {
           "type": "flags.ColorWriteFlags",
           "default": "0xF",
-          "required": false,
           "doc": "Which channels are written, a combination of flags.ColorWrite. Defaults to ALL."
         }
       },
@@ -1722,14 +1606,12 @@
       "fields": {
         "color": {
           "type": "structs.BlendComponentStruct",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A structs.BlendComponent for the color (RGB) channels."
         },
         "alpha": {
           "type": "structs.BlendComponentStruct",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A structs.BlendComponent for the alpha channel."
         }
       },
@@ -1740,19 +1622,16 @@
         "operation": {
           "type": "enums.BlendOperationEnum",
           "default": "\"add\"",
-          "required": false,
           "doc": "The enums.BlendOperation used to combine the scaled values. Defaults to add."
         },
         "src_factor": {
           "type": "enums.BlendFactorEnum",
           "default": "\"one\"",
-          "required": false,
           "doc": "The enums.BlendFactor applied to the source (fragment shader output). Defaults to one."
         },
         "dst_factor": {
           "type": "enums.BlendFactorEnum",
           "default": "\"zero\"",
-          "required": false,
           "doc": "The enums.BlendFactor applied to the destination (existing target value). Defaults to zero."
         }
       },
@@ -1762,62 +1641,52 @@
       "fields": {
         "format": {
           "type": "enums.TextureFormatEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The enums.TextureFormat of the depth-stencil attachment that this pipeline is compatible with."
         },
         "depth_write_enabled": {
           "type": "bool",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "If true, depth values of fragments that pass the depth test are written to the attachment."
         },
         "depth_compare": {
           "type": "enums.CompareFunctionEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The enums.CompareFunction used for the depth test."
         },
         "stencil_front": {
           "type": "structs.StencilFaceStateStruct",
           "default": "{}",
-          "required": false,
           "doc": "A structs.StencilFaceState for front-facing primitives."
         },
         "stencil_back": {
           "type": "structs.StencilFaceStateStruct",
           "default": "{}",
-          "required": false,
           "doc": "A structs.StencilFaceState for back-facing primitives."
         },
         "stencil_read_mask": {
           "type": "int",
           "default": "0xFFFFFFFF",
-          "required": false,
           "doc": "Bitmask applied to the stencil values before comparison. Defaults to 0xFFFFFFFF."
         },
         "stencil_write_mask": {
           "type": "int",
           "default": "0xFFFFFFFF",
-          "required": false,
           "doc": "Bitmask that determines which bits of the stencil buffer are written. Defaults to 0xFFFFFFFF."
         },
         "depth_bias": {
           "type": "int",
           "default": "0",
-          "required": false,
           "doc": "A constant depth value added to each fragment. Defaults to 0."
         },
         "depth_bias_slope_scale": {
           "type": "float",
           "default": "0",
-          "required": false,
           "doc": "A depth bias that scales with the slope of the primitive. Defaults to 0."
         },
         "depth_bias_clamp": {
           "type": "float",
           "default": "0",
-          "required": false,
           "doc": "The maximum (or minimum, if negative) depth bias of a fragment. Defaults to 0."
         }
       },
@@ -1828,25 +1697,21 @@
         "compare": {
           "type": "enums.CompareFunctionEnum",
           "default": "\"always\"",
-          "required": false,
           "doc": "The enums.CompareFunction used to compare the stencil reference with the stencil value. Defaults to always."
         },
         "fail_op": {
           "type": "enums.StencilOperationEnum",
           "default": "\"keep\"",
-          "required": false,
           "doc": "The enums.StencilOperation performed if the stencil test fails. Defaults to keep."
         },
         "depth_fail_op": {
           "type": "enums.StencilOperationEnum",
           "default": "\"keep\"",
-          "required": false,
           "doc": "The enums.StencilOperation performed if the stencil test passes but the depth test fails. Defaults to keep."
         },
         "pass_op": {
           "type": "enums.StencilOperationEnum",
           "default": "\"keep\"",
-          "required": false,
           "doc": "The enums.StencilOperation performed if both the stencil and depth tests pass. Defaults to keep."
         }
       },
@@ -1856,26 +1721,22 @@
       "fields": {
         "module": {
           "type": "GPUShaderModule",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUShaderModule containing the vertex shader code."
         },
         "entry_point": {
           "type": "str",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The name of the vertex entry point in the shader. Optional if the module has only one vertex entry point."
         },
         "constants": {
           "type": "dict[str, float]",
           "default": "{}",
-          "required": false,
           "doc": "A mapping of the identifiers of pipeline-overridable constants in the shader to the values to use. A key is the numeric id (if the shader declares one) or the name of the constant. Values are converted to the WGSL type of the constant; a failed conversion is a validation error."
         },
         "buffers": {
           "type": "list[structs.VertexBufferLayoutStruct]",
           "default": "[]",
-          "required": false,
           "doc": "A list of structs.VertexBufferLayout (or None for unused slots) describing the vertex buffers."
         }
       },
@@ -1885,20 +1746,17 @@
       "fields": {
         "array_stride": {
           "type": "int",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The stride in bytes between consecutive elements in the buffer."
         },
         "step_mode": {
           "type": "enums.VertexStepModeEnum",
           "default": "\"vertex\"",
-          "required": false,
           "doc": "How often the buffer is advanced, see enums.VertexStepMode. Defaults to vertex."
         },
         "attributes": {
           "type": "list[structs.VertexAttributeStruct]",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A list of structs.VertexAttribute describing the attributes in each element."
         }
       },
@@ -1906,22 +1764,15 @@
     },
     "VertexAttribute": {
       "fields": {
-        "format": {
-          "type": "enums.VertexFormatEnum",
-          "default": null,
-          "required": true,
-          "doc": "The enums.VertexFormat of the attribute."
-        },
+        "format": { "type": "enums.VertexFormatEnum", "default": "", "doc": "The enums.VertexFormat of the attribute." },
         "offset": {
           "type": "int",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The offset in bytes of the attribute from the start of an element in the buffer."
         },
         "shader_location": {
           "type": "int",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The location number of the attribute in the vertex shader (the @location attribute)."
         }
       },
@@ -1932,19 +1783,16 @@
         "offset": {
           "type": "int",
           "default": "0",
-          "required": false,
           "doc": "The offset in bytes into the data where the texel data starts. Defaults to 0."
         },
         "bytes_per_row": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The stride in bytes between the start of consecutive rows of texel blocks. Required if the copy has more than one row of texel blocks. Must be a multiple of 256 for buffer copies (not for GPUQueue.write_texture())."
         },
         "rows_per_image": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The number of rows of texel blocks per image (layer or slice); times bytes_per_row it is the stride between images. Required if the copy has more than one image."
         }
       },
@@ -1955,25 +1803,21 @@
         "offset": {
           "type": "int",
           "default": "0",
-          "required": false,
           "doc": "The offset in bytes into the buffer where the texel data starts. Defaults to 0."
         },
         "bytes_per_row": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The stride in bytes between the start of consecutive rows of texel blocks. Required if the copy has more than one row. Must be a multiple of 256."
         },
         "rows_per_image": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The number of rows of texel blocks per image (layer or slice). Required if the copy has more than one image."
         },
         "buffer": {
           "type": "GPUBuffer",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUBuffer that contains (or will contain) the texel data."
         }
       },
@@ -1981,28 +1825,16 @@
     },
     "TexelCopyTextureInfo": {
       "fields": {
-        "texture": {
-          "type": "GPUTexture",
-          "default": null,
-          "required": true,
-          "doc": "The GPUTexture to copy to or from."
-        },
-        "mip_level": {
-          "type": "int",
-          "default": "0",
-          "required": false,
-          "doc": "The mip level to copy to or from. Defaults to 0."
-        },
+        "texture": { "type": "GPUTexture", "default": "", "doc": "The GPUTexture to copy to or from." },
+        "mip_level": { "type": "int", "default": "0", "doc": "The mip level to copy to or from. Defaults to 0." },
         "origin": {
           "type": "tuple[int, int, int] | structs.Origin3DStruct",
           "default": "{}",
-          "required": false,
           "doc": "The origin of the copy in the texture, as a structs.Origin3D or a tuple (x, y, z). Defaults to (0, 0, 0)."
         },
         "aspect": {
           "type": "enums.TextureAspectEnum",
           "default": "\"all\"",
-          "required": false,
           "doc": "Which aspect of the texture to copy, see enums.TextureAspect. Defaults to all."
         }
       },
@@ -2013,7 +1845,6 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the command buffer, used in debugging and error messages."
         }
       },
@@ -2024,7 +1855,6 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the command encoder, used in debugging and error messages."
         }
       },
@@ -2034,20 +1864,17 @@
       "fields": {
         "query_set": {
           "type": "GPUQuerySet",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUQuerySet (of type enums.QueryType.timestamp) to write the timestamps to."
         },
         "beginning_of_pass_write_index": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The index in the query set where the timestamp at the start of the pass is written. If omitted, no timestamp is written."
         },
         "end_of_pass_write_index": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The index in the query set where the timestamp at the end of the pass is written. If omitted, no timestamp is written."
         }
       },
@@ -2058,13 +1885,11 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the compute pass, used in debugging and error messages."
         },
         "timestamp_writes": {
           "type": "structs.ComputePassTimestampWritesStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "An optional structs.ComputePassTimestampWrites for recording timestamps of the pass."
         }
       },
@@ -2074,20 +1899,17 @@
       "fields": {
         "query_set": {
           "type": "GPUQuerySet",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUQuerySet (of type enums.QueryType.timestamp) to write the timestamps to."
         },
         "beginning_of_pass_write_index": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The index in the query set where the timestamp at the start of the pass is written. If omitted, no timestamp is written."
         },
         "end_of_pass_write_index": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The index in the query set where the timestamp at the end of the pass is written. If omitted, no timestamp is written."
         }
       },
@@ -2098,37 +1920,31 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the render pass, used in debugging and error messages."
         },
         "color_attachments": {
           "type": "list[structs.RenderPassColorAttachmentStruct]",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A list of structs.RenderPassColorAttachment (or None for unused slots) that the pass renders to. Attachments may not alias each other or any resource used inside the pass."
         },
         "depth_stencil_attachment": {
           "type": "structs.RenderPassDepthStencilAttachmentStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "An optional structs.RenderPassDepthStencilAttachment for depth and stencil."
         },
         "occlusion_query_set": {
           "type": "GPUQuerySet",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "An optional GPUQuerySet of type enums.QueryType.occlusion, to store occlusion query results in."
         },
         "timestamp_writes": {
           "type": "structs.RenderPassTimestampWritesStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "An optional structs.RenderPassTimestampWrites for recording timestamps of the pass."
         },
         "max_draw_count": {
           "type": "int",
           "default": "50000000",
-          "required": false,
           "doc": "A hint for the maximum number of draw calls in the pass, used by some implementations to size internal work. The default is fine unless more draws are expected. Defaults to 50000000."
         }
       },
@@ -2138,38 +1954,32 @@
       "fields": {
         "view": {
           "type": "GPUTexture | GPUTextureView",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUTextureView to render to. Its texture must have flags.TextureUsage.RENDER_ATTACHMENT."
         },
         "depth_slice": {
           "type": "int",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "For 3D textures, the index of the depth slice to render to."
         },
         "resolve_target": {
           "type": "GPUTexture | GPUTextureView",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "An optional GPUTextureView to resolve the (multisampled) view into at the end of the pass."
         },
         "clear_value": {
           "type": "tuple[float, float, float, float] | structs.ColorStruct",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The color to clear the attachment to if load_op is clear, as a structs.Color or a tuple (r, g, b, a). Defaults to transparent black."
         },
         "load_op": {
           "type": "enums.LoadOpEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "What to do with the existing contents at the start of the pass, see enums.LoadOp."
         },
         "store_op": {
           "type": "enums.StoreOpEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "What to do with the results at the end of the pass, see enums.StoreOp."
         }
       },
@@ -2179,56 +1989,47 @@
       "fields": {
         "view": {
           "type": "GPUTexture | GPUTextureView",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUTextureView to use as depth-stencil attachment. Its texture must have flags.TextureUsage.RENDER_ATTACHMENT."
         },
         "depth_clear_value": {
           "type": "float",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The value to clear the depth aspect to if depth_load_op is clear. Must be between 0 and 1."
         },
         "depth_load_op": {
           "type": "enums.LoadOpEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "What to do with the existing depth values at the start of the pass, see enums.LoadOp. Required unless depth_read_only is true."
         },
         "depth_store_op": {
           "type": "enums.StoreOpEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "What to do with the depth values at the end of the pass, see enums.StoreOp. Required unless depth_read_only is true."
         },
         "depth_read_only": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, the depth aspect is read-only in the pass (it is not written to). Defaults to false."
         },
         "stencil_clear_value": {
           "type": "int",
           "default": "0",
-          "required": false,
           "doc": "The value to clear the stencil aspect to if stencil_load_op is clear. Truncated to the bit size of the stencil aspect (the least significant bits are kept). Defaults to 0."
         },
         "stencil_load_op": {
           "type": "enums.LoadOpEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "What to do with the existing stencil values at the start of the pass, see enums.LoadOp. Required unless stencil_read_only is true."
         },
         "stencil_store_op": {
           "type": "enums.StoreOpEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "What to do with the stencil values at the end of the pass, see enums.StoreOp. Required unless stencil_read_only is true."
         },
         "stencil_read_only": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, the stencil aspect is read-only in the pass (it is not written to). Defaults to false."
         }
       },
@@ -2239,25 +2040,21 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label, used in debugging and error messages."
         },
         "color_formats": {
           "type": "list[enums.TextureFormatEnum]",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A list of enums.TextureFormat (or None for unused slots) of the color attachments."
         },
         "depth_stencil_format": {
           "type": "enums.TextureFormatEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The enums.TextureFormat of the depth-stencil attachment, if any."
         },
         "sample_count": {
           "type": "int",
           "default": "1",
-          "required": false,
           "doc": "The number of samples per pixel of the attachments. Defaults to 1."
         }
       },
@@ -2268,7 +2065,6 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the render bundle, used in debugging and error messages."
         }
       },
@@ -2279,37 +2075,31 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the render bundle encoder, used in debugging and error messages."
         },
         "color_formats": {
           "type": "list[enums.TextureFormatEnum]",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "A list of enums.TextureFormat (or None for unused slots) of the color attachments the bundle will be used with."
         },
         "depth_stencil_format": {
           "type": "enums.TextureFormatEnum",
-          "default": null,
-          "required": false,
+          "default": "None",
           "doc": "The enums.TextureFormat of the depth-stencil attachment the bundle will be used with, if any."
         },
         "sample_count": {
           "type": "int",
           "default": "1",
-          "required": false,
           "doc": "The number of samples per pixel of the attachments the bundle will be used with. Defaults to 1."
         },
         "depth_read_only": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, the bundle does not write to the depth aspect. Defaults to false."
         },
         "stencil_read_only": {
           "type": "bool",
           "default": "False",
-          "required": false,
           "doc": "If true, the bundle does not write to the stencil aspect. Defaults to false."
         }
       },
@@ -2320,7 +2110,6 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the queue, used in debugging and error messages."
         }
       },
@@ -2331,16 +2120,14 @@
         "label": {
           "type": "str",
           "default": "\"\"",
-          "required": false,
           "doc": "A human-readable label for the query set, used in debugging and error messages."
         },
         "type": {
           "type": "enums.QueryTypeEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The type of queries in the set, see enums.QueryType."
         },
-        "count": { "type": "int", "default": null, "required": true, "doc": "The number of queries in the set." }
+        "count": { "type": "int", "default": "", "doc": "The number of queries in the set." }
       },
       "doc": "Descriptor for creating a GPUQuerySet.\n\nUsed as the descriptor argument of the GPUDevice.create_query_set() method.\n"
     },
@@ -2349,7 +2136,6 @@
         "mode": {
           "type": "enums.CanvasToneMappingModeEnum",
           "default": "\"standard\"",
-          "required": false,
           "doc": "The tone mapping mode, see enums.CanvasToneMappingMode. Defaults to standard."
         }
       },
@@ -2359,44 +2145,37 @@
       "fields": {
         "device": {
           "type": "GPUDevice",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUDevice that the canvas textures will be used with."
         },
         "format": {
           "type": "enums.TextureFormatEnum",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The enums.TextureFormat of the canvas textures; must be one of the supported canvas formats. Use GPU.get_preferred_canvas_format() for the best choice."
         },
         "usage": {
           "type": "flags.TextureUsageFlags",
           "default": "0x10",
-          "required": false,
           "doc": "The usages of the canvas textures, a combination of flags.TextureUsage. Defaults to RENDER_ATTACHMENT, but that is not added automatically when usage is set explicitly, so include it to render to the canvas texture."
         },
         "view_formats": {
           "type": "list[enums.TextureFormatEnum]",
           "default": "[]",
-          "required": false,
           "doc": "Additional enums.TextureFormat values that views of the canvas texture may use."
         },
         "color_space": {
           "type": "str",
           "default": "\"srgb\"",
-          "required": false,
           "doc": "The color space of the canvas, e.g. 'srgb' or 'display-p3'. Defaults to 'srgb'."
         },
         "tone_mapping": {
           "type": "structs.CanvasToneMappingStruct",
           "default": "{}",
-          "required": false,
           "doc": "A structs.CanvasToneMapping that describes how the canvas content is tone mapped. May not be supported everywhere; detect support with GPUCanvasContext.get_configuration()."
         },
         "alpha_mode": {
           "type": "enums.CanvasAlphaModeEnum",
           "default": "\"opaque\"",
-          "required": false,
           "doc": "How the alpha channel of the canvas is interpreted, see enums.CanvasAlphaMode. Defaults to opaque."
         }
       },
@@ -2406,8 +2185,7 @@
       "fields": {
         "error": {
           "type": "GPUError",
-          "default": null,
-          "required": true,
+          "default": "",
           "doc": "The GPUError (GPUValidationError, GPUOutOfMemoryError or GPUInternalError) that was not captured by an error scope."
         }
       },
@@ -2415,61 +2193,35 @@
     },
     "Color": {
       "fields": {
-        "r": { "type": "float", "default": null, "required": true, "doc": "The red component." },
-        "g": { "type": "float", "default": null, "required": true, "doc": "The green component." },
-        "b": { "type": "float", "default": null, "required": true, "doc": "The blue component." },
-        "a": { "type": "float", "default": null, "required": true, "doc": "The alpha component." }
+        "r": { "type": "float", "default": "", "doc": "The red component." },
+        "g": { "type": "float", "default": "", "doc": "The green component." },
+        "b": { "type": "float", "default": "", "doc": "The blue component." },
+        "a": { "type": "float", "default": "", "doc": "The alpha component." }
       },
       "doc": "An RGBA color with floating point components.\n\nCan also be given as a tuple (r, g, b, a). Used e.g. in the clear_value field of structs.RenderPassColorAttachment.\n"
     },
     "Origin2D": {
       "fields": {
-        "x": {
-          "type": "int",
-          "default": "0",
-          "required": false,
-          "doc": "The x coordinate (horizontal). Defaults to 0."
-        },
-        "y": {
-          "type": "int",
-          "default": "0",
-          "required": false,
-          "doc": "The y coordinate (vertical). Defaults to 0."
-        }
+        "x": { "type": "int", "default": "0", "doc": "The x coordinate (horizontal). Defaults to 0." },
+        "y": { "type": "int", "default": "0", "doc": "The y coordinate (vertical). Defaults to 0." }
       },
       "doc": "A 2D origin (offset) in a texture or image, in texels.\n\nCan also be given as a tuple (x, y).\n"
     },
     "Origin3D": {
       "fields": {
-        "x": {
-          "type": "int",
-          "default": "0",
-          "required": false,
-          "doc": "The x coordinate (horizontal). Defaults to 0."
-        },
-        "y": {
-          "type": "int",
-          "default": "0",
-          "required": false,
-          "doc": "The y coordinate (vertical). Defaults to 0."
-        },
-        "z": {
-          "type": "int",
-          "default": "0",
-          "required": false,
-          "doc": "The z coordinate (depth, or array layer). Defaults to 0."
-        }
+        "x": { "type": "int", "default": "0", "doc": "The x coordinate (horizontal). Defaults to 0." },
+        "y": { "type": "int", "default": "0", "doc": "The y coordinate (vertical). Defaults to 0." },
+        "z": { "type": "int", "default": "0", "doc": "The z coordinate (depth, or array layer). Defaults to 0." }
       },
       "doc": "A 3D origin (offset) in a texture, in texels.\n\nCan also be given as a tuple (x, y, z).\n"
     },
     "Extent3D": {
       "fields": {
-        "width": { "type": "int", "default": null, "required": true, "doc": "The width of the extent." },
-        "height": { "type": "int", "default": "1", "required": false, "doc": "The height of the extent. Defaults to 1." },
+        "width": { "type": "int", "default": "", "doc": "The width of the extent." },
+        "height": { "type": "int", "default": "1", "doc": "The height of the extent. Defaults to 1." },
         "depth_or_array_layers": {
           "type": "int",
           "default": "1",
-          "required": false,
           "doc": "The depth (for 3D textures) or the number of array layers (for other textures). Defaults to 1."
         }
       },
@@ -2526,7 +2278,6 @@
             "options": {
               "type": "structs.RequestAdapterOptionsStruct",
               "default": "{}",
-              "required": false,
               "doc": "A structs.RequestAdapterOptions with options for selecting the adapter."
             }
           },
@@ -2560,7 +2311,6 @@
             "descriptor": {
               "type": "structs.DeviceDescriptorStruct",
               "default": "{}",
-              "required": false,
               "doc": "A structs.DeviceDescriptor with the required features and limits."
             }
           },
@@ -2605,8 +2355,7 @@
           "args": {
             "descriptor": {
               "type": "structs.BufferDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.BufferDescriptor describing the buffer."
             }
           },
@@ -2617,8 +2366,7 @@
           "args": {
             "descriptor": {
               "type": "structs.TextureDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TextureDescriptor describing the texture."
             }
           },
@@ -2630,7 +2378,6 @@
             "descriptor": {
               "type": "structs.SamplerDescriptorStruct",
               "default": "{}",
-              "required": false,
               "doc": "A structs.SamplerDescriptor describing the sampler. If omitted, the defaults are used."
             }
           },
@@ -2641,8 +2388,7 @@
           "args": {
             "descriptor": {
               "type": "structs.BindGroupLayoutDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.BindGroupLayoutDescriptor describing the entries of the layout."
             }
           },
@@ -2653,8 +2399,7 @@
           "args": {
             "descriptor": {
               "type": "structs.PipelineLayoutDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.PipelineLayoutDescriptor describing the bind group layouts."
             }
           },
@@ -2665,8 +2410,7 @@
           "args": {
             "descriptor": {
               "type": "structs.BindGroupDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.BindGroupDescriptor with the layout and the resources to bind."
             }
           },
@@ -2677,8 +2421,7 @@
           "args": {
             "descriptor": {
               "type": "structs.ShaderModuleDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.ShaderModuleDescriptor containing the shader code."
             }
           },
@@ -2689,8 +2432,7 @@
           "args": {
             "descriptor": {
               "type": "structs.ComputePipelineDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.ComputePipelineDescriptor describing the pipeline."
             }
           },
@@ -2701,8 +2443,7 @@
           "args": {
             "descriptor": {
               "type": "structs.RenderPipelineDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.RenderPipelineDescriptor describing the pipeline."
             }
           },
@@ -2713,8 +2454,7 @@
           "args": {
             "descriptor": {
               "type": "structs.ComputePipelineDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.ComputePipelineDescriptor describing the pipeline."
             }
           },
@@ -2725,8 +2465,7 @@
           "args": {
             "descriptor": {
               "type": "structs.RenderPipelineDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.RenderPipelineDescriptor describing the pipeline."
             }
           },
@@ -2738,7 +2477,6 @@
             "descriptor": {
               "type": "structs.CommandEncoderDescriptorStruct",
               "default": "{}",
-              "required": false,
               "doc": "A structs.CommandEncoderDescriptor. Optional."
             }
           },
@@ -2749,8 +2487,7 @@
           "args": {
             "descriptor": {
               "type": "structs.RenderBundleEncoderDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.RenderBundleEncoderDescriptor describing the attachment formats."
             }
           },
@@ -2761,8 +2498,7 @@
           "args": {
             "descriptor": {
               "type": "structs.QuerySetDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.QuerySetDescriptor describing the type and count of queries."
             }
           },
@@ -2773,8 +2509,7 @@
           "args": {
             "filter": {
               "type": "enums.ErrorFilterEnum",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The type of error to capture, see enums.ErrorFilter."
             }
           },
@@ -2807,20 +2542,17 @@
           "args": {
             "mode": {
               "type": "flags.MapModeFlags",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "Whether to map for reading or writing, see flags.MapMode."
             },
             "offset": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The offset in bytes of the range to map. Must be a multiple of 8. Defaults to 0."
             },
             "size": {
               "type": "int",
               "default": "None",
-              "required": false,
               "doc": "The size in bytes of the range to map. Must be a multiple of 4. Defaults to the remainder of the buffer after offset."
             }
           },
@@ -2832,13 +2564,11 @@
             "offset": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The offset in bytes of the range, relative to the start of the buffer. Must be a multiple of 8. Defaults to 0."
             },
             "size": {
               "type": "int",
               "default": "None",
-              "required": false,
               "doc": "The size in bytes of the range. Must be a multiple of 4. Defaults to the remainder of the mapped range after offset."
             }
           },
@@ -2886,7 +2616,6 @@
             "descriptor": {
               "type": "structs.TextureViewDescriptorStruct",
               "default": "{}",
-              "required": false,
               "doc": "A structs.TextureViewDescriptor. If omitted, a view of the whole texture is created."
             }
           },
@@ -2990,11 +2719,10 @@
         "constructor": {
           "returns": { "type": "None", "doc": "A GPUPipelineError." },
           "args": {
-            "message": { "type": "str", "default": "\"\"", "required": false, "doc": "The human-readable error message." },
+            "message": { "type": "str", "default": "\"\"", "doc": "The human-readable error message." },
             "options": {
               "type": "structs.PipelineErrorInitStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.PipelineErrorInit with the reason of the error."
             }
           },
@@ -3012,8 +2740,7 @@
           "args": {
             "index": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The index of the bind group (the @group number in the shader)."
             }
           },
@@ -3055,8 +2782,7 @@
           "args": {
             "descriptor": {
               "type": "structs.RenderPassDescriptorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.RenderPassDescriptor describing the attachments of the pass."
             }
           },
@@ -3068,7 +2794,6 @@
             "descriptor": {
               "type": "structs.ComputePassDescriptorStruct",
               "default": "{}",
-              "required": false,
               "doc": "A structs.ComputePassDescriptor. Optional."
             }
           },
@@ -3077,24 +2802,21 @@
         "copy_buffer_to_buffer": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "source": { "type": "GPUBuffer", "default": null, "required": true, "doc": "The GPUBuffer to copy from." },
+            "source": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer to copy from." },
             "source_offset": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The offset in bytes in the source buffer where the copy starts."
             },
-            "destination": { "type": "GPUBuffer", "default": null, "required": true, "doc": "The GPUBuffer to copy to." },
+            "destination": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer to copy to." },
             "destination_offset": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The offset in bytes in the destination buffer where the data is written."
             },
             "size": {
               "type": "int",
               "default": "None",
-              "required": false,
               "doc": "The number of bytes to copy. Defaults to the size of the source buffer minus the source_offset argument of this method."
             }
           },
@@ -3105,20 +2827,17 @@
           "args": {
             "source": {
               "type": "structs.TexelCopyBufferInfoStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TexelCopyBufferInfo describing the buffer and the layout of the data in it."
             },
             "destination": {
               "type": "structs.TexelCopyTextureInfoStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TexelCopyTextureInfo describing the part of the texture to copy to."
             },
             "copy_size": {
               "type": "tuple[int, int, int] | structs.Extent3DStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.Extent3D (or tuple) with the size of the region to copy, in texels."
             }
           },
@@ -3129,20 +2848,17 @@
           "args": {
             "source": {
               "type": "structs.TexelCopyTextureInfoStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TexelCopyTextureInfo describing the part of the texture to copy from."
             },
             "destination": {
               "type": "structs.TexelCopyBufferInfoStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TexelCopyBufferInfo describing the buffer and the layout of the data in it."
             },
             "copy_size": {
               "type": "tuple[int, int, int] | structs.Extent3DStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.Extent3D (or tuple) with the size of the region to copy, in texels."
             }
           },
@@ -3153,20 +2869,17 @@
           "args": {
             "source": {
               "type": "structs.TexelCopyTextureInfoStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TexelCopyTextureInfo describing the part of the texture to copy from."
             },
             "destination": {
               "type": "structs.TexelCopyTextureInfoStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TexelCopyTextureInfo describing the part of the texture to copy to."
             },
             "copy_size": {
               "type": "tuple[int, int, int] | structs.Extent3DStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.Extent3D (or tuple) with the size of the region to copy, in texels."
             }
           },
@@ -3175,17 +2888,15 @@
         "clear_buffer": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "buffer": { "type": "GPUBuffer", "default": null, "required": true, "doc": "The GPUBuffer to clear." },
+            "buffer": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer to clear." },
             "offset": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The offset in bytes where the clearing starts. Must be a multiple of 4. Defaults to 0."
             },
             "size": {
               "type": "int",
               "default": "None",
-              "required": false,
               "doc": "The number of bytes to clear. Must be a multiple of 4. Defaults to the remainder of the buffer after offset."
             }
           },
@@ -3194,24 +2905,13 @@
         "resolve_query_set": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "query_set": {
-              "type": "GPUQuerySet",
-              "default": null,
-              "required": true,
-              "doc": "The GPUQuerySet to read results from."
-            },
-            "first_query": { "type": "int", "default": null, "required": true, "doc": "The index of the first query to resolve." },
-            "query_count": { "type": "int", "default": null, "required": true, "doc": "The number of queries to resolve." },
-            "destination": {
-              "type": "GPUBuffer",
-              "default": null,
-              "required": true,
-              "doc": "The GPUBuffer to write the results to."
-            },
+            "query_set": { "type": "GPUQuerySet", "default": "", "doc": "The GPUQuerySet to read results from." },
+            "first_query": { "type": "int", "default": "", "doc": "The index of the first query to resolve." },
+            "query_count": { "type": "int", "default": "", "doc": "The number of queries to resolve." },
+            "destination": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer to write the results to." },
             "destination_offset": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The offset in bytes in the destination buffer where the results are written. Must be a multiple of 256."
             }
           },
@@ -3223,7 +2923,6 @@
             "descriptor": {
               "type": "structs.CommandBufferDescriptorStruct",
               "default": "{}",
-              "required": false,
               "doc": "A structs.CommandBufferDescriptor. Optional."
             }
           },
@@ -3241,32 +2940,23 @@
           "args": {
             "index": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The index of the bind group (the @group number in the shader)."
             },
-            "bind_group": {
-              "type": "GPUBindGroup",
-              "default": null,
-              "required": true,
-              "doc": "The GPUBindGroup to set, or None to unset it."
-            },
+            "bind_group": { "type": "GPUBindGroup", "default": "", "doc": "The GPUBindGroup to set, or None to unset it." },
             "dynamic_offsets_data": {
               "type": "ArrayLike",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A list or array of offsets in bytes, one for each dynamic buffer binding, in order of binding number."
             },
             "dynamic_offsets_data_start": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "If dynamic_offsets_data is an array, the index of the first offset to use."
             },
             "dynamic_offsets_data_length": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "If dynamic_offsets_data is an array, the number of offsets to use."
             }
           },
@@ -3277,26 +2967,22 @@
           "args": {
             "range_offset": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The offset in bytes in the immediate data range where the data is written. Must be a multiple of 4."
             },
             "data": {
               "type": "ArrayLike",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The data to write, as an object that supports the buffer protocol (e.g. bytes or a numpy array)."
             },
             "data_offset": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The offset in the data (in elements of the data type, or bytes) where reading starts. Defaults to 0."
             },
             "data_size": {
               "type": "int",
               "default": "None",
-              "required": false,
               "doc": "The amount of data to write (in elements of the data type, or bytes). Defaults to the remainder of the data after data_offset."
             }
           },
@@ -3312,7 +2998,7 @@
         "push_debug_group": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "group_label": { "type": "str", "default": null, "required": true, "doc": "The label of the debug group." }
+            "group_label": { "type": "str", "default": "", "doc": "The label of the debug group." }
           },
           "doc": "Begin a labeled debug group. Every call must be matched with a call to pop_debug_group().\n"
         },
@@ -3324,7 +3010,7 @@
         "insert_debug_marker": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "marker_label": { "type": "str", "default": null, "required": true, "doc": "The label of the marker." }
+            "marker_label": { "type": "str", "default": "", "doc": "The label of the marker." }
           },
           "doc": "Insert a single labeled marker into the command stream.\n"
         }
@@ -3338,52 +3024,26 @@
         "set_pipeline": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "pipeline": {
-              "type": "GPUComputePipeline",
-              "default": null,
-              "required": true,
-              "doc": "The GPUComputePipeline to use."
-            }
+            "pipeline": { "type": "GPUComputePipeline", "default": "", "doc": "The GPUComputePipeline to use." }
           },
           "doc": "Set the GPUComputePipeline to use for subsequent dispatch commands.\n"
         },
         "dispatch_workgroups": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "workgroup_count_x": {
-              "type": "int",
-              "default": null,
-              "required": true,
-              "doc": "The number of workgroups in the x dimension."
-            },
-            "workgroup_count_y": {
-              "type": "int",
-              "default": "1",
-              "required": false,
-              "doc": "The number of workgroups in the y dimension. Defaults to 1."
-            },
-            "workgroup_count_z": {
-              "type": "int",
-              "default": "1",
-              "required": false,
-              "doc": "The number of workgroups in the z dimension. Defaults to 1."
-            }
+            "workgroup_count_x": { "type": "int", "default": "", "doc": "The number of workgroups in the x dimension." },
+            "workgroup_count_y": { "type": "int", "default": "1", "doc": "The number of workgroups in the y dimension. Defaults to 1." },
+            "workgroup_count_z": { "type": "int", "default": "1", "doc": "The number of workgroups in the z dimension. Defaults to 1." }
           },
           "doc": "Run the compute shader of the current pipeline for a grid of workgroups.\n\nThe total number of invocations is the number of workgroups times the workgroup size defined in the shader.\n"
         },
         "dispatch_workgroups_indirect": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "indirect_buffer": {
-              "type": "GPUBuffer",
-              "default": null,
-              "required": true,
-              "doc": "The GPUBuffer that contains the workgroup counts."
-            },
+            "indirect_buffer": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer that contains the workgroup counts." },
             "indirect_offset": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The offset in bytes in the buffer where the counts start. Must be a multiple of 4."
             }
           },
@@ -3412,30 +3072,18 @@
           "args": {
             "x": {
               "type": "float",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The x coordinate of the top-left corner of the viewport, in pixels."
             },
             "y": {
               "type": "float",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The y coordinate of the top-left corner of the viewport, in pixels."
             },
-            "width": { "type": "float", "default": null, "required": true, "doc": "The width of the viewport, in pixels." },
-            "height": { "type": "float", "default": null, "required": true, "doc": "The height of the viewport, in pixels." },
-            "min_depth": {
-              "type": "float",
-              "default": null,
-              "required": true,
-              "doc": "The minimum depth value of the viewport (between 0 and 1)."
-            },
-            "max_depth": {
-              "type": "float",
-              "default": null,
-              "required": true,
-              "doc": "The maximum depth value of the viewport (between 0 and 1)."
-            }
+            "width": { "type": "float", "default": "", "doc": "The width of the viewport, in pixels." },
+            "height": { "type": "float", "default": "", "doc": "The height of the viewport, in pixels." },
+            "min_depth": { "type": "float", "default": "", "doc": "The minimum depth value of the viewport (between 0 and 1)." },
+            "max_depth": { "type": "float", "default": "", "doc": "The maximum depth value of the viewport (between 0 and 1)." }
           },
           "doc": "Set the viewport: the region of the attachments that the clip-space output is mapped to.\n\nDefaults to the full size of the attachments.\n"
         },
@@ -3444,18 +3092,16 @@
           "args": {
             "x": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The x coordinate of the top-left corner of the rectangle, in pixels."
             },
             "y": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The y coordinate of the top-left corner of the rectangle, in pixels."
             },
-            "width": { "type": "int", "default": null, "required": true, "doc": "The width of the rectangle, in pixels." },
-            "height": { "type": "int", "default": null, "required": true, "doc": "The height of the rectangle, in pixels." }
+            "width": { "type": "int", "default": "", "doc": "The width of the rectangle, in pixels." },
+            "height": { "type": "int", "default": "", "doc": "The height of the rectangle, in pixels." }
           },
           "doc": "Set the scissor rectangle: fragments outside of this rectangle are discarded.\n\nDefaults to the full size of the attachments.\n"
         },
@@ -3464,8 +3110,7 @@
           "args": {
             "color": {
               "type": "tuple[float, float, float, float] | structs.ColorStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The color, as a structs.Color or a tuple (r, g, b, a)."
             }
           },
@@ -3474,24 +3119,14 @@
         "set_stencil_reference": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "reference": {
-              "type": "int",
-              "default": null,
-              "required": true,
-              "doc": "The stencil reference value (an unsigned integer)."
-            }
+            "reference": { "type": "int", "default": "", "doc": "The stencil reference value (an unsigned integer)." }
           },
           "doc": "Set the stencil reference value, used in stencil comparisons and by enums.StencilOperation.replace.\n\nDefaults to 0.\n"
         },
         "begin_occlusion_query": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "query_index": {
-              "type": "int",
-              "default": null,
-              "required": true,
-              "doc": "The index in the query set where the result is stored."
-            }
+            "query_index": { "type": "int", "default": "", "doc": "The index in the query set where the result is stored." }
           },
           "doc": "Begin an occlusion query, which counts the samples that pass the depth and stencil tests.\n\nThe result is stored in the occlusion_query_set of the pass (see structs.RenderPassDescriptor).\nEnd the query with end_occlusion_query().\n"
         },
@@ -3505,8 +3140,7 @@
           "args": {
             "bundles": {
               "type": "list[GPURenderBundle]",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A list of GPURenderBundle objects to execute, in order."
             }
           },
@@ -3527,40 +3161,27 @@
         "set_pipeline": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "pipeline": {
-              "type": "GPURenderPipeline",
-              "default": null,
-              "required": true,
-              "doc": "The GPURenderPipeline to use."
-            }
+            "pipeline": { "type": "GPURenderPipeline", "default": "", "doc": "The GPURenderPipeline to use." }
           },
           "doc": "Set the GPURenderPipeline to use for subsequent draw commands.\n"
         },
         "set_index_buffer": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "buffer": {
-              "type": "GPUBuffer",
-              "default": null,
-              "required": true,
-              "doc": "The GPUBuffer that contains the indices."
-            },
+            "buffer": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer that contains the indices." },
             "index_format": {
               "type": "enums.IndexFormatEnum",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The data type of the indices, see enums.IndexFormat."
             },
             "offset": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The offset in bytes in the buffer where the indices start. Defaults to 0."
             },
             "size": {
               "type": "int",
               "default": "None",
-              "required": false,
               "doc": "The size in bytes of the range to use. Defaults to the remainder of the buffer after offset."
             }
           },
@@ -3571,26 +3192,22 @@
           "args": {
             "slot": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The index of the vertex buffer slot, matching the index in the buffers field of structs.VertexState."
             },
             "buffer": {
               "type": "GPUBuffer",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The GPUBuffer that contains the vertex data, or None to unset the slot."
             },
             "offset": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The offset in bytes in the buffer where the vertex data starts. Defaults to 0."
             },
             "size": {
               "type": "int",
               "default": "None",
-              "required": false,
               "doc": "The size in bytes of the range to use. Defaults to the remainder of the buffer after offset."
             }
           },
@@ -3599,23 +3216,16 @@
         "draw": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "vertex_count": { "type": "int", "default": null, "required": true, "doc": "The number of vertices to draw." },
-            "instance_count": {
-              "type": "int",
-              "default": "1",
-              "required": false,
-              "doc": "The number of instances to draw. Defaults to 1."
-            },
+            "vertex_count": { "type": "int", "default": "", "doc": "The number of vertices to draw." },
+            "instance_count": { "type": "int", "default": "1", "doc": "The number of instances to draw. Defaults to 1." },
             "first_vertex": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The index of the first vertex to draw (the offset into the vertex buffers, in vertices). Defaults to 0."
             },
             "first_instance": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The instance index of the first instance to draw. Defaults to 0."
             }
           },
@@ -3624,29 +3234,21 @@
         "draw_indexed": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "index_count": { "type": "int", "default": null, "required": true, "doc": "The number of indices to draw." },
-            "instance_count": {
-              "type": "int",
-              "default": "1",
-              "required": false,
-              "doc": "The number of instances to draw. Defaults to 1."
-            },
+            "index_count": { "type": "int", "default": "", "doc": "The number of indices to draw." },
+            "instance_count": { "type": "int", "default": "1", "doc": "The number of instances to draw. Defaults to 1." },
             "first_index": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The position in the index buffer (in indices, not bytes) where drawing starts. Defaults to 0."
             },
             "base_vertex": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "A value added to each index before looking up the vertex. Defaults to 0."
             },
             "first_instance": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The instance index of the first instance to draw. Defaults to 0."
             }
           },
@@ -3655,16 +3257,10 @@
         "draw_indirect": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "indirect_buffer": {
-              "type": "GPUBuffer",
-              "default": null,
-              "required": true,
-              "doc": "The GPUBuffer that contains the draw parameters."
-            },
+            "indirect_buffer": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer that contains the draw parameters." },
             "indirect_offset": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The offset in bytes in the buffer where the parameters start. Must be a multiple of 4."
             }
           },
@@ -3673,16 +3269,10 @@
         "draw_indexed_indirect": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "indirect_buffer": {
-              "type": "GPUBuffer",
-              "default": null,
-              "required": true,
-              "doc": "The GPUBuffer that contains the draw parameters."
-            },
+            "indirect_buffer": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer that contains the draw parameters." },
             "indirect_offset": {
               "type": "int",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The offset in bytes in the buffer where the parameters start. Must be a multiple of 4."
             }
           },
@@ -3713,7 +3303,6 @@
             "descriptor": {
               "type": "structs.RenderBundleDescriptorStruct",
               "default": "{}",
-              "required": false,
               "doc": "A structs.RenderBundleDescriptor. Optional."
             }
           },
@@ -3731,8 +3320,7 @@
           "args": {
             "command_buffers": {
               "type": "list[GPUCommandBuffer]",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A list of GPUCommandBuffer objects, executed in order."
             }
           },
@@ -3746,29 +3334,21 @@
         "write_buffer": {
           "returns": { "type": "None", "doc": "None." },
           "args": {
-            "buffer": { "type": "GPUBuffer", "default": null, "required": true, "doc": "The GPUBuffer to write to." },
-            "buffer_offset": {
-              "type": "int",
-              "default": null,
-              "required": true,
-              "doc": "The offset in bytes in the buffer where the data is written."
-            },
+            "buffer": { "type": "GPUBuffer", "default": "", "doc": "The GPUBuffer to write to." },
+            "buffer_offset": { "type": "int", "default": "", "doc": "The offset in bytes in the buffer where the data is written." },
             "data": {
               "type": "ArrayLike",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The data to write, as an object that supports the buffer protocol (e.g. bytes or a numpy array)."
             },
             "data_offset": {
               "type": "int",
               "default": "0",
-              "required": false,
               "doc": "The offset in the data (in elements of the data type, or bytes) where reading starts. Defaults to 0."
             },
             "size": {
               "type": "int",
               "default": "None",
-              "required": false,
               "doc": "The amount of data to write (in elements of the data type, or bytes). Defaults to the remainder of the data after data_offset."
             }
           },
@@ -3779,26 +3359,22 @@
           "args": {
             "destination": {
               "type": "structs.TexelCopyTextureInfoStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TexelCopyTextureInfo describing the part of the texture to write to."
             },
             "data": {
               "type": "ArrayLike",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "The data to write, as an object that supports the buffer protocol (e.g. bytes or a numpy array)."
             },
             "data_layout": {
               "type": "structs.TexelCopyBufferLayoutStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.TexelCopyBufferLayout describing the layout of the texel data in data."
             },
             "size": {
               "type": "tuple[int, int, int] | structs.Extent3DStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.Extent3D (or tuple) with the size of the region to write, in texels."
             }
           },
@@ -3833,8 +3409,7 @@
           "args": {
             "configuration": {
               "type": "structs.CanvasConfigurationStruct",
-              "default": null,
-              "required": true,
+              "default": "",
               "doc": "A structs.CanvasConfiguration with the device, format and other settings."
             }
           },
@@ -3891,7 +3466,7 @@
         "constructor": {
           "returns": { "type": "None", "doc": "A GPUValidationError." },
           "args": {
-            "message": { "type": "str", "default": null, "required": true, "doc": "The human-readable error message." }
+            "message": { "type": "str", "default": "", "doc": "The human-readable error message." }
           },
           "doc": "Create a GPUValidationError.\n\nNormally these are created by the implementation rather than by user code.\n"
         }
@@ -3905,7 +3480,7 @@
         "constructor": {
           "returns": { "type": "None", "doc": "A GPUOutOfMemoryError." },
           "args": {
-            "message": { "type": "str", "default": null, "required": true, "doc": "The human-readable error message." }
+            "message": { "type": "str", "default": "", "doc": "The human-readable error message." }
           },
           "doc": "Create a GPUOutOfMemoryError.\n\nNormally these are created by the implementation rather than by user code.\n"
         }
@@ -3919,7 +3494,7 @@
         "constructor": {
           "returns": { "type": "None", "doc": "A GPUInternalError." },
           "args": {
-            "message": { "type": "str", "default": null, "required": true, "doc": "The human-readable error message." }
+            "message": { "type": "str", "default": "", "doc": "The human-readable error message." }
           },
           "doc": "Create a GPUInternalError.\n\nNormally these are created by the implementation rather than by user code.\n"
         }

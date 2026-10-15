@@ -73,8 +73,7 @@ The structure has some two dozen leaf nodes and looks a bit like this:
         "some_field": {
           "doc": "",
           "type": "int",
-          "default": 0,
-          "required": false
+          "default": "0"
         }
       }
     }
@@ -101,8 +100,7 @@ The structure has some two dozen leaf nodes and looks a bit like this:
             "some_arg": {
               "doc": "",
               "type": "",
-              "default": "",
-              "required": true
+              "default": ""
             }
           }
         }

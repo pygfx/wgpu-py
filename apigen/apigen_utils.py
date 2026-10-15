@@ -183,7 +183,6 @@ def read_definition_file(fname: str) -> dict:
     source = read_file("apigen", "definitions", fname)
     structure = json.loads(source)
 
-    possible_default_types = (None.__class__, int, float, str, list, dict)
     diff_actions = ("REMOVE",)
 
     assert (
@@ -281,11 +280,7 @@ def read_definition_file(fname: str) -> dict:
                                 elif field_dict_key == "type":
                                     assert isinstance(field_dict_val, str)
                                 elif field_dict_key == "default":
-                                    assert isinstance(
-                                        field_dict_val, possible_default_types
-                                    )
-                                elif field_dict_key == "required":
-                                    assert isinstance(field_dict_val, bool)
+                                    assert isinstance(field_dict_val, str)
                                 else:
                                     raise RuntimeError(
                                         f"Invalid struct field dict key {field_dict_key!r}"
@@ -360,11 +355,7 @@ def read_definition_file(fname: str) -> dict:
                                             elif arg_dict_key == "type":
                                                 assert isinstance(arg_dict_val, str)
                                             elif arg_dict_key == "default":
-                                                assert isinstance(
-                                                    arg_dict_val, possible_default_types
-                                                )
-                                            elif arg_dict_key == "required":
-                                                assert isinstance(arg_dict_val, bool)
+                                                assert isinstance(arg_dict_val, str)
                                             else:
                                                 raise RuntimeError(
                                                     f"Invalid method arg dict key {arg_dict_key!r}"

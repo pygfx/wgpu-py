@@ -139,9 +139,8 @@ def write_structs(structs_dict):
         pylines.append(f"@dataclass(kw_only=True, repr=False)\nclass {name}(Struct):")
         # pylines.append(f'    """{indent(struct_dict["doc"])}"""')
         for field_name, field_dict in struct_dict["fields"].items():
-            # Get type to include in code
+            # Get type to include in code, and massage a bit for this module
             raw_type = field_dict["type"]
-            # TODO: do these conversions earlier!
             code_type = raw_type.replace("GPU", "classes.GPU").replace("structs.", "")
             code_type = code_type.replace("list[", "Sequence[")
             # Get type to include in docs
@@ -154,20 +153,14 @@ def write_structs(structs_dict):
             ):
                 docs_type = raw_type.replace("Flags", "").replace("Enum", "")
                 docs_type = resolve_crossrefs(f" {docs_type} ")
-            # Get default
-            # TODO: move this logic earlier; the json files should be leading!
-            # if field_name == "power_preference":
-            #     breakpoint()
+            # Get default and massage it a bit
             default = field_dict["default"]
             if default == "[]":
                 default = "()"
             elif default == "{}":
                 default = "None"  # no mutable defaults
+            if default == "None" and "None" not in code_type:
                 code_type += " | None"
-            if not default and not field_dict["required"]:
-                default = "None"
-                if "None" not in code_type:
-                    code_type += " | None"
             # Build docs
             doc = ""
             if docs_type:

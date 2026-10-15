@@ -79,14 +79,19 @@ class Attribute:
         self.line = line.strip().strip(",;").strip()
         self.source = source
 
-        # Detect default value
-        default = None
+        # Detect default value, store as a str that represents a Python literal.
+        # Default empty string means there is no default; required arg/field.
+        # Note that if default *represents* an empty string, it would be '""'.
+        default = ""
         arg = self.line
         if "=" in arg:
             arg, default = arg.rsplit("=", 1)
             arg, default = arg.strip(), default.strip()
-        if default and default in ["false", "true"]:
-            default = default.capitalize()
+        if default:
+            if default in ["false", "true"]:
+                default = default.capitalize()
+            if default == "null":
+                default = "None"
         arg_type, arg_name = arg.strip().rsplit(" ", 1)
 
         # Handling required vs optional differs between structs fields and function params.
@@ -97,10 +102,10 @@ class Attribute:
                 required = True
                 arg_type = arg_type.split(" ", 1)[1]
                 # required args should not have a default
-                assert default is None
+                assert not default
             else:
                 required = False
-                # default could still be None, i.e. struct field can be omitted
+                default = default or "None"
         elif source == "param":
             if arg_type.startswith("optional "):
                 required = False
@@ -109,26 +114,24 @@ class Attribute:
             else:
                 # but otherwise they are required
                 required = True
-                assert default is None
+                assert not default
         else:
             raise RuntimeError(f"Invalid Attribute source: {source!r}")
+
+        assert isinstance(default, str)
+        assert bool(default) == (not required)
 
         self.name = arg_name
         self.py_name = None
         self.idl_type = arg_type
         self.py_type = "unresolved_type!"
         self.default = default
-        self.required = required
 
     def __repr__(self):
         return f"<Attribute from {self.source} '{self.idl_type} {self.name}'>"
 
     def to_dict(self) -> dict:
-        return {
-            "type": self.py_type,
-            "default": self.default,
-            "required": self.required,
-        }
+        return {"type": self.py_type, "default": self.default}
 
 
 class Interface:
