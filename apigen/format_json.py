@@ -8,7 +8,7 @@ def format_json():
     files = [
         fname
         for fname in os.listdir(DEFINITIONS_DIR)
-        if fname.endswith(".json") and fname.startswith(("diff_", "docs_"))
+        if fname.endswith(".json") and fname.startswith("diff_")
     ]
     for fname in files:
         s = read_definition_file(fname)

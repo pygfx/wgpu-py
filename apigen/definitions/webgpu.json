@@ -1,6 +1,6 @@
 {
   "meta": {
-    "filename": "wgpu_api_web.json",
+    "filename": "webgpu.json",
     "description": "Python-flavored WebGPU API, generated from 'webgpu.idl'.",
     "notes": "All types are converted to the Python equivalents, all names are made Pythonic snake_case, methods that accept a single descriptor arg are *not* yet resolved to accept the descriptor args directly."
   },

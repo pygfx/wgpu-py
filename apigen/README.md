@@ -24,7 +24,7 @@ There is also a CLI for ease of use, and to run the whole codegen pipeline with 
 ## The steps that this code offers
 
 * download: download the latest webgpu.idl, this is only done manually from time to time.
-* extract_idl: parse the IDL to produce 'wgpu_api_web.json'.
+* extract_idl: parse the IDL to produce 'wgpu_idl.json'.
 * format: formats the static definitions.
 * merge: combines multiple definitions files into 'wgpu_api.json'.
 * write_api: produce API for flags, enums and structs.

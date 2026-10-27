@@ -24,7 +24,7 @@ def extract_idl():
 
     # Generate structure
 
-    fname = "wgpu_api_web.json"
+    fname = "webgpu.json"
     s = {}
     s["meta"] = {
         "filename": fname,
