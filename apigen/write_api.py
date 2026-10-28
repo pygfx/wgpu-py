@@ -5,7 +5,7 @@ import re
 from apigen_utils import (
     dict_deep_merge,
     format_code,
-    # indent,
+    # indent_code,
     read_definition_file,
     read_file,
     write_file,
@@ -69,7 +69,7 @@ def write_flags(flags_dict):
     for name, flag_dict in flags_dict.items():
         pylines.append(f"{name}Flags = int | str\n\n")
         pylines.append(f"class {name}(Flags):\n")
-        # pylines.append(f'    """{indent(flag_dict["doc"])}"""')
+        # pylines.append(f'    """{indent_code(flag_dict["doc"])}"""')
         for field_name, field_dict in flag_dict["fields"].items():
             pylines.append(
                 f"    {field_name} = {field_dict['value']!r}"
@@ -104,7 +104,7 @@ def write_enums(enums_dict):
         quoted_values = [f'"{f["value"]}"' for f in enum_dict["fields"].values()]
         pylines.append(f"{name}Enum = Literal[{', '.join(quoted_values)}] | str\n\n")
         pylines.append(f"class {name}(Enum):\n")
-        # pylines.append(f'    """{indent(enum_dict["doc"])}"""')
+        # pylines.append(f'    """{indent_code(enum_dict["doc"])}"""')
         for field_name, field_dict in enum_dict["fields"].items():
             pylines.append(
                 f'    {field_name} = "{field_dict["value"]}"'

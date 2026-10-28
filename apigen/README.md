@@ -16,19 +16,26 @@ Each backend can define additional API surface, but uses suffixes for anything t
 
 ## Code organization
 
-This module consists of one utility modules and then one module for each action.
-These modules can be executed as a script, which is handy during development.
-There is also a CLI for ease of use, and to run the whole codegen pipeline with one command.
+The apigen consists of multiple "actions". Each such action is represented by a module,
+which has a function with the same name that performs the action. These modules can also
+be executed as a script, which is handy during development.
+
+The names of the actions are typically "verb-noun". Call me crazy but I named them such that
+when sorted alphabetically, the order of the actions is correct :)
+
+There is also one utility module that all modules use.
+
+There is a CLI for ease of use, and to run the whole codegen pipeline with one command.
 
 
 ## The steps that this code offers
 
-* download: download the latest webgpu.idl, this is only done manually from time to time.
+* download_idl: download the latest webgpu.idl, this is only done manually from time to time.
 * extract_idl: parse the IDL to produce 'wgpu_idl.json'.
-* format: formats the static definitions.
-* merge: combines multiple definitions files into 'wgpu_api.json'.
-* write_api: produce API for flags, enums and structs.
+* format_json: formats the static definitions.
+* merge_json: combines multiple definitions files into 'wgpu_api.json'.
 * patch_api: produce the classes and functions in _classes.py and all backends.
+* write_api: produce API for flags, enums and structs.
 
 
 ## The API format structure

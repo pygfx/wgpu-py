@@ -1,4 +1,4 @@
-from apigen_utils import read_definition_file, write_file
+from apigen_utils import format_code, read_definition_file, write_file
 
 preamble = '''
 """
@@ -52,6 +52,8 @@ def write_js_api():
         lines.append("")
 
     code = preamble + "\n".join(lines)
+
+    code = format_code(code)
 
     write_file(code, "wgpu", "backends", "js_webgpu", "webgpu_stub.py")
 
