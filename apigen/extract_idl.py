@@ -1,9 +1,9 @@
 from typing import Literal
 
 from apigen_utils import (
+    dict_deep_merge,
     read_definition_file,
     read_file,
-    to_snake_case,
     write_definition_file,
 )
 
@@ -12,10 +12,42 @@ if not isinstance(builtins, dict):
     builtins = builtins.__dict__
 
 
-def extract_idl():
-    """Parse the IDL specification to a structured form in json."""
+# Minimal difference applied to the final structure. Intended for changes that would otherwise make the API invalid Python.
+# Make GPUPipelineError.__init__() message arg not have a default, because the second arg has no default either
+diff_webgpu = {
+    "classes": {
+        "GPUPipelineError": {
+            "methods": {
+                "__init__": {"args": {"message": {"default": ""}}},
+            }
+        }
+    }
+}
 
-    # TODO: handle ARGS_TO_MAKE_OPTIONAL, in apidiff structure
+# TODO: handle ARGS_TO_MAKE_OPTIONAL, in apidiff structure ??
+
+
+def extract_idl():
+    """Parse the IDL specification to a structured form in json.
+
+    Some name changes:
+
+    - flag "GPUMapModeFlags" -> "flags.MapMode"
+    - flag fields remain UPPER_SNAKE_CASE
+    - enum "GPUPowerPreference" -> "enums.PowerPreference"
+    - enum fieds are just "dashed-strings", our enums fields are snake_case, but the values match the "dashed-strings"
+    - struct "GPUBindGroupDescriptor" -> "structs.BindGroupDescriptor"
+    - struct fields "camelCase" -> "snake_case"
+    - class "GPUBuffer" stays that way
+    - methods names "camelCase" -> "snake_case"
+    - arg names "camelCase" -> "snake_case"
+
+    Further:
+
+    - types are resolved to valid Python types
+    - some method args are made required if followed by required args
+    - methods named "constructor" -> "__init__"
+    """
 
     # Get the source, and parse into a structure.
     source = read_file("apigen", "definitions", "webgpu.idl")
@@ -25,34 +57,34 @@ def extract_idl():
     # Generate structure
 
     fname = "webgpu.json"
-    s = {}
-    s["meta"] = {
+    api = {}
+    api["meta"] = {
         "filename": fname,
         "description": "Python-flavored WebGPU API, generated from 'webgpu.idl'.",
         "notes": "All types are converted to the Python equivalents, all names are made Pythonic snake_case, methods that accept a single descriptor arg are *not* yet resolved to accept the descriptor args directly.",
     }
-    flags_dict = s["flags"] = {}
+    flags_dict = api["flags"] = {}
     for flag_name, d in parser.flags.items():
         flag_dict = flags_dict[flag_name] = {}
         flag_dict["fields"] = {}
         for k, v in d.items():
             flag_dict["fields"][k] = {"value": v}
 
-    enums_dict = s["enums"] = {}
+    enums_dict = api["enums"] = {}
     for enum_name, d in parser.enums.items():
         enum_dict = enums_dict[enum_name] = {}
         enum_dict["fields"] = {}
         for k, v in d.items():
             enum_dict["fields"][k] = {"value": v}
 
-    structs_dict = s["structs"] = {}
+    structs_dict = api["structs"] = {}
     for struct_name, d in parser.structs.items():
         struct_dict = structs_dict[struct_name] = {}
         struct_dict["fields"] = {}
         for att in d.values():
-            struct_dict["fields"][att.py_name] = att.to_dict()
+            struct_dict["fields"][att.name] = att.to_dict()
 
-    classes_dict = s["classes"] = {}
+    classes_dict = api["classes"] = {}
     for class_name, interface in parser.classes.items():
         class_dict = classes_dict[class_name] = {}
         class_dict["bases"] = interface.bases
@@ -61,15 +93,65 @@ def extract_idl():
             class_dict["properties"][prop_name] = {"type": attr_type}  # str
         class_dict["methods"] = {}
         for func in interface.methods.values():
-            method_dict = class_dict["methods"][func.py_name] = {}
+            method_dict = class_dict["methods"][func.name] = {}
             method_dict["returns"] = {"type": func.return_type}
             method_dict["args"] = {}
             for attribute in func.args:
-                method_dict["args"][attribute.py_name] = attribute.to_dict()
+                method_dict["args"][attribute.name] = attribute.to_dict()
+
+    # Convert names
+    make_names_pythonic(api)
+    api = dict_deep_merge(api, diff_webgpu)
 
     # Write (and read back as a validation step)
-    write_definition_file(s, fname)
+    write_definition_file(api, fname)
     read_definition_file(fname)
+
+
+def make_names_pythonic(api):
+    # Struct field names
+    for _struct_name, struct_dict in api["structs"].items():
+        new_fields = {}
+        for field_name, field_dict in struct_dict["fields"].items():
+            new_fields[to_snake_case(field_name)] = field_dict
+        struct_dict["fields"] = new_fields
+
+    for _class_name, class_dict in api["classes"].items():
+        # Class property names
+        new_properties = {}
+        for pro_name, prop_dict in class_dict["properties"].items():
+            new_properties[to_snake_case(pro_name)] = prop_dict
+        class_dict["properties"] = new_properties
+        # Class method names
+        new_methods = {}
+        for method_name, method_dict in class_dict["methods"].items():
+            new_method_name = to_snake_case(method_name)
+            if new_method_name == "constructor":
+                new_method_name = "__init__"
+            new_methods[new_method_name] = method_dict
+            # Class method arg names
+            new_args = {}
+            for arg_name, arg_dict in method_dict["args"].items():
+                new_args[to_snake_case(arg_name)] = arg_dict
+            method_dict["args"] = new_args
+        class_dict["methods"] = new_methods
+
+
+def to_snake_case(name, separator="_"):
+    """Convert a name from camelCase to snake_case. Names that already are
+    snake_case remain the same.
+    """
+    name2 = ""
+    for c in name:
+        c2 = c.lower()
+        if c2 != c and len(name2) > 0:
+            prev = name2[-1]
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
+                name2 += separator
+        name2 += c2
+    return name2
 
 
 class Attribute:
@@ -122,7 +204,6 @@ class Attribute:
         assert bool(default) == (not required)
 
         self.name = arg_name
-        self.py_name = None
         self.idl_type = arg_type
         self.py_type = "unresolved_type!"
         self.default = default
@@ -150,7 +231,6 @@ class Function:
     def __init__(self, name, line):
         self.name = name
         self.line = line
-        self.py_name = None
         self.args = None
         self.return_type = None
 
@@ -434,14 +514,12 @@ class IdlParser:
         for name, args in self.structs.items():
             for _fieldname, arg in args.items():
                 arg.py_type = self.resolve_type(arg.idl_type)
-                arg.py_name = to_snake_case(arg.name)
 
-        # Resolve classes: attribyte types and method signatures
+        # Resolve classes: attribute types and method signatures
         for classname, interface in self.classes.items():
             for idl_prop_name in list(interface.properties.keys()):
-                py_prop_name = to_snake_case(idl_prop_name)
-                interface.properties[py_prop_name] = self.resolve_type(
-                    interface.properties.pop(idl_prop_name)
+                interface.properties[idl_prop_name] = self.resolve_type(
+                    interface.properties[idl_prop_name]
                 )
 
             for funcname in list(interface.methods.keys()):
@@ -456,9 +534,7 @@ class IdlParser:
                     ):  # TODO: doesn't the type-resolving handle this already?
                         return_type = f"GPUPromise[{return_type}]"
                 for arg in args:
-                    arg.py_name = to_snake_case(arg.name)
                     arg.py_type = self.resolve_type(arg.idl_type)
-                func.py_name = to_snake_case(func.name)
                 func.return_type = return_type or "None"
                 func.args = args
 

@@ -1289,10 +1289,10 @@
         "reason": { "type": "enums.PipelineErrorReasonEnum" }
       },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None" },
           "args": {
-            "message": { "type": "str", "default": "\"\"" },
+            "message": { "type": "str", "default": "" },
             "options": { "type": "structs.PipelineErrorInitStruct", "default": "" }
           }
         }
@@ -1735,7 +1735,7 @@
       "bases": [ "GPUError" ],
       "properties": {  },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None" },
           "args": {
             "message": { "type": "str", "default": "" }
@@ -1747,7 +1747,7 @@
       "bases": [ "GPUError" ],
       "properties": {  },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None" },
           "args": {
             "message": { "type": "str", "default": "" }
@@ -1759,7 +1759,7 @@
       "bases": [ "GPUError" ],
       "properties": {  },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None" },
           "args": {
             "message": { "type": "str", "default": "" }
@@ -1773,7 +1773,7 @@
         "error": { "type": "GPUError" }
       },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None" },
           "args": {
             "type": { "type": "str", "default": "" },

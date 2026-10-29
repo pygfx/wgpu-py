@@ -2716,10 +2716,10 @@
         }
       },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None", "doc": "A GPUPipelineError." },
           "args": {
-            "message": { "type": "str", "default": "\"\"", "doc": "The human-readable error message." },
+            "message": { "type": "str", "default": "", "doc": "The human-readable error message." },
             "options": {
               "type": "structs.PipelineErrorInitStruct",
               "default": "",
@@ -3463,7 +3463,7 @@
       "bases": [ "GPUError" ],
       "properties": {  },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None", "doc": "A GPUValidationError." },
           "args": {
             "message": { "type": "str", "default": "", "doc": "The human-readable error message." }
@@ -3477,7 +3477,7 @@
       "bases": [ "GPUError" ],
       "properties": {  },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None", "doc": "A GPUOutOfMemoryError." },
           "args": {
             "message": { "type": "str", "default": "", "doc": "The human-readable error message." }
@@ -3491,7 +3491,7 @@
       "bases": [ "GPUError" ],
       "properties": {  },
       "methods": {
-        "constructor": {
+        "__init__": {
           "returns": { "type": "None", "doc": "A GPUInternalError." },
           "args": {
             "message": { "type": "str", "default": "", "doc": "The human-readable error message." }

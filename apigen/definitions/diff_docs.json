@@ -1333,7 +1333,7 @@
         "reason": { "doc": "The reason for the failure, see enums.PipelineErrorReason." }
       },
       "methods": {
-        "constructor": {
+        "__init__": {
           "doc": "Create a GPUPipelineError.\n\nNormally these are created by the implementation rather than by user code.\n",
           "returns": { "doc": "A GPUPipelineError." },
           "args": {
@@ -1789,7 +1789,7 @@
     "GPUValidationError": {
       "doc": "An error that signals that an operation did not satisfy the validation rules of the API, i.e. incorrect usage.\n\nCaptured by error scopes with enums.ErrorFilter.validation.\n",
       "methods": {
-        "constructor": {
+        "__init__": {
           "doc": "Create a GPUValidationError.\n\nNormally these are created by the implementation rather than by user code.\n",
           "returns": { "doc": "A GPUValidationError." },
           "args": {
@@ -1801,7 +1801,7 @@
     "GPUOutOfMemoryError": {
       "doc": "An error that signals that there was not enough memory to complete an operation.\n\nCaptured by error scopes with enums.ErrorFilter.out_of_memory.\n",
       "methods": {
-        "constructor": {
+        "__init__": {
           "doc": "Create a GPUOutOfMemoryError.\n\nNormally these are created by the implementation rather than by user code.\n",
           "returns": { "doc": "A GPUOutOfMemoryError." },
           "args": {
@@ -1813,7 +1813,7 @@
     "GPUInternalError": {
       "doc": "An error that signals that an operation failed for a reason that is not caused by incorrect usage, e.g. an implementation-specific limit.\n\nCaptured by error scopes with enums.ErrorFilter.internal.\n",
       "methods": {
-        "constructor": {
+        "__init__": {
           "doc": "Create a GPUInternalError.\n\nNormally these are created by the implementation rather than by user code.\n",
           "returns": { "doc": "A GPUInternalError." },
           "args": {

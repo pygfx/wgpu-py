@@ -48,23 +48,6 @@ def _get_line_endings(text):
 LE = _get_line_endings((ROOT_DIR / "apigen" / "__init__.py").read_bytes().decode())
 
 
-def to_snake_case(name, separator="_"):
-    """Convert a name from camelCase to snake_case. Names that already are
-    snake_case remain the same.
-    """
-    name2 = ""
-    for c in name:
-        c2 = c.lower()
-        if c2 != c and len(name2) > 0:
-            prev = name2[-1]
-            if c2 == "d" and prev in "123":
-                name2 = name2[:-1] + separator + prev
-            elif prev != separator:
-                name2 += separator
-        name2 += c2
-    return name2
-
-
 def enum_name_to_value(name):
     parts = name.split("_")
     for i in range(len(parts)):
