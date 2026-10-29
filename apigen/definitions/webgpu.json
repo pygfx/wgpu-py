@@ -1021,7 +1021,7 @@
       },
       "methods": {
         "request_adapter": {
-          "returns": { "type": "GPUAdapter" },
+          "returns": { "type": "GPUPromise[GPUAdapter]" },
           "args": {
             "options": { "type": "structs.RequestAdapterOptionsStruct", "default": "{}" }
           }
@@ -1041,7 +1041,7 @@
       },
       "methods": {
         "request_device": {
-          "returns": { "type": "GPUDevice" },
+          "returns": { "type": "GPUPromise[GPUDevice]" },
           "args": {
             "descriptor": { "type": "structs.DeviceDescriptorStruct", "default": "{}" }
           }
@@ -1055,7 +1055,7 @@
         "limits": { "type": "dict" },
         "adapter_info": { "type": "GPUAdapterInfo" },
         "queue": { "type": "GPUQueue" },
-        "lost": { "type": "GPUDeviceLostInfo" },
+        "lost": { "type": "GPUPromise[GPUDeviceLostInfo]" },
         "onuncapturederror": { "type": "None" }
       },
       "methods": {
@@ -1160,7 +1160,7 @@
           }
         },
         "pop_error_scope": {
-          "returns": { "type": "GPUError" },
+          "returns": { "type": "GPUPromise[GPUError]" },
           "args": {  }
         }
       }
@@ -1259,7 +1259,7 @@
       "properties": {  },
       "methods": {
         "get_compilation_info": {
-          "returns": { "type": "GPUCompilationInfo" },
+          "returns": { "type": "GPUPromise[GPUCompilationInfo]" },
           "args": {  }
         }
       }
@@ -1645,7 +1645,7 @@
           }
         },
         "on_submitted_work_done": {
-          "returns": { "type": "None" },
+          "returns": { "type": "GPUPromise[None]" },
           "args": {  }
         },
         "write_buffer": {

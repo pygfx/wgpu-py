@@ -13,11 +13,12 @@ if not isinstance(builtins, dict):
 
 
 # Minimal difference applied to the final structure. Intended for changes that would otherwise make the API invalid Python.
-# Make GPUPipelineError.__init__() message arg not have a default, because the second arg has no default either
 diff_webgpu = {
     "classes": {
         "GPUPipelineError": {
             "methods": {
+                # Make GPUPipelineError.__init__() message arg not have a default,
+                # because the second arg has no default either
                 "__init__": {"args": {"message": {"default": ""}}},
             }
         }
@@ -30,23 +31,12 @@ diff_webgpu = {
 def extract_idl():
     """Parse the IDL specification to a structured form in json.
 
-    Some name changes:
+    This is done in three stages:
 
-    - flag "GPUMapModeFlags" -> "flags.MapMode"
-    - flag fields remain UPPER_SNAKE_CASE
-    - enum "GPUPowerPreference" -> "enums.PowerPreference"
-    - enum fieds are just "dashed-strings", our enums fields are snake_case, but the values match the "dashed-strings"
-    - struct "GPUBindGroupDescriptor" -> "structs.BindGroupDescriptor"
-    - struct fields "camelCase" -> "snake_case"
-    - class "GPUBuffer" stays that way
-    - methods names "camelCase" -> "snake_case"
-    - arg names "camelCase" -> "snake_case"
-
-    Further:
-
-    - types are resolved to valid Python types
-    - some method args are made required if followed by required args
-    - methods named "constructor" -> "__init__"
+    - Parsing the IDL and buil up an internal representation.
+    - Convert that representation to our structured API dict form.
+    - Resolve names, converting camelCase to snake_case, for struct fields, methods, and method arguments.
+    - Resolve JS types to Python types.
     """
 
     # Get the source, and parse into a structure.
@@ -55,7 +45,6 @@ def extract_idl():
     parser.parse()
 
     # Generate structure
-
     fname = "webgpu.json"
     api = {}
     api["meta"] = {
@@ -63,6 +52,23 @@ def extract_idl():
         "description": "Python-flavored WebGPU API, generated from 'webgpu.idl'.",
         "notes": "All types are converted to the Python equivalents, all names are made Pythonic snake_case, methods that accept a single descriptor arg are *not* yet resolved to accept the descriptor args directly.",
     }
+    api.update(build_api_dict(parser))
+
+    # Convert names and types
+    make_names_pythonic(api)
+    resolve_types(api, parser)
+
+    # Some final tweaks
+    api = dict_deep_merge(api, diff_webgpu)
+
+    # Write (and read back as a validation step)
+    write_definition_file(api, fname)
+    read_definition_file(fname)
+
+
+def build_api_dict(parser):
+    """Build api dict from the parser's result."""
+    api = {}
     flags_dict = api["flags"] = {}
     for flag_name, d in parser.flags.items():
         flag_dict = flags_dict[flag_name] = {}
@@ -99,16 +105,12 @@ def extract_idl():
             for attribute in func.args:
                 method_dict["args"][attribute.name] = attribute.to_dict()
 
-    # Convert names
-    make_names_pythonic(api)
-    api = dict_deep_merge(api, diff_webgpu)
-
-    # Write (and read back as a validation step)
-    write_definition_file(api, fname)
-    read_definition_file(fname)
+    return api
 
 
 def make_names_pythonic(api):
+    """Convert camelCase to snake_case."""
+
     # Struct field names
     for _struct_name, struct_dict in api["structs"].items():
         new_fields = {}
@@ -119,9 +121,10 @@ def make_names_pythonic(api):
     for _class_name, class_dict in api["classes"].items():
         # Class property names
         new_properties = {}
-        for pro_name, prop_dict in class_dict["properties"].items():
-            new_properties[to_snake_case(pro_name)] = prop_dict
+        for prop_name, prop_dict in class_dict["properties"].items():
+            new_properties[to_snake_case(prop_name)] = prop_dict
         class_dict["properties"] = new_properties
+
         # Class method names
         new_methods = {}
         for method_name, method_dict in class_dict["methods"].items():
@@ -129,6 +132,7 @@ def make_names_pythonic(api):
             if new_method_name == "constructor":
                 new_method_name = "__init__"
             new_methods[new_method_name] = method_dict
+
             # Class method arg names
             new_args = {}
             for arg_name, arg_dict in method_dict["args"].items():
@@ -138,9 +142,7 @@ def make_names_pythonic(api):
 
 
 def to_snake_case(name, separator="_"):
-    """Convert a name from camelCase to snake_case. Names that already are
-    snake_case remain the same.
-    """
+    """Convert a name from camelCase to snake_case. Names that already are snake_case remain the same."""
     name2 = ""
     for c in name:
         c2 = c.lower()
@@ -152,6 +154,155 @@ def to_snake_case(name, separator="_"):
                 name2 += separator
         name2 += c2
     return name2
+
+
+def resolve_types(api, parser):
+    """Resolve JS types to Python equivalents."""
+    resolver = TypeResolver(api, parser.typedefs)
+    resolve_type = resolver.resolve_type
+
+    # Struct fields
+    for _struct_name, struct_dict in api["structs"].items():
+        for _field_name, field_dict in struct_dict["fields"].items():
+            field_dict["type"] = resolve_type(field_dict["type"])
+
+    for _class_name, class_dict in api["classes"].items():
+        # Class properties
+        for _prop_name, prop_dict in class_dict["properties"].items():
+            prop_dict["type"] = resolve_type(prop_dict["type"])
+
+        # Class method args and return
+        for _method_name, method_dict in class_dict["methods"].items():
+            method_dict["returns"]["type"] = resolve_type(
+                method_dict["returns"]["type"]
+            )
+            for _arg_name, arg_dict in method_dict["args"].items():
+                arg_dict["type"] = resolve_type(arg_dict["type"])
+
+
+class TypeResolver:
+    typemap = {
+        "DOMString": "str",
+        "USVString": "str",
+        "long": "int",
+        "unsigned long": "int",
+        "unsigned long long": "int",
+        "[Clamp] unsigned short": "int",
+        "double": "float",
+        "boolean": "bool",
+        "ImageBitmap": "ArrayLike",
+        "ImageData": "ArrayLike",
+        "VideoFrame": "ArrayLike",
+        "AllowSharedBufferSource": "ArrayLike",
+        "[AllowShared] Uint32Array": "ArrayLike",
+        "GPUPipelineConstantValue": "float",
+        "GPUExternalTexture": "object",
+        "undefined": "None",
+        "ArrayBuffer": "ArrayLike",
+        "WGSLLanguageFeatures": "set",
+        "GPUSupportedFeatures": "set",
+        "GPUSupportedLimits": "dict",
+        "EventHandler": "None",
+        "HTMLCanvasElement": "CanvasLike",
+        "OffscreenCanvas": "CanvasLike",
+    }
+
+    def __init__(self, apidict: dict, typedefs: dict):
+        self.typedefs = typedefs
+        self.apidict = apidict
+
+    def resolve_type(self, typename: str) -> str:
+        """Resolve a type to a suitable name that is also valid so that the linter
+        won't complain when this is used as a type annotation.
+        """
+
+        name = typename.strip().strip("?")
+
+        # We want the flag, not the type that is an alias for int
+        name = name[:-5] if name.endswith("Flags") else name
+
+        # First resolve using typedefs that we found in the IDL
+        while name in self.typedefs:
+            new_name = self.typedefs[name]
+            if new_name == name:
+                break
+            name = new_name
+
+        # Resolve to a Python type (maybe)
+
+        name = self.typemap.get(name, name)
+
+        # Is this a case for which we need to recurse?
+        if (
+            name.startswith("sequence<") or name.startswith("FrozenArray<")
+        ) and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            name = self.resolve_type(name).strip("'")
+            return f"list[{name}]"
+        elif name.startswith("record<") and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            names = [self.resolve_type(t).strip("'") for t in name.split(",")]
+            return f"dict[{', '.join(names)}]"
+        elif " or " in name:
+            # Clean
+            name = name.strip("()")
+            names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
+            names = set(names)  # de-dupe
+            has_none = "None" in names
+            names.discard("None")
+            names = sorted(names)
+            if has_none:
+                names.append("None")
+            # Triage
+            if len(names) == 1:
+                return names[0]
+            if (
+                len(names) == 2
+                and names[0] in ("list[int]", "list[float]")
+                and names[1].endswith("Struct")
+                and names[1].startswith(
+                    ("structs.Origin", "structs.Extent", "structs.Color")
+                )
+            ):
+                if names[1].endswith("ColorStruct"):
+                    names[0] = "tuple[float, float, float, float]"
+                elif names[1].endswith("2DStruct"):
+                    names[0] = "tuple[int, int]"
+                elif names[1].endswith("3DStruct"):
+                    names[0] = "tuple[int, int, int]"
+            return " | ".join(names)
+        if name.startswith("Promise<") and name.endswith(">"):
+            subname = name.split("<")[-1].rstrip(">")
+            subname = self.resolve_type(subname)
+            return f"GPUPromise[{subname}]"
+
+        # Triage
+        if name in builtins:
+            return name  # ok
+        elif name in ["ArrayLike", "CanvasLike"]:
+            return name  # virtual types
+        elif name in self.apidict["classes"]:
+            return name
+        elif name.startswith("HTML"):
+            return "object"  # anything, we ignore this stuff anyway
+        elif name in ["PredefinedColorSpace"]:
+            return "str"
+        else:
+            assert name.startswith("GPU"), f"Unknown type: {name}"
+            name = name[3:]
+            name = name[:-4] if name.endswith("Dict") else name
+            if name in self.apidict["flags"]:
+                return f"flags.{name}Flags"
+            elif name in self.apidict["enums"]:
+                return f"enums.{name}Enum"
+            elif name in self.apidict["structs"]:
+                return f"structs.{name}Struct"
+            else:
+                # When this happens, update the code above or the typemap
+                raise RuntimeError("Encountered unknown IDL type: ", name)
+
+
+# ------------------------------ The parser code ------------------------------
 
 
 class Attribute:
@@ -205,14 +356,13 @@ class Attribute:
 
         self.name = arg_name
         self.idl_type = arg_type
-        self.py_type = "unresolved_type!"
         self.default = default
 
     def __repr__(self):
         return f"<Attribute from {self.source} '{self.idl_type} {self.name}'>"
 
     def to_dict(self) -> dict:
-        return {"type": self.py_type, "default": self.default}
+        return {"type": self.idl_type, "default": self.default}
 
 
 class Interface:
@@ -510,158 +660,15 @@ class IdlParser:
             if name.endswith("Base"):
                 self.structs.pop(name)
 
-        # Resolve struct types
-        for name, args in self.structs.items():
-            for _fieldname, arg in args.items():
-                arg.py_type = self.resolve_type(arg.idl_type)
-
-        # Resolve classes: attribute types and method signatures
-        for classname, interface in self.classes.items():
-            for idl_prop_name in list(interface.properties.keys()):
-                interface.properties[idl_prop_name] = self.resolve_type(
-                    interface.properties[idl_prop_name]
-                )
-
+        # Resolve method signatures
+        for interface in self.classes.values():
             for funcname in list(interface.methods.keys()):
                 func = interface.methods[funcname]
-                args, return_type = self._resolve_signature(
-                    classname, funcname, func.line
-                )
-                if return_type:
-                    return_type = self.resolve_type(return_type)
-                    if funcname.lower().endswith(
-                        "async"
-                    ):  # TODO: doesn't the type-resolving handle this already?
-                        return_type = f"GPUPromise[{return_type}]"
-                for arg in args:
-                    arg.py_type = self.resolve_type(arg.idl_type)
+                args, return_type = self._resolve_signature(func.line)
                 func.return_type = return_type or "None"
                 func.args = args
 
-    def resolve_type(self, typename) -> str:
-        """Resolve a type to a suitable name that is also valid so that the linter
-        won't complain when this is used as a type annotation.
-        """
-
-        name = typename.strip().strip("?")
-
-        # We want the flag, not the type that is an alias for int
-        name = name[:-5] if name.endswith("Flags") else name
-
-        # First resolve using typedefs that we found in the IDL
-        while name in self.typedefs:
-            new_name = self.typedefs[name]
-            if new_name == name:
-                break
-            name = new_name
-
-        # Resolve to a Python type (maybe)
-        pythonmap = {
-            "DOMString": "str",
-            "DOMString?": "str",
-            "USVString": "str",
-            "long": "int",
-            "unsigned long": "int",
-            "unsigned long long": "int",
-            "[Clamp] unsigned short": "int",
-            "unsigned short": "int",
-            "GPUIntegerCoordinate": "int",
-            "GPUSampleMask": "int",
-            "GPUFenceValue": "int",
-            "GPUSize64": "int",
-            "GPUSize32": "int",
-            "GPUIndex32": "int",
-            "double": "float",
-            "boolean": "bool",
-            "object": "dict",
-            "ImageBitmap": "ArrayLike",
-            "ImageData": "ArrayLike",
-            "VideoFrame": "ArrayLike",
-            "AllowSharedBufferSource": "ArrayLike",
-            "[AllowShared] Uint32Array": "ArrayLike",
-            "GPUPipelineConstantValue": "float",
-            "GPUExternalTexture": "object",
-            "undefined": "None",
-            "ArrayBuffer": "ArrayLike",
-            "WGSLLanguageFeatures": "set",
-            "GPUSupportedFeatures": "set",
-            "GPUSupportedLimits": "dict",
-            "EventHandler": "None",
-            "HTMLCanvasElement": "CanvasLike",
-            "OffscreenCanvas": "CanvasLike",
-        }
-        name = pythonmap.get(name, name)
-
-        # Is this a case for which we need to recurse?
-        if (
-            name.startswith("sequence<") or name.startswith("FrozenArray<")
-        ) and name.endswith(">"):
-            name = name.split("<")[-1].rstrip(">")
-            name = self.resolve_type(name).strip("'")
-            return f"list[{name}]"
-        elif name.startswith("record<") and name.endswith(">"):
-            name = name.split("<")[-1].rstrip(">")
-            names = [self.resolve_type(t).strip("'") for t in name.split(",")]
-            return f"dict[{', '.join(names)}]"
-        elif " or " in name:
-            # Clean
-            name = name.strip("()")
-            names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
-            names = set(names)  # de-dupe
-            has_none = "None" in names
-            names.discard("None")
-            names = sorted(names)
-            if has_none:
-                names.append("None")
-            # Triage
-            if len(names) == 1:
-                return names[0]
-            if (
-                len(names) == 2
-                and names[0] in ("list[int]", "list[float]")
-                and names[1].endswith("Struct")
-                and names[1].startswith(
-                    ("structs.Origin", "structs.Extent", "structs.Color")
-                )
-            ):
-                if names[1].endswith("ColorStruct"):
-                    names[0] = "tuple[float, float, float, float]"
-                elif names[1].endswith("2DStruct"):
-                    names[0] = "tuple[int, int]"
-                elif names[1].endswith("3DStruct"):
-                    names[0] = "tuple[int, int, int]"
-            return " | ".join(names)
-        if name.startswith("Promise<") and name.endswith(">"):
-            name = name.split("<")[-1].rstrip(">")
-            # recursive call if there are any of the above situations?
-            return self.resolve_type(name)
-
-        # Triage
-        if name in builtins:
-            return name  # ok
-        elif name in ["ArrayLike", "CanvasLike"]:
-            return name  # virtual types
-        elif name in self.classes:
-            return name
-        elif name.startswith("HTML"):
-            return "object"  # anything, we ignore this stuff anyway
-        elif name in ["PredefinedColorSpace"]:
-            return "str"
-        else:
-            assert name.startswith("GPU"), f"Unknown type: {name}"
-            name = name[3:]
-            name = name[:-4] if name.endswith("Dict") else name
-            if name in self.flags:
-                return f"flags.{name}Flags"
-            elif name in self.enums:
-                return f"enums.{name}Enum"
-            elif name in self.structs:
-                return f"structs.{name}Struct"
-            else:
-                # When this happens, update the code above or the pythonmap
-                raise RuntimeError("Encountered unknown IDL type: ", name)
-
-    def _resolve_signature(self, classname, methodname, idl_line):
+    def _resolve_signature(self, idl_line: str):
         # Get arg names and types
         args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
         args = [Attribute(arg, "param") for arg in args if arg.strip()]

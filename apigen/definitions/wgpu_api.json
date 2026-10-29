@@ -2273,7 +2273,7 @@
       },
       "methods": {
         "request_adapter": {
-          "returns": { "type": "GPUAdapter", "doc": "A GPUAdapter, or None if no suitable adapter was found." },
+          "returns": { "type": "GPUPromise[GPUAdapter]", "doc": "A GPUAdapter, or None if no suitable adapter was found." },
           "args": {
             "options": {
               "type": "structs.RequestAdapterOptionsStruct",
@@ -2306,7 +2306,7 @@
       },
       "methods": {
         "request_device": {
-          "returns": { "type": "GPUDevice", "doc": "A GPUDevice." },
+          "returns": { "type": "GPUPromise[GPUDevice]", "doc": "A GPUDevice." },
           "args": {
             "descriptor": {
               "type": "structs.DeviceDescriptorStruct",
@@ -2336,7 +2336,7 @@
         },
         "queue": { "type": "GPUQueue", "doc": "The default GPUQueue of the device." },
         "lost": {
-          "type": "GPUDeviceLostInfo",
+          "type": "GPUPromise[GPUDeviceLostInfo]",
           "doc": "A promise or future that stays pending for the lifetime of the device and resolves to a GPUDeviceLostInfo when the device is lost."
         },
         "onuncapturederror": {
@@ -2517,7 +2517,7 @@
         },
         "pop_error_scope": {
           "returns": {
-            "type": "GPUError",
+            "type": "GPUPromise[GPUError]",
             "doc": "A GPUError (GPUValidationError, GPUOutOfMemoryError or GPUInternalError), or None if no error was captured."
           },
           "args": {  },
@@ -2664,7 +2664,10 @@
       "properties": {  },
       "methods": {
         "get_compilation_info": {
-          "returns": { "type": "GPUCompilationInfo", "doc": "A GPUCompilationInfo (awaitable) with the list of messages." },
+          "returns": {
+            "type": "GPUPromise[GPUCompilationInfo]",
+            "doc": "A GPUCompilationInfo (awaitable) with the list of messages."
+          },
           "args": {  },
           "doc": "Get diagnostic messages (errors, warnings, info) produced when compiling the shader.\n\nThe locations, order and contents of the messages are implementation-defined; in particular, they are not necessarily ordered by line number.\n"
         }
@@ -3327,7 +3330,7 @@
           "doc": "Submit a list of command buffers for execution on the GPU.\n\nEach command buffer can only be submitted once.\n"
         },
         "on_submitted_work_done": {
-          "returns": { "type": "None", "doc": "None (awaitable); resolves when the submitted work is done." },
+          "returns": { "type": "GPUPromise[None]", "doc": "None (awaitable); resolves when the submitted work is done." },
           "args": {  },
           "doc": "Wait until all work that was submitted so far has been completed by the GPU.\n\nResolving also implies completion of earlier GPUBuffer.map_async() calls on buffers last used exclusively on this queue.\n"
         },

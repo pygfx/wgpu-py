@@ -8,6 +8,8 @@ This helps validate the Pyodide backend via MyPy.
 """
 '''
 
+# todo: replace GPUPromise -> Promise or something?
+
 
 def write_js_api():
     """Write the Python stub API for WebGPU, to use in typechecking for web backends."""
