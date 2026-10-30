@@ -1,0 +1,139 @@
+{
+  "meta": {
+    "filename": "diff_base.json",
+    "description": "Defines how our wgpu-py base API differs from the web-api (the one derived from webgpu.idl).",
+    "notes": "We mostly *remove* things that we cannot replicate on desktop. So that we get an API surface that is the intersection of what we can use on desktop and web."
+  },
+  "classes": {
+    "GPU": {
+      "methods": {
+        "enumerate_adapters_async": {
+          "doc": "Get a list of adapter objects available on the current system.",
+          "returns": { "type": "GPUPromise[list[GPUAdapter]]" },
+          "args": {}
+        },
+        "enumerate_adapters_sync": {
+          "doc": "Get a list of adapter objects available on the current system.",
+          "returns": { "type": "list[GPUAdapter]" },
+          "args": {}
+        },
+        "get_canvas_context": {
+          "doc": "Get the GPUCanvasContext object for the appropriate backend.\n\nNote that the recommended way to get a context is to instead use the ``rendercanvas`` library.\n\nThe ``present_info`` dict should have a ``window`` field containing the window id. On Linux there should also be ``platform`` field to distinguish between 'wayland' and 'x11', and a ``display`` field for the display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object. This dict is an interface between `rendercanvas`` and ``wgpu-py``.",
+          "returns": { "type": "GPUCanvasContext" },
+          "args": {
+            "present_info": {
+              "type": "dict",
+              "default": "",
+              "doc": "The low-level presentation info."
+            }
+          }
+        }
+      }
+    },
+    "GPUCanvasContext": {
+      "properties": {
+        "physical_size": {
+          "doc": "Get the physical size of the current framebuffer.",
+          "type": "tuple[int, int]"
+        }
+      },
+      "methods": {
+        "set_physical_size": {
+          "doc": "Set the current framebuffer physical size.",
+          "returns": { "type": "None" },
+          "args": {
+            "width": {
+              "type": "int",
+              "default": "",
+              "doc": "The new width of the framebuffer."
+            },
+            "height": {
+              "type": "int",
+              "default": "",
+              "doc": "The new height of the framebuffer."
+            }
+          }
+        },
+        "get_preferred_format": {
+          "doc": "Get the preferred surface texture format.",
+          "returns": { "type": "enums.TextureFormat" },
+          "args": { "adapter": { "type": "GPUAdapter", "default": "" } }
+        },
+        "present": {
+          "doc": "Present what has been drawn to the current texture, by compositing it to the canvas.",
+          "returns": { "type": "None" },
+          "args": {}
+        }
+      }
+    },
+    "GPUAdapterInfo": {
+      "bases": ["dict"]
+    },
+    "GPUObjectBase": {
+      "properties": {
+        "uid": {
+          "type": "int",
+          "doc": "A unique id (integer) for this object.\n\nThe value is unique to the process; in contrast to ``id(ob)``, the numbers are never reused."
+        }
+      }
+    },
+    "GPUAdapter": {
+      "properties": {
+        "summary": {
+          "type": "str",
+          "doc": "A one-line summary of the info of this adapter (device, adapter_type, backend_type)."
+        }
+      }
+    },
+    "GPUQueue": {
+      "methods": {
+        "copy_external_image_to_texture": { "diff": "REMOVE" }
+      }
+    },
+    "GPUDevice": {
+      "properties": {
+        "adapter": {
+          "type": "GPUAdapter",
+          "doc": "The adapter object corresponding to this device."
+        }
+      },
+      "methods": {
+        "import_external_texture": { "diff": "REMOVE" },
+        "create_buffer_with_data": {
+          "returns": { "type": "GPUBuffer" },
+          "args": {
+            "label": { "type": "str", "default": "\"\"" },
+            "data": { "type": "ArrayLike", "default": "" },
+            "usage": { "type": "flags.BufferUsageFlags", "default": "" }
+          }
+        }
+      }
+    },
+    "NavigatorGPU": { "diff": "REMOVE" },
+    "GPUExternalTexture": { "diff": "REMOVE" },
+    "GPUUncapturedErrorEvent": { "diff": "REMOVE" },
+    "GPUSupportedLimits": { "diff": "REMOVE" },
+    "GPUSupportedFeatures": { "diff": "REMOVE" },
+    "WGSLLanguageFeatures": { "diff": "REMOVE" }
+  },
+  "structs": {
+    "ExternalTextureBindingLayout": { "diff": "REMOVE" },
+    "CopyExternalImageDestInfo": { "diff": "REMOVE" },
+    "CopyExternalImageSourceInfo": { "diff": "REMOVE" },
+    "BindGroupLayoutEntry": {
+      "fields": {
+        "external_texture": { "diff": "REMOVE" }
+      }
+    },
+    "RequestAdapterOptions": {
+      "fields": {
+        "power_preference": {
+          "type": "enums.PowerPreference | None",
+          "default": "None"
+        },
+        "canvas": { "type": "CanvasLike | None", "default": "None" },
+        "xr_compatible": { "diff": "REMOVE" }
+      }
+    }
+  }
+}
