@@ -963,7 +963,7 @@
           "doc": "The feature level to request: 'core' (default) or 'compatibility'. Core implies the default limits and enums.FeatureName.core_features_and_limits; compatibility has stricter, more widely supported defaults and no features. If the implementation cannot enforce the compatibility rules it treats the request as core. If the level is not supported, no adapter is returned."
         },
         "power_preference": {
-          "type": "enums.PowerPreferenceEnum",
+          "type": "enums.PowerPreference | None",
           "default": "None",
           "doc": "Hint for the kind of adapter to select, see enums.PowerPreference. It may influence which adapter is chosen (mainly in multi-GPU systems), but never whether an adapter is returned."
         },
@@ -972,11 +972,7 @@
           "default": "False",
           "doc": "If true, only a fallback adapter may be returned (no adapter if unsupported). If false, a fallback adapter may still be returned; check the is_fallback_adapter property of GPUAdapterInfo to avoid it."
         },
-        "xr_compatible": {
-          "type": "bool",
-          "default": "False",
-          "doc": "If true, the adapter must be compatible with XR (virtual/augmented reality) sessions. Mostly relevant in browsers."
-        }
+        "canvas": { "type": "CanvasLike | None", "default": "None" }
       },
       "doc": "Options for requesting an adapter.\n\nUsed as the options argument of the GPU.request_adapter() method.\n"
     },
@@ -988,18 +984,18 @@
           "doc": "A human-readable label for the device, used in debugging and error messages."
         },
         "required_features": {
-          "type": "list[enums.FeatureNameEnum]",
-          "default": "[]",
+          "type": "Sequence[enums.FeatureNameEnum]",
+          "default": "()",
           "doc": "A list of enums.FeatureName that the device must support. The request fails if the adapter cannot provide them. Exactly this set of features, no more and no less, is allowed on the resulting device."
         },
         "required_limits": {
-          "type": "dict[str, int | None]",
-          "default": "{}",
+          "type": "dict[str, int | None] | None",
+          "default": "None",
           "doc": "A mapping of limit names to the values the device requires; the request fails if the adapter cannot provide them. Unspecified limits get their default value. Validation on the device uses these exact limits, not the (possibly higher) limits of the adapter."
         },
         "default_queue": {
-          "type": "structs.QueueDescriptorStruct",
-          "default": "{}",
+          "type": "structs.QueueDescriptorStruct | None",
+          "default": "None",
           "doc": "A structs.QueueDescriptor with options for the default queue of the device."
         }
       },
@@ -1060,12 +1056,12 @@
           "doc": "The allowed usages of the texture, a combination of flags.TextureUsage."
         },
         "view_formats": {
-          "type": "list[enums.TextureFormatEnum]",
-          "default": "[]",
+          "type": "Sequence[enums.TextureFormatEnum]",
+          "default": "()",
           "doc": "Additional enums.TextureFormat values that views of this texture may use in GPUTexture.create_view(). They must be view-compatible with the texture format: equal, or (on devices with enums.FeatureName.core_features_and_limits) differing only in sRGB-ness. Adding formats can hurt performance on some systems, so only add what is needed."
         },
         "texture_binding_view_dimension": {
-          "type": "enums.TextureViewDimensionEnum",
+          "type": "enums.TextureViewDimensionEnum | None",
           "default": "None",
           "doc": "Compatibility mode only: on devices without enums.FeatureName.core_features_and_limits, views of this texture must have this enums.TextureViewDimension. A default is chosen if omitted. Ignored on core devices."
         }
@@ -1080,12 +1076,12 @@
           "doc": "A human-readable label for the texture view, used in debugging and error messages."
         },
         "format": {
-          "type": "enums.TextureFormatEnum",
+          "type": "enums.TextureFormatEnum | None",
           "default": "None",
           "doc": "The format of the view, see enums.TextureFormat. Must be the texture format or one of its view_formats. Defaults to the texture format."
         },
         "dimension": {
-          "type": "enums.TextureViewDimensionEnum",
+          "type": "enums.TextureViewDimensionEnum | None",
           "default": "None",
           "doc": "The dimensionality of the view, see enums.TextureViewDimension. Defaults to a dimension matching the texture."
         },
@@ -1101,7 +1097,7 @@
         },
         "base_mip_level": { "type": "int", "default": "0", "doc": "The first mip level accessible via the view. Defaults to 0." },
         "mip_level_count": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The number of mip levels accessible via the view. Defaults to all levels from base_mip_level."
         },
@@ -1111,7 +1107,7 @@
           "doc": "The first array layer accessible via the view. Defaults to 0."
         },
         "array_layer_count": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The number of array layers accessible via the view. Defaults to all layers from base_array_layer."
         },
@@ -1191,7 +1187,7 @@
           "doc": "The maximum level of detail used when sampling. Defaults to 32."
         },
         "compare": {
-          "type": "enums.CompareFunctionEnum",
+          "type": "enums.CompareFunctionEnum | None",
           "default": "None",
           "doc": "If set, makes this a comparison sampler using this enums.CompareFunction. Used for sampling depth textures. Filtering results of comparison samplers are implementation-dependent."
         },
@@ -1211,7 +1207,7 @@
           "doc": "A human-readable label for the bind group layout, used in debugging and error messages."
         },
         "entries": {
-          "type": "list[structs.BindGroupLayoutEntryStruct]",
+          "type": "Sequence[structs.BindGroupLayoutEntryStruct]",
           "default": "",
           "doc": "A list of structs.BindGroupLayoutEntry describing the resources in the bind group."
         }
@@ -1231,22 +1227,22 @@
           "doc": "The shader stages in which the resource is visible, a combination of flags.ShaderStage."
         },
         "buffer": {
-          "type": "structs.BufferBindingLayoutStruct",
+          "type": "structs.BufferBindingLayoutStruct | None",
           "default": "None",
           "doc": "If set, a structs.BufferBindingLayout: the entry is a buffer binding."
         },
         "sampler": {
-          "type": "structs.SamplerBindingLayoutStruct",
+          "type": "structs.SamplerBindingLayoutStruct | None",
           "default": "None",
           "doc": "If set, a structs.SamplerBindingLayout: the entry is a sampler binding."
         },
         "texture": {
-          "type": "structs.TextureBindingLayoutStruct",
+          "type": "structs.TextureBindingLayoutStruct | None",
           "default": "None",
           "doc": "If set, a structs.TextureBindingLayout: the entry is a sampled texture binding."
         },
         "storage_texture": {
-          "type": "structs.StorageTextureBindingLayoutStruct",
+          "type": "structs.StorageTextureBindingLayoutStruct | None",
           "default": "None",
           "doc": "If set, a structs.StorageTextureBindingLayout: the entry is a storage texture binding."
         }
@@ -1336,7 +1332,7 @@
           "doc": "The GPUBindGroupLayout that this bind group conforms to."
         },
         "entries": {
-          "type": "list[structs.BindGroupEntryStruct]",
+          "type": "Sequence[structs.BindGroupEntryStruct]",
           "default": "",
           "doc": "A list of structs.BindGroupEntry with the resources to bind. Must match the layout."
         }
@@ -1367,7 +1363,7 @@
           "doc": "The offset in bytes into the buffer where the binding starts. Defaults to 0."
         },
         "size": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The size in bytes of the binding. Defaults to the remainder of the buffer after offset."
         }
@@ -1382,7 +1378,7 @@
           "doc": "A human-readable label for the pipeline layout, used in debugging and error messages."
         },
         "bind_group_layouts": {
-          "type": "list[GPUBindGroupLayout]",
+          "type": "Sequence[GPUBindGroupLayout]",
           "default": "",
           "doc": "A list of GPUBindGroupLayout (or None for unused groups) used by the pipeline. The Nth element corresponds to @group(N) in the shader."
         },
@@ -1403,8 +1399,8 @@
         },
         "code": { "type": "str", "default": "", "doc": "The shader source code, in WGSL." },
         "compilation_hints": {
-          "type": "list[structs.ShaderModuleCompilationHintStruct]",
-          "default": "[]",
+          "type": "Sequence[structs.ShaderModuleCompilationHintStruct]",
+          "default": "()",
           "doc": "An optional list of structs.ShaderModuleCompilationHint that may help the implementation compile early. Hints only affect performance, are not validated, and only apply to the entry points they name (there is no default entry point)."
         }
       },
@@ -1414,7 +1410,7 @@
       "fields": {
         "entry_point": { "type": "str", "default": "", "doc": "The name of the shader entry point that the hint applies to." },
         "layout": {
-          "type": "GPUPipelineLayout | enums.AutoLayoutModeEnum",
+          "type": "GPUPipelineLayout | enums.AutoLayoutModeEnum | None",
           "default": "None",
           "doc": "The GPUPipelineLayout that the entry point will be used with, or enums.AutoLayoutMode.auto (the default pipeline layout for that entry point)."
         }
@@ -1435,13 +1431,13 @@
       "fields": {
         "module": { "type": "GPUShaderModule", "default": "", "doc": "The GPUShaderModule containing the shader code." },
         "entry_point": {
-          "type": "str",
+          "type": "str | None",
           "default": "None",
           "doc": "The name of the entry point function in the shader. Optional if the module has only one entry point for this stage."
         },
         "constants": {
-          "type": "dict[str, float]",
-          "default": "{}",
+          "type": "dict[str, float] | None",
+          "default": "None",
           "doc": "A mapping of the identifiers of pipeline-overridable constants in the shader to the values to use. A key is the numeric id (if the shader declares one) or the name of the constant. Values are converted to the WGSL type of the constant; a failed conversion is a validation error."
         }
       },
@@ -1485,22 +1481,22 @@
           "doc": "A structs.VertexState describing the vertex shader and vertex buffers."
         },
         "primitive": {
-          "type": "structs.PrimitiveStateStruct",
-          "default": "{}",
+          "type": "structs.PrimitiveStateStruct | None",
+          "default": "None",
           "doc": "A structs.PrimitiveState describing how primitives are assembled and rasterized."
         },
         "depth_stencil": {
-          "type": "structs.DepthStencilStateStruct",
+          "type": "structs.DepthStencilStateStruct | None",
           "default": "None",
           "doc": "An optional structs.DepthStencilState. If omitted, the pipeline does not use a depth-stencil attachment."
         },
         "multisample": {
-          "type": "structs.MultisampleStateStruct",
-          "default": "{}",
+          "type": "structs.MultisampleStateStruct | None",
+          "default": "None",
           "doc": "A structs.MultisampleState describing multisampling."
         },
         "fragment": {
-          "type": "structs.FragmentStateStruct",
+          "type": "structs.FragmentStateStruct | None",
           "default": "None",
           "doc": "An optional structs.FragmentState describing the fragment shader and render targets. If omitted, the pipeline has no color output (e.g. for depth-only passes)."
         }
@@ -1515,7 +1511,7 @@
           "doc": "How vertices are assembled into primitives, see enums.PrimitiveTopology. Defaults to triangle_list."
         },
         "strip_index_format": {
-          "type": "enums.IndexFormatEnum",
+          "type": "enums.IndexFormatEnum | None",
           "default": "None",
           "doc": "The enums.IndexFormat of the index buffer, which sets the primitive restart value (0xFFFF for uint16, 0xFFFFFFFF for uint32). Only allowed for strip topologies, where it is required for indexed draws and must match the format given to GPURenderCommandsMixin.set_index_buffer()."
         },
@@ -1565,17 +1561,17 @@
           "doc": "The GPUShaderModule containing the fragment shader code."
         },
         "entry_point": {
-          "type": "str",
+          "type": "str | None",
           "default": "None",
           "doc": "The name of the fragment entry point in the shader. Optional if the module has only one fragment entry point."
         },
         "constants": {
-          "type": "dict[str, float]",
-          "default": "{}",
+          "type": "dict[str, float] | None",
+          "default": "None",
           "doc": "A mapping of the identifiers of pipeline-overridable constants in the shader to the values to use. A key is the numeric id (if the shader declares one) or the name of the constant. Values are converted to the WGSL type of the constant; a failed conversion is a validation error."
         },
         "targets": {
-          "type": "list[structs.ColorTargetStateStruct]",
+          "type": "Sequence[structs.ColorTargetStateStruct]",
           "default": "",
           "doc": "A list of structs.ColorTargetState (or None for unused slots), one for each color attachment."
         }
@@ -1590,7 +1586,7 @@
           "doc": "The enums.TextureFormat of this color target. The pipeline is only compatible with render passes that use a view of this format in the corresponding color attachment."
         },
         "blend": {
-          "type": "structs.BlendStateStruct",
+          "type": "structs.BlendStateStruct | None",
           "default": "None",
           "doc": "An optional structs.BlendState. If omitted, blending is disabled and the fragment output replaces the target."
         },
@@ -1645,23 +1641,23 @@
           "doc": "The enums.TextureFormat of the depth-stencil attachment that this pipeline is compatible with."
         },
         "depth_write_enabled": {
-          "type": "bool",
+          "type": "bool | None",
           "default": "None",
           "doc": "If true, depth values of fragments that pass the depth test are written to the attachment."
         },
         "depth_compare": {
-          "type": "enums.CompareFunctionEnum",
+          "type": "enums.CompareFunctionEnum | None",
           "default": "None",
           "doc": "The enums.CompareFunction used for the depth test."
         },
         "stencil_front": {
-          "type": "structs.StencilFaceStateStruct",
-          "default": "{}",
+          "type": "structs.StencilFaceStateStruct | None",
+          "default": "None",
           "doc": "A structs.StencilFaceState for front-facing primitives."
         },
         "stencil_back": {
-          "type": "structs.StencilFaceStateStruct",
-          "default": "{}",
+          "type": "structs.StencilFaceStateStruct | None",
+          "default": "None",
           "doc": "A structs.StencilFaceState for back-facing primitives."
         },
         "stencil_read_mask": {
@@ -1725,18 +1721,18 @@
           "doc": "The GPUShaderModule containing the vertex shader code."
         },
         "entry_point": {
-          "type": "str",
+          "type": "str | None",
           "default": "None",
           "doc": "The name of the vertex entry point in the shader. Optional if the module has only one vertex entry point."
         },
         "constants": {
-          "type": "dict[str, float]",
-          "default": "{}",
+          "type": "dict[str, float] | None",
+          "default": "None",
           "doc": "A mapping of the identifiers of pipeline-overridable constants in the shader to the values to use. A key is the numeric id (if the shader declares one) or the name of the constant. Values are converted to the WGSL type of the constant; a failed conversion is a validation error."
         },
         "buffers": {
-          "type": "list[structs.VertexBufferLayoutStruct]",
-          "default": "[]",
+          "type": "Sequence[structs.VertexBufferLayoutStruct]",
+          "default": "()",
           "doc": "A list of structs.VertexBufferLayout (or None for unused slots) describing the vertex buffers."
         }
       },
@@ -1755,7 +1751,7 @@
           "doc": "How often the buffer is advanced, see enums.VertexStepMode. Defaults to vertex."
         },
         "attributes": {
-          "type": "list[structs.VertexAttributeStruct]",
+          "type": "Sequence[structs.VertexAttributeStruct]",
           "default": "",
           "doc": "A list of structs.VertexAttribute describing the attributes in each element."
         }
@@ -1786,12 +1782,12 @@
           "doc": "The offset in bytes into the data where the texel data starts. Defaults to 0."
         },
         "bytes_per_row": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The stride in bytes between the start of consecutive rows of texel blocks. Required if the copy has more than one row of texel blocks. Must be a multiple of 256 for buffer copies (not for GPUQueue.write_texture())."
         },
         "rows_per_image": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The number of rows of texel blocks per image (layer or slice); times bytes_per_row it is the stride between images. Required if the copy has more than one image."
         }
@@ -1806,12 +1802,12 @@
           "doc": "The offset in bytes into the buffer where the texel data starts. Defaults to 0."
         },
         "bytes_per_row": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The stride in bytes between the start of consecutive rows of texel blocks. Required if the copy has more than one row. Must be a multiple of 256."
         },
         "rows_per_image": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The number of rows of texel blocks per image (layer or slice). Required if the copy has more than one image."
         },
@@ -1828,8 +1824,8 @@
         "texture": { "type": "GPUTexture", "default": "", "doc": "The GPUTexture to copy to or from." },
         "mip_level": { "type": "int", "default": "0", "doc": "The mip level to copy to or from. Defaults to 0." },
         "origin": {
-          "type": "tuple[int, int, int] | structs.Origin3DStruct",
-          "default": "{}",
+          "type": "tuple[int, int, int] | structs.Origin3DStruct | None",
+          "default": "None",
           "doc": "The origin of the copy in the texture, as a structs.Origin3D or a tuple (x, y, z). Defaults to (0, 0, 0)."
         },
         "aspect": {
@@ -1868,12 +1864,12 @@
           "doc": "The GPUQuerySet (of type enums.QueryType.timestamp) to write the timestamps to."
         },
         "beginning_of_pass_write_index": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The index in the query set where the timestamp at the start of the pass is written. If omitted, no timestamp is written."
         },
         "end_of_pass_write_index": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The index in the query set where the timestamp at the end of the pass is written. If omitted, no timestamp is written."
         }
@@ -1888,7 +1884,7 @@
           "doc": "A human-readable label for the compute pass, used in debugging and error messages."
         },
         "timestamp_writes": {
-          "type": "structs.ComputePassTimestampWritesStruct",
+          "type": "structs.ComputePassTimestampWritesStruct | None",
           "default": "None",
           "doc": "An optional structs.ComputePassTimestampWrites for recording timestamps of the pass."
         }
@@ -1903,12 +1899,12 @@
           "doc": "The GPUQuerySet (of type enums.QueryType.timestamp) to write the timestamps to."
         },
         "beginning_of_pass_write_index": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The index in the query set where the timestamp at the start of the pass is written. If omitted, no timestamp is written."
         },
         "end_of_pass_write_index": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "The index in the query set where the timestamp at the end of the pass is written. If omitted, no timestamp is written."
         }
@@ -1923,22 +1919,22 @@
           "doc": "A human-readable label for the render pass, used in debugging and error messages."
         },
         "color_attachments": {
-          "type": "list[structs.RenderPassColorAttachmentStruct]",
+          "type": "Sequence[structs.RenderPassColorAttachmentStruct]",
           "default": "",
           "doc": "A list of structs.RenderPassColorAttachment (or None for unused slots) that the pass renders to. Attachments may not alias each other or any resource used inside the pass."
         },
         "depth_stencil_attachment": {
-          "type": "structs.RenderPassDepthStencilAttachmentStruct",
+          "type": "structs.RenderPassDepthStencilAttachmentStruct | None",
           "default": "None",
           "doc": "An optional structs.RenderPassDepthStencilAttachment for depth and stencil."
         },
         "occlusion_query_set": {
-          "type": "GPUQuerySet",
+          "type": "GPUQuerySet | None",
           "default": "None",
           "doc": "An optional GPUQuerySet of type enums.QueryType.occlusion, to store occlusion query results in."
         },
         "timestamp_writes": {
-          "type": "structs.RenderPassTimestampWritesStruct",
+          "type": "structs.RenderPassTimestampWritesStruct | None",
           "default": "None",
           "doc": "An optional structs.RenderPassTimestampWrites for recording timestamps of the pass."
         },
@@ -1958,17 +1954,17 @@
           "doc": "The GPUTextureView to render to. Its texture must have flags.TextureUsage.RENDER_ATTACHMENT."
         },
         "depth_slice": {
-          "type": "int",
+          "type": "int | None",
           "default": "None",
           "doc": "For 3D textures, the index of the depth slice to render to."
         },
         "resolve_target": {
-          "type": "GPUTexture | GPUTextureView",
+          "type": "GPUTexture | GPUTextureView | None",
           "default": "None",
           "doc": "An optional GPUTextureView to resolve the (multisampled) view into at the end of the pass."
         },
         "clear_value": {
-          "type": "tuple[float, float, float, float] | structs.ColorStruct",
+          "type": "tuple[float, float, float, float] | structs.ColorStruct | None",
           "default": "None",
           "doc": "The color to clear the attachment to if load_op is clear, as a structs.Color or a tuple (r, g, b, a). Defaults to transparent black."
         },
@@ -1993,17 +1989,17 @@
           "doc": "The GPUTextureView to use as depth-stencil attachment. Its texture must have flags.TextureUsage.RENDER_ATTACHMENT."
         },
         "depth_clear_value": {
-          "type": "float",
+          "type": "float | None",
           "default": "None",
           "doc": "The value to clear the depth aspect to if depth_load_op is clear. Must be between 0 and 1."
         },
         "depth_load_op": {
-          "type": "enums.LoadOpEnum",
+          "type": "enums.LoadOpEnum | None",
           "default": "None",
           "doc": "What to do with the existing depth values at the start of the pass, see enums.LoadOp. Required unless depth_read_only is true."
         },
         "depth_store_op": {
-          "type": "enums.StoreOpEnum",
+          "type": "enums.StoreOpEnum | None",
           "default": "None",
           "doc": "What to do with the depth values at the end of the pass, see enums.StoreOp. Required unless depth_read_only is true."
         },
@@ -2018,12 +2014,12 @@
           "doc": "The value to clear the stencil aspect to if stencil_load_op is clear. Truncated to the bit size of the stencil aspect (the least significant bits are kept). Defaults to 0."
         },
         "stencil_load_op": {
-          "type": "enums.LoadOpEnum",
+          "type": "enums.LoadOpEnum | None",
           "default": "None",
           "doc": "What to do with the existing stencil values at the start of the pass, see enums.LoadOp. Required unless stencil_read_only is true."
         },
         "stencil_store_op": {
-          "type": "enums.StoreOpEnum",
+          "type": "enums.StoreOpEnum | None",
           "default": "None",
           "doc": "What to do with the stencil values at the end of the pass, see enums.StoreOp. Required unless stencil_read_only is true."
         },
@@ -2043,12 +2039,12 @@
           "doc": "A human-readable label, used in debugging and error messages."
         },
         "color_formats": {
-          "type": "list[enums.TextureFormatEnum]",
+          "type": "Sequence[enums.TextureFormatEnum]",
           "default": "",
           "doc": "A list of enums.TextureFormat (or None for unused slots) of the color attachments."
         },
         "depth_stencil_format": {
-          "type": "enums.TextureFormatEnum",
+          "type": "enums.TextureFormatEnum | None",
           "default": "None",
           "doc": "The enums.TextureFormat of the depth-stencil attachment, if any."
         },
@@ -2078,12 +2074,12 @@
           "doc": "A human-readable label for the render bundle encoder, used in debugging and error messages."
         },
         "color_formats": {
-          "type": "list[enums.TextureFormatEnum]",
+          "type": "Sequence[enums.TextureFormatEnum]",
           "default": "",
           "doc": "A list of enums.TextureFormat (or None for unused slots) of the color attachments the bundle will be used with."
         },
         "depth_stencil_format": {
-          "type": "enums.TextureFormatEnum",
+          "type": "enums.TextureFormatEnum | None",
           "default": "None",
           "doc": "The enums.TextureFormat of the depth-stencil attachment the bundle will be used with, if any."
         },
@@ -2159,8 +2155,8 @@
           "doc": "The usages of the canvas textures, a combination of flags.TextureUsage. Defaults to RENDER_ATTACHMENT, but that is not added automatically when usage is set explicitly, so include it to render to the canvas texture."
         },
         "view_formats": {
-          "type": "list[enums.TextureFormatEnum]",
-          "default": "[]",
+          "type": "Sequence[enums.TextureFormatEnum]",
+          "default": "()",
           "doc": "Additional enums.TextureFormat values that views of the canvas texture may use."
         },
         "color_space": {
@@ -2169,8 +2165,8 @@
           "doc": "The color space of the canvas, e.g. 'srgb' or 'display-p3'. Defaults to 'srgb'."
         },
         "tone_mapping": {
-          "type": "structs.CanvasToneMappingStruct",
-          "default": "{}",
+          "type": "structs.CanvasToneMappingStruct | None",
+          "default": "None",
           "doc": "A structs.CanvasToneMapping that describes how the canvas content is tone mapped. May not be supported everywhere; detect support with GPUCanvasContext.get_configuration()."
         },
         "alpha_mode": {
@@ -2235,13 +2231,17 @@
         "label": {
           "type": "str",
           "doc": "A human-readable label for the object, used in debugging and error messages. Initially taken from the label field of the descriptor used to create it."
+        },
+        "uid": {
+          "type": "int",
+          "doc": "A unique id (integer) for this object.\n\nThe value is unique to the process; in contrast to ``id(ob)``, the numbers are never reused."
         }
       },
       "methods": {  },
       "doc": "The base class of all GPU objects.\n\nIt provides the label property that is shared by all objects in the API.\n"
     },
     "GPUAdapterInfo": {
-      "bases": [  ],
+      "bases": [ "dict" ],
       "properties": {
         "vendor": { "type": "str", "doc": "The name of the vendor of the adapter, e.g. 'nvidia' or 'amd'." },
         "architecture": { "type": "str", "doc": "The name of the family or class of GPUs the adapter belongs to." },
@@ -2272,16 +2272,27 @@
         "wgsl_language_features": { "type": "set", "doc": "The set of WGSL language features that are supported by the implementation." }
       },
       "methods": {
-        "request_adapter": {
+        "request_adapter_async": {
           "returns": { "type": "GPUPromise[GPUAdapter]", "doc": "A GPUAdapter, or None if no suitable adapter was found." },
           "args": {
             "options": {
-              "type": "structs.RequestAdapterOptionsStruct",
-              "default": "{}",
+              "type": "structs.RequestAdapterOptionsStruct | None",
+              "default": "None",
               "doc": "A structs.RequestAdapterOptions with options for selecting the adapter."
             }
           },
           "doc": "Request a GPUAdapter, which represents a physical GPU (or a software equivalent).\n\nThe adapter can be used to inspect the capabilities (features and limits) of the GPU,\nand to request a GPUDevice. If no suitable adapter is available, None is returned.\n"
+        },
+        "request_adapter_sync": {
+          "returns": { "type": "GPUAdapter", "doc": "" },
+          "args": {
+            "options": {
+              "type": "structs.RequestAdapterOptionsStruct | None",
+              "default": "None",
+              "doc": "A structs.RequestAdapterOptions with options for selecting the adapter."
+            }
+          },
+          "doc": "The synchronous variant of request_adapter_async()."
         },
         "get_preferred_canvas_format": {
           "returns": {
@@ -2290,6 +2301,23 @@
           },
           "args": {  },
           "doc": "Get the preferred texture format for presenting to a canvas.\n\nUsing this format for the format field of structs.CanvasConfiguration avoids a conversion when presenting.\n"
+        },
+        "enumerate_adapters_async": {
+          "doc": "Get a list of adapter objects available on the current system.",
+          "returns": { "type": "GPUPromise[list[GPUAdapter]]" },
+          "args": {  }
+        },
+        "enumerate_adapters_sync": {
+          "doc": "Get a list of adapter objects available on the current system.",
+          "returns": { "type": "list[GPUAdapter]" },
+          "args": {  }
+        },
+        "get_canvas_context": {
+          "doc": "Get the GPUCanvasContext object for the appropriate backend.\n\nNote that the recommended way to get a context is to instead use the ``rendercanvas`` library.\n\nThe ``present_info`` dict should have a ``window`` field containing the window id. On Linux there should also be ``platform`` field to distinguish between 'wayland' and 'x11', and a ``display`` field for the display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object. This dict is an interface between `rendercanvas`` and ``wgpu-py``.",
+          "returns": { "type": "GPUCanvasContext" },
+          "args": {
+            "present_info": { "type": "dict", "default": "", "doc": "The low-level presentation info." }
+          }
         }
       },
       "doc": "The entry point of the API.\n\nIt is used to request a GPUAdapter. In wgpu-py an instance is available as wgpu.gpu.\n"
@@ -2302,25 +2330,40 @@
         "info": {
           "type": "GPUAdapterInfo",
           "doc": "A GPUAdapterInfo with information about the adapter. The values are constant over time."
+        },
+        "summary": {
+          "type": "str",
+          "doc": "A one-line summary of the info of this adapter (device, adapter_type, backend_type)."
         }
       },
       "methods": {
-        "request_device": {
+        "request_device_async": {
           "returns": { "type": "GPUPromise[GPUDevice]", "doc": "A GPUDevice." },
           "args": {
             "descriptor": {
-              "type": "structs.DeviceDescriptorStruct",
-              "default": "{}",
+              "type": "structs.DeviceDescriptorStruct | None",
+              "default": "None",
               "doc": "A structs.DeviceDescriptor with the required features and limits."
             }
           },
           "doc": "Request a GPUDevice from the adapter.\n\nThe device is the main object used to create resources and to submit work. An adapter can\nonly provide a single device; if it was already used, or if the requested features or limits\nare not supported, the request fails.\n"
+        },
+        "request_device_sync": {
+          "returns": { "type": "GPUDevice", "doc": "" },
+          "args": {
+            "descriptor": {
+              "type": "structs.DeviceDescriptorStruct | None",
+              "default": "None",
+              "doc": "A structs.DeviceDescriptor with the required features and limits."
+            }
+          },
+          "doc": "The synchronous variant of request_device_async()."
         }
       },
       "doc": "Represents a physical GPU (or a software implementation of one).\n\nAn adapter can be used to inspect the capabilities of the GPU, and to request a GPUDevice,\nwhich is used to do actual work. Adapters are obtained via GPU.request_adapter().\n"
     },
     "GPUDevice": {
-      "bases": [ "EventTarget", "GPUObjectBase" ],
+      "bases": [ "GPUObjectBase" ],
       "properties": {
         "features": {
           "type": "set",
@@ -2342,7 +2385,8 @@
         "onuncapturederror": {
           "type": "None",
           "doc": "A callback that is called with an event (see structs.UncapturedErrorEventInit) when an error occurs that is not captured by an error scope."
-        }
+        },
+        "adapter": { "type": "GPUAdapter", "doc": "The adapter object corresponding to this device." }
       },
       "methods": {
         "destroy": {
@@ -2376,8 +2420,8 @@
           "returns": { "type": "GPUSampler", "doc": "A GPUSampler." },
           "args": {
             "descriptor": {
-              "type": "structs.SamplerDescriptorStruct",
-              "default": "{}",
+              "type": "structs.SamplerDescriptorStruct | None",
+              "default": "None",
               "doc": "A structs.SamplerDescriptor describing the sampler. If omitted, the defaults are used."
             }
           },
@@ -2475,8 +2519,8 @@
           "returns": { "type": "GPUCommandEncoder", "doc": "A GPUCommandEncoder." },
           "args": {
             "descriptor": {
-              "type": "structs.CommandEncoderDescriptorStruct",
-              "default": "{}",
+              "type": "structs.CommandEncoderDescriptorStruct | None",
+              "default": "None",
               "doc": "A structs.CommandEncoderDescriptor. Optional."
             }
           },
@@ -2515,13 +2559,26 @@
           },
           "doc": "Push a new error scope onto the device's error scope stack.\n\nWhile the scope is active, errors of the given type that are generated by operations on this device are\ncaptured by the scope (instead of triggering the onuncapturederror callback). Retrieve them with pop_error_scope().\n"
         },
-        "pop_error_scope": {
+        "pop_error_scope_async": {
           "returns": {
             "type": "GPUPromise[GPUError]",
             "doc": "A GPUError (GPUValidationError, GPUOutOfMemoryError or GPUInternalError), or None if no error was captured."
           },
           "args": {  },
           "doc": "Pop the most recent error scope from the stack and return an error observed by it.\n\nFails if there is no error scope to pop. Errors are only reported once all operations in the scope have been processed.\n"
+        },
+        "pop_error_scope_sync": {
+          "returns": { "type": "GPUError", "doc": "" },
+          "args": {  },
+          "doc": "The synchronous variant of pop_error_scope_async()."
+        },
+        "create_buffer_with_data": {
+          "returns": { "type": "GPUBuffer" },
+          "args": {
+            "label": { "type": "str", "default": "\"\"" },
+            "data": { "type": "ArrayLike", "default": "" },
+            "usage": { "type": "flags.BufferUsageFlags", "default": "" }
+          }
         }
       },
       "doc": "The main object that is used to create GPU resources and to submit work.\n\nA device is requested from a GPUAdapter. It is a GPUObjectBase, and has a GPUQueue\n(the queue property) which is used to submit work to the GPU. Most resources\n(buffers, textures, pipelines, etc.) are created using the create_* methods of the device.\n"
@@ -2551,12 +2608,33 @@
               "doc": "The offset in bytes of the range to map. Must be a multiple of 8. Defaults to 0."
             },
             "size": {
-              "type": "int",
+              "type": "int | None",
               "default": "None",
               "doc": "The size in bytes of the range to map. Must be a multiple of 4. Defaults to the remainder of the buffer after offset."
             }
           },
           "doc": "Map (a part of) the buffer so its memory can be accessed by the CPU.\n\nThe returned promise or future resolves when the buffer is mapped. Once mapped, use get_mapped_range()\nto access the data, and call unmap() when done to give the buffer back to the GPU.\nResolving only indicates that this buffer is mapped, not that other work has completed. However, when GPUQueue.on_submitted_work_done()\nresolves, earlier map_async() calls on buffers last used exclusively on that queue have completed.\n"
+        },
+        "map_sync": {
+          "returns": { "type": "None", "doc": "" },
+          "args": {
+            "mode": {
+              "type": "flags.MapModeFlags",
+              "default": "",
+              "doc": "Whether to map for reading or writing, see flags.MapMode."
+            },
+            "offset": {
+              "type": "int",
+              "default": "0",
+              "doc": "The offset in bytes of the range to map. Must be a multiple of 8. Defaults to 0."
+            },
+            "size": {
+              "type": "int | None",
+              "default": "None",
+              "doc": "The size in bytes of the range to map. Must be a multiple of 4. Defaults to the remainder of the buffer after offset."
+            }
+          },
+          "doc": "The synchronous variant of map_async()."
         },
         "get_mapped_range": {
           "returns": { "type": "ArrayLike", "doc": "A writable memory view (e.g. a memoryview) on the mapped range." },
@@ -2567,7 +2645,7 @@
               "doc": "The offset in bytes of the range, relative to the start of the buffer. Must be a multiple of 8. Defaults to 0."
             },
             "size": {
-              "type": "int",
+              "type": "int | None",
               "default": "None",
               "doc": "The size in bytes of the range. Must be a multiple of 4. Defaults to the remainder of the mapped range after offset."
             }
@@ -2614,8 +2692,8 @@
           "returns": { "type": "GPUTextureView", "doc": "A GPUTextureView." },
           "args": {
             "descriptor": {
-              "type": "structs.TextureViewDescriptorStruct",
-              "default": "{}",
+              "type": "structs.TextureViewDescriptorStruct | None",
+              "default": "None",
               "doc": "A structs.TextureViewDescriptor. If omitted, a view of the whole texture is created."
             }
           },
@@ -2663,13 +2741,18 @@
       "bases": [ "GPUObjectBase" ],
       "properties": {  },
       "methods": {
-        "get_compilation_info": {
+        "get_compilation_info_async": {
           "returns": {
             "type": "GPUPromise[GPUCompilationInfo]",
             "doc": "A GPUCompilationInfo (awaitable) with the list of messages."
           },
           "args": {  },
           "doc": "Get diagnostic messages (errors, warnings, info) produced when compiling the shader.\n\nThe locations, order and contents of the messages are implementation-defined; in particular, they are not necessarily ordered by line number.\n"
+        },
+        "get_compilation_info_sync": {
+          "returns": { "type": "GPUCompilationInfo", "doc": "" },
+          "args": {  },
+          "doc": "The synchronous variant of get_compilation_info_async()."
         }
       },
       "doc": "A compiled piece of shader code (WGSL), containing one or more entry points.\n\nShader modules are created with GPUDevice.create_shader_module() and used in pipeline descriptors (see structs.ProgrammableStage).\n"
@@ -2705,7 +2788,7 @@
     "GPUCompilationInfo": {
       "bases": [  ],
       "properties": {
-        "messages": { "type": "list[GPUCompilationMessage]", "doc": "A list of GPUCompilationMessage objects." }
+        "messages": { "type": "Sequence[GPUCompilationMessage]", "doc": "A list of GPUCompilationMessage objects." }
       },
       "methods": {  },
       "doc": "The diagnostic messages produced when compiling a shader module.\n\nObtained from GPUShaderModule.get_compilation_info().\n"
@@ -2722,7 +2805,7 @@
         "__init__": {
           "returns": { "type": "None", "doc": "A GPUPipelineError." },
           "args": {
-            "message": { "type": "str", "default": "", "doc": "The human-readable error message." },
+            "message": { "type": "str", "default": "\"\"", "doc": "The human-readable error message." },
             "options": {
               "type": "structs.PipelineErrorInitStruct",
               "default": "",
@@ -2795,8 +2878,8 @@
           "returns": { "type": "GPUComputePassEncoder", "doc": "A GPUComputePassEncoder." },
           "args": {
             "descriptor": {
-              "type": "structs.ComputePassDescriptorStruct",
-              "default": "{}",
+              "type": "structs.ComputePassDescriptorStruct | None",
+              "default": "None",
               "doc": "A structs.ComputePassDescriptor. Optional."
             }
           },
@@ -2818,7 +2901,7 @@
               "doc": "The offset in bytes in the destination buffer where the data is written."
             },
             "size": {
-              "type": "int",
+              "type": "int | None",
               "default": "None",
               "doc": "The number of bytes to copy. Defaults to the size of the source buffer minus the source_offset argument of this method."
             }
@@ -2898,7 +2981,7 @@
               "doc": "The offset in bytes where the clearing starts. Must be a multiple of 4. Defaults to 0."
             },
             "size": {
-              "type": "int",
+              "type": "int | None",
               "default": "None",
               "doc": "The number of bytes to clear. Must be a multiple of 4. Defaults to the remainder of the buffer after offset."
             }
@@ -2924,8 +3007,8 @@
           "returns": { "type": "GPUCommandBuffer", "doc": "A GPUCommandBuffer." },
           "args": {
             "descriptor": {
-              "type": "structs.CommandBufferDescriptorStruct",
-              "default": "{}",
+              "type": "structs.CommandBufferDescriptorStruct | None",
+              "default": "None",
               "doc": "A structs.CommandBufferDescriptor. Optional."
             }
           },
@@ -2984,7 +3067,7 @@
               "doc": "The offset in the data (in elements of the data type, or bytes) where reading starts. Defaults to 0."
             },
             "data_size": {
-              "type": "int",
+              "type": "int | None",
               "default": "None",
               "doc": "The amount of data to write (in elements of the data type, or bytes). Defaults to the remainder of the data after data_offset."
             }
@@ -3142,7 +3225,7 @@
           "returns": { "type": "None", "doc": "None." },
           "args": {
             "bundles": {
-              "type": "list[GPURenderBundle]",
+              "type": "Sequence[GPURenderBundle]",
               "default": "",
               "doc": "A list of GPURenderBundle objects to execute, in order."
             }
@@ -3183,7 +3266,7 @@
               "doc": "The offset in bytes in the buffer where the indices start. Defaults to 0."
             },
             "size": {
-              "type": "int",
+              "type": "int | None",
               "default": "None",
               "doc": "The size in bytes of the range to use. Defaults to the remainder of the buffer after offset."
             }
@@ -3209,7 +3292,7 @@
               "doc": "The offset in bytes in the buffer where the vertex data starts. Defaults to 0."
             },
             "size": {
-              "type": "int",
+              "type": "int | None",
               "default": "None",
               "doc": "The size in bytes of the range to use. Defaults to the remainder of the buffer after offset."
             }
@@ -3304,8 +3387,8 @@
           "returns": { "type": "GPURenderBundle", "doc": "A GPURenderBundle." },
           "args": {
             "descriptor": {
-              "type": "structs.RenderBundleDescriptorStruct",
-              "default": "{}",
+              "type": "structs.RenderBundleDescriptorStruct | None",
+              "default": "None",
               "doc": "A structs.RenderBundleDescriptor. Optional."
             }
           },
@@ -3322,17 +3405,22 @@
           "returns": { "type": "None", "doc": "None." },
           "args": {
             "command_buffers": {
-              "type": "list[GPUCommandBuffer]",
+              "type": "Sequence[GPUCommandBuffer]",
               "default": "",
               "doc": "A list of GPUCommandBuffer objects, executed in order."
             }
           },
           "doc": "Submit a list of command buffers for execution on the GPU.\n\nEach command buffer can only be submitted once.\n"
         },
-        "on_submitted_work_done": {
+        "on_submitted_work_done_async": {
           "returns": { "type": "GPUPromise[None]", "doc": "None (awaitable); resolves when the submitted work is done." },
           "args": {  },
           "doc": "Wait until all work that was submitted so far has been completed by the GPU.\n\nResolving also implies completion of earlier GPUBuffer.map_async() calls on buffers last used exclusively on this queue.\n"
+        },
+        "on_submitted_work_done_sync": {
+          "returns": { "type": "None", "doc": "" },
+          "args": {  },
+          "doc": "The synchronous variant of on_submitted_work_done_async()."
         },
         "write_buffer": {
           "returns": { "type": "None", "doc": "None." },
@@ -3350,7 +3438,7 @@
               "doc": "The offset in the data (in elements of the data type, or bytes) where reading starts. Defaults to 0."
             },
             "size": {
-              "type": "int",
+              "type": "int | None",
               "default": "None",
               "doc": "The amount of data to write (in elements of the data type, or bytes). Defaults to the remainder of the data after data_offset."
             }
@@ -3404,7 +3492,8 @@
     "GPUCanvasContext": {
       "bases": [  ],
       "properties": {
-        "canvas": { "type": "CanvasLike", "doc": "The canvas (or window/surface object) that this context belongs to." }
+        "canvas": { "type": "CanvasLike", "doc": "The canvas (or window/surface object) that this context belongs to." },
+        "physical_size": { "doc": "Get the physical size of the current framebuffer.", "type": "tuple[int, int]" }
       },
       "methods": {
         "configure": {
@@ -3435,6 +3524,26 @@
           "returns": { "type": "GPUTexture", "doc": "A GPUTexture." },
           "args": {  },
           "doc": "Get the GPUTexture to render to for the current frame.\n\nThe texture has the size of the canvas, and is the texture that will be composited to the canvas next. The same GPUTexture object is returned\nuntil the frame is presented (even if it was destroyed or failed validation); a new one is returned for the next frame.\n"
+        },
+        "set_physical_size": {
+          "doc": "Set the current framebuffer physical size.",
+          "returns": { "type": "None" },
+          "args": {
+            "width": { "type": "int", "default": "", "doc": "The new width of the framebuffer." },
+            "height": { "type": "int", "default": "", "doc": "The new height of the framebuffer." }
+          }
+        },
+        "get_preferred_format": {
+          "doc": "Get the preferred surface texture format.",
+          "returns": { "type": "enums.TextureFormat" },
+          "args": {
+            "adapter": { "type": "GPUAdapter", "default": "" }
+          }
+        },
+        "present": {
+          "doc": "Present what has been drawn to the current texture, by compositing it to the canvas.",
+          "returns": { "type": "None" },
+          "args": {  }
         }
       },
       "doc": "The connection between a canvas (or window) and the GPU, used to present rendered images.\n\nConfigure it with configure(), then each frame obtain a texture with get_current_texture(),\nrender to it, and submit the work. The result is presented when the frame ends.\n"

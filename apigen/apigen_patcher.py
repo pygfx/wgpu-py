@@ -185,9 +185,14 @@ class ApiPatcher(Patcher):
     walk over each of its properties and methods to patch these too.
     """
 
-    def __init__(self, api_dict):
+    known_external_classes = {"GPUPromise"}
+
+    def __init__(self, api_dict, explode_single_args_that_are_descriptors: bool):
         super().__init__()
         self.api_dict = api_dict
+        self.explode_single_args_that_are_descriptors = (
+            explode_single_args_that_are_descriptors
+        )
 
     def apply(self, code):
         self._init(code)
@@ -203,7 +208,9 @@ class ApiPatcher(Patcher):
         for classname, i1, i2 in self.iter_classes():
             seen_classes.add(classname)
             self._apidiffs = set()
-            if self.class_is_known(classname):
+            if classname in self.known_external_classes:
+                pass
+            elif self.class_is_known(classname):
                 old_line = self.lines[i1]
                 new_line = self.get_class_def(classname)
                 if old_line != new_line:
@@ -240,7 +247,7 @@ class ApiPatcher(Patcher):
             if self.prop_is_known(classname, propname):
                 old_line = self.lines[j1]
                 new_line = self.get_property_def(classname, propname)
-                if old_line != new_line:
+                if old_line != new_line.split("@property\n")[1]:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
@@ -269,6 +276,8 @@ class ApiPatcher(Patcher):
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
+            elif methodname.startswith("_"):
+                pass
             else:
                 msg = f"unknown api: method {classname}.{methodname}"
                 self.insert_line(j1, "    # FIXME: " + msg)
@@ -286,7 +295,6 @@ class ApiPatcher(Patcher):
         for propname in self.get_prop_names(classname):
             if propname not in seen_props:
                 lines.append("    # FIXME: new prop to implement")
-                lines.append("    @property")
                 lines.append(self.get_property_def(classname, propname))
                 lines.append("        raise NotImplementedError()")
                 lines.append("")
@@ -316,8 +324,35 @@ class ApiPatcher(Patcher):
     def get_method_def(self, class_name, method_name) -> str:
         method_dict = self.api_dict["classes"][class_name]["methods"][method_name]
         args = ["self"]
-        for arg_name, arg_dict in method_dict["args"].items():
-            arg = f"{arg_name}: {arg_dict['type']}"
+        args_dict = method_dict["args"]
+        # Maybe use descriptor field as args
+        if (
+            self.explode_single_args_that_are_descriptors
+            and len(method_dict["args"]) == 1
+        ):
+            arg_type_name = list(method_dict["args"].values())[0]["type"]
+            if arg_type_name.startswith("structs."):
+                if arg_type_name.endswith(" | None"):
+                    arg_type_name = arg_type_name[:-7]
+                if arg_type_name.endswith("Struct"):
+                    arg_type_name = arg_type_name[:-6]
+                args.append("*")
+                args_dict = self.api_dict["structs"][arg_type_name[8:]]["fields"]
+        # Maybe make the args non-positional
+        if "*" not in args:
+            need_star = False
+            previous_where_all_required = True
+            for arg_name, arg_dict in args_dict.items():
+                if arg_dict["default"]:
+                    previous_where_all_required = False
+                elif not previous_where_all_required:
+                    need_star = True
+            if need_star:
+                args.append("*")
+        # Build signature
+        for arg_name, arg_dict in args_dict.items():
+            typ = arg_dict["type"]
+            arg = f"{arg_name}: {typ}"
             if arg_dict["default"]:
                 arg += f" = {arg_dict['default']}"
             args.append(arg)
@@ -337,10 +372,10 @@ class ApiPatcher(Patcher):
         return list(self.api_dict["classes"].keys())
 
     def get_prop_names(self, class_name):
-        return list(self.api_dict["classes"][class_name]["properties"].keys())
+        return list(self.api_dict["classes"][class_name].get("properties", {}).keys())
 
     def get_method_names(self, class_name):
-        return list(self.api_dict["classes"][class_name]["methods"].keys())
+        return list(self.api_dict["classes"][class_name].get("methods", {}).keys())
 
 
 class StructValidationChecker(Patcher):

@@ -469,7 +469,7 @@
     "RequestAdapterOptions": {
       "fields": {
         "feature_level": { "type": "str", "default": "\"core\"" },
-        "power_preference": { "type": "enums.PowerPreferenceEnum", "default": "None" },
+        "power_preference": { "type": "enums.PowerPreferenceEnum | None", "default": "None" },
         "force_fallback_adapter": { "type": "bool", "default": "False" },
         "xr_compatible": { "type": "bool", "default": "False" }
       }
@@ -477,9 +477,9 @@
     "DeviceDescriptor": {
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
-        "required_features": { "type": "list[enums.FeatureNameEnum]", "default": "[]" },
-        "required_limits": { "type": "dict[str, int | None]", "default": "{}" },
-        "default_queue": { "type": "structs.QueueDescriptorStruct", "default": "{}" }
+        "required_features": { "type": "Sequence[enums.FeatureNameEnum]", "default": "()" },
+        "required_limits": { "type": "dict[str, int | None] | None", "default": "None" },
+        "default_queue": { "type": "structs.QueueDescriptorStruct | None", "default": "None" }
       }
     },
     "BufferDescriptor": {
@@ -499,21 +499,21 @@
         "dimension": { "type": "enums.TextureDimensionEnum", "default": "\"2d\"" },
         "format": { "type": "enums.TextureFormatEnum", "default": "" },
         "usage": { "type": "flags.TextureUsageFlags", "default": "" },
-        "view_formats": { "type": "list[enums.TextureFormatEnum]", "default": "[]" },
-        "texture_binding_view_dimension": { "type": "enums.TextureViewDimensionEnum", "default": "None" }
+        "view_formats": { "type": "Sequence[enums.TextureFormatEnum]", "default": "()" },
+        "texture_binding_view_dimension": { "type": "enums.TextureViewDimensionEnum | None", "default": "None" }
       }
     },
     "TextureViewDescriptor": {
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
-        "format": { "type": "enums.TextureFormatEnum", "default": "None" },
-        "dimension": { "type": "enums.TextureViewDimensionEnum", "default": "None" },
+        "format": { "type": "enums.TextureFormatEnum | None", "default": "None" },
+        "dimension": { "type": "enums.TextureViewDimensionEnum | None", "default": "None" },
         "usage": { "type": "flags.TextureUsageFlags", "default": "0" },
         "aspect": { "type": "enums.TextureAspectEnum", "default": "\"all\"" },
         "base_mip_level": { "type": "int", "default": "0" },
-        "mip_level_count": { "type": "int", "default": "None" },
+        "mip_level_count": { "type": "int | None", "default": "None" },
         "base_array_layer": { "type": "int", "default": "0" },
-        "array_layer_count": { "type": "int", "default": "None" },
+        "array_layer_count": { "type": "int | None", "default": "None" },
         "swizzle": { "type": "str", "default": "\"rgba\"" }
       }
     },
@@ -535,25 +535,25 @@
         "mipmap_filter": { "type": "enums.MipmapFilterModeEnum", "default": "\"nearest\"" },
         "lod_min_clamp": { "type": "float", "default": "0" },
         "lod_max_clamp": { "type": "float", "default": "32" },
-        "compare": { "type": "enums.CompareFunctionEnum", "default": "None" },
+        "compare": { "type": "enums.CompareFunctionEnum | None", "default": "None" },
         "max_anisotropy": { "type": "int", "default": "1" }
       }
     },
     "BindGroupLayoutDescriptor": {
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
-        "entries": { "type": "list[structs.BindGroupLayoutEntryStruct]", "default": "" }
+        "entries": { "type": "Sequence[structs.BindGroupLayoutEntryStruct]", "default": "" }
       }
     },
     "BindGroupLayoutEntry": {
       "fields": {
         "binding": { "type": "int", "default": "" },
         "visibility": { "type": "flags.ShaderStageFlags", "default": "" },
-        "buffer": { "type": "structs.BufferBindingLayoutStruct", "default": "None" },
-        "sampler": { "type": "structs.SamplerBindingLayoutStruct", "default": "None" },
-        "texture": { "type": "structs.TextureBindingLayoutStruct", "default": "None" },
-        "storage_texture": { "type": "structs.StorageTextureBindingLayoutStruct", "default": "None" },
-        "external_texture": { "type": "structs.ExternalTextureBindingLayoutStruct", "default": "None" }
+        "buffer": { "type": "structs.BufferBindingLayoutStruct | None", "default": "None" },
+        "sampler": { "type": "structs.SamplerBindingLayoutStruct | None", "default": "None" },
+        "texture": { "type": "structs.TextureBindingLayoutStruct | None", "default": "None" },
+        "storage_texture": { "type": "structs.StorageTextureBindingLayoutStruct | None", "default": "None" },
+        "external_texture": { "type": "structs.ExternalTextureBindingLayoutStruct | None", "default": "None" }
       }
     },
     "BufferBindingLayout": {
@@ -589,7 +589,7 @@
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
         "layout": { "type": "GPUBindGroupLayout", "default": "" },
-        "entries": { "type": "list[structs.BindGroupEntryStruct]", "default": "" }
+        "entries": { "type": "Sequence[structs.BindGroupEntryStruct]", "default": "" }
       }
     },
     "BindGroupEntry": {
@@ -605,13 +605,13 @@
       "fields": {
         "buffer": { "type": "GPUBuffer", "default": "" },
         "offset": { "type": "int", "default": "0" },
-        "size": { "type": "int", "default": "None" }
+        "size": { "type": "int | None", "default": "None" }
       }
     },
     "PipelineLayoutDescriptor": {
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
-        "bind_group_layouts": { "type": "list[GPUBindGroupLayout]", "default": "" },
+        "bind_group_layouts": { "type": "Sequence[GPUBindGroupLayout]", "default": "" },
         "immediate_size": { "type": "int", "default": "0" }
       }
     },
@@ -619,13 +619,13 @@
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
         "code": { "type": "str", "default": "" },
-        "compilation_hints": { "type": "list[structs.ShaderModuleCompilationHintStruct]", "default": "[]" }
+        "compilation_hints": { "type": "Sequence[structs.ShaderModuleCompilationHintStruct]", "default": "()" }
       }
     },
     "ShaderModuleCompilationHint": {
       "fields": {
         "entry_point": { "type": "str", "default": "" },
-        "layout": { "type": "GPUPipelineLayout | enums.AutoLayoutModeEnum", "default": "None" }
+        "layout": { "type": "GPUPipelineLayout | enums.AutoLayoutModeEnum | None", "default": "None" }
       }
     },
     "PipelineErrorInit": {
@@ -636,8 +636,8 @@
     "ProgrammableStage": {
       "fields": {
         "module": { "type": "GPUShaderModule", "default": "" },
-        "entry_point": { "type": "str", "default": "None" },
-        "constants": { "type": "dict[str, float]", "default": "{}" }
+        "entry_point": { "type": "str | None", "default": "None" },
+        "constants": { "type": "dict[str, float] | None", "default": "None" }
       }
     },
     "ComputePipelineDescriptor": {
@@ -652,16 +652,16 @@
         "label": { "type": "str", "default": "\"\"" },
         "layout": { "type": "GPUPipelineLayout | enums.AutoLayoutModeEnum", "default": "" },
         "vertex": { "type": "structs.VertexStateStruct", "default": "" },
-        "primitive": { "type": "structs.PrimitiveStateStruct", "default": "{}" },
-        "depth_stencil": { "type": "structs.DepthStencilStateStruct", "default": "None" },
-        "multisample": { "type": "structs.MultisampleStateStruct", "default": "{}" },
-        "fragment": { "type": "structs.FragmentStateStruct", "default": "None" }
+        "primitive": { "type": "structs.PrimitiveStateStruct | None", "default": "None" },
+        "depth_stencil": { "type": "structs.DepthStencilStateStruct | None", "default": "None" },
+        "multisample": { "type": "structs.MultisampleStateStruct | None", "default": "None" },
+        "fragment": { "type": "structs.FragmentStateStruct | None", "default": "None" }
       }
     },
     "PrimitiveState": {
       "fields": {
         "topology": { "type": "enums.PrimitiveTopologyEnum", "default": "\"triangle-list\"" },
-        "strip_index_format": { "type": "enums.IndexFormatEnum", "default": "None" },
+        "strip_index_format": { "type": "enums.IndexFormatEnum | None", "default": "None" },
         "front_face": { "type": "enums.FrontFaceEnum", "default": "\"ccw\"" },
         "cull_mode": { "type": "enums.CullModeEnum", "default": "\"none\"" },
         "unclipped_depth": { "type": "bool", "default": "False" }
@@ -677,15 +677,15 @@
     "FragmentState": {
       "fields": {
         "module": { "type": "GPUShaderModule", "default": "" },
-        "entry_point": { "type": "str", "default": "None" },
-        "constants": { "type": "dict[str, float]", "default": "{}" },
-        "targets": { "type": "list[structs.ColorTargetStateStruct]", "default": "" }
+        "entry_point": { "type": "str | None", "default": "None" },
+        "constants": { "type": "dict[str, float] | None", "default": "None" },
+        "targets": { "type": "Sequence[structs.ColorTargetStateStruct]", "default": "" }
       }
     },
     "ColorTargetState": {
       "fields": {
         "format": { "type": "enums.TextureFormatEnum", "default": "" },
-        "blend": { "type": "structs.BlendStateStruct", "default": "None" },
+        "blend": { "type": "structs.BlendStateStruct | None", "default": "None" },
         "write_mask": { "type": "flags.ColorWriteFlags", "default": "0xF" }
       }
     },
@@ -705,10 +705,10 @@
     "DepthStencilState": {
       "fields": {
         "format": { "type": "enums.TextureFormatEnum", "default": "" },
-        "depth_write_enabled": { "type": "bool", "default": "None" },
-        "depth_compare": { "type": "enums.CompareFunctionEnum", "default": "None" },
-        "stencil_front": { "type": "structs.StencilFaceStateStruct", "default": "{}" },
-        "stencil_back": { "type": "structs.StencilFaceStateStruct", "default": "{}" },
+        "depth_write_enabled": { "type": "bool | None", "default": "None" },
+        "depth_compare": { "type": "enums.CompareFunctionEnum | None", "default": "None" },
+        "stencil_front": { "type": "structs.StencilFaceStateStruct | None", "default": "None" },
+        "stencil_back": { "type": "structs.StencilFaceStateStruct | None", "default": "None" },
         "stencil_read_mask": { "type": "int", "default": "0xFFFFFFFF" },
         "stencil_write_mask": { "type": "int", "default": "0xFFFFFFFF" },
         "depth_bias": { "type": "int", "default": "0" },
@@ -727,16 +727,16 @@
     "VertexState": {
       "fields": {
         "module": { "type": "GPUShaderModule", "default": "" },
-        "entry_point": { "type": "str", "default": "None" },
-        "constants": { "type": "dict[str, float]", "default": "{}" },
-        "buffers": { "type": "list[structs.VertexBufferLayoutStruct]", "default": "[]" }
+        "entry_point": { "type": "str | None", "default": "None" },
+        "constants": { "type": "dict[str, float] | None", "default": "None" },
+        "buffers": { "type": "Sequence[structs.VertexBufferLayoutStruct]", "default": "()" }
       }
     },
     "VertexBufferLayout": {
       "fields": {
         "array_stride": { "type": "int", "default": "" },
         "step_mode": { "type": "enums.VertexStepModeEnum", "default": "\"vertex\"" },
-        "attributes": { "type": "list[structs.VertexAttributeStruct]", "default": "" }
+        "attributes": { "type": "Sequence[structs.VertexAttributeStruct]", "default": "" }
       }
     },
     "VertexAttribute": {
@@ -749,15 +749,15 @@
     "TexelCopyBufferLayout": {
       "fields": {
         "offset": { "type": "int", "default": "0" },
-        "bytes_per_row": { "type": "int", "default": "None" },
-        "rows_per_image": { "type": "int", "default": "None" }
+        "bytes_per_row": { "type": "int | None", "default": "None" },
+        "rows_per_image": { "type": "int | None", "default": "None" }
       }
     },
     "TexelCopyBufferInfo": {
       "fields": {
         "offset": { "type": "int", "default": "0" },
-        "bytes_per_row": { "type": "int", "default": "None" },
-        "rows_per_image": { "type": "int", "default": "None" },
+        "bytes_per_row": { "type": "int | None", "default": "None" },
+        "rows_per_image": { "type": "int | None", "default": "None" },
         "buffer": { "type": "GPUBuffer", "default": "" }
       }
     },
@@ -765,7 +765,7 @@
       "fields": {
         "texture": { "type": "GPUTexture", "default": "" },
         "mip_level": { "type": "int", "default": "0" },
-        "origin": { "type": "tuple[int, int, int] | structs.Origin3DStruct", "default": "{}" },
+        "origin": { "type": "tuple[int, int, int] | structs.Origin3DStruct | None", "default": "None" },
         "aspect": { "type": "enums.TextureAspectEnum", "default": "\"all\"" }
       }
     },
@@ -773,7 +773,7 @@
       "fields": {
         "texture": { "type": "GPUTexture", "default": "" },
         "mip_level": { "type": "int", "default": "0" },
-        "origin": { "type": "tuple[int, int, int] | structs.Origin3DStruct", "default": "{}" },
+        "origin": { "type": "tuple[int, int, int] | structs.Origin3DStruct | None", "default": "None" },
         "aspect": { "type": "enums.TextureAspectEnum", "default": "\"all\"" },
         "color_space": { "type": "str", "default": "\"srgb\"" },
         "premultiplied_alpha": { "type": "bool", "default": "False" }
@@ -782,7 +782,7 @@
     "CopyExternalImageSourceInfo": {
       "fields": {
         "source": { "type": "ArrayLike | CanvasLike | object", "default": "" },
-        "origin": { "type": "tuple[int, int] | structs.Origin2DStruct", "default": "{}" },
+        "origin": { "type": "tuple[int, int] | structs.Origin2DStruct | None", "default": "None" },
         "flip_y": { "type": "bool", "default": "False" }
       }
     },
@@ -799,39 +799,39 @@
     "ComputePassTimestampWrites": {
       "fields": {
         "query_set": { "type": "GPUQuerySet", "default": "" },
-        "beginning_of_pass_write_index": { "type": "int", "default": "None" },
-        "end_of_pass_write_index": { "type": "int", "default": "None" }
+        "beginning_of_pass_write_index": { "type": "int | None", "default": "None" },
+        "end_of_pass_write_index": { "type": "int | None", "default": "None" }
       }
     },
     "ComputePassDescriptor": {
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
-        "timestamp_writes": { "type": "structs.ComputePassTimestampWritesStruct", "default": "None" }
+        "timestamp_writes": { "type": "structs.ComputePassTimestampWritesStruct | None", "default": "None" }
       }
     },
     "RenderPassTimestampWrites": {
       "fields": {
         "query_set": { "type": "GPUQuerySet", "default": "" },
-        "beginning_of_pass_write_index": { "type": "int", "default": "None" },
-        "end_of_pass_write_index": { "type": "int", "default": "None" }
+        "beginning_of_pass_write_index": { "type": "int | None", "default": "None" },
+        "end_of_pass_write_index": { "type": "int | None", "default": "None" }
       }
     },
     "RenderPassDescriptor": {
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
-        "color_attachments": { "type": "list[structs.RenderPassColorAttachmentStruct]", "default": "" },
-        "depth_stencil_attachment": { "type": "structs.RenderPassDepthStencilAttachmentStruct", "default": "None" },
-        "occlusion_query_set": { "type": "GPUQuerySet", "default": "None" },
-        "timestamp_writes": { "type": "structs.RenderPassTimestampWritesStruct", "default": "None" },
+        "color_attachments": { "type": "Sequence[structs.RenderPassColorAttachmentStruct]", "default": "" },
+        "depth_stencil_attachment": { "type": "structs.RenderPassDepthStencilAttachmentStruct | None", "default": "None" },
+        "occlusion_query_set": { "type": "GPUQuerySet | None", "default": "None" },
+        "timestamp_writes": { "type": "structs.RenderPassTimestampWritesStruct | None", "default": "None" },
         "max_draw_count": { "type": "int", "default": "50000000" }
       }
     },
     "RenderPassColorAttachment": {
       "fields": {
         "view": { "type": "GPUTexture | GPUTextureView", "default": "" },
-        "depth_slice": { "type": "int", "default": "None" },
-        "resolve_target": { "type": "GPUTexture | GPUTextureView", "default": "None" },
-        "clear_value": { "type": "tuple[float, float, float, float] | structs.ColorStruct", "default": "None" },
+        "depth_slice": { "type": "int | None", "default": "None" },
+        "resolve_target": { "type": "GPUTexture | GPUTextureView | None", "default": "None" },
+        "clear_value": { "type": "tuple[float, float, float, float] | structs.ColorStruct | None", "default": "None" },
         "load_op": { "type": "enums.LoadOpEnum", "default": "" },
         "store_op": { "type": "enums.StoreOpEnum", "default": "" }
       }
@@ -839,21 +839,21 @@
     "RenderPassDepthStencilAttachment": {
       "fields": {
         "view": { "type": "GPUTexture | GPUTextureView", "default": "" },
-        "depth_clear_value": { "type": "float", "default": "None" },
-        "depth_load_op": { "type": "enums.LoadOpEnum", "default": "None" },
-        "depth_store_op": { "type": "enums.StoreOpEnum", "default": "None" },
+        "depth_clear_value": { "type": "float | None", "default": "None" },
+        "depth_load_op": { "type": "enums.LoadOpEnum | None", "default": "None" },
+        "depth_store_op": { "type": "enums.StoreOpEnum | None", "default": "None" },
         "depth_read_only": { "type": "bool", "default": "False" },
         "stencil_clear_value": { "type": "int", "default": "0" },
-        "stencil_load_op": { "type": "enums.LoadOpEnum", "default": "None" },
-        "stencil_store_op": { "type": "enums.StoreOpEnum", "default": "None" },
+        "stencil_load_op": { "type": "enums.LoadOpEnum | None", "default": "None" },
+        "stencil_store_op": { "type": "enums.StoreOpEnum | None", "default": "None" },
         "stencil_read_only": { "type": "bool", "default": "False" }
       }
     },
     "RenderPassLayout": {
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
-        "color_formats": { "type": "list[enums.TextureFormatEnum]", "default": "" },
-        "depth_stencil_format": { "type": "enums.TextureFormatEnum", "default": "None" },
+        "color_formats": { "type": "Sequence[enums.TextureFormatEnum]", "default": "" },
+        "depth_stencil_format": { "type": "enums.TextureFormatEnum | None", "default": "None" },
         "sample_count": { "type": "int", "default": "1" }
       }
     },
@@ -865,8 +865,8 @@
     "RenderBundleEncoderDescriptor": {
       "fields": {
         "label": { "type": "str", "default": "\"\"" },
-        "color_formats": { "type": "list[enums.TextureFormatEnum]", "default": "" },
-        "depth_stencil_format": { "type": "enums.TextureFormatEnum", "default": "None" },
+        "color_formats": { "type": "Sequence[enums.TextureFormatEnum]", "default": "" },
+        "depth_stencil_format": { "type": "enums.TextureFormatEnum | None", "default": "None" },
         "sample_count": { "type": "int", "default": "1" },
         "depth_read_only": { "type": "bool", "default": "False" },
         "stencil_read_only": { "type": "bool", "default": "False" }
@@ -894,9 +894,9 @@
         "device": { "type": "GPUDevice", "default": "" },
         "format": { "type": "enums.TextureFormatEnum", "default": "" },
         "usage": { "type": "flags.TextureUsageFlags", "default": "0x10" },
-        "view_formats": { "type": "list[enums.TextureFormatEnum]", "default": "[]" },
+        "view_formats": { "type": "Sequence[enums.TextureFormatEnum]", "default": "()" },
         "color_space": { "type": "str", "default": "\"srgb\"" },
-        "tone_mapping": { "type": "structs.CanvasToneMappingStruct", "default": "{}" },
+        "tone_mapping": { "type": "structs.CanvasToneMappingStruct | None", "default": "None" },
         "alpha_mode": { "type": "enums.CanvasAlphaModeEnum", "default": "\"opaque\"" }
       }
     },
@@ -1023,7 +1023,7 @@
         "request_adapter": {
           "returns": { "type": "GPUPromise[GPUAdapter]" },
           "args": {
-            "options": { "type": "structs.RequestAdapterOptionsStruct", "default": "{}" }
+            "options": { "type": "structs.RequestAdapterOptionsStruct | None", "default": "None" }
           }
         },
         "get_preferred_canvas_format": {
@@ -1043,13 +1043,13 @@
         "request_device": {
           "returns": { "type": "GPUPromise[GPUDevice]" },
           "args": {
-            "descriptor": { "type": "structs.DeviceDescriptorStruct", "default": "{}" }
+            "descriptor": { "type": "structs.DeviceDescriptorStruct | None", "default": "None" }
           }
         }
       }
     },
     "GPUDevice": {
-      "bases": [ "EventTarget", "GPUObjectBase" ],
+      "bases": [ "GPUObjectBase" ],
       "properties": {
         "features": { "type": "set" },
         "limits": { "type": "dict" },
@@ -1078,7 +1078,7 @@
         "create_sampler": {
           "returns": { "type": "GPUSampler" },
           "args": {
-            "descriptor": { "type": "structs.SamplerDescriptorStruct", "default": "{}" }
+            "descriptor": { "type": "structs.SamplerDescriptorStruct | None", "default": "None" }
           }
         },
         "import_external_texture": {
@@ -1138,7 +1138,7 @@
         "create_command_encoder": {
           "returns": { "type": "GPUCommandEncoder" },
           "args": {
-            "descriptor": { "type": "structs.CommandEncoderDescriptorStruct", "default": "{}" }
+            "descriptor": { "type": "structs.CommandEncoderDescriptorStruct | None", "default": "None" }
           }
         },
         "create_render_bundle_encoder": {
@@ -1178,14 +1178,14 @@
           "args": {
             "mode": { "type": "flags.MapModeFlags", "default": "" },
             "offset": { "type": "int", "default": "0" },
-            "size": { "type": "int", "default": "None" }
+            "size": { "type": "int | None", "default": "None" }
           }
         },
         "get_mapped_range": {
           "returns": { "type": "ArrayLike" },
           "args": {
             "offset": { "type": "int", "default": "0" },
-            "size": { "type": "int", "default": "None" }
+            "size": { "type": "int | None", "default": "None" }
           }
         },
         "unmap": {
@@ -1215,7 +1215,7 @@
         "create_view": {
           "returns": { "type": "GPUTextureView" },
           "args": {
-            "descriptor": { "type": "structs.TextureViewDescriptorStruct", "default": "{}" }
+            "descriptor": { "type": "structs.TextureViewDescriptorStruct | None", "default": "None" }
           }
         },
         "destroy": {
@@ -1279,7 +1279,7 @@
     "GPUCompilationInfo": {
       "bases": [  ],
       "properties": {
-        "messages": { "type": "list[GPUCompilationMessage]" }
+        "messages": { "type": "Sequence[GPUCompilationMessage]" }
       },
       "methods": {  }
     },
@@ -1292,7 +1292,7 @@
         "__init__": {
           "returns": { "type": "None" },
           "args": {
-            "message": { "type": "str", "default": "" },
+            "message": { "type": "str", "default": "\"\"" },
             "options": { "type": "structs.PipelineErrorInitStruct", "default": "" }
           }
         }
@@ -1343,7 +1343,7 @@
         "begin_compute_pass": {
           "returns": { "type": "GPUComputePassEncoder" },
           "args": {
-            "descriptor": { "type": "structs.ComputePassDescriptorStruct", "default": "{}" }
+            "descriptor": { "type": "structs.ComputePassDescriptorStruct | None", "default": "None" }
           }
         },
         "copy_buffer_to_buffer": {
@@ -1353,7 +1353,7 @@
             "source_offset": { "type": "int", "default": "" },
             "destination": { "type": "GPUBuffer", "default": "" },
             "destination_offset": { "type": "int", "default": "" },
-            "size": { "type": "int", "default": "None" }
+            "size": { "type": "int | None", "default": "None" }
           }
         },
         "copy_buffer_to_texture": {
@@ -1385,7 +1385,7 @@
           "args": {
             "buffer": { "type": "GPUBuffer", "default": "" },
             "offset": { "type": "int", "default": "0" },
-            "size": { "type": "int", "default": "None" }
+            "size": { "type": "int | None", "default": "None" }
           }
         },
         "resolve_query_set": {
@@ -1401,7 +1401,7 @@
         "finish": {
           "returns": { "type": "GPUCommandBuffer" },
           "args": {
-            "descriptor": { "type": "structs.CommandBufferDescriptorStruct", "default": "{}" }
+            "descriptor": { "type": "structs.CommandBufferDescriptorStruct | None", "default": "None" }
           }
         }
       }
@@ -1426,7 +1426,7 @@
             "range_offset": { "type": "int", "default": "" },
             "data": { "type": "ArrayLike", "default": "" },
             "data_offset": { "type": "int", "default": "0" },
-            "data_size": { "type": "int", "default": "None" }
+            "data_size": { "type": "int | None", "default": "None" }
           }
         }
       }
@@ -1539,7 +1539,7 @@
         "execute_bundles": {
           "returns": { "type": "None" },
           "args": {
-            "bundles": { "type": "list[GPURenderBundle]", "default": "" }
+            "bundles": { "type": "Sequence[GPURenderBundle]", "default": "" }
           }
         },
         "end": {
@@ -1564,7 +1564,7 @@
             "buffer": { "type": "GPUBuffer", "default": "" },
             "index_format": { "type": "enums.IndexFormatEnum", "default": "" },
             "offset": { "type": "int", "default": "0" },
-            "size": { "type": "int", "default": "None" }
+            "size": { "type": "int | None", "default": "None" }
           }
         },
         "set_vertex_buffer": {
@@ -1573,7 +1573,7 @@
             "slot": { "type": "int", "default": "" },
             "buffer": { "type": "GPUBuffer", "default": "" },
             "offset": { "type": "int", "default": "0" },
-            "size": { "type": "int", "default": "None" }
+            "size": { "type": "int | None", "default": "None" }
           }
         },
         "draw": {
@@ -1629,7 +1629,7 @@
         "finish": {
           "returns": { "type": "GPURenderBundle" },
           "args": {
-            "descriptor": { "type": "structs.RenderBundleDescriptorStruct", "default": "{}" }
+            "descriptor": { "type": "structs.RenderBundleDescriptorStruct | None", "default": "None" }
           }
         }
       }
@@ -1641,7 +1641,7 @@
         "submit": {
           "returns": { "type": "None" },
           "args": {
-            "command_buffers": { "type": "list[GPUCommandBuffer]", "default": "" }
+            "command_buffers": { "type": "Sequence[GPUCommandBuffer]", "default": "" }
           }
         },
         "on_submitted_work_done": {
@@ -1655,7 +1655,7 @@
             "buffer_offset": { "type": "int", "default": "" },
             "data": { "type": "ArrayLike", "default": "" },
             "data_offset": { "type": "int", "default": "0" },
-            "size": { "type": "int", "default": "None" }
+            "size": { "type": "int | None", "default": "None" }
           }
         },
         "write_texture": {

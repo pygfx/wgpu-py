@@ -25,7 +25,7 @@ def patch_api():
         code = part1 + line + part2
 
     # Patch!
-    for patcher in [CommentRemover(), ApiPatcher(api)]:
+    for patcher in [CommentRemover(), ApiPatcher(api, True)]:
         patcher.apply(code)
         code = patcher.dumps()
 

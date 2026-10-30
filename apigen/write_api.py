@@ -142,7 +142,6 @@ def write_structs(structs_dict):
             # Get type to include in code, and massage a bit for this module
             raw_type = field_dict["type"]
             code_type = raw_type.replace("GPU", "classes.GPU").replace("structs.", "")
-            code_type = code_type.replace("list[", "Sequence[")
             # Get type to include in docs
             docs_type = ""
             if (

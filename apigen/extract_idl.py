@@ -12,18 +12,7 @@ if not isinstance(builtins, dict):
     builtins = builtins.__dict__
 
 
-# Minimal difference applied to the final structure. Intended for changes that would otherwise make the API invalid Python.
-diff_webgpu = {
-    "classes": {
-        "GPUPipelineError": {
-            "methods": {
-                # Make GPUPipelineError.__init__() message arg not have a default,
-                # because the second arg has no default either
-                "__init__": {"args": {"message": {"default": ""}}},
-            }
-        }
-    }
-}
+IGNORE_BASES = {"EventTarget"}
 
 # TODO: handle ARGS_TO_MAKE_OPTIONAL, in apidiff structure ??
 
@@ -58,9 +47,6 @@ def extract_idl():
     make_names_pythonic(api)
     resolve_types(api, parser)
 
-    # Some final tweaks
-    api = dict_deep_merge(api, diff_webgpu)
-
     # Write (and read back as a validation step)
     write_definition_file(api, fname)
     read_definition_file(fname)
@@ -93,7 +79,9 @@ def build_api_dict(parser):
     classes_dict = api["classes"] = {}
     for class_name, interface in parser.classes.items():
         class_dict = classes_dict[class_name] = {}
-        class_dict["bases"] = interface.bases
+        class_dict["bases"] = [
+            base for base in interface.bases if base not in IGNORE_BASES
+        ]
         class_dict["properties"] = {}
         for prop_name, attr_type in interface.properties.items():
             class_dict["properties"][prop_name] = {"type": attr_type}  # str
@@ -211,6 +199,25 @@ class TypeResolver:
         self.typedefs = typedefs
         self.apidict = apidict
 
+    def split_on_or(self, name):
+        needle = " or "
+        i = 0
+        level = 0
+        parts = [""]
+        for c in name:
+            if c in "<[(":
+                level += 1
+            elif c in ">])":
+                level -= 1
+            if level == 0 and c == needle[i]:
+                i += 1
+                if i == len(needle):
+                    i = 0
+                    parts.append("")
+                continue
+            parts[-1] += c
+        return parts
+
     def resolve_type(self, typename: str) -> str:
         """Resolve a type to a suitable name that is also valid so that the linter
         won't complain when this is used as a type annotation.
@@ -231,34 +238,24 @@ class TypeResolver:
         # Resolve to a Python type (maybe)
 
         name = self.typemap.get(name, name)
+        name = name.strip()
+        if name and name[0] == "(" and name[-1] == ")":
+            name = name[1:-1].strip()
 
-        # Is this a case for which we need to recurse?
-        if (
-            name.startswith("sequence<") or name.startswith("FrozenArray<")
-        ) and name.endswith(">"):
-            name = name.split("<")[-1].rstrip(">")
-            name = self.resolve_type(name).strip("'")
-            return f"list[{name}]"
-        elif name.startswith("record<") and name.endswith(">"):
-            name = name.split("<")[-1].rstrip(">")
-            names = [self.resolve_type(t).strip("'") for t in name.split(",")]
-            return f"dict[{', '.join(names)}]"
-        elif " or " in name:
-            # Clean
-            name = name.strip("()")
-            names = [self.resolve_type(t).strip("'") for t in name.split(" or ")]
+        parts = self.split_on_or(name)
+        if len(parts) > 1:
+            names = [self.resolve_type(part).strip("'") for part in parts]
             names = set(names)  # de-dupe
             has_none = "None" in names
             names.discard("None")
             names = sorted(names)
             if has_none:
                 names.append("None")
-            # Triage
             if len(names) == 1:
                 return names[0]
             if (
                 len(names) == 2
-                and names[0] in ("list[int]", "list[float]")
+                and names[0] in ("Sequence[int]", "Sequence[float]")
                 and names[1].endswith("Struct")
                 and names[1].startswith(
                     ("structs.Origin", "structs.Extent", "structs.Color")
@@ -271,7 +268,17 @@ class TypeResolver:
                 elif names[1].endswith("3DStruct"):
                     names[0] = "tuple[int, int, int]"
             return " | ".join(names)
-        if name.startswith("Promise<") and name.endswith(">"):
+        elif (
+            name.startswith("sequence<") or name.startswith("FrozenArray<")
+        ) and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            name = self.resolve_type(name).strip("'")
+            return f"Sequence[{name}]"
+        elif name.startswith("record<") and name.endswith(">"):
+            name = name.split("<")[-1].rstrip(">")
+            names = [self.resolve_type(t).strip("'") for t in name.split(",")]
+            return f"dict[{', '.join(names)}]"
+        elif name.startswith("Promise<") and name.endswith(">"):
             subname = name.split("<")[-1].rstrip(">")
             subname = self.resolve_type(subname)
             return f"GPUPromise[{subname}]"
@@ -291,6 +298,7 @@ class TypeResolver:
             assert name.startswith("GPU"), f"Unknown type: {name}"
             name = name[3:]
             name = name[:-4] if name.endswith("Dict") else name
+            # TODO: Let's remove these suffixes from our types annotations?
             if name in self.apidict["flags"]:
                 return f"flags.{name}Flags"
             elif name in self.apidict["enums"]:
@@ -353,6 +361,14 @@ class Attribute:
 
         assert isinstance(default, str)
         assert bool(default) == (not required)
+
+        if default == "[]":
+            default = "()"
+        elif default == "{}":
+            default = "None"
+
+        if default == "None" and "None" not in arg_type:
+            arg_type += " or None"
 
         self.name = arg_name
         self.idl_type = arg_type
