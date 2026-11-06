@@ -64,6 +64,9 @@ _cstructfield2enum_alt = {
     "stencil_store_op": "StoreOp",
 }
 
+# we use this as a default in a few places, precomputed for performance
+ASPECT_ALL = enummap["TextureAspect.all"]
+
 
 def print_struct(s, indent=""):
     """Tool to pretty-print struct contents during debugging."""
@@ -2719,7 +2722,7 @@ class GPUTexture(classes.GPUTexture, GPUObjectBase):
                 f"Texture view dimension must be a str, not {dimension.__class__.__name__}"
             )
         if not aspect:
-            aspect = "all"
+            aspect = ASPECT_ALL
         if not mip_level_count:
             mip_level_count = self._tex_info["mip_level_count"] - base_mip_level
         if not array_layer_count:
@@ -3401,7 +3404,7 @@ class GPUCommandEncoder(
             texture=destination["texture"]._internal,
             mipLevel=int(destination.get("mip_level", 0)),
             origin=c_origin,
-            aspect=enums.TextureAspect.all,
+            aspect=destination.get("aspect", ASPECT_ALL),
         )
 
         # H: width: int, height: int, depthOrArrayLayers: int
@@ -3454,7 +3457,7 @@ class GPUCommandEncoder(
             texture=source["texture"]._internal,
             mipLevel=int(source.get("mip_level", 0)),
             origin=c_origin,
-            aspect=0,
+            aspect=source.get("aspect", ASPECT_ALL),
         )
 
         # H: layout: WGPUTexelCopyBufferLayout, buffer: WGPUBuffer
@@ -3962,7 +3965,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             texture=destination["texture"]._internal,
             mipLevel=destination.get("mip_level", 0),
             origin=c_origin,
-            aspect=enums.TextureAspect.all,
+            aspect=destination.get("aspect", ASPECT_ALL),
         )
 
         # H: offset: int, bytesPerRow: int, rowsPerImage: int
