@@ -8,6 +8,7 @@ examples/screenshots/diffs
 docs/gallery/
 docs/_static/*.whl
 docs/sg_execution_times.rst
+.zed
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

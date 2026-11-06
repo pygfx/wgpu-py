@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "filename": "diff_backend_wgpu.json",
+    "description": "Defines how the native/desktop API differs from the base API.",
+    "notes": "Code that uses any of these cannot run on the web. Therefore we make this extra API explicit by using a suffix for everything that is added."
+  }
+}
