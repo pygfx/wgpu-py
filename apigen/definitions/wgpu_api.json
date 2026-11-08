@@ -1,7 +1,7 @@
 {
   "meta": {
     "filename": "wgpu_api.json",
-    "description": "Definition of the base wgpu API, derived from 'webgpu.json', 'diff_base.json', 'diff_docs.json'.",
+    "description": "Definition of the base wgpu API, derived from 'webgpu.toml', 'diff_base.toml', 'diff_docs.toml'.",
     "notes": "The full API, including docs, in one file. This does *not* include enums/flags/structs from any of the backends."
   },
   "flags": {
@@ -2227,21 +2227,22 @@
   "classes": {
     "GPUObjectBase": {
       "bases": [  ],
+      "methods": {  },
       "properties": {
         "label": {
           "type": "str",
           "doc": "A human-readable label for the object, used in debugging and error messages. Initially taken from the label field of the descriptor used to create it."
         },
         "uid": {
-          "type": "int",
-          "doc": "A unique id (integer) for this object.\n\nThe value is unique to the process; in contrast to ``id(ob)``, the numbers are never reused."
+          "doc": "A unique id (integer) for this object.\n\nThe value is unique to the process; in contrast to ``id(ob)``, the numbers are never reused.",
+          "type": "int"
         }
       },
-      "methods": {  },
       "doc": "The base class of all GPU objects.\n\nIt provides the label property that is shared by all objects in the API.\n"
     },
     "GPUAdapterInfo": {
       "bases": [ "dict" ],
+      "methods": {  },
       "properties": {
         "vendor": { "type": "str", "doc": "The name of the vendor of the adapter, e.g. 'nvidia' or 'amd'." },
         "architecture": { "type": "str", "doc": "The name of the family or class of GPUs the adapter belongs to." },
@@ -2263,7 +2264,6 @@
         },
         "is_fallback_adapter": { "type": "bool", "doc": "Whether this is a fallback adapter, e.g. a software renderer." }
       },
-      "methods": {  },
       "doc": "Information about a physical adapter (GPU).\n\nAn instance is available via the info property of GPUAdapter and the adapter_info property of GPUDevice.\nThe values are strings that are possibly empty if the information is not available.\n"
     },
     "GPU": {
@@ -2295,28 +2295,28 @@
           "doc": "The synchronous variant of request_adapter_async()."
         },
         "get_preferred_canvas_format": {
+          "args": {  },
           "returns": {
             "type": "enums.TextureFormatEnum",
             "doc": "An enums.TextureFormat, either rgba8unorm or bgra8unorm."
           },
-          "args": {  },
           "doc": "Get the preferred texture format for presenting to a canvas.\n\nUsing this format for the format field of structs.CanvasConfiguration avoids a conversion when presenting.\n"
         },
         "enumerate_adapters_async": {
           "doc": "Get a list of adapter objects available on the current system.",
-          "returns": { "type": "GPUPromise[list[GPUAdapter]]" },
-          "args": {  }
+          "args": {  },
+          "returns": { "type": "GPUPromise[list[GPUAdapter]]" }
         },
         "enumerate_adapters_sync": {
           "doc": "Get a list of adapter objects available on the current system.",
-          "returns": { "type": "list[GPUAdapter]" },
-          "args": {  }
+          "args": {  },
+          "returns": { "type": "list[GPUAdapter]" }
         },
         "get_canvas_context": {
           "doc": "Get the GPUCanvasContext object for the appropriate backend.\n\nNote that the recommended way to get a context is to instead use the ``rendercanvas`` library.\n\nThe ``present_info`` dict should have a ``window`` field containing the window id. On Linux there should also be ``platform`` field to distinguish between 'wayland' and 'x11', and a ``display`` field for the display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object. This dict is an interface between `rendercanvas`` and ``wgpu-py``.",
           "returns": { "type": "GPUCanvasContext" },
           "args": {
-            "present_info": { "type": "dict", "default": "", "doc": "The low-level presentation info." }
+            "present_info": { "doc": "The low-level presentation info.", "type": "dict", "default": "" }
           }
         }
       },
@@ -2332,8 +2332,8 @@
           "doc": "A GPUAdapterInfo with information about the adapter. The values are constant over time."
         },
         "summary": {
-          "type": "str",
-          "doc": "A one-line summary of the info of this adapter (device, adapter_type, backend_type)."
+          "doc": "A one-line summary of the info of this adapter (device, adapter_type, backend_type).",
+          "type": "str"
         }
       },
       "methods": {
@@ -2386,12 +2386,12 @@
           "type": "None",
           "doc": "A callback that is called with an event (see structs.UncapturedErrorEventInit) when an error occurs that is not captured by an error scope."
         },
-        "adapter": { "type": "GPUAdapter", "doc": "The adapter object corresponding to this device." }
+        "adapter": { "doc": "The adapter object corresponding to this device.", "type": "GPUAdapter" }
       },
       "methods": {
         "destroy": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "Destroy the device, preventing further operations on it.\n\nOutstanding asynchronous operations fail. The device is lost with the reason enums.DeviceLostReason.destroyed, and all resources\ncreated by the device become unusable. Destroying a device multiple times is allowed.\n"
         },
         "create_buffer": {
@@ -2560,16 +2560,16 @@
           "doc": "Push a new error scope onto the device's error scope stack.\n\nWhile the scope is active, errors of the given type that are generated by operations on this device are\ncaptured by the scope (instead of triggering the onuncapturederror callback). Retrieve them with pop_error_scope().\n"
         },
         "pop_error_scope_async": {
+          "args": {  },
           "returns": {
             "type": "GPUPromise[GPUError]",
             "doc": "A GPUError (GPUValidationError, GPUOutOfMemoryError or GPUInternalError), or None if no error was captured."
           },
-          "args": {  },
           "doc": "Pop the most recent error scope from the stack and return an error observed by it.\n\nFails if there is no error scope to pop. Errors are only reported once all operations in the scope have been processed.\n"
         },
         "pop_error_scope_sync": {
-          "returns": { "type": "GPUError", "doc": "" },
           "args": {  },
+          "returns": { "type": "GPUError", "doc": "" },
           "doc": "The synchronous variant of pop_error_scope_async()."
         },
         "create_buffer_with_data": {
@@ -2653,13 +2653,13 @@
           "doc": "Get a view on the memory of a mapped part of the buffer.\n\nThe buffer must be mapped (see map_async() or the mapped_at_creation field of structs.BufferDescriptor).\nThe returned memory becomes invalid when the buffer is unmapped.\n"
         },
         "unmap": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "Unmap the buffer, making any mapped memory invalid, and handing the buffer back to the GPU.\n\nIf the buffer was mapped for writing, the written data becomes visible to the GPU.\n"
         },
         "destroy": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "Destroy the buffer and free its memory.\n\nThe buffer can no longer be used. Calling this multiple times is allowed.\n"
         }
       },
@@ -2700,8 +2700,8 @@
           "doc": "Create a GPUTextureView, a specific view of (part of) the texture.\n\nThe view is what gets bound to shaders or used as a render attachment.\n"
         },
         "destroy": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "Destroy the texture and free its memory.\n\nThe texture can no longer be used. Calling this multiple times is allowed.\n"
         }
       },
@@ -2742,16 +2742,16 @@
       "properties": {  },
       "methods": {
         "get_compilation_info_async": {
+          "args": {  },
           "returns": {
             "type": "GPUPromise[GPUCompilationInfo]",
             "doc": "A GPUCompilationInfo (awaitable) with the list of messages."
           },
-          "args": {  },
           "doc": "Get diagnostic messages (errors, warnings, info) produced when compiling the shader.\n\nThe locations, order and contents of the messages are implementation-defined; in particular, they are not necessarily ordered by line number.\n"
         },
         "get_compilation_info_sync": {
-          "returns": { "type": "GPUCompilationInfo", "doc": "" },
           "args": {  },
+          "returns": { "type": "GPUCompilationInfo", "doc": "" },
           "doc": "The synchronous variant of get_compilation_info_async()."
         }
       },
@@ -2759,6 +2759,7 @@
     },
     "GPUCompilationMessage": {
       "bases": [  ],
+      "methods": {  },
       "properties": {
         "message": { "type": "str", "doc": "The human-readable text of the message." },
         "type": {
@@ -2782,15 +2783,14 @@
           "doc": "The length (in UTF-16 code units) of the span in the shader code that the message refers to."
         }
       },
-      "methods": {  },
       "doc": "A single diagnostic message produced when compiling a shader module.\n\nThe messages are available via the messages property of GPUCompilationInfo.\n"
     },
     "GPUCompilationInfo": {
       "bases": [  ],
+      "methods": {  },
       "properties": {
         "messages": { "type": "Sequence[GPUCompilationMessage]", "doc": "A list of GPUCompilationMessage objects." }
       },
-      "methods": {  },
       "doc": "The diagnostic messages produced when compiling a shader module.\n\nObtained from GPUShaderModule.get_compilation_info().\n"
     },
     "GPUPipelineError": {
@@ -3089,8 +3089,8 @@
           "doc": "Begin a labeled debug group. Every call must be matched with a call to pop_debug_group().\n"
         },
         "pop_debug_group": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "End the most recent debug group that was started with push_debug_group().\n"
         },
         "insert_debug_marker": {
@@ -3136,8 +3136,8 @@
           "doc": "Like dispatch_workgroups(), but the workgroup counts are read from a GPUBuffer.\n\nThe buffer must have flags.BufferUsage.INDIRECT, and contain three consecutive 32-bit unsigned integers (x, y, z) at the given offset.\n"
         },
         "end": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "End the compute pass. The encoder can no longer be used afterwards.\n"
         }
       },
@@ -3217,8 +3217,8 @@
           "doc": "Begin an occlusion query, which counts the samples that pass the depth and stencil tests.\n\nThe result is stored in the occlusion_query_set of the pass (see structs.RenderPassDescriptor).\nEnd the query with end_occlusion_query().\n"
         },
         "end_occlusion_query": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "End the occlusion query that was started with begin_occlusion_query().\n"
         },
         "execute_bundles": {
@@ -3233,8 +3233,8 @@
           "doc": "Execute pre-recorded GPURenderBundle objects as part of this pass.\n\nBundles do not inherit the pipeline, bind groups or vertex/index buffers of the pass. After executing bundles (even zero of them),\nthat state is cleared, not restored, so it needs to be set again.\n"
         },
         "end": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "End the render pass. The encoder can no longer be used afterwards.\n"
         }
       },
@@ -3413,13 +3413,13 @@
           "doc": "Submit a list of command buffers for execution on the GPU.\n\nEach command buffer can only be submitted once.\n"
         },
         "on_submitted_work_done_async": {
-          "returns": { "type": "GPUPromise[None]", "doc": "None (awaitable); resolves when the submitted work is done." },
           "args": {  },
+          "returns": { "type": "GPUPromise[None]", "doc": "None (awaitable); resolves when the submitted work is done." },
           "doc": "Wait until all work that was submitted so far has been completed by the GPU.\n\nResolving also implies completion of earlier GPUBuffer.map_async() calls on buffers last used exclusively on this queue.\n"
         },
         "on_submitted_work_done_sync": {
-          "returns": { "type": "None", "doc": "" },
           "args": {  },
+          "returns": { "type": "None", "doc": "" },
           "doc": "The synchronous variant of on_submitted_work_done_async()."
         },
         "write_buffer": {
@@ -3482,8 +3482,8 @@
       },
       "methods": {
         "destroy": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "Destroy the query set and free its resources.\n\nThe query set can no longer be used. Calling this multiple times is allowed.\n"
         }
       },
@@ -3508,29 +3508,29 @@
           "doc": "Configure the context for use with a device, so that textures can be obtained from it.\n\nCalling this again replaces the previous configuration. It also clears the drawing buffer to transparent black.\nUse get_configuration() to detect support for optional configuration members.\n"
         },
         "unconfigure": {
-          "returns": { "type": "None", "doc": "None." },
           "args": {  },
+          "returns": { "type": "None", "doc": "None." },
           "doc": "Remove the configuration and destroy any textures produced while configured.\n\nAfter this, get_current_texture() cannot be used until the context is configured again.\n"
         },
         "get_configuration": {
+          "args": {  },
           "returns": {
             "type": "structs.CanvasConfigurationStruct",
             "doc": "The structs.CanvasConfiguration that was last passed to configure(), or None if the context is not configured."
           },
-          "args": {  },
           "doc": "Get the current configuration of the context, or None if it is not configured.\n\nThis is mainly useful for feature detection of optional members of structs.CanvasConfiguration; for supported members it returns the originally supplied values.\n"
         },
         "get_current_texture": {
-          "returns": { "type": "GPUTexture", "doc": "A GPUTexture." },
           "args": {  },
+          "returns": { "type": "GPUTexture", "doc": "A GPUTexture." },
           "doc": "Get the GPUTexture to render to for the current frame.\n\nThe texture has the size of the canvas, and is the texture that will be composited to the canvas next. The same GPUTexture object is returned\nuntil the frame is presented (even if it was destroyed or failed validation); a new one is returned for the next frame.\n"
         },
         "set_physical_size": {
           "doc": "Set the current framebuffer physical size.",
           "returns": { "type": "None" },
           "args": {
-            "width": { "type": "int", "default": "", "doc": "The new width of the framebuffer." },
-            "height": { "type": "int", "default": "", "doc": "The new height of the framebuffer." }
+            "width": { "doc": "The new width of the framebuffer.", "type": "int", "default": "" },
+            "height": { "doc": "The new height of the framebuffer.", "type": "int", "default": "" }
           }
         },
         "get_preferred_format": {
@@ -3542,14 +3542,15 @@
         },
         "present": {
           "doc": "Present what has been drawn to the current texture, by compositing it to the canvas.",
-          "returns": { "type": "None" },
-          "args": {  }
+          "args": {  },
+          "returns": { "type": "None" }
         }
       },
       "doc": "The connection between a canvas (or window) and the GPU, used to present rendered images.\n\nConfigure it with configure(), then each frame obtain a texture with get_current_texture(),\nrender to it, and submit the work. The result is presented when the frame ends.\n"
     },
     "GPUDeviceLostInfo": {
       "bases": [  ],
+      "methods": {  },
       "properties": {
         "reason": {
           "type": "enums.DeviceLostReasonEnum",
@@ -3557,18 +3558,17 @@
         },
         "message": { "type": "str", "doc": "A human-readable message with details about why the device was lost." }
       },
-      "methods": {  },
       "doc": "Information about why a GPUDevice was lost.\n\nAvailable via the lost property of GPUDevice.\n"
     },
     "GPUError": {
       "bases": [  ],
+      "methods": {  },
       "properties": {
         "message": {
           "type": "str",
           "doc": "A human-readable description of the error, meant for developers (debugging, bug reports) and not for end users. Do not try to parse it."
         }
       },
-      "methods": {  },
       "doc": "The base class of errors that are generated by the GPU API.\n\nSubclasses are GPUValidationError, GPUOutOfMemoryError and GPUInternalError.\nErrors are obtained via error scopes (see GPUDevice.push_error_scope()) or the onuncapturederror property of GPUDevice.\n"
     },
     "GPUValidationError": {

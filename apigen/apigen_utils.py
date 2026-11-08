@@ -1,6 +1,8 @@
-import json
-import subprocess
 import sys
+import json
+import re
+import tomllib
+import subprocess
 from pathlib import Path
 
 DEFINITIONS_DIR = Path(__file__).parent.absolute() / "definitions"
@@ -87,41 +89,212 @@ def indent_code(text: str, indent=4) -> str:
 def write_definition_file(structure: dict, fname: str) -> None:
     """Write an API definition to disk. The structure is serialized to json, indented, but with singular and small leaf nodes single-lined."""
 
-    def _is_leaf(obj):
-        values = obj.values() if isinstance(obj, dict) else obj
-        return not any(isinstance(v, (dict, list)) for v in values)
+    unknown = [k for k in structure if k not in ("meta", *_section_names)]
+    if unknown:
+        raise RuntimeError(f"structure_to_toml(): unknown section(s): {unknown!r}")
 
-    def dumps(obj, indent=2, level=0, max_len=100, **kw):
-        if not isinstance(obj, (dict, list)):
-            return json.dumps(obj, **kw)
+    # Put sections in predefined order, with an ordered meta at the top
+    meta = {"filename": fname}
+    for meta_key in ["description", "notes"]:
+        meta[meta_key] = structure["meta"][meta_key]
+    s = {"meta": meta}
+    for section in _section_names:
+        s[section] = structure.get(section, {})
 
-        if _is_leaf(obj):
-            flat = json.dumps(obj, **kw).strip("{}")
-            if len(obj) <= 1 or len(flat) < max_len:
-                if isinstance(obj, list):
-                    return "[ " + flat.strip("[]") + " ]"
-                else:
-                    return "{ " + flat.strip("{}") + " }"
-
-        pad = " " * (indent * (level + 1))
-        end = " " * (indent * level)
-        sub = dict(indent=indent, level=level + 1, max_len=max_len, **kw)
-
-        if isinstance(obj, dict):
-            if not obj:
-                return "{}"
-            body = ",\n".join(
-                f"{pad}{json.dumps(k, **kw)}: {dumps(v, **sub)}" for k, v in obj.items()
-            )
-            return "{\n" + body + "\n" + end + "}"
-        else:  # list
-            if not obj:
-                return "[]"
-            body = ",\n".join(pad + dumps(v, **sub) for v in obj)
-            return "[\n" + body + "\n" + end + "]"
-
-    text = dumps(structure)
+    if fname.endswith(".json"):
+        text = structure_to_json(s)
+    elif fname.endswith(".toml"):
+        text = structure_to_toml(s)
+    else:
+        raise RuntimeError(
+            f"write_definition_file(): invalid definition file extension for {fname!r}."
+        )
     write_file(text, "apigen", "definitions", fname)
+
+
+def _is_json_leaf(obj):
+    values = obj.values() if isinstance(obj, dict) else obj
+    return not any(isinstance(v, (dict, list)) for v in values)
+
+
+def structure_to_json(obj, indent=2, level=0, max_len=100, **kw):
+    if not isinstance(obj, (dict, list)):
+        return json.dumps(obj, **kw)
+
+    if _is_json_leaf(obj):
+        flat = json.dumps(obj, **kw).strip("{}")
+        if len(obj) <= 1 or len(flat) < max_len:
+            if isinstance(obj, list):
+                return "[ " + flat.strip("[]") + " ]"
+            else:
+                return "{ " + flat.strip("{}") + " }"
+
+    pad = " " * (indent * (level + 1))
+    end = " " * (indent * level)
+    sub = dict(indent=indent, level=level + 1, max_len=max_len, **kw)
+
+    if isinstance(obj, dict):
+        if not obj:
+            return "{}"
+        body = ",\n".join(
+            f"{pad}{json.dumps(k, **kw)}: {structure_to_json(v, **sub)}"
+            for k, v in obj.items()
+        )
+        return "{\n" + body + "\n" + end + "}"
+    else:  # list
+        if not obj:
+            return "[]"
+        body = ",\n".join(pad + structure_to_json(v, **sub) for v in obj)
+        return "[\n" + body + "\n" + end + "]"
+
+
+def _toml_key(key: str) -> str:
+    """Represent a dict key in TOML syntax, quoting it when it cannot be a bare key."""
+    if re.match(r"^[A-Za-z0-9_-]+$", key):
+        return key
+    else:
+        return json.dumps(key)
+
+
+def _value_to_toml(val):
+    """Represent a leaf value (or a list of leaf values) in TOML syntax.
+    Multi-line strings are written as literal (triple-single-quoted) strings.
+    """
+    if isinstance(val, bool):
+        return ["false", "true"][val]
+    elif isinstance(val, (int, float)):
+        return repr(val)
+    elif isinstance(val, list):
+        return "[" + ", ".join(_value_to_toml(v) for v in val) + "]"
+    elif isinstance(val, str):
+        if "\n" in val and "'''" not in val and not val.endswith("'"):
+            return "'''\n" + val + "'''"
+        elif "'" in val:
+            return json.dumps(val)  # basic string, i.e. with escapes
+        else:
+            return f"'{val}'"
+    else:
+        raise RuntimeError(f"Only expected leaf values, not {val.__class__.__name__}")
+
+
+_scalar_key_order = ("doc", "diff", "value", "type", "default", "bases")
+_section_names = ("flags", "enums", "structs", "classes")
+_child_table_keys = ("methods", "properties")
+_banner_width = 100
+
+
+def _banner_lines(title: str, double: bool = False) -> list:
+    """Create a comment banner, at least 100 chars wide. Sections get a
+    double-row banner (with "="), classes a single-line one (with "-").
+    """
+    char = "=" if double else "-"
+    line = f"# {char * 4} {title} "
+    line = line + char * max(_banner_width - len(line), 4)
+    result = [line]
+    if double:
+        result.append("# " + char * max(_banner_width - 2, 4))
+    return result
+
+
+def structure_to_toml(structure: dict) -> str:
+    """Generate a nicely readable TOML representation of the given structure
+    (the shape checked by check_definition_structure()).
+
+    The "meta" section is written as a table first, so it survives a
+    roundtrip. Each named entity becomes a table: flags, enums, structs,
+    classes (e.g. "[flags.TextureUsageFlags]"), and the methods and
+    properties of a class (e.g. "[classes.GPU.methods.foo]"). Deeper
+    sub-dicts (fields, method args, returns) are written as dotted keys
+    inside the entity's table, e.g. "args.width.type = 'int'", with blank
+    lines between groups. Empty sub-dicts are written as inline tables
+    (e.g. "args = {}"), so that the TOML parses back into the exact same
+    structure.
+    """
+
+    lines = []
+
+    # Write the meta section as a table, in a fixed key order
+    meta = structure.get("meta", {})
+    if meta:
+        meta = {
+            key: meta[key]
+            for key in ("filename", "description", "notes")
+            if key in meta
+        }
+        _write_entity_table(lines, ["meta"], meta)
+
+    # Write each section, separated by a banner
+    for section, section_dict in structure.items():
+        if section == "meta" or not section_dict:
+            continue
+        lines.append("")
+        lines.extend(_banner_lines(section, double=True))
+        for name, item_dict in section_dict.items():
+            if section == "classes":
+                lines.append("")
+                lines.extend(_banner_lines(name))
+            _write_entity_table(lines, [section, name], item_dict)
+
+    return "\n".join(lines).lstrip() + "\n"
+
+
+def _write_entity_table(lines: list, path: list, d: dict) -> None:
+    """Write the given dict as a TOML table, e.g. "[classes.GPU.methods.foo]".
+    Non-dict values become plain keys, deeper sub-dicts become dotted keys,
+    and the keys in _child_table_keys become tables of their own. The header
+    is only written when the table has content of its own.
+    """
+    scalar_keys = [k for k in d if not isinstance(d[k], dict)]
+    empty_keys = [k for k in d if isinstance(d[k], dict) and not d[k]]
+    dotted_dict = {
+        k: v
+        for k, v in d.items()
+        if isinstance(v, dict) and v and k not in _child_table_keys
+    }
+    child_keys = [k for k in d if k in _child_table_keys and d[k]]
+
+    if scalar_keys or empty_keys or dotted_dict or not d:
+        lines.append("")
+        lines.append("[" + ".".join(_toml_key(p) for p in path) + "]")
+        scalar_keys = [k for k in _scalar_key_order if k in scalar_keys] + [
+            k for k in scalar_keys if k not in _scalar_key_order
+        ]
+        for key in scalar_keys:
+            lines.append(f"{_toml_key(key)} = {_value_to_toml(d[key])}")
+        for key in empty_keys:
+            lines.append(f"{_toml_key(key)} = {{}}")
+
+    if dotted_dict:
+        _write_dotted_dict(lines, [], dotted_dict)
+
+    for key in child_keys:
+        for sub_name, sub_dict in d[key].items():
+            _write_entity_table(lines, [*path, key, sub_name], sub_dict)
+
+
+def _write_dotted_dict(lines: list, path: list, d: dict) -> None:
+    """Write the given dict as dotted keys under the given path, e.g.
+    "args.width.type = 'int'". Sub-dict groups are separated by blank lines.
+    """
+    scalar_keys = [k for k in d if not isinstance(d[k], dict) or not d[k]]
+    scalar_keys = [k for k in _scalar_key_order if k in scalar_keys] + [
+        k for k in scalar_keys if k not in _scalar_key_order
+    ]
+    for key in scalar_keys:
+        prefix = ".".join([*path, _toml_key(key)]) if path else _toml_key(key)
+        val = d[key]
+        if isinstance(val, dict):  # an empty dict, written inline
+            lines.append(f"{prefix} = {{}}")
+        else:
+            lines.append(f"{prefix} = {_value_to_toml(val)}")
+
+    first = True
+    for key, val in d.items():
+        if isinstance(val, dict) and val:
+            if not first:
+                lines.append("")
+            first = False
+            _write_dotted_dict(lines, [*path, key], val)
 
 
 def read_definition_file(fname: str) -> dict:
@@ -129,17 +302,27 @@ def read_definition_file(fname: str) -> dict:
     Returns the structure as a dict.
     """
     source = read_file("apigen", "definitions", fname)
-    structure = json.loads(source)
 
+    if fname.endswith(".json"):
+        structure = json.loads(source)
+        assert (
+            "meta" in structure
+            and "filename" in structure["meta"]
+            and fname == structure["meta"]["filename"]
+        )
+    elif fname.endswith(".toml"):
+        structure = tomllib.loads(source)
+    else:
+        raise RuntimeError(
+            f"read_definition_file(): invalid definition file extension for {fname!r}."
+        )
+
+    check_definition_structure(structure)
+    return structure
+
+
+def check_definition_structure(structure):
     diff_actions = ("REMOVE",)
-
-    assert (
-        "meta" in structure
-        and "filename" in structure["meta"]
-        and fname == structure["meta"]["filename"]
-    )
-
-    # The code below is just a tedious traversing of the structure that checks each leaf node.
 
     for section, section_dict in structure.items():
         assert section in ("meta", "flags", "enums", "structs", "classes")
@@ -314,8 +497,6 @@ def read_definition_file(fname: str) -> dict:
                                     )
                     else:
                         raise RuntimeError(f"Invalid class attr {class_attr_key!r}")
-
-    return structure
 
 
 class FormatError(Exception):

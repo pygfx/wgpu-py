@@ -31,9 +31,9 @@ There is a CLI for ease of use, and to run the whole codegen pipeline with one c
 ## The steps that this code offers
 
 * download_idl: download the latest webgpu.idl, this is only done manually from time to time.
-* extract_idl: parse the IDL to produce 'wgpu_idl.json'.
-* format_json: formats the static definitions.
-* merge_json: combines multiple definitions files into 'wgpu_api.json'.
+* extract_idl: parse the IDL to produce 'wgpu_idl.toml'.
+* format_defs: formats the static definitions.
+* merge_defs: combines multiple definitions files into 'wgpu_api.toml'.
 * patch_api: produce the classes and functions in _classes.py and all backends.
 * write_api: produce API for flags, enums and structs.
 

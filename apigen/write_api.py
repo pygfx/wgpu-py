@@ -15,11 +15,11 @@ from apigen_utils import (
 def write_api():
     """Write the Python code for the flags, enums, and structs."""
 
-    api = read_definition_file("wgpu_api.json")
+    api = read_definition_file("wgpu_api.toml")
 
     # Flags, enums, and structs (and their fields) defined in specific backends are added to the global set of flags/enums/structs,
     # but they'll each have a '_ext' suffix
-    for fname in ["diff_backend_pyodide.json", "diff_backend_wgpu.json"]:
+    for fname in ["diff_backend_pyodide.toml", "diff_backend_wgpu.toml"]:
         extra_api = read_definition_file(fname)
         api = dict_deep_merge(api, extra_api)
 

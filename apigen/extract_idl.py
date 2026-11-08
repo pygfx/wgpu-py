@@ -34,22 +34,18 @@ def extract_idl():
     parser.parse()
 
     # Generate structure
-    fname = "webgpu.json"
-    api = {}
+    api = build_api_dict(parser)
+
     api["meta"] = {
-        "filename": fname,
         "description": "Python-flavored WebGPU API, generated from 'webgpu.idl'.",
         "notes": "All types are converted to the Python equivalents, all names are made Pythonic snake_case, methods that accept a single descriptor arg are *not* yet resolved to accept the descriptor args directly.",
     }
-    api.update(build_api_dict(parser))
-
     # Convert names and types
     make_names_pythonic(api)
     resolve_types(api, parser)
 
-    # Write (and read back as a validation step)
-    write_definition_file(api, fname)
-    read_definition_file(fname)
+    # Write
+    write_definition_file(api, "webgpu.toml")
 
 
 def build_api_dict(parser):

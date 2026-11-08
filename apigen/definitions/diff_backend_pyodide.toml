@@ -1,0 +1,4 @@
+[meta]
+filename = 'diff_backend_pyodide.toml'
+description = 'Defines how the Pyodide API differs from the base API.'
+notes = 'We could use this to bring back e.g. external textures.'

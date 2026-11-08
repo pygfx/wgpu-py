@@ -3,7 +3,7 @@ from apigen_utils import format_code, read_definition_file, write_file
 preamble = '''
 """
 JS WebGPU API, but in Python. This is what the Pyodide backend should talk to.
-This code is generated from webgpu.json, which is generated from webgpu.idl.
+This code is generated from webgpu.toml, which is generated from webgpu.idl.
 This helps validate the Pyodide backend via MyPy.
 """
 '''
@@ -13,7 +13,7 @@ This helps validate the Pyodide backend via MyPy.
 
 def write_js_api():
     """Write the Python stub API for WebGPU, to use in typechecking for web backends."""
-    webgpu = read_definition_file("webgpu.json")
+    webgpu = read_definition_file("webgpu.toml")
 
     lines = []
 

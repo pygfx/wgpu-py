@@ -5,7 +5,7 @@ from apigen_utils import read_definition_file, read_file, write_file
 def patch_api():
     """Patch the base API in _classes.py."""
 
-    api = read_definition_file("wgpu_api.json")
+    api = read_definition_file("wgpu_api.toml")
     code = read_file("wgpu", "_classes.py")
 
     # code = format_code(code, singleline=True) ??
