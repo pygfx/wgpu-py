@@ -1,11 +1,7 @@
 from typing import Literal
 
-from apigen_utils import (
-    dict_deep_merge,
-    read_definition_file,
-    read_file,
-    write_definition_file,
-)
+from apigen_utils import read_file
+from apigen_defs import write_definition_file
 
 builtins = __builtins__
 if not isinstance(builtins, dict):

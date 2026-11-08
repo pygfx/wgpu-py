@@ -330,7 +330,7 @@ class ApiPatcher(Patcher):
             self.explode_single_args_that_are_descriptors
             and len(method_dict["args"]) == 1
         ):
-            arg_type_name = list(method_dict["args"].values())[0]["type"]
+            arg_type_name = next(iter(method_dict["args"].values()))["type"]
             if arg_type_name.startswith("structs."):
                 if arg_type_name.endswith(" | None"):
                     arg_type_name = arg_type_name[:-7]

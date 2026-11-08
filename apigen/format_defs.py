@@ -1,6 +1,7 @@
 import os
 
-from apigen_utils import DEFINITIONS_DIR, read_definition_file, write_definition_file
+from apigen_utils import DEFINITIONS_DIR
+from apigen_defs import read_definition_file, write_definition_file
 
 
 def format_defs():

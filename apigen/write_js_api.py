@@ -1,4 +1,6 @@
-from apigen_utils import format_code, read_definition_file, write_file
+from apigen_utils import format_code, write_file
+from apigen_defs import read_definition_file
+
 
 preamble = '''
 """

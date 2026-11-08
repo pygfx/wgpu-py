@@ -6,10 +6,10 @@ from apigen_utils import (
     dict_deep_merge,
     format_code,
     # indent_code,
-    read_definition_file,
     read_file,
     write_file,
 )
+from apigen_defs import read_definition_file
 
 
 def write_api():

@@ -1,5 +1,6 @@
 from apigen_patcher import ApiPatcher, CommentRemover
-from apigen_utils import read_definition_file, read_file, write_file
+from apigen_utils import read_file, write_file
+from apigen_defs import read_definition_file
 
 
 def patch_api():
