@@ -3401,7 +3401,7 @@ class GPUCommandEncoder(
             texture=destination["texture"]._internal,
             mipLevel=int(destination.get("mip_level", 0)),
             origin=c_origin,
-            aspect=enums.TextureAspect.all,
+            aspect=destination.get("aspect", "all"),
         )
 
         # H: width: int, height: int, depthOrArrayLayers: int
@@ -3454,7 +3454,7 @@ class GPUCommandEncoder(
             texture=source["texture"]._internal,
             mipLevel=int(source.get("mip_level", 0)),
             origin=c_origin,
-            aspect=0,
+            aspect=source.get("aspect", "all"),
         )
 
         # H: layout: WGPUTexelCopyBufferLayout, buffer: WGPUBuffer
@@ -3962,7 +3962,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
             texture=destination["texture"]._internal,
             mipLevel=destination.get("mip_level", 0),
             origin=c_origin,
-            aspect=enums.TextureAspect.all,
+            aspect=destination.get("aspect", "all"),
         )
 
         # H: offset: int, bytesPerRow: int, rowsPerImage: int
