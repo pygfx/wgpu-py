@@ -670,19 +670,19 @@ buffer data.
 
 A summary to help you update your code:
 ```py
-### X import wgpu.backends.rs
+# X import wgpu.backends.rs
 import wgpu
 
-### X wgpu.request_adapter(canvas=None, power_preference="high-performance")
+# X wgpu.request_adapter(canvas=None, power_preference="high-performance")
 wgpu.gpu.request_adapter(power_preference="high-performance")
 
-### X buffer.map_read()
+# X buffer.map_read()
 buffer.map("READ")
 buffer.read_mapped(...)
 buffer.read_mapped(...)
 buffer.unmap()
 
-### X buffer.map_write()
+# X buffer.map_write()
 buffer.map("WRITE")
 buffer.write_mapped(data1, ...)
 buffer.write_mapped(data2, ...)
