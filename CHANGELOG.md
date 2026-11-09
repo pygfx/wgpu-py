@@ -38,7 +38,7 @@ Possible sections in each release:
 **Full Changelog**: https://github.com/pygfx/wgpu-py/compare/v0.32.0...v0.33.0
 
 
-## v0.32.0] - 19-07-2026
+## [v0.32.0] - 19-07-2026
 
 ### Changed:
 * update wgpu-native to [29.0.0.0](https://github.com/gfx-rs/wgpu-native/blob/v29.0.0.0/CHANGELOG.md#changed) by @Vipitis in https://github.com/pygfx/wgpu-py/pull/805
@@ -150,7 +150,7 @@ Fixed:
 * Also run example-tests with imgui by @almarklein in https://github.com/pygfx/wgpu-py/pull/769
 
 
-### [v0.27.0] - 05-11-2025
+## [v0.27.0] - 05-11-2025
 
 Fixed:
 
@@ -163,7 +163,7 @@ Changed:
   * The async methods now return a promise-like object which has `.sync_wait()`, `.then()`, and be we awaited.
 
 
-### [v0.26.0] - 17-10-2025
+## [v0.26.0] - 17-10-2025
 
 Changed:
 
@@ -174,7 +174,7 @@ Added:
 * Add DXC and debug examples by @Vipitis in https://github.com/pygfx/wgpu-py/pull/760
 
 
-### [v0.25.0] - 29-09-2025
+## [v0.25.0] - 29-09-2025
 
 This release is marked with many improvements to types and structs, making it much easier to write wgpu-code in an IDE.
 
@@ -200,13 +200,12 @@ Removed:
 
 * Drop support for Python 3.9 by @almarklein in https://github.com/pygfx/wgpu-py/pull/737
 
-
 Other:
 
 * Cleanup examples (remove most gui-specific ones) by @almarklein in https://github.com/pygfx/wgpu-py/pull/744
 
 
-### [v0.24.0] - 15-09-2025
+## [v0.24.0] - 15-09-2025
 
 Changed:
 
@@ -227,7 +226,7 @@ Other:
 * Switch to trusted publishing for PyPI publish in CI by @EpicWink in https://github.com/pygfx/wgpu-py/pull/738
 
 
-### [v0.23.0] - 11-07-2025
+## [v0.23.0] - 11-07-2025
 
 Added:
 
@@ -246,7 +245,7 @@ Other:
 * Examples are updated to use `rendercanvas`.
 
 
-### [v0.22.2] - 16-05-2025
+## [v0.22.2] - 16-05-2025
 
 Added:
 
@@ -257,17 +256,17 @@ Changed:
 
 * Set the size via `imgui.io` instead of using the `psize` parameter of the render method. by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/713
 
-
 **Full Changelog**: https://github.com/pygfx/wgpu-py/compare/v0.22.1...asd
 
-### [v0.22.1] - 17-04-2025
+
+## [v0.22.1] - 17-04-2025
 
 Changed:
 
 * Make ``GPUAdapterInfo`` a subclass of dict. Since ``adapter.info`` returned a dict before 0.22.0, this makes it compatible again, with code that expects a dict.
 
 
-### [v0.22.0] - 16-04-2025
+## [v0.22.0] - 16-04-2025
 
 Added:
 
@@ -292,7 +291,7 @@ Other:
 * Verify that override variables can be used for workgroup sizes and array lengths by @fyellin in https://github.com/pygfx/wgpu-py/pull/692
 
 
-### [v0.21.1] - 20-03-2025
+## [v0.21.1] - 20-03-2025
 
 This release updates to wgpu-native v24.0.3.1, which includes several upstream fixes.
 
@@ -301,7 +300,7 @@ Added:
 * Add `multi_draw_indexed_indirect_count` and `multi_draw_indirect_count` by @fyellin in https://github.com/pygfx/wgpu-py/pull/687
 
 
-### [v0.21.0] - 17-03-2025
+## [v0.21.0] - 17-03-2025
 
 This releases updates to using wgpu-native v24.0.0.2, and updates the API to the latest WebGPU spec (IDL).
 
@@ -313,13 +312,13 @@ Added:
 * New `feaure_level` arg for `request_adapter()`. More a diagnostic tool, not for most end-users.
 
 
-### [v0.20.1] - 14-03-2025
+## [v0.20.1] - 14-03-2025
 
 Other:
 * Add release notes.
 
 
-### [v0.20.0] - 14-03-2025
+## [v0.20.0] - 14-03-2025
 
 Added:
 
@@ -352,7 +351,7 @@ Other:
 * examples/imgui_cmap_picker.py - update for imgui bundle 1.6.2 by @pthom in https://github.com/pygfx/wgpu-py/pull/671
 
 
-### [v0.19.3] - 10-12-2024
+## [v0.19.3] - 10-12-2024
 
 Fixed:
 
@@ -362,14 +361,14 @@ Fixed:
 * Allow ``rendercanvas.get_context()`` before a backend is selected by @almarklein in https://github.com/pygfx/wgpu-py/pull/652
 
 
-### [v0.19.2] - 25-11-2024
+## [v0.19.2] - 25-11-2024
 
 Changed:
 
 * Update to Imgui 1.6+ by @panxinmiao in https://github.com/pygfx/wgpu-py/pull/645
 
 
-### [v0.19.1] - 19-11-2024
+## [v0.19.1] - 19-11-2024
 
 Some internal refactoring, fix the doc theme, and compatibility with rendercanvas.
 
@@ -381,7 +380,7 @@ Changed:
 * Refactor present-method mechanic by @almarklein in https://github.com/pygfx/wgpu-py/pull/642
 
 
-### [v0.19.0] - 04-11-2024
+## [v0.19.0] - 04-11-2024
 
 Added:
 
@@ -436,7 +435,7 @@ Internal changes:
 * Prevent extra errors when canvascontext creation fails by @almarklein in https://github.com/pygfx/wgpu-py/pull/635
 
 
-### [v0.18.1] - 17-09-2024
+## [v0.18.1] - 17-09-2024
 
 Added:
 
@@ -447,7 +446,7 @@ Fixed:
 * Fixed jupyter gui backend.
 
 
-### [v0.18.0] - 16-09-2024
+## [v0.18.0] - 16-09-2024
 
 Added:
 
@@ -463,7 +462,7 @@ Fixed:
 * Fixed the wheels for 32bit Windows.
 
 
-### [v0.17.3] - 10-09-2024
+## [v0.17.3] - 10-09-2024
 
 Added:
 
@@ -485,7 +484,7 @@ Changed:
 (Due to problems with the CD process, we had to bump the version a few times.)
 
 
-### [v0.16.0] - 13-06-2024
+## [v0.16.0] - 13-06-2024
 
 Changed:
 
@@ -493,13 +492,12 @@ Changed:
 * Updated to latest IDL.
 * Replaced the `adapter.request_adapter_info()` method with the `adapter.info` property.
 
-
 Changed:
 
 * The `Adapter.request_adapter_info()` method is replaced by the `.info` property.
 
 
-### [v0.15.3] - 12-06-2024
+## [v0.15.3] - 12-06-2024
 
 Added:
 
@@ -520,7 +518,7 @@ Fixed:
 * Implement `destroy()` the right way by @almarklein in https://github.com/pygfx/wgpu-py/pull/519
 
 
-### [v0.15.2] - 10-05-2024
+## [v0.15.2] - 10-05-2024
 
 Added:
 
@@ -537,7 +535,7 @@ Fixed:
 * Fix WxWgpuWindow by not calling 'add_event_handler' by @cansik in https://github.com/pygfx/wgpu-py/pull/486
 
 
-### [v0.15.1] - 28-03-2024
+## [v0.15.1] - 28-03-2024
 
 Added:
 
@@ -560,7 +558,7 @@ Fixed:
   * The `run()` function can be called multiple times (similar to `plt.plot()`).
 
 
-### [v0.15.0] - 07-03-2024
+## [v0.15.0] - 07-03-2024
 
 Changed:
 
@@ -576,7 +574,7 @@ Added:
 * Tests for detecting nan and inf values in shaders.
 
 
-### [v0.14.1] - 15-02-2024
+## [v0.14.1] - 15-02-2024
 
 Added:
 
@@ -587,7 +585,7 @@ Changed:
 * Diagnostics renders bools as `✓` or `-`, and large ints get scientific notation.
 
 
-### [v0.14.0] - 13-02-2024
+## [v0.14.0] - 13-02-2024
 
 Added:
 
@@ -609,7 +607,7 @@ Fixed:
 * Devices no longer leak memory.
 
 
-### [v0.13.2] - 21-12-2023
+## [v0.13.2] - 21-12-2023
 
 Added:
 
@@ -617,7 +615,7 @@ Added:
 * Add texture input and iFrameRate builtin to Shadertoy util https://github.com/pygfx/wgpu-py/pull/453
 
 
-### [v0.13.1] - 08-12-2023
+## [v0.13.1] - 08-12-2023
 
 Fixed:
 
@@ -631,7 +629,7 @@ Added:
 * Support for linux-aarch64 (binary wheels available)! This includes Raspberry Pi's with a 64-bit OS, and adds support for building linux docker images on Apple Silicon devices without having to emulate x86 (no need for `--platform linux/amd64`).
 
 
-### [v0.13.0] - 24-11-2023
+## [v0.13.0] - 24-11-2023
 
 Added:
 
@@ -660,7 +658,7 @@ Fixed:
   a texture view is kept.
 
 
-### [v0.12.0] - 15-11-2023
+## [v0.12.0] - 15-11-2023
 
 This is a big release that contains many improvements, but also multiple API changes.
 
@@ -672,20 +670,19 @@ buffer data.
 
 A summary to help you update your code:
 ```py
-# X import wgpu.backends.rs
+### X import wgpu.backends.rs
 import wgpu
 
-
-# X wgpu.request_adapter(canvas=None, power_preference="high-performance")
+### X wgpu.request_adapter(canvas=None, power_preference="high-performance")
 wgpu.gpu.request_adapter(power_preference="high-performance")
 
-# X buffer.map_read()
+### X buffer.map_read()
 buffer.map("READ")
 buffer.read_mapped(...)
 buffer.read_mapped(...)
 buffer.unmap()
 
-# X buffer.map_write()
+### X buffer.map_write()
 buffer.map("WRITE")
 buffer.write_mapped(data1, ...)
 buffer.write_mapped(data2, ...)
@@ -736,14 +733,14 @@ Fixed:
 * Prevent a few classes of memoryleaks. Mind that creating many `GPUDevice` objects still leaks.
 
 
-### [v0.11.0] - 11-10-2023
+## [v0.11.0] - 11-10-2023
 
 Changed:
 
 * Update to wgpu-native 0.17.2.1. No changes are needed in downstream code.
 
 
-### [v0.10.0] - 09-10-2023
+## [v0.10.0] - 09-10-2023
 
 In this release the API is aligned with the latest webgpu.idl, and
 we updated to wgpu-native (v0.17.0.2).
@@ -763,7 +760,7 @@ Changed:
 * Errors produced by a call into a wgpu-native function now produce a Python exception (no more async logging of errors).
 
 
-### [v0.9.5] - 02-10-2023
+## [v0.9.5] - 02-10-2023
 
 Fixed:
 
@@ -776,7 +773,7 @@ Changed:
 * Don't enable any features by default (previously WGPUNativeFeature_TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES was enabled).
 
 
-### [v0.9.4] - 23-02-2023
+## [v0.9.4] - 23-02-2023
 
 Fixed:
 
@@ -784,7 +781,7 @@ Fixed:
 * Fixed our example screenshot tests.
 
 
-### [v0.9.3] - 20-02-2023
+## [v0.9.3] - 20-02-2023
 
 Changed:
 
@@ -792,7 +789,7 @@ Changed:
 * The shadertoy util changed internally from using numpy to using a memoryview.
 
 
-### [v0.9.2] - 17-02-2023
+## [v0.9.2] - 17-02-2023
 
 Fixed:
 
@@ -803,7 +800,7 @@ Added:
 * The shadertoy util now supports GLSL, so code from the shadertoy website can be directly copied and run with wgpu (#343)
 
 
-### [v0.9.1] - 13-02-2023
+## [v0.9.1] - 13-02-2023
 
 Changed:
 
@@ -816,7 +813,7 @@ Added:
 * Added support for GLSL.
 
 
-### [v0.9.0] - 25-01-2023
+## [v0.9.0] - 25-01-2023
 
 In this release the API is aligned with the latest webgpu.idl, and
 we updated to the latest release of wgpu-native (v0.14.2.3).
@@ -835,7 +832,7 @@ Added:
 * New IDL: Buffer has new prop `map_state`.
 
 
-### [v0.8.4] - 10-01-2023
+## [v0.8.4] - 10-01-2023
 
 Fixed:
 
@@ -843,7 +840,7 @@ Fixed:
 * Prevent error messages when Qt examples/apps are closed (#326)
 
 
-### [v0.8.3] - 06-01-2023
+## [v0.8.3] - 06-01-2023
 
 Fixed:
 
@@ -869,7 +866,7 @@ Changed:
 * Improve readme (#290, #302, #314)
 
 
-### [v0.8.2] - 06-10-2022
+## [v0.8.2] - 06-10-2022
 
 Fixed:
 
@@ -890,7 +887,7 @@ Changed:
 * The examples have been adjusted for srgb colors.
 
 
-### [v0.8.1] - 29-04-2022
+## [v0.8.1] - 29-04-2022
 
 Fixed:
 
@@ -901,7 +898,7 @@ Changed:
 * Added a note in the docs to explain that the version of the examples must match the runtime version.
 
 
-### [v0.8.0] - 20-04-2022
+## [v0.8.0] - 20-04-2022
 
 Changed:
 
@@ -918,7 +915,6 @@ To update, you need to adjust to the following API changes:
 * Same for `depth_load_value` and `stencil_load_value`.
 * The `device.create_sampler()` method for mipmap filtering now uses the `MipmapFilterMode` enum instead of the `FilterMode` enum. Since the fields of these enums are the same, you probably don't need to change anything.
 
-
 To update, your shaders need the following changes:
 
 * The decorators have changed from `[[...]]` to `@...`.
@@ -929,7 +925,7 @@ To update, your shaders need the following changes:
 * Buffers bound as arrays don't need to be defined via a struct anymore.
 
 
-### [v0.7.7] - 12-04-2022
+## [v0.7.7] - 12-04-2022
 
 Fixed:
 
@@ -942,7 +938,7 @@ Added:
 * Our CI now tests the examples (including image comparisons).
 
 
-### [v0.7.6] - 28-03-2022
+## [v0.7.6] - 28-03-2022
 
 Changed:
 
@@ -953,7 +949,7 @@ Added:
 * Added `wgpu.gui.base.log_exception`, a context-manager to catch and log exceptions, e.g. in event callbacks.
 
 
-### [v0.7.5] - 17-03-2022
+## [v0.7.5] - 17-03-2022
 
 Fixed:
 
@@ -961,14 +957,14 @@ Fixed:
 * Mouse move events were not emitted no button is pressed in the Qt canvas.
 
 
-### [v0.7.4] - 04-02-2022
+## [v0.7.4] - 04-02-2022
 
 Fixed:
 
 * Position of glfw pointer events on MacOS.
 
 
-### [v0.7.3] - 25-01-2022
+## [v0.7.3] - 25-01-2022
 
 Added:
 
@@ -982,7 +978,7 @@ Fixed:
 * Size of glfw windows on MacOS.
 
 
-### [v0.7.2] - 24-12-2021
+## [v0.7.2] - 24-12-2021
 
 Fixed:
 
@@ -990,14 +986,14 @@ Fixed:
 * Pointer events in glfw have the correct key modifiers now.
 
 
-### [v0.7.1] - 22-12-2021
+## [v0.7.1] - 22-12-2021
 
 Added:
 
 * #224 - Added `add_event_handler` and `remove_event_handler` to GLFW and Jupyter GUI canvases.
 
 
-### [v0.7.0] - 21-12-2021
+## [v0.7.0] - 21-12-2021
 
 Changed:
 
@@ -1006,7 +1002,7 @@ Changed:
 * Renamed `ProgrammableStage.clamp_depth` -> `unclipped_depth`.
 
 
-### [v0.6.0] - 16-12-2021
+## [v0.6.0] - 16-12-2021
 
 Added:
 
@@ -1028,7 +1024,7 @@ Changed:
 * No changes to the wgpu API.
 
 
-### [v0.5.9] - 11-10-2021
+## [v0.5.9] - 11-10-2021
 
 Fixed:
 
@@ -1036,7 +1032,7 @@ Fixed:
 * Options for arch argument of download-wgpu-native.py script
 
 
-### [v0.5.8] - 09-10-2021
+## [v0.5.8] - 09-10-2021
 
 Added:
 
@@ -1047,7 +1043,7 @@ Changed:
 * The Qt examples use PySide6 instead of PyQt5.
 
 
-### [v0.5.7] - 07-10-2021
+## [v0.5.7] - 07-10-2021
 
 Changed:
 
@@ -1058,7 +1054,7 @@ Changed:
 * The `Adapter.is_software` property is renamed to `Adapter.is_fallback_adapter`.
 
 
-### [v0.5.6] - 30-08-2021
+## [v0.5.6] - 30-08-2021
 
 Added:
 
@@ -1075,7 +1071,7 @@ Fixed:
 * Support calling `get_current_texture()` multiple times during a draw.
 
 
-### [v0.5.5] - 09-08-2021
+## [v0.5.5] - 09-08-2021
 
 Added:
 
@@ -1102,14 +1098,14 @@ Changed:
 * WGSL: storage classes are written differently.
 
 
-### [v0.5.4] - 11-06-2021
+## [v0.5.4] - 11-06-2021
 
 Changed:
 
 * The backend selection is automatic by default. To force a backend, the `WGPU_BACKEND_TYPE` environment variable can be set to e.g. "Vulkan". It could be good to do this on Windows to prevent selection of DX12 for now.
 
 
-### [v0.5.3] - 04-06-2021
+## [v0.5.3] - 04-06-2021
 
 Added:
 
@@ -1125,7 +1121,7 @@ Fixed:
   because it's less mature.
 
 
-### [v0.5.2] - 23-05-2021
+## [v0.5.2] - 23-05-2021
 
 This release uses a new version of wgpu-native which has changed quite a bit internally. There
 is more validation (thus more restrictions). There are only a few changes to the API.
@@ -1153,7 +1149,7 @@ Removed:
 * Adapter and device limits is temporarily removed.
 
 
-### [v0.4] - 21-05-2021
+## [v0.4] - 21-05-2021
 
 This release represents about half a year of progress on the WebGPU API, so the API
 has changed quite a bit. The wgpu-py API more closely reflects the webgpu API - wgpu-native does
@@ -1191,7 +1187,7 @@ Changed:
 * When copying from/to textures, the `bytes_per_row` must now be a multiple of 256.
 
 
-### [v0.3.0] - 2020-07-05
+## [v0.3.0] - 2020-07-05
 
 With this update we're using a later release of wgpu-native, and follow changes
 is the WebGPU spec. Further, we've removed the need for ctypes to communicate
@@ -1226,7 +1222,7 @@ Removed:
 * The device `create_buffer_mapped` method is similarly removed. Use `create_buffer_with_data` instead.
 
 
-### [v0.2.0] - 2020-04-16
+## [v0.2.0] - 2020-04-16
 
 Added:
 
@@ -1247,6 +1243,6 @@ Changed:
 * Rendering is now done under the swap_chain's context: `with swap_chain as current_texture_view`
 
 
-### [v0.1.6] - 2020-04-01
+## [v0.1.6] - 2020-04-01
 
 This release is the first moderately mature version of wgpu-py.
