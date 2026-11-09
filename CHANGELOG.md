@@ -17,7 +17,7 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
-## [v0.33.0] - 06-11-2026
+## [v0.33.0](https://github.com/pygfx/wgpu-py/releases/tag/v0.33.0) - 06-11-2026
 
 ### What's Changed
 * Use len(draw_data.cmd_lists) in imgui backend by @hmaarrfk in https://github.com/pygfx/wgpu-py/pull/830
@@ -38,7 +38,7 @@ Possible sections in each release:
 **Full Changelog**: https://github.com/pygfx/wgpu-py/compare/v0.32.0...v0.33.0
 
 
-## [v0.32.0] - 19-07-2026
+## [v0.32.0](https://github.com/pygfx/wgpu-py/releases/tag/v0.32.0) - 19-07-2026
 
 ### Changed:
 * update wgpu-native to [29.0.0.0](https://github.com/gfx-rs/wgpu-native/blob/v29.0.0.0/CHANGELOG.md#changed) by @Vipitis in https://github.com/pygfx/wgpu-py/pull/805
@@ -74,7 +74,7 @@ Possible sections in each release:
 * Tweak contributing section in readme by @almarklein in https://github.com/pygfx/wgpu-py/pull/822
 
 
-## [v0.31.1] - 23-06-2026
+## [v0.31.1](https://github.com/pygfx/wgpu-py/releases/tag/v0.31.1) - 23-06-2026
 
 * Add compute_workgroups example by @mrinalchaturvedi27 in https://github.com/pygfx/wgpu-py/pull/801
 * Fix required positional args by @Vipitis in https://github.com/pygfx/wgpu-py/pull/804
@@ -83,7 +83,7 @@ Possible sections in each release:
 * Make the triangle example simpler by @Vipitis in https://github.com/pygfx/wgpu-py/pull/810
 
 
-## [v0.31.0] - 02-03-2026
+## [v0.31.0](https://github.com/pygfx/wgpu-py/releases/tag/v0.31.0) - 02-03-2026
 
 * Update to wgpu-native v27.0.4.0 by @almarklein in https://github.com/pygfx/wgpu-py/pull/787
 * Small improvement in error for preconfigure_default_device by @almarklein in https://github.com/pygfx/wgpu-py/pull/798
