@@ -1,0 +1,162 @@
+[meta]
+filename = 'diff_base.toml'
+description = 'Defines how our wgpu-py base API differs from the web-api (the one derived from webgpu.idl).'
+notes = 'We mostly *remove* things that we cannot replicate on desktop. So that we get an API surface that is the intersection of what we can use on desktop and web.'
+
+# ==== structs =====================================================================================
+# ==================================================================================================
+
+[structs.ExternalTextureBindingLayout]
+diff = 'REMOVE'
+
+[structs.CopyExternalImageDestInfo]
+diff = 'REMOVE'
+
+[structs.CopyExternalImageSourceInfo]
+diff = 'REMOVE'
+
+[structs.BindGroupLayoutEntry]
+fields.external_texture.diff = 'REMOVE'
+
+[structs.RequestAdapterOptions]
+fields.power_preference.type = 'enums.PowerPreference | None'
+fields.power_preference.default = 'None'
+
+fields.canvas.type = 'CanvasLike | None'
+fields.canvas.default = 'None'
+
+fields.xr_compatible.diff = 'REMOVE'
+
+# ==== classes =====================================================================================
+# ==================================================================================================
+
+# ---- GPU -----------------------------------------------------------------------------------------
+
+[classes.GPU.methods.enumerate_adapters_async]
+doc = 'Get a list of adapter objects available on the current system.'
+args = {}
+returns.type = 'GPUPromise[list[GPUAdapter]]'
+
+[classes.GPU.methods.enumerate_adapters_sync]
+doc = 'Get a list of adapter objects available on the current system.'
+args = {}
+returns.type = 'list[GPUAdapter]'
+
+[classes.GPU.methods.get_canvas_context]
+doc = '''
+Get the GPUCanvasContext object for the appropriate backend.
+
+Note that the recommended way to get a context is to instead use the ``rendercanvas`` library.
+
+The ``present_info`` dict should have a ``window`` field containing the window id. On Linux there should also be ``platform`` field to distinguish between 'wayland' and 'x11', and a ``display`` field for the display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object. This dict is an interface between `rendercanvas`` and ``wgpu-py``.'''
+returns.type = 'GPUCanvasContext'
+
+args.present_info.doc = 'The low-level presentation info.'
+args.present_info.type = 'dict'
+args.present_info.default = ''
+
+# ---- GPUCanvasContext ----------------------------------------------------------------------------
+
+[classes.GPUCanvasContext.properties.physical_size]
+doc = 'Get the physical size of the current framebuffer.'
+type = 'tuple[int, int]'
+
+[classes.GPUCanvasContext.methods.set_physical_size]
+doc = 'Set the current framebuffer physical size.'
+returns.type = 'None'
+
+args.width.doc = 'The new width of the framebuffer.'
+args.width.type = 'int'
+args.width.default = ''
+
+args.height.doc = 'The new height of the framebuffer.'
+args.height.type = 'int'
+args.height.default = ''
+
+[classes.GPUCanvasContext.methods.get_preferred_format]
+doc = 'Get the preferred surface texture format.'
+returns.type = 'enums.TextureFormat'
+
+args.adapter.type = 'GPUAdapter'
+args.adapter.default = ''
+
+[classes.GPUCanvasContext.methods.present]
+doc = 'Present what has been drawn to the current texture, by compositing it to the canvas.'
+args = {}
+returns.type = 'None'
+
+# ---- GPUAdapterInfo ------------------------------------------------------------------------------
+
+[classes.GPUAdapterInfo]
+bases = ['dict']
+
+# ---- GPUObjectBase -------------------------------------------------------------------------------
+
+[classes.GPUObjectBase.properties.uid]
+doc = '''
+A unique id (integer) for this object.
+
+The value is unique to the process; in contrast to ``id(ob)``, the numbers are never reused.'''
+type = 'int'
+
+# ---- GPUAdapter ----------------------------------------------------------------------------------
+
+[classes.GPUAdapter.properties.summary]
+doc = 'A one-line summary of the info of this adapter (device, adapter_type, backend_type).'
+type = 'str'
+
+# ---- GPUQueue ------------------------------------------------------------------------------------
+
+[classes.GPUQueue.methods.copy_external_image_to_texture]
+diff = 'REMOVE'
+
+# ---- GPUDevice -----------------------------------------------------------------------------------
+
+[classes.GPUDevice.properties.adapter]
+doc = 'The adapter object corresponding to this device.'
+type = 'GPUAdapter'
+
+[classes.GPUDevice.methods.import_external_texture]
+diff = 'REMOVE'
+
+[classes.GPUDevice.methods.create_buffer_with_data]
+returns.type = 'GPUBuffer'
+
+args.label.type = 'str'
+args.label.default = '""'
+
+args.data.type = 'ArrayLike'
+args.data.default = ''
+
+args.usage.type = 'flags.BufferUsageFlags'
+args.usage.default = ''
+
+# ---- NavigatorGPU --------------------------------------------------------------------------------
+
+[classes.NavigatorGPU]
+diff = 'REMOVE'
+
+# ---- GPUExternalTexture --------------------------------------------------------------------------
+
+[classes.GPUExternalTexture]
+diff = 'REMOVE'
+
+# ---- GPUUncapturedErrorEvent ---------------------------------------------------------------------
+
+[classes.GPUUncapturedErrorEvent]
+diff = 'REMOVE'
+
+# ---- GPUSupportedLimits --------------------------------------------------------------------------
+
+[classes.GPUSupportedLimits]
+diff = 'REMOVE'
+
+# ---- GPUSupportedFeatures ------------------------------------------------------------------------
+
+[classes.GPUSupportedFeatures]
+diff = 'REMOVE'
+
+# ---- WGSLLanguageFeatures ------------------------------------------------------------------------
+
+[classes.WGSLLanguageFeatures]
+diff = 'REMOVE'

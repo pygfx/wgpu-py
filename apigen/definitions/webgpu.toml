@@ -1,0 +1,2527 @@
+[meta]
+filename = 'webgpu.toml'
+description = "Python-flavored WebGPU API, generated from 'webgpu.idl'."
+notes = 'All types are converted to the Python equivalents, all names are made Pythonic snake_case, methods that accept a single descriptor arg are *not* yet resolved to accept the descriptor args directly.'
+
+# ==== flags =======================================================================================
+# ==================================================================================================
+
+[flags.BufferUsage]
+fields.MAP_READ.value = 1
+
+fields.MAP_WRITE.value = 2
+
+fields.COPY_SRC.value = 4
+
+fields.COPY_DST.value = 8
+
+fields.INDEX.value = 16
+
+fields.VERTEX.value = 32
+
+fields.UNIFORM.value = 64
+
+fields.STORAGE.value = 128
+
+fields.INDIRECT.value = 256
+
+fields.QUERY_RESOLVE.value = 512
+
+[flags.MapMode]
+fields.READ.value = 1
+
+fields.WRITE.value = 2
+
+[flags.TextureUsage]
+fields.COPY_SRC.value = 1
+
+fields.COPY_DST.value = 2
+
+fields.TEXTURE_BINDING.value = 4
+
+fields.STORAGE_BINDING.value = 8
+
+fields.RENDER_ATTACHMENT.value = 16
+
+fields.TRANSIENT_ATTACHMENT.value = 32
+
+[flags.ShaderStage]
+fields.VERTEX.value = 1
+
+fields.FRAGMENT.value = 2
+
+fields.COMPUTE.value = 4
+
+[flags.ColorWrite]
+fields.RED.value = 1
+
+fields.GREEN.value = 2
+
+fields.BLUE.value = 4
+
+fields.ALPHA.value = 8
+
+fields.ALL.value = 15
+
+# ==== enums =======================================================================================
+# ==================================================================================================
+
+[enums.PowerPreference]
+fields.low_power.value = 'low-power'
+
+fields.high_performance.value = 'high-performance'
+
+[enums.FeatureName]
+fields.core_features_and_limits.value = 'core-features-and-limits'
+
+fields.depth_clip_control.value = 'depth-clip-control'
+
+fields.depth32float_stencil8.value = 'depth32float-stencil8'
+
+fields.texture_compression_bc.value = 'texture-compression-bc'
+
+fields.texture_compression_bc_sliced_d3.value = 'texture-compression-bc-sliced-3d'
+
+fields.texture_compression_etc2.value = 'texture-compression-etc2'
+
+fields.texture_compression_astc.value = 'texture-compression-astc'
+
+fields.texture_compression_astc_sliced_d3.value = 'texture-compression-astc-sliced-3d'
+
+fields.timestamp_query.value = 'timestamp-query'
+
+fields.indirect_first_instance.value = 'indirect-first-instance'
+
+fields.shader_f16.value = 'shader-f16'
+
+fields.rg11b10ufloat_renderable.value = 'rg11b10ufloat-renderable'
+
+fields.bgra8unorm_storage.value = 'bgra8unorm-storage'
+
+fields.float32_filterable.value = 'float32-filterable'
+
+fields.float32_blendable.value = 'float32-blendable'
+
+fields.clip_distances.value = 'clip-distances'
+
+fields.dual_source_blending.value = 'dual-source-blending'
+
+fields.subgroups.value = 'subgroups'
+
+fields.texture_formats_tier1.value = 'texture-formats-tier1'
+
+fields.texture_formats_tier2.value = 'texture-formats-tier2'
+
+fields.primitive_index.value = 'primitive-index'
+
+fields.texture_component_swizzle.value = 'texture-component-swizzle'
+
+[enums.BufferMapState]
+fields.unmapped.value = 'unmapped'
+
+fields.pending.value = 'pending'
+
+fields.mapped.value = 'mapped'
+
+[enums.TextureDimension]
+fields.d1.value = '1d'
+
+fields.d2.value = '2d'
+
+fields.d3.value = '3d'
+
+[enums.TextureViewDimension]
+fields.d1.value = '1d'
+
+fields.d2.value = '2d'
+
+fields.d2_array.value = '2d-array'
+
+fields.cube.value = 'cube'
+
+fields.cube_array.value = 'cube-array'
+
+fields.d3.value = '3d'
+
+[enums.TextureAspect]
+fields.all.value = 'all'
+
+fields.stencil_only.value = 'stencil-only'
+
+fields.depth_only.value = 'depth-only'
+
+[enums.TextureFormat]
+fields.r8unorm.value = 'r8unorm'
+
+fields.r8snorm.value = 'r8snorm'
+
+fields.r8uint.value = 'r8uint'
+
+fields.r8sint.value = 'r8sint'
+
+fields.r16unorm.value = 'r16unorm'
+
+fields.r16snorm.value = 'r16snorm'
+
+fields.r16uint.value = 'r16uint'
+
+fields.r16sint.value = 'r16sint'
+
+fields.r16float.value = 'r16float'
+
+fields.rg8unorm.value = 'rg8unorm'
+
+fields.rg8snorm.value = 'rg8snorm'
+
+fields.rg8uint.value = 'rg8uint'
+
+fields.rg8sint.value = 'rg8sint'
+
+fields.r32uint.value = 'r32uint'
+
+fields.r32sint.value = 'r32sint'
+
+fields.r32float.value = 'r32float'
+
+fields.rg16unorm.value = 'rg16unorm'
+
+fields.rg16snorm.value = 'rg16snorm'
+
+fields.rg16uint.value = 'rg16uint'
+
+fields.rg16sint.value = 'rg16sint'
+
+fields.rg16float.value = 'rg16float'
+
+fields.rgba8unorm.value = 'rgba8unorm'
+
+fields.rgba8unorm_srgb.value = 'rgba8unorm-srgb'
+
+fields.rgba8snorm.value = 'rgba8snorm'
+
+fields.rgba8uint.value = 'rgba8uint'
+
+fields.rgba8sint.value = 'rgba8sint'
+
+fields.bgra8unorm.value = 'bgra8unorm'
+
+fields.bgra8unorm_srgb.value = 'bgra8unorm-srgb'
+
+fields.rgb9e5ufloat.value = 'rgb9e5ufloat'
+
+fields.rgb10a2uint.value = 'rgb10a2uint'
+
+fields.rgb10a2unorm.value = 'rgb10a2unorm'
+
+fields.rg11b10ufloat.value = 'rg11b10ufloat'
+
+fields.rg32uint.value = 'rg32uint'
+
+fields.rg32sint.value = 'rg32sint'
+
+fields.rg32float.value = 'rg32float'
+
+fields.rgba16unorm.value = 'rgba16unorm'
+
+fields.rgba16snorm.value = 'rgba16snorm'
+
+fields.rgba16uint.value = 'rgba16uint'
+
+fields.rgba16sint.value = 'rgba16sint'
+
+fields.rgba16float.value = 'rgba16float'
+
+fields.rgba32uint.value = 'rgba32uint'
+
+fields.rgba32sint.value = 'rgba32sint'
+
+fields.rgba32float.value = 'rgba32float'
+
+fields.stencil8.value = 'stencil8'
+
+fields.depth16unorm.value = 'depth16unorm'
+
+fields.depth24plus.value = 'depth24plus'
+
+fields.depth24plus_stencil8.value = 'depth24plus-stencil8'
+
+fields.depth32float.value = 'depth32float'
+
+fields.depth32float_stencil8.value = 'depth32float-stencil8'
+
+fields.bc1_rgba_unorm.value = 'bc1-rgba-unorm'
+
+fields.bc1_rgba_unorm_srgb.value = 'bc1-rgba-unorm-srgb'
+
+fields.bc2_rgba_unorm.value = 'bc2-rgba-unorm'
+
+fields.bc2_rgba_unorm_srgb.value = 'bc2-rgba-unorm-srgb'
+
+fields.bc3_rgba_unorm.value = 'bc3-rgba-unorm'
+
+fields.bc3_rgba_unorm_srgb.value = 'bc3-rgba-unorm-srgb'
+
+fields.bc4_r_unorm.value = 'bc4-r-unorm'
+
+fields.bc4_r_snorm.value = 'bc4-r-snorm'
+
+fields.bc5_rg_unorm.value = 'bc5-rg-unorm'
+
+fields.bc5_rg_snorm.value = 'bc5-rg-snorm'
+
+fields.bc6h_rgb_ufloat.value = 'bc6h-rgb-ufloat'
+
+fields.bc6h_rgb_float.value = 'bc6h-rgb-float'
+
+fields.bc7_rgba_unorm.value = 'bc7-rgba-unorm'
+
+fields.bc7_rgba_unorm_srgb.value = 'bc7-rgba-unorm-srgb'
+
+fields.etc2_rgb8unorm.value = 'etc2-rgb8unorm'
+
+fields.etc2_rgb8unorm_srgb.value = 'etc2-rgb8unorm-srgb'
+
+fields.etc2_rgb8a1unorm.value = 'etc2-rgb8a1unorm'
+
+fields.etc2_rgb8a1unorm_srgb.value = 'etc2-rgb8a1unorm-srgb'
+
+fields.etc2_rgba8unorm.value = 'etc2-rgba8unorm'
+
+fields.etc2_rgba8unorm_srgb.value = 'etc2-rgba8unorm-srgb'
+
+fields.eac_r11unorm.value = 'eac-r11unorm'
+
+fields.eac_r11snorm.value = 'eac-r11snorm'
+
+fields.eac_rg11unorm.value = 'eac-rg11unorm'
+
+fields.eac_rg11snorm.value = 'eac-rg11snorm'
+
+fields.astc_4x4_unorm.value = 'astc-4x4-unorm'
+
+fields.astc_4x4_unorm_srgb.value = 'astc-4x4-unorm-srgb'
+
+fields.astc_5x4_unorm.value = 'astc-5x4-unorm'
+
+fields.astc_5x4_unorm_srgb.value = 'astc-5x4-unorm-srgb'
+
+fields.astc_5x5_unorm.value = 'astc-5x5-unorm'
+
+fields.astc_5x5_unorm_srgb.value = 'astc-5x5-unorm-srgb'
+
+fields.astc_6x5_unorm.value = 'astc-6x5-unorm'
+
+fields.astc_6x5_unorm_srgb.value = 'astc-6x5-unorm-srgb'
+
+fields.astc_6x6_unorm.value = 'astc-6x6-unorm'
+
+fields.astc_6x6_unorm_srgb.value = 'astc-6x6-unorm-srgb'
+
+fields.astc_8x5_unorm.value = 'astc-8x5-unorm'
+
+fields.astc_8x5_unorm_srgb.value = 'astc-8x5-unorm-srgb'
+
+fields.astc_8x6_unorm.value = 'astc-8x6-unorm'
+
+fields.astc_8x6_unorm_srgb.value = 'astc-8x6-unorm-srgb'
+
+fields.astc_8x8_unorm.value = 'astc-8x8-unorm'
+
+fields.astc_8x8_unorm_srgb.value = 'astc-8x8-unorm-srgb'
+
+fields.astc_10x5_unorm.value = 'astc-10x5-unorm'
+
+fields.astc_10x5_unorm_srgb.value = 'astc-10x5-unorm-srgb'
+
+fields.astc_10x6_unorm.value = 'astc-10x6-unorm'
+
+fields.astc_10x6_unorm_srgb.value = 'astc-10x6-unorm-srgb'
+
+fields.astc_10x8_unorm.value = 'astc-10x8-unorm'
+
+fields.astc_10x8_unorm_srgb.value = 'astc-10x8-unorm-srgb'
+
+fields.astc_10x10_unorm.value = 'astc-10x10-unorm'
+
+fields.astc_10x10_unorm_srgb.value = 'astc-10x10-unorm-srgb'
+
+fields.astc_12x10_unorm.value = 'astc-12x10-unorm'
+
+fields.astc_12x10_unorm_srgb.value = 'astc-12x10-unorm-srgb'
+
+fields.astc_12x12_unorm.value = 'astc-12x12-unorm'
+
+fields.astc_12x12_unorm_srgb.value = 'astc-12x12-unorm-srgb'
+
+[enums.AddressMode]
+fields.clamp_to_edge.value = 'clamp-to-edge'
+
+fields.repeat.value = 'repeat'
+
+fields.mirror_repeat.value = 'mirror-repeat'
+
+[enums.FilterMode]
+fields.nearest.value = 'nearest'
+
+fields.linear.value = 'linear'
+
+[enums.MipmapFilterMode]
+fields.nearest.value = 'nearest'
+
+fields.linear.value = 'linear'
+
+[enums.CompareFunction]
+fields.never.value = 'never'
+
+fields.less.value = 'less'
+
+fields.equal.value = 'equal'
+
+fields.less_equal.value = 'less-equal'
+
+fields.greater.value = 'greater'
+
+fields.not_equal.value = 'not-equal'
+
+fields.greater_equal.value = 'greater-equal'
+
+fields.always.value = 'always'
+
+[enums.BufferBindingType]
+fields.uniform.value = 'uniform'
+
+fields.storage.value = 'storage'
+
+fields.read_only_storage.value = 'read-only-storage'
+
+[enums.SamplerBindingType]
+fields.filtering.value = 'filtering'
+
+fields.non_filtering.value = 'non-filtering'
+
+fields.comparison.value = 'comparison'
+
+[enums.TextureSampleType]
+fields.float.value = 'float'
+
+fields.unfilterable_float.value = 'unfilterable-float'
+
+fields.depth.value = 'depth'
+
+fields.sint.value = 'sint'
+
+fields.uint.value = 'uint'
+
+[enums.StorageTextureAccess]
+fields.write_only.value = 'write-only'
+
+fields.read_only.value = 'read-only'
+
+fields.read_write.value = 'read-write'
+
+[enums.CompilationMessageType]
+fields.error.value = 'error'
+
+fields.warning.value = 'warning'
+
+fields.info.value = 'info'
+
+[enums.PipelineErrorReason]
+fields.validation.value = 'validation'
+
+fields.internal.value = 'internal'
+
+[enums.AutoLayoutMode]
+fields.auto.value = 'auto'
+
+[enums.PrimitiveTopology]
+fields.point_list.value = 'point-list'
+
+fields.line_list.value = 'line-list'
+
+fields.line_strip.value = 'line-strip'
+
+fields.triangle_list.value = 'triangle-list'
+
+fields.triangle_strip.value = 'triangle-strip'
+
+[enums.FrontFace]
+fields.ccw.value = 'ccw'
+
+fields.cw.value = 'cw'
+
+[enums.CullMode]
+fields.none.value = 'none'
+
+fields.front.value = 'front'
+
+fields.back.value = 'back'
+
+[enums.BlendFactor]
+fields.zero.value = 'zero'
+
+fields.one.value = 'one'
+
+fields.src.value = 'src'
+
+fields.one_minus_src.value = 'one-minus-src'
+
+fields.src_alpha.value = 'src-alpha'
+
+fields.one_minus_src_alpha.value = 'one-minus-src-alpha'
+
+fields.dst.value = 'dst'
+
+fields.one_minus_dst.value = 'one-minus-dst'
+
+fields.dst_alpha.value = 'dst-alpha'
+
+fields.one_minus_dst_alpha.value = 'one-minus-dst-alpha'
+
+fields.src_alpha_saturated.value = 'src-alpha-saturated'
+
+fields.constant.value = 'constant'
+
+fields.one_minus_constant.value = 'one-minus-constant'
+
+fields.src1.value = 'src1'
+
+fields.one_minus_src1.value = 'one-minus-src1'
+
+fields.src1_alpha.value = 'src1-alpha'
+
+fields.one_minus_src1_alpha.value = 'one-minus-src1-alpha'
+
+[enums.BlendOperation]
+fields.add.value = 'add'
+
+fields.subtract.value = 'subtract'
+
+fields.reverse_subtract.value = 'reverse-subtract'
+
+fields.min.value = 'min'
+
+fields.max.value = 'max'
+
+[enums.StencilOperation]
+fields.keep.value = 'keep'
+
+fields.zero.value = 'zero'
+
+fields.replace.value = 'replace'
+
+fields.invert.value = 'invert'
+
+fields.increment_clamp.value = 'increment-clamp'
+
+fields.decrement_clamp.value = 'decrement-clamp'
+
+fields.increment_wrap.value = 'increment-wrap'
+
+fields.decrement_wrap.value = 'decrement-wrap'
+
+[enums.IndexFormat]
+fields.uint16.value = 'uint16'
+
+fields.uint32.value = 'uint32'
+
+[enums.VertexFormat]
+fields.uint8.value = 'uint8'
+
+fields.uint8x2.value = 'uint8x2'
+
+fields.uint8x4.value = 'uint8x4'
+
+fields.sint8.value = 'sint8'
+
+fields.sint8x2.value = 'sint8x2'
+
+fields.sint8x4.value = 'sint8x4'
+
+fields.unorm8.value = 'unorm8'
+
+fields.unorm8x2.value = 'unorm8x2'
+
+fields.unorm8x4.value = 'unorm8x4'
+
+fields.snorm8.value = 'snorm8'
+
+fields.snorm8x2.value = 'snorm8x2'
+
+fields.snorm8x4.value = 'snorm8x4'
+
+fields.uint16.value = 'uint16'
+
+fields.uint16x2.value = 'uint16x2'
+
+fields.uint16x4.value = 'uint16x4'
+
+fields.sint16.value = 'sint16'
+
+fields.sint16x2.value = 'sint16x2'
+
+fields.sint16x4.value = 'sint16x4'
+
+fields.unorm16.value = 'unorm16'
+
+fields.unorm16x2.value = 'unorm16x2'
+
+fields.unorm16x4.value = 'unorm16x4'
+
+fields.snorm16.value = 'snorm16'
+
+fields.snorm16x2.value = 'snorm16x2'
+
+fields.snorm16x4.value = 'snorm16x4'
+
+fields.float16.value = 'float16'
+
+fields.float16x2.value = 'float16x2'
+
+fields.float16x4.value = 'float16x4'
+
+fields.float32.value = 'float32'
+
+fields.float32x2.value = 'float32x2'
+
+fields.float32x3.value = 'float32x3'
+
+fields.float32x4.value = 'float32x4'
+
+fields.uint32.value = 'uint32'
+
+fields.uint32x2.value = 'uint32x2'
+
+fields.uint32x3.value = 'uint32x3'
+
+fields.uint32x4.value = 'uint32x4'
+
+fields.sint32.value = 'sint32'
+
+fields.sint32x2.value = 'sint32x2'
+
+fields.sint32x3.value = 'sint32x3'
+
+fields.sint32x4.value = 'sint32x4'
+
+fields.unorm10_10_10_2.value = 'unorm10-10-10-2'
+
+fields.unorm8x4_bgra.value = 'unorm8x4-bgra'
+
+[enums.VertexStepMode]
+fields.vertex.value = 'vertex'
+
+fields.instance.value = 'instance'
+
+[enums.LoadOp]
+fields.load.value = 'load'
+
+fields.clear.value = 'clear'
+
+[enums.StoreOp]
+fields.store.value = 'store'
+
+fields.discard.value = 'discard'
+
+[enums.QueryType]
+fields.occlusion.value = 'occlusion'
+
+fields.timestamp.value = 'timestamp'
+
+[enums.CanvasAlphaMode]
+fields.opaque.value = 'opaque'
+
+fields.premultiplied.value = 'premultiplied'
+
+[enums.CanvasToneMappingMode]
+fields.standard.value = 'standard'
+
+fields.extended.value = 'extended'
+
+[enums.DeviceLostReason]
+fields.unknown.value = 'unknown'
+
+fields.destroyed.value = 'destroyed'
+
+[enums.ErrorFilter]
+fields.validation.value = 'validation'
+
+fields.out_of_memory.value = 'out-of-memory'
+
+fields.internal.value = 'internal'
+
+# ==== structs =====================================================================================
+# ==================================================================================================
+
+[structs.RequestAdapterOptions]
+fields.feature_level.type = 'str'
+fields.feature_level.default = '"core"'
+
+fields.power_preference.type = 'enums.PowerPreferenceEnum | None'
+fields.power_preference.default = 'None'
+
+fields.force_fallback_adapter.type = 'bool'
+fields.force_fallback_adapter.default = 'False'
+
+fields.xr_compatible.type = 'bool'
+fields.xr_compatible.default = 'False'
+
+[structs.DeviceDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.required_features.type = 'Sequence[enums.FeatureNameEnum]'
+fields.required_features.default = '()'
+
+fields.required_limits.type = 'dict[str, int | None] | None'
+fields.required_limits.default = 'None'
+
+fields.default_queue.type = 'structs.QueueDescriptorStruct | None'
+fields.default_queue.default = 'None'
+
+[structs.BufferDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.size.type = 'int'
+fields.size.default = ''
+
+fields.usage.type = 'flags.BufferUsageFlags'
+fields.usage.default = ''
+
+fields.mapped_at_creation.type = 'bool'
+fields.mapped_at_creation.default = 'False'
+
+[structs.TextureDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.size.type = 'tuple[int, int, int] | structs.Extent3DStruct'
+fields.size.default = ''
+
+fields.mip_level_count.type = 'int'
+fields.mip_level_count.default = '1'
+
+fields.sample_count.type = 'int'
+fields.sample_count.default = '1'
+
+fields.dimension.type = 'enums.TextureDimensionEnum'
+fields.dimension.default = '"2d"'
+
+fields.format.type = 'enums.TextureFormatEnum'
+fields.format.default = ''
+
+fields.usage.type = 'flags.TextureUsageFlags'
+fields.usage.default = ''
+
+fields.view_formats.type = 'Sequence[enums.TextureFormatEnum]'
+fields.view_formats.default = '()'
+
+fields.texture_binding_view_dimension.type = 'enums.TextureViewDimensionEnum | None'
+fields.texture_binding_view_dimension.default = 'None'
+
+[structs.TextureViewDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.format.type = 'enums.TextureFormatEnum | None'
+fields.format.default = 'None'
+
+fields.dimension.type = 'enums.TextureViewDimensionEnum | None'
+fields.dimension.default = 'None'
+
+fields.usage.type = 'flags.TextureUsageFlags'
+fields.usage.default = '0'
+
+fields.aspect.type = 'enums.TextureAspectEnum'
+fields.aspect.default = '"all"'
+
+fields.base_mip_level.type = 'int'
+fields.base_mip_level.default = '0'
+
+fields.mip_level_count.type = 'int | None'
+fields.mip_level_count.default = 'None'
+
+fields.base_array_layer.type = 'int'
+fields.base_array_layer.default = '0'
+
+fields.array_layer_count.type = 'int | None'
+fields.array_layer_count.default = 'None'
+
+fields.swizzle.type = 'str'
+fields.swizzle.default = '"rgba"'
+
+[structs.ExternalTextureDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.source.type = 'ArrayLike | object'
+fields.source.default = ''
+
+fields.color_space.type = 'str'
+fields.color_space.default = '"srgb"'
+
+[structs.SamplerDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.address_mode_u.type = 'enums.AddressModeEnum'
+fields.address_mode_u.default = '"clamp-to-edge"'
+
+fields.address_mode_v.type = 'enums.AddressModeEnum'
+fields.address_mode_v.default = '"clamp-to-edge"'
+
+fields.address_mode_w.type = 'enums.AddressModeEnum'
+fields.address_mode_w.default = '"clamp-to-edge"'
+
+fields.mag_filter.type = 'enums.FilterModeEnum'
+fields.mag_filter.default = '"nearest"'
+
+fields.min_filter.type = 'enums.FilterModeEnum'
+fields.min_filter.default = '"nearest"'
+
+fields.mipmap_filter.type = 'enums.MipmapFilterModeEnum'
+fields.mipmap_filter.default = '"nearest"'
+
+fields.lod_min_clamp.type = 'float'
+fields.lod_min_clamp.default = '0'
+
+fields.lod_max_clamp.type = 'float'
+fields.lod_max_clamp.default = '32'
+
+fields.compare.type = 'enums.CompareFunctionEnum | None'
+fields.compare.default = 'None'
+
+fields.max_anisotropy.type = 'int'
+fields.max_anisotropy.default = '1'
+
+[structs.BindGroupLayoutDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.entries.type = 'Sequence[structs.BindGroupLayoutEntryStruct]'
+fields.entries.default = ''
+
+[structs.BindGroupLayoutEntry]
+fields.binding.type = 'int'
+fields.binding.default = ''
+
+fields.visibility.type = 'flags.ShaderStageFlags'
+fields.visibility.default = ''
+
+fields.buffer.type = 'structs.BufferBindingLayoutStruct | None'
+fields.buffer.default = 'None'
+
+fields.sampler.type = 'structs.SamplerBindingLayoutStruct | None'
+fields.sampler.default = 'None'
+
+fields.texture.type = 'structs.TextureBindingLayoutStruct | None'
+fields.texture.default = 'None'
+
+fields.storage_texture.type = 'structs.StorageTextureBindingLayoutStruct | None'
+fields.storage_texture.default = 'None'
+
+fields.external_texture.type = 'structs.ExternalTextureBindingLayoutStruct | None'
+fields.external_texture.default = 'None'
+
+[structs.BufferBindingLayout]
+fields.type.type = 'enums.BufferBindingTypeEnum'
+fields.type.default = '"uniform"'
+
+fields.has_dynamic_offset.type = 'bool'
+fields.has_dynamic_offset.default = 'False'
+
+fields.min_binding_size.type = 'int'
+fields.min_binding_size.default = '0'
+
+[structs.SamplerBindingLayout]
+fields.type.type = 'enums.SamplerBindingTypeEnum'
+fields.type.default = '"filtering"'
+
+[structs.TextureBindingLayout]
+fields.sample_type.type = 'enums.TextureSampleTypeEnum'
+fields.sample_type.default = '"float"'
+
+fields.view_dimension.type = 'enums.TextureViewDimensionEnum'
+fields.view_dimension.default = '"2d"'
+
+fields.multisampled.type = 'bool'
+fields.multisampled.default = 'False'
+
+[structs.StorageTextureBindingLayout]
+fields.access.type = 'enums.StorageTextureAccessEnum'
+fields.access.default = '"write-only"'
+
+fields.format.type = 'enums.TextureFormatEnum'
+fields.format.default = ''
+
+fields.view_dimension.type = 'enums.TextureViewDimensionEnum'
+fields.view_dimension.default = '"2d"'
+
+[structs.ExternalTextureBindingLayout]
+fields = {}
+
+[structs.BindGroupDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.layout.type = 'GPUBindGroupLayout'
+fields.layout.default = ''
+
+fields.entries.type = 'Sequence[structs.BindGroupEntryStruct]'
+fields.entries.default = ''
+
+[structs.BindGroupEntry]
+fields.binding.type = 'int'
+fields.binding.default = ''
+
+fields.resource.type = 'GPUBuffer | GPUSampler | GPUTexture | GPUTextureView | object | structs.BufferBindingStruct'
+fields.resource.default = ''
+
+[structs.BufferBinding]
+fields.buffer.type = 'GPUBuffer'
+fields.buffer.default = ''
+
+fields.offset.type = 'int'
+fields.offset.default = '0'
+
+fields.size.type = 'int | None'
+fields.size.default = 'None'
+
+[structs.PipelineLayoutDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.bind_group_layouts.type = 'Sequence[GPUBindGroupLayout]'
+fields.bind_group_layouts.default = ''
+
+fields.immediate_size.type = 'int'
+fields.immediate_size.default = '0'
+
+[structs.ShaderModuleDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.code.type = 'str'
+fields.code.default = ''
+
+fields.compilation_hints.type = 'Sequence[structs.ShaderModuleCompilationHintStruct]'
+fields.compilation_hints.default = '()'
+
+[structs.ShaderModuleCompilationHint]
+fields.entry_point.type = 'str'
+fields.entry_point.default = ''
+
+fields.layout.type = 'GPUPipelineLayout | enums.AutoLayoutModeEnum | None'
+fields.layout.default = 'None'
+
+[structs.PipelineErrorInit]
+fields.reason.type = 'enums.PipelineErrorReasonEnum'
+fields.reason.default = ''
+
+[structs.ProgrammableStage]
+fields.module.type = 'GPUShaderModule'
+fields.module.default = ''
+
+fields.entry_point.type = 'str | None'
+fields.entry_point.default = 'None'
+
+fields.constants.type = 'dict[str, float] | None'
+fields.constants.default = 'None'
+
+[structs.ComputePipelineDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.layout.type = 'GPUPipelineLayout | enums.AutoLayoutModeEnum'
+fields.layout.default = ''
+
+fields.compute.type = 'structs.ProgrammableStageStruct'
+fields.compute.default = ''
+
+[structs.RenderPipelineDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.layout.type = 'GPUPipelineLayout | enums.AutoLayoutModeEnum'
+fields.layout.default = ''
+
+fields.vertex.type = 'structs.VertexStateStruct'
+fields.vertex.default = ''
+
+fields.primitive.type = 'structs.PrimitiveStateStruct | None'
+fields.primitive.default = 'None'
+
+fields.depth_stencil.type = 'structs.DepthStencilStateStruct | None'
+fields.depth_stencil.default = 'None'
+
+fields.multisample.type = 'structs.MultisampleStateStruct | None'
+fields.multisample.default = 'None'
+
+fields.fragment.type = 'structs.FragmentStateStruct | None'
+fields.fragment.default = 'None'
+
+[structs.PrimitiveState]
+fields.topology.type = 'enums.PrimitiveTopologyEnum'
+fields.topology.default = '"triangle-list"'
+
+fields.strip_index_format.type = 'enums.IndexFormatEnum | None'
+fields.strip_index_format.default = 'None'
+
+fields.front_face.type = 'enums.FrontFaceEnum'
+fields.front_face.default = '"ccw"'
+
+fields.cull_mode.type = 'enums.CullModeEnum'
+fields.cull_mode.default = '"none"'
+
+fields.unclipped_depth.type = 'bool'
+fields.unclipped_depth.default = 'False'
+
+[structs.MultisampleState]
+fields.count.type = 'int'
+fields.count.default = '1'
+
+fields.mask.type = 'int'
+fields.mask.default = '0xFFFFFFFF'
+
+fields.alpha_to_coverage_enabled.type = 'bool'
+fields.alpha_to_coverage_enabled.default = 'False'
+
+[structs.FragmentState]
+fields.module.type = 'GPUShaderModule'
+fields.module.default = ''
+
+fields.entry_point.type = 'str | None'
+fields.entry_point.default = 'None'
+
+fields.constants.type = 'dict[str, float] | None'
+fields.constants.default = 'None'
+
+fields.targets.type = 'Sequence[structs.ColorTargetStateStruct]'
+fields.targets.default = ''
+
+[structs.ColorTargetState]
+fields.format.type = 'enums.TextureFormatEnum'
+fields.format.default = ''
+
+fields.blend.type = 'structs.BlendStateStruct | None'
+fields.blend.default = 'None'
+
+fields.write_mask.type = 'flags.ColorWriteFlags'
+fields.write_mask.default = '0xF'
+
+[structs.BlendState]
+fields.color.type = 'structs.BlendComponentStruct'
+fields.color.default = ''
+
+fields.alpha.type = 'structs.BlendComponentStruct'
+fields.alpha.default = ''
+
+[structs.BlendComponent]
+fields.operation.type = 'enums.BlendOperationEnum'
+fields.operation.default = '"add"'
+
+fields.src_factor.type = 'enums.BlendFactorEnum'
+fields.src_factor.default = '"one"'
+
+fields.dst_factor.type = 'enums.BlendFactorEnum'
+fields.dst_factor.default = '"zero"'
+
+[structs.DepthStencilState]
+fields.format.type = 'enums.TextureFormatEnum'
+fields.format.default = ''
+
+fields.depth_write_enabled.type = 'bool | None'
+fields.depth_write_enabled.default = 'None'
+
+fields.depth_compare.type = 'enums.CompareFunctionEnum | None'
+fields.depth_compare.default = 'None'
+
+fields.stencil_front.type = 'structs.StencilFaceStateStruct | None'
+fields.stencil_front.default = 'None'
+
+fields.stencil_back.type = 'structs.StencilFaceStateStruct | None'
+fields.stencil_back.default = 'None'
+
+fields.stencil_read_mask.type = 'int'
+fields.stencil_read_mask.default = '0xFFFFFFFF'
+
+fields.stencil_write_mask.type = 'int'
+fields.stencil_write_mask.default = '0xFFFFFFFF'
+
+fields.depth_bias.type = 'int'
+fields.depth_bias.default = '0'
+
+fields.depth_bias_slope_scale.type = 'float'
+fields.depth_bias_slope_scale.default = '0'
+
+fields.depth_bias_clamp.type = 'float'
+fields.depth_bias_clamp.default = '0'
+
+[structs.StencilFaceState]
+fields.compare.type = 'enums.CompareFunctionEnum'
+fields.compare.default = '"always"'
+
+fields.fail_op.type = 'enums.StencilOperationEnum'
+fields.fail_op.default = '"keep"'
+
+fields.depth_fail_op.type = 'enums.StencilOperationEnum'
+fields.depth_fail_op.default = '"keep"'
+
+fields.pass_op.type = 'enums.StencilOperationEnum'
+fields.pass_op.default = '"keep"'
+
+[structs.VertexState]
+fields.module.type = 'GPUShaderModule'
+fields.module.default = ''
+
+fields.entry_point.type = 'str | None'
+fields.entry_point.default = 'None'
+
+fields.constants.type = 'dict[str, float] | None'
+fields.constants.default = 'None'
+
+fields.buffers.type = 'Sequence[structs.VertexBufferLayoutStruct]'
+fields.buffers.default = '()'
+
+[structs.VertexBufferLayout]
+fields.array_stride.type = 'int'
+fields.array_stride.default = ''
+
+fields.step_mode.type = 'enums.VertexStepModeEnum'
+fields.step_mode.default = '"vertex"'
+
+fields.attributes.type = 'Sequence[structs.VertexAttributeStruct]'
+fields.attributes.default = ''
+
+[structs.VertexAttribute]
+fields.format.type = 'enums.VertexFormatEnum'
+fields.format.default = ''
+
+fields.offset.type = 'int'
+fields.offset.default = ''
+
+fields.shader_location.type = 'int'
+fields.shader_location.default = ''
+
+[structs.TexelCopyBufferLayout]
+fields.offset.type = 'int'
+fields.offset.default = '0'
+
+fields.bytes_per_row.type = 'int | None'
+fields.bytes_per_row.default = 'None'
+
+fields.rows_per_image.type = 'int | None'
+fields.rows_per_image.default = 'None'
+
+[structs.TexelCopyBufferInfo]
+fields.offset.type = 'int'
+fields.offset.default = '0'
+
+fields.bytes_per_row.type = 'int | None'
+fields.bytes_per_row.default = 'None'
+
+fields.rows_per_image.type = 'int | None'
+fields.rows_per_image.default = 'None'
+
+fields.buffer.type = 'GPUBuffer'
+fields.buffer.default = ''
+
+[structs.TexelCopyTextureInfo]
+fields.texture.type = 'GPUTexture'
+fields.texture.default = ''
+
+fields.mip_level.type = 'int'
+fields.mip_level.default = '0'
+
+fields.origin.type = 'tuple[int, int, int] | structs.Origin3DStruct | None'
+fields.origin.default = 'None'
+
+fields.aspect.type = 'enums.TextureAspectEnum'
+fields.aspect.default = '"all"'
+
+[structs.CopyExternalImageDestInfo]
+fields.texture.type = 'GPUTexture'
+fields.texture.default = ''
+
+fields.mip_level.type = 'int'
+fields.mip_level.default = '0'
+
+fields.origin.type = 'tuple[int, int, int] | structs.Origin3DStruct | None'
+fields.origin.default = 'None'
+
+fields.aspect.type = 'enums.TextureAspectEnum'
+fields.aspect.default = '"all"'
+
+fields.color_space.type = 'str'
+fields.color_space.default = '"srgb"'
+
+fields.premultiplied_alpha.type = 'bool'
+fields.premultiplied_alpha.default = 'False'
+
+[structs.CopyExternalImageSourceInfo]
+fields.source.type = 'ArrayLike | CanvasLike | object'
+fields.source.default = ''
+
+fields.origin.type = 'tuple[int, int] | structs.Origin2DStruct | None'
+fields.origin.default = 'None'
+
+fields.flip_y.type = 'bool'
+fields.flip_y.default = 'False'
+
+[structs.CommandBufferDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+[structs.CommandEncoderDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+[structs.ComputePassTimestampWrites]
+fields.query_set.type = 'GPUQuerySet'
+fields.query_set.default = ''
+
+fields.beginning_of_pass_write_index.type = 'int | None'
+fields.beginning_of_pass_write_index.default = 'None'
+
+fields.end_of_pass_write_index.type = 'int | None'
+fields.end_of_pass_write_index.default = 'None'
+
+[structs.ComputePassDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.timestamp_writes.type = 'structs.ComputePassTimestampWritesStruct | None'
+fields.timestamp_writes.default = 'None'
+
+[structs.RenderPassTimestampWrites]
+fields.query_set.type = 'GPUQuerySet'
+fields.query_set.default = ''
+
+fields.beginning_of_pass_write_index.type = 'int | None'
+fields.beginning_of_pass_write_index.default = 'None'
+
+fields.end_of_pass_write_index.type = 'int | None'
+fields.end_of_pass_write_index.default = 'None'
+
+[structs.RenderPassDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.color_attachments.type = 'Sequence[structs.RenderPassColorAttachmentStruct]'
+fields.color_attachments.default = ''
+
+fields.depth_stencil_attachment.type = 'structs.RenderPassDepthStencilAttachmentStruct | None'
+fields.depth_stencil_attachment.default = 'None'
+
+fields.occlusion_query_set.type = 'GPUQuerySet | None'
+fields.occlusion_query_set.default = 'None'
+
+fields.timestamp_writes.type = 'structs.RenderPassTimestampWritesStruct | None'
+fields.timestamp_writes.default = 'None'
+
+fields.max_draw_count.type = 'int'
+fields.max_draw_count.default = '50000000'
+
+[structs.RenderPassColorAttachment]
+fields.view.type = 'GPUTexture | GPUTextureView'
+fields.view.default = ''
+
+fields.depth_slice.type = 'int | None'
+fields.depth_slice.default = 'None'
+
+fields.resolve_target.type = 'GPUTexture | GPUTextureView | None'
+fields.resolve_target.default = 'None'
+
+fields.clear_value.type = 'tuple[float, float, float, float] | structs.ColorStruct | None'
+fields.clear_value.default = 'None'
+
+fields.load_op.type = 'enums.LoadOpEnum'
+fields.load_op.default = ''
+
+fields.store_op.type = 'enums.StoreOpEnum'
+fields.store_op.default = ''
+
+[structs.RenderPassDepthStencilAttachment]
+fields.view.type = 'GPUTexture | GPUTextureView'
+fields.view.default = ''
+
+fields.depth_clear_value.type = 'float | None'
+fields.depth_clear_value.default = 'None'
+
+fields.depth_load_op.type = 'enums.LoadOpEnum | None'
+fields.depth_load_op.default = 'None'
+
+fields.depth_store_op.type = 'enums.StoreOpEnum | None'
+fields.depth_store_op.default = 'None'
+
+fields.depth_read_only.type = 'bool'
+fields.depth_read_only.default = 'False'
+
+fields.stencil_clear_value.type = 'int'
+fields.stencil_clear_value.default = '0'
+
+fields.stencil_load_op.type = 'enums.LoadOpEnum | None'
+fields.stencil_load_op.default = 'None'
+
+fields.stencil_store_op.type = 'enums.StoreOpEnum | None'
+fields.stencil_store_op.default = 'None'
+
+fields.stencil_read_only.type = 'bool'
+fields.stencil_read_only.default = 'False'
+
+[structs.RenderPassLayout]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.color_formats.type = 'Sequence[enums.TextureFormatEnum]'
+fields.color_formats.default = ''
+
+fields.depth_stencil_format.type = 'enums.TextureFormatEnum | None'
+fields.depth_stencil_format.default = 'None'
+
+fields.sample_count.type = 'int'
+fields.sample_count.default = '1'
+
+[structs.RenderBundleDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+[structs.RenderBundleEncoderDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.color_formats.type = 'Sequence[enums.TextureFormatEnum]'
+fields.color_formats.default = ''
+
+fields.depth_stencil_format.type = 'enums.TextureFormatEnum | None'
+fields.depth_stencil_format.default = 'None'
+
+fields.sample_count.type = 'int'
+fields.sample_count.default = '1'
+
+fields.depth_read_only.type = 'bool'
+fields.depth_read_only.default = 'False'
+
+fields.stencil_read_only.type = 'bool'
+fields.stencil_read_only.default = 'False'
+
+[structs.QueueDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+[structs.QuerySetDescriptor]
+fields.label.type = 'str'
+fields.label.default = '""'
+
+fields.type.type = 'enums.QueryTypeEnum'
+fields.type.default = ''
+
+fields.count.type = 'int'
+fields.count.default = ''
+
+[structs.CanvasToneMapping]
+fields.mode.type = 'enums.CanvasToneMappingModeEnum'
+fields.mode.default = '"standard"'
+
+[structs.CanvasConfiguration]
+fields.device.type = 'GPUDevice'
+fields.device.default = ''
+
+fields.format.type = 'enums.TextureFormatEnum'
+fields.format.default = ''
+
+fields.usage.type = 'flags.TextureUsageFlags'
+fields.usage.default = '0x10'
+
+fields.view_formats.type = 'Sequence[enums.TextureFormatEnum]'
+fields.view_formats.default = '()'
+
+fields.color_space.type = 'str'
+fields.color_space.default = '"srgb"'
+
+fields.tone_mapping.type = 'structs.CanvasToneMappingStruct | None'
+fields.tone_mapping.default = 'None'
+
+fields.alpha_mode.type = 'enums.CanvasAlphaModeEnum'
+fields.alpha_mode.default = '"opaque"'
+
+[structs.UncapturedErrorEventInit]
+fields.error.type = 'GPUError'
+fields.error.default = ''
+
+[structs.Color]
+fields.r.type = 'float'
+fields.r.default = ''
+
+fields.g.type = 'float'
+fields.g.default = ''
+
+fields.b.type = 'float'
+fields.b.default = ''
+
+fields.a.type = 'float'
+fields.a.default = ''
+
+[structs.Origin2D]
+fields.x.type = 'int'
+fields.x.default = '0'
+
+fields.y.type = 'int'
+fields.y.default = '0'
+
+[structs.Origin3D]
+fields.x.type = 'int'
+fields.x.default = '0'
+
+fields.y.type = 'int'
+fields.y.default = '0'
+
+fields.z.type = 'int'
+fields.z.default = '0'
+
+[structs.Extent3D]
+fields.width.type = 'int'
+fields.width.default = ''
+
+fields.height.type = 'int'
+fields.height.default = '1'
+
+fields.depth_or_array_layers.type = 'int'
+fields.depth_or_array_layers.default = '1'
+
+# ==== classes =====================================================================================
+# ==================================================================================================
+
+# ---- GPUObjectBase -------------------------------------------------------------------------------
+
+[classes.GPUObjectBase]
+bases = []
+methods = {}
+
+[classes.GPUObjectBase.properties.label]
+type = 'str'
+
+# ---- GPUSupportedLimits --------------------------------------------------------------------------
+
+[classes.GPUSupportedLimits]
+bases = []
+methods = {}
+
+[classes.GPUSupportedLimits.properties.max_texture_dimension_1d]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_texture_dimension_2d]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_texture_dimension_3d]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_texture_array_layers]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_bind_groups]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_bind_groups_plus_vertex_buffers]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_immediate_size]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_bindings_per_bind_group]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_dynamic_uniform_buffers_per_pipeline_layout]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_dynamic_storage_buffers_per_pipeline_layout]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_sampled_textures_per_shader_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_samplers_per_shader_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_storage_buffers_per_shader_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_storage_buffers_in_vertex_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_storage_buffers_in_fragment_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_storage_textures_per_shader_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_storage_textures_in_vertex_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_storage_textures_in_fragment_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_uniform_buffers_per_shader_stage]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_uniform_buffer_binding_size]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_storage_buffer_binding_size]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.min_uniform_buffer_offset_alignment]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.min_storage_buffer_offset_alignment]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_vertex_buffers]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_buffer_size]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_vertex_attributes]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_vertex_buffer_array_stride]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_inter_stage_shader_variables]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_color_attachments]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_color_attachment_bytes_per_sample]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_compute_workgroup_storage_size]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_compute_invocations_per_workgroup]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_compute_workgroup_size_x]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_compute_workgroup_size_y]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_compute_workgroup_size_z]
+type = 'int'
+
+[classes.GPUSupportedLimits.properties.max_compute_workgroups_per_dimension]
+type = 'int'
+
+# ---- GPUSupportedFeatures ------------------------------------------------------------------------
+
+[classes.GPUSupportedFeatures]
+bases = []
+properties = {}
+methods = {}
+
+# ---- WGSLLanguageFeatures ------------------------------------------------------------------------
+
+[classes.WGSLLanguageFeatures]
+bases = []
+properties = {}
+methods = {}
+
+# ---- GPUAdapterInfo ------------------------------------------------------------------------------
+
+[classes.GPUAdapterInfo]
+bases = []
+methods = {}
+
+[classes.GPUAdapterInfo.properties.vendor]
+type = 'str'
+
+[classes.GPUAdapterInfo.properties.architecture]
+type = 'str'
+
+[classes.GPUAdapterInfo.properties.device]
+type = 'str'
+
+[classes.GPUAdapterInfo.properties.description]
+type = 'str'
+
+[classes.GPUAdapterInfo.properties.subgroup_min_size]
+type = 'int'
+
+[classes.GPUAdapterInfo.properties.subgroup_max_size]
+type = 'int'
+
+[classes.GPUAdapterInfo.properties.is_fallback_adapter]
+type = 'bool'
+
+# ---- NavigatorGPU --------------------------------------------------------------------------------
+
+[classes.NavigatorGPU]
+bases = []
+methods = {}
+
+[classes.NavigatorGPU.properties.gpu]
+type = 'GPU'
+
+# ---- GPU -----------------------------------------------------------------------------------------
+
+[classes.GPU]
+bases = []
+
+[classes.GPU.properties.wgsl_language_features]
+type = 'set'
+
+[classes.GPU.methods.request_adapter]
+returns.type = 'GPUPromise[GPUAdapter]'
+
+args.options.type = 'structs.RequestAdapterOptionsStruct | None'
+args.options.default = 'None'
+
+[classes.GPU.methods.get_preferred_canvas_format]
+args = {}
+returns.type = 'enums.TextureFormatEnum'
+
+# ---- GPUAdapter ----------------------------------------------------------------------------------
+
+[classes.GPUAdapter]
+bases = []
+
+[classes.GPUAdapter.properties.features]
+type = 'set'
+
+[classes.GPUAdapter.properties.limits]
+type = 'dict'
+
+[classes.GPUAdapter.properties.info]
+type = 'GPUAdapterInfo'
+
+[classes.GPUAdapter.methods.request_device]
+returns.type = 'GPUPromise[GPUDevice]'
+
+args.descriptor.type = 'structs.DeviceDescriptorStruct | None'
+args.descriptor.default = 'None'
+
+# ---- GPUDevice -----------------------------------------------------------------------------------
+
+[classes.GPUDevice]
+bases = ['GPUObjectBase']
+
+[classes.GPUDevice.properties.features]
+type = 'set'
+
+[classes.GPUDevice.properties.limits]
+type = 'dict'
+
+[classes.GPUDevice.properties.adapter_info]
+type = 'GPUAdapterInfo'
+
+[classes.GPUDevice.properties.queue]
+type = 'GPUQueue'
+
+[classes.GPUDevice.properties.lost]
+type = 'GPUPromise[GPUDeviceLostInfo]'
+
+[classes.GPUDevice.properties.onuncapturederror]
+type = 'None'
+
+[classes.GPUDevice.methods.destroy]
+args = {}
+returns.type = 'None'
+
+[classes.GPUDevice.methods.create_buffer]
+returns.type = 'GPUBuffer'
+
+args.descriptor.type = 'structs.BufferDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_texture]
+returns.type = 'GPUTexture'
+
+args.descriptor.type = 'structs.TextureDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_sampler]
+returns.type = 'GPUSampler'
+
+args.descriptor.type = 'structs.SamplerDescriptorStruct | None'
+args.descriptor.default = 'None'
+
+[classes.GPUDevice.methods.import_external_texture]
+returns.type = 'object'
+
+args.descriptor.type = 'structs.ExternalTextureDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_bind_group_layout]
+returns.type = 'GPUBindGroupLayout'
+
+args.descriptor.type = 'structs.BindGroupLayoutDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_pipeline_layout]
+returns.type = 'GPUPipelineLayout'
+
+args.descriptor.type = 'structs.PipelineLayoutDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_bind_group]
+returns.type = 'GPUBindGroup'
+
+args.descriptor.type = 'structs.BindGroupDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_shader_module]
+returns.type = 'GPUShaderModule'
+
+args.descriptor.type = 'structs.ShaderModuleDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_compute_pipeline]
+returns.type = 'GPUComputePipeline'
+
+args.descriptor.type = 'structs.ComputePipelineDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_render_pipeline]
+returns.type = 'GPURenderPipeline'
+
+args.descriptor.type = 'structs.RenderPipelineDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_compute_pipeline_async]
+returns.type = 'GPUPromise[GPUComputePipeline]'
+
+args.descriptor.type = 'structs.ComputePipelineDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_render_pipeline_async]
+returns.type = 'GPUPromise[GPURenderPipeline]'
+
+args.descriptor.type = 'structs.RenderPipelineDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_command_encoder]
+returns.type = 'GPUCommandEncoder'
+
+args.descriptor.type = 'structs.CommandEncoderDescriptorStruct | None'
+args.descriptor.default = 'None'
+
+[classes.GPUDevice.methods.create_render_bundle_encoder]
+returns.type = 'GPURenderBundleEncoder'
+
+args.descriptor.type = 'structs.RenderBundleEncoderDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.create_query_set]
+returns.type = 'GPUQuerySet'
+
+args.descriptor.type = 'structs.QuerySetDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUDevice.methods.push_error_scope]
+returns.type = 'None'
+
+args.filter.type = 'enums.ErrorFilterEnum'
+args.filter.default = ''
+
+[classes.GPUDevice.methods.pop_error_scope]
+args = {}
+returns.type = 'GPUPromise[GPUError]'
+
+# ---- GPUBuffer -----------------------------------------------------------------------------------
+
+[classes.GPUBuffer]
+bases = ['GPUObjectBase']
+
+[classes.GPUBuffer.properties.size]
+type = 'int'
+
+[classes.GPUBuffer.properties.usage]
+type = 'int'
+
+[classes.GPUBuffer.properties.map_state]
+type = 'enums.BufferMapStateEnum'
+
+[classes.GPUBuffer.methods.map_async]
+returns.type = 'GPUPromise[None]'
+
+args.mode.type = 'flags.MapModeFlags'
+args.mode.default = ''
+
+args.offset.type = 'int'
+args.offset.default = '0'
+
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+[classes.GPUBuffer.methods.get_mapped_range]
+returns.type = 'ArrayLike'
+
+args.offset.type = 'int'
+args.offset.default = '0'
+
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+[classes.GPUBuffer.methods.unmap]
+args = {}
+returns.type = 'None'
+
+[classes.GPUBuffer.methods.destroy]
+args = {}
+returns.type = 'None'
+
+# ---- GPUTexture ----------------------------------------------------------------------------------
+
+[classes.GPUTexture]
+bases = ['GPUObjectBase']
+
+[classes.GPUTexture.properties.width]
+type = 'int'
+
+[classes.GPUTexture.properties.height]
+type = 'int'
+
+[classes.GPUTexture.properties.depth_or_array_layers]
+type = 'int'
+
+[classes.GPUTexture.properties.mip_level_count]
+type = 'int'
+
+[classes.GPUTexture.properties.sample_count]
+type = 'int'
+
+[classes.GPUTexture.properties.dimension]
+type = 'enums.TextureDimensionEnum'
+
+[classes.GPUTexture.properties.format]
+type = 'enums.TextureFormatEnum'
+
+[classes.GPUTexture.properties.usage]
+type = 'int'
+
+[classes.GPUTexture.properties.texture_binding_view_dimension]
+type = 'enums.TextureViewDimensionEnum | None'
+
+[classes.GPUTexture.methods.create_view]
+returns.type = 'GPUTextureView'
+
+args.descriptor.type = 'structs.TextureViewDescriptorStruct | None'
+args.descriptor.default = 'None'
+
+[classes.GPUTexture.methods.destroy]
+args = {}
+returns.type = 'None'
+
+# ---- GPUTextureView ------------------------------------------------------------------------------
+
+[classes.GPUTextureView]
+bases = ['GPUObjectBase']
+properties = {}
+methods = {}
+
+# ---- GPUExternalTexture --------------------------------------------------------------------------
+
+[classes.GPUExternalTexture]
+bases = ['GPUObjectBase']
+properties = {}
+methods = {}
+
+# ---- GPUSampler ----------------------------------------------------------------------------------
+
+[classes.GPUSampler]
+bases = ['GPUObjectBase']
+properties = {}
+methods = {}
+
+# ---- GPUBindGroupLayout --------------------------------------------------------------------------
+
+[classes.GPUBindGroupLayout]
+bases = ['GPUObjectBase']
+properties = {}
+methods = {}
+
+# ---- GPUBindGroup --------------------------------------------------------------------------------
+
+[classes.GPUBindGroup]
+bases = ['GPUObjectBase']
+properties = {}
+methods = {}
+
+# ---- GPUPipelineLayout ---------------------------------------------------------------------------
+
+[classes.GPUPipelineLayout]
+bases = ['GPUObjectBase']
+properties = {}
+methods = {}
+
+# ---- GPUShaderModule -----------------------------------------------------------------------------
+
+[classes.GPUShaderModule]
+bases = ['GPUObjectBase']
+properties = {}
+
+[classes.GPUShaderModule.methods.get_compilation_info]
+args = {}
+returns.type = 'GPUPromise[GPUCompilationInfo]'
+
+# ---- GPUCompilationMessage -----------------------------------------------------------------------
+
+[classes.GPUCompilationMessage]
+bases = []
+methods = {}
+
+[classes.GPUCompilationMessage.properties.message]
+type = 'str'
+
+[classes.GPUCompilationMessage.properties.type]
+type = 'enums.CompilationMessageTypeEnum'
+
+[classes.GPUCompilationMessage.properties.line_num]
+type = 'int'
+
+[classes.GPUCompilationMessage.properties.line_pos]
+type = 'int'
+
+[classes.GPUCompilationMessage.properties.offset]
+type = 'int'
+
+[classes.GPUCompilationMessage.properties.length]
+type = 'int'
+
+# ---- GPUCompilationInfo --------------------------------------------------------------------------
+
+[classes.GPUCompilationInfo]
+bases = []
+methods = {}
+
+[classes.GPUCompilationInfo.properties.messages]
+type = 'Sequence[GPUCompilationMessage]'
+
+# ---- GPUPipelineError ----------------------------------------------------------------------------
+
+[classes.GPUPipelineError]
+bases = ['DOMException']
+
+[classes.GPUPipelineError.properties.reason]
+type = 'enums.PipelineErrorReasonEnum'
+
+[classes.GPUPipelineError.methods.__init__]
+returns.type = 'None'
+
+args.message.type = 'str'
+args.message.default = '""'
+
+args.options.type = 'structs.PipelineErrorInitStruct'
+args.options.default = ''
+
+# ---- GPUPipelineBase -----------------------------------------------------------------------------
+
+[classes.GPUPipelineBase]
+bases = []
+properties = {}
+
+[classes.GPUPipelineBase.methods.get_bind_group_layout]
+returns.type = 'GPUBindGroupLayout'
+
+args.index.type = 'int'
+args.index.default = ''
+
+# ---- GPUComputePipeline --------------------------------------------------------------------------
+
+[classes.GPUComputePipeline]
+bases = ['GPUObjectBase', 'GPUPipelineBase']
+properties = {}
+methods = {}
+
+# ---- GPURenderPipeline ---------------------------------------------------------------------------
+
+[classes.GPURenderPipeline]
+bases = ['GPUObjectBase', 'GPUPipelineBase']
+properties = {}
+methods = {}
+
+# ---- GPUCommandBuffer ----------------------------------------------------------------------------
+
+[classes.GPUCommandBuffer]
+bases = ['GPUObjectBase']
+properties = {}
+methods = {}
+
+# ---- GPUCommandsMixin ----------------------------------------------------------------------------
+
+[classes.GPUCommandsMixin]
+bases = []
+properties = {}
+methods = {}
+
+# ---- GPUCommandEncoder ---------------------------------------------------------------------------
+
+[classes.GPUCommandEncoder]
+bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin']
+properties = {}
+
+[classes.GPUCommandEncoder.methods.begin_render_pass]
+returns.type = 'GPURenderPassEncoder'
+
+args.descriptor.type = 'structs.RenderPassDescriptorStruct'
+args.descriptor.default = ''
+
+[classes.GPUCommandEncoder.methods.begin_compute_pass]
+returns.type = 'GPUComputePassEncoder'
+
+args.descriptor.type = 'structs.ComputePassDescriptorStruct | None'
+args.descriptor.default = 'None'
+
+[classes.GPUCommandEncoder.methods.copy_buffer_to_buffer]
+returns.type = 'None'
+
+args.source.type = 'GPUBuffer'
+args.source.default = ''
+
+args.source_offset.type = 'int'
+args.source_offset.default = ''
+
+args.destination.type = 'GPUBuffer'
+args.destination.default = ''
+
+args.destination_offset.type = 'int'
+args.destination_offset.default = ''
+
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+[classes.GPUCommandEncoder.methods.copy_buffer_to_texture]
+returns.type = 'None'
+
+args.source.type = 'structs.TexelCopyBufferInfoStruct'
+args.source.default = ''
+
+args.destination.type = 'structs.TexelCopyTextureInfoStruct'
+args.destination.default = ''
+
+args.copy_size.type = 'tuple[int, int, int] | structs.Extent3DStruct'
+args.copy_size.default = ''
+
+[classes.GPUCommandEncoder.methods.copy_texture_to_buffer]
+returns.type = 'None'
+
+args.source.type = 'structs.TexelCopyTextureInfoStruct'
+args.source.default = ''
+
+args.destination.type = 'structs.TexelCopyBufferInfoStruct'
+args.destination.default = ''
+
+args.copy_size.type = 'tuple[int, int, int] | structs.Extent3DStruct'
+args.copy_size.default = ''
+
+[classes.GPUCommandEncoder.methods.copy_texture_to_texture]
+returns.type = 'None'
+
+args.source.type = 'structs.TexelCopyTextureInfoStruct'
+args.source.default = ''
+
+args.destination.type = 'structs.TexelCopyTextureInfoStruct'
+args.destination.default = ''
+
+args.copy_size.type = 'tuple[int, int, int] | structs.Extent3DStruct'
+args.copy_size.default = ''
+
+[classes.GPUCommandEncoder.methods.clear_buffer]
+returns.type = 'None'
+
+args.buffer.type = 'GPUBuffer'
+args.buffer.default = ''
+
+args.offset.type = 'int'
+args.offset.default = '0'
+
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+[classes.GPUCommandEncoder.methods.resolve_query_set]
+returns.type = 'None'
+
+args.query_set.type = 'GPUQuerySet'
+args.query_set.default = ''
+
+args.first_query.type = 'int'
+args.first_query.default = ''
+
+args.query_count.type = 'int'
+args.query_count.default = ''
+
+args.destination.type = 'GPUBuffer'
+args.destination.default = ''
+
+args.destination_offset.type = 'int'
+args.destination_offset.default = ''
+
+[classes.GPUCommandEncoder.methods.finish]
+returns.type = 'GPUCommandBuffer'
+
+args.descriptor.type = 'structs.CommandBufferDescriptorStruct | None'
+args.descriptor.default = 'None'
+
+# ---- GPUBindingCommandsMixin ---------------------------------------------------------------------
+
+[classes.GPUBindingCommandsMixin]
+bases = []
+properties = {}
+
+[classes.GPUBindingCommandsMixin.methods.set_bind_group]
+returns.type = 'None'
+
+args.index.type = 'int'
+args.index.default = ''
+
+args.bind_group.type = 'GPUBindGroup'
+args.bind_group.default = ''
+
+args.dynamic_offsets_data.type = 'ArrayLike'
+args.dynamic_offsets_data.default = ''
+
+args.dynamic_offsets_data_start.type = 'int'
+args.dynamic_offsets_data_start.default = ''
+
+args.dynamic_offsets_data_length.type = 'int'
+args.dynamic_offsets_data_length.default = ''
+
+[classes.GPUBindingCommandsMixin.methods.set_immediates]
+returns.type = 'None'
+
+args.range_offset.type = 'int'
+args.range_offset.default = ''
+
+args.data.type = 'ArrayLike'
+args.data.default = ''
+
+args.data_offset.type = 'int'
+args.data_offset.default = '0'
+
+args.data_size.type = 'int | None'
+args.data_size.default = 'None'
+
+# ---- GPUDebugCommandsMixin -----------------------------------------------------------------------
+
+[classes.GPUDebugCommandsMixin]
+bases = []
+properties = {}
+
+[classes.GPUDebugCommandsMixin.methods.push_debug_group]
+returns.type = 'None'
+
+args.group_label.type = 'str'
+args.group_label.default = ''
+
+[classes.GPUDebugCommandsMixin.methods.pop_debug_group]
+args = {}
+returns.type = 'None'
+
+[classes.GPUDebugCommandsMixin.methods.insert_debug_marker]
+returns.type = 'None'
+
+args.marker_label.type = 'str'
+args.marker_label.default = ''
+
+# ---- GPUComputePassEncoder -----------------------------------------------------------------------
+
+[classes.GPUComputePassEncoder]
+bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin']
+properties = {}
+
+[classes.GPUComputePassEncoder.methods.set_pipeline]
+returns.type = 'None'
+
+args.pipeline.type = 'GPUComputePipeline'
+args.pipeline.default = ''
+
+[classes.GPUComputePassEncoder.methods.dispatch_workgroups]
+returns.type = 'None'
+
+args.workgroup_count_x.type = 'int'
+args.workgroup_count_x.default = ''
+
+args.workgroup_count_y.type = 'int'
+args.workgroup_count_y.default = '1'
+
+args.workgroup_count_z.type = 'int'
+args.workgroup_count_z.default = '1'
+
+[classes.GPUComputePassEncoder.methods.dispatch_workgroups_indirect]
+returns.type = 'None'
+
+args.indirect_buffer.type = 'GPUBuffer'
+args.indirect_buffer.default = ''
+
+args.indirect_offset.type = 'int'
+args.indirect_offset.default = ''
+
+[classes.GPUComputePassEncoder.methods.end]
+args = {}
+returns.type = 'None'
+
+# ---- GPURenderPassEncoder ------------------------------------------------------------------------
+
+[classes.GPURenderPassEncoder]
+bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin']
+properties = {}
+
+[classes.GPURenderPassEncoder.methods.set_viewport]
+returns.type = 'None'
+
+args.x.type = 'float'
+args.x.default = ''
+
+args.y.type = 'float'
+args.y.default = ''
+
+args.width.type = 'float'
+args.width.default = ''
+
+args.height.type = 'float'
+args.height.default = ''
+
+args.min_depth.type = 'float'
+args.min_depth.default = ''
+
+args.max_depth.type = 'float'
+args.max_depth.default = ''
+
+[classes.GPURenderPassEncoder.methods.set_scissor_rect]
+returns.type = 'None'
+
+args.x.type = 'int'
+args.x.default = ''
+
+args.y.type = 'int'
+args.y.default = ''
+
+args.width.type = 'int'
+args.width.default = ''
+
+args.height.type = 'int'
+args.height.default = ''
+
+[classes.GPURenderPassEncoder.methods.set_blend_constant]
+returns.type = 'None'
+
+args.color.type = 'tuple[float, float, float, float] | structs.ColorStruct'
+args.color.default = ''
+
+[classes.GPURenderPassEncoder.methods.set_stencil_reference]
+returns.type = 'None'
+
+args.reference.type = 'int'
+args.reference.default = ''
+
+[classes.GPURenderPassEncoder.methods.begin_occlusion_query]
+returns.type = 'None'
+
+args.query_index.type = 'int'
+args.query_index.default = ''
+
+[classes.GPURenderPassEncoder.methods.end_occlusion_query]
+args = {}
+returns.type = 'None'
+
+[classes.GPURenderPassEncoder.methods.execute_bundles]
+returns.type = 'None'
+
+args.bundles.type = 'Sequence[GPURenderBundle]'
+args.bundles.default = ''
+
+[classes.GPURenderPassEncoder.methods.end]
+args = {}
+returns.type = 'None'
+
+# ---- GPURenderCommandsMixin ----------------------------------------------------------------------
+
+[classes.GPURenderCommandsMixin]
+bases = []
+properties = {}
+
+[classes.GPURenderCommandsMixin.methods.set_pipeline]
+returns.type = 'None'
+
+args.pipeline.type = 'GPURenderPipeline'
+args.pipeline.default = ''
+
+[classes.GPURenderCommandsMixin.methods.set_index_buffer]
+returns.type = 'None'
+
+args.buffer.type = 'GPUBuffer'
+args.buffer.default = ''
+
+args.index_format.type = 'enums.IndexFormatEnum'
+args.index_format.default = ''
+
+args.offset.type = 'int'
+args.offset.default = '0'
+
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+[classes.GPURenderCommandsMixin.methods.set_vertex_buffer]
+returns.type = 'None'
+
+args.slot.type = 'int'
+args.slot.default = ''
+
+args.buffer.type = 'GPUBuffer'
+args.buffer.default = ''
+
+args.offset.type = 'int'
+args.offset.default = '0'
+
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+[classes.GPURenderCommandsMixin.methods.draw]
+returns.type = 'None'
+
+args.vertex_count.type = 'int'
+args.vertex_count.default = ''
+
+args.instance_count.type = 'int'
+args.instance_count.default = '1'
+
+args.first_vertex.type = 'int'
+args.first_vertex.default = '0'
+
+args.first_instance.type = 'int'
+args.first_instance.default = '0'
+
+[classes.GPURenderCommandsMixin.methods.draw_indexed]
+returns.type = 'None'
+
+args.index_count.type = 'int'
+args.index_count.default = ''
+
+args.instance_count.type = 'int'
+args.instance_count.default = '1'
+
+args.first_index.type = 'int'
+args.first_index.default = '0'
+
+args.base_vertex.type = 'int'
+args.base_vertex.default = '0'
+
+args.first_instance.type = 'int'
+args.first_instance.default = '0'
+
+[classes.GPURenderCommandsMixin.methods.draw_indirect]
+returns.type = 'None'
+
+args.indirect_buffer.type = 'GPUBuffer'
+args.indirect_buffer.default = ''
+
+args.indirect_offset.type = 'int'
+args.indirect_offset.default = ''
+
+[classes.GPURenderCommandsMixin.methods.draw_indexed_indirect]
+returns.type = 'None'
+
+args.indirect_buffer.type = 'GPUBuffer'
+args.indirect_buffer.default = ''
+
+args.indirect_offset.type = 'int'
+args.indirect_offset.default = ''
+
+# ---- GPURenderBundle -----------------------------------------------------------------------------
+
+[classes.GPURenderBundle]
+bases = ['GPUObjectBase']
+properties = {}
+methods = {}
+
+# ---- GPURenderBundleEncoder ----------------------------------------------------------------------
+
+[classes.GPURenderBundleEncoder]
+bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin']
+properties = {}
+
+[classes.GPURenderBundleEncoder.methods.finish]
+returns.type = 'GPURenderBundle'
+
+args.descriptor.type = 'structs.RenderBundleDescriptorStruct | None'
+args.descriptor.default = 'None'
+
+# ---- GPUQueue ------------------------------------------------------------------------------------
+
+[classes.GPUQueue]
+bases = ['GPUObjectBase']
+properties = {}
+
+[classes.GPUQueue.methods.submit]
+returns.type = 'None'
+
+args.command_buffers.type = 'Sequence[GPUCommandBuffer]'
+args.command_buffers.default = ''
+
+[classes.GPUQueue.methods.on_submitted_work_done]
+args = {}
+returns.type = 'GPUPromise[None]'
+
+[classes.GPUQueue.methods.write_buffer]
+returns.type = 'None'
+
+args.buffer.type = 'GPUBuffer'
+args.buffer.default = ''
+
+args.buffer_offset.type = 'int'
+args.buffer_offset.default = ''
+
+args.data.type = 'ArrayLike'
+args.data.default = ''
+
+args.data_offset.type = 'int'
+args.data_offset.default = '0'
+
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+[classes.GPUQueue.methods.write_texture]
+returns.type = 'None'
+
+args.destination.type = 'structs.TexelCopyTextureInfoStruct'
+args.destination.default = ''
+
+args.data.type = 'ArrayLike'
+args.data.default = ''
+
+args.data_layout.type = 'structs.TexelCopyBufferLayoutStruct'
+args.data_layout.default = ''
+
+args.size.type = 'tuple[int, int, int] | structs.Extent3DStruct'
+args.size.default = ''
+
+[classes.GPUQueue.methods.copy_external_image_to_texture]
+returns.type = 'None'
+
+args.source.type = 'structs.CopyExternalImageSourceInfoStruct'
+args.source.default = ''
+
+args.destination.type = 'structs.CopyExternalImageDestInfoStruct'
+args.destination.default = ''
+
+args.copy_size.type = 'tuple[int, int, int] | structs.Extent3DStruct'
+args.copy_size.default = ''
+
+# ---- GPUQuerySet ---------------------------------------------------------------------------------
+
+[classes.GPUQuerySet]
+bases = ['GPUObjectBase']
+
+[classes.GPUQuerySet.properties.type]
+type = 'enums.QueryTypeEnum'
+
+[classes.GPUQuerySet.properties.count]
+type = 'int'
+
+[classes.GPUQuerySet.methods.destroy]
+args = {}
+returns.type = 'None'
+
+# ---- GPUCanvasContext ----------------------------------------------------------------------------
+
+[classes.GPUCanvasContext]
+bases = []
+
+[classes.GPUCanvasContext.properties.canvas]
+type = 'CanvasLike'
+
+[classes.GPUCanvasContext.methods.configure]
+returns.type = 'None'
+
+args.configuration.type = 'structs.CanvasConfigurationStruct'
+args.configuration.default = ''
+
+[classes.GPUCanvasContext.methods.unconfigure]
+args = {}
+returns.type = 'None'
+
+[classes.GPUCanvasContext.methods.get_configuration]
+args = {}
+returns.type = 'structs.CanvasConfigurationStruct'
+
+[classes.GPUCanvasContext.methods.get_current_texture]
+args = {}
+returns.type = 'GPUTexture'
+
+# ---- GPUDeviceLostInfo ---------------------------------------------------------------------------
+
+[classes.GPUDeviceLostInfo]
+bases = []
+methods = {}
+
+[classes.GPUDeviceLostInfo.properties.reason]
+type = 'enums.DeviceLostReasonEnum'
+
+[classes.GPUDeviceLostInfo.properties.message]
+type = 'str'
+
+# ---- GPUError ------------------------------------------------------------------------------------
+
+[classes.GPUError]
+bases = []
+methods = {}
+
+[classes.GPUError.properties.message]
+type = 'str'
+
+# ---- GPUValidationError --------------------------------------------------------------------------
+
+[classes.GPUValidationError]
+bases = ['GPUError']
+properties = {}
+
+[classes.GPUValidationError.methods.__init__]
+returns.type = 'None'
+
+args.message.type = 'str'
+args.message.default = ''
+
+# ---- GPUOutOfMemoryError -------------------------------------------------------------------------
+
+[classes.GPUOutOfMemoryError]
+bases = ['GPUError']
+properties = {}
+
+[classes.GPUOutOfMemoryError.methods.__init__]
+returns.type = 'None'
+
+args.message.type = 'str'
+args.message.default = ''
+
+# ---- GPUInternalError ----------------------------------------------------------------------------
+
+[classes.GPUInternalError]
+bases = ['GPUError']
+properties = {}
+
+[classes.GPUInternalError.methods.__init__]
+returns.type = 'None'
+
+args.message.type = 'str'
+args.message.default = ''
+
+# ---- GPUUncapturedErrorEvent ---------------------------------------------------------------------
+
+[classes.GPUUncapturedErrorEvent]
+bases = ['Event']
+
+[classes.GPUUncapturedErrorEvent.properties.error]
+type = 'GPUError'
+
+[classes.GPUUncapturedErrorEvent.methods.__init__]
+returns.type = 'None'
+
+args.type.type = 'str'
+args.type.default = ''
+
+args.gpu_uncaptured_error_event_init_dict.type = 'structs.UncapturedErrorEventInitStruct'
+args.gpu_uncaptured_error_event_init_dict.default = ''
