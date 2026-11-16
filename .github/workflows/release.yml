@@ -7,7 +7,7 @@
 # * One build to tag the release and publish on GitHub (with notes from CHANGELOG.md).
 # * One build to publish to Pypi.
 
-name: CD
+name: Release
 
 on:
   # Manual trigger from the Actions tab.
@@ -16,9 +16,8 @@ on:
   push:
     tags:
       - "v[0-9]*.[0-9]*.[0-9]*"
-  # A PR is merged into main (the release-shared.yml checks the name of the branch).
+  # A PR is targeting main (the release-shared.yml checks the name of the branch and wheter its merged).
   pull_request:
-    types: [closed]
     branches: [main]
 
 jobs:
