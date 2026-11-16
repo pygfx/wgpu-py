@@ -17,6 +17,12 @@ Possible sections in each release:
 * Security: in case of vulnerabilities.
 
 
+## Unreleased
+
+### Added
+* ``wgpu.gpu.get_canvas_context()`` can render into a WinUI ``SwapChainPanel``, with ``"platform": "swapchainpanel"`` (D3D12 only).
+
+
 ## [v0.33.0](https://github.com/pygfx/wgpu-py/releases/tag/v0.33.0) - 06-11-2026
 
 ### What's Changed

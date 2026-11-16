@@ -679,7 +679,10 @@ class GPU(classes.GPU):
         The ``present_info`` dict should have a ``window`` field containing the
         window id. On Linux there should also be ``platform`` field to
         distinguish between "wayland" and "x11", and a ``display`` field for the
-        display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object.
+        display id. On Windows, ``platform`` can be "swapchainpanel" to render
+        into a WinUI ``SwapChainPanel``, with ``window`` a pointer to its
+        ``ISwapChainPanelNative`` COM interface; this needs a D3D12 adapter.
+        For the Pyodide backend, the ``window`` is the ``<canvas>`` object.
         This dict is an interface between ``rendercanvas`` and ``wgpu-py``.
         """
         return GPUCanvasContext(present_info)
@@ -748,7 +751,10 @@ class GPUCanvasContext(classes.GPUCanvasContext):
         # H: WGPUStatus f(WGPUSurface surface, WGPUAdapter adapter, WGPUSurfaceCapabilities * capabilities)
         status = libf.wgpuSurfaceGetCapabilities(surface_id, adapter_id, c_capabilities)
         if status != lib.WGPUStatus_Success:
-            raise RuntimeError("Error calling wgpuSurfaceGetCapabilities")
+            msg = "Error calling wgpuSurfaceGetCapabilities"
+            if self._present_info.get("platform") == "swapchainpanel":
+                msg += " (a SwapChainPanel surface needs a D3D12 adapter)"
+            raise RuntimeError(msg)
 
         # Convert to Python.
         capabilities = {}
