@@ -127,6 +127,20 @@ def test_swapchainpanel_present():
     assert panel.refcount == 1
 
 
+def test_swapchainpanel_compatible_adapter():
+    get_adapter(d3d12=True)  # skip if there is none
+    panel = FakeSwapChainPanelNative()
+
+    context = wgpu.gpu.get_canvas_context(
+        {"platform": "swapchainpanel", "window": panel.pointer}
+    )
+    for power_preference in ("low-power", "high-performance"):
+        adapter = wgpu.gpu.request_adapter_sync(
+            power_preference=power_preference, canvas=context
+        )
+        assert adapter.info["backend_type"] == "D3D12"
+
+
 def test_swapchainpanel_needs_d3d12():
     adapter = get_adapter(d3d12=False)
     panel = FakeSwapChainPanelNative()
