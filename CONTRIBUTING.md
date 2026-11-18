@@ -196,3 +196,11 @@ https://github.com/gfx-rs/wgpu?tab=readme-ov-file#environment-variables
 and should only be used for testing the wgpu-py library itself.
 It is not part of the supported wgpu-py interface.
 
+
+## Releasing
+
+* Use `alver bump vx.y.z` to bump the version number and draft an entry in the `CHANGELOG.md`.
+* Edit the changelog (explicitly list API changes).
+* Contribute the changes via a PR.
+* If the branch name of that PR is "release", GH actions will tag and publish to GH and Pypi.
+  Otherwise, manually invoke the `release.yml` workflow, or push the appropriate tag to trigger the release.
