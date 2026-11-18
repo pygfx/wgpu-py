@@ -2585,9 +2585,13 @@ type = 'GPUAdapterInfo'
 doc = 'The default GPUQueue of the device.'
 type = 'GPUQueue'
 
-[classes.GPUDevice.properties.lost]
+[classes.GPUDevice.properties.lost_async]
 doc = 'A promise or future that stays pending for the lifetime of the device and resolves to a GPUDeviceLostInfo when the device is lost.'
 type = 'GPUPromise[GPUDeviceLostInfo]'
+
+[classes.GPUDevice.properties.lost_sync]
+doc = 'The synchronous variant of lost_async().'
+type = 'GPUDeviceLostInfo'
 
 [classes.GPUDevice.properties.onuncapturederror]
 doc = 'A callback that is called with an event (see structs.UncapturedErrorEventInit) when an error occurs that is not captured by an error scope.'

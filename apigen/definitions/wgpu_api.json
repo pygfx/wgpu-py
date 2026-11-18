@@ -2378,10 +2378,11 @@
           "doc": "A GPUAdapterInfo with information about the adapter that this device was created from. The values are constant over time."
         },
         "queue": { "type": "GPUQueue", "doc": "The default GPUQueue of the device." },
-        "lost": {
+        "lost_async": {
           "type": "GPUPromise[GPUDeviceLostInfo]",
           "doc": "A promise or future that stays pending for the lifetime of the device and resolves to a GPUDeviceLostInfo when the device is lost."
         },
+        "lost_sync": { "type": "GPUDeviceLostInfo", "doc": "The synchronous variant of lost_async()." },
         "onuncapturederror": {
           "type": "None",
           "doc": "A callback that is called with an event (see structs.UncapturedErrorEventInit) when an error occurs that is not captured by an error scope."
