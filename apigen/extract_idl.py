@@ -8,7 +8,7 @@ if not isinstance(builtins, dict):
     builtins = builtins.__dict__
 
 
-IGNORE_BASES = {"EventTarget"}
+IGNORE_BASES = {"EventTarget", "DOMException"}
 
 # TODO: handle ARGS_TO_MAKE_OPTIONAL, in apidiff structure ??
 
@@ -71,9 +71,15 @@ def build_api_dict(parser):
     classes_dict = api["classes"] = {}
     for class_name, interface in parser.classes.items():
         class_dict = classes_dict[class_name] = {}
-        class_dict["bases"] = [
-            base for base in interface.bases if base not in IGNORE_BASES
-        ]
+        bases = [base for base in interface.bases if base not in IGNORE_BASES]
+        if "GPUObjectBase" in bases:  # put GPUObjectBase at the end, for mro
+            bases.remove("GPUObjectBase")
+            bases.append("GPUObjectBase")
+        if class_name.endswith("Error") and not bases:
+            bases = ["Exception"]
+        if class_name == "GPUOutOfMemoryError":
+            bases.append("MemoryError")
+        class_dict["bases"] = bases
         class_dict["properties"] = {}
         for prop_name, attr_type in interface.properties.items():
             class_dict["properties"][prop_name] = {"type": attr_type}  # str

@@ -2938,6 +2938,72 @@ args = {}
 returns.doc = 'None.'
 returns.type = 'None'
 
+[classes.GPUBuffer.methods.read_mapped]
+doc = '''
+Read mapped buffer data.
+
+This method must only be called when the buffer is in a mapped state.
+This is the Python alternative to WebGPU's ``getMappedRange``.
+Returns a memoryview that is a copy of the mapped data (it won't
+become invalid when the buffer is ummapped).
+'''
+returns.type = 'ArrayLike'
+
+args.buffer_offset.doc = '''
+the buffer offset in bytes.
+Must be at least as large as the offset specified in ``map()``. The default
+is the offset of the mapped range.
+"'''
+args.buffer_offset.type = 'int | None'
+args.buffer_offset.default = 'None'
+
+args.size.doc = '''
+The resulting range must fit into the range specified in ``map()``. The default is as large as the mapped range allows.
+'''
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+args.copy.doc = '''
+whether a copy of the data is given. Default True.
+If False, the returned memoryview represents the mapped data
+directly, and is released when the buffer is unmapped.
+WARNING: views of the returned data (e.g. memoryview objects or
+numpy arrays) can still be used after the base memory is released,
+which can result in corrupted data and segfaults. Therefore, when
+setting copy to False, make *very* sure the memory is not accessed
+after the buffer is unmapped.
+'''
+args.copy.type = 'bool'
+args.copy.default = 'True'
+
+[classes.GPUBuffer.methods.write_mapped]
+doc = '''
+Write mapped buffer data.
+
+This method must only be called when the buffer is in a mapped state.
+This is the Python alternative to WebGPU's ``getMappedRange``.
+Since the data can also be a view into a larger array, this method
+allows updating the buffer with minimal data copying.
+'''
+returns.type = 'None'
+
+args.data.doc = '''
+The data to write to the buffer.
+Must be an object that supports the buffer protocol,
+e.g. bytes, memoryview, numpy array, etc. Does not have to
+be contiguous, since the data is copied anyway.
+"'''
+args.data.type = 'ArrayLike'
+args.data.default = ''
+
+args.buffer_offset.doc = '''
+The buffer offset in bytes.
+Must be at least as large as the offset specified in ``map()``. The default
+is the offset of the mapped range.
+'''
+args.buffer_offset.type = 'int | None'
+args.buffer_offset.default = 'None'
+
 # ---- GPUTexture ----------------------------------------------------------------------------------
 
 [classes.GPUTexture]
@@ -2985,6 +3051,10 @@ type = 'int'
 doc = 'Compatibility mode only: on devices without enums.FeatureName.core_features_and_limits, views of this texture must have this enums.TextureViewDimension. None on core devices.'
 type = 'enums.TextureViewDimensionEnum | None'
 
+[classes.GPUTexture.properties.size]
+doc = 'The size of the texture in mipmap level 0, as a 3-tuple of ints'
+type = 'tuple[int, int, int]'
+
 [classes.GPUTexture.methods.create_view]
 doc = '''
 Create a GPUTextureView, a specific view of (part of) the texture.
@@ -3018,8 +3088,15 @@ Texture views are created with GPUTexture.create_view(), and are used in bind gr
 and as render pass attachments (see structs.RenderPassColorAttachment).
 '''
 bases = ['GPUObjectBase']
-properties = {}
 methods = {}
+
+[classes.GPUTextureView.properties.size]
+doc = 'The texture size (as a 3-tuple).'
+type = 'tuple[int, int, int]'
+
+[classes.GPUTextureView.properties.texture]
+doc = 'The texture object to which this is a view.'
+type = 'GPUTexture'
 
 # ---- GPUSampler ----------------------------------------------------------------------------------
 
@@ -3210,7 +3287,7 @@ A pipeline that describes a compute shader and its resources.
 
 Created with GPUDevice.create_compute_pipeline(). It is used in a compute pass with GPUComputePassEncoder.set_pipeline().
 '''
-bases = ['GPUObjectBase', 'GPUPipelineBase']
+bases = ['GPUPipelineBase', 'GPUObjectBase']
 properties = {}
 methods = {}
 
@@ -3222,7 +3299,7 @@ A pipeline that describes the complete graphics pipeline state: shaders, vertex 
 
 Created with GPUDevice.create_render_pipeline(). It is used in a render pass with GPURenderCommandsMixin.set_pipeline().
 '''
-bases = ['GPUObjectBase', 'GPUPipelineBase']
+bases = ['GPUPipelineBase', 'GPUObjectBase']
 properties = {}
 methods = {}
 
@@ -3259,7 +3336,7 @@ Records GPU commands (render passes, compute passes and copy operations) into a 
 Create one with GPUDevice.create_command_encoder(). Call finish() to obtain the command buffer, and submit it with GPUQueue.submit().
 Only one pass can be active at a time; end the pass (using the end() method of the pass encoder) before recording other commands.
 '''
-bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin']
+bases = ['GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUObjectBase']
 properties = {}
 
 [classes.GPUCommandEncoder.methods.begin_render_pass]
@@ -3476,16 +3553,16 @@ args.bind_group.type = 'GPUBindGroup'
 args.bind_group.default = ''
 
 args.dynamic_offsets_data.doc = 'A list or array of offsets in bytes, one for each dynamic buffer binding, in order of binding number.'
-args.dynamic_offsets_data.type = 'ArrayLike'
+args.dynamic_offsets_data.type = 'Sequence[int]'
 args.dynamic_offsets_data.default = ''
 
 args.dynamic_offsets_data_start.doc = 'If dynamic_offsets_data is an array, the index of the first offset to use.'
-args.dynamic_offsets_data_start.type = 'int'
-args.dynamic_offsets_data_start.default = ''
+args.dynamic_offsets_data_start.type = 'int | None'
+args.dynamic_offsets_data_start.default = 'None'
 
 args.dynamic_offsets_data_length.doc = 'If dynamic_offsets_data is an array, the number of offsets to use.'
-args.dynamic_offsets_data_length.type = 'int'
-args.dynamic_offsets_data_length.default = ''
+args.dynamic_offsets_data_length.type = 'int | None'
+args.dynamic_offsets_data_length.default = 'None'
 
 [classes.GPUBindingCommandsMixin.methods.set_immediates]
 doc = '''
@@ -3562,7 +3639,7 @@ Records the commands of a compute pass.
 Created with GPUCommandEncoder.begin_compute_pass(). Set a pipeline and bind groups, dispatch work,
 and finally call end(). Also has the methods of GPUBindingCommandsMixin and GPUDebugCommandsMixin.
 '''
-bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin']
+bases = ['GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPUObjectBase']
 properties = {}
 
 [classes.GPUComputePassEncoder.methods.set_pipeline]
@@ -3631,7 +3708,7 @@ Records the commands of a render pass.
 Created with GPUCommandEncoder.begin_render_pass(). Set a pipeline, bind groups and vertex/index buffers,
 draw, and finally call end(). Also has the methods of GPUBindingCommandsMixin, GPUDebugCommandsMixin and GPURenderCommandsMixin.
 '''
-bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin']
+bases = ['GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin', 'GPUObjectBase']
 properties = {}
 
 [classes.GPURenderPassEncoder.methods.set_viewport]
@@ -3943,7 +4020,7 @@ Records render commands into a GPURenderBundle, which can be replayed in multipl
 Created with GPUDevice.create_render_bundle_encoder(). Also has the methods of GPUBindingCommandsMixin,
 GPUDebugCommandsMixin and GPURenderCommandsMixin.
 '''
-bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin']
+bases = ['GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin', 'GPUObjectBase']
 properties = {}
 
 [classes.GPURenderBundleEncoder.methods.finish]
@@ -4053,6 +4130,62 @@ args.data_layout.default = ''
 
 args.size.doc = 'A structs.Extent3D (or tuple) with the size of the region to write, in texels.'
 args.size.type = 'tuple[int, int, int] | structs.Extent3DStruct'
+args.size.default = ''
+
+[classes.GPUQueue.methods.read_buffer]
+doc = '''
+Takes the data contents of the buffer and return them as a memoryview.
+
+This copies the data in the given buffer to a temporary buffer
+and then maps that buffer to read the data. The given buffer's
+usage must include COPY_SRC.
+
+Also see `GPUBuffer._sync()` and `GPUBuffer._async()`.
+'''
+returns.type = 'None'
+
+args.buffer.doc = 'The `GPUBuffer` object to read from.'
+args.buffer.type = 'GPUBuffer'
+args.buffer.default = ''
+
+args.buffer_offset.doc = 'The offset in the buffer to start reading from.'
+args.buffer_offset.type = 'int'
+args.buffer_offset.default = '0'
+
+args.size.doc = 'The number of bytes to read. Default all minus offset.'
+args.size.type = 'int | None'
+args.size.default = 'None'
+
+[classes.GPUQueue.methods.read_texture]
+doc = '''
+Takes the data contents and schedules a write operation of
+these contents to the destination texture in the queue. A
+snapshot of the data is taken; any changes to the data after
+this function is called do not affect the texture contents.
+
+Unlike `GPUCommandEncoder.copyBufferToTexture()`, there is
+no alignment requirement on `bytes_per_row`.
+'''
+returns.type = 'None'
+
+args.destination.doc = "A dict with fields: 'texture' (a texture object), 'origin' (a 3-tuple), 'mip_level' (an int, default 0)."
+args.destination.type = 'structs.TexelCopyTextureInfoStruct'
+args.destination.default = ''
+
+args.data.doc = '''
+The data to write to the texture.
+Must be an object that supports the buffer protocol,
+e.g. bytes, memoryview, numpy array, etc. Must be contiguous.
+'''
+args.data.type = 'ArrayLike'
+args.data.default = ''
+
+args.data_layout.doc = "A dict with fields: 'offset' (an int, default 0), 'bytes_per_row' (an int), 'rows_per_image' (an int, default 0)."
+args.data_layout.type = 'structs.TexelCopyBufferLayoutStruct'
+args.data_layout.default = ''
+
+args.size.doc = 'A 3-tuple of ints specifying the size to write.'
+args.size.type = 'tuple[int, int, int]'
 args.size.default = ''
 
 # ---- GPUQuerySet ---------------------------------------------------------------------------------

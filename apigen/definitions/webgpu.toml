@@ -1933,14 +1933,14 @@ args.index.default = ''
 # ---- GPUComputePipeline --------------------------------------------------------------------------
 
 [classes.GPUComputePipeline]
-bases = ['GPUObjectBase', 'GPUPipelineBase']
+bases = ['GPUPipelineBase', 'GPUObjectBase']
 properties = {}
 methods = {}
 
 # ---- GPURenderPipeline ---------------------------------------------------------------------------
 
 [classes.GPURenderPipeline]
-bases = ['GPUObjectBase', 'GPUPipelineBase']
+bases = ['GPUPipelineBase', 'GPUObjectBase']
 properties = {}
 methods = {}
 
@@ -1961,7 +1961,7 @@ methods = {}
 # ---- GPUCommandEncoder ---------------------------------------------------------------------------
 
 [classes.GPUCommandEncoder]
-bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin']
+bases = ['GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUObjectBase']
 properties = {}
 
 [classes.GPUCommandEncoder.methods.begin_render_pass]
@@ -2130,7 +2130,7 @@ args.marker_label.default = ''
 # ---- GPUComputePassEncoder -----------------------------------------------------------------------
 
 [classes.GPUComputePassEncoder]
-bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin']
+bases = ['GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPUObjectBase']
 properties = {}
 
 [classes.GPUComputePassEncoder.methods.set_pipeline]
@@ -2167,7 +2167,7 @@ returns.type = 'None'
 # ---- GPURenderPassEncoder ------------------------------------------------------------------------
 
 [classes.GPURenderPassEncoder]
-bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin']
+bases = ['GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin', 'GPUObjectBase']
 properties = {}
 
 [classes.GPURenderPassEncoder.methods.set_viewport]
@@ -2341,7 +2341,7 @@ methods = {}
 # ---- GPURenderBundleEncoder ----------------------------------------------------------------------
 
 [classes.GPURenderBundleEncoder]
-bases = ['GPUObjectBase', 'GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin']
+bases = ['GPUCommandsMixin', 'GPUDebugCommandsMixin', 'GPUBindingCommandsMixin', 'GPURenderCommandsMixin', 'GPUObjectBase']
 properties = {}
 
 [classes.GPURenderBundleEncoder.methods.finish]
