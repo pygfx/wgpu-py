@@ -112,11 +112,18 @@ def get_surface_id_from_info(present_info):
     """
 
     if sys.platform.startswith("win"):  # no-cover
-        GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa: N806
-        struct = ffi.new("WGPUSurfaceSourceWindowsHWND *")
-        struct.hinstance = ffi.cast("void *", GetModuleHandle(lib_path))
-        struct.hwnd = ffi.cast("void *", int(present_info["window"]))
-        struct.chain.sType = lib.WGPUSType_SurfaceSourceWindowsHWND
+        if present_info.get("platform") == "swapchainpanel":
+            # A WinUI SwapChainPanel; the "window" is a pointer to its
+            # ISwapChainPanelNative COM interface. Only D3D12 can present to it.
+            struct = ffi.new("WGPUSurfaceSourceSwapChainPanel *")
+            struct.panelNative = ffi.cast("void *", int(present_info["window"]))
+            struct.chain.sType = lib.WGPUSType_SurfaceSourceSwapChainPanel
+        else:
+            GetModuleHandle = ctypes.windll.kernel32.GetModuleHandleW  # noqa: N806
+            struct = ffi.new("WGPUSurfaceSourceWindowsHWND *")
+            struct.hinstance = ffi.cast("void *", GetModuleHandle(lib_path))
+            struct.hwnd = ffi.cast("void *", int(present_info["window"]))
+            struct.chain.sType = lib.WGPUSType_SurfaceSourceWindowsHWND
 
     elif sys.platform.startswith("darwin"):  # no-cover
         # This is what the triangle example from wgpu-native does:
