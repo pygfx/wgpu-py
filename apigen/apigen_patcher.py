@@ -357,7 +357,10 @@ class ApiPatcher(Patcher):
                 arg += f" = {arg_dict['default']}"
             args.append(arg)
         sig = ", ".join(args)
-        return f"    def {method_name}({sig}) -> {method_dict['returns']['type']}:"
+        if method_name == "__init__":
+            return f"    def {method_name}({sig}):"
+        else:
+            return f"    def {method_name}({sig}) -> {method_dict['returns']['type']}:"
 
     def class_is_known(self, class_name):
         return class_name in self.api_dict["classes"]
