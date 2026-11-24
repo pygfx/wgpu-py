@@ -5,6 +5,7 @@ from extract_idl import extract_idl
 from format_defs import format_defs
 from merge_defs import merge_defs
 from patch_api import patch_api
+from patch_backend_wgpu_native import patch_backend_wgpu_native
 from write_api import write_api
 from write_js_api import write_js_api
 
@@ -14,6 +15,7 @@ actions = [
     format_defs,
     merge_defs,
     patch_api,
+    patch_backend_wgpu_native,
     write_api,
     write_js_api,
 ]

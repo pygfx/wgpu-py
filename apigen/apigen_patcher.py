@@ -7,6 +7,23 @@ from functools import cache
 from apigen_utils import FormatError, format_code, read_file
 
 
+def detect_implemented_properties_and_methods(code) -> set[str]:
+    """Get what properties and method are implemented, so that deriving API's (i.e. backends) don't need to."""
+    p = ApiPatcher({}, False)
+    p._init(code)
+    implemented = set()
+    for class_name, i1, i2 in p.iter_classes():
+        for prop_name, j1, j2 in p.iter_properties(i1 + 1):
+            body = "\n".join(p.lines[j1 + 1 : j2 + 1])
+            if "NotImplemented" not in body:
+                implemented.add(f"{class_name}.{prop_name}")
+        for method_name, j1, j2 in p.iter_methods(i1 + 1):
+            body = "\n".join(p.lines[j1 + 1 : j2 + 1])
+            if "NotImplemented" not in body:
+                implemented.add(f"{class_name}.{method_name}")
+    return implemented
+
+
 class Patcher:
     """Class to help patch a Python module. Supports iterating (over
     lines, classes, properties, methods), and applying diffs (replace,
@@ -95,7 +112,7 @@ class Patcher:
 
     def iter_classes(self, start_line=0):
         """Generator to iterate over the classes.
-        Each iteration yields (classname, linenr_start, linenr_end),
+        Each iteration yields (class_name, linenr_start, linenr_end),
         where linenr_end is the last line of code.
         """
         current_class = None
@@ -116,7 +133,7 @@ class Patcher:
 
     def iter_properties(self, start_line=0):
         """Generator to iterate over the properties.
-        Each iteration yields (classname, linenr_first, linenr_last),
+        Each iteration yields (class_name, linenr_first, linenr_last),
         where linenr_first is the line that startswith `def`,
         and linenr_last is the last line of code.
         """
@@ -124,7 +141,7 @@ class Patcher:
 
     def iter_methods(self, start_line=0):
         """Generator to iterate over the methods.
-        Each iteration yields (classname, linenr_first, linenr_last)
+        Each iteration yields (class_name, linenr_first, linenr_last)
         where linenr_first is the line that startswith `def`,
         and linenr_last is the last line of code.
         """
@@ -187,12 +204,19 @@ class ApiPatcher(Patcher):
 
     known_external_classes = {"GPUPromise"}
 
-    def __init__(self, api_dict, explode_single_args_that_are_descriptors: bool):
+    def __init__(
+        self,
+        api_dict,
+        explode_single_args_that_are_descriptors: bool,
+        implemented_on_base_class=None,
+        inherit_from="",
+    ):
         super().__init__()
         self.api_dict = api_dict
         self.explode_single_args_that_are_descriptors = (
             explode_single_args_that_are_descriptors
         )
+        self.implemented_on_base_class = implemented_on_base_class or set()
 
     def apply(self, code):
         self._init(code)
@@ -205,113 +229,120 @@ class ApiPatcher(Patcher):
         seen_classes = set()
 
         # Update existing classes in the Python code
-        for classname, i1, i2 in self.iter_classes():
-            seen_classes.add(classname)
+        for class_name, i1, i2 in self.iter_classes():
+            seen_classes.add(class_name)
             self._apidiffs = set()
-            if classname in self.known_external_classes:
+            if class_name in self.known_external_classes:
                 pass
-            elif self.class_is_known(classname):
+            elif self.class_is_known(class_name):
                 old_line = self.lines[i1]
-                new_line = self.get_class_def(classname)
+                new_line = self.get_class_def(class_name)
                 if old_line != new_line:
                     fixme_line = "# FIXME: was " + old_line.split("class ", 1)[-1]
                     self.replace_line(i1, f"{fixme_line}\n{new_line}")
-                self.patch_properties(classname, i1 + 1, i2)
-                self.patch_methods(classname, i1 + 1, i2)
+                self.patch_properties(class_name, i1 + 1, i2)
+                self.patch_methods(class_name, i1 + 1, i2)
             else:
-                msg = f"unknown api: class {classname}"
+                msg = f"unknown api: class {class_name}"
                 self.insert_line(i1, "# FIXME: " + msg)
                 print("Warning: " + msg)
 
         # Add missing classes
         lines = []
-        for classname in self.get_class_names():
-            if classname not in seen_classes:
+        for class_name in self.get_class_names():
+            if class_name not in seen_classes:
                 lines.append("# FIXME: new class to implement")
-                lines.append(self.get_class_def(classname))
+                lines.append(self.get_class_def(class_name))
                 more_lines = []
-                more_lines += self.get_missing_properties(classname, set())
-                more_lines += self.get_missing_methods(classname, set())
+                more_lines += self.get_missing_properties(class_name, set())
+                more_lines += self.get_missing_methods(class_name, set())
                 lines.extend(more_lines or ["    pass"])
         if lines:
             self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["classes"] += len(seen_classes)
 
-    def patch_properties(self, classname, i1, i2):
+    def patch_properties(self, class_name, i1, i2):
         seen_props = set()
 
         # Update existing properties in Python code
-        for propname, j1, j2 in self.iter_properties(i1):
-            seen_props.add(propname)
-            if self.prop_is_known(classname, propname):
+        for prop_name, j1, j2 in self.iter_properties(i1):
+            seen_props.add(prop_name)
+            if self.prop_is_known(class_name, prop_name):
                 old_line = self.lines[j1]
-                new_line = self.get_property_def(classname, propname)
+                new_line = self.get_property_def(class_name, prop_name)
                 if old_line != new_line.split("@property\n")[1]:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
             else:
-                msg = f"unknown api: prop {classname}.{propname}"
+                msg = f"unknown api: prop {class_name}.{prop_name}"
                 self.insert_line(j1, "    # FIXME: " + msg)
                 print("Warning: " + msg)
 
         # Add missing properties for this class
-        lines = self.get_missing_properties(classname, seen_props)
+        lines = self.get_missing_properties(class_name, seen_props)
         if lines:
             self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["properties"] += len(seen_props)
 
-    def patch_methods(self, classname, i1, i2):
+    def patch_methods(self, class_name, i1, i2):
         seen_funcs = set()
 
         # Update existing methods in Python code
-        for methodname, j1, j2 in self.iter_methods(i1):
-            seen_funcs.add(methodname)
-            if self.method_is_known(classname, methodname):
+        for method_name, j1, j2 in self.iter_methods(i1):
+            seen_funcs.add(method_name)
+            if self.method_is_known(class_name, method_name):
                 old_line = self.lines[j1]
-                new_line = self.get_method_def(classname, methodname)
+                new_line = self.get_method_def(class_name, method_name)
                 if old_line != new_line:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
-            elif methodname.startswith("_"):
+            elif method_name.startswith("_"):
                 pass
             else:
-                msg = f"unknown api: method {classname}.{methodname}"
+                msg = f"unknown api: method {class_name}.{method_name}"
                 self.insert_line(j1, "    # FIXME: " + msg)
                 print("Warning: " + msg)
 
         # Add missing methods for this class
-        lines = self.get_missing_methods(classname, seen_funcs)
+        lines = self.get_missing_methods(class_name, seen_funcs)
         if lines:
             self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["methods"] += len(seen_funcs)
 
-    def get_missing_properties(self, classname, seen_props):
+    def get_missing_properties(self, class_name, seen_props):
         lines = []
-        for propname in self.get_prop_names(classname):
-            if propname not in seen_props:
+        for prop_name in self.get_prop_names(class_name):
+            if f"{class_name}.{prop_name}" in self.implemented_on_base_class:
+                pass
+            elif prop_name not in seen_props:
                 lines.append("    # FIXME: new prop to implement")
-                lines.append(self.get_property_def(classname, propname))
+                lines.append(self.get_property_def(class_name, prop_name))
                 lines.append("        raise NotImplementedError()")
                 lines.append("")
         return lines
 
-    def get_missing_methods(self, classname, seen_funcs):
+    def get_missing_methods(self, class_name, seen_funcs):
         lines = []
-        for methodname in self.get_method_names(classname):
-            if methodname not in seen_funcs:
+        for method_name in self.get_method_names(class_name):
+            if f"{class_name}.{method_name}" in self.implemented_on_base_class:
+                pass
+            elif method_name not in seen_funcs:
                 lines.append("    # FIXME: new method to implement")
-                lines.append(self.get_method_def(classname, methodname))
+                lines.append(self.get_method_def(class_name, method_name))
                 lines.append("        raise NotImplementedError()\n")
         return lines
 
     def get_class_def(self, class_name):
         class_dict = self.api_dict["classes"][class_name]
         bases = class_dict.get("bases", [])
+        if self.implemented_on_base_class:
+            bases = [b for b in bases if b.startswith("GPU")]
+            bases.insert(0, f"classes.{class_name}")
         bases_str = ""
         if bases:
             bases_str = "(" + ", ".join(bases) + ")"
@@ -366,9 +397,15 @@ class ApiPatcher(Patcher):
         return class_name in self.api_dict["classes"]
 
     def prop_is_known(self, class_name, prop_name):
+        stub = f"{class_name}.{prop_name}"
+        if stub in self.implemented_on_base_class:
+            print(f"Overloading s{stub} even though the base class implements it.")
         return prop_name in self.api_dict["classes"][class_name]["properties"]
 
     def method_is_known(self, class_name, method_name):
+        stub = f"{class_name}.{method_name}"
+        if stub in self.implemented_on_base_class:
+            print(f"Overloading {stub} even though the base class implements it.")
         return method_name in self.api_dict["classes"][class_name]["methods"]
 
     def get_class_names(self):
@@ -399,12 +436,12 @@ class StructValidationChecker(Patcher):
 
         structure_checks = self._get_structure_checks()
 
-        for classname, i1, i2 in self.iter_classes():
-            if classname not in self.api_dict["classes"]:
+        for class_name, i1, i2 in self.iter_classes():
+            if class_name not in self.api_dict["classes"]:
                 continue
 
             # For each method ...
-            for methodname, j1, j2 in self.iter_methods(i1 + 1):
+            for method_name, j1, j2 in self.iter_methods(i1 + 1):
                 code = "\n".join(self.lines[j1 : j2 + 1])
                 # Get signature and cut it up in words
                 sig_words = code.partition("(")[2].split("):")[0]
@@ -419,18 +456,18 @@ class StructValidationChecker(Patcher):
                 all_structs.update(method_structs)
                 # Collect structs being checked
                 try:
-                    checked = structure_checks[classname, methodname]
+                    checked = structure_checks[class_name, method_name]
                 except KeyError:
                     checked = set()
                     print(
-                        f"Could not validate check_struct for {classname}.{methodname}; need another codegen run."
+                        f"Could not validate check_struct for {class_name}.{method_name}; need another codegen run."
                     )
 
                 # Test that a matching check is done
                 unchecked = method_structs.difference(checked)
                 unchecked = list(sorted(unchecked.difference(ignore_structs)))
                 # Must we check, or does this method defer to another
-                defer_func_name = "_" + methodname
+                defer_func_name = "_" + method_name
                 defer_line_starts = (
                     f"return self.{defer_func_name[:-7]}",
                     f"promise = self.{defer_func_name[:-7]}",
@@ -440,7 +477,7 @@ class StructValidationChecker(Patcher):
                     for line in code.splitlines()
                 )
                 if not this_method_defers and unchecked:
-                    msg = f"missing check_struct in {methodname}: {unchecked}"
+                    msg = f"missing check_struct in {method_name}: {unchecked}"
                     self.insert_line(j1, f"# FIXME: {msg}")
                     print(f"ERROR: {msg}")
 

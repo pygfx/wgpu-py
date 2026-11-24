@@ -9,7 +9,7 @@ ROOT_DIR = Path(__file__).parents[1].absolute()
 def read_file(*fname):
     """Read a file from disk using the relative filename. Line endings are normalized."""
     filename = ROOT_DIR.joinpath(*fname)
-    print(f"Reading {filename.name}")
+    print(f"Reading {filename.relative_to(ROOT_DIR)}")
     with open(filename, "rb") as f:
         return (
             f.read()
@@ -23,7 +23,7 @@ def read_file(*fname):
 def write_file(text: str, *fname):
     """Write the given text to disk, using the relative filename. Line endings are matched to what's used for __init__.py."""
     filename = ROOT_DIR.joinpath(*fname)
-    print(f"Writing {filename.name}")
+    print(f"Writing {filename.relative_to(ROOT_DIR)}")
     if not text.endswith("\n"):
         text = text + "\n"
     with open(filename, "wb") as f:

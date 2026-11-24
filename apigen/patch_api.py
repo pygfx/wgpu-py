@@ -7,9 +7,10 @@ def patch_api():
     """Patch the base API in _classes.py."""
 
     api = read_definition_file("wgpu_api.toml")
-    code = read_file("wgpu", "_classes.py")
 
-    # code = format_code(code, singleline=True) ??
+    print(f"Found {len(api['classes'])} classes in the base API")
+
+    code = read_file("wgpu", "_classes.py")
 
     # Write __all__
     extra_public_classes = ["GPUPromise", "DrawCancelled"]
@@ -24,8 +25,6 @@ def patch_api():
         line += ", ".join(f'"{name}"' for name in all_public_classes)
         line += "]"
         code = part1 + line + part2
-
-    print(f"Found {len(all_public_classes)} classes")
 
     # Patch!
     for patcher in [CommentRemover(), ApiPatcher(api, True)]:

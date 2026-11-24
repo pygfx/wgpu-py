@@ -24,7 +24,6 @@ def write_api():
         extra_api = read_definition_file(fname)
         api = dict_deep_merge(api, extra_api)
 
-
     write_flags(api["flags"])
     write_enums(api["enums"])
     write_structs(api["structs"])

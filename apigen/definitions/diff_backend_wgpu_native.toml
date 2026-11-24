@@ -1,0 +1,4 @@
+[meta]
+filename = 'diff_backend_wgpu_native.toml'
+description = 'Defines how the native/desktop API differs from the base API.'
+notes = ''

@@ -12,7 +12,6 @@ def merge_defs():
     diff_base = read_definition_file("diff_base.toml")
     diff_docs = read_definition_file("diff_docs.toml")
 
-
     # Combine
     print("Merging")
     api = dict_deep_merge(webgpu, diff_base)
@@ -33,7 +32,6 @@ def merge_defs():
 def add_sync_properties_and_methods(api: dict):
     """For every async method, add a sync variant."""
     for _class_name, class_dict in api["classes"].items():
-
         current_properties = class_dict.get("properties", {})
         current_prop_names = set(current_properties.keys())
         new_properties = {}
