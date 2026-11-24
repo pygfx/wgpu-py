@@ -1,5 +1,5 @@
 from apigen_patcher import ApiPatcher, CommentRemover
-from apigen_utils import read_file, write_file
+from apigen_utils import print, read_file, write_file
 from apigen_defs import read_definition_file
 
 
@@ -24,6 +24,8 @@ def patch_api():
         line += ", ".join(f'"{name}"' for name in all_public_classes)
         line += "]"
         code = part1 + line + part2
+
+    print(f"Found {len(all_public_classes)} classes")
 
     # Patch!
     for patcher in [CommentRemover(), ApiPatcher(api, True)]:

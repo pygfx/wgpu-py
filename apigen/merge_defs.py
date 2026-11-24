@@ -1,6 +1,6 @@
 import json
 
-from apigen_utils import dict_deep_merge
+from apigen_utils import print, dict_deep_merge
 from apigen_defs import read_definition_file, write_definition_file
 
 
@@ -12,10 +12,13 @@ def merge_defs():
     diff_base = read_definition_file("diff_base.toml")
     diff_docs = read_definition_file("diff_docs.toml")
 
+
     # Combine
+    print("Merging")
     api = dict_deep_merge(webgpu, diff_base)
     api = dict_deep_merge(api, diff_docs, allow_add=False)
 
+    print("Adding async props and methods")
     add_sync_properties_and_methods(api)
 
     api["meta"] = {

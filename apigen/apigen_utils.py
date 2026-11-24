@@ -9,6 +9,7 @@ ROOT_DIR = Path(__file__).parents[1].absolute()
 def read_file(*fname):
     """Read a file from disk using the relative filename. Line endings are normalized."""
     filename = ROOT_DIR.joinpath(*fname)
+    print(f"Reading {filename.name}")
     with open(filename, "rb") as f:
         return (
             f.read()
@@ -22,6 +23,7 @@ def read_file(*fname):
 def write_file(text: str, *fname):
     """Write the given text to disk, using the relative filename. Line endings are matched to what's used for __init__.py."""
     filename = ROOT_DIR.joinpath(*fname)
+    print(f"Writing {filename.name}")
     if not text.endswith("\n"):
         text = text + "\n"
     with open(filename, "wb") as f:
@@ -45,6 +47,34 @@ def _get_line_endings(text):
 
 
 LE = _get_line_endings((ROOT_DIR / "apigen" / "__init__.py").read_bytes().decode())
+
+
+_file_objects_to_print_to = [sys.stdout]
+
+
+def print(*args, **kwargs):
+    """Report something will be printed and added to a file."""
+    # __builtins__["print"](*args, **kwargs)
+    if args and not args[0].lstrip().startswith("#"):
+        args = ("*", *args)
+    for f in _file_objects_to_print_to:
+        __builtins__["print"](*args, file=f, flush=True, **kwargs)
+
+
+class PrintToFile:
+    """Context manager to print to file."""
+
+    def __init__(self, f):
+        assert hasattr(f, "write")
+        self.f = f
+
+    def __enter__(self):
+        _file_objects_to_print_to.append(self.f)
+
+    def __exit__(self, type, value, tb):
+        while self.f in _file_objects_to_print_to:
+            _file_objects_to_print_to.remove(self.f)
+        self.f.close()
 
 
 def dict_deep_merge(a: dict, b: dict, allow_add: bool = True) -> dict:

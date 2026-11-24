@@ -1,11 +1,12 @@
 import os
 
-from apigen_utils import DEFINITIONS_DIR
+from apigen_utils import print, DEFINITIONS_DIR  # noqa: F401
 from apigen_defs import read_definition_file, write_definition_file
 
 
 def format_defs():
     """Format the static definition files for consistency."""
+
     files = [
         fname for fname in os.listdir(DEFINITIONS_DIR) if fname.startswith("diff_")
     ]

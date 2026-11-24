@@ -1,6 +1,6 @@
 import urllib.request
 
-from apigen_utils import DEFINITIONS_DIR
+from apigen_utils import print, DEFINITIONS_DIR
 
 
 def download_idl():
@@ -10,15 +10,17 @@ def download_idl():
         "https://raw.githubusercontent.com/gpuweb/gpuweb/refs/heads/gh-pages/webgpu.idl"
     )
 
+    print(f"Downloading from {url}")
+
     with urllib.request.urlopen(url, timeout=10) as response:
         data = response.read()
 
     filename = DEFINITIONS_DIR / "webgpu.idl"
 
+    print(f"Write to {filename}")
     with open(filename, "wb") as f:
         f.write(data)
 
-    print(f"Wrote to {filename}")
 
 
 if __name__ == "__main__":

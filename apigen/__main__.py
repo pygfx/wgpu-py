@@ -3,11 +3,14 @@ The entrypoint / script to apply automatic patches to the code.
 See README.md for more information.
 """
 
+import io
 import os
 import sys
 from argparse import ArgumentParser
 
 from apigen import actions
+from apigen_utils import print, PrintToFile, write_file
+
 
 parser = ArgumentParser(description="apigen - run code generation and patching.")
 
@@ -37,6 +40,18 @@ parser.add_argument(
 sys.path.insert(0, os.path.abspath(os.path.join(__file__, "..", "..")))
 
 
+def run_all():
+    log = io.StringIO()
+    with PrintToFile(log):
+        print("# Code generation report")
+        for func in actions:
+            if "download" in func.__name__:
+                continue
+            print(f"\n## {func.__name__}")
+            func()
+        write_file(log.getvalue(), "apigen", "definitions", "codegen_report.md")
+
+
 if __name__ == "__main__":
     args = parser.parse_args()
     enabled = [k for k, v in vars(args).items() if v is True]
@@ -53,12 +68,10 @@ if __name__ == "__main__":
     elif not enabled:
         parser.print_help()
     elif "all" in enabled:
-        for func in actions:
-            if "download" in func.__name__:
-                continue
-            func()
+        run_all()
     else:
         for name in enabled:
             for func in actions:
                 if name == func.__name__:
+                    print(f"## {func.__name__}")
                     func()

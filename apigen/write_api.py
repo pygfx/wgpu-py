@@ -3,6 +3,7 @@
 import re
 
 from apigen_utils import (
+    print,
     dict_deep_merge,
     format_code,
     # indent_code,
@@ -22,6 +23,7 @@ def write_api():
     for fname in ["diff_backend_pyodide.toml", "diff_backend_wgpu.toml"]:
         extra_api = read_definition_file(fname)
         api = dict_deep_merge(api, extra_api)
+
 
     write_flags(api["flags"])
     write_enums(api["enums"])
@@ -49,6 +51,8 @@ def resolve_crossrefs(text):
 
 
 def write_flags(flags_dict):
+    print(f"Writing {len(flags_dict)} flags")
+
     # Get preamble
     pylines = []
     for line in read_file("wgpu", "flags.py").splitlines():
@@ -79,10 +83,11 @@ def write_flags(flags_dict):
     # Write
     code = format_code("\n".join(pylines))
     write_file(code, "wgpu", "flags.py")
-    print(f"Wrote {n} flags to flags.py")
 
 
 def write_enums(enums_dict):
+    print(f"Writing {len(enums_dict)} enums")
+
     # Get preamble
     pylines = []
     for line in read_file("wgpu", "enums.py").splitlines():
@@ -114,10 +119,11 @@ def write_enums(enums_dict):
     # Write
     code = format_code("\n".join(pylines))
     write_file(code, "wgpu", "enums.py")
-    print(f"Wrote {n} enums to enums.py")
 
 
 def write_structs(structs_dict):
+    print(f"Writing {len(structs_dict)} structs")
+
     # Get preamble
     pylines = []
     for line in read_file("wgpu", "structs.py").splitlines():
@@ -178,7 +184,6 @@ def write_structs(structs_dict):
     # Write
     code = format_code("\n".join(pylines))
     write_file(code, "wgpu", "structs.py")
-    print(f"Wrote {n} structs to structs.py")
 
 
 if __name__ == "__main__":
