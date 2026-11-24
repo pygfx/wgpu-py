@@ -57,7 +57,7 @@ def write_js_api():
 
     code = preamble + "\n".join(lines)
 
-    code = format_code(code)
+    # code = format_code(code)
 
     write_file(code, "wgpu", "backends", "js_webgpu", "webgpu_stub.py")
 

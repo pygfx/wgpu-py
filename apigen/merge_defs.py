@@ -30,19 +30,21 @@ def merge_defs():
 def add_sync_properties_and_methods(api: dict):
     """For every async method, add a sync variant."""
     for _class_name, class_dict in api["classes"].items():
-        current_prop_names = set(class_dict["properties"].keys())
+
+        current_properties = class_dict.get("properties", {})
+        current_prop_names = set(current_properties.keys())
         new_properties = {}
-        for prop_name, prop_dict in class_dict["properties"].items():
+        for prop_name, prop_dict in current_properties.items():
             new_properties[prop_name] = prop_dict
             _make_prop_or_method_async(
                 prop_name, prop_dict, current_prop_names, new_properties
             )
         class_dict["properties"] = new_properties
 
-    for _class_name, class_dict in api["classes"].items():
-        current_method_names = set(class_dict["methods"].keys())
+        current_methods = class_dict.get("methods", {})
+        current_method_names = set(current_methods.keys())
         new_methods = {}
-        for method_name, method_dict in class_dict["methods"].items():
+        for method_name, method_dict in current_methods.items():
             _make_prop_or_method_async(
                 method_name, method_dict, current_method_names, new_methods
             )

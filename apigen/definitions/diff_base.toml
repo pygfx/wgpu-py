@@ -111,7 +111,6 @@ type = 'str'
 diff = 'REMOVE'
 
 [classes.GPUQueue.methods.read_buffer]
-returns.type = 'GPUBuffer'
 doc = '''
 Takes the data contents of the buffer and return them as a memoryview.
 
@@ -121,6 +120,7 @@ usage must include COPY_SRC.
 
 Also see `GPUBuffer._sync()` and `GPUBuffer._async()`.
 '''
+returns.type = 'GPUBuffer'
 
 args.buffer.doc = 'The `GPUBuffer` object to read from.'
 args.buffer.type = 'GPUBuffer'
@@ -135,7 +135,6 @@ args.size.type = 'int | None'
 args.size.default = 'None'
 
 [classes.GPUQueue.methods.read_texture]
-returns.type = 'GPUTexture'
 doc = '''
 Takes the data contents and schedules a write operation of
 these contents to the destination texture in the queue. A
@@ -145,6 +144,7 @@ this function is called do not affect the texture contents.
 Unlike `GPUCommandEncoder.copyBufferToTexture()`, there is
 no alignment requirement on `bytes_per_row`.
 '''
+returns.type = 'GPUTexture'
 
 args.destination.doc = "A dict with fields: 'texture' (a texture object), 'origin' (a 3-tuple), 'mip_level' (an int, default 0)."
 args.destination.type = 'structs.TexelCopyTextureInfoStruct'
@@ -275,7 +275,7 @@ type = 'GPUTexture'
 
 [classes.GPUBindingCommandsMixin.methods.set_bind_group]
 args.dynamic_offsets_data.type = 'Sequence[int]'
-args.dynamic_offsets_data.default = "()"
+args.dynamic_offsets_data.default = '()'
 
 args.dynamic_offsets_data_start.type = 'int | None'
 args.dynamic_offsets_data_start.default = 'None'
@@ -313,9 +313,10 @@ diff = 'REMOVE'
 [classes.WGSLLanguageFeatures]
 diff = 'REMOVE'
 
+# ---- DrawCancelled -------------------------------------------------------------------------------
 
 [classes.DrawCancelled]
-doc = """
+doc = '''
 An excepion raised to cancel a draw when the surface texture could not be obtained,
 e.g. because the window is hidden or occluded.
-"""
+'''

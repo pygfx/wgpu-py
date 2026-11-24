@@ -1904,7 +1904,7 @@ type = 'Sequence[GPUCompilationMessage]'
 # ---- GPUPipelineError ----------------------------------------------------------------------------
 
 [classes.GPUPipelineError]
-bases = ['DOMException']
+bases = ['Exception']
 
 [classes.GPUPipelineError.properties.reason]
 type = 'enums.PipelineErrorReasonEnum'
@@ -2467,7 +2467,7 @@ type = 'str'
 # ---- GPUError ------------------------------------------------------------------------------------
 
 [classes.GPUError]
-bases = []
+bases = ['Exception']
 methods = {}
 
 [classes.GPUError.properties.message]
@@ -2488,7 +2488,7 @@ args.message.default = ''
 # ---- GPUOutOfMemoryError -------------------------------------------------------------------------
 
 [classes.GPUOutOfMemoryError]
-bases = ['GPUError']
+bases = ['GPUError', 'MemoryError']
 properties = {}
 
 [classes.GPUOutOfMemoryError.methods.__init__]

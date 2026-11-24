@@ -54,9 +54,9 @@ if __name__ == "__main__":
         parser.print_help()
     elif "all" in enabled:
         for func in actions:
-            if func.__name__ == "download":
+            if "download" in func.__name__:
                 continue
-                func()
+            func()
     else:
         for name in enabled:
             for func in actions:

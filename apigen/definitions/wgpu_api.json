@@ -2839,7 +2839,7 @@
       "doc": "The diagnostic messages produced when compiling a shader module.\n\nObtained from GPUShaderModule.get_compilation_info().\n"
     },
     "GPUPipelineError": {
-      "bases": [ "DOMException" ],
+      "bases": [ "Exception" ],
       "properties": {
         "reason": {
           "type": "enums.PipelineErrorReasonEnum",
@@ -3077,7 +3077,7 @@
             "bind_group": { "type": "GPUBindGroup", "default": "", "doc": "The GPUBindGroup to set, or None to unset it." },
             "dynamic_offsets_data": {
               "type": "Sequence[int]",
-              "default": "",
+              "default": "()",
               "doc": "A list or array of offsets in bytes, one for each dynamic buffer binding, in order of binding number."
             },
             "dynamic_offsets_data_start": {
@@ -3518,7 +3518,7 @@
         },
         "read_buffer": {
           "doc": "Takes the data contents of the buffer and return them as a memoryview.\n\nThis copies the data in the given buffer to a temporary buffer\nand then maps that buffer to read the data. The given buffer's\nusage must include COPY_SRC.\n\nAlso see `GPUBuffer._sync()` and `GPUBuffer._async()`.\n",
-          "returns": { "type": "None" },
+          "returns": { "type": "GPUBuffer" },
           "args": {
             "buffer": { "doc": "The `GPUBuffer` object to read from.", "type": "GPUBuffer", "default": "" },
             "buffer_offset": { "doc": "The offset in the buffer to start reading from.", "type": "int", "default": "0" },
@@ -3531,7 +3531,7 @@
         },
         "read_texture": {
           "doc": "Takes the data contents and schedules a write operation of\nthese contents to the destination texture in the queue. A\nsnapshot of the data is taken; any changes to the data after\nthis function is called do not affect the texture contents.\n\nUnlike `GPUCommandEncoder.copyBufferToTexture()`, there is\nno alignment requirement on `bytes_per_row`.\n",
-          "returns": { "type": "None" },
+          "returns": { "type": "GPUTexture" },
           "args": {
             "destination": {
               "doc": "A dict with fields: 'texture' (a texture object), 'origin' (a 3-tuple), 'mip_level' (an int, default 0).",
@@ -3645,7 +3645,7 @@
       "doc": "Information about why a GPUDevice was lost.\n\nAvailable via the lost property of GPUDevice.\n"
     },
     "GPUError": {
-      "bases": [  ],
+      "bases": [ "Exception" ],
       "methods": {  },
       "properties": {
         "message": {
@@ -3670,7 +3670,7 @@
       "doc": "An error that signals that an operation did not satisfy the validation rules of the API, i.e. incorrect usage.\n\nCaptured by error scopes with enums.ErrorFilter.validation.\n"
     },
     "GPUOutOfMemoryError": {
-      "bases": [ "GPUError" ],
+      "bases": [ "GPUError", "MemoryError" ],
       "properties": {  },
       "methods": {
         "__init__": {
@@ -3696,6 +3696,11 @@
         }
       },
       "doc": "An error that signals that an operation failed for a reason that is not caused by incorrect usage, e.g. an implementation-specific limit.\n\nCaptured by error scopes with enums.ErrorFilter.internal.\n"
+    },
+    "DrawCancelled": {
+      "doc": "An excepion raised to cancel a draw when the surface texture could not be obtained,\ne.g. because the window is hidden or occluded.\n",
+      "properties": {  },
+      "methods": {  }
     }
   }
 }
