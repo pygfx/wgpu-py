@@ -77,6 +77,21 @@ class PrintToFile:
         self.f.close()
 
 
+def to_snake_case(name, separator="_"):
+    """Convert a name from camelCase to snake_case. Names that already are snake_case remain the same."""
+    name2 = ""
+    for c in name:
+        c2 = c.lower()
+        if c2 != c and len(name2) > 0:
+            prev = name2[-1]
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
+                name2 += separator
+        name2 += c2
+    return name2
+
+
 def dict_deep_merge(a: dict, b: dict, allow_add: bool = True) -> dict:
     """Return a new dict: b merged into a, recursing into nested dicts."""
     result = dict(a)

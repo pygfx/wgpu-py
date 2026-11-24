@@ -1,6 +1,6 @@
 from typing import Literal
 
-from apigen_utils import print, read_file
+from apigen_utils import print, read_file, to_snake_case
 from apigen_defs import write_definition_file
 
 builtins = __builtins__
@@ -125,21 +125,6 @@ def make_names_pythonic(api):
                 new_args[to_snake_case(arg_name)] = arg_dict
             method_dict["args"] = new_args
         class_dict["methods"] = new_methods
-
-
-def to_snake_case(name, separator="_"):
-    """Convert a name from camelCase to snake_case. Names that already are snake_case remain the same."""
-    name2 = ""
-    for c in name:
-        c2 = c.lower()
-        if c2 != c and len(name2) > 0:
-            prev = name2[-1]
-            if c2 == "d" and prev in "123":
-                name2 = name2[:-1] + separator + prev
-            elif prev != separator:
-                name2 += separator
-        name2 += c2
-    return name2
 
 
 def resolve_types(api, parser):
