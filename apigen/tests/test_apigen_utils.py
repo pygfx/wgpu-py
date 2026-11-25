@@ -2,7 +2,18 @@
 Strive for full coverage of the apigen utils module.
 """
 
-from apigen_utils import format_code, to_snake_case, _get_line_endings
+import io
+
+import apigen_utils
+from apigen_utils import (
+    FormatError,
+    PrintToFile,
+    _get_line_endings,
+    dict_deep_merge,
+    format_code,
+    indent_code,
+    to_snake_case,
+)
 from apigen_patcher import Patcher
 from patch_backend_wgpu_native import remove_c_comments
 
@@ -280,6 +291,71 @@ def test_patcher2():
             assert line.startswith("def")
             assert funcname in line
             assert "pass" in p.lines[j2]
+
+
+def test_dict_deep_merge():
+    a = {"a": {"x": 1}, "b": 1, "c": {"deep": {"i": 3}}}
+    b = {"a": {"y": 2}, "b": 2, "d": 3}
+
+    # Merge, adding new keys
+    merged = dict_deep_merge(a, b)
+    assert merged == {
+        "a": {"x": 1, "y": 2},
+        "b": 2,
+        "c": {"deep": {"i": 3}},
+        "d": 3,
+    }
+
+    # The original dicts are not modified
+    assert "y" not in a["a"]
+    assert "d" not in a
+
+    # New dict-valued keys are subject to allow_add
+    b2 = {"a": {"y": 2}, "d": {"new": 1}}
+    assert "d" in dict_deep_merge(a, b2)
+    assert "d" not in dict_deep_merge(a, b2, allow_add=False)
+
+    # Remove a key
+    merged = dict_deep_merge(a, {"a": {"diff": "REMOVE"}})
+    assert "a" not in merged
+    assert merged["b"] == 1
+
+    # Scalars overwrite
+    merged = dict_deep_merge({"a": {"b": {"c": 1}}}, {"a": {"b": {"c": 2}}})
+    assert merged == {"a": {"b": {"c": 2}}}
+
+
+def test_indent_code():
+    code = dedent("""
+    def foo():
+        pass
+    """)
+    assert indent_code(code) == "    def foo():\n        pass\n"
+    assert indent_code(code, 2) == "  def foo():\n      pass\n"
+
+
+def test_format_code_error():
+    bad_code = dedent("""
+    def foo():
+        x = 1
+     y = 2
+    """)
+    with raises(FormatError):
+        format_code(bad_code)
+
+
+def test_print_and_print_to_file():
+    log = io.StringIO()
+    with PrintToFile(log):
+        apigen_utils.print("hello", "world")
+        apigen_utils.print("")
+        apigen_utils.print("# this is a comment-like line")
+        capture = log.getvalue()
+
+    # Lines that are not comment-ish get a star prefix
+    assert "* hello world\n" in capture
+    assert "* \n" in capture
+    assert "# this is a comment-like line\n" in capture
 
 
 if __name__ == "__main__":
