@@ -43,8 +43,49 @@ This API is derived from the WebGPU spec, but differs in a few ways:
 
 Further changes:
 
-.. autodata:: wgpu._classes.apidiff
-    :annotation: Differences of base API:
+.. Changes get inserted below by codegen/write_docs.py
+.. api-difference-start
+
+* Removed: the ``ExternalTextureBindingLayout`` struct.
+* Removed: the ``CopyExternalImageDestInfo`` struct.
+* Removed: the ``CopyExternalImageSourceInfo`` struct.
+* Removed: the ``external_texture`` field of the ``BindGroupLayoutEntry`` struct.
+* Changed: the ``power_preference`` field of the ``RequestAdapterOptions`` struct is now ``enums.PowerPreference | None``.
+* Added: the ``canvas`` field of the ``RequestAdapterOptions`` struct.
+* Removed: the ``xr_compatible`` field of the ``RequestAdapterOptions`` struct.
+* Added: the ``GPU.enumerate_adapters_async`` method.
+* Added: the ``GPU.enumerate_adapters_sync`` method.
+* Added: the ``GPU.get_canvas_context`` method.
+* Added: the ``GPUCanvasContext.physical_size`` property.
+* Added: the ``GPUCanvasContext.set_physical_size`` method.
+* Added: the ``GPUCanvasContext.get_preferred_format`` method.
+* Added: the ``GPUCanvasContext.present`` method.
+* Changed: the ``GPUAdapterInfo`` class now inherits from ``dict``.
+* Added: the ``GPUObjectBase.uid`` property.
+* Added: the ``GPUAdapter.summary`` property.
+* Removed: the ``GPUQueue.copy_external_image_to_texture`` method.
+* Added: the ``GPUQueue.read_buffer`` method.
+* Added: the ``GPUQueue.read_texture`` method.
+* Added: the ``GPUDevice.adapter`` property.
+* Removed: the ``GPUDevice.import_external_texture`` method.
+* Added: the ``GPUDevice.create_buffer_with_data`` method.
+* Added: the ``GPUBuffer.read_mapped`` method.
+* Added: the ``GPUBuffer.write_mapped`` method.
+* Added: the ``GPUTexture.size`` property.
+* Added: the ``GPUTextureView.size`` property.
+* Added: the ``GPUTextureView.texture`` property.
+* Changed: the ``dynamic_offsets_data`` argument of the ``GPUBindingCommandsMixin.set_bind_group`` method is now ``Sequence[int]``, defaults to ``()``.
+* Changed: the ``dynamic_offsets_data_start`` argument of the ``GPUBindingCommandsMixin.set_bind_group`` method is now ``int | None``, defaults to ``None``.
+* Changed: the ``dynamic_offsets_data_length`` argument of the ``GPUBindingCommandsMixin.set_bind_group`` method is now ``int | None``, defaults to ``None``.
+* Removed: the ``NavigatorGPU`` class.
+* Removed: the ``GPUExternalTexture`` class.
+* Removed: the ``GPUUncapturedErrorEvent`` class.
+* Removed: the ``GPUSupportedLimits`` class.
+* Removed: the ``GPUSupportedFeatures`` class.
+* Removed: the ``WGSLLanguageFeatures`` class.
+* Added: the ``DrawCancelled`` class.
+
+.. api-difference-end
 
 
 Each backend may implement extra functionality on top of the base API.

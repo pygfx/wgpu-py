@@ -231,7 +231,6 @@ class ApiPatcher(Patcher):
         # Update existing classes in the Python code
         for class_name, i1, i2 in self.iter_classes():
             seen_classes.add(class_name)
-            self._apidiffs = set()
             if class_name in self.known_external_classes:
                 pass
             elif self.class_is_known(class_name):

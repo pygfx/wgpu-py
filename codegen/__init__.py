@@ -7,6 +7,7 @@ from merge_defs import merge_defs
 from patch_api import patch_api
 from patch_backend_wgpu_native import patch_backend_wgpu_native
 from write_api import write_api
+from write_docs import write_docs
 from write_js_api import write_js_api
 
 actions = [
@@ -17,5 +18,6 @@ actions = [
     patch_api,
     patch_backend_wgpu_native,
     write_api,
+    write_docs,
     write_js_api,
 ]
