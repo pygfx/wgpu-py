@@ -1,12 +1,12 @@
 """Test the definition file reading/writing/checking,
-and the json/toml converters in apigen_defs.py.
+and the json/toml converters in codegen_defs.py.
 """
 
 import json
 import tomllib
 
-import apigen_utils
-from apigen_defs import (
+import codegen_utils
+from codegen_defs import (
     _toml_key,
     _value_to_toml,
     check_definition_structure,
@@ -106,7 +106,7 @@ def test_write_definition_file(monkeypatch):
     def mock_write_file(text, filename):
         written[str(filename)] = text
 
-    monkeypatch.setattr(apigen_utils, "_write_file", mock_write_file)
+    monkeypatch.setattr(codegen_utils, "_write_file", mock_write_file)
 
     # The toml version parses back to the same structure (all sections filled)
     write_definition_file(structure, "test.toml")
@@ -320,7 +320,7 @@ def test_structure_to_toml(monkeypatch):
     def mock_write_file(text, filename):
         written[str(filename)] = text
 
-    monkeypatch.setattr(apigen_utils, "_write_file", mock_write_file)
+    monkeypatch.setattr(codegen_utils, "_write_file", mock_write_file)
     structure["meta"]["filename"] = "test.toml"
     write_definition_file(structure, "test.toml")
     text2 = written.popitem()[1]

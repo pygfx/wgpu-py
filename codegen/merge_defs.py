@@ -1,7 +1,7 @@
 import json
 
-from apigen_utils import print, dict_deep_merge
-from apigen_defs import read_definition_file, write_definition_file
+from codegen_utils import print, dict_deep_merge
+from codegen_defs import read_definition_file, write_definition_file
 
 
 def merge_defs():

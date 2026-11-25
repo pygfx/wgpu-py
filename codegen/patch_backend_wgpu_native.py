@@ -10,14 +10,14 @@ from cffi.cparser import _preprocess as cffi_preprocess
 
 from wgpu._coreutils import get_header_filename
 
-from apigen_patcher import (
+from codegen_patcher import (
     Patcher,
     CommentRemover,
     ApiPatcher,
     StructValidationChecker,
     detect_implemented_properties_and_methods,
 )
-from apigen_utils import (
+from codegen_utils import (
     print,
     read_file,
     write_file,
@@ -26,7 +26,7 @@ from apigen_utils import (
     format_code,
     _write_file,
 )
-from apigen_defs import read_definition_file
+from codegen_defs import read_definition_file
 
 
 def patch_backend_wgpu_native():

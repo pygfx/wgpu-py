@@ -2,14 +2,14 @@ import json
 import re
 import tomllib
 
-from apigen_utils import read_file, write_file
+from codegen_utils import read_file, write_file
 
 
 def read_definition_file(fname: str) -> dict:
     """Read an API definition from disk and check that the structure is correct.
     Returns the structure as a dict.
     """
-    source = read_file("apigen", "definitions", fname)
+    source = read_file("codegen", "definitions", fname)
 
     if fname.endswith(".json"):
         structure = json.loads(source)
@@ -54,7 +54,7 @@ def write_definition_file(structure: dict, fname: str) -> None:
         raise RuntimeError(
             f"write_definition_file(): invalid definition file extension for {fname!r}."
         )
-    write_file(text, "apigen", "definitions", fname)
+    write_file(text, "codegen", "definitions", fname)
 
 
 def check_definition_structure(structure: dict):

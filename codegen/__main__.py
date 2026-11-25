@@ -8,11 +8,11 @@ import os
 import sys
 from argparse import ArgumentParser
 
-from apigen import actions
-from apigen_utils import print, PrintToFile, write_file
+from codegen import actions
+from codegen_utils import print, PrintToFile, write_file
 
 
-parser = ArgumentParser(description="apigen - run code generation and patching.")
+parser = ArgumentParser(description="codegen - run code generation and patching.")
 
 for func in actions:
     parser.add_argument(
@@ -49,7 +49,7 @@ def run_all():
                 continue
             print(f"\n## {func.__name__}")
             func()
-        write_file(log.getvalue(), "apigen", "definitions", "codegen_report.md")
+        write_file(log.getvalue(), "codegen", "definitions", "codegen_report.md")
 
 
 if __name__ == "__main__":

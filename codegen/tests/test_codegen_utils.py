@@ -1,11 +1,11 @@
 """
-Strive for full coverage of the apigen utils module.
+Strive for full coverage of the codegen utils module.
 """
 
 import io
 
-import apigen_utils
-from apigen_utils import (
+import codegen_utils
+from codegen_utils import (
     FormatError,
     PrintToFile,
     _get_line_endings,
@@ -14,7 +14,7 @@ from apigen_utils import (
     indent_code,
     to_snake_case,
 )
-from apigen_patcher import Patcher
+from codegen_patcher import Patcher
 from patch_backend_wgpu_native import remove_c_comments
 
 from pytest import raises
@@ -347,9 +347,9 @@ def test_format_code_error():
 def test_print_and_print_to_file():
     log = io.StringIO()
     with PrintToFile(log):
-        apigen_utils.print("hello", "world")
-        apigen_utils.print("")
-        apigen_utils.print("# this is a comment-like line")
+        codegen_utils.print("hello", "world")
+        codegen_utils.print("")
+        codegen_utils.print("# this is a comment-like line")
         capture = log.getvalue()
 
     # Lines that are not comment-ish get a star prefix

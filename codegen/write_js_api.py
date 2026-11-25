@@ -1,5 +1,5 @@
-from apigen_utils import write_file
-from apigen_defs import read_definition_file
+from codegen_utils import write_file
+from codegen_defs import read_definition_file
 
 
 preamble = '''

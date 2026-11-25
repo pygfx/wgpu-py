@@ -2,7 +2,7 @@
 
 import re
 
-from apigen_utils import (
+from codegen_utils import (
     print,
     dict_deep_merge,
     format_code,
@@ -10,7 +10,7 @@ from apigen_utils import (
     read_file,
     write_file,
 )
-from apigen_defs import read_definition_file
+from codegen_defs import read_definition_file
 
 
 def write_api():

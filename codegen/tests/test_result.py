@@ -4,8 +4,8 @@ import os
 import sys
 from difflib import unified_diff
 
-import apigen_utils
-from apigen_utils import LE, ROOT_DIR, format_code, read_file
+import codegen_utils
+from codegen_utils import LE, ROOT_DIR, format_code, read_file
 
 
 def test_async_methods_and_props():
@@ -27,7 +27,7 @@ def test_async_methods_and_props():
 
 
 def test_codegen_report_has_no_errors():
-    text = read_file("apigen", "definitions", "codegen_report.md")
+    text = read_file("codegen", "definitions", "codegen_report.md")
 
     # The codegen uses a prefix "ERROR:" for unacceptable things.
     # All caps, some function names may contain the name "error".
@@ -35,29 +35,29 @@ def test_codegen_report_has_no_errors():
 
 
 def test_that_code_is_up_to_date(monkeypatch):
-    """Test that running the apigen pipeline updates what we expect, but
+    """Test that running the codegen pipeline updates what we expect, but
     does not introduce changes.
 
     Nothing is actually written, because the low-level _write_file() is
     monkeypatched into a mock that collects the writes; the "written"
     content is then compared with the content of the original files.
     """
-    import apigen
-    import apigen.__main__
+    import codegen
+    import codegen.__main__
 
     # The mock that collects all "writes". All writes go through
-    # apigen_utils._write_file(), so we only have to patch that one.
+    # codegen_utils._write_file(), so we only have to patch that one.
     writes = {}
 
     def mock_write_file(text, filename):
         assert isinstance(text, str)
         writes[str(filename)] = text
 
-    monkeypatch.setattr(apigen_utils, "_write_file", mock_write_file)
+    monkeypatch.setattr(codegen_utils, "_write_file", mock_write_file)
 
     # Perform the whole codegen - this should not write anything to disk,
     # but "write" all the same files.
-    apigen.__main__.run_all()
+    codegen.__main__.run_all()
 
     # Confirm that the pipeline "wrote" a reasonable number of files
     assert len(writes) > 4
@@ -91,7 +91,7 @@ def test_that_code_is_up_to_date(monkeypatch):
             errors = True
 
     assert not errors
-    print("Apigen check ok!")
+    print("codegen check ok!")
 
 
 if __name__ == "__main__":

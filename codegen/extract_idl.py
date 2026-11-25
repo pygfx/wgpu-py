@@ -1,7 +1,7 @@
 from typing import Literal
 
-from apigen_utils import print, read_file, to_snake_case
-from apigen_defs import write_definition_file
+from codegen_utils import print, read_file, to_snake_case
+from codegen_defs import write_definition_file
 
 builtins = __builtins__
 if not isinstance(builtins, dict):
@@ -25,7 +25,7 @@ def extract_idl():
     """
 
     # Get the source, and parse into a structure.
-    source = read_file("apigen", "definitions", "webgpu.idl")
+    source = read_file("codegen", "definitions", "webgpu.idl")
     parser = IdlParser(source)
     parser.parse()
 

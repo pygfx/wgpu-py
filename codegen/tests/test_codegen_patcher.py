@@ -1,12 +1,12 @@
-"""Test the patchers in apigen_patcher.py."""
+"""Test the patchers in codegen_patcher.py."""
 
-from apigen_patcher import (
+from codegen_patcher import (
     ApiPatcher,
     CommentRemover,
     StructValidationChecker,
     detect_implemented_properties_and_methods,
 )
-from apigen_utils import format_code
+from codegen_utils import format_code
 
 
 def dedent(code):

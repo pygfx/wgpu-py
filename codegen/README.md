@@ -1,4 +1,4 @@
-# wgpu APIGEN
+# wgpu CODEGEN
 
 ## Introduction
 
@@ -16,7 +16,7 @@ Each backend can define additional API surface, but uses suffixes for anything t
 
 ## Code organization
 
-The apigen consists of multiple "actions". Each such action is represented by a module,
+The codegen consists of multiple "actions". Each such action is represented by a module,
 which has a function with the same name that performs the action. These modules can also
 be executed as a script, which is handy during development.
 

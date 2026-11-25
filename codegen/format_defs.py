@@ -1,7 +1,7 @@
 import os
 
-from apigen_utils import print, DEFINITIONS_DIR  # noqa: F401
-from apigen_defs import read_definition_file, write_definition_file
+from codegen_utils import print, DEFINITIONS_DIR  # noqa: F401
+from codegen_defs import read_definition_file, write_definition_file
 
 
 def format_defs():

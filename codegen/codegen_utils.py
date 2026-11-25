@@ -51,7 +51,7 @@ def _get_line_endings(text):
         return "\r\n"
 
 
-LE = _get_line_endings((ROOT_DIR / "apigen" / "__init__.py").read_bytes().decode())
+LE = _get_line_endings((ROOT_DIR / "codegen" / "__init__.py").read_bytes().decode())
 
 
 _file_objects_to_print_to = [sys.stdout]

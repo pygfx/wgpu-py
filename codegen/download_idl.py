@@ -1,6 +1,6 @@
 import urllib.request
 
-from apigen_utils import print, DEFINITIONS_DIR
+from codegen_utils import print, DEFINITIONS_DIR
 
 
 def download_idl():
