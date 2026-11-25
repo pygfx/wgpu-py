@@ -61,6 +61,9 @@ args.present_info.default = ''
 doc = 'Get the physical size of the current framebuffer.'
 type = 'tuple[int, int]'
 
+[classes.GPUCanvasContext.properties.canvas]
+diff = 'REMOVE'
+
 [classes.GPUCanvasContext.methods.set_physical_size]
 doc = 'Set the current framebuffer physical size.'
 returns.type = 'None'
@@ -172,6 +175,18 @@ args.size.default = ''
 doc = 'The adapter object corresponding to this device.'
 type = 'GPUAdapter'
 
+[classes.GPUDevice.properties.lost]
+diff = 'REMOVE'
+
+[classes.GPUDevice.properties.onuncapturederror]
+diff = 'REMOVE'
+
+[classes.GPUDevice.methods.push_error_scope]
+diff = 'REMOVE'
+
+[classes.GPUDevice.methods.pop_error_scope]
+diff = 'REMOVE'
+
 [classes.GPUDevice.methods.import_external_texture]
 diff = 'REMOVE'
 
@@ -188,6 +203,9 @@ args.usage.type = 'flags.BufferUsageFlags'
 args.usage.default = ''
 
 # ---- GPUBuffer -----------------------------------------------------------------------------------
+
+[classes.GPUBuffer.methods.get_mapped_range]
+diff = 'REMOVE'
 
 [classes.GPUBuffer.methods.read_mapped]
 doc = '''
@@ -320,3 +338,4 @@ doc = '''
 An excepion raised to cancel a draw when the surface texture could not be obtained,
 e.g. because the window is hidden or occluded.
 '''
+bases = ['Exception']

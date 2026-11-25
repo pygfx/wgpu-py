@@ -57,6 +57,7 @@ Further changes:
 * Added: the ``GPU.enumerate_adapters_sync`` method.
 * Added: the ``GPU.get_canvas_context`` method.
 * Added: the ``GPUCanvasContext.physical_size`` property.
+* Removed: the ``GPUCanvasContext.canvas`` property.
 * Added: the ``GPUCanvasContext.set_physical_size`` method.
 * Added: the ``GPUCanvasContext.get_preferred_format`` method.
 * Added: the ``GPUCanvasContext.present`` method.
@@ -67,8 +68,13 @@ Further changes:
 * Added: the ``GPUQueue.read_buffer`` method.
 * Added: the ``GPUQueue.read_texture`` method.
 * Added: the ``GPUDevice.adapter`` property.
+* Removed: the ``GPUDevice.lost`` property.
+* Removed: the ``GPUDevice.onuncapturederror`` property.
+* Removed: the ``GPUDevice.push_error_scope`` method.
+* Removed: the ``GPUDevice.pop_error_scope`` method.
 * Removed: the ``GPUDevice.import_external_texture`` method.
 * Added: the ``GPUDevice.create_buffer_with_data`` method.
+* Removed: the ``GPUBuffer.get_mapped_range`` method.
 * Added: the ``GPUBuffer.read_mapped`` method.
 * Added: the ``GPUBuffer.write_mapped`` method.
 * Added: the ``GPUTexture.size`` property.

@@ -13,7 +13,7 @@ def patch_api():
     code = read_file("wgpu", "_classes.py")
 
     # Write __all__
-    extra_public_classes = ["GPUPromise", "DrawCancelled"]
+    extra_public_classes = ["GPUPromise"]
     all_public_classes = [*api["classes"].keys(), *extra_public_classes]
     all_public_classes.sort()
     all_public_classes.remove("GPU")
