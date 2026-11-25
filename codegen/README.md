@@ -23,19 +23,21 @@ be executed as a script, which is handy during development.
 The names of the actions are typically "verb-noun". Call me crazy but I named them such that
 when sorted alphabetically, the order of the actions is correct :)
 
-There is also one utility module that all modules use.
+There are also some utility module that all modules use.
 
-There is a CLI for ease of use, and to run the whole codegen pipeline with one command.
+There is a CLI for ease of use, and to run the whole codegen pipeline with a single command.
 
 
 ## The steps that this code offers
 
 * download_idl: download the latest webgpu.idl, this is only done manually from time to time.
-* extract_idl: parse the IDL to produce 'wgpu_idl.toml'.
+* extract_idl: parse the 'webgpu.idl' to produce 'webgpu.toml'.
 * format_defs: formats the static definitions.
 * merge_defs: combines multiple definitions files into 'wgpu_api.toml'.
-* patch_api: produce the classes and functions in _classes.py and all backends.
+* patch_api: produce the classes and functions in '_classes.py'.
+* patch_backend_xx: produce the API for a specific backend.
 * write_api: produce API for flags, enums and structs.
+* write_docs: insert / generate docs based on the api definitions, e.g. how wgpu-py differs from WebGPU.
 
 
 ## The API format structure
@@ -45,7 +47,10 @@ This allows generating an API definition that is precise and sort of human reada
 we can easily combine multiple structures, e.g. diff definitions, backend-specific additions,
 and docs from multiple sources.
 
-The structure has some two dozen leaf nodes and looks a bit like this:
+In practice we use TOML because writing *differences* to the API (additions, removals, changes)
+and multiline docstrings is much friendlier in TOML.
+
+The structure looks a bit like this:
 
 ```
 {

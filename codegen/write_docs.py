@@ -1,6 +1,3 @@
-"""Generate RST text that describes the differences between the base API
-and the WebGPU API, as defined in diff_base.toml."""
-
 from codegen_defs import read_definition_file
 from codegen_utils import print, read_file, write_file
 

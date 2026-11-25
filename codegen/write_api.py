@@ -1,5 +1,3 @@
-"""Generate the simple API from the definitions."""
-
 import re
 
 from codegen_utils import (
