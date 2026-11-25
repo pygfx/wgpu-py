@@ -1,14 +1,21 @@
 """
-Strive for full coverage of the codegen utils module.
+Strive for full coverage of the apigen utils module.
 """
 
-from codegen.utils import (
-    remove_c_comments,
+import io
+
+import apigen_utils
+from apigen_utils import (
+    FormatError,
+    PrintToFile,
+    _get_line_endings,
+    dict_deep_merge,
     format_code,
-    Patcher,
+    indent_code,
     to_snake_case,
-    to_camel_case,
 )
+from apigen_patcher import Patcher
+from patch_backend_wgpu_native import remove_c_comments
 
 from pytest import raises
 
@@ -24,18 +31,6 @@ def test_to_snake_case():
     assert to_snake_case("_fooBarSpam") == "_foo_bar_spam"
     assert to_snake_case("maxTextureDimension1D") == "max_texture_dimension_1d"
     assert to_snake_case("max_texture_dimension_1d") == "max_texture_dimension_1d"
-
-
-def test_to_camel_case():
-    assert to_camel_case("foo_bar_spam") == "fooBarSpam"
-    assert to_camel_case("_foo_bar_spam") == "_fooBarSpam"
-    assert to_camel_case("fooBarSpam") == "fooBarSpam"
-    assert to_camel_case("_fooBarSpam") == "_fooBarSpam"
-    assert to_camel_case("max_texture_dimension_1d") == "maxTextureDimension1D"
-    assert to_camel_case("max_texture_dimension1d") == "maxTextureDimension1D"
-    assert to_camel_case("max-texture-dimension1d") == "maxTextureDimension1D"
-    assert to_camel_case("max-texture-dimension-1d") == "maxTextureDimension1D"
-    assert to_camel_case("maxTextureDimension1D") == "maxTextureDimension1D"
 
 
 def test_remove_c_comments():
@@ -62,6 +57,23 @@ def test_remove_c_comments():
     code2 = remove_c_comments(code1)
 
     assert code2 == code3
+
+
+def test_line_endings():
+    # All LF, but also ok if fraction is CR
+    assert _get_line_endings("foo\nbar\nspam\neggs\n") == "\n"
+    assert _get_line_endings("foo\nbar\nspam\reggs\n") == "\n"
+
+    # All CR, but also ok if fraction is LF.
+    # I know that CR line endings are an archaic Mac thing, but some dev
+    # might just have his git setup in a weird way :)
+    assert _get_line_endings("foo\rbar\rspam\reggs\r") == "\r"
+    assert _get_line_endings("foo\rbar\rspam\neggs\r") == "\r"
+
+    # If most are equal,
+    assert _get_line_endings("foo\r\nbar\r\nspam\r\neggs\r\n") == "\r\n"
+    assert _get_line_endings("foo\r\nbar\r\nspam\neggs\r\n") == "\r\n"
+    assert _get_line_endings("foo\r\nbar\r\nspam\reggs\r\n") == "\r\n"
 
 
 def test_format_code_singleline():
@@ -279,6 +291,71 @@ def test_patcher2():
             assert line.startswith("def")
             assert funcname in line
             assert "pass" in p.lines[j2]
+
+
+def test_dict_deep_merge():
+    a = {"a": {"x": 1}, "b": 1, "c": {"deep": {"i": 3}}}
+    b = {"a": {"y": 2}, "b": 2, "d": 3}
+
+    # Merge, adding new keys
+    merged = dict_deep_merge(a, b)
+    assert merged == {
+        "a": {"x": 1, "y": 2},
+        "b": 2,
+        "c": {"deep": {"i": 3}},
+        "d": 3,
+    }
+
+    # The original dicts are not modified
+    assert "y" not in a["a"]
+    assert "d" not in a
+
+    # New dict-valued keys are subject to allow_add
+    b2 = {"a": {"y": 2}, "d": {"new": 1}}
+    assert "d" in dict_deep_merge(a, b2)
+    assert "d" not in dict_deep_merge(a, b2, allow_add=False)
+
+    # Remove a key
+    merged = dict_deep_merge(a, {"a": {"diff": "REMOVE"}})
+    assert "a" not in merged
+    assert merged["b"] == 1
+
+    # Scalars overwrite
+    merged = dict_deep_merge({"a": {"b": {"c": 1}}}, {"a": {"b": {"c": 2}}})
+    assert merged == {"a": {"b": {"c": 2}}}
+
+
+def test_indent_code():
+    code = dedent("""
+    def foo():
+        pass
+    """)
+    assert indent_code(code) == "    def foo():\n        pass\n"
+    assert indent_code(code, 2) == "  def foo():\n      pass\n"
+
+
+def test_format_code_error():
+    bad_code = dedent("""
+    def foo():
+        x = 1
+     y = 2
+    """)
+    with raises(FormatError):
+        format_code(bad_code)
+
+
+def test_print_and_print_to_file():
+    log = io.StringIO()
+    with PrintToFile(log):
+        apigen_utils.print("hello", "world")
+        apigen_utils.print("")
+        apigen_utils.print("# this is a comment-like line")
+        capture = log.getvalue()
+
+    # Lines that are not comment-ish get a star prefix
+    assert "* hello world\n" in capture
+    assert "* \n" in capture
+    assert "# this is a comment-like line\n" in capture
 
 
 if __name__ == "__main__":
