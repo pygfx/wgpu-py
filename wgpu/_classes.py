@@ -16,7 +16,7 @@ import itertools
 from typing import Sequence
 
 from ._async import GPUPromise as BaseGPUPromise, AwaitedType
-from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
+from ._coreutils import str_flag_to_int, ArrayLike, CanvasLike
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -66,8 +66,6 @@ __all__ = [
 logger = logging.getLogger("wgpu")
 
 
-apidiff = ApiDiff()
-
 
 # Obtain the object tracker. Note that we store a ref of
 # the latter on all classes that refer to it. Otherwise, on a sys exit,
@@ -95,7 +93,6 @@ class GPU:
     """
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> DOMString featureLevel = "core", GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false, boolean xrCompatible = false
-    @apidiff.change("arguments include canvas")
     def request_adapter_sync(
         self,
         *,
@@ -117,7 +114,6 @@ class GPU:
         return promise.sync_wait()
 
     # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> DOMString featureLevel = "core", GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false, boolean xrCompatible = false
-    @apidiff.change("arguments include canvas")
     def request_adapter_async(
         self,
         *,
@@ -147,7 +143,6 @@ class GPU:
             canvas=canvas,
         )
 
-    @apidiff.add("Method useful for multi-gpu environments")
     def enumerate_adapters_sync(self) -> list[GPUAdapter]:
         """Sync version of `enumerate_adapters_async()`.
 
@@ -156,7 +151,6 @@ class GPU:
         promise = gpu.enumerate_adapters_async()
         return promise.sync_wait()
 
-    @apidiff.add("Method useful for multi-gpu environments")
     def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
 
@@ -187,7 +181,6 @@ class GPU:
         return gpu.enumerate_adapters_async()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
-    @apidiff.change("Disabled because we put it on the canvas context")
     def get_preferred_canvas_format(self):
         """Not implemented in wgpu-py; use `GPUCanvasContext.get_preferred_format()` instead.
         The WebGPU spec defines this function, but in wgpu there are different
@@ -203,7 +196,6 @@ class GPU:
         # Looks like at the time of writing there are no definitions for extensions yet
         return set()
 
-    @apidiff.add("Provide a low-level way to let wgpu render to screen")
     def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
         """Get the GPUCanvasContext object for the appropriate backend.
 
@@ -224,7 +216,6 @@ class GPU:
 gpu = GPU()
 
 
-@apidiff.add("Added for async support")
 class GPUPromise(BaseGPUPromise[AwaitedType]):
     pass
 
@@ -263,13 +254,6 @@ class GPUCanvasContext:
         # The last used texture
         self._texture = None
 
-    # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
-    @apidiff.hide("No unified concept of a canvas in Python, and avoid circular refs")
-    @property
-    def canvas(self) -> CanvasLike:
-        return None
-
-    @apidiff.add("External code needs to set the framebuffer size")
     def set_physical_size(self, width: int, height: int) -> None:
         """Set the current framebuffer physical size.
 
@@ -281,7 +265,6 @@ class GPUCanvasContext:
         self._physical_size = int(width), int(height)
         self._has_new_size = True
 
-    @apidiff.add("Allow code that uses a context to get the physical size")
     @property
     def physical_size(self) -> tuple[int, int]:
         """The physical size of the underlying surface in integer pixels."""
@@ -303,7 +286,6 @@ class GPUCanvasContext:
         """Get capabilities for a native surface."""
         raise NotImplementedError()
 
-    @apidiff.add("Better place to define the preferred format")
     def get_preferred_format(self, adapter: GPUAdapter) -> enums.TextureFormatEnum:
         """Get the preferred surface texture format."""
         capabilities = self._get_capabilities(adapter)
@@ -457,7 +439,6 @@ class GPUCanvasContext:
             self._texture._release()  # not destroy, because it may be in use.
             self._texture = None
 
-    @apidiff.add("External code needs to invoke presenting at the appropriate time")
     def present(self) -> None:
         """Present what has been drawn to the current texture, by compositing it to the canvas."""
         if self._texture:
@@ -618,7 +599,6 @@ class GPUAdapter:
         self._ot.decrease(self.__class__.__name__)
         self._release()
 
-    @apidiff.add("Useful in multi-gpu environments")
     @property
     def summary(self) -> str:
         """A one-line summary of the info of this adapter (device, adapter_type, backend_type)."""
@@ -645,7 +625,6 @@ class GPUObjectBase:
         self._device = device
         logger.info(f"Creating {self.__class__.__name__} {label}")
 
-    @apidiff.add("Useful in caching strategies")
     @property
     def uid(self) -> int:
         """A unique id (integer).
@@ -727,44 +706,10 @@ class GPUDevice(GPUObjectBase):
         """The adapter.info dict."""
         return self._adapter.info
 
-    @apidiff.add("Too useful to not-have")
     @property
     def adapter(self) -> GPUAdapter:
         """The adapter object corresponding to this device."""
         return self._adapter
-
-    # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
-    @apidiff.hide("Not a Pythonic API")
-    @property
-    def lost_sync(self) -> GPUDeviceLostInfo:
-        """Sync version of `lost`.
-
-        Provided by wgpu-py, but not compatible with WebGPU.
-        """
-        promise = self.lost_async
-        return promise.sync_wait()
-
-    # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
-    @apidiff.hide("Not a Pythonic API")
-    @property
-    def lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
-        """Resolves to GPUDeviceLostInfo, providing information about why the device is lost."""
-        # Properties don't get repeated at _api.py, so we use a proxy method.
-        return self._get_lost_async()
-
-    def _get_lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
-        raise NotImplementedError()
-
-    # IDL: attribute EventHandler onuncapturederror;
-    @apidiff.hide("Specific to browsers")
-    @property
-    def onuncapturederror(self) -> None:
-        """Event handler.
-
-        In JS you'd do ``gpuDevice.addEventListener('uncapturederror', ...)``. We'd need
-        to figure out how to do this in Python.
-        """
-        raise NotImplementedError()
 
     # IDL: undefined destroy();
     def destroy(self) -> None:
@@ -800,7 +745,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("Convenience function")
     def create_buffer_with_data(
         self, *, label: str = "", data: ArrayLike, usage: flags.BufferUsageFlags
     ) -> GPUBuffer:
@@ -1269,37 +1213,6 @@ class GPUDevice(GPUObjectBase):
         """Create a `GPUQuerySet` object."""
         raise NotImplementedError()
 
-    # IDL: undefined pushErrorScope(GPUErrorFilter filter);
-    @apidiff.hide
-    def push_error_scope(self, filter: enums.ErrorFilterEnum) -> None:
-        """Pushes a new GPU error scope onto the stack."""
-        raise NotImplementedError()
-
-    # IDL: Promise<GPUError?> popErrorScope();
-    @apidiff.hide
-    def pop_error_scope_sync(self) -> GPUError:
-        """Sync version of `pop_error_scope_async().
-
-        Provided by wgpu-py, but not compatible with WebGPU.
-        """
-        promise = self.pop_error_scope_async()
-        return promise.sync_wait()
-
-    # IDL: Promise<GPUError?> popErrorScope();
-    @apidiff.hide
-    def pop_error_scope_async(self) -> GPUPromise[GPUError]:
-        """Pops a GPU error scope from the stack."""
-        raise NotImplementedError()
-
-    # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor); -> USVString label = "", required (HTMLVideoElement or VideoFrame) source, PredefinedColorSpace colorSpace = "srgb"
-    @apidiff.hide("Specific to browsers")
-    def import_external_texture(
-        self, *, label: str = "", source: ArrayLike | object, color_space: str = "srgb"
-    ) -> object:
-        """For browsers only."""
-        raise NotImplementedError()
-
-
 class GPUBuffer(GPUObjectBase):
     """Represents a block of memory that can be used in GPU operations.
 
@@ -1397,7 +1310,6 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("Replacement for get_mapped_range")
     def read_mapped(
         self,
         buffer_offset: int | None = None,
@@ -1433,7 +1345,6 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("Replacement for get_mapped_range")
     def write_mapped(self, data: ArrayLike, buffer_offset: int | None = None) -> None:
         """Write mapped buffer data.
 
@@ -1457,11 +1368,6 @@ class GPUBuffer(GPUObjectBase):
         Also see `GPUBuffer.read_mapped, `GPUQueue.read_buffer()` and `GPUQueue.write_buffer()`.
         """
         raise NotImplementedError()
-
-    # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size);
-    @apidiff.hide
-    def get_mapped_range(self, offset: int = 0, size: int | None = None) -> ArrayLike:
-        raise NotImplementedError("The Python API differs from WebGPU here")
 
     # IDL: undefined destroy();
     def destroy(self) -> None:
@@ -1508,7 +1414,6 @@ class GPUTexture(GPUObjectBase):
         # Return rounded to nearest integer
         return int(nbytes + 0.5)
 
-    @apidiff.add("Too useful to not-have")
     @property
     def size(self) -> tuple[int, int, int]:
         """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
@@ -1634,13 +1539,11 @@ class GPUTextureView(GPUObjectBase):
         self._texture = texture
         self._size = size
 
-    @apidiff.add("Need to know size e.g. for texture view provided by canvas")
     @property
     def size(self) -> tuple[int, int, int]:
         """The texture size (as a 3-tuple)."""
         return self._size
 
-    @apidiff.add("Too useful to not-have")
     @property
     def texture(self) -> GPUTexture:
         """The texture object to which this is a view."""
@@ -1762,9 +1665,6 @@ class GPUBindingCommandsMixin:
     """Mixin for classes that defines bindings."""
 
     # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup? bindGroup, [AllowShared] Uint32Array dynamicOffsetsData, GPUSize64 dynamicOffsetsDataStart, GPUSize32 dynamicOffsetsDataLength);
-    @apidiff.change(
-        "In the WebGPU specification, this method has two different signatures."
-    )
     def set_bind_group(
         self,
         index: int,
@@ -2332,7 +2232,6 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("For symmetry with queue.write_buffer")
     def read_buffer(
         self, buffer: GPUBuffer, buffer_offset: int = 0, size: int | None = None
     ) -> ArrayLike:
@@ -2379,7 +2278,6 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("For symmetry, and to help work around the bytes_per_row constraint")
     def read_texture(
         self, source: dict, data_layout: dict, size: tuple[int, int, int]
     ) -> ArrayLike:
@@ -2398,16 +2296,6 @@ class GPUQueue(GPUObjectBase):
         ``bytes_per_row`` is not a multiple of 256 (because we'll be
         copying data row-by-row in Python).
         """
-        raise NotImplementedError()
-
-    # IDL: undefined copyExternalImageToTexture( GPUCopyExternalImageSourceInfo source, GPUCopyExternalImageDestInfo destination, GPUExtent3D copySize);
-    @apidiff.hide("Specific to browsers")
-    def copy_external_image_to_texture(
-        self,
-        source: structs.CopyExternalImageSourceInfoStruct,
-        destination: structs.CopyExternalImageDestInfoStruct,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
-    ) -> None:
         raise NotImplementedError()
 
     # IDL: Promise<undefined> onSubmittedWorkDone();
@@ -2450,7 +2338,6 @@ class GPUDeviceLostInfo:
         return self._reason
 
 
-@apidiff.add("Added because Python deals with native windows")
 class DrawCancelled(Exception):  # noqa: N818
     """An excepion raised to cancel a draw when the surface texture could not be obtained,
     e.g. because the window is hidden or occluded.
@@ -2603,11 +2490,6 @@ class GPUQuerySet(GPUObjectBase):
 
 
 # %%%%% Post processing
-
-# Note that some toplevel classes are already filtered out by the codegen,
-# like GPUExternalTexture and GPUUncapturedErrorEvent, and more.
-
-apidiff.remove_hidden_methods(globals())
 
 
 def _seed_object_counts():
