@@ -1,26 +1,77 @@
-"""
-Apply codegen to wgpu-native backend.
+from __future__ import annotations
 
-The idea is that when there are any changes in wgpu.h that affect how
-wgpu_native/_api.py should be written, this module will:
-
-* For enums: automatically update the mappings.
-* For flags: report discrepancies.
-* For structs and functions: update the code, so a diff of _api.py quickly
-  shows if manual changes are needed.
-
-Note that the apipatcher will also patch wgpu_native/_api.py, but where that codegen
-focuses on the API, here we focus on the C library usage.
-"""
-
+import os
 import re
-from collections import defaultdict
 from itertools import chain
+from collections import defaultdict
 
-from codegen.utils import print, format_code, Patcher, to_snake_case
-from codegen.hparser import get_h_parser
-from codegen.idlparser import get_idl_parser
-from codegen.files import file_cache
+from cffi import FFI
+from cffi.cparser import _preprocess as cffi_preprocess
+
+from wgpu._coreutils import get_header_filename
+
+from apigen_patcher import (
+    Patcher,
+    CommentRemover,
+    ApiPatcher,
+    StructValidationChecker,
+    detect_implemented_properties_and_methods,
+)
+from apigen_utils import (
+    print,
+    read_file,
+    write_file,
+    dict_deep_merge,
+    to_snake_case,
+    format_code,
+    _write_file,
+)
+from apigen_defs import read_definition_file
+
+
+def patch_backend_wgpu_native():
+    """Patch the api for the wgpu_native backend in backends/wgpu_native/_api.py."""
+
+    # Get API dict
+    api_base = read_definition_file("wgpu_api.toml")
+    diff_wgpu_native = read_definition_file("diff_backend_wgpu_native.toml")
+    api = dict_deep_merge(api_base, diff_wgpu_native)
+    print(f"Found {len(api['classes'])} classes in the wgpu_native backend API")
+
+    # Create parser object
+    header_source = _get_wgpu_header(
+        get_header_filename("webgpu.h"), get_header_filename("wgpu.h")
+    )
+    hp = HParser(header_source)
+    hp.parse()
+
+    # Check and write mappings
+    compare_flags(api["flags"], hp)
+    write_enum_mappings(api["enums"], hp)
+
+    # The api patch itself
+    patch_backend_api(api, hp)
+
+
+def patch_backend_api(api, hp):
+    implemented = detect_implemented_properties_and_methods(
+        read_file("wgpu", "_classes.py")
+    )
+
+    filename_parts = "wgpu", "backends", "wgpu_native", "_api.py"
+    code = read_file(*filename_parts)
+
+    for patcher in [
+        CommentRemover(("# FIXME: unknown C", "# FIXME: invalid C", "# H:")),
+        ApiPatcher(api, True, implemented),
+        StructValidationChecker(api),
+        CStructPatcher(hp),
+        FunctionPatcher(hp),
+    ]:
+        patcher.apply(code)
+        code = patcher.dumps()
+
+    write_file(code, *filename_parts)
 
 
 mappings_preamble = '''
@@ -31,7 +82,7 @@ mappings_preamble = '''
 '''.lstrip()
 
 
-def compare_flags():
+def compare_flags(flags_dict: dict, hp: HParser):
     """For each flag in WebGPU:
 
     * Verify that there is a corresponding flag in webgpu.h/wgpu.h
@@ -40,19 +91,17 @@ def compare_flags():
 
     """
 
-    idl = get_idl_parser()
-    hp = get_h_parser()  # gets both headerfiles!
-
     name_map = {
         "ColorWrite": "ColorWriteMask",
     }
 
-    for name, flag in idl.flags.items():
+    for name, flag_dict in flags_dict.items():
         name = name_map.get(name, name)
         if name not in hp.flags:
             print(f"Flag {name} missing in webgpu.h/wgpu.h")
         else:
-            for key, val in flag.items():
+            for key, flag in flag_dict["fields"].items():
+                val = flag["value"]
                 key = key.title().replace("_", "")  # MAP_READ -> MapRead
                 key = name_map.get(f"{name}.{key}") or key
                 if key not in hp.flags[name]:
@@ -61,14 +110,11 @@ def compare_flags():
                     print(f"Warning: Flag field {name}.{key} have different values.")
 
 
-def write_mappings():
+def write_enum_mappings(enums_dict: dict, hp: HParser):
     """Generate the file with dicts to map enums strings to ints. This
     also compares the enums in wgpu-native with WebGPU, and reports any
     missing ones.
     """
-
-    idl = get_idl_parser()
-    hp = get_h_parser()
 
     # These maps are empty and thus not used, since no name mapping is (currently) necessary.
     name_map = {}
@@ -82,7 +128,7 @@ def write_mappings():
     # We only include enums and enum fields that are defined in webgpu.h, so any
     # code written against wgpu-py is maximally compatible.
     enummap = {}
-    for name in idl.enums:
+    for name, enum_dict in enums_dict.items():
         hname = name_map.get(name, name)
         native_name = "Native" + hname
         if hname not in hp.enums:
@@ -98,7 +144,8 @@ def write_mappings():
                 if key in hp_enum and val != hp_enum.get(key):
                     print(f"Enum field {name}.{key} overridden by wgpu.h")
                     hp_enum[key] = val
-        for ikey in idl.enums[name].values():
+        for e in enum_dict["fields"].values():
+            ikey = e["value"]
             hkey = ikey.lower().replace("-", "")
             hkey = name_map.get(f"{name}.{hkey}") or hkey
             if hkey in hp_enum:
@@ -121,7 +168,7 @@ def write_mappings():
             if isinstance(val, str) and val.startswith("WGPU"):
                 henumname = val[4:].split("/")[0]
                 enumname = name_map_i.get(henumname, henumname)
-                if enumname in idl.enums:
+                if enumname in enums_dict:
                     cstructfield2enum[f"{structname[4:]}.{key}"] = enumname
                 else:
                     pass  # a struct
@@ -168,9 +215,11 @@ def write_mappings():
         "SurfaceGetCurrentTextureStatus",
     ]:
         webgpu_names = {}
-        if name in idl.enums:
+        if name in enums_dict:
+            enum_fields = enums_dict[name]["fields"]
             webgpu_names = {
-                val.replace("-", ""): val for val in idl.enums[name].values()
+                val["value"].replace("-", ""): val["value"]
+                for val in enum_fields.values()
             }
             if "unknown" in webgpu_names:
                 webgpu_names["undefined"] = "unknown"
@@ -198,52 +247,24 @@ def write_mappings():
     pylines.append("")
 
     # Wrap up
-    code = format_code("\n".join(pylines))
-    file_cache.write("backends/wgpu_native/_mappings.py", code)
     print(
-        f"Wrote {len(enummap)} enum mappings and {len(cstructfield2enum)} struct-field mappings to wgpu_native/_mappings.py"
+        f"Mapping {len(enummap)} enum mappings and {len(cstructfield2enum)} struct-field mappings"
     )
+    code = format_code("\n".join(pylines))
+    write_file(code, "wgpu", "backends", "wgpu_native", "_mappings.py")
 
 
-def patch_wgpu_native_backend(code):
-    """Given the Python code, applies patches to annotate functions
-    calls and struct instantiations.
-
-    For functions:
-
-    * Verify that the function exists in webgpu.h/wgpu.h. If not, add a fixme comment.
-    * Add a comment showing corresponding signature from webgpu.h/wgpu.h.
-
-    For structs:
-
-    * Verify that the struct name exists.
-    * Verify that the correct form (pointer or not) is used.
-    * Verify that all used fields exists.
-    * Annotate any missing fields.
-    * Add a comment that shows all fields and their type.
-
-    """
-
-    for patcher in [CommentRemover(), FunctionPatcher(), StructPatcher()]:
-        patcher.apply(code)
-        code = patcher.dumps()
-    return code
-
-
-class CommentRemover(Patcher):
-    triggers = "# FIXME: unknown C", "# FIXME: invalid C", "# H:"
-
-    def apply(self, code):
-        self._init(code)
-        for line, i in self.iter_lines():
-            if line.lstrip().startswith(self.triggers):
-                self.remove_line(i)
+# ==================== More patchers ====================
 
 
 class FunctionPatcher(Patcher):
+    def __init__(self, hp: HParser):
+        super().__init__()
+        self.hp = hp
+
     def apply(self, code):
         self._init(code)
-        hp = get_h_parser()
+        hp = self.hp
         count = 0
         detected = set()
         generic_class_var_assignment = defaultdict(list)
@@ -318,7 +339,11 @@ class FunctionPatcher(Patcher):
         print(f"Not using {len(unused)} C functions")
 
 
-class StructPatcher(Patcher):
+class CStructPatcher(Patcher):
+    def __init__(self, hp: HParser):
+        super().__init__()
+        self.hp = hp
+
     def apply(self, code):
         self._init(code)
         count = 0
@@ -345,7 +370,7 @@ class StructPatcher(Patcher):
         If a struct start is found, this function will find the end of the struct and then validate it
         """
         brace_depth = 0
-        hp = get_h_parser()
+        hp = self.hp
         for line, i in chain(
             [(first_line, 0)], self.iter_lines(start_line=start_line_index + 1)
         ):
@@ -451,3 +476,338 @@ class StructPatcher(Patcher):
                 more_lines.append(indent + f"    # not used: {key}")
         if more_lines:
             self.insert_line(i2, "\n".join(more_lines))
+
+
+# ==================== C header parser ====================
+
+
+def _get_wgpu_header(*filenames):
+    """Func written so we can use this in both wgpu_native/_ffi.py and codegen/hparser.py"""
+
+    cleaned_contents = []  # one for each filename
+
+    for filename in filenames:
+        # Read the code
+        with open(filename, "rb") as f:
+            source = f.read().decode().replace("\r\n", "\n").replace("\\\n", "")
+
+        # Use a cffi preprocessor to e.g. remove comments, then remove empty lines.
+        # Yeah, that's a private func from cffi, but this is not runtime code so we can fix it when it changes.
+        lines1 = []
+        cleaned_source, macros = cffi_preprocess(source)
+        lines1 += [f"#define {k} {v}" for k, v in macros.items()]  # restore macros
+        lines1 += [line.strip() for line in cleaned_source.splitlines() if line.strip()]
+
+        # Deal with pre-processor commands, because cffi cannot handle them.
+        # Just removing them, plus a few extra lines, seems to do the trick.
+        lines2 = [f"// Cleaned version of {os.path.basename(filename)} ".ljust(79, "-")]
+        in_ifdef = False
+        for line in lines1:
+            # skip #ifdef blocks, which cffi doesn't support. In both headers they are used for `#ifdef __cplusplus` which we were skipping anyway.
+            if line.startswith("#ifdef "):
+                in_ifdef = True
+                continue
+            if in_ifdef and line.startswith("#endif"):
+                in_ifdef = False
+                continue
+            if in_ifdef:
+                continue
+            if (
+                line.startswith("#define ")
+                and len(line.split()) > 2
+                and ("0x" in line or "_MAX" in line)
+            ):
+                # pattern to find: #define WGPU_CONSTANT (0x1234)
+                # we use ffi.sizeof() to hopefully get the correct max sizes per platform
+                # we don't have ffi in this namespace, so I just put the hardcoded values for now, we could use ctypes.sizeof(ctypes.c_size_t)
+                max_size = hex((1 << (8 * 8)) - 1)  # sizeof(size_t)
+                max_32 = hex((1 << (4 * 8)) - 1)  # sizeof(uint32_t)
+                max_64 = hex((1 << (8 * 8)) - 1)  # sizeof(uint64_t)
+                line = (
+                    line.replace("SIZE_MAX", max_size)
+                    .replace("UINT32_MAX", max_32)
+                    .replace("UINT64_MAX", max_64)
+                )
+                # cffi seems to struggle with these macros, so we can just skip them I hope, the idl spec already contains defaults.
+                if line.startswith("#define") and "_INIT" in line:
+                    continue
+                line = line.replace("(", "").replace(")", "")
+            elif line.startswith("#"):
+                continue
+            for define_to_drop in [
+                "WGPU_EXPORT ",
+                "WGPU_NULLABLE ",
+                " WGPU_OBJECT_ATTRIBUTE",
+                " WGPU_ENUM_ATTRIBUTE",
+                " WGPU_FUNCTION_ATTRIBUTE",
+                " WGPU_STRUCTURE_ATTRIBUTE",
+            ]:
+                line = line.replace(define_to_drop, "")
+            lines2.append(line)
+
+        lines2.append("")
+        cleaned_contents.append("\n".join(lines2))
+
+    # Write the combined source, which is what will be loaded at wgpu import time
+    combined_source = "\n\n".join(cleaned_contents)
+    combined_header_file = get_header_filename("combined_header.h")
+    _write_file(combined_source, combined_header_file)
+
+    return combined_source
+
+
+class HParser:
+    """Object to parse the webgpu.h/wgpu.h header files, by letting cffi do the heavy lifting."""
+
+    def __init__(self, source):
+        self.source = source
+
+    def parse(self, verbose=True):
+        self.flags = {}
+        self.enums = {}
+        self.structs = {}
+        self.functions = {}
+
+        self._parse_from_h()
+        self._parse_from_cffi()
+
+        if verbose:
+            print(f"webgpu.h/wgpu.h define {len(self.functions)} functions")
+            keys = "flags", "enums", "structs"
+            stats = ", ".join(f"{len(getattr(self, key))} {key}" for key in keys)
+            print("webgpu.h/wgpu.h define " + stats)
+
+    # NOTE: we could use pycparser as it's used by cffi anyway and we have that.
+    def _parse_from_h(self):
+        code = self.source
+
+        # Collect enums and flags. This is easy.
+        # Note that flags are first defined as enums and then redefined as flags later.
+        i1 = i2 = i3 = i4 = 0
+        while True:
+            # Find enum
+            i1 = code.find("typedef enum", i4)
+            i2 = code.find("{", i1)
+            i3 = code.find("}", i2)
+            i4 = code.find(";", i3)
+            if i1 < 0:
+                break
+            # Decompose "typedef enum XX {...} XX;"
+            name1 = code[i1 + 13 : i2].strip()
+            name2 = code[i3 + 1 : i4].strip()
+            assert name1 == name2, f"mismatch in enum name: {name1} vs {name2}"
+            assert name1.startswith("WGPU")
+            name = name1[4:]
+            self.enums[name] = enum = {}
+            code_block = code[i2 + 1 : i3].strip().strip(";")
+            block = remove_c_comments(code_block).strip()
+            for f in block.split(","):
+                if not f:
+                    continue  # no item after last comma
+                key, _, val = f.partition("=")
+                # Handle key
+                key = key.strip()
+                assert key.startswith("WGPU") and "_" in key, f"key={key}"
+                key = key.split("_", 1)[1]
+                # Turn value into an int
+                val = val.strip()
+                if val.startswith("0x"):
+                    enum[key] = int(val, 16)
+                elif "<<" in val:
+                    val1, _, val2 = val.partition("<<")
+                    enum[key] = int(val1) << int(val2)
+                elif "|" in val:  # field is an OR of the earlier fields :/
+                    keys = [k.strip().split("_", 1)[1] for k in val.split("|")]
+                    val = 0
+                    for k in keys:
+                        val |= enum[k]
+                    enum[key] = val
+                else:
+                    enum[key] = int(val)
+
+        for line in code.splitlines():
+            # collect flags
+            # schme: typedef WGPUFlags WGPUFlagName;
+            if line.startswith("typedef WGPUFlags "):
+                parts = line.strip().strip(";").split()
+                assert len(parts) == 3
+                name = parts[-1]
+                assert name.startswith("WGPU")
+                name = name[4:]
+                assert not name.endswith("Flags"), "XxxxFlags should not longer exist"
+                assert name not in self.enums, "flags used to look like enums"
+                self.flags[name] = {}
+
+            # fill flags
+            # schema: static const WGPUFlagName WGPUFlagName_Value = 0x0000000000000001;
+            if line.startswith("static const"):
+                line = remove_c_comments(line).strip()
+                flag_name = line.removeprefix("static const").lstrip().split()[0]
+                flag_key, _, val = (
+                    line.removeprefix(f"static const {flag_name}")
+                    .strip()
+                    .rstrip(";")
+                    .partition("=")
+                )
+                # Check / normalize flag_name
+                assert flag_name.startswith("WGPU")
+                flag_name = flag_name[4:]
+                assert flag_name in self.flags
+                # Check / normalize flag_key
+                assert flag_key.startswith(f"WGPU{flag_name}_")
+                flag_key = flag_key.partition("_")[2].strip()
+                self.flags[flag_name][flag_key] = self._parse_val_to_int(val)
+
+        # Collect structs. This is relatively easy, since we only need the C code.
+        # But we don't deal with union structs.
+        i1 = i2 = i3 = i4 = 0
+        while True:
+            # Find struct
+            i1 = code.find("typedef struct", i4)
+            i2 = code.find("{", i1)
+            i3 = code.find("}", i2)
+            i4 = code.find(";", i3)
+            if i1 < 0:
+                break
+            # Only do simple structs, not Unions
+            if 0 < code.find("{", i2 + 1) < i3:
+                continue
+            # Decompose
+            name = code[i3 + 1 : i4].strip()
+            self.structs[name] = struct = {}
+            for f in code[i2 + 1 : i3].strip().strip(";").split(";"):
+                f = remove_c_comments(f).strip()
+                if not f:
+                    continue  # probably last item ended with a comma
+                parts = f.strip().split()
+                typename = " ".join(parts[:-1])
+                typename = typename.replace("const ", "")
+                key = parts[-1].strip("*")
+                struct[key] = typename
+
+        # Collect functions. This is not too hard, since we only need the C code.
+        i1 = i2 = i3 = 0
+        while True:
+            # Find function
+            i1 = code.find("wgpu", i3)
+            i2 = code.find("(", i1)
+            i3 = code.find(");", i2)
+            if i1 < 0:
+                break
+            # Extract name, and check whether we found something real
+            name = code[i1:i2]
+            if not (name and name.isidentifier()):
+                i3 = i1 + 5
+                continue
+            # Decompose further
+            i1 = code.rfind("\n", 0, i1)
+            line = code[i1 : i3 + 2]
+            line = " ".join(line.split())  # effective way to put on one line
+            self.functions[name] = line
+
+    def _parse_from_cffi(self):
+        self.ffi = ffi = FFI()
+        ffi.cdef(self.source)
+
+        # Collect structs. We iterate over all types. Some will resolve
+        # to C types, the rest are structs. The types for the struct
+        # fields are reduced to the C primitives, making it less useful
+        # for annotations. We update the structs that we've found by
+        # parsing wgpu.h directly.
+        for names in ffi.list_types():
+            for name in names:
+                # name = ffi.getctype(name) - no, keep original
+                if name.startswith("WGPU") and not name.endswith("Impl"):
+                    t = ffi.typeof(name)
+                    if not hasattr(t, "fields"):
+                        continue  # probably an enum
+                    elif not t.fields:
+                        continue  # base struct / alias
+                    s = ffi.new(f"{name} *")
+                    # Construct struct
+                    struct = {}
+                    for key, field in t.fields:
+                        typename = field.type.cname
+                        # typename = ffi.getctype(typename)
+                        if typename.startswith("WGPU"):
+                            val = typename  # Enum or struct
+                        else:
+                            val = type(getattr(s, key)).__name__
+                        struct[key] = val
+                    # Update
+                    if name not in self.structs:
+                        self.structs[name] = struct
+                    else:
+                        ori_struct = self.structs[name]
+                        assert set(struct) == set(ori_struct)
+                        for key, val in struct.items():
+                            if ori_struct[key] != val:
+                                if val.startswith("_"):  # _CDataBase
+                                    pass
+                                elif ori_struct[key].startswith("WGPU"):
+                                    if "/" not in ori_struct[key]:
+                                        ori_struct[key] += "/" + val
+                                else:
+                                    ori_struct[key] = val
+                    # Make copies
+                    alt_name = name
+                    while alt_name != ffi.getctype(alt_name):
+                        alt_name = ffi.getctype(alt_name)
+                        self.structs[alt_name] = self.structs[name]
+
+    def _parse_val_to_int(self, val):
+        """
+        little helper to parse complex values for enums.
+        """
+        val = val.strip(" ()")
+        if "|" in val:
+            # recursively handle the "OR" values?
+            res_val = 0
+            for sub_val in val.split("|"):
+                res_val |= self._parse_val_to_int(sub_val)
+            return res_val
+        if val.startswith("0x"):
+            return int(val, 16)
+        elif "<<" in val:
+            val1, _, val2 = val.partition("<<")
+            return int(val1) << int(val2)
+        else:
+            return int(val)
+
+
+def remove_c_comments(code):
+    """Remove C-style comments from the given code."""
+    pos = 0
+    new_code = ""
+
+    while True:
+        # Find start of comment
+        lookfor = None
+        i1 = code.find("//", pos)
+        i2 = code.find("/*", pos)
+        if i1 >= 0:
+            lookfor = "\n"
+            comment_start = i1
+        if i2 >= 0:
+            if not (i1 >= 0 and i1 < i2):
+                lookfor = "*/"
+                comment_start = i2
+        # Found a start?
+        if not lookfor:
+            new_code += code[pos:]
+            break
+        else:
+            new_code += code[pos:comment_start]
+        # Find the end
+        comment_end = code.find(lookfor, comment_start + 2)
+        if comment_end < 0:
+            break
+        if lookfor == "\n":
+            pos = comment_end
+        else:
+            pos = comment_end + len(lookfor)
+    return new_code
+
+
+if __name__ == "__main__":
+    patch_backend_wgpu_native()

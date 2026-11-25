@@ -1,80 +1,179 @@
-"""
-The logic to generate/patch the base API from the WebGPU
-spec (IDL), and the backend implementations from the base API.
-"""
-
 import ast
+import os
+import tempfile
 from collections import defaultdict
 from functools import cache
 
-from codegen.files import file_cache
-from codegen.idlparser import Attribute, get_idl_parser
-from codegen.utils import Patcher, format_code, print, to_camel_case, to_snake_case
-
-# In wgpu-py, we make some args optional, that are not optional in the
-# IDL. Reasons may be because it makes sense to be able to omit them,
-# or because the WebGPU says its optional while IDL says it's not, or
-# for backwards compatibility. These args have a default value of
-# 'optional'  (which is just None) so we can recognise them. If IDL
-# makes any of these args optional, their presence in this list is
-# ignored.
-ARGS_TO_MAKE_OPTIONAL = {
-    ("compilation_hints", "compilation_hints"),  # idl actually has a default
-    ("create_shader_module", "source_map"),
-    ("begin_compute_pass", "timestamp_writes"),
-    ("begin_render_pass", "timestamp_writes"),
-    ("begin_render_pass", "depth_stencil_attachment"),
-    ("begin_render_pass", "occlusion_query_set"),
-    ("create_render_pipeline", "fragment"),
-    ("create_render_pipeline_async", "fragment"),
-    ("create_render_bundle_encoder", "depth_stencil_format"),
-}
+from apigen_utils import FormatError, format_code, read_file
 
 
-def patch_base_api(code):
-    """Given the Python code, applies patches to make the code conform
-    to the IDL.
-    """
-    idl = get_idl_parser()
-
-    # Write __all__
-    extra_public_classes = ["GPUPromise", "DrawCancelled"]
-    all_public_classes = [*idl.classes.keys(), *extra_public_classes]
-    all_public_classes.sort()
-    all_public_classes.remove("GPU")
-    all_public_classes.insert(0, "GPU")  # ruff RUF022 wants it at the top
-    part1, found_all, part2 = code.partition("\n__all__ =")
-    if found_all:
-        part2 = part2.split("]", 1)[-1]
-        line = "\n__all__ = ["
-        line += ", ".join(f'"{name}"' for name in all_public_classes)
-        line += "]"
-        code = part1 + line + part2
-
-    # Patch!
-    for patcher in [CommentRemover(), BaseApiPatcher(), IdlCommentInjector()]:
-        patcher.apply(code)
-        code = patcher.dumps()
-    return code
+def detect_implemented_properties_and_methods(code) -> set[str]:
+    """Get what properties and method are implemented, so that deriving API's (i.e. backends) don't need to."""
+    p = ApiPatcher({}, False)
+    p._init(code)
+    implemented = set()
+    for class_name, i1, i2 in p.iter_classes():
+        for prop_name, j1, j2 in p.iter_properties(i1 + 1):
+            body = "\n".join(p.lines[j1 + 1 : j2 + 1])
+            if "NotImplemented" not in body:
+                implemented.add(f"{class_name}.{prop_name}")
+        for method_name, j1, j2 in p.iter_methods(i1 + 1):
+            body = "\n".join(p.lines[j1 + 1 : j2 + 1])
+            if "NotImplemented" not in body:
+                implemented.add(f"{class_name}.{method_name}")
+    return implemented
 
 
-def patch_backend_api(code):
-    """Given the Python code, applies patches to make the code conform
-    to the base API.
+class Patcher:
+    """Class to help patch a Python module. Supports iterating (over
+    lines, classes, properties, methods), and applying diffs (replace,
+    remove, insert).
     """
 
-    # Obtain the base API definition
-    base_api_code = file_cache.read("_classes.py")
+    def __init__(self, code=None):
+        self._init(code)
 
-    # Patch!
-    for patcher in [
-        CommentRemover(),
-        BackendApiPatcher(base_api_code),
-        StructValidationChecker(),
-    ]:
-        patcher.apply(code)
-        code = patcher.dumps()
-    return code
+    def _init(self, code):
+        """Subclasses can call this to reset the patcher."""
+        self.lines = []
+        self._diffs = {}
+        self._classes = {}
+        if code:
+            self.lines = format_code(code, True).splitlines()  # inf line length
+
+    def remove_line(self, i):
+        """Remove the line at the given position. There must not have been
+        an action on line i.
+        """
+        assert i not in self._diffs, f"Line {i} already has a diff"
+        self._diffs[i] = i, "remove"
+
+    def insert_line(self, i, line):
+        """Insert a new line at the given position. It's ok if there
+        has already been an insertion on line i, but there must not have been
+        any other actions.
+        """
+        if i in self._diffs and self._diffs[i][1] == "insert":
+            cur_line = self._diffs[i][2]
+            self._diffs[i] = i, "insert", cur_line + "\n" + line
+        else:
+            assert i not in self._diffs, f"Line {i} already has a diff"
+            self._diffs[i] = i, "insert", line
+
+    def replace_line(self, i, line):
+        """Replace the line at the given position with another line.
+        There must not have been an action on line i.
+        """
+        assert i not in self._diffs, f"Line {i} already has a diff"
+        self._diffs[i] = i, "replace", line
+
+    def dumps(self, format=True):
+        """Return the patched result as a string."""
+        lines = self.lines.copy()
+        # Apply diff
+        diffs = sorted(self._diffs.values())
+        for diff in reversed(diffs):
+            if diff[1] == "remove":
+                lines.pop(diff[0])
+            elif diff[1] == "insert":
+                lines.insert(diff[0], diff[2])
+            elif diff[1] == "replace":
+                lines[diff[0]] = diff[2]
+            else:  # pragma: no cover
+                raise ValueError(f"Unknown diff: {diff}")
+        # Format
+        text = "\n".join(lines)
+        if format:
+            try:
+                text = format_code(text)
+            except FormatError as err:  # pragma: no cover
+                # If you get this error, it really helps to load the code
+                # in an IDE to see where the error is. Let's help with that ...
+                filename = os.path.join(tempfile.gettempdir(), "wgpu_patcher_fail.py")
+                with open(filename, "wb") as f:
+                    f.write(text.encode())
+                err = str(err)
+                err = err if len(err) < 78 else err[:77] + "…"
+                raise RuntimeError(
+                    f"It appears that the patcher has generated invalid Python:"
+                    f"\n\n    {err}\n\n"
+                    f'Wrote the generated (but unformatted) code to:\n\n  "{filename}"'
+                ) from None
+
+        return text
+
+    def iter_lines(self, start_line=0):
+        """Generator to iterate over the lines.
+        Each iteration yields (line, linenr)
+        """
+        for i in range(start_line, len(self.lines)):
+            line = self.lines[i]
+            yield line, i
+
+    def iter_classes(self, start_line=0):
+        """Generator to iterate over the classes.
+        Each iteration yields (class_name, linenr_start, linenr_end),
+        where linenr_end is the last line of code.
+        """
+        current_class = None
+        for i in range(start_line, len(self.lines)):
+            line = self.lines[i]
+            sline = line.rstrip()
+            if current_class and sline:
+                if sline.startswith("    "):
+                    current_class[2] = i
+                else:  # code has less indentation -> something new
+                    yield current_class
+                    current_class = None
+            if line.startswith("class "):
+                name = line.split(":")[0].split("(")[0].split()[-1]
+                current_class = [name, i, i]
+        if current_class:
+            yield current_class
+
+    def iter_properties(self, start_line=0):
+        """Generator to iterate over the properties.
+        Each iteration yields (class_name, linenr_first, linenr_last),
+        where linenr_first is the line that startswith `def`,
+        and linenr_last is the last line of code.
+        """
+        return self._iter_props_and_methods(start_line, True)
+
+    def iter_methods(self, start_line=0):
+        """Generator to iterate over the methods.
+        Each iteration yields (class_name, linenr_first, linenr_last)
+        where linenr_first is the line that startswith `def`,
+        and linenr_last is the last line of code.
+        """
+        return self._iter_props_and_methods(start_line, False)
+
+    def _iter_props_and_methods(self, start_line, find_props):
+        prop_mark = None
+        current_def = None
+        for i in range(start_line, len(self.lines)):
+            line = self.lines[i]
+            sline = line.rstrip()
+            if current_def and sline:
+                if sline.startswith("        "):
+                    current_def[2] = i
+                else:
+                    yield current_def
+                    current_def = None
+            if sline and not sline.startswith("    "):
+                break  # exit class
+            if line.startswith(("    def ", "    async def ")):
+                name = line.split("(")[0].split()[-1]
+                if prop_mark and find_props:
+                    current_def = [name, i, i]
+                elif not prop_mark and not find_props:
+                    current_def = [name, i, i]
+            if line.startswith("    @property"):
+                prop_mark = i
+            elif sline and not sline.lstrip().startswith("#"):
+                prop_mark = None
+
+        if current_def:
+            yield current_def
 
 
 class CommentRemover(Patcher):
@@ -82,7 +181,12 @@ class CommentRemover(Patcher):
     to prevent accumulating comments.
     """
 
-    triggers = "# IDL:", "# FIXME: unknown api", "# FIXME: missing check_struct"
+    def __init__(
+        self, triggers=("# FIXME: unknown api", "# FIXME: missing check_struct")
+    ):
+        # TODO: add "# IDL:" temporarily later to remove legacy stuff
+        super().__init__()
+        self.triggers = triggers
 
     def apply(self, code):
         self._init(code)
@@ -91,596 +195,253 @@ class CommentRemover(Patcher):
                 self.remove_line(i)
 
 
-class AbstractCommentInjector(Patcher):
-    """A base patcher that can insert  helpful comments in front of
-    properties, methods, and classes. It does not mark any as new or unknown,
-    since that is the task of the API patchers.
-
-    Also moves decorators just above the def. Doing this here in a
-    post-processing step means we don't have to worry about decorators
-    in the other patchers, keeping them simpler.
-    """
-
-    # Note that in terms of structure, this class is basically a simplified
-    # version of the AbstractApiPatcher
-
-    def apply(self, code):
-        self._init(code)
-        self.patch_classes()
-
-    def patch_classes(self):
-        for classname, i1, i2 in self.iter_classes():
-            if self.class_is_known(classname):
-                comment = self.get_class_comment(classname)
-                if comment:
-                    self.insert_line(i1, comment)
-                self.patch_properties(classname, i1 + 1, i2)
-                self.patch_methods(classname, i1 + 1, i2)
-
-    def patch_properties(self, classname, i1, i2):
-        for propname, j1, j2 in self.iter_properties(i1):
-            comment = self.get_prop_comment(classname, propname)
-            if comment:
-                self.insert_line(j1, comment)
-            self._move_decorator_below_comments(j1)
-
-    def patch_methods(self, classname, i1, i2):
-        for methodname, j1, j2 in self.iter_methods(i1):
-            comment = self.get_method_comment(classname, methodname)
-            if comment:
-                self.insert_line(j1, comment)
-            self._move_decorator_below_comments(j1)
-
-    def _move_decorator_below_comments(self, i_def):
-        for i in range(i_def - 3, i_def):
-            line = self.lines[i]
-            if line.lstrip().startswith("@"):
-                self.remove_line(i)
-                self.insert_line(i_def, line)
-
-
-class AbstractApiPatcher(Patcher):
-    """The base patcher to update a wgpu API.
-
-    This code is generalized, so it can be used both to generate the base API
-    and the backends (implementations).
+class ApiPatcher(Patcher):
+    """The patcher to update an API (classes and their props and methods).
 
     The idea is to walk over all classes, patch it if necessary, then
     walk over each of its properties and methods to patch these too.
     """
+
+    known_external_classes = {"GPUPromise"}
+
+    def __init__(
+        self,
+        api_dict,
+        explode_single_args_that_are_descriptors: bool,
+        implemented_on_base_class=None,
+        inherit_from="",
+    ):
+        super().__init__()
+        self.api_dict = api_dict
+        self.explode_single_args_that_are_descriptors = (
+            explode_single_args_that_are_descriptors
+        )
+        self.implemented_on_base_class = implemented_on_base_class or set()
 
     def apply(self, code):
         self._init(code)
         self._counts = {"classes": 0, "methods": 0, "properties": 0}
         self.patch_classes()
         stats = ", ".join(f"{self._counts[key]} {key}" for key in self._counts)
-        print("Validated " + stats)
+        print("Patched " + stats)
 
     def patch_classes(self):
         seen_classes = set()
 
         # Update existing classes in the Python code
-        for classname, i1, i2 in self.iter_classes():
-            seen_classes.add(classname)
+        for class_name, i1, i2 in self.iter_classes():
+            seen_classes.add(class_name)
             self._apidiffs = set()
-            pre_lines = "\n".join(self.lines[i1 - 3 : i1])
-            self._apidiffs_from_lines(pre_lines, classname)
-            if self.class_is_known(classname):
-                if "@apidiff.add" in pre_lines:
-                    print(f"ERROR: apidiff.add for known {classname}")
-                elif "@apidiff.hide" in pre_lines:
-                    pass  # continue as normal
+            if class_name in self.known_external_classes:
+                pass
+            elif self.class_is_known(class_name):
                 old_line = self.lines[i1]
-                new_line = self.get_class_def(classname)
+                new_line = self.get_class_def(class_name)
                 if old_line != new_line:
                     fixme_line = "# FIXME: was " + old_line.split("class ", 1)[-1]
                     self.replace_line(i1, f"{fixme_line}\n{new_line}")
-                self.patch_properties(classname, i1 + 1, i2)
-                self.patch_methods(classname, i1 + 1, i2)
-            elif "@apidiff.add" in pre_lines:
-                pass
+                self.patch_properties(class_name, i1 + 1, i2)
+                self.patch_methods(class_name, i1 + 1, i2)
             else:
-                msg = f"unknown api: class {classname}"
+                msg = f"unknown api: class {class_name}"
                 self.insert_line(i1, "# FIXME: " + msg)
                 print("Warning: " + msg)
-            if self._apidiffs:
-                print(f"Diffs for {classname}:", ", ".join(sorted(self._apidiffs)))
 
         # Add missing classes
         lines = []
-        for classname in self.get_class_names():
-            if classname not in seen_classes:
+        for class_name in self.get_class_names():
+            if class_name not in seen_classes:
                 lines.append("# FIXME: new class to implement")
-                lines.append(self.get_class_def(classname))
+                lines.append(self.get_class_def(class_name))
                 more_lines = []
-                more_lines += self.get_missing_properties(classname, set())
-                more_lines += self.get_missing_methods(classname, set())
+                more_lines += self.get_missing_properties(class_name, set())
+                more_lines += self.get_missing_methods(class_name, set())
                 lines.extend(more_lines or ["    pass"])
         if lines:
             self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["classes"] += len(seen_classes)
 
-    def patch_properties(self, classname, i1, i2):
+    def patch_properties(self, class_name, i1, i2):
         seen_props = set()
 
         # Update existing properties in Python code
-        for propname, j1, j2 in self.iter_properties(i1):
-            seen_props.add(propname)
-            pre_lines = "\n".join(self.lines[j1 - 3 : j1])
-            self._apidiffs_from_lines(pre_lines, propname)
-            if self.prop_is_known(classname, propname):
-                if "@apidiff.add" in pre_lines:
-                    print(f"ERROR: apidiff.add for known {classname}.{propname}")
-                elif "@apidiff.hide" in pre_lines:
-                    pass  # continue as normal
+        for prop_name, j1, j2 in self.iter_properties(i1):
+            seen_props.add(prop_name)
+            if self.prop_is_known(class_name, prop_name):
                 old_line = self.lines[j1]
-                new_line = self.get_property_def(classname, propname)
-                if old_line != new_line:
+                new_line = self.get_property_def(class_name, prop_name)
+                if old_line != new_line.split("@property\n")[1]:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
-            elif "@apidiff.add" in pre_lines:
-                pass
             else:
-                msg = f"unknown api: prop {classname}.{propname}"
+                msg = f"unknown api: prop {class_name}.{prop_name}"
                 self.insert_line(j1, "    # FIXME: " + msg)
                 print("Warning: " + msg)
 
         # Add missing properties for this class
-        lines = self.get_missing_properties(classname, seen_props)
+        lines = self.get_missing_properties(class_name, seen_props)
         if lines:
             self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["properties"] += len(seen_props)
 
-    def patch_methods(self, classname, i1, i2):
+    def patch_methods(self, class_name, i1, i2):
         seen_funcs = set()
 
         # Update existing methods in Python code
-        for methodname, j1, j2 in self.iter_methods(i1):
-            seen_funcs.add(methodname)
-            pre_lines = "\n".join(self.lines[j1 - 3 : j1])
-            self._apidiffs_from_lines(pre_lines, methodname)
-            if self.method_is_known(classname, methodname):
-                if "@apidiff.add" in pre_lines:
-                    print(f"ERROR: apidiff.add for known {classname}.{methodname}")
-                elif "@apidiff.hide" in pre_lines:
-                    pass  # continue as normal
-                elif "@apidiff.change" in pre_lines:
-                    continue
+        for method_name, j1, j2 in self.iter_methods(i1):
+            seen_funcs.add(method_name)
+            if self.method_is_known(class_name, method_name):
                 old_line = self.lines[j1]
-                new_line = self.get_method_def(classname, methodname)
+                new_line = self.get_method_def(class_name, method_name)
                 if old_line != new_line:
                     fixme_line = "    # FIXME: was " + old_line.split("def ", 1)[-1]
                     lines = [fixme_line, new_line]
                     self.replace_line(j1, "\n".join(lines))
-            elif "@apidiff.add" in pre_lines:
-                pass
-            elif methodname.startswith("_"):
+            elif method_name.startswith("_"):
                 pass
             else:
-                msg = f"unknown api: method {classname}.{methodname}"
+                msg = f"unknown api: method {class_name}.{method_name}"
                 self.insert_line(j1, "    # FIXME: " + msg)
                 print("Warning: " + msg)
 
         # Add missing methods for this class
-        lines = self.get_missing_methods(classname, seen_funcs)
+        lines = self.get_missing_methods(class_name, seen_funcs)
         if lines:
             self.insert_line(i2 + 1, "\n".join(lines))
 
         self._counts["methods"] += len(seen_funcs)
 
-    def get_missing_properties(self, classname, seen_props):
+    def get_missing_properties(self, class_name, seen_props):
         lines = []
-        for propname in self.get_required_prop_names(classname):
-            if propname not in seen_props:
+        for prop_name in self.get_prop_names(class_name):
+            if f"{class_name}.{prop_name}" in self.implemented_on_base_class:
+                pass
+            elif prop_name not in seen_props:
                 lines.append("    # FIXME: new prop to implement")
-                lines.append("    @property")
-                lines.append(self.get_property_def(classname, propname))
+                lines.append(self.get_property_def(class_name, prop_name))
                 lines.append("        raise NotImplementedError()")
                 lines.append("")
         return lines
 
-    def get_missing_methods(self, classname, seen_funcs):
+    def get_missing_methods(self, class_name, seen_funcs):
         lines = []
-        for methodname in self.get_required_method_names(classname):
-            if methodname not in seen_funcs:
+        for method_name in self.get_method_names(class_name):
+            if f"{class_name}.{method_name}" in self.implemented_on_base_class:
+                pass
+            elif method_name not in seen_funcs:
                 lines.append("    # FIXME: new method to implement")
-                lines.append(self.get_method_def(classname, methodname))
+                lines.append(self.get_method_def(class_name, method_name))
                 lines.append("        raise NotImplementedError()\n")
         return lines
 
-    def _apidiffs_from_lines(self, text, what):
-        diffs = [x.replace("(", " ").split()[0] for x in text.split("@apidiff.")[1:]]
-        if diffs:
-            self._apidiffs.add(f"{'/'.join(diffs)} {what}")
-
-
-class IdlPatcherMixin:
-    def __init__(self):
-        super().__init__()
-        self.idl = get_idl_parser()
-        self.detect_async_props_and_methods()
-
-    def detect_async_props_and_methods(self):
-        self.async_idl_names = async_idl_names = {}  # (sync-name, async-name)
-
-        for classname, interface in self.idl.classes.items():
-            for namedict in [interface.attributes, interface.functions]:
-                for name_idl, idl_line in namedict.items():
-                    idl_result = idl_line.split(name_idl)[0]
-                    if "Promise" in idl_result:
-                        # We found an async property or method.
-                        name_idl_base = name_idl
-                        if name_idl.endswith("Async"):
-                            name_idl_base = name_idl[:-5]
-                        key = classname, name_idl_base
-                        # Now we determine the kind
-                        if name_idl_base != name_idl and name_idl_base in namedict:
-                            # Has both
-                            async_idl_names[key] = name_idl_base, name_idl
-                        else:
-                            # Only has async
-                            async_idl_names[key] = None, name_idl
-
-    def get_idl_name_variants(self, classname, base_name):
-        """Returns the names of an idl prop/method for its sync and async variant.
-        Either can be None.
-        """
-        # Must be a base name, without the suffix
-        assert not base_name.lower().endswith(("sync", "async"))
-
-        key = classname, base_name
-        default = base_name, None
-        return self.async_idl_names.get(key, default)
-
-    def name2idl(self, classname, name_py):
-        """Map a python propname/methodname to the idl variant.
-        Take async into account.
-        """
-        if name_py == "__init__":
-            return "constructor"
-
-        # Get idl base name
-        if name_py.endswith(("_sync", "_async")):
-            name_idl_base = to_camel_case(name_py.rsplit("_", 1)[0])
-        else:
-            name_idl_base = to_camel_case(name_py)
-
-        # Get idl variant names
-        idl_sync, idl_async = self.get_idl_name_variants(classname, name_idl_base)
-
-        # Triage
-        if idl_sync and idl_async:
-            if name_py.endswith("_async"):
-                return idl_async
-            elif name_py.endswith("_sync"):
-                return name_idl_base + "InvalidVariant"
-            else:
-                return idl_sync
-        elif idl_async:
-            if name_py.endswith("_async"):
-                return idl_async
-            elif name_py.endswith("_sync"):
-                return idl_async
-            else:
-                return name_idl_base + "InvalidVariant"
-        else:  # idl_sync only
-            if name_py.endswith("_async"):
-                return name_idl_base + "InvalidVariant"
-            elif name_py.endswith("_sync"):
-                return name_idl_base + "InvalidVariant"
-            else:
-                return idl_sync
-
-    def name2py_names(self, classname, name_idl):
-        """Map an idl propname/methodname to the python variants.
-        Take async into account. Returns a list with one or two names;
-        for async props/methods Python has the sync and the async variant.
-        """
-
-        if name_idl == "constructor":
-            return ["__init__"]
-
-        # Get idl base name
-        name_idl_base = name_idl
-        if name_idl.endswith("Async"):
-            name_idl_base = name_idl[:-5]
-        name_py_base = to_snake_case(name_idl_base)
-
-        # Get idl variant names
-        idl_sync, idl_async = self.get_idl_name_variants(classname, name_idl_base)
-
-        if idl_sync and idl_async:
-            return [to_snake_case(idl_sync), name_py_base + "_async"]
-        elif idl_async:
-            return [name_py_base + "_sync", name_py_base + "_async"]
-        else:
-            assert idl_sync == name_idl_base
-            return [name_py_base]
-
-    def class_is_known(self, classname):
-        return classname in self.idl.classes
-
-    def get_class_def(self, classname):
-        cls = self.idl.classes[classname]
-        # Make sure that GPUObjectBase comes last, for MRO
-        ignore = "Event", "EventTarget", "DOMException"
-        bases = sorted(cls.bases or [], key=lambda n: n.count("GPUObjectBase"))
-        bases = [b for b in bases if b not in ignore]
-        # Cover some special cases
-        if classname.lower().endswith("error"):
-            if "memory" in classname.lower():
-                bases.append("MemoryError")
-            elif not bases:
-                bases.append("Exception")
-        elif classname in ["GPUAdapterInfo"]:
-            bases.append("dict")
-
-        bases = "" if not bases else f"({', '.join(bases)})"
-        return f"class {classname}{bases}:"
-
-    def get_property_def(self, classname, propname) -> str:
-        attributes = self.idl.classes[classname].attributes
-        name_idl = self.name2idl(classname, propname)
-        assert name_idl in attributes
-
-        idl_line = attributes[name_idl]
-        prop_type = idl_line.split("attribute")[1].split(name_idl)[0].strip()
-
-        try:
-            prop_type = self.idl.resolve_type(prop_type)
-        except (RuntimeError, AssertionError) as err:
-            print(f"Error resolving type for {classname}.{propname}: {err}")
-            prop_type = None
-
-        if prop_type and propname.endswith("_async"):
-            prop_type = f"GPUPromise[{prop_type}]"
-
-        line = (
-            "def "
-            + to_snake_case(propname)
-            + "(self)"
-            + f"{f' -> {prop_type}' if prop_type else ''}:"
-        )
-        return "    " + line
-
-    def get_method_def(self, classname, methodname) -> str:
-        functions = self.idl.classes[classname].functions
-        name_idl = self.name2idl(classname, methodname)
-        assert name_idl in functions
-
-        # Construct preamble
-        preamble = "def " + to_snake_case(methodname) + "("
-
-        # Get arg names and types
-        idl_line = functions[name_idl]
-        args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-        args = [Attribute(arg, "param") for arg in args if arg.strip()]
-        return_type = idl_line.split()[0]
-        if return_type.startswith("[NewObject]"):
-            # [NewObject] can be skipped: https://webidl.spec.whatwg.org/#NewObject
-            return_type = idl_line.split()[1]
-        if return_type.startswith("constructor"):
-            # this means __init__ which essentially returns None (used with Error Messages)
-            return_type = None
-        if return_type:
-            return_type = self.idl.resolve_type(return_type)
-            if methodname.endswith("_async"):
-                return_type = f"GPUPromise[{return_type}]"
-
-        # If one arg that is a dict, flatten dict to kwargs
-        if len(args) == 1 and args[0].typename.endswith(
-            ("Options", "Descriptor", "Configuration")
-        ):
-            assert args[0].typename.startswith("GPU")
-            attributes = self.idl.structs[args[0].typename[3:]].values()
-            py_args = [
-                self._arg_from_attribute(methodname, attr) for attr in attributes
-            ]
-            if py_args[0].startswith("label: str"):
-                py_args[0] = 'label: str=""'
-            py_args = ["self", "*", *py_args]
-        else:
-            py_args = [self._arg_from_attribute(methodname, attr) for attr in args]
-            py_args = ["self", *py_args]
-
-            # IDL has some signatures that cannot work in Python. This may be a bug in idl
-            known_bugged_methods = {"GPUPipelineError.__init__"}
-            remove_default = False
-            for i in reversed(range(len(py_args))):
-                arg = py_args[i]
-                if "=" in arg:
-                    if remove_default:
-                        py_args[i] = arg.split("=")[0]
-                        assert f"{classname}.{methodname}" in known_bugged_methods
-                else:
-                    remove_default = True
-
-        # Construct final def
-        line = preamble + ", ".join(py_args) + "): pass\n"
-        line = (
-            format_code(line, True).split("):")[0]
-            + f"){f' -> {return_type}' if return_type else ''}:"
-        )
-        return "    " + line
-
-    def _arg_from_attribute(self, methodname, attribute):
-        name = to_snake_case(attribute.name)
-        optional_in_py = (methodname, name) in ARGS_TO_MAKE_OPTIONAL
-        d = attribute.default
-        t = self.idl.resolve_type(attribute.typename)
-        result = name
-        if not d and not attribute.required:
-            d = "None"
-        elif optional_in_py and not d:
-            d = "optional"
-        elif d == "{}":
-            d = "None"
-        elif d == "[]":
-            d = "()"
-        if t:
-            t = t.replace("list[", "Sequence[")
-            # If default is None, the type won't match, so we need to mark it optional
-            result += f": {t}"
-            if d in ("None", "optional"):
-                result += " | None"
-        if d:
-            d = {"false": "False", "true": "True"}.get(d, d)
-            result += f"={d}"
-        return result
-
-    def prop_is_known(self, classname, propname):
-        attributes = self.idl.classes[classname].attributes
-        propname_idl = self.name2idl(classname, propname)
-        return propname_idl if propname_idl in attributes else None
-
-    def method_is_known(self, classname, methodname):
-        functions = self.idl.classes[classname].functions
-        methodname_idl = self.name2idl(classname, methodname)
-        return methodname_idl if methodname_idl in functions else None
-
-    def get_class_names(self):
-        return list(self.idl.classes.keys())
-
-    def get_required_prop_names(self, classname):
-        attributes = self.idl.classes[classname].attributes
-        names = []
-        for name_idl in attributes.keys():
-            names.extend(self.name2py_names(classname, name_idl))
-        return names
-
-    def get_required_method_names(self, classname):
-        functions = self.idl.classes[classname].functions
-        names = []
-        for name_idl in functions.keys():
-            names.extend(self.name2py_names(classname, name_idl))
-        return names
-
-
-class BaseApiPatcher(IdlPatcherMixin, AbstractApiPatcher):
-    """A patcher to patch the base API (in _classes.py), using IDL as input."""
-
-
-class IdlCommentInjector(IdlPatcherMixin, AbstractCommentInjector):
-    """A patcher that injects signatures as defined in IDL, which can be useful
-    to determine the types of arguments, etc.
-    """
-
-    def get_class_comment(self, classname):
-        return None
-
-    def get_prop_comment(self, classname, propname):
-        attributes = self.idl.classes[classname].attributes
-        name_idl = self.prop_is_known(classname, propname)
-        if name_idl:
-            return "    # IDL: " + attributes[name_idl]
-
-    def get_method_comment(self, classname, methodname):
-        functions = self.idl.classes[classname].functions
-        name_idl = self.method_is_known(classname, methodname)
-        if name_idl:
-            idl_line = functions[name_idl]
-
-            args = idl_line.split("(", 1)[1].split(")", 1)[0].split(",")
-            args = [Attribute(arg, "param") for arg in args if arg.strip()]
-
-            # If one arg that is a dict, flatten dict to kwargs
-            if len(args) == 1 and args[0].typename.endswith(
-                ("Options", "Descriptor", "Configuration")
-            ):
-                assert args[0].typename.startswith("GPU")
-                attributes = self.idl.structs[args[0].typename[3:]].values()
-                idl_line += " -> " + ", ".join(attr.line for attr in attributes)
-
-            return "    # IDL: " + idl_line
-
-
-class BackendApiPatcher(AbstractApiPatcher):
-    """A patcher to patch a backend API, using the base API as input."""
-
-    def __init__(self, base_api_code):
-        super().__init__()
-
-        p1 = Patcher(base_api_code)
-
-        # Collect what's needed
-        self.classes = classes = {}
-        for classname, i1, i2 in p1.iter_classes():
-            methods = {}
-            for methodname, j1, j2 in p1.iter_methods(i1 + 1):
-                pre_lines = "\n".join(p1.lines[j1 - 3 : j1])
-                if "@apidiff.hide" in pre_lines:
-                    continue  # method (currently) not part of our API
-                if methodname.endswith("_sync"):
-                    continue  # the base class implements _sync versions (using promise.sync_wait())
-                body = "\n".join(p1.lines[j1 + 1 : j2 + 1])
-                must_overload = "raise NotImplementedError()" in body
-                methods[methodname] = p1.lines[j1], must_overload
-            classes[classname] = p1.lines[i1], methods
-            # We assume that all properties can be implemented on the base class
-
-    def class_is_known(self, classname):
-        return classname in self.classes
-
-    def get_class_def(self, classname):
-        line, _ = self.classes[classname]
-
-        if line.startswith("class GPUPromise"):
-            # otherwise the else block below strips the typevar.
-            return "class GPUPromise(classes.GPUPromise[AwaitedType]):"
-
-        if "):" not in line:
-            return line.replace(":", f"(classes.{classname}):")
-        else:
-            i = line.find("(")
-            bases = line[i:].strip("():").replace(",", " ").split()
+    def get_class_def(self, class_name):
+        class_dict = self.api_dict["classes"][class_name]
+        bases = class_dict.get("bases", [])
+        if self.implemented_on_base_class:
             bases = [b for b in bases if b.startswith("GPU")]
-            bases.insert(0, f"classes.{classname}")
-            return line[:i] + "(" + ", ".join(bases) + "):"
+            bases.insert(0, f"classes.{class_name}")
+        bases_str = ""
+        if bases:
+            bases_str = "(" + ", ".join(bases) + ")"
+        return f"class {class_name}{bases_str}:"
 
-    def get_method_def(self, classname, methodname):
-        _, methods = self.classes[classname]
-        line, _ = methods[methodname]
-        return line
+    def get_property_def(self, class_name, prop_name) -> str:
+        prop_dict = self.api_dict["classes"][class_name]["properties"][prop_name]
+        return f"    @property\n    def {prop_name}(self) -> {prop_dict['type']}:"
 
-    def prop_is_known(self, classname, propname):
-        return False
+    def get_method_def(self, class_name, method_name) -> str:
+        method_dict = self.api_dict["classes"][class_name]["methods"][method_name]
+        args = ["self"]
+        args_dict = method_dict["args"]
+        # Maybe use descriptor field as args
+        if (
+            self.explode_single_args_that_are_descriptors
+            and len(method_dict["args"]) == 1
+        ):
+            arg_type_name = next(iter(method_dict["args"].values()))["type"]
+            if arg_type_name.startswith("structs."):
+                if arg_type_name.endswith(" | None"):
+                    arg_type_name = arg_type_name[:-7]
+                if arg_type_name.endswith("Struct"):
+                    arg_type_name = arg_type_name[:-6]
+                args.append("*")
+                args_dict = self.api_dict["structs"][arg_type_name[8:]]["fields"]
+        # Maybe make the args non-positional
+        if "*" not in args:
+            need_star = False
+            previous_where_all_required = True
+            for arg_name, arg_dict in args_dict.items():
+                if arg_dict["default"]:
+                    previous_where_all_required = False
+                elif not previous_where_all_required:
+                    need_star = True
+            if need_star:
+                args.append("*")
+        # Build signature
+        for arg_name, arg_dict in args_dict.items():
+            typ = arg_dict["type"]
+            arg = f"{arg_name}: {typ}"
+            if arg_dict["default"]:
+                arg += f" = {arg_dict['default']}"
+            args.append(arg)
+        sig = ", ".join(args)
+        if method_name == "__init__":
+            return f"    def {method_name}({sig}):"
+        else:
+            return f"    def {method_name}({sig}) -> {method_dict['returns']['type']}:"
 
-    def method_is_known(self, classname, methodname):
-        _, methods = self.classes[classname]
-        return methodname in methods
+    def class_is_known(self, class_name):
+        return class_name in self.api_dict["classes"]
+
+    def prop_is_known(self, class_name, prop_name):
+        stub = f"{class_name}.{prop_name}"
+        if stub in self.implemented_on_base_class:
+            print(f"Overloading s{stub} even though the base class implements it.")
+        return prop_name in self.api_dict["classes"][class_name]["properties"]
+
+    def method_is_known(self, class_name, method_name):
+        stub = f"{class_name}.{method_name}"
+        if stub in self.implemented_on_base_class:
+            print(f"Overloading {stub} even though the base class implements it.")
+        return method_name in self.api_dict["classes"][class_name]["methods"]
 
     def get_class_names(self):
-        return list(self.classes.keys())
+        return list(self.api_dict["classes"].keys())
 
-    def get_required_prop_names(self, classname):
-        return []
+    def get_prop_names(self, class_name):
+        return list(self.api_dict["classes"][class_name].get("properties", {}).keys())
 
-    def get_required_method_names(self, classname):
-        _, methods = self.classes[classname]
-        return list(name for name in methods.keys() if methods[name][1])
+    def get_method_names(self, class_name):
+        return list(self.api_dict["classes"][class_name].get("methods", {}).keys())
 
 
 class StructValidationChecker(Patcher):
     """Checks that all structs are validated in the methods that have incoming structs."""
 
+    def __init__(self, api_dict):
+        super().__init__()
+        self.api_dict = api_dict
+
     def apply(self, code):
         self._init(code)
 
-        idl = get_idl_parser()
         all_structs = set()
-        ignore_structs = {"Extent3D", "Origin3D"}
+        ignore_structs = {
+            "Extent3D",
+            "Origin3D",
+        }  # TODO: ignore here or convert earlier?
 
         structure_checks = self._get_structure_checks()
 
-        for classname, i1, i2 in self.iter_classes():
-            if classname not in idl.classes:
+        for class_name, i1, i2 in self.iter_classes():
+            if class_name not in self.api_dict["classes"]:
                 continue
 
             # For each method ...
-            for methodname, j1, j2 in self.iter_methods(i1 + 1):
+            for method_name, j1, j2 in self.iter_methods(i1 + 1):
                 code = "\n".join(self.lines[j1 : j2 + 1])
                 # Get signature and cut it up in words
                 sig_words = code.partition("(")[2].split("):")[0]
@@ -690,22 +451,23 @@ class StructValidationChecker(Patcher):
                 method_structs = set()
                 for word in sig_words.split():
                     if word.startswith("structs."):
-                        structname = word.partition(".")[2]
-                        method_structs.update(self._get_sub_structs(idl, structname))
+                        struct_name = word.partition(".")[2]
+                        method_structs.update(self._get_sub_structs(struct_name))
                 all_structs.update(method_structs)
                 # Collect structs being checked
                 try:
-                    checked = structure_checks[classname, methodname]
+                    checked = structure_checks[class_name, method_name]
                 except KeyError:
+                    checked = set()
                     print(
-                        f"Could not validate check_struct for {classname}.{methodname}; need another codegen run."
+                        f"Could not validate check_struct for {class_name}.{method_name}; need another codegen run."
                     )
 
                 # Test that a matching check is done
                 unchecked = method_structs.difference(checked)
                 unchecked = list(sorted(unchecked.difference(ignore_structs)))
                 # Must we check, or does this method defer to another
-                defer_func_name = "_" + methodname
+                defer_func_name = "_" + method_name
                 defer_line_starts = (
                     f"return self.{defer_func_name[:-7]}",
                     f"promise = self.{defer_func_name[:-7]}",
@@ -715,7 +477,7 @@ class StructValidationChecker(Patcher):
                     for line in code.splitlines()
                 )
                 if not this_method_defers and unchecked:
-                    msg = f"missing check_struct in {methodname}: {unchecked}"
+                    msg = f"missing check_struct in {method_name}: {unchecked}"
                     self.insert_line(j1, f"# FIXME: {msg}")
                     print(f"ERROR: {msg}")
 
@@ -723,15 +485,17 @@ class StructValidationChecker(Patcher):
         # some reason, this would probably catch that.
         assert len(all_structs) > 10
 
-    def _get_sub_structs(self, idl, structname):
-        if structname.endswith("Struct"):
-            structname = structname[:-6]
-        structnames = {structname}
-        for attribute in idl.structs[structname].values():
-            structname2 = attribute.typename[3:]  # remove "GPU"
-            if structname2 in idl.structs:
-                structnames.update(self._get_sub_structs(idl, structname2))
-        return structnames
+    def _get_sub_structs(self, struct_name):
+        if struct_name.endswith("Struct"):
+            struct_name = struct_name[:-6]
+        struct_names = {struct_name}
+        for field_name, field_dict in self.api_dict["structs"][struct_name][
+            "fields"
+        ].items():
+            type_name = field_dict["type"]
+            if type_name in self.api_dict["structs"]:
+                struct_names.update(self._get_sub_structs(type_name))
+        return struct_names
 
     @staticmethod
     def _get_structure_checks():
@@ -741,10 +505,11 @@ class StructValidationChecker(Patcher):
         mapping each top-level method in _api.py to the calls to check_struct made by
         that method or by any helper methods called by that method.
 
-        For now, the helper function must be methods within the same class.  This code
+        For now, the helper function must be methods within the same class. This code
         does not yet deal with global functions or with methods in superclasses.
         """
-        module = ast.parse(file_cache.read("backends/wgpu_native/_api.py"))
+        # TODO: abstract the file, we want to do this for each backend, I suppose
+        module = ast.parse(read_file("wgpu", "backends", "wgpu_native", "_api.py"))
         # We only care about top-level classes and their top-level methods.
         top_level_methods = {
             # (class_name, method_name) -> method_ast

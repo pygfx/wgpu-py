@@ -1,47 +1,57 @@
-"""
-Codegen utils.
-"""
-
-import os
 import sys
-import tempfile
 import subprocess
+from pathlib import Path
+
+DEFINITIONS_DIR = Path(__file__).parent.absolute() / "definitions"
+ROOT_DIR = Path(__file__).parents[1].absolute()
 
 
-def to_snake_case(name, separator="_"):
-    """Convert a name from camelCase to snake_case. Names that already are
-    snake_case remain the same.
-    """
-    name2 = ""
-    for c in name:
-        c2 = c.lower()
-        if c2 != c and len(name2) > 0:
-            prev = name2[-1]
-            if c2 == "d" and prev in "123":
-                name2 = name2[:-1] + separator + prev
-            elif prev != separator:
-                name2 += separator
-        name2 += c2
-    return name2
+def read_file(*fname):
+    """Read a file from disk using the relative filename. Line endings are normalized."""
+    filename = ROOT_DIR.joinpath(*fname)
+    print(f"Reading {filename.relative_to(ROOT_DIR)}")
+    with open(filename, "rb") as f:
+        return (
+            f.read()
+            .decode()
+            .replace("\r\n", "\n")
+            .replace("\r", "\n")
+            .replace("\\\n", "")  # Macros escaping a newline
+        )
 
 
-def to_camel_case(name):
-    """Convert a name from snake_case to camelCase. Names that already are
-    camelCase remain the same.
-    """
-    is_capital = False
-    name2 = ""
-    for c in name:
-        if c in "_-" and name2:
-            is_capital = True
-        elif is_capital:
-            name2 += c.upper()
-            is_capital = False
-        else:
-            name2 += c
-    if name2.endswith(("1d", "2d", "3d")):
-        name2 = name2[:-1] + "D"
-    return name2
+def write_file(text: str, *fname):
+    """Write the given text to disk, using the relative filename. Line endings are matched to what's used for __init__.py."""
+    filename = ROOT_DIR.joinpath(*fname)
+    print(f"Writing {filename.relative_to(ROOT_DIR)}")
+    if not text.endswith("\n"):
+        text = text + "\n"
+    _write_file(text, filename)
+
+
+def _write_file(text: str, filename):
+    # Private method that we can monkey-patch in tests
+    with open(filename, "wb") as f:
+        f.write(text.replace("\n", LE).encode())
+
+
+def _get_line_endings(text):
+    """Detect whether the line endings in use is CR LF or CRLF."""
+    # Count how many line ending chars there are
+    crlf_count = text.count("\r\n")
+    lf_count = text.count("\n") - crlf_count
+    cr_count = text.count("\r") - crlf_count
+    assert lf_count + cr_count + crlf_count >= 4
+    # Check what's used the most, or whether it's a combination.
+    if lf_count > cr_count and lf_count > crlf_count:
+        return "\n"
+    elif cr_count > lf_count and cr_count > crlf_count:
+        return "\r"
+    else:
+        return "\r\n"
+
+
+LE = _get_line_endings((ROOT_DIR / "apigen" / "__init__.py").read_bytes().decode())
 
 
 _file_objects_to_print_to = [sys.stdout]
@@ -49,7 +59,7 @@ _file_objects_to_print_to = [sys.stdout]
 
 def print(*args, **kwargs):
     """Report something will be printed and added to a file."""
-    # __builtins__.print(*args, **kwargs)
+    # __builtins__["print"](*args, **kwargs)
     if args and not args[0].lstrip().startswith("#"):
         args = ("*", *args)
     for f in _file_objects_to_print_to:
@@ -72,38 +82,47 @@ class PrintToFile:
         self.f.close()
 
 
-def remove_c_comments(code):
-    """Remove C-style comments from the given code."""
-    pos = 0
-    new_code = ""
+def to_snake_case(name, separator="_"):
+    """Convert a name from camelCase to snake_case. Names that already are snake_case remain the same."""
+    name2 = ""
+    for c in name:
+        c2 = c.lower()
+        if c2 != c and len(name2) > 0:
+            prev = name2[-1]
+            if c2 == "d" and prev in "123":
+                name2 = name2[:-1] + separator + prev
+            elif prev != separator:
+                name2 += separator
+        name2 += c2
+    return name2
 
-    while True:
-        # Find start of comment
-        lookfor = None
-        i1 = code.find("//", pos)
-        i2 = code.find("/*", pos)
-        if i1 >= 0:
-            lookfor = "\n"
-            comment_start = i1
-        if i2 >= 0:
-            if not (i1 >= 0 and i1 < i2):
-                lookfor = "*/"
-                comment_start = i2
-        # Found a start?
-        if not lookfor:
-            new_code += code[pos:]
-            break
+
+def dict_deep_merge(a: dict, b: dict, allow_add: bool = True) -> dict:
+    """Return a new dict: b merged into a, recursing into nested dicts."""
+    result = dict(a)
+    for key, val in b.items():
+        if isinstance(val, dict):
+            if key in result and isinstance(result[key], dict):
+                if "diff" in val:
+                    assert val["diff"] == "REMOVE"
+                    result.pop(key, None)
+                else:
+                    result[key] = dict_deep_merge(result[key], val, allow_add)
+            elif allow_add:
+                result[key] = val
         else:
-            new_code += code[pos:comment_start]
-        # Find the end
-        comment_end = code.find(lookfor, comment_start + 2)
-        if comment_end < 0:
-            break
-        if lookfor == "\n":
-            pos = comment_end
-        else:
-            pos = comment_end + len(lookfor)
-    return new_code
+            result[key] = val
+
+    return result
+
+
+def indent_code(text: str, indent=4) -> str:
+    text = text.strip()
+    lines = []
+    for line in text.split("\n"):
+        lines.append(" " * indent + line.rstrip())
+    lines.append("")
+    return "\n".join(lines)
 
 
 class FormatError(Exception):
@@ -144,12 +163,12 @@ def format_code(src, singleline=False):
     # Make defs single-line. You'd think that setting the line length
     # to a very high number would do the trick, but it does not.
     if singleline:
-        result = _make_sigs_singline(result)
+        result = _make_sigs_singleline(result)
 
     return result
 
 
-def _make_sigs_singline(code):
+def _make_sigs_singleline(code):
     lines1 = code.splitlines()
     lines2 = []
 
@@ -238,155 +257,3 @@ def _make_sigs_singline(code):
 
     lines2.append("")
     return "\n".join(lines2)
-
-
-class Patcher:
-    """Class to help patch a Python module. Supports iterating (over
-    lines, classes, properties, methods), and applying diffs (replace,
-    remove, insert).
-    """
-
-    def __init__(self, code=None):
-        self._init(code)
-
-    def _init(self, code):
-        """Subclasses can call this to reset the patcher."""
-        self.lines = []
-        self._diffs = {}
-        self._classes = {}
-        if code:
-            self.lines = format_code(code, True).splitlines()  # inf line length
-
-    def remove_line(self, i):
-        """Remove the line at the given position. There must not have been
-        an action on line i.
-        """
-        assert i not in self._diffs, f"Line {i} already has a diff"
-        self._diffs[i] = i, "remove"
-
-    def insert_line(self, i, line):
-        """Insert a new line at the given position. It's ok if there
-        has already been an insertion on line i, but there must not have been
-        any other actions.
-        """
-        if i in self._diffs and self._diffs[i][1] == "insert":
-            cur_line = self._diffs[i][2]
-            self._diffs[i] = i, "insert", cur_line + "\n" + line
-        else:
-            assert i not in self._diffs, f"Line {i} already has a diff"
-            self._diffs[i] = i, "insert", line
-
-    def replace_line(self, i, line):
-        """Replace the line at the given position with another line.
-        There must not have been an action on line i.
-        """
-        assert i not in self._diffs, f"Line {i} already has a diff"
-        self._diffs[i] = i, "replace", line
-
-    def dumps(self, format=True):
-        """Return the patched result as a string."""
-        lines = self.lines.copy()
-        # Apply diff
-        diffs = sorted(self._diffs.values())
-        for diff in reversed(diffs):
-            if diff[1] == "remove":
-                lines.pop(diff[0])
-            elif diff[1] == "insert":
-                lines.insert(diff[0], diff[2])
-            elif diff[1] == "replace":
-                lines[diff[0]] = diff[2]
-            else:  # pragma: no cover
-                raise ValueError(f"Unknown diff: {diff}")
-        # Format
-        text = "\n".join(lines)
-        if format:
-            try:
-                text = format_code(text)
-            except FormatError as err:  # pragma: no cover
-                # If you get this error, it really helps to load the code
-                # in an IDE to see where the error is. Let's help with that ...
-                filename = os.path.join(tempfile.gettempdir(), "wgpu_patcher_fail.py")
-                with open(filename, "wb") as f:
-                    f.write(text.encode())
-                err = str(err)
-                err = err if len(err) < 78 else err[:77] + "…"
-                raise RuntimeError(
-                    f"It appears that the patcher has generated invalid Python:"
-                    f"\n\n    {err}\n\n"
-                    f'Wrote the generated (but unformatted) code to:\n\n  "{filename}"'
-                ) from None
-
-        return text
-
-    def iter_lines(self, start_line=0):
-        """Generator to iterate over the lines.
-        Each iteration yields (line, linenr)
-        """
-        for i in range(start_line, len(self.lines)):
-            line = self.lines[i]
-            yield line, i
-
-    def iter_classes(self, start_line=0):
-        """Generator to iterate over the classes.
-        Each iteration yields (classname, linenr_start, linenr_end),
-        where linenr_end is the last line of code.
-        """
-        current_class = None
-        for i in range(start_line, len(self.lines)):
-            line = self.lines[i]
-            sline = line.rstrip()
-            if current_class and sline:
-                if sline.startswith("    "):
-                    current_class[2] = i
-                else:  # code has less indentation -> something new
-                    yield current_class
-                    current_class = None
-            if line.startswith("class "):
-                name = line.split(":")[0].split("(")[0].split()[-1]
-                current_class = [name, i, i]
-        if current_class:
-            yield current_class
-
-    def iter_properties(self, start_line=0):
-        """Generator to iterate over the properties.
-        Each iteration yields (classname, linenr_first, linenr_last),
-        where linenr_first is the line that startswith `def`,
-        and linenr_last is the last line of code.
-        """
-        return self._iter_props_and_methods(start_line, True)
-
-    def iter_methods(self, start_line=0):
-        """Generator to iterate over the methods.
-        Each iteration yields (classname, linenr_first, linenr_last)
-        where linenr_first is the line that startswith `def`,
-        and linenr_last is the last line of code.
-        """
-        return self._iter_props_and_methods(start_line, False)
-
-    def _iter_props_and_methods(self, start_line, find_props):
-        prop_mark = None
-        current_def = None
-        for i in range(start_line, len(self.lines)):
-            line = self.lines[i]
-            sline = line.rstrip()
-            if current_def and sline:
-                if sline.startswith("        "):
-                    current_def[2] = i
-                else:
-                    yield current_def
-                    current_def = None
-            if sline and not sline.startswith("    "):
-                break  # exit class
-            if line.startswith(("    def ", "    async def ")):
-                name = line.split("(")[0].split()[-1]
-                if prop_mark and find_props:
-                    current_def = [name, i, i]
-                elif not prop_mark and not find_props:
-                    current_def = [name, i, i]
-            if line.startswith("    @property"):
-                prop_mark = i
-            elif sline and not sline.lstrip().startswith("#"):
-                prop_mark = None
-
-        if current_def:
-            yield current_def
