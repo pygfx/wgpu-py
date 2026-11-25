@@ -66,7 +66,6 @@ __all__ = [
 logger = logging.getLogger("wgpu")
 
 
-
 # Obtain the object tracker. Note that we store a ref of
 # the latter on all classes that refer to it. Otherwise, on a sys exit,
 # the module attributes are None-ified, and the destructors would
@@ -97,9 +96,9 @@ class GPU:
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreferenceEnum | None = None,
+        power_preference: enums.PowerPreference | None = None,
         force_fallback_adapter: bool = False,
-        canvas: CanvasLike = None,
+        canvas: CanvasLike | None = None,
     ) -> GPUAdapter:
         """Sync version of `request_adapter_async()`.
 
@@ -118,7 +117,7 @@ class GPU:
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreferenceEnum | None = None,
+        power_preference: enums.PowerPreference | None = None,
         force_fallback_adapter: bool = False,
         canvas: CanvasLike | None = None,
     ) -> GPUPromise[GPUAdapter]:
@@ -181,7 +180,7 @@ class GPU:
         return gpu.enumerate_adapters_async()
 
     # IDL: GPUTextureFormat getPreferredCanvasFormat();
-    def get_preferred_canvas_format(self):
+    def get_preferred_canvas_format(self) -> enums.TextureFormatEnum:
         """Not implemented in wgpu-py; use `GPUCanvasContext.get_preferred_format()` instead.
         The WebGPU spec defines this function, but in wgpu there are different
         kinds of canvases which may each prefer/support a different format.
@@ -286,7 +285,7 @@ class GPUCanvasContext:
         """Get capabilities for a native surface."""
         raise NotImplementedError()
 
-    def get_preferred_format(self, adapter: GPUAdapter) -> enums.TextureFormatEnum:
+    def get_preferred_format(self, adapter: GPUAdapter) -> enums.TextureFormat:
         """Get the preferred surface texture format."""
         capabilities = self._get_capabilities(adapter)
         formats = capabilities["formats"]
@@ -1213,6 +1212,7 @@ class GPUDevice(GPUObjectBase):
         """Create a `GPUQuerySet` object."""
         raise NotImplementedError()
 
+
 class GPUBuffer(GPUObjectBase):
     """Represents a block of memory that can be used in GPU operations.
 
@@ -1314,7 +1314,6 @@ class GPUBuffer(GPUObjectBase):
         self,
         buffer_offset: int | None = None,
         size: int | None = None,
-        *,
         copy: bool = True,
     ) -> ArrayLike:
         """Read mapped buffer data.
@@ -2234,7 +2233,7 @@ class GPUQueue(GPUObjectBase):
 
     def read_buffer(
         self, buffer: GPUBuffer, buffer_offset: int = 0, size: int | None = None
-    ) -> ArrayLike:
+    ) -> GPUBuffer:
         """Takes the data contents of the buffer and return them as a memoryview.
 
         Arguments:
@@ -2279,8 +2278,12 @@ class GPUQueue(GPUObjectBase):
         raise NotImplementedError()
 
     def read_texture(
-        self, source: dict, data_layout: dict, size: tuple[int, int, int]
-    ) -> ArrayLike:
+        self,
+        destination: structs.TexelCopyTextureInfoStruct,
+        data: ArrayLike,
+        data_layout: structs.TexelCopyBufferLayoutStruct,
+        size: tuple[int, int, int],
+    ) -> GPUTexture:
         """Reads the contents of the texture and return them as a memoryview.
 
         Arguments:
@@ -2338,7 +2341,7 @@ class GPUDeviceLostInfo:
         return self._reason
 
 
-class DrawCancelled(Exception):  # noqa: N818
+class DrawCancelled(Exception):
     """An excepion raised to cancel a draw when the surface texture could not be obtained,
     e.g. because the window is hidden or occluded.
     """
@@ -2377,7 +2380,7 @@ class GPUPipelineError(Exception):
     """An error raised when a pipeline could not be created."""
 
     # IDL: constructor(optional DOMString message = "", GPUPipelineErrorInit options);
-    def __init__(self, message: str, options: structs.PipelineErrorInitStruct):
+    def __init__(self, *, message: str = "", options: structs.PipelineErrorInitStruct):
         super().__init__(message or "")
         self._options = options
 
@@ -2448,9 +2451,9 @@ class GPUCompilationInfo:
 
     # IDL: readonly attribute FrozenArray<GPUCompilationMessage> messages;
     @property
-    def messages(self) -> list[GPUCompilationMessage]:
+    def messages(self) -> Sequence[GPUCompilationMessage]:
         """A list of `GPUCompilationMessage` objects."""
-        raise NotImplementedError()
+        raise self._messages
 
 
 class GPUQuerySet(GPUObjectBase):
