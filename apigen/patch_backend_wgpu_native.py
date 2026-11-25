@@ -24,6 +24,7 @@ from apigen_utils import (
     dict_deep_merge,
     to_snake_case,
     format_code,
+    _write_file,
 )
 from apigen_defs import read_definition_file
 
@@ -53,7 +54,6 @@ def patch_backend_wgpu_native():
 
 
 def patch_backend_api(api, hp):
-
     implemented = detect_implemented_properties_and_methods(
         read_file("wgpu", "_classes.py")
     )
@@ -551,8 +551,7 @@ def _get_wgpu_header(*filenames):
     # Write the combined source, which is what will be loaded at wgpu import time
     combined_source = "\n\n".join(cleaned_contents)
     combined_header_file = get_header_filename("combined_header.h")
-    with open(combined_header_file, "wb") as f:
-        f.write(combined_source.encode())
+    _write_file(combined_source, combined_header_file)
 
     return combined_source
 

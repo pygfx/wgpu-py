@@ -489,7 +489,9 @@ class StructValidationChecker(Patcher):
         if struct_name.endswith("Struct"):
             struct_name = struct_name[:-6]
         struct_names = {struct_name}
-        for field_name, field_dict in self.api_dict["structs"][struct_name]['fields'].items():
+        for field_name, field_dict in self.api_dict["structs"][struct_name][
+            "fields"
+        ].items():
             type_name = field_dict["type"]
             if type_name in self.api_dict["structs"]:
                 struct_names.update(self._get_sub_structs(type_name))

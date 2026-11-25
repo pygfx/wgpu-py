@@ -26,6 +26,11 @@ def write_file(text: str, *fname):
     print(f"Writing {filename.relative_to(ROOT_DIR)}")
     if not text.endswith("\n"):
         text = text + "\n"
+    _write_file(text, filename)
+
+
+def _write_file(text: str, filename):
+    # Private method that we can monkey-patch in tests
     with open(filename, "wb") as f:
         f.write(text.replace("\n", LE).encode())
 

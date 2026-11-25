@@ -20,7 +20,7 @@ def write_api():
 
     # Flags, enums, and structs (and their fields) defined in specific backends are added to the global set of flags/enums/structs,
     # but they'll each have a '_ext' suffix
-    for fname in ["diff_backend_pyodide.toml", "diff_backend_wgpu.toml"]:
+    for fname in ["diff_backend_pyodide.toml", "diff_backend_wgpu_native.toml"]:
         extra_api = read_definition_file(fname)
         api = dict_deep_merge(api, extra_api)
 
