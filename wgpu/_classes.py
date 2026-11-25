@@ -16,7 +16,7 @@ import itertools
 from typing import Sequence
 
 from ._async import GPUPromise as BaseGPUPromise, AwaitedType
-from ._coreutils import str_flag_to_int, ArrayLike, CanvasLike
+from ._coreutils import str_flag_to_int, ArrayLike, CanvasLike, NotSupportedError
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -2413,37 +2413,37 @@ class GPUCompilationMessage:
     @property
     def message(self) -> str:
         """The warning/error message."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
     # IDL: readonly attribute GPUCompilationMessageType type;
     @property
     def type(self) -> enums.CompilationMessageTypeEnum:
         """The type of warning/problem."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
     # IDL: readonly attribute unsigned long long lineNum;
     @property
     def line_num(self) -> int:
         """The corresponding line number in the shader source."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
     # IDL: readonly attribute unsigned long long linePos;
     @property
     def line_pos(self) -> int:
         """The position on the line in the shader source."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
     # IDL: readonly attribute unsigned long long offset;
     @property
     def offset(self) -> int:
         """Offset of ..."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
     # IDL: readonly attribute unsigned long long length;
     @property
     def length(self) -> int:
         """The length of the line?"""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
 
 class GPUCompilationInfo:

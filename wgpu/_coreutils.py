@@ -26,6 +26,10 @@ ArrayLike = memoryview | object
 CanvasLike = object
 
 
+class NotSupportedError(NotImplementedError):
+    pass  # to mark as not implemented, without requiring subclasses to implement it
+
+
 def get_header_filename(name):
     """Get the filename to a wgpu related header resource."""
     ref = importlib.resources.files("wgpu.resources") / name
