@@ -451,8 +451,8 @@ class StructValidationChecker(Patcher):
                 method_structs = set()
                 for word in sig_words.split():
                     if word.startswith("structs."):
-                        structname = word.partition(".")[2]
-                        method_structs.update(self._get_sub_structs(structname))
+                        struct_name = word.partition(".")[2]
+                        method_structs.update(self._get_sub_structs(struct_name))
                 all_structs.update(method_structs)
                 # Collect structs being checked
                 try:
@@ -485,16 +485,15 @@ class StructValidationChecker(Patcher):
         # some reason, this would probably catch that.
         assert len(all_structs) > 10
 
-    def _get_sub_structs(self, structname):
-        # todo: how to deal with these suffixes?
-        # if structname.endswith("Struct"):
-        #     structname = structname[:-6]
-        structnames = {structname}
-        for field_name, field_dict in self.api_dict.structs[structname].items():
+    def _get_sub_structs(self, struct_name):
+        if struct_name.endswith("Struct"):
+            struct_name = struct_name[:-6]
+        struct_names = {struct_name}
+        for field_name, field_dict in self.api_dict["structs"][struct_name]['fields'].items():
             type_name = field_dict["type"]
             if type_name in self.api_dict["structs"]:
-                structnames.update(self._get_sub_structs(type_name))
-        return structnames
+                struct_names.update(self._get_sub_structs(type_name))
+        return struct_names
 
     @staticmethod
     def _get_structure_checks():
