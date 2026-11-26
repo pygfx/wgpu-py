@@ -182,9 +182,9 @@ class CommentRemover(Patcher):
     """
 
     def __init__(
-        self, triggers=("# FIXME: unknown api", "# FIXME: missing check_struct")
+        self,
+        triggers=("# FIXME: unknown api", "# FIXME: missing check_struct"),
     ):
-        # TODO: add "# IDL:" temporarily later to remove legacy stuff
         super().__init__()
         self.triggers = triggers
 
