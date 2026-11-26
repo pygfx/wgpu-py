@@ -29,6 +29,7 @@
 * Reading codegen/definitions/wgpu_api.toml
 * Found 38 classes in the base API
 * Reading wgpu/_classes.py
+* Patched 39 classes, 114 methods, 48 properties
 * Writing wgpu/_classes.py
 
 ## patch_backend_wgpu_native
@@ -46,6 +47,16 @@
 * Writing wgpu/backends/wgpu_native/_mappings.py
 * Reading wgpu/_classes.py
 * Reading wgpu/backends/wgpu_native/_api.py
+* Overloading GPU.request_adapter_async even though the base class implements it.
+* Overloading GPU.enumerate_adapters_async even though the base class implements it.
+* Overloading GPU.get_canvas_context even though the base class implements it.
+* Overloading GPUCanvasContext.__init__ even though the base class implements it.
+* Overloading GPUCanvasContext._release even though the base class implements it.
+* Overloading GPUObjectBase._release even though the base class implements it.
+* Overloading GPUAdapter._release even though the base class implements it.
+* Overloading GPUDevice.__init__ even though the base class implements it.
+* Overloading GPUBuffer.__init__ even though the base class implements it.
+* Patched 39 classes, 113 methods, 0 properties
 * Reading wgpu/backends/wgpu_native/_api.py
 * Validated 96 C structs
 * Validated 153 C function calls
