@@ -435,7 +435,7 @@ class StructValidationChecker(Patcher):
             "Origin3D",
         }  # TODO: ignore here or convert earlier?
 
-        structure_checks = self._get_structure_checks()
+        structure_checks = self._get_structure_checks(code)
 
         for class_name, i1, i2 in self.iter_classes():
             if class_name not in self.api_dict["classes"]:
@@ -499,7 +499,7 @@ class StructValidationChecker(Patcher):
         return struct_names
 
     @staticmethod
-    def _get_structure_checks():
+    def _get_structure_checks(code):
         """
         Returns a map
             (class_name, method_name) -> <list of structure names>
@@ -509,8 +509,7 @@ class StructValidationChecker(Patcher):
         For now, the helper function must be methods within the same class. This code
         does not yet deal with global functions or with methods in superclasses.
         """
-        # TODO: abstract the file, we want to do this for each backend, I suppose
-        module = ast.parse(read_file("wgpu", "backends", "wgpu_native", "_api.py"))
+        module = ast.parse(code)
         # We only care about top-level classes and their top-level methods.
         top_level_methods = {
             # (class_name, method_name) -> method_ast
