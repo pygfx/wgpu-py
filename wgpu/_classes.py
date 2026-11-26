@@ -2181,8 +2181,7 @@ class GPUQueue(GPUObjectBase):
 
     def read_texture(
         self,
-        destination: structs.TexelCopyTextureInfoStruct,
-        data: ArrayLike,
+        source: structs.TexelCopyTextureInfoStruct,
         data_layout: structs.TexelCopyBufferLayoutStruct,
         size: tuple[int, int, int],
     ) -> GPUTexture:

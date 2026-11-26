@@ -3989,15 +3989,14 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     def read_texture(
         self,
-        destination: structs.TexelCopyTextureInfoStruct,
-        data: ArrayLike,
+        source: structs.TexelCopyTextureInfoStruct,
         data_layout: structs.TexelCopyBufferLayoutStruct,
         size: tuple[int, int, int],
     ) -> GPUTexture:
         # Note that the bytes_per_row restriction does not apply for
         # this function; we have to deal with it.
 
-        check_struct("TexelCopyTextureInfo", destination)
+        check_struct("TexelCopyTextureInfo", source)
         check_struct("TexelCopyBufferLayout", data_layout)
 
         device = source["texture"]._device

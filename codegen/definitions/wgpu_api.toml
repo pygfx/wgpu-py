@@ -4108,17 +4108,9 @@ no alignment requirement on `bytes_per_row`.
 '''
 returns.type = 'GPUTexture'
 
-args.destination.doc = "A dict with fields: 'texture' (a texture object), 'origin' (a 3-tuple), 'mip_level' (an int, default 0)."
-args.destination.type = 'structs.TexelCopyTextureInfoStruct'
-args.destination.default = ''
-
-args.data.doc = '''
-The data to write to the texture.
-Must be an object that supports the buffer protocol,
-e.g. bytes, memoryview, numpy array, etc. Must be contiguous.
-'''
-args.data.type = 'ArrayLike'
-args.data.default = ''
+args.source.doc = "A dict with fields: 'texture' (a texture object), 'origin' (a 3-tuple), 'mip_level' (an int, default 0)."
+args.source.type = 'structs.TexelCopyTextureInfoStruct'
+args.source.default = ''
 
 args.data_layout.doc = "A dict with fields: 'offset' (an int, default 0), 'bytes_per_row' (an int), 'rows_per_image' (an int, default 0)."
 args.data_layout.type = 'structs.TexelCopyBufferLayoutStruct'

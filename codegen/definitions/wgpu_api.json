@@ -3484,14 +3484,9 @@
           "doc": "Takes the data contents and schedules a write operation of\nthese contents to the destination texture in the queue. A\nsnapshot of the data is taken; any changes to the data after\nthis function is called do not affect the texture contents.\n\nUnlike `GPUCommandEncoder.copyBufferToTexture()`, there is\nno alignment requirement on `bytes_per_row`.\n",
           "returns": { "type": "GPUTexture" },
           "args": {
-            "destination": {
+            "source": {
               "doc": "A dict with fields: 'texture' (a texture object), 'origin' (a 3-tuple), 'mip_level' (an int, default 0).",
               "type": "structs.TexelCopyTextureInfoStruct",
-              "default": ""
-            },
-            "data": {
-              "doc": "The data to write to the texture.\nMust be an object that supports the buffer protocol,\ne.g. bytes, memoryview, numpy array, etc. Must be contiguous.\n",
-              "type": "ArrayLike",
               "default": ""
             },
             "data_layout": {

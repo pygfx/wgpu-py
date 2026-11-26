@@ -57,7 +57,6 @@
 * Overloading GPUDevice.__init__ even though the base class implements it.
 * Overloading GPUBuffer.__init__ even though the base class implements it.
 * Patched 39 classes, 113 methods, 0 properties
-* Reading wgpu/backends/wgpu_native/_api.py
 * Validated 96 C structs
 * Validated 153 C function calls
 * Not using 86 C functions
