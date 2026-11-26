@@ -572,10 +572,10 @@ class HParser:
         self._parse_from_cffi()
 
         if verbose:
-            print(f"webgpu.h/wgpu.h define {len(self.functions)} functions")
+            print(f"webgpu.h/wgpu.h defines {len(self.functions)} functions")
             keys = "flags", "enums", "structs"
             stats = ", ".join(f"{len(getattr(self, key))} {key}" for key in keys)
-            print("webgpu.h/wgpu.h define " + stats)
+            print("webgpu.h/wgpu.h defines " + stats)
 
     # NOTE: we could use pycparser as it's used by cffi anyway and we have that.
     def _parse_from_h(self):

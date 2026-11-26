@@ -36,8 +36,8 @@
 * Reading codegen/definitions/wgpu_api.toml
 * Reading codegen/definitions/diff_backend_wgpu_native.toml
 * Found 38 classes in the wgpu_native backend API
-* webgpu.h/wgpu.h define 228 functions
-* webgpu.h/wgpu.h define 8 flags, 70 enums, 115 structs
+* webgpu.h/wgpu.h defines 228 functions
+* webgpu.h/wgpu.h defines 8 flags, 70 enums, 115 structs
 * Enum PipelineErrorReason missing in webgpu.h
 * Enum AutoLayoutMode missing in webgpu.h
 * Enum field VertexFormat.unorm10-10-10-2 missing in webgpu.h
