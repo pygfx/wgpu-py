@@ -7,14 +7,14 @@
 * Writing codegen/definitions/webgpu.toml
 
 ## format_defs
-* Reading codegen/definitions/diff_docs.toml
-* Writing codegen/definitions/diff_docs.toml
-* Reading codegen/definitions/diff_backend_wgpu_native.toml
-* Writing codegen/definitions/diff_backend_wgpu_native.toml
 * Reading codegen/definitions/diff_backend_pyodide.toml
 * Writing codegen/definitions/diff_backend_pyodide.toml
+* Reading codegen/definitions/diff_backend_wgpu_native.toml
+* Writing codegen/definitions/diff_backend_wgpu_native.toml
 * Reading codegen/definitions/diff_base.toml
 * Writing codegen/definitions/diff_base.toml
+* Reading codegen/definitions/diff_docs.toml
+* Writing codegen/definitions/diff_docs.toml
 
 ## merge_defs
 * Reading codegen/definitions/webgpu.toml
