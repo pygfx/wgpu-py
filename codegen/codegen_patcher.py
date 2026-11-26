@@ -4,7 +4,7 @@ import tempfile
 from collections import defaultdict
 from functools import cache
 
-from codegen_utils import FormatError, format_code, read_file, print
+from codegen_utils import FormatError, format_code, print
 
 
 def detect_implemented_properties_and_methods(code) -> set[str]:

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from codegen_utils import print, read_file, to_snake_case
+from codegen_utils import print, to_snake_case, read_file
 from codegen_defs import write_definition_file
 
 builtins = __builtins__
