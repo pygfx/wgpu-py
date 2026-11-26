@@ -10,8 +10,6 @@ if not isinstance(builtins, dict):
 
 IGNORE_BASES = {"EventTarget", "DOMException"}
 
-# TODO: handle ARGS_TO_MAKE_OPTIONAL, in apidiff structure ??
-
 
 def extract_idl():
     """Parse the IDL specification to a structured form in json.
