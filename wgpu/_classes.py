@@ -199,7 +199,12 @@ class GPU:
         The ``present_info`` dict should have a ``window`` field containing the
         window id. On Linux there should also be ``platform`` field to
         distinguish between "wayland" and "x11", and a ``display`` field for the
-        display id. For the Pyodide backend, the ``window`` is the ``<canvas>`` object.
+        display id. On Windows, ``platform`` can be "swapchainpanel" to render
+        into a WinUI ``SwapChainPanel``, with ``window`` a pointer to its
+        ``ISwapChainPanelNative`` COM interface. Only D3D12 adapters can present
+        to a panel; pass the context as ``canvas`` to ``request_adapter_sync()``
+        to get one. For the Pyodide backend, the ``window`` is the ``<canvas>``
+        object.
         This dict is an interface between ``rendercanvas`` and ``wgpu-py``.
         """
         from .backends.auto import gpu

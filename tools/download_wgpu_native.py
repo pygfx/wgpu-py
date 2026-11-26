@@ -89,7 +89,7 @@ def get_os_string():
 def get_arch():
     # See e.g.: https://stackoverflow.com/questions/45124888
     is_64_bit = sys.maxsize > 2**32
-    machine = platform.machine()
+    machine = platform.machine().lower()  # e.g. 'ARM64' on Windows
 
     if machine == "armv7l":
         # Raspberry pi
