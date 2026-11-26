@@ -2,8 +2,8 @@ import sys
 import subprocess
 from pathlib import Path
 
-DEFINITIONS_DIR = Path(__file__).parent.absolute() / "definitions"
-ROOT_DIR = Path(__file__).parents[1].absolute()
+DEFINITIONS_DIR = Path(__file__).resolve().parent / "definitions"
+ROOT_DIR = Path(__file__).resolve().parents[1]
 
 
 def read_file(*fname):
@@ -51,7 +51,7 @@ def _get_line_endings(text):
         return "\r\n"
 
 
-LE = _get_line_endings((ROOT_DIR / "codegen" / "__init__.py").read_bytes().decode())
+LE = _get_line_endings((ROOT_DIR / "README.md").read_bytes().decode())
 
 
 _file_objects_to_print_to = [sys.stdout]

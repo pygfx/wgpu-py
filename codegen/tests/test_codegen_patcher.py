@@ -228,7 +228,9 @@ def test_struct_validation_checker(monkeypatch):
         ("Foo", "defer_async"): {"S9", "S10", "S11"},
     }
     monkeypatch.setattr(
-        StructValidationChecker, "_get_structure_checks", staticmethod(lambda: checks)
+        StructValidationChecker,
+        "_get_structure_checks",
+        staticmethod(lambda _c: checks),
     )
 
     p = StructValidationChecker(api)

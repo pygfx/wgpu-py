@@ -23,7 +23,7 @@ VERSION_FILE = os.path.join(ROOT_DIR, "wgpu", "backends", "wgpu_native", "__init
 # Whether to ensure we export \n instead of \r\n
 NEWLINE_FLAVOUR = b"\n"
 if sys.platform.startswith("win"):
-    sample = open(os.path.join(RESOURCE_DIR, "codegen_report.md"), "rb").read()
+    sample = open(os.path.join(ROOT_DIR, "README.md"), "rb").read()
     if sample.count(b"\r\n") > 0.5 * sample.count(b"\n"):
         NEWLINE_FLAVOUR = b"\r\n"
 
