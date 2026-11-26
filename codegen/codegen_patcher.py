@@ -227,6 +227,7 @@ class ApiPatcher(Patcher):
 
     def patch_classes(self):
         seen_classes = set()
+        i2 = 0
 
         # Update existing classes in the Python code
         for class_name, i1, i2 in self.iter_classes():
@@ -263,6 +264,7 @@ class ApiPatcher(Patcher):
 
     def patch_properties(self, class_name, i1, i2):
         seen_props = set()
+        i2 = 0
 
         # Update existing properties in Python code
         for prop_name, j1, j2 in self.iter_properties(i1):

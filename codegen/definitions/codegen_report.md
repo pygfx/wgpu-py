@@ -72,7 +72,3 @@
 * Writing 44 API differences to docs/wgpu.rst
 * Reading docs/wgpu.rst
 * Writing docs/wgpu.rst
-
-## write_js_api
-* Reading codegen/definitions/webgpu.toml
-* Writing wgpu/backends/js_webgpu/webgpu_stub.py
