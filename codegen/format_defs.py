@@ -10,6 +10,7 @@ def format_defs():
     files = [
         fname for fname in os.listdir(DEFINITIONS_DIR) if fname.startswith("diff_")
     ]
+    files.sort()  # deterministic codegen report!
     for fname in files:
         s = read_definition_file(fname)
         write_definition_file(s, fname)
