@@ -87,6 +87,7 @@ ignore = [
     "E731",   # Do not assign a `lambda` expression, use a `def`
     "B007",   # Loop control variable `x` not used within loop body
     "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "N818",   # Exception class should be named with an Error suffix
 ]
 
 [tool.coverage.report]

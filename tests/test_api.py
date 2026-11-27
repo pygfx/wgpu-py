@@ -136,13 +136,6 @@ def test_backend_is_selected_automatically():
     assert "traceback" not in out.lower()
 
 
-def test_that_we_know_how_our_api_differs():
-    doc = wgpu._classes.apidiff.__doc__
-    assert isinstance(doc, str)
-    assert "GPUBuffer.get_mapped_range" in doc
-    assert "GPUDevice.create_buffer_with_data" in doc
-
-
 def test_that_all_docstrings_are_there():
     for class_name, cls in wgpu.classes.__dict__.items():
         if class_name.startswith("_"):

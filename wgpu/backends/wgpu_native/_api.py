@@ -461,7 +461,7 @@ class GPU(classes.GPU):
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreferenceEnum | None = None,
+        power_preference: enums.PowerPreference | None = None,
         force_fallback_adapter: bool = False,
         canvas: CanvasLike | None = None,
     ) -> GPUPromise[GPUAdapter]:
@@ -2597,7 +2597,6 @@ class GPUBuffer(classes.GPUBuffer, GPUObjectBase):
         self,
         buffer_offset: int | None = None,
         size: int | None = None,
-        *,
         copy: bool = True,
     ) -> ArrayLike:
         # Can we even read?
@@ -3888,7 +3887,7 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
 
     def read_buffer(
         self, buffer: GPUBuffer, buffer_offset: int = 0, size: int | None = None
-    ) -> ArrayLike:
+    ) -> GPUBuffer:
         # Note that write_buffer probably does a very similar thing
         # using a temporary buffer. But write_buffer is official API
         # so it's a single call, while here we must create the temporary
@@ -3997,10 +3996,16 @@ class GPUQueue(classes.GPUQueue, GPUObjectBase):
     _shared_copy_buffer = None, 0
 
     def read_texture(
-        self, source: dict, data_layout: dict, size: tuple[int, int, int]
-    ) -> ArrayLike:
+        self,
+        source: structs.TexelCopyTextureInfoStruct,
+        data_layout: structs.TexelCopyBufferLayoutStruct,
+        size: tuple[int, int, int],
+    ) -> GPUTexture:
         # Note that the bytes_per_row restriction does not apply for
         # this function; we have to deal with it.
+
+        check_struct("TexelCopyTextureInfo", source)
+        check_struct("TexelCopyBufferLayout", data_layout)
 
         device = source["texture"]._device
 

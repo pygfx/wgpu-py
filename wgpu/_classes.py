@@ -16,7 +16,7 @@ import itertools
 from typing import Sequence
 
 from ._async import GPUPromise as BaseGPUPromise, AwaitedType
-from ._coreutils import ApiDiff, str_flag_to_int, ArrayLike, CanvasLike
+from ._coreutils import str_flag_to_int, ArrayLike, CanvasLike, NotSupportedError
 from ._diagnostics import diagnostics, texture_format_to_bpp
 from . import flags, enums, structs
 
@@ -66,9 +66,6 @@ __all__ = [
 logger = logging.getLogger("wgpu")
 
 
-apidiff = ApiDiff()
-
-
 # Obtain the object tracker. Note that we store a ref of
 # the latter on all classes that refer to it. Otherwise, on a sys exit,
 # the module attributes are None-ified, and the destructors would
@@ -94,15 +91,13 @@ class GPU:
     a backend-specific implementation.
     """
 
-    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> DOMString featureLevel = "core", GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false, boolean xrCompatible = false
-    @apidiff.change("arguments include canvas")
     def request_adapter_sync(
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreferenceEnum | None = None,
+        power_preference: enums.PowerPreference | None = None,
         force_fallback_adapter: bool = False,
-        canvas: CanvasLike = None,
+        canvas: CanvasLike | None = None,
     ) -> GPUAdapter:
         """Sync version of `request_adapter_async()`.
 
@@ -116,13 +111,11 @@ class GPU:
         )
         return promise.sync_wait()
 
-    # IDL: Promise<GPUAdapter?> requestAdapter(optional GPURequestAdapterOptions options = {}); -> DOMString featureLevel = "core", GPUPowerPreference powerPreference, boolean forceFallbackAdapter = false, boolean xrCompatible = false
-    @apidiff.change("arguments include canvas")
     def request_adapter_async(
         self,
         *,
         feature_level: str = "core",
-        power_preference: enums.PowerPreferenceEnum | None = None,
+        power_preference: enums.PowerPreference | None = None,
         force_fallback_adapter: bool = False,
         canvas: CanvasLike | None = None,
     ) -> GPUPromise[GPUAdapter]:
@@ -147,7 +140,6 @@ class GPU:
             canvas=canvas,
         )
 
-    @apidiff.add("Method useful for multi-gpu environments")
     def enumerate_adapters_sync(self) -> list[GPUAdapter]:
         """Sync version of `enumerate_adapters_async()`.
 
@@ -156,7 +148,6 @@ class GPU:
         promise = gpu.enumerate_adapters_async()
         return promise.sync_wait()
 
-    @apidiff.add("Method useful for multi-gpu environments")
     def enumerate_adapters_async(self) -> GPUPromise[list[GPUAdapter]]:
         """Get a list of adapter objects available on the current system.
 
@@ -186,16 +177,13 @@ class GPU:
 
         return gpu.enumerate_adapters_async()
 
-    # IDL: GPUTextureFormat getPreferredCanvasFormat();
-    @apidiff.change("Disabled because we put it on the canvas context")
-    def get_preferred_canvas_format(self):
+    def get_preferred_canvas_format(self) -> enums.TextureFormatEnum:
         """Not implemented in wgpu-py; use `GPUCanvasContext.get_preferred_format()` instead.
         The WebGPU spec defines this function, but in wgpu there are different
         kinds of canvases which may each prefer/support a different format.
         """
         raise RuntimeError("Use canvas.get_preferred_format() instead.")
 
-    # IDL: [SameObject] readonly attribute WGSLLanguageFeatures wgslLanguageFeatures;
     @property
     def wgsl_language_features(self) -> set:
         """A set of strings representing the WGSL language extensions supported by all adapters.
@@ -203,7 +191,6 @@ class GPU:
         # Looks like at the time of writing there are no definitions for extensions yet
         return set()
 
-    @apidiff.add("Provide a low-level way to let wgpu render to screen")
     def get_canvas_context(self, present_info: dict) -> GPUCanvasContext:
         """Get the GPUCanvasContext object for the appropriate backend.
 
@@ -229,7 +216,6 @@ class GPU:
 gpu = GPU()
 
 
-@apidiff.add("Added for async support")
 class GPUPromise(BaseGPUPromise[AwaitedType]):
     pass
 
@@ -268,13 +254,6 @@ class GPUCanvasContext:
         # The last used texture
         self._texture = None
 
-    # IDL: readonly attribute (HTMLCanvasElement or OffscreenCanvas) canvas;
-    @apidiff.hide("No unified concept of a canvas in Python, and avoid circular refs")
-    @property
-    def canvas(self) -> CanvasLike:
-        return None
-
-    @apidiff.add("External code needs to set the framebuffer size")
     def set_physical_size(self, width: int, height: int) -> None:
         """Set the current framebuffer physical size.
 
@@ -286,7 +265,6 @@ class GPUCanvasContext:
         self._physical_size = int(width), int(height)
         self._has_new_size = True
 
-    @apidiff.add("Allow code that uses a context to get the physical size")
     @property
     def physical_size(self) -> tuple[int, int]:
         """The physical size of the underlying surface in integer pixels."""
@@ -308,19 +286,16 @@ class GPUCanvasContext:
         """Get capabilities for a native surface."""
         raise NotImplementedError()
 
-    @apidiff.add("Better place to define the preferred format")
-    def get_preferred_format(self, adapter: GPUAdapter) -> enums.TextureFormatEnum:
+    def get_preferred_format(self, adapter: GPUAdapter) -> enums.TextureFormat:
         """Get the preferred surface texture format."""
         capabilities = self._get_capabilities(adapter)
         formats = capabilities["formats"]
         return formats[0] if formats else "bgra8-unorm"
 
-    # IDL: GPUCanvasConfiguration? getConfiguration();
     def get_configuration(self) -> structs.CanvasConfigurationStruct:
         """Get the current configuration (or None if the context is not yet configured)."""
         return self._config
 
-    # IDL: undefined configure(GPUCanvasConfiguration configuration); -> required GPUDevice device, required GPUTextureFormat format, GPUTextureUsageFlags usage = 0x10, sequence<GPUTextureFormat> viewFormats = [], PredefinedColorSpace colorSpace = "srgb", GPUCanvasToneMapping toneMapping = {}, GPUCanvasAlphaMode alphaMode = "opaque"
     def configure(
         self,
         *,
@@ -430,7 +405,6 @@ class GPUCanvasContext:
     ):
         raise NotImplementedError()
 
-    # IDL: undefined unconfigure();
     def unconfigure(self) -> None:
         """Removes the presentation context configuration.
         Destroys any textures produced while configured.
@@ -442,7 +416,6 @@ class GPUCanvasContext:
     def _unconfigure_screen(self):
         raise NotImplementedError()
 
-    # IDL: GPUTexture getCurrentTexture();
     def get_current_texture(self) -> GPUTexture:
         """Get the `GPUTexture` that will be composited to the canvas next."""
         if not self._config:
@@ -462,7 +435,6 @@ class GPUCanvasContext:
             self._texture._release()  # not destroy, because it may be in use.
             self._texture = None
 
-    @apidiff.add("External code needs to invoke presenting at the appropriate time")
     def present(self) -> None:
         """Present what has been drawn to the current texture, by compositing it to the canvas."""
         if self._texture:
@@ -487,43 +459,36 @@ class GPUAdapterInfo(dict):
         parts = [f"{k}={v!r}" for k, v in self.items()]
         return f"<GPUAdapterInfo dict with {', '.join(parts)}>"
 
-    # IDL: readonly attribute DOMString vendor;
     @property
     def vendor(self) -> str:
         """The vendor that built this adaptor."""
         return self["vendor"]
 
-    # IDL: readonly attribute DOMString architecture;
     @property
     def architecture(self) -> str:
         """The adapters architecrure."""
         return self["architecture"]
 
-    # IDL: readonly attribute DOMString device;
     @property
     def device(self) -> str:
         """The kind of device that this adapter represents."""
         return self["device"]
 
-    # IDL: readonly attribute DOMString description;
     @property
     def description(self) -> str:
         """A textual description of the adapter."""
         return self["description"]
 
-    # IDL: readonly attribute unsigned long subgroupMinSize;
     @property
     def subgroup_min_size(self) -> int:
         """If the "subgroups" feature is supported, the minimum supported subgroup size for the adapter."""
         return self.get("subgroup_min_size")
 
-    # IDL: readonly attribute unsigned long subgroupMaxSize;
     @property
     def subgroup_max_size(self) -> int:
         """If the "subgroups" feature is supported, the maximum supported subgroup size for the adapter."""
         return self.get("subgroup_max_size")
 
-    # IDL: readonly attribute boolean isFallbackAdapter;
     @property
     def is_fallback_adapter(self) -> bool:
         """Whether this adapter runs on software (rather than dedicated hardware)."""
@@ -558,25 +523,21 @@ class GPUAdapter:
         self._limits = limits
         self._adapter_info = adapter_info
 
-    # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
     def features(self) -> set:
         """A set of feature names supported by the adapter."""
         return self._features
 
-    # IDL: [SameObject] readonly attribute GPUSupportedLimits limits;
     @property
     def limits(self) -> dict:
         """A dict with limits for the adapter."""
         return self._limits
 
-    # IDL: [SameObject] readonly attribute GPUAdapterInfo info;
     @property
     def info(self) -> GPUAdapterInfo:
         """Information associated with this adapter."""
         return self._adapter_info
 
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {}); -> USVString label = "", sequence<GPUFeatureName> requiredFeatures = [], record<DOMString, (GPUSize64 or undefined)> requiredLimits = {}, GPUQueueDescriptor defaultQueue = {}
     def request_device_sync(
         self,
         *,
@@ -597,7 +558,6 @@ class GPUAdapter:
         )
         return promise.sync_wait()
 
-    # IDL: Promise<GPUDevice> requestDevice(optional GPUDeviceDescriptor descriptor = {}); -> USVString label = "", sequence<GPUFeatureName> requiredFeatures = [], record<DOMString, (GPUSize64 or undefined)> requiredLimits = {}, GPUQueueDescriptor defaultQueue = {}
     def request_device_async(
         self,
         *,
@@ -623,7 +583,6 @@ class GPUAdapter:
         self._ot.decrease(self.__class__.__name__)
         self._release()
 
-    @apidiff.add("Useful in multi-gpu environments")
     @property
     def summary(self) -> str:
         """A one-line summary of the info of this adapter (device, adapter_type, backend_type)."""
@@ -650,7 +609,6 @@ class GPUObjectBase:
         self._device = device
         logger.info(f"Creating {self.__class__.__name__} {label}")
 
-    @apidiff.add("Useful in caching strategies")
     @property
     def uid(self) -> int:
         """A unique id (integer).
@@ -659,7 +617,6 @@ class GPUObjectBase:
         """
         return self._uid
 
-    # IDL: attribute USVString label;
     @property
     def label(self) -> str:
         """A human-readable name identifying the GPU object."""
@@ -708,70 +665,31 @@ class GPUDevice(GPUObjectBase):
         self._queue = queue
         queue._device = self  # because it could not be set earlier
 
-    # IDL: [SameObject] readonly attribute GPUSupportedFeatures features;
     @property
     def features(self) -> set:
         """A set of feature names supported by this device."""
         return self._features
 
-    # IDL: [SameObject] readonly attribute GPUSupportedLimits limits;
     @property
     def limits(self) -> dict:
         """A dict with limits for this device."""
         return self._limits
 
-    # IDL: [SameObject] readonly attribute GPUQueue queue;
     @property
     def queue(self) -> GPUQueue:
         """The default `GPUQueue` for this device."""
         return self._queue
 
-    # IDL: [SameObject] readonly attribute GPUAdapterInfo adapterInfo;
     @property
     def adapter_info(self) -> GPUAdapterInfo:
         """The adapter.info dict."""
         return self._adapter.info
 
-    @apidiff.add("Too useful to not-have")
     @property
     def adapter(self) -> GPUAdapter:
         """The adapter object corresponding to this device."""
         return self._adapter
 
-    # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
-    @apidiff.hide("Not a Pythonic API")
-    @property
-    def lost_sync(self) -> GPUDeviceLostInfo:
-        """Sync version of `lost`.
-
-        Provided by wgpu-py, but not compatible with WebGPU.
-        """
-        promise = self.lost_async
-        return promise.sync_wait()
-
-    # IDL: readonly attribute Promise<GPUDeviceLostInfo> lost;
-    @apidiff.hide("Not a Pythonic API")
-    @property
-    def lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
-        """Resolves to GPUDeviceLostInfo, providing information about why the device is lost."""
-        # Properties don't get repeated at _api.py, so we use a proxy method.
-        return self._get_lost_async()
-
-    def _get_lost_async(self) -> GPUPromise[GPUDeviceLostInfo]:
-        raise NotImplementedError()
-
-    # IDL: attribute EventHandler onuncapturederror;
-    @apidiff.hide("Specific to browsers")
-    @property
-    def onuncapturederror(self) -> None:
-        """Event handler.
-
-        In JS you'd do ``gpuDevice.addEventListener('uncapturederror', ...)``. We'd need
-        to figure out how to do this in Python.
-        """
-        raise NotImplementedError()
-
-    # IDL: undefined destroy();
     def destroy(self) -> None:
         """Destroy this device.
 
@@ -783,7 +701,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUBuffer createBuffer(GPUBufferDescriptor descriptor); -> USVString label = "", required GPUSize64 size, required GPUBufferUsageFlags usage, boolean mappedAtCreation = false
     def create_buffer(
         self,
         *,
@@ -805,7 +722,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("Convenience function")
     def create_buffer_with_data(
         self, *, label: str = "", data: ArrayLike, usage: flags.BufferUsageFlags
     ) -> GPUBuffer:
@@ -843,7 +759,6 @@ class GPUDevice(GPUObjectBase):
         buf.unmap()
         return buf
 
-    # IDL: GPUTexture createTexture(GPUTextureDescriptor descriptor); -> USVString label = "", required GPUExtent3D size, GPUIntegerCoordinate mipLevelCount = 1, GPUSize32 sampleCount = 1, GPUTextureDimension dimension = "2d", required GPUTextureFormat format, required GPUTextureUsageFlags usage, sequence<GPUTextureFormat> viewFormats = [], GPUTextureViewDimension textureBindingViewDimension
     def create_texture(
         self,
         *,
@@ -879,7 +794,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUSampler createSampler(optional GPUSamplerDescriptor descriptor = {}); -> USVString label = "", GPUAddressMode addressModeU = "clamp-to-edge", GPUAddressMode addressModeV = "clamp-to-edge", GPUAddressMode addressModeW = "clamp-to-edge", GPUFilterMode magFilter = "nearest", GPUFilterMode minFilter = "nearest", GPUMipmapFilterMode mipmapFilter = "nearest", float lodMinClamp = 0, float lodMaxClamp = 32, GPUCompareFunction compare, [Clamp] unsigned short maxAnisotropy = 1
     def create_sampler(
         self,
         *,
@@ -917,7 +831,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUBindGroupLayout createBindGroupLayout(GPUBindGroupLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayoutEntry> entries
     def create_bind_group_layout(
         self, *, label: str = "", entries: Sequence[structs.BindGroupLayoutEntryStruct]
     ) -> GPUBindGroupLayout:
@@ -955,7 +868,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUBindGroup createBindGroup(GPUBindGroupDescriptor descriptor); -> USVString label = "", required GPUBindGroupLayout layout, required sequence<GPUBindGroupEntry> entries
     def create_bind_group(
         self,
         *,
@@ -998,7 +910,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUPipelineLayout createPipelineLayout(GPUPipelineLayoutDescriptor descriptor); -> USVString label = "", required sequence<GPUBindGroupLayout?> bindGroupLayouts, GPUSize32 immediateSize = 0
     def create_pipeline_layout(
         self,
         *,
@@ -1015,7 +926,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUShaderModule createShaderModule(GPUShaderModuleDescriptor descriptor); -> USVString label = "", required USVString code, sequence<GPUShaderModuleCompilationHint> compilationHints = []
     def create_shader_module(
         self,
         *,
@@ -1038,7 +948,6 @@ class GPUDevice(GPUObjectBase):
         # Noe: compilation_hints has been removed: https://github.com/webgpu-native/webgpu-headers/pull/337
         raise NotImplementedError()
 
-    # IDL: GPUComputePipeline createComputePipeline(GPUComputePipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUProgrammableStage compute
     def create_compute_pipeline(
         self,
         *,
@@ -1055,7 +964,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: Promise<GPUComputePipeline> createComputePipelineAsync(GPUComputePipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUProgrammableStage compute
     def create_compute_pipeline_async(
         self,
         *,
@@ -1068,7 +976,6 @@ class GPUDevice(GPUObjectBase):
         Both versions are compatible with WebGPU."""
         raise NotImplementedError()
 
-    # IDL: GPURenderPipeline createRenderPipeline(GPURenderPipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUVertexState vertex, GPUPrimitiveState primitive = {}, GPUDepthStencilState depthStencil, GPUMultisampleState multisample = {}, GPUFragmentState fragment
     def create_render_pipeline(
         self,
         *,
@@ -1212,7 +1119,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: Promise<GPURenderPipeline> createRenderPipelineAsync(GPURenderPipelineDescriptor descriptor); -> USVString label = "", required (GPUPipelineLayout or GPUAutoLayoutMode) layout, required GPUVertexState vertex, GPUPrimitiveState primitive = {}, GPUDepthStencilState depthStencil, GPUMultisampleState multisample = {}, GPUFragmentState fragment
     def create_render_pipeline_async(
         self,
         *,
@@ -1229,7 +1135,6 @@ class GPUDevice(GPUObjectBase):
         Both versions are compatible with WebGPU."""
         raise NotImplementedError()
 
-    # IDL: GPUCommandEncoder createCommandEncoder(optional GPUCommandEncoderDescriptor descriptor = {}); -> USVString label = ""
     def create_command_encoder(self, *, label: str = "") -> GPUCommandEncoder:
         """Create a `GPUCommandEncoder` object.
 
@@ -1240,7 +1145,6 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPURenderBundleEncoder createRenderBundleEncoder(GPURenderBundleEncoderDescriptor descriptor); -> USVString label = "", required sequence<GPUTextureFormat?> colorFormats, GPUTextureFormat depthStencilFormat, GPUSize32 sampleCount = 1, boolean depthReadOnly = false, boolean stencilReadOnly = false
     def create_render_bundle_encoder(
         self,
         *,
@@ -1267,41 +1171,10 @@ class GPUDevice(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUQuerySet createQuerySet(GPUQuerySetDescriptor descriptor); -> USVString label = "", required GPUQueryType type, required GPUSize32 count
     def create_query_set(
         self, *, label: str = "", type: enums.QueryTypeEnum, count: int
     ) -> GPUQuerySet:
         """Create a `GPUQuerySet` object."""
-        raise NotImplementedError()
-
-    # IDL: undefined pushErrorScope(GPUErrorFilter filter);
-    @apidiff.hide
-    def push_error_scope(self, filter: enums.ErrorFilterEnum) -> None:
-        """Pushes a new GPU error scope onto the stack."""
-        raise NotImplementedError()
-
-    # IDL: Promise<GPUError?> popErrorScope();
-    @apidiff.hide
-    def pop_error_scope_sync(self) -> GPUError:
-        """Sync version of `pop_error_scope_async().
-
-        Provided by wgpu-py, but not compatible with WebGPU.
-        """
-        promise = self.pop_error_scope_async()
-        return promise.sync_wait()
-
-    # IDL: Promise<GPUError?> popErrorScope();
-    @apidiff.hide
-    def pop_error_scope_async(self) -> GPUPromise[GPUError]:
-        """Pops a GPU error scope from the stack."""
-        raise NotImplementedError()
-
-    # IDL: GPUExternalTexture importExternalTexture(GPUExternalTextureDescriptor descriptor); -> USVString label = "", required (HTMLVideoElement or VideoFrame) source, PredefinedColorSpace colorSpace = "srgb"
-    @apidiff.hide("Specific to browsers")
-    def import_external_texture(
-        self, *, label: str = "", source: ArrayLike | object, color_space: str = "srgb"
-    ) -> object:
-        """For browsers only."""
         raise NotImplementedError()
 
 
@@ -1327,13 +1200,11 @@ class GPUBuffer(GPUObjectBase):
         self._usage = usage
         self._map_state = map_state
 
-    # IDL: readonly attribute GPUSize64Out size;
     @property
     def size(self) -> int:
         """The length of the GPUBuffer allocation in bytes."""
         return self._size
 
-    # IDL: readonly attribute GPUFlagsConstant usage;
     @property
     def usage(self) -> int:
         """The allowed usages (int bitmap) for this GPUBuffer, specifying
@@ -1342,7 +1213,6 @@ class GPUBuffer(GPUObjectBase):
         """
         return self._usage
 
-    # IDL: readonly attribute GPUBufferMapState mapState;
     @property
     def map_state(self) -> enums.BufferMapStateEnum:
         """The mapping state of the buffer, see `BufferMapState`."""
@@ -1362,7 +1232,6 @@ class GPUBuffer(GPUObjectBase):
     # but reading and writing data goes via method calls instead of via
     # an array-like object that exposes the shared memory.
 
-    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def map_sync(
         self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> None:
@@ -1373,7 +1242,6 @@ class GPUBuffer(GPUObjectBase):
         promise = self.map_async(mode=mode, offset=offset, size=size)
         return promise.sync_wait()
 
-    # IDL: Promise<undefined> mapAsync(GPUMapModeFlags mode, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def map_async(
         self, mode: flags.MapModeFlags, offset: int = 0, size: int | None = None
     ) -> GPUPromise[None]:
@@ -1393,7 +1261,6 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined unmap();
     def unmap(self) -> None:
         """Unmaps the buffer.
 
@@ -1402,12 +1269,10 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("Replacement for get_mapped_range")
     def read_mapped(
         self,
         buffer_offset: int | None = None,
         size: int | None = None,
-        *,
         copy: bool = True,
     ) -> ArrayLike:
         """Read mapped buffer data.
@@ -1438,7 +1303,6 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("Replacement for get_mapped_range")
     def write_mapped(self, data: ArrayLike, buffer_offset: int | None = None) -> None:
         """Write mapped buffer data.
 
@@ -1463,12 +1327,6 @@ class GPUBuffer(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: ArrayBuffer getMappedRange(optional GPUSize64 offset = 0, optional GPUSize64 size);
-    @apidiff.hide
-    def get_mapped_range(self, offset: int = 0, size: int | None = None) -> ArrayLike:
-        raise NotImplementedError("The Python API differs from WebGPU here")
-
-    # IDL: undefined destroy();
     def destroy(self) -> None:
         """Destroy the buffer.
 
@@ -1513,61 +1371,51 @@ class GPUTexture(GPUObjectBase):
         # Return rounded to nearest integer
         return int(nbytes + 0.5)
 
-    @apidiff.add("Too useful to not-have")
     @property
     def size(self) -> tuple[int, int, int]:
         """The size of the texture in mipmap level 0, as a 3-tuple of ints."""
         return self._tex_info["size"]
 
-    # IDL: readonly attribute GPUIntegerCoordinateOut width;
     @property
     def width(self) -> int:
         """The texture's width. Also see ``.size``."""
         return self._tex_info["size"][0]
 
-    # IDL: readonly attribute GPUIntegerCoordinateOut height;
     @property
     def height(self) -> int:
         """The texture's height. Also see ``.size``."""
         return self._tex_info["size"][1]
 
-    # IDL: readonly attribute GPUIntegerCoordinateOut depthOrArrayLayers;
     @property
     def depth_or_array_layers(self) -> int:
         """The texture's depth or number of layers. Also see ``.size``."""
         return self._tex_info["size"][2]
 
-    # IDL: readonly attribute GPUIntegerCoordinateOut mipLevelCount;
     @property
     def mip_level_count(self) -> int:
         """The total number of the mipmap levels of the texture."""
         return self._tex_info["mip_level_count"]
 
-    # IDL: readonly attribute GPUSize32Out sampleCount;
     @property
     def sample_count(self) -> int:
         """The number of samples in each texel of the texture."""
         return self._tex_info["sample_count"]
 
-    # IDL: readonly attribute GPUTextureDimension dimension;
     @property
     def dimension(self) -> enums.TextureDimensionEnum:
         """The dimension of the texture."""
         return self._tex_info["dimension"]
 
-    # IDL: readonly attribute GPUTextureFormat format;
     @property
     def format(self) -> enums.TextureFormatEnum:
         """The format of the texture."""
         return self._tex_info["format"]
 
-    # IDL: readonly attribute GPUFlagsConstant usage;
     @property
     def usage(self) -> int:
         """The allowed usages for this texture."""
         return self._tex_info["usage"]
 
-    # IDL: readonly attribute (GPUTextureViewDimension or undefined) textureBindingViewDimension;
     @property
     def texture_binding_view_dimension(self) -> enums.TextureViewDimensionEnum | None:
         """The required texture binding for views, when in compatibility mode.
@@ -1578,7 +1426,6 @@ class GPUTexture(GPUObjectBase):
         """
         return self._tex_info["texture_binding_view_dimension"]
 
-    # IDL: GPUTextureView createView(optional GPUTextureViewDescriptor descriptor = {}); -> USVString label = "", GPUTextureFormat format, GPUTextureViewDimension dimension, GPUTextureUsageFlags usage = 0, GPUTextureAspect aspect = "all", GPUIntegerCoordinate baseMipLevel = 0, GPUIntegerCoordinate mipLevelCount, GPUIntegerCoordinate baseArrayLayer = 0, GPUIntegerCoordinate arrayLayerCount, DOMString swizzle = "rgba"
     def create_view(
         self,
         *,
@@ -1617,7 +1464,6 @@ class GPUTexture(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined destroy();
     def destroy(self) -> None:
         """Destroy the texture.
 
@@ -1639,13 +1485,11 @@ class GPUTextureView(GPUObjectBase):
         self._texture = texture
         self._size = size
 
-    @apidiff.add("Need to know size e.g. for texture view provided by canvas")
     @property
     def size(self) -> tuple[int, int, int]:
         """The texture size (as a 3-tuple)."""
         return self._size
 
-    @apidiff.add("Too useful to not-have")
     @property
     def texture(self) -> GPUTexture:
         """The texture object to which this is a view."""
@@ -1700,7 +1544,6 @@ class GPUShaderModule(GPUObjectBase):
     Create a shader module using `GPUDevice.create_shader_module()`.
     """
 
-    # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
     def get_compilation_info_sync(self) -> GPUCompilationInfo:
         """Sync version of `get_compilation_info_async()`.
 
@@ -1709,7 +1552,6 @@ class GPUShaderModule(GPUObjectBase):
         promise = self.get_compilation_info_async()
         return promise.sync_wait()
 
-    # IDL: Promise<GPUCompilationInfo> getCompilationInfo();
     def get_compilation_info_async(self) -> GPUPromise[GPUCompilationInfo]:
         """Get shader compilation info. Always resolves to an empty list at the moment."""
         # How can this return shader errors if one cannot create a
@@ -1720,7 +1562,6 @@ class GPUShaderModule(GPUObjectBase):
 class GPUPipelineBase:
     """A mixin class for render and compute pipelines."""
 
-    # IDL: [NewObject] GPUBindGroupLayout getBindGroupLayout(unsigned long index);
     def get_bind_group_layout(self, index: int) -> GPUBindGroupLayout:
         """Get the bind group layout at the given index."""
         raise NotImplementedError()
@@ -1766,10 +1607,6 @@ class GPUCommandsMixin:
 class GPUBindingCommandsMixin:
     """Mixin for classes that defines bindings."""
 
-    # IDL: undefined setBindGroup(GPUIndex32 index, GPUBindGroup? bindGroup, [AllowShared] Uint32Array dynamicOffsetsData, GPUSize64 dynamicOffsetsDataStart, GPUSize32 dynamicOffsetsDataLength);
-    @apidiff.change(
-        "In the WebGPU specification, this method has two different signatures."
-    )
     def set_bind_group(
         self,
         index: int,
@@ -1790,7 +1627,6 @@ class GPUBindingCommandsMixin:
         """
         raise NotImplementedError()
 
-    # IDL: undefined setImmediates(GPUSize32 rangeOffset, AllowSharedBufferSource data, optional GPUSize64 dataOffset = 0, optional GPUSize64 dataSize);
     def set_immediates(
         self,
         range_offset: int,
@@ -1811,17 +1647,14 @@ class GPUBindingCommandsMixin:
 class GPUDebugCommandsMixin:
     """Mixin for classes that support debug groups and markers."""
 
-    # IDL: undefined pushDebugGroup(USVString groupLabel);
     def push_debug_group(self, group_label: str) -> None:
         """Push a named debug group into the command stream."""
         raise NotImplementedError()
 
-    # IDL: undefined popDebugGroup();
     def pop_debug_group(self) -> None:
         """Pop the active debug group."""
         raise NotImplementedError()
 
-    # IDL: undefined insertDebugMarker(USVString markerLabel);
     def insert_debug_marker(self, marker_label: str) -> None:
         """Insert the given message into the debug message queue."""
         raise NotImplementedError()
@@ -1830,7 +1663,6 @@ class GPUDebugCommandsMixin:
 class GPURenderCommandsMixin:
     """Mixin for classes that provide rendering commands."""
 
-    # IDL: undefined setPipeline(GPURenderPipeline pipeline);
     def set_pipeline(self, pipeline: GPURenderPipeline) -> None:
         """Set the pipeline for this render pass.
 
@@ -1839,7 +1671,6 @@ class GPURenderCommandsMixin:
         """
         raise NotImplementedError()
 
-    # IDL: undefined setIndexBuffer(GPUBuffer buffer, GPUIndexFormat indexFormat, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def set_index_buffer(
         self,
         buffer: GPUBuffer,
@@ -1860,7 +1691,6 @@ class GPURenderCommandsMixin:
         """
         raise NotImplementedError()
 
-    # IDL: undefined setVertexBuffer(GPUIndex32 slot, GPUBuffer? buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def set_vertex_buffer(
         self, slot: int, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
@@ -1877,7 +1707,6 @@ class GPURenderCommandsMixin:
         """
         raise NotImplementedError()
 
-    # IDL: undefined draw(GPUSize32 vertexCount, optional GPUSize32 instanceCount = 1, optional GPUSize32 firstVertex = 0, optional GPUSize32 firstInstance = 0);
     def draw(
         self,
         vertex_count: int,
@@ -1895,7 +1724,6 @@ class GPURenderCommandsMixin:
         """
         raise NotImplementedError()
 
-    # IDL: undefined drawIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indirect(self, indirect_buffer: GPUBuffer, indirect_offset: int) -> None:
         """Like `draw()`, but the function arguments are in a buffer.
 
@@ -1907,7 +1735,6 @@ class GPURenderCommandsMixin:
         """
         raise NotImplementedError()
 
-    # IDL: undefined drawIndexed(GPUSize32 indexCount, optional GPUSize32 instanceCount = 1, optional GPUSize32 firstIndex = 0, optional GPUSignedOffset32 baseVertex = 0, optional GPUSize32 firstInstance = 0);
     def draw_indexed(
         self,
         index_count: int,
@@ -1929,7 +1756,6 @@ class GPURenderCommandsMixin:
         """
         raise NotImplementedError()
 
-    # IDL: undefined drawIndexedIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def draw_indexed_indirect(
         self, indirect_buffer: GPUBuffer, indirect_offset: int
     ) -> None:
@@ -1951,7 +1777,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
     Create a command encoder using `GPUDevice.create_command_encoder()`.
     """
 
-    # IDL: GPUComputePassEncoder beginComputePass(optional GPUComputePassDescriptor descriptor = {}); -> USVString label = "", GPUComputePassTimestampWrites timestampWrites
     def begin_compute_pass(
         self,
         *,
@@ -1966,7 +1791,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPURenderPassEncoder beginRenderPass(GPURenderPassDescriptor descriptor); -> USVString label = "", required sequence<GPURenderPassColorAttachment?> colorAttachments, GPURenderPassDepthStencilAttachment depthStencilAttachment, GPUQuerySet occlusionQuerySet, GPURenderPassTimestampWrites timestampWrites, GPUSize64 maxDrawCount = 50000000
     def begin_render_pass(
         self,
         *,
@@ -1989,7 +1813,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined clearBuffer( GPUBuffer buffer, optional GPUSize64 offset = 0, optional GPUSize64 size);
     def clear_buffer(
         self, buffer: GPUBuffer, offset: int = 0, size: int | None = None
     ) -> None:
@@ -2004,7 +1827,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined copyBufferToBuffer( GPUBuffer source, GPUSize64 sourceOffset, GPUBuffer destination, GPUSize64 destinationOffset, optional GPUSize64 size);
     def copy_buffer_to_buffer(
         self,
         source: GPUBuffer,
@@ -2026,7 +1848,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined copyBufferToTexture( GPUTexelCopyBufferInfo source, GPUTexelCopyTextureInfo destination, GPUExtent3D copySize);
     def copy_buffer_to_texture(
         self,
         source: structs.TexelCopyBufferInfoStruct,
@@ -2044,7 +1865,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined copyTextureToBuffer( GPUTexelCopyTextureInfo source, GPUTexelCopyBufferInfo destination, GPUExtent3D copySize);
     def copy_texture_to_buffer(
         self,
         source: structs.TexelCopyTextureInfoStruct,
@@ -2062,7 +1882,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined copyTextureToTexture( GPUTexelCopyTextureInfo source, GPUTexelCopyTextureInfo destination, GPUExtent3D copySize);
     def copy_texture_to_texture(
         self,
         source: structs.TexelCopyTextureInfoStruct,
@@ -2078,7 +1897,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: GPUCommandBuffer finish(optional GPUCommandBufferDescriptor descriptor = {}); -> USVString label = ""
     def finish(self, *, label: str = "") -> GPUCommandBuffer:
         """Finish recording. Returns a `GPUCommandBuffer` to submit to a `GPUQueue`.
 
@@ -2087,7 +1905,6 @@ class GPUCommandEncoder(GPUCommandsMixin, GPUDebugCommandsMixin, GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined resolveQuerySet( GPUQuerySet querySet, GPUSize32 firstQuery, GPUSize32 queryCount, GPUBuffer destination, GPUSize64 destinationOffset);
     def resolve_query_set(
         self,
         query_set: GPUQuerySet,
@@ -2119,7 +1936,6 @@ class GPUComputePassEncoder(
     Create a compute pass encoder using `GPUCommandEncoder.begin_compute_pass()`.
     """
 
-    # IDL: undefined setPipeline(GPUComputePipeline pipeline);
     def set_pipeline(self, pipeline: GPUComputePipeline) -> None:
         """Set the pipeline for this compute pass.
 
@@ -2128,7 +1944,6 @@ class GPUComputePassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined dispatchWorkgroups(GPUSize32 workgroupCountX, optional GPUSize32 workgroupCountY = 1, optional GPUSize32 workgroupCountZ = 1);
     def dispatch_workgroups(
         self,
         workgroup_count_x: int,
@@ -2144,7 +1959,6 @@ class GPUComputePassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined dispatchWorkgroupsIndirect(GPUBuffer indirectBuffer, GPUSize64 indirectOffset);
     def dispatch_workgroups_indirect(
         self, indirect_buffer: GPUBuffer, indirect_offset: int
     ) -> None:
@@ -2156,7 +1970,6 @@ class GPUComputePassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined end();
     def end(self) -> None:
         """Record the end of the compute pass."""
         raise NotImplementedError()
@@ -2174,7 +1987,6 @@ class GPURenderPassEncoder(
     Create a render pass encoder using `GPUCommandEncoder.begin_render_pass`.
     """
 
-    # IDL: undefined setViewport(float x, float y, float width, float height, float minDepth, float maxDepth);
     def set_viewport(
         self,
         x: float,
@@ -2198,7 +2010,6 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined setScissorRect(GPUIntegerCoordinate x, GPUIntegerCoordinate y,  GPUIntegerCoordinate width, GPUIntegerCoordinate height);
     def set_scissor_rect(self, x: int, y: int, width: int, height: int) -> None:
         """Set the scissor rectangle for this render pass. The scene
         is rendered as usual, but is only applied to this sub-rectangle.
@@ -2211,7 +2022,6 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined setBlendConstant(GPUColor color);
     def set_blend_constant(
         self, color: tuple[float, float, float, float] | structs.ColorStruct
     ) -> None:
@@ -2222,7 +2032,6 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined setStencilReference(GPUStencilValue reference);
     def set_stencil_reference(self, reference: int) -> None:
         """Set the reference stencil value for this render pass.
 
@@ -2231,7 +2040,6 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined executeBundles(sequence<GPURenderBundle> bundles);
     def execute_bundles(self, bundles: Sequence[GPURenderBundle]) -> None:
         """Executes commands previously recorded into the render bundles
           as part of this render pass.
@@ -2241,12 +2049,10 @@ class GPURenderPassEncoder(
         """
         raise NotImplementedError()
 
-    # IDL: undefined end();
     def end(self) -> None:
         """Record the end of the render pass."""
         raise NotImplementedError()
 
-    # IDL: undefined beginOcclusionQuery(GPUSize32 queryIndex);
     def begin_occlusion_query(self, query_index: int) -> None:
         """Begins an occlusion query.
 
@@ -2258,7 +2064,6 @@ class GPURenderPassEncoder(
 
         raise NotImplementedError()
 
-    # IDL: undefined endOcclusionQuery();
     def end_occlusion_query(self) -> None:
         """Ends an occlusion query."""
         raise NotImplementedError()
@@ -2279,7 +2084,6 @@ class GPURenderBundleEncoder(
 ):
     """Encodes a series of render commands into a reusable render bundle."""
 
-    # IDL: GPURenderBundle finish(optional GPURenderBundleDescriptor descriptor = {}); -> USVString label = ""
     def finish(self, *, label: str = "") -> GPURenderBundle:
         """Finish recording and return a `GPURenderBundle`.
 
@@ -2295,7 +2099,6 @@ class GPUQueue(GPUObjectBase):
     You can obtain a queue object via the :attr:`GPUDevice.queue` property.
     """
 
-    # IDL: undefined submit(sequence<GPUCommandBuffer> commandBuffers);
     def submit(self, command_buffers: Sequence[GPUCommandBuffer]) -> None:
         """Submit a `GPUCommandBuffer` to the queue.
 
@@ -2304,7 +2107,6 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined writeBuffer( GPUBuffer buffer, GPUSize64 bufferOffset, AllowSharedBufferSource data, optional GPUSize64 dataOffset = 0, optional GPUSize64 size);
     def write_buffer(
         self,
         buffer: GPUBuffer,
@@ -2337,10 +2139,9 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("For symmetry with queue.write_buffer")
     def read_buffer(
         self, buffer: GPUBuffer, buffer_offset: int = 0, size: int | None = None
-    ) -> ArrayLike:
+    ) -> GPUBuffer:
         """Takes the data contents of the buffer and return them as a memoryview.
 
         Arguments:
@@ -2356,7 +2157,6 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined writeTexture( GPUTexelCopyTextureInfo destination, AllowSharedBufferSource data, GPUTexelCopyBufferLayout dataLayout, GPUExtent3D size);
     def write_texture(
         self,
         destination: structs.TexelCopyTextureInfoStruct,
@@ -2384,10 +2184,12 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    @apidiff.add("For symmetry, and to help work around the bytes_per_row constraint")
     def read_texture(
-        self, source: dict, data_layout: dict, size: tuple[int, int, int]
-    ) -> ArrayLike:
+        self,
+        source: structs.TexelCopyTextureInfoStruct,
+        data_layout: structs.TexelCopyBufferLayoutStruct,
+        size: tuple[int, int, int],
+    ) -> GPUTexture:
         """Reads the contents of the texture and return them as a memoryview.
 
         Arguments:
@@ -2405,17 +2207,6 @@ class GPUQueue(GPUObjectBase):
         """
         raise NotImplementedError()
 
-    # IDL: undefined copyExternalImageToTexture( GPUCopyExternalImageSourceInfo source, GPUCopyExternalImageDestInfo destination, GPUExtent3D copySize);
-    @apidiff.hide("Specific to browsers")
-    def copy_external_image_to_texture(
-        self,
-        source: structs.CopyExternalImageSourceInfoStruct,
-        destination: structs.CopyExternalImageDestInfoStruct,
-        copy_size: tuple[int, int, int] | structs.Extent3DStruct,
-    ) -> None:
-        raise NotImplementedError()
-
-    # IDL: Promise<undefined> onSubmittedWorkDone();
     def on_submitted_work_done_sync(self) -> None:
         """Sync version of `on_submitted_work_done_async()`.
 
@@ -2424,7 +2215,6 @@ class GPUQueue(GPUObjectBase):
         promise = self.on_submitted_work_done_async()
         return promise.sync_wait()
 
-    # IDL: Promise<undefined> onSubmittedWorkDone();
     def on_submitted_work_done_async(self) -> GPUPromise[None]:
         """TODO"""
         raise NotImplementedError()
@@ -2442,21 +2232,18 @@ class GPUDeviceLostInfo:
         self._reason = reason
         self._message = message
 
-    # IDL: readonly attribute DOMString message;
     @property
     def message(self) -> str:
         """The error message specifying the reason for the device being lost."""
         return self._message
 
-    # IDL: readonly attribute GPUDeviceLostReason reason;
     @property
     def reason(self) -> enums.DeviceLostReasonEnum:
         """The reason (enums.GPUDeviceLostReason) for the device getting lost. Can be None."""
         return self._reason
 
 
-@apidiff.add("Added because Python deals with native windows")
-class DrawCancelled(Exception):  # noqa: N818
+class DrawCancelled(Exception):
     """An excepion raised to cancel a draw when the surface texture could not be obtained,
     e.g. because the window is hidden or occluded.
     """
@@ -2468,7 +2255,6 @@ class GPUError(Exception):
     def __init__(self, message):
         super().__init__(message)
 
-    # IDL: readonly attribute DOMString message;
     @property
     def message(self) -> str:
         """The error message."""
@@ -2478,7 +2264,6 @@ class GPUError(Exception):
 class GPUOutOfMemoryError(GPUError, MemoryError):
     """An error raised when the GPU is out of memory."""
 
-    # IDL: constructor(DOMString message);
     def __init__(self, message: str):
         super().__init__(message or "GPU is out of memory.")
 
@@ -2486,7 +2271,6 @@ class GPUOutOfMemoryError(GPUError, MemoryError):
 class GPUValidationError(GPUError):
     """An error raised when the pipeline could not be validated."""
 
-    # IDL: constructor(DOMString message);
     def __init__(self, message: str):
         super().__init__(message)
 
@@ -2494,12 +2278,10 @@ class GPUValidationError(GPUError):
 class GPUPipelineError(Exception):
     """An error raised when a pipeline could not be created."""
 
-    # IDL: constructor(optional DOMString message = "", GPUPipelineErrorInit options);
-    def __init__(self, message: str, options: structs.PipelineErrorInitStruct):
+    def __init__(self, *, message: str = "", options: structs.PipelineErrorInitStruct):
         super().__init__(message or "")
         self._options = options
 
-    # IDL: readonly attribute GPUPipelineErrorReason reason;
     @property
     def reason(self) -> enums.PipelineErrorReasonEnum:
         """The reason for the failure."""
@@ -2513,7 +2295,6 @@ class GPUInternalError(GPUError):
     reason even when all validation requirements have been satisfied.
     """
 
-    # IDL: constructor(DOMString message);
     def __init__(self, message: str):
         super().__init__(message)
 
@@ -2524,51 +2305,44 @@ class GPUInternalError(GPUError):
 class GPUCompilationMessage:
     """An object that contains information about a problem with shader compilation."""
 
-    # IDL: readonly attribute DOMString message;
     @property
     def message(self) -> str:
         """The warning/error message."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
-    # IDL: readonly attribute GPUCompilationMessageType type;
     @property
     def type(self) -> enums.CompilationMessageTypeEnum:
         """The type of warning/problem."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
-    # IDL: readonly attribute unsigned long long lineNum;
     @property
     def line_num(self) -> int:
         """The corresponding line number in the shader source."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
-    # IDL: readonly attribute unsigned long long linePos;
     @property
     def line_pos(self) -> int:
         """The position on the line in the shader source."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
-    # IDL: readonly attribute unsigned long long offset;
     @property
     def offset(self) -> int:
         """Offset of ..."""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
-    # IDL: readonly attribute unsigned long long length;
     @property
     def length(self) -> int:
         """The length of the line?"""
-        raise NotImplementedError()
+        raise NotSupportedError()
 
 
 class GPUCompilationInfo:
     """TODO"""
 
-    # IDL: readonly attribute FrozenArray<GPUCompilationMessage> messages;
     @property
-    def messages(self) -> list[GPUCompilationMessage]:
+    def messages(self) -> Sequence[GPUCompilationMessage]:
         """A list of `GPUCompilationMessage` objects."""
-        raise NotImplementedError()
+        raise self._messages
 
 
 class GPUQuerySet(GPUObjectBase):
@@ -2582,19 +2356,16 @@ class GPUQuerySet(GPUObjectBase):
         self._type = type
         self._count = count
 
-    # IDL: readonly attribute GPUQueryType type;
     @property
     def type(self) -> enums.QueryTypeEnum:
         """The type of the queries managed by this queryset."""
         return self._type
 
-    # IDL: readonly attribute GPUSize32Out count;
     @property
     def count(self) -> int:
         """The number of the queries managed by this queryset."""
         return self._count
 
-    # IDL: undefined destroy();
     def destroy(self) -> None:
         """Destroy the QuerySet.
 
@@ -2608,11 +2379,6 @@ class GPUQuerySet(GPUObjectBase):
 
 
 # %%%%% Post processing
-
-# Note that some toplevel classes are already filtered out by the codegen,
-# like GPUExternalTexture and GPUUncapturedErrorEvent, and more.
-
-apidiff.remove_hidden_methods(globals())
 
 
 def _seed_object_counts():
