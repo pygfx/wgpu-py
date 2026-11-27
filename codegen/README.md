@@ -142,9 +142,9 @@ and docs from multiple sources.
 In practice we use TOML because writing *differences* to the API (additions, removals, changes)
 and multiline docstrings is much friendlier in TOML.
 
-The structure looks a bit like this:
+The structure (as JSON) look like this:
 
-```
+```json
 {
   "flags": {
     "SomeFlag": {
@@ -212,5 +212,39 @@ The structure looks a bit like this:
     }
   }
 }
+```
 
+Differences can be defined (in TOML) using for example:
+
+```toml
+
+# Removing an enum
+[structs.SomeEnum]
+diff = 'REMOVE'
+
+# Adding an enum field
+[flags.SomeEnum.fields.new_field_ext]
+doc = ''
+value = 'new-field'
+
+# Removing a property
+[classes.GPUSomeClass.properties.some_prop]
+diff = 'REMOVE'
+
+# Adding a method
+[classes.GPUSomeClass.methods.some_method]
+doc = '''
+bla bla
+'''
+returns.type = 'str'
+
+args.arg1.doc = ''
+args.arg1.type = 'int'
+args1.arg1.default = '1'
+
+# Adding an argument to an existing method
+[classes.GPUSomeClass.methods.some_method.args.new_arg_ext]
+doc = ''
+type = 'bool'
+default = 'False'
 ```
